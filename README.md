@@ -63,7 +63,7 @@ xcodebuild -project OSGKeyboard.xcodeproj -scheme OSGKeyboard \
 3. In any text field, tap 🌐 to switch to **OSGKeyboard**.
 4. Press and hold the mic, speak, release. ✨
 
-> **"Allow Full Access" is required.** Without it, iOS blocks the keyboard from using the microphone and from making network requests. We never log, store, or transmit your keystrokes — see [`PrivacyInfo.xcprivacy`](./OpenLess/PrivacyInfo.xcprivacy).
+> **"Allow Full Access" is required.** Without it, iOS blocks the keyboard from using the microphone and from making network requests. We never log, store, or transmit your keystrokes — see [`PrivacyInfo.xcprivacy`](./OSGKeyboard/PrivacyInfo.xcprivacy).
 
 ---
 
@@ -71,23 +71,23 @@ xcodebuild -project OSGKeyboard.xcodeproj -scheme OSGKeyboard \
 
 ```
 OSGKeyboard/
-├── OpenLess/                    # Main iOS app (settings, onboarding)
+├── OSGKeyboard/                 # Main iOS app (settings, onboarding)
 │   ├── Views/                   # SwiftUI screens
 │   ├── OSGKeyboardApp.swift     # @main entry
 │   ├── PrivacyInfo.xcprivacy    # Required privacy manifest
-│   └── OpenLess.entitlements    # App Group declaration
-├── OpenLessKeyboard/            # Custom Keyboard Extension
+│   └── OSGKeyboard.entitlements # App Group declaration
+├── OSGKeyboardExt/              # Custom Keyboard Extension
 │   ├── KeyboardViewController.swift   # Principal class
 │   ├── Services/
 │   │   ├── AudioCaptureService.swift  # AVAudioEngine → 16 kHz PCM
 │   │   ├── ASRService.swift           # iOS 26 + iOS 18 ASR
 │   │   └── PolishingService.swift     # LLM call with timeout
 │   └── Views/                   # RecordButton, Waveform, KeyboardRootView
-├── OpenLessShared/              # Framework shared by app + extension
+├── OSGKeyboardShared/           # Framework shared by app + extension
 │   ├── Models/                  # ProviderConfig, LLMRequest, LLMProvider
 │   ├── Services/                # LLMClient (OpenAI-compatible)
 │   └── Constants/               # AppGroup identifier
-├── OpenLessTests/               # XCTest unit tests
+├── OSGKeyboardTests/            # XCTest unit tests
 ├── project.yml                  # XcodeGen project definition
 └── .github/workflows/ci.yml     # Lint + build CI
 ```
@@ -112,7 +112,7 @@ OSGKeyboard/
 
 ## Adding a new LLM provider
 
-Open `OpenLessShared/Models/LLMProvider.swift` and append a new `LLMProvider` to the `presets` array. The default `OpenAICompatibleClient` handles any endpoint that speaks the `POST /chat/completions` protocol.
+Open `OSGKeyboardShared/Models/LLMProvider.swift` and append a new `LLMProvider` to the `presets` array. The default `OpenAICompatibleClient` handles any endpoint that speaks the `POST /chat/completions` protocol.
 
 ```swift
 LLMProvider(

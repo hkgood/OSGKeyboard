@@ -35,19 +35,23 @@ targets:
     type: application
     platform: iOS
     sources:
-      - path: OpenLess
+      - path: OSGKeyboard
     entitlements:
-      path: OpenLess/OpenLess.entitlements
+      path: OSGKeyboard/OSGKeyboard.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.osgkeyboard.shared
+        com.apple.security.device.audio-input: true
     resources:
-      - path: OpenLess/Assets.xcassets
+      - path: OSGKeyboard/Assets.xcassets
     info:
-      path: OpenLess/Info.plist
+      path: OSGKeyboard/Info.plist
       properties:
         CFBundleDisplayName: OSGKeyboard
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UILaunchScreen:
-          UIColorName: ""
+          UIColorName: "BackgroundColor"
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         UIApplicationSceneManifest:
@@ -77,11 +81,17 @@ targets:
     type: app-extension
     platform: iOS
     sources:
-      - path: OpenLessKeyboard
+      - path: OSGKeyboardExt
+    settings:
+      base:
+        IPHONEOS_DEPLOYMENT_TARGET: "18.0"
     entitlements:
-      path: OpenLessKeyboard/OpenLessKeyboard.entitlements
+      path: OSGKeyboardExt/OSGKeyboardExt.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.osgkeyboard.shared
     info:
-      path: OpenLessKeyboard/Info.plist
+      path: OSGKeyboardExt/Info.plist
       properties:
         CFBundleDisplayName: OSGKeyboard
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
@@ -109,9 +119,9 @@ targets:
     type: framework
     platform: iOS
     sources:
-      - path: OpenLessShared
+      - path: OSGKeyboardShared
     info:
-      path: OpenLessShared/Info.plist
+      path: OSGKeyboardShared/Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.shared
@@ -129,9 +139,9 @@ targets:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: OpenLessTests
+      - path: OSGKeyboardTests
     info:
-      path: OpenLessTests/Info.plist
+      path: OSGKeyboardTests/Info.plist
     dependencies:
       - target: OSGKeyboard
     settings:

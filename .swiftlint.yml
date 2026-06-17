@@ -21,10 +21,10 @@ opt_in_rules:
   - redundant_optional_initialization
 
 included:
-  - OpenLess
-  - OpenLessKeyboard
-  - OpenLessShared
-  - OpenLessTests
+  - OSGKeyboard
+  - OSGKeyboardExt
+  - OSGKeyboardShared
+  - OSGKeyboardTests
 
 excluded:
   - build

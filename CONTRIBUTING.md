@@ -32,7 +32,7 @@ Open an issue using the **Feature request** template. Briefly describe:
    xcodegen generate
    ```
 3. **Code style.** SwiftLint config lives in `.swiftlint.yml` — keep it green. We use Swift 6 strict concurrency, no `Sendable` shims where avoidable.
-4. **Tests.** Add XCTest coverage in `OpenLessTests/` for any non-trivial logic.
+4. **Tests.** Add XCTest coverage in `OSGKeyboardTests/` for any non-trivial logic.
 5. **Build & test before pushing:**
    ```bash
    xcodebuild -project OSGKeyboard.xcodeproj \
@@ -46,17 +46,17 @@ Open an issue using the **Feature request** template. Briefly describe:
 ## Project structure
 
 ```
-OpenLess/          Main iOS app target
-OpenLessKeyboard/  Custom Keyboard Extension target
-OpenLessShared/    Framework shared by app + extension
-OpenLessTests/     XCTest unit tests
+OSGKeyboard/       Main iOS app target
+OSGKeyboardExt/    Custom Keyboard Extension target
+OSGKeyboardShared/ Framework shared by app + extension
+OSGKeyboardTests/  XCTest unit tests
 project.yml        XcodeGen project definition (source of truth)
 .github/workflows/ CI
 ```
 
 ## Adding a new LLM provider
 
-The simplest contribution: add a preset to `OpenLessShared/Models/LLMProvider.swift`. No other code change is needed — `OpenAICompatibleClient` handles any OpenAI-compatible endpoint.
+The simplest contribution: add a preset to `OSGKeyboardShared/Models/LLMProvider.swift`. No other code change is needed — `OpenAICompatibleClient` handles any OpenAI-compatible endpoint.
 
 ## Coding conventions
 

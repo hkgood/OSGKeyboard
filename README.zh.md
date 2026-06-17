@@ -62,7 +62,7 @@ xcodebuild -project OSGKeyboard.xcodeproj -scheme OSGKeyboard \
 3. 在任意输入框，点 🌐 切换到 **OSGKeyboard**。
 4. 长按麦克风键 → 说话 → 松开。✨
 
-> **"允许完全访问"是必须的。** 没有它，iOS 会阻止键盘使用麦克风与网络。我们**绝不记录、存储或上传你的击键** —— 见 [`PrivacyInfo.xcprivacy`](./OpenLess/PrivacyInfo.xcprivacy)。
+> **"允许完全访问"是必须的。** 没有它，iOS 会阻止键盘使用麦克风与网络。我们**绝不记录、存储或上传你的击键** —— 见 [`PrivacyInfo.xcprivacy`](./OSGKeyboard/PrivacyInfo.xcprivacy)。
 
 ---
 
@@ -70,23 +70,23 @@ xcodebuild -project OSGKeyboard.xcodeproj -scheme OSGKeyboard \
 
 ```
 OSGKeyboard/
-├── OpenLess/                    # 主 iOS App（设置、Onboarding）
+├── OSGKeyboard/                 # 主 iOS App（设置、Onboarding）
 │   ├── Views/                   # SwiftUI 屏幕
 │   ├── OSGKeyboardApp.swift     # @main 入口
 │   ├── PrivacyInfo.xcprivacy    # 隐私清单
-│   └── OpenLess.entitlements    # App Group 声明
-├── OpenLessKeyboard/            # 自定义键盘扩展
+│   └── OSGKeyboard.entitlements # App Group 声明
+├── OSGKeyboardExt/              # 自定义键盘扩展
 │   ├── KeyboardViewController.swift   # 主体类
 │   ├── Services/
 │   │   ├── AudioCaptureService.swift  # AVAudioEngine → 16kHz PCM
 │   │   ├── ASRService.swift           # iOS 26 + iOS 18 ASR
 │   │   └── PolishingService.swift     # LLM 调用（带超时）
 │   └── Views/                   # 录音按钮、波形、键盘主视图
-├── OpenLessShared/              # 主 App + 键盘共享 framework
+├── OSGKeyboardShared/           # 主 App + 键盘共享 framework
 │   ├── Models/                  # ProviderConfig、LLMRequest、LLMProvider
 │   ├── Services/                # LLMClient（OpenAI 兼容）
 │   └── Constants/               # App Group ID
-├── OpenLessTests/               # XCTest 单元测试
+├── OSGKeyboardTests/            # XCTest 单元测试
 ├── project.yml                  # XcodeGen 工程定义
 └── .github/workflows/ci.yml     # Lint + 编译 CI
 ```
@@ -111,7 +111,7 @@ OSGKeyboard/
 
 ## 新增 LLM 提供商
 
-打开 `OpenLessShared/Models/LLMProvider.swift`，在 `presets` 数组里追加一条 `LLMProvider` 即可。默认的 `OpenAICompatibleClient` 处理任何实现了 `POST /chat/completions` 的端点。
+打开 `OSGKeyboardShared/Models/LLMProvider.swift`，在 `presets` 数组里追加一条 `LLMProvider` 即可。默认的 `OpenAICompatibleClient` 处理任何实现了 `POST /chat/completions` 的端点。
 
 ```swift
 LLMProvider(
