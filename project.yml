@@ -1,0 +1,154 @@
+# XcodeGen configuration for OSGKeyboard
+# Run `xcodegen generate` to create OSGKeyboard.xcodeproj
+# Repo only tracks project.yml; .xcodeproj is gitignored.
+
+name: OSGKeyboard
+options:
+  bundleIdPrefix: com.osgkeyboard
+  deploymentTarget:
+    iOS: "18.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+    GENERATE_INFOPLIST_FILE: NO
+    ENABLE_MODULE_VERIFIER: YES
+    CODE_SIGN_STYLE: Automatic
+    CODE_SIGN_IDENTITY: "Apple Development"
+    DEVELOPMENT_TEAM: ""
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+
+  # =========================================================
+  # 主 App
+  # =========================================================
+  OSGKeyboard:
+    type: application
+    platform: iOS
+    sources:
+      - path: OpenLess
+    entitlements:
+      path: OpenLess/OpenLess.entitlements
+    resources:
+      - path: OpenLess/Assets.xcassets
+    info:
+      path: OpenLess/Info.plist
+      properties:
+        CFBundleDisplayName: OSGKeyboard
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen:
+          UIColorName: ""
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        NSMicrophoneUsageDescription: "OSGKeyboard needs microphone access to transcribe your voice into text."
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: false
+        CFBundleURLTypes:
+          - CFBundleURLName: com.osgkeyboard.ios.settings
+            CFBundleURLSchemes:
+              - osgkeyboard
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+    dependencies:
+      - target: OSGKeyboardShared
+        embed: true
+      - target: OSGKeyboardExt
+        # Keyboard Extension is a plugin of the main App; embed it.
+
+  # =========================================================
+  # Keyboard Extension
+  # =========================================================
+  OSGKeyboardExt:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: OpenLessKeyboard
+    entitlements:
+      path: OpenLessKeyboard/OpenLessKeyboard.entitlements
+    info:
+      path: OpenLessKeyboard/Info.plist
+      properties:
+        CFBundleDisplayName: OSGKeyboard
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionAttributes:
+            IsASCIICapable: false
+            PrefersRightToLeft: false
+            PrimaryLanguage: "en-US"
+            RequestsOpenAccess: true
+          NSExtensionPointIdentifier: com.apple.keyboard-service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.keyboard
+        TARGETED_DEVICE_FAMILY: "1,2"
+    dependencies:
+      - target: OSGKeyboardShared
+        embed: false
+
+  # =========================================================
+  # Shared Framework (主 App 与扩展共用)
+  # =========================================================
+  OSGKeyboardShared:
+    type: framework
+    platform: iOS
+    sources:
+      - path: OpenLessShared
+    info:
+      path: OpenLessShared/Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.shared
+        DEFINES_MODULE: YES
+        SKIP_INSTALL: YES
+        BUILD_LIBRARY_FOR_DISTRIBUTION: NO
+        DYLIB_INSTALL_NAME_BASE: "@rpath"
+        APPLICATION_EXTENSION_API_ONLY: YES
+        ENABLE_MODULE_VERIFIER: YES
+
+  # =========================================================
+  # 单元测试
+  # =========================================================
+  OSGKeyboardTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: OpenLessTests
+    info:
+      path: OpenLessTests/Info.plist
+    dependencies:
+      - target: OSGKeyboard
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.tests
+
+schemes:
+  OSGKeyboard:
+    build:
+      targets:
+        OSGKeyboard: all
+        OSGKeyboardExt: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - OSGKeyboardTests
+    archive:
+      config: Release

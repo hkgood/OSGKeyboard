@@ -1,0 +1,34 @@
+# SwiftLint configuration for OSGKeyboard
+# Goal: simple, opinionated, minimal false positives
+
+disabled_rules:
+  - trailing_whitespace
+  - line_length
+  - todo
+  - function_body_length
+  - type_body_length
+  - file_length
+  - cyclomatic_complexity
+  - force_cast
+  - force_try
+
+opt_in_rules:
+  - empty_count
+  - first_where
+  - explicit_init
+  - prefer_self_type_over_type_of_self
+  - sorted_imports
+  - redundant_optional_initialization
+
+included:
+  - OpenLess
+  - OpenLessKeyboard
+  - OpenLessShared
+  - OpenLessTests
+
+excluded:
+  - build
+  - DerivedData
+  - .build
+  - Pods
+  - Carthage
