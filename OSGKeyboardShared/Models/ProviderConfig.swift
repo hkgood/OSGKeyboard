@@ -16,16 +16,18 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     public static let shared = ProviderConfig()
 
     private enum Key {
-        static let providerId   = "config.providerId"
-        static let baseURL      = "config.baseURL"
+        static let providerId      = "config.providerId"
+        static let baseURL         = "config.baseURL"
         // Legacy: apiKey used to live in UserDefaults before the
         // migration. We still read it once (see init below) and then
         // delete the entry, but no other code path touches this key.
-        static let apiKeyLegacy = "config.apiKey"
-        static let model        = "config.model"
-        static let systemPrompt = "config.systemPrompt"
-        static let modeId       = "config.modeId"
-        static let localeId     = "config.localeId"
+        static let apiKeyLegacy    = "config.apiKey"
+        static let model           = "config.model"
+        static let systemPrompt    = "config.systemPrompt"
+        static let modeId          = "config.modeId"
+        static let localeId        = "config.localeId"
+        static let requiresOnDevice = "config.requiresOnDevice"
+        static let engineMode       = "config.engineMode"
     }
 
     @Published public var providerId: String {
@@ -60,6 +62,16 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     @Published public var localeId: String {
         didSet { defaults.set(localeId, forKey: Key.localeId) }
     }
+    /// When `true`, forces SFSpeechRecognizer to on-device only mode.
+    /// Ignored on iOS 26+ where SpeechAnalyzer is always on-device.
+    @Published public var requiresOnDevice: Bool {
+        didSet { defaults.set(requiresOnDevice, forKey: Key.requiresOnDevice) }
+    }
+    /// "local" → on-device ASR only, no LLM polishing.
+    /// "cloud" → ASR + LLM polish (default).
+    @Published public var engineMode: String {
+        didSet { defaults.set(engineMode, forKey: Key.engineMode) }
+    }
 
     public var isConfigured: Bool {
         !baseURL.isEmpty && !apiKey.isEmpty && !model.isEmpty
@@ -89,8 +101,10 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         self.model        = defaults.string(forKey: Key.model)      ?? preset.defaultModel
         self.systemPrompt = defaults.string(forKey: Key.systemPrompt)
             ?? AppGroupStore.defaultSystemPrompt(for: pid)
-        self.modeId       = defaults.string(forKey: Key.modeId)     ?? "polish"
-        self.localeId     = defaults.string(forKey: Key.localeId)   ?? "auto"
+        self.modeId          = defaults.string(forKey: Key.modeId)     ?? "polish"
+        self.localeId        = defaults.string(forKey: Key.localeId)   ?? "auto"
+        self.requiresOnDevice = defaults.bool(forKey: Key.requiresOnDevice)
+        self.engineMode       = defaults.string(forKey: Key.engineMode) ?? "cloud"
     }
 
     /// Read the API key from the Keychain, falling back to a one-time

@@ -30,8 +30,10 @@ public struct AppGroupPersistor {
             return .unavailable
         }
         let store = AppGroupStore()
-        state.localeId = store.localeId
-        state.mode = KeyboardViewController.State.InputMode(rawValue: store.modeId) ?? .polish
+        state.localeId         = store.localeId
+        state.mode             = KeyboardViewController.State.InputMode(rawValue: store.modeId) ?? .polish
+        state.requiresOnDevice = store.requiresOnDevice
+        state.engineMode       = store.engineMode
 
         #if DEBUG
         // Print a masked view of the live App Group config so we can see
@@ -67,5 +69,15 @@ public struct AppGroupPersistor {
     /// Persist `localeId` to the App Group store.
     public func persist(localeId: String) {
         AppGroupStore().setLocaleId(localeId)
+    }
+
+    /// Persist the `requiresOnDevice` flag to the App Group store.
+    public func persist(requiresOnDevice: Bool) {
+        AppGroupStore().setRequiresOnDevice(requiresOnDevice)
+    }
+
+    /// Persist `engineMode` to the App Group store.
+    public func persist(engineMode: String) {
+        AppGroupStore().setEngineMode(engineMode)
     }
 }

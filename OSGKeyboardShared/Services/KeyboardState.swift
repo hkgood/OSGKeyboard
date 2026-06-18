@@ -68,17 +68,27 @@ public final class KeyboardState: ObservableObject {
     /// ASR for Japanese). Updated once per recording by the ASR
     /// pipeline before any `.partial` is emitted.
     @Published public var onDeviceSupported: Bool = false
+    /// When `true`, `SFSpeechRecognizer` is forced to on-device mode.
+    /// Ignored on iOS 26+ where `SpeechAnalyzer` is always on-device.
+    @Published public var requiresOnDevice: Bool = false
+    /// "local" → ASR only, no LLM. "cloud" → ASR + optional LLM polish.
+    @Published public var engineMode: String = "cloud"
+
+    /// Convenience shorthand used by the pipeline and views.
+    public var isLocalEngine: Bool { engineMode == "local" }
 
     // Action hooks — injected by the view controller at install time.
-    public var beginRecording: () -> Void = {}
-    public var endRecording:   () -> Void = {}
-    public var tapMic:         () -> Void = {}
-    public var openSettings:   () -> Void = {}
-    public var setMode:        (InputMode) -> Void = { _ in }
-    public var setLocale:      (String) -> Void = { _ in }
-    public var insertNewline:  () -> Void = {}
-    public var insertSpace:    () -> Void = {}
-    public var deleteBackward: () -> Void = {}
+    public var beginRecording:      () -> Void = {}
+    public var endRecording:        () -> Void = {}
+    public var tapMic:              () -> Void = {}
+    public var openSettings:        () -> Void = {}
+    public var setMode:             (InputMode) -> Void = { _ in }
+    public var setLocale:           (String) -> Void = { _ in }
+    public var setRequiresOnDevice:  (Bool) -> Void = { _ in }
+    public var setEngineMode:        (String) -> Void = { _ in }
+    public var insertNewline:       () -> Void = {}
+    public var insertSpace:         () -> Void = {}
+    public var deleteBackward:      () -> Void = {}
 
     // MARK: - Preview helpers (DEBUG only)
 

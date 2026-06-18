@@ -21,12 +21,14 @@ public struct AppGroupStore: @unchecked Sendable {
     // MARK: - Keys
 
     private enum Key {
-        static let providerId   = "config.providerId"
-        static let baseURL      = "config.baseURL"
-        static let model        = "config.model"
-        static let systemPrompt = "config.systemPrompt"
-        static let modeId       = "config.modeId"
-        static let localeId     = "config.localeId"
+        static let providerId      = "config.providerId"
+        static let baseURL         = "config.baseURL"
+        static let model           = "config.model"
+        static let systemPrompt    = "config.systemPrompt"
+        static let modeId          = "config.modeId"
+        static let localeId        = "config.localeId"
+        static let requiresOnDevice = "config.requiresOnDevice"
+        static let engineMode       = "config.engineMode"
     }
 
     // MARK: - Reads
@@ -62,6 +64,19 @@ public struct AppGroupStore: @unchecked Sendable {
         defaults.string(forKey: Key.localeId) ?? "auto"
     }
 
+    /// When `true`, `SFSpeechRecognizer` is forced to on-device mode
+    /// (`requiresOnDeviceRecognition = true`). Ignored on iOS 26+ where
+    /// `SpeechAnalyzer` is always on-device.
+    public var requiresOnDevice: Bool {
+        defaults.bool(forKey: Key.requiresOnDevice)
+    }
+
+    /// "local" → on-device ASR only, no LLM polishing.
+    /// "cloud" → ASR + LLM polish (default behaviour).
+    public var engineMode: String {
+        defaults.string(forKey: Key.engineMode) ?? "cloud"
+    }
+
     // MARK: - Writes
 
     public func setModeId(_ id: String) {
@@ -70,6 +85,14 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setLocaleId(_ id: String) {
         defaults.set(id, forKey: Key.localeId)
+    }
+
+    public func setRequiresOnDevice(_ value: Bool) {
+        defaults.set(value, forKey: Key.requiresOnDevice)
+    }
+
+    public func setEngineMode(_ mode: String) {
+        defaults.set(mode, forKey: Key.engineMode)
     }
 
     // MARK: - Client

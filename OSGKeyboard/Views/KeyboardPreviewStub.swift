@@ -61,7 +61,7 @@ struct KeyboardPreviewStub: View {
     private var modeChip: some View {
         HStack(spacing: 4) {
             Image(systemName: "wand.and.stars")
-            Text("润色 · Polish")
+            Text("mode.polish")
             Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
         }
         .font(TypeStyle.caption2)
@@ -74,7 +74,7 @@ struct KeyboardPreviewStub: View {
     private var localeChip: some View {
         HStack(spacing: 4) {
             Image(systemName: "globe")
-            Text("简体 · ZH-Hans")
+            Text("locale.zh-Hans")
             Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
         }
         .font(TypeStyle.caption2)
@@ -92,7 +92,7 @@ struct KeyboardPreviewStub: View {
             case .recording:
                 HStack(spacing: 4) {
                     Circle().fill(palette.recordRed).frame(width: 6, height: 6)
-                    Text("REC · 录音中").font(TypeStyle.caption2).foregroundStyle(palette.textSecondary)
+                    Text("keyboard.rec").font(TypeStyle.caption2).foregroundStyle(palette.textSecondary)
                 }
                 .padding(.horizontal, Spacing.xs).padding(.vertical, 3)
                 .background(palette.surface, in: Capsule())
@@ -123,7 +123,7 @@ struct KeyboardPreviewStub: View {
         Group {
             switch phase {
             case .idle:
-                Text("按住说话 · Hold to talk")
+                Text("keyboard.placeholder.idle")
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textTertiary)
             case .recording:
@@ -136,7 +136,7 @@ struct KeyboardPreviewStub: View {
             case .processing:
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(palette.accent)
-                    Text("处理中 · Processing")
+                    Text("keyboard.placeholder.processing")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -234,12 +234,12 @@ struct KeyboardPreviewStub: View {
     // MARK: - Bottom bar
 
     private var bottomBar: some View {
+        // Mirror the real keyboard — globe button removed (the iOS
+        // system keyboard strip already provides one).
         HStack(spacing: Spacing.xxs) {
-            iconButton("globe")
             iconButton("delete.left")
-            Spacer(minLength: 0)
             Button(action: {}) {
-                Text("空格 · Space")
+                Text("common.space")
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                     .frame(maxWidth: .infinity, minHeight: 42)
@@ -247,7 +247,6 @@ struct KeyboardPreviewStub: View {
                     .overlay(RoundedRectangle(cornerRadius: Radius.medium, style: .continuous).stroke(palette.divider, lineWidth: 0.5))
             }
             .buttonStyle(.plain)
-            Spacer(minLength: 0)
             iconButton("return")
         }
         .padding(.horizontal, Spacing.sm)

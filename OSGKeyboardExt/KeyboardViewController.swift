@@ -80,15 +80,17 @@ public final class KeyboardViewController: UIInputViewController {
     // MARK: - Wiring
 
     private func installStateActions() {
-        state.beginRecording  = { [weak self] in self?.pressBegan() }
-        state.endRecording    = { [weak self] in self?.pressEnded() }
-        state.tapMic          = { [weak self] in self?.advanceToNextInputMode() }
-        state.openSettings    = { [weak self] in self?.openHostApp() }
-        state.setMode         = { [weak self] m in self?.persistMode(m) }
-        state.setLocale       = { [weak self] l in self?.persistLocale(l) }
-        state.insertNewline   = { [weak self] in self?.textDocumentProxy.insertText("\n") }
-        state.insertSpace     = { [weak self] in self?.textDocumentProxy.insertText(" ") }
-        state.deleteBackward  = { [weak self] in self?.textDocumentProxy.deleteBackward() }
+        state.beginRecording      = { [weak self] in self?.pressBegan() }
+        state.endRecording        = { [weak self] in self?.pressEnded() }
+        state.tapMic              = { [weak self] in self?.advanceToNextInputMode() }
+        state.openSettings        = { [weak self] in self?.openHostApp() }
+        state.setMode             = { [weak self] m in self?.persistMode(m) }
+        state.setLocale           = { [weak self] l in self?.persistLocale(l) }
+        state.setRequiresOnDevice = { [weak self] v in self?.persistRequiresOnDevice(v) }
+        state.setEngineMode       = { [weak self] m in self?.persistEngineMode(m) }
+        state.insertNewline       = { [weak self] in self?.textDocumentProxy.insertText("\n") }
+        state.insertSpace         = { [weak self] in self?.textDocumentProxy.insertText(" ") }
+        state.deleteBackward      = { [weak self] in self?.textDocumentProxy.deleteBackward() }
     }
 
     private func installSwiftUI() {
@@ -181,7 +183,11 @@ public final class KeyboardViewController: UIInputViewController {
         state.lastTranscript = ""
 
         let locale = resolveLocale(state.localeId)
-        let events = asr.transcribe(stream: session.audio, locale: locale)
+        let events = asr.transcribe(
+            stream: session.audio,
+            locale: locale,
+            requiresOnDevice: state.requiresOnDevice
+        )
 
         asrTask = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -237,8 +243,8 @@ public final class KeyboardViewController: UIInputViewController {
             state.phase = .idle
             return
         }
-        // In `.transcribe` mode, skip the LLM and insert raw.
-        if state.mode == .transcribe {
+        // Local engine or transcribe mode: insert directly, no LLM call.
+        if state.isLocalEngine || state.mode == .transcribe {
             textDocumentProxy.insertText(trimmed)
             state.lastTranscript = ""
             state.phase = .idle
@@ -326,6 +332,16 @@ public final class KeyboardViewController: UIInputViewController {
     private func persistLocale(_ id: String) {
         state.localeId = id
         persistor.persist(localeId: id)
+    }
+
+    private func persistRequiresOnDevice(_ value: Bool) {
+        state.requiresOnDevice = value
+        persistor.persist(requiresOnDevice: value)
+    }
+
+    private func persistEngineMode(_ mode: String) {
+        state.engineMode = mode
+        persistor.persist(engineMode: mode)
     }
 
     // MARK: - Open host app

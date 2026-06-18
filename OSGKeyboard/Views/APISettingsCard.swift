@@ -50,7 +50,7 @@ struct APISettingsCard: View {
                     HStack {
                         Image(systemName: "key.fill")
                             .foregroundStyle(palette.accent)
-                        Text("获取 API Key · Get an API key")
+                        Text("api.getKey")
                             .foregroundStyle(palette.textPrimary)
                         Spacer()
                         Image(systemName: "arrow.up.right.square")
@@ -77,7 +77,7 @@ struct APISettingsCard: View {
     private var keyField: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("API Key · 密钥")
+                Text("api.key")
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
                 Spacer()
@@ -143,7 +143,7 @@ struct APISettingsCard: View {
     private var testConnectionRow: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Connection · 连接测试")
+                Text("api.connection")
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
                 Spacer()
@@ -176,10 +176,10 @@ struct APISettingsCard: View {
 
     private var testButtonLabel: String {
         switch testStatus {
-        case .idle:        return "测试连接 · Test"
-        case .running:     return "测试中… · Testing…"
-        case .success:     return "成功 · Retry"
-        case .failure:     return "失败 · Retry"
+        case .idle:        return NSLocalizedString("api.test.idle", comment: "")
+        case .running:     return NSLocalizedString("api.test.running", comment: "")
+        case .success:     return NSLocalizedString("api.test.success", comment: "")
+        case .failure:     return NSLocalizedString("api.test.failure", comment: "")
         }
     }
 
@@ -218,17 +218,30 @@ struct APISettingsCard: View {
         Task {
             do {
                 let reply = try await client.polish("ping", systemPrompt: "Reply with the single word PONG.")
-                testStatus = .success("连接成功 · Connected · “\(reply.prefix(60))”")
+                // Interpolated success message — LocalizedStringKey can't
+                // take %@, so we use `String.localizedStringWithFormat`
+                // with a key that has %@ in the value.
+                let preview = String(reply.prefix(60))
+                testStatus = .success(String.localizedStringWithFormat(
+                    NSLocalizedString("api.test.connectedWith", comment: "Connected test prefix"),
+                    preview
+                ))
             } catch LLMError.noAPIKey {
-                testStatus = .failure("未填写 API Key · API key missing")
+                testStatus = .failure(NSLocalizedString("api.test.missing", comment: ""))
             } catch let error as LLMError {
                 switch error {
                 case .http(let status):
-                    testStatus = .failure("HTTP \(status)")
+                    testStatus = .failure(String.localizedStringWithFormat(
+                        NSLocalizedString("api.test.http", comment: ""),
+                        status
+                    ))
                 case .rateLimited:
-                    testStatus = .failure("API 限流 (429) · Rate limited")
+                    testStatus = .failure(NSLocalizedString("api.test.rateLimited", comment: ""))
                 case .transport(let msg):
-                    testStatus = .failure("网络错误 · Network error: \(msg)")
+                    testStatus = .failure(String.localizedStringWithFormat(
+                        NSLocalizedString("api.test.transportWith", comment: ""),
+                        msg
+                    ))
                 default:
                     testStatus = .failure(error.errorDescription ?? "\(error)")
                 }

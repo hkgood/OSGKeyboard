@@ -96,7 +96,7 @@ public struct KeyboardRootView: View {
                     .overlay(Circle().stroke(palette.divider, lineWidth: 0.5))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("打开设置 · Open OSGKeyboard settings"))
+            .accessibilityLabel(Text("home.action.openSettingsA11y"))
         }
         .padding(.horizontal, Spacing.md)
     }
@@ -128,16 +128,18 @@ public struct KeyboardRootView: View {
     // MARK: - Bottom bar
 
     private var bottomBar: some View {
+        // The globe / "next keyboard" button used to live here so the
+        // user could long-press to call up the system keyboard picker.
+        // In practice the user already has a "globe" key in the iOS
+        // system keyboard strip (every iOS keyboard does), so an
+        // in-extension globe is redundant and crowds the bar.
+        // Bottom bar: ⌫ (delete)  [    space    ]  ↩ (return)
         HStack(spacing: Spacing.xxs) {
-            ToolbarIconButton(systemName: "globe", label: "nextKeyboard") {
-                state.tapMic()
-            }
             ToolbarIconButton(systemName: "delete.left", label: "delete") {
                 state.deleteBackward()
             }
-            Spacer(minLength: 0)
             Button(action: state.insertSpace) {
-                Text("空格 · Space")
+                Text("common.space")
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                     .frame(maxWidth: .infinity, minHeight: 42)
@@ -148,8 +150,7 @@ public struct KeyboardRootView: View {
                     )
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("空格 · Space"))
-            Spacer(minLength: 0)
+            .accessibilityLabel(Text("common.space"))
             ToolbarIconButton(systemName: "return", label: "newline") {
                 state.insertNewline()
             }
@@ -210,13 +211,13 @@ private struct TranscriptLine: View {
         ZStack {
             switch phase {
             case .idle:
-                Text("按住说话 · Hold to talk")
+                Text("keyboard.placeholder.idle")
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textTertiary)
             case .requestingPermissions:
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(palette.textSecondary)
-                    Text("准备中… · Preparing")
+                    Text("keyboard.placeholder.preparing")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -230,7 +231,7 @@ private struct TranscriptLine: View {
             case .processing:
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(palette.accent)
-                    Text("处理中 · Processing")
+                    Text("keyboard.placeholder.processing")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -255,7 +256,7 @@ private struct TranscriptLine: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityHint(Text("打开 OSGKeyboard 设置,可授予麦克风 / 语音识别权限。Opens the OSGKeyboard settings page where you can grant microphone or speech recognition access."))
+                .accessibilityHint(Text("keyboard.deniedHint"))
             }
         }
         .frame(maxWidth: .infinity)
@@ -360,7 +361,7 @@ private struct LocalEngineChip: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: "iphone.badge.checkmark")
-            Text("本地 · On-device")
+            Text("keyboard.placeholder.localBadge")
         }
         .font(TypeStyle.caption2)
         .foregroundStyle(palette.accent)

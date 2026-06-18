@@ -78,7 +78,7 @@ final class PreviewASRController: ObservableObject {
         // hits `dispatch_assert_queue` in `_swift_task_checkIsolatedSwift`.
         let micGranted = await Self.requestMicrophonePermission()
         guard micGranted else {
-            phase = .denied("麦克风被拒绝 · Mic denied")
+            phase = .denied(NSLocalizedString("keyboard.denied.mic", comment: ""))
             return
         }
 
@@ -86,7 +86,7 @@ final class PreviewASRController: ObservableObject {
         // the callback fires on TCC's reply queue, NOT the main queue.
         let speechGranted = await Self.requestSpeechRecognitionPermission()
         guard speechGranted else {
-            phase = .denied("语音识别被拒绝 · Speech denied")
+            phase = .denied(NSLocalizedString("keyboard.denied.speech", comment: ""))
             return
         }
 

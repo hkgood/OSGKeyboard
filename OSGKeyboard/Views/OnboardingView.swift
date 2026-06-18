@@ -1,11 +1,23 @@
 // OnboardingView.swift
 // OSGKeyboard · Main App
 //
-// Three-step onboarding presented as a horizontal pager:
+// Three-step onboarding:
 //
 //   1) Welcome — what the app does, in one sentence
 //   2) Enable  — Settings → General → Keyboards → Add → Allow Full Access
 //   3) Setup   — pick a provider, paste a key
+//
+// We deliberately do NOT use `TabView` with `.page` style for the
+// pager. That style wraps the content in a `UIPageViewController`,
+// and `UIPageViewController` has a long-standing iOS 18 bug where
+// the keyboard-showing layout reflow on a `TextField` focus is
+// misread as a horizontal swipe — the page jumps back to step 1
+// the moment the user starts typing. Replacing the TabView with a
+// `ZStack`-based conditional view sidesteps the bug entirely; we
+// give up the swipe-to-page gesture, but the Back/Next buttons at
+// the bottom (and the page dots) are the canonical onboarding
+// affordance and the user is never more than one tap from the next
+// page anyway.
 //
 // Visual style: one large accent surface, generous whitespace, single CTA
 // at the bottom. No tipsy animations, no cheerful illustrations — every
@@ -24,12 +36,15 @@ struct OnboardingView: View {
         ZStack {
             palette.background.ignoresSafeArea()
             VStack(spacing: 0) {
-                TabView(selection: $page) {
-                    WelcomePage().tag(0)
-                    EnableKeyboardPage().tag(1)
-                    APISetupPage(config: config).tag(2)
+                Group {
+                    switch page {
+                    case 0: WelcomePage()
+                    case 1: EnableKeyboardPage()
+                    default: APISetupPage(config: config)
+                    }
                 }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .transition(.opacity.combined(with: .move(edge: .trailing)))
 
                 pageDots
                     .padding(.bottom, Spacing.md)
@@ -57,7 +72,7 @@ struct OnboardingView: View {
         HStack(spacing: Spacing.sm) {
             if page > 0 {
                 Button { withAnimation(Motion.soft) { page -= 1 } } label: {
-                    Text("返回 · Back")
+                    Text("common.back")
                         .font(TypeStyle.headline)
                         .frame(maxWidth: .infinity, minHeight: 50)
                         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
@@ -75,7 +90,11 @@ struct OnboardingView: View {
                     if page < 2 { page += 1 }
                 }
             } label: {
-                Text(page == 2 ? (config.isConfigured ? "完成 · Done" : "继续 · Continue") : "下一步 · Next")
+                Text(page == 2
+                     ? (config.isConfigured
+                        ? NSLocalizedString("common.done", comment: "")
+                        : NSLocalizedString("common.continue", comment: ""))
+                     : NSLocalizedString("common.next", comment: ""))
                     .font(TypeStyle.headline)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(
@@ -113,11 +132,11 @@ private struct WelcomePage: View {
                 Text("OSGKeyboard")
                     .font(TypeStyle.title)
                     .foregroundStyle(palette.textPrimary)
-                Text("按住说话,松开即得润色文字。")
+                Text("onboarding.welcome.subtitle")
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textSecondary)
                     .multilineTextAlignment(.center)
-                Text("Hold to talk. Release for polished text, in any app.")
+                Text("onboarding.welcome.subtitle")
                     .font(TypeStyle.footnote)
                     .foregroundStyle(palette.textTertiary)
                     .multilineTextAlignment(.center)
@@ -136,14 +155,14 @@ private struct PrivacyFootnote: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             footnoteRow(icon: "lock.fill",
-                        title: "Audio stays on device · 音频不出本机",
-                        body: "Transcribed locally with Apple's speech engine. · 由 Apple 端侧引擎转录")
+                        title: "privacy.audio.title",
+                        body: "privacy.audio.body")
             footnoteRow(icon: "wifi",
-                        title: "Only the polished text is sent · 仅发送润色后文字",
-                        body: "Sent to your chosen LLM to add structure & punctuation. · 仅向所选 LLM 发送润色后文字")
+                        title: "privacy.network.title",
+                        body: "privacy.network.body")
             footnoteRow(icon: "keyboard",
-                        title: "Works everywhere · 处处可用",
-                        body: "WeChat, Notes, Mail, ChatGPT, Claude, Cursor — anywhere a keyboard appears. · 微信、备忘录、邮件、ChatGPT、Claude、Cursor — 任何键盘出现的地方")
+                        title: "privacy.universal.title",
+                        body: "privacy.universal.body")
         }
         .padding(Spacing.md)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
@@ -154,7 +173,10 @@ private struct PrivacyFootnote: View {
         .padding(.horizontal, Spacing.md)
     }
 
-    private func footnoteRow(icon: String, title: String, body: String) -> some View {
+    // `LocalizedStringKey` (not `String`) so the call-site string
+    // literals are auto-looked-up in Localizable.strings. Passing a
+    // plain `String` would just print the key.
+    private func footnoteRow(icon: String, title: LocalizedStringKey, body: LocalizedStringKey) -> some View {
         HStack(alignment: .top, spacing: Spacing.xs) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .medium))
@@ -185,10 +207,10 @@ private struct EnableKeyboardPage: View {
                 .font(.system(size: 64, weight: .light))
                 .foregroundStyle(palette.accent)
             VStack(spacing: Spacing.sm) {
-                Text("启用 OSGKeyboard")
+                Text("onboarding.enable.title")
                     .font(TypeStyle.title2)
                     .foregroundStyle(palette.textPrimary)
-                Text("Enable OSGKeyboard")
+                Text("onboarding.enable.title")
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textTertiary)
             }
@@ -240,25 +262,56 @@ private struct APISetupPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Spacing.md) {
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text("配置 AI 提供商")
+                    Text("onboarding.api.title")
                         .font(TypeStyle.title2)
                         .foregroundStyle(palette.textPrimary)
-                    Text("Configure your AI provider")
-                        .font(TypeStyle.body)
-                        .foregroundStyle(palette.textTertiary)
-                    Text("OSGKeyboard only calls the AI to polish your text. No audio leaves your device.")
+                    Text("onboarding.api.subtitle")
                         .font(TypeStyle.footnote)
-                        .foregroundStyle(palette.textSecondary)
+                        .foregroundStyle(palette.textTertiary)
                         .padding(.top, Spacing.xxs)
                 }
                 .padding(.horizontal, Spacing.md)
                 .padding(.top, Spacing.lg)
 
-                ProviderPickerSection(config: config)
+                // Same Engine picker as Settings — see EnginePickerSection.
+                EnginePickerSection(config: config)
                     .padding(.horizontal, Spacing.md)
 
-                APISettingsCard(config: config)
+                if config.engineMode == "cloud" {
+                    ProviderPickerSection(config: config)
+                        .padding(.horizontal, Spacing.md)
+
+                    APISettingsCard(config: config)
+                        .padding(.horizontal, Spacing.md)
+                } else {
+                    // Local path: no LLM, no API key needed. Show a short
+                    // confirmation so the user understands "no further
+                    // setup required".
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.system(size: 18, weight: .medium))
+                                .foregroundStyle(palette.accent)
+                                .frame(width: 28)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("onboarding.api.localReady.title")
+                                    .font(TypeStyle.body)
+                                    .foregroundStyle(palette.textPrimary)
+                                Text("onboarding.api.localReady.body")
+                                    .font(TypeStyle.caption2)
+                                    .foregroundStyle(palette.textTertiary)
+                            }
+                            Spacer()
+                        }
+                        .padding(Spacing.md)
+                    }
+                    .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                            .stroke(palette.divider, lineWidth: 0.5)
+                    )
                     .padding(.horizontal, Spacing.md)
+                }
             }
             .padding(.bottom, Spacing.xxxl)
         }

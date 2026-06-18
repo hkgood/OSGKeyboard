@@ -91,14 +91,14 @@ struct HomeView: View {
                     Image(systemName: "waveform")
                         .font(.system(size: 36, weight: .light))
                         .foregroundStyle(palette.accent)
-                    Text("点此配置 · Tap to configure")
+                    Text("home.hero.label")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                 }
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text("打开设置 · Open OSGKeyboard settings"))
+        .accessibilityLabel(Text("home.action.openSettingsA11y"))
     }
 
     // MARK: - Actions
@@ -110,7 +110,7 @@ struct HomeView: View {
                     UIApplication.shared.open(url)
                 }
             } label: {
-                Label("启用键盘 · Enable in iOS Settings", systemImage: "keyboard")
+                Label("home.action.enableInSettings", systemImage: "keyboard")
                     .primaryButton()
             }
             .buttonStyle(.plain)
@@ -118,7 +118,7 @@ struct HomeView: View {
             Button {
                 showSettings = true
             } label: {
-                Label("编辑 API 配置 · Edit API Configuration", systemImage: "slider.horizontal.3")
+                Label("home.action.editApi", systemImage: "slider.horizontal.3")
                     .secondaryButton()
             }
             .buttonStyle(.plain)
@@ -127,7 +127,7 @@ struct HomeView: View {
             Button {
                 showKeyboardPreview = true
             } label: {
-                Label("键盘预览 · Keyboard Preview (Debug)", systemImage: "eye")
+                Label("home.action.keyboardPreview", systemImage: "eye")
                     .secondaryButton()
             }
             .buttonStyle(.plain)

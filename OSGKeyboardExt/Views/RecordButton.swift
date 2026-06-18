@@ -153,7 +153,7 @@ struct RecordButton: View {
         .onChange(of: phase) { _, new in
             breath = (new == .recording)
         }
-        .accessibilityLabel(Text("按住说话 · Push to talk"))
+        .accessibilityLabel(Text("keyboard.pressToTalkA11y"))
     }
 
     @State private var pressArmed: Bool = false

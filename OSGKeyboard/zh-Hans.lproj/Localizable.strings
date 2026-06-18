@@ -1,0 +1,141 @@
+/* OSGKeyboard · 简体中文翻译 */
+
+"OSGKeyboard" = "OSGKeyboard";
+
+/* Onboarding */
+"onboarding.welcome.subtitle" = "按住说话,松开即得润色文字。";
+"onboarding.enable.title" = "启用 OSGKeyboard";
+"onboarding.enable.step1" = "设置 → 通用 → 键盘 → 键盘";
+"onboarding.enable.step2" = "点击「添加新键盘…」并选择 OSGKeyboard";
+"onboarding.enable.step3" = "点击 OSGKeyboard 并启用「允许完全访问」";
+"onboarding.enable.step4" = "允许完全访问是麦克风和网络调用的前提。";
+"onboarding.enable.openSettings" = "打开 iOS 设置";
+"onboarding.api.title" = "选择引擎";
+"onboarding.api.subtitle" = "Local 不需要 API Key;Cloud 用 LLM 润色文字。";
+"onboarding.api.localReady.title" = "无需配置 API Key";
+"onboarding.api.localReady.body" = "本地识别直接可用,按 Done 即可开始使用。";
+
+/* Common navigation */
+"common.back" = "返回";
+"common.next" = "下一步";
+"common.done" = "完成";
+"common.continue" = "继续";
+"common.reset" = "重置";
+"common.cancel" = "取消";
+"common.delete" = "删除";
+"common.space" = "空格";
+"common.newline" = "换行";
+
+/* Privacy footnote (onboarding welcome page) */
+"privacy.audio.title" = "音频不出本机";
+"privacy.audio.body" = "由 Apple 端侧引擎转录。";
+"privacy.network.title" = "仅发送润色后文字";
+"privacy.network.body" = "仅向所选 LLM 发送润色后文字,用于整理结构和标点。";
+"privacy.universal.title" = "处处可用";
+"privacy.universal.body" = "微信、备忘录、邮件、ChatGPT、Claude、Cursor — 任何键盘出现的地方。";
+
+/* Home */
+"home.status.ready" = "就绪";
+"home.status.setupIncomplete" = "未完成配置";
+"home.hero.label" = "点此配置";
+"home.action.enableInSettings" = "在 iOS 设置中启用";
+"home.action.editApi" = "编辑 API 配置";
+"home.action.keyboardPreview" = "键盘预览(Debug)";
+"home.action.openSettingsA11y" = "打开 OSGKeyboard 设置";
+
+/* API settings */
+"api.baseUrl" = "接口地址";
+"api.model" = "模型";
+"api.getKey" = "获取 API Key";
+"api.key" = "API Key";
+"api.key.placeholder" = "sk-…";
+"api.key.show" = "显示";
+"api.key.hide" = "隐藏";
+"api.connection" = "连接测试";
+"api.test.idle" = "测试连接";
+"api.test.running" = "测试中…";
+"api.test.success" = "成功 · 重试";
+"api.test.failure" = "失败 · 重试";
+"api.test.connected" = "连接成功";
+"api.test.missing" = "未填写 API Key";
+"api.test.rateLimited" = "API 限流 (429)";
+"api.test.http" = "HTTP %d";
+"api.test.network" = "网络错误";
+"api.test.connectedWith" = "“%@”";
+"api.test.transportWith" = "%@";
+
+/* Settings */
+"settings.title" = "设置";
+"settings.reset.title" = "重置所有设置?";
+"settings.reset.message" = "API key、model 和 base URL 都会被清空。";
+"settings.reset.confirm" = "重置所有设置";
+"settings.engine.title" = "引擎";
+"settings.engine.subtitle" = "选择识别方式。本地引擎无需 API Key,仅做语音转录。";
+"settings.engine.local.title" = "本地识别";
+"settings.engine.local.ios26" = "始终端侧,无需联网。";
+"settings.engine.local.legacy" = "端侧 ASR,仅转录,无润色。";
+"settings.engine.cloud.title" = "云端润色";
+"settings.engine.cloud.subtitle" = "ASR 转录 + LLM 润色,需要 API Key。";
+"settings.provider.title" = "提供商";
+"settings.provider.subtitle" = "选择 LLM 提供商。";
+"settings.api.title" = "接口";
+"settings.language.title" = "语言";
+"settings.language.subtitle.cloud" = "选择识别语言和文字处理模式。";
+"settings.language.subtitle.local" = "选择识别语言。";
+"settings.mode.title" = "模式";
+"settings.mode.off" = "关闭";
+"settings.mode.transcribe" = "转写";
+"settings.mode.polish" = "润色";
+"settings.systemPrompt.title" = "系统提示";
+"settings.systemPrompt.reset" = "重置";
+"settings.asrLocale" = "识别语言";
+"settings.engineBadge.ios26" = "SpeechAnalyzer — 始终端侧";
+"settings.engineRow.title" = "识别引擎";
+"settings.onDeviceOnly.title" = "仅端侧识别";
+"settings.onDeviceOnly.body" = "禁用云端回退,识别失败时会报错而非联网。";
+"settings.legend.onDevice" = "端侧识别";
+"settings.legend.cloudFallback" = "需联网";
+
+/* App group error */
+"appGroup.error.title" = "App Group 未配置";
+"appGroup.error.body" = "OSGKeyboard 需要 App Group 才能在键盘扩展和主 App 之间共享配置。";
+"appGroup.error.step1" = "在 Apple Developer 后台创建 group.com.osgkeyboard.shared";
+"appGroup.error.step2" = "主 App 和键盘扩展都启用该 App Group";
+"appGroup.error.step3" = "重新生成 provisioning profile 并下载";
+
+/* Keyboard preview */
+"preview.title" = "键盘预览";
+"preview.subtitle" = "点按 disc 开始/结束录音;真实键盘使用同样布局。";
+"preview.placeholder" = "试着输入或按 disc 录音";
+"preview.clear" = "清空";
+"preview.openSettingsA11y" = "打开 OSGKeyboard 设置";
+
+/* Keyboard (ext) */
+"keyboard.placeholder.idle" = "按住说话";
+"keyboard.placeholder.preparing" = "准备中…";
+"keyboard.placeholder.processing" = "处理中…";
+"keyboard.placeholder.error" = "润色失败";
+"keyboard.placeholder.localBadge" = "本地";
+"keyboard.rec" = "REC";
+"keyboard.space" = "空格";
+"keyboard.denied.mic" = "麦克风被拒绝";
+"keyboard.denied.speech" = "语音识别被拒绝";
+"keyboard.openSettingsA11y" = "打开 OSGKeyboard 设置";
+"keyboard.deniedHint" = "打开 OSGKeyboard 设置,可授予麦克风 / 语音识别权限。";
+"keyboard.pressToTalkA11y" = "按住说话";
+
+/* Mode chip labels */
+"mode.off" = "关闭";
+"mode.transcribe" = "转写";
+"mode.polish" = "润色";
+
+/* Locale chip labels (preview stub) */
+"locale.zh-Hans" = "简体";
+
+/* Locale menu items (settings) */
+"locale.auto"     = "跟随系统";
+"locale.zh-Hans"  = "中文(简体)";
+"locale.zh-Hant"  = "中文(繁體)";
+"locale.en-US"    = "English (US)";
+"locale.ja-JP"    = "日本語";
+"locale.ko-KR"    = "한국어";

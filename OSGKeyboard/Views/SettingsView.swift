@@ -39,108 +39,42 @@ struct SettingsView: View {
                     .padding(.vertical, Spacing.md)
                 }
             }
-            .navigationTitle("设置 · Settings")
+            .navigationTitle(LocalizedStringKey("settings.title"))
             .navigationBarTitleDisplayMode(.inline)
             .task { await loadDynamicLocales() }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("完成 · Done") { dismiss() }
+                    Button("common.done") { dismiss() }
                         .font(TypeStyle.headline)
                         .foregroundStyle(palette.accent)
                 }
             }
         }
         .confirmationDialog(
-            "重置所有设置? · Reset all settings?",
+            LocalizedStringKey("settings.reset.title"),
             isPresented: $showResetConfirm,
             titleVisibility: .visible
         ) {
-            Button("重置 · Reset", role: .destructive) {
+            Button(LocalizedStringKey("common.reset"), role: .destructive) {
                 config.reset()
             }
-            Button("取消 · Cancel", role: .cancel) {}
+            Button(LocalizedStringKey("common.cancel"), role: .cancel) {}
         } message: {
-            Text("API key、model 和 base URL 都会被清空。\nAPI key, model, and base URL will be cleared.")
+            Text("settings.reset.message")
         }
     }
 
     // MARK: - Engine
 
-    private var localEngineSubtitle: String {
-        if #available(iOS 26, *) {
-            return "SpeechAnalyzer · 始终端侧，无需联网 · Always on-device, no network"
-        } else {
-            return "端侧 ASR · 仅转录，无润色 · On-device ASR, transcription only, no polish"
-        }
-    }
-
     private var engineSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            sectionHeader("引擎 · Engine", subtitle: "选择识别方式。本地引擎无需 API Key，仅做语音转录。\nPick the recognition engine. Local engine does transcription only, no API key needed.")
-            VStack(spacing: 0) {
-                engineOptionRow(
-                    id: "local",
-                    icon: "iphone.badge.checkmark",
-                    title: "本地识别",
-                    subtitle: localEngineSubtitle
-                )
-                Divider().background(palette.divider)
-                engineOptionRow(
-                    id: "cloud",
-                    icon: "wand.and.stars",
-                    title: "云端润色",
-                    subtitle: "ASR 转录 + LLM 润色，需要 API Key · ASR + LLM polish, API key required"
-                )
-            }
-            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
-        }
-    }
-
-    private func engineOptionRow(id: String, icon: String, title: String, subtitle: String) -> some View {
-        let isSelected = config.engineMode == id
-        return Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                config.engineMode = id
-                // Lock mode to transcribe when switching to local engine
-                if id == "local" { config.modeId = "transcribe" }
-            }
-        } label: {
-            HStack(spacing: Spacing.sm) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(isSelected ? palette.accent : palette.textSecondary)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(TypeStyle.body)
-                        .foregroundStyle(isSelected ? palette.accent : palette.textPrimary)
-                    Text(subtitle)
-                        .font(TypeStyle.caption2)
-                        .foregroundStyle(palette.textTertiary)
-                }
-                Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(palette.accent)
-                }
-            }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
+        EnginePickerSection(config: config)
     }
 
     // MARK: - Provider
 
     private var providerSection: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            sectionHeader("Provider · 提供商", subtitle: "选择 LLM 提供商。Pick the LLM that polishes your dictation.")
+            sectionHeader("settings.provider.title", subtitle: "settings.provider.subtitle")
             ProviderPickerSection(config: config)
         }
     }
@@ -193,14 +127,14 @@ struct SettingsView: View {
                     Image(systemName: "iphone")
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.success)
-                    Text("端侧识别 · On-device")
+                    Text("settings.legend.onDevice")
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.textTertiary)
                     Spacer()
                     Image(systemName: "cloud")
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.warning)
-                    Text("需联网 · Cloud fallback")
+                    Text("settings.legend.cloudFallback")
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.textTertiary)
                 }
@@ -216,7 +150,7 @@ struct SettingsView: View {
     private var asrEngineRow: some View {
         if #available(iOS 26, *) {
             HStack(spacing: Spacing.sm) {
-                Text("识别引擎 · Engine")
+                Text("settings.engineRow.title")
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                 Spacer()
@@ -224,7 +158,7 @@ struct SettingsView: View {
                     Image(systemName: "iphone.badge.checkmark")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(palette.success)
-                    Text("SpeechAnalyzer · 始终端侧")
+                    Text("settings.engineBadge.ios26")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.success)
                 }
@@ -240,7 +174,7 @@ struct SettingsView: View {
                 set: { config.requiresOnDevice = $0 }
             )) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("仅端侧识别 · On-device only")
+                    Text("settings.onDeviceOnly.title")
                         .font(TypeStyle.body)
                         .foregroundStyle(palette.textPrimary)
                     Text("禁用云端回退，识别失败时会报错而非联网 · Disable cloud fallback, fail locally instead of going online")
@@ -261,20 +195,20 @@ struct SettingsView: View {
 
     private var staticLocales: [(id: String, label: String, onDevice: Bool)] {
         [
-            ("auto",     "Auto · 跟随系统", false),
-            ("zh-Hans",  "中文(简体)",      false),
-            ("zh-Hant",  "中文(繁體)",      false),
-            ("en-US",    "English (US)",    false),
-            ("ja-JP",    "日本語",          false),
-            ("ko-KR",    "한국어",          false)
+            ("auto",     NSLocalizedString("locale.auto", comment: ""),     false),
+            ("zh-Hans",  NSLocalizedString("locale.zh-Hans", comment: ""),  false),
+            ("zh-Hant",  NSLocalizedString("locale.zh-Hant", comment: ""),  false),
+            ("en-US",    NSLocalizedString("locale.en-US", comment: ""),    false),
+            ("ja-JP",    NSLocalizedString("locale.ja-JP", comment: ""),    false),
+            ("ko-KR",    NSLocalizedString("locale.ko-KR", comment: ""),    false)
         ]
     }
 
     private var modeOptions: [(id: String, label: String)] {
         [
-            ("off",        "Off · 关闭"),
-            ("transcribe", "Transcribe · 仅转写"),
-            ("polish",     "Polish · 润色")
+            ("off",        NSLocalizedString("settings.mode.off", comment: "")),
+            ("transcribe", NSLocalizedString("settings.mode.transcribe", comment: "")),
+            ("polish",     NSLocalizedString("settings.mode.polish", comment: ""))
         ]
     }
 
@@ -314,7 +248,7 @@ struct SettingsView: View {
             HStack {
                 sectionHeader("System Prompt · 系统提示", subtitle: nil)
                 Spacer()
-                Button("重置 · Reset") { config.systemPrompt = config.defaultSystemPrompt }
+                Button("common.reset") { config.systemPrompt = config.defaultSystemPrompt }
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.accent)
             }
@@ -340,7 +274,7 @@ struct SettingsView: View {
         Button(role: .destructive) {
             showResetConfirm = true
         } label: {
-            Text("重置所有设置 · Reset all settings")
+            Text("settings.reset.confirm")
                 .font(TypeStyle.caption)
                 .foregroundStyle(palette.danger)
                 .frame(maxWidth: .infinity, minHeight: 40)
@@ -350,7 +284,7 @@ struct SettingsView: View {
 
     // MARK: - Header
 
-    private func sectionHeader(_ title: String, subtitle: String?) -> some View {
+    private func sectionHeader(_ title: LocalizedStringKey, subtitle: LocalizedStringKey?) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(TypeStyle.caption2)
@@ -423,7 +357,7 @@ private struct LocalePickerRow: View {
 
     var body: some View {
         HStack {
-            Text("ASR locale · 识别语言")
+            Text("settings.asrLocale")
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textPrimary)
             Spacer()

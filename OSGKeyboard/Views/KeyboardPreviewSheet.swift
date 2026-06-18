@@ -77,10 +77,10 @@ struct KeyboardPreviewSheet: View {
             palette.background.ignoresSafeArea()
             VStack(spacing: 0) {
                 VStack(spacing: Spacing.md) {
-                    Text("键盘预览 · Keyboard Preview")
+                    Text("preview.title")
                         .font(TypeStyle.title2)
                         .foregroundStyle(palette.textPrimary)
-                    Text("点按 disc 开始/结束录音;真实键盘使用同样布局。\nTap the disc to start/stop recording. The real keyboard uses the same layout.")
+                    Text("preview.subtitle")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                         .multilineTextAlignment(.center)
@@ -110,7 +110,7 @@ struct KeyboardPreviewSheet: View {
         HStack(spacing: Spacing.xs) {
             Image(systemName: "text.cursor")
                 .foregroundStyle(palette.textSecondary)
-            TextField("试着输入或按 disc 录音 · Type or tap to record", text: $typedText, axis: .vertical)
+            TextField(LocalizedStringKey("preview.placeholder"), text: $typedText, axis: .vertical)
                 .lineLimit(1...4)
                 .textFieldStyle(.plain)
                 .foregroundStyle(palette.textPrimary)
@@ -123,7 +123,7 @@ struct KeyboardPreviewSheet: View {
                         .foregroundStyle(palette.textTertiary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("清空 · Clear text")
+                .accessibilityLabel("preview.clear")
             }
         }
         .padding(Spacing.md)

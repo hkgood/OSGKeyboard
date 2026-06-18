@@ -1,0 +1,141 @@
+/* OSGKeyboard · English localization (development language) */
+
+"OSGKeyboard" = "OSGKeyboard";
+
+/* Onboarding */
+"onboarding.welcome.subtitle" = "Hold to talk. Release for polished text, in any app.";
+"onboarding.enable.title" = "Enable OSGKeyboard";
+"onboarding.enable.step1" = "Settings → General → Keyboard → Keyboards";
+"onboarding.enable.step2" = "Tap “Add New Keyboard…” and choose OSGKeyboard";
+"onboarding.enable.step3" = "Tap OSGKeyboard and enable “Allow Full Access”";
+"onboarding.enable.step4" = "Allow Full Access is required for the microphone and LLM calls.";
+"onboarding.enable.openSettings" = "Open iOS Settings";
+"onboarding.api.title" = "Choose engine";
+"onboarding.api.subtitle" = "Local needs no API key; Cloud polishes your text via LLM.";
+"onboarding.api.localReady.title" = "No API key needed";
+"onboarding.api.localReady.body" = "Local recognition is ready to use. Tap Done to start.";
+
+/* Common navigation */
+"common.back" = "Back";
+"common.next" = "Next";
+"common.done" = "Done";
+"common.continue" = "Continue";
+"common.reset" = "Reset";
+"common.cancel" = "Cancel";
+"common.delete" = "Delete";
+"common.space" = "Space";
+"common.newline" = "Return";
+
+/* Privacy footnote (onboarding welcome page) */
+"privacy.audio.title" = "Audio stays on device";
+"privacy.audio.body" = "Transcribed locally with Apple’s speech engine.";
+"privacy.network.title" = "Only the polished text is sent";
+"privacy.network.body" = "Sent to your chosen LLM to add structure & punctuation.";
+"privacy.universal.title" = "Works everywhere";
+"privacy.universal.body" = "WeChat, Notes, Mail, ChatGPT, Claude, Cursor — anywhere a keyboard appears.";
+
+/* Home */
+"home.status.ready" = "Ready";
+"home.status.setupIncomplete" = "Setup incomplete";
+"home.hero.label" = "Tap to configure";
+"home.action.enableInSettings" = "Enable in iOS Settings";
+"home.action.editApi" = "Edit API Configuration";
+"home.action.keyboardPreview" = "Keyboard Preview (Debug)";
+"home.action.openSettingsA11y" = "Open OSGKeyboard settings";
+
+/* API settings */
+"api.baseUrl" = "Base URL";
+"api.model" = "Model";
+"api.getKey" = "Get an API key";
+"api.key" = "API Key";
+"api.key.placeholder" = "sk-…";
+"api.key.show" = "Show";
+"api.key.hide" = "Hide";
+"api.connection" = "Connection";
+"api.test.idle" = "Test connection";
+"api.test.running" = "Testing…";
+"api.test.success" = "Success · Retry";
+"api.test.failure" = "Failed · Retry";
+"api.test.connected" = "Connected";
+"api.test.missing" = "API key missing";
+"api.test.rateLimited" = "Rate limited (429)";
+"api.test.http" = "HTTP %d";
+"api.test.network" = "Network error";
+"api.test.connectedWith" = "“%@”";
+"api.test.transportWith" = "%@";
+
+/* Settings */
+"settings.title" = "Settings";
+"settings.reset.title" = "Reset all settings?";
+"settings.reset.message" = "API key, model, and base URL will be cleared.";
+"settings.reset.confirm" = "Reset all settings";
+"settings.engine.title" = "Engine";
+"settings.engine.subtitle" = "Pick the recognition engine. Local engine does transcription only, no API key needed.";
+"settings.engine.local.title" = "On-device";
+"settings.engine.local.ios26" = "Always on-device, no network.";
+"settings.engine.local.legacy" = "On-device ASR. Transcription only, no polish.";
+"settings.engine.cloud.title" = "Cloud polish";
+"settings.engine.cloud.subtitle" = "ASR + LLM polish. API key required.";
+"settings.provider.title" = "Provider";
+"settings.provider.subtitle" = "Pick the LLM that polishes your dictation.";
+"settings.api.title" = "API";
+"settings.language.title" = "Language";
+"settings.language.subtitle.cloud" = "Recognition language and text processing mode.";
+"settings.language.subtitle.local" = "Recognition language.";
+"settings.mode.title" = "Mode";
+"settings.mode.off" = "Off";
+"settings.mode.transcribe" = "Transcribe";
+"settings.mode.polish" = "Polish";
+"settings.systemPrompt.title" = "System Prompt";
+"settings.systemPrompt.reset" = "Reset";
+"settings.asrLocale" = "ASR locale";
+"settings.engineBadge.ios26" = "SpeechAnalyzer — always on-device";
+"settings.engineRow.title" = "Recognition engine";
+"settings.onDeviceOnly.title" = "On-device only";
+"settings.onDeviceOnly.body" = "Disable cloud fallback. The keyboard reports an error instead of going online.";
+"settings.legend.onDevice" = "On-device";
+"settings.legend.cloudFallback" = "Cloud fallback";
+
+/* App group error */
+"appGroup.error.title" = "App Group not configured";
+"appGroup.error.body" = "OSGKeyboard needs an App Group to share config between the main app and the keyboard extension.";
+"appGroup.error.step1" = "Create group.com.osgkeyboard.shared in the Apple Developer portal";
+"appGroup.error.step2" = "Enable it for both the main app and the keyboard extension";
+"appGroup.error.step3" = "Re-generate the provisioning profile and download it";
+
+/* Keyboard preview */
+"preview.title" = "Keyboard Preview";
+"preview.subtitle" = "Tap the disc to start/stop recording. The real keyboard uses the same layout.";
+"preview.placeholder" = "Type or tap to record";
+"preview.clear" = "Clear text";
+"preview.openSettingsA11y" = "Open OSGKeyboard settings";
+
+/* Keyboard (ext) */
+"keyboard.placeholder.idle" = "Hold to talk";
+"keyboard.placeholder.preparing" = "Preparing";
+"keyboard.placeholder.processing" = "Processing";
+"keyboard.placeholder.error" = "Polishing failed";
+"keyboard.placeholder.localBadge" = "On-device";
+"keyboard.rec" = "REC";
+"keyboard.space" = "Space";
+"keyboard.denied.mic" = "Mic denied";
+"keyboard.denied.speech" = "Speech denied";
+"keyboard.openSettingsA11y" = "Open OSGKeyboard settings";
+"keyboard.deniedHint" = "Opens the OSGKeyboard settings page where you can grant microphone or speech recognition access.";
+"keyboard.pressToTalkA11y" = "Push to talk";
+
+/* Mode chip labels (used in both ext + preview stub) */
+"mode.off" = "Off";
+"mode.transcribe" = "Transcribe";
+"mode.polish" = "Polish";
+
+/* Locale chip labels (preview stub) */
+"locale.zh-Hans" = "ZH-Hans";
+
+/* Locale menu items (settings) */
+"locale.auto"     = "Auto";
+"locale.zh-Hans"  = "Chinese (Simplified)";
+"locale.zh-Hant"  = "Chinese (Traditional)";
+"locale.en-US"    = "English (US)";
+"locale.ja-JP"    = "Japanese";
+"locale.ko-KR"    = "Korean";

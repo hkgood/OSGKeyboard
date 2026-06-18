@@ -54,12 +54,21 @@ targets:
           - com.osgkeyboard.shared
     resources:
       - path: OSGKeyboard/Assets.xcassets
+      - path: OSGKeyboard/en.lproj
+      - path: OSGKeyboard/zh-Hans.lproj
     info:
       path: OSGKeyboard/Info.plist
       properties:
         CFBundleDisplayName: OSGKeyboard
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        # English is the development language; zh-Hans is the only
+        # translation right now. The list also tells iOS to surface
+        # the keyboard in the per-app language picker for both.
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations:
+          - en
+          - zh-Hans
         UILaunchScreen:
           UIColorName: "BackgroundColor"
         UISupportedInterfaceOrientations:
@@ -94,6 +103,11 @@ targets:
     platform: iOS
     sources:
       - path: OSGKeyboardExt
+        excludes:
+          - "en.lproj"
+          - "zh-Hans.lproj"
+      - path: OSGKeyboardExt/en.lproj
+      - path: OSGKeyboardExt/zh-Hans.lproj
     settings:
       base:
         IPHONEOS_DEPLOYMENT_TARGET: "18.0"
