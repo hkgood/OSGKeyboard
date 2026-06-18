@@ -38,6 +38,8 @@
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>OSGKeyboard needs microphone access to transcribe your voice into text.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>OSGKeyboard uses on-device speech recognition to transcribe your dictation. Audio never leaves your device.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

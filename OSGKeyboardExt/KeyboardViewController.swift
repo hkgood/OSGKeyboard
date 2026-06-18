@@ -20,6 +20,7 @@
 import UIKit
 import SwiftUI
 import AVFoundation
+import Speech
 import OSGKeyboardShared
 
 @objc(KeyboardViewController)
@@ -199,9 +200,23 @@ public final class KeyboardViewController: UIInputViewController {
         // user already feels the press registered.
             Task { @MainActor [weak self] in
             guard let self else { return }
-            let granted = await self.requestMicPermission()
-            guard granted else {
+            let micGranted = await self.requestMicPermission()
+            guard micGranted else {
                 self.state.phase = .error("麦克风被拒绝,请到「设置」中允许")
+                self.scheduleAutoClearError()
+                return
+            }
+            // iOS 18 SFSpeechRecognizer path: we explicitly ask for Speech
+            // recognition permission. Without this call + the
+            // NSSpeechRecognitionUsageDescription key in Info.plist the
+            // recogniser silently returns .denied and the user hears
+            // nothing back.
+            // iOS 26 SpeechAnalyzer path (planned for the next release)
+            // does not expose an explicit request API — the framework
+            // prompts via the same plist key on first use.
+            let speechGranted = await self.requestSpeechPermission()
+            guard speechGranted else {
+                self.state.phase = .error("语音识别被拒绝,请到「设置」中允许")
                 self.scheduleAutoClearError()
                 return
             }
@@ -344,6 +359,24 @@ public final class KeyboardViewController: UIInputViewController {
                 }
                 return false
             @unknown default: return false
+            }
+        }
+    }
+
+    /// Request Speech Recognition permission. Returns true if granted
+    /// (or already authorised). For the iOS 18 SFSpeechRecognizer path
+    /// this is required before recognition can begin; for the iOS 26
+    /// SpeechAnalyzer path the framework prompts on first use.
+    private func requestSpeechPermission() async -> Bool {
+        await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+            SFSpeechRecognizer.requestAuthorization { status in
+                switch status {
+                case .authorized: cont.resume(returning: true)
+                case .denied, .restricted, .notDetermined:
+                    cont.resume(returning: false)
+                @unknown default:
+                    cont.resume(returning: false)
+                }
             }
         }
     }

@@ -73,6 +73,11 @@ final class AppleSpeechASR: ASRService, @unchecked Sendable {
             let request = SFSpeechAudioBufferRecognitionRequest()
             request.shouldReportPartialResults = true
             request.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
+            if !recognizer.supportsOnDeviceRecognition {
+                #if DEBUG
+                print("⚠️ 设备不支持 \(locale.identifier) 端侧 ASR, 回退云端。")
+                #endif
+            }
 
             let task = recognizer.recognitionTask(with: request) { result, error in
                 if let error {

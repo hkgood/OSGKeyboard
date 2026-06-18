@@ -20,6 +20,8 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>OSGKeyboard uses on-device speech recognition to transcribe your dictation. Audio never leaves your device.</string>
 	<key>NSExtension</key>
 	<dict>
 		<key>NSExtensionAttributes</key>
