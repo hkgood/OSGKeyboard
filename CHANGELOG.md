@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **iPhone only**: Set `TARGETED_DEVICE_FAMILY` to `"1"` for both `OSGKeyboard` and `OSGKeyboardExt` targets. Removed `UIRequiresFullScreen` and trimmed `UISupportedInterfaceOrientations` to Portrait only (iPad is no longer a supported device).
+- **Remove top divider line**: Deleted the 0.5 pt `palette.divider` overlay from `KeyboardRootView` — the subtle highlight gradient is retained; the hard separator line is gone.
+- **Keyboard preview always dark**: `KeyboardPreviewSheet` now injects `.environment(\.themePalette, Palette.dark)` alongside `.environment(\.colorScheme, .dark)` on `KeyboardPreviewStub`, so the preview palette is always the dark variant regardless of the app's active theme.
+
+## [0.1.2] - Planned
+
+### Fixed
+- **Light/Dark mode consistency**: `cardSurface()`, `primaryButton()`, `secondaryButton()`, and `pillChip()` view modifiers in `Theme.swift` now use `ViewModifier` structs that read from `@Environment(\.themePalette)`. Previously they used hardcoded dark `Palette` constants, causing cards and buttons to always render in dark mode even when the main App was in light mode.
+- **TestFlight error 90474** (Invalid bundle): Added `UIRequiresFullScreen: true` and all four `UISupportedInterfaceOrientations` values to `Info.plist` via `project.yml`. The app targets iPhone + iPad (`TARGETED_DEVICE_FAMILY: "1,2"`), and Apple requires all four orientations for iPad multitasking; setting `UIRequiresFullScreen` opts out of slide-over/split-view while still satisfying the validator.
+- **Keyboard Preview cycling**: The "Tap the disc to cycle states" prompt now actually works. `KeyboardPreviewStub` gained an `onTap` closure wired to `cyclePhase()` in `KeyboardPreviewSheet`, which rotates `.idle → .recording → .processing → .idle` with animation. Sample transcript text is shown during the `.recording` phase.
+
+### Added
+- **Dynamic ASR locale picker**: Settings now loads the full list of supported locales from `SFSpeechRecognizer.supportedLocales()` on appear (off the main thread). Each locale shows an on-device badge (iPhone icon) when the device supports on-device recognition for that language — giving users confidence about which locales avoid sending audio to the cloud. A static fallback list is shown while the async load is in progress.
+- `Speech.framework` linked to the main App target in `project.yml` (needed by the new dynamic locale loader in `SettingsView`).
+
+### Changed
+- `pillChip(foreground:)` signature changed from `foreground: Color = Palette.textSecondary` to `foreground: Color? = nil`; callers that pass an explicit color are unaffected.
+
 > **Note: v0.1.1 polish** — this is a small follow-up to v0.1.0 focused on review-driven cleanup
 > (theme follow-up, ASR robustness, debug-print hygiene, docs). **No features are removed.**
 > The iOS 26 `SpeechAnalyzer` path remains deferred to 0.2.0 (see below); v0.1.1 users continue

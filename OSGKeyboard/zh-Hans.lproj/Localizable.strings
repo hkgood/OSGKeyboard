@@ -109,6 +109,8 @@
 "preview.placeholder" = "试着输入或按 disc 录音";
 "preview.clear" = "清空";
 "preview.openSettingsA11y" = "打开 OSGKeyboard 设置";
+"preview.modeChip.cycle" = "切换输入模式";
+"preview.localeChip.cycle" = "切换识别语言";
 
 /* Keyboard (ext) */
 "keyboard.placeholder.idle" = "按住说话";

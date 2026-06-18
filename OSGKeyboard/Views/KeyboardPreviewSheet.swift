@@ -143,8 +143,12 @@ struct KeyboardPreviewSheet: View {
                 phase: stubPhase,
                 level: asr.level,
                 transcript: stubTranscript,
+                modeId: config.modeId,
+                localeId: config.localeId,
                 onTap: cyclePhase,
-                openSettings: { showSettings = true }
+                openSettings: { showSettings = true },
+                onModeCycle: cycleMode,
+                onLocaleCycle: cycleLocale
             )
         }
     }
@@ -162,6 +166,40 @@ struct KeyboardPreviewSheet: View {
             case .requestingPermission, .processing:
                 break
             }
+        }
+    }
+
+    /// Cycle the input mode on tap of the mode chip. The order mirrors
+    /// the Settings picker (`off` → `transcribe` → `polish` → wrap)
+    /// so the user sees the same surface in both places.
+    ///
+    /// Note: when the user picks `off` we *also* stop any in-flight
+    /// recording — leaving the disc mid-recording in an "off" mode
+    /// would be a confusing state (the user is recording but the
+    /// keyboard says it won't insert anything).
+    private func cycleMode() {
+        let order = ["off", "transcribe", "polish"]
+        let current = order.firstIndex(of: config.modeId) ?? 0
+        let next = order[(current + 1) % order.count]
+        config.modeId = next
+        if next == "off" && asr.phase == .recording {
+            asr.stop()
+        }
+    }
+
+    /// Cycle the locale on tap of the locale chip. Same order as
+    /// `staticLocales` in `SettingsView.swift` so both surfaces stay
+    /// in sync. When the user picks a new locale we *also* stop any
+    /// in-flight recording — ASR sessions are bound to the locale
+    /// they were started with, and continuing to feed buffers into a
+    /// stale session would produce garbage in the next `.final`.
+    private func cycleLocale() {
+        let order = ["auto", "zh-Hans", "zh-Hant", "en-US", "ja-JP", "ko-KR"]
+        let current = order.firstIndex(of: config.localeId) ?? 0
+        let next = order[(current + 1) % order.count]
+        config.localeId = next
+        if asr.phase == .recording {
+            asr.stop()
         }
     }
 

@@ -42,8 +42,9 @@ fastlane/test_output
 *.swp
 *.swo
 
-# Local config (API keys, etc.)
+# Local config (API keys, signing, etc.)
 *.local
+Signing.local.xcconfig
 .env
 .env.*
 

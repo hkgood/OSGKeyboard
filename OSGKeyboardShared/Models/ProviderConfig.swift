@@ -74,7 +74,13 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     }
 
     public var isConfigured: Bool {
-        !baseURL.isEmpty && !apiKey.isEmpty && !model.isEmpty
+        // Local engine (on-device ASR only) doesn't need an API key,
+        // base URL, or model — the LLM round-trip is skipped entirely.
+        // Treat it as always-configured so onboarding's "Next" button
+        // enables the moment the user picks the local path, instead
+        // of forcing them to fill in cloud fields they won't use.
+        if engineMode == "local" { return true }
+        return !baseURL.isEmpty && !apiKey.isEmpty && !model.isEmpty
     }
 
     /// The system prompt the user *sees* in the editor — fall back to the

@@ -109,6 +109,8 @@
 "preview.placeholder" = "Type or tap to record";
 "preview.clear" = "Clear text";
 "preview.openSettingsA11y" = "Open OSGKeyboard settings";
+"preview.modeChip.cycle" = "Cycle input mode";
+"preview.localeChip.cycle" = "Cycle recognition language";
 
 /* Keyboard (ext) */
 "keyboard.placeholder.idle" = "Hold to talk";

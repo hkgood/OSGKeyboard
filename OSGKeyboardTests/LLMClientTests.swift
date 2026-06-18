@@ -46,6 +46,28 @@ final class LLMClientTests: XCTestCase {
         XCTAssertTrue(config2.isConfigured)
     }
 
+    /// Local engine path: with `engineMode = "local"`, `isConfigured`
+    /// must return `true` even when the API key is empty — onboarding
+    /// gates the "Next" button on this property, and the local path
+    /// never needs a key. Regression: see commit `isConfigured` fix
+    /// that exposed this gate.
+    func testIsConfiguredTrueForLocalEngineWithoutAPIKey() {
+        let suiteName = "group.com.osgkeyboard.shared.tests"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let config = ProviderConfig(defaults: defaults)
+        // No apiKey, no baseURL, no model — cloud would fail.
+        XCTAssertFalse(config.isConfigured)
+        // Switch to local engine: should flip to true regardless of
+        // the missing cloud fields.
+        config.engineMode = "local"
+        XCTAssertTrue(config.isConfigured)
+        // And back to cloud: should flip to false again.
+        config.engineMode = "cloud"
+        XCTAssertFalse(config.isConfigured)
+    }
+
     // MARK: - OpenAICompatibleClient
 
     func testPolishSendsCorrectRequestAndDecodesResponse() async throws {

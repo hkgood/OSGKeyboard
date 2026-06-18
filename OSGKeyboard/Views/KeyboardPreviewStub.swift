@@ -18,10 +18,26 @@ struct KeyboardPreviewStub: View {
     let phase: Phase
     let level: Double
     let transcript: String
+    /// Current input mode id (`off` / `transcribe` / `polish`). Shown in
+    /// the mode chip in the top bar. The chip is wired to `onModeCycle`,
+    /// so tapping it actually advances the mode and the label updates
+    /// in real time — the previous version was a static decoration and
+    /// the user couldn't tell the chip was even a button.
+    let modeId: String
+    /// Current locale id (`auto` / `zh-Hans` / `en-US` / …). Shown in
+    /// the locale chip. Same lifecycle as `modeId`.
+    let localeId: String
     /// Called when the user taps the record disc. Use this to cycle states in the preview sheet.
     var onTap: () -> Void = {}
     /// Called when the user taps the settings gear icon.
     var openSettings: () -> Void = {}
+    /// Cycle to the next mode in `[off, transcribe, polish]`. Owned by
+    /// the sheet so `ProviderConfig` (a shared model) stays the source
+    /// of truth — the stub just renders whatever it's told.
+    var onModeCycle: () -> Void = {}
+    /// Cycle to the next locale in the supported list. Same ownership
+    /// story as `onModeCycle`.
+    var onLocaleCycle: () -> Void = {}
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -59,29 +75,78 @@ struct KeyboardPreviewStub: View {
     }
 
     private var modeChip: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "wand.and.stars")
-            Text("mode.polish")
-            Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
+        Button(action: onModeCycle) {
+            HStack(spacing: 4) {
+                Image(systemName: modeIconName)
+                Text(modeChipLabel)
+                Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
+            }
+            .font(TypeStyle.caption2)
+            .foregroundStyle(palette.textPrimary)
+            .padding(.horizontal, Spacing.xs + 2).padding(.vertical, 4)
+            .background(palette.surfaceElevated, in: Capsule())
+            .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
         }
-        .font(TypeStyle.caption2)
-        .foregroundStyle(palette.textPrimary)
-        .padding(.horizontal, Spacing.xs + 2).padding(.vertical, 4)
-        .background(palette.surfaceElevated, in: Capsule())
-        .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("preview.modeChip.cycle"))
     }
 
     private var localeChip: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "globe")
-            Text("locale.zh-Hans")
-            Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
+        Button(action: onLocaleCycle) {
+            HStack(spacing: 4) {
+                Image(systemName: "globe")
+                Text(localeChipLabel)
+                Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
+            }
+            .font(TypeStyle.caption2)
+            .foregroundStyle(palette.textPrimary)
+            .padding(.horizontal, Spacing.xs + 2).padding(.vertical, 4)
+            .background(palette.surfaceElevated, in: Capsule())
+            .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
         }
-        .font(TypeStyle.caption2)
-        .foregroundStyle(palette.textPrimary)
-        .padding(.horizontal, Spacing.xs + 2).padding(.vertical, 4)
-        .background(palette.surfaceElevated, in: Capsule())
-        .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("preview.localeChip.cycle"))
+    }
+
+    /// Display label for the mode chip. The mode ids are
+    /// `off` / `transcribe` / `polish`; we show a user-facing label
+    /// from `Localizable.strings` and fall back to the raw id if a
+    /// translation is missing (shouldn't happen, but cheaper than
+    /// crashing in the preview).
+    private var modeChipLabel: LocalizedStringKey {
+        switch modeId {
+        case "off":        return "settings.mode.off"
+        case "transcribe": return "settings.mode.transcribe"
+        case "polish":     return "settings.mode.polish"
+        default:           return LocalizedStringKey(modeId)
+        }
+    }
+
+    /// Display label for the locale chip. Cycles through the static
+    /// locale list the Settings view also uses — see `staticLocales` in
+    /// `SettingsView.swift`. We keep the list inline here so the
+    /// preview doesn't need a settings dependency.
+    private var localeChipLabel: LocalizedStringKey {
+        switch localeId {
+        case "auto":       return "locale.auto"
+        case "zh-Hans":    return "locale.zh-Hans"
+        case "zh-Hant":    return "locale.zh-Hant"
+        case "en-US":      return "locale.en-US"
+        case "ja-JP":      return "locale.ja-JP"
+        case "ko-KR":      return "locale.ko-KR"
+        default:           return LocalizedStringKey(localeId)
+        }
+    }
+
+    /// Icon follows the mode so the user has a second visual cue
+    /// beyond the label — off=slash, transcribe=mic, polish=wand.
+    private var modeIconName: String {
+        switch modeId {
+        case "off":        return "mic.slash.fill"
+        case "transcribe": return "mic.fill"
+        case "polish":     return "wand.and.stars"
+        default:           return "wand.and.stars"
+        }
     }
 
     private var statusBadge: some View {
@@ -267,7 +332,13 @@ struct KeyboardPreviewStub: View {
 
 #if DEBUG
 #Preview {
-    KeyboardPreviewStub(phase: .idle, level: 0, transcript: "")
-        .preferredColorScheme(.dark)
+    KeyboardPreviewStub(
+        phase: .idle,
+        level: 0,
+        transcript: "",
+        modeId: "polish",
+        localeId: "zh-Hans"
+    )
+    .preferredColorScheme(.dark)
 }
 #endif
