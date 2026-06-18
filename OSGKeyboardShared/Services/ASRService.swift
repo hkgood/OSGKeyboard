@@ -65,6 +65,46 @@ public enum ASRServiceFactory {
     }
 }
 
+// MARK: - PCM format conversion (testable helpers)
+//
+// Extracted from the audio-thread hot path so the scaling + clipping
+// math can be exercised in unit tests without instantiating the
+// full ASR pipeline. See `OSGKeyboardTests/ASRConversionTests.swift`.
+extension ASRServiceFactory {
+
+    /// Convert a Float32 PCM buffer (`-1.0...1.0`) to an Int16 PCM
+    /// buffer (`-32768...32767`).
+    ///
+    /// - Parameters:
+    ///   - source: Pointer to `sourceCount` `Float` samples. May be
+    ///     `nil` when `sourceCount == 0`.
+    ///   - sourceCount: Number of samples to convert. A `0` count
+    ///     turns the call into a no-op regardless of the pointers.
+    ///   - destination: Pointer to at least `sourceCount` slots of
+    ///     `Int16`. May be `nil` when `sourceCount == 0`.
+    ///
+    /// Per-sample: `Int16(round(clamp(s * 32767, -32768, 32767)))`.
+    /// The explicit clip matters: without it, `s == 1.0` would map
+    /// to `+32767` (fine) but `s == 1.5` (which can show up at the
+    /// audio engine boundary under gain) would wrap to a negative
+    /// value after the implicit Float→Int16 conversion. The
+    /// `round()` (rather than truncate) preserves DC balance — `0.5`
+    /// quantises to `+16384`, not `+16383`, matching what most audio
+    /// DAW round-trips expect.
+    static func convertFloat32ToInt16(
+        source: UnsafePointer<Float>?,
+        sourceCount: Int,
+        destination: UnsafeMutablePointer<Int16>?
+    ) {
+        guard sourceCount > 0, let source, let destination else { return }
+        for i in 0..<sourceCount {
+            let scaled = source[i] * 32767.0
+            let clipped = Swift.max(-32768.0, Swift.min(32767.0, scaled))
+            destination[i] = Int16(clipped.rounded())
+        }
+    }
+}
+
 // MARK: - SpeechAnalyzer implementation (iOS 26+)
 
 /// ASR backend that uses the iOS 26 `SpeechAnalyzer` + `DictationTranscriber`
@@ -87,11 +127,17 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
             let newAnalyzer = SpeechAnalyzer(modules: [transcriber])
             self.lock.withLock { self.analyzer = newAnalyzer }
 
+            // iOS 26's `DictationTranscriber` requires **Int16** PCM
+            // (precondition `"Audio sample data must be 16-bit signed
+            // integers"` — Float32 was the iOS 18 `SFSpeechRecognizer`
+            // shape; the new analyzer is strict). 16 kHz mono, Int16,
+            // interleaved — the canonical layout Apple's Speech
+            // framework examples use.
             let audioFormat = AVAudioFormat(
-                commonFormat: .pcmFormatFloat32,
+                commonFormat: .pcmFormatInt16,
                 sampleRate: 16_000,
                 channels: 1,
-                interleaved: false
+                interleaved: true
             )!
 
             let task = Task { [weak self] in
@@ -162,6 +208,19 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
 
     /// Maps the `AudioBufferSnapshot` stream into the `AnalyzerInput` stream
     /// that `SpeechAnalyzer` consumes.
+    ///
+    /// `AudioBufferSnapshot.samples` is `[Float]` (the transport format
+    /// both `AudioCaptureService` and `PreviewASRController` produce —
+    /// Float32 is what `AVAudioEngine` gives us at the hardware rate
+    /// and we already downsample to 16 kHz mono before this point).
+    /// iOS 26's `DictationTranscriber` requires **Int16** PCM at the
+    /// `AnalyzerInput` boundary, so we convert per-snapshot here.
+    ///
+    /// The conversion is the textbook `[-1.0, 1.0]` × 32767 + clip +
+    /// cast. For a 16 kHz mono feed the loop is ~16k iters/sec —
+    /// well under any audio-thread budget — so a simple scalar loop
+    /// beats pulling in `vDSP` (which would also need a scratch
+    /// buffer the audio thread can't easily allocate).
     private func makeInputStream(
         from stream: AsyncStream<AudioBufferSnapshot>,
         format: AVAudioFormat
@@ -169,17 +228,27 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
         AsyncStream { continuation in
             Task {
                 for await snap in stream {
-                    guard !snap.samples.isEmpty,
-                          let pcm = AVAudioPCMBuffer(
-                            pcmFormat: format,
-                            frameCapacity: AVAudioFrameCount(snap.samples.count)
-                          )
-                    else { continue }
-                    pcm.frameLength = AVAudioFrameCount(snap.samples.count)
-                    if let dst = pcm.floatChannelData?[0] {
+                    guard !snap.samples.isEmpty else { continue }
+                    let capacity = AVAudioFrameCount(snap.samples.count)
+                    guard let pcm = AVAudioPCMBuffer(
+                        pcmFormat: format,
+                        frameCapacity: capacity
+                    ) else { continue }
+                    pcm.frameLength = capacity
+
+                    // For a 1-channel Int16 buffer (interleaved or not —
+                    // single channel, so the data layout is identical),
+                    // `int16ChannelData?[0]` gives us the raw sample
+                    // pointer. Clip on overflow to avoid wraparound
+                    // (a Float like 1.5 would otherwise become a
+                    // negative Int16 after the implicit truncation).
+                    if let dst = pcm.int16ChannelData?[0] {
                         snap.samples.withUnsafeBufferPointer { src in
-                            guard let base = src.baseAddress else { return }
-                            memcpy(dst, base, snap.samples.count * MemoryLayout<Float>.size)
+                            ASRServiceFactory.convertFloat32ToInt16(
+                                source: src.baseAddress,
+                                sourceCount: src.count,
+                                destination: dst
+                            )
                         }
                     }
                     continuation.yield(AnalyzerInput(buffer: pcm))
