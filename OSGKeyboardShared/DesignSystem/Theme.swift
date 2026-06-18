@@ -232,18 +232,4 @@ public extension View {
             .foregroundStyle(Palette.textPrimary)
     }
 
-    /// Legacy alias for older call sites.
-    func cardStyle() -> some View { cardSurface() }
-}
-
-// MARK: - Backwards compat (legacy callers in old code)
-
-public enum Theme {
-    public static let background     = Palette.background
-    public static let card           = Palette.surface
-    public static let accent         = Palette.accent
-    public static let danger         = Palette.danger
-    public static let textPrimary    = Palette.textPrimary
-    public static let textSecondary  = Palette.textSecondary
-    public static let divider        = Palette.divider
-}
+    }

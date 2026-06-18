@@ -86,7 +86,7 @@ public struct KeyboardRootView: View {
                 state.setLocale(newId)
             }
             Spacer(minLength: 0)
-            StatusBadge(phase: state.phase)
+            StatusBadge(phase: state.phase, onDeviceSupported: state.onDeviceSupported)
             Button(action: state.openSettings) {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 13, weight: .medium))
@@ -229,8 +229,8 @@ private struct TranscriptLine: View {
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                 }
-            case .error(let msg):
-                Text(msg)
+            case .error(_, let msg):
+                Text(msg ?? "")
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.warning)
                     .lineLimit(1)
@@ -287,6 +287,11 @@ private struct StatusBadge: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     let phase: KeyboardViewController.State.Phase
+    /// Reflects whether the active ASR session is on-device. We surface
+    /// a small ⚠️ during recording so the user knows their audio is
+    /// going to the cloud for this locale (and so devs catch it during
+    /// QA without staring at the Xcode console).
+    let onDeviceSupported: Bool
 
     var body: some View {
         Group {
@@ -296,7 +301,11 @@ private struct StatusBadge: View {
             case .requestingPermissions:
                 EmptyView()
             case .recording:
-                dot(color: palette.recordRed, label: "REC")
+                if onDeviceSupported {
+                    dot(color: palette.recordRed, label: "REC")
+                } else {
+                    dot(color: palette.warning, label: "REC ⚠️", showWarning: true)
+                }
             case .processing:
                 dot(color: palette.accent, label: "···")
             case .error:
@@ -307,11 +316,16 @@ private struct StatusBadge: View {
         }
     }
 
-    private func dot(color: Color, label: String) -> some View {
+    private func dot(color: Color, label: String, showWarning: Bool = false) -> some View {
         HStack(spacing: 4) {
             Circle()
                 .fill(color)
                 .frame(width: 6, height: 6)
+            if showWarning {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(palette.warning)
+            }
             Text(label)
                 .font(TypeStyle.caption2)
                 .foregroundStyle(palette.textSecondary)

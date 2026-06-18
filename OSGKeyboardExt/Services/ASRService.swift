@@ -35,6 +35,11 @@ public protocol ASRService: Sendable {
 }
 
 public enum ASREvent: Sendable, Equatable {
+    /// Emitted exactly once at the start of every `transcribe` call, so
+    /// the UI can flag non-on-device locales (e.g. ja-JP on devices that
+    /// only ship on-device ASR for en/zh). The ASR session continues
+    /// either way — we fall back to cloud automatically.
+    case capability(onDeviceSupported: Bool)
     case partial(String)
     case final(String)
     case error(String)
@@ -73,11 +78,16 @@ final class AppleSpeechASR: ASRService, @unchecked Sendable {
             let request = SFSpeechAudioBufferRecognitionRequest()
             request.shouldReportPartialResults = true
             request.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
-            if !recognizer.supportsOnDeviceRecognition {
+            let onDeviceSupported = recognizer.supportsOnDeviceRecognition
+            if !onDeviceSupported {
                 #if DEBUG
                 print("⚠️ 设备不支持 \(locale.identifier) 端侧 ASR, 回退云端。")
                 #endif
             }
+            // Tell the UI about the capability *before* any partials so
+            // the StatusBadge can light up the cloud-fallback indicator
+            // as soon as the user presses the mic.
+            continuation.yield(.capability(onDeviceSupported: onDeviceSupported))
 
             let task = recognizer.recognitionTask(with: request) { result, error in
                 if let error {

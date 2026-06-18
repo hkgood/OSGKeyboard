@@ -27,7 +27,6 @@ struct APISettingsCard: View {
                 title: "Base URL",
                 placeholder: "https://api.openai.com/v1",
                 text: $config.baseURL,
-                keyboard: .URL,
                 autocap: false
             )
             Divider().background(palette.divider)
@@ -37,7 +36,6 @@ struct APISettingsCard: View {
                 title: "Model",
                 placeholder: "gpt-4o-mini",
                 text: $config.model,
-                keyboard: .default,
                 autocap: false
             )
             if let url = LLMProvider.provider(id: config.providerId).apiKeyURL {
@@ -97,6 +95,7 @@ struct APISettingsCard: View {
                     SecureField("sk-…", text: $config.apiKey)
                 }
             }
+            .keyboardType(.asciiCapable)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled(true)
             .font(TypeStyle.body)
@@ -113,15 +112,20 @@ struct APISettingsCard: View {
         title: String,
         placeholder: String,
         text: Binding<String>,
-        keyboard: UIKeyboardType,
         autocap: Bool
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(TypeStyle.caption)
                 .foregroundStyle(palette.textSecondary)
+            // `.asciiCapable` is the *minimum* contract for these fields:
+            // API keys, base URLs, and model names are all ASCII by spec,
+            // and SwiftUI's `.URL` keyboard on iOS 18 still occasionally
+            // hands control to the system keyboard which then auto-suggests
+            // Chinese / emoji completions that corrupt the value. Forcing
+            // `.asciiCapable` keeps the system out of the way.
             TextField(placeholder, text: text)
-                .keyboardType(keyboard)
+                .keyboardType(.asciiCapable)
                 .autocorrectionDisabled(true)
                 .textInputAutocapitalization(autocap ? .sentences : .never)
                 .font(TypeStyle.body)

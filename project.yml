@@ -151,6 +151,22 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.tests
 
+  # =========================================================
+  # 键盘扩展单元测试 (TEST-4)
+  # =========================================================
+  OSGKeyboardExtTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: OSGKeyboardExtTests
+    info:
+      path: OSGKeyboardExtTests/Info.plist
+    dependencies:
+      - target: OSGKeyboardShared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.ext.tests
+
 schemes:
   OSGKeyboard:
     build:
@@ -163,5 +179,6 @@ schemes:
       config: Debug
       targets:
         - OSGKeyboardTests
+        - OSGKeyboardExtTests
     archive:
       config: Release

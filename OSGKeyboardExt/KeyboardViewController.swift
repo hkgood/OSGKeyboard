@@ -20,7 +20,6 @@
 import UIKit
 import SwiftUI
 import AVFoundation
-import Speech
 import OSGKeyboardShared
 
 @objc(KeyboardViewController)
@@ -29,84 +28,11 @@ public final class KeyboardViewController: UIInputViewController {
 
     // MARK: - View model
 
-    @MainActor
-    public final class State: ObservableObject {
-        public init() {}
-        public enum Phase: Equatable {
-            case idle
-            case requestingPermissions
-            case recording
-            case processing
-            case error(String)
-            case denied(Reason)
-            public enum Reason: Equatable { case mic, speech }
-        }
-
-        public enum InputMode: String, CaseIterable, Identifiable {
-            case off
-            case transcribe
-            case polish
-
-            public var id: String { rawValue }
-
-            public var labelKey: String {
-                switch self {
-                case .off:        return "mode.off"
-                case .transcribe: return "mode.transcribe"
-                case .polish:     return "mode.polish"
-                }
-            }
-        }
-
-        @Published public var phase: Phase = .idle
-        @Published public var level: Double = 0
-        @Published public var mode: InputMode = .polish
-        @Published public var localeId: String = "auto"
-        @Published public var lastTranscript: String = ""
-
-        // Action hooks — injected by the view controller at install time.
-        var beginRecording: () -> Void = {}
-        var endRecording:   () -> Void = {}
-        var tapMic:         () -> Void = {}     // tap on the mic area (advances keyboard)
-        var openSettings:   () -> Void = {}
-        var setMode:        (InputMode) -> Void = { _ in }
-        var setLocale:      (String) -> Void = { _ in }
-        var insertNewline:  () -> Void = {}
-        var insertSpace:    () -> Void = {}
-        var deleteBackward: () -> Void = {}
-
-        // MARK: - Preview helpers
-
-        #if DEBUG
-        static var previewIdle: State {
-            let s = State()
-            s.phase = .idle
-            s.level = 0
-            s.mode = .polish
-            s.localeId = "zh-Hans"
-            s.lastTranscript = ""
-            return s
-        }
-        static var previewRecording: State {
-            let s = State()
-            s.phase = .recording
-            s.level = 0.65
-            s.mode = .polish
-            s.localeId = "zh-Hans"
-            s.lastTranscript = "你好,我想说一段测试"
-            return s
-        }
-        static var previewProcessing: State {
-            let s = State()
-            s.phase = .processing
-            s.level = 0
-            s.mode = .polish
-            s.localeId = "zh-Hans"
-            s.lastTranscript = ""
-            return s
-        }
-        #endif
-    }
+    /// Typealias so existing call sites (`KeyboardViewController.State`)
+    /// keep compiling unchanged. The actual class lives in
+    /// `OSGKeyboardShared` so unit tests can `@testable import` it
+    /// without dragging in the `app-extension` linking surface.
+    public typealias State = KeyboardState
 
     // MARK: - State
 
@@ -114,11 +40,12 @@ public final class KeyboardViewController: UIInputViewController {
     private let audio = AudioCaptureService()
     private let asr: ASRService = ASRServiceFactory.make()
     private let polisher = PolishingService()
+    private let permissions = PermissionManager()
+    private let persistor = AppGroupPersistor()
 
     private var session: AudioCaptureService.Session?
     private var asrTask: Task<Void, Never>?
     private var levelTask: Task<Void, Never>?
-    private var didRequestMicOnce: Bool = false
 
     private var hosting: UIHostingController<KeyboardRootView>!
 
@@ -132,7 +59,7 @@ public final class KeyboardViewController: UIInputViewController {
         inputView?.allowsSelfSizing = true
         installStateActions()
         installSwiftUI()
-        loadPersistedLocale()
+        loadPersistedConfig()
     }
 
     public override func viewWillDisappear(_ animated: Bool) {
@@ -186,38 +113,13 @@ public final class KeyboardViewController: UIInputViewController {
         self.hosting = host
     }
 
-    private func loadPersistedLocale() {
-        guard AppGroup.isAvailable else {
-            state.phase = .error("App Group 未配置")
-            return
+    private func loadPersistedConfig() {
+        switch persistor.load(into: state) {
+        case .loaded:
+            break
+        case .unavailable:
+            state.phase = .error(.appGroupUnavailable, message: "App Group 未配置")
         }
-        let store = AppGroupStore()
-        let id = store.localeId
-        state.localeId = id
-        state.mode = State.InputMode(rawValue: store.modeId) ?? .polish
-        #if DEBUG
-        // Print a masked view of the live App Group config so we can see
-        // from the device console exactly what the keyboard extension
-        // actually sees (and whether it agrees with the main App).
-        let key = store.apiKey
-        let masked: String
-        if key.count > 8 {
-            masked = "\(key.prefix(4))…\(key.suffix(4)) (\(key.count) chars)"
-        } else if key.isEmpty {
-            masked = "<empty>"
-        } else {
-            masked = "<\(key.count) chars>"
-        }
-        print("""
-        🔍 [KeyboardViewController.loadPersistedLocale]
-           providerId = \(store.providerId)
-           baseURL    = \(store.baseURL)
-           apiKey     = \(masked)
-           model      = \(store.model)
-           modeId     = \(store.modeId)
-           localeId   = \(store.localeId)
-        """)
-        #endif
     }
 
     // MARK: - Press handlers
@@ -233,7 +135,7 @@ public final class KeyboardViewController: UIInputViewController {
         state.phase = .requestingPermissions
         Task { @MainActor [weak self] in
             guard let self else { return }
-            let micGranted = await self.requestMicPermission()
+            let micGranted = await self.permissions.requestMicPermission()
             guard micGranted else {
                 self.state.phase = .denied(.mic)
                 self.scheduleAutoClearError()
@@ -247,7 +149,7 @@ public final class KeyboardViewController: UIInputViewController {
             // iOS 26 SpeechAnalyzer path (planned for the next release)
             // does not expose an explicit request API — the framework
             // prompts via the same plist key on first use.
-            let speechGranted = await self.requestSpeechPermission()
+            let speechGranted = await self.permissions.requestSpeechPermission()
             guard speechGranted else {
                 self.state.phase = .denied(.speech)
                 self.scheduleAutoClearError()
@@ -279,6 +181,8 @@ public final class KeyboardViewController: UIInputViewController {
             var lastPartial: String = ""
             for await event in events {
                 switch event {
+                case .capability(let onDevice):
+                    self.state.onDeviceSupported = onDevice
                 case .partial(let s):
                     lastPartial = s
                     self.state.lastTranscript = s
@@ -286,7 +190,7 @@ public final class KeyboardViewController: UIInputViewController {
                     let transcript = s.isEmpty ? lastPartial : s
                     self.handleFinalTranscript(transcript)
                 case .error(let m):
-                    self.state.phase = .error("ASR: \(m)")
+                    self.state.phase = .error(.asr(m))
                     self.scheduleAutoClearError()
                 }
             }
@@ -315,6 +219,9 @@ public final class KeyboardViewController: UIInputViewController {
             state.phase = .idle
         }
         state.level = 0
+        // Reset the on-device flag so the StatusBadge stops showing the
+        // cloud-fallback indicator between recordings.
+        state.onDeviceSupported = false
     }
 
     private func handleFinalTranscript(_ transcript: String) {
@@ -339,19 +246,19 @@ public final class KeyboardViewController: UIInputViewController {
                 self.textDocumentProxy.insertText(polished)
                 self.state.lastTranscript = ""
                 self.state.phase = .idle
-            } catch LLMError.noAPIKey {
-                // Don't silently insert the raw transcript — the user
-                // thinks they're getting polished text when really no
-                // key is configured. Show a precise, actionable error.
-                self.state.phase = .error("未配置 API Key · 请在主 App 设置中填写")
-                self.scheduleAutoClearError()
             } catch let error as LLMError {
                 switch error {
+                case .noAPIKey:
+                    // Don't silently insert the raw transcript — the user
+                    // thinks they're getting polished text when really no
+                    // key is configured. Show a precise, actionable error.
+                    self.state.phase = .error(.llm(error), message: "未配置 API Key · 请在主 App 设置中填写")
+                    self.scheduleAutoClearError()
                 case .http(401):
-                    self.state.phase = .error("API Key 无效 (401) · 请检查主 App 设置")
+                    self.state.phase = .error(.llm(error), message: "API Key 无效 (401) · 请检查主 App 设置")
                     self.scheduleAutoClearError()
                 case .http(429), .rateLimited:
-                    self.state.phase = .error("API 限流 (429) · 请稍后再试")
+                    self.state.phase = .error(.llm(error), message: "API 限流 (429) · 请稍后再试")
                     self.scheduleAutoClearError()
                 case .cancelled:
                     // User-initiated cancellation (e.g. mode switch mid-
@@ -363,12 +270,12 @@ public final class KeyboardViewController: UIInputViewController {
                     return
                 default:
                     // Other LLMError variants (transport / decoding /
-                    // invalidURL / cancelled) fall back to raw transcript
-                    // + generic error badge, same as the catch-all below.
+                    // invalidURL) fall back to raw transcript + generic
+                    // error badge, same as the catch-all below.
                     self.textDocumentProxy.insertText(trimmed)
                     self.state.lastTranscript = ""
                     let msg = error.errorDescription ?? "Polishing failed — inserted raw."
-                    self.state.phase = .error(msg)
+                    self.state.phase = .error(.llm(error), message: msg)
                     self.scheduleAutoClearError()
                 }
             } catch {
@@ -379,7 +286,7 @@ public final class KeyboardViewController: UIInputViewController {
                 self.state.lastTranscript = ""
                 let msg = (error as? LocalizedError)?.errorDescription
                     ?? "Polishing failed — inserted raw."
-                self.state.phase = .error(msg)
+                self.state.phase = .error(.unknown(msg), message: msg)
                 self.scheduleAutoClearError()
             }
         }
@@ -390,7 +297,7 @@ public final class KeyboardViewController: UIInputViewController {
     private func persistMode(_ m: State.InputMode) {
         let isRecording = state.phase == .recording
         state.mode = m
-        AppGroupStore().setModeId(m.rawValue)
+        persistor.persist(mode: m)
         if isRecording {
             if m == .off {
                 // Switching to .off while recording: drop the partial
@@ -411,58 +318,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     private func persistLocale(_ id: String) {
         state.localeId = id
-        AppGroupStore().setLocaleId(id)
-    }
-
-    // MARK: - Permissions
-
-    private func requestMicPermission() async -> Bool {
-        if #available(iOS 17.0, *) {
-            switch AVAudioApplication.shared.recordPermission {
-            case .granted: return true
-            case .denied:  return false
-            case .undetermined:
-                if !didRequestMicOnce {
-                    didRequestMicOnce = true
-                    return await AVAudioApplication.requestRecordPermission()
-                }
-                return false
-            @unknown default: return false
-            }
-        } else {
-            let session = AVAudioSession.sharedInstance()
-            switch session.recordPermission {
-            case .granted: return true
-            case .denied:  return false
-            case .undetermined:
-                if !didRequestMicOnce {
-                    didRequestMicOnce = true
-                    return await withCheckedContinuation { cont in
-                        session.requestRecordPermission { cont.resume(returning: $0) }
-                    }
-                }
-                return false
-            @unknown default: return false
-            }
-        }
-    }
-
-    /// Request Speech Recognition permission. Returns true if granted
-    /// (or already authorised). For the iOS 18 SFSpeechRecognizer path
-    /// this is required before recognition can begin; for the iOS 26
-    /// SpeechAnalyzer path the framework prompts on first use.
-    private func requestSpeechPermission() async -> Bool {
-        await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
-            SFSpeechRecognizer.requestAuthorization { status in
-                switch status {
-                case .authorized: cont.resume(returning: true)
-                case .denied, .restricted, .notDetermined:
-                    cont.resume(returning: false)
-                @unknown default:
-                    cont.resume(returning: false)
-                }
-            }
-        }
+        persistor.persist(localeId: id)
     }
 
     // MARK: - Open host app

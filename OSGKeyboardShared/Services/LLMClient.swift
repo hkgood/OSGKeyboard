@@ -6,7 +6,7 @@
 
 import Foundation
 
-public enum LLMError: Error, LocalizedError, Sendable {
+public enum LLMError: Error, LocalizedError, Sendable, Equatable {
     case invalidURL
     case noAPIKey
     case http(status: Int)
@@ -30,6 +30,12 @@ public enum LLMError: Error, LocalizedError, Sendable {
 
 public protocol LLMClient: Sendable {
     func polish(_ text: String, systemPrompt: String) async throws -> String
+
+    /// Single source of truth for the upper bound on a single LLM HTTP
+    /// round-trip. Both the `URLRequest` we send and any wrapping
+    /// timeout-style race (e.g. `PolishingService`'s `withThrowingTaskGroup`)
+    /// must read from this property so the two never disagree.
+    var requestTimeout: TimeInterval { get }
 }
 
 // MARK: - OpenAI-compatible implementation
@@ -39,6 +45,12 @@ public struct OpenAICompatibleClient: LLMClient {
     public let apiKey: String
     public let model: String
     public let session: URLSession
+
+    /// Canonical request timeout for a single LLM HTTP round-trip. Both
+    /// the `URLRequest.timeoutInterval` we set below and any external
+    /// race that wants to bound the total time spent waiting on the LLM
+    /// (e.g. `PolishingService`) should derive from this constant.
+    public let requestTimeout: TimeInterval = 15
 
     public init(
         baseURL: String,
@@ -74,7 +86,7 @@ public struct OpenAICompatibleClient: LLMClient {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        req.timeoutInterval = 15
+        req.timeoutInterval = requestTimeout
 
         let encoder = JSONEncoder()
         req.httpBody = try encoder.encode(request)
@@ -121,5 +133,14 @@ public enum LLMClientFactory {
             apiKey: config.apiKey,
             model: config.model
         )
+    }
+
+    /// Single source of truth for the LLM request timeout, shared by
+    /// `LLMClient.requestTimeout` implementations and any caller that
+    /// wants to bound total time spent waiting on the LLM (e.g.
+    /// `PolishingService`'s safety-net `withThrowingTaskGroup`). Use
+    /// this instead of hard-coding `15` so all timeouts stay aligned.
+    public static var defaultRequestTimeout: TimeInterval {
+        OpenAICompatibleClient(baseURL: "", apiKey: "", model: "").requestTimeout
     }
 }
