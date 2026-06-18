@@ -96,10 +96,17 @@ struct RecordButton: View {
                             .frame(width: 80, height: 44)
                             .transition(.opacity)
                     case .processing:
+                        // Scaled to ~50pt inside a 120pt disc (~42%) —
+                        // same absolute size as the preview stub's
+                        // spinner (2.5x of the default ProgressView),
+                        // just a smaller fraction because the real
+                        // disc is bigger. The user gets the same
+                        // visual weight whether they're looking at
+                        // the in-app preview or the live keyboard.
                         ProgressView()
                             .progressViewStyle(.circular)
                             .tint(palette.textPrimary)
-                            .scaleEffect(1.2)
+                            .scaleEffect(2.5)
                     case .error:
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 30, weight: .medium))
@@ -109,7 +116,6 @@ struct RecordButton: View {
             }
             .frame(width: 120, height: 120)
             .scaleEffect(isPressed ? 0.94 : 1.0)
-            .shadow(color: .black.opacity(0.45), radius: 14, y: 8)
             .animation(Motion.quick, value: isPressed)
             .animation(Motion.soft, value: phase)
         }

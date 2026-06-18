@@ -241,7 +241,6 @@ struct KeyboardPreviewStub: View {
                 .fill(discGradient)
                 .frame(width: 96, height: 96)
                 .overlay(Circle().stroke(palette.accentGlow, lineWidth: 1.5))
-                .shadow(color: .black.opacity(0.4), radius: 10, y: 6)
             Group {
                 switch phase {
                 case .idle:
@@ -258,7 +257,19 @@ struct KeyboardPreviewStub: View {
                     }
                     .frame(width: 60, height: 32)
                 case .processing:
-                    ProgressView().tint(.white).scaleEffect(1.1)
+                    // Scaled to ~50pt inside a 96pt disc (~52%) so the
+                    // spinner is the dominant visual element of the
+                    // loading state without crowding the disc's edge.
+                    // `palette.textPrimary` (instead of hardcoded
+                    // `.white`) keeps the spinner visible in both light
+                    // and dark themes — the processing-state disc
+                    // gradient is `surfaceElevated → surface`, which is
+                    // light in light mode and would swallow a white
+                    // spinner.
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(palette.textPrimary)
+                        .scaleEffect(2.5)
                 }
             }
         }
