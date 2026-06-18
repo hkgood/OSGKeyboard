@@ -86,7 +86,6 @@ public final class KeyboardViewController: UIInputViewController {
         state.openSettings        = { [weak self] in self?.openHostApp() }
         state.setMode             = { [weak self] m in self?.persistMode(m) }
         state.setLocale           = { [weak self] l in self?.persistLocale(l) }
-        state.setRequiresOnDevice = { [weak self] v in self?.persistRequiresOnDevice(v) }
         state.setEngineMode       = { [weak self] m in self?.persistEngineMode(m) }
         state.insertNewline       = { [weak self] in self?.textDocumentProxy.insertText("\n") }
         state.insertSpace         = { [weak self] in self?.textDocumentProxy.insertText(" ") }
@@ -185,8 +184,7 @@ public final class KeyboardViewController: UIInputViewController {
         let locale = resolveLocale(state.localeId)
         let events = asr.transcribe(
             stream: session.audio,
-            locale: locale,
-            requiresOnDevice: state.requiresOnDevice
+            locale: locale
         )
 
         asrTask = Task { @MainActor [weak self] in
@@ -332,11 +330,6 @@ public final class KeyboardViewController: UIInputViewController {
     private func persistLocale(_ id: String) {
         state.localeId = id
         persistor.persist(localeId: id)
-    }
-
-    private func persistRequiresOnDevice(_ value: Bool) {
-        state.requiresOnDevice = value
-        persistor.persist(requiresOnDevice: value)
     }
 
     private func persistEngineMode(_ mode: String) {

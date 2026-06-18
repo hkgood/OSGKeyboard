@@ -63,14 +63,10 @@ public final class KeyboardState: ObservableObject {
     @Published public var localeId: String = "auto"
     @Published public var lastTranscript: String = ""
     /// `true` if the active ASR session is running on-device for the
-    /// current locale. `false` means the request fell back to the
-    /// network (e.g. ja-JP on a device that doesn't ship on-device
-    /// ASR for Japanese). Updated once per recording by the ASR
-    /// pipeline before any `.partial` is emitted.
+    /// current locale. With iOS 26's `SpeechAnalyzer` this is always
+    /// `true` — kept on the state object because the UI's status
+    /// badge still wants a single source of truth to read from.
     @Published public var onDeviceSupported: Bool = false
-    /// When `true`, `SFSpeechRecognizer` is forced to on-device mode.
-    /// Ignored on iOS 26+ where `SpeechAnalyzer` is always on-device.
-    @Published public var requiresOnDevice: Bool = false
     /// "local" → ASR only, no LLM. "cloud" → ASR + optional LLM polish.
     @Published public var engineMode: String = "cloud"
 
@@ -84,7 +80,6 @@ public final class KeyboardState: ObservableObject {
     public var openSettings:        () -> Void = {}
     public var setMode:             (InputMode) -> Void = { _ in }
     public var setLocale:           (String) -> Void = { _ in }
-    public var setRequiresOnDevice:  (Bool) -> Void = { _ in }
     public var setEngineMode:        (String) -> Void = { _ in }
     public var insertNewline:       () -> Void = {}
     public var insertSpace:         () -> Void = {}

@@ -25,43 +25,27 @@ public final class PermissionManager: @unchecked Sendable {
     private var didRequestMicOnce: Bool = false
 
     /// Request microphone access. Returns true if granted (already or
-    /// after this call). iOS 17 uses `AVAudioApplication.recordPermission`;
-    /// older systems fall back to `AVAudioSession.recordPermission`.
+    /// after this call). Uses the iOS 17+ `AVAudioApplication` API.
     public func requestMicPermission() async -> Bool {
-        if #available(iOS 17.0, *) {
-            switch AVAudioApplication.shared.recordPermission {
-            case .granted: return true
-            case .denied:  return false
-            case .undetermined:
-                if !didRequestMicOnce {
-                    didRequestMicOnce = true
-                    return await AVAudioApplication.requestRecordPermission()
-                }
-                return false
-            @unknown default: return false
+        switch AVAudioApplication.shared.recordPermission {
+        case .granted: return true
+        case .denied:  return false
+        case .undetermined:
+            if !didRequestMicOnce {
+                didRequestMicOnce = true
+                return await AVAudioApplication.requestRecordPermission()
             }
-        } else {
-            let session = AVAudioSession.sharedInstance()
-            switch session.recordPermission {
-            case .granted: return true
-            case .denied:  return false
-            case .undetermined:
-                if !didRequestMicOnce {
-                    didRequestMicOnce = true
-                    return await withCheckedContinuation { cont in
-                        session.requestRecordPermission { cont.resume(returning: $0) }
-                    }
-                }
-                return false
-            @unknown default: return false
-            }
+            return false
+        @unknown default: return false
         }
     }
 
     /// Request Speech Recognition permission. Returns true if granted
-    /// (already or after this call). For iOS 18 SFSpeechRecognizer this
-    /// is required before recognition can begin; for iOS 26 SpeechAnalyzer
-    /// the framework prompts on first use, so this call is a no-op there.
+    /// (already or after this call). The `SFSpeechRecognizer` plist
+    /// key + this call are still required even on iOS 26 — the
+    /// `SpeechAnalyzer` API does not expose an explicit request
+    /// method of its own and the framework checks the same TCC
+    /// entry on first use.
     public func requestSpeechPermission() async -> Bool {
         await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
             SFSpeechRecognizer.requestAuthorization { status in

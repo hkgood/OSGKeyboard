@@ -26,7 +26,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         static let systemPrompt    = "config.systemPrompt"
         static let modeId          = "config.modeId"
         static let localeId        = "config.localeId"
-        static let requiresOnDevice = "config.requiresOnDevice"
         static let engineMode       = "config.engineMode"
     }
 
@@ -61,11 +60,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     }
     @Published public var localeId: String {
         didSet { defaults.set(localeId, forKey: Key.localeId) }
-    }
-    /// When `true`, forces SFSpeechRecognizer to on-device only mode.
-    /// Ignored on iOS 26+ where SpeechAnalyzer is always on-device.
-    @Published public var requiresOnDevice: Bool {
-        didSet { defaults.set(requiresOnDevice, forKey: Key.requiresOnDevice) }
     }
     /// "local" → on-device ASR only, no LLM polishing.
     /// "cloud" → ASR + LLM polish (default).
@@ -109,7 +103,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
             ?? AppGroupStore.defaultSystemPrompt(for: pid)
         self.modeId          = defaults.string(forKey: Key.modeId)     ?? "polish"
         self.localeId        = defaults.string(forKey: Key.localeId)   ?? "auto"
-        self.requiresOnDevice = defaults.bool(forKey: Key.requiresOnDevice)
         self.engineMode       = defaults.string(forKey: Key.engineMode) ?? "cloud"
     }
 

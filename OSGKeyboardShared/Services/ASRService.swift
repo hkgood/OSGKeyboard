@@ -1,11 +1,12 @@
 // ASRService.swift
 // OSGKeyboard · Shared
 //
-// Speech-to-text abstraction.
-// • iOS 26+: uses `SpeechAnalyzer` + `DictationTranscriber` — always on-device.
-// • iOS 18–25: uses `SFSpeechRecognizer`, with optional requiresOnDevice flag.
-// Honours a user-selected locale (auto / zh-CN / en-US / ja-JP …) so
-// dictation is first-class for non-English languages.
+// Speech-to-text abstraction. As of iOS 26 being the minimum
+// deployment target, the only ASR backend is `SpeechAnalyzer` +
+// `DictationTranscriber` — always on-device, no cloud fallback, no
+// `requiresOnDevice` toggle. The previous SFSpeechRecognizer path
+// (iOS 18–25) is gone; if a future platform ever needs it back,
+// reintroduce as a sibling class in `ASRServiceFactory.make()`.
 //
 // Lives in `OSGKeyboardShared` (not the keyboard extension target) so
 // that the host app's `KeyboardPreviewSheet` can run the same ASR
@@ -20,28 +21,23 @@ import os
 
 // MARK: - Sendable conformance
 
-// `AVAudioPCMBuffer` and `SFSpeechRecognitionTask` are not Sendable. We
-// only ever access them serially — the PCM buffer is built and consumed
-// inside a single Task, and the recogniser task is cancelled but never
+// `AVAudioPCMBuffer` and `SpeechAnalyzer` are not Sendable. We only
+// ever access them serially — the PCM buffer is built and consumed
+// inside a single Task, and the analyzer is cancelled but never
 // shared concurrently — so an unchecked conformance is sound here.
 extension AVAudioPCMBuffer: @unchecked @retroactive Sendable {}
-extension SFSpeechRecognitionTask: @unchecked @retroactive Sendable {}
 
 // MARK: - Protocol
 
 public protocol ASRService: Sendable {
     /// Start a transcription session. The returned stream emits `.partial`
     /// updates and exactly one `.final` (or `.error`) before finishing.
-    /// - Parameters:
-    ///   - stream: Audio buffer stream from `AudioCaptureService`.
-    ///   - locale: Target recognition locale.
-    ///   - requiresOnDevice: When `true`, forces on-device recognition only
-    ///     (SFSpeechRecognizer path). Ignored on iOS 26+ where
-    ///     `SpeechAnalyzer` is always fully on-device.
+    /// `SpeechAnalyzer` is always fully on-device, so there is no
+    /// `requiresOnDevice` flag — the previous iOS 18 SFSpeechRecognizer
+    /// flag was about cloud fallback, which doesn't apply here.
     func transcribe(
         stream: AsyncStream<AudioBufferSnapshot>,
-        locale: Locale,
-        requiresOnDevice: Bool
+        locale: Locale
     ) -> AsyncStream<ASREvent>
 
     /// Cancel any in-flight recognition and tear down its tasks.
@@ -62,138 +58,17 @@ public enum ASREvent: Sendable, Equatable {
 // MARK: - Factory
 
 public enum ASRServiceFactory {
-    /// Returns the best available ASR backend for the current OS:
-    /// `SpeechAnalyzerASR` on iOS 26+ (always on-device), `AppleSpeechASR`
-    /// on older OS versions.
+    /// Returns the ASR backend. With iOS 26 as the deployment target,
+    /// there is exactly one backend (`SpeechAnalyzer`).
     public static func make() -> ASRService {
-        if #available(iOS 26.0, *) {
-            return SpeechAnalyzerASR()
-        }
-        return AppleSpeechASR()
-    }
-}
-
-// MARK: - Apple Speech implementation (iOS 18–25)
-
-final class AppleSpeechASR: ASRService, @unchecked Sendable {
-
-    private let lock = OSAllocatedUnfairLock()
-    private var recognizerTask: SFSpeechRecognitionTask?
-    private var feedTask: Task<Void, Never>?
-
-    func transcribe(
-        stream: AsyncStream<AudioBufferSnapshot>,
-        locale: Locale,
-        requiresOnDevice: Bool
-    ) -> AsyncStream<ASREvent> {
-        AsyncStream { continuation in
-            let recognizer = SFSpeechRecognizer(locale: locale)
-                ?? SFSpeechRecognizer(locale: .current)
-            guard let recognizer, recognizer.isAvailable else {
-                continuation.yield(.error("Speech recognizer unavailable for \(locale.identifier)"))
-                continuation.finish()
-                return
-            }
-            recognizer.defaultTaskHint = .dictation
-
-            let request = SFSpeechAudioBufferRecognitionRequest()
-            request.shouldReportPartialResults = true
-            // Honour the user's "force on-device" preference; fall back to
-            // whatever the device natively supports if the flag is off.
-            request.requiresOnDeviceRecognition = requiresOnDevice || recognizer.supportsOnDeviceRecognition
-            let onDeviceSupported = recognizer.supportsOnDeviceRecognition
-            if !onDeviceSupported {
-                #if DEBUG
-                print("⚠️ 设备不支持 \(locale.identifier) 端侧 ASR, 回退云端。")
-                #endif
-            }
-            // Tell the UI about the capability *before* any partials so
-            // the StatusBadge can light up the cloud-fallback indicator
-            // as soon as the user presses the mic.
-            continuation.yield(.capability(onDeviceSupported: onDeviceSupported))
-
-            let task = recognizer.recognitionTask(with: request) { result, error in
-                if let error {
-                    let nsErr = error as NSError
-                    // Codes 203 / 1110 = "no speech detected" — a normal exit.
-                    if nsErr.code == 203 || nsErr.code == 1110 {
-                        continuation.yield(.final(""))
-                    } else {
-                        continuation.yield(.error(error.localizedDescription))
-                    }
-                    continuation.finish()
-                    return
-                }
-                guard let result else { return }
-                if result.isFinal {
-                    continuation.yield(.final(result.bestTranscription.formattedString))
-                    continuation.finish()
-                } else {
-                    continuation.yield(.partial(result.bestTranscription.formattedString))
-                }
-            }
-
-            self.lock.withLock { self.recognizerTask = task }
-
-            // Feed audio: for each snapshot, build a 16 kHz mono Float32
-            // PCM buffer and immediately `request.append(pcm)`. The PCM
-            // buffer never leaves this task, so it doesn't need to be
-            // Sendable.
-            let feedFormat = AVAudioFormat(
-                commonFormat: .pcmFormatFloat32,
-                sampleRate: 16_000,
-                channels: 1,
-                interleaved: false
-            )!
-            self.feedTask = Task { [request] in
-                for await snap in stream {
-                    if Task.isCancelled { break }
-                    guard !snap.samples.isEmpty,
-                          let pcm = AVAudioPCMBuffer(
-                            pcmFormat: feedFormat,
-                            frameCapacity: AVAudioFrameCount(snap.samples.count)
-                          )
-                    else { continue }
-                    pcm.frameLength = AVAudioFrameCount(snap.samples.count)
-                    if let dst = pcm.floatChannelData?[0] {
-                        snap.samples.withUnsafeBufferPointer { src in
-                            if let base = src.baseAddress {
-                                memcpy(dst, base, snap.samples.count * MemoryLayout<Float>.size)
-                            }
-                        }
-                    }
-                    request.append(pcm)
-                }
-                if !Task.isCancelled {
-                    request.endAudio()
-                }
-            }
-
-            continuation.onTermination = { @Sendable [weak self] _ in
-                self?.cancel()
-            }
-        }
-    }
-
-    func cancel() {
-        let (recTask, feedT) = lock.withLock { () -> (SFSpeechRecognitionTask?, Task<Void, Never>?) in
-            let r = self.recognizerTask
-            let f = self.feedTask
-            self.recognizerTask = nil
-            self.feedTask = nil
-            return (r, f)
-        }
-        recTask?.cancel()
-        feedT?.cancel()
+        SpeechAnalyzerASR()
     }
 }
 
 // MARK: - SpeechAnalyzer implementation (iOS 26+)
 
 /// ASR backend that uses the iOS 26 `SpeechAnalyzer` + `DictationTranscriber`
-/// APIs. This engine is always fully on-device — `requiresOnDevice` has no
-/// effect and `.capability(onDeviceSupported: true)` is always emitted.
-@available(iOS 26.0, *)
+/// APIs. This engine is always fully on-device.
 final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
 
     private let lock = OSAllocatedUnfairLock()
@@ -202,8 +77,7 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
 
     func transcribe(
         stream: AsyncStream<AudioBufferSnapshot>,
-        locale: Locale,
-        requiresOnDevice: Bool  // ignored — SpeechAnalyzer is always on-device
+        locale: Locale
     ) -> AsyncStream<ASREvent> {
         AsyncStream { continuation in
             // SpeechAnalyzer is always fully on-device.

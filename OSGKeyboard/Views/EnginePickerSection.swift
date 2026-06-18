@@ -53,11 +53,9 @@ struct EnginePickerSection: View {
     }
 
     private var localSubtitle: String {
-        if #available(iOS 26, *) {
-            return "SpeechAnalyzer · 始终端侧,无需联网\nAlways on-device, no network"
-        } else {
-            return "端侧 ASR · 仅转录,无润色\nOn-device ASR, transcription only, no polish"
-        }
+        // iOS 26's `SpeechAnalyzer` is always fully on-device, so the
+        // local engine's only contract is "no network, no LLM".
+        "SpeechAnalyzer · 始终端侧,无需联网\nAlways on-device, no network"
     }
 
     private func engineOptionRow(id: String, icon: String, title: String, subtitle: String) -> some View {

@@ -27,7 +27,6 @@ public struct AppGroupStore: @unchecked Sendable {
         static let systemPrompt    = "config.systemPrompt"
         static let modeId          = "config.modeId"
         static let localeId        = "config.localeId"
-        static let requiresOnDevice = "config.requiresOnDevice"
         static let engineMode       = "config.engineMode"
     }
 
@@ -64,13 +63,6 @@ public struct AppGroupStore: @unchecked Sendable {
         defaults.string(forKey: Key.localeId) ?? "auto"
     }
 
-    /// When `true`, `SFSpeechRecognizer` is forced to on-device mode
-    /// (`requiresOnDeviceRecognition = true`). Ignored on iOS 26+ where
-    /// `SpeechAnalyzer` is always on-device.
-    public var requiresOnDevice: Bool {
-        defaults.bool(forKey: Key.requiresOnDevice)
-    }
-
     /// "local" → on-device ASR only, no LLM polishing.
     /// "cloud" → ASR + LLM polish (default behaviour).
     public var engineMode: String {
@@ -85,10 +77,6 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setLocaleId(_ id: String) {
         defaults.set(id, forKey: Key.localeId)
-    }
-
-    public func setRequiresOnDevice(_ value: Bool) {
-        defaults.set(value, forKey: Key.requiresOnDevice)
     }
 
     public func setEngineMode(_ mode: String) {

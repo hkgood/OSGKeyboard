@@ -208,8 +208,7 @@ final class PreviewASRController: ObservableObject {
         // 5. Wire up ASR.
         let events = asr.transcribe(
             stream: stream,
-            locale: locale,
-            requiresOnDevice: false
+            locale: locale
         )
         asrTask = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -242,10 +241,9 @@ final class PreviewASRController: ObservableObject {
 
     // MARK: - Permission helpers (nonisolated)
     //
-    // `SFSpeechRecognizer.requestAuthorization` and (iOS < 17)
-    // `AVAudioSession.requestRecordPermission` deliver their callbacks
-    // on a TCC reply queue, NOT the main queue. If we wrap those
-    // callbacks inline in `start(locale:)` — which is `@MainActor` —
+    // `SFSpeechRecognizer.requestAuthorization` delivers its callback
+    // on a TCC reply queue, NOT the main queue. If we wrap that
+    // callback inline in `start(locale:)` — which is `@MainActor` —
     // Swift 6 strict concurrency infers the closure body as
     // `@MainActor`, and the runtime crashes on
     // `dispatch_assert_queue` in `_swift_task_checkIsolatedSwift` as
@@ -275,19 +273,14 @@ final class PreviewASRController: ObservableObject {
     // main actor before resuming.
 
     private nonisolated static func requestMicrophonePermission() async -> Bool {
-        if #available(iOS 17.0, *) {
-            switch AVAudioApplication.shared.recordPermission {
-            case .granted:               return true
-            case .denied:                return false
-            case .undetermined:          return await AVAudioApplication.requestRecordPermission()
-            @unknown default:            return false
-            }
-        } else {
-            return await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
-                AVAudioSession.sharedInstance().requestRecordPermission(
-                    Self.makeMicAuthHandler(continuation: cont)
-                )
-            }
+        // iOS 17+ API; the iOS < 17 fallback (`AVAudioSession.recordPermission`
+        // + `requestRecordPermission` callback) is gone now that the
+        // deployment target is iOS 26.
+        switch AVAudioApplication.shared.recordPermission {
+        case .granted:               return true
+        case .denied:                return false
+        case .undetermined:          return await AVAudioApplication.requestRecordPermission()
+        @unknown default:            return false
         }
     }
 
@@ -304,14 +297,6 @@ final class PreviewASRController: ObservableObject {
     ) -> @Sendable (SFSpeechRecognizerAuthorizationStatus) -> Void {
         return { status in
             continuation.resume(returning: status == .authorized)
-        }
-    }
-
-    private nonisolated static func makeMicAuthHandler(
-        continuation: CheckedContinuation<Bool, Never>
-    ) -> @Sendable (Bool) -> Void {
-        return { granted in
-            continuation.resume(returning: granted)
         }
     }
 

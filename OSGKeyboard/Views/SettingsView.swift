@@ -143,49 +143,31 @@ struct SettingsView: View {
         }
     }
 
-    /// ASR engine row — adapts to OS version:
-    /// • iOS 26+: shows a badge indicating SpeechAnalyzer is active (always on-device).
-    /// • iOS 18–25: shows a toggle to force on-device recognition only.
-    @ViewBuilder
+    /// ASR engine row. With iOS 26 as the deployment target, the
+    /// only ASR backend is `SpeechAnalyzer` and it is always fully
+    /// on-device — so this row is now a static badge rather than a
+    /// toggle. The previous `requiresOnDevice` toggle (iOS 18–25
+    /// `SFSpeechRecognizer` cloud-fallback control) is gone.
     private var asrEngineRow: some View {
-        if #available(iOS 26, *) {
-            HStack(spacing: Spacing.sm) {
-                Text("settings.engineRow.title")
-                    .font(TypeStyle.body)
-                    .foregroundStyle(palette.textPrimary)
-                Spacer()
-                HStack(spacing: 4) {
-                    Image(systemName: "iphone.badge.checkmark")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(palette.success)
-                    Text("settings.engineBadge.ios26")
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.success)
-                }
-                .padding(.horizontal, Spacing.xs)
-                .padding(.vertical, 4)
-                .background(palette.success.opacity(0.12), in: Capsule())
+        HStack(spacing: Spacing.sm) {
+            Text("settings.engineRow.title")
+                .font(TypeStyle.body)
+                .foregroundStyle(palette.textPrimary)
+            Spacer()
+            HStack(spacing: 4) {
+                Image(systemName: "iphone.badge.checkmark")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(palette.success)
+                Text("settings.engineBadge.ios26")
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.success)
             }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm)
-        } else {
-            Toggle(isOn: Binding(
-                get: { config.requiresOnDevice },
-                set: { config.requiresOnDevice = $0 }
-            )) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("settings.onDeviceOnly.title")
-                        .font(TypeStyle.body)
-                        .foregroundStyle(palette.textPrimary)
-                    Text("禁用云端回退，识别失败时会报错而非联网 · Disable cloud fallback, fail locally instead of going online")
-                        .font(TypeStyle.caption2)
-                        .foregroundStyle(palette.textTertiary)
-                }
-            }
-            .tint(palette.accent)
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm)
+            .padding(.horizontal, Spacing.xs)
+            .padding(.vertical, 4)
+            .background(palette.success.opacity(0.12), in: Capsule())
         }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
     }
 
     /// Falls back to a static list while SFSpeechRecognizer locales are loading.
