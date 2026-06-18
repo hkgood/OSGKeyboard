@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> **Note: v0.1.1 polish** — this is a small follow-up to v0.1.0 focused on review-driven cleanup
+> (theme follow-up, ASR robustness, debug-print hygiene, docs). **No features are removed.**
+> The iOS 26 `SpeechAnalyzer` path remains deferred to 0.2.0 (see below); v0.1.1 users continue
+> to ship with the iOS 18 `SFSpeechRecognizer` path that shipped in v0.1.0. User experience is
+> unchanged from v0.1.0.
+
 ### Fixed
 - **Theme follows system appearance**: main App now renders a true light palette in light mode via `ThemedRoot` + `EnvironmentKey<ThemePalette>`. The keyboard extension deliberately stays dark (Apple's default) and now uses a transparent `.background(Color.clear)` so the system UI chrome shows through.
 - **Speech Recognition permission requested on first press**: added `NSSpeechRecognitionUsageDescription` to both targets' `Info.plist` and an explicit `SFSpeechRecognizer.requestAuthorization` call inside `pressBegan()`. Without these the iOS 18 ASR path silently returned `.denied` and the user heard nothing.

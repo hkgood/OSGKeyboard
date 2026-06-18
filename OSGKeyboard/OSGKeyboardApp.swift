@@ -8,12 +8,6 @@ import OSGKeyboardShared
 struct OSGKeyboardApp: App {
     @StateObject private var config = ProviderConfig.shared
 
-    init() {
-        #if DEBUG
-        print("🔥 [OSGKeyboardApp] init()")
-        #endif
-    }
-
     var body: some Scene {
         WindowGroup {
             ThemedRoot {

@@ -21,31 +21,36 @@ public struct ThemedRoot<Content: View>: View {
     public var body: some View {
         content()
             .environment(\.themePalette, colorScheme == .dark ? Palette.dark : Palette.light)
+            .background(colorScheme == .dark ? Palette.dark.background : Palette.light.background)
     }
 }
 
 #if DEBUG
 #Preview("ThemedRoot · Dark") {
     ThemedRoot {
-        ZStack {
-            Palette.dark.background.ignoresSafeArea()
-            Text("Dark")
-                .foregroundStyle(Palette.dark.textPrimary)
-                .font(.title)
-        }
+        ThemedPreviewContent(title: "Dark")
     }
     .preferredColorScheme(.dark)
 }
 
 #Preview("ThemedRoot · Light") {
     ThemedRoot {
+        ThemedPreviewContent(title: "Light")
+    }
+    .preferredColorScheme(.light)
+}
+
+private struct ThemedPreviewContent: View {
+    @Environment(\.themePalette) private var palette
+    let title: String
+
+    var body: some View {
         ZStack {
-            Palette.light.background.ignoresSafeArea()
-            Text("Light")
-                .foregroundStyle(Palette.light.textPrimary)
+            palette.background.ignoresSafeArea()
+            Text(title)
+                .foregroundStyle(palette.textPrimary)
                 .font(.title)
         }
     }
-    .preferredColorScheme(.light)
 }
 #endif

@@ -154,16 +154,19 @@ extension KeyboardRootView {
 #Preview("Keyboard · Idle") {
     KeyboardRootView(state: KeyboardViewController.State.previewIdle)
         .frame(width: 390, height: 280)
+        .preferredColorScheme(.dark)
 }
 
 #Preview("Keyboard · Recording") {
     KeyboardRootView(state: KeyboardViewController.State.previewRecording)
         .frame(width: 390, height: 280)
+        .preferredColorScheme(.dark)
 }
 
 #Preview("Keyboard · Processing") {
     KeyboardRootView(state: KeyboardViewController.State.previewProcessing)
         .frame(width: 390, height: 280)
+        .preferredColorScheme(.dark)
 }
 #endif
 

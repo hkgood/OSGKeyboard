@@ -132,6 +132,7 @@ LLMProvider(
 - iOS 沙盒：键盘扩展 ~60 MB 内存上限，必须开完全访问
 - 密码框与部分 `WKWebView` 输入框不可用（iOS 限制）
 - iOS 18/19 用 `SFSpeechRecognizer` 做端侧 ASR；iOS 26+ 的 `SpeechAnalyzer` 计划下版接入（更快、支持语种更多）
+- v0.1.1 中 iOS 26+ 用户仍走 iOS 18 `SFSpeechRecognizer` 路径；iOS 26 `SpeechAnalyzer` 计划在 0.2.0 接入
 
 ---
 

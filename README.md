@@ -133,6 +133,7 @@ That's it. No other code changes required.
 - iOS sandboxes keyboard extensions: ~60 MB memory cap, Full Access required.
 - The keyboard does **not** work in password fields or some `WKWebView` textareas (iOS limitation).
 - iOS 18/19 ships with `SFSpeechRecognizer` for on-device ASR. iOS 26+ `SpeechAnalyzer` is planned for the next release — it is significantly faster and supports more locales.
+- iOS 26+ users in v0.1.1 use the iOS 18 `SFSpeechRecognizer` path; the iOS 26 `SpeechAnalyzer` is planned for 0.2.0.
 
 ---
 
