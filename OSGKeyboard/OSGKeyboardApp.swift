@@ -11,12 +11,14 @@ struct OSGKeyboardApp: App {
     var body: some Scene {
         WindowGroup {
             ThemedRoot {
-                Group {
+                if AppGroup.isAvailable {
                     if config.isConfigured {
                         HomeView()
                     } else {
                         OnboardingView(config: config)
                     }
+                } else {
+                    AppGroupErrorView()
                 }
             }
         }

@@ -52,6 +52,26 @@ public struct KeyboardRootView: View {
         // through by drawing no background of our own.
         .background(Color.clear)
         .frame(height: Self.totalHeight)
+        // Top edge: subtle highlight gradient + 0.5pt divider line.
+        // These give the keyboard a "physical surface" feel and visually
+        // separate it from the host text field above. We overlay (not
+        // background) so the underlying color stays clear.
+        .overlay(alignment: .top) {
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(LinearGradient(
+                        colors: [Color.white.opacity(0.05), .clear],
+                        startPoint: .top, endPoint: .bottom
+                    ))
+                    .frame(height: 1)
+                Spacer(minLength: 0)
+            }
+        }
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Palette.divider)
+                .frame(height: 0.5)
+        }
     }
 
     // MARK: - Top bar
@@ -135,9 +155,11 @@ public struct KeyboardRootView: View {
     private var buttonPhase: RecordButton.Phase {
         switch state.phase {
         case .idle:                       return .idle
+        case .requestingPermissions:      return .idle
         case .recording:                  return .recording
         case .processing:                 return .processing
         case .error:                      return .error
+        case .denied:                     return .error
         }
     }
 }
@@ -183,6 +205,13 @@ private struct TranscriptLine: View {
                 Text("按住说话 · Hold to talk")
                     .font(TypeStyle.caption)
                     .foregroundStyle(Palette.textTertiary)
+            case .requestingPermissions:
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.mini).tint(Palette.textSecondary)
+                    Text("准备中…")
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(Palette.textSecondary)
+                }
             case .recording:
                 Text(transcript.isEmpty ? " " : transcript)
                     .font(TypeStyle.caption)
@@ -203,10 +232,23 @@ private struct TranscriptLine: View {
                     .foregroundStyle(Palette.warning)
                     .lineLimit(1)
                     .truncationMode(.tail)
+            case .denied(let reason):
+                Text(deniedMessage(for: reason))
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(Palette.warning)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, Spacing.md)
+    }
+
+    private func deniedMessage(for reason: KeyboardViewController.State.Phase.Reason) -> String {
+        switch reason {
+        case .mic:    return "麦克风被拒绝 · 请到「设置」中允许"
+        case .speech: return "语音识别被拒绝 · 请到「设置」中允许"
+        }
     }
 }
 
@@ -244,11 +286,15 @@ private struct StatusBadge: View {
             switch phase {
             case .idle:
                 EmptyView()
+            case .requestingPermissions:
+                EmptyView()
             case .recording:
                 dot(color: Palette.recordRed, label: "REC")
             case .processing:
                 dot(color: Palette.accent, label: "···")
             case .error:
+                dot(color: Palette.warning, label: "!")
+            case .denied:
                 dot(color: Palette.warning, label: "!")
             }
         }

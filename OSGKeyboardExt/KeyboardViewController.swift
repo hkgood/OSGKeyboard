@@ -34,9 +34,12 @@ public final class KeyboardViewController: UIInputViewController {
         public init() {}
         public enum Phase: Equatable {
             case idle
+            case requestingPermissions
             case recording
             case processing
             case error(String)
+            case denied(Reason)
+            public enum Reason: Equatable { case mic, speech }
         }
 
         public enum InputMode: String, CaseIterable, Identifiable {
@@ -184,6 +187,10 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     private func loadPersistedLocale() {
+        guard AppGroup.isAvailable else {
+            state.phase = .error("App Group 未配置")
+            return
+        }
         let store = AppGroupStore()
         let id = store.localeId
         state.localeId = id
@@ -218,14 +225,17 @@ public final class KeyboardViewController: UIInputViewController {
     private func pressBegan() {
         guard state.phase == .idle else { return }
         guard state.mode != .off else { return }
-        // We optimistically enter `.recording`; the capture session will yield
-        // frames on its own queue, so even if mic permission takes a beat the
-        // user already feels the press registered.
-            Task { @MainActor [weak self] in
+        // Set the intermediate phase SYNCHRONOUSLY so a rapid second
+        // press (before the first Task has had a chance to flip phase to
+        // .recording) is rejected by the guard above. This fixes the race
+        // where the user double-tapped the mic and we started two
+        // pipelines at once.
+        state.phase = .requestingPermissions
+        Task { @MainActor [weak self] in
             guard let self else { return }
             let micGranted = await self.requestMicPermission()
             guard micGranted else {
-                self.state.phase = .error("麦克风被拒绝,请到「设置」中允许")
+                self.state.phase = .denied(.mic)
                 self.scheduleAutoClearError()
                 return
             }
@@ -239,7 +249,7 @@ public final class KeyboardViewController: UIInputViewController {
             // prompts via the same plist key on first use.
             let speechGranted = await self.requestSpeechPermission()
             guard speechGranted else {
-                self.state.phase = .error("语音识别被拒绝,请到「设置」中允许")
+                self.state.phase = .denied(.speech)
                 self.scheduleAutoClearError()
                 return
             }
@@ -343,6 +353,14 @@ public final class KeyboardViewController: UIInputViewController {
                 case .http(429), .rateLimited:
                     self.state.phase = .error("API 限流 (429) · 请稍后再试")
                     self.scheduleAutoClearError()
+                case .cancelled:
+                    // User-initiated cancellation (e.g. mode switch mid-
+                    // polish). Do NOT re-insert the original transcript —
+                    // the user has already moved on and the partial is
+                    // considered discarded.
+                    self.state.phase = .idle
+                    self.state.lastTranscript = ""
+                    return
                 default:
                     // Other LLMError variants (transport / decoding /
                     // invalidURL / cancelled) fall back to raw transcript
@@ -370,8 +388,25 @@ public final class KeyboardViewController: UIInputViewController {
     // MARK: - Persistence
 
     private func persistMode(_ m: State.InputMode) {
+        let isRecording = state.phase == .recording
         state.mode = m
         AppGroupStore().setModeId(m.rawValue)
+        if isRecording {
+            if m == .off {
+                // Switching to .off while recording: drop the partial
+                // (no insertion, no LLM). User has explicitly disabled
+                // the keyboard, so we honour that immediately.
+                stopPipeline()
+                state.phase = .idle
+                state.lastTranscript = ""
+            } else if m == .transcribe {
+                // Switching to .transcribe while in .polish: end the
+                // recording, the partial will flow through
+                // handleFinalTranscript which inserts the raw text in
+                // .transcribe mode (no LLM call).
+                pressEnded()
+            }
+        }
     }
 
     private func persistLocale(_ id: String) {
@@ -466,8 +501,14 @@ public final class KeyboardViewController: UIInputViewController {
         Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 2_400_000_000)
             guard let self else { return }
-            if case .error = self.state.phase {
+            // Clear both .error (transient error message) and .denied
+            // (permission was rejected — show the message, then return
+            // to idle so the user can navigate away).
+            switch self.state.phase {
+            case .error, .denied:
                 self.state.phase = .idle
+            default:
+                break
             }
         }
     }

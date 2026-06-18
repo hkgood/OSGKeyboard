@@ -10,6 +10,22 @@ public enum AppGroup {
     /// App Group container identifier (must match entitlements in both targets)
     public static let identifier = "group.com.osgkeyboard.shared"
 
+    /// Whether the App Group container is available on this device.
+    ///
+    /// Cached at first read — the underlying `UserDefaults(suiteName:)`
+    /// call is cheap, but main-app startup and every keyboard-extension
+    /// read hit it, so we memoize the result.
+    ///
+    /// Production code paths MUST go through `isAvailable` first and
+    /// surface a friendly error view (e.g. `AppGroupErrorView`) on the
+    /// main app, or the keyboard extension's persisted-locale load.
+    /// Calling `defaults` directly when the group is missing will trip
+    /// the DEBUG `fatalError` below — that path is reserved for
+    /// developer-only escape hatches and intentional debugging.
+    public static let isAvailable: Bool = {
+        UserDefaults(suiteName: identifier) != nil
+    }()
+
     /// Shared UserDefaults instance for cross-process config.
     ///
     /// In DEBUG builds a missing App Group is a hard `fatalError`: silently
