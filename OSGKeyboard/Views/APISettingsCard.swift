@@ -8,6 +8,8 @@ import SwiftUI
 import OSGKeyboardShared
 
 struct APISettingsCard: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     @ObservedObject var config: ProviderConfig
     @State private var showKey: Bool = false
     @State private var testStatus: TestStatus = .idle
@@ -28,9 +30,9 @@ struct APISettingsCard: View {
                 keyboard: .URL,
                 autocap: false
             )
-            Divider().background(Palette.divider)
+            Divider().background(palette.divider)
             keyField
-            Divider().background(Palette.divider)
+            Divider().background(palette.divider)
             field(
                 title: "Model",
                 placeholder: "gpt-4o-mini",
@@ -39,7 +41,7 @@ struct APISettingsCard: View {
                 autocap: false
             )
             if let url = LLMProvider.provider(id: config.providerId).apiKeyURL {
-                Divider().background(Palette.divider)
+                Divider().background(palette.divider)
                 // Use a Button + UIApplication.open instead of SwiftUI
                 // `Link`. SwiftUI `Link` has a hit-test bug on iOS 18 that
                 // makes its tappable area eat gestures from the adjacent
@@ -49,12 +51,12 @@ struct APISettingsCard: View {
                 } label: {
                     HStack {
                         Image(systemName: "key.fill")
-                            .foregroundStyle(Palette.accent)
+                            .foregroundStyle(palette.accent)
                         Text("Get an API key")
-                            .foregroundStyle(Palette.textPrimary)
+                            .foregroundStyle(palette.textPrimary)
                         Spacer()
                         Image(systemName: "arrow.up.right.square")
-                            .foregroundStyle(Palette.textSecondary)
+                            .foregroundStyle(palette.textSecondary)
                     }
                     .padding(.horizontal, Spacing.md)
                     .padding(.vertical, Spacing.sm)
@@ -62,13 +64,13 @@ struct APISettingsCard: View {
                 }
                 .buttonStyle(.plain)
             }
-            Divider().background(Palette.divider)
+            Divider().background(palette.divider)
             testConnectionRow
         }
-        .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                .stroke(Palette.divider, lineWidth: 0.5)
+                .stroke(palette.divider, lineWidth: 0.5)
         )
     }
 
@@ -79,11 +81,11 @@ struct APISettingsCard: View {
             HStack {
                 Text("API Key")
                     .font(TypeStyle.caption)
-                    .foregroundStyle(Palette.textSecondary)
+                    .foregroundStyle(palette.textSecondary)
                 Spacer()
                 Button(action: { showKey.toggle() }) {
                     Image(systemName: showKey ? "eye.slash.fill" : "eye.fill")
-                        .foregroundStyle(Palette.textSecondary)
+                        .foregroundStyle(palette.textSecondary)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text(showKey ? "Hide key" : "Show key"))
@@ -98,7 +100,7 @@ struct APISettingsCard: View {
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled(true)
             .font(TypeStyle.body)
-            .foregroundStyle(Palette.textPrimary)
+            .foregroundStyle(palette.textPrimary)
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
@@ -117,13 +119,13 @@ struct APISettingsCard: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(TypeStyle.caption)
-                .foregroundStyle(Palette.textSecondary)
+                .foregroundStyle(palette.textSecondary)
             TextField(placeholder, text: text)
                 .keyboardType(keyboard)
                 .autocorrectionDisabled(true)
                 .textInputAutocapitalization(autocap ? .sentences : .never)
                 .font(TypeStyle.body)
-                .foregroundStyle(Palette.textPrimary)
+                .foregroundStyle(palette.textPrimary)
                 .submitLabel(.done)
                 .onSubmit { /* no-op: prevent the keyboard from "submitting"
                               and dismissing the sheet on iOS 18 */ }
@@ -139,7 +141,7 @@ struct APISettingsCard: View {
             HStack {
                 Text("Connection")
                     .font(TypeStyle.caption)
-                    .foregroundStyle(Palette.textSecondary)
+                    .foregroundStyle(palette.textSecondary)
                 Spacer()
                 Button(action: runTest) {
                     HStack(spacing: 6) {
@@ -187,9 +189,9 @@ struct APISettingsCard: View {
 
     private var testTint: Color {
         switch testStatus {
-        case .idle, .running: return Palette.accent
-        case .success:        return Palette.success
-        case .failure:        return Palette.danger
+        case .idle, .running: return palette.accent
+        case .success:        return palette.success
+        case .failure:        return palette.danger
         }
     }
 

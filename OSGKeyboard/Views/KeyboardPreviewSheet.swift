@@ -11,6 +11,8 @@ import SwiftUI
 import OSGKeyboardShared
 
 struct KeyboardPreviewSheet: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     @Environment(\.dismiss) private var dismiss
 
     // We mirror only the fields the stand-in actually needs, instead of
@@ -24,15 +26,15 @@ struct KeyboardPreviewSheet: View {
 
     var body: some View {
         ZStack {
-            Palette.background.ignoresSafeArea()
+            palette.background.ignoresSafeArea()
             VStack(spacing: 0) {
                 VStack(spacing: Spacing.md) {
                     Text("Keyboard Preview")
                         .font(TypeStyle.title2)
-                        .foregroundStyle(Palette.textPrimary)
+                        .foregroundStyle(palette.textPrimary)
                     Text("Tap the disc to cycle states. The real keyboard uses the same layout.")
                         .font(TypeStyle.caption)
-                        .foregroundStyle(Palette.textSecondary)
+                        .foregroundStyle(palette.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, Spacing.lg)
                     mockTextField.padding(.horizontal, Spacing.md)
@@ -47,23 +49,23 @@ struct KeyboardPreviewSheet: View {
     private var mockTextField: some View {
         HStack {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(Palette.textSecondary)
+                .foregroundStyle(palette.textSecondary)
             Text("Type here…")
-                .foregroundStyle(Palette.textTertiary)
+                .foregroundStyle(palette.textTertiary)
             Spacer()
         }
         .padding(Spacing.md)
-        .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.medium))
+        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.medium))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.medium)
-                .stroke(Palette.divider, lineWidth: 0.5)
+                .stroke(palette.divider, lineWidth: 0.5)
         )
     }
 
     private var keyboardBlock: some View {
         VStack(spacing: 0) {
             Rectangle()
-                .fill(Palette.divider)
+                .fill(palette.divider)
                 .frame(height: 0.5)
             KeyboardPreviewStub(
                 phase: stubPhase,

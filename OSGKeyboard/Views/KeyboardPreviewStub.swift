@@ -11,6 +11,7 @@ import SwiftUI
 import OSGKeyboardShared
 
 struct KeyboardPreviewStub: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
 
     enum Phase { case idle, recording, processing }
 
@@ -20,7 +21,7 @@ struct KeyboardPreviewStub: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            Palette.background
+            palette.background
             VStack(spacing: 0) {
                 topBar.frame(height: 32)
                 centreArea.frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -43,10 +44,10 @@ struct KeyboardPreviewStub: View {
             Button(action: {}) {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Palette.textSecondary)
+                    .foregroundStyle(palette.textSecondary)
                     .frame(width: 28, height: 28)
-                    .background(Palette.surface, in: Circle())
-                    .overlay(Circle().stroke(Palette.divider, lineWidth: 0.5))
+                    .background(palette.surface, in: Circle())
+                    .overlay(Circle().stroke(palette.divider, lineWidth: 0.5))
             }
             .buttonStyle(.plain)
         }
@@ -60,10 +61,10 @@ struct KeyboardPreviewStub: View {
             Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
         }
         .font(TypeStyle.caption2)
-        .foregroundStyle(Palette.textPrimary)
+        .foregroundStyle(palette.textPrimary)
         .padding(.horizontal, Spacing.xs + 2).padding(.vertical, 4)
-        .background(Palette.surfaceElevated, in: Capsule())
-        .overlay(Capsule().stroke(Palette.divider, lineWidth: 0.5))
+        .background(palette.surfaceElevated, in: Capsule())
+        .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
     }
 
     private var localeChip: some View {
@@ -73,10 +74,10 @@ struct KeyboardPreviewStub: View {
             Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
         }
         .font(TypeStyle.caption2)
-        .foregroundStyle(Palette.textPrimary)
+        .foregroundStyle(palette.textPrimary)
         .padding(.horizontal, Spacing.xs + 2).padding(.vertical, 4)
-        .background(Palette.surfaceElevated, in: Capsule())
-        .overlay(Capsule().stroke(Palette.divider, lineWidth: 0.5))
+        .background(palette.surfaceElevated, in: Capsule())
+        .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
     }
 
     private var statusBadge: some View {
@@ -86,20 +87,20 @@ struct KeyboardPreviewStub: View {
                 EmptyView()
             case .recording:
                 HStack(spacing: 4) {
-                    Circle().fill(Palette.recordRed).frame(width: 6, height: 6)
-                    Text("REC").font(TypeStyle.caption2).foregroundStyle(Palette.textSecondary)
+                    Circle().fill(palette.recordRed).frame(width: 6, height: 6)
+                    Text("REC").font(TypeStyle.caption2).foregroundStyle(palette.textSecondary)
                 }
                 .padding(.horizontal, Spacing.xs).padding(.vertical, 3)
-                .background(Palette.surface, in: Capsule())
-                .overlay(Capsule().stroke(Palette.divider, lineWidth: 0.5))
+                .background(palette.surface, in: Capsule())
+                .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
             case .processing:
                 HStack(spacing: 4) {
-                    Circle().fill(Palette.accent).frame(width: 6, height: 6)
-                    Text("···").font(TypeStyle.caption2).foregroundStyle(Palette.textSecondary)
+                    Circle().fill(palette.accent).frame(width: 6, height: 6)
+                    Text("···").font(TypeStyle.caption2).foregroundStyle(palette.textSecondary)
                 }
                 .padding(.horizontal, Spacing.xs).padding(.vertical, 3)
-                .background(Palette.surface, in: Capsule())
-                .overlay(Capsule().stroke(Palette.divider, lineWidth: 0.5))
+                .background(palette.surface, in: Capsule())
+                .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
             }
         }
     }
@@ -120,20 +121,20 @@ struct KeyboardPreviewStub: View {
             case .idle:
                 Text("按住说话 · Hold to talk")
                     .font(TypeStyle.caption)
-                    .foregroundStyle(Palette.textTertiary)
+                    .foregroundStyle(palette.textTertiary)
             case .recording:
                 Text(transcript.isEmpty ? " " : transcript)
                     .font(TypeStyle.caption)
-                    .foregroundStyle(Palette.textPrimary)
+                    .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.head)
                     .frame(maxWidth: .infinity)
             case .processing:
                 HStack(spacing: 6) {
-                    ProgressView().controlSize(.mini).tint(Palette.accent)
+                    ProgressView().controlSize(.mini).tint(palette.accent)
                     Text("润色中 · Polishing")
                         .font(TypeStyle.caption)
-                        .foregroundStyle(Palette.textSecondary)
+                        .foregroundStyle(palette.textSecondary)
                 }
             }
         }
@@ -144,11 +145,11 @@ struct KeyboardPreviewStub: View {
         ZStack {
             if phase == .recording {
                 Circle()
-                    .stroke(Palette.recordRed.opacity(0.35), lineWidth: 2)
+                    .stroke(palette.recordRed.opacity(0.35), lineWidth: 2)
                     .frame(width: 110, height: 110)
                     .opacity(0.6)
                 Circle()
-                    .fill(RadialGradient(colors: [Palette.recordRed.opacity(0.55), .clear], center: .center, startRadius: 30, endRadius: 70))
+                    .fill(RadialGradient(colors: [palette.recordRed.opacity(0.55), .clear], center: .center, startRadius: 30, endRadius: 70))
                     .frame(width: 160, height: 160)
                     .blur(radius: 12)
                     .opacity(0.4 + level * 0.6)
@@ -168,7 +169,7 @@ struct KeyboardPreviewStub: View {
                     HStack(spacing: 3) {
                         ForEach(0..<12, id: \.self) { i in
                             Capsule()
-                                .fill(Palette.recordRed)
+                                .fill(palette.recordRed)
                                 .frame(width: 2, height: 8 + CGFloat(level * 30) * (i.isMultiple(of: 2) ? 1 : 0.6))
                         }
                     }
@@ -183,9 +184,9 @@ struct KeyboardPreviewStub: View {
     private var discGradient: LinearGradient {
         switch phase {
         case .recording:
-            return LinearGradient(colors: [Palette.recordRed.opacity(0.95), Palette.recordRed.opacity(0.75)], startPoint: .top, endPoint: .bottom)
+            return LinearGradient(colors: [palette.recordRed.opacity(0.95), palette.recordRed.opacity(0.75)], startPoint: .top, endPoint: .bottom)
         case .processing:
-            return LinearGradient(colors: [Palette.surfaceElevated, Palette.surface], startPoint: .top, endPoint: .bottom)
+            return LinearGradient(colors: [palette.surfaceElevated, palette.surface], startPoint: .top, endPoint: .bottom)
         case .idle:
             return LinearGradient(colors: [Color(white: 0.22), Color(white: 0.10)], startPoint: .top, endPoint: .bottom)
         }
@@ -201,10 +202,10 @@ struct KeyboardPreviewStub: View {
             Button(action: {}) {
                 Text("空格")
                     .font(TypeStyle.body)
-                    .foregroundStyle(Palette.textPrimary)
+                    .foregroundStyle(palette.textPrimary)
                     .frame(maxWidth: .infinity, minHeight: 42)
-                    .background(Palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: Radius.medium, style: .continuous).stroke(Palette.divider, lineWidth: 0.5))
+                    .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: Radius.medium, style: .continuous).stroke(palette.divider, lineWidth: 0.5))
             }
             .buttonStyle(.plain)
             Spacer(minLength: 0)
@@ -217,10 +218,10 @@ struct KeyboardPreviewStub: View {
         Button(action: {}) {
             Image(systemName: systemName)
                 .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(Palette.textPrimary)
+                .foregroundStyle(palette.textPrimary)
                 .frame(width: 40, height: 40)
-                .background(Palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: Radius.medium, style: .continuous).stroke(Palette.divider, lineWidth: 0.5))
+                .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Radius.medium, style: .continuous).stroke(palette.divider, lineWidth: 0.5))
         }
         .buttonStyle(.plain)
     }

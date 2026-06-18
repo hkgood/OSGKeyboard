@@ -10,15 +10,17 @@ import SwiftUI
 import OSGKeyboardShared
 
 struct WaveformView: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     let level: Double          // 0...1, smoothed RMS
     let barCount: Int
-    let color: Color
+    let color: Color?
     let active: Bool           // when false, bars collapse to a thin resting line
 
     init(
         level: Double,
         barCount: Int = 18,
-        color: Color = Palette.recordRed,
+        color: Color? = nil,
         active: Bool = true
     ) {
         self.level = max(0, min(1, level))
@@ -27,12 +29,16 @@ struct WaveformView: View {
         self.active = active
     }
 
+    private var resolvedColor: Color {
+        color ?? palette.recordRed
+    }
+
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
             HStack(alignment: .center, spacing: 3) {
                 ForEach(0..<barCount, id: \.self) { i in
                     Capsule()
-                        .fill(color)
+                        .fill(resolvedColor)
                         .frame(width: 2.4, height: height(for: i, time: context.date.timeIntervalSinceReferenceDate))
                         .opacity(active ? 1.0 : 0.45)
                 }

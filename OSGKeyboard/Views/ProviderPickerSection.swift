@@ -9,6 +9,8 @@ import SwiftUI
 import OSGKeyboardShared
 
 struct ProviderPickerSection: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     @ObservedObject var config: ProviderConfig
 
     var body: some View {
@@ -21,14 +23,14 @@ struct ProviderPickerSection: View {
                 }
                 .buttonStyle(.plain)
                 if index < LLMProvider.presets.count - 1 {
-                    Divider().background(Palette.divider)
+                    Divider().background(palette.divider)
                 }
             }
         }
-        .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                .stroke(Palette.divider, lineWidth: 0.5)
+                .stroke(palette.divider, lineWidth: 0.5)
         )
     }
 
@@ -44,27 +46,27 @@ struct ProviderPickerSection: View {
             // Provider mark — a coloured dot with first letter
             ZStack {
                 Circle()
-                    .fill(selected ? Palette.accent : Palette.surfaceElevated)
+                    .fill(selected ? palette.accent : palette.surfaceElevated)
                     .frame(width: 36, height: 36)
                 Text(String(provider.name.prefix(1)))
                     .font(TypeStyle.bodyEmph)
-                    .foregroundStyle(selected ? Palette.textOnAccent : Palette.textPrimary)
+                    .foregroundStyle(selected ? palette.textOnAccent : palette.textPrimary)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(provider.name)
                     .font(TypeStyle.bodyEmph)
-                    .foregroundStyle(Palette.textPrimary)
+                    .foregroundStyle(palette.textPrimary)
                 if let blurb = provider.blurb {
                     Text(blurb)
                         .font(TypeStyle.caption2)
-                        .foregroundStyle(Palette.textTertiary)
+                        .foregroundStyle(palette.textTertiary)
                 }
             }
             Spacer()
             if selected {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(Palette.accent)
+                    .foregroundStyle(palette.accent)
             }
         }
         .padding(.horizontal, Spacing.md)

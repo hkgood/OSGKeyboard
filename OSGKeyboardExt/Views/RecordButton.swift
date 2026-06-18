@@ -10,6 +10,8 @@ import SwiftUI
 import OSGKeyboardShared
 
 struct RecordButton: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     enum Phase: Equatable {
         case idle
         case recording
@@ -44,7 +46,7 @@ struct RecordButton: View {
         ZStack {
             // Outer breathing ring (recording only)
             Circle()
-                .stroke(Palette.recordRed.opacity(0.35), lineWidth: 2)
+                .stroke(palette.recordRed.opacity(0.35), lineWidth: 2)
                 .frame(width: 150, height: 150)
                 .scaleEffect(breath ? 1.18 : 0.95)
                 .opacity(phase == .recording ? 1 : 0)
@@ -54,7 +56,7 @@ struct RecordButton: View {
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [Palette.recordRed.opacity(0.55), .clear],
+                        colors: [palette.recordRed.opacity(0.55), .clear],
                         center: .center,
                         startRadius: 50,
                         endRadius: 100
@@ -88,7 +90,7 @@ struct RecordButton: View {
                     case .idle:
                         Image(systemName: "mic.fill")
                             .font(.system(size: 38, weight: .medium))
-                            .foregroundStyle(Palette.textPrimary)
+                            .foregroundStyle(palette.textPrimary)
                     case .recording:
                         WaveformView(level: level, active: true)
                             .frame(width: 80, height: 44)
@@ -96,12 +98,12 @@ struct RecordButton: View {
                     case .processing:
                         ProgressView()
                             .progressViewStyle(.circular)
-                            .tint(Palette.textPrimary)
+                            .tint(palette.textPrimary)
                             .scaleEffect(1.2)
                     case .error:
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 30, weight: .medium))
-                            .foregroundStyle(Palette.warning)
+                            .foregroundStyle(palette.warning)
                     }
                 }
             }
@@ -160,19 +162,19 @@ struct RecordButton: View {
         switch phase {
         case .recording:
             return LinearGradient(
-                colors: [Palette.recordRed.opacity(0.95), Palette.recordRed.opacity(0.75)],
+                colors: [palette.recordRed.opacity(0.95), palette.recordRed.opacity(0.75)],
                 startPoint: .top,
                 endPoint: .bottom
             )
         case .processing:
             return LinearGradient(
-                colors: [Palette.surfaceElevated, Palette.surface],
+                colors: [palette.surfaceElevated, palette.surface],
                 startPoint: .top,
                 endPoint: .bottom
             )
         case .error:
             return LinearGradient(
-                colors: [Palette.warning.opacity(0.85), Palette.warning.opacity(0.55)],
+                colors: [palette.warning.opacity(0.85), palette.warning.opacity(0.55)],
                 startPoint: .top,
                 endPoint: .bottom
             )

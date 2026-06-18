@@ -15,12 +15,14 @@ import SwiftUI
 import OSGKeyboardShared
 
 struct OnboardingView: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     @ObservedObject var config: ProviderConfig
     @State private var page: Int = 0
 
     var body: some View {
         ZStack {
-            Palette.background.ignoresSafeArea()
+            palette.background.ignoresSafeArea()
             VStack(spacing: 0) {
                 TabView(selection: $page) {
                     WelcomePage().tag(0)
@@ -43,7 +45,7 @@ struct OnboardingView: View {
         HStack(spacing: 6) {
             ForEach(0..<3, id: \.self) { i in
                 Capsule()
-                    .fill(i == page ? Palette.accent : Color.white.opacity(0.18))
+                    .fill(i == page ? palette.accent : Color.white.opacity(0.18))
                     .frame(width: i == page ? 18 : 6, height: 6)
                     .animation(Motion.quick, value: page)
             }
@@ -58,12 +60,12 @@ struct OnboardingView: View {
                     Text("Back")
                         .font(TypeStyle.headline)
                         .frame(maxWidth: .infinity, minHeight: 50)
-                        .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+                        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
                         .overlay(
                             RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                                .stroke(Palette.dividerStrong, lineWidth: 0.5)
+                                .stroke(palette.dividerStrong, lineWidth: 0.5)
                         )
-                        .foregroundStyle(Palette.textPrimary)
+                        .foregroundStyle(palette.textPrimary)
                 }
                 .buttonStyle(.plain)
             }
@@ -77,11 +79,11 @@ struct OnboardingView: View {
                     .font(TypeStyle.headline)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(
-                        (page == 2 && !config.isConfigured) ? Palette.surfaceElevated : Palette.accent,
+                        (page == 2 && !config.isConfigured) ? palette.surfaceElevated : palette.accent,
                         in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
                     )
                     .foregroundStyle(
-                        (page == 2 && !config.isConfigured) ? Palette.textSecondary : Palette.textOnAccent
+                        (page == 2 && !config.isConfigured) ? palette.textSecondary : palette.textOnAccent
                     )
             }
             .buttonStyle(.plain)
@@ -93,29 +95,31 @@ struct OnboardingView: View {
 // MARK: - Page 1: Welcome
 
 private struct WelcomePage: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     var body: some View {
         VStack(spacing: Spacing.xl) {
             Spacer()
             ZStack {
                 Circle()
-                    .fill(Palette.accentMuted)
+                    .fill(palette.accentMuted)
                     .frame(width: 180, height: 180)
                     .blur(radius: 30)
                 Image(systemName: "mic.circle.fill")
                     .font(.system(size: 96, weight: .light))
-                    .foregroundStyle(Palette.accent)
+                    .foregroundStyle(palette.accent)
             }
             VStack(spacing: Spacing.sm) {
                 Text("OSGKeyboard")
                     .font(TypeStyle.title)
-                    .foregroundStyle(Palette.textPrimary)
+                    .foregroundStyle(palette.textPrimary)
                 Text("按住说话,松开即得润色文字。")
                     .font(TypeStyle.body)
-                    .foregroundStyle(Palette.textSecondary)
+                    .foregroundStyle(palette.textSecondary)
                     .multilineTextAlignment(.center)
                 Text("Hold to talk. Release for polished text, in any app.")
                     .font(TypeStyle.footnote)
-                    .foregroundStyle(Palette.textTertiary)
+                    .foregroundStyle(palette.textTertiary)
                     .multilineTextAlignment(.center)
             }
             .padding(.horizontal, Spacing.xl)
@@ -127,6 +131,8 @@ private struct WelcomePage: View {
 }
 
 private struct PrivacyFootnote: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             footnoteRow(icon: "lock.fill",
@@ -140,10 +146,10 @@ private struct PrivacyFootnote: View {
                         body: "WeChat, Notes, Mail, ChatGPT, Claude, Cursor — anywhere a keyboard appears.")
         }
         .padding(Spacing.md)
-        .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                .stroke(Palette.divider, lineWidth: 0.5)
+                .stroke(palette.divider, lineWidth: 0.5)
         )
         .padding(.horizontal, Spacing.md)
     }
@@ -152,16 +158,16 @@ private struct PrivacyFootnote: View {
         HStack(alignment: .top, spacing: Spacing.xs) {
             Image(systemName: icon)
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(Palette.accent)
+                .foregroundStyle(palette.accent)
                 .frame(width: 24, height: 24)
-                .background(Palette.accentMuted, in: Circle())
+                .background(palette.accentMuted, in: Circle())
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(TypeStyle.caption)
-                    .foregroundStyle(Palette.textPrimary)
+                    .foregroundStyle(palette.textPrimary)
                 Text(body)
                     .font(TypeStyle.caption2)
-                    .foregroundStyle(Palette.textSecondary)
+                    .foregroundStyle(palette.textSecondary)
             }
         }
     }
@@ -170,19 +176,21 @@ private struct PrivacyFootnote: View {
 // MARK: - Page 2: Enable keyboard
 
 private struct EnableKeyboardPage: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     var body: some View {
         VStack(spacing: Spacing.xl) {
             Spacer()
             Image(systemName: "keyboard.fill")
                 .font(.system(size: 64, weight: .light))
-                .foregroundStyle(Palette.accent)
+                .foregroundStyle(palette.accent)
             VStack(spacing: Spacing.sm) {
                 Text("启用 OSGKeyboard")
                     .font(TypeStyle.title2)
-                    .foregroundStyle(Palette.textPrimary)
+                    .foregroundStyle(palette.textPrimary)
                 Text("Enable OSGKeyboard")
                     .font(TypeStyle.body)
-                    .foregroundStyle(Palette.textTertiary)
+                    .foregroundStyle(palette.textTertiary)
             }
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 step(num: 1, text: "Settings → General → Keyboard → Keyboards")
@@ -211,11 +219,11 @@ private struct EnableKeyboardPage: View {
             Text("\(num)")
                 .font(TypeStyle.caption2)
                 .frame(width: 22, height: 22)
-                .background(Palette.accent, in: Circle())
-                .foregroundStyle(Palette.textOnAccent)
+                .background(palette.accent, in: Circle())
+                .foregroundStyle(palette.textOnAccent)
             Text(text)
                 .font(TypeStyle.body)
-                .foregroundStyle(Palette.textPrimary)
+                .foregroundStyle(palette.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -224,6 +232,8 @@ private struct EnableKeyboardPage: View {
 // MARK: - Page 3: API setup
 
 private struct APISetupPage: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     @ObservedObject var config: ProviderConfig
 
     var body: some View {
@@ -232,13 +242,13 @@ private struct APISetupPage: View {
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text("配置 AI 提供商")
                         .font(TypeStyle.title2)
-                        .foregroundStyle(Palette.textPrimary)
+                        .foregroundStyle(palette.textPrimary)
                     Text("Configure your AI provider")
                         .font(TypeStyle.body)
-                        .foregroundStyle(Palette.textTertiary)
+                        .foregroundStyle(palette.textTertiary)
                     Text("OSGKeyboard only calls the AI to polish your text. No audio leaves your device.")
                         .font(TypeStyle.footnote)
-                        .foregroundStyle(Palette.textSecondary)
+                        .foregroundStyle(palette.textSecondary)
                         .padding(.top, Spacing.xxs)
                 }
                 .padding(.horizontal, Spacing.md)

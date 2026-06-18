@@ -14,24 +14,26 @@ import SwiftUI
 import OSGKeyboardShared
 
 struct AppGroupErrorView: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 48))
-                .foregroundStyle(Palette.danger)
+                .foregroundStyle(palette.danger)
             Text("App Group 未配置")
                 .font(TypeStyle.title2)
             Text("OSGKeyboard 需要 App Group 才能在键盘扩展和主 App 之间共享配置。")
                 .font(TypeStyle.body)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(Palette.textSecondary)
+                .foregroundStyle(palette.textSecondary)
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Label("在 Apple Developer 后台创建 group.com.osgkeyboard.shared", systemImage: "1.circle")
                 Label("主 App 和键盘扩展都启用该 App Group", systemImage: "2.circle")
                 Label("重新生成 provisioning profile 并下载", systemImage: "3.circle")
             }
             .font(TypeStyle.body)
-            .foregroundStyle(Palette.textPrimary)
+            .foregroundStyle(palette.textPrimary)
         }
         .padding(Spacing.lg)
     }

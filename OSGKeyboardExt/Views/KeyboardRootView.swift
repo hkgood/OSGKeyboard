@@ -22,6 +22,7 @@ import SwiftUI
 import OSGKeyboardShared
 
 public struct KeyboardRootView: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
 
     @ObservedObject var state: State
 
@@ -69,7 +70,7 @@ public struct KeyboardRootView: View {
         }
         .overlay(alignment: .top) {
             Rectangle()
-                .fill(Palette.divider)
+                .fill(palette.divider)
                 .frame(height: 0.5)
         }
     }
@@ -89,10 +90,10 @@ public struct KeyboardRootView: View {
             Button(action: state.openSettings) {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(Palette.textSecondary)
+                    .foregroundStyle(palette.textSecondary)
                     .frame(width: 28, height: 28)
-                    .background(Palette.surface, in: Circle())
-                    .overlay(Circle().stroke(Palette.divider, lineWidth: 0.5))
+                    .background(palette.surface, in: Circle())
+                    .overlay(Circle().stroke(palette.divider, lineWidth: 0.5))
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("Open OSGKeyboard settings"))
@@ -134,12 +135,12 @@ public struct KeyboardRootView: View {
             Button(action: state.insertSpace) {
                 Text("空格")
                     .font(TypeStyle.body)
-                    .foregroundStyle(Palette.textPrimary)
+                    .foregroundStyle(palette.textPrimary)
                     .frame(maxWidth: .infinity, minHeight: 42)
-                    .background(Palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
+                    .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                            .stroke(Palette.divider, lineWidth: 0.5)
+                            .stroke(palette.divider, lineWidth: 0.5)
                     )
             }
             .buttonStyle(.plain)
@@ -195,6 +196,8 @@ extension KeyboardRootView {
 // MARK: - Transcript line
 
 private struct TranscriptLine: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     let phase: KeyboardViewController.State.Phase
     let transcript: String
 
@@ -204,38 +207,38 @@ private struct TranscriptLine: View {
             case .idle:
                 Text("按住说话 · Hold to talk")
                     .font(TypeStyle.caption)
-                    .foregroundStyle(Palette.textTertiary)
+                    .foregroundStyle(palette.textTertiary)
             case .requestingPermissions:
                 HStack(spacing: 6) {
-                    ProgressView().controlSize(.mini).tint(Palette.textSecondary)
+                    ProgressView().controlSize(.mini).tint(palette.textSecondary)
                     Text("准备中…")
                         .font(TypeStyle.caption)
-                        .foregroundStyle(Palette.textSecondary)
+                        .foregroundStyle(palette.textSecondary)
                 }
             case .recording:
                 Text(transcript.isEmpty ? " " : transcript)
                     .font(TypeStyle.caption)
-                    .foregroundStyle(Palette.textPrimary)
+                    .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.head)
                     .frame(maxWidth: .infinity)
             case .processing:
                 HStack(spacing: 6) {
-                    ProgressView().controlSize(.mini).tint(Palette.accent)
+                    ProgressView().controlSize(.mini).tint(palette.accent)
                     Text("润色中 · Polishing")
                         .font(TypeStyle.caption)
-                        .foregroundStyle(Palette.textSecondary)
+                        .foregroundStyle(palette.textSecondary)
                 }
             case .error(let msg):
                 Text(msg)
                     .font(TypeStyle.caption)
-                    .foregroundStyle(Palette.warning)
+                    .foregroundStyle(palette.warning)
                     .lineLimit(1)
                     .truncationMode(.tail)
             case .denied(let reason):
                 Text(deniedMessage(for: reason))
                     .font(TypeStyle.caption)
-                    .foregroundStyle(Palette.warning)
+                    .foregroundStyle(palette.warning)
                     .lineLimit(1)
                     .truncationMode(.tail)
             }
@@ -255,6 +258,8 @@ private struct TranscriptLine: View {
 // MARK: - Toolbar icon button
 
 private struct ToolbarIconButton: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     let systemName: String
     let label: String
     let action: () -> Void
@@ -263,12 +268,12 @@ private struct ToolbarIconButton: View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(Palette.textPrimary)
+                .foregroundStyle(palette.textPrimary)
                 .frame(width: 40, height: 40)
-                .background(Palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
+                .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                        .stroke(Palette.divider, lineWidth: 0.5)
+                        .stroke(palette.divider, lineWidth: 0.5)
                 )
         }
         .buttonStyle(.plain)
@@ -279,6 +284,8 @@ private struct ToolbarIconButton: View {
 // MARK: - Status badge
 
 private struct StatusBadge: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     let phase: KeyboardViewController.State.Phase
 
     var body: some View {
@@ -289,13 +296,13 @@ private struct StatusBadge: View {
             case .requestingPermissions:
                 EmptyView()
             case .recording:
-                dot(color: Palette.recordRed, label: "REC")
+                dot(color: palette.recordRed, label: "REC")
             case .processing:
-                dot(color: Palette.accent, label: "···")
+                dot(color: palette.accent, label: "···")
             case .error:
-                dot(color: Palette.warning, label: "!")
+                dot(color: palette.warning, label: "!")
             case .denied:
-                dot(color: Palette.warning, label: "!")
+                dot(color: palette.warning, label: "!")
             }
         }
     }
@@ -307,18 +314,20 @@ private struct StatusBadge: View {
                 .frame(width: 6, height: 6)
             Text(label)
                 .font(TypeStyle.caption2)
-                .foregroundStyle(Palette.textSecondary)
+                .foregroundStyle(palette.textSecondary)
         }
         .padding(.horizontal, Spacing.xs)
         .padding(.vertical, 3)
-        .background(Palette.surface, in: Capsule())
-        .overlay(Capsule().stroke(Palette.divider, lineWidth: 0.5))
+        .background(palette.surface, in: Capsule())
+        .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
     }
 }
 
 // MARK: - Mode chip
 
 private struct ModeChip: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     let mode: KeyboardViewController.State.InputMode
     let onChange: (KeyboardViewController.State.InputMode) -> Void
 
@@ -343,11 +352,11 @@ private struct ModeChip: View {
                     .font(.system(size: 8, weight: .bold))
             }
             .font(TypeStyle.caption2)
-            .foregroundStyle(mode == .off ? Palette.textTertiary : Palette.textPrimary)
+            .foregroundStyle(mode == .off ? palette.textTertiary : palette.textPrimary)
             .padding(.horizontal, Spacing.xs + 2)
             .padding(.vertical, 4)
-            .background(Palette.surfaceElevated, in: Capsule())
-            .overlay(Capsule().stroke(Palette.divider, lineWidth: 0.5))
+            .background(palette.surfaceElevated, in: Capsule())
+            .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
         }
         .menuStyle(.button)
     }
@@ -372,6 +381,8 @@ private struct ModeChip: View {
 // MARK: - Locale chip
 
 private struct LocaleChip: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     let localeId: String
     let onChange: (String) -> Void
 
@@ -405,11 +416,11 @@ private struct LocaleChip: View {
                     .font(.system(size: 8, weight: .bold))
             }
             .font(TypeStyle.caption2)
-            .foregroundStyle(Palette.textPrimary)
+            .foregroundStyle(palette.textPrimary)
             .padding(.horizontal, Spacing.xs + 2)
             .padding(.vertical, 4)
-            .background(Palette.surfaceElevated, in: Capsule())
-            .overlay(Capsule().stroke(Palette.divider, lineWidth: 0.5))
+            .background(palette.surfaceElevated, in: Capsule())
+            .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
         }
         .menuStyle(.button)
     }

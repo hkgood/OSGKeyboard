@@ -8,6 +8,8 @@ import SwiftUI
 import OSGKeyboardShared
 
 struct SettingsView: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     @ObservedObject var config = ProviderConfig.shared
     @Environment(\.dismiss) private var dismiss
     @State private var showResetConfirm = false
@@ -15,7 +17,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Palette.background.ignoresSafeArea()
+                palette.background.ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: Spacing.md) {
                         providerSection
@@ -34,7 +36,7 @@ struct SettingsView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                         .font(TypeStyle.headline)
-                        .foregroundStyle(Palette.accent)
+                        .foregroundStyle(palette.accent)
                 }
             }
         }
@@ -84,7 +86,7 @@ struct SettingsView: View {
                         set: { config.modeId = $0 }
                     )
                 )
-                Divider().background(Palette.divider)
+                Divider().background(palette.divider)
                 PickerRow(
                     title: "ASR locale",
                     options: localeOptions,
@@ -94,10 +96,10 @@ struct SettingsView: View {
                     )
                 )
             }
-            .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(Palette.divider, lineWidth: 0.5)
+                    .stroke(palette.divider, lineWidth: 0.5)
             )
         }
     }
@@ -130,7 +132,7 @@ struct SettingsView: View {
                 Spacer()
                 Button("Reset") { config.systemPrompt = config.defaultSystemPrompt }
                     .font(TypeStyle.caption2)
-                    .foregroundStyle(Palette.accent)
+                    .foregroundStyle(palette.accent)
             }
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 TextEditor(text: $config.systemPrompt)
@@ -138,10 +140,10 @@ struct SettingsView: View {
                     .scrollContentBackground(.hidden)
                     .frame(minHeight: 140)
                     .padding(Spacing.xs)
-                    .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
+                    .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                            .stroke(Palette.divider, lineWidth: 0.5)
+                            .stroke(palette.divider, lineWidth: 0.5)
                     )
             }
             .cardSurface()
@@ -156,7 +158,7 @@ struct SettingsView: View {
         } label: {
             Text("Reset all settings")
                 .font(TypeStyle.caption)
-                .foregroundStyle(Palette.danger)
+                .foregroundStyle(palette.danger)
                 .frame(maxWidth: .infinity, minHeight: 40)
         }
         .buttonStyle(.plain)
@@ -168,12 +170,12 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
                 .font(TypeStyle.caption2)
-                .foregroundStyle(Palette.textSecondary)
+                .foregroundStyle(palette.textSecondary)
                 .textCase(.uppercase)
             if let subtitle {
                 Text(subtitle)
                     .font(TypeStyle.caption2)
-                    .foregroundStyle(Palette.textTertiary)
+                    .foregroundStyle(palette.textTertiary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -183,6 +185,8 @@ struct SettingsView: View {
 // MARK: - Picker row
 
 private struct PickerRow: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
     let title: String
     let options: [(id: String, label: String)]
     @Binding var selection: String
@@ -191,7 +195,7 @@ private struct PickerRow: View {
         HStack {
             Text(title)
                 .font(TypeStyle.body)
-                .foregroundStyle(Palette.textPrimary)
+                .foregroundStyle(palette.textPrimary)
             Spacer()
             Menu {
                 ForEach(options, id: \.id) { o in
@@ -209,10 +213,10 @@ private struct PickerRow: View {
                 HStack(spacing: 4) {
                     Text(currentLabel)
                         .font(TypeStyle.body)
-                        .foregroundStyle(Palette.textSecondary)
+                        .foregroundStyle(palette.textSecondary)
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Palette.textTertiary)
+                        .foregroundStyle(palette.textTertiary)
                 }
             }
         }
