@@ -71,31 +71,20 @@ final class PreviewASRController: ObservableObject {
         errorMessage = nil
         level = 0
 
-        // 1. Microphone permission.
-        let micGranted: Bool
-        if #available(iOS 17.0, *) {
-            switch AVAudioApplication.shared.recordPermission {
-            case .granted:               micGranted = true
-            case .denied:                micGranted = false
-            case .undetermined:          micGranted = await AVAudioApplication.requestRecordPermission()
-            @unknown default:            micGranted = false
-            }
-        } else {
-            micGranted = await withCheckedContinuation { cont in
-                AVAudioSession.sharedInstance().requestRecordPermission { cont.resume(returning: $0) }
-            }
-        }
+        // 1. Microphone permission. The helper is `nonisolated` so the
+        // (iOS < 17) callback closure does not inherit `@MainActor` —
+        // `AVAudioSession.requestRecordPermission` delivers on a TCC
+        // reply queue, and a `@MainActor`-inferred closure body there
+        // hits `dispatch_assert_queue` in `_swift_task_checkIsolatedSwift`.
+        let micGranted = await Self.requestMicrophonePermission()
         guard micGranted else {
             phase = .denied("麦克风被拒绝 · Mic denied")
             return
         }
 
-        // 2. Speech recognition permission.
-        let speechGranted = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
-            SFSpeechRecognizer.requestAuthorization { status in
-                cont.resume(returning: status == .authorized)
-            }
-        }
+        // 2. Speech recognition permission. Same reasoning as above:
+        // the callback fires on TCC's reply queue, NOT the main queue.
+        let speechGranted = await Self.requestSpeechRecognitionPermission()
         guard speechGranted else {
             phase = .denied("语音识别被拒绝 · Speech denied")
             return
@@ -266,6 +255,43 @@ final class PreviewASRController: ObservableObject {
                     self.errorMessage = m
                     self.phase = .error(m)
                 }
+            }
+        }
+    }
+
+    // MARK: - Permission helpers (nonisolated)
+    //
+    // `SFSpeechRecognizer.requestAuthorization` and (iOS < 17)
+    // `AVAudioSession.requestRecordPermission` deliver their callbacks
+    // on a TCC reply queue, NOT the main queue. If we wrap those
+    // callbacks inline in `start(locale:)` — which is `@MainActor` —
+    // Swift 6 strict concurrency infers the closure body as
+    // `@MainActor`, and the runtime crashes on
+    // `dispatch_assert_queue` in `_swift_task_checkIsolatedSwift` as
+    // soon as TCC calls us back. Extracting to `nonisolated static
+    // func` breaks the inference: the helper has no isolation, the
+    // callback closure body has no isolation, and `cont.resume(...)`
+    // is itself thread-safe on `CheckedContinuation`.
+
+    private nonisolated static func requestMicrophonePermission() async -> Bool {
+        if #available(iOS 17.0, *) {
+            switch AVAudioApplication.shared.recordPermission {
+            case .granted:               return true
+            case .denied:                return false
+            case .undetermined:          return await AVAudioApplication.requestRecordPermission()
+            @unknown default:            return false
+            }
+        } else {
+            return await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+                AVAudioSession.sharedInstance().requestRecordPermission { cont.resume(returning: $0) }
+            }
+        }
+    }
+
+    private nonisolated static func requestSpeechRecognitionPermission() async -> Bool {
+        await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+            SFSpeechRecognizer.requestAuthorization { status in
+                cont.resume(returning: status == .authorized)
             }
         }
     }
