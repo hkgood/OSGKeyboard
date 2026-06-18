@@ -57,6 +57,7 @@ targets:
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         NSMicrophoneUsageDescription: "OSGKeyboard needs microphone access to transcribe your voice into text."
+        NSSpeechRecognitionUsageDescription: "OSGKeyboard uses on-device speech recognition to transcribe your dictation. Audio never leaves your device."
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
         CFBundleURLTypes:
@@ -96,6 +97,8 @@ targets:
         CFBundleDisplayName: OSGKeyboard
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSMicrophoneUsageDescription: "OSGKeyboard needs microphone access to transcribe your voice into text."
+        NSSpeechRecognitionUsageDescription: "OSGKeyboard uses on-device speech recognition to transcribe your dictation. Audio never leaves your device."
         NSExtension:
           NSExtensionAttributes:
             IsASCIICapable: false
