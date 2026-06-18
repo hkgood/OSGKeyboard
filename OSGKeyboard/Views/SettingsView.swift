@@ -37,7 +37,6 @@ struct SettingsView: View {
                         .foregroundStyle(Palette.accent)
                 }
             }
-            .preferredColorScheme(.dark)
         }
         .confirmationDialog(
             "Reset all settings?",

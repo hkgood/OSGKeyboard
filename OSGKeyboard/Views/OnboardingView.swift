@@ -37,7 +37,6 @@ struct OnboardingView: View {
                     .padding(.bottom, Spacing.lg)
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private var pageDots: some View {

@@ -9,7 +9,37 @@
 
 import SwiftUI
 
-// MARK: - Palette
+// MARK: - Theme palette (light / dark)
+
+/// Single source of truth for *one* colour scheme. The active palette is
+/// injected via the `\.themePalette` environment key — see
+/// `DesignSystem/ThemedRoot.swift`. Token names mirror the previous
+/// `Palette` static API so existing call sites (`Palette.background` etc.)
+/// still compile and resolve through the legacy static accessors below.
+public struct ThemePalette: Sendable {
+    public let background:      Color
+    public let surface:         Color
+    public let surfaceElevated: Color
+    public let surfaceMuted:    Color
+
+    public let accent:      Color
+    public let accentMuted: Color
+    public let accentGlow:  Color
+
+    public let danger:  Color
+    public let success: Color
+    public let warning: Color
+
+    public let textPrimary:   Color
+    public let textSecondary: Color
+    public let textTertiary:  Color
+    public let textOnAccent:  Color
+
+    public let divider:       Color
+    public let dividerStrong: Color
+
+    public let recordRed: Color
+}
 
 public enum Palette {
     // Backgrounds
@@ -40,6 +70,69 @@ public enum Palette {
 
     // Recording state
     public static let recordRed       = Color(red: 1.000, green: 0.231, blue: 0.188)  // #FF3B30
+
+    /// Canonical dark palette — preserves every legacy literal above so
+    /// existing call sites that read `Palette.background` directly keep
+    /// getting the dark value (important for the keyboard extension, which
+    /// deliberately stays dark regardless of system appearance).
+    public static let dark = ThemePalette(
+        background:      background,
+        surface:         surface,
+        surfaceElevated: surfaceElevated,
+        surfaceMuted:    surfaceMuted,
+        accent:          accent,
+        accentMuted:     accentMuted,
+        accentGlow:      accentGlow,
+        danger:          danger,
+        success:         success,
+        warning:         warning,
+        textPrimary:     textPrimary,
+        textSecondary:   textSecondary,
+        textTertiary:    textTertiary,
+        textOnAccent:    textOnAccent,
+        divider:         divider,
+        dividerStrong:   dividerStrong,
+        recordRed:       recordRed
+    )
+
+    /// Light palette — iOS system light mode defaults. Used by the main app
+    /// when the user is in light mode; the keyboard extension stays dark.
+    public static let light = ThemePalette(
+        background:      Color(red: 0.980, green: 0.980, blue: 0.988),  // #FAFAFC
+        surface:         Color(red: 1.000, green: 1.000, blue: 1.000),  // #FFFFFF
+        surfaceElevated: Color(red: 0.941, green: 0.941, blue: 0.961),  // #F0F0F5
+        surfaceMuted:    Color(red: 0.953, green: 0.953, blue: 0.965),  // #F3F3F6
+        accent:          Color(red: 0.000, green: 0.478, blue: 1.000),  // iOS systemBlue
+        accentMuted:     Color(red: 0.000, green: 0.478, blue: 1.000).opacity(0.14),
+        accentGlow:      Color(red: 0.000, green: 0.478, blue: 1.000).opacity(0.32),
+        danger:          Color(red: 1.000, green: 0.231, blue: 0.188),  // #FF3B30
+        success:         Color(red: 0.157, green: 0.812, blue: 0.412),  // #28CF69
+        warning:         Color(red: 1.000, green: 0.620, blue: 0.094),  // #FF9E18
+        textPrimary:     Color(red: 0.067, green: 0.067, blue: 0.094),  // #111118
+        textSecondary:   Color(red: 0.392, green: 0.392, blue: 0.435),  // #64646F
+        textTertiary:    Color(red: 0.557, green: 0.557, blue: 0.604),  // #8E8E9A
+        textOnAccent:    Color.white,
+        divider:         Color.black.opacity(0.06),
+        dividerStrong:   Color.black.opacity(0.10),
+        recordRed:       Color(red: 1.000, green: 0.231, blue: 0.188)   // #FF3B30
+    )
+}
+
+// MARK: - Environment key
+
+private struct ThemePaletteKey: EnvironmentKey {
+    /// Default falls back to the legacy dark palette so views that haven't
+    /// been wrapped in `ThemedRoot` continue to look identical to today.
+    static let defaultValue: ThemePalette = Palette.dark
+}
+
+public extension EnvironmentValues {
+    /// The palette currently active for this view. Reads from the nearest
+    /// `ThemedRoot` ancestor (or `Palette.dark` if none).
+    var themePalette: ThemePalette {
+        get { self[ThemePaletteKey.self] }
+        set { self[ThemePaletteKey.self] = newValue }
+    }
 }
 
 // MARK: - Spacing scale (4 pt grid)

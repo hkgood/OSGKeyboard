@@ -1,7 +1,5 @@
 // OSGKeyboardApp.swift
 // OSGKeyboard · Main App
-//
-// DEBUG VERSION 2: restore real flow but instrument every step.
 
 import SwiftUI
 import OSGKeyboardShared
@@ -11,21 +9,22 @@ struct OSGKeyboardApp: App {
     @StateObject private var config = ProviderConfig.shared
 
     init() {
+        #if DEBUG
         print("🔥 [OSGKeyboardApp] init()")
+        #endif
     }
 
     var body: some Scene {
         WindowGroup {
-            Group {
-                if config.isConfigured {
-                    HomeView()
-                        .onAppear { print("🔥 [OSGKeyboardApp] → HomeView appeared") }
-                } else {
-                    OnboardingView(config: config)
-                        .onAppear { print("🔥 [OSGKeyboardApp] → OnboardingView appeared") }
+            ThemedRoot {
+                Group {
+                    if config.isConfigured {
+                        HomeView()
+                    } else {
+                        OnboardingView(config: config)
+                    }
                 }
             }
-            .onAppear { print("🔥 [OSGKeyboardApp] body appeared") }
         }
     }
 }

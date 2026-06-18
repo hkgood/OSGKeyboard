@@ -30,7 +30,6 @@ struct KeyboardPreviewStub: View {
             .padding(.bottom, 6)
         }
         .frame(height: 280)
-        .preferredColorScheme(.dark)
     }
 
     // MARK: - Top bar

@@ -33,7 +33,6 @@ struct HomeView: View {
         .sheet(isPresented: $showKeyboardPreview) {
             KeyboardPreviewSheet()
         }
-        .preferredColorScheme(.dark)
     }
 
     // MARK: - Header

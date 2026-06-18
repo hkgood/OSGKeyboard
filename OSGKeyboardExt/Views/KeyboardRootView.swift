@@ -35,51 +35,23 @@ public struct KeyboardRootView: View {
     static let totalHeight: CGFloat = 280
 
     public var body: some View {
-        ZStack(alignment: .top) {
-            background
+        VStack(spacing: 0) {
+            topBar
+                .frame(height: 32)
 
-            VStack(spacing: 0) {
-                topBar
-                    .frame(height: 32)
+            centreArea
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                centreArea
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                bottomBar
-                    .frame(height: 56)
-            }
-            .padding(.top, 4)
-            .padding(.bottom, 6)
+            bottomBar
+                .frame(height: 56)
         }
+        .padding(.top, 4)
+        .padding(.bottom, 6)
+        // iOS keyboard extensions always render dark (Apple's default
+        // for custom keyboards), and we let the system UI chrome show
+        // through by drawing no background of our own.
+        .background(Color.clear)
         .frame(height: Self.totalHeight)
-        .preferredColorScheme(.dark)
-    }
-
-    // MARK: - Background
-
-    /// Solid dark fill plus a hairline highlight at the top edge, so the
-    /// keyboard reads as a physical surface rather than a floating card.
-    private var background: some View {
-        ZStack {
-            Palette.background
-            VStack(spacing: 0) {
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.05), .clear],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .frame(height: 1)
-                Spacer(minLength: 0)
-            }
-        }
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(Palette.divider)
-                .frame(height: 0.5)
-        }
     }
 
     // MARK: - Top bar
@@ -182,19 +154,16 @@ extension KeyboardRootView {
 #Preview("Keyboard · Idle") {
     KeyboardRootView(state: KeyboardViewController.State.previewIdle)
         .frame(width: 390, height: 280)
-        .preferredColorScheme(.dark)
 }
 
 #Preview("Keyboard · Recording") {
     KeyboardRootView(state: KeyboardViewController.State.previewRecording)
         .frame(width: 390, height: 280)
-        .preferredColorScheme(.dark)
 }
 
 #Preview("Keyboard · Processing") {
     KeyboardRootView(state: KeyboardViewController.State.previewProcessing)
         .frame(width: 390, height: 280)
-        .preferredColorScheme(.dark)
 }
 #endif
 

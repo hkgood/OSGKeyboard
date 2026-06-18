@@ -42,7 +42,6 @@ struct KeyboardPreviewSheet: View {
                 keyboardBlock
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private var mockTextField: some View {
