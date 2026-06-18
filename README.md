@@ -6,7 +6,7 @@
 ![Platform](https://img.shields.io/badge/platform-iOS%2018%2B-0078D4?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![CI](https://github.com/<OWNER>/OSGKeyboard/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/hkgood/OSGKeyboard/actions/workflows/ci.yml/badge.svg)
 
 [中文 README](./README.zh.md)
 
@@ -20,14 +20,14 @@ OSGKeyboard is a free, open alternative to commercial voice-input tools. It runs
 2. Speak naturally
 3. Release — the AI polishes your words into clean text and inserts it at the cursor
 
-The audio stays on-device (transcribed by Apple's on-device `SpeechAnalyzer` on iOS 26+, or `SFSpeechRecognizer` on iOS 18/19). Only the **polished transcript** is sent to your chosen cloud LLM. **No audio ever leaves your phone.**
+The audio stays on-device (transcribed by Apple's on-device `SFSpeechRecognizer` on iOS 18/19; iOS 26+ `SpeechAnalyzer` planned for the next release). Only the **polished transcript** is sent to your chosen cloud LLM. **No audio ever leaves your phone.**
 
 ---
 
 ## Features
 
 - 🎙 **Push-to-talk** with a Typeless-style circular mic button
-- 🧠 **On-device ASR** (iOS 26 `SpeechAnalyzer` + `DictationTranscriber`; iOS 18 `SFSpeechRecognizer` fallback)
+- 🧠 **On-device ASR** (iOS 18/19 `SFSpeechRecognizer`; iOS 26+ `SpeechAnalyzer` + `DictationTranscriber` planned)
 - ✍️ **AI polishing** — adds structure, punctuation, fixes grammar, optionally produces lists
 - 🔌 **Bring-your-own API** — works with any OpenAI-compatible endpoint (OpenAI, DeepSeek, Qwen DashScope, your own self-hosted server, …)
 - 🔒 **Privacy first** — audio never leaves your device; transcripts only sent to the LLM you choose
@@ -41,14 +41,14 @@ The audio stays on-device (transcribed by Apple's on-device `SpeechAnalyzer` on 
 ### Requirements
 
 - macOS with **Xcode 16+** (Xcode 26 recommended)
-- iPhone running **iOS 18.0+** (iOS 26+ for the best on-device ASR)
+- iPhone running **iOS 18.0+**
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen): `brew install xcodegen`
 - An OpenAI-compatible API key (e.g. from [OpenAI](https://platform.openai.com/api-keys), [DeepSeek](https://platform.deepseek.com/api_keys), or [Qwen DashScope](https://dashscope.console.aliyun.com/apiKey))
 
 ### Build & run
 
 ```bash
-git clone https://github.com/<OWNER>/OSGKeyboard.git
+git clone https://github.com/hkgood/OSGKeyboard.git
 cd OSGKeyboard
 xcodegen generate          # produces OSGKeyboard.xcodeproj
 open OSGKeyboard.xcodeproj # or build via CLI:
@@ -132,7 +132,7 @@ That's it. No other code changes required.
 
 - iOS sandboxes keyboard extensions: ~60 MB memory cap, Full Access required.
 - The keyboard does **not** work in password fields or some `WKWebView` textareas (iOS limitation).
-- iOS 18 uses `SFSpeechRecognizer` instead of `SpeechAnalyzer`; on iOS 26, `SpeechAnalyzer` is significantly faster and supports more locales.
+- iOS 18/19 ships with `SFSpeechRecognizer` for on-device ASR. iOS 26+ `SpeechAnalyzer` is planned for the next release — it is significantly faster and supports more locales.
 
 ---
 
@@ -150,4 +150,4 @@ That's it. No other code changes required.
 
 ---
 
-**Note:** replace `<OWNER>` in badges and the git clone URL with your GitHub username.
+**Note:** the project is published at [`hkgood/OSGKeyboard`](https://github.com/hkgood/OSGKeyboard); badges and git clone URLs already point there.
