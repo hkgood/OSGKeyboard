@@ -68,19 +68,19 @@ public struct KeyboardRootView: View {
                 Spacer(minLength: 0)
             }
         }
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(palette.divider)
-                .frame(height: 0.5)
-        }
     }
 
     // MARK: - Top bar
 
     private var topBar: some View {
         HStack(spacing: Spacing.xs) {
-            ModeChip(mode: state.mode) { newMode in
-                state.setMode(newMode)
+            if state.isLocalEngine {
+                // Local engine: always transcribe, no mode menu needed.
+                LocalEngineChip()
+            } else {
+                ModeChip(mode: state.mode) { newMode in
+                    state.setMode(newMode)
+                }
             }
             LocaleChip(localeId: state.localeId) { newId in
                 state.setLocale(newId)
@@ -96,7 +96,7 @@ public struct KeyboardRootView: View {
                     .overlay(Circle().stroke(palette.divider, lineWidth: 0.5))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("Open OSGKeyboard settings"))
+            .accessibilityLabel(Text("打开设置 · Open OSGKeyboard settings"))
         }
         .padding(.horizontal, Spacing.md)
     }
@@ -137,7 +137,7 @@ public struct KeyboardRootView: View {
             }
             Spacer(minLength: 0)
             Button(action: state.insertSpace) {
-                Text("空格")
+                Text("空格 · Space")
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                     .frame(maxWidth: .infinity, minHeight: 42)
@@ -148,7 +148,7 @@ public struct KeyboardRootView: View {
                     )
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("Space"))
+            .accessibilityLabel(Text("空格 · Space"))
             Spacer(minLength: 0)
             ToolbarIconButton(systemName: "return", label: "newline") {
                 state.insertNewline()
@@ -216,7 +216,7 @@ private struct TranscriptLine: View {
             case .requestingPermissions:
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(palette.textSecondary)
-                    Text("准备中…")
+                    Text("准备中… · Preparing")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -230,7 +230,7 @@ private struct TranscriptLine: View {
             case .processing:
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(palette.accent)
-                    Text("润色中 · Polishing")
+                    Text("处理中 · Processing")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -255,7 +255,7 @@ private struct TranscriptLine: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityHint(Text("Opens the OSGKeyboard settings page where you can grant microphone or speech recognition access."))
+                .accessibilityHint(Text("打开 OSGKeyboard 设置,可授予麦克风 / 语音识别权限。Opens the OSGKeyboard settings page where you can grant microphone or speech recognition access."))
             }
         }
         .frame(maxWidth: .infinity)
@@ -264,8 +264,8 @@ private struct TranscriptLine: View {
 
     private func deniedMessage(for reason: KeyboardViewController.State.Phase.Reason) -> String {
         switch reason {
-        case .mic:    return "麦克风被拒绝"
-        case .speech: return "语音识别被拒绝"
+        case .mic:    return "麦克风被拒绝 · Mic denied"
+        case .speech: return "语音识别被拒绝 · Speech denied"
         }
     }
 }
@@ -349,6 +349,25 @@ private struct StatusBadge: View {
         .padding(.vertical, 3)
         .background(palette.surface, in: Capsule())
         .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
+    }
+}
+
+// MARK: - Local engine chip (shown instead of ModeChip when engineMode == "local")
+
+private struct LocalEngineChip: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "iphone.badge.checkmark")
+            Text("本地 · On-device")
+        }
+        .font(TypeStyle.caption2)
+        .foregroundStyle(palette.accent)
+        .padding(.horizontal, Spacing.xs + 2)
+        .padding(.vertical, 4)
+        .background(palette.accent.opacity(0.15), in: Capsule())
+        .overlay(Capsule().stroke(palette.accent.opacity(0.35), lineWidth: 0.5))
     }
 }
 

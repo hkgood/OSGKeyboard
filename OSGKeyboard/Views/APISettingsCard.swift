@@ -24,7 +24,7 @@ struct APISettingsCard: View {
     var body: some View {
         VStack(spacing: 0) {
             field(
-                title: "Base URL",
+                title: "Base URL · 接口地址",
                 placeholder: "https://api.openai.com/v1",
                 text: $config.baseURL,
                 autocap: false
@@ -33,7 +33,7 @@ struct APISettingsCard: View {
             keyField
             Divider().background(palette.divider)
             field(
-                title: "Model",
+                title: "Model · 模型",
                 placeholder: "gpt-4o-mini",
                 text: $config.model,
                 autocap: false
@@ -50,7 +50,7 @@ struct APISettingsCard: View {
                     HStack {
                         Image(systemName: "key.fill")
                             .foregroundStyle(palette.accent)
-                        Text("Get an API key")
+                        Text("获取 API Key · Get an API key")
                             .foregroundStyle(palette.textPrimary)
                         Spacer()
                         Image(systemName: "arrow.up.right.square")
@@ -77,7 +77,7 @@ struct APISettingsCard: View {
     private var keyField: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("API Key")
+                Text("API Key · 密钥")
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
                 Spacer()
@@ -86,7 +86,7 @@ struct APISettingsCard: View {
                         .foregroundStyle(palette.textSecondary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text(showKey ? "Hide key" : "Show key"))
+                .accessibilityLabel(Text(showKey ? "隐藏密钥 · Hide key" : "显示密钥 · Show key"))
             }
             Group {
                 if showKey {
@@ -143,7 +143,7 @@ struct APISettingsCard: View {
     private var testConnectionRow: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("Connection")
+                Text("Connection · 连接测试")
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
                 Spacer()
@@ -176,10 +176,10 @@ struct APISettingsCard: View {
 
     private var testButtonLabel: String {
         switch testStatus {
-        case .idle:        return "Test connection"
-        case .running:     return "Testing…"
-        case .success:     return "OK · retry"
-        case .failure:     return "Failed · retry"
+        case .idle:        return "测试连接 · Test"
+        case .running:     return "测试中… · Testing…"
+        case .success:     return "成功 · Retry"
+        case .failure:     return "失败 · Retry"
         }
     }
 
@@ -218,17 +218,17 @@ struct APISettingsCard: View {
         Task {
             do {
                 let reply = try await client.polish("ping", systemPrompt: "Reply with the single word PONG.")
-                testStatus = .success("连接成功 · “\(reply.prefix(60))”")
+                testStatus = .success("连接成功 · Connected · “\(reply.prefix(60))”")
             } catch LLMError.noAPIKey {
-                testStatus = .failure("未填写 API Key")
+                testStatus = .failure("未填写 API Key · API key missing")
             } catch let error as LLMError {
                 switch error {
                 case .http(let status):
                     testStatus = .failure("HTTP \(status)")
                 case .rateLimited:
-                    testStatus = .failure("API 限流 (429)")
+                    testStatus = .failure("API 限流 (429) · Rate limited")
                 case .transport(let msg):
-                    testStatus = .failure("网络错误: \(msg)")
+                    testStatus = .failure("网络错误 · Network error: \(msg)")
                 default:
                     testStatus = .failure(error.errorDescription ?? "\(error)")
                 }

@@ -18,6 +18,10 @@ struct KeyboardPreviewStub: View {
     let phase: Phase
     let level: Double
     let transcript: String
+    /// Called when the user taps the record disc. Use this to cycle states in the preview sheet.
+    var onTap: () -> Void = {}
+    /// Called when the user taps the settings gear icon.
+    var openSettings: () -> Void = {}
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -41,7 +45,7 @@ struct KeyboardPreviewStub: View {
             localeChip
             Spacer(minLength: 0)
             statusBadge
-            Button(action: {}) {
+            Button(action: openSettings) {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(palette.textSecondary)
@@ -57,7 +61,7 @@ struct KeyboardPreviewStub: View {
     private var modeChip: some View {
         HStack(spacing: 4) {
             Image(systemName: "wand.and.stars")
-            Text("润色")
+            Text("润色 · Polish")
             Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
         }
         .font(TypeStyle.caption2)
@@ -70,7 +74,7 @@ struct KeyboardPreviewStub: View {
     private var localeChip: some View {
         HStack(spacing: 4) {
             Image(systemName: "globe")
-            Text("简体")
+            Text("简体 · ZH-Hans")
             Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
         }
         .font(TypeStyle.caption2)
@@ -88,7 +92,7 @@ struct KeyboardPreviewStub: View {
             case .recording:
                 HStack(spacing: 4) {
                     Circle().fill(palette.recordRed).frame(width: 6, height: 6)
-                    Text("REC").font(TypeStyle.caption2).foregroundStyle(palette.textSecondary)
+                    Text("REC · 录音中").font(TypeStyle.caption2).foregroundStyle(palette.textSecondary)
                 }
                 .padding(.horizontal, Spacing.xs).padding(.vertical, 3)
                 .background(palette.surface, in: Capsule())
@@ -132,7 +136,7 @@ struct KeyboardPreviewStub: View {
             case .processing:
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(palette.accent)
-                    Text("润色中 · Polishing")
+                    Text("处理中 · Processing")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -153,11 +157,25 @@ struct KeyboardPreviewStub: View {
                     .frame(width: 160, height: 160)
                     .blur(radius: 12)
                     .opacity(0.4 + level * 0.6)
+            } else if phase == .idle {
+                // Idle-state ambient glow tinted with the accent — mirrors
+                // the "polish / ready" brand colour so the disc is the
+                // single most recognisable element on the keyboard.
+                Circle()
+                    .fill(RadialGradient(
+                        colors: [palette.accent.opacity(0.30), .clear],
+                        center: .center,
+                        startRadius: 40,
+                        endRadius: 90
+                    ))
+                    .frame(width: 180, height: 180)
+                    .blur(radius: 18)
+                    .opacity(0.7)
             }
             Circle()
                 .fill(discGradient)
                 .frame(width: 96, height: 96)
-                .overlay(Circle().stroke(Color.white.opacity(0.16), lineWidth: 1))
+                .overlay(Circle().stroke(palette.accentGlow, lineWidth: 1.5))
                 .shadow(color: .black.opacity(0.4), radius: 10, y: 6)
             Group {
                 switch phase {
@@ -179,16 +197,37 @@ struct KeyboardPreviewStub: View {
                 }
             }
         }
+        .contentShape(Circle())
+        .onTapGesture { onTap() }
     }
 
     private var discGradient: LinearGradient {
         switch phase {
         case .recording:
-            return LinearGradient(colors: [palette.recordRed.opacity(0.95), palette.recordRed.opacity(0.75)], startPoint: .top, endPoint: .bottom)
+            return LinearGradient(
+                colors: [palette.recordRed.opacity(0.95), palette.recordRed.opacity(0.75)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
         case .processing:
-            return LinearGradient(colors: [palette.surfaceElevated, palette.surface], startPoint: .top, endPoint: .bottom)
+            return LinearGradient(
+                colors: [palette.surfaceElevated, palette.surface],
+                startPoint: .top,
+                endPoint: .bottom
+            )
         case .idle:
-            return LinearGradient(colors: [Color(white: 0.22), Color(white: 0.10)], startPoint: .top, endPoint: .bottom)
+            // Brand green — same hue as the AccentColor asset and
+            // `Palette.{dark,light}.accent`. The disc is the keyboard's
+            // primary CTA, and it must read as "the green button" across
+            // both light and dark themes.
+            return LinearGradient(
+                colors: [
+                    palette.accent.opacity(0.95),
+                    palette.accent.opacity(0.75)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
         }
     }
 
@@ -200,7 +239,7 @@ struct KeyboardPreviewStub: View {
             iconButton("delete.left")
             Spacer(minLength: 0)
             Button(action: {}) {
-                Text("空格")
+                Text("空格 · Space")
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                     .frame(maxWidth: .infinity, minHeight: 42)

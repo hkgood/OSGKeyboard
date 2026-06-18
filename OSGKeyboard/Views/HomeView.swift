@@ -45,7 +45,7 @@ struct HomeView: View {
                 Circle()
                     .fill(config.isConfigured ? palette.success : palette.warning)
                     .frame(width: 8, height: 8)
-                Text(config.isConfigured ? "Ready" : "Setup incomplete")
+                Text(config.isConfigured ? "就绪 · Ready" : "未完成配置 · Setup incomplete")
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
             }
@@ -91,14 +91,14 @@ struct HomeView: View {
                     Image(systemName: "waveform")
                         .font(.system(size: 36, weight: .light))
                         .foregroundStyle(palette.accent)
-                    Text("Tap to configure")
+                    Text("点此配置 · Tap to configure")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                 }
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text("Open OSGKeyboard settings"))
+        .accessibilityLabel(Text("打开设置 · Open OSGKeyboard settings"))
     }
 
     // MARK: - Actions

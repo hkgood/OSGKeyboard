@@ -153,7 +153,7 @@ struct RecordButton: View {
         .onChange(of: phase) { _, new in
             breath = (new == .recording)
         }
-        .accessibilityLabel(Text("Push to talk"))
+        .accessibilityLabel(Text("按住说话 · Push to talk"))
     }
 
     @State private var pressArmed: Bool = false
@@ -179,8 +179,15 @@ struct RecordButton: View {
                 endPoint: .bottom
             )
         case .idle:
+            // Brand green — same hue as `Palette.{dark,light}.accent`
+            // and the AccentColor asset. The disc is the keyboard's
+            // primary CTA, and a dark-gray disc looked like an inert
+            // surface, not an actionable button.
             return LinearGradient(
-                colors: [Color(white: 0.22), Color(white: 0.10)],
+                colors: [
+                    palette.accent.opacity(0.95),
+                    palette.accent.opacity(0.75)
+                ],
                 startPoint: .top,
                 endPoint: .bottom
             )

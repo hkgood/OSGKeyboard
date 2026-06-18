@@ -38,7 +38,7 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "https://api.openai.com/v1",
             defaultModel: "gpt-4o-mini",
             apiKeyURL: URL(string: "https://platform.openai.com/api-keys"),
-            blurb: "GPT-4o mini · 多语言"
+            blurb: "GPT-4o mini · 多语言 · Multilingual"
         ),
         .init(
             id: "deepseek",
@@ -46,7 +46,7 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "https://api.deepseek.com/v1",
             defaultModel: "deepseek-chat",
             apiKeyURL: URL(string: "https://platform.deepseek.com/api_keys"),
-            blurb: "deepseek-chat · 中文友好"
+            blurb: "deepseek-chat · 中文友好 · Chinese-friendly"
         ),
         .init(
             id: "qwen",
@@ -54,15 +54,15 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
             defaultModel: "qwen-plus",
             apiKeyURL: URL(string: "https://dashscope.console.aliyun.com/apiKey"),
-            blurb: "通义千问 · OpenAI 兼容"
+            blurb: "通义千问 · OpenAI 兼容 · OpenAI-compatible"
         ),
         .init(
             id: "zhipu",
-            name: "智谱 GLM",
+            name: "智谱 GLM · Zhipu",
             defaultBaseURL: "https://open.bigmodel.cn/api/paas/v4",
             defaultModel: "glm-4-flash",
             apiKeyURL: URL(string: "https://bigmodel.cn/usercenter/apikeys"),
-            blurb: "GLM-4-Flash · 中文优化"
+            blurb: "GLM-4-Flash · 中文优化 · Chinese-optimized"
         ),
         .init(
             id: "moonshot",
@@ -70,14 +70,14 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "https://api.moonshot.cn/v1",
             defaultModel: "moonshot-v1-8k",
             apiKeyURL: URL(string: "https://platform.moonshot.cn/console/api-keys"),
-            blurb: "Kimi · 长上下文"
+            blurb: "Kimi · 长上下文 · Long context"
         ),
         .init(
             id: "custom",
-            name: "Custom (OpenAI-compatible)",
+            name: "Custom · 自定义",
             defaultBaseURL: "",
             defaultModel: "",
-            blurb: "自建 / 任意 OpenAI 兼容端点"
+            blurb: "自建 / 任意 OpenAI 兼容端点 · Any OpenAI-compatible endpoint"
         )
     ]
 

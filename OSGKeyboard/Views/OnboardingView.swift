@@ -57,7 +57,7 @@ struct OnboardingView: View {
         HStack(spacing: Spacing.sm) {
             if page > 0 {
                 Button { withAnimation(Motion.soft) { page -= 1 } } label: {
-                    Text("Back")
+                    Text("返回 · Back")
                         .font(TypeStyle.headline)
                         .frame(maxWidth: .infinity, minHeight: 50)
                         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
@@ -75,7 +75,7 @@ struct OnboardingView: View {
                     if page < 2 { page += 1 }
                 }
             } label: {
-                Text(page == 2 ? (config.isConfigured ? "Done" : "Continue") : "Next")
+                Text(page == 2 ? (config.isConfigured ? "完成 · Done" : "继续 · Continue") : "下一步 · Next")
                     .font(TypeStyle.headline)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(
@@ -136,14 +136,14 @@ private struct PrivacyFootnote: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             footnoteRow(icon: "lock.fill",
-                        title: "Audio stays on device",
-                        body: "Transcribed locally with Apple's speech engine.")
+                        title: "Audio stays on device · 音频不出本机",
+                        body: "Transcribed locally with Apple's speech engine. · 由 Apple 端侧引擎转录")
             footnoteRow(icon: "wifi",
-                        title: "Only the polished text is sent",
-                        body: "Sent to your chosen LLM to add structure & punctuation.")
+                        title: "Only the polished text is sent · 仅发送润色后文字",
+                        body: "Sent to your chosen LLM to add structure & punctuation. · 仅向所选 LLM 发送润色后文字")
             footnoteRow(icon: "keyboard",
-                        title: "Works everywhere",
-                        body: "WeChat, Notes, Mail, ChatGPT, Claude, Cursor — anywhere a keyboard appears.")
+                        title: "Works everywhere · 处处可用",
+                        body: "WeChat, Notes, Mail, ChatGPT, Claude, Cursor — anywhere a keyboard appears. · 微信、备忘录、邮件、ChatGPT、Claude、Cursor — 任何键盘出现的地方")
         }
         .padding(Spacing.md)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
@@ -193,10 +193,10 @@ private struct EnableKeyboardPage: View {
                     .foregroundStyle(palette.textTertiary)
             }
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                step(num: 1, text: "Settings → General → Keyboard → Keyboards")
-                step(num: 2, text: "Tap “Add New Keyboard…” and choose OSGKeyboard")
-                step(num: 3, text: "Tap OSGKeyboard and enable “Allow Full Access”")
-                step(num: 4, text: "Allow Full Access is required for the microphone and LLM calls.")
+                step(num: 1, text: "设置 → 通用 → 键盘 → 键盘")
+                step(num: 2, text: "点击「添加新键盘…」并选择 OSGKeyboard")
+                step(num: 3, text: "点击 OSGKeyboard 并启用「允许完全访问」")
+                step(num: 4, text: "Allow Full Access is required for microphone + LLM calls · 允许完全访问是麦克风和网络调用的前提")
             }
             .cardSurface()
             .padding(.horizontal, Spacing.md)

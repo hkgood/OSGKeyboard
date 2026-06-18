@@ -98,23 +98,20 @@ public enum Palette {
     /// Light palette — iOS system light mode defaults. Used by the main app
     /// when the user is in light mode; the keyboard extension stays dark.
     ///
-    /// Accent: Apple system blue (#007AFF), matching the AccentColor asset
-    /// and the iOS HIG default. We deliberately do NOT use the dark-mode
-    /// green here — a bright green CTA on a near-white background reads as
-    /// "go to a garden centre" rather than "tap me to enable your
-    /// keyboard", and a Typeless/Apple-style design system expects the
-    /// accent to follow the system tint in light mode. The keyboard
-    /// extension always renders dark and keeps its green accent for the
-    /// "polish / on-device" affordances, where green-on-dark is the more
-    /// legible pairing.
+    /// Accent is the same brand green (#3AA05A) used in the dark palette —
+    /// "one accent" is core to the design system, and the recording-state
+    /// CTA needs to read as the same brand colour in both modes. The
+    /// keyboard's record disc also picks up `palette.accent` (see
+    /// `KeyboardPreviewStub.recordDisc`), so this single token drives
+    /// every interactive surface.
     public static let light = ThemePalette(
         background:      Color(red: 0.980, green: 0.980, blue: 0.988),  // #FAFAFC
         surface:         Color(red: 1.000, green: 1.000, blue: 1.000),  // #FFFFFF
         surfaceElevated: Color(red: 0.941, green: 0.941, blue: 0.961),  // #F0F0F5
         surfaceMuted:    Color(red: 0.953, green: 0.953, blue: 0.965),  // #F3F3F6
-        accent:          Color(red: 0.000, green: 0.478, blue: 1.000),  // #007AFF
-        accentMuted:     Color(red: 0.000, green: 0.478, blue: 1.000).opacity(0.12),
-        accentGlow:      Color(red: 0.000, green: 0.478, blue: 1.000).opacity(0.28),
+        accent:          Color(red: 0.227, green: 0.627, blue: 0.353),  // #3AA05A
+        accentMuted:     Color(red: 0.227, green: 0.627, blue: 0.353).opacity(0.14),
+        accentGlow:      Color(red: 0.227, green: 0.627, blue: 0.353).opacity(0.32),
         danger:          Color(red: 1.000, green: 0.231, blue: 0.188),  // #FF3B30
         success:         Color(red: 0.157, green: 0.812, blue: 0.412),  // #28CF69
         warning:         Color(red: 1.000, green: 0.620, blue: 0.094),  // #FF9E18
