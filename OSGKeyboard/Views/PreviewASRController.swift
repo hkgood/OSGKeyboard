@@ -249,10 +249,30 @@ final class PreviewASRController: ObservableObject {
     // Swift 6 strict concurrency infers the closure body as
     // `@MainActor`, and the runtime crashes on
     // `dispatch_assert_queue` in `_swift_task_checkIsolatedSwift` as
-    // soon as TCC calls us back. Extracting to `nonisolated static
-    // func` breaks the inference: the helper has no isolation, the
-    // callback closure body has no isolation, and `cont.resume(...)`
-    // is itself thread-safe on `CheckedContinuation`.
+    // soon as TCC calls us back.
+    //
+    // The first attempt (commit `e8a0310`) extracted the entire
+    // permission request into a `nonisolated static func` helper.
+    // That worked in isolation, but the Swift 6 optimizer
+    // inlined those helpers back into `start(locale:)`. After
+    // inlining, the `withCheckedContinuation` body and the
+    // `requestAuthorization` callback were re-typed in the
+    // `@MainActor` context of the caller, and the runtime
+    // assertion came right back — same crash, different symbol:
+    // `closure #1 in closure #2 in PreviewASRController.start(locale:)`.
+    //
+    // The fix that survives inlining is the *function-reference*
+    // pattern, the same one used for `installTap` in
+    // `makeAudioTapBlock` below. The callback is built in a
+    // `nonisolated` static helper that takes a `CheckedContinuation`
+    // and returns the `(Status) -> Void` handler. The body of that
+    // helper has no enclosing actor, so the closure is created in
+    // nonisolated context. When TCC calls us back, the runtime
+    // sees a nonisolated closure on a non-main queue and is happy.
+    //
+    // `cont.resume(...)` is itself thread-safe on
+    // `CheckedContinuation`, so we don't need to hop back to the
+    // main actor before resuming.
 
     private nonisolated static func requestMicrophonePermission() async -> Bool {
         if #available(iOS 17.0, *) {
@@ -264,16 +284,34 @@ final class PreviewASRController: ObservableObject {
             }
         } else {
             return await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
-                AVAudioSession.sharedInstance().requestRecordPermission { cont.resume(returning: $0) }
+                AVAudioSession.sharedInstance().requestRecordPermission(
+                    Self.makeMicAuthHandler(continuation: cont)
+                )
             }
         }
     }
 
     private nonisolated static func requestSpeechRecognitionPermission() async -> Bool {
         await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
-            SFSpeechRecognizer.requestAuthorization { status in
-                cont.resume(returning: status == .authorized)
-            }
+            SFSpeechRecognizer.requestAuthorization(
+                Self.makeSpeechAuthHandler(continuation: cont)
+            )
+        }
+    }
+
+    private nonisolated static func makeSpeechAuthHandler(
+        continuation: CheckedContinuation<Bool, Never>
+    ) -> @Sendable (SFSpeechRecognizerAuthorizationStatus) -> Void {
+        return { status in
+            continuation.resume(returning: status == .authorized)
+        }
+    }
+
+    private nonisolated static func makeMicAuthHandler(
+        continuation: CheckedContinuation<Bool, Never>
+    ) -> @Sendable (Bool) -> Void {
+        return { granted in
+            continuation.resume(returning: granted)
         }
     }
 
