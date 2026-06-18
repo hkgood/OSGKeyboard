@@ -50,7 +50,13 @@ final class PreviewASRController: ObservableObject {
 
     private let asr: ASRService = ASRServiceFactory.make()
     private let audioEngine = AVAudioEngine()
-    private var asrTask: Task<Void, Never>?
+    /// `internal` (not `private`) so the regression test in
+    /// `OSGKeyboardTests/PreviewASRControllerStateTests.swift` can
+    /// install a known consumer task and assert `stop()` doesn't
+    /// cancel it. The class is `@MainActor`-isolated, so the
+    /// natural Swift 6 isolation rules still prevent production
+    /// code outside the class from racing on it.
+    var asrTask: Task<Void, Never>?
     private var bufferContinuation: AsyncStream<AudioBufferSnapshot>.Continuation?
     private var didConfigureAudioSession = false
     private var didInstallTap = false
@@ -65,6 +71,15 @@ final class PreviewASRController: ObservableObject {
         default:
             break
         }
+        // Cancel any leftover consumer task from a previous recording.
+        // Normally `stop()` lets the task run to completion (so it can
+        // see the `.final` and transition out of `.processing`), but if
+        // the user smashed the disc twice — stop, then immediately
+        // start — the previous task might still be draining. Cancel it
+        // here so we don't have two consumer tasks fighting over the
+        // same `events` stream.
+        asrTask?.cancel()
+        asrTask = nil
         phase = .requestingPermission
         currentPartial = ""
         lastFinal = ""
@@ -111,8 +126,20 @@ final class PreviewASRController: ObservableObject {
     }
 
     func stop() {
-        asrTask?.cancel()
-        asrTask = nil
+        // Don't `asrTask?.cancel()` here — see the comment in
+        // `startEngineAndASR` for the full rationale. Short version:
+        // cancelling the consumer task at the same moment we close the
+        // audio stream also triggers the producer's
+        // `continuation.onTermination → self?.cancel()` cascade, which
+        // marks the producer's outer task as cancelled and skips the
+        // `.final` event. The UI is then left in `.processing` forever
+        // because no one schedules the transition out. The consumer
+        // task naturally exits when `events` finishes, so the right
+        // thing is to let it run.
+        //
+        // If a previous `asrTask` is somehow still running (e.g. the
+        // user smashed the disc twice quickly), `start()` cancels it
+        // at the entry point as a safety net.
         if didInstallTap {
             audioEngine.inputNode.removeTap(onBus: 0)
             didInstallTap = false
@@ -128,6 +155,21 @@ final class PreviewASRController: ObservableObject {
         // Deactivate so the user's music resumes if the preview is
         // dismissed mid-recording.
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+
+        // Safety net: if the ASR pipeline never produces a `.final`
+        // (analyzer hang, system glitch, dropped continuation), force
+        // the UI back to idle after a short delay so the user isn't
+        // stuck. Normal recordings complete well under a second, so
+        // the 3-second budget is only hit on the unhappy path; if the
+        // pipeline finishes first and flips the phase to `.idle` (or
+        // `.error`), the check below no-ops.
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(3))
+            guard let self else { return }
+            if self.phase == .processing {
+                self.phase = .idle
+            }
+        }
     }
 
     func reset() {

@@ -101,6 +101,16 @@ struct KeyboardPreviewSheet: View {
             insertRecognizedText(new)
             asr.reset()
         }
+        // Tear down the ASR pipeline when the sheet leaves the screen
+        // (preview dismissed, app backgrounded mid-recording, etc.).
+        // Without this, a leftover `asrTask` keeps the AVAudioSession
+        // active and the mic permission in use after the user has
+        // moved on. `asr.stop()` is idempotent — it no-ops on
+        // `.idle`/`.denied`/`.error` — so it's safe to call here
+        // even when the disc is not currently recording.
+        .onDisappear {
+            asr.stop()
+        }
     }
 
     /// Real `TextField` (was a static placeholder HStack before the
