@@ -83,7 +83,7 @@ struct SettingsView: View {
 
     private var apiSection: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            sectionHeader("API · 接口", subtitle: nil)
+            sectionHeader("settings.api.title", subtitle: nil)
             APISettingsCard(config: config)
         }
     }
@@ -91,12 +91,15 @@ struct SettingsView: View {
     // MARK: - Language (ASR + mode)
 
     private var languageSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            sectionHeader("Language · 语言", subtitle: "选择识别语言\(config.engineMode == "cloud" ? "和文字处理模式" : "")。Recognition language\(config.engineMode == "cloud" ? " and text processing mode" : "").")
+        let subtitleKey: LocalizedStringKey = config.engineMode == "cloud"
+            ? "settings.language.subtitle.cloud"
+            : "settings.language.subtitle.local"
+        return VStack(alignment: .leading, spacing: Spacing.xs) {
+            sectionHeader("settings.language.title", subtitle: subtitleKey)
             VStack(spacing: 0) {
                 if config.engineMode == "cloud" {
                     PickerRow(
-                        title: "Mode · 模式",
+                        title: NSLocalizedString("settings.mode.title", comment: ""),
                         options: modeOptions,
                         selection: Binding(
                             get: { config.modeId },
@@ -121,7 +124,8 @@ struct SettingsView: View {
                     .stroke(palette.divider, lineWidth: 0.5)
             )
 
-            // Legend — only relevant for SFSpeechRecognizer path (iOS 18–25)
+            // Legacy legend block: kept for UI compatibility, but with
+            // iOS 26 as minimum target this branch never executes.
             if #unavailable(iOS 26) {
                 HStack(spacing: Spacing.xs) {
                     Image(systemName: "iphone")
@@ -146,8 +150,7 @@ struct SettingsView: View {
     /// ASR engine row. With iOS 26 as the deployment target, the
     /// only ASR backend is `SpeechAnalyzer` and it is always fully
     /// on-device — so this row is now a static badge rather than a
-    /// toggle. The previous `requiresOnDevice` toggle (iOS 18–25
-    /// `SFSpeechRecognizer` cloud-fallback control) is gone.
+    /// toggle. The old cloud-fallback toggle is gone.
     private var asrEngineRow: some View {
         HStack(spacing: Spacing.sm) {
             Text("settings.engineRow.title")
@@ -170,7 +173,7 @@ struct SettingsView: View {
         .padding(.vertical, Spacing.sm)
     }
 
-    /// Falls back to a static list while SFSpeechRecognizer locales are loading.
+    /// Falls back to a static list while dynamic locales are loading.
     private var effectiveLocales: [(id: String, label: String, onDevice: Bool)] {
         dynamicLocales.isEmpty ? staticLocales : dynamicLocales
     }
@@ -197,15 +200,15 @@ struct SettingsView: View {
     // MARK: - Dynamic locale loading
 
     private func loadDynamicLocales() async {
-        // Run everything in a background task: SFSpeechRecognizer.supportedLocales()
+        // Run everything in a background task: `SFSpeechRecognizer.supportedLocales()`
         // can return 100+ locales, and we probe supportsOnDeviceRecognition for each.
-        // Creating SFSpeechRecognizer instances in a @Sendable closure is safe —
-        // the existing ASRService.swift does the same thing inside AsyncStream { }.
+        // Creating `SFSpeechRecognizer` instances in a @Sendable closure is
+        // safe here; we only read locale metadata (no transcription session).
         let entries: [(id: String, label: String, onDevice: Bool)] = await Task.detached(
             priority: .userInitiated
         ) {
             var result: [(id: String, label: String, onDevice: Bool)] = []
-            result.append(("auto", "Auto · 跟随系统", false))
+            result.append(("auto", NSLocalizedString("locale.auto", comment: ""), false))
 
             let currentLocale = Locale.current  // snapshot on background thread is fine
             for locale in SFSpeechRecognizer.supportedLocales()
@@ -228,7 +231,7 @@ struct SettingsView: View {
     private var promptSection: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
             HStack {
-                sectionHeader("System Prompt · 系统提示", subtitle: nil)
+                sectionHeader("settings.systemPrompt.title", subtitle: nil)
                 Spacer()
                 Button("common.reset") { config.systemPrompt = config.defaultSystemPrompt }
                     .font(TypeStyle.caption2)

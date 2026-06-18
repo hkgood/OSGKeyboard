@@ -133,7 +133,10 @@ final class PreviewASRController: ObservableObject {
                 try session.setActive(true, options: .notifyOthersOnDeactivation)
                 didConfigureAudioSession = true
             } catch {
-                phase = .error("Audio session 错误 · Audio session error: \(error.localizedDescription)")
+                phase = .error(String.localizedStringWithFormat(
+                    NSLocalizedString("preview.error.audioSession", comment: ""),
+                    error.localizedDescription
+                ))
                 return
             }
         }
@@ -219,7 +222,11 @@ final class PreviewASRController: ObservableObject {
         // state from a previous foreground/background transition.
         guard hwFormat.sampleRate > 0, hwFormat.channelCount > 0 else {
             phase = .error(
-                "麦克风不可用 · Microphone unavailable (hw format \(hwFormat.sampleRate) Hz / \(hwFormat.channelCount) ch)"
+                String.localizedStringWithFormat(
+                    NSLocalizedString("preview.error.micUnavailable", comment: ""),
+                    hwFormat.sampleRate,
+                    Int(hwFormat.channelCount)
+                )
             )
             return
         }
@@ -231,11 +238,11 @@ final class PreviewASRController: ObservableObject {
             channels: 1,
             interleaved: false
         ) else {
-            phase = .error("无法创建 16 kHz 音频格式")
+            phase = .error(NSLocalizedString("preview.error.formatCreate", comment: ""))
             return
         }
         guard let converter = AVAudioConverter(from: hwFormat, to: targetFormat) else {
-            phase = .error("无法创建音频转换器")
+            phase = .error(NSLocalizedString("preview.error.converterCreate", comment: ""))
             return
         }
 
@@ -280,7 +287,10 @@ final class PreviewASRController: ObservableObject {
         do {
             try audioEngine.start()
         } catch {
-            phase = .error("无法启动音频引擎 · Engine start failed: \(error.localizedDescription)")
+            phase = .error(String.localizedStringWithFormat(
+                NSLocalizedString("preview.error.engineStart", comment: ""),
+                error.localizedDescription
+            ))
             return
         }
 

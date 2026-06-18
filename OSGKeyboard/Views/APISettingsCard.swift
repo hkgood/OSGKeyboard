@@ -24,7 +24,7 @@ struct APISettingsCard: View {
     var body: some View {
         VStack(spacing: 0) {
             field(
-                title: "Base URL · 接口地址",
+                title: NSLocalizedString("api.baseUrl", comment: ""),
                 placeholder: "https://api.openai.com/v1",
                 text: $config.baseURL,
                 autocap: false
@@ -33,7 +33,7 @@ struct APISettingsCard: View {
             keyField
             Divider().background(palette.divider)
             field(
-                title: "Model · 模型",
+                title: NSLocalizedString("api.model", comment: ""),
                 placeholder: "gpt-4o-mini",
                 text: $config.model,
                 autocap: false
@@ -41,7 +41,7 @@ struct APISettingsCard: View {
             if let url = LLMProvider.provider(id: config.providerId).apiKeyURL {
                 Divider().background(palette.divider)
                 // Use a Button + UIApplication.open instead of SwiftUI
-                // `Link`. SwiftUI `Link` has a hit-test bug on iOS 18 that
+                // `Link`. SwiftUI `Link` can have hit-test quirks on some
                 // makes its tappable area eat gestures from the adjacent
                 // TextField, which manifests as "typing jumps to a website".
                 Button {
@@ -86,7 +86,9 @@ struct APISettingsCard: View {
                         .foregroundStyle(palette.textSecondary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text(showKey ? "隐藏密钥 · Hide key" : "显示密钥 · Show key"))
+                .accessibilityLabel(Text(showKey
+                    ? NSLocalizedString("api.key.hide", comment: "")
+                    : NSLocalizedString("api.key.show", comment: "")))
             }
             Group {
                 if showKey {
@@ -120,7 +122,7 @@ struct APISettingsCard: View {
                 .foregroundStyle(palette.textSecondary)
             // `.asciiCapable` is the *minimum* contract for these fields:
             // API keys, base URLs, and model names are all ASCII by spec,
-            // and SwiftUI's `.URL` keyboard on iOS 18 still occasionally
+            // and SwiftUI's `.URL` keyboard can still occasionally
             // hands control to the system keyboard which then auto-suggests
             // Chinese / emoji completions that corrupt the value. Forcing
             // `.asciiCapable` keeps the system out of the way.
@@ -132,7 +134,7 @@ struct APISettingsCard: View {
                 .foregroundStyle(palette.textPrimary)
                 .submitLabel(.done)
                 .onSubmit { /* no-op: prevent the keyboard from "submitting"
-                              and dismissing the sheet on iOS 18 */ }
+                              and dismissing the sheet unexpectedly */ }
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)

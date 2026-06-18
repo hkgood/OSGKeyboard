@@ -53,7 +53,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewDidLoad() {
         super.viewDidLoad()
-        // iOS 18 keyboard extension MUST opt in to self-sizing, otherwise
+        // Keyboard extension MUST opt in to self-sizing, otherwise
         // our SwiftUI `frame(height:)` is ignored and the keyboard is
         // cropped by the system chrome (Spotlight bar, home indicator).
         inputView?.allowsSelfSizing = true
@@ -150,14 +150,10 @@ public final class KeyboardViewController: UIInputViewController {
                 self.state.phase = .denied(.mic)
                 return
             }
-            // iOS 18 SFSpeechRecognizer path: we explicitly ask for Speech
-            // recognition permission. Without this call + the
-            // NSSpeechRecognitionUsageDescription key in Info.plist the
-            // recogniser silently returns .denied and the user hears
-            // nothing back.
-            // iOS 26 SpeechAnalyzer path (planned for the next release)
-            // does not expose an explicit request API — the framework
-            // prompts via the same plist key on first use.
+            // We explicitly ask for Speech recognition permission here.
+            // `SpeechAnalyzer` does not expose a dedicated request API,
+            // so the app still relies on the shared Speech permission
+            // gate and `NSSpeechRecognitionUsageDescription`.
             let speechGranted = await self.permissions.requestSpeechPermission()
             guard speechGranted else {
                 self.state.phase = .denied(.speech)

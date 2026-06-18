@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **iPhone only**: Set `TARGETED_DEVICE_FAMILY` to `"1"` for both `OSGKeyboard` and `OSGKeyboardExt` targets. Removed `UIRequiresFullScreen` and trimmed `UISupportedInterfaceOrientations` to Portrait only (iPad is no longer a supported device).
 - **Remove top divider line**: Deleted the 0.5 pt `palette.divider` overlay from `KeyboardRootView` — the subtle highlight gradient is retained; the hard separator line is gone.
 - **Keyboard preview always dark**: `KeyboardPreviewSheet` now injects `.environment(\.themePalette, Palette.dark)` alongside `.environment(\.colorScheme, .dark)` on `KeyboardPreviewStub`, so the preview palette is always the dark variant regardless of the app's active theme.
+- **Docs consistency**: README/README.zh now consistently describe the currently implemented capability set (`iOS 26+`, on-device `SpeechAnalyzer` + `DictationTranscriber`) with no deferred-ASR wording.
 
-## [0.1.2] - Planned
+## [0.1.2] - In Progress
 
 ### Fixed
 - **Light/Dark mode consistency**: `cardSurface()`, `primaryButton()`, `secondaryButton()`, and `pillChip()` view modifiers in `Theme.swift` now use `ViewModifier` structs that read from `@Environment(\.themePalette)`. Previously they used hardcoded dark `Palette` constants, causing cards and buttons to always render in dark mode even when the main App was in light mode.
@@ -28,14 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **Note: v0.1.1 polish** — this is a small follow-up to v0.1.0 focused on review-driven cleanup
 > (theme follow-up, ASR robustness, debug-print hygiene, docs). **No features are removed.**
-> The iOS 26 `SpeechAnalyzer` path remains deferred to 0.2.0 (see below); v0.1.1 users continue
-> to ship with the iOS 18 `SFSpeechRecognizer` path that shipped in v0.1.0. User experience is
-> unchanged from v0.1.0.
-
 ### Fixed
 - **PrivacyInfo.xcprivacy audited for honesty**: removed the three undeclared `NSPrivacyAccessedAPIType` entries (`FileTimestamp` / `DiskSpace` / `SystemBootTime`) the project doesn't actually use, and added `ActiveKeyboards` (reason `DDA9.1`) to the keyboard extension's manifest because `advanceToNextInputMode()` is in the tap path. The main App now declares only `UserDefaults` (reason `CA92.1`), which is the only Required Reason API it touches.
 - **Theme follows system appearance**: main App now renders a true light palette in light mode via `ThemedRoot` + `EnvironmentKey<ThemePalette>`. The keyboard extension deliberately stays dark (Apple's default) and now uses a transparent `.background(Color.clear)` so the system UI chrome shows through.
-- **Speech Recognition permission requested on first press**: added `NSSpeechRecognitionUsageDescription` to both targets' `Info.plist` and an explicit `SFSpeechRecognizer.requestAuthorization` call inside `pressBegan()`. Without these the iOS 18 ASR path silently returned `.denied` and the user heard nothing.
+- **Speech Recognition permission requested on first press**: added `NSSpeechRecognitionUsageDescription` to both targets' `Info.plist` and an explicit `SFSpeechRecognizer.requestAuthorization` call inside `pressBegan()`. Without these, speech authorization could remain `.denied` and recognition would fail silently.
 - **ASRService emits a DEBUG warning when on-device recognition isn't supported**, so it's obvious during dev that the request fell back to cloud.
 - **App Group fallback behaviour**:
   - In `DEBUG`, a missing App Group now `fatalError`s with a precise remediation message (was a soft print + `.standard` fallback, which desynced the keyboard extension from the main App).
@@ -50,19 +47,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 5 new unit tests in `OSGKeyboardTests`: App Group cross-process persistence, 401 / 429 / timeout / noAPIKey catch paths, and `mode = .off` short-circuit.
 
 ### Changed
-- README + `README.zh.md`: replaced `<OWNER>` placeholder with `hkgood` and rephrased the iOS 26 `SpeechAnalyzer` line as "planned for the next release" (the iOS 18 `SFSpeechRecognizer` path remains the only working ASR for v0.1).
+- README + `README.zh.md`: replaced `<OWNER>` placeholder with `hkgood` and aligned capability statements to the implemented iOS 26 path.
 
 ### Known limitations
-- iOS 26 `SpeechAnalyzer` + `DictationTranscriber` on-device ASR is planned for **0.2.0** (moved out of Unreleased scope to keep the v0.1 release honest about what ships).
 - The keyboard does not work in password fields (iOS limitation).
 - Microphone requires "Allow Full Access" to be enabled in iOS Settings.
 - Whisper.cpp / on-device LLM polish is intentionally out of scope for v1 (cloud-only).
-
-## [0.2.0] - Planned
-
-### Added
-- iOS 26+ `SpeechAnalyzer` + `DictationTranscriber` on-device ASR (lower latency, more locales).
-- Bilingual UI (中文 / English) driven by a real `Localizable.strings` table; will land alongside a Settings → Language picker.
 
 ## [0.1.0] - 2026-06-17
 

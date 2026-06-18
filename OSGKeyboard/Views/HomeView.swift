@@ -45,7 +45,7 @@ struct HomeView: View {
                 Circle()
                     .fill(config.isConfigured ? palette.success : palette.warning)
                     .frame(width: 8, height: 8)
-                Text(config.isConfigured ? "就绪 · Ready" : "未完成配置 · Setup incomplete")
+                Text(config.isConfigured ? "home.status.ready" : "home.status.setupIncomplete")
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
             }

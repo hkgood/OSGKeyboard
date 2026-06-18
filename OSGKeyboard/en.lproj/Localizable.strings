@@ -111,6 +111,11 @@
 "preview.openSettingsA11y" = "Open OSGKeyboard settings";
 "preview.modeChip.cycle" = "Cycle input mode";
 "preview.localeChip.cycle" = "Cycle recognition language";
+"preview.error.audioSession" = "Audio session error: %@";
+"preview.error.micUnavailable" = "Microphone unavailable (hw format %.0f Hz / %d ch)";
+"preview.error.formatCreate" = "Failed to create 16 kHz audio format.";
+"preview.error.converterCreate" = "Failed to create audio converter.";
+"preview.error.engineStart" = "Engine start failed: %@";
 
 /* Keyboard (ext) */
 "keyboard.placeholder.idle" = "Hold to talk";

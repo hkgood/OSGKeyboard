@@ -33,15 +33,15 @@ struct EnginePickerSection: View {
                 engineOptionRow(
                     id: "local",
                     icon: "iphone.badge.checkmark",
-                    title: "本地识别 · On-device",
+                    title: NSLocalizedString("settings.engine.local.title", comment: ""),
                     subtitle: localSubtitle
                 )
                 Divider().background(palette.divider)
                 engineOptionRow(
                     id: "cloud",
                     icon: "wand.and.stars",
-                    title: "云端润色 · Cloud polish",
-                    subtitle: "ASR 转录 + LLM 润色,需要 API Key\nASR + LLM polish, API key required"
+                    title: NSLocalizedString("settings.engine.cloud.title", comment: ""),
+                    subtitle: NSLocalizedString("settings.engine.cloud.subtitle", comment: "")
                 )
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
@@ -55,7 +55,7 @@ struct EnginePickerSection: View {
     private var localSubtitle: String {
         // iOS 26's `SpeechAnalyzer` is always fully on-device, so the
         // local engine's only contract is "no network, no LLM".
-        "SpeechAnalyzer · 始终端侧,无需联网\nAlways on-device, no network"
+        NSLocalizedString("settings.engine.local.ios26", comment: "")
     }
 
     private func engineOptionRow(id: String, icon: String, title: String, subtitle: String) -> some View {

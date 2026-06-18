@@ -9,7 +9,8 @@
 //
 // We deliberately do NOT use `TabView` with `.page` style for the
 // pager. That style wraps the content in a `UIPageViewController`,
-// and `UIPageViewController` has a long-standing iOS 18 bug where
+// and `UIPageViewController` has a long-standing behavior on some iOS
+// versions where
 // the keyboard-showing layout reflow on a `TextField` focus is
 // misread as a horizontal swipe — the page jumps back to step 1
 // the moment the user starts typing. Replacing the TabView with a
@@ -136,10 +137,6 @@ private struct WelcomePage: View {
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textSecondary)
                     .multilineTextAlignment(.center)
-                Text("onboarding.welcome.subtitle")
-                    .font(TypeStyle.footnote)
-                    .foregroundStyle(palette.textTertiary)
-                    .multilineTextAlignment(.center)
             }
             .padding(.horizontal, Spacing.xl)
             PrivacyFootnote()
@@ -210,15 +207,12 @@ private struct EnableKeyboardPage: View {
                 Text("onboarding.enable.title")
                     .font(TypeStyle.title2)
                     .foregroundStyle(palette.textPrimary)
-                Text("onboarding.enable.title")
-                    .font(TypeStyle.body)
-                    .foregroundStyle(palette.textTertiary)
             }
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                step(num: 1, text: "设置 → 通用 → 键盘 → 键盘")
-                step(num: 2, text: "点击「添加新键盘…」并选择 OSGKeyboard")
-                step(num: 3, text: "点击 OSGKeyboard 并启用「允许完全访问」")
-                step(num: 4, text: "Allow Full Access is required for microphone + LLM calls · 允许完全访问是麦克风和网络调用的前提")
+                step(num: 1, text: NSLocalizedString("onboarding.enable.step1", comment: ""))
+                step(num: 2, text: NSLocalizedString("onboarding.enable.step2", comment: ""))
+                step(num: 3, text: NSLocalizedString("onboarding.enable.step3", comment: ""))
+                step(num: 4, text: NSLocalizedString("onboarding.enable.step4", comment: ""))
             }
             .cardSurface()
             .padding(.horizontal, Spacing.md)
@@ -228,7 +222,7 @@ private struct EnableKeyboardPage: View {
                     UIApplication.shared.open(url)
                 }
             } label: {
-                Label("打开 iOS 设置 · Open Settings", systemImage: "arrow.up.right.square")
+                Label(LocalizedStringKey("onboarding.enable.openSettings"), systemImage: "arrow.up.right.square")
                     .primaryButton()
             }
             .padding(.horizontal, Spacing.md)

@@ -4,14 +4,15 @@
 // In-app preview of the keyboard extension. Renders a stand-in
 // `KeyboardPreviewStub` so the user can see what the real extension
 // looks like, AND drives a *real* `PreviewASRController` so tapping
-// the disc actually records from the mic, runs SFSpeechRecognizer,
+// the disc actually records from the mic and runs the shared ASR
+// service (`SpeechAnalyzer` on iOS 26+),
 // and lands recognized text in the top textbox. Without the real ASR
 // the preview was a static mock — "the text never appears" was a
 // fair review note.
 //
 // Lifecycle (local engine = "transcribe" only, no LLM):
 //   tap → start ASR (idempotent re-entry guard)
-//        → SFSpeechRecognizer emits .partial / .final
+//        → ASR emits .partial / .final
 //        → currentPartial updates the transcript line in real time
 //   tap → stop ASR
 //        → lastFinal event lands

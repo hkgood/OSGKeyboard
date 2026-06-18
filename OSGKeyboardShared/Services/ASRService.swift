@@ -4,8 +4,8 @@
 // Speech-to-text abstraction. As of iOS 26 being the minimum
 // deployment target, the only ASR backend is `SpeechAnalyzer` +
 // `DictationTranscriber` — always on-device, no cloud fallback, no
-// `requiresOnDevice` toggle. The previous SFSpeechRecognizer path
-// (iOS 18–25) is gone; if a future platform ever needs it back,
+// `requiresOnDevice` toggle. The previous legacy recognizer path is
+// gone; if a future platform ever needs it back,
 // reintroduce as a sibling class in `ASRServiceFactory.make()`.
 //
 // Lives in `OSGKeyboardShared` (not the keyboard extension target) so
@@ -33,8 +33,8 @@ public protocol ASRService: Sendable {
     /// Start a transcription session. The returned stream emits `.partial`
     /// updates and exactly one `.final` (or `.error`) before finishing.
     /// `SpeechAnalyzer` is always fully on-device, so there is no
-    /// `requiresOnDevice` flag — the previous iOS 18 SFSpeechRecognizer
-    /// flag was about cloud fallback, which doesn't apply here.
+    /// `requiresOnDevice` flag — that legacy cloud-fallback control
+    /// doesn't apply to the iOS 26 `SpeechAnalyzer` path.
     func transcribe(
         stream: AsyncStream<AudioBufferSnapshot>,
         locale: Locale
@@ -129,8 +129,8 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
 
             // iOS 26's `DictationTranscriber` requires **Int16** PCM
             // (precondition `"Audio sample data must be 16-bit signed
-            // integers"` — Float32 was the iOS 18 `SFSpeechRecognizer`
-            // shape; the new analyzer is strict). 16 kHz mono, Int16,
+            // integers"` — the legacy recognizer used Float32 at this
+            // boundary; `SpeechAnalyzer` is strict Int16). 16 kHz mono, Int16,
             // interleaved — the canonical layout Apple's Speech
             // framework examples use.
             let audioFormat = AVAudioFormat(
