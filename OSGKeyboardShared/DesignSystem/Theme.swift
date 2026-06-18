@@ -49,7 +49,7 @@ public enum Palette {
     public static let surfaceMuted    = Color(red: 0.071, green: 0.071, blue: 0.082)  // #121215
 
     // Accents
-    public static let accent          = Color(red: 0.353, green: 0.784, blue: 0.980)  // #5AC8FA
+    public static let accent          = Color(red: 0.227, green: 0.627, blue: 0.353)  // #3AA05A
     public static let accentMuted     = accent.opacity(0.18)
     public static let accentGlow      = accent.opacity(0.42)
 
@@ -97,14 +97,24 @@ public enum Palette {
 
     /// Light palette — iOS system light mode defaults. Used by the main app
     /// when the user is in light mode; the keyboard extension stays dark.
+    ///
+    /// Accent: Apple system blue (#007AFF), matching the AccentColor asset
+    /// and the iOS HIG default. We deliberately do NOT use the dark-mode
+    /// green here — a bright green CTA on a near-white background reads as
+    /// "go to a garden centre" rather than "tap me to enable your
+    /// keyboard", and a Typeless/Apple-style design system expects the
+    /// accent to follow the system tint in light mode. The keyboard
+    /// extension always renders dark and keeps its green accent for the
+    /// "polish / on-device" affordances, where green-on-dark is the more
+    /// legible pairing.
     public static let light = ThemePalette(
         background:      Color(red: 0.980, green: 0.980, blue: 0.988),  // #FAFAFC
         surface:         Color(red: 1.000, green: 1.000, blue: 1.000),  // #FFFFFF
         surfaceElevated: Color(red: 0.941, green: 0.941, blue: 0.961),  // #F0F0F5
         surfaceMuted:    Color(red: 0.953, green: 0.953, blue: 0.965),  // #F3F3F6
-        accent:          Color(red: 0.000, green: 0.478, blue: 1.000),  // iOS systemBlue
-        accentMuted:     Color(red: 0.000, green: 0.478, blue: 1.000).opacity(0.14),
-        accentGlow:      Color(red: 0.000, green: 0.478, blue: 1.000).opacity(0.32),
+        accent:          Color(red: 0.000, green: 0.478, blue: 1.000),  // #007AFF
+        accentMuted:     Color(red: 0.000, green: 0.478, blue: 1.000).opacity(0.12),
+        accentGlow:      Color(red: 0.000, green: 0.478, blue: 1.000).opacity(0.28),
         danger:          Color(red: 1.000, green: 0.231, blue: 0.188),  // #FF3B30
         success:         Color(red: 0.157, green: 0.812, blue: 0.412),  // #28CF69
         warning:         Color(red: 1.000, green: 0.620, blue: 0.094),  // #FF9E18
@@ -188,48 +198,87 @@ public enum Motion {
 }
 
 // MARK: - Reusable view modifiers
+//
+// Each modifier is a proper ViewModifier struct so it can read the
+// active ThemePalette from @Environment. This is the ONLY way to make
+// shared modifiers respect light/dark mode — plain View extension
+// methods cannot access environment values.
+
+private struct CardSurfaceModifier: ViewModifier {
+    @Environment(\.themePalette) private var palette
+    let padding: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                    .stroke(palette.divider, lineWidth: 0.5)
+            )
+    }
+}
+
+private struct PillChipModifier: ViewModifier {
+    @Environment(\.themePalette) private var palette
+    let foreground: Color?
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, Spacing.xs)
+            .padding(.vertical, 4)
+            .background(palette.surfaceElevated, in: Capsule())
+            .foregroundStyle(foreground ?? palette.textSecondary)
+    }
+}
+
+private struct PrimaryButtonModifier: ViewModifier {
+    @Environment(\.themePalette) private var palette
+
+    func body(content: Content) -> some View {
+        content
+            .font(TypeStyle.headline)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .background(palette.accent, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .foregroundStyle(palette.textOnAccent)
+    }
+}
+
+private struct SecondaryButtonModifier: ViewModifier {
+    @Environment(\.themePalette) private var palette
+
+    func body(content: Content) -> some View {
+        content
+            .font(TypeStyle.headline)
+            .frame(maxWidth: .infinity, minHeight: 50)
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                    .stroke(palette.dividerStrong, lineWidth: 0.5)
+            )
+            .foregroundStyle(palette.textPrimary)
+    }
+}
 
 public extension View {
     /// Standard card surface used in the main app.
     func cardSurface(padding: CGFloat = Spacing.md) -> some View {
-        self
-            .padding(padding)
-            .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(Palette.divider, lineWidth: 0.5)
-            )
+        modifier(CardSurfaceModifier(padding: padding))
     }
 
     /// Muted pill (used for tags, locale indicators, etc.).
-    func pillChip(foreground: Color = Palette.textSecondary) -> some View {
-        self
-            .padding(.horizontal, Spacing.xs)
-            .padding(.vertical, 4)
-            .background(Palette.surfaceElevated, in: Capsule())
-            .foregroundStyle(foreground)
+    /// Pass nil to inherit palette.textSecondary automatically.
+    func pillChip(foreground: Color? = nil) -> some View {
+        modifier(PillChipModifier(foreground: foreground))
     }
 
     /// Primary CTA button.
     func primaryButton() -> some View {
-        self
-            .font(TypeStyle.headline)
-            .frame(maxWidth: .infinity, minHeight: 50)
-            .background(Palette.accent, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            .foregroundStyle(Palette.textOnAccent)
+        modifier(PrimaryButtonModifier())
     }
 
     /// Secondary CTA button.
     func secondaryButton() -> some View {
-        self
-            .font(TypeStyle.headline)
-            .frame(maxWidth: .infinity, minHeight: 50)
-            .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(Palette.dividerStrong, lineWidth: 0.5)
-            )
-            .foregroundStyle(Palette.textPrimary)
+        modifier(SecondaryButtonModifier())
     }
-
-    }
+}
