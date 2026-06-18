@@ -10,6 +10,14 @@ import OSGKeyboardShared
 struct APISettingsCard: View {
     @ObservedObject var config: ProviderConfig
     @State private var showKey: Bool = false
+    @State private var testStatus: TestStatus = .idle
+
+    private enum TestStatus: Equatable {
+        case idle
+        case running
+        case success(String)
+        case failure(String)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -54,6 +62,8 @@ struct APISettingsCard: View {
                 }
                 .buttonStyle(.plain)
             }
+            Divider().background(Palette.divider)
+            testConnectionRow
         }
         .background(Palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
         .overlay(
@@ -120,5 +130,105 @@ struct APISettingsCard: View {
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
+    }
+
+    // MARK: - Test connection
+
+    private var testConnectionRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("Connection")
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(Palette.textSecondary)
+                Spacer()
+                Button(action: runTest) {
+                    HStack(spacing: 6) {
+                        if testStatus == .running {
+                            ProgressView().controlSize(.mini)
+                        } else {
+                            Image(systemName: testIcon)
+                                .foregroundStyle(testTint)
+                        }
+                        Text(testButtonLabel)
+                            .font(TypeStyle.caption)
+                            .foregroundStyle(testTint)
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(testStatus == .running)
+            }
+            if let detail = testDetail {
+                Text(detail)
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(testTint)
+                    .lineLimit(3)
+            }
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
+    }
+
+    private var testButtonLabel: String {
+        switch testStatus {
+        case .idle:        return "Test connection"
+        case .running:     return "Testing…"
+        case .success:     return "OK · retry"
+        case .failure:     return "Failed · retry"
+        }
+    }
+
+    private var testIcon: String {
+        switch testStatus {
+        case .idle, .running: return "bolt.horizontal.circle"
+        case .success:        return "checkmark.circle.fill"
+        case .failure:        return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var testTint: Color {
+        switch testStatus {
+        case .idle, .running: return Palette.accent
+        case .success:        return Palette.success
+        case .failure:        return Palette.danger
+        }
+    }
+
+    private var testDetail: String? {
+        switch testStatus {
+        case .idle, .running: return nil
+        case .success(let s): return s
+        case .failure(let s): return s
+        }
+    }
+
+    private func runTest() {
+        testStatus = .running
+        let store = AppGroupStore()
+        let client = OpenAICompatibleClient(
+            baseURL: store.baseURL,
+            apiKey: store.apiKey,
+            model: store.model
+        )
+        Task {
+            do {
+                let reply = try await client.polish("ping", systemPrompt: "Reply with the single word PONG.")
+                testStatus = .success("连接成功 · “\(reply.prefix(60))”")
+            } catch LLMError.noAPIKey {
+                testStatus = .failure("未填写 API Key")
+            } catch let error as LLMError {
+                switch error {
+                case .http(let status):
+                    testStatus = .failure("HTTP \(status)")
+                case .rateLimited:
+                    testStatus = .failure("API 限流 (429)")
+                case .transport(let msg):
+                    testStatus = .failure("网络错误: \(msg)")
+                default:
+                    testStatus = .failure(error.errorDescription ?? "\(error)")
+                }
+            } catch {
+                testStatus = .failure((error as? LocalizedError)?.errorDescription ?? "\(error)")
+            }
+        }
     }
 }

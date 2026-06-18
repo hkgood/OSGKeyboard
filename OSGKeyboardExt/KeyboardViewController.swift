@@ -188,6 +188,29 @@ public final class KeyboardViewController: UIInputViewController {
         let id = store.localeId
         state.localeId = id
         state.mode = State.InputMode(rawValue: store.modeId) ?? .polish
+        #if DEBUG
+        // Print a masked view of the live App Group config so we can see
+        // from the device console exactly what the keyboard extension
+        // actually sees (and whether it agrees with the main App).
+        let key = store.apiKey
+        let masked: String
+        if key.count > 8 {
+            masked = "\(key.prefix(4))…\(key.suffix(4)) (\(key.count) chars)"
+        } else if key.isEmpty {
+            masked = "<empty>"
+        } else {
+            masked = "<\(key.count) chars>"
+        }
+        print("""
+        🔍 [KeyboardViewController.loadPersistedLocale]
+           providerId = \(store.providerId)
+           baseURL    = \(store.baseURL)
+           apiKey     = \(masked)
+           model      = \(store.model)
+           modeId     = \(store.modeId)
+           localeId   = \(store.localeId)
+        """)
+        #endif
     }
 
     // MARK: - Press handlers
@@ -306,8 +329,34 @@ public final class KeyboardViewController: UIInputViewController {
                 self.textDocumentProxy.insertText(polished)
                 self.state.lastTranscript = ""
                 self.state.phase = .idle
+            } catch LLMError.noAPIKey {
+                // Don't silently insert the raw transcript — the user
+                // thinks they're getting polished text when really no
+                // key is configured. Show a precise, actionable error.
+                self.state.phase = .error("未配置 API Key · 请在主 App 设置中填写")
+                self.scheduleAutoClearError()
+            } catch let error as LLMError {
+                switch error {
+                case .http(401):
+                    self.state.phase = .error("API Key 无效 (401) · 请检查主 App 设置")
+                    self.scheduleAutoClearError()
+                case .http(429), .rateLimited:
+                    self.state.phase = .error("API 限流 (429) · 请稍后再试")
+                    self.scheduleAutoClearError()
+                default:
+                    // Other LLMError variants (transport / decoding /
+                    // invalidURL / cancelled) fall back to raw transcript
+                    // + generic error badge, same as the catch-all below.
+                    self.textDocumentProxy.insertText(trimmed)
+                    self.state.lastTranscript = ""
+                    let msg = error.errorDescription ?? "Polishing failed — inserted raw."
+                    self.state.phase = .error(msg)
+                    self.scheduleAutoClearError()
+                }
             } catch {
-                // Fall back to raw transcript on any failure.
+                // Network / timeout / decoding — fall back to the raw
+                // transcript so the user still gets their text, with a
+                // visible error badge.
                 self.textDocumentProxy.insertText(trimmed)
                 self.state.lastTranscript = ""
                 let msg = (error as? LocalizedError)?.errorDescription

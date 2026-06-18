@@ -18,7 +18,7 @@ public actor PolishingService {
     private let store: AppGroupStore
     private let timeout: TimeInterval
 
-    public init(store: AppGroupStore = AppGroupStore(), timeout: TimeInterval = 12) {
+    public init(store: AppGroupStore = AppGroupStore(), timeout: TimeInterval = 15) {
         self.store = store
         self.timeout = timeout
     }
