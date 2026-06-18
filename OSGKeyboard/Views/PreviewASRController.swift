@@ -163,57 +163,38 @@ final class PreviewASRController: ObservableObject {
         let (stream, continuation) = AsyncStream<AudioBufferSnapshot>.makeStream()
         self.bufferContinuation = continuation
 
-        // Tap the hardware input. The closure runs on a real-time audio
-        // thread, so it must do the minimum work needed to produce a
-        // snapshot and then hand off to the main actor for state updates.
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat) { buffer, _ in
-            // Downsample + extract samples + compute RMS in one pass.
-            let ratio = targetSampleRate / hwFormat.sampleRate
-            let outCapacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio + 0.5)
-            guard outCapacity > 0,
-                  let converted = AVAudioPCMBuffer(
-                    pcmFormat: targetFormat,
-                    frameCapacity: outCapacity
-                  ) else { return }
-
-            var error: NSError?
-            var supplied = false
-            converter.convert(to: converted, error: &error) { _, outStatus in
-                if supplied {
-                    outStatus.pointee = .endOfStream
-                    return nil
-                }
-                supplied = true
-                outStatus.pointee = .haveData
-                return buffer
-            }
-            if error != nil { return }
-
-            let n = Int(converted.frameLength)
-            var samples = [Float](repeating: 0, count: n)
-            var sumSquares: Float = 0
-            if let channelData = converted.floatChannelData?[0] {
-                for i in 0..<n {
-                    let v = channelData[i]
-                    samples[i] = v
-                    sumSquares += v * v
-                }
-            }
-            let rms = n > 0 ? sqrtf(sumSquares / Float(n)) : 0
-            // RMS for speech is typically 0.02-0.2; the 4x gain here
-            // pushes normal speech into the 0.4-0.8 range for the
-            // disc meter so it visibly responds.
-            let meter = min(Double(rms) * 4.0, 1.0)
-            let snapshot = AudioBufferSnapshot(samples: samples, sampleRate: targetSampleRate)
-
-            // Hop to main for state updates.
+        // Tap the hardware input. The closure passed to `installTap` runs
+        // on the AVAudioEngine real-time audio thread. In Swift 6 strict
+        // concurrency, a closure literal defined inside a `@MainActor`
+        // method inherits `@MainActor` isolation, which would trip
+        // `dispatch_assert_queue_fail` on first invocation from the
+        // audio thread. The fix is to build the actual tap body in a
+        // `nonisolated` helper (`makeAudioTapBlock`) and have the
+        // installTap closure be a single function reference — function
+        // references never carry inferred isolation, so the dispatch
+        // runtime is happy and the body runs wherever AVAudioEngine
+        // wants it (the audio thread).
+        let onMeter: @Sendable (Double) -> Void = { [weak self] meter in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 // Lightweight smoothing so the disc ring doesn't jitter.
                 self.level = self.level * 0.55 + meter * 0.45
-                self.bufferContinuation?.yield(snapshot)
             }
         }
+        let onSnapshot: @Sendable (AudioBufferSnapshot) -> Void = { [weak self] snapshot in
+            Task { @MainActor [weak self] in
+                self?.bufferContinuation?.yield(snapshot)
+            }
+        }
+        let tap = Self.makeAudioTapBlock(
+            converter: converter,
+            targetFormat: targetFormat,
+            hwFormat: hwFormat,
+            targetSampleRate: targetSampleRate,
+            onMeter: onMeter,
+            onSnapshot: onSnapshot
+        )
+        inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat, block: tap)
         didInstallTap = true
 
         audioEngine.prepare()
@@ -293,6 +274,77 @@ final class PreviewASRController: ObservableObject {
             SFSpeechRecognizer.requestAuthorization { status in
                 cont.resume(returning: status == .authorized)
             }
+        }
+    }
+
+    // MARK: - Audio tap (nonisolated, runs on AVAudioEngine render thread)
+    //
+    // `AVAudioNode.installTap`'s callback fires on the audio engine's
+    // real-time render thread. In Swift 6 strict concurrency, a closure
+    // literal defined inside a `@MainActor` method inherits `@MainActor`
+    // isolation — and `dispatch_assert_queue_fail` fires the moment
+    // the runtime tries to dispatch that closure on a non-main queue.
+    //
+    // The trick is to build the actual tap body in a `nonisolated`
+    // function and have the installTap closure be a *function reference*
+    // to that helper. Function references never carry inferred
+    // isolation, so the dispatch runtime is satisfied and the body
+    // runs wherever AVAudioEngine wants. State updates to
+    // `self.level` and the AsyncStream continuation hop back to the
+    // main actor via `Task { @MainActor in … }`, which is itself
+    // safe to call from a non-isolated context.
+    private nonisolated static func makeAudioTapBlock(
+        converter: AVAudioConverter,
+        targetFormat: AVAudioFormat,
+        hwFormat: AVAudioFormat,
+        targetSampleRate: Double,
+        onMeter: @Sendable @escaping (Double) -> Void,
+        onSnapshot: @Sendable @escaping (AudioBufferSnapshot) -> Void
+    ) -> @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void {
+        // `@Sendable` on the returned closure makes the Sendable
+        // conformance explicit. `AVAudioNodeTapBlock` is declared as
+        // a plain escaping closure in the SDK; we cast at the call
+        // site via `as @Sendable`.
+        return { buffer, _ in
+            // Downsample + extract samples + compute RMS in one pass.
+            let ratio = targetSampleRate / hwFormat.sampleRate
+            let outCapacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio + 0.5)
+            guard outCapacity > 0,
+                  let converted = AVAudioPCMBuffer(
+                    pcmFormat: targetFormat,
+                    frameCapacity: outCapacity
+                  ) else { return }
+
+            var error: NSError?
+            var supplied = false
+            converter.convert(to: converted, error: &error) { _, outStatus in
+                if supplied {
+                    outStatus.pointee = .endOfStream
+                    return nil
+                }
+                supplied = true
+                outStatus.pointee = .haveData
+                return buffer
+            }
+            if error != nil { return }
+
+            let n = Int(converted.frameLength)
+            var samples = [Float](repeating: 0, count: n)
+            var sumSquares: Float = 0
+            if let channelData = converted.floatChannelData?[0] {
+                for i in 0..<n {
+                    let v = channelData[i]
+                    samples[i] = v
+                    sumSquares += v * v
+                }
+            }
+            let rms = n > 0 ? sqrtf(sumSquares / Float(n)) : 0
+            // RMS for speech is typically 0.02-0.2; the 4x gain pushes
+            // normal speech into the 0.4-0.8 range for the disc meter.
+            let meter = min(Double(rms) * 4.0, 1.0)
+            let snapshot = AudioBufferSnapshot(samples: samples, sampleRate: targetSampleRate)
+            onMeter(meter)
+            onSnapshot(snapshot)
         }
     }
 }
