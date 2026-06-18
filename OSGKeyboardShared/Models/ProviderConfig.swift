@@ -3,6 +3,11 @@
 //
 // User's LLM configuration. Persisted in App Group UserDefaults so both
 // the main app and keyboard extension read the same values.
+//
+// `apiKey` is the exception: it lives in the Keychain (see
+// `Keychain.swift`) for at-rest encryption. The first time this struct
+// inits after upgrade, a legacy plaintext value from UserDefaults is
+// migrated to the Keychain and removed from UserDefaults.
 
 import Foundation
 import Combine
@@ -13,7 +18,10 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     private enum Key {
         static let providerId   = "config.providerId"
         static let baseURL      = "config.baseURL"
-        static let apiKey       = "config.apiKey"
+        // Legacy: apiKey used to live in UserDefaults before the
+        // migration. We still read it once (see init below) and then
+        // delete the entry, but no other code path touches this key.
+        static let apiKeyLegacy = "config.apiKey"
         static let model        = "config.model"
         static let systemPrompt = "config.systemPrompt"
         static let modeId       = "config.modeId"
@@ -27,7 +35,18 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         didSet { defaults.set(baseURL, forKey: Key.baseURL) }
     }
     @Published public var apiKey: String {
-        didSet { defaults.set(apiKey, forKey: Key.apiKey) }
+        didSet {
+            // Skip the round-trip on init — we read from Keychain and
+            // writing the same value back is wasteful.
+            guard oldValue != apiKey else { return }
+            do {
+                try Keychain.setAPIKey(apiKey)
+            } catch {
+                #if DEBUG
+                print("⚠️ [OSGKeyboard] Keychain write failed: \(error)")
+                #endif
+            }
+        }
     }
     @Published public var model: String {
         didSet { defaults.set(model, forKey: Key.model) }
@@ -60,12 +79,33 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         let preset = LLMProvider.provider(id: pid)
         self.providerId   = pid
         self.baseURL      = defaults.string(forKey: Key.baseURL)    ?? preset.defaultBaseURL
-        self.apiKey       = defaults.string(forKey: Key.apiKey)     ?? ""
+
+        // Resolve the API key with a one-shot migration from the legacy
+        // UserDefaults slot. After this runs once, `Key.apiKeyLegacy`
+        // is empty in the suite and all subsequent reads go through the
+        // Keychain.
+        self.apiKey = ProviderConfig.resolveAPIKey(defaults: defaults)
+
         self.model        = defaults.string(forKey: Key.model)      ?? preset.defaultModel
         self.systemPrompt = defaults.string(forKey: Key.systemPrompt)
             ?? AppGroupStore.defaultSystemPrompt(for: pid)
         self.modeId       = defaults.string(forKey: Key.modeId)     ?? "polish"
         self.localeId     = defaults.string(forKey: Key.localeId)   ?? "auto"
+    }
+
+    /// Read the API key from the Keychain, falling back to a one-time
+    /// migration from the legacy UserDefaults slot.
+    private static func resolveAPIKey(defaults: UserDefaults) -> String {
+        if let stored = Keychain.apiKey(), !stored.isEmpty {
+            return stored
+        }
+        if let legacy = defaults.string(forKey: Key.apiKeyLegacy),
+           !legacy.isEmpty {
+            try? Keychain.setAPIKey(legacy)
+            defaults.removeObject(forKey: Key.apiKeyLegacy)
+            return legacy
+        }
+        return ""
     }
 
     public func apply(preset: LLMProvider) {

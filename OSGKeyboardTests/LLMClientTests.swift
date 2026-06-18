@@ -9,6 +9,24 @@ import XCTest
 
 final class LLMClientTests: XCTestCase {
 
+    override func setUpWithError() throws {
+        // The Keychain is process-global in the simulator (one simulator,
+        // one keychain DB), so an API key written by a previous test would
+        // leak into the next one unless we wipe it here. We intentionally
+        // swallow errors — `errSecItemNotFound` is fine.
+        try? Keychain.deleteAPIKey()
+        StubURLProtocolStorage.config = nil
+        StubURLProtocolStorage.delaySeconds = 0
+        StubURLProtocolStorage.lastRequest = nil
+    }
+
+    override func tearDownWithError() throws {
+        try? Keychain.deleteAPIKey()
+        StubURLProtocolStorage.config = nil
+        StubURLProtocolStorage.delaySeconds = 0
+        StubURLProtocolStorage.lastRequest = nil
+    }
+
     // MARK: - ProviderConfig persistence
 
     func testProviderConfigPersistsAcrossInstances() {

@@ -4,6 +4,10 @@
 // Convenience wrapper around App Group UserDefaults for non-Published reads.
 // Used by the keyboard extension (no SwiftUI) to read config without
 // instantiating an ObservableObject.
+//
+// `apiKey` is NOT read from UserDefaults — see `Keychain.swift`. We
+// share access between the host app and the keyboard extension via a
+// shared keychain-access-group declared in both targets' entitlements.
 
 import Foundation
 
@@ -19,7 +23,6 @@ public struct AppGroupStore: @unchecked Sendable {
     private enum Key {
         static let providerId   = "config.providerId"
         static let baseURL      = "config.baseURL"
-        static let apiKey       = "config.apiKey"
         static let model        = "config.model"
         static let systemPrompt = "config.systemPrompt"
         static let modeId       = "config.modeId"
@@ -36,8 +39,11 @@ public struct AppGroupStore: @unchecked Sendable {
         defaults.string(forKey: Key.baseURL) ?? LLMProvider.provider(id: providerId).defaultBaseURL
     }
 
+    /// API key lives in the Keychain (cross-process, encrypted at rest).
+    /// Returns "" when nothing is stored so the LLMClient can surface a
+    /// `noAPIKey` error rather than firing off an obviously-bad request.
     public var apiKey: String {
-        defaults.string(forKey: Key.apiKey) ?? ""
+        Keychain.apiKey() ?? ""
     }
 
     public var model: String {

@@ -125,7 +125,16 @@ public final class KeyboardViewController: UIInputViewController {
     // MARK: - Press handlers
 
     private func pressBegan() {
-        guard state.phase == .idle else { return }
+        // Allow re-entry from `.denied` and from a finished/cleared
+        // `.error` so the user can simply press the mic again after
+        // returning from Settings with permission granted — they
+        // shouldn't have to wait for an auto-clear timer.
+        switch state.phase {
+        case .idle, .denied, .error:
+            break
+        default:
+            return
+        }
         guard state.mode != .off else { return }
         // Set the intermediate phase SYNCHRONOUSLY so a rapid second
         // press (before the first Task has had a chance to flip phase to
@@ -138,7 +147,6 @@ public final class KeyboardViewController: UIInputViewController {
             let micGranted = await self.permissions.requestMicPermission()
             guard micGranted else {
                 self.state.phase = .denied(.mic)
-                self.scheduleAutoClearError()
                 return
             }
             // iOS 18 SFSpeechRecognizer path: we explicitly ask for Speech
@@ -152,7 +160,6 @@ public final class KeyboardViewController: UIInputViewController {
             let speechGranted = await self.permissions.requestSpeechPermission()
             guard speechGranted else {
                 self.state.phase = .denied(.speech)
-                self.scheduleAutoClearError()
                 return
             }
             self.startPipeline()
@@ -357,11 +364,12 @@ public final class KeyboardViewController: UIInputViewController {
         Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 2_400_000_000)
             guard let self else { return }
-            // Clear both .error (transient error message) and .denied
-            // (permission was rejected — show the message, then return
-            // to idle so the user can navigate away).
+            // Only transient errors auto-clear. `.denied` is sticky: the
+            // user needs the message long enough to read it AND decide
+            // whether to tap "去设置" or tap the mic to retry. They
+            // dismiss it implicitly by doing either of those things.
             switch self.state.phase {
-            case .error, .denied:
+            case .error:
                 self.state.phase = .idle
             default:
                 break

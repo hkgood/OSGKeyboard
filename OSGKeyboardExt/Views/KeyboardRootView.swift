@@ -106,7 +106,11 @@ public struct KeyboardRootView: View {
     private var centreArea: some View {
         ZStack {
             VStack(spacing: Spacing.xxs) {
-                TranscriptLine(phase: state.phase, transcript: state.lastTranscript)
+                TranscriptLine(
+                    phase: state.phase,
+                    transcript: state.lastTranscript,
+                    openSettings: state.openSettings
+                )
                     .frame(height: 22)
                 RecordButton(
                     phase: buttonPhase,
@@ -200,6 +204,7 @@ private struct TranscriptLine: View {
 
     let phase: KeyboardViewController.State.Phase
     let transcript: String
+    let openSettings: () -> Void
 
     var body: some View {
         ZStack {
@@ -236,11 +241,21 @@ private struct TranscriptLine: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
             case .denied(let reason):
-                Text(deniedMessage(for: reason))
+                Button(action: openSettings) {
+                    HStack(spacing: 4) {
+                        Text(deniedMessage(for: reason))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.warning)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(Text("Opens the OSGKeyboard settings page where you can grant microphone or speech recognition access."))
             }
         }
         .frame(maxWidth: .infinity)
@@ -249,8 +264,8 @@ private struct TranscriptLine: View {
 
     private func deniedMessage(for reason: KeyboardViewController.State.Phase.Reason) -> String {
         switch reason {
-        case .mic:    return "麦克风被拒绝 · 请到「设置」中允许"
-        case .speech: return "语音识别被拒绝 · 请到「设置」中允许"
+        case .mic:    return "麦克风被拒绝"
+        case .speech: return "语音识别被拒绝"
         }
     }
 }

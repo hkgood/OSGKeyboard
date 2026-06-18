@@ -42,6 +42,13 @@ targets:
         com.apple.security.application-groups:
           - group.com.osgkeyboard.shared
         com.apple.security.device.audio-input: true
+        # Shared Keychain access group: the host app writes the LLM API
+        # key here in Settings; the keyboard extension reads it before
+        # each request. The first entry below becomes each process's
+        # default access group, so the Keychain helper does not need to
+        # specify kSecAttrAccessGroup explicitly.
+        com.apple.security.keychain-access-groups:
+          - com.osgkeyboard.shared
     resources:
       - path: OSGKeyboard/Assets.xcassets
     info:
@@ -91,6 +98,11 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.com.osgkeyboard.shared
+        # Shared with the host app so the keyboard extension can read the
+        # user's LLM API key. See OSGKeyboard/OSGKeyboard.entitlements
+        # for the full rationale.
+        com.apple.security.keychain-access-groups:
+          - com.osgkeyboard.shared
     info:
       path: OSGKeyboardExt/Info.plist
       properties:
