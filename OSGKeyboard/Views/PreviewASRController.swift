@@ -106,12 +106,30 @@ final class PreviewASRController: ObservableObject {
         }
 
         // 3. Audio session — only configure once per process.
+        //
+        // Category is `.record` (not `.playAndRecord`) because the
+        // preview never plays back audio — it just records from the
+        // mic and hands the buffers to `SpeechAnalyzer`. On the
+        // iOS Simulator, `.playAndRecord` requires the
+        // `AURemoteIO` Audio Unit's *output* side to also be
+        // enabled, but the simulator's "speaker" reports a 0 Hz
+        // hardware format, so `AURemoteIO::enable` fails with
+        // `kAudioUnitErr_FormatNotSupported` (-10851) and any
+        // subsequent `installTap` traps with "Failed to create tap
+        // due to format mismatch". `.record` skips the output
+        // side entirely, so the simulator can record.
+        //
+        // The real keyboard extension (`OSGKeyboardExt`) keeps
+        // `.playAndRecord` because it runs on a real device where
+        // the output side has a real hardware format, and may want
+        // to play click sounds / haptic feedback. Only the preview
+        // needs the simulator-friendly category.
         if !didConfigureAudioSession {
             do {
                 let session = AVAudioSession.sharedInstance()
-                try session.setCategory(.playAndRecord,
+                try session.setCategory(.record,
                                         mode: .measurement,
-                                        options: [.defaultToSpeaker, .allowBluetoothHFP])
+                                        options: [])
                 try session.setActive(true, options: .notifyOthersOnDeactivation)
                 didConfigureAudioSession = true
             } catch {
@@ -187,6 +205,25 @@ final class PreviewASRController: ObservableObject {
     private func startEngineAndASR(locale: Locale) {
         let inputNode = audioEngine.inputNode
         let hwFormat = inputNode.outputFormat(forBus: 0)
+
+        // Pre-flight check: a placeholder / unconfigured input bus
+        // reports `sampleRate == 0` (or `channelCount == 0`).
+        // `installTap` on such a bus traps with "Failed to create
+        // tap due to format mismatch" (an NSException, not a Swift
+        // `Error`, so we can't `try`/`catch` it). The safest fix
+        // is to refuse the tap up front and surface a clear
+        // `.error` phase instead of crashing the app. We've seen
+        // this on the iOS Simulator when the host's microphone
+        // permission isn't granted to CoreSimulator, and on
+        // devices where the audio session is in an unexpected
+        // state from a previous foreground/background transition.
+        guard hwFormat.sampleRate > 0, hwFormat.channelCount > 0 else {
+            phase = .error(
+                "麦克风不可用 · Microphone unavailable (hw format \(hwFormat.sampleRate) Hz / \(hwFormat.channelCount) ch)"
+            )
+            return
+        }
+
         let targetSampleRate: Double = 16_000
         guard let targetFormat = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
