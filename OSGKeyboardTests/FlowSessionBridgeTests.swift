@@ -49,4 +49,18 @@ final class FlowSessionBridgeTests: XCTestCase {
         XCTAssertNil(FlowSessionBridge.consumeTranscriptionResult(defaults: defaults))
         XCTAssertEqual(FlowSessionBridge.recordingState(defaults: defaults), .idle)
     }
+
+    func testRemainingSessionDurationNilWhenExpired() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(duration: 1, defaults: defaults)
+        XCTAssertNotNil(FlowSessionBridge.remainingSessionDuration(defaults: defaults))
+
+        let expired = Date().timeIntervalSince1970 - 5
+        defaults.set(expired, forKey: FlowSessionKeys.flowSessionExpires)
+        XCTAssertNil(FlowSessionBridge.remainingSessionDuration(defaults: defaults))
+    }
+
+    func testDarwinNotificationPostsWithoutCrashing() {
+        FlowSessionDarwin.postSessionChanged()
+    }
 }

@@ -86,7 +86,7 @@ public struct KeyboardRootView: View {
                     .overlay(Circle().stroke(palette.divider, lineWidth: 0.5))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text(KeyboardL10n.openSettingsA11y))
+            .accessibilityLabel(Text("keyboard.openSettingsA11y"))
         }
         .padding(.horizontal, Spacing.md)
     }
@@ -99,6 +99,7 @@ public struct KeyboardRootView: View {
                 TranscriptLine(
                     phase: state.phase,
                     transcript: state.lastTranscript,
+                    flowSessionActive: state.flowSessionActive,
                     openSettings: state.openSettings
                 )
                     .frame(height: 22)
@@ -128,7 +129,7 @@ public struct KeyboardRootView: View {
                 state.deleteBackward()
             }
             Button(action: state.insertSpace) {
-                Text(KeyboardL10n.space)
+                Text("keyboard.space")
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                     .frame(maxWidth: .infinity, minHeight: 42)
@@ -139,7 +140,7 @@ public struct KeyboardRootView: View {
                     )
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text(KeyboardL10n.space))
+            .accessibilityLabel(Text("keyboard.space"))
             ToolbarIconButton(systemName: "return", label: "newline") {
                 state.insertNewline()
             }
@@ -194,19 +195,26 @@ private struct TranscriptLine: View {
 
     let phase: KeyboardViewController.State.Phase
     let transcript: String
+    let flowSessionActive: Bool
     let openSettings: () -> Void
 
     var body: some View {
         ZStack {
             switch phase {
             case .idle:
-                Text(KeyboardL10n.placeholderIdle)
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textTertiary)
+                if flowSessionActive {
+                    Text("keyboard.placeholder.idle")
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textTertiary)
+                } else {
+                    Text("keyboard.flow.sessionInactive")
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textTertiary)
+                }
             case .requestingPermissions:
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(palette.textSecondary)
-                    Text(KeyboardL10n.placeholderPreparing)
+                    Text("keyboard.placeholder.preparing")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -220,7 +228,7 @@ private struct TranscriptLine: View {
             case .processing:
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(palette.accent)
-                    Text(transcript.isEmpty ? KeyboardL10n.placeholderProcessing : transcript)
+                    Text(transcript.isEmpty ? String(localized: "keyboard.placeholder.processing") : transcript)
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                         .lineLimit(1)
@@ -247,17 +255,17 @@ private struct TranscriptLine: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityHint(Text(KeyboardL10n.deniedHint))
+                .accessibilityHint(Text("keyboard.deniedHint"))
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, Spacing.md)
     }
 
-    private func deniedMessage(for reason: KeyboardViewController.State.Phase.Reason) -> String {
+    private func deniedMessage(for reason: KeyboardViewController.State.Phase.Reason) -> LocalizedStringKey {
         switch reason {
-        case .mic:    return KeyboardL10n.micDenied
-        case .speech: return KeyboardL10n.speechDenied
+        case .mic:    return "keyboard.denied.mic"
+        case .speech: return "keyboard.denied.speech"
         }
     }
 }
@@ -309,21 +317,21 @@ private struct StatusBadge: View {
                 EmptyView()
             case .recording:
                 if onDeviceSupported {
-                    dot(color: palette.recordRed, label: "REC")
+                    dot(color: palette.recordRed, labelKey: "keyboard.status.rec")
                 } else {
-                    dot(color: palette.warning, label: "REC ⚠️", showWarning: true)
+                    dot(color: palette.warning, labelKey: "keyboard.status.recWarning", showWarning: true)
                 }
             case .processing:
-                dot(color: palette.accent, label: "···")
+                dot(color: palette.accent, labelKey: "keyboard.status.processing")
             case .error:
-                dot(color: palette.warning, label: "!")
+                dot(color: palette.warning, labelKey: "keyboard.status.error")
             case .denied:
-                dot(color: palette.warning, label: "!")
+                dot(color: palette.warning, labelKey: "keyboard.status.error")
             }
         }
     }
 
-    private func dot(color: Color, label: String, showWarning: Bool = false) -> some View {
+    private func dot(color: Color, labelKey: LocalizedStringKey, showWarning: Bool = false) -> some View {
         HStack(spacing: 4) {
             Circle()
                 .fill(color)
@@ -333,7 +341,7 @@ private struct StatusBadge: View {
                     .font(.system(size: 9, weight: .bold))
                     .foregroundStyle(palette.warning)
             }
-            Text(label)
+            Text(labelKey)
                 .font(TypeStyle.caption2)
                 .foregroundStyle(palette.textSecondary)
         }
@@ -352,7 +360,7 @@ private struct LocalEngineChip: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: "iphone.badge.checkmark")
-            Text(KeyboardL10n.localBadge)
+            Text("keyboard.placeholder.localBadge")
         }
         .font(TypeStyle.caption2)
         .foregroundStyle(palette.accent)
@@ -360,34 +368,6 @@ private struct LocalEngineChip: View {
         .padding(.vertical, 4)
         .background(palette.accent.opacity(0.15), in: Capsule())
         .overlay(Capsule().stroke(palette.accent.opacity(0.35), lineWidth: 0.5))
-    }
-}
-
-// MARK: - Extension text fallback
-//
-// Custom keyboard extensions can end up without the expected localized
-// resource table when signing/project generation drifts. Keep a tiny
-// in-code fallback map so UI never shows raw key names like
-// "common.space" in production.
-private enum KeyboardL10n {
-    private static var isChinese: Bool {
-        Locale.preferredLanguages.first?.hasPrefix("zh") == true
-    }
-
-    static var space: String { isChinese ? "空格" : "Space" }
-    static var placeholderIdle: String { isChinese ? "点按说话" : "Tap to talk" }
-    static var placeholderPreparing: String { isChinese ? "准备中…" : "Preparing" }
-    static var placeholderProcessing: String { isChinese ? "处理中…" : "Processing" }
-    static var localBadge: String { isChinese ? "本地" : "On-device" }
-    static var micDenied: String { isChinese ? "麦克风被拒绝" : "Mic denied" }
-    static var speechDenied: String { isChinese ? "语音识别被拒绝" : "Speech denied" }
-    static var deniedHint: String {
-        isChinese
-            ? "打开 OSGKeyboard 设置,可授予麦克风 / 语音识别权限。"
-            : "Open OSGKeyboard settings to grant microphone / speech access."
-    }
-    static var openSettingsA11y: String {
-        isChinese ? "打开 OSGKeyboard 设置" : "Open OSGKeyboard settings"
     }
 }
 
@@ -429,12 +409,8 @@ private struct ModeChip: View {
         .menuStyle(.button)
     }
 
-    private func label(for m: KeyboardViewController.State.InputMode) -> String {
-        switch m {
-        case .off:        return "Off"
-        case .transcribe: return "转写"
-        case .polish:     return "润色"
-        }
+    private func label(for m: KeyboardViewController.State.InputMode) -> LocalizedStringKey {
+        LocalizedStringKey(m.labelKey)
     }
 
     private func icon(for m: KeyboardViewController.State.InputMode) -> String {
@@ -454,13 +430,13 @@ private struct LocaleChip: View {
     let localeId: String
     let onChange: (String) -> Void
 
-    private let options: [(id: String, label: String)] = [
-        ("auto",    "Auto"),
-        ("zh-Hans", "简体"),
-        ("zh-Hant", "繁體"),
-        ("en-US",   "EN"),
-        ("ja-JP",   "日"),
-        ("ko-KR",   "한")
+    private let options: [(id: String, labelKey: String)] = [
+        ("auto",    "locale.chip.auto"),
+        ("zh-Hans", "locale.chip.zh-Hans"),
+        ("zh-Hant", "locale.chip.zh-Hant"),
+        ("en-US",   "locale.chip.en-US"),
+        ("ja-JP",   "locale.chip.ja-JP"),
+        ("ko-KR",   "locale.chip.ko-KR")
     ]
 
     var body: some View {
@@ -470,9 +446,9 @@ private struct LocaleChip: View {
                     onChange(o.id)
                 } label: {
                     if o.id == localeId {
-                        Label(o.label, systemImage: "checkmark")
+                        Label(LocalizedStringKey(o.labelKey), systemImage: "checkmark")
                     } else {
-                        Text(o.label)
+                        Text(LocalizedStringKey(o.labelKey))
                     }
                 }
             }
@@ -493,7 +469,10 @@ private struct LocaleChip: View {
         .menuStyle(.button)
     }
 
-    private var currentLabel: String {
-        options.first(where: { $0.id == localeId })?.label ?? "Auto"
+    private var currentLabel: LocalizedStringKey {
+        if let key = options.first(where: { $0.id == localeId })?.labelKey {
+            return LocalizedStringKey(key)
+        }
+        return "locale.chip.auto"
     }
 }

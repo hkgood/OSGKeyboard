@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OSGKeyboard</title>
   <meta name="description" content="OSGKeyboard — voice dictation keyboard for iOS with on-device ASR and optional LLM polish.">
+  <link rel="icon" href="assets/app-icon.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/app-icon.png">
   <style>
     :root {
       color-scheme: light dark;
@@ -39,6 +41,19 @@
       padding: 2.5rem 1.25rem 3rem;
     }
     header { margin-bottom: 2rem; }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    .app-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      flex-shrink: 0;
+    }
     h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 0.5rem; }
     .tagline { color: var(--muted); margin: 0; font-size: 1.05rem; }
     .lang { font-size: 0.9rem; margin-top: 0.75rem; }
@@ -78,8 +93,13 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>OSGKeyboard</h1>
-      <p class="tagline">Tap to talk. Polished text in any app.</p>
+      <div class="brand">
+        <img class="app-icon" src="assets/app-icon.png" width="72" height="72" alt="OSGKeyboard app icon">
+        <div>
+          <h1>OSGKeyboard</h1>
+          <p class="tagline">Tap to talk. Polished text in any app.</p>
+        </div>
+      </div>
       <p class="lang"><a href="#zh">中文</a></p>
     </header>
 
@@ -114,8 +134,13 @@
     <hr id="zh">
 
     <header>
-      <h1>OSGKeyboard</h1>
-      <p class="tagline">点按说话，任意 App 里获得润色文字。</p>
+      <div class="brand">
+        <img class="app-icon" src="assets/app-icon.png" width="72" height="72" alt="OSGKeyboard 应用图标">
+        <div>
+          <h1>OSGKeyboard</h1>
+          <p class="tagline">点按说话，任意 App 里获得润色文字。</p>
+        </div>
+      </div>
     </header>
 
     <div class="card">

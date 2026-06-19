@@ -126,6 +126,51 @@
 "keyboard.deniedHint" = "Opens the OSGKeyboard settings page where you can grant microphone or speech recognition access.";
 "keyboard.tapToTalkA11y" = "Tap to talk";
 
+/* Flow session (keyboard) */
+"keyboard.flow.sessionInactive" = "Open OSGKeyboard to start voice session";
+"keyboard.flow.sessionExpired" = "Voice session ended. Open OSGKeyboard to restart.";
+"keyboard.flow.startingSession" = "Starting voice session…";
+"keyboard.flow.transcribing" = "Transcribing…";
+"keyboard.flow.resultTimeout" = "Timed out waiting for transcription. Try again.";
+"keyboard.flow.manualOpenHost" = "Could not auto-open the app. Open OSGKeyboard from the Home Screen, then return.";
+
+/* Keyboard status badges */
+"keyboard.status.rec" = "REC";
+"keyboard.status.recWarning" = "REC";
+"keyboard.status.processing" = "···";
+"keyboard.status.error" = "!";
+
+/* Keyboard errors */
+"keyboard.error.appGroupUnavailable" = "App Group not configured";
+"keyboard.error.appGroupCommunication" = "App Group not configured. Reinstall and check signing.";
+"keyboard.error.fullAccessRequired" = "Enable Allow Full Access for OSGKeyboard in Settings to use voice input.";
+"keyboard.error.fullAccessForJump" = "Allow Full Access is required before the keyboard can open the app.";
+"keyboard.error.manualOpenSettings" = "System blocked the jump. Open OSGKeyboard manually to reach Settings.";
+"keyboard.error.manualOpenForFlow" = "Voice session not running. Open OSGKeyboard, then tap the mic again.";
+"keyboard.error.manualOpenDictateLocal" = "System blocked the jump. Open OSGKeyboard for on-device dictation, then return.";
+"keyboard.error.manualOpenDictate" = "System blocked the jump. Open OSGKeyboard to record, then return.";
+"keyboard.error.llm.noApiKey" = "API key missing · configure it in the main app";
+"keyboard.error.llm.unauthorized" = "Invalid API key (401) · check main app settings";
+"keyboard.error.llm.rateLimited" = "Rate limited (429) · try again later";
+
+/* Legacy dictation handoff progress */
+"keyboard.dictation.opening" = "Opening OSGKeyboard…";
+"keyboard.dictation.openingLocal" = "Opening OSGKeyboard (on-device)…";
+"keyboard.dictation.recording" = "Recording in OSGKeyboard — return here when done";
+"keyboard.dictation.recordingLocal" = "Recording on-device — return here when done";
+"keyboard.dictation.transcribing" = "Transcribing — return here when ready";
+"keyboard.dictation.transcribingLocal" = "On-device transcribing — return here when ready";
+"keyboard.dictation.failed" = "Recording failed. Try again.";
+"keyboard.dictation.resultTimeout" = "Timed out waiting for dictation. Finish in OSGKeyboard and retry.";
+
+/* Locale chip (short labels) */
+"locale.chip.auto" = "Auto";
+"locale.chip.zh-Hans" = "简";
+"locale.chip.zh-Hant" = "繁";
+"locale.chip.en-US" = "EN";
+"locale.chip.ja-JP" = "日";
+"locale.chip.ko-KR" = "韩";
+
 /* Mode chip labels (used in both ext + preview stub) */
 "mode.off" = "Off";
 "mode.transcribe" = "Transcribe";

@@ -69,6 +69,8 @@ public final class KeyboardState: ObservableObject {
     @Published public var onDeviceSupported: Bool = false
     /// Seconds remaining in the current utterance (Flow tap-to-talk).
     @Published public var utteranceRemainingSeconds: Int = Int(FlowSessionKeys.maxUtteranceDuration)
+    /// Whether the host app's Flow voice session is currently valid.
+    @Published public var flowSessionActive: Bool = false
     /// "local" → ASR only, no LLM. "cloud" → ASR + optional LLM polish.
     @Published public var engineMode: String = "cloud"
 

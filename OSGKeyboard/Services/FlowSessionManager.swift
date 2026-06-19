@@ -111,6 +111,7 @@ final class FlowSessionManager: ObservableObject {
         }
 
         FlowSessionBridge.writeHeartbeat()
+        FlowSessionDarwin.postSessionChanged()
         isActive = true
         if let expires = FlowSessionBridge.sessionExpiresAt() {
             sessionExpiresAt = Date(timeIntervalSince1970: expires)
@@ -151,6 +152,7 @@ final class FlowSessionManager: ObservableObject {
 
         capture.stop()
         FlowSessionBridge.markSessionInactive()
+        FlowSessionDarwin.postSessionChanged()
         isActive = false
         sessionExpiresAt = nil
         sessionWarning = nil
@@ -186,6 +188,7 @@ final class FlowSessionManager: ObservableObject {
         }
 
         FlowSessionBridge.markSessionActive(duration: duration)
+        FlowSessionDarwin.postSessionChanged()
         isActive = true
         sessionExpiresAt = Date().addingTimeInterval(duration)
 

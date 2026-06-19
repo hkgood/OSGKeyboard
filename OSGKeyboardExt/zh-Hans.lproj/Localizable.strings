@@ -126,6 +126,51 @@
 "keyboard.deniedHint" = "打开 OSGKeyboard 设置,可授予麦克风 / 语音识别权限。";
 "keyboard.tapToTalkA11y" = "点按说话";
 
+/* Flow session (keyboard) */
+"keyboard.flow.sessionInactive" = "请打开 OSGKeyboard 启动语音会话";
+"keyboard.flow.sessionExpired" = "语音会话已结束，请打开 OSGKeyboard 重新启动";
+"keyboard.flow.startingSession" = "正在启动语音会话…";
+"keyboard.flow.transcribing" = "识别中…";
+"keyboard.flow.resultTimeout" = "等待识别结果超时，请重试";
+"keyboard.flow.manualOpenHost" = "无法自动跳转，请从主屏幕打开 OSGKeyboard 后返回";
+
+/* Keyboard status badges */
+"keyboard.status.rec" = "录音";
+"keyboard.status.recWarning" = "录音";
+"keyboard.status.processing" = "···";
+"keyboard.status.error" = "!";
+
+/* Keyboard errors */
+"keyboard.error.appGroupUnavailable" = "App Group 未配置";
+"keyboard.error.appGroupCommunication" = "App Group 未配置，请重新安装并检查签名";
+"keyboard.error.fullAccessRequired" = "请在系统设置中为 OSGKeyboard 开启「允许完全访问」";
+"keyboard.error.fullAccessForJump" = "请先开启「允许完全访问」，否则键盘无法跳转到 App";
+"keyboard.error.manualOpenSettings" = "系统拒绝了跳转，请手动打开 OSGKeyboard 进入设置";
+"keyboard.error.manualOpenForFlow" = "语音会话未启动，请打开 OSGKeyboard 后再点麦克风";
+"keyboard.error.manualOpenDictateLocal" = "系统拒绝了跳转，请手动打开 OSGKeyboard 完成本地转写";
+"keyboard.error.manualOpenDictate" = "系统拒绝了跳转，请手动打开 OSGKeyboard 录音";
+"keyboard.error.llm.noApiKey" = "未配置 API Key · 请在主 App 设置中填写";
+"keyboard.error.llm.unauthorized" = "API Key 无效 (401) · 请检查主 App 设置";
+"keyboard.error.llm.rateLimited" = "API 限流 (429) · 请稍后再试";
+
+/* Legacy dictation handoff progress */
+"keyboard.dictation.opening" = "正在打开 OSGKeyboard…";
+"keyboard.dictation.openingLocal" = "正在打开 OSGKeyboard（本地转写）…";
+"keyboard.dictation.recording" = "正在录音，请完成后返回当前输入页";
+"keyboard.dictation.recordingLocal" = "正在本地录音，请完成后返回当前输入页";
+"keyboard.dictation.transcribing" = "识别中，请稍候并返回输入页";
+"keyboard.dictation.transcribingLocal" = "本地识别中，请稍候并返回输入页";
+"keyboard.dictation.failed" = "录音失败，请重试";
+"keyboard.dictation.resultTimeout" = "等待录音结果超时，请返回 OSGKeyboard 完成录音后重试";
+
+/* Locale chip (short labels) */
+"locale.chip.auto" = "自动";
+"locale.chip.zh-Hans" = "简";
+"locale.chip.zh-Hant" = "繁";
+"locale.chip.en-US" = "EN";
+"locale.chip.ja-JP" = "日";
+"locale.chip.ko-KR" = "韩";
+
 /* Mode chip labels */
 "mode.off" = "关闭";
 "mode.transcribe" = "转写";

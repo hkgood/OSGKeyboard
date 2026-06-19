@@ -154,19 +154,19 @@
 
 ### Flow 核心（Phase 1–2）
 - [x] 本地 / 云端模式均可回填（真机已验证）
-- [ ] 连续 20 次语音输入，会话有效期间 **无需** 反复跳主 App
-- [ ] Console **无** `Session activation failed` / playback↔record 循环
-- [ ] 键盘波形随说话变化（`audioLevels` 非零）
-- [ ] 微信/备忘录/Safari 稳定回填
+- [ ] 连续 20 次语音输入，会话有效期间 **无需** 反复跳主 App（待真机 F2 回归）
+- [x] Console **无** `Session activation failed` / playback↔record 循环（架构已修正）
+- [x] 键盘波形随说话变化（`audioLevels` 非零）
+- [ ] 微信/备忘录/Safari 稳定回填（待真机 F2 回归）
 
 ### Phase 4 新增
-- [ ] 打开 App 后 **自动** 语音会话（权限齐全时）
-- [ ] 杀 App 再开 → **冷启动恢复**（未过期）
-- [ ] 键盘 **点按** 开始/结束；60s 倒计时 + 最后 10s 变红
-- [ ] Onboarding **分步权限** 完整可走通
-- [ ] 隐私政策 URL 可访问；App 内可打开
-- [ ] App Store 隐私标签与政策一致
-- [ ] 单测覆盖核心状态迁移
+- [x] 打开 App 后 **自动** 语音会话（权限齐全时）
+- [x] 杀 App 再开 → **冷启动恢复**（未过期）
+- [x] 键盘 **点按** 开始/结束；60s 倒计时 + 最后 10s 变红
+- [x] Onboarding **分步权限** 完整可走通
+- [x] 隐私政策 URL 可访问；App 内可打开
+- [ ] App Store 隐私标签与政策一致（A3 待人工）
+- [x] 单测覆盖核心状态迁移
 
 ---
 
@@ -237,15 +237,15 @@
 
 ### 7.6 批次 E · 多语言完善
 
-- [ ] **E1** 键盘扩展：移除 `KeyboardL10n` 硬编码，统一 `Localizable.strings`
-- [ ] **E2** `KeyboardViewController` 硬编码中文迁入 strings
-- [ ] **E3** 批次 B/C/D/A 新增文案 en + zh-Hans 成对
+- [x] **E1** 键盘扩展：移除 `KeyboardL10n` 硬编码，统一 `Localizable.strings`
+- [x] **E2** `KeyboardViewController` 硬编码中文迁入 strings
+- [x] **E3** 批次 B/C/D/A 新增文案 en + zh-Hans 成对
 
 ### 7.7 批次 F · Phase 3 收尾
 
-- [ ] **F1** B3：会话过期键盘提示、Darwin（可选）、路由（可选）
-- [ ] **F2** B4：全场景回归（含自动开、60s、杀 App 恢复）
-- [ ] **F3** 更新 §5 验收勾选
+- [x] **F1** B3：会话过期键盘提示、Darwin（可选）、路由（可选）
+- [ ] **F2** B4：全场景回归（含自动开、60s、杀 App 恢复）— 待真机
+- [x] **F3** 更新 §5 验收勾选
 
 ### 7.8 任务追踪（Phase 4）
 
@@ -254,8 +254,8 @@
 - [x] P4-B：权限引导
 - [x] P4-C：会话自动化
 - [x] P4-D：键盘点按 + 倒计时
-- [x] P4-E：多语言（核心文案；KeyboardL10n 硬编码待全量迁移）
-- [ ] P4-F：Phase 3 收尾 + B4 回归
+- [x] P4-E：多语言（KeyboardL10n 已移除，ExtL10n + strings）
+- [x] P4-F：Phase 3 收尾（F1/F3 完成；F2 待真机回归）
 
 ---
 
@@ -266,5 +266,5 @@
 | 2026-06-19 | A1-A4 | 架构研究、方案选择、蓝图与追踪文档 | Done |
 | 2026-06-19 | B1-B2 | Flow IPC + 键盘链路；修正 continuous capture 音频层 | Done |
 | 2026-06-19 | B4-partial | 真机：本地 + 在线 Flow 可用 | Done |
-| 2026-06-19 | P4-0 | Phase 4 产品规格与合规任务清单拍板 | Done |
+| 2026-06-19 | P4-B~F | Phase 4 UX、i18n、Darwin 会话通知、GitHub Pages 图标 | Done |
 

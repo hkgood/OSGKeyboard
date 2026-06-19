@@ -62,6 +62,9 @@ public final class KeyboardViewController: UIInputViewController {
     private var flowWatchdogTask: Task<Void, Never>?
     private var utteranceTimerTask: Task<Void, Never>?
     private var utteranceStartedAt: TimeInterval = 0
+    private var wasFlowSessionActive = false
+    private var flowSessionMonitorTask: Task<Void, Never>?
+    private var flowSessionDarwinObserver: FlowSessionDarwinObserver?
 
     // MARK: - Lifecycle
 
@@ -76,17 +79,22 @@ public final class KeyboardViewController: UIInputViewController {
         loadPersistedConfig()
         consumePendingDictationResultIfNeeded()
         refreshDictationProgressStateIfNeeded()
+        installFlowSessionDarwinObserver()
+        refreshFlowSessionState()
     }
 
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         cancelPipeline()
+        stopFlowSessionMonitor()
     }
 
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         consumePendingDictationResultIfNeeded()
         refreshDictationProgressStateIfNeeded()
+        refreshFlowSessionState()
+        startFlowSessionMonitor()
     }
 
     public override func didReceiveMemoryWarning() {
@@ -142,8 +150,55 @@ public final class KeyboardViewController: UIInputViewController {
         case .loaded:
             break
         case .unavailable:
-            state.phase = .error(.appGroupUnavailable, message: "App Group 未配置")
+            state.phase = .error(
+                .appGroupUnavailable,
+                message: ExtL10n.string("keyboard.error.appGroupUnavailable")
+            )
         }
+    }
+
+    // MARK: - Flow session monitor
+
+    private func installFlowSessionDarwinObserver() {
+        flowSessionDarwinObserver = FlowSessionDarwinObserver { [weak self] in
+            self?.refreshFlowSessionState()
+        }
+    }
+
+    private func startFlowSessionMonitor() {
+        flowSessionMonitorTask?.cancel()
+        flowSessionMonitorTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                self?.refreshFlowSessionState()
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            }
+        }
+    }
+
+    private func stopFlowSessionMonitor() {
+        flowSessionMonitorTask?.cancel()
+        flowSessionMonitorTask = nil
+    }
+
+    private func refreshFlowSessionState() {
+        let active = FlowSessionBridge.isSessionActive()
+        state.flowSessionActive = active
+
+        if wasFlowSessionActive && !active && !isFlowRecording && !isPendingFlowStart {
+            switch state.phase {
+            case .recording, .processing:
+                break
+            default:
+                showFlowSessionExpiredHint()
+            }
+        }
+        wasFlowSessionActive = active
+    }
+
+    private func showFlowSessionExpiredHint() {
+        let message = ExtL10n.string("keyboard.flow.sessionExpired")
+        state.phase = .error(.unknown(message), message: message)
+        scheduleAutoClearError()
     }
 
     // MARK: - Press handlers
@@ -168,13 +223,13 @@ public final class KeyboardViewController: UIInputViewController {
         }
         guard state.mode != .off else { return }
         guard hasFullAccess else {
-            let msg = "请在系统设置中为 OSGKeyboard 开启“允许完全访问”，否则无法使用语音输入"
+            let msg = ExtL10n.string("keyboard.error.fullAccessRequired")
             state.phase = .error(.unknown(msg), message: msg)
             scheduleAutoClearError()
             return
         }
         guard AppGroup.isAvailable else {
-            let msg = "App Group 未配置，键盘无法与主 App 通信。请重新安装并检查签名配置。"
+            let msg = ExtL10n.string("keyboard.error.appGroupCommunication")
             state.phase = .error(.appGroupUnavailable, message: msg)
             scheduleAutoClearError()
             return
@@ -198,7 +253,7 @@ public final class KeyboardViewController: UIInputViewController {
         stopUtteranceCountdown()
         FlowSessionBridge.setRecordingState(.stopped)
         state.phase = .processing
-        state.lastTranscript = "识别中..."
+        state.lastTranscript = ExtL10n.string("keyboard.flow.transcribing")
         startFlowResultWatchdog()
     }
 
@@ -245,7 +300,7 @@ public final class KeyboardViewController: UIInputViewController {
         isPendingFlowStart = true
         isFlowRecording = false
         flowStartDeadline = Date().timeIntervalSince1970 + FlowWatchdog.startTimeout
-        state.lastTranscript = "正在启动语音会话..."
+        state.lastTranscript = ExtL10n.string("keyboard.flow.startingSession")
         state.phase = .processing
         openHostApp(path: "startflow")
         startFlowStartWatchdog()
@@ -312,7 +367,7 @@ public final class KeyboardViewController: UIInputViewController {
                 let now = Date().timeIntervalSince1970
                 if now - startedAt > FlowWatchdog.resultTimeout {
                     self.stopFlowWatchdog()
-                    let msg = "等待识别结果超时，请重试"
+                    let msg = ExtL10n.string("keyboard.flow.resultTimeout")
                     self.state.phase = .error(.unknown(msg), message: msg)
                     self.scheduleAutoClearError()
                     return
@@ -396,13 +451,13 @@ public final class KeyboardViewController: UIInputViewController {
                     // Don't silently insert the raw transcript — the user
                     // thinks they're getting polished text when really no
                     // key is configured. Show a precise, actionable error.
-                    self.state.phase = .error(.llm(error), message: "未配置 API Key · 请在主 App 设置中填写")
+                    self.state.phase = .error(.llm(error), message: ExtL10n.string("keyboard.error.llm.noApiKey"))
                     self.scheduleAutoClearError()
                 case .http(401):
-                    self.state.phase = .error(.llm(error), message: "API Key 无效 (401) · 请检查主 App 设置")
+                    self.state.phase = .error(.llm(error), message: ExtL10n.string("keyboard.error.llm.unauthorized"))
                     self.scheduleAutoClearError()
                 case .http(429), .rateLimited:
-                    self.state.phase = .error(.llm(error), message: "API 限流 (429) · 请稍后再试")
+                    self.state.phase = .error(.llm(error), message: ExtL10n.string("keyboard.error.llm.rateLimited"))
                     self.scheduleAutoClearError()
                 case .cancelled:
                     // User-initiated cancellation (e.g. mode switch mid-
@@ -464,7 +519,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     private func openHostApp(path: String = "settings") {
         guard hasFullAccess else {
-            let msg = "未开启“允许完全访问”，请先在键盘设置中打开"
+            let msg = ExtL10n.string("keyboard.error.fullAccessForJump")
             state.phase = .error(.unknown(msg), message: msg)
             scheduleAutoClearError()
             return
@@ -485,7 +540,7 @@ public final class KeyboardViewController: UIInputViewController {
         // Flow start: auto-jump often fails in WeChat/Safari — keep polling
         // so a manually opened host app can still satisfy the session check.
         if path == "startflow", isPendingFlowStart {
-            state.lastTranscript = "无法自动跳转，请从主屏幕打开 OSGKeyboard，然后返回继续"
+            state.lastTranscript = ExtL10n.string("keyboard.flow.manualOpenHost")
             return
         }
 
@@ -508,18 +563,18 @@ public final class KeyboardViewController: UIInputViewController {
         switch progress.status {
         case .requested:
             state.lastTranscript = state.isLocalEngine
-                ? "正在打开 OSGKeyboard（本地转写）..."
-                : "正在打开 OSGKeyboard..."
+                ? ExtL10n.string("keyboard.dictation.openingLocal")
+                : ExtL10n.string("keyboard.dictation.opening")
         case .recording:
             state.lastTranscript = state.isLocalEngine
-                ? "正在本地录音，请完成后返回当前输入页"
-                : "正在录音，请完成后返回当前输入页"
+                ? ExtL10n.string("keyboard.dictation.recordingLocal")
+                : ExtL10n.string("keyboard.dictation.recording")
         case .transcribing:
             state.lastTranscript = state.isLocalEngine
-                ? "本地识别中，请稍候并返回输入页"
-                : "识别中，请稍候并返回输入页"
+                ? ExtL10n.string("keyboard.dictation.transcribingLocal")
+                : ExtL10n.string("keyboard.dictation.transcribing")
         case .error:
-            let msg = progress.message ?? "录音失败，请重试"
+            let msg = progress.message ?? ExtL10n.string("keyboard.dictation.failed")
             debug("host returned error: \(msg)")
             awaitingDictationResult = false
             stopDictationWatchdog()
@@ -538,7 +593,7 @@ public final class KeyboardViewController: UIInputViewController {
         let now = Date().timeIntervalSince1970
         let lastProgressAt = progress.updatedAt > 0 ? progress.updatedAt : dictationRequestStartedAt
         if now - lastProgressAt > DictationWatchdog.timeout {
-            let timeoutMessage = "等待录音结果超时，请返回 OSGKeyboard 完成录音后重试"
+            let timeoutMessage = ExtL10n.string("keyboard.dictation.resultTimeout")
             debug("dictation timeout after \(Int(now - lastProgressAt))s")
             awaitingDictationResult = false
             stopDictationWatchdog()
@@ -551,15 +606,15 @@ public final class KeyboardViewController: UIInputViewController {
     private func showManualSettingsHint(path: String = "settings") {
         let msg: String
         if !hasFullAccess {
-            msg = "请先开启 OSGKeyboard 的“允许完全访问”，否则键盘无法跳转到 App"
+            msg = ExtL10n.string("keyboard.error.fullAccessForJump")
         } else if path == "settings" {
-            msg = "系统拒绝了键盘跳转。请手动打开 OSGKeyboard App 进入设置页"
+            msg = ExtL10n.string("keyboard.error.manualOpenSettings")
         } else if path == "startflow" {
-            msg = "语音会话未启动。请从主屏幕打开 OSGKeyboard App，返回后再按麦克风"
+            msg = ExtL10n.string("keyboard.error.manualOpenForFlow")
         } else if state.isLocalEngine {
-            msg = "系统拒绝了键盘跳转。请先手动打开 OSGKeyboard 完成本地转写，再返回输入页"
+            msg = ExtL10n.string("keyboard.error.manualOpenDictateLocal")
         } else {
-            msg = "系统拒绝了键盘跳转。请先手动打开 OSGKeyboard 录音，再返回输入页"
+            msg = ExtL10n.string("keyboard.error.manualOpenDictate")
         }
         state.phase = .error(.unknown(msg), message: msg)
         scheduleAutoClearError()
