@@ -5,10 +5,6 @@
 name: OSGKeyboard
 options:
   bundleIdPrefix: com.osgkeyboard
-  # Icon Composer bundles must stay intact; do not explode into icon.json + SVG.
-  fileTypes:
-    icon:
-      file: true
   # Minimum OS: iOS 26. We dropped older iOS support so the
   # legacy speech + AVAudioSession branching could be removed in
   # favour of iOS 26's `SpeechAnalyzer` (always on-device) and
@@ -50,8 +46,7 @@ targets:
       - path: OSGKeyboard
         excludes:
           - "AppIcon.icon"
-      - path: OSGKeyboard/AppIcon.icon
-        buildPhase: resources
+          - "OSGKeyboard.icon"
     entitlements:
       path: OSGKeyboard/OSGKeyboard.entitlements
       properties:
@@ -103,9 +98,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios
         TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
-        # AppIcon.icon (Liquid Glass) + AppIcon.appiconset (fallback) share the name "AppIcon".
-        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
+        # Use AppIcon.appiconset only. AppIcon.icon (Icon Composer) must not
+        # be passed to actool alongside the asset catalog — it crashes actool.
     dependencies:
       - target: OSGKeyboardShared
         embed: true
