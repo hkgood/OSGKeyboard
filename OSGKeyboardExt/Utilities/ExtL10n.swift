@@ -1,17 +1,26 @@
 // ExtL10n.swift
 // OSGKeyboard · Keyboard Extension
 //
-// Loads strings from the keyboard extension bundle (not SwiftUI's default
-// bundle, which may not see our Localizable.strings).
+// Loads strings from Keyboard.strings in the extension bundle. We use a
+// dedicated strings table (not Localizable.strings) because XcodeGen merges
+// duplicate Localizable.strings variant groups into the main app target only.
 
 import Foundation
 import SwiftUI
 
 enum ExtL10n {
+    private static let table = "Keyboard"
     private static let bundle = Bundle(for: KeyboardViewController.self)
 
     static func string(_ key: String) -> String {
-        NSLocalizedString(key, bundle: bundle, comment: "")
+        let value = NSLocalizedString(
+            key,
+            tableName: table,
+            bundle: bundle,
+            value: key,
+            comment: ""
+        )
+        return value
     }
 
     static func text(_ key: String) -> Text {

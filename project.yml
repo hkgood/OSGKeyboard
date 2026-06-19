@@ -118,9 +118,12 @@ targets:
         excludes:
           - "en.lproj"
           - "zh-Hans.lproj"
+      - path: OSGKeyboardExt/en.lproj/Keyboard.strings
+        buildPhase: resources
+      - path: OSGKeyboardExt/zh-Hans.lproj/Keyboard.strings
+        buildPhase: resources
     resources:
-      - path: OSGKeyboardExt/en.lproj
-      - path: OSGKeyboardExt/zh-Hans.lproj
+      - path: OSGKeyboardExt/PrivacyInfo.xcprivacy
     settings:
       base:
         IPHONEOS_DEPLOYMENT_TARGET: "26.0"

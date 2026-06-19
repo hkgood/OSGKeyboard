@@ -1,0 +1,41 @@
+{
+  "fill" : {
+    "linear-gradient" : [
+      "extended-gray:0.25000,1.00000",
+      "display-p3:0.13763,0.15253,0.17418,1.00000"
+    ]
+  },
+  "groups" : [
+    {
+      "blur-material" : null,
+      "hidden" : false,
+      "layers" : [
+        {
+          "fill" : "none",
+          "hidden" : false,
+          "image-name" : "App Icon Template.svg",
+          "name" : "App Icon Template",
+          "opacity" : 1
+        }
+      ],
+      "lighting" : "individual",
+      "shadow" : {
+        "kind" : "none",
+        "opacity" : 0.5
+      },
+      "specular" : false,
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : [
+      "iOS"
+    ]
+  }
+}
