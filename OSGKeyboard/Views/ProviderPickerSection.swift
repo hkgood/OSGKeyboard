@@ -1,9 +1,5 @@
 // ProviderPickerSection.swift
 // OSGKeyboard · Main App
-//
-// Provider picker shown inline inside Settings & Onboarding. Each option
-// surfaces the provider's name + a short blurb so the user can pick
-// confidently without opening a doc.
 
 import SwiftUI
 import OSGKeyboardShared
@@ -42,35 +38,57 @@ struct ProviderPickerSection: View {
 
     @ViewBuilder
     private func row(_ provider: LLMProvider, selected: Bool) -> some View {
-        HStack(spacing: Spacing.xs) {
-            // Provider mark — a coloured dot with first letter
-            ZStack {
-                Circle()
-                    .fill(selected ? palette.accent : palette.surfaceElevated)
-                    .frame(width: 36, height: 36)
-                Text(String(provider.name.prefix(1)))
-                    .font(TypeStyle.bodyEmph)
-                    .foregroundStyle(selected ? palette.textOnAccent : palette.textPrimary)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(provider.name)
-                    .font(TypeStyle.bodyEmph)
-                    .foregroundStyle(palette.textPrimary)
-                if let blurb = provider.blurb {
-                    Text(blurb)
-                        .font(TypeStyle.caption2)
-                        .foregroundStyle(palette.textTertiary)
-                }
-            }
-            Spacer()
+        HStack(spacing: Spacing.sm) {
+            providerMark(provider, selected: selected)
+
+            Text(ProviderDisplayName.name(for: provider.id))
+                .font(TypeStyle.body)
+                .foregroundStyle(palette.textPrimary)
+
+            Spacer(minLength: Spacing.xs)
+
             if selected {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 18, weight: .medium))
+                    .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(palette.accent)
             }
         }
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
+        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
         .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private func providerMark(_ provider: LLMProvider, selected: Bool) -> some View {
+        ZStack {
+            Circle()
+                .fill(selected ? palette.accentMuted : palette.surfaceElevated)
+                .frame(width: 32, height: 32)
+            if let asset = ProviderLogo.assetName(for: provider.id) {
+                Image(asset)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
+                    .foregroundStyle(selected ? palette.accent : palette.textPrimary)
+            } else {
+                Text(String(provider.name.prefix(1)))
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(selected ? palette.accent : palette.textSecondary)
+            }
+        }
+    }
+}
+
+enum ProviderLogo {
+    static func assetName(for providerId: String) -> String? {
+        switch providerId {
+        case "openai": return "openai"
+        case "deepseek": return "deepseek"
+        case "qwen": return "qwen"
+        case "moonshot": return "moonshot"
+        case "zhipu": return "zhipu"
+        case "custom": return "custom"
+        default: return nil
+        }
     }
 }

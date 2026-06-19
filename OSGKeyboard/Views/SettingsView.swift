@@ -8,12 +8,24 @@ import SwiftUI
 import Speech
 import OSGKeyboardShared
 
+enum SettingsPresentation {
+    case tab
+    case sheet
+}
+
 struct SettingsView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     @ObservedObject var config = ProviderConfig.shared
     @Environment(\.dismiss) private var dismiss
     @State private var showResetConfirm = false
+    @State private var safariURL: URL?
+
+    let presentation: SettingsPresentation
+
+    init(presentation: SettingsPresentation = .sheet) {
+        self.presentation = presentation
+    }
 
     // Dynamic locale list loaded from SFSpeechRecognizer on first appear.
     @State private var dynamicLocales: [(id: String, label: String, onDevice: Bool)] = []
@@ -33,22 +45,30 @@ struct SettingsView: View {
                         if config.engineMode == "cloud" {
                             promptSection
                         }
-                        privacySection
+                        if presentation == .tab {
+                            footerLinks
+                        }
                         resetButton
                     }
                     .padding(.horizontal, Spacing.md)
                     .padding(.vertical, Spacing.md)
+                    .padding(.bottom, presentation == .tab ? 100 : Spacing.lg)
                 }
             }
             .navigationTitle(LocalizedStringKey("settings.title"))
             .navigationBarTitleDisplayMode(.inline)
             .task { await loadDynamicLocales() }
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("common.done") { dismiss() }
-                        .font(TypeStyle.headline)
-                        .foregroundStyle(palette.accent)
+                if presentation == .sheet {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("common.done") { dismiss() }
+                            .font(TypeStyle.headline)
+                            .foregroundStyle(palette.accent)
+                    }
                 }
+            }
+            .sheet(item: $safariURL) { url in
+                SafariSheet(url: url)
             }
         }
         .confirmationDialog(
@@ -74,8 +94,8 @@ struct SettingsView: View {
     // MARK: - Provider
 
     private var providerSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            sectionHeader("settings.provider.title", subtitle: "settings.provider.subtitle")
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.provider.title")
             ProviderPickerSection(config: config)
         }
     }
@@ -83,8 +103,8 @@ struct SettingsView: View {
     // MARK: - API
 
     private var apiSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            sectionHeader("settings.api.title", subtitle: nil)
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.api.title")
             APISettingsCard(config: config)
         }
     }
@@ -92,11 +112,8 @@ struct SettingsView: View {
     // MARK: - Language (ASR + mode)
 
     private var languageSection: some View {
-        let subtitleKey: LocalizedStringKey = config.engineMode == "cloud"
-            ? "settings.language.subtitle.cloud"
-            : "settings.language.subtitle.local"
-        return VStack(alignment: .leading, spacing: Spacing.xs) {
-            sectionHeader("settings.language.title", subtitle: subtitleKey)
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.language.title")
             VStack(spacing: 0) {
                 if config.engineMode == "cloud" {
                     PickerRow(
@@ -131,7 +148,7 @@ struct SettingsView: View {
                 HStack(spacing: Spacing.xs) {
                     Image(systemName: "iphone")
                         .font(TypeStyle.caption2)
-                        .foregroundStyle(palette.success)
+                        .foregroundStyle(palette.accent)
                     Text("settings.legend.onDevice")
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.textTertiary)
@@ -161,17 +178,17 @@ struct SettingsView: View {
             HStack(spacing: 4) {
                 Image(systemName: "iphone.badge.checkmark")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(palette.success)
+                    .foregroundStyle(palette.accent)
                 Text("settings.engineBadge.ios26")
                     .font(TypeStyle.caption)
-                    .foregroundStyle(palette.success)
+                    .foregroundStyle(palette.accent)
             }
             .padding(.horizontal, Spacing.xs)
             .padding(.vertical, 4)
-            .background(palette.success.opacity(0.12), in: Capsule())
+            .background(palette.accent.opacity(0.12), in: Capsule())
         }
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
+        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
     }
 
     /// Falls back to a static list while dynamic locales are loading.
@@ -230,9 +247,9 @@ struct SettingsView: View {
     // MARK: - Prompt
 
     private var promptSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
             HStack {
-                sectionHeader("settings.systemPrompt.title", subtitle: nil)
+                sectionHeader("settings.systemPrompt.title")
                 Spacer()
                 Button("common.reset") { config.systemPrompt = config.defaultSystemPrompt }
                     .font(TypeStyle.caption2)
@@ -254,37 +271,46 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Privacy
+    // MARK: - Footer links (tab settings only)
 
-    private var privacySection: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            sectionHeader("settings.privacy.title", subtitle: nil)
-            VStack(alignment: .leading, spacing: Spacing.sm) {
+    private var footerLinks: some View {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.about.title")
+            VStack(spacing: 0) {
                 if let url = LegalLinks.privacyPolicyURL {
-                    Link(destination: url) {
-                        HStack {
-                            Text("settings.privacy.policy")
-                                .font(TypeStyle.body)
-                                .foregroundStyle(palette.accent)
-                            Spacer()
-                            Image(systemName: "arrow.up.right")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(palette.textTertiary)
-                        }
-                    }
+                    footerLinkRow(title: "settings.privacy.policy", url: url)
+                    Divider().background(palette.divider)
                 }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("settings.privacy.fullAccess.title")
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.textPrimary)
-                    Text("settings.privacy.fullAccess.body")
-                        .font(TypeStyle.caption2)
-                        .foregroundStyle(palette.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                footerLinkRow(
+                    title: "settings.link.github",
+                    url: URL(string: "https://github.com/hkgood/OSGKeyboard")!
+                )
             }
-            .cardSurface()
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+                    .stroke(palette.divider, lineWidth: 0.5)
+            )
         }
+    }
+
+    private func footerLinkRow(title: LocalizedStringKey, url: URL) -> some View {
+        Button {
+            safariURL = url
+        } label: {
+            HStack(spacing: Spacing.sm) {
+                Text(title)
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
+                Spacer()
+                MaterialIcon(name: .openInNew, size: 18)
+                    .foregroundStyle(palette.textTertiary)
+            }
+            .padding(.horizontal, Spacing.md)
+            .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Reset
@@ -296,26 +322,20 @@ struct SettingsView: View {
             Text("settings.reset.confirm")
                 .font(TypeStyle.caption)
                 .foregroundStyle(palette.danger)
-                .frame(maxWidth: .infinity, minHeight: 40)
+                .frame(maxWidth: .infinity, minHeight: 36)
         }
         .buttonStyle(.plain)
+        .padding(.top, presentation == .tab ? Spacing.xs : Spacing.sm)
     }
 
     // MARK: - Header
 
-    private func sectionHeader(_ title: LocalizedStringKey, subtitle: LocalizedStringKey?) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textSecondary)
-                .textCase(.uppercase)
-            if let subtitle {
-                Text(subtitle)
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.textTertiary)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    private func sectionHeader(_ title: LocalizedStringKey) -> some View {
+        Text(title)
+            .font(TypeStyle.caption2)
+            .foregroundStyle(palette.textSecondary)
+            .textCase(.uppercase)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -358,7 +378,7 @@ private struct PickerRow: View {
             }
         }
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
+        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
     }
 
     private var currentLabel: String {
@@ -402,7 +422,7 @@ private struct LocalePickerRow: View {
                     if let current = locales.first(where: { $0.id == selection }), current.onDevice {
                         Image(systemName: "iphone")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(palette.success)
+                            .foregroundStyle(palette.accent)
                     }
                     Text(currentLabel)
                         .font(TypeStyle.body)
@@ -414,7 +434,7 @@ private struct LocalePickerRow: View {
             }
         }
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
+        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
     }
 
     private var currentLabel: String {

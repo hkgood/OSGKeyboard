@@ -55,7 +55,7 @@ public enum Palette {
 
     // Semantic
     public static let danger          = Color(red: 1.000, green: 0.271, blue: 0.227)  // #FF453A
-    public static let success         = Color(red: 0.157, green: 0.812, blue: 0.412)  // #28CF69
+    public static let success         = accent  // unified brand green in UI
     public static let warning         = Color(red: 1.000, green: 0.749, blue: 0.094)  // #FFBF18
 
     // Text
@@ -95,25 +95,17 @@ public enum Palette {
         recordRed:       recordRed
     )
 
-    /// Light palette — iOS system light mode defaults. Used by the main app
-    /// when the user is in light mode; the keyboard extension stays dark.
-    ///
-    /// Accent is the same brand green (#3AA05A) used in the dark palette —
-    /// "one accent" is core to the design system, and the recording-state
-    /// CTA needs to read as the same brand colour in both modes. The
-    /// keyboard's record disc also picks up `palette.accent` (see
-    /// `KeyboardPreviewStub.recordDisc`), so this single token drives
-    /// every interactive surface.
+    /// Light palette — warm gray backgrounds for daytime use.
     public static let light = ThemePalette(
-        background:      Color(red: 0.980, green: 0.980, blue: 0.988),  // #FAFAFC
-        surface:         Color(red: 1.000, green: 1.000, blue: 1.000),  // #FFFFFF
-        surfaceElevated: Color(red: 0.941, green: 0.941, blue: 0.961),  // #F0F0F5
-        surfaceMuted:    Color(red: 0.953, green: 0.953, blue: 0.965),  // #F3F3F6
+        background:      Color(red: 0.949, green: 0.945, blue: 0.933),  // #F2F1EE warm gray
+        surface:         Color(red: 0.988, green: 0.984, blue: 0.976),  // #FCFBF9
+        surfaceElevated: Color(red: 0.922, green: 0.918, blue: 0.906),  // #EBEAE7
+        surfaceMuted:    Color(red: 0.933, green: 0.929, blue: 0.918),  // #EEEDE9
         accent:          Color(red: 0.227, green: 0.627, blue: 0.353),  // #3AA05A
         accentMuted:     Color(red: 0.227, green: 0.627, blue: 0.353).opacity(0.14),
         accentGlow:      Color(red: 0.227, green: 0.627, blue: 0.353).opacity(0.32),
         danger:          Color(red: 1.000, green: 0.231, blue: 0.188),  // #FF3B30
-        success:         Color(red: 0.157, green: 0.812, blue: 0.412),  // #28CF69
+        success:         Color(red: 0.227, green: 0.627, blue: 0.353),  // same as accent
         warning:         Color(red: 1.000, green: 0.620, blue: 0.094),  // #FF9E18
         textPrimary:     Color(red: 0.067, green: 0.067, blue: 0.094),  // #111118
         textSecondary:   Color(red: 0.392, green: 0.392, blue: 0.435),  // #64646F
@@ -169,6 +161,15 @@ public enum Radius {
 
 // MARK: - Typography
 
+public enum SettingsListMetrics {
+    /// Single-line list rows (provider, footer link, picker).
+    public static let singleLineMinHeight: CGFloat = 52
+    /// Two-line rows (engine option, labeled API field).
+    public static let doubleLineMinHeight: CGFloat = 72
+    /// Space between a section label and its card.
+    public static let sectionLabelSpacing: CGFloat = Spacing.sm
+}
+
 public enum TypeStyle {
     public static let caption2   = Font.system(size: 11, weight: .medium)
     public static let caption    = Font.system(size: 12, weight: .medium)
@@ -180,6 +181,8 @@ public enum TypeStyle {
     public static let title2     = Font.system(size: 22, weight: .bold)
     public static let title      = Font.system(size: 28, weight: .bold)
     public static let largeTitle = Font.system(size: 34, weight: .bold)
+    /// Subtle status line under the brand mark (home header).
+    public static let status     = Font.system(size: 13, weight: .regular)
     public static let mono       = Font.system(size: 13, weight: .regular, design: .monospaced)
     public static let monoSmall  = Font.system(size: 11, weight: .regular, design: .monospaced)
 }

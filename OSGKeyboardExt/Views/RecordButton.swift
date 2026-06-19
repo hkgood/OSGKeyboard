@@ -85,17 +85,21 @@ struct RecordButton: View {
                     case .idle:
                         Image(systemName: "mic.fill")
                             .font(.system(size: 38, weight: .medium))
-                            .foregroundStyle(palette.textPrimary)
+                            .foregroundStyle(.white)
                     case .recording:
                         VStack(spacing: 4) {
                             if let remainingSeconds {
                                 Text(formatRemaining(remainingSeconds))
                                     .font(.system(size: 22, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(isUrgent ? .white : palette.textPrimary)
+                                    .foregroundStyle(.white)
                                     .monospacedDigit()
                                     .contentTransition(.numericText())
                             }
-                            WaveformView(level: level, active: true)
+                            WaveformView(
+                                level: level,
+                                color: Color(red: 1.0, green: 0.78, blue: 0.78),
+                                active: true
+                            )
                                 .frame(width: 72, height: 32)
                         }
                         .transition(.opacity)

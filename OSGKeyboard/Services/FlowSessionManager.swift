@@ -29,6 +29,8 @@ final class FlowSessionManager: ObservableObject {
     private var levelTask: Task<Void, Never>?
     private var startTask: Task<Void, Never>?
     private var isUtteranceRecording = false
+    /// True from `stopped` until the result/error is written back to App Group.
+    private var isUtteranceProcessing = false
     private var finalizeTask: Task<Void, Never>?
     private var asrTask: Task<Void, Never>?
     private var currentPartial = ""
@@ -141,14 +143,15 @@ final class FlowSessionManager: ObservableObject {
         levelTask = nil
         finalizeTask?.cancel()
         finalizeTask = nil
-        asrTask?.cancel()
-        asrTask = nil
 
-        if isUtteranceRecording {
+        if isUtteranceRecording || isUtteranceProcessing {
             capture.cancelUtterance()
+            asrTask?.cancel()
             asr.cancel()
-            isUtteranceRecording = false
         }
+        asrTask = nil
+        isUtteranceRecording = false
+        isUtteranceProcessing = false
 
         capture.stop()
         FlowSessionBridge.markSessionInactive()
@@ -222,7 +225,7 @@ final class FlowSessionManager: ObservableObject {
     private func handleKeyboardSignal() {
         switch FlowSessionBridge.recordingState() {
         case .recording:
-            guard !isUtteranceRecording else { return }
+            guard !isUtteranceRecording, !isUtteranceProcessing else { return }
             beginUtterance()
         case .stopped:
             guard isUtteranceRecording else { return }
@@ -239,10 +242,14 @@ final class FlowSessionManager: ObservableObject {
             failUtterance(message: NSLocalizedString("flow.error.audioUnavailable", comment: ""))
             return
         }
+        // Mirror `LiveDictationController.start`: only begin when the previous
+        // utterance fully finished. Never cancel an in-flight analyzer here —
+        // that was the source of intermittent CancellationError / noSpeech.
+        guard !isUtteranceProcessing else {
+            debug("beginUtterance ignored — previous utterance still processing")
+            return
+        }
 
-        finalizeTask?.cancel()
-        asrTask?.cancel()
-        asr.cancel()
         currentPartial = ""
         lastFinal = ""
 
@@ -271,6 +278,8 @@ final class FlowSessionManager: ObservableObject {
                     self.debug("asr error: \(message)")
                     if self.isUtteranceRecording {
                         self.failUtterance(message: message)
+                    } else if self.isUtteranceProcessing {
+                        self.finishProcessing(withError: message)
                     }
                 }
             }
@@ -280,9 +289,18 @@ final class FlowSessionManager: ObservableObject {
     }
 
     private func endUtterance() {
-        isUtteranceRecording = false
+        guard isUtteranceRecording else { return }
+
+        // Close the mic gate first, then mark processing before dropping the
+        // recording flag so the poll loop cannot start a second utterance.
         capture.endUtterance()
         FlowSessionBridge.setRecordingState(.processing)
+        isUtteranceRecording = false
+        isUtteranceProcessing = true
+
+        // Do NOT cancel `asrTask` or `asr` — the preview pipeline relies on
+        // the consumer staying alive until `.final` lands (see
+        // `PreviewASRControllerStateTests`).
 
         finalizeTask?.cancel()
         finalizeTask = Task { @MainActor [weak self] in
@@ -293,7 +311,9 @@ final class FlowSessionManager: ObservableObject {
 
     private func abortUtterance() {
         isUtteranceRecording = false
+        isUtteranceProcessing = false
         finalizeTask?.cancel()
+        finalizeTask = nil
         asrTask?.cancel()
         asr.cancel()
         capture.cancelUtterance()
@@ -305,19 +325,40 @@ final class FlowSessionManager: ObservableObject {
 
     private func failUtterance(message: String) {
         isUtteranceRecording = false
+        isUtteranceProcessing = false
+        finalizeTask?.cancel()
+        finalizeTask = nil
         asrTask?.cancel()
         asr.cancel()
         capture.cancelUtterance()
         currentPartial = ""
         lastFinal = ""
         FlowSessionBridge.storeTranscriptionError(message)
+        FlowSessionBridge.setRecordingState(.idle)
         debug("utterance failed: \(message)")
     }
 
+    private func finishProcessing(withError message: String) {
+        isUtteranceProcessing = false
+        finalizeTask?.cancel()
+        finalizeTask = nil
+        currentPartial = ""
+        lastFinal = ""
+        FlowSessionBridge.storeTranscriptionError(message)
+        FlowSessionBridge.setRecordingState(.idle)
+        debug("utterance processing failed: \(message)")
+    }
+
     private func finalizeUtterance() async {
+        defer {
+            isUtteranceProcessing = false
+            FlowSessionBridge.setRecordingState(.idle)
+        }
+
         let deadline = Date().addingTimeInterval(30)
         while Date() < deadline {
             if !lastFinal.isEmpty { break }
+            if asrTask?.isCancelled == true { break }
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
 
@@ -326,8 +367,11 @@ final class FlowSessionManager: ObservableObject {
             text = currentPartial.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         guard !text.isEmpty else {
+            let key = (asrTask?.isCancelled == true)
+                ? "flow.error.recognitionInterrupted"
+                : "flow.error.noSpeech"
             FlowSessionBridge.storeTranscriptionError(
-                NSLocalizedString("flow.error.noSpeech", comment: "")
+                NSLocalizedString(key, comment: "")
             )
             return
         }
@@ -336,9 +380,11 @@ final class FlowSessionManager: ObservableObject {
         let modeId = store.modeId
         let shouldPolish = engineMode != "local" && modeId == "polish"
 
+        var delivered = text
         if shouldPolish {
             do {
                 let polished = try await polisher.polish(text)
+                delivered = polished
                 FlowSessionBridge.storeTranscriptionResult(polished)
             } catch {
                 FlowSessionBridge.storeTranscriptionResult(text)
@@ -346,6 +392,8 @@ final class FlowSessionManager: ObservableObject {
         } else {
             FlowSessionBridge.storeTranscriptionResult(text)
         }
+
+        SpeechHistoryStore.shared.append(text: delivered, engineMode: engineMode)
 
         currentPartial = ""
         lastFinal = ""

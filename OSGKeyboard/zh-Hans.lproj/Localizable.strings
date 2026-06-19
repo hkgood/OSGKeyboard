@@ -3,7 +3,8 @@
 "OSGKeyboard" = "OSGKeyboard";
 
 /* Onboarding */
-"onboarding.welcome.subtitle" = "点按说话，再点结束 — 任意 App 里都能获得润色文字。";
+"onboarding.welcome.tagline" = "能说就不打字";
+"onboarding.welcome.subtitle" = "你的开源语音输入法";
 "onboarding.enable.fullAccessNote" = "完全访问用于麦克风与 API 配置读取。我们不会记录或上传你的击键内容。";
 "onboarding.permission.mic.title" = "麦克风权限";
 "onboarding.permission.mic.body" = "语音输入需要麦克风。音频在设备端转录，不会上传原始录音。";
@@ -36,6 +37,7 @@
 "common.continue" = "继续";
 "common.reset" = "重置";
 "common.cancel" = "取消";
+"common.clear" = "清空";
 "common.delete" = "删除";
 "common.space" = "空格";
 "common.newline" = "换行";
@@ -92,6 +94,12 @@
 "settings.engine.cloud.subtitle" = "ASR 转录 + LLM 润色,需要 API Key。";
 "settings.provider.title" = "提供商";
 "settings.provider.subtitle" = "选择 LLM 提供商。";
+"provider.openai" = "OpenAI";
+"provider.deepseek" = "DeepSeek";
+"provider.qwen" = "通义千问";
+"provider.zhipu" = "智谱 GLM";
+"provider.moonshot" = "月之暗面";
+"provider.custom" = "自定义";
 "settings.api.title" = "接口";
 "settings.language.title" = "语言";
 "settings.language.subtitle.cloud" = "选择识别语言和文字处理模式。";
@@ -101,6 +109,7 @@
 "settings.mode.transcribe" = "转写";
 "settings.mode.polish" = "润色";
 "settings.systemPrompt.title" = "系统提示";
+"settings.about.title" = "关于";
 "settings.systemPrompt.reset" = "重置";
 "settings.asrLocale" = "识别语言";
 "settings.engineBadge.ios26" = "SpeechAnalyzer — 始终端侧";
@@ -113,6 +122,7 @@
 "settings.privacy.policy" = "隐私政策";
 "settings.privacy.fullAccess.title" = "关于完全访问";
 "settings.privacy.fullAccess.body" = "完全访问用于麦克风与读取 API Key。OSGKeyboard 不会记录或上传你在键盘上的击键内容。";
+"settings.link.github" = "GitHub";
 
 /* App group error */
 "appGroup.error.title" = "App Group 未配置";
@@ -167,17 +177,36 @@
 
 /* Flow session */
 "flow.error.noSpeech" = "未检测到语音，请重试。";
+"flow.error.recognitionInterrupted" = "识别未完成，请再试一次。";
 "keyboard.denied.mic" = "麦克风权限被拒绝";
 "keyboard.denied.speech" = "语音识别权限被拒绝";
 
 /* Home · Flow session */
 "home.flow.active" = "语音会话进行中";
+"home.flow.label" = "语音会话";
 "home.flow.inactive" = "语音会话未启动";
 "home.flow.hint" = "语音会话会自动启动。切到任意 App，点按键盘麦克风即可说话。";
 "home.flow.starting" = "正在启动语音会话…";
 "home.flow.openSettings" = "前往设置授予权限";
 "home.flow.start" = "启动语音会话";
 "home.flow.end" = "结束语音会话";
+"home.flow.endShort" = "结束";
+"home.preview.label" = "输入测试";
+"home.preview.placeholder" = "点击输入，测试键盘效果…";
+
+/* Tabs */
+"tab.keyboard" = "键盘";
+"tab.history" = "历史";
+"tab.settings" = "设置";
+
+/* History */
+"history.title" = "历史";
+"history.subtitle" = "仅保存在本机。";
+"history.empty" = "还没有语音识别记录。";
+"history.clear.title" = "清空全部历史？";
+"history.clear.message" = "此操作无法撤销。";
+"history.clear.confirm" = "全部清空";
+"history.clear.button" = "清空全部历史";
 "flow.error.speechRequired" = "需要语音识别权限才能使用语音会话。";
 "flow.error.micRequired" = "需要麦克风权限才能维持后台语音会话。";
 "flow.error.micUnavailable" = "当前设备无法使用麦克风。";

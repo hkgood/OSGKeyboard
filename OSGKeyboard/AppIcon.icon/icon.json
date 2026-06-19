@@ -1,9 +1,6 @@
 {
   "fill" : {
-    "linear-gradient" : [
-      "extended-gray:0.25000,1.00000",
-      "display-p3:0.13763,0.15253,0.17418,1.00000"
-    ]
+    "automatic-gradient" : "display-p3:0.13763,0.15253,0.17418,1.00000"
   },
   "groups" : [
     {

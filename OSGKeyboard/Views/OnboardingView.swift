@@ -31,29 +31,38 @@ struct OnboardingView: View {
     @State private var speechStatus = AppPermissions.speechStatus
 
     var body: some View {
-        ZStack {
-            palette.background.ignoresSafeArea()
-            VStack(spacing: 0) {
-                Group {
-                    switch OnboardingPage(rawValue: config.onboardingPage) ?? .welcome {
-                    case .welcome: WelcomePage()
-                    case .microphone:
-                        MicPermissionPage(status: $micStatus)
-                    case .speech:
-                        SpeechPermissionPage(status: $speechStatus)
-                    case .keyboard: EnableKeyboardPage()
-                    case .api: APISetupPage(config: config)
+        GeometryReader { geo in
+            let gradientHeight = geo.size.height * 0.28 + geo.safeAreaInsets.top
+
+            ZStack(alignment: .top) {
+                palette.background.ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    Group {
+                        switch OnboardingPage(rawValue: config.onboardingPage) ?? .welcome {
+                        case .welcome: WelcomePage()
+                        case .microphone:
+                            MicPermissionPage(status: $micStatus)
+                        case .speech:
+                            SpeechPermissionPage(status: $speechStatus)
+                        case .keyboard: EnableKeyboardPage()
+                        case .api: APISetupPage(config: config)
+                        }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .transition(.opacity.combined(with: .move(edge: .trailing)))
+
+                    pageDots
+                        .padding(.bottom, Spacing.md)
+
+                    bottomBar
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.bottom, Spacing.lg)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .transition(.opacity.combined(with: .move(edge: .trailing)))
 
-                pageDots
-                    .padding(.bottom, Spacing.md)
-
-                bottomBar
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.bottom, Spacing.lg)
+                onboardingHeaderGradient(height: gradientHeight)
+                    .ignoresSafeArea(edges: .top)
+                    .allowsHitTesting(false)
             }
         }
         .onAppear {
@@ -67,6 +76,20 @@ struct OnboardingView: View {
         }
     }
 
+    private func onboardingHeaderGradient(height: CGFloat) -> some View {
+        LinearGradient(
+            colors: [
+                palette.textTertiary.opacity(0.14),
+                palette.textTertiary.opacity(0.05),
+                palette.background.opacity(0)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
+    }
+
     private func refreshPermissionStatuses() {
         micStatus = AppPermissions.micStatus
         speechStatus = AppPermissions.speechStatus
@@ -76,7 +99,7 @@ struct OnboardingView: View {
         HStack(spacing: 6) {
             ForEach(0..<OnboardingPage.count, id: \.self) { i in
                 Capsule()
-                    .fill(i == config.onboardingPage ? palette.accent : Color.white.opacity(0.18))
+                    .fill(i == config.onboardingPage ? palette.accent : palette.textTertiary.opacity(0.28))
                     .frame(width: i == config.onboardingPage ? 18 : 6, height: 6)
                     .animation(Motion.quick, value: config.onboardingPage)
             }
@@ -140,43 +163,67 @@ struct OnboardingView: View {
     }
 }
 
+// MARK: - Shared onboarding chrome
+
+private struct OnboardingHeroIcon: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
+    let systemName: String
+    var circleSize: CGFloat = 88
+    var iconSize: CGFloat = 36
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(palette.accentMuted)
+                .frame(width: circleSize, height: circleSize)
+            Image(systemName: systemName)
+                .font(.system(size: iconSize, weight: .medium))
+                .foregroundStyle(palette.accent)
+        }
+    }
+}
+
 // MARK: - Welcome
 
 private struct WelcomePage: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     var body: some View {
-        VStack(spacing: Spacing.xl) {
-            Spacer()
-            ZStack {
-                Circle()
-                    .fill(palette.accentMuted)
-                    .frame(width: 180, height: 180)
-                    .blur(radius: 30)
-                Image(systemName: "mic.circle.fill")
-                    .font(.system(size: 96, weight: .light))
-                    .foregroundStyle(palette.accent)
-            }
-            VStack(spacing: Spacing.sm) {
-                Text("OSGKeyboard")
-                    .font(TypeStyle.title)
+        VStack(spacing: 0) {
+            Spacer(minLength: Spacing.xl)
+
+            Image("osglogo")
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: 168, maxHeight: 48)
+                .accessibilityHidden(true)
+
+            VStack(spacing: Spacing.xs) {
+                Text("onboarding.welcome.tagline")
+                    .font(TypeStyle.title3)
                     .foregroundStyle(palette.textPrimary)
                 Text("onboarding.welcome.subtitle")
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textSecondary)
-                    .multilineTextAlignment(.center)
             }
+            .multilineTextAlignment(.center)
             .padding(.horizontal, Spacing.xl)
+            .padding(.top, Spacing.hero)
+
             PrivacyFootnote()
-                .padding(.top, Spacing.lg)
+                .padding(.horizontal, Spacing.xl)
+                .padding(.top, Spacing.hero)
+
             if let url = LegalLinks.privacyPolicyURL {
                 Link(destination: url) {
                     Text("legal.privacyPolicy")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.accent)
                 }
-                .padding(.top, Spacing.xs)
+                .padding(.top, Spacing.xxxl)
             }
+
             Spacer()
         }
     }
@@ -186,35 +233,24 @@ private struct PrivacyFootnote: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            footnoteRow(icon: "lock.fill", title: "privacy.audio.title", body: "privacy.audio.body")
-            footnoteRow(icon: "wifi", title: "privacy.network.title", body: "privacy.network.body")
-            footnoteRow(icon: "keyboard", title: "privacy.universal.title", body: "privacy.universal.body")
+        VStack(alignment: .leading, spacing: Spacing.xl) {
+            footnoteBlock(title: "privacy.audio.title", body: "privacy.audio.body")
+            footnoteBlock(title: "privacy.network.title", body: "privacy.network.body")
+            footnoteBlock(title: "privacy.universal.title", body: "privacy.universal.body")
         }
-        .padding(Spacing.md)
-        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                .stroke(palette.divider, lineWidth: 0.5)
-        )
-        .padding(.horizontal, Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func footnoteRow(icon: String, title: LocalizedStringKey, body: LocalizedStringKey) -> some View {
-        HStack(alignment: .top, spacing: Spacing.xs) {
-            Image(systemName: icon)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(palette.accent)
-                .frame(width: 24, height: 24)
-                .background(palette.accentMuted, in: Circle())
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textPrimary)
-                Text(body)
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.textSecondary)
-            }
+    private func footnoteBlock(title: LocalizedStringKey, body: LocalizedStringKey) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text(title)
+                .font(TypeStyle.bodyEmph)
+                .foregroundStyle(palette.textPrimary)
+            Text(body)
+                .font(TypeStyle.footnote)
+                .foregroundStyle(palette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3)
         }
     }
 }
@@ -256,7 +292,7 @@ private struct MicPermissionPage: View {
 
     private var statusColor: Color {
         switch status {
-        case .granted: return palette.success
+        case .granted: return palette.accent
         case .denied: return palette.warning
         case .undetermined: return palette.textTertiary
         }
@@ -316,7 +352,7 @@ private struct SpeechPermissionPage: View {
 
     private var statusColor: Color {
         switch status {
-        case .granted: return palette.success
+        case .granted: return palette.accent
         case .denied, .restricted: return palette.warning
         case .undetermined: return palette.textTertiary
         }
@@ -352,11 +388,11 @@ private struct PermissionPageLayout: View {
     var deniedHint: LocalizedStringKey? = nil
 
     var body: some View {
-        VStack(spacing: Spacing.lg) {
+        VStack(spacing: Spacing.xl) {
             Spacer()
-            Image(systemName: icon)
-                .font(.system(size: 64, weight: .light))
-                .foregroundStyle(palette.accent)
+
+            OnboardingHeroIcon(systemName: icon, circleSize: 96, iconSize: 40)
+
             VStack(spacing: Spacing.sm) {
                 Text(title)
                     .font(TypeStyle.title2)
@@ -365,28 +401,32 @@ private struct PermissionPageLayout: View {
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textSecondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, Spacing.lg)
+                    .padding(.horizontal, Spacing.xl)
             }
+
             HStack(spacing: 6) {
                 Circle().fill(statusColor).frame(width: 8, height: 8)
                 Text(status)
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
             }
+
             if let deniedHint {
                 Text(deniedHint)
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.warning)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, Spacing.lg)
+                    .padding(.horizontal, Spacing.xl)
             }
-            VStack(spacing: Spacing.xs) {
+
+            VStack(spacing: Spacing.sm) {
                 Button(action: onPrimary) {
                     Text(primaryTitle)
                         .primaryButton()
                 }
                 .buttonStyle(.plain)
                 .disabled(primaryDisabled)
+
                 if let secondaryTitle, let onSecondary {
                     Button(action: onSecondary) {
                         Text(secondaryTitle)
@@ -395,7 +435,8 @@ private struct PermissionPageLayout: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, Spacing.md)
+            .padding(.horizontal, Spacing.lg)
+
             Spacer()
         }
     }
@@ -409,9 +450,9 @@ private struct EnableKeyboardPage: View {
     var body: some View {
         VStack(spacing: Spacing.xl) {
             Spacer()
-            Image(systemName: "keyboard.fill")
-                .font(.system(size: 64, weight: .light))
-                .foregroundStyle(palette.accent)
+
+            OnboardingHeroIcon(systemName: "keyboard.fill", circleSize: 96, iconSize: 40)
+
             VStack(spacing: Spacing.sm) {
                 Text("onboarding.enable.title")
                     .font(TypeStyle.title2)
@@ -422,14 +463,16 @@ private struct EnableKeyboardPage: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Spacing.lg)
             }
-            VStack(alignment: .leading, spacing: Spacing.sm) {
+
+            VStack(alignment: .leading, spacing: Spacing.lg) {
                 step(num: 1, text: NSLocalizedString("onboarding.enable.step1", comment: ""))
                 step(num: 2, text: NSLocalizedString("onboarding.enable.step2", comment: ""))
                 step(num: 3, text: NSLocalizedString("onboarding.enable.step3", comment: ""))
                 step(num: 4, text: NSLocalizedString("onboarding.enable.step4", comment: ""))
             }
-            .cardSurface()
-            .padding(.horizontal, Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.xl)
+            .padding(.top, Spacing.sm)
 
             Button {
                 AppPermissions.openSystemSettings()
@@ -438,21 +481,25 @@ private struct EnableKeyboardPage: View {
                     .primaryButton()
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, Spacing.md)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.xxl)
+
             Spacer()
         }
     }
 
     private func step(num: Int, text: String) -> some View {
-        HStack(alignment: .top, spacing: Spacing.xs) {
+        HStack(alignment: .top, spacing: Spacing.sm) {
             Text("\(num)")
                 .font(TypeStyle.caption2)
-                .frame(width: 22, height: 22)
+                .frame(width: 24, height: 24)
                 .background(palette.accent, in: Circle())
                 .foregroundStyle(palette.textOnAccent)
             Text(text)
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textPrimary)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -467,35 +514,38 @@ private struct APISetupPage: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.md) {
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                VStack(alignment: .leading, spacing: Spacing.xs) {
                     Text("onboarding.api.title")
                         .font(TypeStyle.title2)
                         .foregroundStyle(palette.textPrimary)
                     Text("onboarding.api.subtitle")
                         .font(TypeStyle.footnote)
                         .foregroundStyle(palette.textTertiary)
-                        .padding(.top, Spacing.xxs)
                 }
-                .padding(.horizontal, Spacing.md)
-                .padding(.top, Spacing.lg)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, Spacing.xxxl)
 
                 EnginePickerSection(config: config)
-                    .padding(.horizontal, Spacing.md)
+                    .padding(.horizontal, Spacing.lg)
 
                 if config.engineMode == "cloud" {
                     ProviderPickerSection(config: config)
-                        .padding(.horizontal, Spacing.md)
+                        .padding(.horizontal, Spacing.lg)
                     APISettingsCard(config: config)
-                        .padding(.horizontal, Spacing.md)
+                        .padding(.horizontal, Spacing.lg)
                 } else {
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         HStack(spacing: Spacing.sm) {
-                            Image(systemName: "checkmark.seal.fill")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundStyle(palette.accent)
-                                .frame(width: 28)
-                            VStack(alignment: .leading, spacing: 2) {
+                            ZStack {
+                                Circle()
+                                    .fill(palette.accentMuted)
+                                    .frame(width: 32, height: 32)
+                                Image(systemName: "checkmark.seal.fill")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .foregroundStyle(palette.accent)
+                            }
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text("onboarding.api.localReady.title")
                                     .font(TypeStyle.body)
                                     .foregroundStyle(palette.textPrimary)
@@ -505,14 +555,14 @@ private struct APISetupPage: View {
                             }
                             Spacer()
                         }
-                        .padding(Spacing.md)
+                        .padding(Spacing.lg)
                     }
-                    .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+                    .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                        RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                             .stroke(palette.divider, lineWidth: 0.5)
                     )
-                    .padding(.horizontal, Spacing.md)
+                    .padding(.horizontal, Spacing.lg)
                 }
             }
             .padding(.bottom, Spacing.xxxl)

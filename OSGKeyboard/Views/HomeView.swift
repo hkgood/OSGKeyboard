@@ -1,70 +1,182 @@
 // HomeView.swift
 // OSGKeyboard · Main App
 //
-// Post-onboarding home. Two jobs: (1) tell the user we're ready, and
-// (2) give a clear path to the next setup step if anything is missing.
+// Minimal home: logo, status capsule, flow hints, inline preview field.
 
 import SwiftUI
 import OSGKeyboardShared
-import OSGKeyboardExt
 
 struct HomeView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
-    @ObservedObject var config = ProviderConfig.shared
+    @ObservedObject private var config = ProviderConfig.shared
     @EnvironmentObject private var flowManager: FlowSessionManager
-    @State private var showSettings = false
-    @State private var showKeyboardPreview = false
+    @FocusState private var previewFocused: Bool
+    @State private var previewText = ""
+
+    private var sessionIsLive: Bool {
+        flowManager.isActive || flowManager.isStarting
+    }
 
     var body: some View {
-        ZStack {
-            palette.background.ignoresSafeArea()
-            VStack(spacing: 0) {
-                statusHeader
-                    .padding(.top, Spacing.xl)
-                flowSessionCard
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.top, Spacing.md)
-                Spacer()
-                heroButton
-                Spacer()
-                actionStack
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.bottom, Spacing.lg)
+        GeometryReader { geo in
+            let gradientHeight = geo.size.height * 0.30 + geo.safeAreaInsets.top
+
+            ZStack(alignment: .top) {
+                sessionHeaderGradient(height: gradientHeight)
+                    .ignoresSafeArea(edges: .top)
+                    .allowsHitTesting(false)
+
+                VStack(spacing: 0) {
+                    logoHeader
+                        .padding(.top, Spacing.xxxl)
+                        .padding(.bottom, Spacing.xl)
+
+                    flowSessionExtras
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.bottom, Spacing.lg)
+
+                    previewField
+                        .padding(.horizontal, Spacing.lg)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+                    engineStatusLine
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.top, Spacing.md)
+                        .padding(.bottom, Spacing.xs)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
-        }
-        .sheet(isPresented: $showSettings) {
-            SettingsView()
-        }
-        .sheet(isPresented: $showKeyboardPreview) {
-            KeyboardPreviewSheet()
+            .background(palette.background)
         }
     }
 
-    // MARK: - Flow session
+    // MARK: - Top gradient
 
-    private var flowSessionCard: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            HStack {
-                Circle()
-                    .fill(flowStatusColor)
-                    .frame(width: 8, height: 8)
-                Text(flowStatusTitle)
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textSecondary)
-                Spacer()
-                if flowManager.isActive, let expires = flowManager.sessionExpiresAt {
-                    Text(expires, style: .timer)
-                        .font(TypeStyle.caption2)
-                        .foregroundStyle(palette.textTertiary)
-                        .monospacedDigit()
+    private func sessionHeaderGradient(height: CGFloat) -> some View {
+        LinearGradient(
+            colors: sessionIsLive
+                ? [
+                    palette.accent.opacity(0.28),
+                    palette.accent.opacity(0.10),
+                    palette.background.opacity(0)
+                ]
+                : [
+                    palette.textTertiary.opacity(0.14),
+                    palette.textTertiary.opacity(0.05),
+                    palette.background.opacity(0)
+                ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
+        .animation(Motion.soft, value: sessionIsLive)
+    }
+
+    // MARK: - Header
+
+    private var logoHeader: some View {
+        VStack(spacing: Spacing.xxl) {
+            Image("osglogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 120, height: 34)
+                .accessibilityHidden(true)
+
+            statusCapsule
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Spacing.lg)
+    }
+
+    private var statusCapsule: some View {
+        HStack(spacing: Spacing.sm) {
+            Text(statusLine)
+                .font(TypeStyle.status)
+                .foregroundStyle(palette.textSecondary)
+                .fixedSize()
+
+            capsuleDivider
+
+            flowCapsuleSegment
+
+            if flowManager.isActive {
+                Button {
+                    flowManager.endSession()
+                } label: {
+                    Text("home.flow.endShort")
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textOnAccent)
+                        .padding(.horizontal, Spacing.sm)
+                        .padding(.vertical, 5)
+                        .background(palette.accent, in: Capsule())
                 }
+                .buttonStyle(.plain)
             }
-            Text("home.flow.hint")
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
-            if let warning = flowManager.sessionWarning {
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.sm)
+        .background(capsuleBackground, in: Capsule())
+        .overlay(
+            Capsule()
+                .stroke(palette.divider, lineWidth: 0.5)
+        )
+        .animation(Motion.soft, value: flowManager.isActive)
+    }
+
+    private var capsuleDivider: some View {
+        Circle()
+            .fill(palette.dividerStrong)
+            .frame(width: 3, height: 3)
+    }
+
+    @ViewBuilder
+    private var flowCapsuleSegment: some View {
+        HStack(spacing: Spacing.xs) {
+            Circle()
+                .fill(flowStatusColor)
+                .frame(width: 6, height: 6)
+
+            if flowManager.isActive, let expires = flowManager.sessionExpiresAt {
+                Text("home.flow.label")
+                    .font(TypeStyle.status)
+                    .foregroundStyle(palette.textPrimary)
+                Text(":")
+                    .font(TypeStyle.status)
+                    .foregroundStyle(palette.textTertiary)
+                Text(expires, style: .timer)
+                    .font(TypeStyle.status)
+                    .foregroundStyle(palette.textSecondary)
+                    .monospacedDigit()
+            } else {
+                Text(flowStatusTitle)
+                    .font(TypeStyle.status)
+                    .foregroundStyle(palette.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+        }
+    }
+
+    private var capsuleBackground: Color {
+        sessionIsLive
+            ? palette.accentMuted.opacity(0.55)
+            : palette.surface.opacity(0.88)
+    }
+
+    private var statusLine: String {
+        config.isConfigured
+            ? NSLocalizedString("home.status.ready", comment: "")
+            : NSLocalizedString("home.status.setupIncomplete", comment: "")
+    }
+
+    // MARK: - Flow extras (warnings / hint)
+
+    @ViewBuilder
+    private var flowSessionExtras: some View {
+        if let warning = flowManager.sessionWarning {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text(warning)
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.warning)
@@ -80,30 +192,28 @@ struct HomeView: View {
                     .buttonStyle(.plain)
                 }
             }
-            if flowManager.isActive {
-                Button {
-                    flowManager.endSession()
-                } label: {
-                    Text("home.flow.end")
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.textSecondary)
-                }
-                .buttonStyle(.plain)
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.md)
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+                    .stroke(palette.divider, lineWidth: 0.5)
+            )
+        } else if !flowManager.isActive {
+            Text("home.flow.hint")
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textTertiary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, Spacing.sm)
         }
-        .padding(Spacing.sm)
-        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                .stroke(palette.divider, lineWidth: 0.5)
-        )
     }
 
     private var flowStatusColor: Color {
-        if flowManager.isActive { return palette.success }
+        if flowManager.isActive { return palette.accent }
         if flowManager.isStarting { return palette.accent }
         if flowManager.sessionWarning != nil { return palette.warning }
-        return palette.warning
+        return palette.textTertiary
     }
 
     private var flowStatusTitle: LocalizedStringKey {
@@ -112,122 +222,35 @@ struct HomeView: View {
         return "home.flow.inactive"
     }
 
-    // MARK: - Header
+    // MARK: - Preview field
 
-    private var statusHeader: some View {
-        VStack(spacing: Spacing.xs) {
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(config.isConfigured ? palette.success : palette.warning)
-                    .frame(width: 8, height: 8)
-                Text(config.isConfigured ? "home.status.ready" : "home.status.setupIncomplete")
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textSecondary)
-            }
-            Text("OSGKeyboard")
-                .font(TypeStyle.largeTitle)
-                .foregroundStyle(palette.textPrimary)
-            Text(providerLine)
-                .font(TypeStyle.caption)
-                .foregroundStyle(palette.textSecondary)
-                .multilineTextAlignment(.center)
-        }
+    private var previewField: some View {
+        TextField("home.preview.placeholder", text: $previewText, axis: .vertical)
+            .font(TypeStyle.body)
+            .foregroundStyle(palette.textPrimary)
+            .tint(palette.accent)
+            .focused($previewFocused)
+            .lineLimit(1...100)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(Spacing.md)
+            .background(palette.surfaceMuted, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                    .stroke(previewFocused ? palette.dividerStrong : palette.divider, lineWidth: 0.5)
+            )
     }
 
-    private var providerLine: String {
-        let p = LLMProvider.provider(id: config.providerId)
-        let model = config.model.isEmpty ? "—" : config.model
-        return "\(p.name)  ·  \(model)"
-    }
-
-    // MARK: - Hero
-
-    private var heroButton: some View {
-        Button {
-            showSettings = true
-        } label: {
-            ZStack {
-                Circle()
-                    .fill(palette.accentMuted)
-                    .frame(width: 220, height: 220)
-                    .blur(radius: 40)
-                Circle()
-                    .fill(LinearGradient(
-                        colors: [palette.surfaceElevated, palette.surface],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ))
-                    .frame(width: 160, height: 160)
-                    .overlay(
-                        Circle().stroke(palette.accent.opacity(0.35), lineWidth: 1.5)
-                    )
-                    .shadow(color: palette.accent.opacity(0.18), radius: 24, y: 8)
-                VStack(spacing: 6) {
-                    Image(systemName: "waveform")
-                        .font(.system(size: 36, weight: .light))
-                        .foregroundStyle(palette.accent)
-                    Text("home.hero.label")
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.textSecondary)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("home.action.openSettingsA11y"))
-    }
-
-    // MARK: - Actions
-
-    private var actionStack: some View {
-        VStack(spacing: Spacing.xs) {
-            Button {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
-            } label: {
-                Label("home.action.enableInSettings", systemImage: "keyboard")
-                    .primaryButton()
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                showSettings = true
-            } label: {
-                Label("home.action.editApi", systemImage: "slider.horizontal.3")
-                    .secondaryButton()
-            }
-            .buttonStyle(.plain)
-
-            #if DEBUG
-            Button {
-                showKeyboardPreview = true
-            } label: {
-                Label("home.action.keyboardPreview", systemImage: "eye")
-                    .secondaryButton()
-            }
-            .buttonStyle(.plain)
-            #endif
-
-            HStack(spacing: Spacing.xs) {
-                Button {
-                    if let url = URL(string: "https://github.com/hkgood/OSGKeyboard") {
-                        UIApplication.shared.open(url)
-                    }
-                } label: {
-                    Text("GitHub")
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.textSecondary)
-                        .padding(.horizontal, Spacing.sm)
-                        .padding(.vertical, 6)
-                        .background(palette.surface, in: Capsule())
-                        .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
-                }
-                .buttonStyle(.plain)
-                Spacer()
-                Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.0")")
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.textTertiary)
-            }
-        }
+    private var engineStatusLine: some View {
+        Text(
+            EngineServiceLabel.summary(
+                engineMode: config.engineMode,
+                providerId: config.providerId,
+                model: config.model
+            )
+        )
+        .font(TypeStyle.caption2)
+        .foregroundStyle(palette.textSecondary)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 }

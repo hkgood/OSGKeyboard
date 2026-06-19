@@ -24,22 +24,19 @@ struct EnginePickerSection: View {
     @ObservedObject var config: ProviderConfig
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            sectionHeader(
-                "settings.engine.title",
-                subtitle: "settings.engine.subtitle"
-            )
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.engine.title")
             VStack(spacing: 0) {
                 engineOptionRow(
                     id: "local",
-                    icon: "iphone.badge.checkmark",
+                    assetName: "apple",
                     title: NSLocalizedString("settings.engine.local.title", comment: ""),
                     subtitle: localSubtitle
                 )
                 Divider().background(palette.divider)
                 engineOptionRow(
                     id: "cloud",
-                    icon: "wand.and.stars",
+                    systemIcon: "wand.and.stars",
                     title: NSLocalizedString("settings.engine.cloud.title", comment: ""),
                     subtitle: NSLocalizedString("settings.engine.cloud.subtitle", comment: "")
                 )
@@ -58,7 +55,13 @@ struct EnginePickerSection: View {
         NSLocalizedString("settings.engine.local.ios26", comment: "")
     }
 
-    private func engineOptionRow(id: String, icon: String, title: String, subtitle: String) -> some View {
+    private func engineOptionRow(
+        id: String,
+        assetName: String? = nil,
+        systemIcon: String? = nil,
+        title: String,
+        subtitle: String
+    ) -> some View {
         let isSelected = config.engineMode == id
         return Button {
             withAnimation(.easeInOut(duration: 0.2)) {
@@ -67,10 +70,11 @@ struct EnginePickerSection: View {
             }
         } label: {
             HStack(spacing: Spacing.sm) {
-                Image(systemName: icon)
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(isSelected ? palette.accent : palette.textSecondary)
-                    .frame(width: 28)
+                engineMark(
+                    assetName: assetName,
+                    systemIcon: systemIcon,
+                    isSelected: isSelected
+                )
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(TypeStyle.body)
@@ -87,23 +91,39 @@ struct EnginePickerSection: View {
                 }
             }
             .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm)
+            .frame(minHeight: SettingsListMetrics.doubleLineMinHeight)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
     @ViewBuilder
-    private func sectionHeader(_ title: LocalizedStringKey, subtitle: LocalizedStringKey) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textSecondary)
-                .textCase(.uppercase)
-            Text(subtitle)
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textTertiary)
+    private func engineMark(assetName: String?, systemIcon: String?, isSelected: Bool) -> some View {
+        ZStack {
+            Circle()
+                .fill(isSelected ? palette.accentMuted : palette.surfaceElevated)
+                .frame(width: 32, height: 32)
+            if let assetName {
+                Image(assetName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 18, height: 18)
+                    .foregroundStyle(isSelected ? palette.accent : palette.textPrimary)
+            } else if let systemIcon {
+                Image(systemName: systemIcon)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(isSelected ? palette.accent : palette.textSecondary)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(width: 32, height: 32)
+    }
+
+    @ViewBuilder
+    private func sectionHeader(_ title: LocalizedStringKey) -> some View {
+        Text(title)
+            .font(TypeStyle.caption2)
+            .foregroundStyle(palette.textSecondary)
+            .textCase(.uppercase)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

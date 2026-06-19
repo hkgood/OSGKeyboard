@@ -12,13 +12,21 @@ struct OSGKeyboardApp: App {
     @StateObject private var dictationCoordinator = DictationSessionCoordinator()
     @StateObject private var flowManager = FlowSessionManager()
 
+    init() {
+        MaterialIconsFont.registerIfNeeded()
+        #if DEBUG
+        // Reset onboarding on each launch so guide screens can be reviewed while iterating UI.
+        ProviderConfig.shared.hasCompletedOnboarding = false
+        ProviderConfig.shared.onboardingPage = 0
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
             ThemedRoot {
                 if AppGroup.isAvailable {
                     if config.hasCompletedOnboarding {
-                        HomeView()
-                            .onAppear { flowManager.autoStartIfNeeded() }
+                        MainTabView()
                     } else {
                         OnboardingView(config: config)
                     }

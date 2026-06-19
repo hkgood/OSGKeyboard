@@ -3,7 +3,8 @@
 "OSGKeyboard" = "OSGKeyboard";
 
 /* Onboarding */
-"onboarding.welcome.subtitle" = "Tap to talk. Tap again to finish — polished text in any app.";
+"onboarding.welcome.tagline" = "Speak instead of type";
+"onboarding.welcome.subtitle" = "Your open-source voice keyboard";
 "onboarding.enable.fullAccessNote" = "Full Access lets the keyboard reach the microphone and your LLM API. We never log what you type.";
 "onboarding.permission.mic.title" = "Microphone access";
 "onboarding.permission.mic.body" = "Required for voice input. Audio is processed on your device for transcription.";
@@ -36,6 +37,7 @@
 "common.continue" = "Continue";
 "common.reset" = "Reset";
 "common.cancel" = "Cancel";
+"common.clear" = "Clear";
 "common.delete" = "Delete";
 "common.space" = "Space";
 "common.newline" = "Return";
@@ -92,6 +94,12 @@
 "settings.engine.cloud.subtitle" = "ASR + LLM polish. API key required.";
 "settings.provider.title" = "Provider";
 "settings.provider.subtitle" = "Pick the LLM that polishes your dictation.";
+"provider.openai" = "OpenAI";
+"provider.deepseek" = "DeepSeek";
+"provider.qwen" = "Qwen (DashScope)";
+"provider.zhipu" = "Zhipu GLM";
+"provider.moonshot" = "Moonshot";
+"provider.custom" = "Custom";
 "settings.api.title" = "API";
 "settings.language.title" = "Language";
 "settings.language.subtitle.cloud" = "Recognition language and text processing mode.";
@@ -101,6 +109,7 @@
 "settings.mode.transcribe" = "Transcribe";
 "settings.mode.polish" = "Polish";
 "settings.systemPrompt.title" = "System Prompt";
+"settings.about.title" = "About";
 "settings.systemPrompt.reset" = "Reset";
 "settings.asrLocale" = "ASR locale";
 "settings.engineBadge.ios26" = "SpeechAnalyzer — always on-device";
@@ -113,6 +122,7 @@
 "settings.privacy.policy" = "Privacy Policy";
 "settings.privacy.fullAccess.title" = "About Full Access";
 "settings.privacy.fullAccess.body" = "Full Access is required for the microphone and to read your API key. OSGKeyboard does not record or upload what you type with the keyboard.";
+"settings.link.github" = "GitHub";
 
 /* App group error */
 "appGroup.error.title" = "App Group not configured";
@@ -168,17 +178,36 @@
 
 /* Flow session */
 "flow.error.noSpeech" = "No speech detected. Please try again.";
+"flow.error.recognitionInterrupted" = "Recognition did not finish. Please try again.";
 "keyboard.denied.mic" = "Microphone access denied";
 "keyboard.denied.speech" = "Speech recognition denied";
 
 /* Home · Flow session */
 "home.flow.active" = "Voice session active";
+"home.flow.label" = "Voice session";
 "home.flow.inactive" = "Voice session inactive";
 "home.flow.hint" = "Voice session starts automatically. Switch to any app and tap the keyboard mic to dictate.";
 "home.flow.starting" = "Starting voice session…";
 "home.flow.openSettings" = "Open Settings to grant permissions";
 "home.flow.start" = "Start voice session";
 "home.flow.end" = "End voice session";
+"home.flow.endShort" = "End";
+"home.preview.label" = "Try typing";
+"home.preview.placeholder" = "Tap to type and test…";
+
+/* Tabs */
+"tab.keyboard" = "Keyboard";
+"tab.history" = "History";
+"tab.settings" = "Settings";
+
+/* History */
+"history.title" = "History";
+"history.subtitle" = "Saved on this device only.";
+"history.empty" = "No voice transcripts yet.";
+"history.clear.title" = "Clear all history?";
+"history.clear.message" = "This cannot be undone.";
+"history.clear.confirm" = "Clear all";
+"history.clear.button" = "Clear all history";
 "flow.error.speechRequired" = "Speech recognition access is required for voice sessions.";
 "flow.error.micRequired" = "Microphone access is required for background voice sessions.";
 "flow.error.micUnavailable" = "Microphone is unavailable on this device.";

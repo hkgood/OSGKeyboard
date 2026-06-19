@@ -8,18 +8,19 @@
 // the system Spotlight / home-indicator chrome never clips our controls.
 //
 //   ┌───────────────────────────────────────────┐
-//   │  [polish] [中]                 ●   ⚙     │  ← top: 32 pt (incl. safe top)
-//   │              (transcript preview)         │  ← 24 pt
+//   │  [polish] [中]                 ●   ⚙     │  ← top: ~38 pt (+20%)
+//   │              (transcript preview)         │
 //   │                                           │
-//   │                  ◯  ▲▲▲▲▲                 │  ← centre: 96 pt disc +
-//   │                                           │     breathing ring
-//   │                                           │
-//   ├───────────────────────────────────────────┤
-//   │   🌐   ⌫   [      space      ]     ↩     │  ← bottom: 60 pt (incl. safe bottom)
+//   │        (⌫)      ◯ mic      (↩)          │  ← action row: circular
+//   │                           (space)        │     flanking buttons
 //   └───────────────────────────────────────────┘
 
 import SwiftUI
 import OSGKeyboardShared
+
+private enum KeyboardLayoutMetrics {
+    static let sideActionButtonSize: CGFloat = 44
+}
 
 public struct KeyboardRootView: View {
     @Environment(\.colorScheme) private var colorScheme
@@ -34,6 +35,8 @@ public struct KeyboardRootView: View {
     /// constraint in the view controller so the host UIInputView picks
     /// it up.
     static let totalHeight: CGFloat = 280
+    private static let topBarHeight: CGFloat = 38
+    private static let sideActionStackSpacing: CGFloat = 10
 
     private var palette: ThemePalette {
         colorScheme == .dark ? Palette.dark : Palette.light
@@ -42,13 +45,10 @@ public struct KeyboardRootView: View {
     public var body: some View {
         VStack(spacing: 0) {
             topBar
-                .frame(height: 32)
+                .frame(height: Self.topBarHeight)
 
             centreArea
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            bottomBar
-                .frame(height: 56)
         }
         .padding(.top, 4)
         .padding(.bottom, 6)
@@ -79,9 +79,9 @@ public struct KeyboardRootView: View {
             StatusBadge(phase: state.phase, onDeviceSupported: state.onDeviceSupported)
             Button(action: state.openSettings) {
                 Image(systemName: "gearshape.fill")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(palette.textSecondary)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 34, height: 34)
                     .background(palette.surface, in: Circle())
                     .overlay(Circle().stroke(palette.divider, lineWidth: 0.5))
             }
@@ -94,58 +94,52 @@ public struct KeyboardRootView: View {
     // MARK: - Centre area
 
     private var centreArea: some View {
-        ZStack {
-            VStack(spacing: Spacing.xxs) {
-                TranscriptLine(
-                    phase: state.phase,
-                    transcript: state.lastTranscript,
-                    flowSessionActive: state.flowSessionActive,
-                    openSettings: state.openSettings
-                )
-                    .frame(height: 22)
-                RecordButton(
-                    phase: buttonPhase,
-                    level: state.level,
-                    remainingSeconds: state.phase == .recording ? state.utteranceRemainingSeconds : nil,
-                    onToggle: state.tapMic
-                )
-                .frame(width: 140, height: 140)
-            }
+        VStack(spacing: Spacing.xxs) {
+            TranscriptLine(
+                phase: state.phase,
+                transcript: state.lastTranscript,
+                flowSessionActive: state.flowSessionActive,
+                openSettings: state.openSettings
+            )
+            .frame(height: 22)
+
+            Spacer(minLength: 0)
+
+            micActionRow
+                .padding(.bottom, Spacing.xs)
+
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - Bottom bar
-
-    private var bottomBar: some View {
-        // The globe / "next keyboard" button used to live here so the
-        // user could long-press to call up the system keyboard picker.
-        // In practice the user already has a "globe" key in the iOS
-        // system keyboard strip (every iOS keyboard does), so an
-        // in-extension globe is redundant and crowds the bar.
-        // Bottom bar: ⌫ (delete)  [    space    ]  ↩ (return)
-        HStack(spacing: Spacing.xxs) {
-            ToolbarIconButton(systemName: "delete.left", label: "delete") {
+    /// Delete (left), mic (centre), return + space stacked on the right.
+    /// HStack vertical alignment keeps delete, mic centre, and the gap
+    /// between return/space on one horizontal axis.
+    private var micActionRow: some View {
+        HStack(alignment: .center, spacing: 20) {
+            CircularToolbarButton(systemName: "delete.left", label: "delete") {
                 state.deleteBackward()
             }
-            Button(action: state.insertSpace) {
-                ExtL10n.text("keyboard.space")
-                    .font(TypeStyle.body)
-                    .foregroundStyle(palette.textPrimary)
-                    .frame(maxWidth: .infinity, minHeight: 42)
-                    .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                            .stroke(palette.divider, lineWidth: 0.5)
-                    )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(ExtL10n.text("keyboard.space"))
-            ToolbarIconButton(systemName: "return", label: "newline") {
-                state.insertNewline()
+
+            RecordButton(
+                phase: buttonPhase,
+                level: state.level,
+                remainingSeconds: state.phase == .recording ? state.utteranceRemainingSeconds : nil,
+                onToggle: state.tapMic
+            )
+            .frame(width: 132, height: 132)
+
+            VStack(spacing: Self.sideActionStackSpacing) {
+                CircularToolbarButton(systemName: "return", label: "newline") {
+                    state.insertNewline()
+                }
+                CircularToolbarButton(spaceStyle: true, label: "space") {
+                    state.insertSpace()
+                }
             }
         }
-        .padding(.horizontal, Spacing.sm)
+        .frame(maxWidth: .infinity)
     }
 
     private var buttonPhase: RecordButton.Phase {
@@ -270,26 +264,46 @@ private struct TranscriptLine: View {
     }
 }
 
-// MARK: - Toolbar icon button
+// MARK: - Circular toolbar button
 
-private struct ToolbarIconButton: View {
+private struct CircularToolbarButton: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
-    let systemName: String
+    let systemName: String?
+    let spaceStyle: Bool
     let label: String
     let action: () -> Void
 
+    init(systemName: String, label: String, action: @escaping () -> Void) {
+        self.systemName = systemName
+        self.spaceStyle = false
+        self.label = label
+        self.action = action
+    }
+
+    init(spaceStyle: Bool, label: String, action: @escaping () -> Void) {
+        self.systemName = nil
+        self.spaceStyle = spaceStyle
+        self.label = label
+        self.action = action
+    }
+
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(palette.textPrimary)
-                .frame(width: 40, height: 40)
-                .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                        .stroke(palette.divider, lineWidth: 0.5)
-                )
+            Group {
+                if spaceStyle {
+                    Capsule()
+                        .fill(palette.textPrimary)
+                        .frame(width: 16, height: 3)
+                } else if let systemName {
+                    Image(systemName: systemName)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(palette.textPrimary)
+                }
+            }
+            .frame(width: KeyboardLayoutMetrics.sideActionButtonSize, height: KeyboardLayoutMetrics.sideActionButtonSize)
+            .background(palette.surfaceElevated, in: Circle())
+            .overlay(Circle().stroke(palette.divider, lineWidth: 0.5))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(label))
@@ -365,7 +379,8 @@ private struct LocalEngineChip: View {
         .font(TypeStyle.caption2)
         .foregroundStyle(palette.accent)
         .padding(.horizontal, Spacing.xs + 2)
-        .padding(.vertical, 4)
+        .padding(.vertical, 5)
+        .frame(minHeight: 26)
         .background(palette.accent.opacity(0.15), in: Capsule())
         .overlay(Capsule().stroke(palette.accent.opacity(0.35), lineWidth: 0.5))
     }
@@ -402,7 +417,8 @@ private struct ModeChip: View {
             .font(TypeStyle.caption2)
             .foregroundStyle(mode == .off ? palette.textTertiary : palette.textPrimary)
             .padding(.horizontal, Spacing.xs + 2)
-            .padding(.vertical, 4)
+            .padding(.vertical, 5)
+            .frame(minHeight: 26)
             .background(palette.surfaceElevated, in: Capsule())
             .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
         }
@@ -462,7 +478,8 @@ private struct LocaleChip: View {
             .font(TypeStyle.caption2)
             .foregroundStyle(palette.textPrimary)
             .padding(.horizontal, Spacing.xs + 2)
-            .padding(.vertical, 4)
+            .padding(.vertical, 5)
+            .frame(minHeight: 26)
             .background(palette.surfaceElevated, in: Capsule())
             .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
         }

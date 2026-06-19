@@ -18,9 +18,9 @@ public enum EngineServiceLabel {
                 ? "\(prefix)本地引擎 · Apple SpeechAnalyzer"
                 : "\(prefix)On-device · Apple SpeechAnalyzer"
         }
-        let provider = LLMProvider.provider(id: providerId)
+        let providerName = ProviderDisplayName.name(for: providerId)
         let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmedModel.isEmpty { return "\(prefix)\(provider.name)" }
-        return "\(prefix)\(provider.name) · \(trimmedModel)"
+        if trimmedModel.isEmpty { return "\(prefix)\(providerName)" }
+        return "\(prefix)\(providerName) · \(trimmedModel)"
     }
 }

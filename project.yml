@@ -64,12 +64,14 @@ targets:
       - path: OSGKeyboard/Assets.xcassets
       - path: OSGKeyboard/en.lproj
       - path: OSGKeyboard/zh-Hans.lproj
+      - path: OSGKeyboard/Resources/Fonts/MaterialIcons-Regular.ttf
     info:
       path: OSGKeyboard/Info.plist
       properties:
         CFBundleDisplayName: OSGKeyboard
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        LSApplicationCategoryType: public.app-category.utilities
         # English is the development language; zh-Hans is the only
         # translation right now. The list also tells iOS to surface
         # the keyboard in the per-app language picker for both.
@@ -98,6 +100,10 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios
         TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
         # Use AppIcon.appiconset only. AppIcon.icon (Icon Composer) must not
         # be passed to actool alongside the asset catalog — it crashes actool.
     dependencies:
@@ -161,6 +167,9 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.keyboard
         TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
     dependencies:
       - target: OSGKeyboardShared
         embed: false

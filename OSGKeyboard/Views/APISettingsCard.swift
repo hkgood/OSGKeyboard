@@ -17,7 +17,7 @@ struct APISettingsCard: View {
     private enum TestStatus: Equatable {
         case idle
         case running
-        case success(String)
+        case success
         case failure(String)
     }
 
@@ -48,16 +48,15 @@ struct APISettingsCard: View {
                     UIApplication.shared.open(url)
                 } label: {
                     HStack {
-                        Image(systemName: "key.fill")
-                            .foregroundStyle(palette.accent)
                         Text("api.getKey")
+                            .font(TypeStyle.body)
                             .foregroundStyle(palette.textPrimary)
                         Spacer()
                         Image(systemName: "arrow.up.right.square")
                             .foregroundStyle(palette.textSecondary)
                     }
                     .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, Spacing.sm)
+                    .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -104,7 +103,7 @@ struct APISettingsCard: View {
             .foregroundStyle(palette.textPrimary)
         }
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
+        .frame(minHeight: SettingsListMetrics.doubleLineMinHeight, alignment: .center)
     }
 
     // MARK: - Generic field
@@ -120,12 +119,6 @@ struct APISettingsCard: View {
             Text(title)
                 .font(TypeStyle.caption)
                 .foregroundStyle(palette.textSecondary)
-            // `.asciiCapable` is the *minimum* contract for these fields:
-            // API keys, base URLs, and model names are all ASCII by spec,
-            // and SwiftUI's `.URL` keyboard can still occasionally
-            // hands control to the system keyboard which then auto-suggests
-            // Chinese / emoji completions that corrupt the value. Forcing
-            // `.asciiCapable` keeps the system out of the way.
             TextField(placeholder, text: text)
                 .keyboardType(.asciiCapable)
                 .autocorrectionDisabled(true)
@@ -137,7 +130,7 @@ struct APISettingsCard: View {
                               and dismissing the sheet unexpectedly */ }
         }
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
+        .frame(minHeight: SettingsListMetrics.doubleLineMinHeight, alignment: .center)
     }
 
     // MARK: - Test connection
@@ -146,20 +139,18 @@ struct APISettingsCard: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text("api.connection")
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textSecondary)
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
                 Spacer()
                 Button(action: runTest) {
-                    HStack(spacing: 6) {
+                    Group {
                         if testStatus == .running {
                             ProgressView().controlSize(.mini)
                         } else {
-                            Image(systemName: testIcon)
+                            Text(testButtonLabel)
+                                .font(TypeStyle.body)
                                 .foregroundStyle(testTint)
                         }
-                        Text(testButtonLabel)
-                            .font(TypeStyle.caption)
-                            .foregroundStyle(testTint)
                     }
                 }
                 .buttonStyle(.plain)
@@ -173,7 +164,8 @@ struct APISettingsCard: View {
             }
         }
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
+        .frame(minHeight: SettingsListMetrics.singleLineMinHeight, alignment: .center)
     }
 
     private var testButtonLabel: String {
@@ -185,27 +177,18 @@ struct APISettingsCard: View {
         }
     }
 
-    private var testIcon: String {
-        switch testStatus {
-        case .idle, .running: return "bolt.horizontal.circle"
-        case .success:        return "checkmark.circle.fill"
-        case .failure:        return "exclamationmark.triangle.fill"
-        }
-    }
-
     private var testTint: Color {
         switch testStatus {
         case .idle, .running: return palette.accent
-        case .success:        return palette.success
+        case .success:        return palette.accent
         case .failure:        return palette.danger
         }
     }
 
     private var testDetail: String? {
         switch testStatus {
-        case .idle, .running: return nil
-        case .success(let s): return s
-        case .failure(let s): return s
+        case .idle, .running, .success: return nil
+        case .failure(let message): return message
         }
     }
 
@@ -219,15 +202,8 @@ struct APISettingsCard: View {
         )
         Task {
             do {
-                let reply = try await client.polish("ping", systemPrompt: "Reply with the single word PONG.")
-                // Interpolated success message — LocalizedStringKey can't
-                // take %@, so we use `String.localizedStringWithFormat`
-                // with a key that has %@ in the value.
-                let preview = String(reply.prefix(60))
-                testStatus = .success(String.localizedStringWithFormat(
-                    NSLocalizedString("api.test.connectedWith", comment: "Connected test prefix"),
-                    preview
-                ))
+                _ = try await client.polish("ping", systemPrompt: "Reply with the single word PONG.")
+                testStatus = .success
             } catch LLMError.noAPIKey {
                 testStatus = .failure(NSLocalizedString("api.test.missing", comment: ""))
             } catch let error as LLMError {
