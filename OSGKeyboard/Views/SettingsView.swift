@@ -33,6 +33,7 @@ struct SettingsView: View {
                         if config.engineMode == "cloud" {
                             promptSection
                         }
+                        privacySection
                         resetButton
                     }
                     .padding(.horizontal, Spacing.md)
@@ -248,6 +249,39 @@ struct SettingsView: View {
                         RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
                             .stroke(palette.divider, lineWidth: 0.5)
                     )
+            }
+            .cardSurface()
+        }
+    }
+
+    // MARK: - Privacy
+
+    private var privacySection: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            sectionHeader("settings.privacy.title", subtitle: nil)
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                if let url = LegalLinks.privacyPolicyURL {
+                    Link(destination: url) {
+                        HStack {
+                            Text("settings.privacy.policy")
+                                .font(TypeStyle.body)
+                                .foregroundStyle(palette.accent)
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(palette.textTertiary)
+                        }
+                    }
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("settings.privacy.fullAccess.title")
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textPrimary)
+                    Text("settings.privacy.fullAccess.body")
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .cardSurface()
         }

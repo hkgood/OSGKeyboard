@@ -1,82 +1,32 @@
 // KeyboardPreviewSheet.swift
 // OSGKeyboard · Main App (Debug)
 //
-// In-app preview of the keyboard extension. Renders a stand-in
-// `KeyboardPreviewStub` so the user can see what the real extension
-// looks like, AND drives a *real* `PreviewASRController` so tapping
-// the disc actually records from the mic and runs the shared ASR
-// service (`SpeechAnalyzer` on iOS 26+),
-// and lands recognized text in the top textbox. Without the real ASR
-// the preview was a static mock — "the text never appears" was a
-// fair review note.
+// In-app preview of the keyboard extension. Drives the shared
+// `LiveDictationController` so tapping record exercises the same
+// on-device ASR pipeline as host-app dictation handoff.
 //
-// Lifecycle (local engine = "transcribe" only, no LLM):
-//   tap → start ASR (idempotent re-entry guard)
-//        → ASR emits .partial / .final
-//        → currentPartial updates the transcript line in real time
-//   tap → stop ASR
-//        → lastFinal event lands
-//        → onChange in this view appends to typedText
-//        → controller resets
+// Local engine: partial transcripts stream into the text box live.
+// Cloud engine: final transcript is appended when recording stops.
 
 import SwiftUI
 import OSGKeyboardShared
 
 struct KeyboardPreviewSheet: View {
     @Environment(\.themePalette) private var palette: ThemePalette
-
     @Environment(\.dismiss) private var dismiss
-
     @ObservedObject private var config = ProviderConfig.shared
-    @StateObject private var asr = PreviewASRController()
+    @StateObject private var dictation = LiveDictationController()
 
     @State private var showSettings = false
-    /// Accumulates text in the top textbox. The real keyboard extension
-    /// inserts directly via `textDocumentProxy`; this preview mirrors
-    /// that in a parallel `@State` so the user can verify the flow.
     @State private var typedText: String = ""
-    /// Cached snapshot of the previous lastFinal so the .onChange
-    /// doesn't fire on every body re-render — only on real changes.
     @State private var lastFinalSeen: String = ""
-
-    private enum StubPhase { case idle, recording, processing }
-
-    /// Visible phase for the stub. Driven by the real ASR controller
-    /// — when the controller is `recording` we show the recording
-    /// state; otherwise we show `processing` while a final is in
-    /// flight and `idle` otherwise.
-    private var stubPhase: KeyboardPreviewStub.Phase {
-        switch asr.phase {
-        case .recording:    return .recording
-        case .processing:   return .processing
-        case .idle:         return .idle
-        case .requestingPermission:
-            return .recording
-        case .denied, .error:
-            return .idle
-        }
-    }
-
-    /// The transcript line the stub shows under the chips. While
-    /// recording we surface the live ASR partial; otherwise we surface
-    /// any error or stay quiet.
-    private var stubTranscript: String {
-        switch asr.phase {
-        case .recording:
-            return asr.currentPartial.isEmpty ? " " : asr.currentPartial
-        case .error(let m):
-            return m
-        case .denied(let m):
-            return m
-        default:
-            return ""
-        }
-    }
+    /// Text in the box when the current dictation session started.
+    @State private var dictationAnchorText: String = ""
 
     var body: some View {
         ZStack {
             palette.background.ignoresSafeArea()
-            VStack(spacing: 0) {
+            VStack(spacing: Spacing.md) {
                 VStack(spacing: Spacing.md) {
                     Text("preview.title")
                         .font(TypeStyle.title2)
@@ -87,55 +37,62 @@ struct KeyboardPreviewSheet: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, Spacing.lg)
                     mockTextField.padding(.horizontal, Spacing.md)
+                    controls
+                        .padding(.horizontal, Spacing.md)
                 }
                 .padding(.top, Spacing.lg)
-                Spacer(minLength: 0)
-                keyboardBlock
+                Spacer()
             }
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
         }
-        .onChange(of: asr.lastFinal) { _, new in
+        .onChange(of: dictation.currentPartial) { _, partial in
+            guard config.isLocalEngine, isDictationActive else { return }
+            applyLiveTranscript(partial)
+        }
+        .onChange(of: dictation.lastFinal) { _, new in
             guard !new.isEmpty, new != lastFinalSeen else { return }
             lastFinalSeen = new
-            insertRecognizedText(new)
-            asr.reset()
+            if config.isLocalEngine {
+                applyLiveTranscript(new)
+                dictationAnchorText = typedText
+            } else {
+                insertRecognizedText(new)
+            }
+            dictation.reset()
         }
-        // Tear down the ASR pipeline when the sheet leaves the screen
-        // (preview dismissed, app backgrounded mid-recording, etc.).
-        // Without this, a leftover `asrTask` keeps the AVAudioSession
-        // active and the mic permission in use after the user has
-        // moved on. `asr.stop()` is idempotent — it no-ops on
-        // `.idle`/`.denied`/`.error` — so it's safe to call here
-        // even when the disc is not currently recording.
         .onDisappear {
-            asr.stop()
+            dictation.stop()
         }
     }
 
-    /// Real `TextField` (was a static placeholder HStack before the
-    /// first fix). The user can both type into it AND see recognized
-    /// text land in it as the real ASR fires `.final`.
     private var mockTextField: some View {
-        HStack(spacing: Spacing.xs) {
-            Image(systemName: "text.cursor")
-                .foregroundStyle(palette.textSecondary)
-            TextField(LocalizedStringKey("preview.placeholder"), text: $typedText, axis: .vertical)
-                .lineLimit(1...4)
-                .textFieldStyle(.plain)
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            HStack {
+                Image(systemName: "text.cursor")
+                    .foregroundStyle(palette.textSecondary)
+                Text(statusTitle)
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+                Spacer()
+                if !typedText.isEmpty {
+                    Button {
+                        typedText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(palette.textTertiary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("preview.clear")
+                }
+            }
+            TextEditor(text: $typedText)
+                .frame(minHeight: 260)
+                .scrollContentBackground(.hidden)
                 .foregroundStyle(palette.textPrimary)
                 .tint(palette.accent)
-            if !typedText.isEmpty {
-                Button {
-                    typedText = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(palette.textTertiary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("preview.clear")
-            }
+                .padding(.horizontal, 2)
         }
         .padding(Spacing.md)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.medium))
@@ -145,94 +102,99 @@ struct KeyboardPreviewSheet: View {
         )
     }
 
-    private var keyboardBlock: some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .fill(palette.divider)
-                .frame(height: 0.5)
-            KeyboardPreviewStub(
-                phase: stubPhase,
-                level: asr.level,
-                transcript: stubTranscript,
-                modeId: config.modeId,
-                localeId: config.localeId,
-                onTap: cyclePhase,
-                openSettings: { showSettings = true },
-                onModeCycle: cycleMode,
-                onLocaleCycle: cycleLocale
-            )
+    private var controls: some View {
+        VStack(spacing: Spacing.xs) {
+            HStack(spacing: Spacing.sm) {
+                Button {
+                    toggleRecording()
+                } label: {
+                    Label(isRecording ? "停止录音" : "开始录音", systemImage: isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                        .primaryButton()
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    showSettings = true
+                } label: {
+                    Label("设置", systemImage: "gearshape")
+                        .secondaryButton()
+                }
+                .buttonStyle(.plain)
+            }
+
+            Text(serviceLabel)
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textTertiary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
         }
     }
 
-    /// Tap on the disc. Drives the *real* ASR pipeline — the previous
-    /// mock that just toggled a hardcoded phase is gone.
-    private func cyclePhase() {
+    private var serviceLabel: String {
+        EngineServiceLabel.summary(
+            engineMode: config.engineMode,
+            providerId: config.providerId,
+            model: config.model
+        )
+    }
+
+    private var isRecording: Bool {
+        if case .recording = dictation.phase { return true }
+        return false
+    }
+
+    private var isDictationActive: Bool {
+        switch dictation.phase {
+        case .recording, .processing: return true
+        default: return false
+        }
+    }
+
+    private var statusTitle: String {
+        switch dictation.phase {
+        case .idle: return "输入框"
+        case .requestingPermission: return "请求权限中..."
+        case .recording: return config.isLocalEngine ? "正在实时识别..." : "正在录音..."
+        case .processing: return "识别中..."
+        case .denied(let message), .error(let message):
+            return message
+        }
+    }
+
+    private func toggleRecording() {
         withAnimation(Motion.quick) {
-            switch asr.phase {
+            switch dictation.phase {
             case .idle, .denied, .error:
-                let locale = resolveLocale(config.localeId)
-                Task { await asr.start(locale: locale) }
+                startRecording()
             case .recording:
-                asr.stop()
+                stopAndFinalize()
             case .requestingPermission, .processing:
                 break
             }
         }
     }
 
-    /// Cycle the input mode on tap of the mode chip. The order mirrors
-    /// the Settings picker (`off` → `transcribe` → `polish` → wrap)
-    /// so the user sees the same surface in both places.
-    ///
-    /// Note: when the user picks `off` we *also* stop any in-flight
-    /// recording — leaving the disc mid-recording in an "off" mode
-    /// would be a confusing state (the user is recording but the
-    /// keyboard says it won't insert anything).
-    private func cycleMode() {
-        let order = ["off", "transcribe", "polish"]
-        let current = order.firstIndex(of: config.modeId) ?? 0
-        let next = order[(current + 1) % order.count]
-        config.modeId = next
-        if next == "off" && asr.phase == .recording {
-            asr.stop()
-        }
+    private func startRecording() {
+        dictationAnchorText = typedText
+        lastFinalSeen = ""
+        Task { await dictation.start(localeId: config.localeId) }
     }
 
-    /// Cycle the locale on tap of the locale chip. Same order as
-    /// `staticLocales` in `SettingsView.swift` so both surfaces stay
-    /// in sync. When the user picks a new locale we *also* stop any
-    /// in-flight recording — ASR sessions are bound to the locale
-    /// they were started with, and continuing to feed buffers into a
-    /// stale session would produce garbage in the next `.final`.
-    private func cycleLocale() {
-        let order = ["auto", "zh-Hans", "zh-Hant", "en-US", "ja-JP", "ko-KR"]
-        let current = order.firstIndex(of: config.localeId) ?? 0
-        let next = order[(current + 1) % order.count]
-        config.localeId = next
-        if asr.phase == .recording {
-            asr.stop()
-        }
+    private func stopAndFinalize() {
+        dictation.stop()
     }
 
-    private func resolveLocale(_ id: String) -> Locale {
-        if id == "auto" { return .current }
-        return Locale(identifier: id)
+    private func applyLiveTranscript(_ transcript: String) {
+        let composed = DictationTextComposer.compose(anchor: dictationAnchorText, live: transcript)
+        guard composed != typedText else { return }
+        typedText = composed
     }
 
-    /// Append the recognized transcript to the textbox, with a leading
-    /// space when the existing text doesn't already end in whitespace.
-    /// Matches what `textDocumentProxy.insertText` does for the real
-    /// keyboard when the user's draft has no trailing whitespace.
     private func insertRecognizedText(_ recognized: String) {
         let trimmed = recognized.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        if typedText.isEmpty {
-            typedText = trimmed
-        } else if typedText.last == " " || typedText.last == "\n" {
-            typedText += trimmed
-        } else {
-            typedText += " " + trimmed
-        }
+        typedText = DictationTextComposer.compose(anchor: typedText, live: trimmed)
     }
 }
 

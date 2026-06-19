@@ -55,8 +55,8 @@ targets:
         # each request. The first entry below becomes each process's
         # default access group, so the Keychain helper does not need to
         # specify kSecAttrAccessGroup explicitly.
-        com.apple.security.keychain-access-groups:
-          - com.osgkeyboard.shared
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)com.osgkeyboard.shared
     resources:
       - path: OSGKeyboard/Assets.xcassets
       - path: OSGKeyboard/en.lproj
@@ -80,8 +80,10 @@ targets:
           - UIInterfaceOrientationPortrait
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
-        NSMicrophoneUsageDescription: "OSGKeyboard needs microphone access to transcribe your voice into text."
-        NSSpeechRecognitionUsageDescription: "OSGKeyboard uses on-device speech recognition to transcribe your dictation. Audio never leaves your device."
+        NSMicrophoneUsageDescription: "OSGKeyboard uses the microphone for voice dictation and keeps a background audio session active while a voice session is running."
+        NSSpeechRecognitionUsageDescription: "OSGKeyboard uses on-device speech recognition to transcribe your voice. Audio is processed on your device and is not uploaded for transcription."
+        UIBackgroundModes:
+          - audio
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
         CFBundleURLTypes:
@@ -111,8 +113,9 @@ targets:
         excludes:
           - "en.lproj"
           - "zh-Hans.lproj"
-      - path: OSGKeyboardExt/en.lproj
-      - path: OSGKeyboardExt/zh-Hans.lproj
+    resources:
+      - path: OSGKeyboardExt/en.lproj/Localizable.strings
+      - path: OSGKeyboardExt/zh-Hans.lproj/Localizable.strings
     settings:
       base:
         IPHONEOS_DEPLOYMENT_TARGET: "26.0"
@@ -124,16 +127,16 @@ targets:
         # Shared with the host app so the keyboard extension can read the
         # user's LLM API key. See OSGKeyboard/OSGKeyboard.entitlements
         # for the full rationale.
-        com.apple.security.keychain-access-groups:
-          - com.osgkeyboard.shared
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)com.osgkeyboard.shared
     info:
       path: OSGKeyboardExt/Info.plist
       properties:
         CFBundleDisplayName: OSGKeyboard
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
-        NSMicrophoneUsageDescription: "OSGKeyboard needs microphone access to transcribe your voice into text."
-        NSSpeechRecognitionUsageDescription: "OSGKeyboard uses on-device speech recognition to transcribe your dictation. Audio never leaves your device."
+        NSMicrophoneUsageDescription: "OSGKeyboard uses the microphone for voice dictation and keeps a background audio session active while a voice session is running."
+        NSSpeechRecognitionUsageDescription: "OSGKeyboard uses on-device speech recognition to transcribe your voice. Audio is processed on your device and is not uploaded for transcription."
         NSExtension:
           NSExtensionAttributes:
             IsASCIICapable: false

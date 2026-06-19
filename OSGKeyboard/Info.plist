@@ -42,14 +42,18 @@
 		<false/>
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>OSGKeyboard needs microphone access to transcribe your voice into text.</string>
+	<string>OSGKeyboard uses the microphone for voice dictation and keeps a background audio session active while a voice session is running.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>OSGKeyboard uses on-device speech recognition to transcribe your dictation. Audio never leaves your device.</string>
+	<string>OSGKeyboard uses on-device speech recognition to transcribe your voice. Audio is processed on your device and is not uploaded for transcription.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<false/>
 	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

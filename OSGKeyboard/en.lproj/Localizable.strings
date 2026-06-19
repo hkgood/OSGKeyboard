@@ -3,7 +3,21 @@
 "OSGKeyboard" = "OSGKeyboard";
 
 /* Onboarding */
-"onboarding.welcome.subtitle" = "Hold to talk. Release for polished text, in any app.";
+"onboarding.welcome.subtitle" = "Tap to talk. Tap again to finish — polished text in any app.";
+"onboarding.enable.fullAccessNote" = "Full Access lets the keyboard reach the microphone and your LLM API. We never log what you type.";
+"onboarding.permission.mic.title" = "Microphone access";
+"onboarding.permission.mic.body" = "Required for voice input. Audio is processed on your device for transcription.";
+"onboarding.permission.mic.allow" = "Allow microphone";
+"onboarding.permission.mic.deniedHint" = "Microphone was denied. Open Settings to enable it, or tap Next to continue.";
+"onboarding.permission.speech.title" = "Speech recognition";
+"onboarding.permission.speech.body" = "On-device speech recognition turns your voice into text. Audio never leaves your device.";
+"onboarding.permission.speech.allow" = "Allow speech recognition";
+"onboarding.permission.speech.deniedHint" = "Speech recognition was denied. Open Settings to enable it, or tap Next to continue.";
+"onboarding.permission.openSettings" = "Open Settings";
+"onboarding.permission.status.undetermined" = "Not requested yet";
+"onboarding.permission.status.granted" = "Allowed";
+"onboarding.permission.status.denied" = "Denied";
+"legal.privacyPolicy" = "Privacy Policy";
 "onboarding.enable.title" = "Enable OSGKeyboard";
 "onboarding.enable.step1" = "Settings → General → Keyboard → Keyboards";
 "onboarding.enable.step2" = "Tap “Add New Keyboard…” and choose OSGKeyboard";
@@ -95,6 +109,10 @@
 "settings.onDeviceOnly.body" = "Disable cloud fallback. The keyboard reports an error instead of going online.";
 "settings.legend.onDevice" = "On-device";
 "settings.legend.cloudFallback" = "Cloud fallback";
+"settings.privacy.title" = "Privacy";
+"settings.privacy.policy" = "Privacy Policy";
+"settings.privacy.fullAccess.title" = "About Full Access";
+"settings.privacy.fullAccess.body" = "Full Access is required for the microphone and to read your API key. OSGKeyboard does not record or upload what you type with the keyboard.";
 
 /* App group error */
 "appGroup.error.title" = "App Group not configured";
@@ -105,8 +123,9 @@
 
 /* Keyboard preview */
 "preview.title" = "Keyboard Preview";
-"preview.subtitle" = "Tap the disc to start/stop recording. The real keyboard uses the same layout.";
-"preview.placeholder" = "Type or tap to record";
+"preview.subtitle" = "Tap Start/Stop Recording to test here. On the real keyboard, tap the mic disc to dictate.";
+"preview.placeholder" = "Type here or tap the record button";
+"preview.placeholder" = "Type here or tap the record button";
 "preview.clear" = "Clear text";
 "preview.openSettingsA11y" = "Open OSGKeyboard settings";
 "preview.modeChip.cycle" = "Cycle input mode";
@@ -118,7 +137,7 @@
 "preview.error.engineStart" = "Engine start failed: %@";
 
 /* Keyboard (ext) */
-"keyboard.placeholder.idle" = "Hold to talk";
+"keyboard.placeholder.idle" = "Tap to talk";
 "keyboard.placeholder.preparing" = "Preparing";
 "keyboard.placeholder.processing" = "Processing";
 "keyboard.placeholder.error" = "Polishing failed";
@@ -129,7 +148,7 @@
 "keyboard.denied.speech" = "Speech denied";
 "keyboard.openSettingsA11y" = "Open OSGKeyboard settings";
 "keyboard.deniedHint" = "Opens the OSGKeyboard settings page where you can grant microphone or speech recognition access.";
-"keyboard.pressToTalkA11y" = "Push to talk";
+"keyboard.tapToTalkA11y" = "Tap to talk";
 
 /* Mode chip labels (used in both ext + preview stub) */
 "mode.off" = "Off";
@@ -146,3 +165,21 @@
 "locale.en-US"    = "English (US)";
 "locale.ja-JP"    = "Japanese";
 "locale.ko-KR"    = "Korean";
+
+/* Flow session */
+"flow.error.noSpeech" = "No speech detected. Please try again.";
+"keyboard.denied.mic" = "Microphone access denied";
+"keyboard.denied.speech" = "Speech recognition denied";
+
+/* Home · Flow session */
+"home.flow.active" = "Voice session active";
+"home.flow.inactive" = "Voice session inactive";
+"home.flow.hint" = "Voice session starts automatically. Switch to any app and tap the keyboard mic to dictate.";
+"home.flow.starting" = "Starting voice session…";
+"home.flow.openSettings" = "Open Settings to grant permissions";
+"home.flow.start" = "Start voice session";
+"home.flow.end" = "End voice session";
+"flow.error.speechRequired" = "Speech recognition access is required for voice sessions.";
+"flow.error.micRequired" = "Microphone access is required for background voice sessions.";
+"flow.error.micUnavailable" = "Microphone is unavailable on this device.";
+"flow.error.audioUnavailable" = "Could not start background audio.";

@@ -27,6 +27,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         static let modeId          = "config.modeId"
         static let localeId        = "config.localeId"
         static let engineMode       = "config.engineMode"
+        static let hasCompletedOnboarding = "config.hasCompletedOnboarding"
     }
 
     @Published public var providerId: String {
@@ -66,6 +67,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     @Published public var engineMode: String {
         didSet { defaults.set(engineMode, forKey: Key.engineMode) }
     }
+    @Published public var hasCompletedOnboarding: Bool {
+        didSet { defaults.set(hasCompletedOnboarding, forKey: Key.hasCompletedOnboarding) }
+    }
 
     public var isConfigured: Bool {
         // Local engine (on-device ASR only) doesn't need an API key,
@@ -73,9 +77,12 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         // Treat it as always-configured so onboarding's "Next" button
         // enables the moment the user picks the local path, instead
         // of forcing them to fill in cloud fields they won't use.
-        if engineMode == "local" { return true }
+        if isLocalEngine { return true }
         return !baseURL.isEmpty && !apiKey.isEmpty && !model.isEmpty
     }
+
+    /// On-device ASR only — no cloud LLM polish.
+    public var isLocalEngine: Bool { engineMode == "local" }
 
     /// The system prompt the user *sees* in the editor — fall back to the
     /// provider-aware default from `AppGroupStore` when nothing is set.
@@ -85,25 +92,27 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
 
     private let defaults: UserDefaults
 
-    public init(defaults: UserDefaults = AppGroup.defaults) {
-        self.defaults = defaults
-        let pid = defaults.string(forKey: Key.providerId) ?? "openai"
+    public init(defaults: UserDefaults? = nil) {
+        let resolvedDefaults: UserDefaults = defaults ?? (AppGroup.isAvailable ? AppGroup.defaults : .standard)
+        self.defaults = resolvedDefaults
+        let pid = resolvedDefaults.string(forKey: Key.providerId) ?? "openai"
         let preset = LLMProvider.provider(id: pid)
         self.providerId   = pid
-        self.baseURL      = defaults.string(forKey: Key.baseURL)    ?? preset.defaultBaseURL
+        self.baseURL      = resolvedDefaults.string(forKey: Key.baseURL)    ?? preset.defaultBaseURL
 
         // Resolve the API key with a one-shot migration from the legacy
         // UserDefaults slot. After this runs once, `Key.apiKeyLegacy`
         // is empty in the suite and all subsequent reads go through the
         // Keychain.
-        self.apiKey = ProviderConfig.resolveAPIKey(defaults: defaults)
+        self.apiKey = ProviderConfig.resolveAPIKey(defaults: resolvedDefaults)
 
-        self.model        = defaults.string(forKey: Key.model)      ?? preset.defaultModel
-        self.systemPrompt = defaults.string(forKey: Key.systemPrompt)
+        self.model        = resolvedDefaults.string(forKey: Key.model)      ?? preset.defaultModel
+        self.systemPrompt = resolvedDefaults.string(forKey: Key.systemPrompt)
             ?? AppGroupStore.defaultSystemPrompt(for: pid)
-        self.modeId          = defaults.string(forKey: Key.modeId)     ?? "polish"
-        self.localeId        = defaults.string(forKey: Key.localeId)   ?? "auto"
-        self.engineMode       = defaults.string(forKey: Key.engineMode) ?? "cloud"
+        self.modeId          = resolvedDefaults.string(forKey: Key.modeId)     ?? "polish"
+        self.localeId        = resolvedDefaults.string(forKey: Key.localeId)   ?? "auto"
+        self.engineMode       = resolvedDefaults.string(forKey: Key.engineMode) ?? "cloud"
+        self.hasCompletedOnboarding = resolvedDefaults.bool(forKey: Key.hasCompletedOnboarding)
     }
 
     /// Read the API key from the Keychain, falling back to a one-time

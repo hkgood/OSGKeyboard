@@ -22,7 +22,7 @@ import SwiftUI
 import OSGKeyboardShared
 
 public struct KeyboardRootView: View {
-    @Environment(\.themePalette) private var palette: ThemePalette
+    @Environment(\.colorScheme) private var colorScheme
 
     @ObservedObject var state: State
 
@@ -34,6 +34,10 @@ public struct KeyboardRootView: View {
     /// constraint in the view controller so the host UIInputView picks
     /// it up.
     static let totalHeight: CGFloat = 280
+
+    private var palette: ThemePalette {
+        colorScheme == .dark ? Palette.dark : Palette.light
+    }
 
     public var body: some View {
         VStack(spacing: 0) {
@@ -48,26 +52,12 @@ public struct KeyboardRootView: View {
         }
         .padding(.top, 4)
         .padding(.bottom, 6)
-        // iOS keyboard extensions always render dark (Apple's default
-        // for custom keyboards), and we let the system UI chrome show
-        // through by drawing no background of our own.
+        // Let the system UI chrome show through by drawing no background
+        // of our own.
         .background(Color.clear)
         .frame(height: Self.totalHeight)
-        // Top edge: subtle highlight gradient + 0.5pt divider line.
-        // These give the keyboard a "physical surface" feel and visually
-        // separate it from the host text field above. We overlay (not
-        // background) so the underlying color stays clear.
-        .overlay(alignment: .top) {
-            VStack(spacing: 0) {
-                Rectangle()
-                    .fill(LinearGradient(
-                        colors: [Color.white.opacity(0.05), .clear],
-                        startPoint: .top, endPoint: .bottom
-                    ))
-                    .frame(height: 1)
-                Spacer(minLength: 0)
-            }
-        }
+        // Feed the resolved palette to all nested chips/buttons.
+        .environment(\.themePalette, palette)
     }
 
     // MARK: - Top bar
@@ -96,7 +86,7 @@ public struct KeyboardRootView: View {
                     .overlay(Circle().stroke(palette.divider, lineWidth: 0.5))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("home.action.openSettingsA11y"))
+            .accessibilityLabel(Text(KeyboardL10n.openSettingsA11y))
         }
         .padding(.horizontal, Spacing.md)
     }
@@ -115,9 +105,8 @@ public struct KeyboardRootView: View {
                 RecordButton(
                     phase: buttonPhase,
                     level: state.level,
-                    onPressBegan: state.beginRecording,
-                    onPressEnded:  state.endRecording,
-                    onTap:         state.tapMic
+                    remainingSeconds: state.phase == .recording ? state.utteranceRemainingSeconds : nil,
+                    onToggle: state.tapMic
                 )
                 .frame(width: 140, height: 140)
             }
@@ -139,7 +128,7 @@ public struct KeyboardRootView: View {
                 state.deleteBackward()
             }
             Button(action: state.insertSpace) {
-                Text("common.space")
+                Text(KeyboardL10n.space)
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                     .frame(maxWidth: .infinity, minHeight: 42)
@@ -150,7 +139,7 @@ public struct KeyboardRootView: View {
                     )
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("common.space"))
+            .accessibilityLabel(Text(KeyboardL10n.space))
             ToolbarIconButton(systemName: "return", label: "newline") {
                 state.insertNewline()
             }
@@ -211,13 +200,13 @@ private struct TranscriptLine: View {
         ZStack {
             switch phase {
             case .idle:
-                Text("keyboard.placeholder.idle")
+                Text(KeyboardL10n.placeholderIdle)
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textTertiary)
             case .requestingPermissions:
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(palette.textSecondary)
-                    Text("keyboard.placeholder.preparing")
+                    Text(KeyboardL10n.placeholderPreparing)
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -231,9 +220,11 @@ private struct TranscriptLine: View {
             case .processing:
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(palette.accent)
-                    Text("keyboard.placeholder.processing")
+                    Text(transcript.isEmpty ? KeyboardL10n.placeholderProcessing : transcript)
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
             case .error(_, let msg):
                 Text(msg ?? "")
@@ -256,7 +247,7 @@ private struct TranscriptLine: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityHint(Text("keyboard.deniedHint"))
+                .accessibilityHint(Text(KeyboardL10n.deniedHint))
             }
         }
         .frame(maxWidth: .infinity)
@@ -265,8 +256,8 @@ private struct TranscriptLine: View {
 
     private func deniedMessage(for reason: KeyboardViewController.State.Phase.Reason) -> String {
         switch reason {
-        case .mic:    return "麦克风被拒绝 · Mic denied"
-        case .speech: return "语音识别被拒绝 · Speech denied"
+        case .mic:    return KeyboardL10n.micDenied
+        case .speech: return KeyboardL10n.speechDenied
         }
     }
 }
@@ -361,7 +352,7 @@ private struct LocalEngineChip: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: "iphone.badge.checkmark")
-            Text("keyboard.placeholder.localBadge")
+            Text(KeyboardL10n.localBadge)
         }
         .font(TypeStyle.caption2)
         .foregroundStyle(palette.accent)
@@ -369,6 +360,34 @@ private struct LocalEngineChip: View {
         .padding(.vertical, 4)
         .background(palette.accent.opacity(0.15), in: Capsule())
         .overlay(Capsule().stroke(palette.accent.opacity(0.35), lineWidth: 0.5))
+    }
+}
+
+// MARK: - Extension text fallback
+//
+// Custom keyboard extensions can end up without the expected localized
+// resource table when signing/project generation drifts. Keep a tiny
+// in-code fallback map so UI never shows raw key names like
+// "common.space" in production.
+private enum KeyboardL10n {
+    private static var isChinese: Bool {
+        Locale.preferredLanguages.first?.hasPrefix("zh") == true
+    }
+
+    static var space: String { isChinese ? "空格" : "Space" }
+    static var placeholderIdle: String { isChinese ? "点按说话" : "Tap to talk" }
+    static var placeholderPreparing: String { isChinese ? "准备中…" : "Preparing" }
+    static var placeholderProcessing: String { isChinese ? "处理中…" : "Processing" }
+    static var localBadge: String { isChinese ? "本地" : "On-device" }
+    static var micDenied: String { isChinese ? "麦克风被拒绝" : "Mic denied" }
+    static var speechDenied: String { isChinese ? "语音识别被拒绝" : "Speech denied" }
+    static var deniedHint: String {
+        isChinese
+            ? "打开 OSGKeyboard 设置,可授予麦克风 / 语音识别权限。"
+            : "Open OSGKeyboard settings to grant microphone / speech access."
+    }
+    static var openSettingsA11y: String {
+        isChinese ? "打开 OSGKeyboard 设置" : "Open OSGKeyboard settings"
     }
 }
 

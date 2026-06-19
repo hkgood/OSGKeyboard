@@ -105,15 +105,15 @@
 
 /* Keyboard preview */
 "preview.title" = "键盘预览";
-"preview.subtitle" = "点按 disc 开始/结束录音;真实键盘使用同样布局。";
-"preview.placeholder" = "试着输入或按 disc 录音";
+"preview.subtitle" = "点击「开始录音」/「停止录音」按钮测试；真实键盘为长按麦克风圆盘。";
+"preview.placeholder" = "试着输入或点击按钮录音";
 "preview.clear" = "清空";
 "preview.openSettingsA11y" = "打开 OSGKeyboard 设置";
 "preview.modeChip.cycle" = "切换输入模式";
 "preview.localeChip.cycle" = "切换识别语言";
 
 /* Keyboard (ext) */
-"keyboard.placeholder.idle" = "按住说话";
+"keyboard.placeholder.idle" = "点按说话";
 "keyboard.placeholder.preparing" = "准备中…";
 "keyboard.placeholder.processing" = "处理中…";
 "keyboard.placeholder.error" = "润色失败";
@@ -124,7 +124,7 @@
 "keyboard.denied.speech" = "语音识别被拒绝";
 "keyboard.openSettingsA11y" = "打开 OSGKeyboard 设置";
 "keyboard.deniedHint" = "打开 OSGKeyboard 设置,可授予麦克风 / 语音识别权限。";
-"keyboard.pressToTalkA11y" = "按住说话";
+"keyboard.tapToTalkA11y" = "点按说话";
 
 /* Mode chip labels */
 "mode.off" = "关闭";

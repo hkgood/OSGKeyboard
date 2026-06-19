@@ -105,15 +105,15 @@
 
 /* Keyboard preview */
 "preview.title" = "Keyboard Preview";
-"preview.subtitle" = "Tap the disc to start/stop recording. The real keyboard uses the same layout.";
-"preview.placeholder" = "Type or tap to record";
+"preview.subtitle" = "Tap Start/Stop Recording to test here. On the real keyboard, press and hold the mic disc.";
+"preview.placeholder" = "Type here or tap the record button";
 "preview.clear" = "Clear text";
 "preview.openSettingsA11y" = "Open OSGKeyboard settings";
 "preview.modeChip.cycle" = "Cycle input mode";
 "preview.localeChip.cycle" = "Cycle recognition language";
 
 /* Keyboard (ext) */
-"keyboard.placeholder.idle" = "Hold to talk";
+"keyboard.placeholder.idle" = "Tap to talk";
 "keyboard.placeholder.preparing" = "Preparing";
 "keyboard.placeholder.processing" = "Processing";
 "keyboard.placeholder.error" = "Polishing failed";
@@ -124,7 +124,7 @@
 "keyboard.denied.speech" = "Speech denied";
 "keyboard.openSettingsA11y" = "Open OSGKeyboard settings";
 "keyboard.deniedHint" = "Opens the OSGKeyboard settings page where you can grant microphone or speech recognition access.";
-"keyboard.pressToTalkA11y" = "Push to talk";
+"keyboard.tapToTalkA11y" = "Tap to talk";
 
 /* Mode chip labels (used in both ext + preview stub) */
 "mode.off" = "Off";

@@ -67,6 +67,8 @@ public final class KeyboardState: ObservableObject {
     /// `true` — kept on the state object because the UI's status
     /// badge still wants a single source of truth to read from.
     @Published public var onDeviceSupported: Bool = false
+    /// Seconds remaining in the current utterance (Flow tap-to-talk).
+    @Published public var utteranceRemainingSeconds: Int = Int(FlowSessionKeys.maxUtteranceDuration)
     /// "local" → ASR only, no LLM. "cloud" → ASR + optional LLM polish.
     @Published public var engineMode: String = "cloud"
 

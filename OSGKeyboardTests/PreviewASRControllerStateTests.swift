@@ -29,8 +29,7 @@
 // the ASR to never yield `.final` and asserts the timeout fires.
 
 import XCTest
-@testable import OSGKeyboard
-import AVFoundation
+@testable import OSGKeyboardShared
 
 @MainActor
 final class PreviewASRControllerStateTests: XCTestCase {
@@ -41,7 +40,7 @@ final class PreviewASRControllerStateTests: XCTestCase {
     /// is the regression test for the original bug — if it ever
     /// fails, the disc is stuck again.
     func testStopDoesNotCancelConsumerTask() {
-        let controller = PreviewASRController()
+        let controller = LiveDictationController()
         let consumerTask = Task<Void, Never> {}
         controller.asrTask = consumerTask
 
@@ -58,7 +57,7 @@ final class PreviewASRControllerStateTests: XCTestCase {
     /// misbehave — no double-cancel, no extra state transitions.
     /// This is the contract `.onDisappear` relies on.
     func testStopIsIdempotent() {
-        let controller = PreviewASRController()
+        let controller = LiveDictationController()
         let consumerTask = Task<Void, Never> {}
         controller.asrTask = consumerTask
 

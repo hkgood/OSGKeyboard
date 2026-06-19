@@ -47,15 +47,34 @@ public final class PermissionManager: @unchecked Sendable {
     /// method of its own and the framework checks the same TCC
     /// entry on first use.
     public func requestSpeechPermission() async -> Bool {
+        await Self.requestSpeechPermissionNonisolated()
+    }
+
+    // MARK: - Nonisolated permission bridge
+    //
+    // `SFSpeechRecognizer.requestAuthorization` callback is not guaranteed
+    // to run on main queue. Building the callback inline inside a
+    // `@MainActor` method can trigger runtime actor/isolation assertions.
+    // Keep the continuation + callback creation in nonisolated helpers.
+    private nonisolated static func requestSpeechPermissionNonisolated() async -> Bool {
         await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
-            SFSpeechRecognizer.requestAuthorization { status in
-                switch status {
-                case .authorized: cont.resume(returning: true)
-                case .denied, .restricted, .notDetermined:
-                    cont.resume(returning: false)
-                @unknown default:
-                    cont.resume(returning: false)
-                }
+            SFSpeechRecognizer.requestAuthorization(
+                makeSpeechAuthHandler(continuation: cont)
+            )
+        }
+    }
+
+    private nonisolated static func makeSpeechAuthHandler(
+        continuation: CheckedContinuation<Bool, Never>
+    ) -> @Sendable (SFSpeechRecognizerAuthorizationStatus) -> Void {
+        return { status in
+            switch status {
+            case .authorized:
+                continuation.resume(returning: true)
+            case .denied, .restricted, .notDetermined:
+                continuation.resume(returning: false)
+            @unknown default:
+                continuation.resume(returning: false)
             }
         }
     }

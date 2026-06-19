@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OSGKeyboard</title>
+  <meta name="description" content="OSGKeyboard — voice dictation keyboard for iOS with on-device ASR and optional LLM polish.">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f7f7f7;
+      --card: #fff;
+      --text: #1a1a1a;
+      --muted: #666;
+      --accent: #0a7a55;
+      --border: #e5e5e5;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111;
+        --card: #1c1c1e;
+        --text: #f5f5f7;
+        --muted: #a1a1a6;
+        --accent: #34c759;
+        --border: #333;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 3rem;
+    }
+    header { margin-bottom: 2rem; }
+    h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 0.5rem; }
+    .tagline { color: var(--muted); margin: 0; font-size: 1.05rem; }
+    .lang { font-size: 0.9rem; margin-top: 0.75rem; }
+    .lang a { color: var(--accent); }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.25rem 1.35rem;
+      margin-bottom: 1rem;
+    }
+    .card h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+    .card p { margin: 0; color: var(--muted); }
+    .links { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
+    .btn {
+      display: inline-block;
+      padding: 0.65rem 1rem;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    footer {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>OSGKeyboard</h1>
+      <p class="tagline">Tap to talk. Polished text in any app.</p>
+      <p class="lang"><a href="#zh">中文</a></p>
+    </header>
+
+    <div class="card">
+      <h2>Voice dictation keyboard for iOS</h2>
+      <p>
+        OSGKeyboard is a custom keyboard extension that transcribes your voice on-device
+        and optionally polishes the result through an LLM you configure.
+        Works in WeChat, Notes, Mail, ChatGPT, and anywhere a keyboard appears.
+      </p>
+      <div class="links">
+        <a class="btn btn-primary" href="https://github.com/hkgood/OSGKeyboard">View on GitHub</a>
+        <a class="btn btn-secondary" href="privacy/">Privacy Policy</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Privacy at a glance</h2>
+      <p>
+        Audio is processed on your device for transcription. We do not log ordinary keystrokes.
+        In Cloud polish mode, only the transcribed text (not audio) is sent to your chosen API provider.
+      </p>
+      <div class="links">
+        <a class="btn btn-secondary" href="privacy/">Read full policy</a>
+      </div>
+    </div>
+
+    <footer>
+      <p>© OSGKeyboard · <a href="https://github.com/hkgood/OSGKeyboard">Source code</a></p>
+    </footer>
+
+    <hr id="zh">
+
+    <header>
+      <h1>OSGKeyboard</h1>
+      <p class="tagline">点按说话，任意 App 里获得润色文字。</p>
+    </header>
+
+    <div class="card">
+      <h2>iOS 语音输入键盘</h2>
+      <p>
+        OSGKeyboard 是一款自定义键盘扩展：在设备端转写语音，并可选通过你配置的 LLM 润色结果。
+        适用于微信、备忘录、邮件、ChatGPT 等所有出现键盘的场景。
+      </p>
+      <div class="links">
+        <a class="btn btn-primary" href="https://github.com/hkgood/OSGKeyboard">GitHub 仓库</a>
+        <a class="btn btn-secondary" href="privacy/#zh">隐私政策</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>隐私摘要</h2>
+      <p>
+        音频在设备端转写。我们不会记录普通击键内容。
+        云端润色模式下，仅发送转写文字（非音频）到你选择的 API 服务商。
+      </p>
+      <div class="links">
+        <a class="btn btn-secondary" href="privacy/#zh">查看完整政策</a>
+      </div>
+    </div>
+
+    <footer>
+      <p>© OSGKeyboard · <a href="https://github.com/hkgood/OSGKeyboard">源代码</a></p>
+    </footer>
+  </div>
+</body>
+</html>

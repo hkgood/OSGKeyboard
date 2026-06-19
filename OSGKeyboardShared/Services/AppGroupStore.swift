@@ -14,8 +14,15 @@ import Foundation
 public struct AppGroupStore: @unchecked Sendable {
     public let defaults: UserDefaults
 
-    public init(defaults: UserDefaults = AppGroup.defaults) {
-        self.defaults = defaults
+    public init(defaults: UserDefaults? = nil) {
+        if let defaults {
+            self.defaults = defaults
+            return
+        }
+        // Never hard-crash on implicit construction sites (e.g. default
+        // service initializers). If App Group is unavailable, use .standard
+        // so callers can still surface a user-facing setup error.
+        self.defaults = AppGroup.isAvailable ? AppGroup.defaults : .standard
     }
 
     // MARK: - Keys

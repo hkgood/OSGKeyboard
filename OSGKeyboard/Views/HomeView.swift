@@ -12,6 +12,7 @@ struct HomeView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     @ObservedObject var config = ProviderConfig.shared
+    @EnvironmentObject private var flowManager: FlowSessionManager
     @State private var showSettings = false
     @State private var showKeyboardPreview = false
 
@@ -21,6 +22,9 @@ struct HomeView: View {
             VStack(spacing: 0) {
                 statusHeader
                     .padding(.top, Spacing.xl)
+                flowSessionCard
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.top, Spacing.md)
                 Spacer()
                 heroButton
                 Spacer()
@@ -35,6 +39,77 @@ struct HomeView: View {
         .sheet(isPresented: $showKeyboardPreview) {
             KeyboardPreviewSheet()
         }
+    }
+
+    // MARK: - Flow session
+
+    private var flowSessionCard: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            HStack {
+                Circle()
+                    .fill(flowStatusColor)
+                    .frame(width: 8, height: 8)
+                Text(flowStatusTitle)
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+                Spacer()
+                if flowManager.isActive, let expires = flowManager.sessionExpiresAt {
+                    Text(expires, style: .timer)
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.textTertiary)
+                        .monospacedDigit()
+                }
+            }
+            Text("home.flow.hint")
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+            if let warning = flowManager.sessionWarning {
+                Text(warning)
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.warning)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !AppPermissions.flowRequirementsMet {
+                    Button {
+                        AppPermissions.openSystemSettings()
+                    } label: {
+                        Text("home.flow.openSettings")
+                            .font(TypeStyle.caption)
+                            .foregroundStyle(palette.accent)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            if flowManager.isActive {
+                Button {
+                    flowManager.endSession()
+                } label: {
+                    Text("home.flow.end")
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textSecondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(Spacing.sm)
+        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                .stroke(palette.divider, lineWidth: 0.5)
+        )
+    }
+
+    private var flowStatusColor: Color {
+        if flowManager.isActive { return palette.success }
+        if flowManager.isStarting { return palette.accent }
+        if flowManager.sessionWarning != nil { return palette.warning }
+        return palette.warning
+    }
+
+    private var flowStatusTitle: LocalizedStringKey {
+        if flowManager.isActive { return "home.flow.active" }
+        if flowManager.isStarting { return "home.flow.starting" }
+        return "home.flow.inactive"
     }
 
     // MARK: - Header

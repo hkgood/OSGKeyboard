@@ -3,7 +3,21 @@
 "OSGKeyboard" = "OSGKeyboard";
 
 /* Onboarding */
-"onboarding.welcome.subtitle" = "按住说话,松开即得润色文字。";
+"onboarding.welcome.subtitle" = "点按说话，再点结束 — 任意 App 里都能获得润色文字。";
+"onboarding.enable.fullAccessNote" = "完全访问用于麦克风与 API 配置读取。我们不会记录或上传你的击键内容。";
+"onboarding.permission.mic.title" = "麦克风权限";
+"onboarding.permission.mic.body" = "语音输入需要麦克风。音频在设备端转录，不会上传原始录音。";
+"onboarding.permission.mic.allow" = "允许麦克风";
+"onboarding.permission.mic.deniedHint" = "麦克风被拒绝。可前往设置开启，或点「下一步」继续。";
+"onboarding.permission.speech.title" = "语音识别权限";
+"onboarding.permission.speech.body" = "端侧语音识别将语音转为文字。音频不会离开你的设备。";
+"onboarding.permission.speech.allow" = "允许语音识别";
+"onboarding.permission.speech.deniedHint" = "语音识别被拒绝。可前往设置开启，或点「下一步」继续。";
+"onboarding.permission.openSettings" = "打开设置";
+"onboarding.permission.status.undetermined" = "尚未请求";
+"onboarding.permission.status.granted" = "已允许";
+"onboarding.permission.status.denied" = "已拒绝";
+"legal.privacyPolicy" = "隐私政策";
 "onboarding.enable.title" = "启用 OSGKeyboard";
 "onboarding.enable.step1" = "设置 → 通用 → 键盘 → 键盘";
 "onboarding.enable.step2" = "点击「添加新键盘…」并选择 OSGKeyboard";
@@ -95,6 +109,10 @@
 "settings.onDeviceOnly.body" = "禁用云端回退,识别失败时会报错而非联网。";
 "settings.legend.onDevice" = "端侧识别";
 "settings.legend.cloudFallback" = "需联网";
+"settings.privacy.title" = "隐私";
+"settings.privacy.policy" = "隐私政策";
+"settings.privacy.fullAccess.title" = "关于完全访问";
+"settings.privacy.fullAccess.body" = "完全访问用于麦克风与读取 API Key。OSGKeyboard 不会记录或上传你在键盘上的击键内容。";
 
 /* App group error */
 "appGroup.error.title" = "App Group 未配置";
@@ -105,8 +123,8 @@
 
 /* Keyboard preview */
 "preview.title" = "键盘预览";
-"preview.subtitle" = "点按 disc 开始/结束录音;真实键盘使用同样布局。";
-"preview.placeholder" = "试着输入或按 disc 录音";
+"preview.subtitle" = "点击「开始录音」/「停止录音」按钮测试；真实键盘为长按麦克风圆盘。";
+"preview.placeholder" = "试着输入或点击按钮录音";
 "preview.clear" = "清空";
 "preview.openSettingsA11y" = "打开 OSGKeyboard 设置";
 "preview.modeChip.cycle" = "切换输入模式";
@@ -146,3 +164,21 @@
 "locale.en-US"    = "English (US)";
 "locale.ja-JP"    = "日本語";
 "locale.ko-KR"    = "한국어";
+
+/* Flow session */
+"flow.error.noSpeech" = "未检测到语音，请重试。";
+"keyboard.denied.mic" = "麦克风权限被拒绝";
+"keyboard.denied.speech" = "语音识别权限被拒绝";
+
+/* Home · Flow session */
+"home.flow.active" = "语音会话进行中";
+"home.flow.inactive" = "语音会话未启动";
+"home.flow.hint" = "语音会话会自动启动。切到任意 App，点按键盘麦克风即可说话。";
+"home.flow.starting" = "正在启动语音会话…";
+"home.flow.openSettings" = "前往设置授予权限";
+"home.flow.start" = "启动语音会话";
+"home.flow.end" = "结束语音会话";
+"flow.error.speechRequired" = "需要语音识别权限才能使用语音会话。";
+"flow.error.micRequired" = "需要麦克风权限才能维持后台语音会话。";
+"flow.error.micUnavailable" = "当前设备无法使用麦克风。";
+"flow.error.audioUnavailable" = "无法启动后台音频。";

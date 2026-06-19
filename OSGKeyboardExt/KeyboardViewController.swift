@@ -4,7 +4,7 @@
 // Principal class for the Custom Keyboard Extension. Hosts a single
 // SwiftUI tree (`KeyboardRootView`) and drives the recording pipeline:
 //
-//     AudioCaptureService ──► ASRService ──► PolishingService ──► insertText
+//     host app dictation handoff ──► App Group transcript ──► insertText
 //
 // Design notes:
 //   • The class is `@MainActor` — every UI mutation and `textDocumentProxy`
@@ -19,12 +19,22 @@
 
 import UIKit
 import SwiftUI
-import AVFoundation
 import OSGKeyboardShared
 
 @objc(KeyboardViewController)
 @MainActor
 public final class KeyboardViewController: UIInputViewController {
+    private enum FlowWatchdog {
+        static let pollIntervalNs: UInt64 = 200_000_000
+        /// Give the user time to manually open the host app when auto-jump fails.
+        static let startTimeout: TimeInterval = 30
+        static let resultTimeout: TimeInterval = 45
+    }
+
+    private enum DictationWatchdog {
+        static let pollIntervalNs: UInt64 = 400_000_000
+        static let timeout: TimeInterval = 45
+    }
 
     // MARK: - View model
 
@@ -37,17 +47,21 @@ public final class KeyboardViewController: UIInputViewController {
     // MARK: - State
 
     private let state = State()
-    private let audio = AudioCaptureService()
-    private let asr: ASRService = ASRServiceFactory.make()
     private let polisher = PolishingService()
-    private let permissions = PermissionManager()
     private let persistor = AppGroupPersistor()
 
-    private var session: AudioCaptureService.Session?
-    private var asrTask: Task<Void, Never>?
-    private var levelTask: Task<Void, Never>?
-
     private var hosting: UIHostingController<KeyboardRootView>!
+    /// Legacy one-shot handoff (`osgkeyboard://dictate`).
+    private var awaitingDictationResult = false
+    private var dictationRequestStartedAt: TimeInterval = 0
+    private var dictationWatchdogTask: Task<Void, Never>?
+    /// Flow session: waiting for host app to come alive after `startflow`.
+    private var isPendingFlowStart = false
+    private var flowStartDeadline: TimeInterval = 0
+    private var isFlowRecording = false
+    private var flowWatchdogTask: Task<Void, Never>?
+    private var utteranceTimerTask: Task<Void, Never>?
+    private var utteranceStartedAt: TimeInterval = 0
 
     // MARK: - Lifecycle
 
@@ -60,11 +74,19 @@ public final class KeyboardViewController: UIInputViewController {
         installStateActions()
         installSwiftUI()
         loadPersistedConfig()
+        consumePendingDictationResultIfNeeded()
+        refreshDictationProgressStateIfNeeded()
     }
 
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         cancelPipeline()
+    }
+
+    public override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        consumePendingDictationResultIfNeeded()
+        refreshDictationProgressStateIfNeeded()
     }
 
     public override func didReceiveMemoryWarning() {
@@ -74,7 +96,8 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func textDidChange(_ textInput: (any UITextInput)?) {
         super.textDidChange(textInput)
-        // Hook for future per-app mode switching (e.g. password field → .off).
+        consumePendingDictationResultIfNeeded()
+        refreshDictationProgressStateIfNeeded()
     }
 
     // MARK: - Wiring
@@ -82,7 +105,7 @@ public final class KeyboardViewController: UIInputViewController {
     private func installStateActions() {
         state.beginRecording      = { [weak self] in self?.pressBegan() }
         state.endRecording        = { [weak self] in self?.pressEnded() }
-        state.tapMic              = { [weak self] in self?.advanceToNextInputMode() }
+        state.tapMic              = { [weak self] in self?.toggleRecording() }
         state.openSettings        = { [weak self] in self?.openHostApp() }
         state.setMode             = { [weak self] m in self?.persistMode(m) }
         state.setLocale           = { [weak self] l in self?.persistLocale(l) }
@@ -125,11 +148,18 @@ public final class KeyboardViewController: UIInputViewController {
 
     // MARK: - Press handlers
 
+    private func toggleRecording() {
+        switch state.phase {
+        case .recording:
+            pressEnded()
+        case .idle, .denied, .error:
+            pressBegan()
+        case .requestingPermissions, .processing:
+            break
+        }
+    }
+
     private func pressBegan() {
-        // Allow re-entry from `.denied` and from a finished/cleared
-        // `.error` so the user can simply press the mic again after
-        // returning from Settings with permission granted — they
-        // shouldn't have to wait for an auto-clear timer.
         switch state.phase {
         case .idle, .denied, .error:
             break
@@ -137,106 +167,213 @@ public final class KeyboardViewController: UIInputViewController {
             return
         }
         guard state.mode != .off else { return }
-        // Set the intermediate phase SYNCHRONOUSLY so a rapid second
-        // press (before the first Task has had a chance to flip phase to
-        // .recording) is rejected by the guard above. This fixes the race
-        // where the user double-tapped the mic and we started two
-        // pipelines at once.
-        state.phase = .requestingPermissions
-        Task { @MainActor [weak self] in
-            guard let self else { return }
-            let micGranted = await self.permissions.requestMicPermission()
-            guard micGranted else {
-                self.state.phase = .denied(.mic)
-                return
-            }
-            // We explicitly ask for Speech recognition permission here.
-            // `SpeechAnalyzer` does not expose a dedicated request API,
-            // so the app still relies on the shared Speech permission
-            // gate and `NSSpeechRecognitionUsageDescription`.
-            let speechGranted = await self.permissions.requestSpeechPermission()
-            guard speechGranted else {
-                self.state.phase = .denied(.speech)
-                return
-            }
-            self.startPipeline()
+        guard hasFullAccess else {
+            let msg = "请在系统设置中为 OSGKeyboard 开启“允许完全访问”，否则无法使用语音输入"
+            state.phase = .error(.unknown(msg), message: msg)
+            scheduleAutoClearError()
+            return
+        }
+        guard AppGroup.isAvailable else {
+            let msg = "App Group 未配置，键盘无法与主 App 通信。请重新安装并检查签名配置。"
+            state.phase = .error(.appGroupUnavailable, message: msg)
+            scheduleAutoClearError()
+            return
+        }
+
+        if FlowSessionBridge.isSessionActive() {
+            startFlowRecording()
+        } else {
+            beginFlowStart()
         }
     }
 
     private func pressEnded() {
-        guard state.phase == .recording else { return }
-        stopPipeline()
+        if isPendingFlowStart {
+            cancelPendingFlowStart()
+            return
+        }
+        guard isFlowRecording else { return }
+
+        isFlowRecording = false
+        stopUtteranceCountdown()
+        FlowSessionBridge.setRecordingState(.stopped)
+        state.phase = .processing
+        state.lastTranscript = "识别中..."
+        startFlowResultWatchdog()
     }
 
-    // MARK: - Pipeline
+    private func startFlowRecording() {
+        isPendingFlowStart = false
+        flowStartDeadline = 0
+        stopFlowWatchdog()
 
-    private func startPipeline() {
-        let session = audio.start()
-        self.session = session
-        state.phase = .recording
-        state.level = 0
+        FlowSessionBridge.setTranscriptionLanguage(state.localeId)
+        FlowSessionBridge.setRecordingState(.recording)
+        isFlowRecording = true
         state.lastTranscript = ""
+        state.phase = .recording
+        startUtteranceCountdown()
+        startFlowLevelWatchdog()
+        debug("startFlowRecording")
+    }
 
-        let locale = resolveLocale(state.localeId)
-        let events = asr.transcribe(
-            stream: session.audio,
-            locale: locale
-        )
-
-        asrTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            var lastPartial: String = ""
-            for await event in events {
-                switch event {
-                case .capability(let onDevice):
-                    self.state.onDeviceSupported = onDevice
-                case .partial(let s):
-                    lastPartial = s
-                    self.state.lastTranscript = s
-                case .final(let s):
-                    let transcript = s.isEmpty ? lastPartial : s
-                    self.handleFinalTranscript(transcript)
-                case .error(let m):
-                    self.state.phase = .error(.asr(m))
-                    self.scheduleAutoClearError()
+    private func startUtteranceCountdown() {
+        utteranceStartedAt = Date().timeIntervalSince1970
+        state.utteranceRemainingSeconds = Int(FlowSessionKeys.maxUtteranceDuration)
+        utteranceTimerTask?.cancel()
+        utteranceTimerTask = Task { @MainActor [weak self] in
+            while let self, self.isFlowRecording, !Task.isCancelled {
+                let elapsed = Date().timeIntervalSince1970 - self.utteranceStartedAt
+                let remaining = max(0, Int(ceil(FlowSessionKeys.maxUtteranceDuration - elapsed)))
+                self.state.utteranceRemainingSeconds = remaining
+                if remaining <= 0 {
+                    self.pressEnded()
+                    return
                 }
-            }
-        }
-
-        levelTask = Task { @MainActor [weak self] in
-            for await level in session.levels {
-                guard let self else { return }
-                // Smooth a little extra to feel natural.
-                self.state.level = Double(self.state.level) * 0.6 + Double(level.meter) * 0.4
+                try? await Task.sleep(nanoseconds: 200_000_000)
             }
         }
     }
 
-    private func stopPipeline() {
-        session?.stop()
-        session = nil
-        asrTask?.cancel();   asrTask = nil
-        levelTask?.cancel(); levelTask = nil
+    private func stopUtteranceCountdown() {
+        utteranceTimerTask?.cancel()
+        utteranceTimerTask = nil
+        state.utteranceRemainingSeconds = Int(FlowSessionKeys.maxUtteranceDuration)
+    }
+
+    private func beginFlowStart() {
+        isPendingFlowStart = true
+        isFlowRecording = false
+        flowStartDeadline = Date().timeIntervalSince1970 + FlowWatchdog.startTimeout
+        state.lastTranscript = "正在启动语音会话..."
+        state.phase = .processing
+        openHostApp(path: "startflow")
+        startFlowStartWatchdog()
+        debug("beginFlowStart")
+    }
+
+    private func cancelPendingFlowStart() {
+        isPendingFlowStart = false
+        flowStartDeadline = 0
+        stopFlowWatchdog()
+        state.phase = .idle
+        state.lastTranscript = ""
+    }
+
+    private func startFlowStartWatchdog() {
+        stopFlowWatchdog()
+        flowWatchdogTask = Task { @MainActor [weak self] in
+            while let self, !Task.isCancelled, self.isPendingFlowStart {
+                if FlowSessionBridge.isSessionActive() {
+                    self.startFlowRecording()
+                    return
+                }
+                let now = Date().timeIntervalSince1970
+                if self.flowStartDeadline > 0, now > self.flowStartDeadline {
+                    self.isPendingFlowStart = false
+                    self.flowStartDeadline = 0
+                    self.showManualSettingsHint(path: "startflow")
+                    return
+                }
+                try? await Task.sleep(nanoseconds: FlowWatchdog.pollIntervalNs)
+            }
+        }
+    }
+
+    private func startFlowLevelWatchdog() {
+        stopFlowWatchdog()
+        flowWatchdogTask = Task { @MainActor [weak self] in
+            while let self, !Task.isCancelled, self.isFlowRecording {
+                let levels = FlowSessionBridge.audioLevels()
+                if let peak = levels.max(), peak > 0 {
+                    self.state.level = Double(peak)
+                }
+                try? await Task.sleep(nanoseconds: FlowWatchdog.pollIntervalNs)
+            }
+        }
+    }
+
+    private func startFlowResultWatchdog() {
+        stopFlowWatchdog()
+        let startedAt = Date().timeIntervalSince1970
+        flowWatchdogTask = Task { @MainActor [weak self] in
+            while let self, !Task.isCancelled {
+                if let result = FlowSessionBridge.consumeTranscriptionResult() {
+                    self.stopFlowWatchdog()
+                    self.handleFlowTranscript(result)
+                    return
+                }
+                if let error = FlowSessionBridge.consumeTranscriptionError() {
+                    self.stopFlowWatchdog()
+                    self.state.phase = .error(.unknown(error), message: error)
+                    self.scheduleAutoClearError()
+                    return
+                }
+                let now = Date().timeIntervalSince1970
+                if now - startedAt > FlowWatchdog.resultTimeout {
+                    self.stopFlowWatchdog()
+                    let msg = "等待识别结果超时，请重试"
+                    self.state.phase = .error(.unknown(msg), message: msg)
+                    self.scheduleAutoClearError()
+                    return
+                }
+                try? await Task.sleep(nanoseconds: FlowWatchdog.pollIntervalNs)
+            }
+        }
+    }
+
+    private func handleFlowTranscript(_ transcript: String) {
+        let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            state.phase = .idle
+            state.level = 0
+            return
+        }
+        // Host app already polished when configured; keyboard only inserts.
+        textDocumentProxy.insertText(trimmed)
+        state.lastTranscript = ""
+        state.level = 0
+        state.phase = .idle
+        debug("flow insert length=\(trimmed.count)")
+    }
+
+    private func stopFlowWatchdog() {
+        flowWatchdogTask?.cancel()
+        flowWatchdogTask = nil
     }
 
     private func cancelPipeline() {
-        stopPipeline()
-        asr.cancel()
-        if state.phase == .recording || state.phase == .processing {
+        if isFlowRecording || isPendingFlowStart {
+            if isFlowRecording {
+                FlowSessionBridge.setRecordingState(.aborted)
+            }
+            isFlowRecording = false
+            isPendingFlowStart = false
+            stopUtteranceCountdown()
+            stopFlowWatchdog()
+            state.level = 0
+        }
+        if awaitingDictationResult {
+            debug("cancelPipeline ignored while awaiting legacy handoff result")
+            return
+        }
+        if state.phase == .processing {
             state.phase = .idle
         }
-        state.level = 0
-        // Reset the on-device flag so the StatusBadge stops showing the
-        // cloud-fallback indicator between recordings.
-        state.onDeviceSupported = false
     }
 
     private func handleFinalTranscript(_ transcript: String) {
         let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
+            debug("received empty transcript")
+            awaitingDictationResult = false
+            stopDictationWatchdog()
             state.phase = .idle
             return
         }
+        debug("received transcript length=\(trimmed.count)")
+        awaitingDictationResult = false
+        stopDictationWatchdog()
         // Local engine or transcribe mode: insert directly, no LLM call.
         if state.isLocalEngine || state.mode == .transcribe {
             textDocumentProxy.insertText(trimmed)
@@ -307,18 +444,8 @@ public final class KeyboardViewController: UIInputViewController {
         persistor.persist(mode: m)
         if isRecording {
             if m == .off {
-                // Switching to .off while recording: drop the partial
-                // (no insertion, no LLM). User has explicitly disabled
-                // the keyboard, so we honour that immediately.
-                stopPipeline()
                 state.phase = .idle
                 state.lastTranscript = ""
-            } else if m == .transcribe {
-                // Switching to .transcribe while in .polish: end the
-                // recording, the partial will flow through
-                // handleFinalTranscript which inserts the raw text in
-                // .transcribe mode (no LLM call).
-                pressEnded()
             }
         }
     }
@@ -335,34 +462,123 @@ public final class KeyboardViewController: UIInputViewController {
 
     // MARK: - Open host app
 
-    private func openHostApp() {
-        let urlString = "osgkeyboard://settings"
-        if let url = URL(string: urlString) {
-            var responder: UIResponder? = self
-            while let r = responder {
-                if let app = r as? UIApplication {
-                    app.open(url)
-                    return
-                }
-                responder = r.next
-            }
+    private func openHostApp(path: String = "settings") {
+        guard hasFullAccess else {
+            let msg = "未开启“允许完全访问”，请先在键盘设置中打开"
+            state.phase = .error(.unknown(msg), message: msg)
+            scheduleAutoClearError()
+            return
         }
-        if let url = URL(string: UIApplication.openSettingsURLString) {
-            var responder: UIResponder? = self
-            while let r = responder {
-                if let app = r as? UIApplication {
-                    app.open(url); return
-                }
-                responder = r.next
+        guard let url = URL(string: "osgkeyboard://\(path)") else {
+            handleHostAppOpenResult(path: path, success: false)
+            return
+        }
+        HostAppLauncher.open(url: url, from: self) { [weak self] success in
+            self?.handleHostAppOpenResult(path: path, success: success)
+        }
+    }
+
+    private func handleHostAppOpenResult(path: String, success: Bool) {
+        debug("openHostApp path=\(path) success=\(success)")
+        guard !success else { return }
+
+        // Flow start: auto-jump often fails in WeChat/Safari — keep polling
+        // so a manually opened host app can still satisfy the session check.
+        if path == "startflow", isPendingFlowStart {
+            state.lastTranscript = "无法自动跳转，请从主屏幕打开 OSGKeyboard，然后返回继续"
+            return
+        }
+
+        if path == "dictate" {
+            awaitingDictationResult = false
+            stopDictationWatchdog()
+        }
+        showManualSettingsHint(path: path)
+    }
+
+    private func consumePendingDictationResultIfNeeded() {
+        guard let transcript = DictationBridge.consumePendingTranscript() else { return }
+        debug("consumePendingDictationResultIfNeeded success")
+        handleFinalTranscript(transcript)
+    }
+
+    private func refreshDictationProgressStateIfNeeded() {
+        guard awaitingDictationResult, case .processing = state.phase else { return }
+        let progress = DictationBridge.currentStatus()
+        switch progress.status {
+        case .requested:
+            state.lastTranscript = state.isLocalEngine
+                ? "正在打开 OSGKeyboard（本地转写）..."
+                : "正在打开 OSGKeyboard..."
+        case .recording:
+            state.lastTranscript = state.isLocalEngine
+                ? "正在本地录音，请完成后返回当前输入页"
+                : "正在录音，请完成后返回当前输入页"
+        case .transcribing:
+            state.lastTranscript = state.isLocalEngine
+                ? "本地识别中，请稍候并返回输入页"
+                : "识别中，请稍候并返回输入页"
+        case .error:
+            let msg = progress.message ?? "录音失败，请重试"
+            debug("host returned error: \(msg)")
+            awaitingDictationResult = false
+            stopDictationWatchdog()
+            state.phase = .error(.unknown(msg), message: msg)
+            scheduleAutoClearError()
+        case .cancelled:
+            debug("host cancelled")
+            awaitingDictationResult = false
+            stopDictationWatchdog()
+            state.phase = .idle
+        case .done, .idle:
+            break
+        }
+        // Host app can be killed or leave without callback. If status does not
+        // advance for too long, fail fast with an actionable retry message.
+        let now = Date().timeIntervalSince1970
+        let lastProgressAt = progress.updatedAt > 0 ? progress.updatedAt : dictationRequestStartedAt
+        if now - lastProgressAt > DictationWatchdog.timeout {
+            let timeoutMessage = "等待录音结果超时，请返回 OSGKeyboard 完成录音后重试"
+            debug("dictation timeout after \(Int(now - lastProgressAt))s")
+            awaitingDictationResult = false
+            stopDictationWatchdog()
+            DictationBridge.clear()
+            state.phase = .error(.unknown(timeoutMessage), message: timeoutMessage)
+            scheduleAutoClearError()
+        }
+    }
+
+    private func showManualSettingsHint(path: String = "settings") {
+        let msg: String
+        if !hasFullAccess {
+            msg = "请先开启 OSGKeyboard 的“允许完全访问”，否则键盘无法跳转到 App"
+        } else if path == "settings" {
+            msg = "系统拒绝了键盘跳转。请手动打开 OSGKeyboard App 进入设置页"
+        } else if path == "startflow" {
+            msg = "语音会话未启动。请从主屏幕打开 OSGKeyboard App，返回后再按麦克风"
+        } else if state.isLocalEngine {
+            msg = "系统拒绝了键盘跳转。请先手动打开 OSGKeyboard 完成本地转写，再返回输入页"
+        } else {
+            msg = "系统拒绝了键盘跳转。请先手动打开 OSGKeyboard 录音，再返回输入页"
+        }
+        state.phase = .error(.unknown(msg), message: msg)
+        scheduleAutoClearError()
+    }
+
+    private func startDictationWatchdog() {
+        stopDictationWatchdog()
+        dictationWatchdogTask = Task { @MainActor [weak self] in
+            while let self, !Task.isCancelled, self.awaitingDictationResult {
+                self.consumePendingDictationResultIfNeeded()
+                self.refreshDictationProgressStateIfNeeded()
+                try? await Task.sleep(nanoseconds: DictationWatchdog.pollIntervalNs)
             }
         }
     }
 
-    // MARK: - Helpers
-
-    private func resolveLocale(_ id: String) -> Locale {
-        if id == "auto" { return .current }
-        return Locale(identifier: id)
+    private func stopDictationWatchdog() {
+        dictationWatchdogTask?.cancel()
+        dictationWatchdogTask = nil
     }
 
     private func scheduleAutoClearError() {
@@ -380,5 +596,11 @@ public final class KeyboardViewController: UIInputViewController {
                 break
             }
         }
+    }
+
+    private func debug(_ message: String) {
+        #if DEBUG
+        print("🎙️[KeyboardVC] \(message)")
+        #endif
     }
 }

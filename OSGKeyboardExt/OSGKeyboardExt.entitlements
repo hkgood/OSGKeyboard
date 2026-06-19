@@ -6,9 +6,9 @@
 	<array>
 		<string>group.com.osgkeyboard.shared</string>
 	</array>
-	<key>com.apple.security.keychain-access-groups</key>
+	<key>keychain-access-groups</key>
 	<array>
-		<string>com.osgkeyboard.shared</string>
+		<string>$(AppIdentifierPrefix)com.osgkeyboard.shared</string>
 	</array>
 </dict>
 </plist>

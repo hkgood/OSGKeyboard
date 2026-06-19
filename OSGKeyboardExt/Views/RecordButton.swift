@@ -1,10 +1,8 @@
 // RecordButton.swift
 // OSGKeyboard · Keyboard Extension
 //
-// The hero control. 120 pt primary disc with a soft inner gradient, a
-// breathing outer ring while recording, and a centred waveform that maps
-// directly to the real audio RMS. Idle / recording / processing are three
-// distinct visual states — no flicker, no surprise transitions.
+// Tap-to-toggle mic: tap once to start, tap again to stop. Shows a
+// remaining-time countdown while recording; last 10 seconds turn red.
 
 import SwiftUI
 import OSGKeyboardShared
@@ -21,38 +19,38 @@ struct RecordButton: View {
 
     let phase: Phase
     let level: Double          // 0...1
-    let onPressBegan: () -> Void
-    let onPressEnded:  () -> Void
-    let onTap:         () -> Void
+    /// Seconds left in the current utterance; shown only while recording.
+    let remainingSeconds: Int?
+    let onToggle: () -> Void
 
-    @GestureState private var isPressed: Bool = false
     @State private var breath: Bool = false
 
     init(
         phase: Phase,
         level: Double,
-        onPressBegan: @escaping () -> Void,
-        onPressEnded:  @escaping () -> Void,
-        onTap:         @escaping () -> Void
+        remainingSeconds: Int? = nil,
+        onToggle: @escaping () -> Void
     ) {
         self.phase = phase
         self.level = level
-        self.onPressBegan = onPressBegan
-        self.onPressEnded = onPressEnded
-        self.onTap = onTap
+        self.remainingSeconds = remainingSeconds
+        self.onToggle = onToggle
+    }
+
+    private var isUrgent: Bool {
+        guard phase == .recording, let remainingSeconds else { return false }
+        return remainingSeconds <= 10
     }
 
     var body: some View {
         ZStack {
-            // Outer breathing ring (recording only)
             Circle()
-                .stroke(palette.recordRed.opacity(0.35), lineWidth: 2)
+                .stroke(palette.recordRed.opacity(isUrgent ? 0.55 : 0.35), lineWidth: isUrgent ? 3 : 2)
                 .frame(width: 150, height: 150)
                 .scaleEffect(breath ? 1.18 : 0.95)
                 .opacity(phase == .recording ? 1 : 0)
                 .animation(Motion.breath, value: breath)
 
-            // Halo: soft red glow that intensifies with input level
             Circle()
                 .fill(
                     RadialGradient(
@@ -68,7 +66,6 @@ struct RecordButton: View {
                 .animation(Motion.soft, value: phase)
                 .animation(Motion.soft, value: level)
 
-            // Secondary outer ring (always present, dimmer when idle)
             Circle()
                 .stroke(
                     Color.white.opacity(phase == .idle ? 0.08 : 0.12),
@@ -76,7 +73,6 @@ struct RecordButton: View {
                 )
                 .frame(width: 140, height: 140)
 
-            // Main disc with gradient + soft inner highlight
             ZStack {
                 Circle()
                     .fill(discGradient)
@@ -84,7 +80,6 @@ struct RecordButton: View {
                     .stroke(Color.white.opacity(0.16), lineWidth: 1)
                     .blendMode(.overlay)
 
-                // Centre content — switches by phase
                 Group {
                     switch phase {
                     case .idle:
@@ -92,17 +87,19 @@ struct RecordButton: View {
                             .font(.system(size: 38, weight: .medium))
                             .foregroundStyle(palette.textPrimary)
                     case .recording:
-                        WaveformView(level: level, active: true)
-                            .frame(width: 80, height: 44)
-                            .transition(.opacity)
+                        VStack(spacing: 4) {
+                            if let remainingSeconds {
+                                Text(formatRemaining(remainingSeconds))
+                                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                                    .foregroundStyle(isUrgent ? .white : palette.textPrimary)
+                                    .monospacedDigit()
+                                    .contentTransition(.numericText())
+                            }
+                            WaveformView(level: level, active: true)
+                                .frame(width: 72, height: 32)
+                        }
+                        .transition(.opacity)
                     case .processing:
-                        // Scaled to ~50pt inside a 120pt disc (~42%) —
-                        // same absolute size as the preview stub's
-                        // spinner (2.5x of the default ProgressView),
-                        // just a smaller fraction because the real
-                        // disc is bigger. The user gets the same
-                        // visual weight whether they're looking at
-                        // the in-app preview or the live keyboard.
                         ProgressView()
                             .progressViewStyle(.circular)
                             .tint(palette.textPrimary)
@@ -115,63 +112,34 @@ struct RecordButton: View {
                 }
             }
             .frame(width: 120, height: 120)
-            .scaleEffect(isPressed ? 0.94 : 1.0)
-            .animation(Motion.quick, value: isPressed)
             .animation(Motion.soft, value: phase)
+            .animation(Motion.soft, value: remainingSeconds)
         }
         .contentShape(Circle())
-        // Press-to-talk: act on the FIRST touch-down, not after a 150 ms
-        // minimum duration. That's what Typeless feels like, and it's what
-        // makes the keyboard feel responsive. A tap (very short press) is
-        // interpreted as "toggle" for the secondary action (onTap), not
-        // "record" — the recording only fires if the press lasts long
-        // enough to read as intentional. This avoids the previous bug
-        // where every single tap fired both onPressBegan AND onTap.
-        .gesture(
-            LongPressGesture(minimumDuration: 0.18)
-                .sequenced(before: DragGesture(minimumDistance: 0))
-                .updating($isPressed) { value, state, _ in
-                    switch value {
-                    case .second(true, _): state = true
-                    default: state = false
-                    }
-                }
-                .onChanged { value in
-                    if case .second(true, _) = value, !pressArmed {
-                        pressArmed = true
-                        onPressBegan()
-                    }
-                }
-                .onEnded { _ in
-                    if pressArmed { pressArmed = false; onPressEnded() }
-                }
-        )
-        .simultaneousGesture(
-            // Pure tap: only fires when the user lifts before the long-press
-            // threshold. This becomes the "secondary action" (e.g. cycle
-            // mode). It is paired with, not conflicting with, the long-press.
-            TapGesture(count: 1)
-                .onEnded {
-                    if !pressArmed { onTap() }
-                }
-        )
+        .onTapGesture {
+            guard phase != .processing else { return }
+            onToggle()
+        }
         .onAppear { breath = (phase == .recording) }
         .onChange(of: phase) { _, new in
             breath = (new == .recording)
         }
-        .accessibilityLabel(Text("keyboard.pressToTalkA11y"))
+        .accessibilityLabel(Text("keyboard.tapToTalkA11y"))
     }
 
-    @State private var pressArmed: Bool = false
+    private func formatRemaining(_ seconds: Int) -> String {
+        let m = seconds / 60
+        let s = seconds % 60
+        return String(format: "%d:%02d", m, s)
+    }
 
     private var discGradient: LinearGradient {
         switch phase {
         case .recording:
-            return LinearGradient(
-                colors: [palette.recordRed.opacity(0.95), palette.recordRed.opacity(0.75)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
+            let colors: [Color] = isUrgent
+                ? [palette.recordRed, palette.recordRed.opacity(0.85)]
+                : [palette.recordRed.opacity(0.95), palette.recordRed.opacity(0.75)]
+            return LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
         case .processing:
             return LinearGradient(
                 colors: [palette.surfaceElevated, palette.surface],
@@ -185,10 +153,6 @@ struct RecordButton: View {
                 endPoint: .bottom
             )
         case .idle:
-            // Brand green — same hue as `Palette.{dark,light}.accent`
-            // and the AccentColor asset. The disc is the keyboard's
-            // primary CTA, and a dark-gray disc looked like an inert
-            // surface, not an actionable button.
             return LinearGradient(
                 colors: [
                     palette.accent.opacity(0.95),

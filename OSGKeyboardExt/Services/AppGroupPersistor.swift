@@ -62,16 +62,19 @@ public struct AppGroupPersistor {
 
     /// Persist `mode` to the App Group store.
     public func persist(mode: KeyboardViewController.State.InputMode) {
+        guard AppGroup.isAvailable else { return }
         AppGroupStore().setModeId(mode.rawValue)
     }
 
     /// Persist `localeId` to the App Group store.
     public func persist(localeId: String) {
+        guard AppGroup.isAvailable else { return }
         AppGroupStore().setLocaleId(localeId)
     }
 
     /// Persist `engineMode` to the App Group store.
     public func persist(engineMode: String) {
+        guard AppGroup.isAvailable else { return }
         AppGroupStore().setEngineMode(engineMode)
     }
 }

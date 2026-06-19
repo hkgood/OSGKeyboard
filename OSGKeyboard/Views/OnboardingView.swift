@@ -1,31 +1,25 @@
 // OnboardingView.swift
 // OSGKeyboard · Main App
 //
-// Three-step onboarding:
-//
-//   1) Welcome — what the app does, in one sentence
-//   2) Enable  — Settings → General → Keyboards → Add → Allow Full Access
-//   3) Setup   — pick a provider, paste a key
-//
-// We deliberately do NOT use `TabView` with `.page` style for the
-// pager. That style wraps the content in a `UIPageViewController`,
-// and `UIPageViewController` has a long-standing behavior on some iOS
-// versions where
-// the keyboard-showing layout reflow on a `TextField` focus is
-// misread as a horizontal swipe — the page jumps back to step 1
-// the moment the user starts typing. Replacing the TabView with a
-// `ZStack`-based conditional view sidesteps the bug entirely; we
-// give up the swipe-to-page gesture, but the Back/Next buttons at
-// the bottom (and the page dots) are the canonical onboarding
-// affordance and the user is never more than one tap from the next
-// page anyway.
-//
-// Visual style: one large accent surface, generous whitespace, single CTA
-// at the bottom. No tipsy animations, no cheerful illustrations — every
-// pixel is doing one job.
+// Five-step onboarding:
+//   1) Welcome
+//   2) Microphone permission
+//   3) Speech recognition permission
+//   4) Enable keyboard + Allow Full Access
+//   5) Engine / API setup
 
 import SwiftUI
 import OSGKeyboardShared
+
+private enum OnboardingPage: Int, CaseIterable {
+    case welcome = 0
+    case microphone
+    case speech
+    case keyboard
+    case api
+
+    static let count = 5
+}
 
 struct OnboardingView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
@@ -38,10 +32,12 @@ struct OnboardingView: View {
             palette.background.ignoresSafeArea()
             VStack(spacing: 0) {
                 Group {
-                    switch page {
-                    case 0: WelcomePage()
-                    case 1: EnableKeyboardPage()
-                    default: APISetupPage(config: config)
+                    switch OnboardingPage(rawValue: page) ?? .welcome {
+                    case .welcome: WelcomePage()
+                    case .microphone: MicPermissionPage()
+                    case .speech: SpeechPermissionPage()
+                    case .keyboard: EnableKeyboardPage()
+                    case .api: APISetupPage(config: config)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -59,12 +55,25 @@ struct OnboardingView: View {
 
     private var pageDots: some View {
         HStack(spacing: 6) {
-            ForEach(0..<3, id: \.self) { i in
+            ForEach(0..<OnboardingPage.count, id: \.self) { i in
                 Capsule()
                     .fill(i == page ? palette.accent : Color.white.opacity(0.18))
                     .frame(width: i == page ? 18 : 6, height: 6)
                     .animation(Motion.quick, value: page)
             }
+        }
+    }
+
+    private var isLastPage: Bool { page == OnboardingPage.api.rawValue }
+
+    private var canAdvance: Bool {
+        switch OnboardingPage(rawValue: page) ?? .welcome {
+        case .welcome, .keyboard, .api:
+            return page != OnboardingPage.api.rawValue || config.isConfigured
+        case .microphone:
+            return AppPermissions.micStatus != .undetermined
+        case .speech:
+            return AppPermissions.speechStatus != .undetermined
         }
     }
 
@@ -88,31 +97,31 @@ struct OnboardingView: View {
 
             Button {
                 withAnimation(Motion.soft) {
-                    if page < 2 { page += 1 }
+                    if isLastPage {
+                        config.hasCompletedOnboarding = true
+                    } else {
+                        page += 1
+                    }
                 }
             } label: {
-                Text(page == 2
-                     ? (config.isConfigured
-                        ? NSLocalizedString("common.done", comment: "")
-                        : NSLocalizedString("common.continue", comment: ""))
+                Text(isLastPage
+                     ? NSLocalizedString("common.done", comment: "")
                      : NSLocalizedString("common.next", comment: ""))
                     .font(TypeStyle.headline)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(
-                        (page == 2 && !config.isConfigured) ? palette.surfaceElevated : palette.accent,
+                        canAdvance ? palette.accent : palette.surfaceElevated,
                         in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
                     )
-                    .foregroundStyle(
-                        (page == 2 && !config.isConfigured) ? palette.textSecondary : palette.textOnAccent
-                    )
+                    .foregroundStyle(canAdvance ? palette.textOnAccent : palette.textSecondary)
             }
             .buttonStyle(.plain)
-            .disabled(page == 2 && !config.isConfigured)
+            .disabled(!canAdvance)
         }
     }
 }
 
-// MARK: - Page 1: Welcome
+// MARK: - Welcome
 
 private struct WelcomePage: View {
     @Environment(\.themePalette) private var palette: ThemePalette
@@ -141,6 +150,14 @@ private struct WelcomePage: View {
             .padding(.horizontal, Spacing.xl)
             PrivacyFootnote()
                 .padding(.top, Spacing.lg)
+            if let url = LegalLinks.privacyPolicyURL {
+                Link(destination: url) {
+                    Text("legal.privacyPolicy")
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.accent)
+                }
+                .padding(.top, Spacing.xs)
+            }
             Spacer()
         }
     }
@@ -151,15 +168,9 @@ private struct PrivacyFootnote: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            footnoteRow(icon: "lock.fill",
-                        title: "privacy.audio.title",
-                        body: "privacy.audio.body")
-            footnoteRow(icon: "wifi",
-                        title: "privacy.network.title",
-                        body: "privacy.network.body")
-            footnoteRow(icon: "keyboard",
-                        title: "privacy.universal.title",
-                        body: "privacy.universal.body")
+            footnoteRow(icon: "lock.fill", title: "privacy.audio.title", body: "privacy.audio.body")
+            footnoteRow(icon: "wifi", title: "privacy.network.title", body: "privacy.network.body")
+            footnoteRow(icon: "keyboard", title: "privacy.universal.title", body: "privacy.universal.body")
         }
         .padding(Spacing.md)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
@@ -170,9 +181,6 @@ private struct PrivacyFootnote: View {
         .padding(.horizontal, Spacing.md)
     }
 
-    // `LocalizedStringKey` (not `String`) so the call-site string
-    // literals are auto-looked-up in Localizable.strings. Passing a
-    // plain `String` would just print the key.
     private func footnoteRow(icon: String, title: LocalizedStringKey, body: LocalizedStringKey) -> some View {
         HStack(alignment: .top, spacing: Spacing.xs) {
             Image(systemName: icon)
@@ -192,7 +200,180 @@ private struct PrivacyFootnote: View {
     }
 }
 
-// MARK: - Page 2: Enable keyboard
+// MARK: - Permission pages
+
+private struct MicPermissionPage: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+    @State private var status = AppPermissions.micStatus
+    @State private var isRequesting = false
+
+    var body: some View {
+        PermissionPageLayout(
+            icon: "mic.fill",
+            title: "onboarding.permission.mic.title",
+            detail: "onboarding.permission.mic.body",
+            status: statusLabel,
+            statusColor: statusColor,
+            primaryTitle: primaryButtonTitle,
+            primaryDisabled: isRequesting || status == .granted,
+            onPrimary: { Task { await request() } },
+            secondaryTitle: status == .denied ? "onboarding.permission.openSettings" : nil,
+            onSecondary: status == .denied ? { AppPermissions.openSystemSettings() } : nil,
+            deniedHint: status == .denied ? "onboarding.permission.mic.deniedHint" : nil
+        )
+        .onAppear { status = AppPermissions.micStatus }
+    }
+
+    private var statusLabel: LocalizedStringKey {
+        switch status {
+        case .undetermined: return "onboarding.permission.status.undetermined"
+        case .granted: return "onboarding.permission.status.granted"
+        case .denied: return "onboarding.permission.status.denied"
+        }
+    }
+
+    private var statusColor: Color {
+        switch status {
+        case .granted: return palette.success
+        case .denied: return palette.warning
+        case .undetermined: return palette.textTertiary
+        }
+    }
+
+    private var primaryButtonTitle: LocalizedStringKey {
+        status == .granted ? "onboarding.permission.status.granted" : "onboarding.permission.mic.allow"
+    }
+
+    private func request() async {
+        isRequesting = true
+        _ = await AppPermissions.requestMicrophone()
+        status = AppPermissions.micStatus
+        isRequesting = false
+    }
+}
+
+private struct SpeechPermissionPage: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+    @State private var isRequesting = false
+
+    var body: some View {
+        PermissionPageLayout(
+            icon: "waveform.badge.mic",
+            title: "onboarding.permission.speech.title",
+            detail: "onboarding.permission.speech.body",
+            status: statusLabel,
+            statusColor: statusColor,
+            primaryTitle: primaryButtonTitle,
+            primaryDisabled: isRequesting || AppPermissions.speechStatus == .granted,
+            onPrimary: { Task { await request() } },
+            secondaryTitle: speechDenied ? "onboarding.permission.openSettings" : nil,
+            onSecondary: speechDenied ? { AppPermissions.openSystemSettings() } : nil,
+            deniedHint: speechDenied ? "onboarding.permission.speech.deniedHint" : nil
+        )
+    }
+
+    private var speechDenied: Bool {
+        switch AppPermissions.speechStatus {
+        case .denied, .restricted: return true
+        default: return false
+        }
+    }
+
+    private var statusLabel: LocalizedStringKey {
+        switch AppPermissions.speechStatus {
+        case .undetermined: return "onboarding.permission.status.undetermined"
+        case .granted: return "onboarding.permission.status.granted"
+        case .denied, .restricted: return "onboarding.permission.status.denied"
+        }
+    }
+
+    private var statusColor: Color {
+        switch AppPermissions.speechStatus {
+        case .granted: return palette.success
+        case .denied, .restricted: return palette.warning
+        case .undetermined: return palette.textTertiary
+        }
+    }
+
+    private var primaryButtonTitle: LocalizedStringKey {
+        AppPermissions.speechStatus == .granted
+            ? "onboarding.permission.status.granted"
+            : "onboarding.permission.speech.allow"
+    }
+
+    private func request() async {
+        isRequesting = true
+        _ = await AppPermissions.requestSpeechRecognition()
+        isRequesting = false
+    }
+}
+
+private struct PermissionPageLayout: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
+    let icon: String
+    let title: LocalizedStringKey
+    let detail: LocalizedStringKey
+    let status: LocalizedStringKey
+    let statusColor: Color
+    let primaryTitle: LocalizedStringKey
+    let primaryDisabled: Bool
+    let onPrimary: () -> Void
+    var secondaryTitle: LocalizedStringKey? = nil
+    var onSecondary: (() -> Void)? = nil
+    var deniedHint: LocalizedStringKey? = nil
+
+    var body: some View {
+        VStack(spacing: Spacing.lg) {
+            Spacer()
+            Image(systemName: icon)
+                .font(.system(size: 64, weight: .light))
+                .foregroundStyle(palette.accent)
+            VStack(spacing: Spacing.sm) {
+                Text(title)
+                    .font(TypeStyle.title2)
+                    .foregroundStyle(palette.textPrimary)
+                Text(detail)
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Spacing.lg)
+            }
+            HStack(spacing: 6) {
+                Circle().fill(statusColor).frame(width: 8, height: 8)
+                Text(status)
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+            }
+            if let deniedHint {
+                Text(deniedHint)
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.warning)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Spacing.lg)
+            }
+            VStack(spacing: Spacing.xs) {
+                Button(action: onPrimary) {
+                    Text(primaryTitle)
+                        .primaryButton()
+                }
+                .buttonStyle(.plain)
+                .disabled(primaryDisabled)
+                if let secondaryTitle, let onSecondary {
+                    Button(action: onSecondary) {
+                        Text(secondaryTitle)
+                            .secondaryButton()
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, Spacing.md)
+            Spacer()
+        }
+    }
+}
+
+// MARK: - Enable keyboard
 
 private struct EnableKeyboardPage: View {
     @Environment(\.themePalette) private var palette: ThemePalette
@@ -207,6 +388,11 @@ private struct EnableKeyboardPage: View {
                 Text("onboarding.enable.title")
                     .font(TypeStyle.title2)
                     .foregroundStyle(palette.textPrimary)
+                Text("onboarding.enable.fullAccessNote")
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Spacing.lg)
             }
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 step(num: 1, text: NSLocalizedString("onboarding.enable.step1", comment: ""))
@@ -218,13 +404,12 @@ private struct EnableKeyboardPage: View {
             .padding(.horizontal, Spacing.md)
 
             Button {
-                if let url = URL(string: UIApplication.openSettingsURLString) {
-                    UIApplication.shared.open(url)
-                }
+                AppPermissions.openSystemSettings()
             } label: {
                 Label(LocalizedStringKey("onboarding.enable.openSettings"), systemImage: "arrow.up.right.square")
                     .primaryButton()
             }
+            .buttonStyle(.plain)
             .padding(.horizontal, Spacing.md)
             Spacer()
         }
@@ -245,7 +430,7 @@ private struct EnableKeyboardPage: View {
     }
 }
 
-// MARK: - Page 3: API setup
+// MARK: - API setup
 
 private struct APISetupPage: View {
     @Environment(\.themePalette) private var palette: ThemePalette
@@ -267,20 +452,15 @@ private struct APISetupPage: View {
                 .padding(.horizontal, Spacing.md)
                 .padding(.top, Spacing.lg)
 
-                // Same Engine picker as Settings — see EnginePickerSection.
                 EnginePickerSection(config: config)
                     .padding(.horizontal, Spacing.md)
 
                 if config.engineMode == "cloud" {
                     ProviderPickerSection(config: config)
                         .padding(.horizontal, Spacing.md)
-
                     APISettingsCard(config: config)
                         .padding(.horizontal, Spacing.md)
                 } else {
-                    // Local path: no LLM, no API key needed. Show a short
-                    // confirmation so the user understands "no further
-                    // setup required".
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         HStack(spacing: Spacing.sm) {
                             Image(systemName: "checkmark.seal.fill")

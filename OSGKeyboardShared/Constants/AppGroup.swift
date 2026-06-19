@@ -12,18 +12,15 @@ public enum AppGroup {
 
     /// Whether the App Group container is available on this device.
     ///
-    /// Cached at first read — the underlying `UserDefaults(suiteName:)`
-    /// call is cheap, but main-app startup and every keyboard-extension
-    /// read hit it, so we memoize the result.
-    ///
-    /// Production code paths MUST go through `isAvailable` first and
-    /// surface a friendly error view (e.g. `AppGroupErrorView`) on the
-    /// main app, or the keyboard extension's persisted-locale load.
-    /// Calling `defaults` directly when the group is missing will trip
-    /// the DEBUG `fatalError` below — that path is reserved for
-    /// developer-only escape hatches and intentional debugging.
+    /// Checks both `UserDefaults(suiteName:)` *and* the on-disk container.
+    /// The suite alone can appear to open while the container is still `(null)`
+    /// when provisioning is misconfigured — that case produces the
+    /// `CFPrefsPlistSource … Container: (null)` console warning.
     public static let isAvailable: Bool = {
-        UserDefaults(suiteName: identifier) != nil
+        guard UserDefaults(suiteName: identifier) != nil else { return false }
+        return FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: identifier
+        ) != nil
     }()
 
     /// Shared UserDefaults instance for cross-process config.

@@ -114,72 +114,111 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
     private let lock = OSAllocatedUnfairLock()
     private var analyzer: SpeechAnalyzer?
     private var analyzerTask: Task<Void, Never>?
+    private var analyzerFinished = false
+
+    /// Canonical capture format: 16 kHz mono Float32 from `AudioCaptureService`
+    /// / `PreviewASRController` before it reaches SpeechAnalyzer.
+    private static let captureFormat = AVAudioFormat(
+        commonFormat: .pcmFormatFloat32,
+        sampleRate: 16_000,
+        channels: 1,
+        interleaved: false
+    )!
 
     func transcribe(
         stream: AsyncStream<AudioBufferSnapshot>,
         locale: Locale
     ) -> AsyncStream<ASREvent> {
         AsyncStream { continuation in
-            // SpeechAnalyzer is always fully on-device.
             continuation.yield(.capability(onDeviceSupported: true))
-
-            let transcriber = DictationTranscriber(locale: locale, preset: .progressiveShortDictation)
-            let newAnalyzer = SpeechAnalyzer(modules: [transcriber])
-            self.lock.withLock { self.analyzer = newAnalyzer }
-
-            // iOS 26's `DictationTranscriber` requires **Int16** PCM
-            // (precondition `"Audio sample data must be 16-bit signed
-            // integers"` — the legacy recognizer used Float32 at this
-            // boundary; `SpeechAnalyzer` is strict Int16). 16 kHz mono, Int16,
-            // interleaved — the canonical layout Apple's Speech
-            // framework examples use.
-            let audioFormat = AVAudioFormat(
-                commonFormat: .pcmFormatInt16,
-                sampleRate: 16_000,
-                channels: 1,
-                interleaved: true
-            )!
 
             let task = Task { [weak self] in
                 guard let self else { return }
-                do {
-                    try await newAnalyzer.prepareToAnalyze(in: audioFormat)
-
-                    let inputStream = self.makeInputStream(from: stream, format: audioFormat)
-
-                    // Feed audio in a child task so we can concurrently
-                    // iterate `transcriber.results` on the outer task.
-                    // After the audio stream ends, finalize so the results
-                    // sequence can drain and complete.
-                    let feedTask = Task {
-                        do {
-                            try await newAnalyzer.start(inputSequence: inputStream)
-                            try await newAnalyzer.finalizeAndFinishThroughEndOfInput()
-                        } catch {}
+                self.lock.withLock { self.analyzerFinished = false }
+                defer {
+                    self.lock.withLock {
+                        self.analyzer = nil
+                        self.analyzerTask = nil
+                        self.analyzerFinished = true
                     }
-                    defer { feedTask.cancel() }
+                }
 
-                    var lastText = ""
+                do {
+                    guard let resolvedLocale = await DictationTranscriber.supportedLocale(equivalentTo: locale) else {
+                        Self.debug("locale unsupported: \(locale.identifier(.bcp47))")
+                        continuation.yield(.error("当前系统未分配可用语音语言模型，请稍后重试或切换语言"))
+                        continuation.finish()
+                        return
+                    }
+                    let transcriber = DictationTranscriber(locale: resolvedLocale, preset: .progressiveShortDictation)
                     do {
+                        try await Self.prepareAssetsIfNeeded(for: transcriber, locale: resolvedLocale)
+                    } catch {
+                        Self.debug("asset prepare failed: \(error.localizedDescription)")
+                        continuation.yield(.error("语音语言资源未就绪，请稍后重试"))
+                        continuation.finish()
+                        return
+                    }
+
+                    let newAnalyzer = SpeechAnalyzer(modules: [transcriber])
+                    self.lock.withLock { self.analyzer = newAnalyzer }
+
+                    guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
+                        compatibleWith: [transcriber],
+                        considering: Self.captureFormat
+                    ) else {
+                        continuation.yield(.error("当前设备不支持该语音输入格式"))
+                        continuation.finish()
+                        return
+                    }
+
+                    try await newAnalyzer.prepareToAnalyze(in: analyzerFormat)
+
+                    let inputStream = self.makeInputStream(from: stream, analyzerFormat: analyzerFormat)
+
+                    // Apple recommends consuming `transcriber.results` concurrently
+                    // while `analyzeSequence` drains the input stream.
+                    let resultsTask = Task<String, Error> {
+                        var lastText = ""
                         for try await result in transcriber.results {
                             if Task.isCancelled { break }
-                            // `result.text` is an AttributedString; extract plain text.
-                            let text = result.text.characters.map(String.init).joined()
+                            let text = String(result.text.characters)
                             guard !text.isEmpty, text != lastText else { continue }
                             lastText = text
                             continuation.yield(.partial(text))
                         }
-                    } catch {
-                        // Results sequence threw — likely cancellation.
+                        return lastText
                     }
 
-                    if !Task.isCancelled {
-                        continuation.yield(.final(lastText))
+                    let lastSampleTime = try await newAnalyzer.analyzeSequence(inputStream)
+
+                    if let lastSampleTime {
+                        try await newAnalyzer.finalizeAndFinish(through: lastSampleTime)
+                    } else {
+                        try await newAnalyzer.cancelAndFinishNow()
+                    }
+
+                    let lastText: String
+                    do {
+                        lastText = try await resultsTask.value
+                    } catch {
+                        Self.debug("transcriber results failed: \(error.localizedDescription)")
+                        continuation.yield(.error(error.localizedDescription))
+                        continuation.finish()
+                        return
+                    }
+
+                    let trimmed = lastText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if trimmed.isEmpty {
+                        continuation.yield(.error("未识别到语音内容，请重试"))
+                    } else {
+                        continuation.yield(.final(trimmed))
                     }
                     continuation.finish()
                 } catch is CancellationError {
                     continuation.finish()
                 } catch {
+                    Self.debug("SpeechAnalyzer failed: \(error.localizedDescription)")
                     continuation.yield(.error(error.localizedDescription))
                     continuation.finish()
                 }
@@ -192,69 +231,90 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
         }
     }
 
-    func cancel() {
-        let (task, currentAnalyzer) = lock.withLock { () -> (Task<Void, Never>?, SpeechAnalyzer?) in
-            let t = analyzerTask
-            let a = analyzer
-            analyzerTask = nil
-            analyzer = nil
-            return (t, a)
+    private static func debug(_ message: String) {
+        #if DEBUG
+        print("🎙️[ASRService] \(message)")
+        #endif
+    }
+
+    private static func prepareAssetsIfNeeded(
+        for transcriber: DictationTranscriber,
+        locale: Locale
+    ) async throws {
+        do {
+            _ = try await AssetInventory.reserve(locale: locale)
+        } catch {
+            // Reservation may already exist or slots are full; continue.
         }
-        task?.cancel()
-        if let a = currentAnalyzer {
-            Task { await a.cancelAndFinishNow() }
+        if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
+            try await request.downloadAndInstall()
         }
     }
 
-    /// Maps the `AudioBufferSnapshot` stream into the `AnalyzerInput` stream
-    /// that `SpeechAnalyzer` consumes.
-    ///
-    /// `AudioBufferSnapshot.samples` is `[Float]` (the transport format
-    /// both `AudioCaptureService` and `PreviewASRController` produce —
-    /// Float32 is what `AVAudioEngine` gives us at the hardware rate
-    /// and we already downsample to 16 kHz mono before this point).
-    /// iOS 26's `DictationTranscriber` requires **Int16** PCM at the
-    /// `AnalyzerInput` boundary, so we convert per-snapshot here.
-    ///
-    /// The conversion is the textbook `[-1.0, 1.0]` × 32767 + clip +
-    /// cast. For a 16 kHz mono feed the loop is ~16k iters/sec —
-    /// well under any audio-thread budget — so a simple scalar loop
-    /// beats pulling in `vDSP` (which would also need a scratch
-    /// buffer the audio thread can't easily allocate).
+    func cancel() {
+        let (task, currentAnalyzer, finished) = lock.withLock { () -> (Task<Void, Never>?, SpeechAnalyzer?, Bool) in
+            let t = analyzerTask
+            let a = analyzer
+            let f = analyzerFinished
+            analyzerTask = nil
+            analyzer = nil
+            return (t, a, f)
+        }
+        task?.cancel()
+        guard !finished, let currentAnalyzer else { return }
+        Task { await currentAnalyzer.cancelAndFinishNow() }
+    }
+
+    /// Maps 16 kHz Float32 snapshots into `AnalyzerInput` using the format
+    /// returned by `bestAvailableAudioFormat(compatibleWith:considering:)`.
     private func makeInputStream(
         from stream: AsyncStream<AudioBufferSnapshot>,
-        format: AVAudioFormat
+        analyzerFormat: AVAudioFormat
     ) -> AsyncStream<AnalyzerInput> {
         AsyncStream { continuation in
             Task {
                 for await snap in stream {
                     guard !snap.samples.isEmpty else { continue }
-                    let capacity = AVAudioFrameCount(snap.samples.count)
-                    guard let pcm = AVAudioPCMBuffer(
-                        pcmFormat: format,
-                        frameCapacity: capacity
-                    ) else { continue }
-                    pcm.frameLength = capacity
-
-                    // For a 1-channel Int16 buffer (interleaved or not —
-                    // single channel, so the data layout is identical),
-                    // `int16ChannelData?[0]` gives us the raw sample
-                    // pointer. Clip on overflow to avoid wraparound
-                    // (a Float like 1.5 would otherwise become a
-                    // negative Int16 after the implicit truncation).
-                    if let dst = pcm.int16ChannelData?[0] {
-                        snap.samples.withUnsafeBufferPointer { src in
-                            ASRServiceFactory.convertFloat32ToInt16(
-                                source: src.baseAddress,
-                                sourceCount: src.count,
-                                destination: dst
-                            )
-                        }
+                    guard let pcm = Self.makeAnalyzerPCMBuffer(from: snap, format: analyzerFormat) else {
+                        continue
                     }
                     continuation.yield(AnalyzerInput(buffer: pcm))
                 }
                 continuation.finish()
             }
         }
+    }
+
+    private static func makeAnalyzerPCMBuffer(
+        from snap: AudioBufferSnapshot,
+        format: AVAudioFormat
+    ) -> AVAudioPCMBuffer? {
+        let capacity = AVAudioFrameCount(snap.samples.count)
+        guard capacity > 0,
+              let pcm = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: capacity) else {
+            return nil
+        }
+        pcm.frameLength = capacity
+
+        switch format.commonFormat {
+        case .pcmFormatInt16:
+            guard let dst = pcm.int16ChannelData?[0] else { return nil }
+            snap.samples.withUnsafeBufferPointer { src in
+                ASRServiceFactory.convertFloat32ToInt16(
+                    source: src.baseAddress,
+                    sourceCount: src.count,
+                    destination: dst
+                )
+            }
+        case .pcmFormatFloat32:
+            guard let dst = pcm.floatChannelData?[0] else { return nil }
+            snap.samples.withUnsafeBufferPointer { src in
+                guard let base = src.baseAddress else { return }
+                memcpy(dst, base, src.count * MemoryLayout<Float>.stride)
+            }
+        default:
+            return nil
+        }
+        return pcm
     }
 }
