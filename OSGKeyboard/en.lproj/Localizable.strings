@@ -7,11 +7,11 @@
 "onboarding.welcome.subtitle" = "Your open-source voice keyboard";
 "onboarding.enable.fullAccessNote" = "Full Access lets the keyboard reach the microphone and your LLM API. We never log what you type.";
 "onboarding.permission.mic.title" = "Microphone access";
-"onboarding.permission.mic.body" = "Required for voice input. Audio is processed on your device for transcription.";
+"onboarding.permission.mic.body" = "Voice input requires your permission to use the microphone.";
 "onboarding.permission.mic.allow" = "Allow microphone";
 "onboarding.permission.mic.deniedHint" = "Microphone was denied. Open Settings to enable it, or tap Next to continue.";
 "onboarding.permission.speech.title" = "Speech recognition";
-"onboarding.permission.speech.body" = "On-device speech recognition turns your voice into text. Audio never leaves your device.";
+"onboarding.permission.speech.body" = "On-device speech recognition turns your voice into text.";
 "onboarding.permission.speech.allow" = "Allow speech recognition";
 "onboarding.permission.speech.deniedHint" = "Speech recognition was denied. Open Settings to enable it, or tap Next to continue.";
 "onboarding.permission.openSettings" = "Open Settings";
@@ -43,12 +43,12 @@
 "common.newline" = "Return";
 
 /* Privacy footnote (onboarding welcome page) */
-"privacy.audio.title" = "Audio stays on device";
-"privacy.audio.body" = "Transcribed locally with Apple’s speech engine.";
-"privacy.network.title" = "Only the polished text is sent";
-"privacy.network.body" = "Sent to your chosen LLM to add structure & punctuation.";
+"privacy.audio.title" = "On-device transcription";
+"privacy.audio.body" = "Powered by the on-device iOS speech engine.";
+"privacy.network.title" = "Automatic text polish";
+"privacy.network.body" = "AI formats and polishes your text automatically.";
 "privacy.universal.title" = "Works everywhere";
-"privacy.universal.body" = "WeChat, Notes, Mail, ChatGPT, Claude, Cursor — anywhere a keyboard appears.";
+"privacy.universal.body" = "Chat, email, vibe coding — just speak.";
 
 /* Home */
 "home.status.ready" = "Ready";
@@ -184,7 +184,7 @@
 
 /* Home · Flow session */
 "home.flow.active" = "Voice session active";
-"home.flow.label" = "Voice session";
+"home.flow.label" = "Ready";
 "home.flow.inactive" = "Voice session inactive";
 "home.flow.hint" = "Voice session starts automatically. Switch to any app and tap the keyboard mic to dictate.";
 "home.flow.starting" = "Starting voice session…";

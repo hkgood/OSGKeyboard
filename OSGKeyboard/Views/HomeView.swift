@@ -42,8 +42,8 @@ struct HomeView: View {
 
                     engineStatusLine
                         .padding(.horizontal, Spacing.lg)
-                        .padding(.top, Spacing.md)
-                        .padding(.bottom, Spacing.xs)
+                        .padding(.top, Spacing.xl)
+                        .padding(.bottom, Spacing.sm)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
@@ -81,7 +81,7 @@ struct HomeView: View {
             Image("osglogo")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 120, height: 34)
+                .frame(width: 144, height: 41)
                 .accessibilityHidden(true)
 
             statusCapsule
@@ -92,13 +92,6 @@ struct HomeView: View {
 
     private var statusCapsule: some View {
         HStack(spacing: Spacing.sm) {
-            Text(statusLine)
-                .font(TypeStyle.status)
-                .foregroundStyle(palette.textSecondary)
-                .fixedSize()
-
-            capsuleDivider
-
             flowCapsuleSegment
 
             if flowManager.isActive {
@@ -123,12 +116,6 @@ struct HomeView: View {
                 .stroke(palette.divider, lineWidth: 0.5)
         )
         .animation(Motion.soft, value: flowManager.isActive)
-    }
-
-    private var capsuleDivider: some View {
-        Circle()
-            .fill(palette.dividerStrong)
-            .frame(width: 3, height: 3)
     }
 
     @ViewBuilder
@@ -163,12 +150,6 @@ struct HomeView: View {
         sessionIsLive
             ? palette.accentMuted.opacity(0.55)
             : palette.surface.opacity(0.88)
-    }
-
-    private var statusLine: String {
-        config.isConfigured
-            ? NSLocalizedString("home.status.ready", comment: "")
-            : NSLocalizedString("home.status.setupIncomplete", comment: "")
     }
 
     // MARK: - Flow extras (warnings / hint)

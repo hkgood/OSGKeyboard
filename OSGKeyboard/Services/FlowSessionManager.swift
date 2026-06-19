@@ -35,6 +35,8 @@ final class FlowSessionManager: ObservableObject {
     private var asrTask: Task<Void, Never>?
     private var currentPartial = ""
     private var lastFinal = ""
+    /// True while the host app scene is `.active` — drives foreground renewal.
+    private var isAppForeground = false
 
     init() {
         Task { @MainActor [weak self] in
@@ -169,6 +171,24 @@ final class FlowSessionManager: ObservableObject {
         scheduleExpiry(after: duration)
     }
 
+    /// Called from `OSGKeyboardApp` when `scenePhase` changes.
+    func setAppForeground(_ foreground: Bool) {
+        isAppForeground = foreground
+        if foreground, isActive {
+            renewSessionIfNeededWhileForeground()
+        }
+    }
+
+    /// Extend the session before it expires while the host app stays in foreground.
+    private func renewSessionIfNeededWhileForeground() {
+        guard isActive, isAppForeground else { return }
+        guard let remaining = FlowSessionBridge.remainingSessionDuration() else { return }
+        let threshold = FlowSessionKeys.defaultSessionDuration * 0.25
+        guard remaining < threshold else { return }
+        extendSession()
+        debug("Flow session renewed in foreground (\(Int(threshold))s threshold)")
+    }
+
     // MARK: - Session start
 
     private func startSessionAsync(duration: TimeInterval) async {
@@ -217,7 +237,7 @@ final class FlowSessionManager: ObservableObject {
         pollingTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 self?.handleKeyboardSignal()
-                try? await Task.sleep(nanoseconds: 100_000_000)
+                try? await Task.sleep(nanoseconds: 50_000_000)
             }
         }
     }
@@ -424,6 +444,7 @@ final class FlowSessionManager: ObservableObject {
         heartbeatTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 FlowSessionBridge.writeHeartbeat()
+                self?.renewSessionIfNeededWhileForeground()
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 guard self?.isActive == true else { break }
             }

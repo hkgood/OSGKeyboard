@@ -27,12 +27,12 @@
 "common.newline" = "换行";
 
 /* Privacy footnote (onboarding welcome page) */
-"privacy.audio.title" = "音频不出本机";
-"privacy.audio.body" = "由 Apple 端侧引擎转录。";
-"privacy.network.title" = "仅发送润色后文字";
-"privacy.network.body" = "仅向所选 LLM 发送润色后文字,用于整理结构和标点。";
+"privacy.audio.title" = "支持本地转写";
+"privacy.audio.body" = "支持 iOS 本地引擎转录";
+"privacy.network.title" = "文字自动润色";
+"privacy.network.body" = "通过 AI 自动对文字进行排版润色";
 "privacy.universal.title" = "处处可用";
-"privacy.universal.body" = "微信、备忘录、邮件、ChatGPT、Claude、Cursor — 任何键盘出现的地方。";
+"privacy.universal.body" = "聊天、邮件、Vibe Coding 动嘴就行";
 
 /* Home */
 "home.status.ready" = "就绪";
@@ -127,7 +127,9 @@
 "keyboard.tapToTalkA11y" = "点按说话";
 
 /* Flow session (keyboard) */
-"keyboard.flow.sessionInactive" = "请打开 OSGKeyboard 启动语音会话";
+"keyboard.flow.sessionInactive" = "语音会话未启动";
+"keyboard.flow.start" = "启动";
+"keyboard.flow.startA11y" = "启动语音会话";
 "keyboard.flow.sessionExpired" = "语音会话已结束，请打开 OSGKeyboard 重新启动";
 "keyboard.flow.startingSession" = "正在启动语音会话…";
 "keyboard.flow.transcribing" = "识别中…";

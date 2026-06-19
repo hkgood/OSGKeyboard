@@ -66,6 +66,8 @@ public final class KeyboardViewController: UIInputViewController {
     private var flowSessionMonitorTask: Task<Void, Never>?
     private var flowSessionDarwinObserver: FlowSessionDarwinObserver?
     private var isAwaitingFlowResult = false
+    private var lastFlowAutoStartAttempt: TimeInterval = 0
+    private static let flowAutoStartCooldown: TimeInterval = 20
 
     // MARK: - Lifecycle
 
@@ -121,6 +123,7 @@ public final class KeyboardViewController: UIInputViewController {
         state.endRecording        = { [weak self] in self?.pressEnded() }
         state.tapMic              = { [weak self] in self?.toggleRecording() }
         state.openSettings        = { [weak self] in self?.openHostApp() }
+        state.startFlowSession    = { [weak self] in self?.beginFlowStart() }
         state.setMode             = { [weak self] m in self?.persistMode(m) }
         state.setLocale           = { [weak self] l in self?.persistLocale(l) }
         state.setEngineMode       = { [weak self] m in self?.persistEngineMode(m) }
@@ -199,6 +202,24 @@ public final class KeyboardViewController: UIInputViewController {
             }
         }
         wasFlowSessionActive = active
+
+        if !active {
+            maybeAutoStartFlowSession()
+        }
+    }
+
+    /// When the host session is down, proactively jump to the app to start it.
+    private func maybeAutoStartFlowSession() {
+        guard !FlowSessionBridge.isSessionActive() else { return }
+        guard !isPendingFlowStart, !isFlowRecording, !isAwaitingFlowResult else { return }
+        guard state.mode != .off else { return }
+        guard hasFullAccess, AppGroup.isAvailable else { return }
+        guard case .idle = state.phase else { return }
+
+        let now = Date().timeIntervalSince1970
+        guard now - lastFlowAutoStartAttempt >= Self.flowAutoStartCooldown else { return }
+        lastFlowAutoStartAttempt = now
+        beginFlowStart()
     }
 
     private func showFlowSessionExpiredHint() {
@@ -303,6 +324,7 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     private func beginFlowStart() {
+        guard !isPendingFlowStart else { return }
         isPendingFlowStart = true
         isFlowRecording = false
         flowStartDeadline = Date().timeIntervalSince1970 + FlowWatchdog.startTimeout

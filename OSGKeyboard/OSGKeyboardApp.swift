@@ -35,6 +35,9 @@ struct OSGKeyboardApp: App {
                 }
             }
             .environmentObject(flowManager)
+            .onAppear {
+                flowManager.setAppForeground(scenePhase == .active)
+            }
             .onOpenURL { url in
                 guard url.scheme == "osgkeyboard" else { return }
                 switch url.host {
@@ -56,6 +59,7 @@ struct OSGKeyboardApp: App {
                 if done { flowManager.autoStartIfNeeded() }
             }
             .onChange(of: scenePhase) { _, phase in
+                flowManager.setAppForeground(phase == .active)
                 guard phase == .active, AppGroup.isAvailable, config.hasCompletedOnboarding else { return }
                 if flowManager.isActive {
                     flowManager.extendSession()

@@ -25,6 +25,14 @@ private final class FlowCaptureStreamRelay: @unchecked Sendable {
         lock.withLock { self.continuation = continuation }
     }
 
+    func replay(_ snapshots: [AudioBufferSnapshot]) {
+        lock.withLock {
+            for snapshot in snapshots {
+                continuation?.yield(snapshot)
+            }
+        }
+    }
+
     func yield(_ snapshot: AudioBufferSnapshot) {
         lock.withLock { continuation?.yield(snapshot) }
     }
@@ -33,6 +41,34 @@ private final class FlowCaptureStreamRelay: @unchecked Sendable {
         lock.withLock {
             continuation?.finish()
             continuation = nil
+        }
+    }
+}
+
+/// Rolling pre-roll while utterance gate is closed (~400 ms at typical tap rates).
+private final class FlowPrerollStore: @unchecked Sendable {
+    private let lock = OSAllocatedUnfairLock()
+    private var snapshots: [AudioBufferSnapshot] = []
+    private let maxCount: Int
+
+    init(maxCount: Int = 6) {
+        self.maxCount = maxCount
+    }
+
+    func append(_ snapshot: AudioBufferSnapshot) {
+        lock.withLock {
+            snapshots.append(snapshot)
+            if snapshots.count > maxCount {
+                snapshots.removeFirst(snapshots.count - maxCount)
+            }
+        }
+    }
+
+    func drain() -> [AudioBufferSnapshot] {
+        lock.withLock {
+            let drained = snapshots
+            snapshots.removeAll()
+            return drained
         }
     }
 }
@@ -120,6 +156,7 @@ public final class FlowContinuousCapture {
 
     private let audioEngine = AVAudioEngine()
     private let streamRelay = FlowCaptureStreamRelay()
+    private let prerollStore = FlowPrerollStore()
     private let levelStore = FlowLevelStore(barCount: FlowCaptureConstants.levelBarCount)
     private let isUtteranceActive = OSAllocatedUnfairLock(initialState: false)
 
@@ -170,6 +207,7 @@ public final class FlowContinuousCapture {
         if !didInstallTap {
             let utteranceFlag = isUtteranceActive
             let relay = streamRelay
+            let preroll = prerollStore
             let levels = levelStore
             let tap = Self.makeAudioTapBlock(
                 converter: converter,
@@ -177,6 +215,7 @@ public final class FlowContinuousCapture {
                 hwFormat: hwFormat,
                 utteranceFlag: utteranceFlag,
                 levelStore: levels,
+                prerollStore: preroll,
                 streamRelay: relay
             )
             inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat, block: tap)
@@ -213,9 +252,12 @@ public final class FlowContinuousCapture {
 
     /// Begin forwarding downsampled buffers to ASR for one utterance.
     public func beginUtterance() -> AsyncStream<AudioBufferSnapshot> {
-        isUtteranceActive.withLock { $0 = true }
         let (stream, continuation) = AsyncStream<AudioBufferSnapshot>.makeStream()
+        // Bind the consumer before opening the gate so early tap frames
+        // are not dropped on the floor.
         streamRelay.bind(continuation)
+        streamRelay.replay(prerollStore.drain())
+        isUtteranceActive.withLock { $0 = true }
         return stream
     }
 
@@ -241,12 +283,11 @@ public final class FlowContinuousCapture {
         hwFormat: AVAudioFormat,
         utteranceFlag: OSAllocatedUnfairLock<Bool>,
         levelStore: FlowLevelStore,
+        prerollStore: FlowPrerollStore,
         streamRelay: FlowCaptureStreamRelay
     ) -> @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void {
         return { buffer, _ in
             levelStore.update(from: buffer, barCount: FlowCaptureConstants.levelBarCount)
-
-            guard utteranceFlag.withLock({ $0 }) else { return }
 
             let outFrames = AVAudioFrameCount(
                 Double(buffer.frameLength) * targetFormat.sampleRate / hwFormat.sampleRate
@@ -264,7 +305,12 @@ public final class FlowContinuousCapture {
 
             let snapshot = AudioBufferSnapshot(buffer: outBuffer)
             guard !snapshot.samples.isEmpty else { return }
-            streamRelay.yield(snapshot)
+
+            if utteranceFlag.withLock({ $0 }) {
+                streamRelay.yield(snapshot)
+            } else {
+                prerollStore.append(snapshot)
+            }
         }
     }
 }

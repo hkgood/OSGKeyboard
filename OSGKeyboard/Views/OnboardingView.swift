@@ -184,6 +184,11 @@ private struct OnboardingHeroIcon: View {
     }
 }
 
+private enum OnboardingLayoutMetrics {
+    /// Matches welcome page: logo → tagline, and subtitle → next block.
+    static let heroTextGap: CGFloat = Spacing.hero
+}
+
 // MARK: - Welcome
 
 private struct WelcomePage: View {
@@ -209,11 +214,11 @@ private struct WelcomePage: View {
             }
             .multilineTextAlignment(.center)
             .padding(.horizontal, Spacing.xl)
-            .padding(.top, Spacing.hero)
+            .padding(.top, OnboardingLayoutMetrics.heroTextGap)
 
             PrivacyFootnote()
                 .padding(.horizontal, Spacing.xl)
-                .padding(.top, Spacing.hero)
+                .padding(.top, OnboardingLayoutMetrics.heroTextGap)
 
             if let url = LegalLinks.privacyPolicyURL {
                 Link(destination: url) {
@@ -388,12 +393,12 @@ private struct PermissionPageLayout: View {
     var deniedHint: LocalizedStringKey? = nil
 
     var body: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: 0) {
             Spacer()
 
             OnboardingHeroIcon(systemName: icon, circleSize: 96, iconSize: 40)
 
-            VStack(spacing: Spacing.sm) {
+            VStack(spacing: Spacing.xs) {
                 Text(title)
                     .font(TypeStyle.title2)
                     .foregroundStyle(palette.textPrimary)
@@ -403,6 +408,7 @@ private struct PermissionPageLayout: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Spacing.xl)
             }
+            .padding(.top, OnboardingLayoutMetrics.heroTextGap)
 
             HStack(spacing: 6) {
                 Circle().fill(statusColor).frame(width: 8, height: 8)
@@ -410,6 +416,7 @@ private struct PermissionPageLayout: View {
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
             }
+            .padding(.top, OnboardingLayoutMetrics.heroTextGap)
 
             if let deniedHint {
                 Text(deniedHint)
@@ -417,6 +424,7 @@ private struct PermissionPageLayout: View {
                     .foregroundStyle(palette.warning)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Spacing.xl)
+                    .padding(.top, Spacing.md)
             }
 
             VStack(spacing: Spacing.sm) {
@@ -436,6 +444,7 @@ private struct PermissionPageLayout: View {
                 }
             }
             .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.xl)
 
             Spacer()
         }
@@ -448,12 +457,12 @@ private struct EnableKeyboardPage: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     var body: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: 0) {
             Spacer()
 
             OnboardingHeroIcon(systemName: "keyboard.fill", circleSize: 96, iconSize: 40)
 
-            VStack(spacing: Spacing.sm) {
+            VStack(spacing: Spacing.xs) {
                 Text("onboarding.enable.title")
                     .font(TypeStyle.title2)
                     .foregroundStyle(palette.textPrimary)
@@ -463,6 +472,7 @@ private struct EnableKeyboardPage: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Spacing.lg)
             }
+            .padding(.top, OnboardingLayoutMetrics.heroTextGap)
 
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 step(num: 1, text: NSLocalizedString("onboarding.enable.step1", comment: ""))
@@ -472,7 +482,7 @@ private struct EnableKeyboardPage: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.xl)
-            .padding(.top, Spacing.sm)
+            .padding(.top, OnboardingLayoutMetrics.heroTextGap)
 
             Button {
                 AppPermissions.openSystemSettings()

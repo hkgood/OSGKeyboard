@@ -7,11 +7,11 @@
 "onboarding.welcome.subtitle" = "你的开源语音输入法";
 "onboarding.enable.fullAccessNote" = "完全访问用于麦克风与 API 配置读取。我们不会记录或上传你的击键内容。";
 "onboarding.permission.mic.title" = "麦克风权限";
-"onboarding.permission.mic.body" = "语音输入需要麦克风。音频在设备端转录，不会上传原始录音。";
+"onboarding.permission.mic.body" = "语音输入需要您授予麦克风权限";
 "onboarding.permission.mic.allow" = "允许麦克风";
 "onboarding.permission.mic.deniedHint" = "麦克风被拒绝。可前往设置开启，或点「下一步」继续。";
 "onboarding.permission.speech.title" = "语音识别权限";
-"onboarding.permission.speech.body" = "端侧语音识别将语音转为文字。音频不会离开你的设备。";
+"onboarding.permission.speech.body" = "端侧语音识别将语音转为文字。";
 "onboarding.permission.speech.allow" = "允许语音识别";
 "onboarding.permission.speech.deniedHint" = "语音识别被拒绝。可前往设置开启，或点「下一步」继续。";
 "onboarding.permission.openSettings" = "打开设置";
@@ -43,12 +43,12 @@
 "common.newline" = "换行";
 
 /* Privacy footnote (onboarding welcome page) */
-"privacy.audio.title" = "音频不出本机";
-"privacy.audio.body" = "由 Apple 端侧引擎转录。";
-"privacy.network.title" = "仅发送润色后文字";
-"privacy.network.body" = "仅向所选 LLM 发送润色后文字,用于整理结构和标点。";
+"privacy.audio.title" = "支持本地转写";
+"privacy.audio.body" = "支持 iOS 本地引擎转录";
+"privacy.network.title" = "文字自动润色";
+"privacy.network.body" = "通过 AI 自动对文字进行排版润色";
 "privacy.universal.title" = "处处可用";
-"privacy.universal.body" = "微信、备忘录、邮件、ChatGPT、Claude、Cursor — 任何键盘出现的地方。";
+"privacy.universal.body" = "聊天、邮件、Vibe Coding 动嘴就行";
 
 /* Home */
 "home.status.ready" = "就绪";
@@ -183,7 +183,7 @@
 
 /* Home · Flow session */
 "home.flow.active" = "语音会话进行中";
-"home.flow.label" = "语音会话";
+"home.flow.label" = "就绪";
 "home.flow.inactive" = "语音会话未启动";
 "home.flow.hint" = "语音会话会自动启动。切到任意 App，点按键盘麦克风即可说话。";
 "home.flow.starting" = "正在启动语音会话…";

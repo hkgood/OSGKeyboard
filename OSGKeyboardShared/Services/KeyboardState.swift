@@ -82,6 +82,7 @@ public final class KeyboardState: ObservableObject {
     public var endRecording:        () -> Void = {}
     public var tapMic:              () -> Void = {}
     public var openSettings:        () -> Void = {}
+    public var startFlowSession:    () -> Void = {}
     public var setMode:             (InputMode) -> Void = { _ in }
     public var setLocale:           (String) -> Void = { _ in }
     public var setEngineMode:        (String) -> Void = { _ in }

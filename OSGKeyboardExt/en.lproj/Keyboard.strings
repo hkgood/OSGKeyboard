@@ -27,12 +27,12 @@
 "common.newline" = "Return";
 
 /* Privacy footnote (onboarding welcome page) */
-"privacy.audio.title" = "Audio stays on device";
-"privacy.audio.body" = "Transcribed locally with Apple’s speech engine.";
-"privacy.network.title" = "Only the polished text is sent";
-"privacy.network.body" = "Sent to your chosen LLM to add structure & punctuation.";
+"privacy.audio.title" = "On-device transcription";
+"privacy.audio.body" = "Powered by the on-device iOS speech engine.";
+"privacy.network.title" = "Automatic text polish";
+"privacy.network.body" = "AI formats and polishes your text automatically.";
 "privacy.universal.title" = "Works everywhere";
-"privacy.universal.body" = "WeChat, Notes, Mail, ChatGPT, Claude, Cursor — anywhere a keyboard appears.";
+"privacy.universal.body" = "Chat, email, vibe coding — just speak.";
 
 /* Home */
 "home.status.ready" = "Ready";
@@ -127,7 +127,9 @@
 "keyboard.tapToTalkA11y" = "Tap to talk";
 
 /* Flow session (keyboard) */
-"keyboard.flow.sessionInactive" = "Open OSGKeyboard to start voice session";
+"keyboard.flow.sessionInactive" = "Voice session off";
+"keyboard.flow.start" = "Start";
+"keyboard.flow.startA11y" = "Start voice session";
 "keyboard.flow.sessionExpired" = "Voice session ended. Open OSGKeyboard to restart.";
 "keyboard.flow.startingSession" = "Starting voice session…";
 "keyboard.flow.transcribing" = "Transcribing…";

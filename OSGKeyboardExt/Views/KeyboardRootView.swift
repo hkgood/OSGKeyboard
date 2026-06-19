@@ -19,7 +19,13 @@ import SwiftUI
 import OSGKeyboardShared
 
 private enum KeyboardLayoutMetrics {
-    static let sideActionButtonSize: CGFloat = 44
+    static let sideActionButtonSize: CGFloat = 53
+    static let sideActionIconSize: CGFloat = 19
+    static let sideSpaceBarWidth: CGFloat = 19
+    static let micFlankMinSpacing: CGFloat = 36
+    static let sideActionStackSpacing: CGFloat = 16
+    /// Outer inset for delete / return·space from screen edges (8 pt → 24 pt, +200%).
+    static let sideActionHorizontalInset: CGFloat = Spacing.xs * 3
 }
 
 public struct KeyboardRootView: View {
@@ -36,7 +42,6 @@ public struct KeyboardRootView: View {
     /// it up.
     static let totalHeight: CGFloat = 280
     private static let topBarHeight: CGFloat = 38
-    private static let sideActionStackSpacing: CGFloat = 10
 
     private var palette: ThemePalette {
         colorScheme == .dark ? Palette.dark : Palette.light
@@ -52,12 +57,14 @@ public struct KeyboardRootView: View {
         }
         .padding(.top, 4)
         .padding(.bottom, 6)
-        // Let the system UI chrome show through by drawing no background
-        // of our own.
-        .background(Color.clear)
+        .background(keyboardBackground)
         .frame(height: Self.totalHeight)
         // Feed the resolved palette to all nested chips/buttons.
         .environment(\.themePalette, palette)
+    }
+
+    private var keyboardBackground: Color {
+        colorScheme == .dark ? palette.background : Color.clear
     }
 
     // MARK: - Top bar
@@ -99,7 +106,8 @@ public struct KeyboardRootView: View {
                 phase: state.phase,
                 transcript: state.lastTranscript,
                 flowSessionActive: state.flowSessionActive,
-                openSettings: state.openSettings
+                openSettings: state.openSettings,
+                startFlowSession: state.startFlowSession
             )
             .frame(height: 22)
 
@@ -117,10 +125,12 @@ public struct KeyboardRootView: View {
     /// HStack vertical alignment keeps delete, mic centre, and the gap
     /// between return/space on one horizontal axis.
     private var micActionRow: some View {
-        HStack(alignment: .center, spacing: 20) {
+        HStack(alignment: .center, spacing: 0) {
             CircularToolbarButton(systemName: "delete.left", label: "delete") {
                 state.deleteBackward()
             }
+
+            Spacer(minLength: KeyboardLayoutMetrics.micFlankMinSpacing)
 
             RecordButton(
                 phase: buttonPhase,
@@ -130,7 +140,9 @@ public struct KeyboardRootView: View {
             )
             .frame(width: 132, height: 132)
 
-            VStack(spacing: Self.sideActionStackSpacing) {
+            Spacer(minLength: KeyboardLayoutMetrics.micFlankMinSpacing)
+
+            VStack(spacing: KeyboardLayoutMetrics.sideActionStackSpacing) {
                 CircularToolbarButton(systemName: "return", label: "newline") {
                     state.insertNewline()
                 }
@@ -139,6 +151,7 @@ public struct KeyboardRootView: View {
                 }
             }
         }
+        .padding(.horizontal, KeyboardLayoutMetrics.sideActionHorizontalInset)
         .frame(maxWidth: .infinity)
     }
 
@@ -191,6 +204,7 @@ private struct TranscriptLine: View {
     let transcript: String
     let flowSessionActive: Bool
     let openSettings: () -> Void
+    let startFlowSession: () -> Void
 
     var body: some View {
         ZStack {
@@ -201,9 +215,18 @@ private struct TranscriptLine: View {
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textTertiary)
                 } else {
-                    ExtL10n.text("keyboard.flow.sessionInactive")
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.textTertiary)
+                    HStack(spacing: 6) {
+                        ExtL10n.text("keyboard.flow.sessionInactive")
+                            .font(TypeStyle.caption)
+                            .foregroundStyle(palette.textTertiary)
+                        Button(action: startFlowSession) {
+                            ExtL10n.text("keyboard.flow.start")
+                                .font(TypeStyle.caption)
+                                .foregroundStyle(palette.accent)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint(ExtL10n.text("keyboard.flow.startA11y"))
+                    }
                 }
             case .requestingPermissions:
                 HStack(spacing: 6) {
@@ -267,6 +290,7 @@ private struct TranscriptLine: View {
 // MARK: - Circular toolbar button
 
 private struct CircularToolbarButton: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.themePalette) private var palette: ThemePalette
 
     let systemName: String?
@@ -294,19 +318,25 @@ private struct CircularToolbarButton: View {
                 if spaceStyle {
                     Capsule()
                         .fill(palette.textPrimary)
-                        .frame(width: 16, height: 3)
+                        .frame(width: KeyboardLayoutMetrics.sideSpaceBarWidth, height: 3)
                 } else if let systemName {
                     Image(systemName: systemName)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: KeyboardLayoutMetrics.sideActionIconSize, weight: .medium))
                         .foregroundStyle(palette.textPrimary)
                 }
             }
             .frame(width: KeyboardLayoutMetrics.sideActionButtonSize, height: KeyboardLayoutMetrics.sideActionButtonSize)
-            .background(palette.surfaceElevated, in: Circle())
-            .overlay(Circle().stroke(palette.divider, lineWidth: 0.5))
+            .background(sideButtonFill, in: Circle())
+            .overlay(Circle().stroke(palette.dividerStrong, lineWidth: 0.5))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(label))
+    }
+
+    private var sideButtonFill: Color {
+        colorScheme == .dark
+            ? Color(red: 0.20, green: 0.20, blue: 0.22)
+            : palette.surfaceElevated
     }
 }
 
