@@ -5,6 +5,10 @@
 name: OSGKeyboard
 options:
   bundleIdPrefix: com.osgkeyboard
+  # Icon Composer bundles must stay intact; do not explode into icon.json + SVG.
+  fileTypes:
+    icon:
+      file: true
   # Minimum OS: iOS 26. We dropped older iOS support so the
   # legacy speech + AVAudioSession branching could be removed in
   # favour of iOS 26's `SpeechAnalyzer` (always on-device) and
@@ -44,6 +48,10 @@ targets:
     platform: iOS
     sources:
       - path: OSGKeyboard
+        excludes:
+          - "AppIcon.icon"
+      - path: OSGKeyboard/AppIcon.icon
+        buildPhase: resources
     entitlements:
       path: OSGKeyboard/OSGKeyboard.entitlements
       properties:
@@ -95,6 +103,9 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios
         TARGETED_DEVICE_FAMILY: "1"
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        # AppIcon.icon (Liquid Glass) + AppIcon.appiconset (fallback) share the name "AppIcon".
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
     dependencies:
       - target: OSGKeyboardShared
         embed: true
@@ -114,8 +125,8 @@ targets:
           - "en.lproj"
           - "zh-Hans.lproj"
     resources:
-      - path: OSGKeyboardExt/en.lproj/Localizable.strings
-      - path: OSGKeyboardExt/zh-Hans.lproj/Localizable.strings
+      - path: OSGKeyboardExt/en.lproj
+      - path: OSGKeyboardExt/zh-Hans.lproj
     settings:
       base:
         IPHONEOS_DEPLOYMENT_TARGET: "26.0"
@@ -135,6 +146,10 @@ targets:
         CFBundleDisplayName: OSGKeyboard
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations:
+          - en
+          - zh-Hans
         NSMicrophoneUsageDescription: "OSGKeyboard uses the microphone for voice dictation and keeps a background audio session active while a voice session is running."
         NSSpeechRecognitionUsageDescription: "OSGKeyboard uses on-device speech recognition to transcribe your voice. Audio is processed on your device and is not uploaded for transcription."
         NSExtension:

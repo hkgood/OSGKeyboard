@@ -28,6 +28,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         static let localeId        = "config.localeId"
         static let engineMode       = "config.engineMode"
         static let hasCompletedOnboarding = "config.hasCompletedOnboarding"
+        static let onboardingPage         = "config.onboardingPage"
     }
 
     @Published public var providerId: String {
@@ -68,7 +69,16 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         didSet { defaults.set(engineMode, forKey: Key.engineMode) }
     }
     @Published public var hasCompletedOnboarding: Bool {
-        didSet { defaults.set(hasCompletedOnboarding, forKey: Key.hasCompletedOnboarding) }
+        didSet {
+            defaults.set(hasCompletedOnboarding, forKey: Key.hasCompletedOnboarding)
+            if hasCompletedOnboarding {
+                onboardingPage = 0
+            }
+        }
+    }
+    /// Persisted onboarding step so returning from Settings does not reset progress.
+    @Published public var onboardingPage: Int {
+        didSet { defaults.set(onboardingPage, forKey: Key.onboardingPage) }
     }
 
     public var isConfigured: Bool {
@@ -113,6 +123,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         self.localeId        = resolvedDefaults.string(forKey: Key.localeId)   ?? "auto"
         self.engineMode       = resolvedDefaults.string(forKey: Key.engineMode) ?? "cloud"
         self.hasCompletedOnboarding = resolvedDefaults.bool(forKey: Key.hasCompletedOnboarding)
+        let savedPage = resolvedDefaults.integer(forKey: Key.onboardingPage)
+        self.onboardingPage = savedPage > 0 ? savedPage : 0
     }
 
     /// Read the API key from the Keychain, falling back to a one-time

@@ -10,6 +10,7 @@
 
 import SwiftUI
 import OSGKeyboardShared
+import UIKit
 
 private enum OnboardingPage: Int, CaseIterable {
     case welcome = 0
@@ -23,19 +24,23 @@ private enum OnboardingPage: Int, CaseIterable {
 
 struct OnboardingView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject var config: ProviderConfig
-    @State private var page: Int = 0
+    @State private var micStatus = AppPermissions.micStatus
+    @State private var speechStatus = AppPermissions.speechStatus
 
     var body: some View {
         ZStack {
             palette.background.ignoresSafeArea()
             VStack(spacing: 0) {
                 Group {
-                    switch OnboardingPage(rawValue: page) ?? .welcome {
+                    switch OnboardingPage(rawValue: config.onboardingPage) ?? .welcome {
                     case .welcome: WelcomePage()
-                    case .microphone: MicPermissionPage()
-                    case .speech: SpeechPermissionPage()
+                    case .microphone:
+                        MicPermissionPage(status: $micStatus)
+                    case .speech:
+                        SpeechPermissionPage(status: $speechStatus)
                     case .keyboard: EnableKeyboardPage()
                     case .api: APISetupPage(config: config)
                     }
@@ -51,37 +56,51 @@ struct OnboardingView: View {
                     .padding(.bottom, Spacing.lg)
             }
         }
+        .onAppear {
+            if config.onboardingPage < 0 || config.onboardingPage >= OnboardingPage.count {
+                config.onboardingPage = 0
+            }
+            refreshPermissionStatuses()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { refreshPermissionStatuses() }
+        }
+    }
+
+    private func refreshPermissionStatuses() {
+        micStatus = AppPermissions.micStatus
+        speechStatus = AppPermissions.speechStatus
     }
 
     private var pageDots: some View {
         HStack(spacing: 6) {
             ForEach(0..<OnboardingPage.count, id: \.self) { i in
                 Capsule()
-                    .fill(i == page ? palette.accent : Color.white.opacity(0.18))
-                    .frame(width: i == page ? 18 : 6, height: 6)
-                    .animation(Motion.quick, value: page)
+                    .fill(i == config.onboardingPage ? palette.accent : Color.white.opacity(0.18))
+                    .frame(width: i == config.onboardingPage ? 18 : 6, height: 6)
+                    .animation(Motion.quick, value: config.onboardingPage)
             }
         }
     }
 
-    private var isLastPage: Bool { page == OnboardingPage.api.rawValue }
+    private var isLastPage: Bool { config.onboardingPage == OnboardingPage.api.rawValue }
 
     private var canAdvance: Bool {
-        switch OnboardingPage(rawValue: page) ?? .welcome {
+        switch OnboardingPage(rawValue: config.onboardingPage) ?? .welcome {
         case .welcome, .keyboard, .api:
-            return page != OnboardingPage.api.rawValue || config.isConfigured
+            return !isLastPage || config.isConfigured
         case .microphone:
-            return AppPermissions.micStatus != .undetermined
+            return micStatus != .undetermined
         case .speech:
-            return AppPermissions.speechStatus != .undetermined
+            return speechStatus != .undetermined
         }
     }
 
     @ViewBuilder
     private var bottomBar: some View {
         HStack(spacing: Spacing.sm) {
-            if page > 0 {
-                Button { withAnimation(Motion.soft) { page -= 1 } } label: {
+            if config.onboardingPage > 0 {
+                Button { withAnimation(Motion.soft) { config.onboardingPage -= 1 } } label: {
                     Text("common.back")
                         .font(TypeStyle.headline)
                         .frame(maxWidth: .infinity, minHeight: 50)
@@ -100,7 +119,7 @@ struct OnboardingView: View {
                     if isLastPage {
                         config.hasCompletedOnboarding = true
                     } else {
-                        page += 1
+                        config.onboardingPage += 1
                     }
                 }
             } label: {
@@ -204,7 +223,7 @@ private struct PrivacyFootnote: View {
 
 private struct MicPermissionPage: View {
     @Environment(\.themePalette) private var palette: ThemePalette
-    @State private var status = AppPermissions.micStatus
+    @Binding var status: AppPermissions.MicStatus
     @State private var isRequesting = false
 
     var body: some View {
@@ -222,6 +241,9 @@ private struct MicPermissionPage: View {
             deniedHint: status == .denied ? "onboarding.permission.mic.deniedHint" : nil
         )
         .onAppear { status = AppPermissions.micStatus }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            status = AppPermissions.micStatus
+        }
     }
 
     private var statusLabel: LocalizedStringKey {
@@ -254,6 +276,7 @@ private struct MicPermissionPage: View {
 
 private struct SpeechPermissionPage: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @Binding var status: AppPermissions.SpeechStatus
     @State private var isRequesting = false
 
     var body: some View {
@@ -264,23 +287,27 @@ private struct SpeechPermissionPage: View {
             status: statusLabel,
             statusColor: statusColor,
             primaryTitle: primaryButtonTitle,
-            primaryDisabled: isRequesting || AppPermissions.speechStatus == .granted,
+            primaryDisabled: isRequesting || status == .granted,
             onPrimary: { Task { await request() } },
             secondaryTitle: speechDenied ? "onboarding.permission.openSettings" : nil,
             onSecondary: speechDenied ? { AppPermissions.openSystemSettings() } : nil,
             deniedHint: speechDenied ? "onboarding.permission.speech.deniedHint" : nil
         )
+        .onAppear { status = AppPermissions.speechStatus }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            status = AppPermissions.speechStatus
+        }
     }
 
     private var speechDenied: Bool {
-        switch AppPermissions.speechStatus {
+        switch status {
         case .denied, .restricted: return true
         default: return false
         }
     }
 
     private var statusLabel: LocalizedStringKey {
-        switch AppPermissions.speechStatus {
+        switch status {
         case .undetermined: return "onboarding.permission.status.undetermined"
         case .granted: return "onboarding.permission.status.granted"
         case .denied, .restricted: return "onboarding.permission.status.denied"
@@ -288,7 +315,7 @@ private struct SpeechPermissionPage: View {
     }
 
     private var statusColor: Color {
-        switch AppPermissions.speechStatus {
+        switch status {
         case .granted: return palette.success
         case .denied, .restricted: return palette.warning
         case .undetermined: return palette.textTertiary
@@ -296,7 +323,7 @@ private struct SpeechPermissionPage: View {
     }
 
     private var primaryButtonTitle: LocalizedStringKey {
-        AppPermissions.speechStatus == .granted
+        status == .granted
             ? "onboarding.permission.status.granted"
             : "onboarding.permission.speech.allow"
     }
@@ -304,6 +331,7 @@ private struct SpeechPermissionPage: View {
     private func request() async {
         isRequesting = true
         _ = await AppPermissions.requestSpeechRecognition()
+        status = AppPermissions.speechStatus
         isRequesting = false
     }
 }

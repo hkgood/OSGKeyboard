@@ -44,6 +44,9 @@ struct OSGKeyboardApp: App {
                     coordinator: dictationCoordinator
                 )
             }
+            .onChange(of: config.hasCompletedOnboarding) { _, done in
+                if done { flowManager.autoStartIfNeeded() }
+            }
             .onChange(of: scenePhase) { _, phase in
                 guard phase == .active, AppGroup.isAvailable, config.hasCompletedOnboarding else { return }
                 if flowManager.isActive {

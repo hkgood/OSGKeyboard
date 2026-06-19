@@ -65,6 +65,7 @@ public final class KeyboardViewController: UIInputViewController {
     private var wasFlowSessionActive = false
     private var flowSessionMonitorTask: Task<Void, Never>?
     private var flowSessionDarwinObserver: FlowSessionDarwinObserver?
+    private var isAwaitingFlowResult = false
 
     // MARK: - Lifecycle
 
@@ -85,8 +86,13 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        cancelPipeline()
         stopFlowSessionMonitor()
+        // Preserve flow handoff / recording / result polling across the
+        // intentional jump to the host app (keyboard extension pauses here).
+        if isPendingFlowStart || isFlowRecording || isAwaitingFlowResult || awaitingDictationResult {
+            return
+        }
+        cancelPipeline()
     }
 
     public override func viewWillAppear(_ animated: Bool) {
@@ -320,7 +326,7 @@ public final class KeyboardViewController: UIInputViewController {
         flowWatchdogTask = Task { @MainActor [weak self] in
             while let self, !Task.isCancelled, self.isPendingFlowStart {
                 if FlowSessionBridge.isSessionActive() {
-                    self.startFlowRecording()
+                    self.completeFlowStartHandoff()
                     return
                 }
                 let now = Date().timeIntervalSince1970
@@ -333,6 +339,17 @@ public final class KeyboardViewController: UIInputViewController {
                 try? await Task.sleep(nanoseconds: FlowWatchdog.pollIntervalNs)
             }
         }
+    }
+
+    /// Session is live — return to idle so the user can tap again to record.
+    private func completeFlowStartHandoff() {
+        isPendingFlowStart = false
+        flowStartDeadline = 0
+        stopFlowWatchdog()
+        state.lastTranscript = ""
+        state.phase = .idle
+        refreshFlowSessionState()
+        debug("completeFlowStartHandoff")
     }
 
     private func startFlowLevelWatchdog() {
@@ -350,15 +367,18 @@ public final class KeyboardViewController: UIInputViewController {
 
     private func startFlowResultWatchdog() {
         stopFlowWatchdog()
+        isAwaitingFlowResult = true
         let startedAt = Date().timeIntervalSince1970
         flowWatchdogTask = Task { @MainActor [weak self] in
             while let self, !Task.isCancelled {
                 if let result = FlowSessionBridge.consumeTranscriptionResult() {
+                    self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
                     self.handleFlowTranscript(result)
                     return
                 }
                 if let error = FlowSessionBridge.consumeTranscriptionError() {
+                    self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
                     self.state.phase = .error(.unknown(error), message: error)
                     self.scheduleAutoClearError()
@@ -366,6 +386,7 @@ public final class KeyboardViewController: UIInputViewController {
                 }
                 let now = Date().timeIntervalSince1970
                 if now - startedAt > FlowWatchdog.resultTimeout {
+                    self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
                     let msg = ExtL10n.string("keyboard.flow.resultTimeout")
                     self.state.phase = .error(.unknown(msg), message: msg)
@@ -398,6 +419,9 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     private func cancelPipeline() {
+        if isAwaitingFlowResult || awaitingDictationResult {
+            return
+        }
         if isFlowRecording || isPendingFlowStart {
             if isFlowRecording {
                 FlowSessionBridge.setRecordingState(.aborted)
@@ -407,13 +431,6 @@ public final class KeyboardViewController: UIInputViewController {
             stopUtteranceCountdown()
             stopFlowWatchdog()
             state.level = 0
-        }
-        if awaitingDictationResult {
-            debug("cancelPipeline ignored while awaiting legacy handoff result")
-            return
-        }
-        if state.phase == .processing {
-            state.phase = .idle
         }
     }
 

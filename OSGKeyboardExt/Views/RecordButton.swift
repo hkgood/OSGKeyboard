@@ -124,7 +124,7 @@ struct RecordButton: View {
         .onChange(of: phase) { _, new in
             breath = (new == .recording)
         }
-        .accessibilityLabel(Text("keyboard.tapToTalkA11y"))
+        .accessibilityLabel(ExtL10n.text("keyboard.tapToTalkA11y"))
     }
 
     private func formatRemaining(_ seconds: Int) -> String {
