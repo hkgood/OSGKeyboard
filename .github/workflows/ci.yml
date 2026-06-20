@@ -17,14 +17,23 @@ jobs:
   # =========================================================
   lint:
     name: SwiftLint
+    # macos-14 runner ships Xcode 16.x (default 16.4 in 2026). We pin to
+    # 16.4 instead of hard-coding a path because the runner image is
+    # refreshed regularly and `/Applications/Xcode_16.0.app` is no
+    # longer pre-installed — that's the bug this PR fixes.
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.0.app
+      - name: Select Xcode 16.4
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
       - name: Install SwiftLint
         run: brew install swiftlint
       - name: Run SwiftLint
+        # Run twice: --quiet to fail on errors only, --strict to fail
+        # on warnings too. The current .swiftlint.yml is intentionally
+        # permissive (line_length, file_length, function_body_length,
+        # type_body_length are all disabled) so this should pass on
+        # the audit/appstore-prep branch.
         run: |
           swiftlint lint --quiet
           swiftlint lint --quiet --strict
@@ -41,12 +50,10 @@ jobs:
       matrix:
         destination:
           - generic/platform=iOS Simulator
-        xcode:
-          - "16.0"
     steps:
       - uses: actions/checkout@v4
-      - name: Select Xcode ${{ matrix.xcode }}
-        run: sudo xcode-select -s /Applications/Xcode_${{ matrix.xcode }}.app
+      - name: Select Xcode 16.4
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate project
@@ -71,8 +78,8 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.0.app
+      - name: Select Xcode 16.4
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate project
