@@ -57,14 +57,11 @@ public struct KeyboardRootView: View {
         }
         .padding(.top, 4)
         .padding(.bottom, 6)
-        .background(keyboardBackground)
+        // 透明背景：让系统键盘 chrome 透出，不自行铺色（深浅模式一致）。
+        .background(Color.clear)
         .frame(height: Self.totalHeight)
         // Feed the resolved palette to all nested chips/buttons.
         .environment(\.themePalette, palette)
-    }
-
-    private var keyboardBackground: Color {
-        colorScheme == .dark ? palette.background : Color.clear
     }
 
     // MARK: - Top bar

@@ -32,6 +32,7 @@ enum AppTab: Int, CaseIterable {
 
 struct MinimalTabBar: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @Environment(\.colorScheme) private var colorScheme
     @Binding var selection: AppTab
 
     var body: some View {
@@ -44,7 +45,7 @@ struct MinimalTabBar: View {
                         name: tab.icon,
                         size: 24
                     )
-                    .foregroundStyle(selection == tab ? palette.accent : palette.textTertiary)
+                    .foregroundStyle(tabIconColor(for: tab))
                     .frame(maxWidth: .infinity)
                     .frame(height: 48)
                     .contentShape(Rectangle())
@@ -60,5 +61,13 @@ struct MinimalTabBar: View {
         .frame(maxWidth: 252)
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.bottom, Spacing.xs)
+    }
+
+    private func tabIconColor(for tab: AppTab) -> Color {
+        if selection == tab { return palette.accent }
+        // 未选中：浅色模式更深、深色模式更亮，提升 dock 可读性。
+        return colorScheme == .dark
+            ? Color(white: 0.76)
+            : palette.textSecondary
     }
 }

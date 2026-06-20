@@ -4,7 +4,7 @@
 <dict>
 	<key>NSPrivacyTracking</key>
 	<false/>
-	<key>NSPrivacyCollectedUsageTypes</key>
+	<key>NSPrivacyCollectedDataTypes</key>
 	<array/>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
@@ -12,13 +12,9 @@
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
 			<key>NSPrivacyAccessedAPITypeReasons</key>
-			<string>CA92.1</string>
-		</dict>
-		<dict>
-			<key>NSPrivacyAccessedAPIType</key>
-			<string>NSPrivacyAccessedAPICategoryActiveKeyboards</string>
-			<key>NSPrivacyAccessedAPITypeReasons</key>
-			<string>DDA9.1</string>
+			<array>
+				<string>CA92.1</string>
+			</array>
 		</dict>
 	</array>
 </dict>

@@ -7,7 +7,6 @@ import OSGKeyboardShared
 struct HistoryView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @ObservedObject private var store = SpeechHistoryStore.shared
-    @State private var showClearConfirm = false
 
     private static let dayFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -25,13 +24,27 @@ struct HistoryView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                palette.background.ignoresSafeArea()
+            VStack(spacing: 0) {
+                PageHeaderRow(title: "history.title") {
+                    if !store.entries.isEmpty {
+                        PageHeaderConfirmButton(
+                            systemImage: "trash",
+                            accessibilityLabel: "history.clear.button",
+                            confirmTitle: "history.clear.title",
+                            confirmMessage: "history.clear.message",
+                            confirmActionTitle: "history.clear.confirm"
+                        ) {
+                            store.clearAll()
+                        }
+                    }
+                }
 
-                if store.entries.isEmpty {
-                    emptyState
-                } else {
-                    VStack(spacing: 0) {
+                ZStack {
+                    palette.background.ignoresSafeArea()
+
+                    if store.entries.isEmpty {
+                        emptyState
+                    } else {
                         ScrollView {
                             LazyVStack(alignment: .leading, spacing: Spacing.xl) {
                                 ForEach(store.groupedByDay, id: \.day) { group in
@@ -42,25 +55,11 @@ struct HistoryView: View {
                             .padding(.vertical, Spacing.md)
                             .padding(.bottom, 100)
                         }
-
-                        clearFooter
                     }
                 }
             }
-            .navigationTitle(LocalizedStringKey("history.title"))
-            .navigationBarTitleDisplayMode(.inline)
-        }
-        .confirmationDialog(
-            LocalizedStringKey("history.clear.title"),
-            isPresented: $showClearConfirm,
-            titleVisibility: .visible
-        ) {
-            Button(LocalizedStringKey("history.clear.confirm"), role: .destructive) {
-                store.clearAll()
-            }
-            Button(LocalizedStringKey("common.cancel"), role: .cancel) {}
-        } message: {
-            Text("history.clear.message")
+            .background(palette.background)
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
@@ -115,19 +114,5 @@ struct HistoryView: View {
         }
         .padding(Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var clearFooter: some View {
-        Button(role: .destructive) {
-            showClearConfirm = true
-        } label: {
-            Text("history.clear.button")
-                .font(TypeStyle.caption)
-                .foregroundStyle(palette.danger)
-                .frame(maxWidth: .infinity, minHeight: 44)
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, Spacing.md)
-        .padding(.bottom, Spacing.sm)
     }
 }

@@ -18,7 +18,6 @@ struct SettingsView: View {
 
     @ObservedObject var config = ProviderConfig.shared
     @Environment(\.dismiss) private var dismiss
-    @State private var showResetConfirm = false
     @State private var safariURL: URL?
 
     let presentation: SettingsPresentation
@@ -32,56 +31,56 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                palette.background.ignoresSafeArea()
-                ScrollView {
-                    VStack(spacing: Spacing.md) {
-                        engineSection
-                        if config.engineMode == "cloud" {
-                            providerSection
-                            apiSection
+            VStack(spacing: 0) {
+                PageHeaderRow(title: "settings.title") {
+                    HStack(spacing: Spacing.xs) {
+                        PageHeaderConfirmButton(
+                            systemImage: "arrow.counterclockwise",
+                            accessibilityLabel: "settings.reset.confirm",
+                            confirmTitle: "settings.reset.title",
+                            confirmMessage: "settings.reset.message",
+                            confirmActionTitle: "common.reset"
+                        ) {
+                            config.reset()
                         }
-                        languageSection
-                        if config.engineMode == "cloud" {
-                            promptSection
+                        if presentation == .sheet {
+                            Button("common.done") { dismiss() }
+                                .font(TypeStyle.headline)
+                                .foregroundStyle(palette.accent)
+                                .frame(minHeight: 44)
                         }
-                        if presentation == .tab {
-                            footerLinks
-                        }
-                        resetButton
                     }
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, Spacing.md)
-                    .padding(.bottom, presentation == .tab ? 100 : Spacing.lg)
+                }
+
+                ZStack {
+                    palette.background.ignoresSafeArea()
+                    ScrollView {
+                        VStack(spacing: Spacing.md) {
+                            engineSection
+                            if config.engineMode == "cloud" {
+                                providerSection
+                                apiSection
+                            }
+                            languageSection
+                            if config.engineMode == "cloud" {
+                                promptSection
+                            }
+                            if presentation == .tab {
+                                footerLinks
+                            }
+                        }
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.vertical, Spacing.md)
+                        .padding(.bottom, presentation == .tab ? 100 : Spacing.lg)
+                    }
                 }
             }
-            .navigationTitle(LocalizedStringKey("settings.title"))
-            .navigationBarTitleDisplayMode(.inline)
+            .background(palette.background)
+            .toolbar(.hidden, for: .navigationBar)
             .task { await loadDynamicLocales() }
-            .toolbar {
-                if presentation == .sheet {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("common.done") { dismiss() }
-                            .font(TypeStyle.headline)
-                            .foregroundStyle(palette.accent)
-                    }
-                }
-            }
             .sheet(item: $safariURL) { url in
                 SafariSheet(url: url)
             }
-        }
-        .confirmationDialog(
-            LocalizedStringKey("settings.reset.title"),
-            isPresented: $showResetConfirm,
-            titleVisibility: .visible
-        ) {
-            Button(LocalizedStringKey("common.reset"), role: .destructive) {
-                config.reset()
-            }
-            Button(LocalizedStringKey("common.cancel"), role: .cancel) {}
-        } message: {
-            Text("settings.reset.message")
         }
     }
 
@@ -311,21 +310,6 @@ struct SettingsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-
-    // MARK: - Reset
-
-    private var resetButton: some View {
-        Button(role: .destructive) {
-            showResetConfirm = true
-        } label: {
-            Text("settings.reset.confirm")
-                .font(TypeStyle.caption)
-                .foregroundStyle(palette.danger)
-                .frame(maxWidth: .infinity, minHeight: 36)
-        }
-        .buttonStyle(.plain)
-        .padding(.top, presentation == .tab ? Spacing.xs : Spacing.sm)
     }
 
     // MARK: - Header
