@@ -84,7 +84,7 @@
 /* Settings */
 "settings.title" = "设置";
 "settings.reset.title" = "重置所有设置?";
-"settings.reset.message" = "API key、model 和 base URL 都会被清空。";
+"settings.reset.message" = "将清空 API Key、模型、接口地址、语音历史及云端确认状态。";
 "settings.reset.confirm" = "重置所有设置";
 "settings.engine.title" = "引擎";
 "settings.engine.subtitle" = "本地不用 Key，只转文字；云端会润色，要配 Key。";
@@ -92,7 +92,7 @@
 "settings.engine.local.ios26" = "全程在手机本地，不用联网";
 "settings.engine.local.legacy" = "端侧 ASR,仅转录,无润色。";
 "settings.engine.cloud.title" = "云端润色";
-"settings.engine.cloud.subtitle" = "先转文字，再用 AI 润色，要 API Key";
+"settings.engine.cloud.subtitle" = "本地转写 + 你配置的 API 润色，文字发往该第三方服务";
 "settings.provider.title" = "提供商";
 "settings.provider.subtitle" = "选择 LLM 提供商。";
 "provider.openai" = "OpenAI";
@@ -123,6 +123,10 @@
 "settings.privacy.policy" = "隐私政策";
 "settings.privacy.fullAccess.title" = "关于完全访问";
 "settings.privacy.fullAccess.body" = "用来调用麦克风和读取 API Key；不会读取或上传你的输入内容。";
+"settings.privacy.cloud.body" = "云端润色模式下，转写文字会发送到你配置的 API（如 OpenAI 或自建服务）。OSGKeyboard 不运营服务器，也不会把转写内容存到云端。";
+"settings.privacy.cloud.alert.title" = "第三方 API";
+"settings.privacy.cloud.alert.message" = "云端润色会把转写文字发到你配置的第三方 API。OSGKeyboard 不会在自有服务器上存储数据。是否继续？";
+"settings.link.support" = "帮助与反馈";
 "settings.link.github" = "GitHub";
 
 /* App group error */

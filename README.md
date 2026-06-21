@@ -1,11 +1,11 @@
 # OSGKeyboard
 
 > Hold a key, speak, release — AI-polished text appears at your cursor in any app.
-> An open-source, custom-keyboard-based voice input tool for iOS 26+, inspired by [Typeless](https://typeless.com) and [OpenLess](https://github.com/Open-Less/openless).
+> A source-available, custom-keyboard-based voice input tool for iOS 26+, inspired by [Typeless](https://typeless.com) and [OpenLess](https://github.com/Open-Less/openless).
 
 ![Platform](https://img.shields.io/badge/platform-iOS%2026%2B-0078D4?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-Source%20Available-blue)
 ![CI](https://github.com/hkgood/OSGKeyboard/actions/workflows/ci.yml/badge.svg)
 
 [中文 README](./README.zh.md)
@@ -14,7 +14,7 @@
 
 ## What is it?
 
-OSGKeyboard is a free, open alternative to commercial voice-input tools. It runs as a **Custom Keyboard Extension** on iOS, so you can use it in **any app** — Messages, Notes, Mail, ChatGPT, Claude, Cursor, you name it.
+OSGKeyboard is a free, source-available alternative to commercial voice-input tools. It runs as a **Custom Keyboard Extension** on iOS, so you can use it in **any app** — Messages, Notes, Mail, ChatGPT, Claude, Cursor, you name it.
 
 1. Press and hold the mic key
 2. Speak naturally
@@ -138,7 +138,7 @@ That's it. No other code changes required.
 
 ## License
 
-[MIT](./LICENSE) — use it, fork it, ship it. No warranty.
+[OSGKeyboard Source Available License](./LICENSE) — personal learning and non-commercial local use only. No commercial use, redistribution, or public forks without permission. Commercial licensing: [rocky.hk@gmail.com](mailto:rocky.hk@gmail.com).
 
 ---
 

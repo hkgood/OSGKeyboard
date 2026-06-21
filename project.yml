@@ -65,6 +65,7 @@ targets:
       - path: OSGKeyboard/en.lproj
       - path: OSGKeyboard/zh-Hans.lproj
       - path: OSGKeyboard/Resources/Fonts/MaterialIcons-Regular.ttf
+      - path: OSGKeyboard/PrivacyInfo.xcprivacy
     info:
       path: OSGKeyboard/Info.plist
       properties:
@@ -91,6 +92,7 @@ targets:
           - audio
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
+        ITSAppUsesNonExemptEncryption: false
         CFBundleURLTypes:
           - CFBundleURLName: com.osgkeyboard.ios.settings
             CFBundleURLSchemes:

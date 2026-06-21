@@ -1,0 +1,4 @@
+/* Permission prompts — English */
+
+"NSMicrophoneUsageDescription" = "OSGKeyboard uses the microphone for voice dictation and keeps a background audio session active while a voice session is running.";
+"NSSpeechRecognitionUsageDescription" = "OSGKeyboard uses on-device speech recognition to transcribe your voice. Audio is processed on your device and is not uploaded for transcription.";

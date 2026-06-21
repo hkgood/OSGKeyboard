@@ -617,6 +617,13 @@ private struct EnableKeyboardPage: View {
                 .padding(.horizontal, Spacing.xl)
                 .padding(.top, OnboardingLayoutMetrics.heroTextGap)
 
+                PrivacyInfoCard(
+                    title: "settings.privacy.fullAccess.title",
+                    bodyText: "settings.privacy.fullAccess.body"
+                )
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, Spacing.lg)
+
                 Button {
                     AppPermissions.openSystemSettings()
                 } label: {

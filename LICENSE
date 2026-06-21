@@ -1,21 +1,220 @@
-MIT License
+OSGKeyboard Source Available License
+Version 1.0, June 2026
 
-Copyright (c) 2026 OSGKeyboard Contributors
+Copyright (c) 2026 OSGKeyboard Contributors. All rights reserved.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This is NOT an open-source license. The software is made available for
+transparency and personal, non-commercial use only. Commercial rights are
+reserved exclusively by the copyright holder unless a separate written
+agreement is granted.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Contact for commercial licensing: rocky.hk@gmail.com
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+
+1. Definitions
+
+   "Software" means the OSGKeyboard source code, documentation, and
+   associated files in this repository.
+
+   "You" means any individual or legal entity exercising permissions under
+   this License.
+
+   "Commercial Use" means any use of the Software that is intended for or
+   directed toward commercial advantage or monetary compensation, including
+   but not limited to: selling, licensing, or distributing the Software or
+   derivatives; offering a product or service that incorporates or is
+   derived from the Software; using the Software in production for a
+   business; or using the Software to develop a competing product.
+
+
+2. Permitted Uses (Non-Commercial, Personal)
+
+   You may, without a separate commercial license:
+
+   (a) Clone, download, and view the Software for personal learning and
+       reference.
+
+   (b) Build and run the Software locally on devices you own or control,
+       for personal, non-commercial evaluation and debugging.
+
+   (c) Modify the Software for your own personal, non-commercial use on
+       devices you own or control, provided you do not distribute,
+       publish, or make available any modified version to any third party.
+
+
+3. Prohibited Uses
+
+   Without prior written permission from the copyright holder, You may NOT:
+
+   (a) Use the Software for any Commercial Use.
+
+   (b) Redistribute, publish, sublicense, sell, or otherwise make the
+       Software or any portion thereof available to any third party,
+       whether in original or modified form.
+
+   (c) Create, maintain, or distribute forked or derivative works based on
+       the Software, including repositories, packages, or products intended
+       for public or third-party use.
+
+   (d) Remove or alter copyright notices or this License.
+
+   (e) Use the Software, or any derivative thereof, as the basis for a
+       competing keyboard, voice-input, or substantially similar product.
+
+
+4. Commercial Licensing
+
+   Exclusive commercial rights are retained by the copyright holder.
+   Commercial Use requires a separate written license. To inquire, contact:
+
+       rocky.hk@gmail.com
+
+
+5. Contributions
+
+   Contributions (e.g., pull requests, patches, issues with code) are
+   welcome. By submitting a contribution, You represent that You have the
+   right to submit it and You grant the copyright holder a perpetual,
+   worldwide, non-exclusive, royalty-free license to use, reproduce,
+   modify, and sublicense Your contribution as part of the Software under
+   this License. You retain ownership of Your contribution; no copyright
+   transfer is required.
+
+
+6. App Store Distribution
+
+   Distribution of compiled application binaries through the Apple App Store
+   (or other channels) by the copyright holder or its authorized licensees
+   does not grant You any rights to the source code beyond those stated in
+   this License.
+
+
+7. Third-Party Components
+
+   The Software may include or depend on third-party components governed by
+   their own licenses. This License applies only to OSGKeyboard's own
+   original work and does not override third-party license terms.
+
+
+8. Disclaimer of Warranty
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+   OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+
+9. Limitation of Liability
+
+   IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY
+   CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+   TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE
+   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+
+10. Termination
+
+    Your rights under this License terminate automatically if You breach
+    any term. Sections 3–9 survive termination.
+
+
+11. Governing Language
+
+    This English text is the authoritative version. A Chinese translation
+    follows for reference only.
+
+
+================================================================================
+OSGKeyboard 源码可见许可协议
+版本 1.0，2026 年 6 月
+
+版权所有 (c) 2026 OSGKeyboard Contributors。保留所有权利。
+
+本协议并非开源许可。公开源码仅为透明与个人非商用目的。除另行书面授权外，
+商业权利由版权持有人独占保留。
+
+商业授权联系：rocky.hk@gmail.com
+
+
+1. 定义
+
+   「软件」指本仓库中的 OSGKeyboard 源代码、文档及相关文件。
+
+   「您」指在本协议下行使权利的任何个人或法人。
+
+   「商业使用」指以商业利益或金钱报酬为目的的使用，包括但不限于：销售、
+   许可或分发软件或其衍生作品；提供包含或源于本软件的产品或服务；在
+   商业生产环境中使用；或用于开发竞争产品。
+
+
+2. 允许的使用（非商用、个人）
+
+   无需另行商业授权，您可：
+
+   (a) 克隆、下载、阅读软件，用于个人学习与研究；
+
+   (b) 在自有或控制的设备上构建并运行软件，用于个人非商用评估与调试；
+
+   (c) 为个人非商用目的修改软件并在自有设备上使用，但不得向任何第三方
+       分发、发布或提供任何修改版本。
+
+
+3. 禁止的使用
+
+   未经版权持有人事先书面许可，您不得：
+
+   (a) 将软件用于任何商业使用；
+
+   (b) 以任何形式向第三方再分发、发布、转许可、销售或提供软件或其部分，
+       无论是否修改；
+
+   (c) 创建、维护或分发基于本软件的分叉或衍生作品，包括面向公众或第三
+       方的仓库、包或产品；
+
+   (d) 移除或篡改版权声明或本协议；
+
+   (e) 将软件或其衍生作品作为竞争性的键盘、语音输入或实质相似产品的
+       基础。
+
+
+4. 商业授权
+
+   商业权利由版权持有人独占保留。商业使用须取得单独书面授权。联系：
+
+       rocky.hk@gmail.com
+
+
+5. 贡献
+
+   欢迎提交贡献（如 Pull Request、补丁等）。提交即表示您有权提交该内容，
+   并授予版权持有人一项永久的、全球性的、非独占的、免版税许可，以便在
+   本协议下将您的贡献作为软件的一部分使用、复制、修改和再许可。您保留
+   对贡献的所有权；不要求转让版权。
+
+
+6. App Store 分发
+
+   版权持有人或其授权方通过 Apple App Store（或其他渠道）分发编译后的
+   应用，不授予您超出本协议所述范围的源码权利。
+
+
+7. 第三方组件
+
+   软件可能包含或依赖受各自许可约束的第三方组件。本协议仅适用于
+   OSGKeyboard 原创作品，不覆盖第三方许可条款。
+
+
+8. 免责声明
+
+   软件按「原样」提供，不提供任何明示或暗示的保证，包括但不限于适销性、
+   特定用途适用性和不侵权保证。
+
+
+9. 责任限制
+
+   在任何情况下，版权持有人或贡献者均不对因软件或使用软件而产生的任何
+   索赔、损害或其他责任承担责任。
+
+
+10. 终止
+
+    若您违反本协议任何条款，您的权利自动终止。第 3–9 条在终止后继续有效。

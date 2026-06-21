@@ -8,4 +8,9 @@ enum LegalLinks {
     static var privacyPolicyURL: URL? {
         URL(string: "https://hkgood.github.io/OSGKeyboard/privacy/")
     }
+
+    /// Support / feedback (GitHub Issues).
+    static var supportURL: URL? {
+        URL(string: "https://github.com/hkgood/OSGKeyboard/issues")
+    }
 }

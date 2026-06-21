@@ -22,6 +22,8 @@ struct EnginePickerSection: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     @ObservedObject var config: ProviderConfig
+    @State private var showCloudAcknowledgment = false
+    @State private var pendingEngineSelection: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
@@ -46,7 +48,17 @@ struct EnginePickerSection: View {
                 RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
                     .stroke(palette.divider, lineWidth: 0.5)
             )
+
+            if config.engineMode == "cloud" {
+                CloudPolishDisclosureBanner()
+            }
         }
+        .cloudSharingAcknowledgment(
+            config: config,
+            isPresented: $showCloudAcknowledgment,
+            onConfirm: { applyPendingEngineSelection() },
+            onCancel: { pendingEngineSelection = nil }
+        )
     }
 
     private var localSubtitle: String {
@@ -64,10 +76,13 @@ struct EnginePickerSection: View {
     ) -> some View {
         let isSelected = config.engineMode == id
         return Button {
-            withAnimation(.easeInOut(duration: 0.2)) {
-                config.engineMode = id
-                if id == "local" { config.modeId = "transcribe" }
+            guard config.engineMode != id else { return }
+            if id == "cloud", !config.hasAcknowledgedCloudSharing {
+                pendingEngineSelection = id
+                showCloudAcknowledgment = true
+                return
             }
+            selectEngine(id)
         } label: {
             HStack(spacing: Spacing.sm) {
                 engineMark(
@@ -95,6 +110,19 @@ struct EnginePickerSection: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    private func selectEngine(_ id: String) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            config.engineMode = id
+            if id == "local" { config.modeId = "transcribe" }
+        }
+    }
+
+    private func applyPendingEngineSelection() {
+        guard let id = pendingEngineSelection else { return }
+        pendingEngineSelection = nil
+        selectEngine(id)
     }
 
     @ViewBuilder

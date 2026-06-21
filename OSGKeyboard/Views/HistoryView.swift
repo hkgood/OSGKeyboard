@@ -39,6 +39,13 @@ struct HistoryView: View {
                     }
                 }
 
+                Text("history.subtitle")
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.bottom, Spacing.sm)
+
                 ZStack {
                     palette.background.ignoresSafeArea()
 

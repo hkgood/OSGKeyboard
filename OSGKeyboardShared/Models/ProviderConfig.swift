@@ -29,6 +29,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         static let engineMode       = "config.engineMode"
         static let hasCompletedOnboarding = "config.hasCompletedOnboarding"
         static let onboardingPage         = "config.onboardingPage"
+        static let hasAcknowledgedCloudSharing = "config.hasAcknowledgedCloudSharing"
     }
 
     @Published public var providerId: String {
@@ -80,6 +81,10 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     @Published public var onboardingPage: Int {
         didSet { defaults.set(onboardingPage, forKey: Key.onboardingPage) }
     }
+    /// User confirmed that Cloud polish sends transcripts to their configured third-party API.
+    @Published public var hasAcknowledgedCloudSharing: Bool {
+        didSet { defaults.set(hasAcknowledgedCloudSharing, forKey: Key.hasAcknowledgedCloudSharing) }
+    }
 
     public var isConfigured: Bool {
         // Local engine (on-device ASR only) doesn't need an API key,
@@ -125,6 +130,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         self.hasCompletedOnboarding = resolvedDefaults.bool(forKey: Key.hasCompletedOnboarding)
         let savedPage = resolvedDefaults.integer(forKey: Key.onboardingPage)
         self.onboardingPage = savedPage > 0 ? savedPage : 0
+        self.hasAcknowledgedCloudSharing = resolvedDefaults.bool(forKey: Key.hasAcknowledgedCloudSharing)
     }
 
     /// Read the API key from the Keychain, falling back to a one-time
@@ -170,5 +176,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         apiKey = ""
         model = preset.defaultModel
         systemPrompt = AppGroupStore.defaultSystemPrompt(for: "openai")
+        hasAcknowledgedCloudSharing = false
     }
 }

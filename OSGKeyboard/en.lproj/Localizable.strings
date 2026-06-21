@@ -84,7 +84,7 @@
 /* Settings */
 "settings.title" = "Settings";
 "settings.reset.title" = "Reset all settings?";
-"settings.reset.message" = "API key, model, and base URL will be cleared.";
+"settings.reset.message" = "API key, model, base URL, voice history, and cloud consent will be cleared.";
 "settings.reset.confirm" = "Reset all settings";
 "settings.engine.title" = "Engine";
 "settings.engine.subtitle" = "Pick the recognition engine. Local engine does transcription only, no API key needed.";
@@ -92,7 +92,7 @@
 "settings.engine.local.ios26" = "Always on-device, no network.";
 "settings.engine.local.legacy" = "On-device ASR. Transcription only, no polish.";
 "settings.engine.cloud.title" = "Cloud polish";
-"settings.engine.cloud.subtitle" = "ASR + LLM polish. API key required.";
+"settings.engine.cloud.subtitle" = "On-device ASR + polish via your API. Text is sent to the endpoint you configure.";
 "settings.provider.title" = "Provider";
 "settings.provider.subtitle" = "Pick the LLM that polishes your dictation.";
 "provider.openai" = "OpenAI";
@@ -123,6 +123,10 @@
 "settings.privacy.policy" = "Privacy Policy";
 "settings.privacy.fullAccess.title" = "About Full Access";
 "settings.privacy.fullAccess.body" = "Full Access is required for the microphone and to read your API key. OSGKeyboard does not record or upload what you type with the keyboard.";
+"settings.privacy.cloud.body" = "In Cloud polish mode, transcribed text is sent to the API endpoint you configure (e.g. OpenAI or your own server). OSGKeyboard does not operate servers and does not store transcripts in the cloud.";
+"settings.privacy.cloud.alert.title" = "Third-party API";
+"settings.privacy.cloud.alert.message" = "Cloud polish sends transcribed text to the third-party API you configure. OSGKeyboard never stores data on our servers. Continue?";
+"settings.link.support" = "Help & Feedback";
 "settings.link.github" = "GitHub";
 
 /* App group error */

@@ -1,11 +1,11 @@
 # OSGKeyboard
 
 > 按住说话，松开即得 AI 润色文字，插入任意 App 的光标处。
-> 一款开源的 iOS 自定义键盘语音输入工具，灵感来自 [Typeless](https://typeless.com) 和 [OpenLess](https://github.com/Open-Less/openless)。
+> 一款源码可见的 iOS 自定义键盘语音输入工具，灵感来自 [Typeless](https://typeless.com) 和 [OpenLess](https://github.com/Open-Less/openless)。
 
 ![Platform](https://img.shields.io/badge/platform-iOS%2026%2B-0078D4?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-Source%20Available-blue)
 
 [English README](./README.md)
 
@@ -13,7 +13,7 @@
 
 ## 这是什么？
 
-OSGKeyboard 是商业语音输入工具的免费开源替代。它以 **iOS 自定义键盘扩展** 的形式运行，所以你可以在 **任何 App** 里使用 —— 微信、备忘录、邮件、ChatGPT、Claude、Cursor，无所不能。
+OSGKeyboard 是商业语音输入工具的免费、源码可见替代方案。它以 **iOS 自定义键盘扩展** 的形式运行，所以你可以在 **任何 App** 里使用 —— 微信、备忘录、邮件、ChatGPT、Claude、Cursor，无所不能。
 
 1. 长按麦克风键
 2. 自由说话
@@ -137,7 +137,7 @@ LLMProvider(
 
 ## 许可
 
-[MIT](./LICENSE) —— 使用、修改、商用均可。无任何担保。
+[OSGKeyboard 源码可见许可协议](./LICENSE) —— 仅限个人学习与非商用本地使用；禁止商用、再分发及公开 fork。商业授权请联系 [rocky.hk@gmail.com](mailto:rocky.hk@gmail.com)。
 
 ---
 

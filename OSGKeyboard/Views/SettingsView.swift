@@ -42,6 +42,7 @@ struct SettingsView: View {
                             confirmActionTitle: "common.reset"
                         ) {
                             config.reset()
+                            SpeechHistoryStore.shared.clearAll()
                         }
                         if presentation == .sheet {
                             Button("common.done") { dismiss() }
@@ -299,6 +300,10 @@ struct SettingsView: View {
 
                 if let url = LegalLinks.privacyPolicyURL {
                     footerLinkRow(title: "settings.privacy.policy", url: url)
+                    Divider().background(palette.divider)
+                }
+                if let url = LegalLinks.supportURL {
+                    footerLinkRow(title: "settings.link.support", url: url)
                     Divider().background(palette.divider)
                 }
                 footerLinkRow(
