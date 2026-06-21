@@ -99,6 +99,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        KeyboardSetupBridge.markExtensionAppearance(hasFullAccess: hasFullAccess)
         consumePendingDictationResultIfNeeded()
         refreshDictationProgressStateIfNeeded()
         refreshFlowSessionState()

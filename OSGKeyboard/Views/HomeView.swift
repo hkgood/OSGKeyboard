@@ -5,17 +5,38 @@
 
 import SwiftUI
 import OSGKeyboardShared
+import UIKit
 
 struct HomeView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject private var config = ProviderConfig.shared
     @EnvironmentObject private var flowManager: FlowSessionManager
     @FocusState private var previewFocused: Bool
     @State private var previewText = ""
+    @State private var keyboardHintDismissed = HomeGuideState.isKeyboardHintDismissed
+    @State private var micStatus = AppPermissions.micStatus
+    @State private var speechStatus = AppPermissions.speechStatus
 
     private var sessionIsLive: Bool {
         flowManager.isActive || flowManager.isStarting
+    }
+
+    private var needsCloudSetup: Bool {
+        !config.isLocalEngine && !config.isConfigured
+    }
+
+    private var needsPermissionSetup: Bool {
+        micStatus != .granted || speechStatus != .granted
+    }
+
+    private var shouldShowKeyboardHint: Bool {
+        !keyboardHintDismissed
+            && !KeyboardSetupBridge.isReadyForOnboardingSkip
+            && !needsPermissionSetup
+            && flowManager.sessionWarning == nil
+            && !needsCloudSetup
     }
 
     var body: some View {
@@ -48,6 +69,33 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
             .background(palette.background)
+        }
+        .onAppear { refreshPermissionStatuses() }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            refreshPermissionStatuses()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            refreshPermissionStatuses()
+        }
+    }
+
+    private func refreshPermissionStatuses() {
+        micStatus = AppPermissions.micStatus
+        speechStatus = AppPermissions.speechStatus
+        if AppPermissions.flowRequirementsMet {
+            flowManager.autoStartIfNeeded()
+        }
+    }
+
+    private func handlePermissionGuidanceAction() {
+        if AppPermissions.canRequestPermissionsInApp {
+            Task {
+                await AppPermissions.requestFlowPermissionsIfNeeded()
+                refreshPermissionStatuses()
+            }
+        } else {
+            AppPermissions.openSystemSettings()
         }
     }
 
@@ -152,34 +200,57 @@ struct HomeView: View {
             : palette.surface.opacity(0.88)
     }
 
-    // MARK: - Flow extras (warnings / hint)
+    // MARK: - Flow extras (warnings / hints)
 
     @ViewBuilder
     private var flowSessionExtras: some View {
-        if let warning = flowManager.sessionWarning {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
+        if needsPermissionSetup {
+            setupGuidanceCard {
+                Text(AppPermissions.homePermissionGuidanceMessage)
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.warning)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(action: handlePermissionGuidanceAction) {
+                    Text(
+                        AppPermissions.canRequestPermissionsInApp
+                            ? "home.setup.permission.request"
+                            : "home.flow.openSettings"
+                    )
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.accent)
+                }
+                .buttonStyle(.plain)
+            }
+        } else if let warning = flowManager.sessionWarning {
+            setupGuidanceCard {
                 Text(warning)
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.warning)
                     .fixedSize(horizontal: false, vertical: true)
-                if !AppPermissions.flowRequirementsMet {
-                    Button {
-                        AppPermissions.openSystemSettings()
-                    } label: {
-                        Text("home.flow.openSettings")
-                            .font(TypeStyle.caption)
-                            .foregroundStyle(palette.accent)
-                    }
-                    .buttonStyle(.plain)
-                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(Spacing.md)
-            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
+        } else if needsCloudSetup {
+            setupGuidanceCard {
+                Text("home.setup.cloudIncomplete")
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.warning)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } else if shouldShowKeyboardHint {
+            setupGuidanceCard {
+                Text("home.setup.keyboardHint")
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button {
+                    keyboardHintDismissed = true
+                    HomeGuideState.dismissKeyboardHint()
+                } label: {
+                    Text("home.setup.keyboardHint.dismiss")
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.accent)
+                }
+                .buttonStyle(.plain)
+            }
         } else if !flowManager.isActive {
             Text("home.flow.hint")
                 .font(TypeStyle.caption2)
@@ -190,9 +261,23 @@ struct HomeView: View {
         }
     }
 
+    private func setupGuidanceCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.md)
+        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+                .stroke(palette.divider, lineWidth: 0.5)
+        )
+    }
+
     private var flowStatusColor: Color {
         if flowManager.isActive { return palette.accent }
         if flowManager.isStarting { return palette.accent }
+        if needsPermissionSetup { return palette.warning }
         if flowManager.sessionWarning != nil { return palette.warning }
         return palette.textTertiary
     }
@@ -233,5 +318,21 @@ struct HomeView: View {
         .foregroundStyle(palette.textSecondary)
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity, alignment: .center)
+    }
+}
+
+// MARK: - Home guidance persistence
+
+private enum HomeGuideState {
+    private static let keyboardHintDismissedKey = "home.keyboardHintDismissed"
+
+    static var isKeyboardHintDismissed: Bool {
+        guard AppGroup.isAvailable else { return false }
+        return AppGroup.defaults.bool(forKey: keyboardHintDismissedKey)
+    }
+
+    static func dismissKeyboardHint() {
+        guard AppGroup.isAvailable else { return }
+        AppGroup.defaults.set(true, forKey: keyboardHintDismissedKey)
     }
 }

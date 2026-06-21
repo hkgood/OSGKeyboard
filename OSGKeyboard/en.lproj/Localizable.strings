@@ -3,32 +3,33 @@
 "OSGKeyboard" = "OSGKeyboard";
 
 /* Onboarding */
+"onboarding.progress" = "Step %1$d of %2$d";
 "onboarding.welcome.tagline" = "Speak instead of type";
-"onboarding.welcome.subtitle" = "Your open-source voice keyboard";
-"onboarding.enable.fullAccessNote" = "Full Access lets the keyboard reach the microphone and your LLM API. We never log what you type.";
-"onboarding.permission.mic.title" = "Microphone access";
-"onboarding.permission.mic.body" = "Voice input requires your permission to use the microphone.";
-"onboarding.permission.mic.allow" = "Allow microphone";
-"onboarding.permission.mic.deniedHint" = "Microphone was denied. Open Settings to enable it, or tap Next to continue.";
-"onboarding.permission.speech.title" = "Speech recognition";
-"onboarding.permission.speech.body" = "On-device speech recognition turns your voice into text.";
-"onboarding.permission.speech.allow" = "Allow speech recognition";
-"onboarding.permission.speech.deniedHint" = "Speech recognition was denied. Open Settings to enable it, or tap Next to continue.";
+"onboarding.welcome.subtitle" = "Open-source voice keyboard";
+"onboarding.welcome.subtitle2" = "We never read or upload anything you type.";
+"onboarding.permission.preface" = "iOS will ask for two permissions — please allow both.";
+"onboarding.permission.mic.title" = "Microphone";
+"onboarding.permission.mic.body" = "Records your voice.";
+"onboarding.permission.mic.allow" = "Allow";
+"onboarding.permission.mic.deniedHint" = "Open Settings to enable, or tap Next to set up later.";
+"onboarding.permission.speech.title" = "Speech Recognition";
+"onboarding.permission.speech.body" = "Turns your voice into text.";
+"onboarding.permission.speech.allow" = "Allow";
+"onboarding.permission.speech.deniedHint" = "Open Settings to enable, or tap Next to set up later.";
 "onboarding.permission.openSettings" = "Open Settings";
 "onboarding.permission.status.undetermined" = "Not requested yet";
 "onboarding.permission.status.granted" = "Allowed";
 "onboarding.permission.status.denied" = "Denied";
 "legal.privacyPolicy" = "Privacy Policy";
-"onboarding.enable.title" = "Enable OSGKeyboard";
-"onboarding.enable.step1" = "Settings → General → Keyboard → Keyboards";
-"onboarding.enable.step2" = "Tap “Add New Keyboard…” and choose OSGKeyboard";
-"onboarding.enable.step3" = "Tap OSGKeyboard and enable “Allow Full Access”";
-"onboarding.enable.step4" = "Allow Full Access is required for the microphone and LLM calls.";
-"onboarding.enable.openSettings" = "Open iOS Settings";
-"onboarding.api.title" = "Choose engine";
-"onboarding.api.subtitle" = "Local needs no API key; Cloud polishes your text via LLM.";
-"onboarding.api.localReady.title" = "No API key needed";
-"onboarding.api.localReady.body" = "Local recognition is ready to use. Tap Done to start.";
+"onboarding.enable.title" = "Add Keyboard";
+"onboarding.enable.fullAccessNote" = "Turn on Allow Full Access so the mic can work.";
+"onboarding.enable.step1" = "Settings → General → Keyboard → Add New Keyboard";
+"onboarding.enable.step2" = "Select OSGKeyboard and enable Allow Full Access";
+"onboarding.enable.step3.prefix" = "Hold ";
+"onboarding.enable.step3.suffix" = "and select OSGKeyboard";
+"onboarding.enable.openSettings" = "Open Settings";
+"onboarding.api.title" = "Choose Engine";
+"settings.onboarding.replay" = "Restart permission setup";
 
 /* Common navigation */
 "common.back" = "Back";
@@ -42,7 +43,7 @@
 "common.space" = "Space";
 "common.newline" = "Return";
 
-/* Privacy footnote (onboarding welcome page) */
+/* Privacy footnote (onboarding engine page) */
 "privacy.audio.title" = "On-device transcription";
 "privacy.audio.body" = "Powered by the on-device iOS speech engine.";
 "privacy.network.title" = "Automatic text polish";
@@ -186,7 +187,14 @@
 "home.flow.active" = "Voice session active";
 "home.flow.label" = "Ready";
 "home.flow.inactive" = "Voice session inactive";
-"home.flow.hint" = "Voice session starts automatically. Switch to any app and tap the keyboard mic to dictate.";
+"home.flow.hint" = "Switch to any app and tap the keyboard mic to dictate.";
+"home.setup.permission.mic" = "Microphone access is off — voice input won't work.";
+"home.setup.permission.speech" = "Speech recognition is off — voice input won't work.";
+"home.setup.permission.both" = "Microphone and speech recognition are off — voice input won't work.";
+"home.setup.permission.request" = "Grant access";
+"home.setup.cloudIncomplete" = "Cloud engine needs an API key. Open the Settings tab.";
+"home.setup.keyboardHint" = "Don't see OSGKeyboard? Add it in iOS Settings.";
+"home.setup.keyboardHint.dismiss" = "Got it";
 "home.flow.starting" = "Starting voice session…";
 "home.flow.openSettings" = "Open Settings to grant permissions";
 "home.flow.start" = "Start voice session";

@@ -29,6 +29,11 @@ struct OnboardingView: View {
     @ObservedObject var config: ProviderConfig
     @State private var micStatus = AppPermissions.micStatus
     @State private var speechStatus = AppPermissions.speechStatus
+    @State private var keyboardReady = KeyboardSetupBridge.isReadyForOnboardingSkip
+
+    private var currentPage: OnboardingPage {
+        OnboardingPage(rawValue: config.onboardingPage) ?? .welcome
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -38,15 +43,22 @@ struct OnboardingView: View {
                 palette.background.ignoresSafeArea()
 
                 VStack(spacing: 0) {
+                    progressHeader
+                        .padding(.top, Spacing.md)
+                        .padding(.bottom, Spacing.sm)
+
                     Group {
-                        switch OnboardingPage(rawValue: config.onboardingPage) ?? .welcome {
-                        case .welcome: WelcomePage()
+                        switch currentPage {
+                        case .welcome:
+                            WelcomePage()
                         case .microphone:
-                            MicPermissionPage(status: $micStatus)
+                            MicPermissionPage(status: $micStatus, showsPreface: speechStatus != .granted)
                         case .speech:
                             SpeechPermissionPage(status: $speechStatus)
-                        case .keyboard: EnableKeyboardPage()
-                        case .api: APISetupPage(config: config)
+                        case .keyboard:
+                            EnableKeyboardPage()
+                        case .api:
+                            APISetupPage(config: config)
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -69,10 +81,94 @@ struct OnboardingView: View {
             if config.onboardingPage < 0 || config.onboardingPage >= OnboardingPage.count {
                 config.onboardingPage = 0
             }
+            applyOnboardingDefaultsIfNeeded()
             refreshPermissionStatuses()
+            snapToVisiblePageIfNeeded()
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { refreshPermissionStatuses() }
+        }
+        .onChange(of: micStatus) { previous, current in
+            guard currentPage == .microphone, current == .granted, previous != .granted else { return }
+            advanceAfterPermissionGrant()
+        }
+        .onChange(of: speechStatus) { previous, current in
+            guard currentPage == .speech, current == .granted, previous != .granted else { return }
+            advanceAfterPermissionGrant()
+        }
+    }
+
+    // MARK: - Navigation helpers
+
+    private func applyOnboardingDefaultsIfNeeded() {
+        guard !config.hasCompletedOnboarding, config.onboardingPage == 0 else { return }
+        // First-time users with no API key: default to local for a faster path.
+        if config.apiKey.isEmpty, config.engineMode == "cloud" {
+            config.engineMode = "local"
+            config.modeId = "transcribe"
+        }
+    }
+
+    private func shouldShowPage(_ page: OnboardingPage) -> Bool {
+        switch page {
+        case .microphone: return micStatus != .granted
+        case .speech: return speechStatus != .granted
+        case .keyboard: return !keyboardReady
+        default: return true
+        }
+    }
+
+    private func nextVisiblePage(after page: Int) -> Int? {
+        guard page + 1 < OnboardingPage.count else { return nil }
+        for index in (page + 1)..<OnboardingPage.count {
+            guard let candidate = OnboardingPage(rawValue: index) else { continue }
+            if shouldShowPage(candidate) { return index }
+        }
+        return nil
+    }
+
+    private func previousVisiblePage(before page: Int) -> Int? {
+        guard page > 0 else { return nil }
+        for index in stride(from: page - 1, through: 0, by: -1) {
+            guard let candidate = OnboardingPage(rawValue: index) else { continue }
+            if shouldShowPage(candidate) { return index }
+        }
+        return nil
+    }
+
+    private func snapToVisiblePageIfNeeded() {
+        guard let page = OnboardingPage(rawValue: config.onboardingPage) else { return }
+        guard !shouldShowPage(page) else { return }
+        if let next = nextVisiblePage(after: config.onboardingPage) {
+            config.onboardingPage = next
+        } else if let previous = previousVisiblePage(before: config.onboardingPage) {
+            config.onboardingPage = previous
+        }
+    }
+
+    private func advanceAfterPermissionGrant() {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(400))
+            guard currentPage == .microphone || currentPage == .speech else { return }
+            refreshPermissionStatuses()
+            withAnimation(Motion.soft) {
+                if let next = nextVisiblePage(after: config.onboardingPage) {
+                    config.onboardingPage = next
+                }
+            }
+        }
+    }
+
+    private func advancePage() {
+        refreshPermissionStatuses()
+        withAnimation(Motion.soft) {
+            if isLastPage {
+                config.hasCompletedOnboarding = true
+            } else if let next = nextVisiblePage(after: config.onboardingPage) {
+                config.onboardingPage = next
+            } else {
+                config.hasCompletedOnboarding = true
+            }
         }
     }
 
@@ -93,6 +189,20 @@ struct OnboardingView: View {
     private func refreshPermissionStatuses() {
         micStatus = AppPermissions.micStatus
         speechStatus = AppPermissions.speechStatus
+        keyboardReady = KeyboardSetupBridge.isReadyForOnboardingSkip
+    }
+
+    private var progressHeader: some View {
+        Text(
+            String(
+                format: NSLocalizedString("onboarding.progress", comment: ""),
+                config.onboardingPage + 1,
+                OnboardingPage.count
+            )
+        )
+        .font(TypeStyle.caption)
+        .foregroundStyle(palette.textTertiary)
+        .frame(maxWidth: .infinity)
     }
 
     private var pageDots: some View {
@@ -109,7 +219,7 @@ struct OnboardingView: View {
     private var isLastPage: Bool { config.onboardingPage == OnboardingPage.api.rawValue }
 
     private var canAdvance: Bool {
-        switch OnboardingPage(rawValue: config.onboardingPage) ?? .welcome {
+        switch currentPage {
         case .welcome, .keyboard, .api:
             return !isLastPage || config.isConfigured
         case .microphone:
@@ -119,11 +229,26 @@ struct OnboardingView: View {
         }
     }
 
+    private var primaryActionTitle: String {
+        if isLastPage {
+            return NSLocalizedString("common.done", comment: "")
+        }
+        switch currentPage {
+        case .microphone where micStatus == .granted,
+             .speech where speechStatus == .granted:
+            return NSLocalizedString("common.continue", comment: "")
+        default:
+            return NSLocalizedString("common.next", comment: "")
+        }
+    }
+
     @ViewBuilder
     private var bottomBar: some View {
         HStack(spacing: Spacing.sm) {
-            if config.onboardingPage > 0 {
-                Button { withAnimation(Motion.soft) { config.onboardingPage -= 1 } } label: {
+            if let previous = previousVisiblePage(before: config.onboardingPage) {
+                Button {
+                    withAnimation(Motion.soft) { config.onboardingPage = previous }
+                } label: {
                     Text("common.back")
                         .font(TypeStyle.headline)
                         .frame(maxWidth: .infinity, minHeight: 50)
@@ -137,18 +262,8 @@ struct OnboardingView: View {
                 .buttonStyle(.plain)
             }
 
-            Button {
-                withAnimation(Motion.soft) {
-                    if isLastPage {
-                        config.hasCompletedOnboarding = true
-                    } else {
-                        config.onboardingPage += 1
-                    }
-                }
-            } label: {
-                Text(isLastPage
-                     ? NSLocalizedString("common.done", comment: "")
-                     : NSLocalizedString("common.next", comment: ""))
+            Button { advancePage() } label: {
+                Text(primaryActionTitle)
                     .font(TypeStyle.headline)
                     .frame(maxWidth: .infinity, minHeight: 50)
                     .background(
@@ -185,40 +300,72 @@ private struct OnboardingHeroIcon: View {
 }
 
 private enum OnboardingLayoutMetrics {
-    /// Matches welcome page: logo → tagline, and subtitle → next block.
+    /// Matches welcome page: hero → title block, and title block → next block.
     static let heroTextGap: CGFloat = Spacing.hero
+}
+
+/// Title + subtitle styling aligned with the welcome page.
+private struct OnboardingTitleBlock: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
+    let title: LocalizedStringKey
+    var subtitle: LocalizedStringKey? = nil
+    var secondarySubtitle: LocalizedStringKey? = nil
+
+    var body: some View {
+        VStack(spacing: Spacing.xs) {
+            Text(title)
+                .font(TypeStyle.title3)
+                .foregroundStyle(palette.textPrimary)
+            if let subtitle {
+                Text(subtitle)
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textSecondary)
+            }
+            if let secondarySubtitle {
+                Text(secondarySubtitle)
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textSecondary)
+            }
+        }
+        .multilineTextAlignment(.center)
+        .padding(.horizontal, Spacing.xl)
+    }
 }
 
 // MARK: - Welcome
 
 private struct WelcomePage: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @State private var logoAppeared = false
 
     var body: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: Spacing.xl)
+            Spacer()
 
             Image("osglogo")
                 .resizable()
                 .scaledToFit()
                 .frame(maxWidth: 168, maxHeight: 48)
+                .opacity(logoAppeared ? 1 : 0)
+                .offset(y: logoAppeared ? 0 : 14)
+                .scaleEffect(logoAppeared ? 1 : 0.9)
                 .accessibilityHidden(true)
+                .onAppear {
+                    withAnimation(.spring(response: 0.75, dampingFraction: 0.82)) {
+                        logoAppeared = true
+                    }
+                }
 
-            VStack(spacing: Spacing.xs) {
-                Text("onboarding.welcome.tagline")
-                    .font(TypeStyle.title3)
-                    .foregroundStyle(palette.textPrimary)
-                Text("onboarding.welcome.subtitle")
-                    .font(TypeStyle.body)
-                    .foregroundStyle(palette.textSecondary)
-            }
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, Spacing.xl)
+            OnboardingTitleBlock(
+                title: "onboarding.welcome.tagline",
+                subtitle: "onboarding.welcome.subtitle",
+                secondarySubtitle: "onboarding.welcome.subtitle2"
+            )
+            .opacity(logoAppeared ? 1 : 0)
+            .offset(y: logoAppeared ? 0 : 10)
             .padding(.top, OnboardingLayoutMetrics.heroTextGap)
-
-            PrivacyFootnote()
-                .padding(.horizontal, Spacing.xl)
-                .padding(.top, OnboardingLayoutMetrics.heroTextGap)
+            .animation(.spring(response: 0.8, dampingFraction: 0.85).delay(0.12), value: logoAppeared)
 
             if let url = LegalLinks.privacyPolicyURL {
                 Link(destination: url) {
@@ -227,36 +374,13 @@ private struct WelcomePage: View {
                         .foregroundStyle(palette.accent)
                 }
                 .padding(.top, Spacing.xxxl)
+                .opacity(logoAppeared ? 1 : 0)
+                .animation(.easeOut(duration: 0.45).delay(0.28), value: logoAppeared)
             }
 
             Spacer()
         }
-    }
-}
-
-private struct PrivacyFootnote: View {
-    @Environment(\.themePalette) private var palette: ThemePalette
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.xl) {
-            footnoteBlock(title: "privacy.audio.title", body: "privacy.audio.body")
-            footnoteBlock(title: "privacy.network.title", body: "privacy.network.body")
-            footnoteBlock(title: "privacy.universal.title", body: "privacy.universal.body")
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func footnoteBlock(title: LocalizedStringKey, body: LocalizedStringKey) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(title)
-                .font(TypeStyle.bodyEmph)
-                .foregroundStyle(palette.textPrimary)
-            Text(body)
-                .font(TypeStyle.footnote)
-                .foregroundStyle(palette.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .lineSpacing(3)
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
@@ -265,6 +389,7 @@ private struct PrivacyFootnote: View {
 private struct MicPermissionPage: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @Binding var status: AppPermissions.MicStatus
+    var showsPreface: Bool = false
     @State private var isRequesting = false
 
     var body: some View {
@@ -272,13 +397,12 @@ private struct MicPermissionPage: View {
             icon: "mic.fill",
             title: "onboarding.permission.mic.title",
             detail: "onboarding.permission.mic.body",
+            preface: showsPreface ? "onboarding.permission.preface" : nil,
             status: statusLabel,
             statusColor: statusColor,
             primaryTitle: primaryButtonTitle,
-            primaryDisabled: isRequesting || status == .granted,
+            primaryDisabled: isRequesting || (status == .granted),
             onPrimary: { Task { await request() } },
-            secondaryTitle: status == .denied ? "onboarding.permission.openSettings" : nil,
-            onSecondary: status == .denied ? { AppPermissions.openSystemSettings() } : nil,
             deniedHint: status == .denied ? "onboarding.permission.mic.deniedHint" : nil
         )
         .onAppear { status = AppPermissions.micStatus }
@@ -304,10 +428,18 @@ private struct MicPermissionPage: View {
     }
 
     private var primaryButtonTitle: LocalizedStringKey {
-        status == .granted ? "onboarding.permission.status.granted" : "onboarding.permission.mic.allow"
+        switch status {
+        case .granted: return "onboarding.permission.status.granted"
+        case .denied: return "onboarding.permission.openSettings"
+        case .undetermined: return "onboarding.permission.mic.allow"
+        }
     }
 
     private func request() async {
+        if status == .denied {
+            AppPermissions.openSystemSettings()
+            return
+        }
         isRequesting = true
         _ = await AppPermissions.requestMicrophone()
         status = AppPermissions.micStatus
@@ -330,8 +462,6 @@ private struct SpeechPermissionPage: View {
             primaryTitle: primaryButtonTitle,
             primaryDisabled: isRequesting || status == .granted,
             onPrimary: { Task { await request() } },
-            secondaryTitle: speechDenied ? "onboarding.permission.openSettings" : nil,
-            onSecondary: speechDenied ? { AppPermissions.openSystemSettings() } : nil,
             deniedHint: speechDenied ? "onboarding.permission.speech.deniedHint" : nil
         )
         .onAppear { status = AppPermissions.speechStatus }
@@ -364,12 +494,18 @@ private struct SpeechPermissionPage: View {
     }
 
     private var primaryButtonTitle: LocalizedStringKey {
-        status == .granted
-            ? "onboarding.permission.status.granted"
-            : "onboarding.permission.speech.allow"
+        switch status {
+        case .granted: return "onboarding.permission.status.granted"
+        case .denied, .restricted: return "onboarding.permission.openSettings"
+        case .undetermined: return "onboarding.permission.speech.allow"
+        }
     }
 
     private func request() async {
+        if speechDenied {
+            AppPermissions.openSystemSettings()
+            return
+        }
         isRequesting = true
         _ = await AppPermissions.requestSpeechRecognition()
         status = AppPermissions.speechStatus
@@ -383,6 +519,7 @@ private struct PermissionPageLayout: View {
     let icon: String
     let title: LocalizedStringKey
     let detail: LocalizedStringKey
+    var preface: LocalizedStringKey? = nil
     let status: LocalizedStringKey
     let statusColor: Color
     let primaryTitle: LocalizedStringKey
@@ -393,60 +530,62 @@ private struct PermissionPageLayout: View {
     var deniedHint: LocalizedStringKey? = nil
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
+        ScrollView {
+            VStack(spacing: 0) {
+                Spacer(minLength: Spacing.lg)
 
-            OnboardingHeroIcon(systemName: icon, circleSize: 96, iconSize: 40)
-
-            VStack(spacing: Spacing.xs) {
-                Text(title)
-                    .font(TypeStyle.title2)
-                    .foregroundStyle(palette.textPrimary)
-                Text(detail)
-                    .font(TypeStyle.body)
-                    .foregroundStyle(palette.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, Spacing.xl)
-            }
-            .padding(.top, OnboardingLayoutMetrics.heroTextGap)
-
-            HStack(spacing: 6) {
-                Circle().fill(statusColor).frame(width: 8, height: 8)
-                Text(status)
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textSecondary)
-            }
-            .padding(.top, OnboardingLayoutMetrics.heroTextGap)
-
-            if let deniedHint {
-                Text(deniedHint)
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.warning)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, Spacing.xl)
-                    .padding(.top, Spacing.md)
-            }
-
-            VStack(spacing: Spacing.sm) {
-                Button(action: onPrimary) {
-                    Text(primaryTitle)
-                        .primaryButton()
+                if let preface {
+                    Text(preface)
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.bottom, Spacing.lg)
                 }
-                .buttonStyle(.plain)
-                .disabled(primaryDisabled)
 
-                if let secondaryTitle, let onSecondary {
-                    Button(action: onSecondary) {
-                        Text(secondaryTitle)
-                            .secondaryButton()
+                OnboardingHeroIcon(systemName: icon, circleSize: 96, iconSize: 40)
+
+                OnboardingTitleBlock(title: title, subtitle: detail)
+                    .padding(.top, OnboardingLayoutMetrics.heroTextGap)
+
+                HStack(spacing: 6) {
+                    Circle().fill(statusColor).frame(width: 8, height: 8)
+                    Text(status)
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textSecondary)
+                }
+                .padding(.top, OnboardingLayoutMetrics.heroTextGap)
+
+                if let deniedHint {
+                    Text(deniedHint)
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.warning)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, Spacing.xl)
+                        .padding(.top, Spacing.md)
+                }
+
+                VStack(spacing: Spacing.sm) {
+                    Button(action: onPrimary) {
+                        Text(primaryTitle)
+                            .primaryButton()
                     }
                     .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.xl)
+                    .disabled(primaryDisabled)
 
-            Spacer()
+                    if let secondaryTitle, let onSecondary {
+                        Button(action: onSecondary) {
+                            Text(secondaryTitle)
+                                .secondaryButton()
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, Spacing.xl)
+
+                Spacer(minLength: Spacing.lg)
+            }
         }
     }
 }
@@ -457,54 +596,45 @@ private struct EnableKeyboardPage: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
+        ScrollView {
+            VStack(spacing: 0) {
+                Spacer(minLength: Spacing.lg)
 
-            OnboardingHeroIcon(systemName: "keyboard.fill", circleSize: 96, iconSize: 40)
+                OnboardingHeroIcon(systemName: "keyboard.fill", circleSize: 96, iconSize: 40)
 
-            VStack(spacing: Spacing.xs) {
-                Text("onboarding.enable.title")
-                    .font(TypeStyle.title2)
-                    .foregroundStyle(palette.textPrimary)
-                Text("onboarding.enable.fullAccessNote")
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, Spacing.lg)
+                OnboardingTitleBlock(
+                    title: "onboarding.enable.title",
+                    subtitle: "onboarding.enable.fullAccessNote"
+                )
+                .padding(.top, OnboardingLayoutMetrics.heroTextGap)
+
+                VStack(alignment: .leading, spacing: Spacing.lg) {
+                    step(num: 1, text: NSLocalizedString("onboarding.enable.step1", comment: ""))
+                    step(num: 2, text: NSLocalizedString("onboarding.enable.step2", comment: ""))
+                    switchKeyboardStep(num: 3)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Spacing.xl)
+                .padding(.top, OnboardingLayoutMetrics.heroTextGap)
+
+                Button {
+                    AppPermissions.openSystemSettings()
+                } label: {
+                    Label(LocalizedStringKey("onboarding.enable.openSettings"), systemImage: "arrow.up.right.square")
+                        .primaryButton()
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, Spacing.xxxl)
+
+                Spacer(minLength: Spacing.lg)
             }
-            .padding(.top, OnboardingLayoutMetrics.heroTextGap)
-
-            VStack(alignment: .leading, spacing: Spacing.lg) {
-                step(num: 1, text: NSLocalizedString("onboarding.enable.step1", comment: ""))
-                step(num: 2, text: NSLocalizedString("onboarding.enable.step2", comment: ""))
-                step(num: 3, text: NSLocalizedString("onboarding.enable.step3", comment: ""))
-                step(num: 4, text: NSLocalizedString("onboarding.enable.step4", comment: ""))
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Spacing.xl)
-            .padding(.top, OnboardingLayoutMetrics.heroTextGap)
-
-            Button {
-                AppPermissions.openSystemSettings()
-            } label: {
-                Label(LocalizedStringKey("onboarding.enable.openSettings"), systemImage: "arrow.up.right.square")
-                    .primaryButton()
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.xxl)
-
-            Spacer()
         }
     }
 
     private func step(num: Int, text: String) -> some View {
         HStack(alignment: .top, spacing: Spacing.sm) {
-            Text("\(num)")
-                .font(TypeStyle.caption2)
-                .frame(width: 24, height: 24)
-                .background(palette.accent, in: Circle())
-                .foregroundStyle(palette.textOnAccent)
+            stepLabel(num)
             Text(text)
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textPrimary)
@@ -512,6 +642,34 @@ private struct EnableKeyboardPage: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private func switchKeyboardStep(num: Int) -> some View {
+        HStack(alignment: .top, spacing: Spacing.sm) {
+            stepLabel(num)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text("onboarding.enable.step3.prefix")
+                Image(systemName: "globe")
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
+                    .alignmentGuide(.firstTextBaseline) { dimensions in
+                        dimensions[.bottom] - dimensions.height * 0.12
+                    }
+                Text("onboarding.enable.step3.suffix")
+            }
+            .font(TypeStyle.body)
+            .foregroundStyle(palette.textPrimary)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func stepLabel(_ num: Int) -> some View {
+        Text("\(num)")
+            .font(TypeStyle.body)
+            .foregroundStyle(palette.textPrimary)
+            .frame(width: 20, alignment: .leading)
     }
 }
 
@@ -524,17 +682,12 @@ private struct APISetupPage: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.lg) {
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    Text("onboarding.api.title")
-                        .font(TypeStyle.title2)
-                        .foregroundStyle(palette.textPrimary)
-                    Text("onboarding.api.subtitle")
-                        .font(TypeStyle.footnote)
-                        .foregroundStyle(palette.textTertiary)
-                }
-                .padding(.horizontal, Spacing.lg)
-                .padding(.top, Spacing.xxxl)
+            VStack(spacing: Spacing.lg) {
+                OnboardingHeroIcon(systemName: "cpu", circleSize: 72, iconSize: 30)
+                    .padding(.top, Spacing.xl)
+
+                OnboardingTitleBlock(title: "onboarding.api.title")
+                    .padding(.horizontal, Spacing.lg)
 
                 EnginePickerSection(config: config)
                     .padding(.horizontal, Spacing.lg)
@@ -544,35 +697,6 @@ private struct APISetupPage: View {
                         .padding(.horizontal, Spacing.lg)
                     APISettingsCard(config: config)
                         .padding(.horizontal, Spacing.lg)
-                } else {
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                        HStack(spacing: Spacing.sm) {
-                            ZStack {
-                                Circle()
-                                    .fill(palette.accentMuted)
-                                    .frame(width: 32, height: 32)
-                                Image(systemName: "checkmark.seal.fill")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundStyle(palette.accent)
-                            }
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("onboarding.api.localReady.title")
-                                    .font(TypeStyle.body)
-                                    .foregroundStyle(palette.textPrimary)
-                                Text("onboarding.api.localReady.body")
-                                    .font(TypeStyle.caption2)
-                                    .foregroundStyle(palette.textTertiary)
-                            }
-                            Spacer()
-                        }
-                        .padding(Spacing.lg)
-                    }
-                    .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                            .stroke(palette.divider, lineWidth: 0.5)
-                    )
-                    .padding(.horizontal, Spacing.lg)
                 }
             }
             .padding(.bottom, Spacing.xxxl)

@@ -3,32 +3,33 @@
 "OSGKeyboard" = "OSGKeyboard";
 
 /* Onboarding */
+"onboarding.progress" = "第 %1$d / %2$d 步";
 "onboarding.welcome.tagline" = "能说就不打字";
-"onboarding.welcome.subtitle" = "你的开源语音输入法";
-"onboarding.enable.fullAccessNote" = "完全访问用于麦克风与 API 配置读取。我们不会记录或上传你的击键内容。";
-"onboarding.permission.mic.title" = "麦克风权限";
-"onboarding.permission.mic.body" = "语音输入需要您授予麦克风权限";
-"onboarding.permission.mic.allow" = "允许麦克风";
-"onboarding.permission.mic.deniedHint" = "麦克风被拒绝。可前往设置开启，或点「下一步」继续。";
-"onboarding.permission.speech.title" = "语音识别权限";
-"onboarding.permission.speech.body" = "端侧语音识别将语音转为文字。";
-"onboarding.permission.speech.allow" = "允许语音识别";
-"onboarding.permission.speech.deniedHint" = "语音识别被拒绝。可前往设置开启，或点「下一步」继续。";
+"onboarding.welcome.subtitle" = "开源语音输入法";
+"onboarding.welcome.subtitle2" = "不读取、不上传任何输入内容。";
+"onboarding.permission.preface" = "系统会弹出两次授权，请「允许」权限申请。";
+"onboarding.permission.mic.title" = "麦克风";
+"onboarding.permission.mic.body" = "用于录制语音。";
+"onboarding.permission.mic.allow" = "允许";
+"onboarding.permission.mic.deniedHint" = "去设置打开，或先点「下一步」。";
+"onboarding.permission.speech.title" = "语音识别";
+"onboarding.permission.speech.body" = "把你说的话转成文字。";
+"onboarding.permission.speech.allow" = "允许";
+"onboarding.permission.speech.deniedHint" = "去设置打开，或先点「下一步」。";
 "onboarding.permission.openSettings" = "打开设置";
 "onboarding.permission.status.undetermined" = "尚未请求";
 "onboarding.permission.status.granted" = "已允许";
 "onboarding.permission.status.denied" = "已拒绝";
 "legal.privacyPolicy" = "隐私政策";
-"onboarding.enable.title" = "启用 OSGKeyboard";
-"onboarding.enable.step1" = "设置 → 通用 → 键盘 → 键盘";
-"onboarding.enable.step2" = "点击「添加新键盘…」并选择 OSGKeyboard";
-"onboarding.enable.step3" = "点击 OSGKeyboard 并启用「允许完全访问」";
-"onboarding.enable.step4" = "允许完全访问是麦克风和网络调用的前提。";
-"onboarding.enable.openSettings" = "打开 iOS 设置";
-"onboarding.api.title" = "选择引擎";
-"onboarding.api.subtitle" = "Local 不需要 API Key;Cloud 用 LLM 润色文字。";
-"onboarding.api.localReady.title" = "无需配置 API Key";
-"onboarding.api.localReady.body" = "本地识别直接可用,按 Done 即可开始使用。";
+"onboarding.enable.title" = "添加键盘";
+"onboarding.enable.fullAccessNote" = "记得打开「允许完全访问」，不然麦克风用不了。";
+"onboarding.enable.step1" = "设置 → 通用 → 键盘 → 添加新键盘";
+"onboarding.enable.step2" = "选择 OSGKeyboard，打开「允许完全访问」";
+"onboarding.enable.step3.prefix" = "长按";
+"onboarding.enable.step3.suffix" = "，选中 OSGKeyboard";
+"onboarding.enable.openSettings" = "去设置";
+"onboarding.api.title" = "选择语音转文字 AI 引擎";
+"settings.onboarding.replay" = "重新开始权限引导";
 
 /* Common navigation */
 "common.back" = "返回";
@@ -42,7 +43,7 @@
 "common.space" = "空格";
 "common.newline" = "换行";
 
-/* Privacy footnote (onboarding welcome page) */
+/* Privacy footnote (onboarding engine page) */
 "privacy.audio.title" = "支持本地转写";
 "privacy.audio.body" = "支持 iOS 本地引擎转录";
 "privacy.network.title" = "文字自动润色";
@@ -86,12 +87,12 @@
 "settings.reset.message" = "API key、model 和 base URL 都会被清空。";
 "settings.reset.confirm" = "重置所有设置";
 "settings.engine.title" = "引擎";
-"settings.engine.subtitle" = "选择识别方式。本地引擎无需 API Key,仅做语音转录。";
+"settings.engine.subtitle" = "本地不用 Key，只转文字；云端会润色，要配 Key。";
 "settings.engine.local.title" = "本地识别";
-"settings.engine.local.ios26" = "始终端侧,无需联网。";
+"settings.engine.local.ios26" = "全程在手机本地，不用联网";
 "settings.engine.local.legacy" = "端侧 ASR,仅转录,无润色。";
 "settings.engine.cloud.title" = "云端润色";
-"settings.engine.cloud.subtitle" = "ASR 转录 + LLM 润色,需要 API Key。";
+"settings.engine.cloud.subtitle" = "先转文字，再用 AI 润色，要 API Key";
 "settings.provider.title" = "提供商";
 "settings.provider.subtitle" = "选择 LLM 提供商。";
 "provider.openai" = "OpenAI";
@@ -121,7 +122,7 @@
 "settings.privacy.title" = "隐私";
 "settings.privacy.policy" = "隐私政策";
 "settings.privacy.fullAccess.title" = "关于完全访问";
-"settings.privacy.fullAccess.body" = "完全访问用于麦克风与读取 API Key。OSGKeyboard 不会记录或上传你在键盘上的击键内容。";
+"settings.privacy.fullAccess.body" = "用来调用麦克风和读取 API Key；不会读取或上传你的输入内容。";
 "settings.link.github" = "GitHub";
 
 /* App group error */
@@ -185,14 +186,21 @@
 "home.flow.active" = "语音会话进行中";
 "home.flow.label" = "就绪";
 "home.flow.inactive" = "语音会话未启动";
-"home.flow.hint" = "语音会话会自动启动。切到任意 App，点按键盘麦克风即可说话。";
+"home.flow.hint" = "切到别的 App，点键盘麦克风就能说。";
+"home.setup.permission.mic" = "麦克风还没授权，语音输入用不了。";
+"home.setup.permission.speech" = "语音识别还没授权，语音输入用不了。";
+"home.setup.permission.both" = "麦克风和语音识别还没授权，语音输入用不了。";
+"home.setup.permission.request" = "去授权";
+"home.setup.cloudIncomplete" = "选了云端引擎，先去「设置」填 API Key。";
+"home.setup.keyboardHint" = "列表里没有？去系统设置里添加键盘。";
+"home.setup.keyboardHint.dismiss" = "知道了";
 "home.flow.starting" = "正在启动语音会话…";
-"home.flow.openSettings" = "前往设置授予权限";
+"home.flow.openSettings" = "去设置打开权限";
 "home.flow.start" = "启动语音会话";
 "home.flow.end" = "结束语音会话";
 "home.flow.endShort" = "结束";
 "home.preview.label" = "输入测试";
-"home.preview.placeholder" = "点击输入，测试键盘效果…";
+"home.preview.placeholder" = "点这里试试键盘";
 
 /* Tabs */
 "tab.keyboard" = "键盘";

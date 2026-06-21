@@ -3,7 +3,7 @@
 "OSGKeyboard" = "OSGKeyboard";
 
 /* Onboarding */
-"onboarding.welcome.subtitle" = "按住说话,松开即得润色文字。";
+"onboarding.welcome.subtitle" = "点按麦克风说话，再点一次结束，文字即出现。";
 "onboarding.enable.title" = "启用 OSGKeyboard";
 "onboarding.enable.step1" = "设置 → 通用 → 键盘 → 键盘";
 "onboarding.enable.step2" = "点击「添加新键盘…」并选择 OSGKeyboard";

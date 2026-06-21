@@ -276,6 +276,27 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
             sectionHeader("settings.about.title")
             VStack(spacing: 0) {
+                Button {
+                    config.hasCompletedOnboarding = false
+                    config.onboardingPage = 0
+                } label: {
+                    HStack(spacing: Spacing.sm) {
+                        Text("settings.onboarding.replay")
+                            .font(TypeStyle.body)
+                            .foregroundStyle(palette.textPrimary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(palette.textTertiary)
+                    }
+                    .padding(.horizontal, Spacing.md)
+                    .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                Divider().background(palette.divider)
+
                 if let url = LegalLinks.privacyPolicyURL {
                     footerLinkRow(title: "settings.privacy.policy", url: url)
                     Divider().background(palette.divider)

@@ -14,11 +14,6 @@ struct OSGKeyboardApp: App {
 
     init() {
         MaterialIconsFont.registerIfNeeded()
-        #if DEBUG
-        // Reset onboarding on each launch so guide screens can be reviewed while iterating UI.
-        ProviderConfig.shared.hasCompletedOnboarding = false
-        ProviderConfig.shared.onboardingPage = 0
-        #endif
     }
 
     var body: some Scene {

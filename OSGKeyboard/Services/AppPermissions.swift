@@ -76,4 +76,32 @@ enum AppPermissions {
         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
         UIApplication.shared.open(url)
     }
+
+    /// Home-screen guidance when Flow permissions are missing after onboarding.
+    static var homePermissionGuidanceMessage: String {
+        let micMissing = micStatus != .granted
+        let speechMissing = speechStatus != .granted
+        if micMissing && speechMissing {
+            return NSLocalizedString("home.setup.permission.both", comment: "")
+        }
+        if micMissing {
+            return NSLocalizedString("home.setup.permission.mic", comment: "")
+        }
+        return NSLocalizedString("home.setup.permission.speech", comment: "")
+    }
+
+    /// True when at least one permission can still be requested in-app.
+    static var canRequestPermissionsInApp: Bool {
+        micStatus == .undetermined || speechStatus == .undetermined
+    }
+
+    /// Requests any still-undetermined Flow permissions in order.
+    static func requestFlowPermissionsIfNeeded() async {
+        if micStatus == .undetermined {
+            _ = await requestMicrophone()
+        }
+        if speechStatus == .undetermined {
+            _ = await requestSpeechRecognition()
+        }
+    }
 }

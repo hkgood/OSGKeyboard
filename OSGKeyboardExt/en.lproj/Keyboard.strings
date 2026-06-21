@@ -3,7 +3,7 @@
 "OSGKeyboard" = "OSGKeyboard";
 
 /* Onboarding */
-"onboarding.welcome.subtitle" = "Hold to talk. Release for polished text, in any app.";
+"onboarding.welcome.subtitle" = "Tap the mic to speak, tap again to finish — polished text in any app.";
 "onboarding.enable.title" = "Enable OSGKeyboard";
 "onboarding.enable.step1" = "Settings → General → Keyboard → Keyboards";
 "onboarding.enable.step2" = "Tap “Add New Keyboard…” and choose OSGKeyboard";
