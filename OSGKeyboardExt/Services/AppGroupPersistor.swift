@@ -31,8 +31,14 @@ public struct AppGroupPersistor {
         }
         let store = AppGroupStore()
         state.localeId         = store.localeId
-        state.mode             = KeyboardViewController.State.InputMode(rawValue: store.modeId) ?? .polish
+        // Both engines always polish; ignore legacy off/transcribe modeId.
+        state.mode             = .polish
         state.engineMode       = store.engineMode
+        state.localASRBackend  = store.localASRBackend
+        state.localModelsReady = OnDeviceModelStatus.isLocalStackReady(
+            asrBackend: store.localASRBackend
+        )
+        state.localModelsLoaded = OnDeviceModelStatus.modelsLoadedInMemory()
 
         #if DEBUG
         // Print a masked view of the live App Group config so we can see
@@ -49,15 +55,29 @@ public struct AppGroupPersistor {
         }
         print("""
         🔍 [AppGroupPersistor.load]
-           providerId = \(store.providerId)
-           baseURL    = \(store.baseURL)
-           apiKey     = \(masked)
-           model      = \(store.model)
-           modeId     = \(store.modeId)
-           localeId   = \(store.localeId)
+           providerId      = \(store.providerId)
+           baseURL         = \(store.baseURL)
+           apiKey          = \(masked)
+           model           = \(store.model)
+           modeId          = \(store.modeId)
+           localeId        = \(store.localeId)
+           localASRBackend = \(store.localASRBackend.rawValue)
         """)
         #endif
         return .loaded
+    }
+
+    /// Lightweight refresh for flags the host app may update while the
+    /// keyboard stays open (model downloads, engine switches).
+    public func refreshRuntimeFlags(into state: KeyboardViewController.State) {
+        guard AppGroup.isAvailable else { return }
+        let store = AppGroupStore()
+        state.engineMode = store.engineMode
+        state.localASRBackend = store.localASRBackend
+        state.localModelsReady = OnDeviceModelStatus.isLocalStackReady(
+            asrBackend: store.localASRBackend
+        )
+        state.localModelsLoaded = OnDeviceModelStatus.modelsLoadedInMemory()
     }
 
     /// Persist `mode` to the App Group store.
@@ -76,5 +96,11 @@ public struct AppGroupPersistor {
     public func persist(engineMode: String) {
         guard AppGroup.isAvailable else { return }
         AppGroupStore().setEngineMode(engineMode)
+    }
+
+    /// Persist `localASRBackend` to the App Group store.
+    public func persist(localASRBackend: LocalASRBackend) {
+        guard AppGroup.isAvailable else { return }
+        AppGroupStore().setLocalASRBackend(localASRBackend)
     }
 }

@@ -24,7 +24,7 @@ struct APISettingsCard: View {
     var body: some View {
         VStack(spacing: 0) {
             field(
-                title: NSLocalizedString("api.baseUrl", comment: ""),
+                title: AppL10n.string("api.baseUrl"),
                 placeholder: "https://api.openai.com/v1",
                 text: $config.baseURL,
                 autocap: false
@@ -33,7 +33,7 @@ struct APISettingsCard: View {
             keyField
             Divider().background(palette.divider)
             field(
-                title: NSLocalizedString("api.model", comment: ""),
+                title: AppL10n.string("api.model"),
                 placeholder: "gpt-4o-mini",
                 text: $config.model,
                 autocap: false
@@ -86,8 +86,8 @@ struct APISettingsCard: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text(showKey
-                    ? NSLocalizedString("api.key.hide", comment: "")
-                    : NSLocalizedString("api.key.show", comment: "")))
+                    ? AppL10n.string("api.key.hide")
+                    : AppL10n.string("api.key.show")))
             }
             Group {
                 if showKey {
@@ -170,10 +170,10 @@ struct APISettingsCard: View {
 
     private var testButtonLabel: String {
         switch testStatus {
-        case .idle:        return NSLocalizedString("api.test.idle", comment: "")
-        case .running:     return NSLocalizedString("api.test.running", comment: "")
-        case .success:     return NSLocalizedString("api.test.success", comment: "")
-        case .failure:     return NSLocalizedString("api.test.failure", comment: "")
+        case .idle:        return AppL10n.string("api.test.idle")
+        case .running:     return AppL10n.string("api.test.running")
+        case .success:     return AppL10n.string("api.test.success")
+        case .failure:     return AppL10n.string("api.test.failure")
         }
     }
 
@@ -205,21 +205,15 @@ struct APISettingsCard: View {
                 _ = try await client.polish("ping", systemPrompt: "Reply with the single word PONG.")
                 testStatus = .success
             } catch LLMError.noAPIKey {
-                testStatus = .failure(NSLocalizedString("api.test.missing", comment: ""))
+                testStatus = .failure(AppL10n.string("api.test.missing"))
             } catch let error as LLMError {
                 switch error {
                 case .http(let status):
-                    testStatus = .failure(String.localizedStringWithFormat(
-                        NSLocalizedString("api.test.http", comment: ""),
-                        status
-                    ))
+                    testStatus = .failure(AppL10n.format("api.test.http", status))
                 case .rateLimited:
-                    testStatus = .failure(NSLocalizedString("api.test.rateLimited", comment: ""))
+                    testStatus = .failure(AppL10n.string("api.test.rateLimited"))
                 case .transport(let msg):
-                    testStatus = .failure(String.localizedStringWithFormat(
-                        NSLocalizedString("api.test.transportWith", comment: ""),
-                        msg
-                    ))
+                    testStatus = .failure(AppL10n.format("api.test.transportWith", msg))
                 default:
                     testStatus = .failure(error.errorDescription ?? "\(error)")
                 }

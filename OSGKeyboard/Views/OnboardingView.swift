@@ -27,9 +27,12 @@ struct OnboardingView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject var config: ProviderConfig
+    @ObservedObject private var modelWarmup = OnDeviceModelWarmup.shared
+    @StateObject private var modelManager = ModelManager.shared
     @State private var micStatus = AppPermissions.micStatus
     @State private var speechStatus = AppPermissions.speechStatus
     @State private var keyboardReady = KeyboardSetupBridge.isReadyForOnboardingSkip
+    @State private var pendingDownload: OnDeviceModel?
 
     private var currentPage: OnboardingPage {
         OnboardingPage(rawValue: config.onboardingPage) ?? .welcome
@@ -58,7 +61,11 @@ struct OnboardingView: View {
                         case .keyboard:
                             EnableKeyboardPage()
                         case .api:
-                            APISetupPage(config: config)
+                            APISetupPage(
+                                config: config,
+                                manager: modelManager,
+                                pendingDownload: $pendingDownload
+                            )
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -84,6 +91,12 @@ struct OnboardingView: View {
             applyOnboardingDefaultsIfNeeded()
             refreshPermissionStatuses()
             snapToVisiblePageIfNeeded()
+            scheduleModelWarmup()
+        }
+        .onChange(of: config.engineMode) { _, _ in scheduleModelWarmup(force: true) }
+        .onChange(of: config.localASRBackend) { _, _ in
+            modelWarmup.invalidate()
+            scheduleModelWarmup(force: true)
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { refreshPermissionStatuses() }
@@ -105,8 +118,29 @@ struct OnboardingView: View {
         // First-time users with no API key: default to local for a faster path.
         if config.apiKey.isEmpty, config.engineMode == "cloud" {
             config.engineMode = "local"
-            config.modeId = "transcribe"
         }
+        if config.engineMode == "local" {
+            config.localASRBackend = .qwen3ASR
+        }
+    }
+
+    private var localModelNeedsAttention: Bool {
+        guard config.isLocalEngine else { return false }
+        if !OnDeviceModelStatus.isLocalStackReady(asrBackend: config.localASRBackend) {
+            return true
+        }
+        switch modelWarmup.phase {
+        case .ready, .notNeeded, .idle: return false
+        case .warming, .failed: return true
+        }
+    }
+
+    private func scheduleModelWarmup(force: Bool = false) {
+        guard config.isLocalEngine else {
+            modelWarmup.invalidate()
+            return
+        }
+        modelWarmup.warmUpIfNeeded(force: force)
     }
 
     private func shouldShowPage(_ page: OnboardingPage) -> Bool {
@@ -174,16 +208,23 @@ struct OnboardingView: View {
 
     private func onboardingHeaderGradient(height: CGFloat) -> some View {
         LinearGradient(
-            colors: [
-                palette.textTertiary.opacity(0.14),
-                palette.textTertiary.opacity(0.05),
-                palette.background.opacity(0)
-            ],
+            colors: localModelNeedsAttention
+                ? [
+                    palette.warning.opacity(0.32),
+                    palette.warning.opacity(0.12),
+                    palette.background.opacity(0)
+                ]
+                : [
+                    palette.textTertiary.opacity(0.14),
+                    palette.textTertiary.opacity(0.05),
+                    palette.background.opacity(0)
+                ],
             startPoint: .top,
             endPoint: .bottom
         )
         .frame(maxWidth: .infinity)
         .frame(height: height)
+        .animation(Motion.soft, value: localModelNeedsAttention)
     }
 
     private func refreshPermissionStatuses() {
@@ -195,7 +236,7 @@ struct OnboardingView: View {
     private var progressHeader: some View {
         Text(
             String(
-                format: NSLocalizedString("onboarding.progress", comment: ""),
+                format: AppL10n.string("onboarding.progress"),
                 config.onboardingPage + 1,
                 OnboardingPage.count
             )
@@ -220,8 +261,10 @@ struct OnboardingView: View {
 
     private var canAdvance: Bool {
         switch currentPage {
-        case .welcome, .keyboard, .api:
-            return !isLastPage || config.isConfigured
+        case .welcome, .keyboard:
+            return !isLastPage || onboardingCompleteReady
+        case .api:
+            return !isLastPage || onboardingCompleteReady
         case .microphone:
             return micStatus != .undetermined
         case .speech:
@@ -229,16 +272,23 @@ struct OnboardingView: View {
         }
     }
 
+    private var onboardingCompleteReady: Bool {
+        if config.isLocalEngine {
+            return OnDeviceModelStatus.isLocalStackReady(asrBackend: config.localASRBackend)
+        }
+        return config.isConfigured
+    }
+
     private var primaryActionTitle: String {
         if isLastPage {
-            return NSLocalizedString("common.done", comment: "")
+            return AppL10n.string("common.done")
         }
         switch currentPage {
         case .microphone where micStatus == .granted,
              .speech where speechStatus == .granted:
-            return NSLocalizedString("common.continue", comment: "")
+            return AppL10n.string("common.continue")
         default:
-            return NSLocalizedString("common.next", comment: "")
+            return AppL10n.string("common.next")
         }
     }
 
@@ -609,8 +659,8 @@ private struct EnableKeyboardPage: View {
                 .padding(.top, OnboardingLayoutMetrics.heroTextGap)
 
                 VStack(alignment: .leading, spacing: Spacing.lg) {
-                    step(num: 1, text: NSLocalizedString("onboarding.enable.step1", comment: ""))
-                    step(num: 2, text: NSLocalizedString("onboarding.enable.step2", comment: ""))
+                    step(num: 1, text: AppL10n.string("onboarding.enable.step1"))
+                    step(num: 2, text: AppL10n.string("onboarding.enable.step2"))
                     switchKeyboardStep(num: 3)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -686,6 +736,8 @@ private struct APISetupPage: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     @ObservedObject var config: ProviderConfig
+    @ObservedObject var manager: ModelManager
+    @Binding var pendingDownload: OnDeviceModel?
 
     var body: some View {
         ScrollView {
@@ -704,9 +756,45 @@ private struct APISetupPage: View {
                         .padding(.horizontal, Spacing.lg)
                     APISettingsCard(config: config)
                         .padding(.horizontal, Spacing.lg)
+                } else {
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        Text("onboarding.api.localModels.hint")
+                            .font(TypeStyle.caption2)
+                            .foregroundStyle(palette.warning)
+                            .fixedSize(horizontal: false, vertical: true)
+                        LocalModelsGroup(
+                            config: config,
+                            manager: manager,
+                            pendingDownload: $pendingDownload
+                        )
+                        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                                .stroke(palette.divider, lineWidth: 0.5)
+                        )
+                    }
+                    .padding(.horizontal, Spacing.lg)
                 }
             }
             .padding(.bottom, Spacing.xxxl)
+        }
+        .onAppear {
+            manager.refreshAll()
+            if config.engineMode == "local" {
+                config.localASRBackend = .qwen3ASR
+            }
+        }
+        .onChange(of: config.engineMode) { _, mode in
+            guard mode == "local" else { return }
+            Task { @MainActor in
+                config.localASRBackend = .qwen3ASR
+            }
+        }
+        .sheet(item: $pendingDownload) { model in
+            DownloadConfirmSheet(model: model) {
+                pendingDownload = nil
+                manager.startDownload(model)
+            }
         }
     }
 }

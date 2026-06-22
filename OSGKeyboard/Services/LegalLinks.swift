@@ -4,7 +4,9 @@
 import Foundation
 
 enum LegalLinks {
-    /// Public privacy policy (GitHub Pages).
+    static let repositoryURL = URL(string: "https://github.com/hkgood/OSGKeyboard")!
+
+    /// Public privacy policy (GitHub Pages). Also bundled in-app as PrivacyPolicy.html.
     static var privacyPolicyURL: URL? {
         URL(string: "https://hkgood.github.io/OSGKeyboard/privacy/")
     }

@@ -18,7 +18,7 @@ struct SettingsView: View {
 
     @ObservedObject var config = ProviderConfig.shared
     @Environment(\.dismiss) private var dismiss
-    @State private var safariURL: URL?
+    @Environment(\.openURL) private var openURL
 
     let presentation: SettingsPresentation
 
@@ -27,7 +27,9 @@ struct SettingsView: View {
     }
 
     // Dynamic locale list loaded from SFSpeechRecognizer on first appear.
-    @State private var dynamicLocales: [(id: String, label: String, onDevice: Bool)] = []
+    @State private var dynamicLocales: [(id: String, onDevice: Bool)] = []
+    @StateObject private var modelManager = ModelManager.shared
+    @State private var pendingDownload: OnDeviceModel?
 
     var body: some View {
         NavigationStack {
@@ -57,14 +59,15 @@ struct SettingsView: View {
                     palette.background.ignoresSafeArea()
                     ScrollView {
                         VStack(spacing: Spacing.md) {
+                            appLanguageSection
                             engineSection
                             if config.engineMode == "cloud" {
                                 providerSection
                                 apiSection
                             }
-                            languageSection
+                            languageAndModelsSection
                             if config.engineMode == "cloud" {
-                                promptSection
+                                systemPromptLinkSection
                             }
                             if presentation == .tab {
                                 footerLinks
@@ -79,9 +82,33 @@ struct SettingsView: View {
             .background(palette.background)
             .toolbar(.hidden, for: .navigationBar)
             .task { await loadDynamicLocales() }
-            .sheet(item: $safariURL) { url in
-                SafariSheet(url: url)
+            .onAppear { modelManager.refreshAll() }
+            .sheet(item: $pendingDownload) { model in
+                DownloadConfirmSheet(model: model) {
+                    pendingDownload = nil
+                    modelManager.startDownload(model)
+                }
             }
+        }
+    }
+
+    // MARK: - App language
+
+    private var appLanguageSection: some View {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.appLanguage.title")
+            Picker("", selection: $config.uiLanguage) {
+                ForEach(AppUILanguage.allCases) { language in
+                    Text(LocalizedStringKey(language.labelKey)).tag(language)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(Spacing.md)
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                    .stroke(palette.divider, lineWidth: 0.5)
+            )
         }
     }
 
@@ -91,41 +118,18 @@ struct SettingsView: View {
         EnginePickerSection(config: config)
     }
 
-    // MARK: - Provider
+    // MARK: - Language & on-device models
 
-    private var providerSection: some View {
-        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.provider.title")
-            ProviderPickerSection(config: config)
-        }
-    }
-
-    // MARK: - API
-
-    private var apiSection: some View {
-        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.api.title")
-            APISettingsCard(config: config)
-        }
-    }
-
-    // MARK: - Language (ASR + mode)
-
-    private var languageSection: some View {
+    private var languageAndModelsSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
             sectionHeader("settings.language.title")
             VStack(spacing: 0) {
-                if config.engineMode == "cloud" {
-                    PickerRow(
-                        title: NSLocalizedString("settings.mode.title", comment: ""),
-                        options: modeOptions,
-                        selection: Binding(
-                            get: { config.modeId },
-                            set: { config.modeId = $0 }
-                        )
+                if config.engineMode == "local" {
+                    LocalModelsGroup(
+                        config: config,
+                        manager: modelManager,
+                        pendingDownload: $pendingDownload
                     )
-                    Divider().background(palette.divider)
-                    asrEngineRow
                     Divider().background(palette.divider)
                 }
                 LocalePickerRow(
@@ -165,53 +169,37 @@ struct SettingsView: View {
         }
     }
 
-    /// ASR engine row. With iOS 26 as the deployment target, the
-    /// only ASR backend is `SpeechAnalyzer` and it is always fully
-    /// on-device — so this row is now a static badge rather than a
-    /// toggle. The old cloud-fallback toggle is gone.
-    private var asrEngineRow: some View {
-        HStack(spacing: Spacing.sm) {
-            Text("settings.engineRow.title")
-                .font(TypeStyle.body)
-                .foregroundStyle(palette.textPrimary)
-            Spacer()
-            HStack(spacing: 4) {
-                Image(systemName: "iphone.badge.checkmark")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(palette.accent)
-                Text("settings.engineBadge.ios26")
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.accent)
-            }
-            .padding(.horizontal, Spacing.xs)
-            .padding(.vertical, 4)
-            .background(palette.accent.opacity(0.12), in: Capsule())
+    private var providerSection: some View {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.provider.title")
+            ProviderPickerSection(config: config)
         }
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
     }
 
+    // MARK: - API
+
+    private var apiSection: some View {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.api.title")
+            APISettingsCard(config: config)
+        }
+    }
+
+    // MARK: - Language helpers
+
     /// Falls back to a static list while dynamic locales are loading.
-    private var effectiveLocales: [(id: String, label: String, onDevice: Bool)] {
+    private var effectiveLocales: [(id: String, onDevice: Bool)] {
         dynamicLocales.isEmpty ? staticLocales : dynamicLocales
     }
 
-    private var staticLocales: [(id: String, label: String, onDevice: Bool)] {
+    private var staticLocales: [(id: String, onDevice: Bool)] {
         [
-            ("auto",     NSLocalizedString("locale.auto", comment: ""),     false),
-            ("zh-Hans",  NSLocalizedString("locale.zh-Hans", comment: ""),  false),
-            ("zh-Hant",  NSLocalizedString("locale.zh-Hant", comment: ""),  false),
-            ("en-US",    NSLocalizedString("locale.en-US", comment: ""),    false),
-            ("ja-JP",    NSLocalizedString("locale.ja-JP", comment: ""),    false),
-            ("ko-KR",    NSLocalizedString("locale.ko-KR", comment: ""),    false)
-        ]
-    }
-
-    private var modeOptions: [(id: String, label: String)] {
-        [
-            ("off",        NSLocalizedString("settings.mode.off", comment: "")),
-            ("transcribe", NSLocalizedString("settings.mode.transcribe", comment: "")),
-            ("polish",     NSLocalizedString("settings.mode.polish", comment: ""))
+            ("auto", false),
+            ("zh-Hans", false),
+            ("zh-Hant", false),
+            ("en-US", false),
+            ("ja-JP", false),
+            ("ko-KR", false),
         ]
     }
 
@@ -222,20 +210,16 @@ struct SettingsView: View {
         // can return 100+ locales, and we probe supportsOnDeviceRecognition for each.
         // Creating `SFSpeechRecognizer` instances in a @Sendable closure is
         // safe here; we only read locale metadata (no transcription session).
-        let entries: [(id: String, label: String, onDevice: Bool)] = await Task.detached(
+        let entries: [(id: String, onDevice: Bool)] = await Task.detached(
             priority: .userInitiated
         ) {
-            var result: [(id: String, label: String, onDevice: Bool)] = []
-            result.append(("auto", NSLocalizedString("locale.auto", comment: ""), false))
+            var result: [(id: String, onDevice: Bool)] = [("auto", false)]
 
-            let currentLocale = Locale.current  // snapshot on background thread is fine
             for locale in SFSpeechRecognizer.supportedLocales()
                                              .sorted(by: { $0.identifier < $1.identifier }) {
                 let id = locale.identifier
                 let onDevice = SFSpeechRecognizer(locale: locale)?.supportsOnDeviceRecognition ?? false
-                // localizedString on Locale.current gives the name in the app's UI language.
-                let displayName = currentLocale.localizedString(forIdentifier: id) ?? id
-                result.append((id: id, label: displayName, onDevice: onDevice))
+                result.append((id: id, onDevice: onDevice))
             }
             return result
         }.value
@@ -244,30 +228,24 @@ struct SettingsView: View {
         dynamicLocales = entries
     }
 
-    // MARK: - Prompt
+    // MARK: - System prompt (cloud only)
 
-    private var promptSection: some View {
+    private var systemPromptLinkSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            HStack {
-                sectionHeader("settings.systemPrompt.title")
-                Spacer()
-                Button("common.reset") { config.systemPrompt = config.defaultSystemPrompt }
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.accent)
+            sectionHeader("settings.systemPrompt.title")
+            VStack(spacing: 0) {
+                NavigationLink {
+                    SystemPromptSettingsView(config: config)
+                } label: {
+                    footerNavigationRow(title: "settings.systemPrompt.edit")
+                }
+                .buttonStyle(.plain)
             }
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                TextEditor(text: $config.systemPrompt)
-                    .font(TypeStyle.mono)
-                    .scrollContentBackground(.hidden)
-                    .frame(minHeight: 140)
-                    .padding(Spacing.xs)
-                    .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                            .stroke(palette.divider, lineWidth: 0.5)
-                    )
-            }
-            .cardSurface()
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                    .stroke(palette.divider, lineWidth: 0.5)
+            )
         }
     }
 
@@ -298,18 +276,34 @@ struct SettingsView: View {
 
                 Divider().background(palette.divider)
 
-                if let url = LegalLinks.privacyPolicyURL {
-                    footerLinkRow(title: "settings.privacy.policy", url: url)
-                    Divider().background(palette.divider)
+                NavigationLink {
+                    PrivacyPolicyView()
+                } label: {
+                    footerNavigationRow(title: "settings.privacy.policy")
                 }
-                if let url = LegalLinks.supportURL {
-                    footerLinkRow(title: "settings.link.support", url: url)
-                    Divider().background(palette.divider)
+                .buttonStyle(.plain)
+                Divider().background(palette.divider)
+
+                NavigationLink {
+                    HelpFeedbackView()
+                } label: {
+                    footerNavigationRow(title: "settings.link.support")
                 }
-                footerLinkRow(
+                .buttonStyle(.plain)
+                Divider().background(palette.divider)
+
+                footerExternalLinkRow(
                     title: "settings.link.github",
-                    url: URL(string: "https://github.com/hkgood/OSGKeyboard")!
+                    url: LegalLinks.repositoryURL
                 )
+                Divider().background(palette.divider)
+
+                NavigationLink {
+                    OpenSourceLicensesView()
+                } label: {
+                    footerNavigationRow(title: "settings.link.licenses")
+                }
+                .buttonStyle(.plain)
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
             .overlay(
@@ -319,9 +313,9 @@ struct SettingsView: View {
         }
     }
 
-    private func footerLinkRow(title: LocalizedStringKey, url: URL) -> some View {
+    private func footerExternalLinkRow(title: LocalizedStringKey, url: URL) -> some View {
         Button {
-            safariURL = url
+            openURL(url)
         } label: {
             HStack(spacing: Spacing.sm) {
                 Text(title)
@@ -336,6 +330,25 @@ struct SettingsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+
+    /// In-app disclosure row that pushes a child view onto the
+    /// `NavigationStack` rather than opening Safari. Used for the
+    /// Third-Party Licenses entry so the system "back" button
+    /// returns to Settings.
+    private func footerNavigationRow(title: LocalizedStringKey) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Text(title)
+                .font(TypeStyle.body)
+                .foregroundStyle(palette.textPrimary)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(palette.textTertiary)
+        }
+        .padding(.horizontal, Spacing.md)
+        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Header
@@ -400,8 +413,9 @@ private struct PickerRow: View {
 
 private struct LocalePickerRow: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @ObservedObject private var config = ProviderConfig.shared
 
-    let locales: [(id: String, label: String, onDevice: Bool)]
+    let locales: [(id: String, onDevice: Bool)]
     @Binding var selection: String
 
     var body: some View {
@@ -417,12 +431,13 @@ private struct LocalePickerRow: View {
                     } label: {
                         // iOS Menu converts SwiftUI Label to UIAction (title + image).
                         // Using Label keeps checkmark + on-device icon both visible.
+                        let name = label(for: locale.id)
                         if locale.id == selection {
-                            Label(locale.label, systemImage: "checkmark")
+                            Label(name, systemImage: "checkmark")
                         } else if locale.onDevice {
-                            Label(locale.label, systemImage: "iphone")
+                            Label(name, systemImage: "iphone")
                         } else {
-                            Text(locale.label)
+                            Text(name)
                         }
                     }
                 }
@@ -447,7 +462,11 @@ private struct LocalePickerRow: View {
         .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
     }
 
+    private func label(for localeId: String) -> String {
+        ASRLocaleLabels.displayName(for: localeId, language: config.uiLanguage)
+    }
+
     private var currentLabel: String {
-        locales.first(where: { $0.id == selection })?.label ?? "—"
+        label(for: selection)
     }
 }

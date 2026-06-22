@@ -7,13 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- **iPhone only**: Set `TARGETED_DEVICE_FAMILY` to `"1"` for both `OSGKeyboard` and `OSGKeyboardExt` targets. Removed `UIRequiresFullScreen` and trimmed `UISupportedInterfaceOrientations` to Portrait only (iPad is no longer a supported device).
-- **Remove top divider line**: Deleted the 0.5 pt `palette.divider` overlay from `KeyboardRootView` — the subtle highlight gradient is retained; the hard separator line is gone.
-- **Keyboard preview always dark**: `KeyboardPreviewSheet` now injects `.environment(\.themePalette, Palette.dark)` alongside `.environment(\.colorScheme, .dark)` on `KeyboardPreviewStub`, so the preview palette is always the dark variant regardless of the app's active theme.
-- **Docs consistency**: README/README.zh now consistently describe the currently implemented capability set (`iOS 26+`, on-device `SpeechAnalyzer` + `DictationTranscriber`) with no deferred-ASR wording.
+## [0.2.0] - 2026-06-22
 
-## [0.1.2] - In Progress
+### Added
+- **Local engine with on-device Qwen models**: Optional Qwen3-ASR 0.6B speech recognition and Qwen3.5-0.8B text polish, fully offline after download.
+- **On-device model management**: Download, progress, delete, and readiness status in Settings; mirror auto-selection between ModelScope and Hugging Face with fallback.
+- **Engine picker**: Choose between local (on-device ASR + polish) and cloud (ASR + user-configured LLM polish).
+- **Flow session dictation**: TypeWhisper-style continuous capture in the host app with keyboard handoff via App Group.
+- **Open-source licenses** screen for bundled third-party components.
+
+### Changed
+- **Settings simplified**: Merged language and model sections; cloud mode always enables polish (removed off/transcribe mode picker).
+- **Keyboard UI**: Local/cloud engine badges replace the mode menu; shows model-not-downloaded guidance when the local stack is incomplete.
+- **iPhone only**: Set `TARGETED_DEVICE_FAMILY` to `"1"` for both targets; portrait-only orientations.
+- **Keyboard preview always dark**: Preview injects the dark palette regardless of app theme.
+- **Docs consistency**: README/README.zh aligned to the iOS 26+ capability set.
+
+### Fixed
+- **ModelScope download progress**: Progress now tracks byte counts instead of jumping to 50% after the first file.
+- **Light/Dark mode consistency** for shared button/card modifiers via `@Environment(\.themePalette)`.
+
+## [0.1.2] - 2026-06-20
 
 ### Fixed
 - **Light/Dark mode consistency**: `cardSurface()`, `primaryButton()`, `secondaryButton()`, and `pillChip()` view modifiers in `Theme.swift` now use `ViewModifier` structs that read from `@Environment(\.themePalette)`. Previously they used hardcoded dark `Palette` constants, causing cards and buttons to always render in dark mode even when the main App was in light mode.

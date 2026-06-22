@@ -29,7 +29,7 @@ struct DictationCaptureView: View {
     @ObservedObject var coordinator: DictationSessionCoordinator
     @StateObject private var dictation = LiveDictationController()
 
-    @State private var statusText: String = "准备录音..."
+    @State private var statusText: String = ""
     @State private var isSaving: Bool = false
 
     var body: some View {
@@ -60,7 +60,7 @@ struct DictationCaptureView: View {
                     Button {
                         cancelAndClose()
                     } label: {
-                        Text("取消")
+                        Text("common.cancel")
                             .secondaryButton()
                     }
                     .buttonStyle(.plain)
@@ -69,7 +69,7 @@ struct DictationCaptureView: View {
                     Button {
                         stopAndFinalize()
                     } label: {
-                        Text("完成")
+                        Text("common.done")
                             .primaryButton()
                     }
                     .buttonStyle(.plain)
@@ -80,6 +80,7 @@ struct DictationCaptureView: View {
             }
         }
         .onAppear {
+            statusText = AppL10n.string("dictation.status.ready")
             DictationBridge.setStatus(.requested)
             startRecording()
         }
@@ -90,12 +91,14 @@ struct DictationCaptureView: View {
             switch new {
             case .recording:
                 DictationBridge.setStatus(.recording)
-                statusText = config.isLocalEngine ? "正在实时识别..." : "正在听..."
+                statusText = config.isLocalEngine
+                    ? AppL10n.string("dictation.status.listeningLive")
+                    : AppL10n.string("dictation.status.listening")
             case .processing:
                 DictationBridge.setStatus(.transcribing)
-                statusText = "处理中..."
+                statusText = AppL10n.string("dictation.status.processing")
             case .requestingPermission:
-                statusText = "请求权限中..."
+                statusText = AppL10n.string("dictation.status.requestingPermission")
             case .denied(let message):
                 DictationBridge.setStatus(.error, message: message)
                 statusText = message
@@ -114,10 +117,15 @@ struct DictationCaptureView: View {
             guard !new.isEmpty else { return }
             saveAndClose(new)
         }
+        .onChange(of: config.uiLanguage) { _, _ in
+            refreshStatusForCurrentPhase()
+        }
     }
 
     private var titleText: String {
-        isSaving ? "保存中..." : "语音输入"
+        isSaving
+            ? AppL10n.string("dictation.status.saving")
+            : AppL10n.string("dictation.title")
     }
 
     private func startRecording() {
@@ -126,7 +134,7 @@ struct DictationCaptureView: View {
 
     private func stopAndFinalize() {
         dictation.stop()
-        statusText = "等待识别结果..."
+        statusText = AppL10n.string("dictation.status.waitingResult")
     }
 
     private func cancelAndClose() {
@@ -139,8 +147,29 @@ struct DictationCaptureView: View {
     private func saveAndClose(_ transcript: String) {
         guard !isSaving else { return }
         isSaving = true
-        DictationBridge.storePendingTranscript(transcript)
-        coordinator.dismiss()
-        dismiss()
+        statusText = AppL10n.string("dictation.status.processing")
+        Task {
+            let delivered = transcript
+            DictationBridge.storePendingTranscript(delivered, polishWarning: nil)
+            coordinator.dismiss()
+            dismiss()
+        }
+    }
+
+    private func refreshStatusForCurrentPhase() {
+        switch dictation.phase {
+        case .idle:
+            statusText = AppL10n.string("dictation.status.ready")
+        case .recording:
+            statusText = config.isLocalEngine
+                ? AppL10n.string("dictation.status.listeningLive")
+                : AppL10n.string("dictation.status.listening")
+        case .processing:
+            statusText = AppL10n.string("dictation.status.processing")
+        case .requestingPermission:
+            statusText = AppL10n.string("dictation.status.requestingPermission")
+        case .denied(let message), .error(let message):
+            statusText = message
+        }
     }
 }
