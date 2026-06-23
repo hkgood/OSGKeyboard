@@ -21,6 +21,7 @@ public enum DictationBridge {
 
     private enum Key {
         static let pendingText = "dictation.pendingText"
+        static let polishWarning = "dictation.polishWarning"
         static let updatedAt = "dictation.updatedAt"
         static let status = "dictation.status"
         static let statusUpdatedAt = "dictation.statusUpdatedAt"
@@ -67,12 +68,21 @@ public enum DictationBridge {
     }
 
     /// Store a transcript for the keyboard extension to consume.
-    public static func storePendingTranscript(_ text: String, defaults: UserDefaults? = nil) {
+    public static func storePendingTranscript(
+        _ text: String,
+        polishWarning: String? = nil,
+        defaults: UserDefaults? = nil
+    ) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         let store = resolvedDefaults(defaults)
         store.set(trimmed, forKey: Key.pendingText)
         store.set(Date().timeIntervalSince1970, forKey: Key.updatedAt)
+        if let polishWarning, !polishWarning.isEmpty {
+            store.set(polishWarning, forKey: Key.polishWarning)
+        } else {
+            store.removeObject(forKey: Key.polishWarning)
+        }
         setStatus(.done, defaults: store)
     }
 
@@ -81,6 +91,15 @@ public enum DictationBridge {
         maxAge: TimeInterval = 180,
         defaults: UserDefaults? = nil
     ) -> String? {
+        consumePendingDelivery(maxAge: maxAge, defaults: defaults)?.text
+    }
+
+    /// Returns and clears the pending delivery (text + optional polish
+    /// warning) if present.
+    public static func consumePendingDelivery(
+        maxAge: TimeInterval = 180,
+        defaults: UserDefaults? = nil
+    ) -> TranscriptionDelivery? {
         let store = resolvedDefaults(defaults)
         guard let text = store.string(forKey: Key.pendingText) else {
             return nil
@@ -92,14 +111,18 @@ public enum DictationBridge {
                 return nil
             }
         }
+        let warning = store.string(forKey: Key.polishWarning)
         store.removeObject(forKey: Key.pendingText)
+        store.removeObject(forKey: Key.polishWarning)
+        store.removeObject(forKey: Key.updatedAt)
         setStatus(.idle, defaults: store)
-        return text
+        return TranscriptionDelivery(text: text, polishWarning: warning)
     }
 
     public static func clear(defaults: UserDefaults? = nil) {
         let store = resolvedDefaults(defaults)
         store.removeObject(forKey: Key.pendingText)
+        store.removeObject(forKey: Key.polishWarning)
         store.removeObject(forKey: Key.updatedAt)
         setStatus(.idle, defaults: store)
     }

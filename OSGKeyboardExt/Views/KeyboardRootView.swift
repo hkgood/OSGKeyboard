@@ -69,12 +69,9 @@ public struct KeyboardRootView: View {
     private var topBar: some View {
         HStack(spacing: Spacing.xs) {
             if state.isLocalEngine {
-                // Local engine: always transcribe, no mode menu needed.
                 LocalEngineChip()
             } else {
-                ModeChip(mode: state.mode) { newMode in
-                    state.setMode(newMode)
-                }
+                CloudEngineChip()
             }
             LocaleChip(localeId: state.localeId) { newId in
                 state.setLocale(newId)
@@ -103,6 +100,9 @@ public struct KeyboardRootView: View {
                 phase: state.phase,
                 transcript: state.lastTranscript,
                 flowSessionActive: state.flowSessionActive,
+                isLocalEngine: state.isLocalEngine,
+                localModelsReady: state.localModelsReady,
+                localModelsLoaded: state.localModelsLoaded,
                 openSettings: state.openSettings,
                 startFlowSession: state.startFlowSession
             )
@@ -200,6 +200,9 @@ private struct TranscriptLine: View {
     let phase: KeyboardViewController.State.Phase
     let transcript: String
     let flowSessionActive: Bool
+    let isLocalEngine: Bool
+    let localModelsReady: Bool
+    let localModelsLoaded: Bool
     let openSettings: () -> Void
     let startFlowSession: () -> Void
 
@@ -207,7 +210,30 @@ private struct TranscriptLine: View {
         ZStack {
             switch phase {
             case .idle:
-                if flowSessionActive {
+                if isLocalEngine, !localModelsReady {
+                    Button(action: openSettings) {
+                        HStack(spacing: 4) {
+                            Text(ExtL10n.string("keyboard.models.notDownloaded"))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10, weight: .semibold))
+                        }
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.warning)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(ExtL10n.text("keyboard.models.downloadHint"))
+                } else if isLocalEngine, localModelsReady, !localModelsLoaded {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.mini).tint(palette.textSecondary)
+                        ExtL10n.text("keyboard.models.warming")
+                            .font(TypeStyle.caption)
+                            .foregroundStyle(palette.textSecondary)
+                    }
+                } else if flowSessionActive {
                     ExtL10n.text("keyboard.placeholder.idle")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textTertiary)
@@ -393,6 +419,26 @@ private struct StatusBadge: View {
     }
 }
 
+// MARK: - Cloud engine chip (cloud always ASR + LLM polish)
+
+private struct CloudEngineChip: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "wand.and.stars")
+            ExtL10n.text("keyboard.placeholder.cloudBadge")
+        }
+        .font(TypeStyle.caption2)
+        .foregroundStyle(palette.accent)
+        .padding(.horizontal, Spacing.xs + 2)
+        .padding(.vertical, 5)
+        .frame(minHeight: 26)
+        .background(palette.accent.opacity(0.15), in: Capsule())
+        .overlay(Capsule().stroke(palette.accent.opacity(0.35), lineWidth: 0.5))
+    }
+}
+
 // MARK: - Local engine chip (shown instead of ModeChip when engineMode == "local")
 
 private struct LocalEngineChip: View {
@@ -410,58 +456,6 @@ private struct LocalEngineChip: View {
         .frame(minHeight: 26)
         .background(palette.accent.opacity(0.15), in: Capsule())
         .overlay(Capsule().stroke(palette.accent.opacity(0.35), lineWidth: 0.5))
-    }
-}
-
-// MARK: - Mode chip
-
-private struct ModeChip: View {
-    @Environment(\.themePalette) private var palette: ThemePalette
-
-    let mode: KeyboardViewController.State.InputMode
-    let onChange: (KeyboardViewController.State.InputMode) -> Void
-
-    var body: some View {
-        Menu {
-            ForEach(KeyboardViewController.State.InputMode.allCases) { m in
-                Button {
-                    onChange(m)
-                } label: {
-                    if m == mode {
-                        Label(label(for: m), systemImage: "checkmark")
-                    } else {
-                        Text(label(for: m))
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: icon(for: mode))
-                Text(label(for: mode))
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .bold))
-            }
-            .font(TypeStyle.caption2)
-            .foregroundStyle(mode == .off ? palette.textTertiary : palette.textPrimary)
-            .padding(.horizontal, Spacing.xs + 2)
-            .padding(.vertical, 5)
-            .frame(minHeight: 26)
-            .background(palette.surfaceElevated, in: Capsule())
-            .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
-        }
-        .menuStyle(.button)
-    }
-
-    private func label(for m: KeyboardViewController.State.InputMode) -> String {
-        ExtL10n.string(m.labelKey)
-    }
-
-    private func icon(for m: KeyboardViewController.State.InputMode) -> String {
-        switch m {
-        case .off:        return "mic.slash.fill"
-        case .transcribe: return "text.bubble.fill"
-        case .polish:     return "wand.and.stars"
-        }
     }
 }
 

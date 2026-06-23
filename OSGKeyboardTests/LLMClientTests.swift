@@ -232,8 +232,7 @@ final class LLMClientTests: XCTestCase {
     }
 
     /// Cross-process App Group contract: what `ProviderConfig` writes must
-    /// be readable through `AppGroupStore` (and vice-versa) on the same
-    /// suite, and `mode == .off` short-circuits before any network call.
+    /// be readable through `AppGroupStore` on the same suite.
     func testAppGroupCrossProcessAndOffModeShortCircuit() async {
         let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -253,14 +252,6 @@ final class LLMClientTests: XCTestCase {
         XCTAssertEqual(store.apiKey, "sk-test-1234", "API key did not survive the cross-process boundary")
         XCTAssertEqual(store.modeId, "off")
         XCTAssertEqual(store.model, "gpt-4o-mini")
-
-        // mode == .off must short-circuit (the keyboard extension never
-        // even calls `polisher.polish` in this mode, so no LLMClient is
-        // constructed and no network request happens). We model the
-        // short-circuit on the read side: the persisted mode is "off" and
-        // any upstream caller checking `state.mode == .off` would skip
-        // the LLM. The guarantee is the persistence + the literal value.
-        XCTAssertEqual(store.modeId, "off")
     }
 
     func testAppGroupStoreNoAPIKeySurfacesAsLLMError() async {
@@ -288,30 +279,25 @@ final class LLMClientTests: XCTestCase {
         }
     }
 
-    // MARK: - TEST-2: mode = .off short-circuits PolishingService
+    // MARK: - TEST-2: cloud always polishes (legacy modeId ignored)
 
-    /// `PolishingService.polish()` must not invoke the underlying
-    /// `LLMClient` when the App Group store reports `modeId == "off"`.
-    /// We verify both halves of that contract:
-    ///   1. The return value is the trimmed input (not a polished round-trip).
-    ///   2. The `LLMClient` is never asked to talk to the network.
-    func testPolisherSkipsNetworkWhenModeOff() async throws {
+    /// Cloud engine must invoke the LLM even when a legacy `modeId == "off"`
+    /// value is still present in the App Group suite.
+    func testPolisherPolishesWhenCloudEvenIfModeOffLegacy() async throws {
         let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        // modeId = "off" — this is the switch we care about.
         defaults.set("off", forKey: "config.modeId")
+        defaults.set("cloud", forKey: "config.engineMode")
         defaults.set("https://example.com/v1", forKey: "config.baseURL")
-        defaults.set("sk-should-not-be-used", forKey: "config.apiKey")
+        defaults.set("sk-test", forKey: "config.apiKey")
         defaults.set("gpt-4o-mini", forKey: "config.model")
 
-        // Counter LLMClient: if `polish()` is ever called, this trips.
         let counter = CallCounter()
-        let countingClient = CountingLLMClient(counter: counter) { _, _ in
-            XCTFail("LLMClient.polish was invoked under mode=off — short-circuit failed")
-            return ""
+        let countingClient = CountingLLMClient(counter: counter) { raw, _ in
+            "POLISHED: \(raw)"
         }
 
         let store = AppGroupStore(defaults: defaults)
@@ -322,9 +308,38 @@ final class LLMClientTests: XCTestCase {
         )
 
         let result = try await polisher.polish("  hello world  ")
-        XCTAssertEqual(result, "hello world", "mode=off must return trimmed input, not polished output")
+        XCTAssertEqual(result, "POLISHED: hello world")
         let calls = await counter.value()
-        XCTAssertEqual(calls, 0, "LLMClient.polish must not be called when modeId == \"off\"")
+        XCTAssertEqual(calls, 1, "cloud engine must polish even with legacy modeId=off")
+    }
+
+    /// Local engine is ASR-only and never calls the cloud `LLMClient`.
+    func testPolisherReturnsRawWhenEngineLocal() async throws {
+        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set("local", forKey: "config.engineMode")
+        defaults.set("off", forKey: "config.modeId")
+
+        let counter = CallCounter()
+        let countingClient = CountingLLMClient(counter: counter) { _, _ in
+            XCTFail("cloud LLMClient must not run under local engine")
+            return ""
+        }
+
+        let store = AppGroupStore(defaults: defaults)
+        let polisher = PolishingService(
+            store: store,
+            client: countingClient,
+            timeout: 1
+        )
+
+        let result = try await polisher.polish("  hello  ")
+        XCTAssertEqual(result, "hello")
+        let calls = await counter.value()
+        XCTAssertEqual(calls, 0)
     }
 }
 

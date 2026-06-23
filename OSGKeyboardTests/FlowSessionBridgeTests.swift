@@ -13,14 +13,25 @@ final class FlowSessionBridgeTests: XCTestCase {
         return defaults
     }
 
-    func testSessionActiveRequiresFreshHeartbeat() {
+    func testSessionActiveSurvivesStaleHeartbeatWhileNotExpired() {
         let defaults = makeDefaults()
         FlowSessionBridge.markSessionActive(duration: 60, defaults: defaults)
         XCTAssertTrue(FlowSessionBridge.isSessionActive(defaults: defaults))
+        XCTAssertTrue(FlowSessionBridge.isHostReachable(defaults: defaults))
 
         let staleHeartbeat = Date().timeIntervalSince1970 - 10
         defaults.set(staleHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
+        XCTAssertTrue(FlowSessionBridge.isSessionActive(defaults: defaults))
+        XCTAssertFalse(FlowSessionBridge.isHostReachable(defaults: defaults))
+    }
+
+    func testSessionInactiveWhenExpired() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(duration: 1, defaults: defaults)
+        let expired = Date().timeIntervalSince1970 - 5
+        defaults.set(expired, forKey: FlowSessionKeys.flowSessionExpires)
         XCTAssertFalse(FlowSessionBridge.isSessionActive(defaults: defaults))
+        XCTAssertFalse(FlowSessionBridge.isHostReachable(defaults: defaults))
     }
 
     func testRecordingStateRoundTrip() {
@@ -37,6 +48,19 @@ final class FlowSessionBridgeTests: XCTestCase {
         FlowSessionBridge.storeTranscriptionResult("hello", defaults: defaults)
         XCTAssertEqual(FlowSessionBridge.consumeTranscriptionResult(defaults: defaults), "hello")
         XCTAssertNil(FlowSessionBridge.consumeTranscriptionResult(defaults: defaults))
+    }
+
+    func testConsumeTranscriptionDeliveryIncludesPolishWarning() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.storeTranscriptionResult(
+            "raw text",
+            polishWarning: "polish failed",
+            defaults: defaults
+        )
+        let delivery = FlowSessionBridge.consumeTranscriptionDelivery(defaults: defaults)
+        XCTAssertEqual(delivery?.text, "raw text")
+        XCTAssertEqual(delivery?.polishWarning, "polish failed")
+        XCTAssertNil(FlowSessionBridge.consumeTranscriptionDelivery(defaults: defaults))
     }
 
     func testClearFlowStateRemovesSessionKeys() {

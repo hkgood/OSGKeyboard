@@ -28,7 +28,16 @@ public final class KeyboardViewController: UIInputViewController {
         static let pollIntervalNs: UInt64 = 200_000_000
         /// Give the user time to manually open the host app when auto-jump fails.
         static let startTimeout: TimeInterval = 30
-        static let resultTimeout: TimeInterval = 45
+
+        static func resultTimeout(
+            engineMode: String,
+            localASRBackend: LocalASRBackend
+        ) -> TimeInterval {
+            FlowSessionKeys.keyboardResultTimeout(
+                engineMode: engineMode,
+                localASRBackend: localASRBackend
+            )
+        }
     }
 
     private enum DictationWatchdog {
@@ -128,6 +137,7 @@ public final class KeyboardViewController: UIInputViewController {
         state.setMode             = { [weak self] m in self?.persistMode(m) }
         state.setLocale           = { [weak self] l in self?.persistLocale(l) }
         state.setEngineMode       = { [weak self] m in self?.persistEngineMode(m) }
+        state.setLocalASRBackend  = { [weak self] b in self?.persistLocalASRBackend(b) }
         state.insertNewline       = { [weak self] in self?.textDocumentProxy.insertText("\n") }
         state.insertSpace         = { [weak self] in self?.textDocumentProxy.insertText(" ") }
         state.deleteBackward      = { [weak self] in self?.textDocumentProxy.deleteBackward() }
@@ -191,6 +201,9 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     private func refreshFlowSessionState() {
+        persistor.refreshRuntimeFlags(into: state)
+        consumePendingFlowDeliveryIfNeeded()
+
         let active = FlowSessionBridge.isSessionActive()
         state.flowSessionActive = active
 
@@ -209,11 +222,33 @@ public final class KeyboardViewController: UIInputViewController {
         }
     }
 
+    /// Pick up transcripts/errors the host wrote while the extension was paused.
+    private func consumePendingFlowDeliveryIfNeeded() {
+        if isAwaitingFlowResult {
+            if let delivery = FlowSessionBridge.consumeTranscriptionDelivery() {
+                isAwaitingFlowResult = false
+                stopFlowWatchdog()
+                handleFlowTranscript(delivery)
+                return
+            }
+            if let error = FlowSessionBridge.consumeTranscriptionError() {
+                isAwaitingFlowResult = false
+                stopFlowWatchdog()
+                state.phase = .error(.unknown(error), message: error)
+                scheduleAutoClearError()
+                return
+            }
+        }
+
+        if isPendingFlowStart, FlowSessionBridge.isSessionActive() {
+            completeFlowStartHandoff()
+        }
+    }
+
     /// When the host session is down, proactively jump to the app to start it.
     private func maybeAutoStartFlowSession() {
         guard !FlowSessionBridge.isSessionActive() else { return }
         guard !isPendingFlowStart, !isFlowRecording, !isAwaitingFlowResult else { return }
-        guard state.mode != .off else { return }
         guard hasFullAccess, AppGroup.isAvailable else { return }
         guard case .idle = state.phase else { return }
 
@@ -249,7 +284,6 @@ public final class KeyboardViewController: UIInputViewController {
         default:
             return
         }
-        guard state.mode != .off else { return }
         guard hasFullAccess else {
             let msg = ExtL10n.string("keyboard.error.fullAccessRequired")
             state.phase = .error(.unknown(msg), message: msg)
@@ -392,12 +426,16 @@ public final class KeyboardViewController: UIInputViewController {
         stopFlowWatchdog()
         isAwaitingFlowResult = true
         let startedAt = Date().timeIntervalSince1970
+        let resultTimeout = FlowWatchdog.resultTimeout(
+            engineMode: state.engineMode,
+            localASRBackend: state.localASRBackend
+        )
         flowWatchdogTask = Task { @MainActor [weak self] in
             while let self, !Task.isCancelled {
-                if let result = FlowSessionBridge.consumeTranscriptionResult() {
+                if let delivery = FlowSessionBridge.consumeTranscriptionDelivery() {
                     self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
-                    self.handleFlowTranscript(result)
+                    self.handleFlowTranscript(delivery)
                     return
                 }
                 if let error = FlowSessionBridge.consumeTranscriptionError() {
@@ -408,7 +446,7 @@ public final class KeyboardViewController: UIInputViewController {
                     return
                 }
                 let now = Date().timeIntervalSince1970
-                if now - startedAt > FlowWatchdog.resultTimeout {
+                if now - startedAt > resultTimeout {
                     self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
                     let msg = ExtL10n.string("keyboard.flow.resultTimeout")
@@ -421,8 +459,8 @@ public final class KeyboardViewController: UIInputViewController {
         }
     }
 
-    private func handleFlowTranscript(_ transcript: String) {
-        let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func handleFlowTranscript(_ delivery: TranscriptionDelivery) {
+        let trimmed = delivery.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             state.phase = .idle
             state.level = 0
@@ -432,7 +470,12 @@ public final class KeyboardViewController: UIInputViewController {
         textDocumentProxy.insertText(trimmed)
         state.lastTranscript = ""
         state.level = 0
-        state.phase = .idle
+        if let warning = delivery.polishWarning {
+            state.phase = .error(.unknown(warning), message: warning)
+            scheduleAutoClearError()
+        } else {
+            state.phase = .idle
+        }
         debug("flow insert length=\(trimmed.count)")
     }
 
@@ -457,8 +500,8 @@ public final class KeyboardViewController: UIInputViewController {
         }
     }
 
-    private func handleFinalTranscript(_ transcript: String) {
-        let trimmed = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func handleFinalTranscript(_ delivery: TranscriptionDelivery) {
+        let trimmed = delivery.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             debug("received empty transcript")
             awaitingDictationResult = false
@@ -469,14 +512,19 @@ public final class KeyboardViewController: UIInputViewController {
         debug("received transcript length=\(trimmed.count)")
         awaitingDictationResult = false
         stopDictationWatchdog()
-        // Local engine or transcribe mode: insert directly, no LLM call.
-        if state.isLocalEngine || state.mode == .transcribe {
+        // Local engine: host app delivers raw ASR transcript; insert as-is.
+        if state.isLocalEngine {
             textDocumentProxy.insertText(trimmed)
             state.lastTranscript = ""
-            state.phase = .idle
+            if let warning = delivery.polishWarning {
+                state.phase = .error(.unknown(warning), message: warning)
+                scheduleAutoClearError()
+            } else {
+                state.phase = .idle
+            }
             return
         }
-        // `.polish` (default): call the LLM.
+        // Cloud engine: always polish via the configured LLM.
         state.phase = .processing
         Task { @MainActor [weak self] in
             guard let self else { return }
@@ -555,6 +603,11 @@ public final class KeyboardViewController: UIInputViewController {
         persistor.persist(engineMode: mode)
     }
 
+    private func persistLocalASRBackend(_ backend: LocalASRBackend) {
+        state.localASRBackend = backend
+        persistor.persist(localASRBackend: backend)
+    }
+
     // MARK: - Open host app
 
     private func openHostApp(path: String = "settings") {
@@ -592,9 +645,9 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     private func consumePendingDictationResultIfNeeded() {
-        guard let transcript = DictationBridge.consumePendingTranscript() else { return }
+        guard let delivery = DictationBridge.consumePendingDelivery() else { return }
         debug("consumePendingDictationResultIfNeeded success")
-        handleFinalTranscript(transcript)
+        handleFinalTranscript(delivery)
     }
 
     private func refreshDictationProgressStateIfNeeded() {

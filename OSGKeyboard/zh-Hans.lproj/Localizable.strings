@@ -29,6 +29,7 @@
 "onboarding.enable.step3.suffix" = "，选中 OSGKeyboard";
 "onboarding.enable.openSettings" = "去设置";
 "onboarding.api.title" = "选择语音转文字 AI 引擎";
+"onboarding.api.localModels.hint" = "使用 Qwen3-ASR 时需先下载下方 CoreML 语音识别模型，完成后才能开始使用。";
 "settings.onboarding.replay" = "重新开始权限引导";
 
 /* Common navigation */
@@ -83,15 +84,19 @@
 
 /* Settings */
 "settings.title" = "设置";
+"settings.appLanguage.title" = "界面语言";
+"settings.appLanguage.auto" = "自动";
+"settings.appLanguage.english" = "英文";
+"settings.appLanguage.chinese" = "中文";
 "settings.reset.title" = "重置所有设置?";
 "settings.reset.message" = "将清空 API Key、模型、接口地址、语音历史及云端确认状态。";
 "settings.reset.confirm" = "重置所有设置";
-"settings.engine.title" = "引擎";
-"settings.engine.subtitle" = "本地不用 Key，只转文字；云端会润色，要配 Key。";
+"settings.engine.title" = "识别方式";
+"settings.engine.subtitle" = "本地：端侧识别，仅转录；云端：通过 API 润色。";
 "settings.engine.local.title" = "本地识别";
 "settings.engine.local.ios26" = "全程在手机本地，不用联网";
-"settings.engine.local.legacy" = "端侧 ASR,仅转录,无润色。";
-"settings.engine.cloud.title" = "云端润色";
+"settings.engine.local.legacy" = "端侧 ASR，仅转录，无润色。";
+"settings.engine.cloud.title" = "云端识别与润色";
 "settings.engine.cloud.subtitle" = "本地转写 + 你配置的 API 润色，文字发往该第三方服务";
 "settings.provider.title" = "提供商";
 "settings.provider.subtitle" = "选择 LLM 提供商。";
@@ -103,6 +108,12 @@
 "provider.custom" = "自定义";
 "settings.api.title" = "接口";
 "settings.language.title" = "语言";
+"settings.languageModels.title" = "语言与模型";
+"settings.localModels.title" = "本地模型";
+"settings.localModels.speechRole" = "语音识别";
+"settings.localModels.builtIn" = "内置";
+"settings.localModels.allReady" = "已就绪";
+"settings.localModels.readiness %lld %lld" = "%lld/%lld 已就绪";
 "settings.language.subtitle.cloud" = "选择识别语言和文字处理模式。";
 "settings.language.subtitle.local" = "选择识别语言。";
 "settings.mode.title" = "模式";
@@ -110,6 +121,8 @@
 "settings.mode.transcribe" = "转写";
 "settings.mode.polish" = "润色";
 "settings.systemPrompt.title" = "系统提示";
+"settings.systemPrompt.edit" = "编辑系统提示";
+"settings.systemPrompt.hint" = "云端润色时使用。本地识别模式不会用到此提示词。";
 "settings.about.title" = "关于";
 "settings.systemPrompt.reset" = "重置";
 "settings.asrLocale" = "识别语言";
@@ -128,6 +141,47 @@
 "settings.privacy.cloud.alert.message" = "云端润色会把转写文字发到你配置的第三方 API。OSGKeyboard 不会在自有服务器上存储数据。是否继续？";
 "settings.link.support" = "帮助与反馈";
 "settings.link.github" = "GitHub";
+"settings.support.footer" = "OSGKeyboard 为开源项目，欢迎在 GitHub 提交问题与建议。";
+"settings.support.intro" = "获取帮助或反馈问题的最快方式是提交 GitHub Issue，我们会阅读每一条反馈。";
+"settings.support.issuesHint" = "提交前请先搜索是否已有相同问题。反馈 Bug 时请附上 iOS 版本、引擎模式（本地/云端）以及复现步骤。";
+"settings.support.openIssues" = "打开 GitHub Issues";
+"settings.support.unavailable.title" = "无法加载页面";
+"settings.support.unavailable.message" = "无法打开 GitHub Issues，请检查网络连接后重试。";
+"settings.link.licenses" = "第三方许可";
+"settings.link.models" = "本地模型管理";
+"settings.models.link.subtitle" = "下载源、模型文件与存储管理";
+"settings.licenses.title" = "第三方许可";
+"settings.licenses.footer" = "以下为 OSGKeyboard 使用的开源组件。许可正文摘自上游仓库；模型权重在运行时下载并缓存在本机。OSGKeyboard 本身采用源码可见许可，商业授权请联系 rocky.hk@gmail.com。";
+
+/* 本地模型管理(设置 → "本地模型管理") */
+"settings.models.title" = "本地模型管理";
+"settings.models.intro.title" = "完全在 iPhone 上跑语音识别";
+"settings.models.intro.body" = "使用本地 Qwen3-ASR 前请先点「下载」。文件缓存在本 App 存储，可随时删除以释放空间。";
+"settings.models.mirror.title" = "下载源";
+"settings.models.source.modelScope" = "ModelScope";
+"settings.models.source.huggingface" = "Hugging Face";
+"settings.models.action.downloadSize %@" = "下载 - %@";
+"settings.models.action.deleteSize %@" = "删除 - %@";
+"settings.models.action.downloadingPercent %lld" = "%lld%%";
+"settings.models.status.notDownloaded" = "未下载";
+"settings.models.status.downloading" = "下载中…";
+"settings.models.status.downloadingPercent %lld" = "下载中… %lld%%";
+"settings.models.status.downloaded" = "已下载";
+"settings.models.status.failed" = "下载失败";
+"settings.models.action.download" = "下载";
+"settings.models.action.cancel" = "取消";
+"settings.models.action.cancelDownload" = "取消下载";
+"settings.models.action.delete" = "删除";
+
+/* 本地识别引擎选择(本地识别模式) */
+"asr.backend.speechAnalyzer.label" = "iOS SpeechAnalyzer";
+"asr.backend.speechAnalyzer.blurb" = "iOS 26 内置,全程在本地,延迟最低。";
+"asr.backend.speechAnalyzer.hint" = "无需下载,直接可用。";
+"asr.backend.qwen3.label" = "Qwen3-ASR 0.6B (CoreML)";
+"asr.backend.qwen3.blurb" = "对方言和嘈杂环境更友好，需下载约 1.6 GB CoreML 模型，支持后台转写。";
+"asr.backend.qwen3.downloadHint" = "请先在上方「本地模型管理」中下载 CoreML 模型，再开始录音。";
+"asr.error.modelNotDownloaded" = "Qwen3-ASR 尚未下载,请先在设置中的「本地模型管理」下载。";
+"asr.error.unsupportedOS" = "Qwen3-ASR CoreML 需要 iOS 18 或更高版本。请改用 iOS SpeechAnalyzer 或云端引擎。";
 
 /* App group error */
 "appGroup.error.title" = "App Group 未配置";
@@ -142,6 +196,22 @@
 "preview.placeholder" = "试着输入或点击按钮录音";
 "preview.clear" = "清空";
 "preview.openSettingsA11y" = "打开 OSGKeyboard 设置";
+"preview.openSettings" = "设置";
+"preview.record.start" = "开始录音";
+"preview.record.stop" = "停止录音";
+"preview.status.field" = "输入框";
+"preview.status.recording" = "正在录音…";
+"preview.status.processing" = "识别中…";
+
+/* 语音输入（键盘跳转主 App） */
+"dictation.title" = "语音输入";
+"dictation.status.ready" = "准备录音…";
+"dictation.status.listening" = "正在听…";
+"dictation.status.listeningLive" = "正在实时识别…";
+"dictation.status.processing" = "处理中…";
+"dictation.status.requestingPermission" = "请求权限中…";
+"dictation.status.waitingResult" = "等待识别结果…";
+"dictation.status.saving" = "保存中…";
 "preview.modeChip.cycle" = "切换输入模式";
 "preview.localeChip.cycle" = "切换识别语言";
 "preview.error.audioSession" = "音频会话错误: %@";
@@ -156,6 +226,7 @@
 "keyboard.placeholder.processing" = "处理中…";
 "keyboard.placeholder.error" = "润色失败";
 "keyboard.placeholder.localBadge" = "本地";
+"keyboard.placeholder.cloudBadge" = "云端";
 "keyboard.rec" = "REC";
 "keyboard.space" = "空格";
 "keyboard.denied.mic" = "麦克风被拒绝";
@@ -205,6 +276,14 @@
 "home.flow.endShort" = "结束";
 "home.preview.label" = "输入测试";
 "home.preview.placeholder" = "点这里试试键盘";
+"home.engine.unsupportedOS" = "Qwen3-ASR CoreML 需要 iOS 18 或更高版本";
+"home.engine.warming" = "正在加载语音识别模型…";
+"home.engine.downloading" = "正在下载语音识别模型…";
+"home.engine.loadFailed" = "模型已下载，但加载失败。请重启应用后再试。";
+"home.engine.modelsReady" = "语音识别模型已就绪";
+"home.engine.setupRequired" = "本地语音识别模型未就绪";
+"home.engine.downloadFirst" = "请先在设置中下载本地语音识别模型";
+"home.engine.attentionBanner" = "本地语音识别模型尚未就绪，请先下载并等待加载完成后再使用语音输入。";
 
 /* Tabs */
 "tab.keyboard" = "键盘";
@@ -223,3 +302,11 @@
 "flow.error.micRequired" = "需要麦克风权限才能维持后台语音会话。";
 "flow.error.micUnavailable" = "当前设备无法使用麦克风。";
 "flow.error.audioUnavailable" = "无法启动后台音频。";
+
+"settings.models.error.metadata" = "下载缓存损坏或不完整。请更换下载源后重试。";
+"settings.models.error.offline" = "无法连接模型服务器，请检查网络或更换下载源。";
+"settings.models.confirm.downloadTitle %@" = "下载 %@";
+"settings.models.confirm.downloadingTitleFormat %@" = "正在下载 %@";
+"settings.models.confirm.body %lld" = "下载后约占用 %lld MB 空间。建议在 Wi-Fi 下下载，避免消耗蜂窝流量。随时可以在本设置页删除模型文件以释放空间。";
+"settings.models.confirm.cancel" = "取消";
+"settings.models.confirm.download %lld" = "下载 %lld MB";

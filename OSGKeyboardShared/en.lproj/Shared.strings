@@ -1,0 +1,30 @@
+/* Engine status labels */
+"engine.summary.local" = "On-device · %@";
+"engine.summary.cloud" = "Active: %@";
+"engine.summary.cloudWithModel" = "Active: %1$@ · %2$@";
+"engine.asr.appleSpeech" = "Apple SpeechAnalyzer";
+"model.qwen3asr.name" = "Qwen3-ASR 0.6B (CoreML)";
+
+/* LLM providers */
+"provider.openai" = "OpenAI";
+"provider.deepseek" = "DeepSeek";
+"provider.qwen" = "Qwen (DashScope)";
+"provider.zhipu" = "Zhipu GLM";
+"provider.moonshot" = "Moonshot";
+"provider.custom" = "Custom";
+
+/* LLM errors */
+"error.llm.invalidURL" = "Invalid API URL. Check Base URL in Settings.";
+"error.llm.noAPIKey" = "API Key is missing.";
+"error.llm.http" = "API returned HTTP %lld. Try again later or contact the provider.";
+"error.llm.decoding" = "Failed to parse the API response.";
+"error.llm.transport" = "Network error. Check your connection and try again.";
+"error.llm.rateLimited" = "Too many API requests. Please wait and try again.";
+"error.llm.cancelled" = "Request cancelled.";
+
+/* ASR errors */
+"error.asr.localeUnsupported" = "Speech language assets are unavailable. Try again later or switch the recognition language.";
+"error.asr.assetsNotReady" = "Speech language assets are not ready. Try again later.";
+"error.asr.formatUnsupported" = "This device does not support the required audio format.";
+"error.asr.noSpeech" = "No speech detected. Please try again.";
+"error.asr.chunkFailed" = "Segment %lld failed: %@";

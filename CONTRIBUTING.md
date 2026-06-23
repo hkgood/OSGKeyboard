@@ -29,7 +29,7 @@ Open an issue using the **Feature request** template. Briefly describe:
 2. **Generate the project locally:**
    ```bash
    brew install xcodegen swiftlint
-   xcodegen generate
+   xcodegen generate          # or: ./Scripts/generate-xcodeproj.sh
    ```
 3. **Code style.** SwiftLint config lives in `.swiftlint.yml` — keep it green. We use Swift 6 strict concurrency, no `Sendable` shims where avoidable.
 4. **Tests.** Add XCTest coverage in `OSGKeyboardTests/` for any non-trivial logic.

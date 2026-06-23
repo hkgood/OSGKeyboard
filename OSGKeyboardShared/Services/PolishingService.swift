@@ -5,9 +5,9 @@
 // to produce polished, well-punctuated text. Falls back to the raw transcript
 // if the LLM call fails or times out.
 //
-// Mode-aware: when `modeId == "off"` the service short-circuits and returns
-// the trimmed input without touching the network. This is the runtime
-// guarantee behind the keyboard's "Off · 关闭" mode.
+// Cloud engine always runs the LLM polish step (settings no longer expose
+// off / transcribe). Local engine (`engineMode == "local"`) is ASR-only —
+// the raw transcript is returned unchanged and cloud API settings are ignored.
 
 import Foundation
 
@@ -16,7 +16,6 @@ public actor PolishingService {
     public enum PolishError: Error, Equatable {
         case noTranscript
         case timeout
-        case modeOff
     }
 
     private let store: AppGroupStore
@@ -44,30 +43,36 @@ public actor PolishingService {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw PolishError.noTranscript }
 
-        // Mode-aware short-circuit. When the user has selected "Off", the
-        // keyboard must never hit the network — we return the trimmed
-        // input as-is. This is the same value the view controller would
-        // produce if it skipped `polish()` entirely, but having the
-        // guarantee at the service layer means future call sites (CLI,
-        // tests, alternate keyboards) inherit it for free.
-        if store.modeId == "off" {
+        // Local engine: ASR-only — no on-device or cloud polish.
+        if store.engineMode == "local" {
             return trimmed
         }
 
+        return try await polishRemote(trimmed)
+    }
+
+    private func polishRemote(_ trimmed: String) async throws -> String {
         let client = injectedClient ?? store.makeClient()
         let prompt = store.systemPrompt
+        let budget = effectiveTimeout(for: trimmed)
 
         return try await withThrowingTaskGroup(of: String.self) { group in
             group.addTask {
                 try await client.polish(trimmed, systemPrompt: prompt)
             }
             group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(self.timeout * 1_000_000_000))
+                try await Task.sleep(nanoseconds: UInt64(budget * 1_000_000_000))
                 throw PolishError.timeout
             }
             let result = try await group.next()!
             group.cancelAll()
             return result
         }
+    }
+
+    /// Scale polish budget with transcript length (3-minute Flow utterances).
+    private func effectiveTimeout(for text: String) -> TimeInterval {
+        let scaled = timeout + (Double(text.count) / 200.0) * 2.0
+        return min(max(scaled, timeout), 120)
     }
 }

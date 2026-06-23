@@ -108,16 +108,24 @@ struct KeyboardPreviewSheet: View {
                 Button {
                     toggleRecording()
                 } label: {
-                    Label(isRecording ? "停止录音" : "开始录音", systemImage: isRecording ? "stop.circle.fill" : "mic.circle.fill")
-                        .primaryButton()
+                    Label {
+                        Text(isRecording ? "preview.record.stop" : "preview.record.start")
+                    } icon: {
+                        Image(systemName: isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                    }
+                    .primaryButton()
                 }
                 .buttonStyle(.plain)
 
                 Button {
                     showSettings = true
                 } label: {
-                    Label("设置", systemImage: "gearshape")
-                        .secondaryButton()
+                    Label {
+                        Text("preview.openSettings")
+                    } icon: {
+                        Image(systemName: "gearshape")
+                    }
+                    .secondaryButton()
                 }
                 .buttonStyle(.plain)
             }
@@ -135,7 +143,8 @@ struct KeyboardPreviewSheet: View {
         EngineServiceLabel.summary(
             engineMode: config.engineMode,
             providerId: config.providerId,
-            model: config.model
+            model: config.model,
+            localASRBackend: config.localASRBackend
         )
     }
 
@@ -153,10 +162,16 @@ struct KeyboardPreviewSheet: View {
 
     private var statusTitle: String {
         switch dictation.phase {
-        case .idle: return "输入框"
-        case .requestingPermission: return "请求权限中..."
-        case .recording: return config.isLocalEngine ? "正在实时识别..." : "正在录音..."
-        case .processing: return "识别中..."
+        case .idle:
+            return AppL10n.string("preview.status.field")
+        case .requestingPermission:
+            return AppL10n.string("dictation.status.requestingPermission")
+        case .recording:
+            return config.isLocalEngine
+                ? AppL10n.string("dictation.status.listeningLive")
+                : AppL10n.string("preview.status.recording")
+        case .processing:
+            return AppL10n.string("preview.status.processing")
         case .denied(let message), .error(let message):
             return message
         }

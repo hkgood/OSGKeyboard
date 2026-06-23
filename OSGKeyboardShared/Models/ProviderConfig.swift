@@ -30,6 +30,11 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         static let hasCompletedOnboarding = "config.hasCompletedOnboarding"
         static let onboardingPage         = "config.onboardingPage"
         static let hasAcknowledgedCloudSharing = "config.hasAcknowledgedCloudSharing"
+        // Which on-device ASR engine to use when `engineMode == "local"`.
+        // Persisted in the App Group so the keyboard can read the
+        // selection even though it never instantiates the backend itself.
+        static let localASRBackend = "config.localASRBackend"
+        static let uiLanguage = "config.uiLanguage"
     }
 
     @Published public var providerId: String {
@@ -64,8 +69,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     @Published public var localeId: String {
         didSet { defaults.set(localeId, forKey: Key.localeId) }
     }
-    /// "local" → on-device ASR only, no LLM polishing.
-    /// "cloud" → ASR + LLM polish (default).
+    /// "local" → on-device ASR only (raw transcript delivery).
+    /// "cloud" → ASR + LLM polish (always on; modeId kept for compatibility).
     @Published public var engineMode: String {
         didSet { defaults.set(engineMode, forKey: Key.engineMode) }
     }
@@ -85,6 +90,16 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     @Published public var hasAcknowledgedCloudSharing: Bool {
         didSet { defaults.set(hasAcknowledgedCloudSharing, forKey: Key.hasAcknowledgedCloudSharing) }
     }
+    /// Which on-device ASR engine backs the "local" engine mode. Only
+    /// consulted when `isLocalEngine == true`; the cloud engine always
+    /// uses `SpeechAnalyzer`.
+    @Published public var localASRBackend: LocalASRBackend {
+        didSet { defaults.set(localASRBackend.rawValue, forKey: Key.localASRBackend) }
+    }
+    /// Host-app UI language. Also mirrored to the App Group for the keyboard extension.
+    @Published public var uiLanguage: AppUILanguage {
+        didSet { defaults.set(uiLanguage.rawValue, forKey: Key.uiLanguage) }
+    }
 
     public var isConfigured: Bool {
         // Local engine (on-device ASR only) doesn't need an API key,
@@ -96,7 +111,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         return !baseURL.isEmpty && !apiKey.isEmpty && !model.isEmpty
     }
 
-    /// On-device ASR only — no cloud LLM polish.
+    /// On-device ASR only; no cloud API required.
     public var isLocalEngine: Bool { engineMode == "local" }
 
     /// The system prompt the user *sees* in the editor — fall back to the
@@ -131,6 +146,19 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         let savedPage = resolvedDefaults.integer(forKey: Key.onboardingPage)
         self.onboardingPage = savedPage > 0 ? savedPage : 0
         self.hasAcknowledgedCloudSharing = resolvedDefaults.bool(forKey: Key.hasAcknowledgedCloudSharing)
+        // Tolerate missing / unknown raw values (e.g. an enum case that
+        // was renamed in a later build) by falling back to the default
+        // rather than crashing inside `RawRepresentable.init`.
+        let rawBackend = resolvedDefaults.string(forKey: Key.localASRBackend) ?? LocalASRBackend.speechAnalyzer.rawValue
+        self.localASRBackend = LocalASRBackend(rawValue: rawBackend) ?? .speechAnalyzer
+        self.uiLanguage = AppUILanguage.fromStored(
+            resolvedDefaults.string(forKey: Key.uiLanguage)
+        )
+
+        // Cloud no longer exposes off/transcribe; migrate legacy values.
+        if self.engineMode == "cloud", self.modeId != "polish" {
+            self.modeId = "polish"
+        }
     }
 
     /// Read the API key from the Keychain, falling back to a one-time
