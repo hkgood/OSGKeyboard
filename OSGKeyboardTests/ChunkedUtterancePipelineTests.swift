@@ -2,6 +2,7 @@
 // OSGKeyboardTests
 
 import XCTest
+import os
 @testable import OSGKeyboardShared
 
 private struct StubChunkASR: ASRService, @unchecked Sendable {

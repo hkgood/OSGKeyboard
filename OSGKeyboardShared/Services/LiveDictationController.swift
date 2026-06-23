@@ -358,7 +358,11 @@ public final class LiveDictationController: ObservableObject {
                     controller?.currentPartial = partial
                 }
             }
-            await MainActor.run {
+            // Re-bind `controller` inside the `@MainActor` block so the
+            // weak reference is captured under the right isolation. Swift
+            // 6 strict concurrency otherwise complains about a
+            // task-isolated reference escaping into a main-actor closure.
+            await MainActor.run { [weak controller] in
                 guard let controller else { return }
                 switch outcome {
                 case .success(let success):

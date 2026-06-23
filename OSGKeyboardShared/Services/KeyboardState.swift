@@ -77,10 +77,15 @@ public final class KeyboardState: ObservableObject {
     /// Mirrored from `ProviderConfig.localASRBackend` for UI display
     /// and for `state` consumers that want a single source of truth.
     @Published public var localASRBackend: LocalASRBackend = .speechAnalyzer
-    /// `false` when the local engine needs on-device models that are
-    /// not yet downloaded (mirrored from App Group by the extension).
+    /// v0.2.0: kept for source compatibility with the previous Qwen3
+    /// CoreML local engine. Always `true` now — iOS `SpeechAnalyzer`
+    /// ships with iOS 26 and has no per-user weights to download or
+    /// preload. Existing read sites will see `true` and behave the
+    /// same as the "stack ready" branch did.
     @Published public var localModelsReady: Bool = true
-    /// `true` when host app has preloaded Qwen weights into memory.
+    /// v0.2.0: kept for source compatibility with the previous Qwen3
+    /// CoreML local engine. Always `false` now — there are no weights
+    /// for the host app to preload.
     @Published public var localModelsLoaded: Bool = false
 
     /// Convenience shorthand used by the pipeline and views.

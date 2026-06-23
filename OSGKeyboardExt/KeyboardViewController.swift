@@ -565,6 +565,18 @@ public final class KeyboardViewController: UIInputViewController {
                     self.state.phase = .error(.llm(error), message: msg)
                     self.scheduleAutoClearError()
                 }
+            } catch let polishError as PolishingService.PolishError where polishError == .missingAPIKey {
+                // v0.2.0: local engine + cloud polish toggle on, but the
+                // user hasn't entered an API key. Insert the raw transcript
+                // (so the user doesn't lose what they said) and surface the
+                // same "fill in your key" hint we use in the cloud path.
+                self.textDocumentProxy.insertText(trimmed)
+                self.state.lastTranscript = ""
+                self.state.phase = .error(
+                    .llm(.noAPIKey),
+                    message: ExtL10n.string("keyboard.error.llm.noApiKey")
+                )
+                self.scheduleAutoClearError()
             } catch {
                 // Network / timeout / decoding — fall back to the raw
                 // transcript so the user still gets their text, with a

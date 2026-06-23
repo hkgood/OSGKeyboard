@@ -3,7 +3,9 @@
 "engine.summary.cloud" = "Active: %@";
 "engine.summary.cloudWithModel" = "Active: %1$@ · %2$@";
 "engine.asr.appleSpeech" = "Apple SpeechAnalyzer";
-"model.qwen3asr.name" = "Qwen3-ASR 0.6B (CoreML)";
+
+/* v0.2.0: flow-level warnings surfaced alongside the final transcript. */
+"flow.warning.cloudPolishMissingKey" = "Cloud polish is on, but no API key is set. Inserted the raw ASR transcript — fill in your DeepSeek key in Settings to enable polish.";
 
 /* LLM providers */
 "provider.openai" = "OpenAI";

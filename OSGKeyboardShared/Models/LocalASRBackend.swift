@@ -6,51 +6,45 @@
 // factory `ASRServiceFactory` dispatches on this enum; the settings UI
 // renders it as a picker.
 //
-// Why an enum in `Shared` rather than living next to the concrete
-// `ASRService` implementations: the value must be serialisable into
-// the App Group store (so the keyboard extension can observe the
-// selection), exposed via `ProviderConfig` (UI binding) and consumed
-// by every layer that asks for an ASR backend.
+// As of v0.2.0 the only on-device backend is iOS 26 `SpeechAnalyzer`
+// + `DictationTranscriber`. The previous Qwen3-CoreML backend has
+// been removed: that path required a ~1.6 GB CoreML bundle, a local
+// SPM fork that pulled in mlx-swift, and significant app-side state
+// (download manager, warm-up service, model registry). We now keep the
+// local engine narrow — same iOS ASR the cloud engine already uses —
+// and let users opt into a cloud polish step after the transcript is
+// produced if they need stronger accuracy on noisy audio or dialectal
+// Chinese. See `LocalPolishConfig` for the post-ASR polish toggle.
+//
+// Why an enum in `Shared` rather than a `Bool`: the value must remain
+// serialisable into the App Group store (so the keyboard extension can
+// observe the selection) and exposed via `ProviderConfig` (UI binding).
+// Keeping the type stable even with a single case avoids a migration
+// the next time someone adds a non-cloud backend (e.g. whisper.cpp).
 
 import Foundation
 
 public enum LocalASRBackend: String, CaseIterable, Identifiable, Sendable, Codable {
     /// iOS 26 `SpeechAnalyzer` + `DictationTranscriber`. Always
-    /// on-device, no asset download, ships with iOS. Default for every
-    /// fresh install — anything else is opt-in.
+    /// on-device, no asset download, ships with iOS. The only local
+    /// backend in v0.2.0.
     case speechAnalyzer
-
-    /// Qwen3-ASR-0.6B via CoreML (Neural Engine + CPU). Stronger on Chinese
-    /// dialects and noisy audio than `SpeechAnalyzer`, works in Flow while
-    /// the host app is backgrounded, but requires a ~1.6 GB download on first
-    /// use and iOS 18+.
-    case qwen3ASR
 
     public var id: String { rawValue }
 
     /// Localisation key for the human label in the settings picker.
     public var labelKey: String {
-        switch self {
-        case .speechAnalyzer: return "asr.backend.speechAnalyzer.label"
-        case .qwen3ASR:        return "asr.backend.qwen3.label"
-        }
+        "asr.backend.speechAnalyzer.label"
     }
 
     /// Localisation key for the one-line subtitle shown under the label.
     public var blurbKey: String {
-        switch self {
-        case .speechAnalyzer: return "asr.backend.speechAnalyzer.blurb"
-        case .qwen3ASR:        return "asr.backend.qwen3.blurb"
-        }
+        "asr.backend.speechAnalyzer.blurb"
     }
 
     /// Whether this backend needs the user to download a model file
-    /// before it can run. Used to gate the "Downloading Qwen3-ASR" UI
-    /// in a follow-up; for now we just expose the flag.
+    /// before it can run. Always `false` for iOS-bundled speech.
     public var requiresModelDownload: Bool {
-        switch self {
-        case .speechAnalyzer: return false
-        case .qwen3ASR:        return true
-        }
+        false
     }
 }

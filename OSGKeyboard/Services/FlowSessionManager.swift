@@ -22,15 +22,20 @@ final class FlowSessionManager: ObservableObject {
 
     private let capture = FlowContinuousCapture()
     private let store = AppGroupStore()
-    /// Cloud-engine polish only; local engine delivers raw ASR text.
+    /// Cloud-engine polish; local engine now ALSO runs through the
+    /// polisher when `localModeCloudPolishEnabled` is on — the same
+    /// `PolishingService` short-circuits to raw when the toggle is off.
     private var polisher: PolishingService {
         PolishingService()
     }
-    /// Cached ASR instance shared with `OnDeviceModelWarmup`.
+    /// Cached ASR instance. v0.2.0: the only on-device backend is iOS
+    /// `SpeechAnalyzer`, which has no warm-up step — we can hand the
+    /// factory-built service straight back without going through the
+    /// old `OnDeviceModelWarmup` registry.
     private var sessionASR: ASRService?
     private var asr: ASRService {
         if let sessionASR { return sessionASR }
-        let service = OnDeviceModelWarmup.shared.asrService(
+        let service = ASRServiceFactory.make(
             engineMode: store.engineMode,
             localBackend: store.localASRBackend
         )
@@ -144,7 +149,9 @@ final class FlowSessionManager: ObservableObject {
         startLevelPublishing()
         scheduleExpiry(after: remaining)
 
-        OnDeviceModelWarmup.shared.warmUpIfNeeded()
+        // v0.2.0: iOS `SpeechAnalyzer` needs no warm-up. We still
+        // re-bind the cached `sessionASR` so a config flip mid-session
+        // (e.g. switching from cloud to local) is honoured.
         bindSessionASR()
 
         debug("Flow session restored (\(Int(remaining))s remaining)")
@@ -256,7 +263,8 @@ final class FlowSessionManager: ObservableObject {
 
         Task { @MainActor [weak self] in
             await self?.reactivateCaptureIfNeeded()
-            OnDeviceModelWarmup.shared.ensureReadyAfterBackground()
+            // v0.2.0: iOS `SpeechAnalyzer` is bundled with the OS; no
+            // on-device weights to reload after a background trip.
             self?.bindSessionASR()
         }
     }
@@ -320,14 +328,16 @@ final class FlowSessionManager: ObservableObject {
         startLevelPublishing()
         scheduleExpiry(after: duration)
 
-        OnDeviceModelWarmup.shared.warmUpIfNeeded()
+        // v0.2.0: iOS `SpeechAnalyzer` needs no warm-up; just refresh
+        // the cached ASR service in case the user flipped engines
+        // while the session was idle.
         bindSessionASR()
 
         debug("Flow session started (\(Int(duration))s), continuous capture running")
     }
 
     private func bindSessionASR() {
-        sessionASR = OnDeviceModelWarmup.shared.asrService(
+        sessionASR = ASRServiceFactory.make(
             engineMode: store.engineMode,
             localBackend: store.localASRBackend
         )
@@ -396,7 +406,6 @@ final class FlowSessionManager: ObservableObject {
         isUtteranceRecording = true
         FlowDiagnostics.log(
             "beginUtterance engine=\(store.engineMode) asr=\(store.localASRBackend.rawValue) " +
-            "modelsInMemory=\(OnDeviceModelStatus.modelsLoadedInMemory()) " +
             "asrType=\(type(of: asr)) pipelined=true max=\(Int(FlowSessionKeys.maxUtteranceDuration))s"
         )
 
@@ -406,7 +415,11 @@ final class FlowSessionManager: ObservableObject {
                     manager?.currentPartial = partial
                 }
             }
-            await MainActor.run {
+            // Re-bind `manager` inside the `@MainActor` block so the
+            // weak reference is captured under the right isolation. Swift
+            // 6 strict concurrency otherwise complains about a
+            // task-isolated reference escaping into a main-actor closure.
+            await MainActor.run { [weak manager] in
                 guard let manager else { return }
                 FlowDiagnostics.log(
                     "chunkedASR finished partialLen=\(manager.currentPartial.count) " +
@@ -546,10 +559,13 @@ final class FlowSessionManager: ObservableObject {
         }
 
         let engineMode = store.engineMode
+        let chunkNote = Self.chunkWarningMessage(chunkWarnings)
+        let shouldPolish = (engineMode == "cloud")
+            || (engineMode == "local" && store.localModeCloudPolishEnabled)
 
-        if engineMode == "local" {
-            let warning = Self.chunkWarningMessage(chunkWarnings)
-            FlowSessionBridge.storeTranscriptionResult(text, polishWarning: warning)
+        if !shouldPolish {
+            // Local engine, cloud-polish toggle off — pure ASR.
+            FlowSessionBridge.storeTranscriptionResult(text, polishWarning: chunkNote)
             FlowDiagnostics.log(
                 "finalize ASR-only total=\(String(format: "%.1f", Date().timeIntervalSince(pipelineStarted)))s " +
                 "len=\(text.count)"
@@ -563,7 +579,6 @@ final class FlowSessionManager: ObservableObject {
         }
 
         var delivered = text
-        let chunkNote = Self.chunkWarningMessage(chunkWarnings)
         let polishStarted = Date()
         do {
             let polished = try await polisher.polish(text)
@@ -574,11 +589,17 @@ final class FlowSessionManager: ObservableObject {
                 "total=\(String(format: "%.1f", Date().timeIntervalSince(pipelineStarted)))s"
             )
         } catch {
+            // v0.2.0: local + cloud-polish-on + no API key surfaces
+            // `.missingAPIKey`. We translate it into a polishWarning
+            // so the keyboard can show the "fill in your key" hint
+            // inline rather than a generic failure message. The raw
+            // transcript is still delivered — no data loss.
+            let warning = Self.warningFromPolishError(error) ?? chunkNote
             FlowDiagnostics.log(
                 "polish failed after \(String(format: "%.1f", Date().timeIntervalSince(polishStarted)))s: " +
                 "\(error.localizedDescription)"
             )
-            FlowSessionBridge.storeTranscriptionResult(text, polishWarning: chunkNote)
+            FlowSessionBridge.storeTranscriptionResult(text, polishWarning: warning)
         }
 
         SpeechHistoryStore.shared.append(text: delivered, engineMode: engineMode)
@@ -595,11 +616,23 @@ final class FlowSessionManager: ObservableObject {
         return warnings.joined(separator: "\n")
     }
 
+    /// v0.2.0: surface the local-mode cloud-polish error path with a
+    /// localised hint ("please fill in your DeepSeek key in Settings")
+    /// rather than letting the keyboard show a generic network error.
+    private static func warningFromPolishError(_ error: Error) -> String? {
+        guard let polishError = error as? PolishingService.PolishError,
+              polishError == .missingAPIKey else {
+            return nil
+        }
+        return AppL10n.string("flow.warning.cloudPolishMissingKey")
+    }
+
     private func asrWaitTimeout() -> TimeInterval {
+        // v0.2.0: local engine is iOS `SpeechAnalyzer` only, so the
+        // previous Qwen3-specific timeout collapses into the shared
+        // local path.
         if store.engineMode == "local" {
-            return store.localASRBackend == .qwen3ASR
-                ? FlowSessionKeys.localQwen3ASRWaitTimeout
-                : FlowSessionKeys.localASRWaitTimeout
+            return FlowSessionKeys.localASRWaitTimeout
         }
         return FlowSessionKeys.cloudASRWaitTimeout
     }
