@@ -65,12 +65,24 @@ public enum FlowSessionBridge {
 
     // MARK: - Session validity (keyboard)
 
-    /// True when expires is in the future and heartbeat is fresh.
+    /// True when the session contract is still valid (not expired).
+    /// Does not require a fresh heartbeat — the host may be suspended in
+    /// background while the continuous audio session is frozen.
     public static func isSessionActive(defaults: UserDefaults? = nil) -> Bool {
         let store = resolvedDefaults(defaults)
         flush(store)
+        guard store.bool(forKey: FlowSessionKeys.flowSessionActive) else { return false }
+
         let expires = store.double(forKey: FlowSessionKeys.flowSessionExpires)
-        guard expires > Date().timeIntervalSince1970 else { return false }
+        return expires > Date().timeIntervalSince1970
+    }
+
+    /// True when the host app recently wrote a heartbeat (foreground or
+    /// actively processing). Used for auto-start heuristics, not gating record.
+    public static func isHostReachable(defaults: UserDefaults? = nil) -> Bool {
+        let store = resolvedDefaults(defaults)
+        flush(store)
+        guard isSessionActive(defaults: store) else { return false }
 
         let heartbeat = store.double(forKey: FlowSessionKeys.flowHeartbeat)
         guard heartbeat > 0 else { return false }
@@ -124,6 +136,7 @@ public enum FlowSessionBridge {
 
     public static func storeTranscriptionResult(
         _ text: String,
+        polishWarning: String? = nil,
         defaults: UserDefaults? = nil
     ) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -131,6 +144,11 @@ public enum FlowSessionBridge {
         let store = resolvedDefaults(defaults)
         store.set(trimmed, forKey: FlowSessionKeys.transcriptionResult)
         store.removeObject(forKey: FlowSessionKeys.transcriptionError)
+        if let polishWarning, !polishWarning.isEmpty {
+            store.set(polishWarning, forKey: FlowSessionKeys.transcriptionPolishWarning)
+        } else {
+            store.removeObject(forKey: FlowSessionKeys.transcriptionPolishWarning)
+        }
         setRecordingState(.idle, defaults: store)
         flush(store)
     }
@@ -147,14 +165,24 @@ public enum FlowSessionBridge {
 
     /// Returns and clears a pending transcription result, if any.
     public static func consumeTranscriptionResult(defaults: UserDefaults? = nil) -> String? {
+        consumeTranscriptionDelivery(defaults: defaults)?.text
+    }
+
+    /// Returns and clears a pending transcription delivery (text + optional
+    /// polish warning), if any.
+    public static func consumeTranscriptionDelivery(
+        defaults: UserDefaults? = nil
+    ) -> TranscriptionDelivery? {
         let store = resolvedDefaults(defaults)
         flush(store)
         guard let text = store.string(forKey: FlowSessionKeys.transcriptionResult), !text.isEmpty else {
             return nil
         }
+        let warning = store.string(forKey: FlowSessionKeys.transcriptionPolishWarning)
         store.removeObject(forKey: FlowSessionKeys.transcriptionResult)
+        store.removeObject(forKey: FlowSessionKeys.transcriptionPolishWarning)
         flush(store)
-        return text
+        return TranscriptionDelivery(text: text, polishWarning: warning)
     }
 
     /// Returns and clears a pending transcription error, if any.
@@ -212,6 +240,7 @@ public enum FlowSessionBridge {
 
     private static func clearTranscription(defaults: UserDefaults) {
         defaults.removeObject(forKey: FlowSessionKeys.transcriptionResult)
+        defaults.removeObject(forKey: FlowSessionKeys.transcriptionPolishWarning)
         defaults.removeObject(forKey: FlowSessionKeys.transcriptionError)
     }
 }

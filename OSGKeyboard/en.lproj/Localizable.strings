@@ -29,6 +29,7 @@
 "onboarding.enable.step3.suffix" = "and select OSGKeyboard";
 "onboarding.enable.openSettings" = "Open Settings";
 "onboarding.api.title" = "Choose Engine";
+"onboarding.api.localModels.hint" = "Download the on-device CoreML ASR model below before you finish setup (only needed when using Qwen3-ASR).";
 "settings.onboarding.replay" = "Restart permission setup";
 
 /* Common navigation */
@@ -83,15 +84,19 @@
 
 /* Settings */
 "settings.title" = "Settings";
+"settings.appLanguage.title" = "App language";
+"settings.appLanguage.auto" = "Auto";
+"settings.appLanguage.english" = "English";
+"settings.appLanguage.chinese" = "Chinese";
 "settings.reset.title" = "Reset all settings?";
 "settings.reset.message" = "API key, model, base URL, voice history, and cloud consent will be cleared.";
 "settings.reset.confirm" = "Reset all settings";
-"settings.engine.title" = "Engine";
-"settings.engine.subtitle" = "Pick the recognition engine. Local engine does transcription only, no API key needed.";
-"settings.engine.local.title" = "On-device";
+"settings.engine.title" = "Recognition method";
+"settings.engine.subtitle" = "Local: on-device ASR only. Cloud: ASR + polish via your API.";
+"settings.engine.local.title" = "On-device recognition";
 "settings.engine.local.ios26" = "Always on-device, no network.";
 "settings.engine.local.legacy" = "On-device ASR. Transcription only, no polish.";
-"settings.engine.cloud.title" = "Cloud polish";
+"settings.engine.cloud.title" = "Cloud recognition & polish";
 "settings.engine.cloud.subtitle" = "On-device ASR + polish via your API. Text is sent to the endpoint you configure.";
 "settings.provider.title" = "Provider";
 "settings.provider.subtitle" = "Pick the LLM that polishes your dictation.";
@@ -103,6 +108,12 @@
 "provider.custom" = "Custom";
 "settings.api.title" = "API";
 "settings.language.title" = "Language";
+"settings.languageModels.title" = "Language & models";
+"settings.localModels.title" = "On-device models";
+"settings.localModels.speechRole" = "Speech";
+"settings.localModels.builtIn" = "Built-in";
+"settings.localModels.allReady" = "Ready";
+"settings.localModels.readiness %lld %lld" = "%lld/%lld ready";
 "settings.language.subtitle.cloud" = "Recognition language and text processing mode.";
 "settings.language.subtitle.local" = "Recognition language.";
 "settings.mode.title" = "Mode";
@@ -110,6 +121,8 @@
 "settings.mode.transcribe" = "Transcribe";
 "settings.mode.polish" = "Polish";
 "settings.systemPrompt.title" = "System Prompt";
+"settings.systemPrompt.edit" = "Edit system prompt";
+"settings.systemPrompt.hint" = "Used by the cloud LLM when polishing your dictation. Local engine skips this step.";
 "settings.about.title" = "About";
 "settings.systemPrompt.reset" = "Reset";
 "settings.asrLocale" = "ASR locale";
@@ -128,6 +141,47 @@
 "settings.privacy.cloud.alert.message" = "Cloud polish sends transcribed text to the third-party API you configure. OSGKeyboard never stores data on our servers. Continue?";
 "settings.link.support" = "Help & Feedback";
 "settings.link.github" = "GitHub";
+"settings.support.footer" = "OSGKeyboard is open source. Report bugs and share ideas on GitHub.";
+"settings.support.intro" = "The fastest way to get help or send feedback is to open a GitHub issue. We read every report.";
+"settings.support.issuesHint" = "Search existing issues first. For bugs, include your iOS version, engine mode (local or cloud), and steps to reproduce.";
+"settings.support.openIssues" = "Open GitHub Issues";
+"settings.support.unavailable.title" = "Cannot load page";
+"settings.support.unavailable.message" = "GitHub Issues could not be opened. Check your network connection and try again.";
+"settings.link.licenses" = "Third-Party Licenses";
+"settings.link.models" = "On-device models";
+"settings.models.link.subtitle" = "Download source, models, and storage";
+"settings.licenses.title" = "Third-Party Licenses";
+"settings.licenses.footer" = "Open-source components used by OSGKeyboard. License texts are reproduced from upstream repositories; model weights are downloaded at runtime and cached on device. OSGKeyboard itself is source-available — commercial licensing: rocky.hk@gmail.com.";
+
+/* On-device models manager (settings → "On-device models") */
+"settings.models.title" = "On-device models";
+"settings.models.intro.title" = "Run speech recognition entirely on your iPhone";
+"settings.models.intro.body" = "Download the Qwen3-ASR model before using local recognition. Files are cached in this app's storage and can be deleted anytime.";
+"settings.models.mirror.title" = "Download source";
+"settings.models.source.modelScope" = "ModelScope";
+"settings.models.source.huggingface" = "Hugging Face";
+"settings.models.action.downloadSize %@" = "Download - %@";
+"settings.models.action.deleteSize %@" = "Delete - %@";
+"settings.models.action.downloadingPercent %lld" = "%lld%%";
+"settings.models.status.notDownloaded" = "Not downloaded";
+"settings.models.status.downloading" = "Downloading…";
+"settings.models.status.downloadingPercent %lld" = "Downloading… %lld%%";
+"settings.models.status.downloaded" = "Downloaded";
+"settings.models.status.failed" = "Download failed";
+"settings.models.action.download" = "Download";
+"settings.models.action.cancel" = "Cancel";
+"settings.models.action.cancelDownload" = "Cancel download";
+"settings.models.action.delete" = "Delete";
+
+/* Local ASR backend picker (local engine mode) */
+"asr.backend.speechAnalyzer.label" = "iOS SpeechAnalyzer";
+"asr.backend.speechAnalyzer.blurb" = "Built into iOS 26, always on-device, lowest latency.";
+"asr.backend.speechAnalyzer.hint" = "No download required.";
+"asr.backend.qwen3.label" = "Qwen3-ASR 0.6B (CoreML)";
+"asr.backend.qwen3.blurb" = "Stronger on Chinese dialects and noisy audio. ~1.6 GB CoreML model, works in background.";
+"asr.backend.qwen3.downloadHint" = "Download the CoreML model in the section above before dictating.";
+"asr.error.modelNotDownloaded" = "Qwen3-ASR is not downloaded yet. Download it from On-device models in Settings.";
+"asr.error.unsupportedOS" = "Qwen3-ASR CoreML requires iOS 18 or later. Use iOS SpeechAnalyzer or switch to a cloud engine.";
 
 /* App group error */
 "appGroup.error.title" = "App Group not configured";
@@ -143,6 +197,22 @@
 "preview.placeholder" = "Type here or tap the record button";
 "preview.clear" = "Clear text";
 "preview.openSettingsA11y" = "Open OSGKeyboard settings";
+"preview.openSettings" = "Settings";
+"preview.record.start" = "Start Recording";
+"preview.record.stop" = "Stop Recording";
+"preview.status.field" = "Text field";
+"preview.status.recording" = "Recording…";
+"preview.status.processing" = "Transcribing…";
+
+/* Dictation handoff */
+"dictation.title" = "Voice Input";
+"dictation.status.ready" = "Ready to record…";
+"dictation.status.listening" = "Listening…";
+"dictation.status.listeningLive" = "Live transcription…";
+"dictation.status.processing" = "Processing…";
+"dictation.status.requestingPermission" = "Requesting permission…";
+"dictation.status.waitingResult" = "Waiting for transcription…";
+"dictation.status.saving" = "Saving…";
 "preview.modeChip.cycle" = "Cycle input mode";
 "preview.localeChip.cycle" = "Cycle recognition language";
 "preview.error.audioSession" = "Audio session error: %@";
@@ -157,6 +227,7 @@
 "keyboard.placeholder.processing" = "Processing";
 "keyboard.placeholder.error" = "Polishing failed";
 "keyboard.placeholder.localBadge" = "On-device";
+"keyboard.placeholder.cloudBadge" = "Cloud";
 "keyboard.rec" = "REC";
 "keyboard.space" = "Space";
 "keyboard.denied.mic" = "Mic denied";
@@ -206,6 +277,14 @@
 "home.flow.endShort" = "End";
 "home.preview.label" = "Try typing";
 "home.preview.placeholder" = "Tap to type and test…";
+"home.engine.unsupportedOS" = "Qwen3-ASR CoreML requires iOS 18+";
+"home.engine.warming" = "Loading ASR model into memory…";
+"home.engine.downloading" = "Downloading ASR model…";
+"home.engine.loadFailed" = "Model downloaded but failed to load. Restart the app and try again.";
+"home.engine.modelsReady" = "ASR model ready";
+"home.engine.setupRequired" = "Local ASR model not ready";
+"home.engine.downloadFirst" = "Download the local ASR model in Settings first";
+"home.engine.attentionBanner" = "Local ASR model is not ready yet. Download it and wait for warm-up before dictating.";
 
 /* Tabs */
 "tab.keyboard" = "Keyboard";
@@ -224,3 +303,11 @@
 "flow.error.micRequired" = "Microphone access is required for background voice sessions.";
 "flow.error.micUnavailable" = "Microphone is unavailable on this device.";
 "flow.error.audioUnavailable" = "Could not start background audio.";
+
+"settings.models.error.metadata" = "Download cache was corrupted or incomplete. Try switching the download source and download again.";
+"settings.models.error.offline" = "Could not reach the model server. Check your network or try a different download source.";
+"settings.models.confirm.downloadTitle %@" = "Download %@";
+"settings.models.confirm.downloadingTitleFormat %@" = "Downloading %@";
+"settings.models.confirm.body %lld" = "This download uses about %lld MB on disk. We recommend Wi‑Fi to avoid cellular data. You can delete the file anytime from On-device models to free space.";
+"settings.models.confirm.cancel" = "Cancel";
+"settings.models.confirm.download %lld" = "Download %lld MB";

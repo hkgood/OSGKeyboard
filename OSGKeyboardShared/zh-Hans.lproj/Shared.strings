@@ -1,0 +1,30 @@
+/* Engine status labels */
+"engine.summary.local" = "本地 · %@";
+"engine.summary.cloud" = "当前：%@";
+"engine.summary.cloudWithModel" = "当前：%1$@ · %2$@";
+"engine.asr.appleSpeech" = "Apple 语音识别";
+"model.qwen3asr.name" = "Qwen3-ASR 0.6B (CoreML)";
+
+/* LLM providers */
+"provider.openai" = "OpenAI";
+"provider.deepseek" = "DeepSeek";
+"provider.qwen" = "通义千问";
+"provider.zhipu" = "智谱 GLM";
+"provider.moonshot" = "月之暗面";
+"provider.custom" = "自定义";
+
+/* LLM errors */
+"error.llm.invalidURL" = "API 地址无效。请在设置中检查 Base URL。";
+"error.llm.noAPIKey" = "未填写 API Key。";
+"error.llm.http" = "API 返回 HTTP %lld。请稍后重试或联系服务方。";
+"error.llm.decoding" = "解析 API 响应失败。";
+"error.llm.transport" = "网络错误，请检查连接后重试。";
+"error.llm.rateLimited" = "API 调用过于频繁，请稍候再试。";
+"error.llm.cancelled" = "请求已取消。";
+
+/* ASR errors */
+"error.asr.localeUnsupported" = "当前系统未分配可用语音语言模型，请稍后重试或切换语言。";
+"error.asr.assetsNotReady" = "语音语言资源未就绪，请稍后重试。";
+"error.asr.formatUnsupported" = "当前设备不支持该语音输入格式。";
+"error.asr.noSpeech" = "未识别到语音内容，请重试。";
+"error.asr.chunkFailed" = "第 %lld 段识别失败：%@";

@@ -36,7 +36,7 @@ private final class CaptureStreamRelay: @unchecked Sendable {
     }
 
     func yield(_ snapshot: AudioBufferSnapshot) {
-        lock.withLock { continuation?.yield(snapshot) }
+        _ = lock.withLock { continuation?.yield(snapshot) }
     }
 
     func finish() {
@@ -73,7 +73,7 @@ public final class LiveDictationController: ObservableObject {
     /// next recording starts from zero.
     @Published public var lastFinal: String = ""
 
-    private let asr: ASRService = ASRServiceFactory.make()
+    private let asr: ASRService
     private let audioEngine = AVAudioEngine()
     /// `internal` (not `private`) so the regression test in
     /// `OSGKeyboardTests/PreviewASRControllerStateTests.swift` can
@@ -83,10 +83,20 @@ public final class LiveDictationController: ObservableObject {
     /// code outside the class from racing on it.
     public var asrTask: Task<Void, Never>?
     private let streamRelay = CaptureStreamRelay()
+    private var chunkedPipeline: ChunkedUtterancePipeline?
     private var didConfigureAudioSession = false
     private var didInstallTap = false
 
-    public init() {}
+    public init(asr: ASRService? = nil) {
+        // Resolve through the factory so the user's `LocalASRBackend`
+        // selection is honoured. Tests can pass a stub `asr` directly
+        // to bypass the factory and exercise the controller in
+        // isolation.
+        self.asr = asr ?? ASRServiceFactory.make(
+            engineMode: ProviderConfig.shared.engineMode,
+            localBackend: ProviderConfig.shared.localASRBackend
+        )
+    }
 
     /// Start dictation using a persisted settings locale id (`auto`, `zh-Hans`, …).
     public func start(localeId: String) async {
@@ -112,6 +122,10 @@ public final class LiveDictationController: ObservableObject {
         // same `events` stream.
         asrTask?.cancel()
         asrTask = nil
+        if let pipeline = chunkedPipeline {
+            Task { await pipeline.cancel() }
+        }
+        chunkedPipeline = nil
         teardownCapturePipeline()
         phase = .requestingPermission
         currentPartial = ""
@@ -335,29 +349,36 @@ public final class LiveDictationController: ObservableObject {
             return
         }
 
-        // 5. Wire up ASR.
-        let events = asr.transcribe(
-            stream: stream,
-            locale: locale
-        )
-        asrTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            for await event in events {
-                switch event {
-                case .capability:
-                    break
-                case .partial(let s):
-                    self.currentPartial = s
-                case .final(let s):
-                    let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
-                    self.lastFinal = trimmed
-                    self.currentPartial = ""
-                    self.phase = .idle
-                case .error(let m):
-                    self.debug("asr error: \(m)")
-                    self.teardownCapturePipeline()
-                    self.errorMessage = m
-                    self.phase = .error(m)
+        // 5. Pipelined ASR (same chunk path as Flow host).
+        let pipeline = ChunkedUtterancePipeline(asr: asr, locale: locale)
+        chunkedPipeline = pipeline
+        asrTask = Task.detached(priority: .userInitiated) { [weak controller = self] in
+            let outcome = await pipeline.transcribe(stream: stream) { partial in
+                Task { @MainActor in
+                    controller?.currentPartial = partial
+                }
+            }
+            await MainActor.run {
+                guard let controller else { return }
+                switch outcome {
+                case .success(let success):
+                    let trimmed = success.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        controller.lastFinal = trimmed
+                        controller.currentPartial = ""
+                    }
+                    if controller.phase == .processing || controller.phase == .recording {
+                        controller.phase = .idle
+                    }
+                case .failure(let message):
+                    controller.debug("asr error: \(message)")
+                    controller.teardownCapturePipeline()
+                    controller.errorMessage = message
+                    controller.phase = .error(message)
+                case .cancelled:
+                    if controller.phase == .processing {
+                        controller.phase = .idle
+                    }
                 }
             }
         }

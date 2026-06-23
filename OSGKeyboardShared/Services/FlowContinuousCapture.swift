@@ -34,7 +34,7 @@ private final class FlowCaptureStreamRelay: @unchecked Sendable {
     }
 
     func yield(_ snapshot: AudioBufferSnapshot) {
-        lock.withLock { continuation?.yield(snapshot) }
+        _ = lock.withLock { continuation?.yield(snapshot) }
     }
 
     func finish() {
@@ -248,6 +248,22 @@ public final class FlowContinuousCapture {
             false,
             options: .notifyOthersOnDeactivation
         )
+    }
+
+    /// Re-activate capture after returning from background without
+    /// reinstalling the tap (iOS may deactivate the audio session).
+    public func reassertIfRunning() {
+        guard isRunning else { return }
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(
+            .playAndRecord,
+            mode: .measurement,
+            options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
+        )
+        try? session.setActive(true, options: .notifyOthersOnDeactivation)
+        if !audioEngine.isRunning {
+            try? audioEngine.start()
+        }
     }
 
     /// Begin forwarding downsampled buffers to ASR for one utterance.

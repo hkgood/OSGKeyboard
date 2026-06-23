@@ -7,20 +7,27 @@
 
 import Foundation
 import SwiftUI
+import OSGKeyboardShared
 
 enum ExtL10n {
     private static let table = "Keyboard"
-    private static let bundle = Bundle(for: KeyboardViewController.self)
+    private static let container = Bundle(for: KeyboardViewController.self)
+
+    private static var bundle: Bundle {
+        AppUILanguage.localizedBundle(
+            in: container,
+            language: AppGroupStore().uiLanguage
+        )
+    }
 
     static func string(_ key: String) -> String {
-        let value = NSLocalizedString(
+        NSLocalizedString(
             key,
             tableName: table,
             bundle: bundle,
             value: key,
             comment: ""
         )
-        return value
     }
 
     static func text(_ key: String) -> Text {

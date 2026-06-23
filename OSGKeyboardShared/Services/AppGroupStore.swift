@@ -35,6 +35,8 @@ public struct AppGroupStore: @unchecked Sendable {
         static let modeId          = "config.modeId"
         static let localeId        = "config.localeId"
         static let engineMode       = "config.engineMode"
+        static let localASRBackend  = "config.localASRBackend"
+        static let uiLanguage       = "config.uiLanguage"
     }
 
     // MARK: - Reads
@@ -70,10 +72,23 @@ public struct AppGroupStore: @unchecked Sendable {
         defaults.string(forKey: Key.localeId) ?? "auto"
     }
 
-    /// "local" → on-device ASR only, no LLM polishing.
+    /// "local" → on-device ASR only (raw transcript delivery).
     /// "cloud" → ASR + LLM polish (default behaviour).
     public var engineMode: String {
         defaults.string(forKey: Key.engineMode) ?? "cloud"
+    }
+
+    /// Which on-device ASR engine backs the "local" engine mode. Falls
+    /// back to the iOS SpeechAnalyzer path so legacy installs (which
+    /// never wrote this key) keep working.
+    public var localASRBackend: LocalASRBackend {
+        let raw = defaults.string(forKey: Key.localASRBackend) ?? LocalASRBackend.speechAnalyzer.rawValue
+        return LocalASRBackend(rawValue: raw) ?? .speechAnalyzer
+    }
+
+    /// Host-app UI language override (`auto` / `en` / `zh-Hans`).
+    public var uiLanguage: AppUILanguage {
+        AppUILanguage.fromStored(defaults.string(forKey: Key.uiLanguage))
     }
 
     // MARK: - Writes
@@ -88,6 +103,14 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setEngineMode(_ mode: String) {
         defaults.set(mode, forKey: Key.engineMode)
+    }
+
+    public func setLocalASRBackend(_ backend: LocalASRBackend) {
+        defaults.set(backend.rawValue, forKey: Key.localASRBackend)
+    }
+
+    public func setUILanguage(_ language: AppUILanguage) {
+        defaults.set(language.rawValue, forKey: Key.uiLanguage)
     }
 
     // MARK: - Client

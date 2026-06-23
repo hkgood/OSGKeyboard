@@ -1,10 +1,16 @@
 # XcodeGen configuration for OSGKeyboard
-# Run `xcodegen generate` to create OSGKeyboard.xcodeproj
+# Run `./Scripts/generate-xcodeproj.sh` to create OSGKeyboard.xcodeproj.
+# App home-screen icon: OSGKeyboard/AppIcon.icon (Icon Composer, iOS 26).
 # Repo only tracks project.yml; .xcodeproj is gitignored.
 
 name: OSGKeyboard
 options:
   bundleIdPrefix: com.osgkeyboard
+  # Xcode 26 Icon Composer bundles must be treated as a single file,
+  # not expanded into icon.json + SVG children (see XcodeGen #1556).
+  fileTypes:
+    icon:
+      file: true
   # Minimum OS: iOS 26. We dropped older iOS support so the
   # legacy speech + AVAudioSession branching could be removed in
   # favour of iOS 26's `SpeechAnalyzer` (always on-device) and
@@ -17,6 +23,23 @@ options:
   generateEmptyDirectories: true
   groupSortPosition: top
 
+# Local package: `Qwen3Speech`. Vendored fork of
+# `soniqo/speech-swift`'s Qwen3-ASR + Qwen3-Chat modules (plus the
+# AudioCommon / MLXCommon / SpeechVAD slices they depend on).
+# Upstream's `Package.swift` references a `CSpeechCore` binary
+# target whose URL doesn't match its declared filename (the file
+# is `SpeechCore.xcframework.zip`, the target is `CSpeechCore`),
+# which breaks SwiftPM resolve on a clean checkout. Vendoring
+# lets us ship the four targets we actually link without waiting
+# for the upstream fix; the `audio` / `audio-server` CLIs and the
+# `AudioServer` HTTP backend that needed `CSpeechCore` aren't part
+# of OSGKeyboard's build graph. Sources carry their original
+# Apache-2.0 copyright headers; the `Package.swift` here adds
+# only what we need.
+packages:
+  Qwen3Speech:
+    path: OSGKeyboard/ThirdParty/Qwen3Speech
+
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -25,8 +48,9 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     GENERATE_INFOPLIST_FILE: NO
     ENABLE_MODULE_VERIFIER: YES
-    MARKETING_VERSION: "0.1.2"
-    CURRENT_PROJECT_VERSION: "3"
+    CLANG_CXX_LANGUAGE_STANDARD: c++17
+    MARKETING_VERSION: "0.2.0"
+    CURRENT_PROJECT_VERSION: "4"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -43,10 +67,28 @@ targets:
     type: application
     platform: iOS
     sources:
+      - path: OSGKeyboard/AppIcon.icon
+        type: file
+        buildPhase: resources
       - path: OSGKeyboard
         excludes:
           - "AppIcon.icon"
           - "OSGKeyboard.icon"
+          # Legacy PNG app icons must not coexist with AppIcon.icon — actool
+          # crashes when both are passed. iOS 26 uses Icon Composer only.
+          - "Assets.xcassets/AppIcon.appiconset"
+          # `ThirdParty/Qwen3Speech` is a local SPM package pulled in
+          # by `packages:` below — it builds as its own targets
+          # (`Qwen3ASR`, …) and we link the products.
+          # If we don't exclude the source folder, xcodegen walks
+          # into the package's `Sources/*/` directories and pulls
+          # the swift files straight into the host app target,
+          # which collides on duplicate type names (e.g. two
+          # `Configuration.swift` files in `Qwen3ASR` and
+          # `SpeechVAD`) and on multiple `@main` / top-level
+          # declarations. Keep the folder as a package; don't
+          # flatten it into the app.
+          - "ThirdParty/Qwen3Speech"
     entitlements:
       path: OSGKeyboard/OSGKeyboard.entitlements
       properties:
@@ -65,6 +107,7 @@ targets:
       - path: OSGKeyboard/en.lproj
       - path: OSGKeyboard/zh-Hans.lproj
       - path: OSGKeyboard/Resources/Fonts/MaterialIcons-Regular.ttf
+      - path: OSGKeyboard/Resources/PrivacyPolicy.html
       - path: OSGKeyboard/PrivacyInfo.xcprivacy
     info:
       path: OSGKeyboard/Info.plist
@@ -106,14 +149,20 @@ targets:
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
-        # Use AppIcon.appiconset only. AppIcon.icon (Icon Composer) must not
-        # be passed to actool alongside the asset catalog — it crashes actool.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - target: OSGKeyboardShared
         embed: true
       - target: OSGKeyboardExt
         # Keyboard Extension is a plugin of the main App; embed it.
       - sdk: Speech.framework
+      # Local fork of soniqo/speech-swift. See the `packages:`
+      # block at the top of this file for the why-fork rationale.
+      # Only the two products we actually link are listed; AudioServer
+      # / AudioCLI (which is what the upstream binary target was
+      # gating) aren't in our build graph.
+      - package: Qwen3Speech
+        product: Qwen3ASR
 
   # =========================================================
   # Keyboard Extension
@@ -184,6 +233,13 @@ targets:
     platform: iOS
     sources:
       - path: OSGKeyboardShared
+        excludes:
+          - "en.lproj"
+          - "zh-Hans.lproj"
+      - path: OSGKeyboardShared/en.lproj/Shared.strings
+        buildPhase: resources
+      - path: OSGKeyboardShared/zh-Hans.lproj/Shared.strings
+        buildPhase: resources
     info:
       path: OSGKeyboardShared/Info.plist
     settings:

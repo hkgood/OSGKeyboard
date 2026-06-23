@@ -1,19 +1,8 @@
 // EnginePickerSection.swift
 // OSGKeyboard · Main App
 //
-// Engine picker — Local (on-device ASR, no LLM) vs Cloud (ASR + LLM
-// polish). Lives in its own file so the onboarding flow (first-run,
-// no API key yet) and the in-app Settings sheet can render the same
-// component: both need to expose the same two options, and the user
-// must reach the same "Cloud needs an API key" conclusion from either
-// entry point.
-//
-// Selecting "local" also forces `modeId = "transcribe"`: the Local
-// engine skips the LLM round-trip, so leaving modeId on `polish`
-// would surface a confusing "I set everything up and nothing
-// happens" state. The settings UI is the source of truth for
-// `engineMode`; the onboarding page mutates the same `ProviderConfig`
-// singleton.
+// Engine picker — Local (on-device ASR) vs
+// Cloud (ASR + optional LLM polish via the user's API).
 
 import SwiftUI
 import OSGKeyboardShared
@@ -31,16 +20,16 @@ struct EnginePickerSection: View {
             VStack(spacing: 0) {
                 engineOptionRow(
                     id: "local",
-                    assetName: "apple",
-                    title: NSLocalizedString("settings.engine.local.title", comment: ""),
+                    systemIcon: "iphone.badge.checkmark",
+                    title: AppL10n.string("settings.engine.local.title"),
                     subtitle: localSubtitle
                 )
                 Divider().background(palette.divider)
                 engineOptionRow(
                     id: "cloud",
                     systemIcon: "wand.and.stars",
-                    title: NSLocalizedString("settings.engine.cloud.title", comment: ""),
-                    subtitle: NSLocalizedString("settings.engine.cloud.subtitle", comment: "")
+                    title: AppL10n.string("settings.engine.cloud.title"),
+                    subtitle: AppL10n.string("settings.engine.cloud.subtitle")
                 )
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
@@ -62,9 +51,7 @@ struct EnginePickerSection: View {
     }
 
     private var localSubtitle: String {
-        // iOS 26's `SpeechAnalyzer` is always fully on-device, so the
-        // local engine's only contract is "no network, no LLM".
-        NSLocalizedString("settings.engine.local.ios26", comment: "")
+        AppL10n.string("settings.engine.local.legacy")
     }
 
     private func engineOptionRow(
@@ -115,7 +102,10 @@ struct EnginePickerSection: View {
     private func selectEngine(_ id: String) {
         withAnimation(.easeInOut(duration: 0.2)) {
             config.engineMode = id
-            if id == "local" { config.modeId = "transcribe" }
+            // Cloud always runs ASR + LLM polish; no off/transcribe toggle.
+            if id == "cloud" {
+                config.modeId = "polish"
+            }
         }
     }
 

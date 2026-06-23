@@ -69,12 +69,12 @@
 "settings.reset.title" = "Reset all settings?";
 "settings.reset.message" = "API key, model, and base URL will be cleared.";
 "settings.reset.confirm" = "Reset all settings";
-"settings.engine.title" = "Engine";
+"settings.engine.title" = "Recognition method";
 "settings.engine.subtitle" = "Pick the recognition engine. Local engine does transcription only, no API key needed.";
-"settings.engine.local.title" = "On-device";
+"settings.engine.local.title" = "On-device recognition";
 "settings.engine.local.ios26" = "Always on-device, no network.";
 "settings.engine.local.legacy" = "On-device ASR. Transcription only, no polish.";
-"settings.engine.cloud.title" = "Cloud polish";
+"settings.engine.cloud.title" = "Cloud recognition & polish";
 "settings.engine.cloud.subtitle" = "ASR + LLM polish. API key required.";
 "settings.provider.title" = "Provider";
 "settings.provider.subtitle" = "Pick the LLM that polishes your dictation.";
@@ -118,6 +118,10 @@
 "keyboard.placeholder.processing" = "Processing";
 "keyboard.placeholder.error" = "Polishing failed";
 "keyboard.placeholder.localBadge" = "On-device";
+"keyboard.placeholder.cloudBadge" = "Cloud";
+"keyboard.models.notDownloaded" = "On-device models not downloaded";
+"keyboard.models.downloadHint" = "Open OSGKeyboard to download models";
+"keyboard.models.warming" = "Loading models…";
 "keyboard.rec" = "REC";
 "keyboard.space" = "Space";
 "keyboard.denied.mic" = "Mic denied";

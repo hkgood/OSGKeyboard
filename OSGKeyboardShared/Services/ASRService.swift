@@ -16,6 +16,7 @@
 
 import Foundation
 import AVFoundation
+import CoreMedia
 import Speech
 import os
 
@@ -42,6 +43,63 @@ public protocol ASRService: Sendable {
 
     /// Cancel any in-flight recognition and tear down its tasks.
     func cancel()
+
+    /// Clears cancellation / cached session state before a new utterance.
+    func resetForNewUtterance()
+
+    /// Transcribe one PCM chunk (Flow pipelined path). Default wraps `transcribe(stream:)`.
+    func transcribeChunk(samples: [Float], locale: Locale) async -> ASRChunkResult
+}
+
+public enum ASRChunkResult: Sendable, Equatable {
+    case success(String)
+    case failure(String)
+    case cancelled
+}
+
+extension ASRService {
+    public func resetForNewUtterance() {}
+
+    public func transcribeChunk(samples: [Float], locale: Locale) async -> ASRChunkResult {
+        guard !samples.isEmpty else { return .success("") }
+        if Task.isCancelled { return .cancelled }
+
+        let snapshot = AudioBufferSnapshot(samples: samples, sampleRate: 16_000)
+        let (stream, continuation) = AsyncStream<AudioBufferSnapshot>.makeStream()
+        continuation.yield(snapshot)
+        continuation.finish()
+
+        var lastPartial = ""
+        var finalText = ""
+        var failure: String?
+
+        for await event in transcribe(stream: stream, locale: locale) {
+            if Task.isCancelled { return .cancelled }
+            switch event {
+            case .capability:
+                break
+            case .partial(let text):
+                lastPartial = text
+            case .final(let text):
+                finalText = text
+            case .error(let message):
+                failure = message
+            }
+        }
+
+        if let failure {
+            return .failure(failure)
+        }
+        let trimmed = finalText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            return .success(trimmed)
+        }
+        let partial = lastPartial.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !partial.isEmpty {
+            return .success(partial)
+        }
+        return .success("")
+    }
 }
 
 public enum ASREvent: Sendable, Equatable {
@@ -58,11 +116,66 @@ public enum ASREvent: Sendable, Equatable {
 // MARK: - Factory
 
 public enum ASRServiceFactory {
-    /// Returns the ASR backend. With iOS 26 as the deployment target,
-    /// there is exactly one backend (`SpeechAnalyzer`).
+    /// Registry of backend-specific providers. The host app installs
+    /// a provider for the Qwen3-ASR backend at launch time (the
+    /// `Qwen3ASRProvider` lives in the app target because linking
+    /// `Qwen3ASR` pulls in mlx-swift, which the shared framework
+    /// deliberately stays off to keep `APPLICATION_EXTENSION_API_ONLY`
+    /// clean). The shared framework always provides a built-in
+    /// `SpeechAnalyzer` provider; custom providers override it.
+    ///
+    /// `nonisolated(unsafe)` because the only writer is
+    /// `OSGKeyboardApp.init` (single-threaded, runs once at launch).
+    /// After launch, all callers read the dictionary from any
+    /// actor.
+    public nonisolated(unsafe) static var providers: [LocalASRBackend: any ASRServiceProvider] = [
+        .speechAnalyzer: SpeechAnalyzerProvider()
+    ]
+
+    /// Returns the ASR backend chosen by the user. The cloud engine
+    /// always uses the iOS `SpeechAnalyzer` path — it has the lowest
+    /// latency and never hits the network, which matches the user's
+    /// expectation that "ASR" is the local half of the pipeline
+    /// regardless of where the LLM polish happens.
+    ///
+    /// For the local engine, we honour `LocalASRBackend`:
+    ///   - `.speechAnalyzer` (default) → on-device iOS pipeline.
+    ///   - `.qwen3ASR` → CoreML-backed Qwen3-ASR via `soniqo/speech-swift` (host app only)
+    ///                     (registered by the host app at launch).
+    public static func make(
+        engineMode: String,
+        localBackend: LocalASRBackend = .speechAnalyzer
+    ) -> ASRService {
+        if engineMode == "local" {
+            if let provider = providers[localBackend] {
+                return provider.make()
+            }
+        }
+        return SpeechAnalyzerASR()
+    }
+
+    /// Back-compat overload for callers that only ever want the
+    /// SpeechAnalyzer path. The previous single-backend build used
+    /// this signature; new code should pass the engine mode explicitly
+    /// so the user's selection is honoured.
     public static func make() -> ASRService {
         SpeechAnalyzerASR()
     }
+}
+
+/// Backend-specific ASR factory. The shared framework ships a default
+/// `SpeechAnalyzerProvider`; the host app installs a `Qwen3ASRProvider`
+/// at launch time so the Qwen3 backend is wired in only where its
+/// large MLX dependency is also linked.
+public protocol ASRServiceProvider: Sendable {
+    var backend: LocalASRBackend { get }
+    func make() -> ASRService
+}
+
+/// Built-in provider for the iOS SpeechAnalyzer path. Always present.
+struct SpeechAnalyzerProvider: ASRServiceProvider {
+    let backend: LocalASRBackend = .speechAnalyzer
+    func make() -> ASRService { SpeechAnalyzerASR() }
 }
 
 // MARK: - PCM format conversion (testable helpers)
@@ -115,6 +228,114 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
     private var analyzer: SpeechAnalyzer?
     private var analyzerTask: Task<Void, Never>?
     private var analyzerFinished = false
+    /// Reused across pipelined chunks within one utterance (assets + format).
+    private var chunkPreparedLocaleID: String?
+    private var chunkAnalyzerFormat: AVAudioFormat?
+
+    func resetForNewUtterance() {
+        lock.withLock {
+            chunkPreparedLocaleID = nil
+            chunkAnalyzerFormat = nil
+        }
+    }
+
+    func transcribeChunk(samples: [Float], locale: Locale) async -> ASRChunkResult {
+        guard !samples.isEmpty else { return .success("") }
+        if Task.isCancelled { return .cancelled }
+
+        do {
+            let text = try await transcribeSamples(samples, locale: locale, reuseChunkPrep: true)
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? .success("") : .success(trimmed)
+        } catch is CancellationError {
+            return .cancelled
+        } catch {
+            return .failure(error.localizedDescription)
+        }
+    }
+
+    /// Analyze a single PCM buffer without the streaming `transcribe` wrapper.
+    private func transcribeSamples(
+        _ samples: [Float],
+        locale: Locale,
+        reuseChunkPrep: Bool
+    ) async throws -> String {
+        guard let resolvedLocale = await DictationTranscriber.supportedLocale(equivalentTo: locale) else {
+            throw ASRChunkError.localeUnsupported
+        }
+        let localeID = resolvedLocale.identifier(.bcp47)
+        let transcriber = DictationTranscriber(
+            locale: resolvedLocale,
+            preset: .progressiveLongDictation
+        )
+
+        let analyzerFormat: AVAudioFormat
+        let cachedPrep = lock.withLock { (chunkPreparedLocaleID, chunkAnalyzerFormat) }
+        if reuseChunkPrep,
+           cachedPrep.0 == localeID,
+           let cached = cachedPrep.1 {
+            analyzerFormat = cached
+        } else {
+            try await Self.prepareAssetsIfNeeded(for: transcriber, locale: resolvedLocale)
+            guard let format = await SpeechAnalyzer.bestAvailableAudioFormat(
+                compatibleWith: [transcriber],
+                considering: Self.captureFormat
+            ) else {
+                throw ASRChunkError.formatUnsupported
+            }
+            analyzerFormat = format
+            lock.withLock {
+                chunkPreparedLocaleID = localeID
+                chunkAnalyzerFormat = format
+            }
+        }
+
+        let snapshot = AudioBufferSnapshot(samples: samples, sampleRate: 16_000)
+        guard let pcm = Self.makeAnalyzerPCMBuffer(from: snapshot, format: analyzerFormat) else {
+            throw ASRChunkError.formatUnsupported
+        }
+
+        let analyzer = SpeechAnalyzer(modules: [transcriber])
+        try await analyzer.prepareToAnalyze(in: analyzerFormat)
+
+        let resultsTask = Task<String, Error> {
+            var accumulator = ProgressiveDictationTranscriptAccumulator()
+            for try await result in transcriber.results {
+                if Task.isCancelled { break }
+                let text = String(result.text.characters)
+                _ = accumulator.ingest(range: result.range, text: text)
+            }
+            return accumulator.finalize()
+        }
+
+        let inputStream = AsyncStream<AnalyzerInput> { continuation in
+            continuation.yield(AnalyzerInput(buffer: pcm))
+            continuation.finish()
+        }
+
+        let lastSampleTime = try await analyzer.analyzeSequence(inputStream)
+        if let lastSampleTime {
+            try await analyzer.finalizeAndFinish(through: lastSampleTime)
+        } else {
+            await analyzer.cancelAndFinishNow()
+        }
+
+        return try await resultsTask.value
+    }
+
+    private enum ASRChunkError: LocalizedError {
+        case localeUnsupported
+        case formatUnsupported
+
+        var errorDescription: String? {
+            switch self {
+            case .localeUnsupported:
+                return SharedL10n.string("error.asr.localeUnsupported")
+            case .formatUnsupported:
+                return SharedL10n.string("error.asr.formatUnsupported")
+            }
+        }
+    }
 
     /// Canonical capture format: 16 kHz mono Float32 from `AudioCaptureService`
     /// / `PreviewASRController` before it reaches SpeechAnalyzer.
@@ -146,16 +367,21 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
                 do {
                     guard let resolvedLocale = await DictationTranscriber.supportedLocale(equivalentTo: locale) else {
                         Self.debug("locale unsupported: \(locale.identifier(.bcp47))")
-                        continuation.yield(.error("当前系统未分配可用语音语言模型，请稍后重试或切换语言"))
+                        continuation.yield(.error(SharedL10n.string("error.asr.localeUnsupported")))
                         continuation.finish()
                         return
                     }
-                    let transcriber = DictationTranscriber(locale: resolvedLocale, preset: .progressiveShortDictation)
+                    // Each pipelined chunk is ≤ 30 s; long dictation preset keeps a
+                    // single chunk coherent (Flow utterances run up to 3 min).
+                    let transcriber = DictationTranscriber(
+                        locale: resolvedLocale,
+                        preset: .progressiveLongDictation
+                    )
                     do {
                         try await Self.prepareAssetsIfNeeded(for: transcriber, locale: resolvedLocale)
                     } catch {
                         Self.debug("asset prepare failed: \(error.localizedDescription)")
-                        continuation.yield(.error("语音语言资源未就绪，请稍后重试"))
+                        continuation.yield(.error(SharedL10n.string("error.asr.assetsNotReady")))
                         continuation.finish()
                         return
                     }
@@ -167,7 +393,7 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
                         compatibleWith: [transcriber],
                         considering: Self.captureFormat
                     ) else {
-                        continuation.yield(.error("当前设备不支持该语音输入格式"))
+                        continuation.yield(.error(SharedL10n.string("error.asr.formatUnsupported")))
                         continuation.finish()
                         return
                     }
@@ -179,15 +405,16 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
                     // Apple recommends consuming `transcriber.results` concurrently
                     // while `analyzeSequence` drains the input stream.
                     let resultsTask = Task<String, Error> {
-                        var lastText = ""
+                        var accumulator = ProgressiveDictationTranscriptAccumulator()
                         for try await result in transcriber.results {
                             if Task.isCancelled { break }
                             let text = String(result.text.characters)
-                            guard !text.isEmpty, text != lastText else { continue }
-                            lastText = text
-                            continuation.yield(.partial(text))
+                            guard let full = accumulator.ingest(range: result.range, text: text) else {
+                                continue
+                            }
+                            continuation.yield(.partial(full))
                         }
-                        return lastText
+                        return accumulator.finalize()
                     }
 
                     let lastSampleTime = try await newAnalyzer.analyzeSequence(inputStream)
@@ -195,7 +422,7 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
                     if let lastSampleTime {
                         try await newAnalyzer.finalizeAndFinish(through: lastSampleTime)
                     } else {
-                        try await newAnalyzer.cancelAndFinishNow()
+                        await newAnalyzer.cancelAndFinishNow()
                     }
 
                     let lastText: String
@@ -210,7 +437,7 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
 
                     let trimmed = lastText.trimmingCharacters(in: .whitespacesAndNewlines)
                     if trimmed.isEmpty {
-                        continuation.yield(.error("未识别到语音内容，请重试"))
+                        continuation.yield(.error(SharedL10n.string("error.asr.noSpeech")))
                     } else {
                         continuation.yield(.final(trimmed))
                     }

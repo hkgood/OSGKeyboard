@@ -17,13 +17,20 @@ public enum LLMError: Error, LocalizedError, Sendable, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .invalidURL:    return "API 地址无效。请在设置中检查 Base URL。"
-        case .noAPIKey:      return "未填写 API Key。"
-        case .http(let s):   return "API 返回 HTTP \(s)。请稍后重试或联系服务方。"
-        case .decoding:      return "解析 API 响应失败。"
-        case .transport:     return "网络错误,请检查连接后重试。"
-        case .rateLimited:   return "API 调用过于频繁,请稍候再试。"
-        case .cancelled:     return "请求已取消。"
+        case .invalidURL:
+            return SharedL10n.string("error.llm.invalidURL")
+        case .noAPIKey:
+            return SharedL10n.string("error.llm.noAPIKey")
+        case .http(let status):
+            return SharedL10n.format("error.llm.http", status)
+        case .decoding:
+            return SharedL10n.string("error.llm.decoding")
+        case .transport:
+            return SharedL10n.string("error.llm.transport")
+        case .rateLimited:
+            return SharedL10n.string("error.llm.rateLimited")
+        case .cancelled:
+            return SharedL10n.string("error.llm.cancelled")
         }
     }
 }

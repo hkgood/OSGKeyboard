@@ -71,8 +71,17 @@ public final class KeyboardState: ObservableObject {
     @Published public var utteranceRemainingSeconds: Int = Int(FlowSessionKeys.maxUtteranceDuration)
     /// Whether the host app's Flow voice session is currently valid.
     @Published public var flowSessionActive: Bool = false
-    /// "local" → ASR only, no LLM. "cloud" → ASR + optional LLM polish.
+    /// "local" → on-device ASR only. "cloud" → ASR + LLM polish.
     @Published public var engineMode: String = "cloud"
+    /// Which on-device ASR engine to use when `engineMode == "local"`.
+    /// Mirrored from `ProviderConfig.localASRBackend` for UI display
+    /// and for `state` consumers that want a single source of truth.
+    @Published public var localASRBackend: LocalASRBackend = .speechAnalyzer
+    /// `false` when the local engine needs on-device models that are
+    /// not yet downloaded (mirrored from App Group by the extension).
+    @Published public var localModelsReady: Bool = true
+    /// `true` when host app has preloaded Qwen weights into memory.
+    @Published public var localModelsLoaded: Bool = false
 
     /// Convenience shorthand used by the pipeline and views.
     public var isLocalEngine: Bool { engineMode == "local" }
@@ -86,6 +95,7 @@ public final class KeyboardState: ObservableObject {
     public var setMode:             (InputMode) -> Void = { _ in }
     public var setLocale:           (String) -> Void = { _ in }
     public var setEngineMode:        (String) -> Void = { _ in }
+    public var setLocalASRBackend:  (LocalASRBackend) -> Void = { _ in }
     public var insertNewline:       () -> Void = {}
     public var insertSpace:         () -> Void = {}
     public var deleteBackward:      () -> Void = {}

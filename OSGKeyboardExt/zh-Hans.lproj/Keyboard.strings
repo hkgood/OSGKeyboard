@@ -69,12 +69,12 @@
 "settings.reset.title" = "重置所有设置?";
 "settings.reset.message" = "API key、model 和 base URL 都会被清空。";
 "settings.reset.confirm" = "重置所有设置";
-"settings.engine.title" = "引擎";
+"settings.engine.title" = "识别方式";
 "settings.engine.subtitle" = "选择识别方式。本地引擎无需 API Key,仅做语音转录。";
 "settings.engine.local.title" = "本地识别";
 "settings.engine.local.ios26" = "始终端侧,无需联网。";
 "settings.engine.local.legacy" = "端侧 ASR,仅转录,无润色。";
-"settings.engine.cloud.title" = "云端润色";
+"settings.engine.cloud.title" = "云端识别与润色";
 "settings.engine.cloud.subtitle" = "ASR 转录 + LLM 润色,需要 API Key。";
 "settings.provider.title" = "提供商";
 "settings.provider.subtitle" = "选择 LLM 提供商。";
@@ -118,6 +118,10 @@
 "keyboard.placeholder.processing" = "处理中…";
 "keyboard.placeholder.error" = "润色失败";
 "keyboard.placeholder.localBadge" = "本地";
+"keyboard.placeholder.cloudBadge" = "云端";
+"keyboard.models.notDownloaded" = "本地模型尚未下载";
+"keyboard.models.downloadHint" = "打开 OSGKeyboard 下载模型";
+"keyboard.models.warming" = "正在加载模型…";
 "keyboard.rec" = "REC";
 "keyboard.space" = "空格";
 "keyboard.denied.mic" = "麦克风被拒绝";

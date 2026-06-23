@@ -50,7 +50,7 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate project
-        run: xcodegen generate
+        run: ./Scripts/generate-xcodeproj.sh
       - name: Build
         run: |
           set -o pipefail
@@ -76,7 +76,7 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate project
-        run: xcodegen generate
+        run: ./Scripts/generate-xcodeproj.sh
       - name: Run tests
         run: |
           set -o pipefail

@@ -72,6 +72,7 @@ enum AppPermissions {
         }
     }
 
+    @MainActor
     static func openSystemSettings() {
         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
         UIApplication.shared.open(url)
@@ -82,12 +83,12 @@ enum AppPermissions {
         let micMissing = micStatus != .granted
         let speechMissing = speechStatus != .granted
         if micMissing && speechMissing {
-            return NSLocalizedString("home.setup.permission.both", comment: "")
+            return AppL10n.string("home.setup.permission.both")
         }
         if micMissing {
-            return NSLocalizedString("home.setup.permission.mic", comment: "")
+            return AppL10n.string("home.setup.permission.mic")
         }
-        return NSLocalizedString("home.setup.permission.speech", comment: "")
+        return AppL10n.string("home.setup.permission.speech")
     }
 
     /// True when at least one permission can still be requested in-app.
