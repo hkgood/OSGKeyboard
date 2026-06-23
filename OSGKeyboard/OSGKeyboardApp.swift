@@ -14,14 +14,12 @@ struct OSGKeyboardApp: App {
 
     init() {
         MaterialIconsFont.registerIfNeeded()
-        // Register backend-specific ASR providers. The shared
-        // framework ships a built-in SpeechAnalyzer provider; we
-        // install the Qwen3-ASR provider here because linking
-        // `Qwen3ASR` pulls in mlx-swift, which the keyboard
-        // extension's `APPLICATION_EXTENSION_API_ONLY` build would
-        // refuse. Doing it in the host app's `init` keeps the heavy
-        // dependency localised.
-        ASRServiceFactory.providers[.qwen3ASR] = Qwen3ASRServiceProvider()
+        // v0.2.0: no backend-specific ASR provider to install here.
+        // The local engine uses iOS 26 `SpeechAnalyzer` +
+        // `DictationTranscriber`, which the shared framework wires
+        // up directly via `ASRServiceFactory.make(...)`. The previous
+        // Qwen3 CoreML backend (and its mlx-swift transitive
+        // dependency) was removed in this release.
     }
 
     var body: some Scene {
@@ -63,17 +61,15 @@ struct OSGKeyboardApp: App {
             .onChange(of: config.hasCompletedOnboarding) { _, done in
                 if done {
                     flowManager.autoStartIfNeeded()
-                    if config.isLocalEngine {
-                        OnDeviceModelWarmup.shared.warmUpIfNeeded()
-                    }
+                    // v0.2.0: no on-device ASR weights to warm up.
+                    // iOS `SpeechAnalyzer` is always ready.
                 }
             }
             .onChange(of: scenePhase) { _, phase in
                 flowManager.handleScenePhase(phase)
                 guard phase == .active, AppGroup.isAvailable, config.hasCompletedOnboarding else { return }
-                if config.isLocalEngine {
-                    OnDeviceModelWarmup.shared.ensureReadyAfterBackground()
-                }
+                // v0.2.0: iOS `SpeechAnalyzer` is bundled with the OS
+                // and needs no warm-up after a background trip.
                 if flowManager.isActive {
                     flowManager.extendSession()
                 } else {

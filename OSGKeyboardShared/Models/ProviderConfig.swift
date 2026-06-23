@@ -35,6 +35,10 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         // selection even though it never instantiates the backend itself.
         static let localASRBackend = "config.localASRBackend"
         static let uiLanguage = "config.uiLanguage"
+        // v0.2.0: optional cloud polish step after on-device ASR finishes
+        // in the local engine. Default `false` — keeps the local engine
+        // truly local unless the user explicitly opts in.
+        static let localModeCloudPolishEnabled = "config.localModeCloudPolishEnabled"
     }
 
     @Published public var providerId: String {
@@ -96,6 +100,17 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     @Published public var localASRBackend: LocalASRBackend {
         didSet { defaults.set(localASRBackend.rawValue, forKey: Key.localASRBackend) }
     }
+    /// When `engineMode == "local"`, optionally route the ASR transcript
+    /// through the user's configured LLM (DeepSeek by default) before
+    /// inserting at the cursor. The polish step runs through the same
+    /// `LLMClient` + `PolishingService` stack the cloud engine uses.
+    ///
+    /// Defaults to `false` — the local engine is ASR-only out of the
+    /// box. Users opt in from Settings when the iOS ASR output isn't
+    /// strong enough (noisy far-field audio, dialectal Chinese, etc.).
+    @Published public var localModeCloudPolishEnabled: Bool {
+        didSet { defaults.set(localModeCloudPolishEnabled, forKey: Key.localModeCloudPolishEnabled) }
+    }
     /// Host-app UI language. Also mirrored to the App Group for the keyboard extension.
     @Published public var uiLanguage: AppUILanguage {
         didSet { defaults.set(uiLanguage.rawValue, forKey: Key.uiLanguage) }
@@ -113,6 +128,21 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
 
     /// On-device ASR only; no cloud API required.
     public var isLocalEngine: Bool { engineMode == "local" }
+
+    /// Whether a transcript produced by the local engine should be
+    /// sent through the cloud LLM polish step before insertion.
+    ///
+    /// v0.2.0: the local engine defaults to ASR-only. When the user
+    /// enables "Cloud polish after ASR" (`localModeCloudPolishEnabled`)
+    /// we route the transcript through the configured LLM (DeepSeek by
+    /// default in local mode) — same `PolishingService` code path the
+    /// cloud engine uses.
+    ///
+    /// If the user hasn't entered an API key we can't run the polish
+    /// step; callers should check `Keychain.apiKey()` before invoking.
+    public var shouldPolishLocalTranscript: Bool {
+        isLocalEngine && localModeCloudPolishEnabled
+    }
 
     /// The system prompt the user *sees* in the editor — fall back to the
     /// provider-aware default from `AppGroupStore` when nothing is set.
@@ -151,6 +181,15 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         // rather than crashing inside `RawRepresentable.init`.
         let rawBackend = resolvedDefaults.string(forKey: Key.localASRBackend) ?? LocalASRBackend.speechAnalyzer.rawValue
         self.localASRBackend = LocalASRBackend(rawValue: rawBackend) ?? .speechAnalyzer
+        // v0.2.0: local-mode cloud polish toggle. Defaults off; users
+        // opt in from Settings when iOS ASR is too lossy for their
+        // environment. `object(forKey:) == nil` covers fresh installs
+        // and upgrades from builds that never wrote the key.
+        if resolvedDefaults.object(forKey: Key.localModeCloudPolishEnabled) == nil {
+            self.localModeCloudPolishEnabled = false
+        } else {
+            self.localModeCloudPolishEnabled = resolvedDefaults.bool(forKey: Key.localModeCloudPolishEnabled)
+        }
         self.uiLanguage = AppUILanguage.fromStored(
             resolvedDefaults.string(forKey: Key.uiLanguage)
         )

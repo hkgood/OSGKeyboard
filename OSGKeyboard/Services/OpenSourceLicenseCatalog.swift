@@ -2,11 +2,14 @@
 // OSGKeyboard · Main App
 //
 // Single source of truth for third-party open-source components shipped
-// with or downloaded by OSGKeyboard. Consumed by Settings → About →
-// Third-Party Licenses.
+// with OSGKeyboard. Consumed by Settings → About → Third-Party Licenses.
 //
-// Keep this list aligned with `project.yml` package dependencies and
-// the default model ID in `Qwen3ASRService`.
+// Keep this list aligned with `project.yml` package dependencies.
+//
+// v0.2.0: dropped the `Qwen3Speech` SPM fork (Qwen3 CoreML ASR is gone)
+// and the `aufklarer/Qwen3-ASR-CoreML` runtime artefact. The local
+// engine now ships with iOS 26 `SpeechAnalyzer` + `DictationTranscriber`
+// and has no on-device ML dependencies of our own.
 
 import Foundation
 
@@ -23,40 +26,11 @@ enum OpenSourceLicenseCatalog {
         let licenseText: String
     }
 
-    /// Bundled libraries and runtime model artefacts referenced by the app.
+    /// Bundled libraries referenced by the app. v0.2.0 no longer pulls in
+    /// `soniqo/speech-swift` (we use iOS 26 `SpeechAnalyzer` instead) and
+    /// no longer downloads `Qwen3-ASR-CoreML` weights — both entries are
+    /// intentionally absent.
     static let entries: [Entry] = [
-        .init(
-            id: "speech-swift",
-            name: "soniqo/speech-swift",
-            licenseName: "Apache-2.0",
-            purpose: "On-device ASR runtime. Vendored locally as the Qwen3Speech SPM package (Qwen3ASR CoreML path, AudioCommon, SpeechVAD).",
-            url: URL(string: "https://github.com/soniqo/speech-swift"),
-            licenseText: apache2Text
-        ),
-        .init(
-            id: "swift-transformers",
-            name: "huggingface/swift-transformers",
-            licenseName: "Apache-2.0",
-            purpose: "Hugging Face Hub client and tokenizer bindings. Used to resolve and download model snapshots at runtime.",
-            url: URL(string: "https://github.com/huggingface/swift-transformers"),
-            licenseText: apache2Text
-        ),
-        .init(
-            id: "qwen3-asr-coreml",
-            name: "aufklarer/Qwen3-ASR-CoreML",
-            licenseName: "Apache-2.0",
-            purpose: "CoreML INT8 weights for Qwen3-ASR-0.6B (derived from Alibaba Qwen team). Downloaded on first use (~1.6 GB); not bundled in the app binary.",
-            url: URL(string: "https://huggingface.co/aufklarer/Qwen3-ASR-CoreML"),
-            licenseText: apache2Text
-        ),
-        .init(
-            id: "qwen3-asr-upstream",
-            name: "Qwen/Qwen3-ASR-0.6B",
-            licenseName: "Apache-2.0",
-            purpose: "Original ASR model by Alibaba's Qwen team. CoreML bundle and tokenizer files are derived from these weights.",
-            url: URL(string: "https://huggingface.co/Qwen/Qwen3-ASR-0.6B"),
-            licenseText: apache2Text
-        ),
         .init(
             id: "material-icons",
             name: "Google Material Icons",
@@ -104,12 +78,12 @@ enum OpenSourceLicenseCatalog {
     included in all copies or substantial portions of the Software.
 
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
-    OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
     NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
     HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-    WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
-    OTHER DEALINGS IN THE SOFTWARE.
+    WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
     """
 }

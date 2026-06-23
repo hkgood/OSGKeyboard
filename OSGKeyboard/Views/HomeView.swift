@@ -2,6 +2,11 @@
 // OSGKeyboard · Main App
 //
 // Minimal home: logo, status capsule, flow hints, inline preview field.
+//
+// v0.2.0: removed the on-device model warm-up / download state machine
+// (Qwen3 CoreML is gone). The local engine uses iOS 26 `SpeechAnalyzer`
+// which is always ready, so the previous "model warming / download"
+// capsule states collapse into a single "ready" line.
 
 import SwiftUI
 import OSGKeyboardShared
@@ -12,8 +17,6 @@ struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject private var config = ProviderConfig.shared
-    @ObservedObject private var modelWarmup = OnDeviceModelWarmup.shared
-    @ObservedObject private var modelManager = ModelManager.shared
     @EnvironmentObject private var flowManager: FlowSessionManager
     @FocusState private var previewFocused: Bool
     @State private var previewText = ""
@@ -39,33 +42,6 @@ struct HomeView: View {
             && !needsPermissionSetup
             && flowManager.sessionWarning == nil
             && !needsCloudSetup
-            && !localModelNeedsAttention
-    }
-
-    /// Local engine still needs model download and/or in-memory warm-up.
-    private var localModelNeedsAttention: Bool {
-        guard config.isLocalEngine else { return false }
-        if config.isLocalEngine, config.localASRBackend == .qwen3ASR,
-           !OnDeviceMLRuntime.supportsOnDeviceQwen3 { return true }
-        if isAnyModelDownloading { return true }
-        if !OnDeviceModelStatus.isLocalStackReady(asrBackend: config.localASRBackend) {
-            return true
-        }
-        switch modelWarmup.phase {
-        case .ready, .notNeeded:
-            return false
-        case .warming, .failed, .idle:
-            // `.idle` with a downloaded stack means warm-up has not finished yet.
-            return true
-        }
-    }
-
-    private var isAnyModelDownloading: Bool {
-        if !modelManager.activeDownloads.isEmpty { return true }
-        return OnDeviceModel.allCases.contains { model in
-            if case .downloading = modelManager.states[model]?.download { return true }
-            return OnDeviceModelStatus.downloadProgress(model) != nil
-        }
     }
 
     var body: some View {
@@ -103,37 +79,14 @@ struct HomeView: View {
         }
         .onAppear {
             refreshPermissionStatuses()
-            scheduleModelWarmup(force: modelWarmup.phase.isFailed)
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             refreshPermissionStatuses()
-            if config.isLocalEngine {
-                OnDeviceModelWarmup.shared.ensureReadyAfterBackground()
-            }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             refreshPermissionStatuses()
         }
-        .onAppear { scheduleModelWarmup() }
-        .onChange(of: config.engineMode) { _, _ in scheduleModelWarmup(force: true) }
-        .onChange(of: config.localASRBackend) { _, _ in
-            modelWarmup.invalidate()
-            scheduleModelWarmup(force: true)
-        }
-        .onChange(of: modelWarmup.phase) { _, phase in
-            if phase == .idle, config.isLocalEngine {
-                scheduleModelWarmup()
-            }
-        }
-    }
-
-    private func scheduleModelWarmup(force: Bool = false) {
-        guard config.isLocalEngine else {
-            modelWarmup.invalidate()
-            return
-        }
-        modelWarmup.warmUpIfNeeded(force: force)
     }
 
     private func refreshPermissionStatuses() {
@@ -166,17 +119,9 @@ struct HomeView: View {
         .frame(maxWidth: .infinity)
         .frame(height: height)
         .animation(Motion.soft, value: sessionIsLive)
-        .animation(Motion.soft, value: localModelNeedsAttention)
     }
 
     private var headerGradientColors: [Color] {
-        if localModelNeedsAttention {
-            return [
-                palette.warning.opacity(0.32),
-                palette.warning.opacity(0.12),
-                palette.background.opacity(0)
-            ]
-        }
         if sessionIsLive {
             return [
                 palette.accent.opacity(0.28),
@@ -243,8 +188,7 @@ struct HomeView: View {
                 .frame(width: 6, height: 6)
 
             if flowManager.isActive,
-               let expires = flowManager.sessionExpiresAt,
-               !localModelNeedsAttention {
+               let expires = flowManager.sessionExpiresAt {
                 Text("home.flow.label")
                     .font(TypeStyle.status)
                     .foregroundStyle(palette.textPrimary)
@@ -279,7 +223,7 @@ struct HomeView: View {
             || flowManager.sessionWarning != nil
             || needsCloudSetup
             || shouldShowKeyboardHint
-            || (!flowManager.isActive && !localModelNeedsAttention)
+            || !flowManager.isActive
     }
 
     @ViewBuilder
@@ -355,7 +299,6 @@ struct HomeView: View {
     }
 
     private var flowStatusColor: Color {
-        if localModelNeedsAttention { return palette.warning }
         if flowManager.isActive { return palette.accent }
         if flowManager.isStarting { return palette.accent }
         if needsPermissionSetup { return palette.warning }
@@ -363,30 +306,11 @@ struct HomeView: View {
         return palette.textTertiary
     }
 
-    /// Single source of truth for the logo status capsule (local model + flow state).
+    /// Single source of truth for the logo status capsule. The local
+    /// engine is always "ready" in v0.2.0 (iOS `SpeechAnalyzer` ships
+    /// with the OS), so the previous downloading / warming / failed
+    /// states collapse into the cloud-engine branch.
     private var flowCapsuleStatusMessage: String {
-        if config.isLocalEngine, config.localASRBackend == .qwen3ASR,
-           !OnDeviceMLRuntime.supportsOnDeviceQwen3 {
-            return AppL10n.string("home.engine.unsupportedOS")
-        }
-        if config.isLocalEngine {
-            if isAnyModelDownloading {
-                return AppL10n.string("home.engine.downloading")
-            }
-            if !OnDeviceModelStatus.isLocalStackReady(asrBackend: config.localASRBackend) {
-                return AppL10n.string("home.engine.downloadFirst")
-            }
-            switch modelWarmup.phase {
-            case .warming:
-                return AppL10n.string("home.engine.warming")
-            case .failed(let message):
-                return message
-            case .idle:
-                return AppL10n.string("home.engine.warming")
-            case .ready, .notNeeded:
-                break
-            }
-        }
         if flowManager.isStarting {
             return AppL10n.string("home.flow.starting")
         }

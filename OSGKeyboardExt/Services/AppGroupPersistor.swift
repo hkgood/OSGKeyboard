@@ -35,10 +35,11 @@ public struct AppGroupPersistor {
         state.mode             = .polish
         state.engineMode       = store.engineMode
         state.localASRBackend  = store.localASRBackend
-        state.localModelsReady = OnDeviceModelStatus.isLocalStackReady(
-            asrBackend: store.localASRBackend
-        )
-        state.localModelsLoaded = OnDeviceModelStatus.modelsLoadedInMemory()
+        // v0.2.0: iOS `SpeechAnalyzer` is always ready; mirror that
+        // into the State flags so downstream consumers see the same
+        // shape they did when the previous Qwen3 stack reported "ready".
+        state.localModelsReady = true
+        state.localModelsLoaded = false
 
         #if DEBUG
         // Print a masked view of the live App Group config so we can see
@@ -74,10 +75,11 @@ public struct AppGroupPersistor {
         let store = AppGroupStore()
         state.engineMode = store.engineMode
         state.localASRBackend = store.localASRBackend
-        state.localModelsReady = OnDeviceModelStatus.isLocalStackReady(
-            asrBackend: store.localASRBackend
-        )
-        state.localModelsLoaded = OnDeviceModelStatus.modelsLoadedInMemory()
+        // v0.2.0: iOS `SpeechAnalyzer` is always ready. Keep these
+        // toggles here so the keyboard UI doesn't flicker if the host
+        // app briefly clears them while refactoring.
+        state.localModelsReady = true
+        state.localModelsLoaded = false
     }
 
     /// Persist `mode` to the App Group store.

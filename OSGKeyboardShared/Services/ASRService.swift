@@ -116,66 +116,30 @@ public enum ASREvent: Sendable, Equatable {
 // MARK: - Factory
 
 public enum ASRServiceFactory {
-    /// Registry of backend-specific providers. The host app installs
-    /// a provider for the Qwen3-ASR backend at launch time (the
-    /// `Qwen3ASRProvider` lives in the app target because linking
-    /// `Qwen3ASR` pulls in mlx-swift, which the shared framework
-    /// deliberately stays off to keep `APPLICATION_EXTENSION_API_ONLY`
-    /// clean). The shared framework always provides a built-in
-    /// `SpeechAnalyzer` provider; custom providers override it.
+    /// Returns the on-device ASR backend. As of v0.2.0 the only
+    /// supported `LocalASRBackend` is iOS 26 `SpeechAnalyzer` +
+    /// `DictationTranscriber` (always on-device, no asset download),
+    /// so the factory collapses to a single concrete type. We keep the
+    /// `localBackend` parameter on the signature so the next non-iOS
+    /// backend can slot in without touching every call site.
     ///
-    /// `nonisolated(unsafe)` because the only writer is
-    /// `OSGKeyboardApp.init` (single-threaded, runs once at launch).
-    /// After launch, all callers read the dictionary from any
-    /// actor.
-    public nonisolated(unsafe) static var providers: [LocalASRBackend: any ASRServiceProvider] = [
-        .speechAnalyzer: SpeechAnalyzerProvider()
-    ]
-
-    /// Returns the ASR backend chosen by the user. The cloud engine
-    /// always uses the iOS `SpeechAnalyzer` path — it has the lowest
-    /// latency and never hits the network, which matches the user's
-    /// expectation that "ASR" is the local half of the pipeline
+    /// The cloud engine also routes through `SpeechAnalyzerASR`: the
+    /// user expectation is that ASR is the local half of the pipeline
     /// regardless of where the LLM polish happens.
-    ///
-    /// For the local engine, we honour `LocalASRBackend`:
-    ///   - `.speechAnalyzer` (default) → on-device iOS pipeline.
-    ///   - `.qwen3ASR` → CoreML-backed Qwen3-ASR via `soniqo/speech-swift` (host app only)
-    ///                     (registered by the host app at launch).
     public static func make(
         engineMode: String,
         localBackend: LocalASRBackend = .speechAnalyzer
     ) -> ASRService {
-        if engineMode == "local" {
-            if let provider = providers[localBackend] {
-                return provider.make()
-            }
-        }
-        return SpeechAnalyzerASR()
+        SpeechAnalyzerASR()
     }
 
     /// Back-compat overload for callers that only ever want the
     /// SpeechAnalyzer path. The previous single-backend build used
     /// this signature; new code should pass the engine mode explicitly
-    /// so the user's selection is honoured.
+    /// so any future non-iOS backend is honoured.
     public static func make() -> ASRService {
         SpeechAnalyzerASR()
     }
-}
-
-/// Backend-specific ASR factory. The shared framework ships a default
-/// `SpeechAnalyzerProvider`; the host app installs a `Qwen3ASRProvider`
-/// at launch time so the Qwen3 backend is wired in only where its
-/// large MLX dependency is also linked.
-public protocol ASRServiceProvider: Sendable {
-    var backend: LocalASRBackend { get }
-    func make() -> ASRService
-}
-
-/// Built-in provider for the iOS SpeechAnalyzer path. Always present.
-struct SpeechAnalyzerProvider: ASRServiceProvider {
-    let backend: LocalASRBackend = .speechAnalyzer
-    func make() -> ASRService { SpeechAnalyzerASR() }
 }
 
 // MARK: - PCM format conversion (testable helpers)

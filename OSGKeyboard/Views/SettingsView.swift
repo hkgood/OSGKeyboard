@@ -28,8 +28,9 @@ struct SettingsView: View {
 
     // Dynamic locale list loaded from SFSpeechRecognizer on first appear.
     @State private var dynamicLocales: [(id: String, onDevice: Bool)] = []
-    @StateObject private var modelManager = ModelManager.shared
-    @State private var pendingDownload: OnDeviceModel?
+    // v0.2.0: no on-device model manager / pending download state —
+    // iOS `SpeechAnalyzer` ships with iOS 26 and needs nothing
+    // downloaded.
 
     var body: some View {
         NavigationStack {
@@ -64,6 +65,14 @@ struct SettingsView: View {
                             if config.engineMode == "cloud" {
                                 providerSection
                                 apiSection
+                            } else if config.localModeCloudPolishEnabled {
+                                // v0.2.0: local engine + cloud polish on.
+                                // Surface the provider / API key fields so
+                                // the user can fill in their DeepSeek key.
+                                // We hide them when the toggle is off so the
+                                // local engine stays genuinely local.
+                                providerSection
+                                apiSection
                             }
                             languageAndModelsSection
                             if config.engineMode == "cloud" {
@@ -82,13 +91,8 @@ struct SettingsView: View {
             .background(palette.background)
             .toolbar(.hidden, for: .navigationBar)
             .task { await loadDynamicLocales() }
-            .onAppear { modelManager.refreshAll() }
-            .sheet(item: $pendingDownload) { model in
-                DownloadConfirmSheet(model: model) {
-                    pendingDownload = nil
-                    modelManager.startDownload(model)
-                }
-            }
+            // v0.2.0: no on-device model manager to refresh — the
+            // iOS ASR backend is always ready.
         }
     }
 
@@ -125,11 +129,7 @@ struct SettingsView: View {
             sectionHeader("settings.language.title")
             VStack(spacing: 0) {
                 if config.engineMode == "local" {
-                    LocalModelsGroup(
-                        config: config,
-                        manager: modelManager,
-                        pendingDownload: $pendingDownload
-                    )
+                    LocalModelsGroup(config: config)
                     Divider().background(palette.divider)
                 }
                 LocalePickerRow(

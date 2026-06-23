@@ -44,9 +44,13 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             id: "deepseek",
             name: "DeepSeek",
             defaultBaseURL: "https://api.deepseek.com/v1",
-            defaultModel: "deepseek-chat",
+            // v0.2.0: bumped default to `deepseek-v4-flash` for the
+            // local-mode cloud-polish toggle. `deepseek-chat` is
+            // retained as a valid user-overridable model name; only
+            // the default is updated.
+            defaultModel: "deepseek-v4-flash",
             apiKeyURL: URL(string: "https://platform.deepseek.com/api_keys"),
-            blurb: "deepseek-chat · 中文友好 · Chinese-friendly"
+            blurb: "deepseek-v4-flash · 默认 · 快速且中文友好"
         ),
         .init(
             id: "qwen",

@@ -3,7 +3,9 @@
 "engine.summary.cloud" = "当前：%@";
 "engine.summary.cloudWithModel" = "当前：%1$@ · %2$@";
 "engine.asr.appleSpeech" = "Apple 语音识别";
-"model.qwen3asr.name" = "Qwen3-ASR 0.6B (CoreML)";
+
+/* v0.2.0: flow-level warnings surfaced alongside the final transcript. */
+"flow.warning.cloudPolishMissingKey" = "已开启云端润色但未填写 API Key,本次以原始识别结果插入。请在设置中填入 DeepSeek API Key 以启用润色。";
 
 /* LLM providers */
 "provider.openai" = "OpenAI";

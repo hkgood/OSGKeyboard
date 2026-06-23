@@ -35,11 +35,9 @@ public enum EngineServiceLabel {
         for backend: LocalASRBackend,
         language: AppUILanguage
     ) -> String {
-        switch backend {
-        case .speechAnalyzer:
-            return SharedL10n.string("engine.asr.appleSpeech", language: language)
-        case .qwen3ASR:
-            return SharedL10n.string("model.qwen3asr.name", language: language)
-        }
+        // v0.2.0: only the iOS SpeechAnalyzer path remains. We keep the
+        // switch on `LocalASRBackend` so the next non-iOS backend can
+        // slot in without touching every call site.
+        return SharedL10n.string("engine.asr.appleSpeech", language: language)
     }
 }

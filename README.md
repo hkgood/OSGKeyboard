@@ -29,6 +29,7 @@ The audio stays on-device (transcribed by Apple's on-device `SpeechAnalyzer` + `
 - 🎙 **Push-to-talk** with a Typeless-style circular mic button
 - 🧠 **On-device ASR** (`SpeechAnalyzer` + `DictationTranscriber`, iOS 26+)
 - ✍️ **AI polishing** — adds structure, punctuation, fixes grammar, optionally produces lists
+- 🧩 **Local + cloud polish toggle** — local engine is ASR-only by default; opt into a post-ASR cloud polish step (DeepSeek by default) when the iOS speech recognition isn't strong enough for your environment (noisy far-field audio, strong accents, etc.)
 - 🔌 **Bring-your-own API** — works with any OpenAI-compatible endpoint (OpenAI, DeepSeek, Qwen DashScope, your own self-hosted server, …)
 - 🔒 **Privacy first** — audio never leaves your device; transcripts only sent to the LLM you choose
 - 🎨 **Native SwiftUI** — dark theme, frosted glass, ~2000 lines of Swift
@@ -107,6 +108,18 @@ OSGKeyboard/
                                           ↓
                           textDocumentProxy.insertText(polished)
 ```
+
+**Engine modes:**
+
+- `cloud` (default): ASR runs on-device via `SpeechAnalyzer`, the transcript is
+  sent to your configured LLM for polish.
+- `local`: ASR runs on-device via `SpeechAnalyzer`. The transcript is inserted
+  as-is — no cloud round-trip.
+- `local` + "Cloud polish after ASR" toggle (Settings → On-device models):
+  same as `cloud` in spirit, but routed via the local-engine pipeline so the
+  keyboard extension can still use the on-device ASR; the transcript is sent
+  to the configured LLM before insertion. Requires a DeepSeek (or other
+  OpenAI-compatible) API key in the Keychain.
 
 ---
 

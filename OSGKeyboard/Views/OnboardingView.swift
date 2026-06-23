@@ -27,12 +27,11 @@ struct OnboardingView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject var config: ProviderConfig
-    @ObservedObject private var modelWarmup = OnDeviceModelWarmup.shared
-    @StateObject private var modelManager = ModelManager.shared
     @State private var micStatus = AppPermissions.micStatus
     @State private var speechStatus = AppPermissions.speechStatus
     @State private var keyboardReady = KeyboardSetupBridge.isReadyForOnboardingSkip
-    @State private var pendingDownload: OnDeviceModel?
+    // v0.2.0: no on-device model downloads remain, so the API setup
+    // page no longer needs a ModelManager / pendingDownload binding.
 
     private var currentPage: OnboardingPage {
         OnboardingPage(rawValue: config.onboardingPage) ?? .welcome
@@ -61,11 +60,7 @@ struct OnboardingView: View {
                         case .keyboard:
                             EnableKeyboardPage()
                         case .api:
-                            APISetupPage(
-                                config: config,
-                                manager: modelManager,
-                                pendingDownload: $pendingDownload
-                            )
+                            APISetupPage(config: config)
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -91,12 +86,8 @@ struct OnboardingView: View {
             applyOnboardingDefaultsIfNeeded()
             refreshPermissionStatuses()
             snapToVisiblePageIfNeeded()
-            scheduleModelWarmup()
-        }
-        .onChange(of: config.engineMode) { _, _ in scheduleModelWarmup(force: true) }
-        .onChange(of: config.localASRBackend) { _, _ in
-            modelWarmup.invalidate()
-            scheduleModelWarmup(force: true)
+            // v0.2.0: no on-device ASR weights to warm up — iOS
+            // `SpeechAnalyzer` ships with iOS 26 and is always ready.
         }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { refreshPermissionStatuses() }
@@ -116,32 +107,20 @@ struct OnboardingView: View {
     private func applyOnboardingDefaultsIfNeeded() {
         guard !config.hasCompletedOnboarding, config.onboardingPage == 0 else { return }
         // First-time users with no API key: default to local for a faster path.
+        // v0.2.0: no per-user ASR backend selection — iOS `SpeechAnalyzer`
+        // is the only local option, so we don't need to mutate
+        // `config.localASRBackend` here.
         if config.apiKey.isEmpty, config.engineMode == "cloud" {
             config.engineMode = "local"
         }
-        if config.engineMode == "local" {
-            config.localASRBackend = .qwen3ASR
-        }
     }
 
-    private var localModelNeedsAttention: Bool {
-        guard config.isLocalEngine else { return false }
-        if !OnDeviceModelStatus.isLocalStackReady(asrBackend: config.localASRBackend) {
-            return true
-        }
-        switch modelWarmup.phase {
-        case .ready, .notNeeded, .idle: return false
-        case .warming, .failed: return true
-        }
-    }
-
-    private func scheduleModelWarmup(force: Bool = false) {
-        guard config.isLocalEngine else {
-            modelWarmup.invalidate()
-            return
-        }
-        modelWarmup.warmUpIfNeeded(force: force)
-    }
+    /// v0.2.0: with iOS `SpeechAnalyzer` as the only local backend,
+    /// the "local engine ready" check is always true — there is nothing
+    /// for the user to download. Kept as a derived property so the
+    /// existing call sites (which feed the Done button state) compile
+    /// unchanged.
+    private var localModelNeedsAttention: Bool { false }
 
     private func shouldShowPage(_ page: OnboardingPage) -> Bool {
         switch page {
@@ -273,9 +252,10 @@ struct OnboardingView: View {
     }
 
     private var onboardingCompleteReady: Bool {
-        if config.isLocalEngine {
-            return OnDeviceModelStatus.isLocalStackReady(asrBackend: config.localASRBackend)
-        }
+        // v0.2.0: the local engine uses iOS `SpeechAnalyzer`, which is
+        // always available — no model download gate. The cloud engine
+        // still requires base URL + API key + model.
+        if config.isLocalEngine { return true }
         return config.isConfigured
     }
 
@@ -736,8 +716,6 @@ private struct APISetupPage: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     @ObservedObject var config: ProviderConfig
-    @ObservedObject var manager: ModelManager
-    @Binding var pendingDownload: OnDeviceModel?
 
     var body: some View {
         ScrollView {
@@ -757,44 +735,29 @@ private struct APISetupPage: View {
                     APISettingsCard(config: config)
                         .padding(.horizontal, Spacing.lg)
                 } else {
+                    // v0.2.0: local engine is iOS `SpeechAnalyzer` only.
+                    // Surface the cloud-polish toggle and a one-line
+                    // reminder that the iOS ASR is bundled with iOS 26
+                    // (no download step).
                     VStack(alignment: .leading, spacing: Spacing.sm) {
                         Text("onboarding.api.localModels.hint")
                             .font(TypeStyle.caption2)
-                            .foregroundStyle(palette.warning)
+                            .foregroundStyle(palette.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
-                        LocalModelsGroup(
-                            config: config,
-                            manager: manager,
-                            pendingDownload: $pendingDownload
-                        )
-                        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                                .stroke(palette.divider, lineWidth: 0.5)
-                        )
+                        LocalModelsGroup(config: config)
+                            .background(
+                                palette.surface,
+                                in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                                    .stroke(palette.divider, lineWidth: 0.5)
+                            )
                     }
                     .padding(.horizontal, Spacing.lg)
                 }
             }
             .padding(.bottom, Spacing.xxxl)
-        }
-        .onAppear {
-            manager.refreshAll()
-            if config.engineMode == "local" {
-                config.localASRBackend = .qwen3ASR
-            }
-        }
-        .onChange(of: config.engineMode) { _, mode in
-            guard mode == "local" else { return }
-            Task { @MainActor in
-                config.localASRBackend = .qwen3ASR
-            }
-        }
-        .sheet(item: $pendingDownload) { model in
-            DownloadConfirmSheet(model: model) {
-                pendingDownload = nil
-                manager.startDownload(model)
-            }
         }
     }
 }

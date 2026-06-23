@@ -31,18 +31,22 @@ public enum FlowSessionKeys {
     /// finishes most chunks during recording; this is a soft deadline before
     /// blocking on `asrTask.value` (which waits until the pipeline exits).
     public static let localASRWaitTimeout: TimeInterval = 120
-    public static let localQwen3ASRWaitTimeout: TimeInterval = 180
     public static let cloudASRWaitTimeout: TimeInterval = 120
 
     /// Keyboard watchdog after the user stops recording (not utterance max length).
-    /// Must cover worst-case post-stop backlog: remaining MLX/SpeechAnalyzer chunks
+    /// Must cover worst-case post-stop backlog: remaining SpeechAnalyzer chunks
     /// plus cloud LLM polish (see `PolishingService.effectiveTimeout` cap).
+    ///
+    /// As of v0.2.0 the local engine uses iOS `SpeechAnalyzer` only, so the
+    /// previous Qwen3-specific timeout (240 s) collapses into the shared
+    /// local path. We keep `localASRBackend` on the signature for symmetry
+    /// with other shared helpers.
     public static func keyboardResultTimeout(
         engineMode: String,
         localASRBackend: LocalASRBackend
     ) -> TimeInterval {
         if engineMode == "local" {
-            return localASRBackend == .qwen3ASR ? 240 : 180
+            return 180
         }
         return 240
     }

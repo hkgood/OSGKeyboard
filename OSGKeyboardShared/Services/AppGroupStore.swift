@@ -37,6 +37,8 @@ public struct AppGroupStore: @unchecked Sendable {
         static let engineMode       = "config.engineMode"
         static let localASRBackend  = "config.localASRBackend"
         static let uiLanguage       = "config.uiLanguage"
+        // v0.2.0: opt-in cloud polish step after local-mode ASR.
+        static let localModeCloudPolishEnabled = "config.localModeCloudPolishEnabled"
     }
 
     // MARK: - Reads
@@ -84,6 +86,17 @@ public struct AppGroupStore: @unchecked Sendable {
     public var localASRBackend: LocalASRBackend {
         let raw = defaults.string(forKey: Key.localASRBackend) ?? LocalASRBackend.speechAnalyzer.rawValue
         return LocalASRBackend(rawValue: raw) ?? .speechAnalyzer
+    }
+
+    /// v0.2.0: whether the local engine should route its transcript
+    /// through the configured cloud LLM (DeepSeek by default) before
+    /// insertion. Defaults to `false`; the keyboard extension reads
+    /// this so Flow sessions honour the toggle.
+    public var localModeCloudPolishEnabled: Bool {
+        guard defaults.object(forKey: Key.localModeCloudPolishEnabled) != nil else {
+            return false
+        }
+        return defaults.bool(forKey: Key.localModeCloudPolishEnabled)
     }
 
     /// Host-app UI language override (`auto` / `en` / `zh-Hans`).

@@ -5,9 +5,17 @@
 // to produce polished, well-punctuated text. Falls back to the raw transcript
 // if the LLM call fails or times out.
 //
-// Cloud engine always runs the LLM polish step (settings no longer expose
-// off / transcribe). Local engine (`engineMode == "local"`) is ASR-only —
-// the raw transcript is returned unchanged and cloud API settings are ignored.
+// Engine matrix:
+//   - `engineMode == "cloud"`  → always polish (cloud engine's whole point).
+//   - `engineMode == "local"`,
+//     `localModeCloudPolishEnabled == false` → ASR-only, return raw.
+//   - `engineMode == "local"`,
+//     `localModeCloudPolishEnabled == true`  → polish via the user's LLM
+//     (DeepSeek by default). The local engine gains stronger accuracy on
+//     noisy / dialectal Chinese at the cost of one cloud round-trip.
+//     If the user hasn't entered an API key the call falls back to the
+//     raw transcript and surfaces a warning so the keyboard can show
+//     the "fill in your key" hint.
 
 import Foundation
 
@@ -16,6 +24,11 @@ public actor PolishingService {
     public enum PolishError: Error, Equatable {
         case noTranscript
         case timeout
+        /// v0.2.0: local engine + cloud-polish-on, but the user hasn't
+        /// saved an API key in the Keychain. Caller surfaces an Alert
+        /// telling them to fill it in; we deliver the raw transcript
+        /// so no data is lost.
+        case missingAPIKey
     }
 
     private let store: AppGroupStore
@@ -43,9 +56,17 @@ public actor PolishingService {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw PolishError.noTranscript }
 
-        // Local engine: ASR-only — no on-device or cloud polish.
+        // Local engine: ASR-only unless the user opted into cloud
+        // polish via `localModeCloudPolishEnabled`. The cloud polish
+        // path still requires an API key; if the Keychain is empty we
+        // fall back to the raw transcript and throw `missingAPIKey`
+        // so the UI can surface the "fill in your key" hint.
         if store.engineMode == "local" {
-            return trimmed
+            guard store.localModeCloudPolishEnabled else { return trimmed }
+            guard !store.apiKey.isEmpty else {
+                throw PolishError.missingAPIKey
+            }
+            return try await polishRemote(trimmed)
         }
 
         return try await polishRemote(trimmed)
