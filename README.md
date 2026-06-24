@@ -1,3 +1,5 @@
+> ⚠️ **2026-06-24**: Default branch renamed from `main` to `0.2`. Old `main` is now `0.1`; `refactor/drop-qwen3-coreml` is now `0.2`. See CHANGELOG for details.
+
 # OSGKeyboard
 
 > Hold a key, speak, release — AI-polished text appears at your cursor in any app.
