@@ -1,5 +1,57 @@
 > ⚠️ **2026-06-24**: Default branch renamed from `main` to `0.2`. Old `main` is now `0.1`; `refactor/drop-qwen3-coreml` is now `0.2`. See CHANGELOG for details.
 
+## Build Setup
+
+This project uses [XcodeGen](https://github.com/yonaskolb/XcodeGen) — `project.yml`
+is the source of truth, and `OSGKeyboard.xcodeproj` is **regenerated, not committed**
+(it's in `.gitignore`). New clones must generate the Xcode project before opening
+in Xcode, otherwise Xcode will show an empty project with no source files.
+
+### Prerequisites
+
+- macOS with **Xcode 26** (matches `project.yml` deployment target iOS 26)
+- [Homebrew](https://brew.sh)
+
+### One-time setup
+
+```bash
+brew install xcodegen
+```
+
+### Generate `OSGKeyboard.xcodeproj`
+
+From the repository root:
+
+```bash
+./Scripts/generate-xcodeproj.sh
+```
+
+This script:
+
+1. Runs `xcodegen generate` to produce `OSGKeyboard.xcodeproj` from `project.yml`.
+2. Calls `Scripts/patch-icon-composer.sh` to patch the generated project for
+   Xcode 26 Icon Composer bundles — `OSGKeyboard/AppIcon.icon` is treated as
+   a single `folder.iconcomposer.icon` reference (see `project.yml` note on
+   XcodeGen `fileTypes.icon`).
+
+Then open the project:
+
+```bash
+open OSGKeyboard.xcodeproj
+```
+
+> **Troubleshooting**: If Xcode shows an empty project, re-run
+> `./Scripts/generate-xcodeproj.sh`. If the build fails on icon assets,
+> make sure `OSGKeyboard/AppIcon.icon/` exists with `Assets/` and `icon.json`
+> inside (do not expand the folder manually).
+
+### Re-running
+
+Run `./Scripts/generate-xcodeproj.sh` any time `project.yml` changes
+(e.g. after `git pull`).
+
+---
+
 # OSGKeyboard
 
 > Hold a key, speak, release — AI-polished text appears at your cursor in any app.
