@@ -119,7 +119,7 @@
 "settings.localModels.readiness %lld %lld" = "%lld/%lld ready";
 "settings.localModels.cloudPolish.title" = "Cloud polish after ASR";
 "settings.localModels.cloudPolish.subtitle" = "Sends the transcript to your configured cloud LLM (DeepSeek by default) for cleanup. Enable only when iOS speech recognition struggles — noisy far-field audio, strong accents, etc. Requires a DeepSeek API key.";
-"settings.localModels.cloudPolish.caption" = "Uses DeepSeek to polish transcripts in local mode.";
+"settings.localEngine.title" = "Local engine";
 "settings.language.subtitle.cloud" = "Recognition language and text processing mode.";
 "settings.language.subtitle.local" = "Recognition language.";
 "settings.mode.title" = "Mode";
