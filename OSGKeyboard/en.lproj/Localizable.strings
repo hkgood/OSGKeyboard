@@ -111,7 +111,6 @@
 // v0.2.1: translation feature
 "settings.translation.title" = "Translation";
 "settings.translation.off" = "Don't translate";
-"settings.translation.hint.needsCloud" = "Needs cloud";
 "settings.languageModels.title" = "Language & models";
 "settings.localModels.title" = "On-device models";
 "settings.localModels.speechRole" = "Speech";

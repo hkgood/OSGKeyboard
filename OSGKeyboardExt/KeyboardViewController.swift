@@ -138,7 +138,8 @@ public final class KeyboardViewController: UIInputViewController {
         state.setLocale           = { [weak self] l in self?.persistLocale(l) }
         state.setEngineMode       = { [weak self] m in self?.persistEngineMode(m) }
         state.setLocalASRBackend  = { [weak self] b in self?.persistLocalASRBackend(b) }
-        state.setTranslationEnabled = { [weak self] enabled in self?.persistTranslationEnabled(enabled) }
+        // v0.2.1 follow-up: removed `setTranslationEnabled` — the chip
+        // / picker only writes the locale id now; `enabled` is derived.
         state.setTranslationTargetLocaleId = { [weak self] id in self?.persistTranslationTargetLocaleId(id) }
         state.insertNewline       = { [weak self] in self?.textDocumentProxy.insertText("\n") }
         state.insertSpace         = { [weak self] in self?.textDocumentProxy.insertText(" ") }
@@ -645,20 +646,12 @@ public final class KeyboardViewController: UIInputViewController {
 
     // MARK: - Translation persistence
 
-    /// v0.2.1: persist translation toggle. When the user turns the
-    /// feature on while the local engine is active we still write the
-    /// value — `isTranslationEffective` will return `false` until they
-    /// switch to cloud, but the chip on the keyboard reflects their
-    /// intent immediately so they get feedback.
-    private func persistTranslationEnabled(_ enabled: Bool) {
-        state.translationEnabled = enabled
-        persistor.persist(translationEnabled: enabled)
-    }
-
-    /// v0.2.1: persist translation target locale id. Resolved via
-    /// `TranslationLanguageCatalog.resolve` so a stale persisted value
-    /// (e.g. a removed locale id from an older build) still finds the
-    /// right entry instead of crashing the picker.
+    /// v0.2.1 follow-up: persist translation target locale id. Resolved
+    /// via `TranslationLanguageCatalog.resolve` so a stale persisted
+    /// value (e.g. a removed locale id from an older build) still finds
+    /// the right entry instead of crashing the picker. Translation's
+    /// "on/off" state is now derived from this id (== `offLocaleId`
+    /// means off), so there's no separate toggle to persist.
     private func persistTranslationTargetLocaleId(_ id: String) {
         let resolved = TranslationLanguageCatalog.resolve(id).id
         state.translationTargetLocaleId = resolved

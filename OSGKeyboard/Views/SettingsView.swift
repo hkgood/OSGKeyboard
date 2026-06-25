@@ -145,7 +145,9 @@ struct SettingsView: View {
                     LocalModelsGroup(config: config)
                 }
                 Divider().background(palette.divider)
-                TranslationPickerRow(config: config)
+                if config.isTranslationRowVisible {
+                    TranslationPickerRow(config: config, isVisible: true)
+                }
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             .overlay(
