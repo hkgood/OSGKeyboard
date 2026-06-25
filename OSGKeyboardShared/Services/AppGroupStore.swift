@@ -39,8 +39,11 @@ public struct AppGroupStore: @unchecked Sendable {
         static let uiLanguage       = "config.uiLanguage"
         // v0.2.0: opt-in cloud polish step after local-mode ASR.
         static let localModeCloudPolishEnabled = "config.localModeCloudPolishEnabled"
-        // v0.2.1: translation toggle + target locale id (e.g. "en").
-        static let translationEnabled = "config.translationEnabled"
+        // v0.2.1 follow-up: `config.translationEnabled` was *removed* as a
+        // persisted key — translation is derived from the target locale
+        // id. New code should only write/read `translationTargetLocaleId`;
+        // the `translationEnabled` Bool accessor below is kept as a
+        // computed shim for source compatibility.
         static let translationTargetLocaleId = "config.translationTargetLocaleId"
     }
 
@@ -107,20 +110,21 @@ public struct AppGroupStore: @unchecked Sendable {
         AppUILanguage.fromStored(defaults.string(forKey: Key.uiLanguage))
     }
 
-    /// v0.2.1: whether the keyboard should translate the post-ASR transcript
-    /// before inserting it. Honored only when `engineMode == "cloud"` — see
-    /// `ProviderConfig.isTranslationEffective` for the effective predicate.
+    /// v0.2.1 follow-up: derived — translation is on iff a target locale
+    /// has been selected. The `translationTargetLocaleId` getter below
+    /// is the source of truth; this property exists for backwards
+    /// compatibility with call sites that read `store.translationEnabled`.
     public var translationEnabled: Bool {
-        guard defaults.object(forKey: Key.translationEnabled) != nil else {
-            return false
-        }
-        return defaults.bool(forKey: Key.translationEnabled)
+        translationTargetLocaleId != TranslationLanguageCatalog.offLocaleId
     }
 
     /// v0.2.1: target locale id the translate-and-polish prompt should
-    /// produce (e.g. `"en"`). Defaults to `"en"` when nothing is stored.
+    /// produce (e.g. `"en"`, `"ja"`). Defaults to `offLocaleId` ("off")
+    /// when nothing is stored, matching the picker / chip UX where the
+    /// user has to actively pick a language to turn translation on.
     public var translationTargetLocaleId: String {
-        defaults.string(forKey: Key.translationTargetLocaleId) ?? "en"
+        defaults.string(forKey: Key.translationTargetLocaleId)
+            ?? TranslationLanguageCatalog.offLocaleId
     }
 
     // MARK: - Writes
@@ -145,15 +149,24 @@ public struct AppGroupStore: @unchecked Sendable {
         defaults.set(language.rawValue, forKey: Key.uiLanguage)
     }
 
-    /// v0.2.1: persist translation toggle. The keyboard extension reads
-    /// this on every `load()` and `refreshRuntimeFlags()` so the chip
-    /// reflects the latest value without a host-app round-trip.
+    /// v0.2.1 follow-up: kept for source compatibility with callers that
+    /// still pass a Bool (e.g. older tests, any leftover bridge code).
+    /// `enabled == true` selects `defaultLocaleId` ("en") as a sensible
+    /// on-ramp target; `enabled == false` resets to `offLocaleId`.
+    /// The keyboard chip / pipeline now write the locale id directly
+    /// via `setTranslationTargetLocaleId`, which is the preferred path.
     public func setTranslationEnabled(_ enabled: Bool) {
-        defaults.set(enabled, forKey: Key.translationEnabled)
+        defaults.set(
+            enabled ? TranslationLanguageCatalog.defaultLocaleId : TranslationLanguageCatalog.offLocaleId,
+            forKey: Key.translationTargetLocaleId
+        )
     }
 
-    /// v0.2.1: persist target locale id (e.g. `"en"`, `"ja"`). Same
-    /// read cadence as `setTranslationEnabled`.
+    /// v0.2.1: persist target locale id (e.g. `"en"`, `"ja"`, or
+    /// `TranslationLanguageCatalog.offLocaleId`). The keyboard
+    /// extension reads this on every `load()` and `refreshRuntimeFlags()`
+    /// so the chip reflects the latest value without a host-app
+    /// round-trip.
     public func setTranslationTargetLocaleId(_ id: String) {
         defaults.set(id, forKey: Key.translationTargetLocaleId)
     }

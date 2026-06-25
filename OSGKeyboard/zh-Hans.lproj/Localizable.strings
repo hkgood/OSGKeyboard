@@ -111,7 +111,6 @@
 // v0.2.1: 翻译功能
 "settings.translation.title" = "翻译";
 "settings.translation.off" = "不翻译";
-"settings.translation.hint.needsCloud" = "需云端";
 "settings.languageModels.title" = "语言与模型";
 "settings.localModels.title" = "本地模型";
 "settings.localModels.speechRole" = "语音识别";

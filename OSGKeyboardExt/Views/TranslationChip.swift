@@ -5,10 +5,17 @@
 // top bar. Doubles as both the on/off switch and the target-language
 // picker — same Menu pattern as `LocaleChip` so muscle memory transfers.
 //
+// v0.2.1 follow-up: removed the explicit on/off toggle entry. The
+// chip is now a pure picker over the 11 catalog rows (off + 10
+// locales); selecting "不翻译" turns translation off, selecting any
+// locale turns it on with that target. `translationEnabled` is
+// derived from the locale id so the chip / pipeline read the same
+// source of truth.
+//
 // Visual states:
-//   • disabled              → dim outline, "翻译" label
-//   • enabled + cloud       → accent fill, "→ EN" / "→ 日本語" style label
-//   • enabled + local engine→ warning fill + "翻译需云端" hint (effectively
+//   • off             → dim outline, "翻译" label
+//   • on + cloud      → accent fill, "→ EN" / "→ 日本語" style label
+//   • on + local engine→ warning fill + "翻译需云端" hint (effectively
 //     inert; the pipeline rejects the mode and the controller surfaces
 //     the error toast)
 //
@@ -26,28 +33,19 @@ struct TranslationChip: View {
 
     var body: some View {
         Menu {
-            // Toggle entry sits at the top so the user can flip the feature
-            // without picking a language first.
-            Button {
-                state.setTranslationEnabled(!state.translationEnabled)
-            } label: {
-                if state.translationEnabled {
-                    Label(ExtL10n.string("keyboard.translation.disable"), systemImage: "checkmark")
-                } else {
-                    Text(ExtL10n.string("keyboard.translation.enable"))
-                }
-            }
-            if state.translationEnabled {
-                Divider()
-                ForEach(TranslationLanguageCatalog.all) { language in
-                    Button {
-                        state.setTranslationTargetLocaleId(language.id)
-                    } label: {
-                        if language.id == state.translationTargetLocaleId {
-                            Label(language.nativeName, systemImage: "checkmark")
-                        } else {
-                            Text(language.nativeName)
-                        }
+            // v0.2.1 follow-up: pure picker over the full catalog,
+            // including `offLocaleId` at the top so "turn off" is one
+            // tap from any enabled state. Picking a row writes
+            // `translationTargetLocaleId`; `translationEnabled` is
+            // derived from it.
+            ForEach(TranslationLanguageCatalog.all) { language in
+                Button {
+                    state.setTranslationTargetLocaleId(language.id)
+                } label: {
+                    if language.id == currentSelectionId {
+                        Label(displayLabel(for: language), systemImage: "checkmark")
+                    } else {
+                        Text(displayLabel(for: language))
                     }
                 }
             }
@@ -78,6 +76,19 @@ struct TranslationChip: View {
         .frame(minHeight: 26)
         .background(background(enabled: enabled, isLocal: isLocal), in: Capsule())
         .overlay(Capsule().stroke(stroke(enabled: enabled, isLocal: isLocal), lineWidth: 0.5))
+    }
+
+    /// Active selection id — the chip derives "on" from a non-off
+    /// locale id, so reading `translationTargetLocaleId` is enough.
+    private var currentSelectionId: String {
+        state.translationTargetLocaleId
+    }
+
+    private func displayLabel(for language: TranslationLanguage) -> String {
+        if language.id == TranslationLanguageCatalog.offLocaleId {
+            return ExtL10n.string("keyboard.translation.off")
+        }
+        return language.nativeName
     }
 
     private func chipLabel(target: TranslationLanguage, enabled: Bool, isLocal: Bool) -> String {

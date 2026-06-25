@@ -734,6 +734,18 @@ private struct APISetupPage: View {
                         .padding(.horizontal, Spacing.lg)
                     APISettingsCard(config: config)
                         .padding(.horizontal, Spacing.lg)
+                    // v0.2.1 follow-up: translation row lives on the
+                    // onboarding engine page so first-time users can
+                    // pick a target language before they ever see the
+                    // keyboard. Wrapped in the section's surface card
+                    // so it sits flush with the engine / provider cards
+                    // above; visibility gated by `isTranslationRowVisible`
+                    // so the local engine only shows it when cloud
+                    // polish is also enabled.
+                    if config.isTranslationRowVisible {
+                        translationSection
+                            .padding(.horizontal, Spacing.lg)
+                    }
                 } else {
                     // v0.2.0: local engine is iOS `SpeechAnalyzer` only.
                     // Surface the cloud-polish toggle and a one-line
@@ -755,22 +767,25 @@ private struct APISetupPage: View {
                             )
                     }
                     .padding(.horizontal, Spacing.lg)
+                    // v0.2.1 follow-up: same conditional for the local
+                    // branch — the row only renders when the engine
+                    // can actually run the cloud translate-and-polish
+                    // step (i.e. cloud polish is opted in).
+                    if config.isTranslationRowVisible {
+                        translationSection
+                            .padding(.horizontal, Spacing.lg)
+                    }
                 }
-
-                // v0.2.1: translation row lives on the onboarding engine
-                // page so first-time users can pick a target language
-                // before they ever see the keyboard. We render the same
-                // `TranslationPickerRow` used in the language tab — same
-                // persisted bindings, same "需云端" hint when local is
-                // active — wrapped in the section's surface card so it
-                // sits flush with the engine / provider cards above.
-                translationSection
-                    .padding(.horizontal, Spacing.lg)
             }
             .padding(.bottom, Spacing.xxxl)
         }
     }
 
+    /// v0.2.1 follow-up: extracted so both engine branches can render
+    /// the same surface card + picker. `TranslationPickerRow` itself
+    /// reads `ProviderConfig.translationTargetLocaleId` directly, so
+    /// picking a locale in onboarding flows through to the keyboard
+    /// extension on the next `load()` cycle.
     private var translationSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
             Text("settings.translation.title")
@@ -779,7 +794,7 @@ private struct APISetupPage: View {
                 .textCase(.uppercase)
                 .frame(maxWidth: .infinity, alignment: .leading)
             VStack(spacing: 0) {
-                TranslationPickerRow(config: config)
+                TranslationPickerRow(config: config, isVisible: true)
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             .overlay(
