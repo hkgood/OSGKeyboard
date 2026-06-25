@@ -29,10 +29,6 @@ public actor PolishingService {
         /// telling them to fill it in; we deliver the raw transcript
         /// so no data is lost.
         case missingAPIKey
-        /// v0.2.1: the user requested translation but the active engine
-        /// can't honour it (e.g. `engineMode == "local"`). The keyboard
-        /// surfaces a short hint and falls back to the plain polish path.
-        case translationNotAvailable
     }
 
     /// v0.2.1: what the LLM should do with the raw transcript. The
@@ -65,19 +61,18 @@ public actor PolishingService {
         self.timeout = timeout ?? (LLMClientFactory.defaultRequestTimeout + 1)
     }
 
-    public func polish(_ raw: String, mode: PolishMode = .polish) async throws -> String {
+    /// v0.2.1 follow-up: `providerIdOverride` lets callers pin the
+    /// remote polish step to a specific provider (the local engine
+    /// pins to DeepSeek regardless of the user's chosen cloud
+    /// provider). Pass `nil` to honor `store.providerId` as before.
+    public func polish(
+        _ raw: String,
+        mode: PolishMode = .polish,
+        systemPrompt: String? = nil,
+        providerIdOverride: String? = nil
+    ) async throws -> String {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw PolishError.noTranscript }
-
-        // Translation requires the cloud engine (and therefore an API
-        // key + base URL). When the user toggles translation on while
-        // the local engine is active we refuse the mode so the keyboard
-        // can fall back to a plain polish (or raw ASR) and surface a
-        // short hint. This keeps the local engine's "ASR only" promise
-        // intact.
-        if case .translate = mode, store.engineMode != "cloud" {
-            throw PolishError.translationNotAvailable
-        }
 
         // Local engine: ASR-only unless the user opted into cloud
         // polish via `localModeCloudPolishEnabled`. The cloud polish
@@ -89,15 +84,44 @@ public actor PolishingService {
             guard !store.apiKey.isEmpty else {
                 throw PolishError.missingAPIKey
             }
-            return try await polishRemote(trimmed, mode: mode)
+            return try await polishRemote(
+                trimmed,
+                mode: mode,
+                systemPrompt: systemPrompt,
+                providerIdOverride: providerIdOverride
+            )
         }
 
-        return try await polishRemote(trimmed, mode: mode)
+        return try await polishRemote(
+            trimmed,
+            mode: mode,
+            systemPrompt: systemPrompt,
+            providerIdOverride: providerIdOverride
+        )
     }
 
-    private func polishRemote(_ trimmed: String, mode: PolishMode) async throws -> String {
-        let client = injectedClient ?? store.makeClient()
-        let prompt = resolvedSystemPrompt(for: mode)
+    private func polishRemote(
+        _ trimmed: String,
+        mode: PolishMode,
+        systemPrompt: String? = nil,
+        providerIdOverride: String? = nil
+    ) async throws -> String {
+        // v0.2.1 follow-up: when the caller pins a provider id (the
+        // local engine pins DeepSeek) we still want to honor the
+        // injected test client, but we have to re-derive the
+        // preset/baseURL/model triplet from the *override* so the
+        // injected client gets the right values when it's nil.
+        let effectiveProviderId = providerIdOverride ?? store.providerId
+        let client: LLMClient
+        if let injectedClient {
+            client = injectedClient
+        } else {
+            let preset = LLMProvider.provider(id: effectiveProviderId)
+            let baseURL = store.baseURL.isEmpty ? preset.defaultBaseURL : store.baseURL
+            let model = store.model.isEmpty ? preset.defaultModel : preset.defaultModel
+            client = OpenAICompatibleClient(baseURL: baseURL, apiKey: store.apiKey, model: model)
+        }
+        let prompt = resolvedSystemPrompt(for: mode, override: systemPrompt)
         let budget = effectiveTimeout(for: trimmed)
 
         return try await withThrowingTaskGroup(of: String.self) { group in
@@ -118,14 +142,19 @@ public actor PolishingService {
     /// Translation mode swaps in the parameterized translate-and-polish
     /// prompt (see `TranslationPrompt.make`); polish mode keeps the
     /// existing `store.systemPrompt` behaviour so every other call site
-    /// is byte-identical to before.
-    private func resolvedSystemPrompt(for mode: PolishMode) -> String {
+    /// is byte-identical to before. An explicit `override` wins over
+    /// both paths so callers (and tests) can pin a specific prompt.
+    private func resolvedSystemPrompt(for mode: PolishMode, override: String? = nil) -> String {
+        if let override, !override.isEmpty {
+            return override
+        }
         switch mode {
         case .polish:
             return store.systemPrompt
         case .translate(let targetLocaleId):
             let target = TranslationLanguageCatalog.resolve(targetLocaleId)
-            return TranslationPrompt.make(target: target, providerId: store.providerId)
+            let pid = store.providerId
+            return TranslationPrompt.make(target: target, providerId: pid)
         }
     }
 

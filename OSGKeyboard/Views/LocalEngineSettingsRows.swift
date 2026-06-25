@@ -58,20 +58,28 @@ struct LocalModelsGroup: View {
     /// key yet), but the polish call short-circuits with an Alert if
     /// the Keychain is empty when it fires.
     ///
-    /// v0.2.1: dropped the long descriptive subtitle — it explained
-    /// things the user could read about elsewhere in Settings
-    /// (provider / API key section) and made the row visually heavy.
-    /// Title + switch is enough; details live in `CloudPolishDisclosureBanner`.
+    /// v0.2.1 follow-up: added a one-line caption under the toggle
+    /// that names the default cloud vendor (DeepSeek) so the user
+    /// knows where the transcript is going when they flip the switch.
+    /// The toggle row is now a two-line layout — title + caption —
+    /// so we drop the explicit `singleLineMinHeight` here and let
+    /// `SettingsListMetrics` provide enough vertical room.
     private var cloudPolishRow: some View {
-        Toggle(isOn: $config.localModeCloudPolishEnabled) {
-            Text("settings.localModels.cloudPolish.title")
-                .font(TypeStyle.body)
-                .foregroundStyle(palette.textPrimary)
+        VStack(alignment: .leading, spacing: 4) {
+            Toggle(isOn: $config.localModeCloudPolishEnabled) {
+                Text("settings.localModels.cloudPolish.title")
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
+            }
+            .toggleStyle(.switch)
+            .tint(palette.accent)
+            Text("settings.localModels.cloudPolish.caption")
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .toggleStyle(.switch)
-        .tint(palette.accent)
         .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+        .padding(.vertical, Spacing.xs)
     }
 
     // MARK: Helpers

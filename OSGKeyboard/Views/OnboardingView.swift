@@ -737,11 +737,11 @@ private struct APISetupPage: View {
                     // v0.2.1 follow-up: translation row lives on the
                     // onboarding engine page so first-time users can
                     // pick a target language before they ever see the
-                    // keyboard. Wrapped in the section's surface card
-                    // so it sits flush with the engine / provider cards
-                    // above; visibility gated by `isTranslationRowVisible`
-                    // so the local engine only shows it when cloud
-                    // polish is also enabled.
+                    // keyboard. v0.2.1 final review: both engines now
+                    // show the row (the local engine routes the polish
+                    // step through DeepSeek, so the constraint is gone).
+                    // Wrapped in the same surface card chrome as the
+                    // APISettingsCard above for visual symmetry.
                     if config.isTranslationRowVisible {
                         translationSection
                             .padding(.horizontal, Spacing.lg)
@@ -767,10 +767,9 @@ private struct APISetupPage: View {
                             )
                     }
                     .padding(.horizontal, Spacing.lg)
-                    // v0.2.1 follow-up: same conditional for the local
-                    // branch — the row only renders when the engine
-                    // can actually run the cloud translate-and-polish
-                    // step (i.e. cloud polish is opted in).
+                    // v0.2.1 final review: same surface card chrome as
+                    // the cloud branch — the row now renders for both
+                    // engines.
                     if config.isTranslationRowVisible {
                         translationSection
                             .padding(.horizontal, Spacing.lg)
@@ -786,9 +785,14 @@ private struct APISetupPage: View {
     /// reads `ProviderConfig.translationTargetLocaleId` directly, so
     /// picking a locale in onboarding flows through to the keyboard
     /// extension on the next `load()` cycle.
+    ///
+    /// v0.2.1 final review: the section header now reads
+    /// `settings.translation.afterPolish` (renamed alongside the row
+    /// title in `TranslationPickerRow`) so the section and row read
+    /// as one cohesive group.
     private var translationSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            Text("settings.translation.title")
+            Text("settings.translation.afterPolish")
                 .font(TypeStyle.caption2)
                 .foregroundStyle(palette.textSecondary)
                 .textCase(.uppercase)

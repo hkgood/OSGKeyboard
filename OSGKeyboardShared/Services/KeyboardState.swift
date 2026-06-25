@@ -98,12 +98,14 @@ public final class KeyboardState: ObservableObject {
     /// Defaults to `offLocaleId` so the keyboard boots in the "off"
     /// state on first install.
     @Published public var translationTargetLocaleId: String = TranslationLanguageCatalog.offLocaleId
-    /// v0.2.1: effective predicate — translation is honoured only on
-    /// the cloud engine. The keyboard's chip / picker read this so the
-    /// UI can show a "需要云端" hint when the toggle is on while the
-    /// local engine is active.
+    /// v0.2.1: effective predicate — mirrors `ProviderConfig`.
+    /// v0.2.1 follow-up: no longer gates on `engineMode == "cloud"`
+    /// because the local engine's translate-and-polish step now runs
+    /// (routed through DeepSeek). Row visibility (`isTranslationRowVisible`
+    /// on `ProviderConfig`) keeps the picker honest, so the keyboard
+    /// can rely on `translationEnabled` alone here.
     public var isTranslationEffective: Bool {
-        translationEnabled && engineMode == "cloud"
+        translationEnabled
     }
 
     /// Convenience shorthand used by the pipeline and views.
