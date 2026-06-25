@@ -39,6 +39,12 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         // in the local engine. Default `false` — keeps the local engine
         // truly local unless the user explicitly opts in.
         static let localModeCloudPolishEnabled = "config.localModeCloudPolishEnabled"
+        // v0.2.1: optional translation step after ASR. When enabled, the
+        // post-ASR transcript is routed through the same LLM with a
+        // translate-and-polish prompt targeting `translationTargetLocaleId`.
+        // Mutually exclusive with the local-only promise — see `TranslationPolicy`.
+        static let translationEnabled = "config.translationEnabled"
+        static let translationTargetLocaleId = "config.translationTargetLocaleId"
     }
 
     @Published public var providerId: String {
@@ -114,6 +120,29 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     /// Host-app UI language. Also mirrored to the App Group for the keyboard extension.
     @Published public var uiLanguage: AppUILanguage {
         didSet { defaults.set(uiLanguage.rawValue, forKey: Key.uiLanguage) }
+    }
+    /// v0.2.1: whether to translate the transcript into
+    /// `translationTargetLocaleId` before insertion. Persisted in the App
+    /// Group so the keyboard extension can honour it (and so the chip on
+    /// the keyboard reflects the user's choice without a host-app round-
+    /// trip). Default `false` — translation is opt-in.
+    @Published public var translationEnabled: Bool {
+        didSet { defaults.set(translationEnabled, forKey: Key.translationEnabled) }
+    }
+    /// v0.2.1: BCP-47-ish target language id (e.g. `en`, `ja`, `ko`) the
+    /// translate-and-polish prompt should produce. Default `"en"`.
+    /// Persisted in the App Group for the same reason as `translationEnabled`.
+    @Published public var translationTargetLocaleId: String {
+        didSet { defaults.set(translationTargetLocaleId, forKey: Key.translationTargetLocaleId) }
+    }
+
+    /// v0.2.1: hard gate that decides whether the translation feature can
+    /// actually run. The keyboard honors `translationEnabled` only when
+    /// `engineMode == "cloud"` — the local engine is contractually ASR-
+    /// only, so translation is silently ignored (and the UI shows a hint)
+    /// even when the toggle is on.
+    public var isTranslationEffective: Bool {
+        translationEnabled && engineMode == "cloud"
     }
 
     public var isConfigured: Bool {
@@ -193,6 +222,15 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         self.uiLanguage = AppUILanguage.fromStored(
             resolvedDefaults.string(forKey: Key.uiLanguage)
         )
+        // v0.2.1: translation toggle + target locale. Both default in a
+        // backwards-compatible way so existing installs keep their old
+        // behaviour (`false`/English) without prompting.
+        if resolvedDefaults.object(forKey: Key.translationEnabled) == nil {
+            self.translationEnabled = false
+        } else {
+            self.translationEnabled = resolvedDefaults.bool(forKey: Key.translationEnabled)
+        }
+        self.translationTargetLocaleId = resolvedDefaults.string(forKey: Key.translationTargetLocaleId) ?? "en"
 
         // Cloud no longer exposes off/transcribe; migrate legacy values.
         if self.engineMode == "cloud", self.modeId != "polish" {

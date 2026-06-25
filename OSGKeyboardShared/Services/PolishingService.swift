@@ -29,6 +29,19 @@ public actor PolishingService {
         /// telling them to fill it in; we deliver the raw transcript
         /// so no data is lost.
         case missingAPIKey
+        /// v0.2.1: the user requested translation but the active engine
+        /// can't honour it (e.g. `engineMode == "local"`). The keyboard
+        /// surfaces a short hint and falls back to the plain polish path.
+        case translationNotAvailable
+    }
+
+    /// v0.2.1: what the LLM should do with the raw transcript. The
+    /// polish path stays the default so every existing call site keeps
+    /// its current behaviour — translation is opt-in via the `translate`
+    /// case and gets a target-locale parameter baked into the prompt.
+    public enum PolishMode: Equatable, Sendable {
+        case polish
+        case translate(targetLocaleId: String)
     }
 
     private let store: AppGroupStore
@@ -52,9 +65,19 @@ public actor PolishingService {
         self.timeout = timeout ?? (LLMClientFactory.defaultRequestTimeout + 1)
     }
 
-    public func polish(_ raw: String) async throws -> String {
+    public func polish(_ raw: String, mode: PolishMode = .polish) async throws -> String {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw PolishError.noTranscript }
+
+        // Translation requires the cloud engine (and therefore an API
+        // key + base URL). When the user toggles translation on while
+        // the local engine is active we refuse the mode so the keyboard
+        // can fall back to a plain polish (or raw ASR) and surface a
+        // short hint. This keeps the local engine's "ASR only" promise
+        // intact.
+        if case .translate = mode, store.engineMode != "cloud" {
+            throw PolishError.translationNotAvailable
+        }
 
         // Local engine: ASR-only unless the user opted into cloud
         // polish via `localModeCloudPolishEnabled`. The cloud polish
@@ -66,15 +89,15 @@ public actor PolishingService {
             guard !store.apiKey.isEmpty else {
                 throw PolishError.missingAPIKey
             }
-            return try await polishRemote(trimmed)
+            return try await polishRemote(trimmed, mode: mode)
         }
 
-        return try await polishRemote(trimmed)
+        return try await polishRemote(trimmed, mode: mode)
     }
 
-    private func polishRemote(_ trimmed: String) async throws -> String {
+    private func polishRemote(_ trimmed: String, mode: PolishMode) async throws -> String {
         let client = injectedClient ?? store.makeClient()
-        let prompt = store.systemPrompt
+        let prompt = resolvedSystemPrompt(for: mode)
         let budget = effectiveTimeout(for: trimmed)
 
         return try await withThrowingTaskGroup(of: String.self) { group in
@@ -88,6 +111,21 @@ public actor PolishingService {
             let result = try await group.next()!
             group.cancelAll()
             return result
+        }
+    }
+
+    /// v0.2.1: pick the right system prompt for the requested mode.
+    /// Translation mode swaps in the parameterized translate-and-polish
+    /// prompt (see `TranslationPrompt.make`); polish mode keeps the
+    /// existing `store.systemPrompt` behaviour so every other call site
+    /// is byte-identical to before.
+    private func resolvedSystemPrompt(for mode: PolishMode) -> String {
+        switch mode {
+        case .polish:
+            return store.systemPrompt
+        case .translate(let targetLocaleId):
+            let target = TranslationLanguageCatalog.resolve(targetLocaleId)
+            return TranslationPrompt.make(target: target, providerId: store.providerId)
         }
     }
 

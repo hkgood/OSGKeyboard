@@ -139,6 +139,13 @@ struct SettingsView: View {
                         set: { config.localeId = $0 }
                     )
                 )
+                // v0.2.1: translation toggle + target-language picker.
+                // Sits at the bottom of the language section so the user
+                // finds it next to the ASR locale it complements. Reuses
+                // `config.translationEnabled` / `config.translationTargetLocaleId`
+                // bindings — no new state, no new persistence path.
+                Divider().background(palette.divider)
+                TranslationPickerRow(config: config)
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             .overlay(

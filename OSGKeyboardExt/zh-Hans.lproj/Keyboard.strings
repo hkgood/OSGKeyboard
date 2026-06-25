@@ -177,6 +177,15 @@
 "locale.chip.ja-JP" = "日";
 "locale.chip.ko-KR" = "韩";
 
+/* 翻译 chip (v0.2.1) */
+"keyboard.translation.off" = "翻译";
+"keyboard.translation.enable" = "开启翻译";
+"keyboard.translation.disable" = "关闭翻译";
+"keyboard.translation.needsCloudShort" = "需云端";
+"keyboard.translation.a11y" = "翻译";
+"keyboard.translation.a11yHint" = "切换翻译开关或修改目标语言。";
+"keyboard.error.translation.needsCloud" = "翻译需要云端引擎，请到设置切换为云端模式。";
+
 /* Mode chip labels */
 "mode.off" = "关闭";
 "mode.transcribe" = "转写";

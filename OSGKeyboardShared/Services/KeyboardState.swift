@@ -87,6 +87,20 @@ public final class KeyboardState: ObservableObject {
     /// CoreML local engine. Always `false` now — there are no weights
     /// for the host app to preload.
     @Published public var localModelsLoaded: Bool = false
+    /// v0.2.1: translation toggle mirrored from `ProviderConfig`. The
+    /// pipeline asks `isTranslationEffective` before honouring it —
+    /// the local engine ignores translation regardless of this flag.
+    @Published public var translationEnabled: Bool = false
+    /// v0.2.1: target locale id the translate-and-polish prompt should
+    /// produce (e.g. `"en"`, `"ja"`). Mirrored from `ProviderConfig`.
+    @Published public var translationTargetLocaleId: String = TranslationLanguageCatalog.defaultLocaleId
+    /// v0.2.1: effective predicate — translation is honoured only on
+    /// the cloud engine. The keyboard's chip / picker read this so the
+    /// UI can show a "需要云端" hint when the toggle is on while the
+    /// local engine is active.
+    public var isTranslationEffective: Bool {
+        translationEnabled && engineMode == "cloud"
+    }
 
     /// Convenience shorthand used by the pipeline and views.
     public var isLocalEngine: Bool { engineMode == "local" }
@@ -101,6 +115,12 @@ public final class KeyboardState: ObservableObject {
     public var setLocale:           (String) -> Void = { _ in }
     public var setEngineMode:        (String) -> Void = { _ in }
     public var setLocalASRBackend:  (LocalASRBackend) -> Void = { _ in }
+    /// v0.2.1: persist translation toggle. Wired in
+    /// `KeyboardViewController.installStateActions`.
+    public var setTranslationEnabled: (Bool) -> Void = { _ in }
+    /// v0.2.1: persist translation target locale id. Same wiring as
+    /// `setTranslationEnabled`.
+    public var setTranslationTargetLocaleId: (String) -> Void = { _ in }
     public var insertNewline:       () -> Void = {}
     public var insertSpace:         () -> Void = {}
     public var deleteBackward:      () -> Void = {}

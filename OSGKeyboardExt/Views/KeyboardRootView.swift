@@ -76,6 +76,11 @@ public struct KeyboardRootView: View {
             LocaleChip(localeId: state.localeId) { newId in
                 state.setLocale(newId)
             }
+            // v0.2.1: translation chip — sits next to the locale picker
+            // and doubles as both the on/off switch and the target-
+            // language picker (Menu pattern matches LocaleChip so the
+            // top bar stays visually consistent).
+            TranslationChip(state: state)
             Spacer(minLength: 0)
             StatusBadge(phase: state.phase, onDeviceSupported: state.onDeviceSupported)
             Button(action: state.openSettings) {

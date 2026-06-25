@@ -39,6 +39,9 @@ public struct AppGroupStore: @unchecked Sendable {
         static let uiLanguage       = "config.uiLanguage"
         // v0.2.0: opt-in cloud polish step after local-mode ASR.
         static let localModeCloudPolishEnabled = "config.localModeCloudPolishEnabled"
+        // v0.2.1: translation toggle + target locale id (e.g. "en").
+        static let translationEnabled = "config.translationEnabled"
+        static let translationTargetLocaleId = "config.translationTargetLocaleId"
     }
 
     // MARK: - Reads
@@ -104,6 +107,22 @@ public struct AppGroupStore: @unchecked Sendable {
         AppUILanguage.fromStored(defaults.string(forKey: Key.uiLanguage))
     }
 
+    /// v0.2.1: whether the keyboard should translate the post-ASR transcript
+    /// before inserting it. Honored only when `engineMode == "cloud"` — see
+    /// `ProviderConfig.isTranslationEffective` for the effective predicate.
+    public var translationEnabled: Bool {
+        guard defaults.object(forKey: Key.translationEnabled) != nil else {
+            return false
+        }
+        return defaults.bool(forKey: Key.translationEnabled)
+    }
+
+    /// v0.2.1: target locale id the translate-and-polish prompt should
+    /// produce (e.g. `"en"`). Defaults to `"en"` when nothing is stored.
+    public var translationTargetLocaleId: String {
+        defaults.string(forKey: Key.translationTargetLocaleId) ?? "en"
+    }
+
     // MARK: - Writes
 
     public func setModeId(_ id: String) {
@@ -124,6 +143,19 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setUILanguage(_ language: AppUILanguage) {
         defaults.set(language.rawValue, forKey: Key.uiLanguage)
+    }
+
+    /// v0.2.1: persist translation toggle. The keyboard extension reads
+    /// this on every `load()` and `refreshRuntimeFlags()` so the chip
+    /// reflects the latest value without a host-app round-trip.
+    public func setTranslationEnabled(_ enabled: Bool) {
+        defaults.set(enabled, forKey: Key.translationEnabled)
+    }
+
+    /// v0.2.1: persist target locale id (e.g. `"en"`, `"ja"`). Same
+    /// read cadence as `setTranslationEnabled`.
+    public func setTranslationTargetLocaleId(_ id: String) {
+        defaults.set(id, forKey: Key.translationTargetLocaleId)
     }
 
     // MARK: - Client
