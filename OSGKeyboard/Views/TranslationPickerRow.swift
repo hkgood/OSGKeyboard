@@ -1,22 +1,23 @@
 // TranslationPickerRow.swift
 // OSGKeyboard · Main App
 //
-// List row that hosts the translation toggle + target-language picker.
-// Lives at the bottom of the language tab in Settings (see
-// `SettingsView.languageAndModelsSection`) so it sits right next to
-// the existing ASR locale picker — same picker family, same row
-// metrics.
+// Single-row "翻译" picker — replaces the previous two-row toggle +
+// target-locale dropdown. Lets the user pick "不翻译" (off, the
+// default) or one of the 10 target languages, all from a single
+// `Menu`.
 //
-// Layout:
-//   • First row  → switch (label on the left, switch on the right)
-//   • When on    → a second row with a Menu picker for the target
-//     language. Disabled when the local engine is active so the user
-//     immediately sees why the picker is greyed out (instead of picking
-//     a target that the pipeline silently ignores).
+// Mapping to persisted state:
+//   • "不翻译"            → translationEnabled = false
+//   • any specific locale → translationEnabled = true, translationTargetLocaleId = <id>
 //
-// Reuses the host app's `ProviderConfig` `translationEnabled` /
-// `translationTargetLocaleId` bindings — no new state, no new
-// persistence path.
+// The local engine constraint ("translation is cloud-only") is handled
+// in two places that read this row:
+//   • The picker greys out specific locales (and prepends a "需云端"
+//     hint) when `config.isLocalEngine` — the user can still pick
+//     something but it won't fire end-to-end until they switch engines.
+//   • The pipeline (`PolishingService`) rejects `.translate` on local
+//     engine with `translationNotAvailable`, which `KeyboardViewController`
+//     surfaces as a 2.4s toast. Belt + suspenders.
 
 import SwiftUI
 import OSGKeyboardShared
@@ -26,90 +27,87 @@ struct TranslationPickerRow: View {
     @ObservedObject var config: ProviderConfig
 
     var body: some View {
-        VStack(spacing: 0) {
-            toggleRow
-            if config.translationEnabled {
-                Divider().background(palette.divider)
-                targetRow
-            }
-        }
-    }
-
-    private var toggleRow: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("settings.translation.title")
-                    .font(TypeStyle.body)
-                    .foregroundStyle(palette.textPrimary)
-                Text(subtitleKey)
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.textSecondary)
-            }
-            Spacer()
-            Toggle(
-                "",
-                isOn: Binding(
-                    get: { config.translationEnabled },
-                    set: { config.translationEnabled = $0 }
-                )
-            )
-            .labelsHidden()
-            .tint(palette.accent)
-        }
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
-    }
-
-    /// Subtitle explains why the toggle is functionally inert when the
-    /// local engine is on. We still let the user flip the toggle in
-    /// that case so their preference is saved — the moment they switch
-    /// back to cloud, translation just works.
-    private var subtitleKey: LocalizedStringKey {
-        config.isLocalEngine
-            ? "settings.translation.subtitle.needsCloud"
-            : "settings.translation.subtitle"
-    }
-
-    private var targetRow: some View {
-        HStack {
-            Text("settings.translation.target")
+            Text("settings.translation.title")
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textPrimary)
             Spacer()
             Menu {
                 ForEach(TranslationLanguageCatalog.all) { language in
                     Button {
-                        config.translationTargetLocaleId = language.id
+                        apply(language)
                     } label: {
-                        if language.id == config.translationTargetLocaleId {
-                            Label(language.nativeName, systemImage: "checkmark")
+                        if currentSelectionId == language.id {
+                            Label(displayLabel(for: language), systemImage: "checkmark")
                         } else {
-                            Text(language.nativeName)
+                            Text(displayLabel(for: language))
                         }
                     }
                 }
             } label: {
                 HStack(spacing: 6) {
-                    Text(currentTargetName)
+                    Text(currentLabel)
                         .font(TypeStyle.body)
                         .foregroundStyle(pickerForeground)
+                    if config.isLocalEngine && !currentIsOff {
+                        // Inline hint so the user knows the picker
+                        // selection is being held but won't fire on the
+                        // local engine.
+                        Text("settings.translation.hint.needsCloud")
+                            .font(TypeStyle.caption2)
+                            .foregroundStyle(palette.warning)
+                    }
                     Image(systemName: "chevron.up.chevron.down")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(palette.textTertiary)
                 }
             }
-            .disabled(config.isLocalEngine)
-            .opacity(config.isLocalEngine ? 0.5 : 1.0)
         }
         .padding(.horizontal, Spacing.md)
         .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
     }
 
-    private var currentTargetName: String {
-        TranslationLanguageCatalog.resolve(config.translationTargetLocaleId).nativeName
+    // MARK: - Selection plumbing
+
+    /// Currently selected id derived from `translationEnabled`. We
+    /// route everything through the `translationEnabled` boolean so the
+    /// picker stays in lock-step with the rest of the system (chip,
+    /// pipeline, `isTranslationEffective`).
+    private var currentSelectionId: String {
+        config.translationEnabled
+            ? config.translationTargetLocaleId
+            : TranslationLanguageCatalog.offLocaleId
+    }
+
+    private var currentLabel: String {
+        displayLabel(for: TranslationLanguageCatalog.resolve(currentSelectionId))
+    }
+
+    private var currentIsOff: Bool {
+        TranslationLanguageCatalog.isOff(currentSelectionId)
+    }
+
+    private func displayLabel(for language: TranslationLanguage) -> String {
+        if language.id == TranslationLanguageCatalog.offLocaleId {
+            return AppL10n.string("settings.translation.off")
+        }
+        return language.nativeName
     }
 
     private var pickerForeground: Color {
-        config.isLocalEngine ? palette.textTertiary : palette.textSecondary
+        currentIsOff ? palette.textSecondary : palette.textPrimary
+    }
+
+    /// Translates a picker choice into the underlying
+    /// `translationEnabled` + `translationTargetLocaleId` pair. Picking
+    /// "不翻译" clears the toggle; any locale flips it on and stores
+    /// the id.
+    private func apply(_ language: TranslationLanguage) {
+        if language.id == TranslationLanguageCatalog.offLocaleId {
+            config.translationEnabled = false
+            return
+        }
+        config.translationEnabled = true
+        config.translationTargetLocaleId = language.id
     }
 }

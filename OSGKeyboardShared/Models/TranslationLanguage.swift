@@ -28,12 +28,22 @@ public struct TranslationLanguage: Identifiable, Hashable, Sendable {
 }
 
 public enum TranslationLanguageCatalog {
-    /// Default target language id used on fresh installs.
+    /// Sentinel id for "don't translate" — the default selection in the
+    /// picker. Picked over an `Optional<TranslationLanguage>` so the
+    /// single-row `Picker` binding stays a plain `String` (and the same
+    /// code path also works for the `TranslationChip` Menu).
+    public static let offLocaleId = "off"
+    /// Default target language id used on fresh installs when translation
+    /// is enabled. The picker still defaults to `offLocaleId` — this is
+    /// only the language we'd fall back to if a stale "on" state is
+    /// recovered without a remembered target.
     public static let defaultLocaleId = "en"
 
     /// Curated set. Order matters — the picker / chip render top-to-
-    /// bottom, and `defaultLocaleId` is the default selection.
+    /// bottom, with `offLocaleId` ("不翻译") at the very top so the
+    /// "turn off" action is one tap away from any enabled state.
     public static let all: [TranslationLanguage] = [
+        TranslationLanguage(id: offLocaleId, promptLanguageName: "", nativeName: ""),
         TranslationLanguage(id: "en",    promptLanguageName: "English",  nativeName: "English"),
         TranslationLanguage(id: "zh-Hans", promptLanguageName: "Simplified Chinese", nativeName: "简体中文"),
         TranslationLanguage(id: "zh-Hant", promptLanguageName: "Traditional Chinese", nativeName: "繁體中文"),
@@ -46,14 +56,23 @@ public enum TranslationLanguageCatalog {
         TranslationLanguage(id: "pt",    promptLanguageName: "Portuguese", nativeName: "Português"),
     ]
 
+    /// True when the given id is the "off" sentinel. Used by the picker
+    /// to flip `translationEnabled` and by the pipeline to skip the
+    /// translate prompt.
+    public static func isOff(_ id: String) -> Bool {
+        id == offLocaleId
+    }
+
     /// Resolve a stored locale id to its catalog entry. Falls back to
-    /// `defaultLocaleId` when the id is missing or unknown — matches the
-    /// pattern used elsewhere (e.g. `ASRLocaleLabels`) so the keyboard
-    /// never crashes on a stale persisted value.
+    /// `offLocaleId` (the picker default) when the id is missing or
+    /// unknown — matches the pattern used elsewhere (e.g.
+    /// `ASRLocaleLabels`) so the keyboard never crashes on a stale
+    /// persisted value, and the picker lands on the safe "off" state
+    /// instead of an arbitrary language.
     public static func resolve(_ id: String) -> TranslationLanguage {
         if let match = all.first(where: { $0.id == id }) {
             return match
         }
-        return all.first { $0.id == defaultLocaleId } ?? all[0]
+        return all.first { $0.id == offLocaleId } ?? all[0]
     }
 }

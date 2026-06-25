@@ -57,25 +57,21 @@ struct LocalModelsGroup: View {
     /// itself is always live (the user can flip it without having a
     /// key yet), but the polish call short-circuits with an Alert if
     /// the Keychain is empty when it fires.
+    ///
+    /// v0.2.1: dropped the long descriptive subtitle — it explained
+    /// things the user could read about elsewhere in Settings
+    /// (provider / API key section) and made the row visually heavy.
+    /// Title + switch is enough; details live in `CloudPolishDisclosureBanner`.
     private var cloudPolishRow: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Toggle(isOn: $config.localModeCloudPolishEnabled) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("settings.localModels.cloudPolish.title")
-                        .font(TypeStyle.body)
-                        .foregroundStyle(palette.textPrimary)
-                    Text("settings.localModels.cloudPolish.subtitle")
-                        .font(TypeStyle.caption2)
-                        .foregroundStyle(palette.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .toggleStyle(.switch)
-            .tint(palette.accent)
+        Toggle(isOn: $config.localModeCloudPolishEnabled) {
+            Text("settings.localModels.cloudPolish.title")
+                .font(TypeStyle.body)
+                .foregroundStyle(palette.textPrimary)
         }
+        .toggleStyle(.switch)
+        .tint(palette.accent)
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
-        .frame(minHeight: SettingsListMetrics.doubleLineMinHeight)
+        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
     }
 
     // MARK: Helpers
