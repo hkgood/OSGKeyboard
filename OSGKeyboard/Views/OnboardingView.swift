@@ -742,6 +742,11 @@ private struct APISetupPage: View {
                     // step through DeepSeek, so the constraint is gone).
                     // Wrapped in the same surface card chrome as the
                     // APISettingsCard above for visual symmetry.
+                    //
+                    // v0.2.1 final review (topbar cleanup pass): the
+                    // surface card chrome is owned by `translationSection`
+                    // itself, so both branches get it for free — no
+                    // per-branch duplication.
                     if config.isTranslationRowVisible {
                         translationSection
                             .padding(.horizontal, Spacing.lg)

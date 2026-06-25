@@ -14,6 +14,12 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
     public let apiKeyURL: URL?
     /// Optional short blurb shown under the provider name in the picker.
     public let blurb: String?
+    /// Whether this preset should appear in user-facing provider pickers
+    /// (settings / onboarding). Defaults to `true` so the existing
+    /// `presets` array keeps its public surface area; future passes can
+    /// mark e.g. a DeepSeek key-pre-fill preset as `false` to hide it
+    /// from the picker without touching call sites.
+    public let isUserSelectable: Bool
 
     public init(
         id: String,
@@ -21,7 +27,8 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
         defaultBaseURL: String,
         defaultModel: String,
         apiKeyURL: URL? = nil,
-        blurb: String? = nil
+        blurb: String? = nil,
+        isUserSelectable: Bool = true
     ) {
         self.id = id
         self.name = name
@@ -29,6 +36,7 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
         self.defaultModel = defaultModel
         self.apiKeyURL = apiKeyURL
         self.blurb = blurb
+        self.isUserSelectable = isUserSelectable
     }
 
     public static let presets: [LLMProvider] = [
