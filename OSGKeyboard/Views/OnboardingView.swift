@@ -756,8 +756,36 @@ private struct APISetupPage: View {
                     }
                     .padding(.horizontal, Spacing.lg)
                 }
+
+                // v0.2.1: translation row lives on the onboarding engine
+                // page so first-time users can pick a target language
+                // before they ever see the keyboard. We render the same
+                // `TranslationPickerRow` used in the language tab — same
+                // persisted bindings, same "需云端" hint when local is
+                // active — wrapped in the section's surface card so it
+                // sits flush with the engine / provider cards above.
+                translationSection
+                    .padding(.horizontal, Spacing.lg)
             }
             .padding(.bottom, Spacing.xxxl)
+        }
+    }
+
+    private var translationSection: some View {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            Text("settings.translation.title")
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textSecondary)
+                .textCase(.uppercase)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(spacing: 0) {
+                TranslationPickerRow(config: config)
+            }
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                    .stroke(palette.divider, lineWidth: 0.5)
+            )
         }
     }
 }

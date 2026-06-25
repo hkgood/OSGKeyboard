@@ -62,15 +62,14 @@ struct SettingsView: View {
                         VStack(spacing: Spacing.md) {
                             appLanguageSection
                             engineSection
+                            // v0.2.1: hide provider/api card when the
+                            // local engine is active regardless of the
+                            // cloud-polish toggle. Local mode is
+                            // contractually ASR-only, so provider/model/
+                            // base URL/API key controls have no use —
+                            // and exposing them invites the user to fill
+                            // out a DeepSeek key they can't use.
                             if config.engineMode == "cloud" {
-                                providerSection
-                                apiSection
-                            } else if config.localModeCloudPolishEnabled {
-                                // v0.2.0: local engine + cloud polish on.
-                                // Surface the provider / API key fields so
-                                // the user can fill in their DeepSeek key.
-                                // We hide them when the toggle is off so the
-                                // local engine stays genuinely local.
                                 providerSection
                                 apiSection
                             }
@@ -128,10 +127,12 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
             sectionHeader("settings.language.title")
             VStack(spacing: 0) {
-                if config.engineMode == "local" {
-                    LocalModelsGroup(config: config)
-                    Divider().background(palette.divider)
-                }
+                // v0.2.1: language tab reorder — ASR locale ("识别语言")
+                // now sits above the cloud-polish toggle / local models
+                // block so the row that maps to microphone input comes
+                // first, the row that maps to post-processing comes
+                // second, and translation (post-post-processing) sits at
+                // the bottom.
                 LocalePickerRow(
                     locales: effectiveLocales,
                     selection: Binding(
@@ -139,11 +140,10 @@ struct SettingsView: View {
                         set: { config.localeId = $0 }
                     )
                 )
-                // v0.2.1: translation toggle + target-language picker.
-                // Sits at the bottom of the language section so the user
-                // finds it next to the ASR locale it complements. Reuses
-                // `config.translationEnabled` / `config.translationTargetLocaleId`
-                // bindings — no new state, no new persistence path.
+                if config.engineMode == "local" {
+                    Divider().background(palette.divider)
+                    LocalModelsGroup(config: config)
+                }
                 Divider().background(palette.divider)
                 TranslationPickerRow(config: config)
             }
