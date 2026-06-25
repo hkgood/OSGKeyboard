@@ -23,7 +23,7 @@
 //   • on (any engine) → accent fill, "→ EN" / "→ 日本語" style label
 //
 // Stays in the same visual family as `CloudEngineChip` / `LocaleChip`
-// (Capsule + 26 pt min height + 5 pt vertical padding) so the top bar
+// (Capsule + 28 pt min height + 6 pt vertical padding) so the top bar
 // doesn't grow when translation is enabled.
 
 import SwiftUI
@@ -63,22 +63,21 @@ struct TranslationChip: View {
     @ViewBuilder
     private var label: some View {
         let target = TranslationLanguageCatalog.resolve(state.translationTargetLocaleId)
-        let isLocal = state.isLocalEngine
         let enabled = state.translationEnabled
 
         HStack(spacing: 4) {
             Image(systemName: enabled ? "character.bubble" : "character.bubble.fill")
-            Text(chipLabel(target: target, enabled: enabled, isLocal: isLocal))
+            Text(chipLabel(target: target, enabled: enabled))
             Image(systemName: "chevron.down")
                 .font(.system(size: 8, weight: .bold))
         }
         .font(TypeStyle.caption2)
-        .foregroundStyle(foreground(enabled: enabled, isLocal: isLocal))
+        .foregroundStyle(foreground(enabled: enabled))
         .padding(.horizontal, Spacing.xs + 2)
-        .padding(.vertical, 5)
-        .frame(minHeight: 26)
-        .background(background(enabled: enabled, isLocal: isLocal), in: Capsule())
-        .overlay(Capsule().stroke(stroke(enabled: enabled, isLocal: isLocal), lineWidth: 0.5))
+        .padding(.vertical, 6)
+        .frame(minHeight: 28)
+        .background(background(enabled: enabled), in: Capsule())
+        .overlay(Capsule().stroke(stroke(enabled: enabled), lineWidth: 0.5))
     }
 
     /// Active selection id — the chip derives "on" from a non-off
@@ -94,11 +93,7 @@ struct TranslationChip: View {
         return language.nativeName
     }
 
-    private func chipLabel(target: TranslationLanguage, enabled: Bool, isLocal: Bool) -> String {
-        // v0.2.1 follow-up: with the local engine now routing the
-        // polish / translate step through DeepSeek, the chip shows
-        // the same "→EN"-style label on both engines. There's no
-        // "needs cloud" hint path anymore.
+    private func chipLabel(target: TranslationLanguage, enabled: Bool) -> String {
         if !enabled {
             return ExtL10n.string("keyboard.translation.off")
         }
@@ -125,24 +120,17 @@ struct TranslationChip: View {
         }
     }
 
-    private func foreground(enabled: Bool, isLocal: Bool) -> Color {
-        // v0.2.1 follow-up: the chip no longer needs a "warning" path
-        // for local + on — both engines share the accent treatment
-        // now. `isLocal` is kept in the signature so callers don't
-        // need to change; it's intentionally unused below.
-        _ = isLocal
+    private func foreground(enabled: Bool) -> Color {
         if enabled { return palette.accent }
         return palette.textPrimary
     }
 
-    private func background(enabled: Bool, isLocal: Bool) -> Color {
-        _ = isLocal
+    private func background(enabled: Bool) -> Color {
         if enabled { return palette.accent.opacity(0.15) }
         return palette.surfaceElevated
     }
 
-    private func stroke(enabled: Bool, isLocal: Bool) -> Color {
-        _ = isLocal
+    private func stroke(enabled: Bool) -> Color {
         if enabled { return palette.accent.opacity(0.35) }
         return palette.divider
     }

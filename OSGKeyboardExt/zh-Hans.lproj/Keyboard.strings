@@ -121,7 +121,6 @@
 "keyboard.placeholder.cloudBadge" = "云端";
 "keyboard.models.notDownloaded" = "本地模型尚未下载";
 "keyboard.models.downloadHint" = "打开 OSGKeyboard 下载模型";
-"keyboard.models.warming" = "正在加载模型…";
 "keyboard.rec" = "REC";
 "keyboard.space" = "空格";
 "keyboard.denied.mic" = "麦克风被拒绝";

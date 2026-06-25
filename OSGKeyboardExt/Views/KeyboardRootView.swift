@@ -80,7 +80,13 @@ public struct KeyboardRootView: View {
             // and doubles as both the on/off switch and the target-
             // language picker (Menu pattern matches LocaleChip so the
             // top bar stays visually consistent).
-            TranslationChip(state: state)
+            // v0.2.1 final review: only render the chip when translation
+            // is actually on. Off-by-default keeps the top bar compact
+            // for users who don't need translation; the menu still lives
+            // in onboarding so the feature is discoverable.
+            if state.translationEnabled {
+                TranslationChip(state: state)
+            }
             Spacer(minLength: 0)
             StatusBadge(phase: state.phase, onDeviceSupported: state.onDeviceSupported)
             Button(action: state.openSettings) {
@@ -231,13 +237,6 @@ private struct TranscriptLine: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityHint(ExtL10n.text("keyboard.models.downloadHint"))
-                } else if isLocalEngine, localModelsReady, !localModelsLoaded {
-                    HStack(spacing: 6) {
-                        ProgressView().controlSize(.mini).tint(palette.textSecondary)
-                        ExtL10n.text("keyboard.models.warming")
-                            .font(TypeStyle.caption)
-                            .foregroundStyle(palette.textSecondary)
-                    }
                 } else if flowSessionActive {
                     ExtL10n.text("keyboard.placeholder.idle")
                         .font(TypeStyle.caption)
@@ -418,7 +417,7 @@ private struct StatusBadge: View {
                 .foregroundStyle(palette.textSecondary)
         }
         .padding(.horizontal, Spacing.xs)
-        .padding(.vertical, 3)
+        .padding(.vertical, 4)
         .background(palette.surface, in: Capsule())
         .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
     }
@@ -437,8 +436,8 @@ private struct CloudEngineChip: View {
         .font(TypeStyle.caption2)
         .foregroundStyle(palette.accent)
         .padding(.horizontal, Spacing.xs + 2)
-        .padding(.vertical, 5)
-        .frame(minHeight: 26)
+        .padding(.vertical, 6)
+        .frame(minHeight: 28)
         .background(palette.accent.opacity(0.15), in: Capsule())
         .overlay(Capsule().stroke(palette.accent.opacity(0.35), lineWidth: 0.5))
     }
@@ -457,8 +456,8 @@ private struct LocalEngineChip: View {
         .font(TypeStyle.caption2)
         .foregroundStyle(palette.accent)
         .padding(.horizontal, Spacing.xs + 2)
-        .padding(.vertical, 5)
-        .frame(minHeight: 26)
+        .padding(.vertical, 6)
+        .frame(minHeight: 28)
         .background(palette.accent.opacity(0.15), in: Capsule())
         .overlay(Capsule().stroke(palette.accent.opacity(0.35), lineWidth: 0.5))
     }
@@ -504,8 +503,8 @@ private struct LocaleChip: View {
             .font(TypeStyle.caption2)
             .foregroundStyle(palette.textPrimary)
             .padding(.horizontal, Spacing.xs + 2)
-            .padding(.vertical, 5)
-            .frame(minHeight: 26)
+            .padding(.vertical, 6)
+            .frame(minHeight: 28)
             .background(palette.surfaceElevated, in: Capsule())
             .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
         }
