@@ -109,7 +109,7 @@
 "settings.api.title" = "接口";
 "settings.language.title" = "语言";
 // v0.2.1: 翻译功能
-"settings.translation.title" = "翻译";
+"settings.translation.afterPolish" = "润色后翻译";
 "settings.translation.off" = "不翻译";
 "settings.languageModels.title" = "语言与模型";
 "settings.localModels.title" = "本地模型";
@@ -119,6 +119,7 @@
 "settings.localModels.readiness %lld %lld" = "%lld/%lld 已就绪";
 "settings.localModels.cloudPolish.title" = "识别后云端润色";
 "settings.localModels.cloudPolish.subtitle" = "将识别文本发送给已配置的云端大模型(默认 DeepSeek)进行润色。仅在 iOS 语音识别效果不理想时(远场、噪声、方言)开启,需提前在设置中填入 DeepSeek API Key。";
+"settings.localModels.cloudPolish.caption" = "本地模式下，使用 DeepSeek 进行云端润色。";
 "settings.language.subtitle.cloud" = "选择识别语言和文字处理模式。";
 "settings.language.subtitle.local" = "选择识别语言。";
 "settings.mode.title" = "模式";

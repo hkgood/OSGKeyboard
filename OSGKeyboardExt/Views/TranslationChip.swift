@@ -12,12 +12,15 @@
 // derived from the locale id so the chip / pipeline read the same
 // source of truth.
 //
+// v0.2.1 final review: dropped the "needs cloud" warning state —
+// both engines now run the translate-and-polish step (the local
+// engine routes through DeepSeek via
+// `ProviderConfig.localModeProviderId`). The chip is therefore just
+// off / on, with the same accent treatment either way.
+//
 // Visual states:
 //   • off             → dim outline, "翻译" label
-//   • on + cloud      → accent fill, "→ EN" / "→ 日本語" style label
-//   • on + local engine→ warning fill + "翻译需云端" hint (effectively
-//     inert; the pipeline rejects the mode and the controller surfaces
-//     the error toast)
+//   • on (any engine) → accent fill, "→ EN" / "→ 日本語" style label
 //
 // Stays in the same visual family as `CloudEngineChip` / `LocaleChip`
 // (Capsule + 26 pt min height + 5 pt vertical padding) so the top bar
@@ -92,11 +95,10 @@ struct TranslationChip: View {
     }
 
     private func chipLabel(target: TranslationLanguage, enabled: Bool, isLocal: Bool) -> String {
-        // Local-engine + on shows the constraint hint instead of the
-        // target label so the user knows why nothing's happening.
-        if enabled, isLocal {
-            return ExtL10n.string("keyboard.translation.needsCloudShort")
-        }
+        // v0.2.1 follow-up: with the local engine now routing the
+        // polish / translate step through DeepSeek, the chip shows
+        // the same "→EN"-style label on both engines. There's no
+        // "needs cloud" hint path anymore.
         if !enabled {
             return ExtL10n.string("keyboard.translation.off")
         }
@@ -124,19 +126,23 @@ struct TranslationChip: View {
     }
 
     private func foreground(enabled: Bool, isLocal: Bool) -> Color {
-        if enabled, isLocal { return palette.warning }
+        // v0.2.1 follow-up: the chip no longer needs a "warning" path
+        // for local + on — both engines share the accent treatment
+        // now. `isLocal` is kept in the signature so callers don't
+        // need to change; it's intentionally unused below.
+        _ = isLocal
         if enabled { return palette.accent }
         return palette.textPrimary
     }
 
     private func background(enabled: Bool, isLocal: Bool) -> Color {
-        if enabled, isLocal { return palette.warning.opacity(0.15) }
+        _ = isLocal
         if enabled { return palette.accent.opacity(0.15) }
         return palette.surfaceElevated
     }
 
     private func stroke(enabled: Bool, isLocal: Bool) -> Color {
-        if enabled, isLocal { return palette.warning.opacity(0.35) }
+        _ = isLocal
         if enabled { return palette.accent.opacity(0.35) }
         return palette.divider
     }

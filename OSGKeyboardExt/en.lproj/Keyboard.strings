@@ -181,10 +181,8 @@
 "keyboard.translation.off" = "Translate";
 "keyboard.translation.enable" = "Enable translation";
 "keyboard.translation.disable" = "Disable translation";
-"keyboard.translation.needsCloudShort" = "Need cloud";
 "keyboard.translation.a11y" = "Translation";
 "keyboard.translation.a11yHint" = "Toggle translation or change the target language.";
-"keyboard.error.translation.needsCloud" = "Translation needs the cloud engine — switch to cloud in Settings.";
 
 /* Mode chip labels (used in both ext + preview stub) */
 "mode.off" = "Off";

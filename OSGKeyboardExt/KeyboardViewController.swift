@@ -533,14 +533,28 @@ public final class KeyboardViewController: UIInputViewController {
             guard let self else { return }
             // v0.2.1: pick the polish mode once at task start so a
             // mid-flight toggle flip doesn't change the request we
-            // already sent. `isTranslationEffective` honours the cloud-
-            // only constraint so we never accidentally translate on the
-            // local engine.
+            // already sent. `isTranslationEffective` no longer gates on
+            // `engineMode == "cloud"` — the row visibility predicate
+            // already keeps the picker honest, and the local engine's
+            // translate-and-polish path now routes through DeepSeek.
             let polishMode: PolishingService.PolishMode = self.state.isTranslationEffective
                 ? .translate(targetLocaleId: self.state.translationTargetLocaleId)
                 : .polish
+            // v0.2.1: local engine routes through DeepSeek for the
+            // polish / translate step regardless of the user's chosen
+            // cloud provider — DeepSeek is cheap and strong on
+            // Chinese, which is the dominant input for the on-device
+            // ASR transcript. Cloud engine honors the user's own
+            // provider id by passing `nil`.
+            let overrideProviderId: String? = self.state.engineMode == "local"
+                ? "deepseek"
+                : nil
             do {
-                let polished = try await self.polisher.polish(trimmed, mode: polishMode)
+                let polished = try await self.polisher.polish(
+                    trimmed,
+                    mode: polishMode,
+                    providerIdOverride: overrideProviderId
+                )
                 self.textDocumentProxy.insertText(polished)
                 self.state.lastTranscript = ""
                 self.state.phase = .idle
@@ -586,19 +600,6 @@ public final class KeyboardViewController: UIInputViewController {
                 self.state.phase = .error(
                     .llm(.noAPIKey),
                     message: ExtL10n.string("keyboard.error.llm.noApiKey")
-                )
-                self.scheduleAutoClearError()
-            } catch let polishError as PolishingService.PolishError where polishError == .translationNotAvailable {
-                // v0.2.1: user toggled translation on while the local
-                // engine is active. Fall back to a plain polish — and if
-                // we're on local-without-cloud-polish, fall all the way
-                // back to raw ASR. The keyboard surfaces a short hint
-                // telling them to switch to the cloud engine.
-                self.textDocumentProxy.insertText(trimmed)
-                self.state.lastTranscript = ""
-                self.state.phase = .error(
-                    .unknown(ExtL10n.string("keyboard.error.translation.needsCloud")),
-                    message: ExtL10n.string("keyboard.error.translation.needsCloud")
                 )
                 self.scheduleAutoClearError()
             } catch {

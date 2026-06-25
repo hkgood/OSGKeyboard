@@ -149,24 +149,22 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         didSet { defaults.set(translationTargetLocaleId, forKey: Key.translationTargetLocaleId) }
     }
 
-    /// v0.2.1: hard gate that decides whether the translation feature can
-    /// actually run. The keyboard honors `translationEnabled` only when
-    /// `engineMode == "cloud"` — the local engine is contractually ASR-
-    /// only, so translation is silently ignored (and the UI shows a hint)
-    /// even when the toggle is on.
+    /// v0.2.1 follow-up: with the local engine's translate-and-polish
+    /// path now real (see `localModeProviderId`), `translationEnabled`
+    /// alone is enough to decide whether the pipeline should translate.
+    /// Row visibility (`isTranslationRowVisible`) already gates the UI
+    /// on engines that can actually run the step, so we don't need to
+    /// re-check `engineMode` here.
     public var isTranslationEffective: Bool {
-        translationEnabled && engineMode == "cloud"
+        translationEnabled
     }
 
-    /// v0.2.1: row visibility predicate. Translation is shown only when
-    /// the engine can actually run the cloud translate-and-polish step:
-    /// - cloud engine: always visible
-    /// - local engine: visible only when cloud polish is also enabled
-    ///   (otherwise translation is silently inert — the local engine
-    ///   rejects `.translate` upstream, so we'd be advertising a
-    ///   feature that can't run).
+    /// v0.2.1 follow-up: row visibility predicate. Both engines can
+    /// now run the cloud translate-and-polish step (the local engine
+    /// routes through DeepSeek via `localModeProviderId`), so the row
+    /// is shown whenever an engine mode is selected.
     public var isTranslationRowVisible: Bool {
-        (engineMode == "cloud") || (engineMode == "local" && localModeCloudPolishEnabled)
+        engineMode == "local" || engineMode == "cloud"
     }
 
     public var isConfigured: Bool {
@@ -195,6 +193,16 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     /// step; callers should check `Keychain.apiKey()` before invoking.
     public var shouldPolishLocalTranscript: Bool {
         isLocalEngine && localModeCloudPolishEnabled
+    }
+
+    /// v0.2.1 follow-up: when the local engine is using the cloud-
+    /// polish step, route the call through DeepSeek — cheap, strong
+    /// on Chinese, and the right default for the on-device ASR
+    /// transcript. Other engines honor the user's configured
+    /// `providerId` unchanged so cloud users keep their preferred
+    /// vendor (OpenAI / Anthropic / Zhipu / etc).
+    public var localModeProviderId: String {
+        isLocalEngine ? "deepseek" : providerId
     }
 
     /// The system prompt the user *sees* in the editor — fall back to the

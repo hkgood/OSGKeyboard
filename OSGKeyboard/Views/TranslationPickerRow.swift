@@ -13,13 +13,18 @@
 // inline hint was deleted along with the previous Bool toggle — the
 // user only sees the row when the engine can act on the choice.
 //
+// v0.2.1 final review: both engines now run the translate-and-polish
+// step (the local engine routes through DeepSeek via
+// `ProviderConfig.localModeProviderId`), so the row title changed
+// from "Translation" to "Polish then translate" to match the new
+// always-on translation contract.
+//
 // Mapping to persisted state:
 //   • "不翻译"            → translationTargetLocaleId = "off"
 //   • any specific locale → translationTargetLocaleId = <id>
 //
-// The pipeline (`PolishingService`) still rejects `.translate` on the
-// local engine when cloud polish is off, which
-// `KeyboardViewController` surfaces as a 2.4s toast. Belt + suspenders.
+// The pipeline (`PolishingService`) honors `.translate` on both
+// engines when this row is visible — no more "rejected mode" toast.
 
 import SwiftUI
 import OSGKeyboardShared
@@ -37,7 +42,7 @@ struct TranslationPickerRow: View {
     var body: some View {
         if isVisible {
             HStack {
-                Text("settings.translation.title")
+                Text("settings.translation.afterPolish")
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                 Spacer()
