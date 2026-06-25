@@ -138,6 +138,8 @@ public final class KeyboardViewController: UIInputViewController {
         state.setLocale           = { [weak self] l in self?.persistLocale(l) }
         state.setEngineMode       = { [weak self] m in self?.persistEngineMode(m) }
         state.setLocalASRBackend  = { [weak self] b in self?.persistLocalASRBackend(b) }
+        state.setTranslationEnabled = { [weak self] enabled in self?.persistTranslationEnabled(enabled) }
+        state.setTranslationTargetLocaleId = { [weak self] id in self?.persistTranslationTargetLocaleId(id) }
         state.insertNewline       = { [weak self] in self?.textDocumentProxy.insertText("\n") }
         state.insertSpace         = { [weak self] in self?.textDocumentProxy.insertText(" ") }
         state.deleteBackward      = { [weak self] in self?.textDocumentProxy.deleteBackward() }
@@ -528,8 +530,16 @@ public final class KeyboardViewController: UIInputViewController {
         state.phase = .processing
         Task { @MainActor [weak self] in
             guard let self else { return }
+            // v0.2.1: pick the polish mode once at task start so a
+            // mid-flight toggle flip doesn't change the request we
+            // already sent. `isTranslationEffective` honours the cloud-
+            // only constraint so we never accidentally translate on the
+            // local engine.
+            let polishMode: PolishingService.PolishMode = self.state.isTranslationEffective
+                ? .translate(targetLocaleId: self.state.translationTargetLocaleId)
+                : .polish
             do {
-                let polished = try await self.polisher.polish(trimmed)
+                let polished = try await self.polisher.polish(trimmed, mode: polishMode)
                 self.textDocumentProxy.insertText(polished)
                 self.state.lastTranscript = ""
                 self.state.phase = .idle
@@ -577,6 +587,19 @@ public final class KeyboardViewController: UIInputViewController {
                     message: ExtL10n.string("keyboard.error.llm.noApiKey")
                 )
                 self.scheduleAutoClearError()
+            } catch let polishError as PolishingService.PolishError where polishError == .translationNotAvailable {
+                // v0.2.1: user toggled translation on while the local
+                // engine is active. Fall back to a plain polish — and if
+                // we're on local-without-cloud-polish, fall all the way
+                // back to raw ASR. The keyboard surfaces a short hint
+                // telling them to switch to the cloud engine.
+                self.textDocumentProxy.insertText(trimmed)
+                self.state.lastTranscript = ""
+                self.state.phase = .error(
+                    .unknown(ExtL10n.string("keyboard.error.translation.needsCloud")),
+                    message: ExtL10n.string("keyboard.error.translation.needsCloud")
+                )
+                self.scheduleAutoClearError()
             } catch {
                 // Network / timeout / decoding — fall back to the raw
                 // transcript so the user still gets their text, with a
@@ -618,6 +641,28 @@ public final class KeyboardViewController: UIInputViewController {
     private func persistLocalASRBackend(_ backend: LocalASRBackend) {
         state.localASRBackend = backend
         persistor.persist(localASRBackend: backend)
+    }
+
+    // MARK: - Translation persistence
+
+    /// v0.2.1: persist translation toggle. When the user turns the
+    /// feature on while the local engine is active we still write the
+    /// value — `isTranslationEffective` will return `false` until they
+    /// switch to cloud, but the chip on the keyboard reflects their
+    /// intent immediately so they get feedback.
+    private func persistTranslationEnabled(_ enabled: Bool) {
+        state.translationEnabled = enabled
+        persistor.persist(translationEnabled: enabled)
+    }
+
+    /// v0.2.1: persist translation target locale id. Resolved via
+    /// `TranslationLanguageCatalog.resolve` so a stale persisted value
+    /// (e.g. a removed locale id from an older build) still finds the
+    /// right entry instead of crashing the picker.
+    private func persistTranslationTargetLocaleId(_ id: String) {
+        let resolved = TranslationLanguageCatalog.resolve(id).id
+        state.translationTargetLocaleId = resolved
+        persistor.persist(translationTargetLocaleId: resolved)
     }
 
     // MARK: - Open host app

@@ -35,6 +35,12 @@ public struct AppGroupPersistor {
         state.mode             = .polish
         state.engineMode       = store.engineMode
         state.localASRBackend  = store.localASRBackend
+        // v0.2.1: translation toggle + target locale. Read once at
+        // hydration; `refreshRuntimeFlags` keeps them in sync while the
+        // keyboard stays open so a Settings change shows up without a
+        // re-present cycle.
+        state.translationEnabled = store.translationEnabled
+        state.translationTargetLocaleId = store.translationTargetLocaleId
         // v0.2.0: iOS `SpeechAnalyzer` is always ready; mirror that
         // into the State flags so downstream consumers see the same
         // shape they did when the previous Qwen3 stack reported "ready".
@@ -75,6 +81,11 @@ public struct AppGroupPersistor {
         let store = AppGroupStore()
         state.engineMode = store.engineMode
         state.localASRBackend = store.localASRBackend
+        // v0.2.1: keep translation state in sync with the host app so the
+        // chip on the keyboard reflects the latest value without a re-
+        // present cycle.
+        state.translationEnabled = store.translationEnabled
+        state.translationTargetLocaleId = store.translationTargetLocaleId
         // v0.2.0: iOS `SpeechAnalyzer` is always ready. Keep these
         // toggles here so the keyboard UI doesn't flicker if the host
         // app briefly clears them while refactoring.
@@ -104,5 +115,18 @@ public struct AppGroupPersistor {
     public func persist(localASRBackend: LocalASRBackend) {
         guard AppGroup.isAvailable else { return }
         AppGroupStore().setLocalASRBackend(localASRBackend)
+    }
+
+    /// v0.2.1: persist translation toggle. Wired through the
+    /// `KeyboardViewController.setTranslation` action hook.
+    public func persist(translationEnabled: Bool) {
+        guard AppGroup.isAvailable else { return }
+        AppGroupStore().setTranslationEnabled(translationEnabled)
+    }
+
+    /// v0.2.1: persist translation target locale id (e.g. `"en"`).
+    public func persist(translationTargetLocaleId: String) {
+        guard AppGroup.isAvailable else { return }
+        AppGroupStore().setTranslationTargetLocaleId(translationTargetLocaleId)
     }
 }

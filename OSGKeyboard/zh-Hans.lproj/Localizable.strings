@@ -108,6 +108,11 @@
 "provider.custom" = "自定义";
 "settings.api.title" = "接口";
 "settings.language.title" = "语言";
+// v0.2.1: 翻译功能
+"settings.translation.title" = "语音转文字后翻译";
+"settings.translation.subtitle" = "将转写文本发送给已配置的 LLM，使用翻译+润色 prompt 处理后插入。";
+"settings.translation.subtitle.needsCloud" = "需开启云端引擎，当前为本地模式暂不生效。";
+"settings.translation.target" = "目标语言";
 "settings.languageModels.title" = "语言与模型";
 "settings.localModels.title" = "本地模型";
 "settings.localModels.speechRole" = "语音识别";

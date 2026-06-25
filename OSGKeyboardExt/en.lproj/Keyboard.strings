@@ -177,6 +177,15 @@
 "locale.chip.ja-JP" = "日";
 "locale.chip.ko-KR" = "韩";
 
+/* Translation chip (v0.2.1) */
+"keyboard.translation.off" = "Translate";
+"keyboard.translation.enable" = "Enable translation";
+"keyboard.translation.disable" = "Disable translation";
+"keyboard.translation.needsCloudShort" = "Need cloud";
+"keyboard.translation.a11y" = "Translation";
+"keyboard.translation.a11yHint" = "Toggle translation or change the target language.";
+"keyboard.error.translation.needsCloud" = "Translation needs the cloud engine — switch to cloud in Settings.";
+
 /* Mode chip labels (used in both ext + preview stub) */
 "mode.off" = "Off";
 "mode.transcribe" = "Transcribe";
