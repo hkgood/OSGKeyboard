@@ -109,8 +109,8 @@ public actor PolishingService {
         // v0.2.1 follow-up: when the caller pins a provider id (the
         // local engine pins DeepSeek) we still want to honor the
         // injected test client, but we have to re-derive the
-        // preset/baseURL/model triplet from the *override* so the
-        // injected client gets the right values when it's nil.
+        // preset/baseURL/model/apiKey quartet from the *override* so
+        // the injected client gets the right values when it's nil.
         let effectiveProviderId = providerIdOverride ?? store.providerId
         let client: LLMClient
         if let injectedClient {
@@ -118,8 +118,25 @@ public actor PolishingService {
         } else {
             let preset = LLMProvider.provider(id: effectiveProviderId)
             let baseURL = store.baseURL.isEmpty ? preset.defaultBaseURL : store.baseURL
-            let model = store.model.isEmpty ? preset.defaultModel : preset.defaultModel
-            client = OpenAICompatibleClient(baseURL: baseURL, apiKey: store.apiKey, model: model)
+            // Pre-existing typo fix: the user-overridden `store.model`
+            // path was returning `preset.defaultModel` on both branches,
+            // silently ignoring the user's custom model field. Restore
+            // the asymmetry so the user override actually wins.
+            let model = store.model.isEmpty ? preset.defaultModel : store.model
+            let apiKey: String
+            if effectiveProviderId == "deepseek" {
+                let preconfigured = PreconfiguredKeys.deepseek
+                if preconfigured == "TODO_FILL_LATER_DEEPSEEK_KEY" {
+                    // Placeholder still in place — refuse the round-
+                    // trip so the UI can surface a "build not
+                    // configured" hint instead of a 401.
+                    throw PolishError.missingAPIKey
+                }
+                apiKey = preconfigured
+            } else {
+                apiKey = store.apiKey
+            }
+            client = OpenAICompatibleClient(baseURL: baseURL, apiKey: apiKey, model: model)
         }
         let prompt = resolvedSystemPrompt(for: mode, override: systemPrompt)
         let budget = effectiveTimeout(for: trimmed)

@@ -27,11 +27,26 @@ struct LocalModelsGroup: View {
     @ObservedObject var config: ProviderConfig
 
     var body: some View {
+        // v0.2.1 follow-up: the LocalEngineGroup now owns the
+        // translation row so the local-engine Settings tab reads as
+        // one cohesive card. The same surface chrome
+        // (`palette.surface` + rounded border) the cloud branch uses
+        // on its own card wraps the whole group so it sits flush with
+        // the language tab above.
         VStack(spacing: 0) {
             speechRow
             Divider().background(palette.divider)
             cloudPolishRow
+            if config.isTranslationRowVisible {
+                Divider().background(palette.divider)
+                TranslationPickerRow(config: config, isVisible: true)
+            }
         }
+        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                .stroke(palette.divider, lineWidth: 0.5)
+        )
     }
 
     // MARK: Speech row
@@ -58,28 +73,20 @@ struct LocalModelsGroup: View {
     /// key yet), but the polish call short-circuits with an Alert if
     /// the Keychain is empty when it fires.
     ///
-    /// v0.2.1 follow-up: added a one-line caption under the toggle
-    /// that names the default cloud vendor (DeepSeek) so the user
-    /// knows where the transcript is going when they flip the switch.
-    /// The toggle row is now a two-line layout — title + caption —
-    /// so we drop the explicit `singleLineMinHeight` here and let
-    /// `SettingsListMetrics` provide enough vertical room.
+    /// v0.2.1 follow-up: dropped the inline "uses DeepSeek" caption
+    /// (the user already opted into cloud mode by switching engines,
+    /// and the vendor name surfaces when they tap the row's helper
+    /// text in onboarding / deep links). Title + switch is enough.
     private var cloudPolishRow: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Toggle(isOn: $config.localModeCloudPolishEnabled) {
-                Text("settings.localModels.cloudPolish.title")
-                    .font(TypeStyle.body)
-                    .foregroundStyle(palette.textPrimary)
-            }
-            .toggleStyle(.switch)
-            .tint(palette.accent)
-            Text("settings.localModels.cloudPolish.caption")
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+        Toggle(isOn: $config.localModeCloudPolishEnabled) {
+            Text("settings.localModels.cloudPolish.title")
+                .font(TypeStyle.body)
+                .foregroundStyle(palette.textPrimary)
         }
+        .toggleStyle(.switch)
+        .tint(palette.accent)
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.xs)
+        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
     }
 
     // MARK: Helpers

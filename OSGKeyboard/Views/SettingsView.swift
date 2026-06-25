@@ -74,6 +74,9 @@ struct SettingsView: View {
                                 apiSection
                             }
                             languageAndModelsSection
+                            if config.engineMode == "local" {
+                                localEngineSettingsSection
+                            }
                             if config.engineMode == "cloud" {
                                 systemPromptLinkSection
                             }
@@ -131,8 +134,9 @@ struct SettingsView: View {
                 // now sits above the cloud-polish toggle / local models
                 // block so the row that maps to microphone input comes
                 // first, the row that maps to post-processing comes
-                // second, and translation (post-post-processing) sits at
-                // the bottom.
+                // second. Translation moved into the local-engine
+                // group (see `localEngineSettingsSection`) so the local
+                // engine reads as one cohesive card on its own.
                 LocalePickerRow(
                     locales: effectiveLocales,
                     selection: Binding(
@@ -140,14 +144,6 @@ struct SettingsView: View {
                         set: { config.localeId = $0 }
                     )
                 )
-                if config.engineMode == "local" {
-                    Divider().background(palette.divider)
-                    LocalModelsGroup(config: config)
-                }
-                Divider().background(palette.divider)
-                if config.isTranslationRowVisible {
-                    TranslationPickerRow(config: config, isVisible: true)
-                }
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             .overlay(
@@ -175,6 +171,19 @@ struct SettingsView: View {
                 }
                 .padding(.horizontal, Spacing.xs)
             }
+        }
+    }
+
+    /// v0.2.1 follow-up: dedicated section for the local engine's
+    /// settings (cloud-polish toggle + translation row). Renders only
+    /// when `engineMode == "local"` so the cloud-engine user doesn't
+    /// see rows that are inert for them. The translation row lives
+    /// inside `LocalModelsGroup` so it shares the group's surface card
+    /// chrome — see `LocalEngineSettingsRows.swift` for the layout.
+    private var localEngineSettingsSection: some View {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.localEngine.title")
+            LocalModelsGroup(config: config)
         }
     }
 
