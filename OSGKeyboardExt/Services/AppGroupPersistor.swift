@@ -40,6 +40,8 @@ public struct AppGroupPersistor {
         // startup; `refreshRuntimeFlags` keeps the chip in sync while
         // the keyboard stays open.
         state.translationTargetLocaleId = store.translationTargetLocaleId
+        state.polishScenarioId = store.polishScenarioId
+        state.localModeCloudPolishEnabled = store.localModeCloudPolishEnabled
         // v0.2.0: iOS `SpeechAnalyzer` is always ready; mirror that
         // into the State flags so downstream consumers see the same
         // shape they did when the previous Qwen3 stack reported "ready".
@@ -75,14 +77,28 @@ public struct AppGroupPersistor {
 
     /// Lightweight refresh for flags the host app may update while the
     /// keyboard stays open (model downloads, engine switches).
-    public func refreshRuntimeFlags(into state: KeyboardViewController.State) {
+    ///
+    /// When `protectTranslationUntil` is in the future, the translation
+    /// target locale is not overwritten — avoids the 1 Hz poll clobbering
+    /// a chip selection the user just wrote to the App Group.
+    public func refreshRuntimeFlags(
+        into state: KeyboardViewController.State,
+        protectTranslationUntil: Date? = nil,
+        protectPolishScenarioUntil: Date? = nil
+    ) {
         guard AppGroup.isAvailable else { return }
         let store = AppGroupStore()
         state.engineMode = store.engineMode
         state.localASRBackend = store.localASRBackend
-        // v0.2.1 follow-up: same as `load` — only the locale is
-        // persisted, `enabled` is derived.
-        state.translationTargetLocaleId = store.translationTargetLocaleId
+        state.localModeCloudPolishEnabled = store.localModeCloudPolishEnabled
+        let shouldProtectTranslation = protectTranslationUntil.map { Date() < $0 } ?? false
+        if !shouldProtectTranslation {
+            state.translationTargetLocaleId = store.translationTargetLocaleId
+        }
+        let shouldProtectScenario = protectPolishScenarioUntil.map { Date() < $0 } ?? false
+        if !shouldProtectScenario {
+            state.polishScenarioId = store.polishScenarioId
+        }
         // v0.2.0: iOS `SpeechAnalyzer` is always ready. Keep these
         // toggles here so the keyboard UI doesn't flicker if the host
         // app briefly clears them while refactoring.
@@ -126,5 +142,10 @@ public struct AppGroupPersistor {
     public func persist(translationTargetLocaleId: String) {
         guard AppGroup.isAvailable else { return }
         AppGroupStore().setTranslationTargetLocaleId(translationTargetLocaleId)
+    }
+
+    public func persist(polishScenarioId: String) {
+        guard AppGroup.isAvailable else { return }
+        AppGroupStore().setPolishScenarioId(polishScenarioId)
     }
 }

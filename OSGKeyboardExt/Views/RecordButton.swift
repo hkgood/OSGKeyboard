@@ -42,11 +42,20 @@ struct RecordButton: View {
         return remainingSeconds <= 10
     }
 
+    /// Decorative rings are sized to stay inside the 132 pt frame applied
+    /// by `KeyboardRootView` so glow / breath animations are not clipped.
+    private enum Layout {
+        static let disc: CGFloat = 104
+        static let outerRing: CGFloat = 112
+        static let breathRing: CGFloat = 108
+        static let glow: CGFloat = 128
+    }
+
     var body: some View {
         ZStack {
             Circle()
                 .stroke(palette.recordRed.opacity(isUrgent ? 0.55 : 0.35), lineWidth: isUrgent ? 3 : 2)
-                .frame(width: 150, height: 150)
+                .frame(width: Layout.breathRing, height: Layout.breathRing)
                 .scaleEffect(breath ? 1.18 : 0.95)
                 .opacity(phase == .recording ? 1 : 0)
                 .animation(Motion.breath, value: breath)
@@ -60,7 +69,7 @@ struct RecordButton: View {
                         endRadius: 100
                     )
                 )
-                .frame(width: 200, height: 200)
+                .frame(width: Layout.glow, height: Layout.glow)
                 .opacity(phase == .recording ? 0.4 + level * 0.6 : 0)
                 .blur(radius: 18)
                 .animation(Motion.soft, value: phase)
@@ -71,7 +80,7 @@ struct RecordButton: View {
                     Color.white.opacity(phase == .idle ? 0.08 : 0.12),
                     lineWidth: 0.5
                 )
-                .frame(width: 140, height: 140)
+                .frame(width: Layout.outerRing, height: Layout.outerRing)
 
             ZStack {
                 Circle()
@@ -115,7 +124,7 @@ struct RecordButton: View {
                     }
                 }
             }
-            .frame(width: 120, height: 120)
+            .frame(width: Layout.disc, height: Layout.disc)
             .animation(Motion.soft, value: phase)
             .animation(Motion.soft, value: remainingSeconds)
         }

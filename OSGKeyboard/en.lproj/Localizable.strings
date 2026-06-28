@@ -108,9 +108,14 @@
 "provider.custom" = "Custom";
 "settings.api.title" = "API";
 "settings.language.title" = "Language";
+"settings.languageAndPolish.title" = "Language & Polish";
 // v0.2.1: translation feature
 "settings.translation.afterPolish" = "Polish then translate";
 "settings.translation.off" = "Don't translate";
+"settings.polishScenario.section" = "Polish";
+"settings.polishScenario.title" = "Scenario";
+"settings.polishScenario.hint" = "Pick a scenario to match how you write. Choose Custom to edit the full system prompt.";
+"settings.polishScenario.customHint" = "Custom scenario: edit the full system prompt below.";
 "settings.languageModels.title" = "Language & models";
 "settings.localModels.title" = "On-device models";
 "settings.localModels.speechRole" = "Speech";

@@ -62,6 +62,7 @@ struct SettingsView: View {
                         VStack(spacing: Spacing.md) {
                             appLanguageSection
                             engineSection
+                            languageAndPolishSection
                             // v0.2.1: hide provider/api card when the
                             // local engine is active regardless of the
                             // cloud-polish toggle. Local mode is
@@ -73,12 +74,8 @@ struct SettingsView: View {
                                 providerSection
                                 apiSection
                             }
-                            languageAndModelsSection
                             if config.engineMode == "local" {
                                 localEngineSettingsSection
-                            }
-                            if config.engineMode == "cloud" {
-                                systemPromptLinkSection
                             }
                             if presentation == .tab {
                                 footerLinks
@@ -124,19 +121,12 @@ struct SettingsView: View {
         EnginePickerSection(config: config)
     }
 
-    // MARK: - Language & on-device models
+    // MARK: - Language & polish
 
-    private var languageAndModelsSection: some View {
+    private var languageAndPolishSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.language.title")
+            sectionHeader("settings.languageAndPolish.title")
             VStack(spacing: 0) {
-                // v0.2.1: language tab reorder — ASR locale ("识别语言")
-                // now sits above the cloud-polish toggle / local models
-                // block so the row that maps to microphone input comes
-                // first, the row that maps to post-processing comes
-                // second. Translation moved into the local-engine
-                // group (see `localEngineSettingsSection`) so the local
-                // engine reads as one cohesive card on its own.
                 LocalePickerRow(
                     locales: effectiveLocales,
                     selection: Binding(
@@ -144,6 +134,23 @@ struct SettingsView: View {
                         set: { config.localeId = $0 }
                     )
                 )
+                if config.isPolishScenarioRowVisible {
+                    Divider().background(palette.divider)
+                    ScenarioPickerRow(config: config, isVisible: true)
+                    if config.engineMode == "cloud", config.isTranslationRowVisible {
+                        Divider().background(palette.divider)
+                        TranslationPickerRow(config: config, isVisible: true)
+                    }
+                    if config.isCustomPolishScenario {
+                        Divider().background(palette.divider)
+                        NavigationLink {
+                            SystemPromptSettingsView(config: config)
+                        } label: {
+                            footerNavigationRow(title: "settings.systemPrompt.edit")
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             .overlay(
@@ -244,27 +251,6 @@ struct SettingsView: View {
 
         // .task {} calls us from the main actor, so this assignment is safe.
         dynamicLocales = entries
-    }
-
-    // MARK: - System prompt (cloud only)
-
-    private var systemPromptLinkSection: some View {
-        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.systemPrompt.title")
-            VStack(spacing: 0) {
-                NavigationLink {
-                    SystemPromptSettingsView(config: config)
-                } label: {
-                    footerNavigationRow(title: "settings.systemPrompt.edit")
-                }
-                .buttonStyle(.plain)
-            }
-            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
-        }
     }
 
     // MARK: - Footer links (tab settings only)

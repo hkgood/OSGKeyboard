@@ -51,6 +51,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         // who upgraded from a build that wrote it don't see a flash of
         // "on" state during init, but new writes never touch the key.
         static let translationTargetLocaleId = "config.translationTargetLocaleId"
+        static let polishScenarioId = "config.polishScenarioId"
     }
 
     @Published public var providerId: String {
@@ -121,7 +122,10 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     /// box. Users opt in from Settings when the iOS ASR output isn't
     /// strong enough (noisy far-field audio, dialectal Chinese, etc.).
     @Published public var localModeCloudPolishEnabled: Bool {
-        didSet { defaults.set(localModeCloudPolishEnabled, forKey: Key.localModeCloudPolishEnabled) }
+        didSet {
+            defaults.set(localModeCloudPolishEnabled, forKey: Key.localModeCloudPolishEnabled)
+            AppGroupConfigDarwin.postConfigChanged()
+        }
     }
     /// Host-app UI language. Also mirrored to the App Group for the keyboard extension.
     @Published public var uiLanguage: AppUILanguage {
@@ -146,25 +150,46 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     /// extension can honour it (and so the chip on the keyboard reflects
     /// the user's choice without a host-app round-trip).
     @Published public var translationTargetLocaleId: String {
-        didSet { defaults.set(translationTargetLocaleId, forKey: Key.translationTargetLocaleId) }
+        didSet {
+            defaults.set(translationTargetLocaleId, forKey: Key.translationTargetLocaleId)
+            AppGroupConfigDarwin.postConfigChanged()
+        }
+    }
+    /// Selected polish scenario preset (e.g. `daily_chat`, `work`) or
+    /// `custom` when the user edits the raw system prompt.
+    @Published public var polishScenarioId: String {
+        didSet {
+            defaults.set(polishScenarioId, forKey: Key.polishScenarioId)
+            AppGroupConfigDarwin.postConfigChanged()
+        }
     }
 
-    /// v0.2.1 follow-up: with the local engine's translate-and-polish
-    /// path now real (see `localModeProviderId`), `translationEnabled`
-    /// alone is enough to decide whether the pipeline should translate.
-    /// Row visibility (`isTranslationRowVisible`) already gates the UI
-    /// on engines that can actually run the step, so we don't need to
-    /// re-check `engineMode` here.
+    /// Whether the pipeline should run translate-and-polish (not just
+    /// polish). Cloud engine: any selected target locale. Local engine:
+    /// only when cloud polish is also enabled.
     public var isTranslationEffective: Bool {
-        translationEnabled
+        guard translationEnabled else { return false }
+        if isLocalEngine { return localModeCloudPolishEnabled }
+        return true
     }
 
-    /// v0.2.1 follow-up: row visibility predicate. Both engines can
-    /// now run the cloud translate-and-polish step (the local engine
-    /// routes through DeepSeek via `localModeProviderId`), so the row
-    /// is shown whenever an engine mode is selected.
+    /// Translation picker visibility. Cloud engine: always. Local engine:
+    /// only when "Cloud polish after ASR" is on — translation is a
+    /// sub-step of that cloud LLM pass, not a standalone feature.
     public var isTranslationRowVisible: Bool {
-        engineMode == "local" || engineMode == "cloud"
+        if engineMode == "cloud" { return true }
+        return isLocalEngine && localModeCloudPolishEnabled
+    }
+
+    /// Polish scenario picker visibility — same gate as translation:
+    /// only when the pipeline can run a cloud LLM step.
+    public var isPolishScenarioRowVisible: Bool {
+        if engineMode == "cloud" { return true }
+        return isLocalEngine && localModeCloudPolishEnabled
+    }
+
+    public var isCustomPolishScenario: Bool {
+        PolishScenarioCatalog.isCustom(polishScenarioId)
     }
 
     public var isConfigured: Bool {
@@ -263,6 +288,17 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         // conservative default that matches the picker / chip UX).
         self.translationTargetLocaleId = resolvedDefaults.string(forKey: Key.translationTargetLocaleId)
             ?? TranslationLanguageCatalog.offLocaleId
+        if let storedScenario = resolvedDefaults.string(forKey: Key.polishScenarioId) {
+            self.polishScenarioId = PolishScenarioCatalog.resolve(storedScenario).id
+        } else {
+            let savedPrompt = resolvedDefaults.string(forKey: Key.systemPrompt)
+                ?? AppGroupStore.defaultSystemPrompt(for: pid)
+            if savedPrompt != AppGroupStore.defaultSystemPrompt(for: pid) {
+                self.polishScenarioId = PolishScenarioCatalog.customId
+            } else {
+                self.polishScenarioId = PolishScenarioCatalog.defaultId
+            }
+        }
 
         // Cloud no longer exposes off/transcribe; migrate legacy values.
         if self.engineMode == "cloud", self.modeId != "polish" {
@@ -313,6 +349,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         apiKey = ""
         model = preset.defaultModel
         systemPrompt = AppGroupStore.defaultSystemPrompt(for: "openai")
+        polishScenarioId = PolishScenarioCatalog.defaultId
         hasAcknowledgedCloudSharing = false
     }
 }

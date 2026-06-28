@@ -74,24 +74,36 @@ public final class KeyboardViewController: UIInputViewController {
     private var wasFlowSessionActive = false
     private var flowSessionMonitorTask: Task<Void, Never>?
     private var flowSessionDarwinObserver: FlowSessionDarwinObserver?
+    private var configDarwinObserver: FlowSessionDarwinObserver?
+    /// Grace period after a chip-side translation write during which the
+    /// 1 Hz App Group poll must not overwrite `translationTargetLocaleId`.
+    private var translationConfigProtectedUntil: Date?
+    private var polishScenarioConfigProtectedUntil: Date?
     private var isAwaitingFlowResult = false
     private var lastFlowAutoStartAttempt: TimeInterval = 0
     private static let flowAutoStartCooldown: TimeInterval = 20
+    /// Drives the keyboard slot height on `view` (priority 999).
+    private var keyboardHeightConstraint: NSLayoutConstraint?
+    /// Runtime value read from `UIView-Encapsulated-Layout-Height` (varies by device).
+    private var systemEncapsulatedHeight: CGFloat = 228
+
+    private var targetKeyboardHeight: CGFloat {
+        KeyboardRootView.totalHeight
+    }
 
     // MARK: - Lifecycle
 
     public override func viewDidLoad() {
         super.viewDidLoad()
-        // Keyboard extension MUST opt in to self-sizing, otherwise
-        // our SwiftUI `frame(height:)` is ignored and the keyboard is
-        // cropped by the system chrome (Spotlight bar, home indicator).
-        inputView?.allowsSelfSizing = true
+        installKeyboardHeight()
+        configureDictationBehavior()
         installStateActions()
         installSwiftUI()
         loadPersistedConfig()
         consumePendingDictationResultIfNeeded()
         refreshDictationProgressStateIfNeeded()
         installFlowSessionDarwinObserver()
+        installConfigDarwinObserver()
         refreshFlowSessionState()
     }
 
@@ -108,11 +120,23 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        configureDictationBehavior()
         KeyboardSetupBridge.markExtensionAppearance(hasFullAccess: hasFullAccess)
         consumePendingDictationResultIfNeeded()
         refreshDictationProgressStateIfNeeded()
         refreshFlowSessionState()
         startFlowSessionMonitor()
+    }
+
+    public override func viewIsAppearing(_ animated: Bool) {
+        super.viewIsAppearing(animated)
+        applyPresentationHeightOffset()
+    }
+
+    public override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // Presentation finished — lock to the true content-driven height.
+        keyboardHeightConstraint?.constant = targetKeyboardHeight
     }
 
     public override func didReceiveMemoryWarning() {
@@ -124,6 +148,14 @@ public final class KeyboardViewController: UIInputViewController {
         super.textDidChange(textInput)
         consumePendingDictationResultIfNeeded()
         refreshDictationProgressStateIfNeeded()
+    }
+
+    // MARK: - System keyboard chrome
+
+    /// Tell iOS this keyboard provides its own dictation entry (centre mic).
+    /// When `true`, the system dictation key in the bottom-right is not shown.
+    private func configureDictationBehavior() {
+        hasDictationKey = true
     }
 
     // MARK: - Wiring
@@ -141,9 +173,37 @@ public final class KeyboardViewController: UIInputViewController {
         // v0.2.1 follow-up: removed `setTranslationEnabled` — the chip
         // / picker only writes the locale id now; `enabled` is derived.
         state.setTranslationTargetLocaleId = { [weak self] id in self?.persistTranslationTargetLocaleId(id) }
+        state.setPolishScenarioId = { [weak self] id in self?.persistPolishScenarioId(id) }
         state.insertNewline       = { [weak self] in self?.textDocumentProxy.insertText("\n") }
         state.insertSpace         = { [weak self] in self?.textDocumentProxy.insertText(" ") }
         state.deleteBackward      = { [weak self] in self?.textDocumentProxy.deleteBackward() }
+    }
+
+    /// Reserve keyboard height on `view`. During presentation iOS adds a
+    /// private encapsulated height; `viewIsAppearing` applies the community
+    /// offset trick (target − encapsulated) so the slot lands at `target`.
+    private func installKeyboardHeight() {
+        let constraint = view.heightAnchor.constraint(
+            equalToConstant: targetKeyboardHeight
+        )
+        constraint.priority = UILayoutPriority(999)
+        constraint.isActive = true
+        keyboardHeightConstraint = constraint
+    }
+
+    /// Read the system encapsulated height and prime our constraint so iOS
+    /// presentation math (custom + encapsulated) equals `targetKeyboardHeight`.
+    /// See: https://developer.apple.com/forums/thread/799003
+    private func applyPresentationHeightOffset() {
+        if let encapsulated = view.constraints.first(where: { constraint in
+            constraint.firstItem as? UIView === view
+                && constraint.firstAttribute == .height
+                && constraint !== keyboardHeightConstraint
+        }) {
+            systemEncapsulatedHeight = encapsulated.constant
+        }
+        let primed = targetKeyboardHeight - systemEncapsulatedHeight
+        keyboardHeightConstraint?.constant = max(0, primed)
     }
 
     private func installSwiftUI() {
@@ -151,6 +211,11 @@ public final class KeyboardViewController: UIInputViewController {
         let host = UIHostingController(rootView: root)
         host.view.backgroundColor = .clear
         host.view.translatesAutoresizingMaskIntoConstraints = false
+        host.view.clipsToBounds = false
+        // Keep keyboard layout anchored to the top edge across keyboard
+        // switches — don't let UIHostingController re-inset for safe area.
+        host.view.insetsLayoutMarginsFromSafeArea = false
+        host.safeAreaRegions = []
         addChild(host)
         view.addSubview(host.view)
         NSLayoutConstraint.activate([
@@ -158,11 +223,6 @@ public final class KeyboardViewController: UIInputViewController {
             host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             host.view.topAnchor.constraint(equalTo: view.topAnchor),
             host.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            // Pin the host view to a fixed height matching KeyboardRootView.totalHeight.
-            // Without this, iOS lets the system chrome (Spotlight, home
-            // indicator) bleed into our content. With it, our content area
-            // is fully reserved and the keyboard feels intentional.
-            host.view.heightAnchor.constraint(equalToConstant: KeyboardRootView.totalHeight)
         ])
         host.didMove(toParent: self)
         self.hosting = host
@@ -203,8 +263,28 @@ public final class KeyboardViewController: UIInputViewController {
         flowSessionMonitorTask = nil
     }
 
+    private func installConfigDarwinObserver() {
+        configDarwinObserver = FlowSessionDarwinObserver(
+            notificationName: AppGroupConfigDarwin.notificationName
+        ) { [weak self] in
+            self?.refreshConfigFromAppGroup()
+        }
+    }
+
+    private func refreshConfigFromAppGroup() {
+        persistor.refreshRuntimeFlags(
+            into: state,
+            protectTranslationUntil: translationConfigProtectedUntil,
+            protectPolishScenarioUntil: polishScenarioConfigProtectedUntil
+        )
+    }
+
     private func refreshFlowSessionState() {
-        persistor.refreshRuntimeFlags(into: state)
+        persistor.refreshRuntimeFlags(
+            into: state,
+            protectTranslationUntil: translationConfigProtectedUntil,
+            protectPolishScenarioUntil: polishScenarioConfigProtectedUntil
+        )
         consumePendingFlowDeliveryIfNeeded()
 
         let active = FlowSessionBridge.isSessionActive()
@@ -515,8 +595,9 @@ public final class KeyboardViewController: UIInputViewController {
         debug("received transcript length=\(trimmed.count)")
         awaitingDictationResult = false
         stopDictationWatchdog()
-        // Local engine: host app delivers raw ASR transcript; insert as-is.
-        if state.isLocalEngine {
+
+        let runtimeStore = AppGroupStore()
+        guard runtimeStore.shouldRunCloudLLMStep else {
             textDocumentProxy.insertText(trimmed)
             state.lastTranscript = ""
             if let warning = delivery.polishWarning {
@@ -527,28 +608,13 @@ public final class KeyboardViewController: UIInputViewController {
             }
             return
         }
-        // Cloud engine: always polish via the configured LLM.
+
+        // Cloud engine, or local engine with cloud polish / translation.
         state.phase = .processing
         Task { @MainActor [weak self] in
             guard let self else { return }
-            // v0.2.1: pick the polish mode once at task start so a
-            // mid-flight toggle flip doesn't change the request we
-            // already sent. `isTranslationEffective` no longer gates on
-            // `engineMode == "cloud"` — the row visibility predicate
-            // already keeps the picker honest, and the local engine's
-            // translate-and-polish path now routes through DeepSeek.
-            let polishMode: PolishingService.PolishMode = self.state.isTranslationEffective
-                ? .translate(targetLocaleId: self.state.translationTargetLocaleId)
-                : .polish
-            // v0.2.1: local engine routes through DeepSeek for the
-            // polish / translate step regardless of the user's chosen
-            // cloud provider — DeepSeek is cheap and strong on
-            // Chinese, which is the dominant input for the on-device
-            // ASR transcript. Cloud engine honors the user's own
-            // provider id by passing `nil`.
-            let overrideProviderId: String? = self.state.engineMode == "local"
-                ? "deepseek"
-                : nil
+            let polishMode = runtimeStore.polishModeForPipeline
+            let overrideProviderId = runtimeStore.polishProviderIdOverride
             do {
                 let polished = try await self.polisher.polish(
                     trimmed,
@@ -656,7 +722,15 @@ public final class KeyboardViewController: UIInputViewController {
     private func persistTranslationTargetLocaleId(_ id: String) {
         let resolved = TranslationLanguageCatalog.resolve(id).id
         state.translationTargetLocaleId = resolved
+        translationConfigProtectedUntil = Date().addingTimeInterval(2.5)
         persistor.persist(translationTargetLocaleId: resolved)
+    }
+
+    private func persistPolishScenarioId(_ id: String) {
+        let resolved = PolishScenarioCatalog.resolve(id).id
+        state.polishScenarioId = resolved
+        polishScenarioConfigProtectedUntil = Date().addingTimeInterval(2.5)
+        persistor.persist(polishScenarioId: resolved)
     }
 
     // MARK: - Open host app

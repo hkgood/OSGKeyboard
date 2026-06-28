@@ -50,7 +50,7 @@ struct KeyboardPreviewStub: View {
             .padding(.top, 4)
             .padding(.bottom, 6)
         }
-        .frame(height: 280)
+        .frame(height: 240)
     }
 
     // MARK: - Top bar
@@ -60,7 +60,6 @@ struct KeyboardPreviewStub: View {
             modeChip
             localeChip
             Spacer(minLength: 0)
-            statusBadge
             Button(action: openSettings) {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 13, weight: .medium))
@@ -146,31 +145,6 @@ struct KeyboardPreviewStub: View {
         case "transcribe": return "mic.fill"
         case "polish":     return "wand.and.stars"
         default:           return "wand.and.stars"
-        }
-    }
-
-    private var statusBadge: some View {
-        Group {
-            switch phase {
-            case .idle:
-                EmptyView()
-            case .recording:
-                HStack(spacing: 4) {
-                    Circle().fill(palette.recordRed).frame(width: 6, height: 6)
-                    Text("keyboard.rec").font(TypeStyle.caption2).foregroundStyle(palette.textSecondary)
-                }
-                .padding(.horizontal, Spacing.xs).padding(.vertical, 3)
-                .background(palette.surface, in: Capsule())
-                .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
-            case .processing:
-                HStack(spacing: 4) {
-                    Circle().fill(palette.accent).frame(width: 6, height: 6)
-                    Text("···").font(TypeStyle.caption2).foregroundStyle(palette.textSecondary)
-                }
-                .padding(.horizontal, Spacing.xs).padding(.vertical, 3)
-                .background(palette.surface, in: Capsule())
-                .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
-            }
         }
     }
 

@@ -734,23 +734,6 @@ private struct APISetupPage: View {
                         .padding(.horizontal, Spacing.lg)
                     APISettingsCard(config: config)
                         .padding(.horizontal, Spacing.lg)
-                    // v0.2.1 follow-up: translation row lives on the
-                    // onboarding engine page so first-time users can
-                    // pick a target language before they ever see the
-                    // keyboard. v0.2.1 final review: both engines now
-                    // show the row (the local engine routes the polish
-                    // step through DeepSeek, so the constraint is gone).
-                    // Wrapped in the same surface card chrome as the
-                    // APISettingsCard above for visual symmetry.
-                    //
-                    // v0.2.1 final review (topbar cleanup pass): the
-                    // surface card chrome is owned by `translationSection`
-                    // itself, so both branches get it for free — no
-                    // per-branch duplication.
-                    if config.isTranslationRowVisible {
-                        translationSection
-                            .padding(.horizontal, Spacing.lg)
-                    }
                 } else {
                     // v0.2.0: local engine is iOS `SpeechAnalyzer` only.
                     // Surface the cloud-polish toggle and a one-line
@@ -772,38 +755,31 @@ private struct APISetupPage: View {
                             )
                     }
                     .padding(.horizontal, Spacing.lg)
-                    // v0.2.1 final review: same surface card chrome as
-                    // the cloud branch — the row now renders for both
-                    // engines.
-                    if config.isTranslationRowVisible {
-                        translationSection
-                            .padding(.horizontal, Spacing.lg)
-                    }
+                }
+
+                if config.isPolishScenarioRowVisible {
+                    postProcessingSection
+                        .padding(.horizontal, Spacing.lg)
                 }
             }
             .padding(.bottom, Spacing.xxxl)
         }
     }
 
-    /// v0.2.1 follow-up: extracted so both engine branches can render
-    /// the same surface card + picker. `TranslationPickerRow` itself
-    /// reads `ProviderConfig.translationTargetLocaleId` directly, so
-    /// picking a locale in onboarding flows through to the keyboard
-    /// extension on the next `load()` cycle.
-    ///
-    /// v0.2.1 final review: the section header now reads
-    /// `settings.translation.afterPolish` (renamed alongside the row
-    /// title in `TranslationPickerRow`) so the section and row read
-    /// as one cohesive group.
-    private var translationSection: some View {
+    /// Polish scenario + optional translation target for cloud onboarding.
+    private var postProcessingSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            Text("settings.translation.afterPolish")
+            Text("settings.polishScenario.section")
                 .font(TypeStyle.caption2)
                 .foregroundStyle(palette.textSecondary)
                 .textCase(.uppercase)
                 .frame(maxWidth: .infinity, alignment: .leading)
             VStack(spacing: 0) {
-                TranslationPickerRow(config: config, isVisible: true)
+                ScenarioPickerRow(config: config, isVisible: true)
+                if config.isTranslationRowVisible {
+                    Divider().background(palette.divider)
+                    TranslationPickerRow(config: config, isVisible: true)
+                }
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             .overlay(

@@ -176,12 +176,16 @@
 "locale.chip.ja-JP" = "日";
 "locale.chip.ko-KR" = "韩";
 
-/* Translation chip (v0.2.1) */
-"keyboard.translation.off" = "Translate";
+/* Translation chip (v0.3) */
+"keyboard.translation.chip" = "Translate";
+"keyboard.translation.offMenu" = "Don't translate";
+"keyboard.translation.off" = "Don't translate";
 "keyboard.translation.enable" = "Enable translation";
 "keyboard.translation.disable" = "Disable translation";
 "keyboard.translation.a11y" = "Translation";
 "keyboard.translation.a11yHint" = "Toggle translation or change the target language.";
+"keyboard.scenario.a11y" = "Polish scenario";
+"keyboard.scenario.a11yHint" = "Choose how dictation is polished.";
 
 /* Mode chip labels (used in both ext + preview stub) */
 "mode.off" = "Off";
