@@ -19,7 +19,7 @@
 // off / on, with the same accent treatment either way.
 //
 // Visual states:
-//   • off             → dim outline, "翻译" label
+//   • off             → dim outline, "翻译" chip label (menu first row = "不翻译")
 //   • on (any engine) → accent fill, "→ EN" / "→ 日本語" style label
 //
 // Stays in the same visual family as `CloudEngineChip` / `LocaleChip`
@@ -88,14 +88,14 @@ struct TranslationChip: View {
 
     private func displayLabel(for language: TranslationLanguage) -> String {
         if language.id == TranslationLanguageCatalog.offLocaleId {
-            return ExtL10n.string("keyboard.translation.off")
+            return ExtL10n.string("keyboard.translation.offMenu")
         }
         return language.nativeName
     }
 
     private func chipLabel(target: TranslationLanguage, enabled: Bool) -> String {
         if !enabled {
-            return ExtL10n.string("keyboard.translation.off")
+            return ExtL10n.string("keyboard.translation.chip")
         }
         // Short form: "→EN" / "→日" style. Falls back to the prompt
         // language name for languages without a chip-style abbreviation

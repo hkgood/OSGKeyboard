@@ -45,6 +45,7 @@ public struct AppGroupStore: @unchecked Sendable {
         // the `translationEnabled` Bool accessor below is kept as a
         // computed shim for source compatibility.
         static let translationTargetLocaleId = "config.translationTargetLocaleId"
+        static let polishScenarioId = "config.polishScenarioId"
     }
 
     // MARK: - Reads
@@ -127,6 +128,11 @@ public struct AppGroupStore: @unchecked Sendable {
             ?? TranslationLanguageCatalog.offLocaleId
     }
 
+    public var polishScenarioId: String {
+        let stored = defaults.string(forKey: Key.polishScenarioId)
+        return PolishScenarioCatalog.resolve(stored ?? PolishScenarioCatalog.defaultId).id
+    }
+
     // MARK: - Writes
 
     public func setModeId(_ id: String) {
@@ -169,6 +175,70 @@ public struct AppGroupStore: @unchecked Sendable {
     /// round-trip.
     public func setTranslationTargetLocaleId(_ id: String) {
         defaults.set(id, forKey: Key.translationTargetLocaleId)
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setPolishScenarioId(_ id: String) {
+        let resolved = PolishScenarioCatalog.resolve(id).id
+        defaults.set(resolved, forKey: Key.polishScenarioId)
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    /// Whether ASR output should be sent through the cloud LLM step.
+    /// Cloud engine: always. Local engine: only when cloud polish is
+    /// enabled (translation is a sub-option of that step).
+    public var shouldRunCloudLLMStep: Bool {
+        if engineMode == "cloud" { return true }
+        return localModeCloudPolishEnabled
+    }
+
+    /// Whether translate-and-polish should run (vs polish-only).
+    public var isTranslationEffective: Bool {
+        guard translationEnabled else { return false }
+        if engineMode == "local" { return localModeCloudPolishEnabled }
+        return true
+    }
+
+    /// Whether the keyboard top-bar translation chip should render.
+    /// Cloud engine: always. Local engine: when cloud polish is enabled
+    /// (translation is a sub-option of that LLM step). Independent of
+    /// whether a target locale is currently selected — the chip stays
+    /// visible so the user can pick "不翻译" or a language in-place.
+    public var isTranslationChipVisible: Bool {
+        if engineMode == "cloud" { return true }
+        return localModeCloudPolishEnabled
+    }
+
+    /// Whether the keyboard top-bar scenario chip should render.
+    public var isPolishScenarioChipVisible: Bool {
+        if engineMode == "cloud" { return true }
+        return localModeCloudPolishEnabled
+    }
+
+    /// System prompt for the polish pipeline honoring scenario selection.
+    public func resolvedPolishSystemPrompt(providerId: String? = nil) -> String {
+        if PolishScenarioCatalog.isCustom(polishScenarioId) {
+            return systemPrompt
+        }
+        let pid = providerId ?? self.providerId
+        return ScenarioPrompt.make(
+            scenarioId: polishScenarioId,
+            providerId: pid,
+            uiLanguage: uiLanguage
+        )
+    }
+
+    /// Polish vs translate-and-polish for the active pipeline.
+    public var polishModeForPipeline: PolishingService.PolishMode {
+        isTranslationEffective
+            ? .translate(targetLocaleId: translationTargetLocaleId)
+            : .polish
+    }
+
+    /// Local engine pins the LLM step to DeepSeek; cloud uses the
+    /// user's configured provider.
+    public var polishProviderIdOverride: String? {
+        engineMode == "local" ? "deepseek" : nil
     }
 
     // MARK: - Client

@@ -98,7 +98,7 @@
 "settings.engine.local.legacy" = "端侧 ASR，仅转录，无润色。";
 "settings.engine.cloud.title" = "云端识别与润色";
 "settings.engine.cloud.subtitle" = "本地转写 + 你配置的 API 润色，文字发往该第三方服务";
-"settings.provider.title" = "提供商";
+"settings.provider.title" = "云端引擎";
 "settings.provider.subtitle" = "选择 LLM 提供商。";
 "provider.openai" = "OpenAI";
 "provider.deepseek" = "DeepSeek";
@@ -108,9 +108,14 @@
 "provider.custom" = "自定义";
 "settings.api.title" = "接口";
 "settings.language.title" = "语言";
+"settings.languageAndPolish.title" = "语言与润色";
 // v0.2.1: 翻译功能
 "settings.translation.afterPolish" = "润色后翻译";
 "settings.translation.off" = "不翻译";
+"settings.polishScenario.section" = "润色";
+"settings.polishScenario.title" = "润色场景";
+"settings.polishScenario.hint" = "选择适合的使用场景。选「自定义」可编辑完整润色指令。";
+"settings.polishScenario.customHint" = "自定义场景：在下方编辑完整润色指令。";
 "settings.languageModels.title" = "语言与模型";
 "settings.localModels.title" = "本地模型";
 "settings.localModels.speechRole" = "语音识别";

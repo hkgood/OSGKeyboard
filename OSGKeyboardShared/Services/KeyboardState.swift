@@ -98,14 +98,29 @@ public final class KeyboardState: ObservableObject {
     /// Defaults to `offLocaleId` so the keyboard boots in the "off"
     /// state on first install.
     @Published public var translationTargetLocaleId: String = TranslationLanguageCatalog.offLocaleId
-    /// v0.2.1: effective predicate — mirrors `ProviderConfig`.
-    /// v0.2.1 follow-up: no longer gates on `engineMode == "cloud"`
-    /// because the local engine's translate-and-polish step now runs
-    /// (routed through DeepSeek). Row visibility (`isTranslationRowVisible`
-    /// on `ProviderConfig`) keeps the picker honest, so the keyboard
-    /// can rely on `translationEnabled` alone here.
+    /// Selected polish scenario mirrored from App Group.
+    @Published public var polishScenarioId: String = PolishScenarioCatalog.defaultId
+    /// v0.2.0: mirrored from App Group — local engine runs the cloud
+    /// LLM step only when this is `true`.
+    @Published public var localModeCloudPolishEnabled: Bool = false
+    /// Whether translate-and-polish is actually armed for the current
+    /// engine (local requires cloud polish + a target locale).
     public var isTranslationEffective: Bool {
-        translationEnabled
+        guard translationEnabled else { return false }
+        if isLocalEngine { return localModeCloudPolishEnabled }
+        return true
+    }
+
+    /// Whether the keyboard top-bar translation chip should render.
+    public var isTranslationChipVisible: Bool {
+        if isLocalEngine { return localModeCloudPolishEnabled }
+        return true
+    }
+
+    /// Whether the keyboard top-bar polish scenario chip should render.
+    public var isPolishScenarioChipVisible: Bool {
+        if isLocalEngine { return localModeCloudPolishEnabled }
+        return true
     }
 
     /// Convenience shorthand used by the pipeline and views.
@@ -125,6 +140,7 @@ public final class KeyboardState: ObservableObject {
     /// is derived from the locale id, so there's no separate toggle to
     /// persist. Wired in `KeyboardViewController.installStateActions`.
     public var setTranslationTargetLocaleId: (String) -> Void = { _ in }
+    public var setPolishScenarioId: (String) -> Void = { _ in }
     public var insertNewline:       () -> Void = {}
     public var insertSpace:         () -> Void = {}
     public var deleteBackward:      () -> Void = {}

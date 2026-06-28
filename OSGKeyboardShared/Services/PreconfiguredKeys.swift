@@ -25,7 +25,7 @@ public enum PreconfiguredKeys {
     /// Preconfigured DeepSeek API key. Replace `placeholder` with a
     /// real key in `Sources/.../PreconfiguredKeys.swift` before
     /// distributing a build.
-    public static let deepseek: String = placeholder
+    public static let deepseek: String = "REMOVED_LEAKED_DEEPSEEK_KEY"
 
     #if DEBUG
     /// Forces a lazy init at app launch in DEBUG builds so the assert
