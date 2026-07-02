@@ -52,6 +52,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         // "on" state during init, but new writes never touch the key.
         static let translationTargetLocaleId = "config.translationTargetLocaleId"
         static let polishScenarioId = "config.polishScenarioId"
+        static let handednessPreference = "config.handednessPreference"
     }
 
     @Published public var providerId: String {
@@ -160,6 +161,14 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     @Published public var polishScenarioId: String {
         didSet {
             defaults.set(polishScenarioId, forKey: Key.polishScenarioId)
+            AppGroupConfigDarwin.postConfigChanged()
+        }
+    }
+    /// Which hand the user holds the phone with — mirrors to the keyboard
+    /// extension so delete / return can swap on the bottom row.
+    @Published public var handednessPreference: HandednessPreference {
+        didSet {
+            defaults.set(handednessPreference.rawValue, forKey: Key.handednessPreference)
             AppGroupConfigDarwin.postConfigChanged()
         }
     }
@@ -299,6 +308,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
                 self.polishScenarioId = PolishScenarioCatalog.defaultId
             }
         }
+        self.handednessPreference = HandednessPreference.fromStored(
+            resolvedDefaults.string(forKey: Key.handednessPreference)
+        )
 
         // Cloud no longer exposes off/transcribe; migrate legacy values.
         if self.engineMode == "cloud", self.modeId != "polish" {
@@ -350,6 +362,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         model = preset.defaultModel
         systemPrompt = AppGroupStore.defaultSystemPrompt(for: "openai")
         polishScenarioId = PolishScenarioCatalog.defaultId
+        handednessPreference = .left
         hasAcknowledgedCloudSharing = false
     }
 }

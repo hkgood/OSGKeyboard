@@ -140,6 +140,7 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.writeHeartbeat()
         FlowSessionDarwin.postSessionChanged()
         isActive = true
+        ScreenWakeLock.acquire()
         if let expires = FlowSessionBridge.sessionExpiresAt() {
             sessionExpiresAt = Date(timeIntervalSince1970: expires)
         }
@@ -187,6 +188,7 @@ final class FlowSessionManager: ObservableObject {
 
         capture.stop()
         endBackgroundKeepAlive()
+        ScreenWakeLock.release()
         sessionASR = nil
         FlowSessionBridge.markSessionInactive()
         FlowSessionDarwin.postSessionChanged()
@@ -321,6 +323,7 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.markSessionActive(duration: duration)
         FlowSessionDarwin.postSessionChanged()
         isActive = true
+        ScreenWakeLock.acquire()
         sessionExpiresAt = Date().addingTimeInterval(duration)
 
         startHeartbeat()

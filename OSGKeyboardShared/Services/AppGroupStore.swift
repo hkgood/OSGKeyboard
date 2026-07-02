@@ -46,6 +46,7 @@ public struct AppGroupStore: @unchecked Sendable {
         // computed shim for source compatibility.
         static let translationTargetLocaleId = "config.translationTargetLocaleId"
         static let polishScenarioId = "config.polishScenarioId"
+        static let handednessPreference = "config.handednessPreference"
     }
 
     // MARK: - Reads
@@ -133,6 +134,11 @@ public struct AppGroupStore: @unchecked Sendable {
         return PolishScenarioCatalog.resolve(stored ?? PolishScenarioCatalog.defaultId).id
     }
 
+    /// Bottom-row key order on the keyboard extension.
+    public var handednessPreference: HandednessPreference {
+        HandednessPreference.fromStored(defaults.string(forKey: Key.handednessPreference))
+    }
+
     // MARK: - Writes
 
     public func setModeId(_ id: String) {
@@ -181,6 +187,11 @@ public struct AppGroupStore: @unchecked Sendable {
     public func setPolishScenarioId(_ id: String) {
         let resolved = PolishScenarioCatalog.resolve(id).id
         defaults.set(resolved, forKey: Key.polishScenarioId)
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setHandednessPreference(_ preference: HandednessPreference) {
+        defaults.set(preference.rawValue, forKey: Key.handednessPreference)
         AppGroupConfigDarwin.postConfigChanged()
     }
 

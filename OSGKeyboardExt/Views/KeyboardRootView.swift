@@ -11,8 +11,8 @@
 //   │  [polish] [中]                      ⚙     │  ← header band (top)
 //   │              (transcript preview)         │
 //   │              ┊                          │
-//   │        (⌫)      ◯ mic      (↩)          │  ← action cluster:
-//   │                           (space)        │     centred below header
+//   │              ◯ mic (centred)              │  ← action cluster:
+//   │   [delete]  [  space  ]  [return]         │     mic + bottom row
 //   │              ┊                          │
 //   └───────────────────────────────────────────┘
 
@@ -20,36 +20,39 @@ import SwiftUI
 import OSGKeyboardShared
 
 private enum KeyboardLayoutMetrics {
-    static let sideActionButtonSize: CGFloat = 53
-    static let sideActionIconSize: CGFloat = 19
-    static let sideSpaceBarWidth: CGFloat = 19
-    static let micFlankMinSpacing: CGFloat = 36
-    static let sideActionStackSpacing: CGFloat = 16
+    static let micSize: CGFloat = 121
+    static let micToButtonGap: CGFloat = 8
+    static let bottomActionRowHeight: CGFloat = 48
+    static let bottomActionFixedWidth: CGFloat = 86
+    static let bottomActionSpacing: CGFloat = Spacing.xs
     /// Gap between the top chip row and the transcript / hint line (4 pt → 8 pt, +100%).
     static let topBarToTranscriptSpacing: CGFloat = Spacing.xs
-    /// Outer inset for delete / return·space from screen edges (8 pt → 24 pt, +200%).
+    /// Outer inset for the bottom action row from screen edges (8 pt → 24 pt, +200%).
     static let sideActionHorizontalInset: CGFloat = Spacing.xs * 3
 
     // MARK: - Content-driven keyboard height (single source of truth)
     static let outerPaddingTop: CGFloat = 2
-    static let outerPaddingBottom: CGFloat = 6
+    static let outerPaddingBottom: CGFloat = 1
     static let topBarHeight: CGFloat = 38
     static let transcriptLineHeight: CGFloat = 22
-    static let actionClusterHeight: CGFloat = 132
-    /// Fixed breathing room above/below the mic row (not flexible Spacers).
-    static let actionClusterVerticalGap: CGFloat = Spacing.md
+    /// mic (121) + gap (8) + bottom row (48) = 177 pt
+    static let actionClusterHeight: CGFloat = micSize + micToButtonGap + bottomActionRowHeight
+    /// Gap between transcript line and mic (−30% from former 16 pt).
+    static let actionClusterTopGap: CGFloat = Spacing.md * 0.7
+    /// Minimal gap below the bottom action row.
+    static let actionClusterBottomGap: CGFloat = Spacing.xs / 2
 
     static var headerBandHeight: CGFloat {
         topBarHeight + topBarToTranscriptSpacing + transcriptLineHeight
     }
 
-    /// 2 + 68 + 16 + 132 + 16 + 6 = 240 pt
+    /// 2 + 68 + 11.2 + 177 + 4 + 1 = 263.2 pt
     static var totalHeight: CGFloat {
         outerPaddingTop
             + headerBandHeight
-            + actionClusterVerticalGap
+            + actionClusterTopGap
             + actionClusterHeight
-            + actionClusterVerticalGap
+            + actionClusterBottomGap
             + outerPaddingBottom
     }
 }
@@ -76,13 +79,13 @@ public struct KeyboardRootView: View {
             headerBand
 
             Color.clear
-                .frame(height: KeyboardLayoutMetrics.actionClusterVerticalGap)
+                .frame(height: KeyboardLayoutMetrics.actionClusterTopGap)
 
             micActionRow
                 .frame(height: KeyboardLayoutMetrics.actionClusterHeight)
 
             Color.clear
-                .frame(height: KeyboardLayoutMetrics.actionClusterVerticalGap)
+                .frame(height: KeyboardLayoutMetrics.actionClusterBottomGap)
         }
         .padding(.top, KeyboardLayoutMetrics.outerPaddingTop)
         .padding(.bottom, KeyboardLayoutMetrics.outerPaddingBottom)
@@ -152,38 +155,71 @@ public struct KeyboardRootView: View {
 
     // MARK: - Action cluster
 
-    /// Delete (left), mic (centre), return + space stacked on the right.
-    /// Fixed vertical gaps in `body` keep the cluster centred without
-    /// flexible Spacers consuming extra keyboard height.
+    /// Mic centred above a bottom row: delete · space · return (or swapped).
     private var micActionRow: some View {
-        HStack(alignment: .center, spacing: 0) {
-            CircularToolbarButton(systemName: "delete.left", label: "delete") {
-                state.deleteBackward()
-            }
+        let editingBlocked = voiceInputBlocksEditing
+        let swapKeys = state.handednessPreference.swapsActionKeys
 
-            Spacer(minLength: KeyboardLayoutMetrics.micFlankMinSpacing)
-
+        return VStack(spacing: KeyboardLayoutMetrics.micToButtonGap) {
             RecordButton(
                 phase: buttonPhase,
                 level: state.level,
                 remainingSeconds: state.phase == .recording ? state.utteranceRemainingSeconds : nil,
                 onToggle: state.tapMic
             )
-            .frame(width: 132, height: 132)
+            .frame(width: KeyboardLayoutMetrics.micSize, height: KeyboardLayoutMetrics.micSize)
 
-            Spacer(minLength: KeyboardLayoutMetrics.micFlankMinSpacing)
-
-            VStack(spacing: KeyboardLayoutMetrics.sideActionStackSpacing) {
-                CircularToolbarButton(systemName: "return", label: "newline") {
-                    state.insertNewline()
-                }
-                CircularToolbarButton(spaceStyle: true, label: "space") {
-                    state.insertSpace()
+            HStack(spacing: KeyboardLayoutMetrics.bottomActionSpacing) {
+                if swapKeys {
+                    bottomReturnButton(disabled: editingBlocked)
+                    bottomSpaceButton(disabled: editingBlocked)
+                    bottomDeleteButton(disabled: editingBlocked)
+                } else {
+                    bottomDeleteButton(disabled: editingBlocked)
+                    bottomSpaceButton(disabled: editingBlocked)
+                    bottomReturnButton(disabled: editingBlocked)
                 }
             }
         }
         .padding(.horizontal, KeyboardLayoutMetrics.sideActionHorizontalInset)
         .frame(maxWidth: .infinity)
+    }
+
+    private func bottomDeleteButton(disabled: Bool) -> some View {
+        RepeatingDeleteButton(disabled: disabled) {
+            state.deleteBackward()
+        }
+        .frame(
+            width: KeyboardLayoutMetrics.bottomActionFixedWidth,
+            height: KeyboardLayoutMetrics.bottomActionRowHeight
+        )
+    }
+
+    private func bottomSpaceButton(disabled: Bool) -> some View {
+        RectangularToolbarButton(spaceStyle: true, label: "space", disabled: disabled) {
+            state.insertSpace()
+        }
+        .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
+    }
+
+    private func bottomReturnButton(disabled: Bool) -> some View {
+        RectangularToolbarButton(systemName: "return", label: "newline", disabled: disabled) {
+            state.insertNewline()
+        }
+        .frame(
+            width: KeyboardLayoutMetrics.bottomActionFixedWidth,
+            height: KeyboardLayoutMetrics.bottomActionRowHeight
+        )
+    }
+
+    /// Option C: block typing keys during the full voice-input pipeline.
+    private var voiceInputBlocksEditing: Bool {
+        switch state.phase {
+        case .requestingPermissions, .recording, .processing:
+            return true
+        case .idle, .error, .denied:
+            return false
+        }
     }
 
     private var buttonPhase: RecordButton.Phase {
@@ -334,59 +370,6 @@ private struct TranscriptLine: View {
         case .mic:    return ExtL10n.string("keyboard.denied.mic")
         case .speech: return ExtL10n.string("keyboard.denied.speech")
         }
-    }
-}
-
-// MARK: - Circular toolbar button
-
-private struct CircularToolbarButton: View {
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.themePalette) private var palette: ThemePalette
-
-    let systemName: String?
-    let spaceStyle: Bool
-    let label: String
-    let action: () -> Void
-
-    init(systemName: String, label: String, action: @escaping () -> Void) {
-        self.systemName = systemName
-        self.spaceStyle = false
-        self.label = label
-        self.action = action
-    }
-
-    init(spaceStyle: Bool, label: String, action: @escaping () -> Void) {
-        self.systemName = nil
-        self.spaceStyle = spaceStyle
-        self.label = label
-        self.action = action
-    }
-
-    var body: some View {
-        Button(action: action) {
-            Group {
-                if spaceStyle {
-                    Capsule()
-                        .fill(palette.textPrimary)
-                        .frame(width: KeyboardLayoutMetrics.sideSpaceBarWidth, height: 3)
-                } else if let systemName {
-                    Image(systemName: systemName)
-                        .font(.system(size: KeyboardLayoutMetrics.sideActionIconSize, weight: .medium))
-                        .foregroundStyle(palette.textPrimary)
-                }
-            }
-            .frame(width: KeyboardLayoutMetrics.sideActionButtonSize, height: KeyboardLayoutMetrics.sideActionButtonSize)
-            .background(sideButtonFill, in: Circle())
-            .overlay(Circle().stroke(palette.dividerStrong, lineWidth: 0.5))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(label))
-    }
-
-    private var sideButtonFill: Color {
-        colorScheme == .dark
-            ? Color(red: 0.20, green: 0.20, blue: 0.22)
-            : palette.surfaceElevated
     }
 }
 

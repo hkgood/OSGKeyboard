@@ -78,6 +78,7 @@ struct SettingsView: View {
                                 localEngineSettingsSection
                             }
                             if presentation == .tab {
+                                preferencesSection
                                 footerLinks
                             }
                         }
@@ -253,6 +254,27 @@ struct SettingsView: View {
         dynamicLocales = entries
     }
 
+    // MARK: - Preferences (tab settings only)
+
+    private var preferencesSection: some View {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.preferences.title")
+            VStack(spacing: 0) {
+                HandednessPickerRow(
+                    selection: Binding(
+                        get: { config.handednessPreference },
+                        set: { config.handednessPreference = $0 }
+                    )
+                )
+            }
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+                    .stroke(palette.divider, lineWidth: 0.5)
+            )
+        }
+    }
+
     // MARK: - Footer links (tab settings only)
 
     private var footerLinks: some View {
@@ -363,6 +385,31 @@ struct SettingsView: View {
             .foregroundStyle(palette.textSecondary)
             .textCase(.uppercase)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Handedness picker row
+
+private struct HandednessPickerRow: View {
+    @Binding var selection: HandednessPreference
+
+    private var options: [(id: String, label: String)] {
+        HandednessPreference.allCases.map { preference in
+            (preference.rawValue, AppL10n.string(preference.labelKey))
+        }
+    }
+
+    var body: some View {
+        PickerRow(
+            title: AppL10n.string("settings.handedness.title"),
+            options: options,
+            selection: Binding(
+                get: { selection.rawValue },
+                set: { newValue in
+                    selection = HandednessPreference(rawValue: newValue) ?? .left
+                }
+            )
+        )
     }
 }
 

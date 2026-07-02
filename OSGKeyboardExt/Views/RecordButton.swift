@@ -42,13 +42,13 @@ struct RecordButton: View {
         return remainingSeconds <= 10
     }
 
-    /// Decorative rings are sized to stay inside the 132 pt frame applied
+    /// Decorative rings are sized to stay inside the 121 pt frame applied
     /// by `KeyboardRootView` so glow / breath animations are not clipped.
     private enum Layout {
-        static let disc: CGFloat = 104
-        static let outerRing: CGFloat = 112
-        static let breathRing: CGFloat = 108
-        static let glow: CGFloat = 128
+        static let disc: CGFloat = 95
+        static let outerRing: CGFloat = 106
+        static let breathRing: CGFloat = 100
+        static let glow: CGFloat = 119
     }
 
     var body: some View {
@@ -65,8 +65,8 @@ struct RecordButton: View {
                     RadialGradient(
                         colors: [palette.recordRed.opacity(0.55), .clear],
                         center: .center,
-                        startRadius: 50,
-                        endRadius: 100
+                        startRadius: 46,
+                        endRadius: 92
                     )
                 )
                 .frame(width: Layout.glow, height: Layout.glow)
@@ -93,10 +93,10 @@ struct RecordButton: View {
                     switch phase {
                     case .idle:
                         Image(systemName: "mic.fill")
-                            .font(.system(size: 38, weight: .medium))
+                            .font(.system(size: 36, weight: .medium))
                             .foregroundStyle(.white)
                     case .recording:
-                        VStack(spacing: 4) {
+                        VStack(spacing: 3) {
                             if let remainingSeconds {
                                 Text(formatRemaining(remainingSeconds))
                                     .font(.system(size: 22, weight: .semibold, design: .rounded))
@@ -109,7 +109,7 @@ struct RecordButton: View {
                                 color: Color(red: 1.0, green: 0.78, blue: 0.78),
                                 active: true
                             )
-                                .frame(width: 72, height: 32)
+                                .frame(width: 73, height: 32)
                         }
                         .transition(.opacity)
                     case .processing:
@@ -119,7 +119,7 @@ struct RecordButton: View {
                             .scaleEffect(2.5)
                     case .error:
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 30, weight: .medium))
+                            .font(.system(size: 32, weight: .medium))
                             .foregroundStyle(palette.warning)
                     }
                 }
