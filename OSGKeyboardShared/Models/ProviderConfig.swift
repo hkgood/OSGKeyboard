@@ -39,6 +39,20 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         // in the local engine. Default `false` — keeps the local engine
         // truly local unless the user explicitly opts in.
         static let localModeCloudPolishEnabled = "config.localModeCloudPolishEnabled"
+        // v0.2.1: optional translation step after ASR. The
+        // post-ASR transcript is routed through the same LLM with a
+        // translate-and-polish prompt targeting `translationTargetLocaleId`.
+        // Mutually exclusive with the local-only promise — see `TranslationPolicy`.
+        //
+        // v0.2.1 follow-up: `config.translationEnabled` was *removed*
+        // as a persisted key — translation is now derived from
+        // `translationTargetLocaleId` (== offLocaleId means "off"). The
+        // store still tolerates legacy reads of the old key so users
+        // who upgraded from a build that wrote it don't see a flash of
+        // "on" state during init, but new writes never touch the key.
+        static let translationTargetLocaleId = "config.translationTargetLocaleId"
+        static let polishScenarioId = "config.polishScenarioId"
+        static let handednessPreference = "config.handednessPreference"
     }
 
     @Published public var providerId: String {
@@ -109,11 +123,82 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     /// box. Users opt in from Settings when the iOS ASR output isn't
     /// strong enough (noisy far-field audio, dialectal Chinese, etc.).
     @Published public var localModeCloudPolishEnabled: Bool {
-        didSet { defaults.set(localModeCloudPolishEnabled, forKey: Key.localModeCloudPolishEnabled) }
+        didSet {
+            defaults.set(localModeCloudPolishEnabled, forKey: Key.localModeCloudPolishEnabled)
+            AppGroupConfigDarwin.postConfigChanged()
+        }
     }
     /// Host-app UI language. Also mirrored to the App Group for the keyboard extension.
     @Published public var uiLanguage: AppUILanguage {
         didSet { defaults.set(uiLanguage.rawValue, forKey: Key.uiLanguage) }
+    }
+    /// v0.2.1: whether to translate the transcript into
+    /// `translationTargetLocaleId` before insertion. **Derived** —
+    /// translation is on iff the user has selected a target locale
+    /// (i.e. the persisted id is anything other than
+    /// `TranslationLanguageCatalog.offLocaleId`). Default off.
+    ///
+    /// This used to be a stored `@Published var ... { didSet }` but the
+    /// chip / picker now writes the locale directly; collapsing the
+    /// pair into one field removes the "two writes out of sync" bug
+    /// surface entirely.
+    public var translationEnabled: Bool {
+        translationTargetLocaleId != TranslationLanguageCatalog.offLocaleId
+    }
+    /// v0.2.1: BCP-47-ish target language id (e.g. `en`, `ja`, `ko`) the
+    /// translate-and-polish prompt should produce. Default `"off"` —
+    /// translation is opt-in. Persisted in the App Group so the keyboard
+    /// extension can honour it (and so the chip on the keyboard reflects
+    /// the user's choice without a host-app round-trip).
+    @Published public var translationTargetLocaleId: String {
+        didSet {
+            defaults.set(translationTargetLocaleId, forKey: Key.translationTargetLocaleId)
+            AppGroupConfigDarwin.postConfigChanged()
+        }
+    }
+    /// Selected polish scenario preset (e.g. `daily_chat`, `work`) or
+    /// `custom` when the user edits the raw system prompt.
+    @Published public var polishScenarioId: String {
+        didSet {
+            defaults.set(polishScenarioId, forKey: Key.polishScenarioId)
+            AppGroupConfigDarwin.postConfigChanged()
+        }
+    }
+    /// Which hand the user holds the phone with — mirrors to the keyboard
+    /// extension so delete / return can swap on the bottom row.
+    @Published public var handednessPreference: HandednessPreference {
+        didSet {
+            defaults.set(handednessPreference.rawValue, forKey: Key.handednessPreference)
+            AppGroupConfigDarwin.postConfigChanged()
+        }
+    }
+
+    /// Whether the pipeline should run translate-and-polish (not just
+    /// polish). Cloud engine: any selected target locale. Local engine:
+    /// only when cloud polish is also enabled.
+    public var isTranslationEffective: Bool {
+        guard translationEnabled else { return false }
+        if isLocalEngine { return localModeCloudPolishEnabled }
+        return true
+    }
+
+    /// Translation picker visibility. Cloud engine: always. Local engine:
+    /// only when "Cloud polish after ASR" is on — translation is a
+    /// sub-step of that cloud LLM pass, not a standalone feature.
+    public var isTranslationRowVisible: Bool {
+        if engineMode == "cloud" { return true }
+        return isLocalEngine && localModeCloudPolishEnabled
+    }
+
+    /// Polish scenario picker visibility — same gate as translation:
+    /// only when the pipeline can run a cloud LLM step.
+    public var isPolishScenarioRowVisible: Bool {
+        if engineMode == "cloud" { return true }
+        return isLocalEngine && localModeCloudPolishEnabled
+    }
+
+    public var isCustomPolishScenario: Bool {
+        PolishScenarioCatalog.isCustom(polishScenarioId)
     }
 
     public var isConfigured: Bool {
@@ -142,6 +227,16 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     /// step; callers should check `Keychain.apiKey()` before invoking.
     public var shouldPolishLocalTranscript: Bool {
         isLocalEngine && localModeCloudPolishEnabled
+    }
+
+    /// v0.2.1 follow-up: when the local engine is using the cloud-
+    /// polish step, route the call through DeepSeek — cheap, strong
+    /// on Chinese, and the right default for the on-device ASR
+    /// transcript. Other engines honor the user's configured
+    /// `providerId` unchanged so cloud users keep their preferred
+    /// vendor (OpenAI / Anthropic / Zhipu / etc).
+    public var localModeProviderId: String {
+        isLocalEngine ? "deepseek" : providerId
     }
 
     /// The system prompt the user *sees* in the editor — fall back to the
@@ -193,6 +288,29 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         self.uiLanguage = AppUILanguage.fromStored(
             resolvedDefaults.string(forKey: Key.uiLanguage)
         )
+        // v0.2.1 follow-up: `translationEnabled` is now derived from
+        // `translationTargetLocaleId` — no separate init read.
+        // Default the locale id to `offLocaleId` so existing installs
+        // that never picked a target language stay in the "off" state
+        // (the previous build's default of `"en"` would silently turn
+        // translation on for every upgraded user; off is the safe
+        // conservative default that matches the picker / chip UX).
+        self.translationTargetLocaleId = resolvedDefaults.string(forKey: Key.translationTargetLocaleId)
+            ?? TranslationLanguageCatalog.offLocaleId
+        if let storedScenario = resolvedDefaults.string(forKey: Key.polishScenarioId) {
+            self.polishScenarioId = PolishScenarioCatalog.resolve(storedScenario).id
+        } else {
+            let savedPrompt = resolvedDefaults.string(forKey: Key.systemPrompt)
+                ?? AppGroupStore.defaultSystemPrompt(for: pid)
+            if savedPrompt != AppGroupStore.defaultSystemPrompt(for: pid) {
+                self.polishScenarioId = PolishScenarioCatalog.customId
+            } else {
+                self.polishScenarioId = PolishScenarioCatalog.defaultId
+            }
+        }
+        self.handednessPreference = HandednessPreference.fromStored(
+            resolvedDefaults.string(forKey: Key.handednessPreference)
+        )
 
         // Cloud no longer exposes off/transcribe; migrate legacy values.
         if self.engineMode == "cloud", self.modeId != "polish" {
@@ -243,6 +361,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         apiKey = ""
         model = preset.defaultModel
         systemPrompt = AppGroupStore.defaultSystemPrompt(for: "openai")
+        polishScenarioId = PolishScenarioCatalog.defaultId
+        handednessPreference = .left
         hasAcknowledgedCloudSharing = false
     }
 }

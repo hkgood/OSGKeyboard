@@ -39,6 +39,14 @@ public struct AppGroupStore: @unchecked Sendable {
         static let uiLanguage       = "config.uiLanguage"
         // v0.2.0: opt-in cloud polish step after local-mode ASR.
         static let localModeCloudPolishEnabled = "config.localModeCloudPolishEnabled"
+        // v0.2.1 follow-up: `config.translationEnabled` was *removed* as a
+        // persisted key — translation is derived from the target locale
+        // id. New code should only write/read `translationTargetLocaleId`;
+        // the `translationEnabled` Bool accessor below is kept as a
+        // computed shim for source compatibility.
+        static let translationTargetLocaleId = "config.translationTargetLocaleId"
+        static let polishScenarioId = "config.polishScenarioId"
+        static let handednessPreference = "config.handednessPreference"
     }
 
     // MARK: - Reads
@@ -104,6 +112,33 @@ public struct AppGroupStore: @unchecked Sendable {
         AppUILanguage.fromStored(defaults.string(forKey: Key.uiLanguage))
     }
 
+    /// v0.2.1 follow-up: derived — translation is on iff a target locale
+    /// has been selected. The `translationTargetLocaleId` getter below
+    /// is the source of truth; this property exists for backwards
+    /// compatibility with call sites that read `store.translationEnabled`.
+    public var translationEnabled: Bool {
+        translationTargetLocaleId != TranslationLanguageCatalog.offLocaleId
+    }
+
+    /// v0.2.1: target locale id the translate-and-polish prompt should
+    /// produce (e.g. `"en"`, `"ja"`). Defaults to `offLocaleId` ("off")
+    /// when nothing is stored, matching the picker / chip UX where the
+    /// user has to actively pick a language to turn translation on.
+    public var translationTargetLocaleId: String {
+        defaults.string(forKey: Key.translationTargetLocaleId)
+            ?? TranslationLanguageCatalog.offLocaleId
+    }
+
+    public var polishScenarioId: String {
+        let stored = defaults.string(forKey: Key.polishScenarioId)
+        return PolishScenarioCatalog.resolve(stored ?? PolishScenarioCatalog.defaultId).id
+    }
+
+    /// Bottom-row key order on the keyboard extension.
+    public var handednessPreference: HandednessPreference {
+        HandednessPreference.fromStored(defaults.string(forKey: Key.handednessPreference))
+    }
+
     // MARK: - Writes
 
     public func setModeId(_ id: String) {
@@ -124,6 +159,97 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setUILanguage(_ language: AppUILanguage) {
         defaults.set(language.rawValue, forKey: Key.uiLanguage)
+    }
+
+    /// v0.2.1 follow-up: kept for source compatibility with callers that
+    /// still pass a Bool (e.g. older tests, any leftover bridge code).
+    /// `enabled == true` selects `defaultLocaleId` ("en") as a sensible
+    /// on-ramp target; `enabled == false` resets to `offLocaleId`.
+    /// The keyboard chip / pipeline now write the locale id directly
+    /// via `setTranslationTargetLocaleId`, which is the preferred path.
+    public func setTranslationEnabled(_ enabled: Bool) {
+        defaults.set(
+            enabled ? TranslationLanguageCatalog.defaultLocaleId : TranslationLanguageCatalog.offLocaleId,
+            forKey: Key.translationTargetLocaleId
+        )
+    }
+
+    /// v0.2.1: persist target locale id (e.g. `"en"`, `"ja"`, or
+    /// `TranslationLanguageCatalog.offLocaleId`). The keyboard
+    /// extension reads this on every `load()` and `refreshRuntimeFlags()`
+    /// so the chip reflects the latest value without a host-app
+    /// round-trip.
+    public func setTranslationTargetLocaleId(_ id: String) {
+        defaults.set(id, forKey: Key.translationTargetLocaleId)
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setPolishScenarioId(_ id: String) {
+        let resolved = PolishScenarioCatalog.resolve(id).id
+        defaults.set(resolved, forKey: Key.polishScenarioId)
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setHandednessPreference(_ preference: HandednessPreference) {
+        defaults.set(preference.rawValue, forKey: Key.handednessPreference)
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    /// Whether ASR output should be sent through the cloud LLM step.
+    /// Cloud engine: always. Local engine: only when cloud polish is
+    /// enabled (translation is a sub-option of that step).
+    public var shouldRunCloudLLMStep: Bool {
+        if engineMode == "cloud" { return true }
+        return localModeCloudPolishEnabled
+    }
+
+    /// Whether translate-and-polish should run (vs polish-only).
+    public var isTranslationEffective: Bool {
+        guard translationEnabled else { return false }
+        if engineMode == "local" { return localModeCloudPolishEnabled }
+        return true
+    }
+
+    /// Whether the keyboard top-bar translation chip should render.
+    /// Cloud engine: always. Local engine: when cloud polish is enabled
+    /// (translation is a sub-option of that LLM step). Independent of
+    /// whether a target locale is currently selected — the chip stays
+    /// visible so the user can pick "不翻译" or a language in-place.
+    public var isTranslationChipVisible: Bool {
+        if engineMode == "cloud" { return true }
+        return localModeCloudPolishEnabled
+    }
+
+    /// Whether the keyboard top-bar scenario chip should render.
+    public var isPolishScenarioChipVisible: Bool {
+        if engineMode == "cloud" { return true }
+        return localModeCloudPolishEnabled
+    }
+
+    /// System prompt for the polish pipeline honoring scenario selection.
+    public func resolvedPolishSystemPrompt(providerId: String? = nil) -> String {
+        if PolishScenarioCatalog.isCustom(polishScenarioId) {
+            return systemPrompt
+        }
+        let pid = providerId ?? self.providerId
+        return ScenarioPrompt.make(
+            scenarioId: polishScenarioId,
+            providerId: pid,
+            uiLanguage: uiLanguage
+        )
+    }
+
+    /// Polish vs translate-and-polish for the active pipeline.
+    public var polishModeForPipeline: PolishingService.PolishMode {
+        isTranslationEffective
+            ? .translate(targetLocaleId: translationTargetLocaleId)
+            : .polish
+    }
+
+    /// Local engine pins the LLM step to DeepSeek; cloud uses the
+    /// user's configured provider.
+    public var polishProviderIdOverride: String? {
+        engineMode == "local" ? "deepseek" : nil
     }
 
     // MARK: - Client

@@ -42,11 +42,20 @@ struct RecordButton: View {
         return remainingSeconds <= 10
     }
 
+    /// Decorative rings are sized to stay inside the 121 pt frame applied
+    /// by `KeyboardRootView` so glow / breath animations are not clipped.
+    private enum Layout {
+        static let disc: CGFloat = 95
+        static let outerRing: CGFloat = 106
+        static let breathRing: CGFloat = 100
+        static let glow: CGFloat = 119
+    }
+
     var body: some View {
         ZStack {
             Circle()
                 .stroke(palette.recordRed.opacity(isUrgent ? 0.55 : 0.35), lineWidth: isUrgent ? 3 : 2)
-                .frame(width: 150, height: 150)
+                .frame(width: Layout.breathRing, height: Layout.breathRing)
                 .scaleEffect(breath ? 1.18 : 0.95)
                 .opacity(phase == .recording ? 1 : 0)
                 .animation(Motion.breath, value: breath)
@@ -56,11 +65,11 @@ struct RecordButton: View {
                     RadialGradient(
                         colors: [palette.recordRed.opacity(0.55), .clear],
                         center: .center,
-                        startRadius: 50,
-                        endRadius: 100
+                        startRadius: 46,
+                        endRadius: 92
                     )
                 )
-                .frame(width: 200, height: 200)
+                .frame(width: Layout.glow, height: Layout.glow)
                 .opacity(phase == .recording ? 0.4 + level * 0.6 : 0)
                 .blur(radius: 18)
                 .animation(Motion.soft, value: phase)
@@ -71,7 +80,7 @@ struct RecordButton: View {
                     Color.white.opacity(phase == .idle ? 0.08 : 0.12),
                     lineWidth: 0.5
                 )
-                .frame(width: 140, height: 140)
+                .frame(width: Layout.outerRing, height: Layout.outerRing)
 
             ZStack {
                 Circle()
@@ -84,10 +93,10 @@ struct RecordButton: View {
                     switch phase {
                     case .idle:
                         Image(systemName: "mic.fill")
-                            .font(.system(size: 38, weight: .medium))
+                            .font(.system(size: 36, weight: .medium))
                             .foregroundStyle(.white)
                     case .recording:
-                        VStack(spacing: 4) {
+                        VStack(spacing: 3) {
                             if let remainingSeconds {
                                 Text(formatRemaining(remainingSeconds))
                                     .font(.system(size: 22, weight: .semibold, design: .rounded))
@@ -100,7 +109,7 @@ struct RecordButton: View {
                                 color: Color(red: 1.0, green: 0.78, blue: 0.78),
                                 active: true
                             )
-                                .frame(width: 72, height: 32)
+                                .frame(width: 73, height: 32)
                         }
                         .transition(.opacity)
                     case .processing:
@@ -110,12 +119,12 @@ struct RecordButton: View {
                             .scaleEffect(2.5)
                     case .error:
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 30, weight: .medium))
+                            .font(.system(size: 32, weight: .medium))
                             .foregroundStyle(palette.warning)
                     }
                 }
             }
-            .frame(width: 120, height: 120)
+            .frame(width: Layout.disc, height: Layout.disc)
             .animation(Motion.soft, value: phase)
             .animation(Motion.soft, value: remainingSeconds)
         }

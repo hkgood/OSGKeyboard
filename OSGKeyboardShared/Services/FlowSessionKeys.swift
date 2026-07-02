@@ -24,8 +24,8 @@ public enum FlowSessionKeys {
     /// Default Flow session length when started from the keyboard.
     public static let defaultSessionDuration: TimeInterval = 480
 
-    /// Maximum duration for a single keyboard utterance (3 minutes).
-    public static let maxUtteranceDuration: TimeInterval = 180
+    /// Maximum duration for a single keyboard utterance (3.5 minutes).
+    public static let maxUtteranceDuration: TimeInterval = 210
 
     /// Host polls for pipelined ASR drain after mic stop. Pipelining usually
     /// finishes most chunks during recording; this is a soft deadline before
