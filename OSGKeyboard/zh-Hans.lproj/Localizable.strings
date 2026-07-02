@@ -135,6 +135,10 @@
 "settings.systemPrompt.edit" = "编辑系统提示";
 "settings.systemPrompt.hint" = "云端润色时使用。本地识别模式不会用到此提示词。";
 "settings.about.title" = "关于";
+"settings.preferences.title" = "偏好设置";
+"settings.handedness.title" = "握持偏好";
+"settings.handedness.left" = "左手";
+"settings.handedness.right" = "右手";
 "settings.systemPrompt.reset" = "重置";
 "settings.asrLocale" = "识别语言";
 "settings.engineBadge.ios26" = "SpeechAnalyzer — 始终端侧";

@@ -103,6 +103,8 @@ public final class KeyboardState: ObservableObject {
     /// v0.2.0: mirrored from App Group — local engine runs the cloud
     /// LLM step only when this is `true`.
     @Published public var localModeCloudPolishEnabled: Bool = false
+    /// Mirrored from App Group — swaps delete / return on the bottom row.
+    @Published public var handednessPreference: HandednessPreference = .left
     /// Whether translate-and-polish is actually armed for the current
     /// engine (local requires cloud polish + a target locale).
     public var isTranslationEffective: Bool {

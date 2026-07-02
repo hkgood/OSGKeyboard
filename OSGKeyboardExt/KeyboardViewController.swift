@@ -115,6 +115,7 @@ public final class KeyboardViewController: UIInputViewController {
         if isPendingFlowStart || isFlowRecording || isAwaitingFlowResult || awaitingDictationResult {
             return
         }
+        ExtensionScreenWakeLock.releaseAll()
         cancelPipeline()
     }
 
@@ -396,6 +397,7 @@ public final class KeyboardViewController: UIInputViewController {
 
         isFlowRecording = false
         stopUtteranceCountdown()
+        ExtensionScreenWakeLock.release()
         FlowSessionBridge.setRecordingState(.stopped)
         state.phase = .processing
         state.lastTranscript = ExtL10n.string("keyboard.flow.transcribing")
@@ -412,6 +414,7 @@ public final class KeyboardViewController: UIInputViewController {
         isFlowRecording = true
         state.lastTranscript = ""
         state.phase = .recording
+        ExtensionScreenWakeLock.acquire(from: view)
         startUtteranceCountdown()
         startFlowLevelWatchdog()
         debug("startFlowRecording")
@@ -574,6 +577,7 @@ public final class KeyboardViewController: UIInputViewController {
         if isFlowRecording || isPendingFlowStart {
             if isFlowRecording {
                 FlowSessionBridge.setRecordingState(.aborted)
+                ExtensionScreenWakeLock.release()
             }
             isFlowRecording = false
             isPendingFlowStart = false

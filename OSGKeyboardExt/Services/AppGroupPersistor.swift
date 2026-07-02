@@ -41,6 +41,7 @@ public struct AppGroupPersistor {
         // the keyboard stays open.
         state.translationTargetLocaleId = store.translationTargetLocaleId
         state.polishScenarioId = store.polishScenarioId
+        state.handednessPreference = store.handednessPreference
         state.localModeCloudPolishEnabled = store.localModeCloudPolishEnabled
         // v0.2.0: iOS `SpeechAnalyzer` is always ready; mirror that
         // into the State flags so downstream consumers see the same
@@ -99,6 +100,7 @@ public struct AppGroupPersistor {
         if !shouldProtectScenario {
             state.polishScenarioId = store.polishScenarioId
         }
+        state.handednessPreference = store.handednessPreference
         // v0.2.0: iOS `SpeechAnalyzer` is always ready. Keep these
         // toggles here so the keyboard UI doesn't flicker if the host
         // app briefly clears them while refactoring.

@@ -135,6 +135,10 @@
 "settings.systemPrompt.edit" = "Edit system prompt";
 "settings.systemPrompt.hint" = "Used by the cloud LLM when polishing your dictation. Local engine skips this step.";
 "settings.about.title" = "About";
+"settings.preferences.title" = "Preferences";
+"settings.handedness.title" = "Handedness";
+"settings.handedness.left" = "Left hand";
+"settings.handedness.right" = "Right hand";
 "settings.systemPrompt.reset" = "Reset";
 "settings.asrLocale" = "ASR locale";
 "settings.engineBadge.ios26" = "SpeechAnalyzer — always on-device";

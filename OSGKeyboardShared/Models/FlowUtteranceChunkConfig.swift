@@ -1,7 +1,7 @@
 // FlowUtteranceChunkConfig.swift
 // OSGKeyboard · Shared
 //
-// Chunking policy for pipelined Flow utterance ASR (up to 3 minutes).
+// Chunking policy for pipelined Flow utterance ASR (up to 3.5 minutes).
 
 import Foundation
 
