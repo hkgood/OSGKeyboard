@@ -293,6 +293,14 @@ public struct AppGroupStore: @unchecked Sendable {
         set { defaults.set(newValue, forKey: "config.onboardingPage") }
     }
 
+    public func setHasCompletedOnboarding(_ completed: Bool) {
+        defaults.set(completed, forKey: "config.hasCompletedOnboarding")
+    }
+
+    public func setOnboardingPage(_ page: Int) {
+        defaults.set(page, forKey: "config.onboardingPage")
+    }
+
     // MARK: - Detected app context (v0.3.0+)
 
     /// Last app context the keyboard extension detected for this

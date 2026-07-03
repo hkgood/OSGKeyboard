@@ -208,14 +208,14 @@ public final class KeyboardViewController: UIInputViewController {
     private func advanceOnboarding() {
         let store = AppGroupStore()
         let nextPage = min(4, store.onboardingPage + 1)
-        store.onboardingPage = nextPage
+        store.setOnboardingPage(nextPage)
         state.onboardingPage = nextPage
     }
 
     private func completeOnboarding() {
         let store = AppGroupStore()
-        store.hasCompletedOnboarding = true
-        store.onboardingPage = 4
+        store.setHasCompletedOnboarding(true)
+        store.setOnboardingPage(4)
         state.hasCompletedOnboarding = true
         state.onboardingPage = 4
     }
@@ -351,7 +351,7 @@ public final class KeyboardViewController: UIInputViewController {
         guard state.onboardingPage == 3 else { return }
         guard KeyboardSetupBridge.isReadyForOnboardingSkip else { return }
         let store = AppGroupStore()
-        store.onboardingPage = 4
+        store.setOnboardingPage(4)
         state.onboardingPage = 4
     }
 
