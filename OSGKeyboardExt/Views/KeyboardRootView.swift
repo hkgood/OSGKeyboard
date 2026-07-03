@@ -140,17 +140,8 @@ public struct KeyboardRootView: View {
             } else {
                 CloudEngineChip()
             }
-            if state.isPolishScenarioChipVisible {
-                ScenarioChip(state: state)
-            }
-            LocaleChip(localeId: state.localeId) { newId in
-                state.setLocale(newId)
-            }
-            // v0.3.0: detected app context — the per-app polish mode.
-            // The chip mirrors `AppGroupStore.detectedAppContext` and
-            // writes overrides back so the next LLM call uses the new
-            // tone. Hidden during onboarding (the overlay reads better
-            // without chip clutter).
+            // Polish scenario and ASR locale are configured in the main-app
+            // Settings tab only — keep the keyboard top bar uncluttered.
             if state.hasCompletedOnboarding {
                 AppContextChip(state: state)
             }

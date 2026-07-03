@@ -74,11 +74,9 @@ struct SettingsView: View {
                                 providerSection
                                 apiSection
                             }
-                            polishIntensitySection
                             if config.engineMode == "local" {
                                 localEngineSettingsSection
                             }
-                            personalDictionaryLinkSection
                             if presentation == .tab {
                                 preferencesSection
                                 footerLinks
@@ -268,6 +266,19 @@ struct SettingsView: View {
                         set: { config.handednessPreference = $0 }
                     )
                 )
+
+                Divider().background(palette.divider)
+
+                polishIntensityPreferenceRows
+
+                Divider().background(palette.divider)
+
+                NavigationLink {
+                    PersonalDictionaryView()
+                } label: {
+                    personalDictionaryPreferenceRow
+                }
+                .buttonStyle(.plain)
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
             .overlay(
@@ -277,74 +288,50 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Polish intensity (v0.3.0)
-
-    private var polishIntensitySection: some View {
-        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.polishIntensity.title")
-            VStack(spacing: 0) {
-                Picker("", selection: $config.polishIntensity) {
-                    ForEach(PolishIntensity.allCases, id: \.self) { intensity in
-                        Text(LocalizedStringKey(intensity.labelKey))
-                            .tag(intensity)
-                    }
-                }
-                .pickerStyle(.segmented)
+    private var polishIntensityPreferenceRows: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("settings.polishIntensity.title")
+                .font(TypeStyle.body)
+                .foregroundStyle(palette.textPrimary)
                 .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.sm)
+                .padding(.top, Spacing.sm)
 
-                Text(LocalizedStringKey(config.polishIntensity.descriptionKey))
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.bottom, Spacing.sm)
+            Picker("", selection: $config.polishIntensity) {
+                ForEach(PolishIntensity.allCases, id: \.self) { intensity in
+                    Text(SharedL10n.string(intensity.labelKey, language: config.uiLanguage))
+                        .tag(intensity)
+                }
             }
-            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
+            .pickerStyle(.segmented)
+            .padding(.horizontal, Spacing.md)
+
+            Text(SharedL10n.string(config.polishIntensity.descriptionKey, language: config.uiLanguage))
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Spacing.md)
+                .padding(.bottom, Spacing.sm)
         }
     }
 
-    // MARK: - Personal dictionary (v0.3.0)
-
-    private var personalDictionaryLinkSection: some View {
-        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.personalDictionary.sectionTitle")
-            VStack(spacing: 0) {
-                NavigationLink {
-                    PersonalDictionaryView()
-                } label: {
-                    HStack(spacing: Spacing.sm) {
-                        MaterialIcon(name: .bookmark, size: 18)
-                            .foregroundStyle(palette.accent)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("settings.personalDictionary.title")
-                                .font(TypeStyle.body)
-                                .foregroundStyle(palette.textPrimary)
-                            Text("settings.personalDictionary.summary")
-                                .font(TypeStyle.caption2)
-                                .foregroundStyle(palette.textSecondary)
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(palette.textTertiary)
-                    }
-                    .padding(.horizontal, Spacing.md)
-                    .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+    private var personalDictionaryPreferenceRow: some View {
+        HStack(spacing: Spacing.sm) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("settings.personalDictionary.title")
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
+                Text("settings.personalDictionary.summary")
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.textSecondary)
             }
-            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(palette.textTertiary)
         }
+        .padding(.horizontal, Spacing.md)
+        .frame(minHeight: SettingsListMetrics.doubleLineMinHeight)
+        .contentShape(Rectangle())
     }
 
     // MARK: - Footer links (tab settings only)
