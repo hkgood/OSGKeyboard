@@ -132,12 +132,12 @@ struct KeyboardOnboardingOverlay: View {
             Image(systemName: "keyboard")
                 .font(.system(size: 36, weight: .light))
                 .foregroundStyle(palette.accent)
-            Text(ExtL10n.text("keyboard.onboarding.keyboard.title"))
+            Text(ExtL10n.string("keyboard.onboarding.keyboard.title"))
                 .font(TypeStyle.headline)
                 .foregroundStyle(palette.textPrimary)
                 .multilineTextAlignment(.center)
-            Text(ExtL10n.text("keyboard.onboarding.keyboard.body"))
-                .font(TypeStyle.caption1)
+            Text(ExtL10n.string("keyboard.onboarding.keyboard.body"))
+                .font(TypeStyle.caption)
                 .foregroundStyle(palette.textSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -146,9 +146,9 @@ struct KeyboardOnboardingOverlay: View {
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.up.right.square")
-                    Text(ExtL10n.text("keyboard.onboarding.keyboard.openSettings"))
+                    Text(ExtL10n.string("keyboard.onboarding.keyboard.openSettings"))
                 }
-                .font(TypeStyle.caption1.weight(.semibold))
+                .font(TypeStyle.caption.weight(.semibold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, Spacing.md)
                 .padding(.vertical, Spacing.xs + 2)
@@ -164,16 +164,16 @@ struct KeyboardOnboardingOverlay: View {
             Image(systemName: "key.fill")
                 .font(.system(size: 32, weight: .light))
                 .foregroundStyle(palette.accent)
-            Text(ExtL10n.text("keyboard.onboarding.api.title"))
+            Text(ExtL10n.string("keyboard.onboarding.api.title"))
                 .font(TypeStyle.headline)
                 .foregroundStyle(palette.textPrimary)
                 .multilineTextAlignment(.center)
-            Text(ExtL10n.text("keyboard.onboarding.api.body"))
-                .font(TypeStyle.caption1)
+            Text(ExtL10n.string("keyboard.onboarding.api.body"))
+                .font(TypeStyle.caption)
                 .foregroundStyle(palette.textSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-            Text(ExtL10n.text("keyboard.onboarding.api.skipHint"))
+            Text(ExtL10n.string("keyboard.onboarding.api.skipHint"))
                 .font(TypeStyle.caption2)
                 .foregroundStyle(palette.textSecondary)
                 .multilineTextAlignment(.center)
@@ -190,12 +190,12 @@ struct KeyboardOnboardingOverlay: View {
             Image(systemName: iconSystemName)
                 .font(.system(size: 36, weight: .light))
                 .foregroundStyle(palette.accent)
-            Text(ExtL10n.text(title))
+            Text(ExtL10n.string(title))
                 .font(TypeStyle.headline)
                 .foregroundStyle(palette.textPrimary)
                 .multilineTextAlignment(.center)
-            Text(ExtL10n.text(body))
-                .font(TypeStyle.caption1)
+            Text(ExtL10n.string(body))
+                .font(TypeStyle.caption)
                 .foregroundStyle(palette.textSecondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -208,10 +208,10 @@ struct KeyboardOnboardingOverlay: View {
     private var footer: some View {
         HStack(spacing: Spacing.xs) {
             if currentStep != .welcome {
-                Button(ExtL10n.text("keyboard.onboarding.back")) {
+                Button(ExtL10n.string("keyboard.onboarding.back")) {
                     state.onboardingPage = max(0, currentStep.rawValue - 1)
                 }
-                .font(TypeStyle.caption1)
+                .font(TypeStyle.caption)
                 .foregroundStyle(palette.textSecondary)
                 .frame(minHeight: 36)
             }
@@ -226,13 +226,13 @@ struct KeyboardOnboardingOverlay: View {
     private var primaryButton: some View {
         switch currentStep {
         case .welcome:
-            Button(ExtL10n.text("keyboard.onboarding.getStarted")) {
+            Button(ExtL10n.string("keyboard.onboarding.getStarted")) {
                 state.onboardingPage = 1
             }
             .buttonStyle(OverlayPrimaryButtonStyle(palette: palette))
 
         case .microphone:
-            Button(ExtL10n.text("keyboard.onboarding.mic.grant")) {
+            Button(ExtL10n.string("keyboard.onboarding.mic.grant")) {
                 state.requestMicPermission()
                 // Optimistically advance — if permission is denied the
                 // status text on the next viewWillAppear will reflect it.
@@ -241,7 +241,7 @@ struct KeyboardOnboardingOverlay: View {
             .buttonStyle(OverlayPrimaryButtonStyle(palette: palette))
 
         case .speech:
-            Button(ExtL10n.text("keyboard.onboarding.speech.grant")) {
+            Button(ExtL10n.string("keyboard.onboarding.speech.grant")) {
                 state.requestSpeechPermission()
                 state.onboardingPage = 3
             }
@@ -252,22 +252,22 @@ struct KeyboardOnboardingOverlay: View {
             // has enabled the keyboard in Settings.app. We don't show
             // a "Continue" button here — that would re-trigger the
             // confusion we're solving.
-            Button(ExtL10n.text("keyboard.onboarding.keyboard.openSettings")) {
+            Button(ExtL10n.string("keyboard.onboarding.keyboard.openSettings")) {
                 state.openSystemSettings()
             }
             .buttonStyle(OverlayPrimaryButtonStyle(palette: palette))
 
         case .api:
             HStack(spacing: Spacing.xs) {
-                Button(ExtL10n.text("keyboard.onboarding.api.skip")) {
+                Button(ExtL10n.string("keyboard.onboarding.api.skip")) {
                     state.completeOnboarding()
                 }
-                .font(TypeStyle.caption1)
+                .font(TypeStyle.caption)
                 .foregroundStyle(palette.textSecondary)
                 .padding(.horizontal, Spacing.sm)
                 .frame(minHeight: 36)
 
-                Button(ExtL10n.text("keyboard.onboarding.api.openHostApp")) {
+                Button(ExtL10n.string("keyboard.onboarding.api.openHostApp")) {
                     state.openSettings()
                 }
                 .buttonStyle(OverlayPrimaryButtonStyle(palette: palette))
@@ -281,7 +281,7 @@ private struct OverlayPrimaryButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(TypeStyle.caption1.weight(.semibold))
+            .font(TypeStyle.caption.weight(.semibold))
             .foregroundStyle(.white)
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.xs + 2)
