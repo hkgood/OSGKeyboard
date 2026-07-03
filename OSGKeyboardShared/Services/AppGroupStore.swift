@@ -47,6 +47,15 @@ public struct AppGroupStore: @unchecked Sendable {
         static let translationTargetLocaleId = "config.translationTargetLocaleId"
         static let polishScenarioId = "config.polishScenarioId"
         static let handednessPreference = "config.handednessPreference"
+        // v0.3.0: polish intensity (off / light / medium / heavy).
+        static let polishIntensity = "config.polishIntensity"
+        // v0.3.0: last app context detected by the keyboard extension.
+        // Reused across calls within a 30-minute window so the LLM
+        // prompt remains consistent during a single typing session.
+        static let detectedAppContext = "config.detectedAppContext"
+        static let detectedAppContextAt = "config.detectedAppContextAt"
+        // v0.3.0: personal dictionary — JSON-encoded `PersonalDictionary`.
+        static let personalDictionary = "config.personalDictionary.v1"
     }
 
     // MARK: - Reads
@@ -250,6 +259,72 @@ public struct AppGroupStore: @unchecked Sendable {
     /// user's configured provider.
     public var polishProviderIdOverride: String? {
         engineMode == "local" ? "deepseek" : nil
+    }
+
+    // MARK: - Polish settings (v0.3.0+)
+
+    /// How aggressively the LLM should rewrite the ASR transcript.
+    /// Defaults to `medium` for new installs.
+    public var polishIntensity: PolishIntensity {
+        guard let raw = defaults.string(forKey: Key.polishIntensity),
+              let value = PolishIntensity(rawValue: raw)
+        else { return .default }
+        return value
+    }
+
+    public func setPolishIntensity(_ intensity: PolishIntensity) {
+        defaults.set(intensity.rawValue, forKey: Key.polishIntensity)
+    }
+
+    // MARK: - Detected app context (v0.3.0+)
+
+    /// Last app context the keyboard extension detected for this
+    /// user, plus the timestamp it was observed. Callers should
+    /// treat values older than 30 minutes as stale.
+    public var detectedAppContext: (context: AppContext, observedAt: Date)? {
+        guard let raw = defaults.string(forKey: Key.detectedAppContext),
+              let value = AppContext(rawValue: raw)
+        else { return nil }
+        let timestamp = defaults.object(forKey: Key.detectedAppContextAt) as? Date ?? .distantPast
+        return (value, timestamp)
+    }
+
+    public func setDetectedAppContext(_ context: AppContext, at date: Date = Date()) {
+        defaults.set(context.rawValue, forKey: Key.detectedAppContext)
+        defaults.set(date, forKey: Key.detectedAppContextAt)
+    }
+
+    // MARK: - Personal dictionary (v0.3.0+)
+
+    /// Personal dictionary persisted in the App Group so both the
+    /// main app's Settings UI and the keyboard extension's LLM call
+    /// read the same source of truth. Returns an empty dictionary
+    /// when nothing is stored (and when the stored JSON is corrupt —
+    /// failing closed is safer than crashing the keyboard).
+    public var personalDictionary: PersonalDictionary {
+        get {
+            guard let data = defaults.data(forKey: Key.personalDictionary) else {
+                return .empty
+            }
+            do {
+                return try JSONDecoder().decode(PersonalDictionary.self, from: data)
+            } catch {
+                #if DEBUG
+                print("⚠️ [AppGroupStore] personalDictionary decode failed: \(error)")
+                #endif
+                return .empty
+            }
+        }
+        set {
+            do {
+                let data = try JSONEncoder().encode(newValue)
+                defaults.set(data, forKey: Key.personalDictionary)
+            } catch {
+                #if DEBUG
+                print("⚠️ [AppGroupStore] personalDictionary encode failed: \(error)")
+                #endif
+            }
+        }
     }
 
     // MARK: - Client

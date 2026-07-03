@@ -74,9 +74,15 @@ struct SettingsView: View {
                                 providerSection
                                 apiSection
                             }
+                            languageAndModelsSection
+                            polishIntensitySection
+                            if config.engineMode == "cloud" {
+                                systemPromptLinkSection
+                            }
                             if config.engineMode == "local" {
                                 localEngineSettingsSection
                             }
+                            personalDictionaryLinkSection
                             if presentation == .tab {
                                 preferencesSection
                                 footerLinks
@@ -270,6 +276,76 @@ struct SettingsView: View {
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+                    .stroke(palette.divider, lineWidth: 0.5)
+            )
+        }
+    }
+
+    // MARK: - Polish intensity (v0.3.0)
+
+    private var polishIntensitySection: some View {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.polishIntensity.title")
+            VStack(spacing: 0) {
+                Picker("", selection: $config.polishIntensity) {
+                    ForEach(PolishIntensity.allCases, id: \.self) { intensity in
+                        Text(LocalizedStringKey(intensity.labelKey))
+                            .tag(intensity)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.sm)
+
+                Text(LocalizedStringKey(config.polishIntensity.descriptionKey))
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.bottom, Spacing.sm)
+            }
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                    .stroke(palette.divider, lineWidth: 0.5)
+            )
+        }
+    }
+
+    // MARK: - Personal dictionary (v0.3.0)
+
+    private var personalDictionaryLinkSection: some View {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.personalDictionary.sectionTitle")
+            VStack(spacing: 0) {
+                NavigationLink {
+                    PersonalDictionaryView()
+                } label: {
+                    HStack(spacing: Spacing.sm) {
+                        MaterialIcon(name: .bookmark, size: 18)
+                            .foregroundStyle(palette.accent)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("settings.personalDictionary.title")
+                                .font(TypeStyle.body)
+                                .foregroundStyle(palette.textPrimary)
+                            Text("settings.personalDictionary.summary")
+                                .font(TypeStyle.caption2)
+                                .foregroundStyle(palette.textSecondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(palette.textTertiary)
+                    }
+                    .padding(.horizontal, Spacing.md)
+                    .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
                     .stroke(palette.divider, lineWidth: 0.5)
             )
         }
