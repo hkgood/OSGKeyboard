@@ -20,7 +20,7 @@ public enum FlowSessionDarwin {
     }
 }
 
-/// Observes Flow session Darwin notifications on a background thread; invokes
+/// Observes Darwin notifications on a background thread; invokes
 /// `handler` on the main actor.
 public final class FlowSessionDarwinObserver {
     private final class Box: @unchecked Sendable {
@@ -30,11 +30,16 @@ public final class FlowSessionDarwinObserver {
 
     private let box: Box
     private let token: UnsafeMutableRawPointer
+    private let notificationName: CFString
 
-    public init(handler: @escaping @MainActor () -> Void) {
+    public init(
+        notificationName: String = FlowSessionDarwin.notificationName,
+        handler: @escaping @MainActor () -> Void
+    ) {
         let box = Box(handler: handler)
         self.box = box
         self.token = Unmanaged.passRetained(box).toOpaque()
+        self.notificationName = notificationName as CFString
 
         CFNotificationCenterAddObserver(
             CFNotificationCenterGetDarwinNotifyCenter(),
@@ -44,7 +49,7 @@ public final class FlowSessionDarwinObserver {
                 let box = Unmanaged<Box>.fromOpaque(observer).takeUnretainedValue()
                 Task { @MainActor in box.handler() }
             },
-            FlowSessionDarwin.notificationName as CFString,
+            self.notificationName,
             nil,
             .deliverImmediately
         )
@@ -54,7 +59,7 @@ public final class FlowSessionDarwinObserver {
         CFNotificationCenterRemoveObserver(
             CFNotificationCenterGetDarwinNotifyCenter(),
             token,
-            CFNotificationName(FlowSessionDarwin.notificationName as CFString),
+            CFNotificationName(notificationName),
             nil
         )
         Unmanaged<Box>.fromOpaque(token).release()

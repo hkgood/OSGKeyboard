@@ -140,6 +140,7 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.writeHeartbeat()
         FlowSessionDarwin.postSessionChanged()
         isActive = true
+        ScreenWakeLock.acquire()
         if let expires = FlowSessionBridge.sessionExpiresAt() {
             sessionExpiresAt = Date(timeIntervalSince1970: expires)
         }
@@ -187,6 +188,7 @@ final class FlowSessionManager: ObservableObject {
 
         capture.stop()
         endBackgroundKeepAlive()
+        ScreenWakeLock.release()
         sessionASR = nil
         FlowSessionBridge.markSessionInactive()
         FlowSessionDarwin.postSessionChanged()
@@ -321,6 +323,7 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.markSessionActive(duration: duration)
         FlowSessionDarwin.postSessionChanged()
         isActive = true
+        ScreenWakeLock.acquire()
         sessionExpiresAt = Date().addingTimeInterval(duration)
 
         startHeartbeat()
@@ -560,11 +563,12 @@ final class FlowSessionManager: ObservableObject {
 
         let engineMode = store.engineMode
         let chunkNote = Self.chunkWarningMessage(chunkWarnings)
-        let shouldPolish = (engineMode == "cloud")
-            || (engineMode == "local" && store.localModeCloudPolishEnabled)
+        // Re-read App Group at finalize so chip-side translation changes
+        // from the keyboard extension are visible before polish/translate.
+        let pipelineStore = AppGroupStore()
 
-        if !shouldPolish {
-            // Local engine, cloud-polish toggle off — pure ASR.
+        if !pipelineStore.shouldRunCloudLLMStep {
+            // Local engine with cloud polish off — ASR-only.
             FlowSessionBridge.storeTranscriptionResult(text, polishWarning: chunkNote)
             FlowDiagnostics.log(
                 "finalize ASR-only total=\(String(format: "%.1f", Date().timeIntervalSince(pipelineStarted)))s " +
@@ -580,8 +584,18 @@ final class FlowSessionManager: ObservableObject {
 
         var delivered = text
         let polishStarted = Date()
+        let polishMode = pipelineStore.polishModeForPipeline
+        FlowDiagnostics.log(
+            "finalize LLM mode=\(Self.polishModeLogLabel(polishMode)) " +
+            "translationTarget=\(pipelineStore.translationTargetLocaleId) " +
+            "cloudPolish=\(pipelineStore.localModeCloudPolishEnabled)"
+        )
         do {
-            let polished = try await polisher.polish(text)
+            let polished = try await polisher.polish(
+                text,
+                mode: polishMode,
+                providerIdOverride: pipelineStore.polishProviderIdOverride
+            )
             delivered = polished
             FlowSessionBridge.storeTranscriptionResult(polished, polishWarning: chunkNote)
             FlowDiagnostics.log(
@@ -609,6 +623,15 @@ final class FlowSessionManager: ObservableObject {
         chunkWarnings = []
         chunkedPipeline = nil
         debug("utterance finalized length=\(text.count)")
+    }
+
+    private static func polishModeLogLabel(_ mode: PolishingService.PolishMode) -> String {
+        switch mode {
+        case .polish:
+            return "polish"
+        case .translate(let targetLocaleId):
+            return "translate(\(targetLocaleId))"
+        }
     }
 
     private static func chunkWarningMessage(_ warnings: [String]) -> String? {

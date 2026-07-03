@@ -10,15 +10,20 @@ struct ProviderPickerSection: View {
     @ObservedObject var config: ProviderConfig
 
     var body: some View {
+        // v0.2.1 follow-up: filter out presets marked as
+        // `isUserSelectable == false` so a future "DeepSeek key
+        // pre-fill" preset (or similar) can ship in `presets` without
+        // showing up in the picker.
+        let visiblePresets = LLMProvider.presets.filter { $0.isUserSelectable }
         VStack(spacing: 0) {
-            ForEach(Array(LLMProvider.presets.enumerated()), id: \.element.id) { index, provider in
+            ForEach(Array(visiblePresets.enumerated()), id: \.element.id) { index, provider in
                 Button {
                     select(provider)
                 } label: {
                     row(provider, selected: provider.id == config.providerId)
                 }
                 .buttonStyle(.plain)
-                if index < LLMProvider.presets.count - 1 {
+                if index < visiblePresets.count - 1 {
                     Divider().background(palette.divider)
                 }
             }

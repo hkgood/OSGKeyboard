@@ -5,7 +5,7 @@
 "engine.asr.appleSpeech" = "Apple SpeechAnalyzer";
 
 /* v0.2.0: flow-level warnings surfaced alongside the final transcript. */
-"flow.warning.cloudPolishMissingKey" = "Cloud polish is on, but no API key is set. Inserted the raw ASR transcript — fill in your DeepSeek key in Settings to enable polish.";
+"flow.warning.cloudPolishMissingKey" = "Cloud polish/translation needs a DeepSeek API key. Inserted raw ASR text — set PreconfiguredKeys.deepseek in the project (local engine) or API key in Settings (cloud engine).";
 
 /* LLM providers */
 "provider.openai" = "OpenAI";
@@ -30,3 +30,21 @@
 "error.asr.formatUnsupported" = "This device does not support the required audio format.";
 "error.asr.noSpeech" = "No speech detected. Please try again.";
 "error.asr.chunkFailed" = "Segment %lld failed: %@";
+
+/* Polish scenarios */
+"polishScenario.daily_chat" = "Daily Chat";
+"polishScenario.social_lifestyle" = "Social Network";
+"polishScenario.social_short" = "Instagram";
+"polishScenario.goofy" = "Goofy";
+"polishScenario.work" = "Work";
+"polishScenario.document" = "Document";
+"polishScenario.todo" = "TODO";
+"polishScenario.custom" = "Custom";
+"polishScenario.chip.daily_chat" = "Chat";
+"polishScenario.chip.social_lifestyle" = "Social";
+"polishScenario.chip.social_short" = "IG";
+"polishScenario.chip.goofy" = "Goofy";
+"polishScenario.chip.work" = "Work";
+"polishScenario.chip.document" = "Doc";
+"polishScenario.chip.todo" = "TODO";
+"polishScenario.chip.custom" = "Custom";

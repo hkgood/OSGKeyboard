@@ -20,6 +20,13 @@ struct SystemPromptSettingsView: View {
                     .foregroundStyle(palette.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
 
+                if config.isCustomPolishScenario {
+                    Text("settings.polishScenario.customHint")
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
                 TextEditor(text: $config.systemPrompt)
                     .font(TypeStyle.mono)
                     .scrollContentBackground(.hidden)

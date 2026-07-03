@@ -76,7 +76,7 @@
 "settings.engine.local.legacy" = "端侧 ASR,仅转录,无润色。";
 "settings.engine.cloud.title" = "云端识别与润色";
 "settings.engine.cloud.subtitle" = "ASR 转录 + LLM 润色,需要 API Key。";
-"settings.provider.title" = "提供商";
+"settings.provider.title" = "云端引擎";
 "settings.provider.subtitle" = "选择 LLM 提供商。";
 "settings.api.title" = "接口";
 "settings.language.title" = "语言";
@@ -121,7 +121,6 @@
 "keyboard.placeholder.cloudBadge" = "云端";
 "keyboard.models.notDownloaded" = "本地模型尚未下载";
 "keyboard.models.downloadHint" = "打开 OSGKeyboard 下载模型";
-"keyboard.models.warming" = "正在加载模型…";
 "keyboard.rec" = "REC";
 "keyboard.space" = "空格";
 "keyboard.denied.mic" = "麦克风被拒绝";
@@ -176,6 +175,17 @@
 "locale.chip.en-US" = "EN";
 "locale.chip.ja-JP" = "日";
 "locale.chip.ko-KR" = "韩";
+
+/* Translation chip (v0.3) */
+"keyboard.translation.chip" = "翻译";
+"keyboard.translation.offMenu" = "不翻译";
+"keyboard.translation.off" = "不翻译";
+"keyboard.translation.enable" = "开启翻译";
+"keyboard.translation.disable" = "关闭翻译";
+"keyboard.translation.a11y" = "翻译";
+"keyboard.translation.a11yHint" = "切换翻译开关或修改目标语言。";
+"keyboard.scenario.a11y" = "润色场景";
+"keyboard.scenario.a11yHint" = "选择润色风格或使用场景。";
 
 /* Mode chip labels */
 "mode.off" = "关闭";

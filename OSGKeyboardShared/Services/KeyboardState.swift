@@ -87,6 +87,43 @@ public final class KeyboardState: ObservableObject {
     /// CoreML local engine. Always `false` now — there are no weights
     /// for the host app to preload.
     @Published public var localModelsLoaded: Bool = false
+    /// v0.2.1 follow-up: derived — translation is on iff a target
+    /// locale has been selected (mirrors `ProviderConfig.translationEnabled`
+    /// so the chip / pipeline read the same source of truth).
+    public var translationEnabled: Bool {
+        translationTargetLocaleId != TranslationLanguageCatalog.offLocaleId
+    }
+    /// v0.2.1: target locale id the translate-and-polish prompt should
+    /// produce (e.g. `"en"`, `"ja"`). Mirrored from `ProviderConfig`.
+    /// Defaults to `offLocaleId` so the keyboard boots in the "off"
+    /// state on first install.
+    @Published public var translationTargetLocaleId: String = TranslationLanguageCatalog.offLocaleId
+    /// Selected polish scenario mirrored from App Group.
+    @Published public var polishScenarioId: String = PolishScenarioCatalog.defaultId
+    /// v0.2.0: mirrored from App Group — local engine runs the cloud
+    /// LLM step only when this is `true`.
+    @Published public var localModeCloudPolishEnabled: Bool = false
+    /// Mirrored from App Group — swaps delete / return on the bottom row.
+    @Published public var handednessPreference: HandednessPreference = .left
+    /// Whether translate-and-polish is actually armed for the current
+    /// engine (local requires cloud polish + a target locale).
+    public var isTranslationEffective: Bool {
+        guard translationEnabled else { return false }
+        if isLocalEngine { return localModeCloudPolishEnabled }
+        return true
+    }
+
+    /// Whether the keyboard top-bar translation chip should render.
+    public var isTranslationChipVisible: Bool {
+        if isLocalEngine { return localModeCloudPolishEnabled }
+        return true
+    }
+
+    /// Whether the keyboard top-bar polish scenario chip should render.
+    public var isPolishScenarioChipVisible: Bool {
+        if isLocalEngine { return localModeCloudPolishEnabled }
+        return true
+    }
 
     /// Convenience shorthand used by the pipeline and views.
     public var isLocalEngine: Bool { engineMode == "local" }
@@ -101,6 +138,11 @@ public final class KeyboardState: ObservableObject {
     public var setLocale:           (String) -> Void = { _ in }
     public var setEngineMode:        (String) -> Void = { _ in }
     public var setLocalASRBackend:  (LocalASRBackend) -> Void = { _ in }
+    /// v0.2.1 follow-up: only the locale picker remains — `enabled`
+    /// is derived from the locale id, so there's no separate toggle to
+    /// persist. Wired in `KeyboardViewController.installStateActions`.
+    public var setTranslationTargetLocaleId: (String) -> Void = { _ in }
+    public var setPolishScenarioId: (String) -> Void = { _ in }
     public var insertNewline:       () -> Void = {}
     public var insertSpace:         () -> Void = {}
     public var deleteBackward:      () -> Void = {}

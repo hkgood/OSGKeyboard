@@ -5,7 +5,7 @@
 "engine.asr.appleSpeech" = "Apple 语音识别";
 
 /* v0.2.0: flow-level warnings surfaced alongside the final transcript. */
-"flow.warning.cloudPolishMissingKey" = "已开启云端润色但未填写 API Key,本次以原始识别结果插入。请在设置中填入 DeepSeek API Key 以启用润色。";
+"flow.warning.cloudPolishMissingKey" = "云端润色/翻译需要 DeepSeek API Key，本次已插入原始识别结果。本地引擎请在 PreconfiguredKeys.swift 配置；云端引擎请在设置中填写 API Key。";
 
 /* LLM providers */
 "provider.openai" = "OpenAI";
@@ -30,3 +30,21 @@
 "error.asr.formatUnsupported" = "当前设备不支持该语音输入格式。";
 "error.asr.noSpeech" = "未识别到语音内容，请重试。";
 "error.asr.chunkFailed" = "第 %lld 段识别失败：%@";
+
+/* 润色场景 */
+"polishScenario.daily_chat" = "日常聊天";
+"polishScenario.social_lifestyle" = "小红书";
+"polishScenario.social_short" = "微博";
+"polishScenario.goofy" = "逗比";
+"polishScenario.work" = "工作";
+"polishScenario.document" = "文档写作";
+"polishScenario.todo" = "TODO 记录";
+"polishScenario.custom" = "自定义";
+"polishScenario.chip.daily_chat" = "聊天";
+"polishScenario.chip.social_lifestyle" = "小红书";
+"polishScenario.chip.social_short" = "微博";
+"polishScenario.chip.goofy" = "逗比";
+"polishScenario.chip.work" = "工作";
+"polishScenario.chip.document" = "文档";
+"polishScenario.chip.todo" = "TODO";
+"polishScenario.chip.custom" = "自定义";

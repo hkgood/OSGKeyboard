@@ -3,29 +3,58 @@
 //
 // Typeless-inspired keyboard surface. The keyboard is laid out in three
 // vertical bands, but the entire height is reserved for us — we set
-// `inputView.allowsSelfSizing = true` in the view controller so SwiftUI's
-// frame is honoured, and we add safe-area insets at the top and bottom so
-// the system Spotlight / home-indicator chrome never clips our controls.
+// `KeyboardViewController` drives height on `view` (priority 999) and mirrors
+// `KeyboardLayoutMetrics.totalHeight` in SwiftUI — see presentation offset
+// in `applyPresentationHeightOffset()`.
 //
 //   ┌───────────────────────────────────────────┐
-//   │  [polish] [中]                 ●   ⚙     │  ← top: ~38 pt (+20%)
+//   │  [polish] [中]                      ⚙     │  ← header band (top)
 //   │              (transcript preview)         │
-//   │                                           │
-//   │        (⌫)      ◯ mic      (↩)          │  ← action row: circular
-//   │                           (space)        │     flanking buttons
+//   │              ┊                          │
+//   │              ◯ mic (centred)              │  ← action cluster:
+//   │   [delete]  [  space  ]  [return]         │     mic + bottom row
+//   │              ┊                          │
 //   └───────────────────────────────────────────┘
 
 import SwiftUI
 import OSGKeyboardShared
 
 private enum KeyboardLayoutMetrics {
-    static let sideActionButtonSize: CGFloat = 53
-    static let sideActionIconSize: CGFloat = 19
-    static let sideSpaceBarWidth: CGFloat = 19
-    static let micFlankMinSpacing: CGFloat = 36
-    static let sideActionStackSpacing: CGFloat = 16
-    /// Outer inset for delete / return·space from screen edges (8 pt → 24 pt, +200%).
+    static let micSize: CGFloat = 121
+    static let micToButtonGap: CGFloat = 8
+    static let bottomActionRowHeight: CGFloat = 48
+    static let bottomActionFixedWidth: CGFloat = 86
+    static let bottomActionSpacing: CGFloat = Spacing.xs
+    /// Gap between the top chip row and the transcript / hint line (4 pt → 8 pt, +100%).
+    static let topBarToTranscriptSpacing: CGFloat = Spacing.xs
+    /// Outer inset for the bottom action row from screen edges (8 pt → 24 pt, +200%).
     static let sideActionHorizontalInset: CGFloat = Spacing.xs * 3
+
+    // MARK: - Content-driven keyboard height (single source of truth)
+    static let outerPaddingTop: CGFloat = 2
+    static let outerPaddingBottom: CGFloat = 1
+    static let topBarHeight: CGFloat = 38
+    static let transcriptLineHeight: CGFloat = 22
+    /// mic (121) + gap (8) + bottom row (48) = 177 pt
+    static let actionClusterHeight: CGFloat = micSize + micToButtonGap + bottomActionRowHeight
+    /// Gap between transcript line and mic (−30% from former 16 pt).
+    static let actionClusterTopGap: CGFloat = Spacing.md * 0.7
+    /// Minimal gap below the bottom action row.
+    static let actionClusterBottomGap: CGFloat = Spacing.xs / 2
+
+    static var headerBandHeight: CGFloat {
+        topBarHeight + topBarToTranscriptSpacing + transcriptLineHeight
+    }
+
+    /// 2 + 68 + 11.2 + 177 + 4 + 1 = 263.2 pt
+    static var totalHeight: CGFloat {
+        outerPaddingTop
+            + headerBandHeight
+            + actionClusterTopGap
+            + actionClusterHeight
+            + actionClusterBottomGap
+            + outerPaddingBottom
+    }
 }
 
 public struct KeyboardRootView: View {
@@ -37,11 +66,9 @@ public struct KeyboardRootView: View {
         self.state = state
     }
 
-    /// Total keyboard height. We set the same value as a height-anchor
-    /// constraint in the view controller so the host UIInputView picks
-    /// it up.
-    static let totalHeight: CGFloat = 280
-    private static let topBarHeight: CGFloat = 38
+    /// Content-driven keyboard height; mirrored on `UIInputViewController.view`
+    /// in `KeyboardViewController` (see `KeyboardLayoutMetrics.totalHeight`).
+    static let totalHeight: CGFloat = KeyboardLayoutMetrics.totalHeight
 
     private var palette: ThemePalette {
         colorScheme == .dark ? Palette.dark : Palette.light
@@ -49,19 +76,44 @@ public struct KeyboardRootView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            topBar
-                .frame(height: Self.topBarHeight)
+            headerBand
 
-            centreArea
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Color.clear
+                .frame(height: KeyboardLayoutMetrics.actionClusterTopGap)
+
+            micActionRow
+                .frame(height: KeyboardLayoutMetrics.actionClusterHeight)
+
+            Color.clear
+                .frame(height: KeyboardLayoutMetrics.actionClusterBottomGap)
         }
-        .padding(.top, 4)
-        .padding(.bottom, 6)
+        .padding(.top, KeyboardLayoutMetrics.outerPaddingTop)
+        .padding(.bottom, KeyboardLayoutMetrics.outerPaddingBottom)
         // 透明背景：让系统键盘 chrome 透出，不自行铺色（深浅模式一致）。
         .background(Color.clear)
         .frame(height: Self.totalHeight)
         // Feed the resolved palette to all nested chips/buttons.
         .environment(\.themePalette, palette)
+    }
+
+    /// Top chip row + transcript / hint line.
+    private var headerBand: some View {
+        VStack(spacing: KeyboardLayoutMetrics.topBarToTranscriptSpacing) {
+            topBar
+                .frame(height: KeyboardLayoutMetrics.topBarHeight)
+
+            TranscriptLine(
+                phase: state.phase,
+                transcript: state.lastTranscript,
+                flowSessionActive: state.flowSessionActive,
+                isLocalEngine: state.isLocalEngine,
+                localModelsReady: state.localModelsReady,
+                localModelsLoaded: state.localModelsLoaded,
+                openSettings: state.openSettings,
+                startFlowSession: state.startFlowSession
+            )
+            .frame(height: KeyboardLayoutMetrics.transcriptLineHeight)
+        }
     }
 
     // MARK: - Top bar
@@ -73,11 +125,20 @@ public struct KeyboardRootView: View {
             } else {
                 CloudEngineChip()
             }
+            if state.isPolishScenarioChipVisible {
+                ScenarioChip(state: state)
+            }
             LocaleChip(localeId: state.localeId) { newId in
                 state.setLocale(newId)
             }
+            // v0.3: always show the translation chip when the active
+            // engine can run the cloud LLM step — off-by-default keeps
+            // the menu reachable so the user can pick a target language
+            // without opening Settings.
+            if state.isTranslationChipVisible {
+                TranslationChip(state: state)
+            }
             Spacer(minLength: 0)
-            StatusBadge(phase: state.phase, onDeviceSupported: state.onDeviceSupported)
             Button(action: state.openSettings) {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 14, weight: .medium))
@@ -92,64 +153,73 @@ public struct KeyboardRootView: View {
         .padding(.horizontal, Spacing.md)
     }
 
-    // MARK: - Centre area
+    // MARK: - Action cluster
 
-    private var centreArea: some View {
-        VStack(spacing: Spacing.xxs) {
-            TranscriptLine(
-                phase: state.phase,
-                transcript: state.lastTranscript,
-                flowSessionActive: state.flowSessionActive,
-                isLocalEngine: state.isLocalEngine,
-                localModelsReady: state.localModelsReady,
-                localModelsLoaded: state.localModelsLoaded,
-                openSettings: state.openSettings,
-                startFlowSession: state.startFlowSession
-            )
-            .frame(height: 22)
-
-            Spacer(minLength: 0)
-
-            micActionRow
-                .padding(.bottom, Spacing.xs)
-
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    /// Delete (left), mic (centre), return + space stacked on the right.
-    /// HStack vertical alignment keeps delete, mic centre, and the gap
-    /// between return/space on one horizontal axis.
+    /// Mic centred above a bottom row: delete · space · return (or swapped).
     private var micActionRow: some View {
-        HStack(alignment: .center, spacing: 0) {
-            CircularToolbarButton(systemName: "delete.left", label: "delete") {
-                state.deleteBackward()
-            }
+        let editingBlocked = voiceInputBlocksEditing
+        let swapKeys = state.handednessPreference.swapsActionKeys
 
-            Spacer(minLength: KeyboardLayoutMetrics.micFlankMinSpacing)
-
+        return VStack(spacing: KeyboardLayoutMetrics.micToButtonGap) {
             RecordButton(
                 phase: buttonPhase,
                 level: state.level,
                 remainingSeconds: state.phase == .recording ? state.utteranceRemainingSeconds : nil,
                 onToggle: state.tapMic
             )
-            .frame(width: 132, height: 132)
+            .frame(width: KeyboardLayoutMetrics.micSize, height: KeyboardLayoutMetrics.micSize)
 
-            Spacer(minLength: KeyboardLayoutMetrics.micFlankMinSpacing)
-
-            VStack(spacing: KeyboardLayoutMetrics.sideActionStackSpacing) {
-                CircularToolbarButton(systemName: "return", label: "newline") {
-                    state.insertNewline()
-                }
-                CircularToolbarButton(spaceStyle: true, label: "space") {
-                    state.insertSpace()
+            HStack(spacing: KeyboardLayoutMetrics.bottomActionSpacing) {
+                if swapKeys {
+                    bottomReturnButton(disabled: editingBlocked)
+                    bottomSpaceButton(disabled: editingBlocked)
+                    bottomDeleteButton(disabled: editingBlocked)
+                } else {
+                    bottomDeleteButton(disabled: editingBlocked)
+                    bottomSpaceButton(disabled: editingBlocked)
+                    bottomReturnButton(disabled: editingBlocked)
                 }
             }
         }
         .padding(.horizontal, KeyboardLayoutMetrics.sideActionHorizontalInset)
         .frame(maxWidth: .infinity)
+    }
+
+    private func bottomDeleteButton(disabled: Bool) -> some View {
+        RepeatingDeleteButton(disabled: disabled) {
+            state.deleteBackward()
+        }
+        .frame(
+            width: KeyboardLayoutMetrics.bottomActionFixedWidth,
+            height: KeyboardLayoutMetrics.bottomActionRowHeight
+        )
+    }
+
+    private func bottomSpaceButton(disabled: Bool) -> some View {
+        RectangularToolbarButton(spaceStyle: true, label: "space", disabled: disabled) {
+            state.insertSpace()
+        }
+        .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
+    }
+
+    private func bottomReturnButton(disabled: Bool) -> some View {
+        RectangularToolbarButton(systemName: "return", label: "newline", disabled: disabled) {
+            state.insertNewline()
+        }
+        .frame(
+            width: KeyboardLayoutMetrics.bottomActionFixedWidth,
+            height: KeyboardLayoutMetrics.bottomActionRowHeight
+        )
+    }
+
+    /// Option C: block typing keys during the full voice-input pipeline.
+    private var voiceInputBlocksEditing: Bool {
+        switch state.phase {
+        case .requestingPermissions, .recording, .processing:
+            return true
+        case .idle, .error, .denied:
+            return false
+        }
     }
 
     private var buttonPhase: RecordButton.Phase {
@@ -175,19 +245,19 @@ extension KeyboardRootView {
 #if DEBUG
 #Preview("Keyboard · Idle") {
     KeyboardRootView(state: KeyboardViewController.State.previewIdle)
-        .frame(width: 390, height: 280)
+        .frame(width: 390, height: KeyboardRootView.totalHeight)
         .preferredColorScheme(.dark)
 }
 
 #Preview("Keyboard · Recording") {
     KeyboardRootView(state: KeyboardViewController.State.previewRecording)
-        .frame(width: 390, height: 280)
+        .frame(width: 390, height: KeyboardRootView.totalHeight)
         .preferredColorScheme(.dark)
 }
 
 #Preview("Keyboard · Processing") {
     KeyboardRootView(state: KeyboardViewController.State.previewProcessing)
-        .frame(width: 390, height: 280)
+        .frame(width: 390, height: KeyboardRootView.totalHeight)
         .preferredColorScheme(.dark)
 }
 #endif
@@ -226,13 +296,6 @@ private struct TranscriptLine: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityHint(ExtL10n.text("keyboard.models.downloadHint"))
-                } else if isLocalEngine, localModelsReady, !localModelsLoaded {
-                    HStack(spacing: 6) {
-                        ProgressView().controlSize(.mini).tint(palette.textSecondary)
-                        ExtL10n.text("keyboard.models.warming")
-                            .font(TypeStyle.caption)
-                            .foregroundStyle(palette.textSecondary)
-                    }
                 } else if flowSessionActive {
                     ExtL10n.text("keyboard.placeholder.idle")
                         .font(TypeStyle.caption)
@@ -310,115 +373,6 @@ private struct TranscriptLine: View {
     }
 }
 
-// MARK: - Circular toolbar button
-
-private struct CircularToolbarButton: View {
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.themePalette) private var palette: ThemePalette
-
-    let systemName: String?
-    let spaceStyle: Bool
-    let label: String
-    let action: () -> Void
-
-    init(systemName: String, label: String, action: @escaping () -> Void) {
-        self.systemName = systemName
-        self.spaceStyle = false
-        self.label = label
-        self.action = action
-    }
-
-    init(spaceStyle: Bool, label: String, action: @escaping () -> Void) {
-        self.systemName = nil
-        self.spaceStyle = spaceStyle
-        self.label = label
-        self.action = action
-    }
-
-    var body: some View {
-        Button(action: action) {
-            Group {
-                if spaceStyle {
-                    Capsule()
-                        .fill(palette.textPrimary)
-                        .frame(width: KeyboardLayoutMetrics.sideSpaceBarWidth, height: 3)
-                } else if let systemName {
-                    Image(systemName: systemName)
-                        .font(.system(size: KeyboardLayoutMetrics.sideActionIconSize, weight: .medium))
-                        .foregroundStyle(palette.textPrimary)
-                }
-            }
-            .frame(width: KeyboardLayoutMetrics.sideActionButtonSize, height: KeyboardLayoutMetrics.sideActionButtonSize)
-            .background(sideButtonFill, in: Circle())
-            .overlay(Circle().stroke(palette.dividerStrong, lineWidth: 0.5))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(label))
-    }
-
-    private var sideButtonFill: Color {
-        colorScheme == .dark
-            ? Color(red: 0.20, green: 0.20, blue: 0.22)
-            : palette.surfaceElevated
-    }
-}
-
-// MARK: - Status badge
-
-private struct StatusBadge: View {
-    @Environment(\.themePalette) private var palette: ThemePalette
-
-    let phase: KeyboardViewController.State.Phase
-    /// Reflects whether the active ASR session is on-device. We surface
-    /// a small ⚠️ during recording so the user knows their audio is
-    /// going to the cloud for this locale (and so devs catch it during
-    /// QA without staring at the Xcode console).
-    let onDeviceSupported: Bool
-
-    var body: some View {
-        Group {
-            switch phase {
-            case .idle:
-                EmptyView()
-            case .requestingPermissions:
-                EmptyView()
-            case .recording:
-                if onDeviceSupported {
-                    dot(color: palette.recordRed, labelKey: "keyboard.status.rec")
-                } else {
-                    dot(color: palette.warning, labelKey: "keyboard.status.recWarning", showWarning: true)
-                }
-            case .processing:
-                dot(color: palette.accent, labelKey: "keyboard.status.processing")
-            case .error:
-                dot(color: palette.warning, labelKey: "keyboard.status.error")
-            case .denied:
-                dot(color: palette.warning, labelKey: "keyboard.status.error")
-            }
-        }
-    }
-
-    private func dot(color: Color, labelKey: String, showWarning: Bool = false) -> some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(color)
-                .frame(width: 6, height: 6)
-            if showWarning {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(palette.warning)
-            }
-            Text(ExtL10n.string(labelKey))
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textSecondary)
-        }
-        .padding(.horizontal, Spacing.xs)
-        .padding(.vertical, 3)
-        .background(palette.surface, in: Capsule())
-        .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
-    }
-}
-
 // MARK: - Cloud engine chip (cloud always ASR + LLM polish)
 
 private struct CloudEngineChip: View {
@@ -432,8 +386,8 @@ private struct CloudEngineChip: View {
         .font(TypeStyle.caption2)
         .foregroundStyle(palette.accent)
         .padding(.horizontal, Spacing.xs + 2)
-        .padding(.vertical, 5)
-        .frame(minHeight: 26)
+        .padding(.vertical, 6)
+        .frame(minHeight: 28)
         .background(palette.accent.opacity(0.15), in: Capsule())
         .overlay(Capsule().stroke(palette.accent.opacity(0.35), lineWidth: 0.5))
     }
@@ -452,8 +406,8 @@ private struct LocalEngineChip: View {
         .font(TypeStyle.caption2)
         .foregroundStyle(palette.accent)
         .padding(.horizontal, Spacing.xs + 2)
-        .padding(.vertical, 5)
-        .frame(minHeight: 26)
+        .padding(.vertical, 6)
+        .frame(minHeight: 28)
         .background(palette.accent.opacity(0.15), in: Capsule())
         .overlay(Capsule().stroke(palette.accent.opacity(0.35), lineWidth: 0.5))
     }
@@ -499,8 +453,8 @@ private struct LocaleChip: View {
             .font(TypeStyle.caption2)
             .foregroundStyle(palette.textPrimary)
             .padding(.horizontal, Spacing.xs + 2)
-            .padding(.vertical, 5)
-            .frame(minHeight: 26)
+            .padding(.vertical, 6)
+            .frame(minHeight: 28)
             .background(palette.surfaceElevated, in: Capsule())
             .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
         }
