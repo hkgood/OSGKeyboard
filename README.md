@@ -1,93 +1,43 @@
-> ⚠️ **2026-06-24**: Default branch renamed from `main` to `0.2`. Old `main` is now `0.1`; `refactor/drop-qwen3-coreml` is now `0.2`. See CHANGELOG for details.
-
-## Build Setup
-
-This project uses [XcodeGen](https://github.com/yonaskolb/XcodeGen) — `project.yml`
-is the source of truth, and `OSGKeyboard.xcodeproj` is **regenerated, not committed**
-(it's in `.gitignore`). New clones must generate the Xcode project before opening
-in Xcode, otherwise Xcode will show an empty project with no source files.
-
-### Prerequisites
-
-- macOS with **Xcode 26** (matches `project.yml` deployment target iOS 26)
-- [Homebrew](https://brew.sh)
-
-### One-time setup
-
-```bash
-brew install xcodegen
-```
-
-### Generate `OSGKeyboard.xcodeproj`
-
-From the repository root:
-
-```bash
-./Scripts/generate-xcodeproj.sh
-```
-
-This script:
-
-1. Runs `xcodegen generate` to produce `OSGKeyboard.xcodeproj` from `project.yml`.
-2. Calls `Scripts/patch-icon-composer.sh` to patch the generated project for
-   Xcode 26 Icon Composer bundles — `OSGKeyboard/AppIcon.icon` is treated as
-   a single `folder.iconcomposer.icon` reference (see `project.yml` note on
-   XcodeGen `fileTypes.icon`).
-
-Then open the project:
-
-```bash
-open OSGKeyboard.xcodeproj
-```
-
-> **Troubleshooting**: If Xcode shows an empty project, re-run
-> `./Scripts/generate-xcodeproj.sh`. If the build fails on icon assets,
-> make sure `OSGKeyboard/AppIcon.icon/` exists with `Assets/` and `icon.json`
-> inside (do not expand the folder manually).
-
-### Re-running
-
-Run `./Scripts/generate-xcodeproj.sh` any time `project.yml` changes
-(e.g. after `git pull`).
-
----
-
 # OSGKeyboard
 
-> Hold a key, speak, release — AI-polished text appears at your cursor in any app.
+> Tap to talk, tap to stop — AI-polished text appears at your cursor in any app.
 > A source-available, custom-keyboard-based voice input tool for iOS 26+, inspired by [Typeless](https://typeless.com) and [OpenLess](https://github.com/Open-Less/openless).
 
 ![Platform](https://img.shields.io/badge/platform-iOS%2026%2B-0078D4?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
 ![License](https://img.shields.io/badge/license-Source%20Available-blue)
 ![CI](https://github.com/hkgood/OSGKeyboard/actions/workflows/ci.yml/badge.svg)
+![Version](https://img.shields.io/badge/version-0.2.1-3aa05a)
 
-[中文 README](./README.zh.md)
+[中文 README](./README.zh.md) · [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/)
 
 ---
 
 ## What is it?
 
-OSGKeyboard is a free, source-available alternative to commercial voice-input tools. It runs as a **Custom Keyboard Extension** on iOS, so you can use it in **any app** — Messages, Notes, Mail, ChatGPT, Claude, Cursor, you name it.
+OSGKeyboard is a free, source-available alternative to commercial voice-input tools. It runs as a **Custom Keyboard Extension** on iOS, so you can use it in **any app** — Messages, Notes, Mail, WeChat, ChatGPT, Claude, Cursor, you name it.
 
-1. Press and hold the mic key
-2. Speak naturally
-3. Release — the AI polishes your words into clean text and inserts it at the cursor
+1. Tap the mic to start recording
+2. Speak naturally (up to 60 seconds per take)
+3. Tap again to stop — the AI polishes your words into clean text and inserts at the cursor
 
-The audio stays on-device (transcribed by Apple's on-device `SpeechAnalyzer` + `DictationTranscriber` on iOS 26+). Only the **polished transcript** is sent to your chosen cloud LLM. **No audio ever leaves your phone.**
+Audio is transcribed **on-device** by Apple's `SpeechAnalyzer` + `DictationTranscriber` (iOS 26+). Only the **polished transcript** is sent to your chosen cloud LLM. **No audio ever leaves your phone.**
+
+Under the hood, OSGKeyboard uses a **Flow session model**: a long-lived audio session runs in the host app, the keyboard extension writes tiny "start / stop" signals to the App Group, and the polished text is delivered back to the keyboard for insertion. You do not need to jump back to the host app between recordings.
 
 ---
 
 ## Features
 
-- 🎙 **Push-to-talk** with a Typeless-style circular mic button
+- 🎙 **Tap-to-toggle recording** with a Typeless-style circular mic button, 60-second per-take cap with live countdown
 - 🧠 **On-device ASR** (`SpeechAnalyzer` + `DictationTranscriber`, iOS 26+)
 - ✍️ **AI polishing** — adds structure, punctuation, fixes grammar, optionally produces lists
 - 🧩 **Local + cloud polish toggle** — local engine is ASR-only by default; opt into a post-ASR cloud polish step (DeepSeek by default) when the iOS speech recognition isn't strong enough for your environment (noisy far-field audio, strong accents, etc.)
-- 🔌 **Bring-your-own API** — works with any OpenAI-compatible endpoint (OpenAI, DeepSeek, Qwen DashScope, your own self-hosted server, …)
-- 🔒 **Privacy first** — audio never leaves your device; transcripts only sent to the LLM you choose
-- 🎨 **Native SwiftUI** — dark theme, frosted glass, ~2000 lines of Swift
+- 🔌 **Bring-your-own API** — works with any OpenAI-compatible endpoint (OpenAI, DeepSeek, Qwen DashScope, Moonshot, Zhipu, your own self-hosted server, …)
+- 🔒 **Privacy first** — audio never leaves your device; only the final transcript is sent to the LLM you choose
+- 🎨 **Native SwiftUI** — dark theme, frosted glass, pure Swift 6, ~3,600 lines of code
 - 🪶 **Zero dependencies** — no SwiftPM packages, no CocoaPods, no Carthage
+- 🔁 **Flow session** — keep recording across multiple takes without bouncing back to the host app
 
 ---
 
@@ -95,30 +45,39 @@ The audio stays on-device (transcribed by Apple's on-device `SpeechAnalyzer` + `
 
 ### Requirements
 
-- macOS with **Xcode 16+** (Xcode 26 recommended)
+- macOS with **Xcode 26** (matches `project.yml` deployment target iOS 26)
 - iPhone running **iOS 26.0+**
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen): `brew install xcodegen`
-- An OpenAI-compatible API key (e.g. from [OpenAI](https://platform.openai.com/api-keys), [DeepSeek](https://platform.deepseek.com/api_keys), or [Qwen DashScope](https://dashscope.console.aliyun.com/apiKey))
+- An OpenAI-compatible API key (e.g. from [OpenAI](https://platform.openai.com/api-keys), [DeepSeek](https://platform.deepseek.com/api_keys), or [Qwen DashScope](https://dashscope.console.aliyun.com/apiKey)). Not needed if you stay on the "local ASR only" engine.
 
 ### Build & run
 
 ```bash
 git clone https://github.com/hkgood/OSGKeyboard.git
 cd OSGKeyboard
-xcodegen generate          # produces OSGKeyboard.xcodeproj
-open OSGKeyboard.xcodeproj # or build via CLI:
+./Scripts/generate-xcodeproj.sh   # generates OSGKeyboard.xcodeproj via XcodeGen
+open OSGKeyboard.xcodeproj        # or build via CLI:
 xcodebuild -project OSGKeyboard.xcodeproj -scheme OSGKeyboard \
   -destination 'generic/platform=iOS Simulator' build
 ```
 
+> The `OSGKeyboard.xcodeproj` is **not** committed — it is regenerated from
+> `project.yml` by `Scripts/generate-xcodeproj.sh`. Always re-run the script
+> after `git pull` if `project.yml` has changed.
+
 ### Enable the keyboard in iOS
 
-1. Run the app on your device or simulator.
-2. Follow the 3-step onboarding: **enable the keyboard** in iOS Settings, then **allow Full Access** (required for the mic and LLM calls), then **paste your API key**.
-3. In any text field, tap 🌐 to switch to **OSGKeyboard**.
-4. Press and hold the mic, speak, release. ✨
+The host app walks you through a **5-step onboarding**:
 
-> **"Allow Full Access" is required.** Without it, iOS blocks the keyboard from using the microphone and from making network requests. We never log, store, or transmit your keystrokes — see [`PrivacyInfo.xcprivacy`](./OSGKeyboard/PrivacyInfo.xcprivacy).
+1. **Welcome** — intro to OSGKeyboard
+2. **Microphone** — request mic access
+3. **Speech recognition** — request on-device speech recognition access
+4. **Enable keyboard + Full Access** — open iOS Settings to add OSGKeyboard and allow Full Access
+5. **Engine + API** — pick the local or cloud engine, then paste your API key (cloud / cloud-polish only)
+
+After onboarding, in any text field, tap 🌐 to switch to **OSGKeyboard**, then tap the circular mic to start, speak, and tap again to stop.
+
+> **"Allow Full Access" is required.** Without it, iOS blocks the keyboard from using the microphone and from making network requests. We never log, store, or transmit your keystrokes — see [`PrivacyInfo.xcprivacy`](./OSGKeyboard/PrivacyInfo.xcprivacy) and our [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/).
 
 ---
 
@@ -126,54 +85,60 @@ xcodebuild -project OSGKeyboard.xcodeproj -scheme OSGKeyboard \
 
 ```
 OSGKeyboard/
-├── OSGKeyboard/                 # Main iOS app (settings, onboarding)
-│   ├── Views/                   # SwiftUI screens
-│   ├── OSGKeyboardApp.swift     # @main entry
+├── OSGKeyboard/                 # Main iOS app (host of the Flow session)
+│   ├── Services/                # FlowSessionManager, AppPermissions, SpeechHistoryStore, …
+│   ├── Views/                   # SwiftUI: OnboardingView, HomeView, SettingsView, HistoryView, …
+│   ├── OSGKeyboardApp.swift     # @main entry, owns the FlowSessionManager
 │   ├── PrivacyInfo.xcprivacy    # Required privacy manifest
-│   └── OSGKeyboard.entitlements # App Group declaration
+│   └── OSGKeyboard.entitlements # App Group + Keychain Group
 ├── OSGKeyboardExt/              # Custom Keyboard Extension
-│   ├── KeyboardViewController.swift   # Principal class
-│   ├── Services/
-│   │   ├── AudioCaptureService.swift  # AVAudioEngine → 16 kHz PCM
-│   │   ├── ASRService.swift           # iOS 26 SpeechAnalyzer ASR
-│   │   └── PolishingService.swift     # LLM call with timeout
-│   └── Views/                   # RecordButton, Waveform, KeyboardRootView
-├── OSGKeyboardShared/           # Framework shared by app + extension
-│   ├── Models/                  # ProviderConfig, LLMRequest, LLMProvider
-│   ├── Services/                # LLMClient (OpenAI-compatible)
+│   ├── KeyboardViewController.swift   # Principal class (drives SwiftUI)
+│   ├── Services/                # AppGroupPersistor, HostAppLauncher, AudioCaptureService (legacy, unused)
+│   ├── Views/                   # KeyboardRootView, RecordButton, WaveformView
+│   └── PrivacyInfo.xcprivacy
+├── OSGKeyboardShared/           # Framework shared by app + extension (APPLICATION_EXTENSION_API_ONLY=YES)
+│   ├── Services/                # FlowSessionBridge, FlowSessionDarwin, LLMClient, PolishingService, ASRService, Keychain, AppGroupStore, …
+│   ├── Models/                  # LLMProvider, ProviderConfig, TranscriptionDelivery, AudioBufferSnapshot, …
+│   ├── DesignSystem/            # Theme, ThemedRoot
 │   └── Constants/               # AppGroup identifier
-├── OSGKeyboardTests/            # XCTest unit tests
-├── project.yml                  # XcodeGen project definition
+├── OSGKeyboardTests/            # XCTest unit tests (LLM, Keychain, ASR, Flow bridge, …)
+├── OSGKeyboardExtTests/         # Keyboard-extension-side unit tests
+├── Scripts/                     # generate-xcodeproj.sh, patch-icon-composer.sh
+├── docs/                        # GitHub Pages site (privacy policy + landing)
+├── project.yml                  # XcodeGen project definition (source of truth)
 └── .github/workflows/ci.yml     # Lint + build CI
 ```
 
-### Data flow
+### Data flow — Flow session model
 
 ```
-[Long-press mic] → AudioCaptureService → AudioBufferSnapshot (16 kHz mono)
-                                          ↓
-                                  ASRService.transcribe()
-                                          ↓
-                                ASREvent.final(rawTranscript)
-                                          ↓
-                              PolishingService.polish()
-                                          ↓
-                            LLMClient (OpenAI-compatible)
-                                          ↓
-                          textDocumentProxy.insertText(polished)
+[Tap mic in keyboard]
+  └─► KeyboardViewController.pressBegan
+        └─► FlowSessionBridge.setRecordingState(.recording)  [App Group UserDefaults]
+        └─► Darwin notification: "recordingState changed"
+              └─► FlowSessionManager (host app) sees the signal
+                    └─► FlowContinuousCapture feeds 16 kHz PCM into ChunkedUtterancePipeline
+                          └─► ASRService.transcribe (iOS 26 SpeechAnalyzer)
+                                └─► ASREvent.partial / .final
+                                      └─► UtteranceTranscriptStitcher stitches the chunks
+                                            └─► PolishingService (LLMClient)  [optional, configurable]
+                                                  └─► FlowSessionBridge.storeTranscriptionResult
+[Keyboard polls + Darwin notif]
+  └─► KeyboardViewController sees the result
+        └─► textDocumentProxy.insertText(polished)
 ```
 
 **Engine modes:**
 
-- `cloud` (default): ASR runs on-device via `SpeechAnalyzer`, the transcript is
-  sent to your configured LLM for polish.
-- `local`: ASR runs on-device via `SpeechAnalyzer`. The transcript is inserted
-  as-is — no cloud round-trip.
-- `local` + "Cloud polish after ASR" toggle (Settings → On-device models):
-  same as `cloud` in spirit, but routed via the local-engine pipeline so the
-  keyboard extension can still use the on-device ASR; the transcript is sent
-  to the configured LLM before insertion. Requires a DeepSeek (or other
-  OpenAI-compatible) API key in the Keychain.
+- `cloud` (default) — on-device ASR via `SpeechAnalyzer`, transcript is sent to your configured LLM for polish.
+- `local` — on-device ASR via `SpeechAnalyzer` only; transcript is inserted as-is. No network round-trip.
+- `local` + "Cloud polish after ASR" toggle (Settings → Engine) — same on-device ASR, but the transcript is routed through your configured LLM before insertion. Useful when iOS speech recognition isn't accurate enough in your environment.
+
+**Cross-process plumbing (host app ↔ keyboard extension):**
+
+- **App Group `group.com.osgkeyboard.shared`** — `UserDefaults` for the live Flow session state, recording state, audio levels, transcription delivery, and most preferences.
+- **Shared Keychain group `com.osgkeyboard.shared`** — the LLM API key is written by the host app's Settings, read by both processes before every LLM call.
+- **Darwin notifications (`CFNotificationCenter`)** — light-weight "something changed" pings; payloads still travel through the App Group.
 
 ---
 
@@ -191,15 +156,39 @@ LLMProvider(
 )
 ```
 
-That's it. No other code changes required.
+That's it — no other code changes required.
+
+To set it as the new default for first-time users, also bump the `defaultProviderId` constant used by `ProviderConfig`.
 
 ---
 
-## Limitations
+## Known limitations
 
-- iOS sandboxes keyboard extensions: ~60 MB memory cap, Full Access required.
-- The keyboard does **not** work in password fields or some `WKWebView` textareas (iOS limitation).
-- iOS 26+ only. Earlier iOS versions are not supported.
+- **iOS 26+ only.** Earlier iOS versions are not supported. We dropped the pre-26 SFSpeechRecognizer / AVAudioSession branching so the entire ASR path can use the iOS 26 `SpeechAnalyzer` API exclusively.
+- **~60 MB memory cap** for the keyboard extension (iOS sandbox). The Flow session is hosted in the main app, so audio buffers and ASR models live there, not in the extension.
+- **"Allow Full Access" required.** Without it, the keyboard can't reach the microphone or make network requests for cloud polish.
+- **Password fields and some `WKWebView` textareas** are blocked by iOS itself — not something we can work around.
+- **60-second per-take cap.** A long take is automatically stopped and dispatched for transcription; a new take can be started immediately.
+- **3-minute per-utterance ASR cap.** If you exceed it, the pipeline gracefully splits into multiple stitched chunks.
+- **No on-device LLM polish.** The local engine is ASR-only; "AI polish" is always cloud-based and configurable. On-device model support was explored in v0.2.0 and rolled back in v0.2.1 to keep the dependency surface at zero SPM packages.
+- **URL scheme `osgkeyboard://`** can be opened by any app on the device. We don't trust it for anything beyond "wake the host app and (re)start the Flow session"; it never carries your API key or other secrets.
+
+---
+
+## Development
+
+- **Build setup** — see the [Build Setup](#build-setup) section at the top of this file. Run `./Scripts/generate-xcodeproj.sh` after any `project.yml` change.
+- **Tests** — `xcodebuild test -project OSGKeyboard.xcodeproj -scheme OSGKeyboard -destination 'platform=iOS Simulator,name=iPhone 17'` runs both `OSGKeyboardTests` and `OSGKeyboardExtTests` targets.
+- **CI** — `.github/workflows/ci.yml` runs SwiftLint, a clean Debug build, and the test suite on every push to `0.1` / `0.2` and PRs.
+- **Logging** — `print` is debug-only; release builds use `NSLog` for the few cross-process status messages.
+
+---
+
+## Project status
+
+- **Current release: v0.2.1** (2026-06-24)
+- **Default branch: `0.2`** (renamed from `main` on 2026-06-24; the previous `main` is preserved as `0.1`).
+- See [`CHANGELOG.md`](./CHANGELOG.md) for the full release history and [`TYPEWHISPER_FLOW_MIGRATION_TRACKER.md`](./TYPEWHISPER_FLOW_MIGRATION_TRACKER.md) for the architecture-decision log behind the Flow session model.
 
 ---
 
@@ -214,7 +203,3 @@ That's it. No other code changes required.
 - Inspired by [Typeless](https://typeless.com) and the desktop open-source [OpenLess](https://github.com/Open-Less/openless)
 - Built with [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 - Powered by Apple's [SpeechAnalyzer](https://developer.apple.com/documentation/speech/speechanalyzer) and [SFSpeechRecognizer](https://developer.apple.com/documentation/speech/sfspeechrecognizer)
-
----
-
-**Note:** the project is published at [`hkgood/OSGKeyboard`](https://github.com/hkgood/OSGKeyboard); badges and git clone URLs already point there.
