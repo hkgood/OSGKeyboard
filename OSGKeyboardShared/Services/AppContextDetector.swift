@@ -95,7 +95,7 @@ public struct AppContextDetector: Sendable {
             "if (", "if (", "} else", "} catch",
             "=> {", "-> {",
         ]
-        let hasIndentation = tail.contains(where: { $0 == "\n    " || $0 == "\t" })
+        let hasIndentation = tail.contains("\n    ") || tail.contains("\t")
         let hasCodeKeyword = codeKeywords.contains(where: { tail.contains($0) })
         if hasIndentation, hasCodeKeyword {
             return .code
