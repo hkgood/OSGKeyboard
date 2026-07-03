@@ -757,35 +757,8 @@ private struct APISetupPage: View {
                     .padding(.horizontal, Spacing.lg)
                 }
 
-                if config.isPolishScenarioRowVisible {
-                    postProcessingSection
-                        .padding(.horizontal, Spacing.lg)
-                }
             }
             .padding(.bottom, Spacing.xxxl)
-        }
-    }
-
-    /// Polish scenario + optional translation target for cloud onboarding.
-    private var postProcessingSection: some View {
-        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            Text("settings.polishScenario.section")
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textSecondary)
-                .textCase(.uppercase)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            VStack(spacing: 0) {
-                ScenarioPickerRow(config: config, isVisible: true)
-                if config.isTranslationRowVisible {
-                    Divider().background(palette.divider)
-                    TranslationPickerRow(config: config, isVisible: true)
-                }
-            }
-            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
         }
     }
 }
