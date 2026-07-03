@@ -144,7 +144,7 @@ final class DictionaryLearner {
 
         if didChange {
             dictionary.version += 1
-            store.personalDictionary = dictionary
+            store.setPersonalDictionary(dictionary)
         }
         // Suppress the "did not change" path; we still return the
         // bumped-counts view so the caller can refresh a UI label.
