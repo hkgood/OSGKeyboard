@@ -118,6 +118,12 @@ targets:
           - CFBundleURLName: com.osgkeyboard.ios.settings
             CFBundleURLSchemes:
               - osgkeyboard
+        # All network calls are HTTPS (NSAppTransportSecurity above);
+        # nothing in the app uses non-exempt encryption. Declaring
+        # `ITSAppUsesNonExemptEncryption: false` lets us skip the
+        # annual self-classification questionnaire in App Store
+        # Connect on every upload.
+        ITSAppUsesNonExemptEncryption: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios
