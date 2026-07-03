@@ -128,6 +128,36 @@ public final class KeyboardState: ObservableObject {
     /// Convenience shorthand used by the pipeline and views.
     public var isLocalEngine: Bool { engineMode == "local" }
 
+    // MARK: - First-launch onboarding (mirrored from ProviderConfig)
+
+    /// Drives the in-keyboard onboarding overlay. When `false`, the
+    /// keyboard shows a step-by-step overlay instead of the normal UI;
+    /// when `true`, normal UI renders. Mirrored from `ProviderConfig`
+    /// so the keyboard never has to instantiate the main-app config.
+    @Published public var hasCompletedOnboarding: Bool = false
+    /// Step the user is currently on (0-based). The overlay reads this
+    /// to render the right page; main-app `ProviderConfig` is the
+    /// source of truth and the keyboard mirrors it.
+    @Published public var onboardingPage: Int = 0
+    /// Per-call context the polish prompt should adapt to. Mirrored
+    /// from `AppGroupStore.detectedAppContext` on every `viewWillAppear`
+    /// so the chip stays consistent across the open↔jump cycle.
+    @Published public var appContext: AppContext = .unknown
+    /// `true` when the user tapped something (mic, settings) right
+    /// before a forced jump to the host app. The keyboard reads this
+    /// on return and auto-resumes the action so the user does not have
+    /// to tap the same button twice.
+    @Published public var pendingResumeAction: ResumeAction = .none
+
+    /// Action the keyboard should auto-trigger after a host-app jump
+    /// completes. Set just before `openHostApp`, consumed (set back to
+    /// `.none`) after the action fires once.
+    public enum ResumeAction: Equatable {
+        case none
+        case startRecording
+        case openSettings
+    }
+
     // Action hooks — injected by the view controller at install time.
     public var beginRecording:      () -> Void = {}
     public var endRecording:        () -> Void = {}
@@ -143,6 +173,15 @@ public final class KeyboardState: ObservableObject {
     /// persist. Wired in `KeyboardViewController.installStateActions`.
     public var setTranslationTargetLocaleId: (String) -> Void = { _ in }
     public var setPolishScenarioId: (String) -> Void = { _ in }
+    /// v0.3.0: manually override the auto-detected app context (e.g.
+    /// when the heuristic guessed wrong). Writes to the App Group so
+    /// `PolishingService` picks it up on the next take.
+    public var setAppContext:       (AppContext) -> Void = { _ in }
+    public var advanceOnboarding:   () -> Void = {}
+    public var completeOnboarding:   () -> Void = {}
+    public var requestMicPermission:   () -> Void = {}
+    public var requestSpeechPermission: () -> Void = {}
+    public var openSystemSettings:   () -> Void = {}
     public var insertNewline:       () -> Void = {}
     public var insertSpace:         () -> Void = {}
     public var deleteBackward:      () -> Void = {}
