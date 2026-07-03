@@ -302,7 +302,6 @@ public final class KeyboardViewController: UIInputViewController {
             )
         }
         syncOnboardingStateFromAppGroup()
-        syncAppContextFromAppGroup()
     }
 
     // MARK: - Onboarding / app-context sync (v0.3.0)
