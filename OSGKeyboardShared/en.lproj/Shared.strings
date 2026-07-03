@@ -30,3 +30,33 @@
 "error.asr.formatUnsupported" = "This device does not support the required audio format.";
 "error.asr.noSpeech" = "No speech detected. Please try again.";
 "error.asr.chunkFailed" = "Segment %lld failed: %@";
+
+/* v0.3.0: Polish intensity picker */
+"polish.intensity.off" = "Off";
+"polish.intensity.light" = "Light";
+"polish.intensity.medium" = "Medium";
+"polish.intensity.heavy" = "Heavy";
+"polish.intensity.off.desc" = "Insert the raw ASR transcript with no LLM call.";
+"polish.intensity.light.desc" = "Drop only isolated filler words and obvious duplications.";
+"polish.intensity.medium.desc" = "Correct recognition errors, remove fillers, polish phrasing. Default.";
+"polish.intensity.heavy.desc" = "Restructure into lists and paragraphs. Best for meeting notes and reports.";
+
+/* v0.3.0: Detected app context labels */
+"appContext.code" = "Code";
+"appContext.email" = "Email";
+"appContext.chat" = "Chat";
+"appContext.document" = "Document";
+"appContext.unknown" = "General";
+
+/* v0.3.0: Personal dictionary categories */
+"dict.category.properNoun" = "Names & places";
+"dict.category.technical" = "Technical terms";
+"dict.category.acronym" = "Acronyms";
+"dict.category.productName" = "Product names";
+"dict.category.custom" = "Custom";
+
+/* v0.3.0: Personal dictionary sources */
+"dict.source.manual" = "Manual";
+"dict.source.history" = "Auto-learned";
+"dict.source.contacts" = "From Contacts";
+"dict.source.recentEdit" = "From recent edit";

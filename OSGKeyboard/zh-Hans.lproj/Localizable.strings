@@ -312,3 +312,21 @@
 "settings.models.confirm.body %lld" = "下载后约占用 %lld MB 空间。建议在 Wi-Fi 下下载，避免消耗蜂窝流量。随时可以在本设置页删除模型文件以释放空间。";
 "settings.models.confirm.cancel" = "取消";
 "settings.models.confirm.download %lld" = "下载 %lld MB";
+
+/* v0.3.0: 个性化词库 */
+"settings.personalDictionary.sectionTitle" = "个性化词库";
+"settings.personalDictionary.title" = "个性化词库";
+"settings.personalDictionary.summary" = "AI 润色时必须原样保留的词汇。";
+"settings.personalDictionary.intro.title" = "词库如何积累";
+"settings.personalDictionary.intro.body" = "你反复说出的词会自动学习。你也可以在这里编辑或删除任何词条。";
+"settings.personalDictionary.empty.title" = "还没有词条";
+"settings.personalDictionary.empty.body" = "你反复说出的词会出现在这里。你也可以在此页删除任何词条。";
+"settings.personalDictionary.search.prompt" = "搜索词条";
+"settings.personalDictionary.usageCount" = "使用 %lld 次";
+"settings.personalDictionary.clearAll" = "清空词库";
+"settings.personalDictionary.clearAll.confirmTitle" = "清空全部词条？";
+"settings.personalDictionary.clearAll.message" = "这会移除所有受保护的词汇，且无法撤销。";
+"settings.personalDictionary.clearAll.confirm" = "全部清空";
+
+/* v0.3.0: 润色档位 */
+"settings.polishIntensity.title" = "润色档位";

@@ -68,6 +68,13 @@ struct HistoryView: View {
             .background(palette.background)
             .toolbar(.hidden, for: .navigationBar)
         }
+        .task {
+            // v0.3.0: each time the user opens History, run a
+            // silent pass to lift frequently-dictated English
+            // identifiers into the personal dictionary. Cheap
+            // (≤ 5 ms for 200 entries on iPhone 12) and idempotent.
+            DictionaryLearner().learn(from: store.entries)
+        }
     }
 
     private var emptyState: some View {

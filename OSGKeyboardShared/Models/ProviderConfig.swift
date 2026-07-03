@@ -39,6 +39,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         // in the local engine. Default `false` — keeps the local engine
         // truly local unless the user explicitly opts in.
         static let localModeCloudPolishEnabled = "config.localModeCloudPolishEnabled"
+        // v0.3.0: how aggressively the LLM should rewrite transcripts.
+        static let polishIntensity = "config.polishIntensity"
     }
 
     @Published public var providerId: String {
@@ -114,6 +116,13 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     /// Host-app UI language. Also mirrored to the App Group for the keyboard extension.
     @Published public var uiLanguage: AppUILanguage {
         didSet { defaults.set(uiLanguage.rawValue, forKey: Key.uiLanguage) }
+    }
+    /// v0.3.0: how aggressively the LLM should rewrite the ASR
+    /// transcript. Default is `medium` (Typeless-equivalent). The
+    /// `off` value never calls the LLM — equivalent to "transcribe
+    /// only" regardless of `engineMode`.
+    @Published public var polishIntensity: PolishIntensity {
+        didSet { defaults.set(polishIntensity.rawValue, forKey: Key.polishIntensity) }
     }
 
     public var isConfigured: Bool {
@@ -193,6 +202,15 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         self.uiLanguage = AppUILanguage.fromStored(
             resolvedDefaults.string(forKey: Key.uiLanguage)
         )
+        // v0.3.0: polish intensity. Default to `.medium` for new
+        // installs and upgrades; the existing `off` / `light` /
+        // `heavy` values are honored.
+        if let raw = resolvedDefaults.string(forKey: Key.polishIntensity),
+           let intensity = PolishIntensity(rawValue: raw) {
+            self.polishIntensity = intensity
+        } else {
+            self.polishIntensity = .default
+        }
 
         // Cloud no longer exposes off/transcribe; migrate legacy values.
         if self.engineMode == "cloud", self.modeId != "polish" {
