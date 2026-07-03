@@ -14,6 +14,9 @@ enum MaterialIconName {
     case settings
     case chevronRight
     case openInNew
+    case bookmark
+    case textFields
+    case history
 
     var codepoint: UInt32 {
         switch self {
@@ -22,6 +25,9 @@ enum MaterialIconName {
         case .settings: return 0xE8B8
         case .chevronRight: return 0xE5CC
         case .openInNew: return 0xE89E
+        case .bookmark: return 0xE8E4
+        case .textFields: return 0xE932
+        case .history: return 0xE889
         }
     }
 
@@ -32,6 +38,9 @@ enum MaterialIconName {
         case .settings: return "gearshape"
         case .chevronRight: return "chevron.right"
         case .openInNew: return "arrow.up.right.square"
+        case .bookmark: return "bookmark"
+        case .textFields: return "text.alignleft"
+        case .history: return "clock.arrow.circlepath"
         }
     }
 }

@@ -30,3 +30,33 @@
 "error.asr.formatUnsupported" = "当前设备不支持该语音输入格式。";
 "error.asr.noSpeech" = "未识别到语音内容，请重试。";
 "error.asr.chunkFailed" = "第 %lld 段识别失败：%@";
+
+/* v0.3.0: 润色档位 */
+"polish.intensity.off" = "关闭";
+"polish.intensity.light" = "轻度";
+"polish.intensity.medium" = "中度";
+"polish.intensity.heavy" = "深度";
+"polish.intensity.off.desc" = "不调用 LLM，直接插入识别原文。";
+"polish.intensity.light.desc" = "仅清除孤立语气词和重复口误。";
+"polish.intensity.medium.desc" = "纠正识别错误、清除语气词、润色语句。推荐默认。";
+"polish.intensity.heavy.desc" = "可重组段落、拆长句、自动编号。适合会议纪要与报告。";
+
+/* v0.3.0: 输入场景标签 */
+"appContext.code" = "代码";
+"appContext.email" = "邮件";
+"appContext.chat" = "聊天";
+"appContext.document" = "长文";
+"appContext.unknown" = "通用";
+
+/* v0.3.0: 词库类别 */
+"dict.category.properNoun" = "人名地名";
+"dict.category.technical" = "技术名词";
+"dict.category.acronym" = "缩写";
+"dict.category.productName" = "产品名";
+"dict.category.custom" = "自定义";
+
+/* v0.3.0: 词库来源 */
+"dict.source.manual" = "手动添加";
+"dict.source.history" = "自动学习";
+"dict.source.contacts" = "来自通讯录";
+"dict.source.recentEdit" = "来自最近编辑";
