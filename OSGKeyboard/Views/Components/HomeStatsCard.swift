@@ -57,7 +57,21 @@ struct HomeStatsCard: View {
                 )
             }
         }
-        .background(cardBackground, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+        .background {
+            ZStack(alignment: .top) {
+                palette.surface
+                LinearGradient(
+                    colors: [
+                        palette.accent.opacity(0.10),
+                        palette.accent.opacity(0.02),
+                        palette.surface.opacity(0)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                 .stroke(palette.divider, lineWidth: 0.5)
@@ -65,21 +79,6 @@ struct HomeStatsCard: View {
         .onAppear(perform: refreshDictionaryCount)
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             refreshDictionaryCount()
-        }
-    }
-
-    private var cardBackground: some View {
-        ZStack(alignment: .top) {
-            palette.surface
-            LinearGradient(
-                colors: [
-                    palette.accent.opacity(0.10),
-                    palette.accent.opacity(0.02),
-                    palette.surface.opacity(0)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
         }
     }
 
