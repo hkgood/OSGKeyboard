@@ -5,6 +5,12 @@
 //   keyboard extension -> open host app for recording
 //   host app           -> writes final transcript
 //   keyboard extension -> consumes pending transcript and inserts text
+//
+// STATUS (v0.1.2): Retained. Consumed by `KeyboardViewController` for
+// the "one-shot" host-app dictation path (where the keyboard extension
+// launches the host app, the user records there, and the resulting
+// text is consumed back by the extension). The *continuous* path goes
+// through `FlowSessionBridge` + `FlowSessionManager` instead.
 
 import Foundation
 

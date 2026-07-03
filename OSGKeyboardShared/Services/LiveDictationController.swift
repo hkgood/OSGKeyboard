@@ -4,6 +4,22 @@
 // Unified on-device dictation session: mic capture + iOS 26 SpeechAnalyzer.
 // Used by the keyboard preview sheet, host-app dictation handoff, and any
 // other foreground surface that needs live ASR without duplicating pipeline code.
+//
+// STATUS (v0.1.2): Retained as a "preview / one-shot handoff" path.
+// The *primary* voice-session path is `FlowSessionManager` +
+// `FlowContinuousCapture` (TypeWhisper-style continuous capture shared
+// between host app and keyboard extension). The keyboard extension
+// consumes results through `FlowSessionBridge`.
+//
+// This class is still imported by:
+//   - `OSGKeyboard/Views/PreviewASRController.swift` (typealias)
+//   - `OSGKeyboard/Views/KeyboardPreviewSheet.swift` (in-app preview)
+//   - `OSGKeyboard/Views/DictationCaptureView.swift` (host-app fallback)
+//   - `OSGKeyboardTests/PreviewASRControllerStateTests.swift`
+//
+// Do NOT remove without updating those call sites. The earlier
+// `OSGKeyboardExt/Services/AudioCaptureService.swift` *was* a true
+// dead duplicate and has been deleted (see AUDIT_APPSTORE.md P0-3).
 // Owns its own AVAudioEngine + AVAudioSession, downsamples to 16 kHz
 // mono Float32 on the audio thread (same as `AudioCaptureService`), and
 // feeds `AudioBufferSnapshot` to the shared `ASRService` (the same
