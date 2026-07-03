@@ -341,14 +341,18 @@ public struct AppGroupStore: @unchecked Sendable {
             }
         }
         set {
-            do {
-                let data = try JSONEncoder().encode(newValue)
-                defaults.set(data, forKey: Key.personalDictionary)
-            } catch {
-                #if DEBUG
-                print("⚠️ [AppGroupStore] personalDictionary encode failed: \(error)")
-                #endif
-            }
+            setPersonalDictionary(newValue)
+        }
+    }
+
+    public func setPersonalDictionary(_ dictionary: PersonalDictionary) {
+        do {
+            let data = try JSONEncoder().encode(dictionary)
+            defaults.set(data, forKey: Key.personalDictionary)
+        } catch {
+            #if DEBUG
+            print("⚠️ [AppGroupStore] personalDictionary encode failed: \(error)")
+            #endif
         }
     }
 
