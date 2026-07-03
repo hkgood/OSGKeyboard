@@ -6,6 +6,7 @@
 
 import Foundation
 import Combine
+import OSGKeyboardShared
 
 struct UsageStatistics: Codable, Equatable {
     var dictationDurationSeconds: TimeInterval
