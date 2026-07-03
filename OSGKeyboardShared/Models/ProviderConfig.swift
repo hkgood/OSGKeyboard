@@ -23,7 +23,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         // delete the entry, but no other code path touches this key.
         static let apiKeyLegacy    = "config.apiKey"
         static let model           = "config.model"
-        static let systemPrompt    = "config.systemPrompt"
         static let modeId          = "config.modeId"
         static let localeId        = "config.localeId"
         static let engineMode       = "config.engineMode"
@@ -51,7 +50,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         // who upgraded from a build that wrote it don't see a flash of
         // "on" state during init, but new writes never touch the key.
         static let translationTargetLocaleId = "config.translationTargetLocaleId"
-        static let polishScenarioId = "config.polishScenarioId"
         static let handednessPreference = "config.handednessPreference"
         // v0.3.0: how aggressively the LLM should rewrite transcripts.
         static let polishIntensity = "config.polishIntensity"
@@ -79,9 +77,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     }
     @Published public var model: String {
         didSet { defaults.set(model, forKey: Key.model) }
-    }
-    @Published public var systemPrompt: String {
-        didSet { defaults.set(systemPrompt, forKey: Key.systemPrompt) }
     }
     @Published public var modeId: String {
         didSet { defaults.set(modeId, forKey: Key.modeId) }
@@ -158,14 +153,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
             AppGroupConfigDarwin.postConfigChanged()
         }
     }
-    /// Selected polish scenario preset (e.g. `daily_chat`, `work`) or
-    /// `custom` when the user edits the raw system prompt.
-    @Published public var polishScenarioId: String {
-        didSet {
-            defaults.set(polishScenarioId, forKey: Key.polishScenarioId)
-            AppGroupConfigDarwin.postConfigChanged()
-        }
-    }
     /// Which hand the user holds the phone with — mirrors to the keyboard
     /// extension so delete / return can swap on the bottom row.
     @Published public var handednessPreference: HandednessPreference {
@@ -190,17 +177,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     public var isTranslationRowVisible: Bool {
         if engineMode == "cloud" { return true }
         return isLocalEngine && localModeCloudPolishEnabled
-    }
-
-    /// Polish scenario picker visibility — same gate as translation:
-    /// only when the pipeline can run a cloud LLM step.
-    public var isPolishScenarioRowVisible: Bool {
-        if engineMode == "cloud" { return true }
-        return isLocalEngine && localModeCloudPolishEnabled
-    }
-
-    public var isCustomPolishScenario: Bool {
-        PolishScenarioCatalog.isCustom(polishScenarioId)
     }
 
     /// v0.3.0: how aggressively the LLM should rewrite the ASR
@@ -249,12 +225,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         isLocalEngine ? "deepseek" : providerId
     }
 
-    /// The system prompt the user *sees* in the editor — fall back to the
-    /// provider-aware default from `AppGroupStore` when nothing is set.
-    public var defaultSystemPrompt: String {
-        AppGroupStore.defaultSystemPrompt(for: providerId)
-    }
-
     private let defaults: UserDefaults
 
     public init(defaults: UserDefaults? = nil) {
@@ -272,8 +242,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         self.apiKey = ProviderConfig.resolveAPIKey(defaults: resolvedDefaults)
 
         self.model        = resolvedDefaults.string(forKey: Key.model)      ?? preset.defaultModel
-        self.systemPrompt = resolvedDefaults.string(forKey: Key.systemPrompt)
-            ?? AppGroupStore.defaultSystemPrompt(for: pid)
         self.modeId          = resolvedDefaults.string(forKey: Key.modeId)     ?? "polish"
         self.localeId        = resolvedDefaults.string(forKey: Key.localeId)   ?? "auto"
         self.engineMode       = resolvedDefaults.string(forKey: Key.engineMode) ?? "cloud"
@@ -307,17 +275,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         // conservative default that matches the picker / chip UX).
         self.translationTargetLocaleId = resolvedDefaults.string(forKey: Key.translationTargetLocaleId)
             ?? TranslationLanguageCatalog.offLocaleId
-        if let storedScenario = resolvedDefaults.string(forKey: Key.polishScenarioId) {
-            self.polishScenarioId = PolishScenarioCatalog.resolve(storedScenario).id
-        } else {
-            let savedPrompt = resolvedDefaults.string(forKey: Key.systemPrompt)
-                ?? AppGroupStore.defaultSystemPrompt(for: pid)
-            if savedPrompt != AppGroupStore.defaultSystemPrompt(for: pid) {
-                self.polishScenarioId = PolishScenarioCatalog.customId
-            } else {
-                self.polishScenarioId = PolishScenarioCatalog.defaultId
-            }
-        }
         self.handednessPreference = HandednessPreference.fromStored(
             resolvedDefaults.string(forKey: Key.handednessPreference)
         )
@@ -353,23 +310,12 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     }
 
     public func apply(preset: LLMProvider) {
-        // Capture the *previous* provider id BEFORE we mutate, so the
-        // system-prompt reset check below can compare against the actual
-        // prior default.
-        let oldId = providerId
         providerId = preset.id
         if !preset.defaultBaseURL.isEmpty {
             baseURL = preset.defaultBaseURL
         }
         if !preset.defaultModel.isEmpty {
             model = preset.defaultModel
-        }
-        // When switching providers, reset the system prompt to the new
-        // provider's default — otherwise the user is left editing a
-        // Chinese prompt on a US-English model.
-        if systemPrompt.isEmpty
-            || systemPrompt == AppGroupStore.defaultSystemPrompt(for: oldId) {
-            systemPrompt = AppGroupStore.defaultSystemPrompt(for: preset.id)
         }
     }
 
@@ -379,8 +325,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         baseURL = preset.defaultBaseURL
         apiKey = ""
         model = preset.defaultModel
-        systemPrompt = AppGroupStore.defaultSystemPrompt(for: "openai")
-        polishScenarioId = PolishScenarioCatalog.defaultId
         handednessPreference = .left
         hasAcknowledgedCloudSharing = false
     }
