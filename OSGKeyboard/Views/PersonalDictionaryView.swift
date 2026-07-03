@@ -224,11 +224,14 @@ struct PersonalDictionaryView: View {
 
     private func persist() {
         dictionary.version += 1
-        store.personalDictionary = dictionary
+        store.setPersonalDictionary(dictionary)
     }
 }
 
+#if DEBUG
 #Preview {
-    PersonalDictionaryView()
-        .environment(\.themePalette, ThemePalette())
+    ThemedRoot {
+        PersonalDictionaryView()
+    }
 }
+#endif
