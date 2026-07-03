@@ -57,11 +57,11 @@ struct AppContextChip: View {
     }
 
     private var chipText: String {
-        ExtL10n.text("keyboard.appContext.chip.\(state.appContext.rawValue)")
+        ExtL10n.string("keyboard.appContext.chip.\(state.appContext.rawValue)")
     }
 
     private func menuLabel(for context: AppContext) -> String {
-        ExtL10n.text("keyboard.appContext.menu.\(context.rawValue)")
+        ExtL10n.string("keyboard.appContext.menu.\(context.rawValue)")
     }
 
     private func iconName(for context: AppContext) -> String {
