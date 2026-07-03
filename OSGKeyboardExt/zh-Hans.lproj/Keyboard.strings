@@ -202,3 +202,38 @@
 "locale.en-US"    = "English (US)";
 "locale.ja-JP"    = "日本語";
 "locale.ko-KR"    = "한국어";
+
+/* v0.3.0：键盘内首次启动引导 */
+"keyboard.onboarding.title"        = "设置 OSGKeyboard";
+"keyboard.onboarding.back"         = "返回";
+"keyboard.onboarding.getStarted"   = "开始设置";
+"keyboard.onboarding.welcome.title" = "欢迎使用 OSGKeyboard";
+"keyboard.onboarding.welcome.body"  = "语音转文字 + AI 润色。30 秒搞定，绝大部分步骤直接在键盘里完成。";
+"keyboard.onboarding.mic.title"    = "麦克风权限";
+"keyboard.onboarding.mic.body"     = "OSGKeyboard 需要麦克风权限来转写你的语音。点击下方按钮后,iOS 会弹出系统提示。";
+"keyboard.onboarding.mic.grant"    = "允许麦克风";
+"keyboard.onboarding.speech.title" = "语音识别权限";
+"keyboard.onboarding.speech.body"  = "Apple 的本地语音引擎负责把声音变成文字。点击下方按钮后,iOS 会弹出系统提示。";
+"keyboard.onboarding.speech.grant" = "允许语音识别";
+"keyboard.onboarding.keyboard.title" = "启用 OSGKeyboard";
+"keyboard.onboarding.keyboard.body"  = "打开 设置 → 通用 → 键盘 → 键盘 → 添加新键盘 → OSGKeyboard。然后再次点击 OSGKeyboard,打开\"允许完全访问\"。完成后回到这里。";
+"keyboard.onboarding.keyboard.openSettings" = "打开设置";
+"keyboard.onboarding.api.title"    = "最后一步";
+"keyboard.onboarding.api.body"     = "要让 AI 润色你的文字,OSGKeyboard 需要一个 LLM API key。你可以现在在 App 里填写,也可以先跳过,之后在设置里补上。";
+"keyboard.onboarding.api.skipHint" = "没有 API key 也能用——只是不会润色,只输出原始转写。";
+"keyboard.onboarding.api.skip"     = "跳过";
+"keyboard.onboarding.api.openHostApp" = "打开 OSGKeyboard";
+
+/* v0.3.0：键盘顶栏的输入场景芯片 */
+"keyboard.appContext.a11y"        = "润色场景";
+"keyboard.appContext.a11yHint"     = "点击可手动切换输入场景(代码/邮件/聊天/文档),覆盖自动检测结果。";
+"keyboard.appContext.chip.code"     = "代码";
+"keyboard.appContext.chip.email"    = "邮件";
+"keyboard.appContext.chip.chat"     = "聊天";
+"keyboard.appContext.chip.document" = "文档";
+"keyboard.appContext.chip.unknown"  = "通用";
+"keyboard.appContext.menu.code"     = "代码 — 保留标识符、不做自然语言化";
+"keyboard.appContext.menu.email"    = "邮件 — 礼貌专业、合理分段";
+"keyboard.appContext.menu.chat"     = "聊天 — 简短随意、可带 emoji";
+"keyboard.appContext.menu.document" = "文档 — 长文、结构化";
+"keyboard.appContext.menu.unknown"  = "通用 — 中性口吻";

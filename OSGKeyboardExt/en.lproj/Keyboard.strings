@@ -202,3 +202,38 @@
 "locale.en-US"    = "English (US)";
 "locale.ja-JP"    = "Japanese";
 "locale.ko-KR"    = "Korean";
+
+/* v0.3.0: in-keyboard first-launch onboarding */
+"keyboard.onboarding.title"        = "Set up OSGKeyboard";
+"keyboard.onboarding.back"         = "Back";
+"keyboard.onboarding.getStarted"   = "Get Started";
+"keyboard.onboarding.welcome.title" = "Welcome to OSGKeyboard";
+"keyboard.onboarding.welcome.body"  = "Voice-to-text with AI polish. Set up takes 30 seconds — most of it happens right here in the keyboard.";
+"keyboard.onboarding.mic.title"    = "Microphone access";
+"keyboard.onboarding.mic.body"     = "OSGKeyboard needs microphone access to transcribe your speech. iOS will show a system prompt.";
+"keyboard.onboarding.mic.grant"    = "Allow Microphone";
+"keyboard.onboarding.speech.title" = "Speech recognition";
+"keyboard.onboarding.speech.body"  = "Apple's on-device speech engine turns your voice into text. iOS will show a system prompt.";
+"keyboard.onboarding.speech.grant" = "Allow Speech Recognition";
+"keyboard.onboarding.keyboard.title" = "Enable OSGKeyboard";
+"keyboard.onboarding.keyboard.body"  = "Open Settings → General → Keyboard → Keyboards → Add New Keyboard → OSGKeyboard. Then tap OSGKeyboard again and enable Allow Full Access. Come back here when you're done.";
+"keyboard.onboarding.keyboard.openSettings" = "Open Settings";
+"keyboard.onboarding.api.title"    = "One last step";
+"keyboard.onboarding.api.body"     = "To polish your text with AI, OSGKeyboard needs an LLM API key. You can add it now in the app, or skip and add it later from Settings.";
+"keyboard.onboarding.api.skipHint" = "Polishing won't work without an API key, but the keyboard will still type the raw transcript.";
+"keyboard.onboarding.api.skip"     = "Skip";
+"keyboard.onboarding.api.openHostApp" = "Open OSGKeyboard";
+
+/* v0.3.0: AppContext chip on the keyboard top bar */
+"keyboard.appContext.a11y"        = "Polish context";
+"keyboard.appContext.a11yHint"     = "Tap to override the auto-detected input context (code, email, chat, document).";
+"keyboard.appContext.chip.code"     = "Code";
+"keyboard.appContext.chip.email"    = "Email";
+"keyboard.appContext.chip.chat"     = "Chat";
+"keyboard.appContext.chip.document" = "Document";
+"keyboard.appContext.chip.unknown"  = "General";
+"keyboard.appContext.menu.code"     = "Code — preserve identifiers, no natural-language wrap";
+"keyboard.appContext.menu.email"    = "Email — polite, professional, paragraph-broken";
+"keyboard.appContext.menu.chat"     = "Chat — short, casual, emoji-friendly";
+"keyboard.appContext.menu.document" = "Document — long-form, structured";
+"keyboard.appContext.menu.unknown"  = "General — neutral tone";

@@ -75,25 +75,40 @@ public struct KeyboardRootView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            headerBand
+        ZStack {
+            VStack(spacing: 0) {
+                headerBand
 
-            Color.clear
-                .frame(height: KeyboardLayoutMetrics.actionClusterTopGap)
+                Color.clear
+                    .frame(height: KeyboardLayoutMetrics.actionClusterTopGap)
 
-            micActionRow
-                .frame(height: KeyboardLayoutMetrics.actionClusterHeight)
+                micActionRow
+                    .frame(height: KeyboardLayoutMetrics.actionClusterHeight)
 
-            Color.clear
-                .frame(height: KeyboardLayoutMetrics.actionClusterBottomGap)
+                Color.clear
+                    .frame(height: KeyboardLayoutMetrics.actionClusterBottomGap)
+            }
+            .padding(.top, KeyboardLayoutMetrics.outerPaddingTop)
+            .padding(.bottom, KeyboardLayoutMetrics.outerPaddingBottom)
+            // 透明背景：让系统键盘 chrome 透出，不自行铺色（深浅模式一致）。
+            .background(Color.clear)
+            .frame(height: Self.totalHeight)
+            // Feed the resolved palette to all nested chips/buttons.
+            .environment(\.themePalette, palette)
+
+            // v0.3.0: in-keyboard first-launch onboarding. Mounted as
+            // an overlay so the normal keyboard chrome stays
+            // responsive underneath (mic button still works, chip
+            // taps register). Only rendered until
+            // `state.hasCompletedOnboarding` flips to true; from
+            // then on the overlay is unmounted and never re-rendered.
+            if !state.hasCompletedOnboarding {
+                KeyboardOnboardingOverlay(state: state)
+                    .environment(\.themePalette, palette)
+                    .transition(.opacity)
+            }
         }
-        .padding(.top, KeyboardLayoutMetrics.outerPaddingTop)
-        .padding(.bottom, KeyboardLayoutMetrics.outerPaddingBottom)
-        // 透明背景：让系统键盘 chrome 透出，不自行铺色（深浅模式一致）。
-        .background(Color.clear)
-        .frame(height: Self.totalHeight)
-        // Feed the resolved palette to all nested chips/buttons.
-        .environment(\.themePalette, palette)
+        .animation(.easeInOut(duration: 0.18), value: state.hasCompletedOnboarding)
     }
 
     /// Top chip row + transcript / hint line.
@@ -130,6 +145,14 @@ public struct KeyboardRootView: View {
             }
             LocaleChip(localeId: state.localeId) { newId in
                 state.setLocale(newId)
+            }
+            // v0.3.0: detected app context — the per-app polish mode.
+            // The chip mirrors `AppGroupStore.detectedAppContext` and
+            // writes overrides back so the next LLM call uses the new
+            // tone. Hidden during onboarding (the overlay reads better
+            // without chip clutter).
+            if state.hasCompletedOnboarding {
+                AppContextChip(state: state)
             }
             // v0.3: always show the translation chip when the active
             // engine can run the cloud LLM step — off-by-default keeps

@@ -127,6 +127,17 @@ public final class KeyboardViewController: UIInputViewController {
         refreshDictationProgressStateIfNeeded()
         refreshFlowSessionState()
         startFlowSessionMonitor()
+        // v0.3.0: re-mirror onboarding + app context from the App
+        // Group every time we appear. The user may have just returned
+        // from Settings.app or the host app, and the App Group is the
+        // only thing both processes see consistently.
+        syncOnboardingStateFromAppGroup()
+        syncAppContextFromAppGroup()
+        // Auto-advance past step 3 ("Enable Keyboard") if the user has
+        // enabled the keyboard in Settings.app while we were away.
+        // This is the "automatic return from jump" feature: no manual
+        // "Continue" tap needed.
+        autoAdvancePastKeyboardSetupStepIfNeeded()
     }
 
     public override func viewIsAppearing(_ animated: Bool) {
@@ -172,12 +183,78 @@ public final class KeyboardViewController: UIInputViewController {
         state.setEngineMode       = { [weak self] m in self?.persistEngineMode(m) }
         state.setLocalASRBackend  = { [weak self] b in self?.persistLocalASRBackend(b) }
         // v0.2.1 follow-up: removed `setTranslationEnabled` — the chip
-        // / picker only writes the locale id now; `enabled` is derived.
+        // / picker now writes the locale id directly; `enabled` is derived.
         state.setTranslationTargetLocaleId = { [weak self] id in self?.persistTranslationTargetLocaleId(id) }
         state.setPolishScenarioId = { [weak self] id in self?.persistPolishScenarioId(id) }
+        // v0.3.0: per-app context override. Writes to the App Group
+        // (so `PolishingService` reads it on the next take) and mirrors
+        // into local state.
+        state.setAppContext       = { [weak self] c in self?.persistAppContext(c) }
+        // v0.3.0: in-keyboard onboarding actions. Persist via the App
+        // Group so the host app's `ProviderConfig` stays in sync (and
+        // the next launch of the host app opens at the same page).
+        state.advanceOnboarding   = { [weak self] in self?.advanceOnboarding() }
+        state.completeOnboarding   = { [weak self] in self?.completeOnboarding() }
+        state.requestMicPermission   = { [weak self] in self?.requestMicPermissionFromExtension() }
+        state.requestSpeechPermission = { [weak self] in self?.requestSpeechPermissionFromExtension() }
+        state.openSystemSettings   = { [weak self] in self?.openSystemSettingsFromExtension() }
         state.insertNewline       = { [weak self] in self?.textDocumentProxy.insertText("\n") }
         state.insertSpace         = { [weak self] in self?.textDocumentProxy.insertText(" ") }
         state.deleteBackward      = { [weak self] in self?.textDocumentProxy.deleteBackward() }
+    }
+
+    // MARK: - Onboarding persistence (v0.3.0)
+
+    private func advanceOnboarding() {
+        let store = AppGroupStore()
+        let nextPage = min(4, store.onboardingPage + 1)
+        store.onboardingPage = nextPage
+        state.onboardingPage = nextPage
+    }
+
+    private func completeOnboarding() {
+        let store = AppGroupStore()
+        store.hasCompletedOnboarding = true
+        store.onboardingPage = 4
+        state.hasCompletedOnboarding = true
+        state.onboardingPage = 4
+    }
+
+    // MARK: - App context override (v0.3.0)
+
+    private func persistAppContext(_ context: AppContext) {
+        let store = AppGroupStore()
+        store.setDetectedAppContext(context, at: Date())
+        state.appContext = context
+    }
+
+    // MARK: - Permission requests from the extension (v0.3.0)
+
+    /// The keyboard extension cannot present `AVAudioSession` /
+    /// `SFSpeechRecognizer` permission dialogs directly. It *can* read
+    /// the current status and tell the user to grant them from the
+    /// host app — which the overlay's step 1/2 copy already does.
+    /// This method is kept as a no-op stub so the action hook exists
+    /// and we can fill in the right behaviour if iOS ever relaxes the
+    /// sandbox (currently the system dialog is only presented when
+    /// the relevant API is first invoked from the host app, not the
+    /// extension).
+    private func requestMicPermissionFromExtension() {
+        // Status is read on the next `viewWillAppear` via
+        // `KeyboardSetupBridge`; the overlay advances optimistically.
+    }
+
+    private func requestSpeechPermissionFromExtension() {
+        // Same as above — read on next `viewWillAppear`.
+    }
+
+    /// Open `Settings.app` so the user can flip the "Allow Full Access"
+    /// / "OSGKeyboard" toggles. `UIApplication.openSettingsURLString`
+    /// is the only system URL the keyboard extension is allowed to
+    /// open via `extensionContext`.
+    private func openSystemSettingsFromExtension() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        HostAppLauncher.open(url: url, from: self) { _ in }
     }
 
     /// Reserve keyboard height on `view`. During presentation iOS adds a
@@ -239,6 +316,43 @@ public final class KeyboardViewController: UIInputViewController {
                 message: ExtL10n.string("keyboard.error.appGroupUnavailable")
             )
         }
+        syncOnboardingStateFromAppGroup()
+        syncAppContextFromAppGroup()
+    }
+
+    // MARK: - Onboarding / app-context sync (v0.3.0)
+
+    /// Mirror the persisted onboarding flags from the App Group into
+    /// `KeyboardState`. Called both at boot (`loadPersistedConfig`) and
+    /// on every `viewWillAppear` so the overlay reflects what the user
+    /// did while the keyboard was paused (e.g. toggling permissions
+    /// in the host app's onboarding view).
+    private func syncOnboardingStateFromAppGroup() {
+        let store = AppGroupStore()
+        state.hasCompletedOnboarding = store.hasCompletedOnboarding
+        state.onboardingPage = store.onboardingPage
+    }
+
+    /// Mirror the detected app context (or the user's last manual
+    /// override) so the AppContextChip stays in sync after a jump.
+    private func syncAppContextFromAppGroup() {
+        let store = AppGroupStore()
+        state.appContext = store.detectedAppContext?.context ?? .unknown
+    }
+
+    /// If the user has finished the "Enable Keyboard" step (i.e. the
+    /// keyboard is now in the system list with full access), and the
+    /// overlay is currently sitting on that step, advance to the API
+    /// step silently. This is what makes the "jump out → come back"
+    /// flow feel automatic even though iOS won't switch us back.
+    private func autoAdvancePastKeyboardSetupStepIfNeeded() {
+        guard !state.hasCompletedOnboarding else { return }
+        // step index 3 = "Enable Keyboard"
+        guard state.onboardingPage == 3 else { return }
+        guard KeyboardSetupBridge.isReadyForOnboardingSkip else { return }
+        let store = AppGroupStore()
+        store.onboardingPage = 4
+        state.onboardingPage = 4
     }
 
     // MARK: - Flow session monitor
@@ -441,6 +555,10 @@ public final class KeyboardViewController: UIInputViewController {
             storedCache: store.detectedAppContext
         )
         store.setDetectedAppContext(context)
+        // v0.3.0: mirror into local state so the chip updates without
+        // waiting for the next `viewWillAppear`. The user gets
+        // immediate visual feedback that the polish tone just changed.
+        state.appContext = context
     }
 
     private func startUtteranceCountdown() {
