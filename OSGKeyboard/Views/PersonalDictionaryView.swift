@@ -24,41 +24,51 @@ import OSGKeyboardShared
 @MainActor
 struct PersonalDictionaryView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
-    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var config = ProviderConfig.shared
 
     @State private var dictionary: PersonalDictionary = AppGroupStore().personalDictionary
     @State private var searchText: String = ""
+    @State private var showClearAllConfirmation = false
 
     private let store = AppGroupStore()
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                PageHeaderRow(title: "settings.personalDictionary.title") {
-                    if !dictionary.entries.isEmpty {
-                        PageHeaderConfirmButton(
-                            systemImage: "trash",
-                            accessibilityLabel: "settings.personalDictionary.clearAll",
-                            confirmTitle: "settings.personalDictionary.clearAll.confirmTitle",
-                            confirmMessage: "settings.personalDictionary.clearAll.message",
-                            confirmActionTitle: "settings.personalDictionary.clearAll.confirm"
-                        ) {
-                            clearAll()
-                        }
+        Group {
+            if dictionary.entries.isEmpty {
+                emptyState
+            } else {
+                list
+            }
+        }
+        .background(palette.background.ignoresSafeArea())
+        .navigationTitle("settings.personalDictionary.title")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
+        .toolbar {
+            if !dictionary.entries.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showClearAllConfirmation = true
+                    } label: {
+                        Image(systemName: "trash")
                     }
-                }
-
-                ZStack {
-                    palette.background.ignoresSafeArea()
-                    if dictionary.entries.isEmpty {
-                        emptyState
-                    } else {
-                        list
-                    }
+                    .accessibilityLabel(AppL10n.string("settings.personalDictionary.clearAll"))
                 }
             }
-            .background(palette.background)
-            .toolbar(.hidden, for: .navigationBar)
+        }
+        .toolbarBackground(palette.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .confirmationDialog(
+            AppL10n.string("settings.personalDictionary.clearAll.confirmTitle"),
+            isPresented: $showClearAllConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(AppL10n.string("settings.personalDictionary.clearAll.confirm"), role: .destructive) {
+                clearAll()
+            }
+            Button(AppL10n.string("common.cancel"), role: .cancel) {}
+        } message: {
+            Text("settings.personalDictionary.clearAll.message")
         }
     }
 
@@ -103,7 +113,7 @@ struct PersonalDictionaryView: View {
 
     private func section(for category: PersonalDictionary.Entry.Category, items: [PersonalDictionary.Entry]) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(LocalizedStringKey(category.labelKey))
+            Text(SharedL10n.string(category.labelKey, language: config.uiLanguage))
                 .font(TypeStyle.caption2)
                 .foregroundStyle(palette.textSecondary)
                 .textCase(.uppercase)
@@ -131,7 +141,7 @@ struct PersonalDictionaryView: View {
                     .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
                 HStack(spacing: 6) {
-                    Text(LocalizedStringKey(entry.source.labelKey))
+                    Text(SharedL10n.string(entry.source.labelKey, language: config.uiLanguage))
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.textTertiary)
                     if entry.usageCount > 1 {
@@ -231,7 +241,9 @@ struct PersonalDictionaryView: View {
 #if DEBUG
 #Preview {
     ThemedRoot {
-        PersonalDictionaryView()
+        NavigationStack {
+            PersonalDictionaryView()
+        }
     }
 }
 #endif
