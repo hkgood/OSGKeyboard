@@ -1,0 +1,10 @@
+// Signing.local.xcconfig.example
+// Copy to Signing.local.xcconfig (gitignored) for local signing overrides.
+// `./Scripts/generate-xcodeproj.sh` creates Signing.local.xcconfig from this
+// file automatically when it is missing.
+//
+// Replace DEVELOPMENT_TEAM with your Apple Developer Team ID if you are not
+// building with the project's default team.
+
+DEVELOPMENT_TEAM = X329MZU23S
+CODE_SIGN_STYLE = Automatic
