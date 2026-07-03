@@ -40,7 +40,6 @@ public struct AppGroupPersistor {
         // startup; `refreshRuntimeFlags` keeps the chip in sync while
         // the keyboard stays open.
         state.translationTargetLocaleId = store.translationTargetLocaleId
-        state.polishScenarioId = store.polishScenarioId
         state.handednessPreference = store.handednessPreference
         state.localModeCloudPolishEnabled = store.localModeCloudPolishEnabled
         // v0.2.0: iOS `SpeechAnalyzer` is always ready; mirror that
@@ -84,8 +83,7 @@ public struct AppGroupPersistor {
     /// a chip selection the user just wrote to the App Group.
     public func refreshRuntimeFlags(
         into state: KeyboardViewController.State,
-        protectTranslationUntil: Date? = nil,
-        protectPolishScenarioUntil: Date? = nil
+        protectTranslationUntil: Date? = nil
     ) {
         guard AppGroup.isAvailable else { return }
         let store = AppGroupStore()
@@ -95,10 +93,6 @@ public struct AppGroupPersistor {
         let shouldProtectTranslation = protectTranslationUntil.map { Date() < $0 } ?? false
         if !shouldProtectTranslation {
             state.translationTargetLocaleId = store.translationTargetLocaleId
-        }
-        let shouldProtectScenario = protectPolishScenarioUntil.map { Date() < $0 } ?? false
-        if !shouldProtectScenario {
-            state.polishScenarioId = store.polishScenarioId
         }
         state.handednessPreference = store.handednessPreference
         // v0.2.0: iOS `SpeechAnalyzer` is always ready. Keep these
@@ -144,10 +138,5 @@ public struct AppGroupPersistor {
     public func persist(translationTargetLocaleId: String) {
         guard AppGroup.isAvailable else { return }
         AppGroupStore().setTranslationTargetLocaleId(translationTargetLocaleId)
-    }
-
-    public func persist(polishScenarioId: String) {
-        guard AppGroup.isAvailable else { return }
-        AppGroupStore().setPolishScenarioId(polishScenarioId)
     }
 }

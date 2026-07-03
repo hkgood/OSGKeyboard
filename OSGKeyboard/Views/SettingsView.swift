@@ -135,22 +135,9 @@ struct SettingsView: View {
                         set: { config.localeId = $0 }
                     )
                 )
-                if config.isPolishScenarioRowVisible {
+                if config.isTranslationRowVisible {
                     Divider().background(palette.divider)
-                    ScenarioPickerRow(config: config, isVisible: true)
-                    if config.engineMode == "cloud", config.isTranslationRowVisible {
-                        Divider().background(palette.divider)
-                        TranslationPickerRow(config: config, isVisible: true)
-                    }
-                    if config.isCustomPolishScenario {
-                        Divider().background(palette.divider)
-                        NavigationLink {
-                            SystemPromptSettingsView(config: config)
-                        } label: {
-                            footerNavigationRow(title: "settings.systemPrompt.edit")
-                        }
-                        .buttonStyle(.plain)
-                    }
+                    TranslationPickerRow(config: config, isVisible: true)
                 }
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
