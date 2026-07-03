@@ -304,34 +304,12 @@ struct SettingsView: View {
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, Spacing.md)
-
-            Text(SharedL10n.string(config.polishIntensity.descriptionKey, language: config.uiLanguage))
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, Spacing.md)
-                .padding(.bottom, Spacing.sm)
+            .padding(.bottom, Spacing.sm)
         }
     }
 
     private var personalDictionaryPreferenceRow: some View {
-        HStack(spacing: Spacing.sm) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("settings.personalDictionary.title")
-                    .font(TypeStyle.body)
-                    .foregroundStyle(palette.textPrimary)
-                Text("settings.personalDictionary.summary")
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.textSecondary)
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(palette.textTertiary)
-        }
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.doubleLineMinHeight)
-        .contentShape(Rectangle())
+        footerNavigationRow(title: "settings.personalDictionary.title")
     }
 
     // MARK: - Footer links (tab settings only)

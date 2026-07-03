@@ -40,7 +40,8 @@ struct PersonalDictionaryView: View {
                 list
             }
         }
-        .background(palette.background.ignoresSafeArea())
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(palette.surface.ignoresSafeArea())
         .navigationTitle("settings.personalDictionary.title")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
@@ -56,7 +57,7 @@ struct PersonalDictionaryView: View {
                 }
             }
         }
-        .toolbarBackground(palette.background, for: .navigationBar)
+        .toolbarBackground(palette.surface, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .confirmationDialog(
             AppL10n.string("settings.personalDictionary.clearAll.confirmTitle"),
@@ -180,7 +181,7 @@ struct PersonalDictionaryView: View {
     private var emptyState: some View {
         VStack(spacing: Spacing.sm) {
             Spacer()
-            MaterialIcon(name: .bookmark, size: 36)
+            MaterialIcon(name: .menuBook, size: 36)
                 .foregroundStyle(palette.textTertiary.opacity(0.5))
             Text("settings.personalDictionary.empty.title")
                 .font(TypeStyle.body)
