@@ -36,8 +36,8 @@ settings:
     GENERATE_INFOPLIST_FILE: NO
     ENABLE_MODULE_VERIFIER: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "0.3.1"
-    CURRENT_PROJECT_VERSION: "6"
+    MARKETING_VERSION: "0.3.2"
+    CURRENT_PROJECT_VERSION: "7"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
