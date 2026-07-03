@@ -6,11 +6,8 @@
 name: OSGKeyboard
 options:
   bundleIdPrefix: com.osgkeyboard
-  # Xcode 26 Icon Composer bundles must be treated as a single file,
-  # not expanded into icon.json + SVG children (see XcodeGen #1556).
-  fileTypes:
-    icon:
-      file: true
+  # XcodeGen 2.37+ emits AppIcon.icon as folder.iconcomposer.icon natively.
+  # Older XcodeGen releases may need Scripts/patch-icon-composer.sh (fallback).
   # Minimum OS: iOS 26. We dropped older iOS support so the
   # legacy speech + AVAudioSession branching could be removed in
   # favour of iOS 26's `SpeechAnalyzer` (always on-device) and
@@ -58,7 +55,6 @@ targets:
     platform: iOS
     sources:
       - path: OSGKeyboard/AppIcon.icon
-        type: file
         buildPhase: resources
       - path: OSGKeyboard
         excludes:
