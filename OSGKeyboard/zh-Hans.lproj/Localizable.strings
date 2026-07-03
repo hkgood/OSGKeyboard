@@ -291,6 +291,10 @@
 "home.flow.endShort" = "结束";
 "home.preview.label" = "输入测试";
 "home.preview.placeholder" = "点这里试试键盘";
+"home.stats.dictationDuration" = "听写时长";
+"home.stats.dictationCharacters" = "听写字数";
+"home.stats.translationCharacters" = "翻译字数";
+"home.stats.dictionaryEntries" = "个性词库";
 "home.engine.unsupportedOS" = "Qwen3-ASR CoreML 需要 iOS 18 或更高版本";
 "home.engine.warming" = "正在加载语音识别模型…";
 "home.engine.downloading" = "正在下载语音识别模型…";

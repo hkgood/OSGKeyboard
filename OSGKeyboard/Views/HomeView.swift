@@ -64,6 +64,10 @@ struct HomeView: View {
                             .padding(.bottom, Spacing.lg)
                     }
 
+                    HomeStatsCard()
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.bottom, Spacing.md)
+
                     previewField
                         .padding(.horizontal, Spacing.lg)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
