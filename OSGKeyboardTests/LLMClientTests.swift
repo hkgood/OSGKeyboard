@@ -476,60 +476,13 @@ final class LLMClientTests: XCTestCase {
         XCTAssertEqual(calls, 1)
     }
 
-    func testResolvedPolishSystemPromptUsesWorkScenario() {
-        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defaults.removePersistentDomain(forName: suiteName)
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        defaults.set("work", forKey: "config.polishScenarioId")
-        let store = AppGroupStore(defaults: defaults)
-        let prompt = store.resolvedPolishSystemPrompt(providerId: "openai")
-        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("workplace"))
-    }
-
-    func testCustomPolishScenarioUsesStoredSystemPrompt() {
-        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defaults.removePersistentDomain(forName: suiteName)
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        defaults.set(PolishScenarioCatalog.customId, forKey: "config.polishScenarioId")
-        defaults.set("MY CUSTOM PROMPT", forKey: "config.systemPrompt")
-        let store = AppGroupStore(defaults: defaults)
-        XCTAssertEqual(store.resolvedPolishSystemPrompt(), "MY CUSTOM PROMPT")
-    }
-
-    func testPolishScenarioChipVisibleWhenCloudPolishEnabledLocally() {
-        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defaults.removePersistentDomain(forName: suiteName)
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        defaults.set("local", forKey: "config.engineMode")
-        defaults.set(true, forKey: "config.localModeCloudPolishEnabled")
-        let store = AppGroupStore(defaults: defaults)
-        XCTAssertTrue(store.isPolishScenarioChipVisible)
-    }
-
-    func testTranslationPromptIncludesWorkScenarioBullets() {
+    func testTranslationPromptIncludesAppContextGuideline() {
         let prompt = TranslationPrompt.make(
             target: TranslationLanguageCatalog.resolve("en"),
             providerId: "openai",
-            scenarioId: "work"
+            appContext: .code
         )
-        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("MUST use markdown"))
-        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("workplace"))
-    }
-
-    func testWorkScenarioPolishPromptRequiresBullets() {
-        let prompt = ScenarioPrompt.make(scenarioId: "work", providerId: "openai")
-        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("MUST use markdown"))
-    }
-
-    func testTodoScenarioPolishPromptRequiresChecklist() {
-        let prompt = ScenarioPrompt.make(scenarioId: "todo", providerId: "deepseek")
-        XCTAssertTrue(prompt.contains("必须是 markdown"))
+        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("preserve English identifiers"))
     }
 }
 
