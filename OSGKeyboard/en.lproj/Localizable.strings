@@ -326,3 +326,21 @@
 "settings.models.confirm.body %lld" = "This download uses about %lld MB on disk. We recommend Wi‑Fi to avoid cellular data. You can delete the file anytime from On-device models to free space.";
 "settings.models.confirm.cancel" = "Cancel";
 "settings.models.confirm.download %lld" = "Download %lld MB";
+
+/* v0.3.0: Personal dictionary */
+"settings.personalDictionary.sectionTitle" = "Personal dictionary";
+"settings.personalDictionary.title" = "Personal dictionary";
+"settings.personalDictionary.summary" = "Words the LLM must preserve verbatim when polishing.";
+"settings.personalDictionary.intro.title" = "How words get added";
+"settings.personalDictionary.intro.body" = "Words you dictate repeatedly are auto-learned. You can also edit or delete any entry here.";
+"settings.personalDictionary.empty.title" = "No words yet";
+"settings.personalDictionary.empty.body" = "Words you dictate often will appear here. You can also delete any entry from this screen.";
+"settings.personalDictionary.search.prompt" = "Search words";
+"settings.personalDictionary.usageCount" = "%lld uses";
+"settings.personalDictionary.clearAll" = "Clear dictionary";
+"settings.personalDictionary.clearAll.confirmTitle" = "Clear all dictionary words?";
+"settings.personalDictionary.clearAll.message" = "This removes every word the LLM was protecting. This cannot be undone.";
+"settings.personalDictionary.clearAll.confirm" = "Clear all";
+
+/* v0.3.0: Polish intensity */
+"settings.polishIntensity.title" = "Polish intensity";

@@ -381,6 +381,13 @@ public final class KeyboardViewController: UIInputViewController {
             return
         }
 
+        // v0.3.0: detect the app context (code / email / chat / doc)
+        // *before* either path. The Flow session's polisher and the
+        // legacy handoff's polisher both read this from the App
+        // Group. Cheap (heuristic over ≤ 2 KB), safe to run every
+        // press of the mic.
+        detectAndStoreAppContext()
+
         if FlowSessionBridge.isSessionActive() {
             startFlowRecording()
         } else {
@@ -418,6 +425,22 @@ public final class KeyboardViewController: UIInputViewController {
         startUtteranceCountdown()
         startFlowLevelWatchdog()
         debug("startFlowRecording")
+    }
+
+    /// v0.3.0: run the 3-fallback context detector on the text
+    /// already at the cursor and persist the result to the App
+    /// Group. Cheap (heuristic over ≤ 2 KB of preceding text) so
+    /// safe to run on every press of the mic; we deliberately
+    /// avoid hitting the App Group on every keystroke.
+    private func detectAndStoreAppContext() {
+        let preceding = textDocumentProxy.documentContextBeforeInput
+        let store = AppGroupStore()
+        let detector = AppContextDetector()
+        let context = detector.detect(
+            precedingText: preceding,
+            storedCache: store.detectedAppContext
+        )
+        store.setDetectedAppContext(context)
     }
 
     private func startUtteranceCountdown() {
