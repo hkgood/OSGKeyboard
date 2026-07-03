@@ -23,7 +23,7 @@ import sys
 import uuid
 from pathlib import Path
 
-PATCH_VERSION = 3
+PATCH_VERSION = 4
 
 def extract_block(text: str, brace_open: int) -> tuple[str, int] | None:
     depth = 0
@@ -53,6 +53,28 @@ text = pbxproj.read_text()
 if is_valid_icon_setup(text):
     print(f"AppIcon.icon already configured (patch v{PATCH_VERSION})")
     sys.exit(0)
+
+# XcodeGen 2.45 emits a single-line PBXFileReference with
+# lastKnownFileType = wrapper.icon. Upgrade that in place first.
+wrapper_icon_pattern = re.compile(
+    r"(?P<prefix>[A-F0-9]{24} /\* AppIcon\.icon \*/ = \{[^}]*lastKnownFileType = )wrapper\.icon(?P<suffix>; path = AppIcon\.icon;[^}]*\};)"
+)
+wrapper_match = wrapper_icon_pattern.search(text)
+if wrapper_match:
+    text = (
+        text[: wrapper_match.start()]
+        + wrapper_match.group("prefix")
+        + "folder.iconcomposer.icon"
+        + wrapper_match.group("suffix")
+        + text[wrapper_match.end() :]
+    )
+    if is_valid_icon_setup(text):
+        pbxproj.write_text(text)
+        print(
+            f"Patched AppIcon.icon wrapper.icon -> folder.iconcomposer.icon "
+            f"(patch v{PATCH_VERSION})"
+        )
+        sys.exit(0)
 
 icon_ref_match = None
 for pattern in (
