@@ -276,6 +276,23 @@ public struct AppGroupStore: @unchecked Sendable {
         defaults.set(intensity.rawValue, forKey: Key.polishIntensity)
     }
 
+    // MARK: - Onboarding (v0.3.0+)
+    //
+    // Mirrored from `ProviderConfig` so the keyboard extension's
+    // overlay can read / write the same source of truth without
+    // instantiating the main-app config (which would drag in
+    // SwiftUI / Combine and fight the keyboard's main-thread budget).
+
+    public var hasCompletedOnboarding: Bool {
+        get { defaults.bool(forKey: "config.hasCompletedOnboarding") }
+        set { defaults.set(newValue, forKey: "config.hasCompletedOnboarding") }
+    }
+
+    public var onboardingPage: Int {
+        get { defaults.integer(forKey: "config.onboardingPage") }
+        set { defaults.set(newValue, forKey: "config.onboardingPage") }
+    }
+
     // MARK: - Detected app context (v0.3.0+)
 
     /// Last app context the keyboard extension detected for this
