@@ -53,6 +53,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         static let translationTargetLocaleId = "config.translationTargetLocaleId"
         static let polishScenarioId = "config.polishScenarioId"
         static let handednessPreference = "config.handednessPreference"
+        // v0.3.0: how aggressively the LLM should rewrite transcripts.
+        static let polishIntensity = "config.polishIntensity"
     }
 
     @Published public var providerId: String {
@@ -201,6 +203,14 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         PolishScenarioCatalog.isCustom(polishScenarioId)
     }
 
+    /// v0.3.0: how aggressively the LLM should rewrite the ASR
+    /// transcript. Default is `medium` (Typeless-equivalent). The
+    /// `off` value never calls the LLM — equivalent to "transcribe
+    /// only" regardless of `engineMode`.
+    @Published public var polishIntensity: PolishIntensity {
+        didSet { defaults.set(polishIntensity.rawValue, forKey: Key.polishIntensity) }
+    }
+
     public var isConfigured: Bool {
         // Local engine (on-device ASR only) doesn't need an API key,
         // base URL, or model — the LLM round-trip is skipped entirely.
@@ -311,6 +321,15 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         self.handednessPreference = HandednessPreference.fromStored(
             resolvedDefaults.string(forKey: Key.handednessPreference)
         )
+        // v0.3.0: polish intensity. Default to `.medium` for new
+        // installs and upgrades; the existing `off` / `light` /
+        // `heavy` values are honored.
+        if let raw = resolvedDefaults.string(forKey: Key.polishIntensity),
+           let intensity = PolishIntensity(rawValue: raw) {
+            self.polishIntensity = intensity
+        } else {
+            self.polishIntensity = .default
+        }
 
         // Cloud no longer exposes off/transcribe; migrate legacy values.
         if self.engineMode == "cloud", self.modeId != "polish" {
