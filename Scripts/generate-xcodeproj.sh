@@ -5,6 +5,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
+PBXPROJ="$ROOT/OSGKeyboard.xcodeproj/project.pbxproj"
 
 # XcodeGen requires configFiles listed in project.yml to exist on disk.
 # Signing.local.xcconfig is gitignored so each machine keeps its own team ID.
@@ -21,4 +22,21 @@ if [[ ! -f "$SIGNING_LOCAL" ]]; then
 fi
 
 xcodegen generate
-"$ROOT/Scripts/patch-icon-composer.sh"
+
+if python3 - "$PBXPROJ" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+text = Path(sys.argv[1]).read_text()
+has_icon_type = "folder.iconcomposer.icon" in text
+has_icon_path = bool(re.search(r"path = (?:OSGKeyboard/)?AppIcon\.icon;", text))
+has_resources = bool(re.search(r"AppIcon\.icon in Resources", text))
+sys.exit(0 if has_icon_type and has_icon_path and has_resources else 1)
+PY
+then
+  echo "AppIcon.icon configured (XcodeGen native)"
+else
+  echo "Applying AppIcon.icon compatibility patch..."
+  "$ROOT/Scripts/patch-icon-composer.sh"
+fi
