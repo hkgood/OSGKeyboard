@@ -23,7 +23,7 @@ public struct PersonalDictionary: Codable, Sendable, Equatable {
     public var entries: [Entry]
     public var version: Int
 
-    public init(entries: [Entry] = [], version: 1) {
+    public init(entries: [Entry] = [], version: Int = 1) {
         self.entries = entries
         self.version = version
     }
