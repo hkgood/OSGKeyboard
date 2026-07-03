@@ -292,6 +292,10 @@
 "home.flow.endShort" = "End";
 "home.preview.label" = "Try typing";
 "home.preview.placeholder" = "Tap to type and test…";
+"home.stats.dictationDuration" = "Dictation time";
+"home.stats.dictationCharacters" = "Dictation chars";
+"home.stats.translationCharacters" = "Translation chars";
+"home.stats.dictionaryEntries" = "Dictionary";
 "home.engine.unsupportedOS" = "Qwen3-ASR CoreML requires iOS 18+";
 "home.engine.warming" = "Loading ASR model into memory…";
 "home.engine.downloading" = "Downloading ASR model…";

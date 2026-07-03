@@ -57,6 +57,8 @@ final class FlowSessionManager: ObservableObject {
     private var currentPartial = ""
     private var lastFinal = ""
     private var chunkWarnings: [String] = []
+    /// Wall-clock span of the current mic-open utterance (excludes LLM polish).
+    private var utteranceRecordingStartedAt: Date?
     /// True while the host app scene is `.active` — drives foreground renewal.
     private var isAppForeground = false
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
@@ -407,6 +409,7 @@ final class FlowSessionManager: ObservableObject {
         chunkedPipeline = pipeline
 
         isUtteranceRecording = true
+        utteranceRecordingStartedAt = Date()
         FlowDiagnostics.log(
             "beginUtterance engine=\(store.engineMode) asr=\(store.localASRBackend.rawValue) " +
             "asrType=\(type(of: asr)) pipelined=true max=\(Int(FlowSessionKeys.maxUtteranceDuration))s"
@@ -473,6 +476,7 @@ final class FlowSessionManager: ObservableObject {
     private func abortUtterance() {
         isUtteranceRecording = false
         isUtteranceProcessing = false
+        utteranceRecordingStartedAt = nil
         finalizeTask?.cancel()
         finalizeTask = nil
         asrTask?.cancel()
@@ -490,6 +494,7 @@ final class FlowSessionManager: ObservableObject {
     private func failUtterance(message: String) {
         isUtteranceRecording = false
         isUtteranceProcessing = false
+        utteranceRecordingStartedAt = nil
         finalizeTask?.cancel()
         finalizeTask = nil
         asrTask?.cancel()
@@ -507,6 +512,7 @@ final class FlowSessionManager: ObservableObject {
 
     private func finishProcessing(withError message: String) {
         isUtteranceProcessing = false
+        utteranceRecordingStartedAt = nil
         finalizeTask?.cancel()
         finalizeTask = nil
         chunkedPipeline = nil
@@ -555,11 +561,14 @@ final class FlowSessionManager: ObservableObject {
                 ? "flow.error.recognitionInterrupted"
                 : "flow.error.noSpeech"
             FlowDiagnostics.log("finalize failed: empty transcript after \(String(format: "%.1f", asrElapsed))s")
+            utteranceRecordingStartedAt = nil
             FlowSessionBridge.storeTranscriptionError(
                 AppL10n.string(key)
             )
             return
         }
+
+        let recordingDuration = consumeRecordingDuration()
 
         let engineMode = store.engineMode
         let chunkNote = Self.chunkWarningMessage(chunkWarnings)
@@ -574,7 +583,12 @@ final class FlowSessionManager: ObservableObject {
                 "finalize ASR-only total=\(String(format: "%.1f", Date().timeIntervalSince(pipelineStarted)))s " +
                 "len=\(text.count)"
             )
-            SpeechHistoryStore.shared.append(text: text, engineMode: engineMode)
+            SpeechHistoryStore.shared.recordUtterance(
+                text: text,
+                engineMode: engineMode,
+                duration: recordingDuration,
+                wasTranslation: false
+            )
             currentPartial = ""
             lastFinal = ""
             chunkWarnings = []
@@ -616,7 +630,12 @@ final class FlowSessionManager: ObservableObject {
             FlowSessionBridge.storeTranscriptionResult(text, polishWarning: warning)
         }
 
-        SpeechHistoryStore.shared.append(text: delivered, engineMode: engineMode)
+        SpeechHistoryStore.shared.recordUtterance(
+            text: delivered,
+            engineMode: engineMode,
+            duration: recordingDuration,
+            wasTranslation: pipelineStore.isTranslationEffective
+        )
 
         currentPartial = ""
         lastFinal = ""
@@ -637,6 +656,12 @@ final class FlowSessionManager: ObservableObject {
     private static func chunkWarningMessage(_ warnings: [String]) -> String? {
         guard !warnings.isEmpty else { return nil }
         return warnings.joined(separator: "\n")
+    }
+
+    private func consumeRecordingDuration() -> TimeInterval {
+        defer { utteranceRecordingStartedAt = nil }
+        guard let start = utteranceRecordingStartedAt else { return 0 }
+        return max(0, Date().timeIntervalSince(start))
     }
 
     /// v0.2.0: surface the local-mode cloud-polish error path with a
