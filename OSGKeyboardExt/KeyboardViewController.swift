@@ -78,7 +78,6 @@ public final class KeyboardViewController: UIInputViewController {
     /// Grace period after a chip-side translation write during which the
     /// 1 Hz App Group poll must not overwrite `translationTargetLocaleId`.
     private var translationConfigProtectedUntil: Date?
-    private var polishScenarioConfigProtectedUntil: Date?
     private var isAwaitingFlowResult = false
     private var lastFlowAutoStartAttempt: TimeInterval = 0
     private static let flowAutoStartCooldown: TimeInterval = 20
@@ -132,7 +131,6 @@ public final class KeyboardViewController: UIInputViewController {
         // from Settings.app or the host app, and the App Group is the
         // only thing both processes see consistently.
         syncOnboardingStateFromAppGroup()
-        syncAppContextFromAppGroup()
         // Auto-advance past step 3 ("Enable Keyboard") if the user has
         // enabled the keyboard in Settings.app while we were away.
         // This is the "automatic return from jump" feature: no manual
@@ -185,11 +183,6 @@ public final class KeyboardViewController: UIInputViewController {
         // v0.2.1 follow-up: removed `setTranslationEnabled` — the chip
         // / picker now writes the locale id directly; `enabled` is derived.
         state.setTranslationTargetLocaleId = { [weak self] id in self?.persistTranslationTargetLocaleId(id) }
-        state.setPolishScenarioId = { [weak self] id in self?.persistPolishScenarioId(id) }
-        // v0.3.0: per-app context override. Writes to the App Group
-        // (so `PolishingService` reads it on the next take) and mirrors
-        // into local state.
-        state.setAppContext       = { [weak self] c in self?.persistAppContext(c) }
         // v0.3.0: in-keyboard onboarding actions. Persist via the App
         // Group so the host app's `ProviderConfig` stays in sync (and
         // the next launch of the host app opens at the same page).
@@ -218,14 +211,6 @@ public final class KeyboardViewController: UIInputViewController {
         store.setOnboardingPage(4)
         state.hasCompletedOnboarding = true
         state.onboardingPage = 4
-    }
-
-    // MARK: - App context override (v0.3.0)
-
-    private func persistAppContext(_ context: AppContext) {
-        let store = AppGroupStore()
-        store.setDetectedAppContext(context, at: Date())
-        state.appContext = context
     }
 
     // MARK: - Permission requests from the extension (v0.3.0)
@@ -333,13 +318,6 @@ public final class KeyboardViewController: UIInputViewController {
         state.onboardingPage = store.onboardingPage
     }
 
-    /// Mirror the detected app context (or the user's last manual
-    /// override) so the AppContextChip stays in sync after a jump.
-    private func syncAppContextFromAppGroup() {
-        let store = AppGroupStore()
-        state.appContext = store.detectedAppContext?.context ?? .unknown
-    }
-
     /// If the user has finished the "Enable Keyboard" step (i.e. the
     /// keyboard is now in the system list with full access), and the
     /// overlay is currently sitting on that step, advance to the API
@@ -389,16 +367,14 @@ public final class KeyboardViewController: UIInputViewController {
     private func refreshConfigFromAppGroup() {
         persistor.refreshRuntimeFlags(
             into: state,
-            protectTranslationUntil: translationConfigProtectedUntil,
-            protectPolishScenarioUntil: polishScenarioConfigProtectedUntil
+            protectTranslationUntil: translationConfigProtectedUntil
         )
     }
 
     private func refreshFlowSessionState() {
         persistor.refreshRuntimeFlags(
             into: state,
-            protectTranslationUntil: translationConfigProtectedUntil,
-            protectPolishScenarioUntil: polishScenarioConfigProtectedUntil
+            protectTranslationUntil: translationConfigProtectedUntil
         )
         consumePendingFlowDeliveryIfNeeded()
 
@@ -555,10 +531,6 @@ public final class KeyboardViewController: UIInputViewController {
             storedCache: store.detectedAppContext
         )
         store.setDetectedAppContext(context)
-        // v0.3.0: mirror into local state so the chip updates without
-        // waiting for the next `viewWillAppear`. The user gets
-        // immediate visual feedback that the polish tone just changed.
-        state.appContext = context
     }
 
     private func startUtteranceCountdown() {
@@ -869,13 +841,6 @@ public final class KeyboardViewController: UIInputViewController {
         state.translationTargetLocaleId = resolved
         translationConfigProtectedUntil = Date().addingTimeInterval(2.5)
         persistor.persist(translationTargetLocaleId: resolved)
-    }
-
-    private func persistPolishScenarioId(_ id: String) {
-        let resolved = PolishScenarioCatalog.resolve(id).id
-        state.polishScenarioId = resolved
-        polishScenarioConfigProtectedUntil = Date().addingTimeInterval(2.5)
-        persistor.persist(polishScenarioId: resolved)
     }
 
     // MARK: - Open host app

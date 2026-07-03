@@ -200,8 +200,7 @@ public actor PolishingService {
                 prompt = TranslationPrompt.make(
                     target: target,
                     providerId: effectiveProviderId,
-                    scenarioId: store.polishScenarioId,
-                    uiLanguage: store.uiLanguage
+                    appContext: context.appContext
                 )
             }
         }
@@ -231,9 +230,8 @@ public actor PolishingService {
     ///   7. The transcript to process
     ///   8. Output contract
     ///
-    /// The Chinese / English split mirrors the existing per-provider
-    /// default system prompt in `AppGroupStore.defaultSystemPrompt(for:)`
-    /// so the polish step stays in the user's chosen output language.
+    /// The Chinese / English split mirrors `shouldUseChineseGuidance` so
+    /// the polish step stays in the provider's strongest language.
     internal func buildPrompt(for text: String, context: PolishContext) -> String {
         let dictionary = store.personalDictionary
         let dictionaryBlock = dictionary.promptFragment()
@@ -314,10 +312,7 @@ public actor PolishingService {
         }
     }
 
-    /// Mirror `AppGroupStore.defaultSystemPrompt(for:)` — Chinese LLM
-    /// providers get a Chinese prompt, English ones get English.
-    /// Keeping these aligned avoids the "model answers in the wrong
-    /// language" failure mode that LLM benchmarks consistently flag.
+    /// Chinese-native LLM providers get a Chinese prompt, English ones get English.
     private func shouldUseChineseGuidance(providerId: String) -> Bool {
         switch providerId {
         case "zhipu", "moonshot", "qwen", "deepseek":

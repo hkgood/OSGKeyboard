@@ -140,15 +140,7 @@ public struct KeyboardRootView: View {
             } else {
                 CloudEngineChip()
             }
-            // Polish scenario and ASR locale are configured in the main-app
-            // Settings tab only — keep the keyboard top bar uncluttered.
-            if state.hasCompletedOnboarding {
-                AppContextChip(state: state)
-            }
-            // v0.3: always show the translation chip when the active
-            // engine can run the cloud LLM step — off-by-default keeps
-            // the menu reachable so the user can pick a target language
-            // without opening Settings.
+            // App context is auto-detected on each mic press — no UI.
             if state.isTranslationChipVisible {
                 TranslationChip(state: state)
             }

@@ -98,8 +98,6 @@ public final class KeyboardState: ObservableObject {
     /// Defaults to `offLocaleId` so the keyboard boots in the "off"
     /// state on first install.
     @Published public var translationTargetLocaleId: String = TranslationLanguageCatalog.offLocaleId
-    /// Selected polish scenario mirrored from App Group.
-    @Published public var polishScenarioId: String = PolishScenarioCatalog.defaultId
     /// v0.2.0: mirrored from App Group — local engine runs the cloud
     /// LLM step only when this is `true`.
     @Published public var localModeCloudPolishEnabled: Bool = false
@@ -119,12 +117,6 @@ public final class KeyboardState: ObservableObject {
         return true
     }
 
-    /// Whether the keyboard top-bar polish scenario chip should render.
-    public var isPolishScenarioChipVisible: Bool {
-        if isLocalEngine { return localModeCloudPolishEnabled }
-        return true
-    }
-
     /// Convenience shorthand used by the pipeline and views.
     public var isLocalEngine: Bool { engineMode == "local" }
 
@@ -139,10 +131,6 @@ public final class KeyboardState: ObservableObject {
     /// to render the right page; main-app `ProviderConfig` is the
     /// source of truth and the keyboard mirrors it.
     @Published public var onboardingPage: Int = 0
-    /// Per-call context the polish prompt should adapt to. Mirrored
-    /// from `AppGroupStore.detectedAppContext` on every `viewWillAppear`
-    /// so the chip stays consistent across the open↔jump cycle.
-    @Published public var appContext: AppContext = .unknown
     /// `true` when the user tapped something (mic, settings) right
     /// before a forced jump to the host app. The keyboard reads this
     /// on return and auto-resumes the action so the user does not have
@@ -172,11 +160,6 @@ public final class KeyboardState: ObservableObject {
     /// is derived from the locale id, so there's no separate toggle to
     /// persist. Wired in `KeyboardViewController.installStateActions`.
     public var setTranslationTargetLocaleId: (String) -> Void = { _ in }
-    public var setPolishScenarioId: (String) -> Void = { _ in }
-    /// v0.3.0: manually override the auto-detected app context (e.g.
-    /// when the heuristic guessed wrong). Writes to the App Group so
-    /// `PolishingService` picks it up on the next take.
-    public var setAppContext:       (AppContext) -> Void = { _ in }
     public var advanceOnboarding:   () -> Void = {}
     public var completeOnboarding:   () -> Void = {}
     public var requestMicPermission:   () -> Void = {}
