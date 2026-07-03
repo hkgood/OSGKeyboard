@@ -85,7 +85,7 @@ struct PersonalDictionaryView: View {
                 .foregroundStyle(palette.accent)
             VStack(alignment: .leading, spacing: 4) {
                 Text("settings.personalDictionary.intro.title")
-                    .font(TypeStyle.caption1)
+                    .font(TypeStyle.caption)
                     .foregroundStyle(palette.textPrimary)
                 Text("settings.personalDictionary.intro.body")
                     .font(TypeStyle.caption2)
@@ -176,7 +176,7 @@ struct PersonalDictionaryView: View {
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textSecondary)
             Text("settings.personalDictionary.empty.body")
-                .font(TypeStyle.caption1)
+                .font(TypeStyle.caption)
                 .foregroundStyle(palette.textTertiary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Spacing.xl)
