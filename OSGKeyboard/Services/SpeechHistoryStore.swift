@@ -47,6 +47,21 @@ final class SpeechHistoryStore: ObservableObject {
         persist()
     }
 
+    /// Append history and update cumulative home-screen usage stats.
+    func recordUtterance(
+        text: String,
+        engineMode: String,
+        duration: TimeInterval,
+        wasTranslation: Bool
+    ) {
+        append(text: text, engineMode: engineMode)
+        UsageStatisticsStore.shared.recordUtterance(
+            text: text,
+            duration: duration,
+            wasTranslation: wasTranslation
+        )
+    }
+
     func clearAll() {
         entries.removeAll()
         persist()
