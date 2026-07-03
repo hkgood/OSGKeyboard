@@ -108,6 +108,14 @@
 "provider.custom" = "Custom";
 "settings.api.title" = "API";
 "settings.language.title" = "Language";
+"settings.languageAndPolish.title" = "Language & Polish";
+// v0.2.1: translation feature
+"settings.translation.afterPolish" = "Polish then translate";
+"settings.translation.off" = "Don't translate";
+"settings.polishScenario.section" = "Polish";
+"settings.polishScenario.title" = "Scenario";
+"settings.polishScenario.hint" = "Pick a scenario to match how you write. Choose Custom to edit the full system prompt.";
+"settings.polishScenario.customHint" = "Custom scenario: edit the full system prompt below.";
 "settings.languageModels.title" = "Language & models";
 "settings.localModels.title" = "On-device models";
 "settings.localModels.speechRole" = "Speech";
@@ -116,6 +124,7 @@
 "settings.localModels.readiness %lld %lld" = "%lld/%lld ready";
 "settings.localModels.cloudPolish.title" = "Cloud polish after ASR";
 "settings.localModels.cloudPolish.subtitle" = "Sends the transcript to your configured cloud LLM (DeepSeek by default) for cleanup. Enable only when iOS speech recognition struggles — noisy far-field audio, strong accents, etc. Requires a DeepSeek API key.";
+"settings.localEngine.title" = "Local engine";
 "settings.language.subtitle.cloud" = "Recognition language and text processing mode.";
 "settings.language.subtitle.local" = "Recognition language.";
 "settings.mode.title" = "Mode";
@@ -126,6 +135,10 @@
 "settings.systemPrompt.edit" = "Edit system prompt";
 "settings.systemPrompt.hint" = "Used by the cloud LLM when polishing your dictation. Local engine skips this step.";
 "settings.about.title" = "About";
+"settings.preferences.title" = "Preferences";
+"settings.handedness.title" = "Handedness";
+"settings.handedness.left" = "Left hand";
+"settings.handedness.right" = "Right hand";
 "settings.systemPrompt.reset" = "Reset";
 "settings.asrLocale" = "ASR locale";
 "settings.engineBadge.ios26" = "SpeechAnalyzer — always on-device";

@@ -62,23 +62,23 @@ struct SettingsView: View {
                         VStack(spacing: Spacing.md) {
                             appLanguageSection
                             engineSection
+                            languageAndPolishSection
+                            // v0.2.1: hide provider/api card when the
+                            // local engine is active regardless of the
+                            // cloud-polish toggle. Local mode is
+                            // contractually ASR-only, so provider/model/
+                            // base URL/API key controls have no use —
+                            // and exposing them invites the user to fill
+                            // out a DeepSeek key they can't use.
                             if config.engineMode == "cloud" {
-                                providerSection
-                                apiSection
-                            } else if config.localModeCloudPolishEnabled {
-                                // v0.2.0: local engine + cloud polish on.
-                                // Surface the provider / API key fields so
-                                // the user can fill in their DeepSeek key.
-                                // We hide them when the toggle is off so the
-                                // local engine stays genuinely local.
                                 providerSection
                                 apiSection
                             }
-                            languageAndModelsSection
-                            if config.engineMode == "cloud" {
-                                systemPromptLinkSection
+                            if config.engineMode == "local" {
+                                localEngineSettingsSection
                             }
                             if presentation == .tab {
+                                preferencesSection
                                 footerLinks
                             }
                         }
@@ -122,16 +122,12 @@ struct SettingsView: View {
         EnginePickerSection(config: config)
     }
 
-    // MARK: - Language & on-device models
+    // MARK: - Language & polish
 
-    private var languageAndModelsSection: some View {
+    private var languageAndPolishSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.language.title")
+            sectionHeader("settings.languageAndPolish.title")
             VStack(spacing: 0) {
-                if config.engineMode == "local" {
-                    LocalModelsGroup(config: config)
-                    Divider().background(palette.divider)
-                }
                 LocalePickerRow(
                     locales: effectiveLocales,
                     selection: Binding(
@@ -139,6 +135,23 @@ struct SettingsView: View {
                         set: { config.localeId = $0 }
                     )
                 )
+                if config.isPolishScenarioRowVisible {
+                    Divider().background(palette.divider)
+                    ScenarioPickerRow(config: config, isVisible: true)
+                    if config.engineMode == "cloud", config.isTranslationRowVisible {
+                        Divider().background(palette.divider)
+                        TranslationPickerRow(config: config, isVisible: true)
+                    }
+                    if config.isCustomPolishScenario {
+                        Divider().background(palette.divider)
+                        NavigationLink {
+                            SystemPromptSettingsView(config: config)
+                        } label: {
+                            footerNavigationRow(title: "settings.systemPrompt.edit")
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             .overlay(
@@ -166,6 +179,19 @@ struct SettingsView: View {
                 }
                 .padding(.horizontal, Spacing.xs)
             }
+        }
+    }
+
+    /// v0.2.1 follow-up: dedicated section for the local engine's
+    /// settings (cloud-polish toggle + translation row). Renders only
+    /// when `engineMode == "local"` so the cloud-engine user doesn't
+    /// see rows that are inert for them. The translation row lives
+    /// inside `LocalModelsGroup` so it shares the group's surface card
+    /// chrome — see `LocalEngineSettingsRows.swift` for the layout.
+    private var localEngineSettingsSection: some View {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.localEngine.title")
+            LocalModelsGroup(config: config)
         }
     }
 
@@ -228,22 +254,22 @@ struct SettingsView: View {
         dynamicLocales = entries
     }
 
-    // MARK: - System prompt (cloud only)
+    // MARK: - Preferences (tab settings only)
 
-    private var systemPromptLinkSection: some View {
+    private var preferencesSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.systemPrompt.title")
+            sectionHeader("settings.preferences.title")
             VStack(spacing: 0) {
-                NavigationLink {
-                    SystemPromptSettingsView(config: config)
-                } label: {
-                    footerNavigationRow(title: "settings.systemPrompt.edit")
-                }
-                .buttonStyle(.plain)
+                HandednessPickerRow(
+                    selection: Binding(
+                        get: { config.handednessPreference },
+                        set: { config.handednessPreference = $0 }
+                    )
+                )
             }
-            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                     .stroke(palette.divider, lineWidth: 0.5)
             )
         }
@@ -359,6 +385,31 @@ struct SettingsView: View {
             .foregroundStyle(palette.textSecondary)
             .textCase(.uppercase)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Handedness picker row
+
+private struct HandednessPickerRow: View {
+    @Binding var selection: HandednessPreference
+
+    private var options: [(id: String, label: String)] {
+        HandednessPreference.allCases.map { preference in
+            (preference.rawValue, AppL10n.string(preference.labelKey))
+        }
+    }
+
+    var body: some View {
+        PickerRow(
+            title: AppL10n.string("settings.handedness.title"),
+            options: options,
+            selection: Binding(
+                get: { selection.rawValue },
+                set: { newValue in
+                    selection = HandednessPreference(rawValue: newValue) ?? .left
+                }
+            )
+        )
     }
 }
 

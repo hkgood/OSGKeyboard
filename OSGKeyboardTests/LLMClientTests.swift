@@ -341,6 +341,196 @@ final class LLMClientTests: XCTestCase {
         let calls = await counter.value()
         XCTAssertEqual(calls, 0)
     }
+
+    /// Local engine pins DeepSeek — cloud-provider URL/model in App Group
+    /// must not leak into the LLM request (regression: Qwen URL + DeepSeek key → 401).
+    func testResolveLLMEndpointUsesPresetWhenProviderPinned() {
+        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set("qwen", forKey: "config.providerId")
+        defaults.set(
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            forKey: "config.baseURL"
+        )
+        defaults.set("qwen-plus", forKey: "config.model")
+
+        let store = AppGroupStore(defaults: defaults)
+        let deepseekPreset = LLMProvider.provider(id: "deepseek")
+        let pinned = PolishingService.resolveLLMEndpoint(
+            store: store,
+            preset: deepseekPreset,
+            providerIdOverride: "deepseek"
+        )
+        XCTAssertEqual(pinned.baseURL, deepseekPreset.defaultBaseURL)
+        XCTAssertEqual(pinned.model, deepseekPreset.defaultModel)
+
+        let qwenPreset = LLMProvider.provider(id: "qwen")
+        let cloud = PolishingService.resolveLLMEndpoint(
+            store: store,
+            preset: qwenPreset,
+            providerIdOverride: nil
+        )
+        XCTAssertEqual(
+            cloud.baseURL,
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            "cloud engine must keep user base URL"
+        )
+        XCTAssertEqual(cloud.model, "qwen-plus", "cloud engine must keep user model")
+    }
+
+    func testTranslationChipVisibleWithoutTargetLocale() {
+        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set("cloud", forKey: "config.engineMode")
+        defaults.set(TranslationLanguageCatalog.offLocaleId, forKey: "config.translationTargetLocaleId")
+        let cloudStore = AppGroupStore(defaults: defaults)
+        XCTAssertTrue(cloudStore.isTranslationChipVisible)
+        XCTAssertFalse(cloudStore.isTranslationEffective)
+
+        defaults.set("local", forKey: "config.engineMode")
+        defaults.set(true, forKey: "config.localModeCloudPolishEnabled")
+        let localPolishOn = AppGroupStore(defaults: defaults)
+        XCTAssertTrue(localPolishOn.isTranslationChipVisible)
+        XCTAssertFalse(localPolishOn.isTranslationEffective)
+
+        defaults.set(false, forKey: "config.localModeCloudPolishEnabled")
+        let localPolishOff = AppGroupStore(defaults: defaults)
+        XCTAssertFalse(localPolishOff.isTranslationChipVisible)
+    }
+
+    /// Local engine with translation enabled must invoke the LLM even
+    /// when the cloud-polish toggle is off.
+    func testPolisherSkipsLLMWhenLocalCloudPolishOffEvenWithTranslation() async throws {
+        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set("local", forKey: "config.engineMode")
+        defaults.set("en", forKey: "config.translationTargetLocaleId")
+        defaults.set(false, forKey: "config.localModeCloudPolishEnabled")
+
+        let counter = CallCounter()
+        let countingClient = CountingLLMClient(counter: counter) { _, _ in
+            XCTFail("cloud LLMClient must not run when local cloud polish is off")
+            return ""
+        }
+
+        let store = AppGroupStore(defaults: defaults)
+        XCTAssertFalse(store.shouldRunCloudLLMStep)
+
+        let polisher = PolishingService(
+            store: store,
+            client: countingClient,
+            timeout: 1
+        )
+
+        let result = try await polisher.polish(
+            "  你好  ",
+            mode: .translate(targetLocaleId: "en"),
+            providerIdOverride: "deepseek"
+        )
+        XCTAssertEqual(result, "你好")
+        let calls = await counter.value()
+        XCTAssertEqual(calls, 0)
+    }
+
+    /// Local engine with cloud polish + translation enabled invokes LLM.
+    func testPolisherTranslatesWhenLocalEngineTranslationEnabled() async throws {
+        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set("local", forKey: "config.engineMode")
+        defaults.set("en", forKey: "config.translationTargetLocaleId")
+        defaults.set(true, forKey: "config.localModeCloudPolishEnabled")
+
+        let counter = CallCounter()
+        let countingClient = CountingLLMClient(counter: counter) { raw, prompt in
+            XCTAssertEqual(raw, "你好")
+            XCTAssertTrue(prompt.contains("English"), "translate prompt should target English")
+            return "Hello"
+        }
+
+        let store = AppGroupStore(defaults: defaults)
+        let polisher = PolishingService(
+            store: store,
+            client: countingClient,
+            timeout: 1
+        )
+
+        let result = try await polisher.polish(
+            "  你好  ",
+            mode: .translate(targetLocaleId: "en"),
+            providerIdOverride: "deepseek"
+        )
+        XCTAssertEqual(result, "Hello")
+        let calls = await counter.value()
+        XCTAssertEqual(calls, 1)
+    }
+
+    func testResolvedPolishSystemPromptUsesWorkScenario() {
+        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set("work", forKey: "config.polishScenarioId")
+        let store = AppGroupStore(defaults: defaults)
+        let prompt = store.resolvedPolishSystemPrompt(providerId: "openai")
+        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("workplace"))
+    }
+
+    func testCustomPolishScenarioUsesStoredSystemPrompt() {
+        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set(PolishScenarioCatalog.customId, forKey: "config.polishScenarioId")
+        defaults.set("MY CUSTOM PROMPT", forKey: "config.systemPrompt")
+        let store = AppGroupStore(defaults: defaults)
+        XCTAssertEqual(store.resolvedPolishSystemPrompt(), "MY CUSTOM PROMPT")
+    }
+
+    func testPolishScenarioChipVisibleWhenCloudPolishEnabledLocally() {
+        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set("local", forKey: "config.engineMode")
+        defaults.set(true, forKey: "config.localModeCloudPolishEnabled")
+        let store = AppGroupStore(defaults: defaults)
+        XCTAssertTrue(store.isPolishScenarioChipVisible)
+    }
+
+    func testTranslationPromptIncludesWorkScenarioBullets() {
+        let prompt = TranslationPrompt.make(
+            target: TranslationLanguageCatalog.resolve("en"),
+            providerId: "openai",
+            scenarioId: "work"
+        )
+        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("MUST use markdown"))
+        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("workplace"))
+    }
+
+    func testWorkScenarioPolishPromptRequiresBullets() {
+        let prompt = ScenarioPrompt.make(scenarioId: "work", providerId: "openai")
+        XCTAssertTrue(prompt.localizedCaseInsensitiveContains("MUST use markdown"))
+    }
+
+    func testTodoScenarioPolishPromptRequiresChecklist() {
+        let prompt = ScenarioPrompt.make(scenarioId: "todo", providerId: "deepseek")
+        XCTAssertTrue(prompt.contains("必须是 markdown"))
+    }
 }
 
 // MARK: - Test helpers

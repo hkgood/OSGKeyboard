@@ -35,6 +35,14 @@ public struct AppGroupPersistor {
         state.mode             = .polish
         state.engineMode       = store.engineMode
         state.localASRBackend  = store.localASRBackend
+        // v0.2.1 follow-up: only the target locale is persisted —
+        // `translationEnabled` is derived from it. Hydrate once at
+        // startup; `refreshRuntimeFlags` keeps the chip in sync while
+        // the keyboard stays open.
+        state.translationTargetLocaleId = store.translationTargetLocaleId
+        state.polishScenarioId = store.polishScenarioId
+        state.handednessPreference = store.handednessPreference
+        state.localModeCloudPolishEnabled = store.localModeCloudPolishEnabled
         // v0.2.0: iOS `SpeechAnalyzer` is always ready; mirror that
         // into the State flags so downstream consumers see the same
         // shape they did when the previous Qwen3 stack reported "ready".
@@ -70,11 +78,29 @@ public struct AppGroupPersistor {
 
     /// Lightweight refresh for flags the host app may update while the
     /// keyboard stays open (model downloads, engine switches).
-    public func refreshRuntimeFlags(into state: KeyboardViewController.State) {
+    ///
+    /// When `protectTranslationUntil` is in the future, the translation
+    /// target locale is not overwritten — avoids the 1 Hz poll clobbering
+    /// a chip selection the user just wrote to the App Group.
+    public func refreshRuntimeFlags(
+        into state: KeyboardViewController.State,
+        protectTranslationUntil: Date? = nil,
+        protectPolishScenarioUntil: Date? = nil
+    ) {
         guard AppGroup.isAvailable else { return }
         let store = AppGroupStore()
         state.engineMode = store.engineMode
         state.localASRBackend = store.localASRBackend
+        state.localModeCloudPolishEnabled = store.localModeCloudPolishEnabled
+        let shouldProtectTranslation = protectTranslationUntil.map { Date() < $0 } ?? false
+        if !shouldProtectTranslation {
+            state.translationTargetLocaleId = store.translationTargetLocaleId
+        }
+        let shouldProtectScenario = protectPolishScenarioUntil.map { Date() < $0 } ?? false
+        if !shouldProtectScenario {
+            state.polishScenarioId = store.polishScenarioId
+        }
+        state.handednessPreference = store.handednessPreference
         // v0.2.0: iOS `SpeechAnalyzer` is always ready. Keep these
         // toggles here so the keyboard UI doesn't flicker if the host
         // app briefly clears them while refactoring.
@@ -104,5 +130,24 @@ public struct AppGroupPersistor {
     public func persist(localASRBackend: LocalASRBackend) {
         guard AppGroup.isAvailable else { return }
         AppGroupStore().setLocalASRBackend(localASRBackend)
+    }
+
+    /// v0.2.1: persist translation target locale id (e.g. `"en"`,
+    /// `"ja"`, or `TranslationLanguageCatalog.offLocaleId`). The
+    /// chip / picker call this through `KeyboardState.setTranslationTargetLocaleId`.
+    ///
+    /// v0.2.1 follow-up: removed `persist(translationEnabled:)` — the
+    /// enabled state is derived from the locale id, so callers only
+    /// need to write the locale. Keeping the legacy Bool overload
+    /// around would have implied that there's a separate on/off
+    /// switch to persist, which is no longer the model.
+    public func persist(translationTargetLocaleId: String) {
+        guard AppGroup.isAvailable else { return }
+        AppGroupStore().setTranslationTargetLocaleId(translationTargetLocaleId)
+    }
+
+    public func persist(polishScenarioId: String) {
+        guard AppGroup.isAvailable else { return }
+        AppGroupStore().setPolishScenarioId(polishScenarioId)
     }
 }

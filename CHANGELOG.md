@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Polish scenarios**: pick a writing context (Daily Chat, Social Network / 小红书, Instagram / 微博, Goofy, Work, Document, TODO, Custom) in Settings, onboarding, and the keyboard top-bar `ScenarioChip`. Presets drive `ScenarioPrompt`; Custom reuses the system prompt editor.
+
+### Changed
+- **Scenario output formats**: shared `ScenarioStyleDirective` enforces structural rules (Work → mandatory bullets for multi-item input, TODO → checklist). The same directive applies to translate-and-polish via `TranslationPrompt`.
+
+## [0.3.0] - 2026-06-24
+
+### Added
+- **Post-polish translation** for cloud and local engines: target-language picker in Settings / onboarding, `TranslationChip` on the keyboard top bar, and `PolishMode.translate` in `PolishingService`.
+- **Preconfigured DeepSeek key** (`PreconfiguredKeys`) for local-engine cloud polish without round-tripping the Settings API card.
+
+### Changed
+- **Local-engine translation is gated on cloud polish**: the translation row and LLM step are hidden/disabled until "Cloud polish after ASR" is enabled; turning polish off clears a stale translation target.
+- **Local-engine LLM endpoint pinning**: when the pipeline routes through DeepSeek, base URL and model come from the DeepSeek preset instead of the user's cloud-provider settings (fixes DeepSeek key + Qwen URL 401s).
+
+### Fixed
+- **Translation chip always visible** when the engine can run cloud LLM (cloud always; local when cloud polish is on) — no longer hidden when target is "不翻译".
+- **Keyboard translation menu** first item shows "不翻译"; chip label when off stays "翻译".
+- **Translation toggle race**: 2.5s protect window after chip writes, Darwin config notification, host finalize re-reads App Group; turning off cloud polish no longer clears saved translation target.
+
 ## [0.2.1] - 2026-06-24
 
 ### Removed
