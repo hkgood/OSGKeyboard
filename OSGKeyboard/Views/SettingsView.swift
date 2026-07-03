@@ -74,11 +74,7 @@ struct SettingsView: View {
                                 providerSection
                                 apiSection
                             }
-                            languageAndModelsSection
                             polishIntensitySection
-                            if config.engineMode == "cloud" {
-                                systemPromptLinkSection
-                            }
                             if config.engineMode == "local" {
                                 localEngineSettingsSection
                             }
