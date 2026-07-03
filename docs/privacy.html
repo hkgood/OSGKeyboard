@@ -15,76 +15,102 @@
 <body>
   <p class="lang"><a href="#zh">中文</a></p>
   <h1>OSGKeyboard Privacy Policy</h1>
-  <p><strong>Last updated:</strong> June 19, 2026</p>
-  <p>OSGKeyboard is a custom iOS keyboard that turns your voice into text. This policy explains what data the app processes and how it is used.</p>
+  <p><strong>Last updated:</strong> July 3, 2026 · <em>v0.2.1</em></p>
+  <p>OSGKeyboard is a custom iOS keyboard that turns your voice into text. It runs as a Custom Keyboard Extension on iOS 26 and later, and uses Apple's on-device <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code> for transcription. This policy explains what data the app processes and how it is used.</p>
 
   <h2>What we collect</h2>
   <ul>
-    <li><strong>Voice audio</strong> — captured only while you actively record. On-device mode transcribes locally with Apple’s speech APIs; raw audio is not uploaded by OSGKeyboard.</li>
-    <li><strong>Transcribed text</strong> — in Cloud polish mode, the final text (not audio) may be sent to the LLM provider you configure (e.g. OpenAI) for punctuation and formatting.</li>
-    <li><strong>API credentials</strong> — stored in the iOS Keychain on your device and shared only between the main app and keyboard extension via an App Group.</li>
-    <li><strong>App preferences</strong> — engine mode, language, and keyboard settings stored in App Group UserDefaults on your device.</li>
+    <li><strong>Voice audio</strong> — captured only while you actively record. In the local engine, audio is transcribed on-device with Apple's <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code>; raw audio is not uploaded by OSGKeyboard.</li>
+    <li><strong>Transcribed text</strong> — in Cloud polish mode, the final text (not audio) is sent to the LLM provider you configure (e.g. DeepSeek) for punctuation and formatting. The local engine is ASR-only by default; you must explicitly opt in to cloud polish.</li>
+    <li><strong>API credentials</strong> — your LLM API key is stored in the iOS Keychain on your device and is read by the keyboard extension only at the moment it makes an LLM request. It is shared with the main app through a shared Keychain group, never through UserDefaults.</li>
+    <li><strong>App preferences</strong> — engine mode, language, on-device model choices, and keyboard settings are stored in App Group <code>UserDefaults</code> on your device so the main app and keyboard extension can stay in sync.</li>
+    <li><strong>Voice history</strong> — the host app may keep a local list of recent successful transcripts in its History tab, on-device only, capped at 500 entries.</li>
   </ul>
 
   <h2>What we do not collect</h2>
   <ul>
     <li>We do <strong>not</strong> log or upload ordinary keystrokes you type with the keyboard.</li>
-    <li>We do <strong>not</strong> operate analytics or advertising SDKs.</li>
+    <li>We do <strong>not</strong> operate analytics, crash reporting, or advertising SDKs.</li>
+    <li>We do <strong>not</strong> upload raw audio to any server, including the LLM provider.</li>
     <li>We do <strong>not</strong> sell personal data.</li>
   </ul>
 
+  <h2>How the keyboard extension talks to the host app</h2>
+  <p>OSGKeyboard uses a long-lived "Flow session" hosted in the main app. The keyboard extension writes tiny "start / stop" signals into an App Group, the main app processes the audio and writes the polished transcript back. Nothing leaves your device unless you've explicitly enabled cloud polish, in which case only the transcript (never the audio) is sent to the LLM provider you chose.</p>
+
   <h2>Permissions</h2>
   <ul>
-    <li><strong>Microphone</strong> — required for voice input and background voice sessions.</li>
-    <li><strong>Speech recognition</strong> — required for on-device transcription.</li>
-    <li><strong>Full Access</strong> — required so the keyboard can reach the microphone, read your API key, and communicate with the main app. Full Access does not grant us access to everything you type; we do not exfiltrate keystrokes.</li>
+    <li><strong>Microphone</strong> (<code>NSMicrophoneUsageDescription</code>) — required for voice input and the long-lived voice session.</li>
+    <li><strong>Speech recognition</strong> (<code>NSSpeechRecognitionUsageDescription</code>) — required for on-device transcription via Apple's APIs.</li>
+    <li><strong>Full Access</strong> — required so the keyboard can reach the microphone, read your API key from the shared Keychain, and request the polished transcript from the host app. Full Access does <em>not</em> grant us access to everything you type; we do not exfiltrate keystrokes.</li>
   </ul>
 
   <h2>Third parties</h2>
-  <p>When you choose Cloud polish mode, transcribed text is sent to the API endpoint you configure. That provider’s privacy policy applies to those requests.</p>
+  <p>When you enable cloud polish, transcribed text is sent to the OpenAI-compatible API endpoint you configured in Settings (e.g. OpenAI, DeepSeek, Qwen DashScope, Moonshot, Zhipu, or your own self-hosted server). That provider's privacy policy applies to those requests. OSGKeyboard does not proxy, log, or aggregate your requests.</p>
 
   <h2>Data retention</h2>
-  <p>Settings and API keys remain on your device until you delete the app or reset settings. Transcription results are passed to the host app you are typing in and are not stored long-term by OSGKeyboard.</p>
-  <p><strong>Voice history</strong> — successful transcripts may be saved locally in the main app’s History tab for your convenience. This history stays on your device only, is never uploaded, and can be cleared at any time from History or by resetting settings.</p>
+  <p>Settings and API keys remain on your device until you delete the app or reset settings. Transcription results are passed to the host app you are typing in and are not stored long-term by OSGKeyboard. Voice history is kept locally (up to 500 entries) and is never uploaded; you can clear it at any time from the History tab or by resetting settings.</p>
+
+  <h2>Children's privacy</h2>
+  <p>OSGKeyboard is not directed to children under 13 and does not knowingly collect personal data from children.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>We may update this policy as the app evolves. The "Last updated" date at the top will always reflect the current version. Material changes will be called out in the project <a href="https://github.com/hkgood/OSGKeyboard/blob/main/CHANGELOG.md">CHANGELOG</a>.</p>
+
+  <h2>License</h2>
+  <p>OSGKeyboard is distributed under the <a href="https://github.com/hkgood/OSGKeyboard/blob/main/LICENSE">OSGKeyboard Source Available License</a> — personal learning and non-commercial local use only. No commercial use, redistribution, or public forks without permission.</p>
 
   <h2>Contact</h2>
-  <p>Questions: open an issue at <a href="https://github.com/hkgood/OSGKeyboard">github.com/hkgood/OSGKeyboard</a>.</p>
+  <p>Questions or privacy requests: open an issue at <a href="https://github.com/hkgood/OSGKeyboard">github.com/hkgood/OSGKeyboard</a>, or email <a href="mailto:rocky.hk@gmail.com">rocky.hk@gmail.com</a>.</p>
 
   <hr id="zh">
   <h1>OSGKeyboard 隐私政策</h1>
-  <p><strong>更新日期：</strong>2026 年 6 月 19 日</p>
-  <p>OSGKeyboard 是一款 iOS 自定义键盘，可将语音转为文字。本政策说明应用处理哪些数据及用途。</p>
+  <p><strong>更新日期：</strong>2026 年 7 月 3 日 · <em>v0.2.1</em></p>
+  <p>OSGKeyboard 是一款 iOS 自定义键盘，可将语音转为文字。它以自定义键盘扩展的形式运行，需要 iOS 26 及以上系统，转写全程使用 Apple 端侧的 <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code>。本政策说明应用处理哪些数据及用途。</p>
 
   <h2>我们处理的数据</h2>
   <ul>
-    <li><strong>语音音频</strong> — 仅在你主动录音时采集。本地模式在设备端通过 Apple 语音识别转写，OSGKeyboard 不会上传原始录音。</li>
-    <li><strong>转写文字</strong> — 云端润色模式下，最终文字（非音频）可能发送到你配置的 LLM 服务商以整理标点和格式。</li>
-    <li><strong>API 凭证</strong> — 保存在设备 Keychain，仅通过 App Group 在主 App 与键盘扩展间共享。</li>
-    <li><strong>应用偏好</strong> — 引擎、语言等设置保存在设备 App Group 中。</li>
+    <li><strong>语音音频</strong> — 仅在你主动录音时采集。本地模式下音频在设备端通过 <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code> 转写，OSGKeyboard 不会上传原始录音。</li>
+    <li><strong>转写文字</strong> — 云端润色模式下，最终文字（非音频）会发送到你配置的 LLM 服务商（默认 DeepSeek）以整理标点和格式。本地引擎默认仅做 ASR，云端润色需显式开启。</li>
+    <li><strong>API 凭证</strong> — LLM API Key 保存在设备 Keychain，键盘扩展仅在每次发起 LLM 请求时读取；通过共享 Keychain 组与主 App 共享，<strong>不会</strong>写入 <code>UserDefaults</code>。</li>
+    <li><strong>应用偏好</strong> — 引擎模式、语言、端侧模型选项、键盘设置等保存在 App Group <code>UserDefaults</code>，仅用于主 App 与键盘扩展之间的状态同步。</li>
+    <li><strong>语音历史</strong> — 主 App 可在「历史」页保留近期成功转写，最多 500 条，仅本机保存，不会上传。</li>
   </ul>
 
   <h2>我们不收集的内容</h2>
   <ul>
     <li>我们<strong>不会</strong>记录或上传你平时在键盘上的击键内容。</li>
-    <li>我们<strong>不会</strong>集成广告或第三方分析 SDK。</li>
+    <li>我们<strong>不会</strong>集成分析、崩溃上报或广告 SDK。</li>
+    <li>我们<strong>不会</strong>将原始录音上传至任何服务器，包括你配置的 LLM 服务商。</li>
     <li>我们<strong>不会</strong>出售个人数据。</li>
   </ul>
 
+  <h2>键盘扩展与主 App 的通信方式</h2>
+  <p>OSGKeyboard 采用主 App 维护的「Flow 会话」机制：键盘扩展在 App Group 中写入轻量的「开始 / 停止」信号，主 App 负责处理音频，润色完成后将文字回写到 App Group，键盘扩展再读取并插入。整条链路不会让数据离开你的设备，除非你显式开启云端润色 —— 此时发送的也只是转写文字，不包含录音。</p>
+
   <h2>权限说明</h2>
   <ul>
-    <li><strong>麦克风</strong> — 语音输入与后台语音会话所需。</li>
-    <li><strong>语音识别</strong> — 端侧转写所需。</li>
-    <li><strong>完全访问</strong> — 使键盘能使用麦克风、读取 API Key 并与主 App 通信。完全访问不代表我们会收集全部击键内容。</li>
+    <li><strong>麦克风</strong>（<code>NSMicrophoneUsageDescription</code>）— 语音输入与长生命周期语音会话所需。</li>
+    <li><strong>语音识别</strong>（<code>NSSpeechRecognitionUsageDescription</code>）— 调用 Apple 端侧语音能力进行转写所需。</li>
+    <li><strong>完全访问</strong> — 使键盘能使用麦克风、从共享 Keychain 读取 API Key，并从主 App 获取润色结果。完全访问<strong>不</strong>代表我们会获取你输入的所有内容，绝不外传击键。</li>
   </ul>
 
   <h2>第三方</h2>
-  <p>选择云端润色时，转写文字会发往你配置的 API，该服务商的隐私政策适用于相关请求。</p>
+  <p>开启云端润色时，转写文字会发往你在设置中配置的 OpenAI 兼容 API 端点（OpenAI / DeepSeek / 通义 DashScope / Moonshot / 智谱 / 自建服务 等），该服务商的隐私政策适用于相关请求。OSGKeyboard 不代理、不记录、不聚合这些请求。</p>
 
   <h2>数据保留</h2>
-  <p>设置与 API Key 保留在设备上，直至卸载或重置。识别结果写入你正在使用的宿主 App，OSGKeyboard 不会长期存储。</p>
-  <p><strong>语音历史</strong> — 成功的转写可能保存在主 App「历史」页，仅供本机查看，不会上传，可随时在历史页清空或通过重置设置清除。</p>
+  <p>设置与 API Key 保留在设备上，直至卸载或重置。识别结果写入你正在使用的宿主 App，OSGKeyboard 不会长期存储。语音历史最多 500 条本机保存，不会上传，可随时在「历史」页清空或通过重置设置清除。</p>
+
+  <h2>儿童隐私</h2>
+  <p>OSGKeyboard 不面向 13 岁以下儿童，亦不会明知地从儿童处收集个人信息。</p>
+
+  <h2>政策变更</h2>
+  <p>本政策可能随应用演进而更新，更新日期始终显示在文首。重大变更会在项目 <a href="https://github.com/hkgood/OSGKeyboard/blob/main/CHANGELOG.md">CHANGELOG</a> 中标注。</p>
+
+  <h2>许可协议</h2>
+  <p>OSGKeyboard 基于 <a href="https://github.com/hkgood/OSGKeyboard/blob/main/LICENSE">OSGKeyboard 源码可见许可协议</a> 发布 —— 仅限个人学习与非商用本地使用；禁止商用、再分发及公开 fork。</p>
 
   <h2>联系</h2>
-  <p>问题反馈：<a href="https://github.com/hkgood/OSGKeyboard">github.com/hkgood/OSGKeyboard</a></p>
+  <p>问题反馈或隐私相关请求：<a href="https://github.com/hkgood/OSGKeyboard">github.com/hkgood/OSGKeyboard</a> 提 Issue，或邮件 <a href="mailto:rocky.hk@gmail.com">rocky.hk@gmail.com</a>。</p>
 </body>
 </html>
