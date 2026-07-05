@@ -1,0 +1,34 @@
+{
+  "version": "v1",
+  "generated_at": "2026-07-05T07:47:30.162461+00:00",
+  "locale": "zh-Hans",
+  "entry_count": 128743,
+  "sources": [
+    {
+      "key": "computer_terms",
+      "label": "计算机词汇大全【官方推荐】",
+      "weight": 5,
+      "raw_count": 10300
+    },
+    {
+      "key": "network_slang_local",
+      "label": "网络流行新词.scel",
+      "weight": 3,
+      "raw_count": 118599
+    },
+    {
+      "key": "sogou_popular_accumulated",
+      "label": "SogouPopularDict accumulated",
+      "weight": 1,
+      "raw_count": 118602
+    }
+  ],
+  "notes": [
+    "Sogou-derived data is for internal ASR experimentation only.",
+    "PhraseCount weights map to SFCustomLanguageModelData relative frequencies.",
+    "Higher source weight wins on duplicate words."
+  ],
+  "files": {
+    "phrases": "phrases.tsv"
+  }
+}

@@ -1,0 +1,381 @@
+# OSGKeyboard · AI / Tech / Brand seed lexicon (curated, permissive sources only)
+# Columns: word	pinyin	aliases	category	weight
+# aliases: pipe-separated alternate spellings / ASR confusions
+# License: curated by OSGKeyboard contributors (MIT). No third-party data bundled.
+#
+# --- AI brands & products ---
+DeepSeek		deepseek|Deepseek|deep seek	ai_brand	100
+深度求索	shen du qiu suo		ai_brand	100
+OpenAI		open ai|Open AI	ai_brand	100
+ChatGPT		chat gpt|Chat GPT|chatgpt	ai_brand	100
+GPT		gpt-4|GPT-4|GPT-4o|gpt4o	ai_model	95
+Anthropic		anthropic|Athropic|Anthropic	ai_brand	100
+Claude		claude|Claude Sonnet|Claude Opus	ai_brand	100
+Google		google|Alphabet	tech_company	95
+Gemini		gemini|Bard|Google Gemini	ai_brand	95
+Meta		meta|Facebook	tech_company	95
+Llama		llama|LLaMA|Llama 3|Llama 4	ai_model	90
+Microsoft		microsoft|MSFT	tech_company	95
+Copilot		copilot|GitHub Copilot|Microsoft Copilot	ai_brand	90
+GitHub Copilot		github copilot	ai_brand	88
+DeepMind		deep mind|Google DeepMind	ai_brand	88
+Mistral		mistral ai|Mistral AI	ai_brand	85
+Cohere		cohere	ai_brand	80
+Perplexity		perplexity ai|Perplexity AI	ai_brand	88
+Cursor		cursor ai|Cursor AI	dev_tool	90
+Kimi		kimi|Kimi AI|Moonshot|Moonshot AI	ai_brand	95
+月之暗面	yue zhi an mian		ai_brand	90
+Qwen		qwen|Qwen2|Qwen3|通义千问|千问	ai_brand	95
+通义千问	tong yi qian wen	Qwen|qwen	ai_brand	95
+GLM		glm|GLM-4|GLM-5|智谱|Zhipu	ai_brand	90
+智谱	zhi pu	GLM|Zhipu AI	ai_brand	88
+Zhipu AI		zhipu|智谱	ai_brand	88
+文心一言	wen xin yi yan	ERNIE|Ernie	ai_brand	90
+ERNIE		ernie|文心一言	ai_brand	88
+豆包	dou bao	Doubao|doubao	ai_brand	90
+Doubao		dou bao|豆包	ai_brand	88
+混元	hun yuan	Hunyuan|腾讯混元	ai_brand	85
+Hunyuan		hun yuan|混元	ai_brand	85
+星火	xing huo	Spark|讯飞星火	ai_brand	85
+讯飞		iFlytek|iflytek|科大讯飞	ai_brand	85
+iFlytek		iflytek|讯飞	ai_brand	85
+Midjourney		mid journey|Mid Journey	ai_brand	88
+Stable Diffusion		stable diffusion|SD	ai_brand	85
+DALL-E		dalle|DALL E|Dall-E	ai_brand	85
+Sora		sora ai|Sora AI	ai_brand	88
+Hugging Face		huggingface|HuggingFace|HF	ai_platform	85
+Ollama		ollama	ai_platform	82
+LangChain		lang chain|Langchain	ai_platform	80
+vLLM		vllm|VLLM	ai_platform	80
+xAI		x ai|Grok	ai_brand	88
+Grok		grok|xAI	ai_brand	85
+Groq		groq|GROQ	ai_brand	82
+Replicate		replicate	ai_platform	78
+Runway		runway ai|Runway ML	ai_brand	80
+Pika		pika ai|Pika Labs	ai_brand	75
+ElevenLabs		eleven labs|Eleven Labs	ai_brand	80
+Character AI		character.ai|Character.AI	ai_brand	78
+Notion AI		notion ai	ai_brand	75
+Windsurf		windsurf|Codeium Windsurf	dev_tool	82
+Codeium		codeium	ai_brand	80
+Cline		cline|Cline AI	dev_tool	78
+Aider		aider	ai_brand	75
+Replit		replit|Replit Agent	dev_tool	78
+SiliconFlow		silicon flow|Silicon Flow	ai_platform	80
+OpenRouter		open router|Open Router	ai_platform	82
+DeepSeek-R1		deepseek r1|DeepSeek R1|R1	ai_model	92
+DeepSeek-V3		deepseek v3|DeepSeek V3	ai_model	90
+o1		openai o1|O1	ai_model	88
+o3		openai o3|O3	ai_model	88
+Sonnet		claude sonnet|Sonnet 4	ai_model	85
+Opus		claude opus|Opus 4	ai_model	85
+MiniMax		minimax|MiniMax AI	ai_brand	85
+StepFun		step fun|阶跃星辰	ai_brand	82
+阶跃星辰	jie yue xing chen	StepFun	ai_brand	80
+百川		bai chuan|Baichuan	ai_brand	82
+Baichuan		baichuan|百川	ai_brand	82
+零一万物		ling yi wan wu|01.AI|Yi	ai_brand	82
+01.AI		01 ai|零一万物	ai_brand	80
+面壁智能	mian bi zhi neng	MiniCPM	ai_brand	78
+MiniCPM		minicpm|面壁	ai_model	75
+#
+# --- AI / dev terminology ---
+Transformer		transformer|变换器	ai_term	95
+RAG		rag|检索增强生成|retrieval augmented generation	ai_term	95
+检索增强生成	jian suo zeng qiang sheng cheng	RAG	ai_term	92
+LoRA		lora|低秩适配	ai_term	90
+微调	wei tiao	fine-tuning|fine tuning	ai_term	90
+fine-tuning		fine tuning|微调	ai_term	88
+MoE		moe|mixture of experts|混合专家	ai_term	88
+混合专家	hun he zhuan jia	MoE	ai_term	85
+embedding		嵌入|embeddings	ai_term	90
+嵌入	qian ru	embedding	ai_term	88
+tokenizer		tokenizer|分词器	ai_term	85
+幻觉	huan jue	hallucination	ai_term	88
+hallucination		幻觉	ai_term	85
+提示词	ti shi ci	prompt|Prompt	ai_term	92
+prompt		prompt engineering|提示词	ai_term	90
+智能体	zhi neng ti	agent|Agent|AI agent	ai_term	92
+agent		agentic|智能体|AI agent	ai_term	90
+agentic		agentic AI|智能体	ai_term	88
+vibe coding		vibe code|Vibe Coding|氛围编程	ai_term	95
+氛围编程	fen wei bian cheng	vibe coding	ai_term	90
+MCP		model context protocol|MCP server	ai_term	92
+上下文窗口	shang xia wen chuang kou	context window	ai_term	88
+context window		上下文窗口	ai_term	85
+diffusion		扩散模型	ai_term	85
+扩散模型	kuo san mo xing	diffusion	ai_term	82
+推理	tui li	inference|reasoning	ai_term	88
+inference		推理	ai_term	85
+RLHF		rlhf|人类反馈强化学习	ai_term	85
+chain of thought		chain-of-thought|思维链	ai_term	88
+思维链	si wei lian	chain of thought	ai_term	85
+多模态	duo mo tai	multimodal	ai_term	88
+multimodal		多模态	ai_term	85
+AGI		agi|通用人工智能	ai_term	90
+通用人工智能	tong yong ren gong zhi neng	AGI	ai_term	88
+LLM		llm|大语言模型|large language model	ai_term	92
+大语言模型	da yu yan mo xing	LLM	ai_term	90
+大模型	da mo xing	LLM|large model	ai_term	92
+SLM		slm|小语言模型	ai_term	80
+量化	liang hua	quantization	ai_term	85
+quantization		量化	ai_term	82
+function calling		tool calling|工具调用	ai_term	88
+工具调用	gong ju diao yong	function calling	ai_term	85
+流式	liu shi	streaming	ai_term	82
+streaming		流式	ai_term	80
+AIGC		aigc|生成式人工智能	ai_term	88
+生成式人工智能	sheng cheng shi ren gong zhi neng	GenAI|AIGC	ai_term	85
+GenAI		gen ai|生成式AI	ai_term	88
+prompt engineering		提示工程	ai_term	85
+提示工程	ti shi gong cheng	prompt engineering	ai_term	82
+reasoning model		推理模型|thinking model	ai_term	88
+推理模型	tui li mo xing	reasoning model	ai_term	85
+jailbreak		越狱	ai_term	75
+越狱	yue yu	jailbreak	ai_term	72
+SWE-bench		swe bench|SWE bench	ai_term	80
+benchmark		基准测试	ai_term	78
+open weight		open weights|开放权重	ai_term	82
+开放权重	kai fang quan zhong	open weight	ai_term	80
+distillation		蒸馏|知识蒸馏	ai_term	82
+知识蒸馏	zhi shi zheng liu	distillation	ai_term	80
+pretraining		pre-training|预训练	ai_term	82
+预训练	yu xun lian	pretraining	ai_term	80
+vector database		向量数据库	ai_term	82
+向量数据库	xiang liang shu ju ku	vector database	ai_term	80
+RAG pipeline		rag pipeline	ai_term	78
+AI native		AI-native|AI原生	ai_term	82
+AI原生	AI yuan sheng	AI native	ai_term	80
+computer use		computer-use|电脑使用	ai_term	80
+deep research		deep research|深度研究	ai_term	82
+on-device AI		on device ai|端侧AI	ai_term	80
+端侧AI	duan ce AI	on-device AI	ai_term	78
+#
+# --- US / global tech companies ---
+SpaceX		space x|Space X	tech_company	95
+Tesla		tesla|Tesla Motors	tech_company	95
+Apple		apple|苹果公司	tech_company	95
+Microsoft		microsoft|微软	tech_company	95
+Google		google|谷歌	tech_company	95
+Alphabet		alphabet|Google	tech_company	90
+Meta		meta|Facebook|脸书	tech_company	95
+Amazon		amazon|AWS|亚马逊	tech_company	95
+AWS		aws|Amazon Web Services	tech_company	92
+Nvidia		nvidia|NVDA|英伟达	tech_company	98
+英伟达	ying wei da	Nvidia|NVDA	tech_company	95
+AMD		amd	tech_company	88
+Intel		intel|英特尔	tech_company	88
+Netflix		netflix	tech_company	85
+Uber		uber	tech_company	85
+Airbnb		airbnb	tech_company	82
+Stripe		stripe	tech_company	88
+Shopify		shopify	tech_company	82
+Salesforce		salesforce	tech_company	85
+Oracle		oracle	tech_company	82
+IBM		ibm	tech_company	82
+Adobe		adobe	tech_company	85
+Spotify		spotify	tech_company	82
+Reddit		reddit	tech_company	80
+Discord		discord	tech_company	80
+Slack		slack	tech_company	80
+Zoom		zoom	tech_company	80
+Palantir		palantir	tech_company	82
+Neuralink		neural link|Neural Link	tech_company	85
+Waymo		waymo	tech_company	85
+Rivian		rivian	tech_company	80
+Lucid		lucid motors|Lucid Motors	tech_company	78
+Coinbase		coinbase	tech_company	82
+Robinhood		robin hood|Robin Hood	fintech	78
+PayPal		paypal	tech_company	82
+Block		block|Square|square	fintech	78
+Visa		visa	tech_company	78
+Samsung		samsung|三星	tech_company	88
+Sony		sony|索尼	tech_company	85
+Nintendo		nintendo|任天堂	tech_company	82
+TSMC		tsmc|台积电	tech_company	90
+台积电	tai ji dian	TSMC	tech_company	88
+ASML		asml	tech_company	85
+Broadcom		broadcom	tech_company	80
+Qualcomm		qualcomm|高通	tech_company	85
+高通	gao tong	Qualcomm	tech_company	82
+Arm		arm|ARM Holdings	tech_company	85
+Snowflake		snowflake	tech_company	80
+Databricks		databricks	tech_company	85
+Cloudflare		cloudflare	tech_company	82
+Twilio		twilio	tech_company	78
+Datadog		datadog	tech_company	78
+ServiceNow		service now|ServiceNow	tech_company	78
+Atlassian		atlassian|Jira|Confluence	tech_company	80
+Canva		canva	tech_company	80
+Figma		figma	tech_company	85
+Notion		notion	tech_company	82
+Linear		linear app|Linear	tech_company	78
+Vercel		vercel|Next.js	tech_company	82
+Next.js		nextjs|NextJS|next js	dev_tool	85
+Vercel		vercel	tech_company	80
+Supabase		supabase	tech_company	80
+Firebase		firebase	tech_company	80
+MongoDB		mongodb|Mongo DB	tech_company	82
+Redis		redis	tech_company	82
+Elastic		elastic|Elasticsearch	tech_company	78
+Docker		docker	tech_company	88
+Kubernetes		kubernetes|k8s|K8s	dev_tool	90
+k8s		kubernetes|Kubernetes	dev_tool	88
+Terraform		terraform	tech_company	80
+GitLab		gitlab	tech_company	80
+Bitbucket		bitbucket	tech_company	75
+Jenkins		jenkins	dev_tool	75
+CircleCI		circle ci|Circle CI	dev_tool	75
+#
+# --- Chinese tech companies (English names) ---
+Huawei		huawei|华为|HW	tech_company	95
+华为	hua wei	Huawei	tech_company	95
+Xiaomi		xiaomi|小米|MI	tech_company	95
+小米	xiao mi	Xiaomi	tech_company	95
+ByteDance		byte dance|字节跳动|Bytedance	tech_company	95
+字节跳动	zi jie tiao dong	ByteDance	tech_company	95
+TikTok		tik tok|Tik Tok|抖音海外	tech_company	92
+Douyin		dou yin|抖音	tech_company	90
+抖音	dou yin	Douyin|TikTok	tech_company	90
+Alibaba		alibaba|阿里巴巴|阿里	tech_company	95
+阿里巴巴	a li ba ba	Alibaba	tech_company	95
+Taobao		taobao|淘宝	tech_company	88
+淘宝	tao bao	Taobao	tech_company	88
+Tmall		tmall|天猫	tech_company	85
+天猫	tian mao	Tmall	tech_company	85
+Tencent		tencent|腾讯	tech_company	95
+腾讯	teng xun	Tencent	tech_company	95
+WeChat		we chat|微信	tech_company	92
+微信	wei xin	WeChat	tech_company	92
+Baidu		baidu|百度	tech_company	92
+百度	bai du	Baidu	tech_company	92
+JD.com		jd.com|京东|JD	tech_company	88
+京东	jing dong	JD.com	tech_company	88
+Meituan		meituan|美团	tech_company	88
+美团	mei tuan	Meituan	tech_company	88
+Pinduoduo		pinduoduo|拼多多|PDD	tech_company	88
+拼多多	pin duo duo	Pinduoduo	tech_company	88
+BYD		byd|比亚迪	tech_company	95
+比亚迪	bi ya di	BYD	tech_company	95
+NIO		nio|蔚来	tech_company	90
+蔚来	wei lai	NIO	tech_company	90
+XPeng		xpeng|小鹏汽车|X Peng	tech_company	90
+小鹏汽车	xiao peng qi che	XPeng	tech_company	90
+Li Auto		li auto|理想汽车|理想	tech_company	90
+理想汽车	li xiang qi che	Li Auto	tech_company	90
+Zeekr		zeekr|极氪	tech_company	85
+极氪	ji ke	Zeekr	tech_company	85
+CATL		catl|宁德时代	tech_company	92
+宁德时代	ning de shi dai	CATL	tech_company	92
+DJI		dji|大疆	tech_company	90
+大疆	da jiang	DJI	tech_company	90
+SMIC		smic|中芯国际	tech_company	88
+中芯国际	zhong xin guo ji	SMIC	tech_company	88
+Lenovo		lenovo|联想	tech_company	88
+联想	lian xiang	Lenovo	tech_company	88
+Oppo		oppo|OPPO	tech_company	85
+Vivo		vivo|VIVO	tech_company	85
+Honor		honor|荣耀	tech_company	85
+荣耀	rong yao	Honor	tech_company	85
+Shein		shein|SHEIN	tech_company	85
+Temu		temu	tech_company	85
+Ant Group		ant group|蚂蚁集团|Alipay	tech_company	88
+蚂蚁集团	ma yi ji tuan	Ant Group	tech_company	88
+Alipay		alipay|支付宝	tech_company	88
+支付宝	zhi fu bao	Alipay	tech_company	88
+Weibo		weibo|微博	tech_company	82
+微博	wei bo	Weibo	tech_company	82
+Bilibili		bilibili|B站|哔哩哔哩	tech_company	88
+哔哩哔哩	bi li bi li	Bilibili|B站	tech_company	88
+B站	B zhan	Bilibili|哔哩哔哩	tech_company	85
+NetEase		netease|网易	tech_company	85
+网易	wang yi	NetEase	tech_company	85
+Kuaishou		kuaishou|快手	tech_company	85
+快手	kuai shou	Kuaishou	tech_company	85
+SenseTime		sensetime|商汤	tech_company	82
+商汤	shang tang	SenseTime	tech_company	82
+Megvii		megvii|旷视	tech_company	80
+旷视	kuang shi	Megvii	tech_company	80
+Horizon Robotics		horizon|地平线	tech_company	82
+地平线	di ping xian	Horizon	tech_company	80
+Geely		geely|吉利	tech_company	82
+吉利	ji li	Geely	tech_company	80
+Great Wall		great wall|长城汽车	tech_company	78
+长城汽车	chang cheng qi che	Great Wall	tech_company	78
+#
+# --- Tech leaders (bilingual where useful) ---
+Elon Musk		马斯克|elon musk	tech_leader	92
+马斯克	ma si ke	Elon Musk	tech_leader	92
+Sam Altman		sam altman|山姆奥特曼	tech_leader	88
+Jensen Huang		黄仁勋|jensen huang	tech_leader	90
+黄仁勋	huang ren xun	Jensen Huang	tech_leader	90
+Tim Cook		库克|tim cook	tech_leader	85
+库克	ku ke	Tim Cook	tech_leader	85
+Satya Nadella		satya nadella|纳德拉	tech_leader	82
+Sundar Pichai		sundar pichai|皮查伊	tech_leader	82
+Mark Zuckerberg		mark zuckerberg|扎克伯格	tech_leader	85
+扎克伯格	zhai ke bo ge	Mark Zuckerberg	tech_leader	85
+Jeff Bezos		jeff bezos|贝索斯	tech_leader	82
+雷军	lei jun	Lei Jun	tech_leader	90
+Lei Jun		lei jun|雷军	tech_leader	90
+何小鹏	he xiao peng	He Xiaopeng|XPeng	tech_leader	88
+He Xiaopeng		he xiao peng|何小鹏	tech_leader	88
+李斌	li bin	William Li|NIO	tech_leader	85
+余承东	yu cheng dong		tech_leader	82
+梁文锋	liang wen feng	DeepSeek	tech_leader	85
+乔布斯	qiao bu si	Steve Jobs	tech_leader	90
+Steve Jobs		steve jobs|乔布斯	tech_leader	90
+#
+# --- Dev tools & platforms ---
+GitHub		github|GitHub	tech_company	92
+GitLab		gitlab	tech_company	80
+VS Code		vs code|VSCode|Visual Studio Code	dev_tool	88
+Visual Studio Code		vscode|VS Code	dev_tool	85
+Xcode		xcode	dev_tool	85
+SwiftUI		swift ui|Swift UI	dev_tool	82
+React		react|ReactJS	dev_tool	85
+Vue		vue|Vue.js|Vue3	dev_tool	82
+TypeScript		typescript|TS	dev_tool	85
+Python		python	dev_tool	88
+Rust		rust	dev_tool	82
+Go		golang|Golang	dev_tool	82
+Node.js		nodejs|NodeJS|node js	dev_tool	82
+PyTorch		pytorch|Py Torch	dev_tool	88
+TensorFlow		tensorflow|Tensor Flow	dev_tool	85
+Jupyter		jupyter|Jupyter Notebook	dev_tool	78
+Postman		postman	dev_tool	78
+Figma		figma	dev_tool	85
+Notion		notion	dev_tool	82
+Linear		linear	dev_tool	78
+Obsidian		obsidian	dev_tool	75
+Raycast		raycast	dev_tool	75
+Warp		warp terminal|Warp	dev_tool	75
+#
+# --- Hot internet / product terms ---
+SaaS		saas|SaaS	tech_term	82
+API		api|API	tech_term	85
+SDK		sdk|SDK	tech_term	82
+GPU		gpu|GPU	tech_term	88
+CUDA		cuda|CUDA	tech_term	85
+NPU		npu|NPU	tech_term	82
+TPU		tpu|TPU	tech_term	80
+Web3		web3|Web 3	tech_term	78
+区块链	qu kuai lian	blockchain	tech_term	82
+blockchain		区块链	tech_term	80
+元宇宙	yuan yu zhou	metaverse	tech_term	78
+metaverse		元宇宙	tech_term	75
+自动驾驶	zi dong jia shi	autonomous driving|FSD	tech_term	85
+FSD		full self driving|全自动驾驶	tech_term	82
+人形机器人	ren xing ji qi ren	humanoid robot|Optimus	tech_term	82
+Optimus		optimus|擎天柱	tech_term	80
+星链	xing lian	Starlink	tech_term	85
+Starlink		star link|星链	tech_term	85
+低空经济	di kong jing ji	low altitude economy	tech_term	80
+具身智能	ju shen zhi neng	embodied AI	tech_term	82
+embodied AI		具身智能	tech_term	80
+出海	chu hai	go global|全球化	tech_term	78
+内卷	nei juan	involution	tech_term	75
+躺平	tang ping	lying flat	tech_term	72
+数字游民	shu zi you min	digital nomad	tech_term	75
+远程办公	yuan cheng ban gong	remote work	tech_term	78
+副业	fu ye	side hustle	tech_term	72
