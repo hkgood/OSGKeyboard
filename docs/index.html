@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OSGKeyboard — Voice dictation keyboard for iOS</title>
-  <meta name="description" content="OSGKeyboard — tap to start, tap to stop. AI-polished text in any app. On-device speech recognition (iOS 26+), bring-your-own LLM, source available.">
+  <meta name="description" content="OSGKeyboard — tap to start, tap to stop. On-device ASR (iOS 26+), AI polish, optional translation, personal dictionary. Local or cloud engine. Source available.">
   <meta name="theme-color" content="#0A0A0B">
   <link rel="icon" href="assets/app-icon.png" type="image/png">
   <link rel="apple-touch-icon" href="assets/app-icon.png">
@@ -621,7 +621,7 @@
           <div class="eyebrow"><span class="eyebrow-dot"></span><span data-i18n="hero.eyebrow">Source available · iOS 26+</span></div>
           <h1 data-i18n="hero.title">Tap to talk.<br>Polished text in any app.</h1>
           <p class="hero-lead" data-i18n="hero.lead">
-            A custom keyboard that transcribes your voice on-device and optionally polishes the result with the LLM you configure. Works in WeChat, Notes, Mail, ChatGPT — everywhere you type. Up to 60 seconds per take, with a long-lived Flow session so you never bounce back to the host app.
+            A custom keyboard that transcribes your voice on-device, polishes with AI, and optionally translates — in WeChat, Notes, Mail, ChatGPT, and everywhere you type. Pick a local engine (built-in polish) or cloud engine (your API). Up to 3.5 minutes per take, with an 8-minute Flow session so you never bounce back to the host app.
           </p>
           <div class="hero-cta">
             <a class="btn btn-primary" href="https://github.com/hkgood/OSGKeyboard" data-i18n="hero.cta.primary">View on GitHub</a>
@@ -629,9 +629,9 @@
           </div>
           <div class="hero-badges">
             <span class="badge" data-i18n="hero.badge1">On-device ASR</span>
-            <span class="badge" data-i18n="hero.badge2">Bring your own API</span>
-            <span class="badge" data-i18n="hero.badge3">Zero dependencies</span>
-            <span class="badge" data-i18n="hero.badge4">Flow session · 60s / take</span>
+            <span class="badge" data-i18n="hero.badge2">Local + Cloud engines</span>
+            <span class="badge" data-i18n="hero.badge3">Polish &amp; translate</span>
+            <span class="badge" data-i18n="hero.badge4">Flow session · 3.5 min / take</span>
           </div>
         </div>
 
@@ -653,7 +653,7 @@
                     <div class="kb-key"></div><div class="kb-key"></div><div class="kb-key"></div>
                     <div class="kb-key"></div><div class="kb-key"></div>
                   </div>
-                  <div class="kb-mic" aria-hidden="true" title="Hold to record"></div>
+                  <div class="kb-mic" aria-hidden="true" title="Tap to record"></div>
                 </div>
               </div>
             </div>
@@ -666,48 +666,48 @@
       <div class="section-inner">
         <div class="section-head">
           <h2 data-i18n="features.title">Built for real typing workflows</h2>
-          <p data-i18n="features.subtitle">Native SwiftUI, privacy-first architecture, and a Typeless-style push-to-talk experience.</p>
+          <p data-i18n="features.subtitle">Native SwiftUI, on-device transcription, configurable polish intensity, optional translation, and a personal dictionary — all in a tap-to-toggle Flow session.</p>
         </div>
         <div class="features">
           <article class="feature-card">
             <div class="feature-icon" aria-hidden="true">🎙</div>
-            <h3 data-i18n="features.f1.title">Tap-to-toggle, 60s cap</h3>
-            <p data-i18n="features.f1.body">Tap the mic to start, speak naturally, tap again to stop. A live countdown keeps you honest at 60 seconds per take.</p>
+            <h3 data-i18n="features.f1.title">Tap-to-toggle · 3.5 min</h3>
+            <p data-i18n="features.f1.body">Tap the mic to start, speak naturally, tap again to stop. A live countdown tracks each take — up to 210 seconds. Delete, space, and return keys sit below the mic.</p>
           </article>
           <article class="feature-card">
             <div class="feature-icon" aria-hidden="true">🧠</div>
             <h3 data-i18n="features.f2.title">On-device ASR</h3>
-            <p data-i18n="features.f2.body">Speech stays on your iPhone. Apple's on-device speech stack handles transcription — audio never leaves the device.</p>
+            <p data-i18n="features.f2.body">Speech stays on your iPhone. iOS 26 SpeechAnalyzer + DictationTranscriber handle transcription — audio never leaves the device.</p>
           </article>
           <article class="feature-card">
             <div class="feature-icon" aria-hidden="true">✍️</div>
-            <h3 data-i18n="features.f3.title">AI polish</h3>
-            <p data-i18n="features.f3.body">Optional cloud pass adds punctuation, structure, and clarity. Only the transcript is sent — not your voice.</p>
+            <h3 data-i18n="features.f3.title">AI polish · 3 levels</h3>
+            <p data-i18n="features.f3.body">Light, Medium, or Heavy polish adds punctuation, structure, and clarity. Ultra-short utterances skip the LLM and insert directly. Only the transcript is sent — never audio.</p>
           </article>
           <article class="feature-card">
             <div class="feature-icon" aria-hidden="true">🔌</div>
-            <h3 data-i18n="features.f4.title">Bring your own API</h3>
-            <p data-i18n="features.f4.body">Works with any OpenAI-compatible endpoint: OpenAI, DeepSeek, Qwen DashScope, or your own server.</p>
+            <h3 data-i18n="features.f4.title">Local &amp; cloud engines</h3>
+            <p data-i18n="features.f4.body">Local: on-device ASR + built-in DeepSeek polish — no API key needed. Cloud: on-device ASR + your OpenAI-compatible API (OpenAI, Qwen, Zhipu, Moonshot, or self-hosted).</p>
           </article>
           <article class="feature-card">
-            <div class="feature-icon" aria-hidden="true">🔒</div>
-            <h3 data-i18n="features.f5.title">Privacy first</h3>
-            <p data-i18n="features.f5.body">No ordinary keystroke logging. You choose when cloud polish runs and which provider receives text.</p>
+            <div class="feature-icon" aria-hidden="true">🌐</div>
+            <h3 data-i18n="features.f5.title">Post-polish translation</h3>
+            <p data-i18n="features.f5.body">After polish, optionally translate into English, 简体中文, 日本語, 한국어, and more. Toggle from the keyboard chip or Settings — both engines supported.</p>
           </article>
           <article class="feature-card">
-            <div class="feature-icon" aria-hidden="true">🪶</div>
-            <h3 data-i18n="features.f6.title">Lean & native</h3>
-            <p data-i18n="features.f6.body">Pure Swift 6 and SwiftUI — no CocoaPods, no Carthage, no third-party packages.</p>
+            <div class="feature-icon" aria-hidden="true">📖</div>
+            <h3 data-i18n="features.f6.title">Personal dictionary</h3>
+            <p data-i18n="features.f6.body">Add names, product terms, and jargon in the Dictionary tab. The LLM preserves your entries; aliases help correct common ASR misrecognitions.</p>
           </article>
           <article class="feature-card">
             <div class="feature-icon" aria-hidden="true">🔁</div>
             <h3 data-i18n="features.f7.title">Flow session</h3>
-            <p data-i18n="features.f7.body">A long-lived host-app session keeps the recorder warm. Record many takes without bouncing back to the app.</p>
+            <p data-i18n="features.f7.body">A long-lived host-app session (8 minutes) keeps the recorder warm. Record many takes without bouncing back to the app — tap Start on the keyboard if the session expires.</p>
           </article>
           <article class="feature-card">
-            <div class="feature-icon" aria-hidden="true">🧩</div>
-            <h3 data-i18n="features.f8.title">Local + cloud polish</h3>
-            <p data-i18n="features.f8.body">Local mode is ASR-only. Enable cloud polish to route the transcript through your chosen LLM when iOS speech recognition isn't strong enough.</p>
+            <div class="feature-icon" aria-hidden="true">👆</div>
+            <h3 data-i18n="features.f8.title">Cursor drag navigation</h3>
+            <p data-i18n="features.f8.body">Drag the pads beside the mic to move the caret precisely — horizontal or vertical. Toggle on/off in Settings → Preferences. Left- and right-handed layouts supported.</p>
           </article>
         </div>
       </div>
@@ -717,28 +717,28 @@
       <div class="section-inner">
         <div class="section-head">
           <h2 data-i18n="steps.title">How it works</h2>
-          <p data-i18n="steps.subtitle">Three gestures between thought and sent message.</p>
+          <p data-i18n="steps.subtitle">From first launch to polished text in any app — about five minutes.</p>
         </div>
         <div class="steps">
           <article class="step-card">
             <h3 data-i18n="steps.s1.title">Open the app</h3>
-            <p data-i18n="steps.s1.body">Build from source and launch. The 5-step onboarding starts the Flow session automatically once permissions are granted.</p>
+            <p data-i18n="steps.s1.body">Build from source and launch. The 5-step onboarding walks you through permissions, keyboard setup, and engine choice. Flow session starts automatically when ready.</p>
           </article>
           <article class="step-card">
-            <h3 data-i18n="steps.s2.title">Allow mic & speech</h3>
-            <p data-i18n="steps.s2.body">Grant microphone and on-device speech recognition access when prompted. Both stay on-device.</p>
+            <h3 data-i18n="steps.s2.title">Allow mic &amp; speech</h3>
+            <p data-i18n="steps.s2.body">Grant microphone and on-device speech recognition when prompted. You can also finish most steps from the keyboard's own setup overlay.</p>
           </article>
           <article class="step-card">
             <h3 data-i18n="steps.s3.title">Enable the keyboard</h3>
-            <p data-i18n="steps.s3.body">In iOS Settings, add OSGKeyboard and allow Full Access so it can use the mic and your API.</p>
+            <p data-i18n="steps.s3.body">In iOS Settings, add OSGKeyboard and allow Full Access — required for the mic, API key, and Flow session bridge.</p>
           </article>
           <article class="step-card">
-            <h3 data-i18n="steps.s4.title">Pick engine + API</h3>
-            <p data-i18n="steps.s4.body">Choose local ASR or cloud. For cloud polish, paste any OpenAI-compatible key (DeepSeek works out of the box).</p>
+            <h3 data-i18n="steps.s4.title">Pick recognition mode</h3>
+            <p data-i18n="steps.s4.body">Local: on-device ASR + built-in polish, no API key. Cloud: on-device ASR + your OpenAI-compatible key (OpenAI, Qwen, Zhipu, Moonshot, or custom).</p>
           </article>
           <article class="step-card">
-            <h3 data-i18n="steps.s5.title">Tap to talk</h3>
-            <p data-i18n="steps.s5.body">Switch to OSGKeyboard in any text field, tap the mic, speak (up to 60s), tap again. Polished text lands at your cursor.</p>
+            <h3 data-i18n="steps.s5.title">Tune &amp; talk</h3>
+            <p data-i18n="steps.s5.body">Set polish intensity, translation target, and personal dictionary in Settings. Switch to OSGKeyboard, tap the mic, speak (up to 3.5 min), tap again — text lands at your cursor.</p>
           </article>
         </div>
       </div>
@@ -749,7 +749,7 @@
         <div class="privacy-banner">
           <div>
             <h2 data-i18n="privacy.title">Privacy at a glance</h2>
-            <p data-i18n="privacy.body">Audio is processed on your device. We do not log ordinary keystrokes. In cloud polish mode, only transcribed text — never audio — goes to the API provider you configure.</p>
+            <p data-i18n="privacy.body">Audio is processed on your device. We do not log ordinary keystrokes. After ASR, transcribed text — never audio — is sent for polish (built-in DeepSeek on local engine, or your configured API on cloud engine). Translation and personal dictionary data stay on-device until you clear them.</p>
           </div>
           <a class="btn btn-secondary" href="privacy/" data-i18n="privacy.cta">Read full policy</a>
         </div>
@@ -759,7 +759,7 @@
 
   <footer class="footer">
     <div class="footer-inner">
-      <span data-i18n="footer.copy">© OSGKeyboard · v0.2.1 · source available, non-commercial</span>
+      <span data-i18n="footer.copy">© OSGKeyboard · v0.3.6 · source available, non-commercial</span>
       <span>
         <a href="https://github.com/hkgood/OSGKeyboard" data-i18n="footer.source">Source code</a>
         ·
@@ -776,50 +776,50 @@
         "nav.github": "GitHub",
         "hero.eyebrow": "Source available · iOS 26+",
         "hero.title": "Tap to talk.<br>Polished text in any app.",
-        "hero.lead": "A custom keyboard that transcribes your voice on-device and optionally polishes the result with the LLM you configure. Works in WeChat, Notes, Mail, ChatGPT — everywhere you type. Up to 60 seconds per take, with a long-lived Flow session so you never bounce back to the host app.",
+        "hero.lead": "A custom keyboard that transcribes your voice on-device, polishes with AI, and optionally translates — in WeChat, Notes, Mail, ChatGPT, and everywhere you type. Pick a local engine (built-in polish) or cloud engine (your API). Up to 3.5 minutes per take, with an 8-minute Flow session so you never bounce back to the host app.",
         "hero.cta.primary": "View on GitHub",
         "hero.cta.secondary": "Privacy Policy",
         "hero.badge1": "On-device ASR",
-        "hero.badge2": "Bring your own API",
-        "hero.badge3": "Zero dependencies",
-        "hero.badge4": "Flow session · 60s / take",
+        "hero.badge2": "Local + Cloud engines",
+        "hero.badge3": "Polish & translate",
+        "hero.badge4": "Flow session · 3.5 min / take",
         "mock.title": "Notes",
         "mock.sub": "OSGKeyboard active · Flow session",
         "mock.text": "Tomorrow at 3 PM, sync with the design team on the new onboarding flow. Send the draft before lunch.",
         "features.title": "Built for real typing workflows",
-        "features.subtitle": "Native SwiftUI, privacy-first architecture, and a tap-to-toggle Flow session model.",
-        "features.f1.title": "Tap-to-toggle, 60s cap",
-        "features.f1.body": "Tap the mic to start, speak naturally, tap again to stop. A live countdown keeps you honest at 60 seconds per take.",
+        "features.subtitle": "Native SwiftUI, on-device transcription, configurable polish intensity, optional translation, and a personal dictionary — all in a tap-to-toggle Flow session.",
+        "features.f1.title": "Tap-to-toggle · 3.5 min",
+        "features.f1.body": "Tap the mic to start, speak naturally, tap again to stop. A live countdown tracks each take — up to 210 seconds. Delete, space, and return keys sit below the mic.",
         "features.f2.title": "On-device ASR",
-        "features.f2.body": "Speech stays on your iPhone. Apple's iOS 26 SpeechAnalyzer + DictationTranscriber handle transcription — audio never leaves the device.",
-        "features.f3.title": "AI polish",
-        "features.f3.body": "Optional cloud pass adds punctuation, structure, and clarity. Only the transcript is sent — not your voice.",
-        "features.f4.title": "Bring your own API",
-        "features.f4.body": "Works with any OpenAI-compatible endpoint: OpenAI, DeepSeek, Qwen DashScope, Moonshot, Zhipu, or your own server.",
-        "features.f5.title": "Privacy first",
-        "features.f5.body": "No ordinary keystroke logging. You choose when cloud polish runs and which provider receives text.",
-        "features.f6.title": "Lean & native",
-        "features.f6.body": "Pure Swift 6 and SwiftUI — no CocoaPods, no Carthage, no third-party packages.",
+        "features.f2.body": "Speech stays on your iPhone. iOS 26 SpeechAnalyzer + DictationTranscriber handle transcription — audio never leaves the device.",
+        "features.f3.title": "AI polish · 3 levels",
+        "features.f3.body": "Light, Medium, or Heavy polish adds punctuation, structure, and clarity. Ultra-short utterances skip the LLM and insert directly. Only the transcript is sent — never audio.",
+        "features.f4.title": "Local & cloud engines",
+        "features.f4.body": "Local: on-device ASR + built-in DeepSeek polish — no API key needed. Cloud: on-device ASR + your OpenAI-compatible API (OpenAI, Qwen, Zhipu, Moonshot, or self-hosted).",
+        "features.f5.title": "Post-polish translation",
+        "features.f5.body": "After polish, optionally translate into English, 简体中文, 日本語, 한국어, and more. Toggle from the keyboard chip or Settings — both engines supported.",
+        "features.f6.title": "Personal dictionary",
+        "features.f6.body": "Add names, product terms, and jargon in the Dictionary tab. The LLM preserves your entries; aliases help correct common ASR misrecognitions.",
         "features.f7.title": "Flow session",
-        "features.f7.body": "A long-lived host-app session keeps the recorder warm. Record many takes without bouncing back to the app.",
-        "features.f8.title": "Local + cloud polish",
-        "features.f8.body": "Local mode is ASR-only. Enable cloud polish to route the transcript through your chosen LLM when iOS speech recognition isn't strong enough.",
+        "features.f7.body": "A long-lived host-app session (8 minutes) keeps the recorder warm. Record many takes without bouncing back to the app — tap Start on the keyboard if the session expires.",
+        "features.f8.title": "Cursor drag navigation",
+        "features.f8.body": "Drag the pads beside the mic to move the caret precisely — horizontal or vertical. Toggle on/off in Settings → Preferences. Left- and right-handed layouts supported.",
         "steps.title": "Get started in five steps",
-        "steps.subtitle": "From clone to first polished message — about three minutes.",
+        "steps.subtitle": "From first launch to polished text in any app — about five minutes.",
         "steps.s1.title": "Open the app",
-        "steps.s1.body": "Build from source and launch. The 5-step onboarding starts the Flow session automatically once permissions are granted.",
+        "steps.s1.body": "Build from source and launch. The 5-step onboarding walks you through permissions, keyboard setup, and engine choice. Flow session starts automatically when ready.",
         "steps.s2.title": "Allow mic & speech",
-        "steps.s2.body": "Grant microphone and on-device speech recognition access when prompted. Both stay on-device.",
+        "steps.s2.body": "Grant microphone and on-device speech recognition when prompted. You can also finish most steps from the keyboard's own setup overlay.",
         "steps.s3.title": "Enable the keyboard",
-        "steps.s3.body": "In iOS Settings, add OSGKeyboard and allow Full Access so it can use the mic and your API.",
-        "steps.s4.title": "Pick engine + API",
-        "steps.s4.body": "Choose local ASR or cloud. For cloud polish, paste any OpenAI-compatible key (DeepSeek works out of the box).",
-        "steps.s5.title": "Tap to talk",
-        "steps.s5.body": "Switch to OSGKeyboard in any text field, tap the mic, speak (up to 60s), tap again. Polished text lands at your cursor.",
+        "steps.s3.body": "In iOS Settings, add OSGKeyboard and allow Full Access — required for the mic, API key, and Flow session bridge.",
+        "steps.s4.title": "Pick recognition mode",
+        "steps.s4.body": "Local: on-device ASR + built-in polish, no API key. Cloud: on-device ASR + your OpenAI-compatible key (OpenAI, Qwen, Zhipu, Moonshot, or custom).",
+        "steps.s5.title": "Tune & talk",
+        "steps.s5.body": "Set polish intensity, translation target, and personal dictionary in Settings. Switch to OSGKeyboard, tap the mic, speak (up to 3.5 min), tap again — text lands at your cursor.",
         "privacy.title": "Privacy at a glance",
-        "privacy.body": "Audio is processed on your device. We do not log ordinary keystrokes. In cloud polish mode, only transcribed text — never audio — goes to the API provider you configure.",
+        "privacy.body": "Audio is processed on your device. We do not log ordinary keystrokes. After ASR, transcribed text — never audio — is sent for polish (built-in DeepSeek on local engine, or your configured API on cloud engine). Translation and personal dictionary data stay on-device until you clear them.",
         "privacy.cta": "Read full policy",
-        "footer.copy": "© OSGKeyboard · v0.2.1 · source available, non-commercial",
+        "footer.copy": "© OSGKeyboard · v0.3.6 · source available, non-commercial",
         "footer.source": "Source code",
         "footer.privacy": "Privacy",
         "footer.license": "License"
@@ -828,50 +828,50 @@
         "nav.github": "GitHub",
         "hero.eyebrow": "源码可见 · 需要 iOS 26+",
         "hero.title": "点按说话，<br>任意 App 里获得润色文字。",
-        "hero.lead": "自定义键盘扩展：在设备端转写语音，并可选通过你配置的 LLM 润色结果。适用于微信、备忘录、邮件、ChatGPT 等所有出现键盘的场景。单次录音上限 60 秒，配合长生命周期的 Flow 会话，多次录音无需反复跳回主 App。",
+        "hero.lead": "自定义键盘扩展：设备端转写语音，AI 润色，并可选择翻译。适用于微信、备忘录、邮件、ChatGPT 等所有输入场景。可选本地引擎（内置润色）或云端引擎（你的 API）。单次录音最长 3.5 分钟，配合 8 分钟 Flow 会话，多次录音无需反复跳回主 App。",
         "hero.cta.primary": "GitHub 仓库",
         "hero.cta.secondary": "隐私政策",
         "hero.badge1": "设备端语音识别",
-        "hero.badge2": "自带 API",
-        "hero.badge3": "零第三方依赖",
-        "hero.badge4": "Flow 会话 · 单次 60s",
+        "hero.badge2": "本地 + 云端引擎",
+        "hero.badge3": "润色与翻译",
+        "hero.badge4": "Flow 会话 · 单次 3.5 分钟",
         "mock.title": "备忘录",
         "mock.sub": "OSGKeyboard 已启用 · Flow 会话",
         "mock.text": "明天下午三点和设计团队同步新引导流程，午饭前把草稿发过去。",
         "features.title": "为真实输入场景设计",
-        "features.subtitle": "原生 SwiftUI、隐私优先架构，以及点按切换的 Flow 会话模型。",
-        "features.f1.title": "点按录音 · 单次 60 秒",
-        "features.f1.body": "点一下麦克风开始说话，再点一下结束。60 秒倒计时实时显示，长按也不会被卡住。",
+        "features.subtitle": "原生 SwiftUI、设备端转写、可调润色档位、可选翻译与个性词库，全部融入点按切换的 Flow 会话模型。",
+        "features.f1.title": "点按录音 · 单次 3.5 分钟",
+        "features.f1.body": "点一下麦克风开始说话，再点一下结束。倒计时实时显示，单次最长 210 秒。麦克风下方有删除、空格、换行键。",
         "features.f2.title": "设备端转写",
         "features.f2.body": "语音留在 iPhone 本地处理，由 iOS 26 SpeechAnalyzer + DictationTranscriber 完成转写，音频不会上传。",
-        "features.f3.title": "AI 润色",
-        "features.f3.body": "可选云端润色，自动补全标点与结构。仅发送转写文字，不发送录音。",
-        "features.f4.title": "自带 API",
-        "features.f4.body": "兼容 OpenAI 风格接口：OpenAI、DeepSeek、通义 DashScope、Moonshot、智谱 或自建服务均可。",
-        "features.f5.title": "隐私优先",
-        "features.f5.body": "不记录普通击键。是否启用云端润色、发给哪家服务商，完全由你决定。",
-        "features.f6.title": "轻量原生",
-        "features.f6.body": "纯 Swift 6 + SwiftUI 实现，无 CocoaPods、无 Carthage、无第三方包。",
+        "features.f3.title": "AI 润色 · 三档强度",
+        "features.f3.body": "轻度、中度、深度三档润色，自动补全标点与结构。极短语句（如「好」「OK」）跳过 LLM 直接插入。仅发送转写文字，不发送录音。",
+        "features.f4.title": "本地与云端引擎",
+        "features.f4.body": "本地：设备端 ASR + 内置 DeepSeek 润色，无需填 API Key。云端：设备端 ASR + 你配置的 OpenAI 兼容 API（OpenAI、通义、智谱、月之暗面或自建服务）。",
+        "features.f5.title": "润色后翻译",
+        "features.f5.body": "润色完成后可翻译为 English、简体中文、日本語、한국어 等语言。在键盘顶栏芯片或设置中切换，本地与云端引擎均支持。",
+        "features.f6.title": "个性词库",
+        "features.f6.body": "在「词库」Tab 添加人名、产品名、术语等。LLM 润色时原样保留词条；别名有助于纠正常见 ASR 误识别。",
         "features.f7.title": "Flow 会话",
-        "features.f7.body": "主 App 维持长生命周期录音会话，多次录音无需跳回主 App，体验更连贯。",
-        "features.f8.title": "本地 + 云端润色",
-        "features.f8.body": "本地模式仅做 ASR；当 iOS 识别效果不理想时，可一键开启云端润色走你配置的 LLM。",
+        "features.f7.body": "主 App 维持 8 分钟长生命周期录音会话，多次录音无需跳回主 App。会话过期时在键盘上点「启动」即可续期。",
+        "features.f8.title": "光标拖动导航",
+        "features.f8.body": "在麦克风两侧拖动手势区精确移动光标，支持水平/垂直单轴锁定。可在设置 → 偏好设置中开关。支持左手/右手布局。",
         "steps.title": "五步上手",
-        "steps.subtitle": "从克隆到发出第一条润色消息，约 3 分钟。",
+        "steps.subtitle": "从首次启动到在任意 App 发出润色文字，约 5 分钟。",
         "steps.s1.title": "打开 App",
-        "steps.s1.body": "从源码编译运行 App，权限齐全后 5 步引导会自动启动 Flow 会话。",
+        "steps.s1.body": "从源码编译运行，5 步引导会带你完成权限、键盘与引擎选择。权限齐全后自动启动 Flow 会话。",
         "steps.s2.title": "授权麦克风与语音",
-        "steps.s2.body": "按提示授予麦克风与端侧语音识别权限，二者均在设备端处理。",
+        "steps.s2.body": "按提示授予麦克风与端侧语音识别权限。也可在键盘内的设置浮层中完成大部分步骤。",
         "steps.s3.title": "启用键盘",
-        "steps.s3.body": "在 iOS 设置中添加 OSGKeyboard，并允许完全访问（麦克风与 API 所需）。",
-        "steps.s4.title": "选择引擎与 API",
-        "steps.s4.body": "选择本地或云端引擎；云端润色需粘贴 OpenAI 兼容 Key（DeepSeek 开箱即用）。",
-        "steps.s5.title": "点按说话",
-        "steps.s5.body": "在任意输入框切换到 OSGKeyboard，点麦克风开始（上限 60 秒），再点结束，文字自动插入光标。",
+        "steps.s3.body": "在 iOS 设置中添加 OSGKeyboard 并允许完全访问——麦克风、API Key 与 Flow 会话桥接所需。",
+        "steps.s4.title": "选择识别方式",
+        "steps.s4.body": "本地：设备端 ASR + 内置润色，无需 API Key。云端：设备端 ASR + 你的 OpenAI 兼容 Key（OpenAI、通义、智谱、月之暗面或自定义）。",
+        "steps.s5.title": "调偏好，开说",
+        "steps.s5.body": "在设置中配置润色档位、翻译目标与个性词库。切换到 OSGKeyboard，点麦克风开始（最长 3.5 分钟），再点结束，文字自动插入光标处。",
         "privacy.title": "隐私摘要",
-        "privacy.body": "音频在设备端处理。我们不记录普通击键。云端润色模式下，仅转写文字（非音频）会发送到你配置的 API 服务商。",
+        "privacy.body": "音频在设备端处理。我们不记录普通击键。ASR 完成后，转写文字（非音频）会发送润色——本地引擎走内置 DeepSeek，云端引擎走你配置的 API。翻译设置与个性词库数据保存在本机，可随时清除。",
         "privacy.cta": "查看完整政策",
-        "footer.copy": "© OSGKeyboard · v0.2.1 · 源码可见，禁止商用",
+        "footer.copy": "© OSGKeyboard · v0.3.6 · 源码可见，禁止商用",
         "footer.source": "源代码",
         "footer.privacy": "隐私",
         "footer.license": "许可协议"
