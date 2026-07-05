@@ -58,6 +58,9 @@ PreconfiguredKeys.local.swift
 # Lexicon build cache (downloaded SogouPopularDict TSV)
 .cache/
 
+# Custom LM compile output (Mac-only; device-side prepare uses .bin from bundle)
+OSGKeyboard/Resources/CustomLanguageModel/v1/compiled/
+
 # Python bytecode
 __pycache__/
 *.pyc

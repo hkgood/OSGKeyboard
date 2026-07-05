@@ -36,8 +36,8 @@ settings:
     GENERATE_INFOPLIST_FILE: NO
     ENABLE_MODULE_VERIFIER: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "0.3.6"
-    CURRENT_PROJECT_VERSION: "10"
+    MARKETING_VERSION: "0.4.0"
+    CURRENT_PROJECT_VERSION: "11"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -63,6 +63,7 @@ targets:
           # Legacy PNG app icons must not coexist with AppIcon.icon — actool
           # crashes when both are passed. iOS 26 uses Icon Composer only.
           - "Assets.xcassets/AppIcon.appiconset"
+          - "Resources/CustomLanguageModel/**"
     entitlements:
       path: OSGKeyboard/OSGKeyboard.entitlements
       properties:
@@ -220,6 +221,9 @@ targets:
         buildPhase: resources
       - path: OSGKeyboardShared/zh-Hans.lproj/Shared.strings
         buildPhase: resources
+    resources:
+      - path: OSGKeyboardShared/Resources/CustomLanguageModel/v1/OSGKeyboardCLM.bin
+      - path: OSGKeyboardShared/Resources/CustomLanguageModel/v1/compiled-manifest.json
     info:
       path: OSGKeyboardShared/Info.plist
     settings:

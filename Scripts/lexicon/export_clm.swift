@@ -15,7 +15,7 @@ import Speech
 // MARK: - CLI
 
 struct CLIOptions {
-    var sogouTSV: URL
+    var domainTSV: URL
     var aiTechTSV: URL
     var outputBin: URL
     var localeID: String
@@ -29,14 +29,14 @@ struct CLIOptions {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
 
-        var sogou = repoRoot.appendingPathComponent(
+        var domain = repoRoot.appendingPathComponent(
             "OSGKeyboard/Resources/CustomLanguageModel/v1/phrases.tsv"
         )
         var aiTech = repoRoot.appendingPathComponent(
             "OSGKeyboard/Resources/CustomLanguageModel/ai-tech-brands/v1/phrases.tsv"
         )
         var output = repoRoot.appendingPathComponent(
-            "OSGKeyboard/Resources/CustomLanguageModel/v1/OSGKeyboardCLM.bin"
+            "OSGKeyboardShared/Resources/CustomLanguageModel/v1/OSGKeyboardCLM.bin"
         )
         var localeID = "zh_CN"
         var modelID = "com.osgkeyboard.custom-lm.v1"
@@ -46,8 +46,8 @@ struct CLIOptions {
         var iterator = CommandLine.arguments.dropFirst().makeIterator()
         while let flag = iterator.next() {
             switch flag {
-            case "--sogou-tsv":
-                sogou = URL(fileURLWithPath: iterator.next() ?? "")
+            case "--domain-tsv", "--sogou-tsv":
+                domain = URL(fileURLWithPath: iterator.next() ?? "")
             case "--ai-tech-tsv":
                 aiTech = URL(fileURLWithPath: iterator.next() ?? "")
             case "--output":
@@ -71,7 +71,7 @@ struct CLIOptions {
         }
 
         return CLIOptions(
-            sogouTSV: sogou,
+            domainTSV: domain,
             aiTechTSV: aiTech,
             outputBin: output,
             localeID: localeID,
@@ -86,7 +86,7 @@ struct CLIOptions {
         export_clm.swift — build SFCustomLanguageModelData .bin on macOS
 
         Options:
-          --sogou-tsv <path>     Sogou merged phrases TSV
+          --domain-tsv <path>    Domain phrases TSV (computer/IT terms)
           --ai-tech-tsv <path>   AI/tech seed phrases TSV
           --output <path>        Output .bin path
           --locale <id>          Locale identifier (default: zh_CN)
@@ -126,7 +126,7 @@ enum TSVLoader {
             }
 
             // Formats:
-            // sogou: word, pinyin, source, weight
+            // domain: word, pinyin, source, weight
             // ai-tech: word, pinyin, source, category, weight, canonical
             let weight: Int
             if parts.count >= 6, let parsed = Int(parts[4]) {
@@ -171,17 +171,17 @@ enum ExportCLM {
         let options = CLIOptions.parse()
         let fm = FileManager.default
 
-        guard fm.fileExists(atPath: options.sogouTSV.path) else {
-            throw ExportError.missingInput(options.sogouTSV.path)
+        guard fm.fileExists(atPath: options.domainTSV.path) else {
+            throw ExportError.missingInput(options.domainTSV.path)
         }
         guard fm.fileExists(atPath: options.aiTechTSV.path) else {
             throw ExportError.missingInput(options.aiTechTSV.path)
         }
 
         fputs("Loading phrases…\n", stderr)
-        let sogou = try TSVLoader.load(from: options.sogouTSV, sourceLabel: "sogou_v1")
+        let domain = try TSVLoader.load(from: options.domainTSV, sourceLabel: "computer_terms")
         let aiTech = try TSVLoader.load(from: options.aiTechTSV, sourceLabel: "ai_tech_seed")
-        var merged = TSVLoader.merge([sogou, aiTech])
+        var merged = TSVLoader.merge([domain, aiTech])
 
         if let cap = options.maxEntries, merged.count > cap {
             merged = Array(merged.prefix(cap))
@@ -189,7 +189,7 @@ enum ExportCLM {
         }
 
         fputs(
-            "Merged \(merged.count) unique phrases (sogou=\(sogou.count), ai-tech=\(aiTech.count))\n",
+            "Merged \(merged.count) unique phrases (domain=\(domain.count), ai-tech=\(aiTech.count))\n",
             stderr
         )
         fputs("Locale=\(options.localeID) identifier=\(options.modelID) version=\(options.modelVersion)\n", stderr)
@@ -236,7 +236,7 @@ enum ExportCLM {
             "version": options.modelVersion,
             "phrase_count": merged.count,
             "sources": [
-                "sogou_v1": sogou.count,
+                "computer_terms": domain.count,
                 "ai_tech_seed": aiTech.count,
             ],
             "bin_file": outputURL.lastPathComponent,

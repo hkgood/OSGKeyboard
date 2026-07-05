@@ -34,7 +34,6 @@ public struct AppGroupPersistor {
         // Both engines always polish; ignore legacy off/transcribe modeId.
         state.mode             = .polish
         state.engineMode       = store.engineMode
-        state.localASRBackend  = store.localASRBackend
         // v0.2.1 follow-up: only the target locale is persisted —
         // `translationEnabled` is derived from it. Hydrate once at
         // startup; `refreshRuntimeFlags` keeps the chip in sync while
@@ -42,16 +41,10 @@ public struct AppGroupPersistor {
         state.translationTargetLocaleId = store.translationTargetLocaleId
         state.handednessPreference = store.handednessPreference
         state.cursorDragNavigationEnabled = store.cursorDragNavigationEnabled
-        state.localModeCloudPolishEnabled = store.localModeCloudPolishEnabled
         state.micDisabled = store.isCloudAPIKeyMissingForVoiceInput
         state.micDisabledHint = store.isCloudAPIKeyMissingForVoiceInput
             ? ExtL10n.string("keyboard.mic.disabled.missingApiKey")
             : ""
-        // v0.2.0: iOS `SpeechAnalyzer` is always ready; mirror that
-        // into the State flags so downstream consumers see the same
-        // shape they did when the previous Qwen3 stack reported "ready".
-        state.localModelsReady = true
-        state.localModelsLoaded = false
 
         #if DEBUG
         // Print a masked view of the live App Group config so we can see
@@ -74,7 +67,6 @@ public struct AppGroupPersistor {
            model           = \(store.model)
            modeId          = \(store.modeId)
            localeId        = \(store.localeId)
-           localASRBackend = \(store.localASRBackend.rawValue)
         """)
         #endif
         return .loaded
@@ -93,8 +85,6 @@ public struct AppGroupPersistor {
         guard AppGroup.isAvailable else { return }
         let store = AppGroupStore()
         state.engineMode = store.engineMode
-        state.localASRBackend = store.localASRBackend
-        state.localModeCloudPolishEnabled = store.localModeCloudPolishEnabled
         let shouldProtectTranslation = protectTranslationUntil.map { Date() < $0 } ?? false
         if !shouldProtectTranslation {
             state.translationTargetLocaleId = store.translationTargetLocaleId
@@ -105,11 +95,6 @@ public struct AppGroupPersistor {
         state.micDisabledHint = store.isCloudAPIKeyMissingForVoiceInput
             ? ExtL10n.string("keyboard.mic.disabled.missingApiKey")
             : ""
-        // v0.2.0: iOS `SpeechAnalyzer` is always ready. Keep these
-        // toggles here so the keyboard UI doesn't flicker if the host
-        // app briefly clears them while refactoring.
-        state.localModelsReady = true
-        state.localModelsLoaded = false
     }
 
     /// Persist `mode` to the App Group store.
@@ -128,12 +113,6 @@ public struct AppGroupPersistor {
     public func persist(engineMode: String) {
         guard AppGroup.isAvailable else { return }
         AppGroupStore().setEngineMode(engineMode)
-    }
-
-    /// Persist `localASRBackend` to the App Group store.
-    public func persist(localASRBackend: LocalASRBackend) {
-        guard AppGroup.isAvailable else { return }
-        AppGroupStore().setLocalASRBackend(localASRBackend)
     }
 
     /// v0.2.1: persist translation target locale id (e.g. `"en"`,

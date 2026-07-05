@@ -15,144 +15,108 @@ import Combine
 public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     public static let shared = ProviderConfig()
 
-    private enum Key {
-        static let providerId      = "config.providerId"
-        static let baseURL         = "config.baseURL"
-        // Legacy: apiKey used to live in UserDefaults before the
-        // migration. We still read it once (see init below) and then
-        // delete the entry, but no other code path touches this key.
-        static let apiKeyLegacy    = "config.apiKey"
-        static let model           = "config.model"
-        static let modeId          = "config.modeId"
-        static let localeId        = "config.localeId"
-        static let engineMode       = "config.engineMode"
-        static let hasCompletedOnboarding = "config.hasCompletedOnboarding"
-        static let onboardingPage         = "config.onboardingPage"
-        static let hasAcknowledgedCloudSharing = "config.hasAcknowledgedCloudSharing"
-        // Which on-device ASR engine to use when `engineMode == "local"`.
-        // Persisted in the App Group so the keyboard can read the
-        // selection even though it never instantiates the backend itself.
-        static let localASRBackend = "config.localASRBackend"
-        static let uiLanguage = "config.uiLanguage"
-        // v0.2.0: optional cloud polish step after on-device ASR finishes
-        // in the local engine. Default `false` — keeps the local engine
-        // truly local unless the user explicitly opts in.
-        static let localModeCloudPolishEnabled = "config.localModeCloudPolishEnabled"
-        // v0.2.1: optional translation step after ASR. The
-        // post-ASR transcript is routed through the same LLM with a
-        // translate-and-polish prompt targeting `translationTargetLocaleId`.
-        // Mutually exclusive with the local-only promise — see `TranslationPolicy`.
-        //
-        // v0.2.1 follow-up: `config.translationEnabled` was *removed*
-        // as a persisted key — translation is now derived from
-        // `translationTargetLocaleId` (== offLocaleId means "off"). The
-        // store still tolerates legacy reads of the old key so users
-        // who upgraded from a build that wrote it don't see a flash of
-        // "on" state during init, but new writes never touch the key.
-        static let translationTargetLocaleId = "config.translationTargetLocaleId"
-        static let handednessPreference = "config.handednessPreference"
-        static let cursorDragNavigationEnabled = "config.cursorDragNavigationEnabled"
-        // v0.3.0: how aggressively the LLM should rewrite transcripts.
-        static let polishIntensity = "config.polishIntensity"
-    }
-
     @Published public var providerId: String {
         didSet {
-            defaults.set(providerId, forKey: Key.providerId)
-            // Keep API keys isolated per provider: switching provider in
-            // Settings loads that provider's key instead of reusing the
-            // previously selected vendor's key.
+            guard !isApplyingConfiguration, providerId != configuration.providerId else { return }
+            configuration.providerId = providerId
             isSyncingProviderAPIKey = true
-            apiKey = Keychain.apiKey(for: providerId) ?? ""
+            apiKey = configuration.apiKey
             isSyncingProviderAPIKey = false
+            persistConfiguration()
         }
     }
     @Published public var baseURL: String {
-        didSet { defaults.set(baseURL, forKey: Key.baseURL) }
+        didSet {
+            guard !isApplyingConfiguration, baseURL != configuration.baseURL else { return }
+            configuration.baseURL = baseURL
+            persistConfiguration()
+        }
     }
     @Published public var apiKey: String {
         didSet {
-            // Skip the round-trip on init — we read from Keychain and
-            // writing the same value back is wasteful.
             guard oldValue != apiKey, !isSyncingProviderAPIKey else { return }
             do {
                 try Keychain.setAPIKey(apiKey, for: providerId)
             } catch {
-                #if DEBUG
-                print("⚠️ [OSGKeyboard] Keychain write failed: \(error)")
-                #endif
+                OSGLog.config.warning("Keychain write failed: \(error.localizedDescription, privacy: .public)")
             }
         }
     }
     @Published public var model: String {
-        didSet { defaults.set(model, forKey: Key.model) }
+        didSet {
+            guard !isApplyingConfiguration, model != configuration.model else { return }
+            configuration.model = model
+            persistConfiguration()
+        }
     }
     @Published public var modeId: String {
-        didSet { defaults.set(modeId, forKey: Key.modeId) }
+        didSet {
+            guard !isApplyingConfiguration, modeId != configuration.modeId else { return }
+            configuration.modeId = modeId
+            persistConfiguration()
+        }
     }
     @Published public var localeId: String {
-        didSet { defaults.set(localeId, forKey: Key.localeId) }
+        didSet {
+            guard !isApplyingConfiguration, localeId != configuration.localeId else { return }
+            configuration.localeId = localeId
+            persistConfiguration()
+        }
     }
     /// "local" → on-device ASR + built-in DeepSeek polish.
     /// "cloud" → on-device ASR + user's cloud LLM polish.
     @Published public var engineMode: String {
         didSet {
-            defaults.set(engineMode, forKey: Key.engineMode)
+            guard !isApplyingConfiguration, engineMode != configuration.engineMode else { return }
+            configuration.engineMode = engineMode
             applyEngineModeSideEffects()
+            persistConfiguration()
         }
     }
     @Published public var hasCompletedOnboarding: Bool {
         didSet {
-            defaults.set(hasCompletedOnboarding, forKey: Key.hasCompletedOnboarding)
+            guard !isApplyingConfiguration,
+                  hasCompletedOnboarding != configuration.hasCompletedOnboarding else { return }
+            configuration.hasCompletedOnboarding = hasCompletedOnboarding
             if hasCompletedOnboarding {
+                configuration.onboardingPage = 0
                 onboardingPage = 0
             }
+            persistConfiguration()
         }
     }
     /// Persisted onboarding step so returning from Settings does not reset progress.
     @Published public var onboardingPage: Int {
-        didSet { defaults.set(onboardingPage, forKey: Key.onboardingPage) }
+        didSet {
+            guard !isApplyingConfiguration, onboardingPage != configuration.onboardingPage else { return }
+            configuration.onboardingPage = onboardingPage
+            persistConfiguration()
+        }
     }
     /// User confirmed that Cloud polish sends transcripts to their configured third-party API.
     @Published public var hasAcknowledgedCloudSharing: Bool {
-        didSet { defaults.set(hasAcknowledgedCloudSharing, forKey: Key.hasAcknowledgedCloudSharing) }
-    }
-    /// Which on-device ASR engine backs the "local" engine mode. Only
-    /// consulted when `isLocalEngine == true`; the cloud engine always
-    /// uses `SpeechAnalyzer`.
-    @Published public var localASRBackend: LocalASRBackend {
-        didSet { defaults.set(localASRBackend.rawValue, forKey: Key.localASRBackend) }
-    }
-    /// When `engineMode == "local"`, optionally route the ASR transcript
-    /// through the user's configured LLM (DeepSeek by default) before
-    /// inserting at the cursor. The polish step runs through the same
-    /// `LLMClient` + `PolishingService` stack the cloud engine uses.
-    ///
-    /// Defaults to `false` — the local engine is ASR-only out of the
-    /// box. Users opt in from Settings when the iOS ASR output isn't
-    /// strong enough (noisy far-field audio, dialectal Chinese, etc.).
-    @Published public var localModeCloudPolishEnabled: Bool {
         didSet {
-            defaults.set(localModeCloudPolishEnabled, forKey: Key.localModeCloudPolishEnabled)
-            AppGroupConfigDarwin.postConfigChanged()
+            guard !isApplyingConfiguration,
+                  hasAcknowledgedCloudSharing != configuration.hasAcknowledgedCloudSharing else { return }
+            configuration.hasAcknowledgedCloudSharing = hasAcknowledgedCloudSharing
+            persistConfiguration()
         }
     }
     /// Host-app UI language. Also mirrored to the App Group for the keyboard extension.
     @Published public var uiLanguage: AppUILanguage {
-        didSet { defaults.set(uiLanguage.rawValue, forKey: Key.uiLanguage) }
+        didSet {
+            guard !isApplyingConfiguration, uiLanguage != configuration.uiLanguage else { return }
+            configuration.uiLanguage = uiLanguage
+            persistConfiguration()
+        }
     }
     /// v0.2.1: whether to translate the transcript into
     /// `translationTargetLocaleId` before insertion. **Derived** —
     /// translation is on iff the user has selected a target locale
     /// (i.e. the persisted id is anything other than
     /// `TranslationLanguageCatalog.offLocaleId`). Default off.
-    ///
-    /// This used to be a stored `@Published var ... { didSet }` but the
-    /// chip / picker now writes the locale directly; collapsing the
-    /// pair into one field removes the "two writes out of sync" bug
-    /// surface entirely.
     public var translationEnabled: Bool {
-        translationTargetLocaleId != TranslationLanguageCatalog.offLocaleId
+        configuration.translationEnabled
     }
     /// v0.2.1: BCP-47-ish target language id (e.g. `en`, `ja`, `ko`) the
     /// translate-and-polish prompt should produce. Default `"off"` —
@@ -161,31 +125,37 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     /// the user's choice without a host-app round-trip).
     @Published public var translationTargetLocaleId: String {
         didSet {
-            defaults.set(translationTargetLocaleId, forKey: Key.translationTargetLocaleId)
-            AppGroupConfigDarwin.postConfigChanged()
+            guard !isApplyingConfiguration,
+                  translationTargetLocaleId != configuration.translationTargetLocaleId else { return }
+            configuration.translationTargetLocaleId = translationTargetLocaleId
+            persistConfiguration(postConfigChanged: true)
         }
     }
     /// Which hand the user holds the phone with — mirrors to the keyboard
     /// extension so delete / return can swap on the bottom row.
     @Published public var handednessPreference: HandednessPreference {
         didSet {
-            defaults.set(handednessPreference.rawValue, forKey: Key.handednessPreference)
-            AppGroupConfigDarwin.postConfigChanged()
+            guard !isApplyingConfiguration,
+                  handednessPreference != configuration.handednessPreference else { return }
+            configuration.handednessPreference = handednessPreference
+            persistConfiguration(postConfigChanged: true)
         }
     }
 
     /// Press-and-drag pads beside the mic for four-way caret movement.
     @Published public var cursorDragNavigationEnabled: Bool {
         didSet {
-            defaults.set(cursorDragNavigationEnabled, forKey: Key.cursorDragNavigationEnabled)
-            AppGroupConfigDarwin.postConfigChanged()
+            guard !isApplyingConfiguration,
+                  cursorDragNavigationEnabled != configuration.cursorDragNavigationEnabled else { return }
+            configuration.cursorDragNavigationEnabled = cursorDragNavigationEnabled
+            persistConfiguration(postConfigChanged: true)
         }
     }
 
     /// Whether the pipeline should run translate-and-polish (not just
     /// polish). Both engines honour the selected target locale.
     public var isTranslationEffective: Bool {
-        translationEnabled
+        configuration.isTranslationEffective
     }
 
     /// Translation picker visibility — available on both engines.
@@ -194,21 +164,22 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     /// v0.3.0: how aggressively the LLM should rewrite the ASR
     /// transcript. Default is `medium` (Typeless-equivalent).
     @Published public var polishIntensity: PolishIntensity {
-        didSet { defaults.set(polishIntensity.rawValue, forKey: Key.polishIntensity) }
+        didSet {
+            guard !isApplyingConfiguration, polishIntensity != configuration.polishIntensity else { return }
+            configuration.polishIntensity = polishIntensity
+            persistConfiguration()
+        }
     }
 
     public var isConfigured: Bool {
-        // Local engine (on-device ASR only) doesn't need an API key,
-        // base URL, or model — the LLM round-trip is skipped entirely.
-        // Treat it as always-configured so onboarding's "Next" button
-        // enables the moment the user picks the local path, instead
-        // of forcing them to fill in cloud fields they won't use.
+        // Local engine uses on-device ASR + built-in DeepSeek polish and
+        // does not need a user API key. Cloud needs base URL, key, and model.
         if isLocalEngine { return true }
         return !baseURL.isEmpty && !apiKey.isEmpty && !model.isEmpty
     }
 
     /// On-device ASR only; no cloud API required.
-    public var isLocalEngine: Bool { engineMode == "local" }
+    public var isLocalEngine: Bool { configuration.isLocalEngine }
 
     /// Local engine always polishes via the built-in DeepSeek path.
     public var shouldPolishLocalTranscript: Bool { isLocalEngine }
@@ -217,83 +188,37 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     public var localModeProviderId: String { "deepseek" }
 
     private let defaults: UserDefaults
+    private var configuration: AppGroupConfiguration
+    private var isApplyingConfiguration = false
     private var isSyncingProviderAPIKey = false
 
     public init(defaults: UserDefaults? = nil) {
-        let resolvedDefaults: UserDefaults = defaults ?? (AppGroup.isAvailable ? AppGroup.defaults : .standard)
+        guard let resolvedDefaults = defaults ?? AppGroup.defaultsIfAvailable else {
+            preconditionFailure(
+                "ProviderConfig requires App Group or injected UserDefaults — " +
+                "check AppGroup.isAvailable before constructing."
+            )
+        }
         self.defaults = resolvedDefaults
-        let pid = resolvedDefaults.string(forKey: Key.providerId) ?? "openai"
-        let preset = LLMProvider.provider(id: pid)
-        self.providerId   = pid
-        self.baseURL      = resolvedDefaults.string(forKey: Key.baseURL)    ?? preset.defaultBaseURL
+        self.configuration = AppGroupConfiguration.load(fromAvailable: resolvedDefaults)
 
-        // Resolve the API key with a one-shot migration from the legacy
-        // UserDefaults slot. After this runs once, `Key.apiKeyLegacy`
-        // is empty in the suite and all subsequent reads go through the
-        // Keychain.
-        self.apiKey = ProviderConfig.resolveAPIKey(defaults: resolvedDefaults, providerId: pid)
-
-        self.model        = resolvedDefaults.string(forKey: Key.model)      ?? preset.defaultModel
-        self.modeId          = resolvedDefaults.string(forKey: Key.modeId)     ?? "polish"
-        self.localeId        = resolvedDefaults.string(forKey: Key.localeId)   ?? "auto"
-        self.engineMode       = resolvedDefaults.string(forKey: Key.engineMode) ?? "cloud"
-        self.hasCompletedOnboarding = resolvedDefaults.bool(forKey: Key.hasCompletedOnboarding)
-        let savedPage = resolvedDefaults.integer(forKey: Key.onboardingPage)
-        self.onboardingPage = savedPage > 0 ? savedPage : 0
-        self.hasAcknowledgedCloudSharing = resolvedDefaults.bool(forKey: Key.hasAcknowledgedCloudSharing)
-        // Tolerate missing / unknown raw values (e.g. an enum case that
-        // was renamed in a later build) by falling back to the default
-        // rather than crashing inside `RawRepresentable.init`.
-        let rawBackend = resolvedDefaults.string(forKey: Key.localASRBackend) ?? LocalASRBackend.speechAnalyzer.rawValue
-        self.localASRBackend = LocalASRBackend(rawValue: rawBackend) ?? .speechAnalyzer
-        // v0.2.0: local-mode cloud polish toggle. Defaults off; users
-        // opt in from Settings when iOS ASR is too lossy for their
-        // environment. `object(forKey:) == nil` covers fresh installs
-        // and upgrades from builds that never wrote the key.
-        if resolvedDefaults.object(forKey: Key.localModeCloudPolishEnabled) == nil {
-            self.localModeCloudPolishEnabled = false
-        } else {
-            self.localModeCloudPolishEnabled = resolvedDefaults.bool(forKey: Key.localModeCloudPolishEnabled)
-        }
-        self.uiLanguage = AppUILanguage.fromStored(
-            resolvedDefaults.string(forKey: Key.uiLanguage)
-        )
-        // v0.2.1 follow-up: `translationEnabled` is now derived from
-        // `translationTargetLocaleId` — no separate init read.
-        // Default the locale id to `offLocaleId` so existing installs
-        // that never picked a target language stay in the "off" state
-        // (the previous build's default of `"en"` would silently turn
-        // translation on for every upgraded user; off is the safe
-        // conservative default that matches the picker / chip UX).
-        self.translationTargetLocaleId = resolvedDefaults.string(forKey: Key.translationTargetLocaleId)
-            ?? TranslationLanguageCatalog.offLocaleId
-        self.handednessPreference = HandednessPreference.fromStored(
-            resolvedDefaults.string(forKey: Key.handednessPreference)
-        )
-        if resolvedDefaults.object(forKey: Key.cursorDragNavigationEnabled) == nil {
-            self.cursorDragNavigationEnabled = true
-        } else {
-            self.cursorDragNavigationEnabled = resolvedDefaults.bool(forKey: Key.cursorDragNavigationEnabled)
-        }
-        // v0.3.0: polish intensity. Default to `.medium` for new
-        // installs; legacy `"off"` migrates to `.medium`.
-        if let raw = resolvedDefaults.string(forKey: Key.polishIntensity) {
-            self.polishIntensity = PolishIntensity.resolve(storedRawValue: raw)
-            if raw == PolishIntensity.legacyOffRawValue {
-                resolvedDefaults.set(PolishIntensity.medium.rawValue, forKey: Key.polishIntensity)
-            }
-        } else {
-            self.polishIntensity = .default
-        }
-
-        // Cloud no longer exposes off/transcribe; migrate legacy values.
-        if self.engineMode == "cloud", self.modeId != "polish" {
-            self.modeId = "polish"
-        }
-        // DeepSeek is local-engine only — never a cloud picker choice.
-        if self.engineMode == "cloud", self.providerId == "deepseek" {
-            apply(preset: LLMProvider.provider(id: "openai"))
-        }
+        isApplyingConfiguration = true
+        providerId = configuration.providerId
+        baseURL = configuration.baseURL
+        apiKey = configuration.apiKey
+        model = configuration.model
+        modeId = configuration.modeId
+        localeId = configuration.localeId
+        engineMode = configuration.engineMode
+        hasCompletedOnboarding = configuration.hasCompletedOnboarding
+        onboardingPage = configuration.onboardingPage
+        hasAcknowledgedCloudSharing = configuration.hasAcknowledgedCloudSharing
+        uiLanguage = configuration.uiLanguage
+        translationTargetLocaleId = configuration.translationTargetLocaleId
+        handednessPreference = configuration.handednessPreference
+        cursorDragNavigationEnabled = configuration.cursorDragNavigationEnabled
+        polishIntensity = configuration.polishIntensity
+        isApplyingConfiguration = false
     }
 
     /// Keep cloud vs local provider choices isolated when the user
@@ -304,29 +229,15 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         }
     }
 
-    /// Read the API key from the Keychain, falling back to a one-time
-    /// migration from the legacy UserDefaults slot.
-    private static func resolveAPIKey(defaults: UserDefaults, providerId: String) -> String {
-        if let stored = Keychain.apiKey(for: providerId), !stored.isEmpty {
-            return stored
+    private func persistConfiguration(postConfigChanged: Bool = false) {
+        configuration.save(to: defaults)
+        if postConfigChanged {
+            AppGroupConfigDarwin.postConfigChanged()
         }
-        // Migration path: old builds stored one global key under
-        // Keychain account "current". Move it to the active provider.
-        if let legacyKeychain = Keychain.legacyAPIKey(), !legacyKeychain.isEmpty {
-            try? Keychain.setAPIKey(legacyKeychain, for: providerId)
-            try? Keychain.deleteLegacyAPIKey()
-            return legacyKeychain
-        }
-        if let legacy = defaults.string(forKey: Key.apiKeyLegacy),
-           !legacy.isEmpty {
-            try? Keychain.setAPIKey(legacy, for: providerId)
-            defaults.removeObject(forKey: Key.apiKeyLegacy)
-            return legacy
-        }
-        return ""
     }
 
     public func apply(preset: LLMProvider) {
+        isApplyingConfiguration = true
         providerId = preset.id
         if !preset.defaultBaseURL.isEmpty {
             baseURL = preset.defaultBaseURL
@@ -334,15 +245,31 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         if !preset.defaultModel.isEmpty {
             model = preset.defaultModel
         }
+        configuration.providerId = providerId
+        configuration.baseURL = baseURL
+        configuration.model = model
+        isSyncingProviderAPIKey = true
+        apiKey = configuration.apiKey
+        isSyncingProviderAPIKey = false
+        isApplyingConfiguration = false
+        persistConfiguration()
     }
 
     public func reset() {
-        providerId = "openai"
+        isApplyingConfiguration = true
         let preset = LLMProvider.provider(id: "openai")
+        providerId = preset.id
         baseURL = preset.defaultBaseURL
         apiKey = ""
         model = preset.defaultModel
         handednessPreference = .left
         hasAcknowledgedCloudSharing = false
+        configuration.providerId = preset.id
+        configuration.baseURL = preset.defaultBaseURL
+        configuration.model = preset.defaultModel
+        configuration.handednessPreference = .left
+        configuration.hasAcknowledgedCloudSharing = false
+        isApplyingConfiguration = false
+        persistConfiguration()
     }
 }

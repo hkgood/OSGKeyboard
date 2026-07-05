@@ -47,10 +47,11 @@ final class ChunkedUtterancePipelineTests: XCTestCase {
         continuation.yield(AudioBufferSnapshot(samples: [Float](repeating: 0.1, count: 80), sampleRate: 1_000))
         continuation.finish()
 
-        var partials: [String] = []
+        let partialsLock = OSAllocatedUnfairLock(initialState: [String]())
         let outcome = await pipeline.transcribe(stream: stream) { partial in
-            partials.append(partial)
+            partialsLock.withLock { $0.append(partial) }
         }
+        let partials = partialsLock.withLock { $0 }
 
         guard case .success(let success) = outcome else {
             return XCTFail("expected success, got \(outcome)")
@@ -89,8 +90,7 @@ final class ChunkedUtterancePipelineTests: XCTestCase {
 }
 
 private struct FailingSecondChunkASR: ASRService, @unchecked Sendable {
-    private let lock = OSAllocatedUnfairLock()
-    private var index = 0
+    private let callIndex = OSAllocatedUnfairLock(initialState: 0)
 
     func transcribe(
         stream: AsyncStream<AudioBufferSnapshot>,
@@ -103,9 +103,10 @@ private struct FailingSecondChunkASR: ASRService, @unchecked Sendable {
 
     func transcribeChunk(samples: [Float], locale: Locale) async -> ASRChunkResult {
         _ = locale
-        let current = lock.withLock {
-            defer { index += 1 }
-            return index
+        let current = callIndex.withLock { state in
+            let value = state
+            state += 1
+            return value
         }
         if current == 1 {
             return .failure("simulated chunk error")

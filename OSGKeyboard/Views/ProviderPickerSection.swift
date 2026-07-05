@@ -90,6 +90,7 @@ enum ProviderLogo {
         case "qwen": return "qwen"
         case "moonshot": return "moonshot"
         case "zhipu": return "zhipu"
+        case "mimo": return "mimo"
         case "custom": return "custom"
         default: return nil
         }

@@ -23,6 +23,15 @@ public enum AppGroup {
         ) != nil
     }()
 
+    /// Shared UserDefaults when the App Group suite is available; `nil` otherwise.
+    ///
+    /// Prefer this in Release builds and in the keyboard extension so callers
+    /// can surface a setup error instead of silently reading/writing the wrong suite.
+    public static var defaultsIfAvailable: UserDefaults? {
+        guard isAvailable else { return nil }
+        return UserDefaults(suiteName: identifier)
+    }
+
     /// Shared UserDefaults instance for cross-process config.
     ///
     /// In DEBUG builds a missing App Group is a hard `fatalError`: silently
@@ -32,33 +41,30 @@ public enum AppGroup {
     /// the App an API key and nothing happens" — which is exactly the bug
     /// this is meant to prevent.
     ///
-    /// In release builds we keep the soft fallback + `NSLog` so an
-    /// end-user whose developer account simply lacks the App Group still
-    /// gets a usable main App (the keyboard extension won't work, but at
-    /// least the App doesn't crash on launch).
+    /// In Release builds there is **no** `.standard` fallback — use
+    /// `defaultsIfAvailable` and handle `nil` when provisioning is missing.
     public static var defaults: UserDefaults {
-        if let d = UserDefaults(suiteName: identifier) {
-            return d
+        guard let suite = defaultsIfAvailable else {
+            #if DEBUG
+            fatalError("""
+            ⚠️ App Group \(identifier) unavailable.
+
+            Add the App Group in:
+              1. Apple Developer portal → Identifiers → App Groups → add
+                 \(identifier)
+              2. Both bundle IDs (main app + keyboard extension) → enable
+                 that App Group under Capabilities
+              3. Re-generate the provisioning profile, download it, and
+                 re-run the project.
+
+            Falling back to .standard would silently desync the keyboard
+            extension from the main App — a hard crash in DEBUG is the
+            only way to make the misconfiguration impossible to miss.
+            """)
+            #else
+            fatalError("App Group \(identifier) unavailable. Check entitlements and provisioning.")
+            #endif
         }
-        #if DEBUG
-        fatalError("""
-        ⚠️ App Group \(identifier) unavailable.
-
-        Add the App Group in:
-          1. Apple Developer portal → Identifiers → App Groups → add
-             \(identifier)
-          2. Both bundle IDs (main app + keyboard extension) → enable
-             that App Group under Capabilities
-          3. Re-generate the provisioning profile, download it, and
-             re-run the project.
-
-        Falling back to .standard would silently desync the keyboard
-        extension from the main App — a hard crash in DEBUG is the
-        only way to make the misconfiguration impossible to miss.
-        """)
-        #else
-        NSLog("⚠️ [OSGKeyboard] App Group \(identifier) unavailable, falling back to .standard. The keyboard extension will not see config written by the main app.")
-        return .standard
-        #endif
+        return suite
     }
 }

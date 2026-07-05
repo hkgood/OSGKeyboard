@@ -14,6 +14,7 @@
 "provider.qwen" = "通义千问";
 "provider.zhipu" = "智谱 GLM";
 "provider.moonshot" = "月之暗面";
+"provider.mimo" = "小米 MiMo";
 "provider.custom" = "自定义";
 
 /* LLM errors */
@@ -79,3 +80,10 @@
 "dict.source.history" = "自动学习";
 "dict.source.contacts" = "来自通讯录";
 "dict.source.recentEdit" = "来自最近编辑";
+
+/* 键盘 UI（扩展与预览共用） */
+"keyboard.tapToTalkA11y" = "点击说话";
+"keyboard.translation.chip" = "翻译";
+"keyboard.translation.offMenu" = "不翻译";
+"keyboard.translation.a11y" = "翻译";
+"keyboard.translation.a11yHint" = "切换翻译或更改目标语言。";

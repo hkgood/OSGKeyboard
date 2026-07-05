@@ -122,10 +122,7 @@ final class IntelligentPolishTests: XCTestCase {
 
     func testPolishServiceMissingAPIKeyThrows() async {
         store.setEngineMode("cloud")
-        let service = PolishingService(
-            store: store,
-            client: EchoLLMClient()
-        )
+        let service = PolishingService(store: store)
         do {
             _ = try await service.polish("hello world", context: PolishContext(intensity: .medium))
             XCTFail("Expected missingAPIKey")
@@ -218,7 +215,10 @@ final class IntelligentPolishTests: XCTestCase {
         store.setEngineMode("local")
         let captured = CapturingLLMClient()
         let service = PolishingService(store: store, client: captured)
-        _ = try await service.polish("hello", context: PolishContext(intensity: .medium))
+        _ = try await service.polish(
+            "今天我们部署 k8s 集群",
+            context: PolishContext(intensity: .medium)
+        )
         XCTAssertTrue(
             captured.lastPrompt.contains("全局输出契约"),
             "Local engine should get the Chinese prompt via DeepSeek. Got prefix: \(captured.lastPrompt.prefix(80))"

@@ -237,13 +237,13 @@ final class LLMClientTests: XCTestCase {
 
     /// Cross-process App Group contract: what `ProviderConfig` writes must
     /// be readable through `AppGroupStore` on the same suite.
-    func testAppGroupCrossProcessAndOffModeShortCircuit() async {
+    func testAppGroupCrossProcessLegacyOffModeMigratesToPolish() async {
         let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        // Writer side: ProviderConfig (main App) writes API key + mode = off.
+        // Writer side: ProviderConfig (main App) writes API key + legacy off mode.
         let config = ProviderConfig(defaults: defaults)
         config.apiKey = "sk-test-1234"
         config.model = "gpt-4o-mini"
@@ -254,7 +254,7 @@ final class LLMClientTests: XCTestCase {
         // same suite.
         let store = AppGroupStore(defaults: defaults)
         XCTAssertEqual(store.apiKey, "sk-test-1234", "API key did not survive the cross-process boundary")
-        XCTAssertEqual(store.modeId, "off")
+        XCTAssertEqual(store.modeId, "polish", "legacy off mode migrates to polish")
         XCTAssertEqual(store.model, "gpt-4o-mini")
     }
 
@@ -317,20 +317,19 @@ final class LLMClientTests: XCTestCase {
         XCTAssertEqual(calls, 1, "cloud engine must polish even with legacy modeId=off")
     }
 
-    /// Local engine is ASR-only and never calls the cloud `LLMClient`.
-    func testPolisherReturnsRawWhenEngineLocal() async throws {
+    /// Local engine always runs the built-in DeepSeek polish step.
+    func testPolisherInvokesLLMWhenEngineLocal() async throws {
         let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         defaults.set("local", forKey: "config.engineMode")
-        defaults.set("off", forKey: "config.modeId")
+        defaults.set("polish", forKey: "config.modeId")
 
         let counter = CallCounter()
-        let countingClient = CountingLLMClient(counter: counter) { _, _ in
-            XCTFail("cloud LLMClient must not run under local engine")
-            return ""
+        let countingClient = CountingLLMClient(counter: counter) { raw, _ in
+            "POLISHED: \(raw)"
         }
 
         let store = AppGroupStore(defaults: defaults)
@@ -340,10 +339,10 @@ final class LLMClientTests: XCTestCase {
             timeout: 1
         )
 
-        let result = try await polisher.polish("  hello  ")
-        XCTAssertEqual(result, "hello")
+        let result = try await polisher.polish("hello world")
+        XCTAssertEqual(result, "POLISHED: hello world")
         let calls = await counter.value()
-        XCTAssertEqual(calls, 0)
+        XCTAssertEqual(calls, 1, "local engine must always invoke the polish LLM step")
     }
 
     /// Local engine pins DeepSeek — cloud-provider URL/model in App Group

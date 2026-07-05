@@ -83,6 +83,14 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             blurb: "Kimi · 长上下文 · Long context"
         ),
         .init(
+            id: "mimo",
+            name: "小米 MiMo",
+            defaultBaseURL: "https://api.xiaomimimo.com/v1",
+            defaultModel: "mimo-v2.5",
+            apiKeyURL: URL(string: "https://platform.xiaomimimo.com"),
+            blurb: "mimo-v2.5 · 中文优化 · Chinese-optimized"
+        ),
+        .init(
             id: "custom",
             name: "Custom · 自定义",
             defaultBaseURL: "",

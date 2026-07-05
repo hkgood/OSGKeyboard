@@ -47,6 +47,9 @@ public protocol ASRService: Sendable {
     /// Clears cancellation / cached session state before a new utterance.
     func resetForNewUtterance()
 
+    /// Pre-load locale assets and analyzer format for lower first-chunk latency.
+    func warmup(locale: Locale) async
+
     /// Transcribe one PCM chunk (Flow pipelined path). Default wraps `transcribe(stream:)`.
     func transcribeChunk(samples: [Float], locale: Locale) async -> ASRChunkResult
 }
@@ -59,6 +62,8 @@ public enum ASRChunkResult: Sendable, Equatable {
 
 extension ASRService {
     public func resetForNewUtterance() {}
+
+    public func warmup(locale: Locale) async {}
 
     public func transcribeChunk(samples: [Float], locale: Locale) async -> ASRChunkResult {
         guard !samples.isEmpty else { return .success("") }
@@ -116,27 +121,7 @@ public enum ASREvent: Sendable, Equatable {
 // MARK: - Factory
 
 public enum ASRServiceFactory {
-    /// Returns the on-device ASR backend. As of v0.2.0 the only
-    /// supported `LocalASRBackend` is iOS 26 `SpeechAnalyzer` +
-    /// `DictationTranscriber` (always on-device, no asset download),
-    /// so the factory collapses to a single concrete type. We keep the
-    /// `localBackend` parameter on the signature so the next non-iOS
-    /// backend can slot in without touching every call site.
-    ///
-    /// The cloud engine also routes through `SpeechAnalyzerASR`: the
-    /// user expectation is that ASR is the local half of the pipeline
-    /// regardless of where the LLM polish happens.
-    public static func make(
-        engineMode: String,
-        localBackend: LocalASRBackend = .speechAnalyzer
-    ) -> ASRService {
-        SpeechAnalyzerASR()
-    }
-
-    /// Back-compat overload for callers that only ever want the
-    /// SpeechAnalyzer path. The previous single-backend build used
-    /// this signature; new code should pass the engine mode explicitly
-    /// so any future non-iOS backend is honoured.
+    /// Returns the on-device `SpeechAnalyzer` + `DictationTranscriber` backend.
     public static func make() -> ASRService {
         SpeechAnalyzerASR()
     }
@@ -197,9 +182,49 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
     private var chunkAnalyzerFormat: AVAudioFormat?
 
     func resetForNewUtterance() {
+        // Keep chunk format / asset cache warm across utterances in one Flow session.
+    }
+
+    func invalidateChunkPreparationCache() {
         lock.withLock {
             chunkPreparedLocaleID = nil
             chunkAnalyzerFormat = nil
+        }
+    }
+
+    func warmup(locale: Locale) async {
+        guard let resolvedLocale = await DictationTranscriber.supportedLocale(equivalentTo: locale) else {
+            return
+        }
+        let localeID = resolvedLocale.identifier(.bcp47)
+        let cachedLocaleID = lock.withLock { chunkPreparedLocaleID }
+        if cachedLocaleID == localeID, lock.withLock({ chunkAnalyzerFormat != nil }) {
+            return
+        }
+
+        let lmConfiguration = CustomLanguageModelManager.shared.configurationForTranscription(
+            locale: resolvedLocale
+        )
+        let transcriber = CustomLanguageModelManager.makeDictationTranscriber(
+            locale: resolvedLocale,
+            lmConfiguration: lmConfiguration
+        )
+
+        do {
+            try await Self.prepareAssetsIfNeeded(for: transcriber, locale: resolvedLocale)
+            guard let format = await SpeechAnalyzer.bestAvailableAudioFormat(
+                compatibleWith: [transcriber],
+                considering: Self.captureFormat
+            ) else {
+                return
+            }
+            lock.withLock {
+                chunkPreparedLocaleID = localeID
+                chunkAnalyzerFormat = format
+            }
+            Self.debug("warmup ready locale=\(localeID)")
+        } catch {
+            Self.debug("warmup failed: \(error.localizedDescription)")
         }
     }
 
@@ -228,9 +253,12 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
             throw ASRChunkError.localeUnsupported
         }
         let localeID = resolvedLocale.identifier(.bcp47)
-        let transcriber = DictationTranscriber(
+        let lmConfiguration = CustomLanguageModelManager.shared.configurationForTranscription(
+            locale: resolvedLocale
+        )
+        let transcriber = CustomLanguageModelManager.makeDictationTranscriber(
             locale: resolvedLocale,
-            preset: .progressiveLongDictation
+            lmConfiguration: lmConfiguration
         )
 
         let analyzerFormat: AVAudioFormat
@@ -337,9 +365,12 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
                     }
                     // Each pipelined chunk is ≤ 30 s; long dictation preset keeps a
                     // single chunk coherent (Flow utterances run up to 3 min).
-                    let transcriber = DictationTranscriber(
+                    let lmConfiguration = CustomLanguageModelManager.shared.configurationForTranscription(
+                        locale: resolvedLocale
+                    )
+                    let transcriber = CustomLanguageModelManager.makeDictationTranscriber(
                         locale: resolvedLocale,
-                        preset: .progressiveLongDictation
+                        lmConfiguration: lmConfiguration
                     )
                     do {
                         try await Self.prepareAssetsIfNeeded(for: transcriber, locale: resolvedLocale)

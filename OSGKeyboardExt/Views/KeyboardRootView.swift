@@ -141,9 +141,6 @@ public struct KeyboardRootView: View {
                 flowSessionActive: state.flowSessionActive,
                 micDisabled: state.micDisabled,
                 micDisabledHint: state.micDisabledHint,
-                isLocalEngine: state.isLocalEngine,
-                localModelsReady: state.localModelsReady,
-                localModelsLoaded: state.localModelsLoaded,
                 cursorDragHintActive: state.cursorDragActive,
                 openSettings: state.openSettings,
                 startFlowSession: state.startFlowSession
@@ -337,9 +334,6 @@ private struct TranscriptLine: View {
     let flowSessionActive: Bool
     let micDisabled: Bool
     let micDisabledHint: String
-    let isLocalEngine: Bool
-    let localModelsReady: Bool
-    let localModelsLoaded: Bool
     let cursorDragHintActive: Bool
     let openSettings: () -> Void
     let startFlowSession: () -> Void
@@ -367,22 +361,6 @@ private struct TranscriptLine: View {
                         .foregroundStyle(palette.warning)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                } else if isLocalEngine, !localModelsReady {
-                    Button(action: openSettings) {
-                        HStack(spacing: 4) {
-                            Text(ExtL10n.string("keyboard.models.notDownloaded"))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 10, weight: .semibold))
-                        }
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.warning)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(maxWidth: .infinity)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint(ExtL10n.text("keyboard.models.downloadHint"))
                 } else if flowSessionActive {
                     ExtL10n.text("keyboard.placeholder.idle")
                         .font(TypeStyle.caption)

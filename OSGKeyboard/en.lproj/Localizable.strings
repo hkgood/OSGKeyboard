@@ -106,6 +106,7 @@
 "provider.qwen" = "Qwen (DashScope)";
 "provider.zhipu" = "Zhipu GLM";
 "provider.moonshot" = "Moonshot";
+"provider.mimo" = "Xiaomi MiMo";
 "provider.custom" = "Custom";
 "settings.api.title" = "API";
 "settings.language.title" = "Language";

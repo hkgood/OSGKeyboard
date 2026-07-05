@@ -106,6 +106,7 @@
 "provider.qwen" = "通义千问";
 "provider.zhipu" = "智谱 GLM";
 "provider.moonshot" = "月之暗面";
+"provider.mimo" = "小米 MiMo";
 "provider.custom" = "自定义";
 "settings.api.title" = "接口";
 "settings.language.title" = "语言";

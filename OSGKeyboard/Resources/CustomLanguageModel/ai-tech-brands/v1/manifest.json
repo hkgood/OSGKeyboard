@@ -1,21 +1,21 @@
 {
   "version": "v1",
   "name": "ai-tech-brands",
-  "generated_at": "2026-07-05T08:00:01.226941+00:00",
+  "generated_at": "2026-07-05T11:34:08.462301+00:00",
   "locale": "zh-Hans",
-  "entry_count": 749,
+  "entry_count": 1259,
   "seed_file": "Scripts/lexicon/seeds/ai_tech_brands_seed.tsv",
   "license": "MIT (curated seed; OSGKeyboard contributors)",
   "categories": {
-    "ai_brand": 133,
-    "ai_model": 31,
-    "ai_platform": 20,
-    "ai_term": 116,
-    "dev_tool": 74,
+    "ai_brand": 169,
+    "ai_model": 90,
+    "ai_platform": 53,
+    "ai_term": 197,
+    "dev_tool": 283,
     "fintech": 7,
-    "tech_company": 280,
+    "tech_company": 314,
     "tech_leader": 37,
-    "tech_term": 51
+    "tech_term": 109
   },
   "notes": [
     "Curated bilingual AI brands, tech companies, terminology, and hot words.",

@@ -337,8 +337,7 @@ struct HomeView: View {
             EngineServiceLabel.summary(
                 engineMode: config.engineMode,
                 providerId: config.providerId,
-                model: config.model,
-                localASRBackend: config.localASRBackend
+                model: config.model
             )
         )
         .font(TypeStyle.caption2)

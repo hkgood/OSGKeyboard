@@ -108,7 +108,9 @@ extension PersonalDictionary.Entry {
     /// learner. Users can re-classify later from Settings.
     public static func inferCategory(for term: String) -> Category {
         let hasUpper = term.contains(where: { $0.isUppercase })
-        let hasDigit = term.contains(where: { $0.isNumber })
+        let hasDigit = term.unicodeScalars.contains { scalar in
+            CharacterSet.decimalDigits.contains(scalar) && scalar.isASCII
+        }
         let hasLatin = term.unicodeScalars.contains { scalar in
             CharacterSet.letters.contains(scalar) && scalar.isASCII
         }
