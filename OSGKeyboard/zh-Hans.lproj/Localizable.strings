@@ -29,7 +29,7 @@
 "onboarding.enable.step3.suffix" = "，选中 OSGKeyboard";
 "onboarding.enable.openSettings" = "去设置";
 "onboarding.api.title" = "选择语音转文字 AI 引擎";
-"onboarding.api.localModels.hint" = "使用 Qwen3-ASR 时需先下载下方 CoreML 语音识别模型，完成后才能开始使用。";
+"onboarding.api.localModels.hint" = "本地引擎使用内置语音识别与内置润色，无需填写 API Key。";
 "settings.onboarding.replay" = "重新开始权限引导";
 
 /* Common navigation */
@@ -39,6 +39,7 @@
 "common.continue" = "继续";
 "common.reset" = "重置";
 "common.cancel" = "取消";
+"common.save" = "保存";
 "common.clear" = "清空";
 "common.delete" = "删除";
 "common.space" = "空格";
@@ -119,7 +120,10 @@
 "settings.languageModels.title" = "语言与模型";
 "settings.localModels.title" = "本地模型";
 "settings.localModels.speechRole" = "语音识别";
+"settings.localModels.polishRole" = "润色";
 "settings.localModels.builtIn" = "内置";
+"settings.localModels.speechEngine" = "Apple iOS Speech";
+"settings.localModels.polishEngine" = "OSGKeyboard 内置";
 "settings.localModels.allReady" = "已就绪";
 "settings.localModels.readiness %lld %lld" = "%lld/%lld 已就绪";
 "settings.localModels.cloudPolish.title" = "识别后云端润色";
@@ -139,6 +143,7 @@
 "settings.handedness.title" = "握持偏好";
 "settings.handedness.left" = "左手";
 "settings.handedness.right" = "右手";
+"settings.cursorDragNavigation.title" = "麦克风旁拖动移动光标";
 "settings.systemPrompt.reset" = "重置";
 "settings.asrLocale" = "识别语言";
 "settings.engineBadge.ios26" = "SpeechAnalyzer — 始终端侧";
@@ -307,6 +312,7 @@
 /* Tabs */
 "tab.keyboard" = "键盘";
 "tab.history" = "历史";
+"tab.dictionary" = "词库";
 "tab.settings" = "设置";
 
 /* History */
@@ -332,14 +338,19 @@
 
 /* v0.3.0: 个性化词库 */
 "settings.personalDictionary.sectionTitle" = "个性化词库";
-"settings.personalDictionary.title" = "个性化词库";
+"settings.personalDictionary.title" = "个性词库";
 "settings.personalDictionary.summary" = "AI 润色时必须原样保留的词汇。";
-"settings.personalDictionary.intro.title" = "词库如何积累";
-"settings.personalDictionary.intro.body" = "你反复说出的词会自动学习。你也可以在这里编辑或删除任何词条。";
+"settings.personalDictionary.intro.title" = "关于词库";
+"settings.personalDictionary.intro.body" = "手动添加词条；保存后会自动生成常见误识别写法。点击词条可编辑。";
 "settings.personalDictionary.empty.title" = "还没有词条";
-"settings.personalDictionary.empty.body" = "你反复说出的词会出现在这里。你也可以在此页删除任何词条。";
+"settings.personalDictionary.empty.body" = "添加希望在语音纠错时保护的词汇。";
 "settings.personalDictionary.search.prompt" = "搜索词条";
 "settings.personalDictionary.usageCount" = "使用 %lld 次";
+"settings.personalDictionary.add.title" = "添加词条";
+"settings.personalDictionary.edit.title" = "编辑词条";
+"settings.personalDictionary.add.field" = "词条";
+"settings.personalDictionary.add.footer" = "保存后会自动用 DeepSeek 生成常见误识别写法，用于 ASR 纠错。";
+"settings.personalDictionary.aliases.generating" = "正在生成别名…";
 "settings.personalDictionary.clearAll" = "清空词库";
 "settings.personalDictionary.clearAll.confirmTitle" = "清空全部词条？";
 "settings.personalDictionary.clearAll.message" = "这会移除所有受保护的词汇，且无法撤销。";

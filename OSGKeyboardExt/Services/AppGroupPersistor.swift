@@ -41,7 +41,12 @@ public struct AppGroupPersistor {
         // the keyboard stays open.
         state.translationTargetLocaleId = store.translationTargetLocaleId
         state.handednessPreference = store.handednessPreference
+        state.cursorDragNavigationEnabled = store.cursorDragNavigationEnabled
         state.localModeCloudPolishEnabled = store.localModeCloudPolishEnabled
+        state.micDisabled = store.isCloudAPIKeyMissingForVoiceInput
+        state.micDisabledHint = store.isCloudAPIKeyMissingForVoiceInput
+            ? ExtL10n.string("keyboard.mic.disabled.missingApiKey")
+            : ""
         // v0.2.0: iOS `SpeechAnalyzer` is always ready; mirror that
         // into the State flags so downstream consumers see the same
         // shape they did when the previous Qwen3 stack reported "ready".
@@ -95,6 +100,11 @@ public struct AppGroupPersistor {
             state.translationTargetLocaleId = store.translationTargetLocaleId
         }
         state.handednessPreference = store.handednessPreference
+        state.cursorDragNavigationEnabled = store.cursorDragNavigationEnabled
+        state.micDisabled = store.isCloudAPIKeyMissingForVoiceInput
+        state.micDisabledHint = store.isCloudAPIKeyMissingForVoiceInput
+            ? ExtL10n.string("keyboard.mic.disabled.missingApiKey")
+            : ""
         // v0.2.0: iOS `SpeechAnalyzer` is always ready. Keep these
         // toggles here so the keyboard UI doesn't flicker if the host
         // app briefly clears them while refactoring.

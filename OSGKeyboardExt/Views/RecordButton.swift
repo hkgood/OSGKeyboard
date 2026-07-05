@@ -21,6 +21,7 @@ struct RecordButton: View {
     let level: Double          // 0...1
     /// Seconds left in the current utterance; shown only while recording.
     let remainingSeconds: Int?
+    let isEnabled: Bool
     let onToggle: () -> Void
 
     @State private var breath: Bool = false
@@ -29,11 +30,13 @@ struct RecordButton: View {
         phase: Phase,
         level: Double,
         remainingSeconds: Int? = nil,
+        isEnabled: Bool = true,
         onToggle: @escaping () -> Void
     ) {
         self.phase = phase
         self.level = level
         self.remainingSeconds = remainingSeconds
+        self.isEnabled = isEnabled
         self.onToggle = onToggle
     }
 
@@ -103,6 +106,8 @@ struct RecordButton: View {
                                     .foregroundStyle(.white)
                                     .monospacedDigit()
                                     .contentTransition(.numericText())
+                                    // 倒计时略下移，与波形一起在圆盘内更居中。
+                                    .offset(y: 3)
                             }
                             WaveformView(
                                 level: level,
@@ -110,13 +115,15 @@ struct RecordButton: View {
                                 active: true
                             )
                                 .frame(width: 73, height: 32)
+                                .opacity(0.4)
+                                .scaleEffect(0.96)
                         }
                         .transition(.opacity)
                     case .processing:
                         ProgressView()
                             .progressViewStyle(.circular)
                             .tint(palette.textPrimary)
-                            .scaleEffect(2.5)
+                            .scaleEffect(1.25)
                     case .error:
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 32, weight: .medium))
@@ -129,8 +136,9 @@ struct RecordButton: View {
             .animation(Motion.soft, value: remainingSeconds)
         }
         .contentShape(Circle())
+        .opacity(isEnabled ? 1 : 0.45)
         .onTapGesture {
-            guard phase != .processing else { return }
+            guard isEnabled, phase != .processing else { return }
             onToggle()
         }
         .onAppear { breath = (phase == .recording) }

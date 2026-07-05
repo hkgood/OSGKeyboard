@@ -15,6 +15,8 @@ final class LLMClientTests: XCTestCase {
         // leak into the next one unless we wipe it here. We intentionally
         // swallow errors — `errSecItemNotFound` is fine.
         try? Keychain.deleteAPIKey()
+        try? Keychain.deleteLegacyAPIKey()
+        try? Keychain.deleteAPIKey(for: "qwen")
         StubURLProtocolStorage.config = nil
         StubURLProtocolStorage.delaySeconds = 0
         StubURLProtocolStorage.lastRequest = nil
@@ -22,6 +24,8 @@ final class LLMClientTests: XCTestCase {
 
     override func tearDownWithError() throws {
         try? Keychain.deleteAPIKey()
+        try? Keychain.deleteLegacyAPIKey()
+        try? Keychain.deleteAPIKey(for: "qwen")
         StubURLProtocolStorage.config = nil
         StubURLProtocolStorage.delaySeconds = 0
         StubURLProtocolStorage.lastRequest = nil
@@ -394,54 +398,13 @@ final class LLMClientTests: XCTestCase {
         XCTAssertFalse(cloudStore.isTranslationEffective)
 
         defaults.set("local", forKey: "config.engineMode")
-        defaults.set(true, forKey: "config.localModeCloudPolishEnabled")
-        let localPolishOn = AppGroupStore(defaults: defaults)
-        XCTAssertTrue(localPolishOn.isTranslationChipVisible)
-        XCTAssertFalse(localPolishOn.isTranslationEffective)
-
-        defaults.set(false, forKey: "config.localModeCloudPolishEnabled")
-        let localPolishOff = AppGroupStore(defaults: defaults)
-        XCTAssertFalse(localPolishOff.isTranslationChipVisible)
+        defaults.set(TranslationLanguageCatalog.offLocaleId, forKey: "config.translationTargetLocaleId")
+        let localStore = AppGroupStore(defaults: defaults)
+        XCTAssertTrue(localStore.isTranslationChipVisible)
+        XCTAssertFalse(localStore.isTranslationEffective)
     }
 
-    /// Local engine with translation enabled must invoke the LLM even
-    /// when the cloud-polish toggle is off.
-    func testPolisherSkipsLLMWhenLocalCloudPolishOffEvenWithTranslation() async throws {
-        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defaults.removePersistentDomain(forName: suiteName)
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        defaults.set("local", forKey: "config.engineMode")
-        defaults.set("en", forKey: "config.translationTargetLocaleId")
-        defaults.set(false, forKey: "config.localModeCloudPolishEnabled")
-
-        let counter = CallCounter()
-        let countingClient = CountingLLMClient(counter: counter) { _, _ in
-            XCTFail("cloud LLMClient must not run when local cloud polish is off")
-            return ""
-        }
-
-        let store = AppGroupStore(defaults: defaults)
-        XCTAssertFalse(store.shouldRunCloudLLMStep)
-
-        let polisher = PolishingService(
-            store: store,
-            client: countingClient,
-            timeout: 1
-        )
-
-        let result = try await polisher.polish(
-            "  你好  ",
-            mode: .translate(targetLocaleId: "en"),
-            providerIdOverride: "deepseek"
-        )
-        XCTAssertEqual(result, "你好")
-        let calls = await counter.value()
-        XCTAssertEqual(calls, 0)
-    }
-
-    /// Local engine with cloud polish + translation enabled invokes LLM.
+    /// Local engine always runs the LLM step when translation is armed.
     func testPolisherTranslatesWhenLocalEngineTranslationEnabled() async throws {
         let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
@@ -450,7 +413,6 @@ final class LLMClientTests: XCTestCase {
 
         defaults.set("local", forKey: "config.engineMode")
         defaults.set("en", forKey: "config.translationTargetLocaleId")
-        defaults.set(true, forKey: "config.localModeCloudPolishEnabled")
 
         let counter = CallCounter()
         let countingClient = CountingLLMClient(counter: counter) { raw, prompt in
@@ -504,7 +466,7 @@ private struct CountingLLMClient: LLMClient {
 
     var requestTimeout: TimeInterval { 15 }
 
-    func polish(_ text: String, systemPrompt: String) async throws -> String {
+    func polish(_ text: String, systemPrompt: String, timeout: TimeInterval?) async throws -> String {
         await counter.bump()
         return try await body(text, systemPrompt)
     }

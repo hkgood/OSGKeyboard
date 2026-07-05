@@ -40,12 +40,13 @@ struct OpenSourceLicensesView: View {
                         .stroke(palette.divider, lineWidth: 0.5)
                 )
             }
-            .padding(.horizontal, Spacing.md)
+            .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.md)
         }
         .background(palette.background.ignoresSafeArea())
         .navigationTitle("settings.licenses.title")
         .navigationBarTitleDisplayMode(.inline)
+        .hidesTabBarWhenPushed()
     }
 
     private func licenseRow(_ entry: OpenSourceLicenseCatalog.Entry) -> some View {
@@ -105,11 +106,12 @@ private struct OpenSourceLicenseDetailView: View {
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, Spacing.md)
+            .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.md)
         }
         .background(palette.background.ignoresSafeArea())
         .navigationTitle(entry.name)
         .navigationBarTitleDisplayMode(.inline)
+        .hidesTabBarWhenPushed()
     }
 }

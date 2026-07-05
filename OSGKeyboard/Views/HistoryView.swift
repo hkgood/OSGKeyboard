@@ -8,6 +8,8 @@ struct HistoryView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @ObservedObject private var store = SpeechHistoryStore.shared
 
+    @State private var showClearConfirmation = false
+
     private static let dayFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
@@ -24,56 +26,51 @@ struct HistoryView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                PageHeaderRow(title: "history.title") {
-                    if !store.entries.isEmpty {
-                        PageHeaderConfirmButton(
-                            systemImage: "trash",
-                            accessibilityLabel: "history.clear.button",
-                            confirmTitle: "history.clear.title",
-                            confirmMessage: "history.clear.message",
-                            confirmActionTitle: "history.clear.confirm"
-                        ) {
-                            store.clearAll()
-                        }
-                    }
-                }
+            ZStack {
+                palette.background.ignoresSafeArea()
 
-                Text("history.subtitle")
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.bottom, Spacing.sm)
-
-                ZStack {
-                    palette.background.ignoresSafeArea()
-
-                    if store.entries.isEmpty {
-                        emptyState
-                    } else {
-                        ScrollView {
-                            LazyVStack(alignment: .leading, spacing: Spacing.xl) {
-                                ForEach(store.groupedByDay, id: \.day) { group in
-                                    daySection(day: group.day, items: group.items)
-                                }
+                if store.entries.isEmpty {
+                    emptyState
+                } else {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: Spacing.xl) {
+                            ForEach(store.groupedByDay, id: \.day) { group in
+                                daySection(day: group.day, items: group.items)
                             }
-                            .padding(.horizontal, Spacing.md)
-                            .padding(.vertical, Spacing.md)
-                            .padding(.bottom, 100)
                         }
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.vertical, Spacing.md)
+                        .tabBarScrollBottomPadding()
                     }
                 }
             }
             .background(palette.background)
-            .toolbar(.hidden, for: .navigationBar)
-        }
-        .task {
-            // v0.3.0: each time the user opens History, run a
-            // silent pass to lift frequently-dictated English
-            // identifiers into the personal dictionary. Cheap
-            // (≤ 5 ms for 200 entries on iPhone 12) and idempotent.
-            DictionaryLearner().learn(from: store.entries)
+            .navigationTitle("history.title")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                if !store.entries.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showClearConfirmation = true
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .accessibilityLabel("history.clear.button")
+                    }
+                }
+            }
+            .confirmationDialog(
+                "history.clear.title",
+                isPresented: $showClearConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("history.clear.confirm", role: .destructive) {
+                    store.clearAll()
+                }
+                Button("common.cancel", role: .cancel) {}
+            } message: {
+                Text("history.clear.message")
+            }
         }
     }
 

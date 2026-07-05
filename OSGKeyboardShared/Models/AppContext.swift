@@ -46,7 +46,7 @@ public enum AppContext: String, Codable, Sendable, CaseIterable {
         case .email:
             return "Email context: you may add a polite greeting or sign-off if the user clearly forgot one. Reasonable paragraph breaks. Keep tone professional but not stiff."
         case .chat:
-            return "Chat context: keep it short, conversational, and emoji-friendly. Drop formalities. Preserve the speaker's casual voice."
+            return "Chat context: keep it short, conversational, and natural. Drop formalities. Preserve the speaker's casual voice. Do not add emojis."
         case .document:
             return "Document context: add structure — split into paragraphs, use lists when the user enumerates. Keep tone written-formal. Do not invent headings the user did not say."
         case .unknown:

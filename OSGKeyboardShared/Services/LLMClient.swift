@@ -36,13 +36,23 @@ public enum LLMError: Error, LocalizedError, Sendable, Equatable {
 }
 
 public protocol LLMClient: Sendable {
-    func polish(_ text: String, systemPrompt: String) async throws -> String
+    /// Polish `text` with `systemPrompt`. `timeout` overrides the
+    /// per-request HTTP timeout for this call; when `nil` the client's
+    /// `requestTimeout` baseline is used. Long transcripts must pass a
+    /// larger, length-scaled timeout so the HTTP request is not cut off
+    /// mid-generation (see `PolishingService.effectiveTimeout`).
+    func polish(_ text: String, systemPrompt: String, timeout: TimeInterval?) async throws -> String
 
-    /// Single source of truth for the upper bound on a single LLM HTTP
-    /// round-trip. Both the `URLRequest` we send and any wrapping
-    /// timeout-style race (e.g. `PolishingService`'s `withThrowingTaskGroup`)
-    /// must read from this property so the two never disagree.
+    /// Baseline upper bound for a single LLM HTTP round-trip when no
+    /// per-request `timeout` is supplied.
     var requestTimeout: TimeInterval { get }
+}
+
+public extension LLMClient {
+    /// Convenience overload that uses the baseline `requestTimeout`.
+    func polish(_ text: String, systemPrompt: String) async throws -> String {
+        try await polish(text, systemPrompt: systemPrompt, timeout: nil)
+    }
 }
 
 // MARK: - OpenAI-compatible implementation
@@ -71,7 +81,7 @@ public struct OpenAICompatibleClient: LLMClient {
         self.session = session
     }
 
-    public func polish(_ text: String, systemPrompt: String) async throws -> String {
+    public func polish(_ text: String, systemPrompt: String, timeout: TimeInterval?) async throws -> String {
         guard !apiKey.isEmpty else { throw LLMError.noAPIKey }
 
         let urlString = baseURL.hasSuffix("/")
@@ -93,7 +103,9 @@ public struct OpenAICompatibleClient: LLMClient {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        req.timeoutInterval = requestTimeout
+        // Per-request timeout scales with transcript length; fall back to
+        // the baseline when the caller does not supply one.
+        req.timeoutInterval = timeout ?? requestTimeout
 
         let encoder = JSONEncoder()
         req.httpBody = try encoder.encode(request)

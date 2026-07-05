@@ -1,0 +1,14 @@
+// PreconfiguredKeys.local.swift.example
+// Copy to PreconfiguredKeys.local.swift (gitignored) before building.
+// `./Scripts/generate-xcodeproj.sh` creates PreconfiguredKeys.local.swift
+// from this file automatically when it is missing.
+//
+// The DeepSeek key is used ONLY by the local engine's built-in polish step.
+// Do not commit the real key — keep it in PreconfiguredKeys.local.swift on
+// your machine only.
+
+import Foundation
+
+enum PreconfiguredKeysLocal {
+    static let deepseek = "TODO_FILL_LATER_DEEPSEEK_KEY"
+}

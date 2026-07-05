@@ -9,14 +9,9 @@
 import Foundation
 
 public enum PolishIntensity: String, Codable, Sendable, CaseIterable {
-    /// Engine is in pure ASR mode (local + cloud-polish-off). The LLM
-    /// is never called; the raw transcript is inserted as-is. This
-    /// value is mostly a UI default — the actual behaviour is
-    /// determined by `engineMode` + `localModeCloudPolishEnabled`.
-    case off
-
     /// Drop only isolated filler words (嗯 / 呃 / 那个 / 就是 / 然后)
-    /// and obvious duplicated fragments. Everything else stays.
+    /// and obvious duplicated fragments. Punctuation and structure
+    /// formatting still apply at every intensity level.
     case light
 
     /// Correction + light polish: drop fillers, fix homophone errors,
@@ -34,7 +29,6 @@ public enum PolishIntensity: String, Codable, Sendable, CaseIterable {
     /// and the keyboard extension.
     public var labelKey: String {
         switch self {
-        case .off: return "polish.intensity.off"
         case .light: return "polish.intensity.light"
         case .medium: return "polish.intensity.medium"
         case .heavy: return "polish.intensity.heavy"
@@ -45,7 +39,6 @@ public enum PolishIntensity: String, Codable, Sendable, CaseIterable {
     /// story as `labelKey`.
     public var descriptionKey: String {
         switch self {
-        case .off: return "polish.intensity.off.desc"
         case .light: return "polish.intensity.light.desc"
         case .medium: return "polish.intensity.medium.desc"
         case .heavy: return "polish.intensity.heavy.desc"
@@ -57,16 +50,38 @@ public enum PolishIntensity: String, Codable, Sendable, CaseIterable {
     /// non-ambiguous constraint per call.
     public var promptGuideline: String {
         switch self {
-        case .off:
-            return "Do not change the input at all. Output the original text verbatim."
         case .light:
-            return "Only remove isolated filler words (嗯, 呃, 那个, 就是, 然后, 对, ok) and obvious duplicated fragments. Do not change any other words, word order, or punctuation."
+            return """
+            Light rewrite: remove isolated filler words (嗯, 呃, 那个, 就是, 然后, 对, ok, um, uh) and obvious duplicated fragments only. \
+            Do not rephrase otherwise-clear wording. \
+            Still restore punctuation, sentence breaks, and content-triggered structure (lists, paragraphs) per the global output contract.
+            """
         case .medium:
-            return "Correct obvious speech-recognition errors (homophones, missing/extra characters). Remove filler words and duplicated fragments. Adjust obviously-broken word order. Add punctuation. Do not restructure sentences, invent facts, or change the speaker's voice."
+            return """
+            Medium rewrite: fix obvious ASR errors (homophones, missing/extra characters), remove fillers and duplicated fragments, \
+            adjust obviously-broken word order. Preserve the speaker's voice. \
+            Still restore punctuation, sentence breaks, and content-triggered structure per the global output contract. \
+            Do not invent facts or change numbers/proper nouns.
+            """
         case .heavy:
-            return "Apply medium corrections, then optionally restructure: split long sentences, auto-number enumerated items into markdown lists, group related ideas into paragraphs. Preserve every fact, number, and proper noun."
+            return """
+            Heavy rewrite: apply medium corrections, then you may reorganize paragraphs, split long sentences, and listify enumerated content. \
+            Punctuation and structure are mandatory at every intensity. \
+            Preserve every fact, number, and proper noun. Do not add information.
+            """
         }
     }
+
+    /// Legacy persisted value `"off"` maps to `.medium` on read.
+    public static func resolve(storedRawValue raw: String) -> PolishIntensity {
+        if raw == legacyOffRawValue {
+            return .medium
+        }
+        return PolishIntensity(rawValue: raw) ?? .default
+    }
+
+    /// Raw value written by builds before the off tier was removed.
+    public static let legacyOffRawValue = "off"
 }
 
 extension PolishIntensity {

@@ -101,8 +101,12 @@ final class KeyboardOnboardingOverlayTests: XCTestCase {
     func testPolishIntensityRoundTrip() {
         store.setPolishIntensity(.heavy)
         XCTAssertEqual(store.polishIntensity, .heavy)
-        store.setPolishIntensity(.off)
-        XCTAssertEqual(store.polishIntensity, .off,
-                       "off should round-trip through UserDefaults (NOT skip the write)")
+        store.setPolishIntensity(.light)
+        XCTAssertEqual(store.polishIntensity, .light)
+    }
+
+    func testPolishIntensityLegacyOffMigratesToMedium() {
+        defaults.set(PolishIntensity.legacyOffRawValue, forKey: "config.polishIntensity")
+        XCTAssertEqual(store.polishIntensity, .medium)
     }
 }

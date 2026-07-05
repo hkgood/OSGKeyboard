@@ -71,6 +71,11 @@ public final class KeyboardState: ObservableObject {
     @Published public var utteranceRemainingSeconds: Int = Int(FlowSessionKeys.maxUtteranceDuration)
     /// Whether the host app's Flow voice session is currently valid.
     @Published public var flowSessionActive: Bool = false
+    /// When true, the mic is intentionally disabled (e.g. cloud engine
+    /// selected but the provider-specific API key is missing).
+    @Published public var micDisabled: Bool = false
+    /// One-line helper shown above the mic while `micDisabled == true`.
+    @Published public var micDisabledHint: String = ""
     /// "local" → on-device ASR only. "cloud" → ASR + LLM polish.
     @Published public var engineMode: String = "cloud"
     /// Which on-device ASR engine to use when `engineMode == "local"`.
@@ -98,24 +103,23 @@ public final class KeyboardState: ObservableObject {
     /// Defaults to `offLocaleId` so the keyboard boots in the "off"
     /// state on first install.
     @Published public var translationTargetLocaleId: String = TranslationLanguageCatalog.offLocaleId
-    /// v0.2.0: mirrored from App Group — local engine runs the cloud
-    /// LLM step only when this is `true`.
-    @Published public var localModeCloudPolishEnabled: Bool = false
+    /// v0.2.0: mirrored from App Group — kept for source compatibility.
+    /// Local engine always runs built-in polish; the flag is ignored.
+    @Published public var localModeCloudPolishEnabled: Bool = true
     /// Mirrored from App Group — swaps delete / return on the bottom row.
     @Published public var handednessPreference: HandednessPreference = .left
-    /// Whether translate-and-polish is actually armed for the current
-    /// engine (local requires cloud polish + a target locale).
+    /// Press-and-drag pads beside the mic for four-way caret movement.
+    @Published public var cursorDragNavigationEnabled: Bool = true
+    /// `true` while a cursor-drag pad is being pressed — drives the hint
+    /// shown above the mic.
+    @Published public var cursorDragActive: Bool = false
+    /// Whether translate-and-polish is armed for the current engine.
     public var isTranslationEffective: Bool {
-        guard translationEnabled else { return false }
-        if isLocalEngine { return localModeCloudPolishEnabled }
-        return true
+        translationEnabled
     }
 
     /// Whether the keyboard top-bar translation chip should render.
-    public var isTranslationChipVisible: Bool {
-        if isLocalEngine { return localModeCloudPolishEnabled }
-        return true
-    }
+    public var isTranslationChipVisible: Bool { true }
 
     /// Convenience shorthand used by the pipeline and views.
     public var isLocalEngine: Bool { engineMode == "local" }
@@ -168,6 +172,11 @@ public final class KeyboardState: ObservableObject {
     public var insertNewline:       () -> Void = {}
     public var insertSpace:         () -> Void = {}
     public var deleteBackward:      () -> Void = {}
+    public var moveCursorHorizontal: (Int) -> Void = { _ in }
+    public var moveCursorVertical:   (Int) -> Void = { _ in }
+    /// Cursor-drag pad press lifecycle — updates `cursorDragActive` and
+    /// lets the view controller reset vertical-navigation stickiness.
+    public var setCursorDragActive:  (Bool) -> Void = { _ in }
 
     // MARK: - Preview helpers (DEBUG only)
 

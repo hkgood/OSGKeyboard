@@ -1,19 +1,14 @@
 // PreconfiguredKeys.swift
 // OSGKeyboard · Shared
 //
-// v0.2.1 follow-up: preconfigured API keys for built-in cloud providers
-// the keyboard ships with out of the box. Today the only one is DeepSeek
-// — the local engine's default polish vendor (see
-// `ProviderConfig.localModeProviderId`). Future builds may pre-fill
-// additional providers as we harden them.
+// Built-in API keys for engine-specific polish vendors. The local engine
+// pins DeepSeek; the actual key lives in `PreconfiguredKeys.local.swift`
+// (gitignored) so it never ships in the public repo.
 //
-// These constants live in source so a developer building from the repo
-// can swap in their own key once and have every Debug / TestFlight build
-// "just work" without round-tripping the Keychain settings UI.
-//
-// IMPORTANT: Replace the placeholder string with a real key before
-// shipping a build. The DEBUG assert below catches the placeholder at
-// launch so nobody accidentally publishes an "always 401" build.
+// `./Scripts/generate-xcodeproj.sh` copies
+// `PreconfiguredKeys.local.swift.example` → `PreconfiguredKeys.local.swift`
+// on first run. Replace the placeholder in the local file before
+// distributing a build that uses the local engine.
 
 import Foundation
 
@@ -22,29 +17,33 @@ public enum PreconfiguredKeys {
     /// this is treated as "configured".
     private static let placeholder = "TODO_FILL_LATER_DEEPSEEK_KEY"
 
-    /// Preconfigured DeepSeek API key. Replace `placeholder` with a
-    /// real key in `Sources/.../PreconfiguredKeys.swift` before
-    /// distributing a build.
-    public static let deepseek: String = "REMOVED_LEAKED_DEEPSEEK_KEY"
+    /// DeepSeek API key for the local engine's built-in polish step.
+    public static var deepseek: String {
+        PreconfiguredKeysLocal.deepseek
+    }
+
+    public static var isDeepseekConfigured: Bool {
+        deepseek != placeholder && !deepseek.isEmpty
+    }
 
     #if DEBUG
     /// Forces a lazy init at app launch in DEBUG builds so the assert
     /// below fires immediately when somebody forgets to swap the
     /// placeholder. The boolean is intentionally unused at runtime —
     /// it's a tripwire.
-    public static let isDeepseekConfigured: Bool = {
+    public static let debugDeepseekTripwire: Bool = {
         assert(
-            deepseek != placeholder,
-            "DeepSeek preconfigured key not filled — replace TODO_FILL_LATER_DEEPSEEK_KEY in PreconfiguredKeys.swift before building"
+            isDeepseekConfigured,
+            "DeepSeek preconfigured key not filled — copy PreconfiguredKeys.local.swift.example to PreconfiguredKeys.local.swift and set your key"
         )
-        return deepseek != placeholder
+        return isDeepseekConfigured
     }()
 
     /// Touch the tripwire so the assert fires at launch rather than
     /// only the first time the local engine actually tries to polish.
     /// Called from app startup; safe to invoke multiple times.
     public static func assertProductionReadinessAtLaunch() {
-        _ = isDeepseekConfigured
+        _ = debugDeepseekTripwire
     }
     #endif
 }

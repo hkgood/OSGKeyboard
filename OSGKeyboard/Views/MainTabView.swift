@@ -9,6 +9,7 @@ struct MainTabView: View {
     @EnvironmentObject private var flowManager: FlowSessionManager
 
     @State private var tab: AppTab = .keyboard
+    @State private var isTabBarHidden = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -20,17 +21,33 @@ struct MainTabView: View {
                     HomeView()
                 case .history:
                     HistoryView()
+                case .dictionary:
+                    PersonalDictionaryView()
                 case .settings:
                     SettingsView(presentation: .tab)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .environment(\.isTabBarVisible, !isTabBarHidden)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                Color.clear.frame(height: 88)
+                if !isTabBarHidden {
+                    Color.clear.frame(height: 88)
+                }
+            }
+            .onPreferenceChange(TabBarHiddenPreferenceKey.self) { hidden in
+                withAnimation(Motion.quick) {
+                    isTabBarHidden = hidden
+                }
             }
 
-            MinimalTabBar(selection: $tab)
+            if !isTabBarHidden {
+                MinimalTabBar(selection: $tab)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
+        // Keep home card/input/tab layout fixed when system keyboard appears.
+        // Let the keyboard overlay the content instead of pushing it.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .onAppear { flowManager.autoStartIfNeeded() }
     }
 }

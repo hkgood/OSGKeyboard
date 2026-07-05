@@ -5,7 +5,8 @@
 "engine.asr.appleSpeech" = "Apple 语音识别";
 
 /* v0.2.0: flow-level warnings surfaced alongside the final transcript. */
-"flow.warning.cloudPolishMissingKey" = "云端润色/翻译需要 DeepSeek API Key，本次已插入原始识别结果。本地引擎请在 PreconfiguredKeys.swift 配置；云端引擎请在设置中填写 API Key。";
+"flow.warning.cloudPolishMissingKey" = "云端润色需要先在设置中填写 API Key，本次已插入原始识别结果。";
+"flow.warning.localPolishUnavailable" = "内置润色暂不可用，本次已插入原始识别结果。";
 
 /* LLM providers */
 "provider.openai" = "OpenAI";
@@ -54,9 +55,9 @@
 "polish.intensity.light" = "轻度";
 "polish.intensity.medium" = "中度";
 "polish.intensity.heavy" = "深度";
-"polish.intensity.off.desc" = "不调用 LLM，直接插入识别原文。";
-"polish.intensity.light.desc" = "仅清除孤立语气词和重复口误。";
-"polish.intensity.medium.desc" = "纠正识别错误、清除语气词、润色语句。推荐默认。";
+"polish.intensity.off.desc" = "不润色；词库为空时直接插入识别原文，有词条时仅做 ASR 纠错。";
+"polish.intensity.light.desc" = "仅清除孤立语气词和重复口误；标点和结构化仍会生效。";
+"polish.intensity.medium.desc" = "纠正识别错误、清除语气词、润色语句；始终补标点与结构化。推荐默认。";
 "polish.intensity.heavy.desc" = "可重组段落、拆长句、自动编号。适合会议纪要与报告。";
 
 /* v0.3.0: 输入场景标签 */

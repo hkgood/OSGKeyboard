@@ -102,9 +102,11 @@ struct EnginePickerSection: View {
     private func selectEngine(_ id: String) {
         withAnimation(.easeInOut(duration: 0.2)) {
             config.engineMode = id
-            // Cloud always runs ASR + LLM polish; no off/transcribe toggle.
             if id == "cloud" {
                 config.modeId = "polish"
+                if config.providerId == "deepseek" {
+                    config.apply(preset: LLMProvider.provider(id: "openai"))
+                }
             }
         }
     }

@@ -11,10 +11,8 @@ struct ProviderPickerSection: View {
 
     var body: some View {
         // v0.2.1 follow-up: filter out presets marked as
-        // `isUserSelectable == false` so a future "DeepSeek key
-        // pre-fill" preset (or similar) can ship in `presets` without
-        // showing up in the picker.
-        let visiblePresets = LLMProvider.presets.filter { $0.isUserSelectable }
+        // `isUserSelectable == false` (DeepSeek is local-engine only).
+        let visiblePresets = LLMProvider.userSelectablePresets
         VStack(spacing: 0) {
             ForEach(Array(visiblePresets.enumerated()), id: \.element.id) { index, provider in
                 Button {

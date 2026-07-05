@@ -25,8 +25,12 @@ private enum KeyboardLayoutMetrics {
     static let bottomActionRowHeight: CGFloat = 48
     static let bottomActionFixedWidth: CGFloat = 86
     static let bottomActionSpacing: CGFloat = Spacing.xs
-    /// Gap between the top chip row and the transcript / hint line (4 pt → 8 pt, +100%).
-    static let topBarToTranscriptSpacing: CGFloat = Spacing.xs
+    /// Gap between the top chip row and the transcript / hint line.
+    /// Tightened (8 → 4) so the "点按说话" line hugs the chip row. The
+    /// space reclaimed here and from `actionClusterTopGap` is added back
+    /// into `actionClusterBottomGap`, keeping `totalHeight` constant while
+    /// nudging the mic up toward the vertical centre.
+    static let topBarToTranscriptSpacing: CGFloat = Spacing.xs / 2
     /// Outer inset for the bottom action row from screen edges (8 pt → 24 pt, +200%).
     static let sideActionHorizontalInset: CGFloat = Spacing.xs * 3
 
@@ -37,16 +41,18 @@ private enum KeyboardLayoutMetrics {
     static let transcriptLineHeight: CGFloat = 22
     /// mic (121) + gap (8) + bottom row (48) = 177 pt
     static let actionClusterHeight: CGFloat = micSize + micToButtonGap + bottomActionRowHeight
-    /// Gap between transcript line and mic (−30% from former 16 pt).
-    static let actionClusterTopGap: CGFloat = Spacing.md * 0.7
-    /// Minimal gap below the bottom action row.
-    static let actionClusterBottomGap: CGFloat = Spacing.xs / 2
+    /// Gap between transcript line and mic. Tightened (11.2 → 4) to pull
+    /// the mic up; the reclaimed space moves to `actionClusterBottomGap`.
+    static let actionClusterTopGap: CGFloat = Spacing.xs / 2
+    /// Gap below the bottom action row.
+    static let actionClusterBottomGap: CGFloat = 6
 
     static var headerBandHeight: CGFloat {
         topBarHeight + topBarToTranscriptSpacing + transcriptLineHeight
     }
 
-    /// 2 + 68 + 11.2 + 177 + 4 + 1 = 263.2 pt
+    /// 2 + 64 + 4 + 177 + 15.2 + 1 = 263.2 pt (unchanged; the mic cluster
+    /// just sits higher now that the top gaps moved to the bottom gap).
     static var totalHeight: CGFloat {
         outerPaddingTop
             + headerBandHeight
@@ -69,6 +75,17 @@ public struct KeyboardRootView: View {
     /// Content-driven keyboard height; mirrored on `UIInputViewController.view`
     /// in `KeyboardViewController` (see `KeyboardLayoutMetrics.totalHeight`).
     static let totalHeight: CGFloat = KeyboardLayoutMetrics.totalHeight
+
+    // MARK: - Cursor-drag pad geometry
+
+    /// Mic disc side length.
+    static let micSize: CGFloat = KeyboardLayoutMetrics.micSize
+    /// Vertical offset from the keyboard's top edge to the mic disc.
+    static let micTopOffset: CGFloat = KeyboardLayoutMetrics.outerPaddingTop
+        + KeyboardLayoutMetrics.headerBandHeight
+        + KeyboardLayoutMetrics.actionClusterTopGap
+    /// Horizontal inset the side pads should respect.
+    static let sideInset: CGFloat = KeyboardLayoutMetrics.sideActionHorizontalInset
 
     private var palette: ThemePalette {
         colorScheme == .dark ? Palette.dark : Palette.light
@@ -109,6 +126,7 @@ public struct KeyboardRootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.18), value: state.hasCompletedOnboarding)
+        .animation(.easeInOut(duration: 0.12), value: state.cursorDragActive)
     }
 
     /// Top chip row + transcript / hint line.
@@ -121,9 +139,12 @@ public struct KeyboardRootView: View {
                 phase: state.phase,
                 transcript: state.lastTranscript,
                 flowSessionActive: state.flowSessionActive,
+                micDisabled: state.micDisabled,
+                micDisabledHint: state.micDisabledHint,
                 isLocalEngine: state.isLocalEngine,
                 localModelsReady: state.localModelsReady,
                 localModelsLoaded: state.localModelsLoaded,
+                cursorDragHintActive: state.cursorDragActive,
                 openSettings: state.openSettings,
                 startFlowSession: state.startFlowSession
             )
@@ -142,7 +163,14 @@ public struct KeyboardRootView: View {
             }
             // App context is auto-detected on each mic press — no UI.
             if state.isTranslationChipVisible {
-                TranslationChip(state: state)
+                TranslationChip(
+                    palette: palette,
+                    targetLocaleId: state.translationTargetLocaleId,
+                    onSelect: state.setTranslationTargetLocaleId
+                )
+                // Decouple the open picker from the keyboard's 1 Hz App
+                // Group poll so scrolling doesn't reset / dismiss it.
+                .equatable()
             }
             Spacer(minLength: 0)
             Button(action: state.openSettings) {
@@ -162,18 +190,37 @@ public struct KeyboardRootView: View {
     // MARK: - Action cluster
 
     /// Mic centred above a bottom row: delete · space · return (or swapped).
+    /// The side cursor-drag pads are SwiftUI layout wrappers around UIKit
+    /// pan recognizers, avoiding SwiftUI gesture delivery issues in
+    /// keyboard extensions.
     private var micActionRow: some View {
         let editingBlocked = voiceInputBlocksEditing
         let swapKeys = state.handednessPreference.swapsActionKeys
+        let micDisabled = state.micDisabled
+        let cursorPadsEnabled = state.cursorDragNavigationEnabled && !editingBlocked
+
+        // Dragging hides the mic + bottom keys (kept in the layout via
+        // opacity so the pads' hit area never shifts mid-gesture) and lets
+        // the cursor-drag chrome take over.
+        let dragging = state.cursorDragActive
 
         return VStack(spacing: KeyboardLayoutMetrics.micToButtonGap) {
-            RecordButton(
-                phase: buttonPhase,
-                level: state.level,
-                remainingSeconds: state.phase == .recording ? state.utteranceRemainingSeconds : nil,
-                onToggle: state.tapMic
-            )
-            .frame(width: KeyboardLayoutMetrics.micSize, height: KeyboardLayoutMetrics.micSize)
+            HStack(spacing: 0) {
+                cursorDragPad(enabled: cursorPadsEnabled)
+
+                RecordButton(
+                    phase: buttonPhase,
+                    level: state.level,
+                    remainingSeconds: state.phase == .recording ? state.utteranceRemainingSeconds : nil,
+                    isEnabled: !micDisabled,
+                    onToggle: state.tapMic
+                )
+                .frame(width: KeyboardLayoutMetrics.micSize, height: KeyboardLayoutMetrics.micSize)
+                .opacity(dragging ? 0 : 1)
+
+                cursorDragPad(enabled: cursorPadsEnabled)
+            }
+            .frame(height: KeyboardLayoutMetrics.micSize)
 
             HStack(spacing: KeyboardLayoutMetrics.bottomActionSpacing) {
                 if swapKeys {
@@ -186,9 +233,21 @@ public struct KeyboardRootView: View {
                     bottomReturnButton(disabled: editingBlocked)
                 }
             }
+            .opacity(dragging ? 0 : 1)
         }
         .padding(.horizontal, KeyboardLayoutMetrics.sideActionHorizontalInset)
         .frame(maxWidth: .infinity)
+    }
+
+    private func cursorDragPad(enabled: Bool) -> some View {
+        CursorDragPad(
+            enabled: enabled,
+            onPressingChanged: state.setCursorDragActive,
+            moveHorizontal: state.moveCursorHorizontal,
+            moveVertical: state.moveCursorVertical
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
     }
 
     private func bottomDeleteButton(disabled: Bool) -> some View {
@@ -276,17 +335,39 @@ private struct TranscriptLine: View {
     let phase: KeyboardViewController.State.Phase
     let transcript: String
     let flowSessionActive: Bool
+    let micDisabled: Bool
+    let micDisabledHint: String
     let isLocalEngine: Bool
     let localModelsReady: Bool
     let localModelsLoaded: Bool
+    let cursorDragHintActive: Bool
     let openSettings: () -> Void
     let startFlowSession: () -> Void
 
     var body: some View {
         ZStack {
-            switch phase {
-            case .idle:
-                if isLocalEngine, !localModelsReady {
+            // While dragging the caret, the whole mic cluster + transcript
+            // line give way to the cursor-drag overlay, so hide this line's
+            // "点按说话" / status text entirely.
+            if !cursorDragHintActive {
+                phaseContent
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Spacing.md)
+    }
+
+    @ViewBuilder
+    private var phaseContent: some View {
+        switch phase {
+        case .idle:
+                if micDisabled {
+                    Text(micDisabledHint)
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.warning)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                } else if isLocalEngine, !localModelsReady {
                     Button(action: openSettings) {
                         HStack(spacing: 4) {
                             Text(ExtL10n.string("keyboard.models.notDownloaded"))
@@ -335,14 +416,11 @@ private struct TranscriptLine: View {
                     .truncationMode(.head)
                     .frame(maxWidth: .infinity)
             case .processing:
-                HStack(spacing: 6) {
-                    ProgressView().controlSize(.mini).tint(palette.accent)
-                    Text(transcript.isEmpty ? ExtL10n.string("keyboard.placeholder.processing") : transcript)
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.textSecondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
+                Text(transcript.isEmpty ? ExtL10n.string("keyboard.placeholder.processing") : transcript)
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             case .error(_, let msg):
                 Text(msg ?? "")
                     .font(TypeStyle.caption)
@@ -365,10 +443,7 @@ private struct TranscriptLine: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint(ExtL10n.text("keyboard.deniedHint"))
-            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, Spacing.md)
     }
 
     private func deniedMessage(for reason: KeyboardViewController.State.Phase.Reason) -> String {

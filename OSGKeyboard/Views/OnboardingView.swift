@@ -735,26 +735,9 @@ private struct APISetupPage: View {
                     APISettingsCard(config: config)
                         .padding(.horizontal, Spacing.lg)
                 } else {
-                    // v0.2.0: local engine is iOS `SpeechAnalyzer` only.
-                    // Surface the cloud-polish toggle and a one-line
-                    // reminder that the iOS ASR is bundled with iOS 26
-                    // (no download step).
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text("onboarding.api.localModels.hint")
-                            .font(TypeStyle.caption2)
-                            .foregroundStyle(palette.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        LocalModelsGroup(config: config)
-                            .background(
-                                palette.surface,
-                                in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                                    .stroke(palette.divider, lineWidth: 0.5)
-                            )
-                    }
-                    .padding(.horizontal, Spacing.lg)
+                    // Local engine: built-in ASR + built-in polish (no API card).
+                    LocalModelsGroup(config: config)
+                        .padding(.horizontal, Spacing.lg)
                 }
 
             }

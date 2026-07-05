@@ -45,6 +45,8 @@ public struct AppGroupStore: @unchecked Sendable {
         // computed shim for source compatibility.
         static let translationTargetLocaleId = "config.translationTargetLocaleId"
         static let handednessPreference = "config.handednessPreference"
+        // Drag pads beside the mic move the caret like arrow keys.
+        static let cursorDragNavigationEnabled = "config.cursorDragNavigationEnabled"
         // v0.3.0: polish intensity (off / light / medium / heavy).
         static let polishIntensity = "config.polishIntensity"
         // v0.3.0: last app context detected by the keyboard extension.
@@ -70,7 +72,7 @@ public struct AppGroupStore: @unchecked Sendable {
     /// Returns "" when nothing is stored so the LLMClient can surface a
     /// `noAPIKey` error rather than firing off an obviously-bad request.
     public var apiKey: String {
-        Keychain.apiKey() ?? ""
+        Keychain.apiKey(for: providerId) ?? ""
     }
 
     public var model: String {
@@ -137,6 +139,15 @@ public struct AppGroupStore: @unchecked Sendable {
         HandednessPreference.fromStored(defaults.string(forKey: Key.handednessPreference))
     }
 
+    /// Press-and-drag pads beside the mic for four-way caret movement.
+    /// Defaults to `true` for new installs.
+    public var cursorDragNavigationEnabled: Bool {
+        guard defaults.object(forKey: Key.cursorDragNavigationEnabled) != nil else {
+            return true
+        }
+        return defaults.bool(forKey: Key.cursorDragNavigationEnabled)
+    }
+
     // MARK: - Writes
 
     public func setModeId(_ id: String) {
@@ -187,29 +198,30 @@ public struct AppGroupStore: @unchecked Sendable {
         AppGroupConfigDarwin.postConfigChanged()
     }
 
-    /// Whether ASR output should be sent through the cloud LLM step.
-    /// Cloud engine: always. Local engine: only when cloud polish is
-    /// enabled (translation is a sub-option of that step).
-    public var shouldRunCloudLLMStep: Bool {
-        if engineMode == "cloud" { return true }
-        return localModeCloudPolishEnabled
+    public func setCursorDragNavigationEnabled(_ enabled: Bool) {
+        defaults.set(enabled, forKey: Key.cursorDragNavigationEnabled)
+        AppGroupConfigDarwin.postConfigChanged()
     }
+
+    /// Whether ASR output should be sent through the LLM polish step.
+    /// Both engines always run polish after ASR completes (chunked
+    /// pipeline stitches first). Ultra-short structure-free utterances
+    /// may skip the LLM inside `PolishingService`.
+    public var shouldRunCloudLLMStep: Bool { true }
 
     /// Whether translate-and-polish should run (vs polish-only).
     public var isTranslationEffective: Bool {
-        guard translationEnabled else { return false }
-        if engineMode == "local" { return localModeCloudPolishEnabled }
-        return true
+        translationEnabled
     }
 
     /// Whether the keyboard top-bar translation chip should render.
-    /// Cloud engine: always. Local engine: when cloud polish is enabled
-    /// (translation is a sub-option of that LLM step). Independent of
-    /// whether a target locale is currently selected — the chip stays
-    /// visible so the user can pick "不翻译" or a language in-place.
-    public var isTranslationChipVisible: Bool {
-        if engineMode == "cloud" { return true }
-        return localModeCloudPolishEnabled
+    public var isTranslationChipVisible: Bool { true }
+
+    /// Cloud engine requires a provider-specific API key before the user
+    /// can start voice input. Local engine uses the built-in DeepSeek path.
+    public var isCloudAPIKeyMissingForVoiceInput: Bool {
+        guard engineMode == "cloud" else { return false }
+        return apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     /// Polish vs translate-and-polish for the active pipeline.
@@ -230,10 +242,14 @@ public struct AppGroupStore: @unchecked Sendable {
     /// How aggressively the LLM should rewrite the ASR transcript.
     /// Defaults to `medium` for new installs.
     public var polishIntensity: PolishIntensity {
-        guard let raw = defaults.string(forKey: Key.polishIntensity),
-              let value = PolishIntensity(rawValue: raw)
-        else { return .default }
-        return value
+        guard let raw = defaults.string(forKey: Key.polishIntensity) else {
+            return .default
+        }
+        let resolved = PolishIntensity.resolve(storedRawValue: raw)
+        if raw == PolishIntensity.legacyOffRawValue {
+            defaults.set(resolved.rawValue, forKey: Key.polishIntensity)
+        }
+        return resolved
     }
 
     public func setPolishIntensity(_ intensity: PolishIntensity) {
@@ -296,7 +312,17 @@ public struct AppGroupStore: @unchecked Sendable {
                 return .empty
             }
             do {
-                return try JSONDecoder().decode(PersonalDictionary.self, from: data)
+                var dictionary = try JSONDecoder().decode(PersonalDictionary.self, from: data)
+                if dictionary.entries.contains(where: { $0.source == .history }) {
+                    for index in dictionary.entries.indices where dictionary.entries[index].source == .history {
+                        dictionary.entries[index].source = .manual
+                    }
+                    dictionary.version += 1
+                    if let migrated = try? JSONEncoder().encode(dictionary) {
+                        defaults.set(migrated, forKey: Key.personalDictionary)
+                    }
+                }
+                return dictionary
             } catch {
                 #if DEBUG
                 print("⚠️ [AppGroupStore] personalDictionary decode failed: \(error)")

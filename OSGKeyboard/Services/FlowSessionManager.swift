@@ -622,7 +622,7 @@ final class FlowSessionManager: ObservableObject {
             // so the keyboard can show the "fill in your key" hint
             // inline rather than a generic failure message. The raw
             // transcript is still delivered — no data loss.
-            let warning = Self.warningFromPolishError(error) ?? chunkNote
+            let warning = Self.warningFromPolishError(error, engineMode: engineMode) ?? chunkNote
             FlowDiagnostics.log(
                 "polish failed after \(String(format: "%.1f", Date().timeIntervalSince(polishStarted)))s: " +
                 "\(error.localizedDescription)"
@@ -667,10 +667,13 @@ final class FlowSessionManager: ObservableObject {
     /// v0.2.0: surface the local-mode cloud-polish error path with a
     /// localised hint ("please fill in your DeepSeek key in Settings")
     /// rather than letting the keyboard show a generic network error.
-    private static func warningFromPolishError(_ error: Error) -> String? {
+    private static func warningFromPolishError(_ error: Error, engineMode: String) -> String? {
         guard let polishError = error as? PolishingService.PolishError,
               polishError == .missingAPIKey else {
             return nil
+        }
+        if engineMode == "local" {
+            return AppL10n.string("flow.warning.localPolishUnavailable")
         }
         return AppL10n.string("flow.warning.cloudPolishMissingKey")
     }

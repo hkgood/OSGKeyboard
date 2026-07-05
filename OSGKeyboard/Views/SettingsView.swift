@@ -28,91 +28,76 @@ struct SettingsView: View {
 
     // Dynamic locale list loaded from SFSpeechRecognizer on first appear.
     @State private var dynamicLocales: [(id: String, onDevice: Bool)] = []
+    @State private var showResetConfirmation = false
     // v0.2.0: no on-device model manager / pending download state —
     // iOS `SpeechAnalyzer` ships with iOS 26 and needs nothing
     // downloaded.
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                PageHeaderRow(title: "settings.title") {
-                    HStack(spacing: Spacing.xs) {
-                        PageHeaderConfirmButton(
-                            systemImage: "arrow.counterclockwise",
-                            accessibilityLabel: "settings.reset.confirm",
-                            confirmTitle: "settings.reset.title",
-                            confirmMessage: "settings.reset.message",
-                            confirmActionTitle: "common.reset"
-                        ) {
-                            config.reset()
-                            SpeechHistoryStore.shared.clearAll()
+            ZStack {
+                palette.background.ignoresSafeArea()
+                ScrollView {
+                    VStack(spacing: Spacing.md) {
+                        languageAndPolishSection
+                        engineSection
+                        // v0.2.1: hide provider/api card when the
+                        // local engine is active regardless of the
+                        // cloud-polish toggle. Local mode is
+                        // contractually ASR-only, so provider/model/
+                        // base URL/API key controls have no use —
+                        // and exposing them invites the user to fill
+                        // out a DeepSeek key they can't use.
+                        if config.engineMode == "cloud" {
+                            providerSection
+                            apiSection
                         }
-                        if presentation == .sheet {
-                            Button("common.done") { dismiss() }
-                                .font(TypeStyle.headline)
-                                .foregroundStyle(palette.accent)
-                                .frame(minHeight: 44)
+                        if config.engineMode == "local" {
+                            localEngineSettingsSection
+                        }
+                        if presentation == .tab {
+                            footerLinks
                         }
                     }
-                }
-
-                ZStack {
-                    palette.background.ignoresSafeArea()
-                    ScrollView {
-                        VStack(spacing: Spacing.md) {
-                            appLanguageSection
-                            engineSection
-                            languageAndPolishSection
-                            // v0.2.1: hide provider/api card when the
-                            // local engine is active regardless of the
-                            // cloud-polish toggle. Local mode is
-                            // contractually ASR-only, so provider/model/
-                            // base URL/API key controls have no use —
-                            // and exposing them invites the user to fill
-                            // out a DeepSeek key they can't use.
-                            if config.engineMode == "cloud" {
-                                providerSection
-                                apiSection
-                            }
-                            if config.engineMode == "local" {
-                                localEngineSettingsSection
-                            }
-                            if presentation == .tab {
-                                preferencesSection
-                                footerLinks
-                            }
-                        }
-                        .padding(.horizontal, Spacing.md)
-                        .padding(.vertical, Spacing.md)
-                        .padding(.bottom, presentation == .tab ? 100 : Spacing.lg)
-                    }
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.vertical, Spacing.md)
+                    .modifier(SettingsScrollBottomPadding(presentation: presentation))
                 }
             }
             .background(palette.background)
-            .toolbar(.hidden, for: .navigationBar)
+            .navigationTitle("settings.title")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showResetConfirmation = true
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                    }
+                    .accessibilityLabel("settings.reset.confirm")
+                    .confirmationDialog(
+                        "settings.reset.title",
+                        isPresented: $showResetConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("common.reset", role: .destructive) {
+                            config.reset()
+                            SpeechHistoryStore.shared.clearAll()
+                        }
+                        Button("common.cancel", role: .cancel) {}
+                    } message: {
+                        Text("settings.reset.message")
+                    }
+                }
+                if presentation == .sheet {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("common.done") { dismiss() }
+                    }
+                }
+            }
             .task { await loadDynamicLocales() }
             // v0.2.0: no on-device model manager to refresh — the
             // iOS ASR backend is always ready.
-        }
-    }
-
-    // MARK: - App language
-
-    private var appLanguageSection: some View {
-        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.appLanguage.title")
-            Picker("", selection: $config.uiLanguage) {
-                ForEach(AppUILanguage.allCases) { language in
-                    Text(LocalizedStringKey(language.labelKey)).tag(language)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(Spacing.md)
-            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
         }
     }
 
@@ -126,8 +111,17 @@ struct SettingsView: View {
 
     private var languageAndPolishSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.languageAndPolish.title")
+            sectionHeader("settings.preferences.title")
             VStack(spacing: 0) {
+                AppLanguagePickerRow(
+                    selection: Binding(
+                        get: { config.uiLanguage },
+                        set: { config.uiLanguage = $0 }
+                    )
+                )
+
+                Divider().background(palette.divider)
+
                 LocalePickerRow(
                     locales: effectiveLocales,
                     selection: Binding(
@@ -135,14 +129,32 @@ struct SettingsView: View {
                         set: { config.localeId = $0 }
                     )
                 )
+
+                Divider().background(palette.divider)
+
+                HandednessPickerRow(
+                    selection: Binding(
+                        get: { config.handednessPreference },
+                        set: { config.handednessPreference = $0 }
+                    )
+                )
+
+                Divider().background(palette.divider)
+
+                polishIntensityPreferenceRows
+
                 if config.isTranslationRowVisible {
                     Divider().background(palette.divider)
                     TranslationPickerRow(config: config, isVisible: true)
                 }
+
+                Divider().background(palette.divider)
+
+                cursorDragNavigationToggleRow
             }
-            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                     .stroke(palette.divider, lineWidth: 0.5)
             )
 
@@ -241,62 +253,33 @@ struct SettingsView: View {
         dynamicLocales = entries
     }
 
-    // MARK: - Preferences (tab settings only)
-
-    private var preferencesSection: some View {
-        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.preferences.title")
-            VStack(spacing: 0) {
-                HandednessPickerRow(
-                    selection: Binding(
-                        get: { config.handednessPreference },
-                        set: { config.handednessPreference = $0 }
-                    )
-                )
-
-                Divider().background(palette.divider)
-
-                polishIntensityPreferenceRows
-
-                Divider().background(palette.divider)
-
-                NavigationLink {
-                    PersonalDictionaryView()
-                } label: {
-                    personalDictionaryPreferenceRow
-                }
-                .buttonStyle(.plain)
-            }
-            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
-        }
-    }
+    // MARK: - Preference row helpers
 
     private var polishIntensityPreferenceRows: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("settings.polishIntensity.title")
-                .font(TypeStyle.body)
-                .foregroundStyle(palette.textPrimary)
-                .padding(.horizontal, Spacing.md)
-                .padding(.top, Spacing.sm)
-
-            Picker("", selection: $config.polishIntensity) {
-                ForEach(PolishIntensity.allCases, id: \.self) { intensity in
-                    Text(SharedL10n.string(intensity.labelKey, language: config.uiLanguage))
-                        .tag(intensity)
+        // 与「惯用手」一致的右侧下拉菜单行样式，保持偏好设置卡片内各行风格统一。
+        PickerRow(
+            title: AppL10n.string("settings.polishIntensity.title"),
+            options: PolishIntensity.allCases.map { intensity in
+                (intensity.rawValue, SharedL10n.string(intensity.labelKey, language: config.uiLanguage))
+            },
+            selection: Binding(
+                get: { config.polishIntensity.rawValue },
+                set: { newValue in
+                    config.polishIntensity = PolishIntensity(rawValue: newValue) ?? .medium
                 }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, Spacing.md)
-            .padding(.bottom, Spacing.sm)
-        }
+            )
+        )
     }
 
-    private var personalDictionaryPreferenceRow: some View {
-        footerNavigationRow(title: "settings.personalDictionary.title")
+    private var cursorDragNavigationToggleRow: some View {
+        Toggle(isOn: $config.cursorDragNavigationEnabled) {
+            Text("settings.cursorDragNavigation.title")
+                .font(TypeStyle.body)
+                .foregroundStyle(palette.textPrimary)
+        }
+        .tint(palette.accent)
+        .padding(.horizontal, Spacing.md)
+        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
     }
 
     // MARK: - Footer links (tab settings only)
@@ -409,6 +392,45 @@ struct SettingsView: View {
             .foregroundStyle(palette.textSecondary)
             .textCase(.uppercase)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Tab dock bottom padding (tab root only)
+
+private struct SettingsScrollBottomPadding: ViewModifier {
+    let presentation: SettingsPresentation
+
+    func body(content: Content) -> some View {
+        if presentation == .tab {
+            content.tabBarScrollBottomPadding()
+        } else {
+            content.padding(.bottom, Spacing.lg)
+        }
+    }
+}
+
+// MARK: - App language picker row
+
+private struct AppLanguagePickerRow: View {
+    @Binding var selection: AppUILanguage
+
+    private var options: [(id: String, label: String)] {
+        AppUILanguage.allCases.map { language in
+            (language.rawValue, AppL10n.string(language.labelKey))
+        }
+    }
+
+    var body: some View {
+        PickerRow(
+            title: AppL10n.string("settings.appLanguage.title"),
+            options: options,
+            selection: Binding(
+                get: { selection.rawValue },
+                set: { newValue in
+                    selection = AppUILanguage(rawValue: newValue) ?? .auto
+                }
+            )
+        )
     }
 }
 

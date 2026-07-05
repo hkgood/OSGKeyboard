@@ -52,13 +52,11 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             id: "deepseek",
             name: "DeepSeek",
             defaultBaseURL: "https://api.deepseek.com/v1",
-            // v0.2.0: bumped default to `deepseek-v4-flash` for the
-            // local-mode cloud-polish toggle. `deepseek-chat` is
-            // retained as a valid user-overridable model name; only
-            // the default is updated.
             defaultModel: "deepseek-v4-flash",
             apiKeyURL: URL(string: "https://platform.deepseek.com/api_keys"),
-            blurb: "deepseek-v4-flash · 默认 · 快速且中文友好"
+            blurb: "deepseek-v4-flash · 本地引擎内置 · Local engine built-in",
+            // Local engine only — never shown in cloud-engine pickers.
+            isUserSelectable: false
         ),
         .init(
             id: "qwen",
@@ -95,5 +93,11 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
 
     public static func provider(id: String) -> LLMProvider {
         presets.first(where: { $0.id == id }) ?? .presets[0]
+    }
+
+    /// Presets the user may pick in Settings / onboarding. DeepSeek is
+    /// excluded — it is wired exclusively to the local engine.
+    public static var userSelectablePresets: [LLMProvider] {
+        presets.filter(\.isUserSelectable)
     }
 }

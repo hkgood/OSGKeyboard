@@ -128,6 +128,8 @@
 "keyboard.openSettingsA11y" = "Open OSGKeyboard settings";
 "keyboard.deniedHint" = "Opens the OSGKeyboard settings page where you can grant microphone or speech recognition access.";
 "keyboard.tapToTalkA11y" = "Tap to talk";
+"keyboard.cursorDrag.hint" = "Hold and drag to move the cursor";
+"keyboard.cursorDrag.centerHint" = "Drag to move the cursor";
 
 /* Flow session (keyboard) */
 "keyboard.flow.sessionInactive" = "Voice session off";
@@ -155,6 +157,8 @@
 "keyboard.error.manualOpenDictateLocal" = "System blocked the jump. Open OSGKeyboard for on-device dictation, then return.";
 "keyboard.error.manualOpenDictate" = "System blocked the jump. Open OSGKeyboard to record, then return.";
 "keyboard.error.llm.noApiKey" = "API key missing · configure it in the main app";
+"keyboard.mic.disabled.missingApiKey" = "Fill in API key in Settings first";
+"keyboard.error.llm.localPolishUnavailable" = "Built-in polish unavailable · inserted raw text";
 "keyboard.error.llm.unauthorized" = "Invalid API key (401) · check main app settings";
 "keyboard.error.llm.rateLimited" = "Rate limited (429) · try again later";
 
@@ -234,6 +238,6 @@
 "keyboard.appContext.chip.unknown"  = "General";
 "keyboard.appContext.menu.code"     = "Code — preserve identifiers, no natural-language wrap";
 "keyboard.appContext.menu.email"    = "Email — polite, professional, paragraph-broken";
-"keyboard.appContext.menu.chat"     = "Chat — short, casual, emoji-friendly";
+"keyboard.appContext.menu.chat"     = "Chat — short, casual, natural tone";
 "keyboard.appContext.menu.document" = "Document — long-form, structured";
 "keyboard.appContext.menu.unknown"  = "General — neutral tone";

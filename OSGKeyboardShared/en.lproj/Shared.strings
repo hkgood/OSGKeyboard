@@ -5,7 +5,8 @@
 "engine.asr.appleSpeech" = "Apple SpeechAnalyzer";
 
 /* v0.2.0: flow-level warnings surfaced alongside the final transcript. */
-"flow.warning.cloudPolishMissingKey" = "Cloud polish/translation needs a DeepSeek API key. Inserted raw ASR text — set PreconfiguredKeys.deepseek in the project (local engine) or API key in Settings (cloud engine).";
+"flow.warning.cloudPolishMissingKey" = "Cloud polish needs an API key in Settings. Inserted raw ASR text.";
+"flow.warning.localPolishUnavailable" = "Built-in polish is unavailable. Inserted raw ASR text.";
 
 /* LLM providers */
 "provider.openai" = "OpenAI";
@@ -54,10 +55,10 @@
 "polish.intensity.light" = "Light";
 "polish.intensity.medium" = "Medium";
 "polish.intensity.heavy" = "Heavy";
-"polish.intensity.off.desc" = "Insert the raw ASR transcript with no LLM call.";
-"polish.intensity.light.desc" = "Drop only isolated filler words and obvious duplications.";
-"polish.intensity.medium.desc" = "Correct recognition errors, remove fillers, polish phrasing. Default.";
-"polish.intensity.heavy.desc" = "Restructure into lists and paragraphs. Best for meeting notes and reports.";
+"polish.intensity.off.desc" = "No polish; inserts raw ASR unless your personal dictionary has entries, then runs ASR correction only.";
+"polish.intensity.light.desc" = "Drop only isolated filler words and obvious duplications. Punctuation and structure still apply.";
+"polish.intensity.medium.desc" = "Correct recognition errors, remove fillers, polish phrasing. Punctuation and structure always apply. Default.";
+"polish.intensity.heavy.desc" = "Restructure into lists and paragraphs when needed. Best for meeting notes and reports.";
 
 /* v0.3.0: Detected app context labels */
 "appContext.code" = "Code";

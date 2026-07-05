@@ -12,10 +12,14 @@ final class KeychainTests: XCTestCase {
 
     override func setUpWithError() throws {
         try? Keychain.deleteAPIKey()
+        try? Keychain.deleteLegacyAPIKey()
+        try? Keychain.deleteAPIKey(for: "qwen")
     }
 
     override func tearDownWithError() throws {
         try? Keychain.deleteAPIKey()
+        try? Keychain.deleteLegacyAPIKey()
+        try? Keychain.deleteAPIKey(for: "qwen")
     }
 
     // MARK: - Round-trip
@@ -47,6 +51,13 @@ final class KeychainTests: XCTestCase {
 
         try Keychain.setAPIKey("")
         XCTAssertNil(Keychain.apiKey(), "Empty write must delete, not store empty string")
+    }
+
+    func testProviderScopedKeysDoNotMix() throws {
+        try Keychain.setAPIKey("sk-openai", for: "openai")
+        try Keychain.setAPIKey("sk-qwen", for: "qwen")
+        XCTAssertEqual(Keychain.apiKey(for: "openai"), "sk-openai")
+        XCTAssertEqual(Keychain.apiKey(for: "qwen"), "sk-qwen")
     }
 
     /// Deleting a non-existent entry must be a no-op (idempotent), not an

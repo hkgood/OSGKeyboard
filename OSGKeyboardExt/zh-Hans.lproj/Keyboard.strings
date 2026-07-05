@@ -128,6 +128,8 @@
 "keyboard.openSettingsA11y" = "打开 OSGKeyboard 设置";
 "keyboard.deniedHint" = "打开 OSGKeyboard 设置,可授予麦克风 / 语音识别权限。";
 "keyboard.tapToTalkA11y" = "点按说话";
+"keyboard.cursorDrag.hint" = "按住并拖动以移动光标";
+"keyboard.cursorDrag.centerHint" = "拖动移动光标";
 
 /* Flow session (keyboard) */
 "keyboard.flow.sessionInactive" = "语音会话未启动";
@@ -155,6 +157,8 @@
 "keyboard.error.manualOpenDictateLocal" = "系统拒绝了跳转，请手动打开 OSGKeyboard 完成本地转写";
 "keyboard.error.manualOpenDictate" = "系统拒绝了跳转，请手动打开 OSGKeyboard 录音";
 "keyboard.error.llm.noApiKey" = "未配置 API Key · 请在主 App 设置中填写";
+"keyboard.mic.disabled.missingApiKey" = "请先在设置中填写 API Key";
+"keyboard.error.llm.localPolishUnavailable" = "内置润色不可用 · 已插入原始文本";
 "keyboard.error.llm.unauthorized" = "API Key 无效 (401) · 请检查主 App 设置";
 "keyboard.error.llm.rateLimited" = "API 限流 (429) · 请稍后再试";
 
@@ -234,6 +238,6 @@
 "keyboard.appContext.chip.unknown"  = "通用";
 "keyboard.appContext.menu.code"     = "代码 — 保留标识符、不做自然语言化";
 "keyboard.appContext.menu.email"    = "邮件 — 礼貌专业、合理分段";
-"keyboard.appContext.menu.chat"     = "聊天 — 简短随意、可带 emoji";
+"keyboard.appContext.menu.chat"     = "聊天 — 简短随意、保留口语";
 "keyboard.appContext.menu.document" = "文档 — 长文、结构化";
 "keyboard.appContext.menu.unknown"  = "通用 — 中性口吻";

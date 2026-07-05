@@ -51,12 +51,21 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         // "on" state during init, but new writes never touch the key.
         static let translationTargetLocaleId = "config.translationTargetLocaleId"
         static let handednessPreference = "config.handednessPreference"
+        static let cursorDragNavigationEnabled = "config.cursorDragNavigationEnabled"
         // v0.3.0: how aggressively the LLM should rewrite transcripts.
         static let polishIntensity = "config.polishIntensity"
     }
 
     @Published public var providerId: String {
-        didSet { defaults.set(providerId, forKey: Key.providerId) }
+        didSet {
+            defaults.set(providerId, forKey: Key.providerId)
+            // Keep API keys isolated per provider: switching provider in
+            // Settings loads that provider's key instead of reusing the
+            // previously selected vendor's key.
+            isSyncingProviderAPIKey = true
+            apiKey = Keychain.apiKey(for: providerId) ?? ""
+            isSyncingProviderAPIKey = false
+        }
     }
     @Published public var baseURL: String {
         didSet { defaults.set(baseURL, forKey: Key.baseURL) }
@@ -65,9 +74,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         didSet {
             // Skip the round-trip on init — we read from Keychain and
             // writing the same value back is wasteful.
-            guard oldValue != apiKey else { return }
+            guard oldValue != apiKey, !isSyncingProviderAPIKey else { return }
             do {
-                try Keychain.setAPIKey(apiKey)
+                try Keychain.setAPIKey(apiKey, for: providerId)
             } catch {
                 #if DEBUG
                 print("⚠️ [OSGKeyboard] Keychain write failed: \(error)")
@@ -84,10 +93,13 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     @Published public var localeId: String {
         didSet { defaults.set(localeId, forKey: Key.localeId) }
     }
-    /// "local" → on-device ASR only (raw transcript delivery).
-    /// "cloud" → ASR + LLM polish (always on; modeId kept for compatibility).
+    /// "local" → on-device ASR + built-in DeepSeek polish.
+    /// "cloud" → on-device ASR + user's cloud LLM polish.
     @Published public var engineMode: String {
-        didSet { defaults.set(engineMode, forKey: Key.engineMode) }
+        didSet {
+            defaults.set(engineMode, forKey: Key.engineMode)
+            applyEngineModeSideEffects()
+        }
     }
     @Published public var hasCompletedOnboarding: Bool {
         didSet {
@@ -162,27 +174,25 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         }
     }
 
-    /// Whether the pipeline should run translate-and-polish (not just
-    /// polish). Cloud engine: any selected target locale. Local engine:
-    /// only when cloud polish is also enabled.
-    public var isTranslationEffective: Bool {
-        guard translationEnabled else { return false }
-        if isLocalEngine { return localModeCloudPolishEnabled }
-        return true
+    /// Press-and-drag pads beside the mic for four-way caret movement.
+    @Published public var cursorDragNavigationEnabled: Bool {
+        didSet {
+            defaults.set(cursorDragNavigationEnabled, forKey: Key.cursorDragNavigationEnabled)
+            AppGroupConfigDarwin.postConfigChanged()
+        }
     }
 
-    /// Translation picker visibility. Cloud engine: always. Local engine:
-    /// only when "Cloud polish after ASR" is on — translation is a
-    /// sub-step of that cloud LLM pass, not a standalone feature.
-    public var isTranslationRowVisible: Bool {
-        if engineMode == "cloud" { return true }
-        return isLocalEngine && localModeCloudPolishEnabled
+    /// Whether the pipeline should run translate-and-polish (not just
+    /// polish). Both engines honour the selected target locale.
+    public var isTranslationEffective: Bool {
+        translationEnabled
     }
+
+    /// Translation picker visibility — available on both engines.
+    public var isTranslationRowVisible: Bool { true }
 
     /// v0.3.0: how aggressively the LLM should rewrite the ASR
-    /// transcript. Default is `medium` (Typeless-equivalent). The
-    /// `off` value never calls the LLM — equivalent to "transcribe
-    /// only" regardless of `engineMode`.
+    /// transcript. Default is `medium` (Typeless-equivalent).
     @Published public var polishIntensity: PolishIntensity {
         didSet { defaults.set(polishIntensity.rawValue, forKey: Key.polishIntensity) }
     }
@@ -200,32 +210,14 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     /// On-device ASR only; no cloud API required.
     public var isLocalEngine: Bool { engineMode == "local" }
 
-    /// Whether a transcript produced by the local engine should be
-    /// sent through the cloud LLM polish step before insertion.
-    ///
-    /// v0.2.0: the local engine defaults to ASR-only. When the user
-    /// enables "Cloud polish after ASR" (`localModeCloudPolishEnabled`)
-    /// we route the transcript through the configured LLM (DeepSeek by
-    /// default in local mode) — same `PolishingService` code path the
-    /// cloud engine uses.
-    ///
-    /// If the user hasn't entered an API key we can't run the polish
-    /// step; callers should check `Keychain.apiKey()` before invoking.
-    public var shouldPolishLocalTranscript: Bool {
-        isLocalEngine && localModeCloudPolishEnabled
-    }
+    /// Local engine always polishes via the built-in DeepSeek path.
+    public var shouldPolishLocalTranscript: Bool { isLocalEngine }
 
-    /// v0.2.1 follow-up: when the local engine is using the cloud-
-    /// polish step, route the call through DeepSeek — cheap, strong
-    /// on Chinese, and the right default for the on-device ASR
-    /// transcript. Other engines honor the user's configured
-    /// `providerId` unchanged so cloud users keep their preferred
-    /// vendor (OpenAI / Anthropic / Zhipu / etc).
-    public var localModeProviderId: String {
-        isLocalEngine ? "deepseek" : providerId
-    }
+    /// Cloud engine uses `providerId`. Local engine pins DeepSeek.
+    public var localModeProviderId: String { "deepseek" }
 
     private let defaults: UserDefaults
+    private var isSyncingProviderAPIKey = false
 
     public init(defaults: UserDefaults? = nil) {
         let resolvedDefaults: UserDefaults = defaults ?? (AppGroup.isAvailable ? AppGroup.defaults : .standard)
@@ -239,7 +231,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         // UserDefaults slot. After this runs once, `Key.apiKeyLegacy`
         // is empty in the suite and all subsequent reads go through the
         // Keychain.
-        self.apiKey = ProviderConfig.resolveAPIKey(defaults: resolvedDefaults)
+        self.apiKey = ProviderConfig.resolveAPIKey(defaults: resolvedDefaults, providerId: pid)
 
         self.model        = resolvedDefaults.string(forKey: Key.model)      ?? preset.defaultModel
         self.modeId          = resolvedDefaults.string(forKey: Key.modeId)     ?? "polish"
@@ -278,12 +270,18 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         self.handednessPreference = HandednessPreference.fromStored(
             resolvedDefaults.string(forKey: Key.handednessPreference)
         )
+        if resolvedDefaults.object(forKey: Key.cursorDragNavigationEnabled) == nil {
+            self.cursorDragNavigationEnabled = true
+        } else {
+            self.cursorDragNavigationEnabled = resolvedDefaults.bool(forKey: Key.cursorDragNavigationEnabled)
+        }
         // v0.3.0: polish intensity. Default to `.medium` for new
-        // installs and upgrades; the existing `off` / `light` /
-        // `heavy` values are honored.
-        if let raw = resolvedDefaults.string(forKey: Key.polishIntensity),
-           let intensity = PolishIntensity(rawValue: raw) {
-            self.polishIntensity = intensity
+        // installs; legacy `"off"` migrates to `.medium`.
+        if let raw = resolvedDefaults.string(forKey: Key.polishIntensity) {
+            self.polishIntensity = PolishIntensity.resolve(storedRawValue: raw)
+            if raw == PolishIntensity.legacyOffRawValue {
+                resolvedDefaults.set(PolishIntensity.medium.rawValue, forKey: Key.polishIntensity)
+            }
         } else {
             self.polishIntensity = .default
         }
@@ -292,17 +290,36 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         if self.engineMode == "cloud", self.modeId != "polish" {
             self.modeId = "polish"
         }
+        // DeepSeek is local-engine only — never a cloud picker choice.
+        if self.engineMode == "cloud", self.providerId == "deepseek" {
+            apply(preset: LLMProvider.provider(id: "openai"))
+        }
+    }
+
+    /// Keep cloud vs local provider choices isolated when the user
+    /// switches engines in Settings / onboarding.
+    private func applyEngineModeSideEffects() {
+        if engineMode == "cloud", providerId == "deepseek" {
+            apply(preset: LLMProvider.provider(id: "openai"))
+        }
     }
 
     /// Read the API key from the Keychain, falling back to a one-time
     /// migration from the legacy UserDefaults slot.
-    private static func resolveAPIKey(defaults: UserDefaults) -> String {
-        if let stored = Keychain.apiKey(), !stored.isEmpty {
+    private static func resolveAPIKey(defaults: UserDefaults, providerId: String) -> String {
+        if let stored = Keychain.apiKey(for: providerId), !stored.isEmpty {
             return stored
+        }
+        // Migration path: old builds stored one global key under
+        // Keychain account "current". Move it to the active provider.
+        if let legacyKeychain = Keychain.legacyAPIKey(), !legacyKeychain.isEmpty {
+            try? Keychain.setAPIKey(legacyKeychain, for: providerId)
+            try? Keychain.deleteLegacyAPIKey()
+            return legacyKeychain
         }
         if let legacy = defaults.string(forKey: Key.apiKeyLegacy),
            !legacy.isEmpty {
-            try? Keychain.setAPIKey(legacy)
+            try? Keychain.setAPIKey(legacy, for: providerId)
             defaults.removeObject(forKey: Key.apiKeyLegacy)
             return legacy
         }

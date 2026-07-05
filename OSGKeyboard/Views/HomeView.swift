@@ -56,7 +56,7 @@ struct HomeView: View {
                 VStack(spacing: 0) {
                     logoHeader
                         .padding(.top, Spacing.xxxl)
-                        .padding(.bottom, Spacing.xl)
+                        .padding(.bottom, Spacing.xxl)
 
                     if showsFlowSessionExtras {
                         flowSessionExtras
@@ -72,14 +72,24 @@ struct HomeView: View {
                         .padding(.horizontal, Spacing.lg)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-                    engineStatusLine
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.top, Spacing.xl)
-                        .padding(.bottom, Spacing.sm)
+                    HStack(spacing: Spacing.sm) {
+                        engineStatusLine
+                        flowStatusFooter
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.xl)
+                    .padding(.bottom, Spacing.sm)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
             .background(palette.background)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if previewFocused {
+                    previewFocused = false
+                }
+            }
         }
         .onAppear {
             refreshPermissionStatuses()
@@ -149,43 +159,13 @@ struct HomeView: View {
                 .scaledToFit()
                 .frame(width: 144, height: 41)
                 .accessibilityHidden(true)
-
-            statusCapsule
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, Spacing.lg)
     }
 
-    private var statusCapsule: some View {
-        HStack(spacing: Spacing.sm) {
-            flowCapsuleSegment
-
-            if flowManager.isActive {
-                Button {
-                    flowManager.endSession()
-                } label: {
-                    Text("home.flow.endShort")
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.textOnAccent)
-                        .padding(.horizontal, Spacing.sm)
-                        .padding(.vertical, 5)
-                        .background(palette.accent, in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
-        .background(capsuleBackground, in: Capsule())
-        .overlay(
-            Capsule()
-                .stroke(palette.divider, lineWidth: 0.5)
-        )
-        .animation(Motion.soft, value: flowManager.isActive)
-    }
-
-    @ViewBuilder
-    private var flowCapsuleSegment: some View {
+    // 就绪信息：绿点 + 状态文字（+ 计时 / 结束文本按钮），字号对齐引擎信息行。
+    private var flowStatusFooter: some View {
         HStack(spacing: Spacing.xs) {
             Circle()
                 .fill(flowStatusColor)
@@ -194,30 +174,37 @@ struct HomeView: View {
             if flowManager.isActive,
                let expires = flowManager.sessionExpiresAt {
                 Text("home.flow.label")
-                    .font(TypeStyle.status)
+                    .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textPrimary)
                 Text(":")
-                    .font(TypeStyle.status)
+                    .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textTertiary)
                 Text(expires, style: .timer)
-                    .font(TypeStyle.status)
+                    .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textSecondary)
                     .monospacedDigit()
             } else {
                 Text(flowCapsuleStatusMessage)
-                    .font(TypeStyle.status)
+                    .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textPrimary)
-                    .lineLimit(2)
+                    .lineLimit(1)
                     .minimumScaleFactor(0.85)
-                    .multilineTextAlignment(.leading)
+            }
+
+            if flowManager.isActive {
+                Button {
+                    flowManager.endSession()
+                } label: {
+                    Text("home.flow.endShort")
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.accent)
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, Spacing.xs)
             }
         }
-    }
-
-    private var capsuleBackground: Color {
-        sessionIsLive
-            ? palette.accentMuted.opacity(0.55)
-            : palette.surface.opacity(0.88)
+        .fixedSize(horizontal: true, vertical: false)
+        .animation(Motion.soft, value: flowManager.isActive)
     }
 
     // MARK: - Flow extras (warnings / hints)
@@ -333,12 +320,12 @@ struct HomeView: View {
             .tint(palette.accent)
             .focused($previewFocused)
             .lineLimit(1...100)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, minHeight: 180, maxHeight: .infinity, alignment: .topLeading)
             .padding(Spacing.md)
-            .background(palette.surfaceMuted, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(previewFocused ? palette.dividerStrong : palette.divider, lineWidth: 0.5)
+                    .stroke(previewFocused ? palette.dividerStrong : palette.dividerStrong.opacity(0.75), lineWidth: 1)
             )
             // TextField only hit-tests the text line(s); expand taps to the full card.
             .contentShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
@@ -357,7 +344,7 @@ struct HomeView: View {
         .font(TypeStyle.caption2)
         .foregroundStyle(palette.textSecondary)
         .multilineTextAlignment(.center)
-        .frame(maxWidth: .infinity, alignment: .center)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 

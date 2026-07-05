@@ -9,11 +9,18 @@ import OSGKeyboardShared
 
 struct HomeStatsCard: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @Environment(\.colorScheme) private var colorScheme
 
     @ObservedObject private var stats = UsageStatisticsStore.shared
     @ObservedObject private var config = ProviderConfig.shared
 
     @State private var dictionaryCount = 0
+
+    private enum Layout {
+        static let fixedHeight: CGFloat = 166
+        static let valueFontSize: CGFloat = 24
+        static let iconSize: CGFloat = 18
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -48,7 +55,7 @@ struct HomeStatsCard: View {
                 )
                 divider
                 statCell(
-                    systemImage: "books.vertical",
+                    systemImage: "square.stack.3d.down.right.fill",
                     value: UsageStatisticsStore.formatCount(
                         dictionaryCount,
                         language: config.uiLanguage
@@ -57,20 +64,8 @@ struct HomeStatsCard: View {
                 )
             }
         }
-        .background {
-            ZStack(alignment: .top) {
-                palette.surface
-                LinearGradient(
-                    colors: [
-                        palette.accent.opacity(0.10),
-                        palette.accent.opacity(0.02),
-                        palette.surface.opacity(0)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            }
-        }
+        .frame(height: Layout.fixedHeight)
+        .background(cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
@@ -83,22 +78,24 @@ struct HomeStatsCard: View {
     }
 
     private func statCell(systemImage: String, value: String, label: LocalizedStringKey) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            HStack(spacing: 6) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(palette.accent)
+        HStack(alignment: .top, spacing: Spacing.xs) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(value)
-                    .font(TypeStyle.headline)
+                    .font(.system(size: Layout.valueFontSize, weight: .semibold, design: .rounded))
                     .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
+                Text(label)
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
-            Text(label)
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+            Spacer(minLength: Spacing.xs)
+            Image(systemName: systemImage)
+                .font(.system(size: Layout.iconSize, weight: .semibold))
+                .foregroundStyle(palette.accent)
+                .padding(.top, 2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.md)
@@ -118,6 +115,10 @@ struct HomeStatsCard: View {
 
     private func refreshDictionaryCount() {
         dictionaryCount = AppGroupStore().personalDictionary.entries.count
+    }
+
+    private var cardBackground: Color {
+        colorScheme == .dark ? palette.surface : .white
     }
 }
 

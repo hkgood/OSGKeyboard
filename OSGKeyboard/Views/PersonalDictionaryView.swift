@@ -1,22 +1,10 @@
 // PersonalDictionaryView.swift
 // OSGKeyboard · Main App
 //
-// Settings → Personal Dictionary: review, search, delete individual
-// entries, or clear the whole dictionary. Reads / writes the
+// Personal Dictionary tab: review, search, add, edit, delete
+// individual entries, or clear the whole dictionary. Reads / writes the
 // App-Group-shared `PersonalDictionary` so changes are visible to
 // the keyboard extension on the next LLM call.
-//
-// v0.3.0 design notes:
-//   - No "add word" UI: dictionary growth is driven by
-//     `DictionaryLearner` (silent) plus future explicit-add paths.
-//     The user can re-classify, edit, or delete any entry.
-//   - "Clear all" requires confirmation. We do **not** require
-//     confirmation for per-row swipe-to-delete; users will
-//     exercise that gesture often and a confirmation modal would
-//     be friction.
-//   - Search filters by substring match on the term and aliases.
-//   - Sectioned by `Entry.Category` so the user can scan a
-//     technical-names section quickly.
 
 import SwiftUI
 import OSGKeyboardShared
@@ -29,47 +17,68 @@ struct PersonalDictionaryView: View {
     @State private var dictionary: PersonalDictionary = AppGroupStore().personalDictionary
     @State private var searchText: String = ""
     @State private var showClearAllConfirmation = false
+    @State private var showEntrySheet = false
+    @State private var editingEntry: PersonalDictionary.Entry?
+    @State private var generatingAliasEntryIDs: Set<UUID> = []
 
     private let store = AppGroupStore()
+    private let aliasGenerator = DictionaryAliasGenerator()
 
     var body: some View {
-        Group {
-            if dictionary.entries.isEmpty {
-                emptyState
-            } else {
-                list
+        NavigationStack {
+            ZStack {
+                palette.background.ignoresSafeArea()
+
+                if dictionary.entries.isEmpty {
+                    emptyState
+                } else {
+                    list
+                }
             }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(palette.surface.ignoresSafeArea())
-        .navigationTitle("settings.personalDictionary.title")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.visible, for: .navigationBar)
-        .toolbar {
-            if !dictionary.entries.isEmpty {
+            .background(palette.background)
+            .navigationTitle("settings.personalDictionary.title")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                if !dictionary.entries.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showClearAllConfirmation = true
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .accessibilityLabel(AppL10n.string("settings.personalDictionary.clearAll"))
+                        .confirmationDialog(
+                            AppL10n.string("settings.personalDictionary.clearAll.confirmTitle"),
+                            isPresented: $showClearAllConfirmation,
+                            titleVisibility: .visible
+                        ) {
+                            Button(AppL10n.string("settings.personalDictionary.clearAll.confirm"), role: .destructive) {
+                                clearAll()
+                            }
+                            Button(AppL10n.string("common.cancel"), role: .cancel) {}
+                        } message: {
+                            Text("settings.personalDictionary.clearAll.message")
+                        }
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        showClearAllConfirmation = true
+                        editingEntry = nil
+                        showEntrySheet = true
                     } label: {
-                        Image(systemName: "trash")
+                        Image(systemName: "plus")
                     }
-                    .accessibilityLabel(AppL10n.string("settings.personalDictionary.clearAll"))
+                    .accessibilityLabel(AppL10n.string("settings.personalDictionary.add.title"))
                 }
             }
         }
-        .toolbarBackground(palette.surface, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .confirmationDialog(
-            AppL10n.string("settings.personalDictionary.clearAll.confirmTitle"),
-            isPresented: $showClearAllConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button(AppL10n.string("settings.personalDictionary.clearAll.confirm"), role: .destructive) {
-                clearAll()
+        .sheet(isPresented: $showEntrySheet) {
+            PersonalDictionaryEntrySheet(
+                initialTerm: editingEntry?.term ?? "",
+                isEditing: editingEntry != nil
+            ) { term in
+                saveManualEntry(term: term, editingID: editingEntry?.id)
             }
-            Button(AppL10n.string("common.cancel"), role: .cancel) {}
-        } message: {
-            Text("settings.personalDictionary.clearAll.message")
         }
     }
 
@@ -83,41 +92,34 @@ struct PersonalDictionaryView: View {
                     section(for: category, items: items)
                 }
             }
-            .padding(.horizontal, Spacing.md)
+            .padding(.horizontal, Spacing.lg)
             .padding(.vertical, Spacing.md)
-            .padding(.bottom, 100)
+            .tabBarScrollBottomPadding()
         }
         .searchable(text: $searchText, prompt: "settings.personalDictionary.search.prompt")
     }
 
     private var introBanner: some View {
-        HStack(alignment: .top, spacing: Spacing.sm) {
-            MaterialIcon(name: .bookmark, size: 18)
-                .foregroundStyle(palette.accent)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("settings.personalDictionary.intro.title")
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textPrimary)
-                Text("settings.personalDictionary.intro.body")
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.textSecondary)
-            }
-            Spacer()
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("settings.personalDictionary.intro.title")
+                .font(TypeStyle.caption)
+                .foregroundStyle(palette.textPrimary)
+            Text("settings.personalDictionary.intro.body")
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.md)
-        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                 .stroke(palette.divider, lineWidth: 0.5)
         )
     }
 
-    private func section(for category: PersonalDictionary.Entry.Category, items: [PersonalDictionary.Entry]) -> some View {
+    private func section(for _: PersonalDictionary.Entry.Category, items: [PersonalDictionary.Entry]) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(SharedL10n.string(category.labelKey, language: config.uiLanguage))
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textSecondary)
-                .textCase(.uppercase)
             VStack(spacing: 0) {
                 ForEach(Array(items.enumerated()), id: \.element.id) { index, entry in
                     entryRow(entry)
@@ -126,49 +128,65 @@ struct PersonalDictionaryView: View {
                     }
                 }
             }
-            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                     .stroke(palette.divider, lineWidth: 0.5)
             )
         }
     }
 
     private func entryRow(_ entry: PersonalDictionary.Entry) -> some View {
-        HStack(alignment: .center, spacing: Spacing.md) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.term)
-                    .font(TypeStyle.body)
-                    .foregroundStyle(palette.textPrimary)
-                    .lineLimit(1)
-                HStack(spacing: 6) {
-                    Text(SharedL10n.string(entry.source.labelKey, language: config.uiLanguage))
-                        .font(TypeStyle.caption2)
-                        .foregroundStyle(palette.textTertiary)
-                    if entry.usageCount > 1 {
-                        Text("·")
+        Button {
+            editingEntry = entry
+            showEntrySheet = true
+        } label: {
+            HStack(alignment: .center, spacing: Spacing.md) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(entry.term)
+                        .font(TypeStyle.body)
+                        .foregroundStyle(palette.textPrimary)
+                        .lineLimit(1)
+                    HStack(spacing: 6) {
+                        Text(SharedL10n.string(entry.source.labelKey, language: config.uiLanguage))
                             .font(TypeStyle.caption2)
                             .foregroundStyle(palette.textTertiary)
-                        Text("settings.personalDictionary.usageCount \(entry.usageCount)")
-                            .font(TypeStyle.caption2)
-                            .foregroundStyle(palette.textTertiary)
-                    }
-                    if !entry.aliases.isEmpty {
-                        Text("·")
-                            .font(TypeStyle.caption2)
-                            .foregroundStyle(palette.textTertiary)
-                        Text(entry.aliases.joined(separator: " / "))
-                            .font(TypeStyle.caption2)
-                            .foregroundStyle(palette.textTertiary)
-                            .lineLimit(1)
+                        if entry.usageCount > 1 {
+                            Text("·")
+                                .font(TypeStyle.caption2)
+                                .foregroundStyle(palette.textTertiary)
+                            Text("settings.personalDictionary.usageCount \(entry.usageCount)")
+                                .font(TypeStyle.caption2)
+                                .foregroundStyle(palette.textTertiary)
+                        }
+                        if generatingAliasEntryIDs.contains(entry.id) {
+                            Text("·")
+                                .font(TypeStyle.caption2)
+                                .foregroundStyle(palette.textTertiary)
+                            Text("settings.personalDictionary.aliases.generating")
+                                .font(TypeStyle.caption2)
+                                .foregroundStyle(palette.textTertiary)
+                        } else if !entry.aliases.isEmpty {
+                            Text("·")
+                                .font(TypeStyle.caption2)
+                                .foregroundStyle(palette.textTertiary)
+                            Text(entry.aliases.joined(separator: " / "))
+                                .font(TypeStyle.caption2)
+                                .foregroundStyle(palette.textTertiary)
+                                .lineLimit(1)
+                        }
                     }
                 }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(palette.textTertiary)
             }
-            Spacer()
+            .padding(.horizontal, Spacing.md)
+            .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
                 delete(entry)
@@ -181,7 +199,8 @@ struct PersonalDictionaryView: View {
     private var emptyState: some View {
         VStack(spacing: Spacing.sm) {
             Spacer()
-            MaterialIcon(name: .menuBook, size: 36)
+            Image(systemName: "square.stack.3d.down.right.fill")
+                .font(.system(size: 36, weight: .regular))
                 .foregroundStyle(palette.textTertiary.opacity(0.5))
             Text("settings.personalDictionary.empty.title")
                 .font(TypeStyle.body)
@@ -191,6 +210,15 @@ struct PersonalDictionaryView: View {
                 .foregroundStyle(palette.textTertiary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Spacing.xl)
+            Button {
+                editingEntry = nil
+                showEntrySheet = true
+            } label: {
+                Text("settings.personalDictionary.add.title")
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(palette.accent)
+            .padding(.top, Spacing.sm)
             Spacer()
         }
     }
@@ -209,7 +237,6 @@ struct PersonalDictionaryView: View {
                 return entry.aliases.contains(where: { $0.lowercased().contains(needle) })
             }
         }
-        // Group + sort by usageCount desc within each section.
         let grouped = Dictionary(grouping: filtered, by: { $0.category })
         return PersonalDictionary.Entry.Category.allCases.compactMap { category in
             guard let bucket = grouped[category], !bucket.isEmpty else { return nil }
@@ -223,13 +250,44 @@ struct PersonalDictionaryView: View {
 
     // MARK: - Mutations
 
+    private func saveManualEntry(term: String, editingID: UUID?) {
+        let previousTerm = editingID.flatMap { id in
+            dictionary.entries.first(where: { $0.id == id })?.term
+        }
+        let termChanged = previousTerm.map {
+            $0.caseInsensitiveCompare(term) != .orderedSame
+        } ?? true
+
+        guard dictionary.upsertManual(term: term, existingID: editingID) != nil else { return }
+        persist()
+
+        guard let saved = dictionary.entry(matchingTerm: term) else { return }
+        let shouldGenerate = saved.source == .manual && (editingID == nil || termChanged)
+        if shouldGenerate {
+            generateAliases(for: saved.id, term: saved.term)
+        }
+    }
+
+    private func generateAliases(for entryID: UUID, term: String) {
+        generatingAliasEntryIDs.insert(entryID)
+        Task {
+            let aliases = await aliasGenerator.generateAliases(for: term)
+            generatingAliasEntryIDs.remove(entryID)
+            guard !aliases.isEmpty else { return }
+            dictionary.updateAliases(for: entryID, aliases: aliases)
+            persist()
+        }
+    }
+
     private func delete(_ entry: PersonalDictionary.Entry) {
         dictionary.entries.removeAll { $0.id == entry.id }
+        generatingAliasEntryIDs.remove(entry.id)
         persist()
     }
 
     private func clearAll() {
         dictionary = .empty
+        generatingAliasEntryIDs = []
         persist()
     }
 
@@ -242,9 +300,7 @@ struct PersonalDictionaryView: View {
 #if DEBUG
 #Preview {
     ThemedRoot {
-        NavigationStack {
-            PersonalDictionaryView()
-        }
+        PersonalDictionaryView()
     }
 }
 #endif

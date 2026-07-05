@@ -21,6 +21,20 @@ if [[ ! -f "$SIGNING_LOCAL" ]]; then
   echo "Edit DEVELOPMENT_TEAM there if you use a personal Apple Developer account."
 fi
 
+# Local-engine DeepSeek key (gitignored). XcodeGen compiles this file;
+# the example ships a placeholder so fresh clones build after copy.
+PRECONFIG_LOCAL="$ROOT/OSGKeyboardShared/Services/PreconfiguredKeys.local.swift"
+PRECONFIG_EXAMPLE="$ROOT/OSGKeyboardShared/Services/PreconfiguredKeys.local.swift.example"
+if [[ ! -f "$PRECONFIG_LOCAL" ]]; then
+  if [[ ! -f "$PRECONFIG_EXAMPLE" ]]; then
+    echo "error: missing $PRECONFIG_EXAMPLE" >&2
+    exit 1
+  fi
+  cp "$PRECONFIG_EXAMPLE" "$PRECONFIG_LOCAL"
+  echo "Created $PRECONFIG_LOCAL from PreconfiguredKeys.local.swift.example"
+  echo "Edit deepseek in that file before using the local engine's built-in polish."
+fi
+
 xcodegen generate
 
 if python3 - "$PBXPROJ" <<'PY'

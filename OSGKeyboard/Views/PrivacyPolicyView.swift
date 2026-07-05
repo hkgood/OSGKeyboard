@@ -18,6 +18,7 @@ struct PrivacyPolicyView: View {
         .background(palette.background.ignoresSafeArea())
         .navigationTitle("settings.privacy.policy")
         .navigationBarTitleDisplayMode(.inline)
+        .hidesTabBarWhenPushed()
     }
 
     private var privacyScrollAnchor: String? {

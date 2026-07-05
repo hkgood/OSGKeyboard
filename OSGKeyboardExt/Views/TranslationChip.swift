@@ -29,10 +29,27 @@
 import SwiftUI
 import OSGKeyboardShared
 
-struct TranslationChip: View {
-    @Environment(\.themePalette) private var palette: ThemePalette
+struct TranslationChip: View, Equatable {
+    /// Passed in as a value (not read from `@Environment`) so the chip can
+    /// be wrapped in `.equatable()` at the call site: `EquatableView`
+    /// suppresses environment-driven refreshes, so injecting the palette
+    /// here keeps colours correct across dark/light switches.
+    let palette: ThemePalette
+    /// The active target-locale id (`offLocaleId` == translation off).
+    let targetLocaleId: String
+    /// Writes the picked locale id — wired to `state.setTranslationTargetLocaleId`.
+    let onSelect: (String) -> Void
 
-    @ObservedObject var state: KeyboardViewController.State
+    /// Only `palette` and `targetLocaleId` drive the visuals; the
+    /// `onSelect` closure is deliberately excluded from equality. Because
+    /// the keyboard polls the App Group at 1 Hz (each poll re-publishes the
+    /// `KeyboardState`), the parent view re-renders every second. Without
+    /// this, SwiftUI would rebuild the `Menu` on every poll — dismissing an
+    /// open picker or snapping its scroll position back to the top. With
+    /// `.equatable()` the picker is rebuilt only on a real state change.
+    nonisolated static func == (lhs: TranslationChip, rhs: TranslationChip) -> Bool {
+        lhs.palette == rhs.palette && lhs.targetLocaleId == rhs.targetLocaleId
+    }
 
     var body: some View {
         Menu {
@@ -43,9 +60,9 @@ struct TranslationChip: View {
             // derived from it.
             ForEach(TranslationLanguageCatalog.all) { language in
                 Button {
-                    state.setTranslationTargetLocaleId(language.id)
+                    onSelect(language.id)
                 } label: {
-                    if language.id == currentSelectionId {
+                    if language.id == targetLocaleId {
                         Label(displayLabel(for: language), systemImage: "checkmark")
                     } else {
                         Text(displayLabel(for: language))
@@ -62,8 +79,8 @@ struct TranslationChip: View {
 
     @ViewBuilder
     private var label: some View {
-        let target = TranslationLanguageCatalog.resolve(state.translationTargetLocaleId)
-        let enabled = state.translationEnabled
+        let target = TranslationLanguageCatalog.resolve(targetLocaleId)
+        let enabled = targetLocaleId != TranslationLanguageCatalog.offLocaleId
 
         HStack(spacing: 4) {
             Image(systemName: enabled ? "character.bubble" : "character.bubble.fill")
@@ -78,12 +95,6 @@ struct TranslationChip: View {
         .frame(minHeight: 28)
         .background(background(enabled: enabled), in: Capsule())
         .overlay(Capsule().stroke(stroke(enabled: enabled), lineWidth: 0.5))
-    }
-
-    /// Active selection id — the chip derives "on" from a non-off
-    /// locale id, so reading `translationTargetLocaleId` is enough.
-    private var currentSelectionId: String {
-        state.translationTargetLocaleId
     }
 
     private func displayLabel(for language: TranslationLanguage) -> String {

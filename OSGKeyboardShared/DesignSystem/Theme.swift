@@ -16,7 +16,7 @@ import SwiftUI
 /// `DesignSystem/ThemedRoot.swift`. Token names mirror the previous
 /// `Palette` static API so existing call sites (`Palette.background` etc.)
 /// still compile and resolve through the legacy static accessors below.
-public struct ThemePalette: Sendable {
+public struct ThemePalette: Sendable, Equatable {
     public let background:      Color
     public let surface:         Color
     public let surfaceElevated: Color

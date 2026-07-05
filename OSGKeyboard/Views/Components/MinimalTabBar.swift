@@ -1,7 +1,7 @@
 // MinimalTabBar.swift
 // OSGKeyboard · Main App
 //
-// Bottom tab bar — three Material icons, no labels.
+// Bottom tab bar — four icons, no labels.
 // Capsule uses iOS 26 Liquid Glass (.regular.interactive) so content
 // behind the dock refracts through on scroll.
 
@@ -11,13 +11,23 @@ import OSGKeyboardShared
 enum AppTab: Int, CaseIterable {
     case keyboard
     case history
+    case dictionary
     case settings
 
     var icon: MaterialIconName {
         switch self {
         case .keyboard: return .keyboard
         case .history: return .menuBook
+        case .dictionary: return .menuBook // unused — dictionary uses SF Symbol
         case .settings: return .settings
+        }
+    }
+
+    /// Matches `HomeStatsCard` dictionary stat cell (filled variant).
+    var sfSymbol: String? {
+        switch self {
+        case .dictionary: return "square.stack.3d.down.right.fill"
+        default: return nil
         }
     }
 
@@ -25,6 +35,7 @@ enum AppTab: Int, CaseIterable {
         switch self {
         case .keyboard: return "tab.keyboard"
         case .history: return "tab.history"
+        case .dictionary: return "tab.dictionary"
         case .settings: return "tab.settings"
         }
     }
@@ -41,10 +52,14 @@ struct MinimalTabBar: View {
                 Button {
                     withAnimation(Motion.quick) { selection = tab }
                 } label: {
-                    MaterialIcon(
-                        name: tab.icon,
-                        size: 24
-                    )
+                    Group {
+                        if let sfSymbol = tab.sfSymbol {
+                            Image(systemName: sfSymbol)
+                                .font(.system(size: 20, weight: .regular))
+                        } else {
+                            MaterialIcon(name: tab.icon, size: 24)
+                        }
+                    }
                     .foregroundStyle(tabIconColor(for: tab))
                     .frame(maxWidth: .infinity)
                     .frame(height: 48)
@@ -58,7 +73,7 @@ struct MinimalTabBar: View {
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
         .glassEffect(.regular.interactive(), in: .capsule)
-        .frame(maxWidth: 252)
+        .frame(maxWidth: 336)
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.bottom, Spacing.xs)
     }

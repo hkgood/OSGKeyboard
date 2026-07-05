@@ -20,6 +20,26 @@
 import UIKit
 import SwiftUI
 import OSGKeyboardShared
+import os
+
+/// Unified log for the keyboard extension. Visible in Console.app when
+/// filtered by `subsystem: com.osgkeyboard.ios`. Note: plain `print`
+/// from an extension process does NOT reliably reach Xcode's console
+/// (the debugger is usually attached to the host app, not the
+/// extension), which is why extension-side diagnostics must go through
+/// `os.Logger` to be observable.
+private let keyboardExtLog = Logger(subsystem: "com.osgkeyboard.ios", category: "KeyboardExt")
+
+private final class KeyboardHostingController: UIHostingController<KeyboardRootView> {
+    override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge {
+        [.left, .right]
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
+    }
+}
 
 @objc(KeyboardViewController)
 @MainActor
@@ -59,7 +79,9 @@ public final class KeyboardViewController: UIInputViewController {
     private let polisher = PolishingService()
     private let persistor = AppGroupPersistor()
 
-    private var hosting: UIHostingController<KeyboardRootView>!
+    private var hosting: UIHostingController<KeyboardRootView>?
+    /// Centred "拖动移动光标" hint, stacked above the SwiftUI tree.
+    private var cursorDragHintLabel: UILabel?
     /// Legacy one-shot handoff (`osgkeyboard://dictate`).
     private var awaitingDictationResult = false
     private var dictationRequestStartedAt: TimeInterval = 0
@@ -75,6 +97,14 @@ public final class KeyboardViewController: UIInputViewController {
     private var flowSessionMonitorTask: Task<Void, Never>?
     private var flowSessionDarwinObserver: FlowSessionDarwinObserver?
     private var configDarwinObserver: FlowSessionDarwinObserver?
+    /// Serializes caret moves so `textDocumentProxy` keeps up with drag events.
+    private var pendingHorizontalCursorSteps = 0
+    private var pendingVerticalCursorSteps = 0
+    private var cursorMoveFlushScheduled = false
+    /// Fires once per vertical chunk step during a cursor drag.
+    private let cursorLineHaptic = UIImpactFeedbackGenerator(style: .light)
+    /// Characters moved per vertical drag step (up = back, down = forward).
+    private static let cursorVerticalChunkSize = 20
     /// Grace period after a chip-side translation write during which the
     /// 1 Hz App Group poll must not overwrite `translationTargetLocaleId`.
     private var translationConfigProtectedUntil: Date?
@@ -94,6 +124,8 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewDidLoad() {
         super.viewDidLoad()
+        keyboardExtLog.info("viewDidLoad — extension booted (build marker: cursor-drag diag)")
+        setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
         installKeyboardHeight()
         configureDictationBehavior()
         installStateActions()
@@ -120,6 +152,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
         configureDictationBehavior()
         KeyboardSetupBridge.markExtensionAppearance(hasFullAccess: hasFullAccess)
         consumePendingDictationResultIfNeeded()
@@ -131,6 +164,7 @@ public final class KeyboardViewController: UIInputViewController {
         // from Settings.app or the host app, and the App Group is the
         // only thing both processes see consistently.
         syncOnboardingStateFromAppGroup()
+        refreshConfigFromAppGroup()
         // Auto-advance past step 3 ("Enable Keyboard") if the user has
         // enabled the keyboard in Settings.app while we were away.
         // This is the "automatic return from jump" feature: no manual
@@ -145,8 +179,17 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        disableSystemGestureDelays()
         // Presentation finished — lock to the true content-driven height.
         keyboardHeightConstraint?.constant = targetKeyboardHeight
+    }
+
+    public override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge {
+        [.left, .right]
+    }
+
+    public override var childForScreenEdgesDeferringSystemGestures: UIViewController? {
+        hosting
     }
 
     public override func didReceiveMemoryWarning() {
@@ -166,6 +209,37 @@ public final class KeyboardViewController: UIInputViewController {
     /// When `true`, the system dictation key in the bottom-right is not shown.
     private func configureDictationBehavior() {
         hasDictationKey = true
+    }
+
+    /// Keyboard extensions can lose or delay touches near the screen
+    /// edges because system edge-pan recognizers get first refusal.
+    /// Deferring edges above is the intent; this sweep removes delay
+    /// flags from recognizers already attached to the host hierarchy.
+    private func disableSystemGestureDelays() {
+        disableGestureDelays(in: view)
+        var parent = view.superview
+        while let current = parent {
+            disableGestureDelays(in: current)
+            parent = current.superview
+        }
+        if let window = view.window {
+            disableGestureDelays(in: window)
+            if let rootView = window.rootViewController?.view {
+                disableGestureDelays(in: rootView)
+            }
+        }
+    }
+
+    private func disableGestureDelays(in targetView: UIView) {
+        targetView.gestureRecognizers?.forEach { recognizer in
+            recognizer.delaysTouchesBegan = false
+            recognizer.delaysTouchesEnded = false
+            recognizer.cancelsTouchesInView = false
+            if recognizer is UIScreenEdgePanGestureRecognizer {
+                recognizer.isEnabled = false
+            }
+        }
+        targetView.subviews.forEach(disableGestureDelays)
     }
 
     // MARK: - Wiring
@@ -194,6 +268,93 @@ public final class KeyboardViewController: UIInputViewController {
         state.insertNewline       = { [weak self] in self?.textDocumentProxy.insertText("\n") }
         state.insertSpace         = { [weak self] in self?.textDocumentProxy.insertText(" ") }
         state.deleteBackward      = { [weak self] in self?.textDocumentProxy.deleteBackward() }
+        state.moveCursorHorizontal = { [weak self] steps in
+            self?.moveCursorHorizontally(by: steps)
+        }
+        state.moveCursorVertical = { [weak self] steps in
+            self?.moveCursorVertically(by: steps)
+        }
+        state.setCursorDragActive = { [weak self] active in
+            self?.setCursorDragActive(active)
+        }
+    }
+
+    private func setCursorDragActive(_ active: Bool) {
+        state.cursorDragActive = active
+        updateCursorDragWash(active: active)
+    }
+
+    private func updateCursorDragWash(active: Bool) {
+        if active {
+            cursorLineHaptic.prepare()
+        }
+        layoutCursorDragChrome()
+        // Gradient wash intentionally not shown — only the centred hint.
+        guard let hint = cursorDragHintLabel else { return }
+        if active {
+            hint.isHidden = false
+            UIView.animate(withDuration: 0.12) { hint.alpha = 1 }
+        } else {
+            UIView.animate(withDuration: 0.12, animations: { hint.alpha = 0 }) { [weak self] _ in
+                guard let self, !self.state.cursorDragActive else { return }
+                hint.isHidden = true
+            }
+        }
+    }
+
+    private func moveCursorHorizontally(by steps: Int) {
+        guard steps != 0 else { return }
+        pendingHorizontalCursorSteps += steps
+        scheduleCursorMoveFlush()
+    }
+
+    private func moveCursorVertically(by steps: Int) {
+        guard steps != 0 else { return }
+        pendingVerticalCursorSteps += steps
+        scheduleCursorMoveFlush()
+    }
+
+    private func scheduleCursorMoveFlush() {
+        guard !cursorMoveFlushScheduled else { return }
+        cursorMoveFlushScheduled = true
+        // Give the text-document proxy one run-loop turn between drag
+        // samples so caret updates are not dropped. Runs on the main
+        // queue (not a Task) to avoid `unsafeForcedSync` proxy access.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.012) { [weak self] in
+            guard let self else { return }
+            self.cursorMoveFlushScheduled = false
+
+            let horizontal = self.pendingHorizontalCursorSteps
+            let vertical = self.pendingVerticalCursorSteps
+            self.pendingHorizontalCursorSteps = 0
+            self.pendingVerticalCursorSteps = 0
+
+            if horizontal != 0 {
+                keyboardExtLog.info("adjustTextPosition h=\(horizontal)")
+                self.textDocumentProxy.adjustTextPosition(byCharacterOffset: horizontal)
+            }
+
+            if vertical != 0 {
+                self.applyVerticalCursorSteps(vertical)
+            }
+
+            if self.pendingHorizontalCursorSteps != 0 || self.pendingVerticalCursorSteps != 0 {
+                self.scheduleCursorMoveFlush()
+            }
+        }
+    }
+
+    private func applyVerticalCursorSteps(_ steps: Int) {
+        let direction = steps > 0 ? 1 : -1
+        var remaining = abs(steps)
+        let chunk = Self.cursorVerticalChunkSize
+
+        while remaining > 0 {
+            textDocumentProxy.adjustTextPosition(byCharacterOffset: direction * chunk)
+            cursorLineHaptic.impactOccurred()
+            cursorLineHaptic.prepare()
+            remaining -= 1
+        }
     }
 
     // MARK: - Onboarding persistence (v0.3.0)
@@ -271,7 +432,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     private func installSwiftUI() {
         let root = KeyboardRootView(state: state)
-        let host = UIHostingController(rootView: root)
+        let host = KeyboardHostingController(rootView: root)
         host.view.backgroundColor = .clear
         host.view.translatesAutoresizingMaskIntoConstraints = false
         host.view.clipsToBounds = false
@@ -289,12 +450,42 @@ public final class KeyboardViewController: UIInputViewController {
         ])
         host.didMove(toParent: self)
         self.hosting = host
+
+        // Cursor-drag chrome: only a centred hint label above the SwiftUI
+        // tree (non-interactive so the pads underneath still receive
+        // touches). The green gradient wash was removed — it was too hard to
+        // align cleanly with the system keyboard's rounded top edge.
+        let hint = UILabel()
+        hint.text = ExtL10n.string("keyboard.cursorDrag.centerHint")
+        hint.font = .systemFont(ofSize: 22, weight: .medium)
+        hint.textColor = UIColor.label.withAlphaComponent(0.10)
+        hint.textAlignment = .center
+        hint.numberOfLines = 1
+        hint.adjustsFontSizeToFitWidth = true
+        hint.minimumScaleFactor = 0.7
+        hint.isUserInteractionEnabled = false
+        hint.isHidden = true
+        hint.alpha = 0
+        view.addSubview(hint)
+
+        self.cursorDragHintLabel = hint
+    }
+
+    public override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        layoutCursorDragChrome()
+    }
+
+    private func layoutCursorDragChrome() {
+        cursorDragHintLabel?.frame = view.bounds
     }
 
     private func loadPersistedConfig() {
         switch persistor.load(into: state) {
         case .loaded:
-            break
+            keyboardExtLog.info(
+                "config loaded — cursorDragNavigationEnabled=\(self.state.cursorDragNavigationEnabled)"
+            )
         case .unavailable:
             state.phase = .error(
                 .appGroupUnavailable,
@@ -457,6 +648,7 @@ public final class KeyboardViewController: UIInputViewController {
         default:
             return
         }
+        guard !state.micDisabled else { return }
         guard hasFullAccess else {
             let msg = ExtL10n.string("keyboard.error.fullAccessRequired")
             state.phase = .error(.unknown(msg), message: msg)
@@ -731,11 +923,18 @@ public final class KeyboardViewController: UIInputViewController {
             guard let self else { return }
             let polishMode = runtimeStore.polishModeForPipeline
             let overrideProviderId = runtimeStore.polishProviderIdOverride
+            let preceding = self.textDocumentProxy.documentContextBeforeInput
+            let polishContext = PolishContext(
+                appContext: runtimeStore.detectedAppContext?.context ?? .unknown,
+                intensity: runtimeStore.polishIntensity,
+                precedingText: preceding
+            )
             do {
                 let polished = try await self.polisher.polish(
                     trimmed,
                     mode: polishMode,
-                    providerIdOverride: overrideProviderId
+                    providerIdOverride: overrideProviderId,
+                    context: polishContext
                 )
                 self.textDocumentProxy.insertText(polished)
                 self.state.lastTranscript = ""
@@ -773,16 +972,12 @@ public final class KeyboardViewController: UIInputViewController {
                     self.scheduleAutoClearError()
                 }
             } catch let polishError as PolishingService.PolishError where polishError == .missingAPIKey {
-                // v0.2.0: local engine + cloud polish toggle on, but the
-                // user hasn't entered an API key. Insert the raw transcript
-                // (so the user doesn't lose what they said) and surface the
-                // same "fill in your key" hint we use in the cloud path.
                 self.textDocumentProxy.insertText(trimmed)
                 self.state.lastTranscript = ""
-                self.state.phase = .error(
-                    .llm(.noAPIKey),
-                    message: ExtL10n.string("keyboard.error.llm.noApiKey")
-                )
+                let message = runtimeStore.engineMode == "local"
+                    ? ExtL10n.string("keyboard.error.llm.localPolishUnavailable")
+                    : ExtL10n.string("keyboard.error.llm.noApiKey")
+                self.state.phase = .error(.llm(.noAPIKey), message: message)
                 self.scheduleAutoClearError()
             } catch {
                 // Network / timeout / decoding — fall back to the raw
@@ -981,8 +1176,6 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     private func debug(_ message: String) {
-        #if DEBUG
-        print("🎙️[KeyboardVC] \(message)")
-        #endif
+        keyboardExtLog.info("\(message, privacy: .public)")
     }
 }

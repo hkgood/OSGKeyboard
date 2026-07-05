@@ -4,7 +4,6 @@
 // Bottom-row action keys: repeating delete, space, and return.
 
 import SwiftUI
-import UIKit
 import OSGKeyboardShared
 
 // MARK: - Layout metrics
@@ -17,35 +16,7 @@ private enum ToolbarButtonMetrics {
     static let pressOverlayOpacity: CGFloat = 0.18
 }
 
-// MARK: - Haptics
-
-private enum ToolbarHaptics {
-    @MainActor
-    static func tap() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-    }
-}
-
 // MARK: - Press styling
-
-private struct ToolbarKeyPressStyle: ButtonStyle {
-    let cornerRadius: CGFloat
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .overlay {
-                if configuration.isPressed {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(Color.black.opacity(ToolbarButtonMetrics.pressOverlayOpacity))
-                }
-            }
-            .scaleEffect(configuration.isPressed ? ToolbarButtonMetrics.pressScale : 1)
-            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
-            .sensoryFeedback(.impact(weight: .light), trigger: configuration.isPressed) { _, pressed in
-                pressed
-            }
-    }
-}
 
 private struct ToolbarKeySurface<Content: View>: View {
     @Environment(\.colorScheme) private var colorScheme
@@ -120,7 +91,7 @@ struct RepeatingDeleteButton: View {
                 guard !disabled, !isPressing else { return }
                 isPressing = true
                 repeatStartedAt = Date()
-                ToolbarHaptics.tap()
+                KeyboardSoundFeedback.deleteClick()
                 action()
                 startRepeating()
             }
@@ -143,6 +114,7 @@ struct RepeatingDeleteButton: View {
             guard !Task.isCancelled, isPressing else { return }
             let anchor = repeatStartedAt ?? Date()
             while !Task.isCancelled, isPressing {
+                KeyboardSoundFeedback.deleteClick()
                 action()
                 let elapsed = Date().timeIntervalSince(anchor)
                 let wait = interval(for: elapsed)
@@ -186,39 +158,39 @@ struct RectangularToolbarButton: View {
         self.action = action
     }
 
+    @State private var isPressing = false
+
     var body: some View {
-        Button(action: action) {
-            Group {
-                if spaceStyle {
-                    Capsule()
-                        .fill(palette.textPrimary)
-                        .frame(width: ToolbarButtonMetrics.spaceBarCapsuleWidth, height: 3)
-                } else if let systemName {
-                    Image(systemName: systemName)
-                        .font(.system(size: ToolbarButtonMetrics.iconSize, weight: .semibold))
-                        .foregroundStyle(palette.textPrimary)
-                }
+        ToolbarKeySurface(isPressed: isPressing, cornerRadius: ToolbarButtonMetrics.cornerRadius) {
+            if spaceStyle {
+                Capsule()
+                    .fill(palette.textPrimary)
+                    .frame(width: ToolbarButtonMetrics.spaceBarCapsuleWidth, height: 3)
+            } else if let systemName {
+                Image(systemName: systemName)
+                    .font(.system(size: ToolbarButtonMetrics.iconSize, weight: .semibold))
+                    .foregroundStyle(palette.textPrimary)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(keyBackground)
-            .overlay(
-                RoundedRectangle(cornerRadius: ToolbarButtonMetrics.cornerRadius, style: .continuous)
-                    .stroke(palette.dividerStrong, lineWidth: 0.5)
-            )
         }
-        .buttonStyle(ToolbarKeyPressStyle(cornerRadius: ToolbarButtonMetrics.cornerRadius))
-        .disabled(disabled)
+        .contentShape(Rectangle())
+        .gesture(pressGesture)
         .opacity(disabled ? 0.38 : 1)
+        .allowsHitTesting(!disabled)
         .accessibilityLabel(Text(label))
+        .accessibilityAddTraits(.isButton)
     }
 
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var keyBackground: some View {
-        let fill = colorScheme == .dark
-            ? Color(red: 0.20, green: 0.20, blue: 0.22)
-            : palette.surfaceElevated
-        return RoundedRectangle(cornerRadius: ToolbarButtonMetrics.cornerRadius, style: .continuous)
-            .fill(fill)
+    // 按下即响、按下即执行，与系统键盘保持一致（Button 默认松手才触发）。
+    private var pressGesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { _ in
+                guard !disabled, !isPressing else { return }
+                isPressing = true
+                KeyboardSoundFeedback.keyClick()
+                action()
+            }
+            .onEnded { _ in
+                isPressing = false
+            }
     }
 }

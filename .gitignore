@@ -45,6 +45,7 @@ fastlane/test_output
 # Local config (API keys, signing, etc.)
 *.local
 Signing.local.xcconfig
+PreconfiguredKeys.local.swift
 .env
 .env.*
 
@@ -53,3 +54,10 @@ Signing.local.xcconfig
 
 # Local DerivedData (when using -derivedDataPath in repo)
 .derivedData/
+
+# Lexicon build cache (downloaded SogouPopularDict TSV)
+.cache/
+
+# Python bytecode
+__pycache__/
+*.pyc

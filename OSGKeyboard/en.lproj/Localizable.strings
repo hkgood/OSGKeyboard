@@ -29,7 +29,7 @@
 "onboarding.enable.step3.suffix" = "and select OSGKeyboard";
 "onboarding.enable.openSettings" = "Open Settings";
 "onboarding.api.title" = "Choose Engine";
-"onboarding.api.localModels.hint" = "Download the on-device CoreML ASR model below before you finish setup (only needed when using Qwen3-ASR).";
+"onboarding.api.localModels.hint" = "Local engine uses built-in on-device speech recognition and built-in polish — no API key needed.";
 "settings.onboarding.replay" = "Restart permission setup";
 
 /* Common navigation */
@@ -39,6 +39,7 @@
 "common.continue" = "Continue";
 "common.reset" = "Reset";
 "common.cancel" = "Cancel";
+"common.save" = "Save";
 "common.clear" = "Clear";
 "common.delete" = "Delete";
 "common.space" = "Space";
@@ -119,7 +120,10 @@
 "settings.languageModels.title" = "Language & models";
 "settings.localModels.title" = "On-device models";
 "settings.localModels.speechRole" = "Speech";
+"settings.localModels.polishRole" = "Polish";
 "settings.localModels.builtIn" = "Built-in";
+"settings.localModels.speechEngine" = "Apple iOS Speech";
+"settings.localModels.polishEngine" = "OSGKeyboard Built-in";
 "settings.localModels.allReady" = "Ready";
 "settings.localModels.readiness %lld %lld" = "%lld/%lld ready";
 "settings.localModels.cloudPolish.title" = "Cloud polish after ASR";
@@ -139,6 +143,7 @@
 "settings.handedness.title" = "Handedness";
 "settings.handedness.left" = "Left hand";
 "settings.handedness.right" = "Right hand";
+"settings.cursorDragNavigation.title" = "Drag beside mic to move cursor";
 "settings.systemPrompt.reset" = "Reset";
 "settings.asrLocale" = "ASR locale";
 "settings.engineBadge.ios26" = "SpeechAnalyzer — always on-device";
@@ -308,6 +313,7 @@
 /* Tabs */
 "tab.keyboard" = "Keyboard";
 "tab.history" = "History";
+"tab.dictionary" = "Dictionary";
 "tab.settings" = "Settings";
 
 /* History */
@@ -335,12 +341,17 @@
 "settings.personalDictionary.sectionTitle" = "Personal dictionary";
 "settings.personalDictionary.title" = "Personal dictionary";
 "settings.personalDictionary.summary" = "Words the LLM must preserve verbatim when polishing.";
-"settings.personalDictionary.intro.title" = "How words get added";
-"settings.personalDictionary.intro.body" = "Words you dictate repeatedly are auto-learned. You can also edit or delete any entry here.";
+"settings.personalDictionary.intro.title" = "About your dictionary";
+"settings.personalDictionary.intro.body" = "Add words manually. Common speech-recognition mishearings are generated automatically after you save. Tap a word to edit.";
 "settings.personalDictionary.empty.title" = "No words yet";
-"settings.personalDictionary.empty.body" = "Words you dictate often will appear here. You can also delete any entry from this screen.";
+"settings.personalDictionary.empty.body" = "Add words you want protected during speech correction.";
 "settings.personalDictionary.search.prompt" = "Search words";
 "settings.personalDictionary.usageCount" = "%lld uses";
+"settings.personalDictionary.add.title" = "Add word";
+"settings.personalDictionary.edit.title" = "Edit word";
+"settings.personalDictionary.add.field" = "Word";
+"settings.personalDictionary.add.footer" = "Common speech-recognition mishearings are generated automatically after you save.";
+"settings.personalDictionary.aliases.generating" = "Generating aliases…";
 "settings.personalDictionary.clearAll" = "Clear dictionary";
 "settings.personalDictionary.clearAll.confirmTitle" = "Clear all dictionary words?";
 "settings.personalDictionary.clearAll.message" = "This removes every word the LLM was protecting. This cannot be undone.";
