@@ -31,7 +31,7 @@ final class ProgressiveDictationTranscriptAccumulatorTests: XCTestCase {
         _ = acc.ingest(range: r0, text: "前三十秒的内容")
         _ = acc.ingest(range: r30, text: "后二十秒的内容")
 
-        XCTAssertEqual(acc.finalize(), "前三十秒的内容 后二十秒的内容")
+        XCTAssertEqual(acc.finalize(), "前三十秒的内容后二十秒的内容")
     }
 
     func testDuplicateEmissionIsSuppressed() {
@@ -40,5 +40,33 @@ final class ProgressiveDictationTranscriptAccumulatorTests: XCTestCase {
 
         XCTAssertNotNil(acc.ingest(range: r0, text: "hello"))
         XCTAssertNil(acc.ingest(range: r0, text: "hello"))
+    }
+
+    func testPunctuationRevisionWithRangeDriftReplacesPriorSegment() {
+        var acc = ProgressiveDictationTranscriptAccumulator()
+
+        _ = acc.ingest(
+            range: range(start: 0.0, duration: 2.5),
+            text: "先这样用着就算目前的可用性"
+        )
+        _ = acc.ingest(
+            range: range(start: 0.25, duration: 2.5),
+            text: "先这样用着，就算目前的可用性已经"
+        )
+        _ = acc.ingest(
+            range: range(start: 2.8, duration: 2.5),
+            text: "提升很多了"
+        )
+
+        XCTAssertEqual(acc.finalize(), "先这样用着，就算目前的可用性已经提升很多了")
+    }
+
+    func testComposerDropsOverlappingSuffixAndPrefix() {
+        let composed = DictationTextComposer.compose(
+            anchor: "先这样用着，就算目前的可用性已经",
+            live: "可用性已经提升很多了"
+        )
+
+        XCTAssertEqual(composed, "先这样用着，就算目前的可用性已经提升很多了")
     }
 }
