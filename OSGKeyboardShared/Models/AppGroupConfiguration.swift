@@ -30,6 +30,10 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let detectedAppContext = "config.detectedAppContext"
         public static let detectedAppContextAt = "config.detectedAppContextAt"
         public static let personalDictionary = "config.personalDictionary.v1"
+        /// When true, the host app auto-returns to the source app after a cold-start handoff.
+        public static let flowSkipAppSwitch = "config.flowSkipAppSwitch"
+        /// Raw `FlowInactivityDuration` value; session expires after this idle window.
+        public static let flowInactivityDuration = "config.flowInactivityDuration"
     }
 
     // MARK: - Stored fields
@@ -49,6 +53,10 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var cursorDragNavigationEnabled: Bool
     public var polishIntensity: PolishIntensity
     public var personalDictionary: PersonalDictionary
+    /// Auto-return to the host app after `startflow` cold start (default on).
+    public var flowSkipAppSwitch: Bool
+    /// Idle timeout before the Flow session ends; resets on each utterance.
+    public var flowInactivityDuration: FlowInactivityDuration
 
     // MARK: - Derived
 
@@ -145,7 +153,16 @@ public struct AppGroupConfiguration: Sendable, Equatable {
                 return defaults.bool(forKey: Keys.cursorDragNavigationEnabled)
             }(),
             polishIntensity: resolvePolishIntensity(from: defaults),
-            personalDictionary: decodePersonalDictionary(from: defaults)
+            personalDictionary: decodePersonalDictionary(from: defaults),
+            flowSkipAppSwitch: {
+                if defaults.object(forKey: Keys.flowSkipAppSwitch) == nil {
+                    return true
+                }
+                return defaults.bool(forKey: Keys.flowSkipAppSwitch)
+            }(),
+            flowInactivityDuration: FlowInactivityDuration.fromStored(
+                defaults.string(forKey: Keys.flowInactivityDuration)
+            )
         )
 
         let preset = LLMProvider.provider(id: config.providerId)
@@ -193,6 +210,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(handednessPreference.rawValue, forKey: Keys.handednessPreference)
         defaults.set(cursorDragNavigationEnabled, forKey: Keys.cursorDragNavigationEnabled)
         defaults.set(polishIntensity.rawValue, forKey: Keys.polishIntensity)
+        defaults.set(flowSkipAppSwitch, forKey: Keys.flowSkipAppSwitch)
+        defaults.set(flowInactivityDuration.rawValue, forKey: Keys.flowInactivityDuration)
         Self.encodePersonalDictionary(personalDictionary, to: defaults)
     }
 

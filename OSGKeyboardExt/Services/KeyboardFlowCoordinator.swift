@@ -36,8 +36,6 @@ final class KeyboardFlowCoordinator {
     private var wasFlowSessionActive = false
     private var flowSessionMonitorTask: Task<Void, Never>?
     private var isAwaitingFlowResult = false
-    private var lastFlowAutoStartAttempt: TimeInterval = 0
-    private static let flowAutoStartCooldown: TimeInterval = 20
 
     init(
         state: KeyboardState,
@@ -95,10 +93,6 @@ final class KeyboardFlowCoordinator {
             }
         }
         wasFlowSessionActive = active
-
-        if !active {
-            maybeAutoStartFlowSession()
-        }
     }
 
     func toggleRecording() {
@@ -224,18 +218,6 @@ final class KeyboardFlowCoordinator {
         }
     }
 
-    private func maybeAutoStartFlowSession() {
-        guard !FlowSessionBridge.isSessionActive() else { return }
-        guard !isPendingFlowStart, !isFlowRecording, !isAwaitingFlowResult else { return }
-        guard hasFullAccess(), AppGroup.isAvailable else { return }
-        guard case .idle = state.phase else { return }
-
-        let now = Date().timeIntervalSince1970
-        guard now - lastFlowAutoStartAttempt >= Self.flowAutoStartCooldown else { return }
-        lastFlowAutoStartAttempt = now
-        beginFlowStart()
-    }
-
     private func showFlowSessionExpiredHint() {
         let message = ExtL10n.string("keyboard.flow.sessionExpired")
         state.phase = .error(.flowSessionExpired, message: message)
@@ -332,9 +314,9 @@ final class KeyboardFlowCoordinator {
         flowStartDeadline = 0
         stopFlowWatchdog()
         state.lastTranscript = ""
-        state.phase = .idle
         refreshSessionState()
-        debug("completeFlowStartHandoff")
+        startFlowRecording()
+        debug("completeFlowStartHandoff → auto startFlowRecording")
     }
 
     private func startFlowLevelWatchdog() {

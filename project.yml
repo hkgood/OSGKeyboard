@@ -118,6 +118,28 @@ targets:
           - CFBundleURLName: com.osgkeyboard.ios.settings
             CFBundleURLSchemes:
               - osgkeyboard
+        LSApplicationQueriesSchemes:
+          - weixin
+          - mqq
+          - wxwork
+          - dingtalk
+          - lark
+          - tg
+          - whatsapp
+          - line
+          - fb-messenger
+          - slack
+          - msteams
+          - discord
+          - notion
+          - bear
+          - obsidian
+          - drafts5
+          - googlegmail
+          - ms-outlook
+          - googlechrome
+          - sinaweibo
+          - xhsdiscover
         # All network calls are HTTPS (NSAppTransportSecurity above);
         # nothing in the app uses non-exempt encryption. Declaring
         # `ITSAppUsesNonExemptEncryption: false` lets us skip the

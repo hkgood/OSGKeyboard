@@ -30,6 +30,8 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertTrue(config.cursorDragNavigationEnabled)
         XCTAssertEqual(config.polishIntensity, .default)
         XCTAssertTrue(config.personalDictionary.entries.isEmpty)
+        XCTAssertTrue(config.flowSkipAppSwitch)
+        XCTAssertEqual(config.flowInactivityDuration, .twelveHours)
     }
 
     func testSaveAndLoadRoundTrip() {
@@ -49,6 +51,8 @@ final class AppGroupConfigurationTests: XCTestCase {
         config.handednessPreference = .right
         config.cursorDragNavigationEnabled = false
         config.polishIntensity = .light
+        config.flowSkipAppSwitch = false
+        config.flowInactivityDuration = .thirtyMinutes
         config.save(to: defaults)
 
         let loaded = AppGroupConfiguration.load(fromAvailable: defaults)
@@ -66,6 +70,8 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertEqual(loaded.handednessPreference, .right)
         XCTAssertFalse(loaded.cursorDragNavigationEnabled)
         XCTAssertEqual(loaded.polishIntensity, .light)
+        XCTAssertFalse(loaded.flowSkipAppSwitch)
+        XCTAssertEqual(loaded.flowInactivityDuration, .thirtyMinutes)
     }
 
     func testTranslationEnabledDerivedFromTargetLocale() {

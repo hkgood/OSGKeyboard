@@ -171,6 +171,25 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         }
     }
 
+    /// When enabled, the host app tries to return to the source app after a cold-start handoff.
+    @Published public var flowSkipAppSwitch: Bool {
+        didSet {
+            guard !isApplyingConfiguration, flowSkipAppSwitch != configuration.flowSkipAppSwitch else { return }
+            configuration.flowSkipAppSwitch = flowSkipAppSwitch
+            persistConfiguration()
+        }
+    }
+
+    /// Idle window before an active Flow session expires; resets on each utterance.
+    @Published public var flowInactivityDuration: FlowInactivityDuration {
+        didSet {
+            guard !isApplyingConfiguration,
+                  flowInactivityDuration != configuration.flowInactivityDuration else { return }
+            configuration.flowInactivityDuration = flowInactivityDuration
+            persistConfiguration()
+        }
+    }
+
     public var isConfigured: Bool {
         // Local engine uses on-device ASR + built-in DeepSeek polish and
         // does not need a user API key. Cloud needs base URL, key, and model.
@@ -218,6 +237,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         handednessPreference = configuration.handednessPreference
         cursorDragNavigationEnabled = configuration.cursorDragNavigationEnabled
         polishIntensity = configuration.polishIntensity
+        flowSkipAppSwitch = configuration.flowSkipAppSwitch
+        flowInactivityDuration = configuration.flowInactivityDuration
         isApplyingConfiguration = false
     }
 

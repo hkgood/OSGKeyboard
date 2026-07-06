@@ -34,6 +34,30 @@
 			</array>
 		</dict>
 	</array>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>weixin</string>
+		<string>mqq</string>
+		<string>wxwork</string>
+		<string>dingtalk</string>
+		<string>lark</string>
+		<string>tg</string>
+		<string>whatsapp</string>
+		<string>line</string>
+		<string>fb-messenger</string>
+		<string>slack</string>
+		<string>msteams</string>
+		<string>discord</string>
+		<string>notion</string>
+		<string>bear</string>
+		<string>obsidian</string>
+		<string>drafts5</string>
+		<string>googlegmail</string>
+		<string>ms-outlook</string>
+		<string>googlechrome</string>
+		<string>sinaweibo</string>
+		<string>xhsdiscover</string>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

@@ -359,3 +359,48 @@
 
 /* v0.3.0: 润色档位 */
 "settings.polishIntensity.title" = "润色档位";
+
+/* Flow 会话策略 */
+"settings.flow.title" = "语音会话";
+"settings.flow.skipAppSwitch.title" = "跳过应用切换";
+"settings.flow.skipAppSwitch.subtitle" = "冷启动完成后，尝试自动返回来源 App。";
+"settings.flow.inactivity.title" = "无活动后结束会话";
+"settings.flow.inactivity.10m" = "10 分钟";
+"settings.flow.inactivity.30m" = "30 分钟";
+"settings.flow.inactivity.3h" = "3 小时";
+"settings.flow.inactivity.12h" = "12 小时";
+"settings.flow.inactivity.24h" = "24 小时";
+
+/* 冷启动兜底（方案 B） */
+"flow.coldStart.title" = "语音已就绪";
+"flow.coldStart.swipeHint" = "从屏幕底部边缘向上滑动，返回上一个 App。";
+"flow.coldStart.swipeHint.withSystemBack" = "点左上角 ‹ 或从底部向上滑动返回。";
+"flow.coldStart.dismiss" = "知道了";
+"flow.coldStart.swipeAccessibility" = "从底部向上滑动返回";
+"flow.coldStart.alert.title" = "语音已就绪";
+"flow.coldStart.alert.message" = "可返回继续输入，或从底部向上滑动返回。";
+"flow.coldStart.return.named" = "返回%@";
+"flow.coldStart.return.generic" = "返回 App";
+
+/* 宿主 App 显示名（方案 C 白名单） */
+"hostApp.wechat" = "微信";
+"hostApp.qq" = "QQ";
+"hostApp.wecom" = "企业微信";
+"hostApp.dingtalk" = "钉钉";
+"hostApp.lark" = "飞书";
+"hostApp.telegram" = "Telegram";
+"hostApp.whatsapp" = "WhatsApp";
+"hostApp.line" = "LINE";
+"hostApp.messenger" = "Messenger";
+"hostApp.slack" = "Slack";
+"hostApp.teams" = "Microsoft Teams";
+"hostApp.discord" = "Discord";
+"hostApp.notion" = "Notion";
+"hostApp.bear" = "Bear";
+"hostApp.obsidian" = "Obsidian";
+"hostApp.drafts" = "Drafts";
+"hostApp.gmail" = "Gmail";
+"hostApp.outlook" = "Outlook";
+"hostApp.chrome" = "Chrome";
+"hostApp.weibo" = "微博";
+"hostApp.xiaohongshu" = "小红书";

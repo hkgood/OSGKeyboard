@@ -360,3 +360,48 @@
 
 /* v0.3.0: Polish intensity */
 "settings.polishIntensity.title" = "Polish intensity";
+
+/* Flow session policy */
+"settings.flow.title" = "Voice session";
+"settings.flow.skipAppSwitch.title" = "Skip app switch";
+"settings.flow.skipAppSwitch.subtitle" = "After a cold start, try to return to the app you came from.";
+"settings.flow.inactivity.title" = "End session after inactivity";
+"settings.flow.inactivity.10m" = "10 minutes";
+"settings.flow.inactivity.30m" = "30 minutes";
+"settings.flow.inactivity.3h" = "3 hours";
+"settings.flow.inactivity.12h" = "12 hours";
+"settings.flow.inactivity.24h" = "24 hours";
+
+/* Cold-start handoff (scheme B) */
+"flow.coldStart.title" = "Voice is ready";
+"flow.coldStart.swipeHint" = "Swipe up from the bottom edge to return to your previous app.";
+"flow.coldStart.swipeHint.withSystemBack" = "Tap ‹ in the top-left or swipe up from the bottom to return.";
+"flow.coldStart.dismiss" = "Got it";
+"flow.coldStart.swipeAccessibility" = "Swipe up from the bottom to return";
+"flow.coldStart.alert.title" = "Voice is ready";
+"flow.coldStart.alert.message" = "You can return to continue typing, or swipe up from the bottom.";
+"flow.coldStart.return.named" = "Return to %@";
+"flow.coldStart.return.generic" = "Return to app";
+
+/* Host app display names (scheme C whitelist) */
+"hostApp.wechat" = "WeChat";
+"hostApp.qq" = "QQ";
+"hostApp.wecom" = "WeCom";
+"hostApp.dingtalk" = "DingTalk";
+"hostApp.lark" = "Lark";
+"hostApp.telegram" = "Telegram";
+"hostApp.whatsapp" = "WhatsApp";
+"hostApp.line" = "LINE";
+"hostApp.messenger" = "Messenger";
+"hostApp.slack" = "Slack";
+"hostApp.teams" = "Microsoft Teams";
+"hostApp.discord" = "Discord";
+"hostApp.notion" = "Notion";
+"hostApp.bear" = "Bear";
+"hostApp.obsidian" = "Obsidian";
+"hostApp.drafts" = "Drafts";
+"hostApp.gmail" = "Gmail";
+"hostApp.outlook" = "Outlook";
+"hostApp.chrome" = "Chrome";
+"hostApp.weibo" = "Weibo";
+"hostApp.xiaohongshu" = "RED";

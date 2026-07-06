@@ -39,13 +39,16 @@ public enum FlowSessionBridge {
     // MARK: - Session lifecycle (host app)
 
     public static func markSessionActive(
-        duration: TimeInterval = FlowSessionKeys.defaultSessionDuration,
+        duration: TimeInterval? = nil,
         defaults: UserDefaults? = nil
     ) {
         let store = resolvedDefaults(defaults)
-        let expires = Date().timeIntervalSince1970 + duration
+        let resolvedDuration = duration ?? FlowSessionPolicy.sessionDuration(defaults: store)
+        let now = Date().timeIntervalSince1970
+        let expires = now + resolvedDuration
         store.set(true, forKey: FlowSessionKeys.flowSessionActive)
         store.set(expires, forKey: FlowSessionKeys.flowSessionExpires)
+        store.set(now, forKey: FlowSessionKeys.lastActivityAt)
         writeHeartbeat(defaults: store)
         setRecordingState(.idle, defaults: store)
         clearTranscription(defaults: store)
@@ -69,14 +72,47 @@ public enum FlowSessionBridge {
     }
 
     public static func extendSession(
-        by duration: TimeInterval = FlowSessionKeys.defaultSessionDuration,
+        by duration: TimeInterval? = nil,
         defaults: UserDefaults? = nil
     ) {
         let store = resolvedDefaults(defaults)
-        let expires = Date().timeIntervalSince1970 + duration
+        let resolvedDuration = duration ?? FlowSessionPolicy.sessionDuration(defaults: store)
+        let expires = Date().timeIntervalSince1970 + resolvedDuration
         store.set(true, forKey: FlowSessionKeys.flowSessionActive)
         store.set(expires, forKey: FlowSessionKeys.flowSessionExpires)
         flush(store)
+    }
+
+    /// Resets the inactivity timer after utterance completion or explicit activity.
+    public static func touchLastActivity(defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        let now = Date().timeIntervalSince1970
+        let duration = FlowSessionPolicy.sessionDuration(defaults: store)
+        store.set(now, forKey: FlowSessionKeys.lastActivityAt)
+        store.set(now + duration, forKey: FlowSessionKeys.flowSessionExpires)
+        store.set(true, forKey: FlowSessionKeys.flowSessionActive)
+        flush(store)
+    }
+
+    // MARK: - Host return (scheme D)
+
+    public static func setPendingHostBundleId(_ bundleId: String?, defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        if let bundleId, !bundleId.isEmpty {
+            store.set(bundleId, forKey: FlowSessionKeys.pendingHostBundleId)
+        } else {
+            store.removeObject(forKey: FlowSessionKeys.pendingHostBundleId)
+        }
+        flush(store)
+    }
+
+    public static func pendingHostBundleId(defaults: UserDefaults? = nil) -> String? {
+        let store = resolvedDefaults(defaults)
+        return store.string(forKey: FlowSessionKeys.pendingHostBundleId)
+    }
+
+    public static func clearPendingHostBundleId(defaults: UserDefaults? = nil) {
+        setPendingHostBundleId(nil, defaults: defaults)
     }
 
     // MARK: - Session validity (keyboard)
@@ -280,6 +316,8 @@ public enum FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.transcriptionLanguage)
         clearTranscription(defaults: store)
         store.removeObject(forKey: FlowSessionKeys.audioLevels)
+        store.removeObject(forKey: FlowSessionKeys.pendingHostBundleId)
+        store.removeObject(forKey: FlowSessionKeys.lastActivityAt)
         flush(store)
     }
 

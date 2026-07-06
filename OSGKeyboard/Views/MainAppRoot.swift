@@ -24,31 +24,44 @@ struct MainAppRoot: View {
         }
         .environment(\.locale, config.uiLanguage.swiftUILocale)
         .environmentObject(flowManager)
+        .overlay {
+            if let context = flowManager.coldStartContext {
+                FlowColdStartOverlay(
+                    context: context,
+                    onReturnToHost: { flowManager.returnToPendingHostFromColdStart() },
+                    onDismiss: { flowManager.dismissColdStartOverlay() }
+                )
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: flowManager.coldStartContext != nil)
         .onAppear {
             flowManager.setAppForeground(scenePhase == .active)
+            flowManager.restoreSessionIfNeeded()
         }
-        .onOpenURL { url in
-            guard url.scheme == "osgkeyboard" else { return }
-            switch url.host {
-            case "startflow":
-                flowManager.startSession()
-            default:
-                break
-            }
+        .onReceive(NotificationCenter.default.publisher(for: .osgKeyboardOpenURL)) { notification in
+            guard let url = notification.userInfo?["url"] as? URL else { return }
+            handleIncomingURL(url)
         }
         .onChange(of: config.hasCompletedOnboarding) { _, done in
             if done {
-                flowManager.autoStartIfNeeded()
+                flowManager.warmupAfterOnboardingIfNeeded()
             }
         }
         .onChange(of: scenePhase) { _, phase in
             flowManager.handleScenePhase(phase)
             guard phase == .active, config.hasCompletedOnboarding else { return }
-            if flowManager.isActive {
-                flowManager.extendSession()
-            } else {
-                flowManager.autoStartIfNeeded()
-            }
+            flowManager.restoreSessionIfNeeded()
+        }
+    }
+
+    private func handleIncomingURL(_ url: URL) {
+        guard url.scheme == "osgkeyboard" else { return }
+        switch url.host {
+        case "startflow":
+            flowManager.startSession(coldStart: true)
+        default:
+            break
         }
     }
 }

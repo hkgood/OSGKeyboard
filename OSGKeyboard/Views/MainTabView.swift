@@ -48,6 +48,5 @@ struct MainTabView: View {
         // Keep home card/input/tab layout fixed when system keyboard appears.
         // Let the keyboard overlay the content instead of pushing it.
         .ignoresSafeArea(.keyboard, edges: .bottom)
-        .onAppear { flowManager.autoStartIfNeeded() }
     }
 }

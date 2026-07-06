@@ -106,9 +106,6 @@ struct HomeView: View {
     private func refreshPermissionStatuses() {
         micStatus = AppPermissions.micStatus
         speechStatus = AppPermissions.speechStatus
-        if AppPermissions.flowRequirementsMet {
-            flowManager.autoStartIfNeeded()
-        }
     }
 
     private func handlePermissionGuidanceAction() {

@@ -21,11 +21,15 @@ public enum FlowSessionKeys {
     /// Structured kind paired with `transcriptionError` for keyboard UI.
     public static let transcriptionErrorKind = "flow.transcriptionErrorKind"
     public static let audioLevels = "flow.audioLevels"
+    /// Bundle id of the app that opened `osgkeyboard://startflow` (scheme D).
+    public static let pendingHostBundleId = "flow.pendingHostBundleId"
+    /// Wall-clock timestamp of the last utterance completion or session start.
+    public static let lastActivityAt = "flow.lastActivityAt"
 
     /// Heartbeat older than this while the host is foreground → likely killed.
     public static let heartbeatStaleInterval: TimeInterval = 3
 
-    /// Default Flow session length when started from the keyboard.
+    /// Legacy fixed session length — prefer `FlowSessionPolicy.sessionDuration()`.
     public static let defaultSessionDuration: TimeInterval = 480
 
     /// Maximum duration for a single keyboard utterance (3.5 minutes).

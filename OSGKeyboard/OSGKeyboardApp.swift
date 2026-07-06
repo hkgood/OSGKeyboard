@@ -6,6 +6,8 @@ import OSGKeyboardShared
 
 @main
 struct OSGKeyboardApp: App {
+    @UIApplicationDelegateAdaptor(AppURLHandler.self) private var appURLHandler
+
     init() {
         MaterialIconsFont.registerIfNeeded()
         if AppGroup.isAvailable {
