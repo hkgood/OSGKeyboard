@@ -87,6 +87,34 @@ final class ChunkedUtterancePipelineTests: XCTestCase {
         XCTAssertFalse(success.text.isEmpty)
         XCTAssertEqual(success.chunkWarnings.count, 1)
     }
+
+    func testPipelineRetranscribesShortFinalChunkWithPriorOverlap() async {
+        let config = FlowUtteranceChunkConfig(
+            maxChunkDurationSeconds: 0.05,
+            overlapDurationSeconds: 10,
+            pauseExtensionMaxSeconds: 0,
+            pauseRMSThreshold: 0.02,
+            minFinalChunkDurationSeconds: 0.05,
+            sampleRate: 1_000
+        )
+        let asr = ShortFinalMergeStubASR()
+        let pipeline = ChunkedUtterancePipeline(
+            asr: asr,
+            locale: Locale(identifier: "zh-Hans"),
+            config: config
+        )
+
+        let (stream, continuation) = AsyncStream<AudioBufferSnapshot>.makeStream()
+        continuation.yield(AudioBufferSnapshot(samples: [Float](repeating: 0.1, count: 80), sampleRate: 1_000))
+        continuation.yield(AudioBufferSnapshot(samples: [Float](repeating: 0.1, count: 20), sampleRate: 1_000))
+        continuation.finish()
+
+        let outcome = await pipeline.transcribe(stream: stream) { _ in }
+        guard case .success(let success) = outcome else {
+            return XCTFail("expected success, got \(outcome)")
+        }
+        XCTAssertTrue(success.text.contains("merged"))
+    }
 }
 
 private struct FailingSecondChunkASR: ASRService, @unchecked Sendable {
@@ -112,5 +140,34 @@ private struct FailingSecondChunkASR: ASRService, @unchecked Sendable {
             return .failure("simulated chunk error")
         }
         return .success("seg\(samples.count)")
+    }
+}
+
+private struct ShortFinalMergeStubASR: ASRService, @unchecked Sendable {
+    private let callIndex = OSAllocatedUnfairLock(initialState: 0)
+
+    func transcribe(
+        stream: AsyncStream<AudioBufferSnapshot>,
+        locale: Locale
+    ) -> AsyncStream<ASREvent> {
+        AsyncStream { $0.finish() }
+    }
+
+    func cancel() {}
+
+    func transcribeChunk(samples: [Float], locale: Locale) async -> ASRChunkResult {
+        _ = locale
+        let current = callIndex.withLock { state in
+            let value = state
+            state += 1
+            return value
+        }
+        if current == 0 {
+            return .success("head")
+        }
+        if samples.count > 20 {
+            return .success("merged-tail")
+        }
+        return .success("short")
     }
 }

@@ -11,4 +11,8 @@ enum FlowDiagnostics {
     static func log(_ message: String) {
         OSGLog.flow.info("\(message, privacy: .public)")
     }
+
+    static func logDrain(_ report: FlowCaptureDrainReport) {
+        FlowPipelineDiagnostics.logDrain(report)
+    }
 }

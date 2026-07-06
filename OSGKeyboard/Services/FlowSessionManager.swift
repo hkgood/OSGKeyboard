@@ -477,21 +477,21 @@ final class FlowSessionManager: ObservableObject {
 
         // Close the mic gate first, then mark processing before dropping the
         // recording flag so the poll loop cannot start a second utterance.
-        capture.endUtterance()
         FlowSessionBridge.setRecordingState(.processing)
         isUtteranceRecording = false
         isUtteranceProcessing = true
         FlowLiveActivityController.update(phase: .processing)
 
-        // Do NOT cancel `asrTask` or `asr` — the preview pipeline relies on
-        // the consumer staying alive until `.final` lands (see
-        // `PreviewASRControllerStateTests`).
+        // Do NOT cancel `asrTask` or `asr` — drain trailing PCM, then finalize.
 
         finalizeTask?.cancel()
         finalizeTask = Task { @MainActor [weak self] in
-            await self?.finalizeUtterance()
+            guard let self else { return }
+            let drainReport = await self.capture.endUtteranceAndDrain()
+            FlowDiagnostics.logDrain(drainReport)
+            await self.finalizeUtterance()
         }
-        debug("utterance stopped, finalizing")
+        debug("utterance stopped, draining tail")
     }
 
     private func abortUtterance() {

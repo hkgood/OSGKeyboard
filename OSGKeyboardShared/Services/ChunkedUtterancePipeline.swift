@@ -99,6 +99,8 @@ public actor ChunkedUtterancePipeline {
         var chunkWarnings: [String] = []
         var failedChunks = 0
         var processedChunks = 0
+        var previousChunkSamples: [Float] = []
+        var lastChunkSamples = 0
 
         let feeder = Task {
             for await chunk in UtteranceStreamChunker.chunks(from: stream, config: config) {
@@ -117,19 +119,42 @@ public actor ChunkedUtterancePipeline {
             guard let chunk = await queue.dequeue() else { break }
 
             processedChunks += 1
-            let asr = self.asr
-            let locale = self.locale
-            let result = await Task.detached(priority: .userInitiated) {
-                await asr.transcribeChunk(samples: chunk.samples, locale: locale)
-            }.value
+            lastChunkSamples = chunk.samples.count
 
+            if chunk.isLast,
+               chunk.samples.count < config.minFinalChunkSamples,
+               processedChunks > 1,
+               !previousChunkSamples.isEmpty {
+                let mergedSamples = Array(previousChunkSamples.suffix(config.overlapSamples))
+                    + chunk.samples
+                let mergedResult = await transcribeChunk(samples: mergedSamples)
+                switch mergedResult {
+                case .success(let text):
+                    stitcher.removeLastSegment()
+                    stitcher.append(index: max(0, chunk.index - 1), text: text)
+                    publishPartial(from: stitcher, onPartial: onPartial)
+                case .failure(let message):
+                    failedChunks += 1
+                    chunkWarnings.append(
+                        SharedL10n.format(
+                            "error.asr.chunkFailed",
+                            chunk.index + 1,
+                            message
+                        )
+                    )
+                case .cancelled:
+                    feeder.cancel()
+                    return .cancelled
+                }
+                previousChunkSamples = chunk.samples
+                continue
+            }
+
+            let result = await transcribeChunk(samples: chunk.samples)
             switch result {
             case .success(let text):
                 stitcher.append(index: chunk.index, text: text)
-                let partial = stitcher.composed()
-                if !partial.isEmpty {
-                    onPartial(partial)
-                }
+                publishPartial(from: stitcher, onPartial: onPartial)
             case .failure(let message):
                 failedChunks += 1
                 chunkWarnings.append(
@@ -143,11 +168,20 @@ public actor ChunkedUtterancePipeline {
                 feeder.cancel()
                 return .cancelled
             }
+
+            previousChunkSamples = chunk.samples
         }
 
         _ = await feeder.value
 
-        let finalText = stitcher.composed().trimmingCharacters(in: .whitespacesAndNewlines)
+        let finalText = stitcher.composedSafely().trimmingCharacters(in: .whitespacesAndNewlines)
+        FlowPipelineDiagnostics.logChunkFinalize(
+            chunkCount: processedChunks,
+            lastChunkSamples: lastChunkSamples,
+            stitchedLength: finalText.count,
+            chunkWarnings: chunkWarnings.count
+        )
+
         if finalText.isEmpty {
             if failedChunks > 0, processedChunks == failedChunks {
                 return .failure(SharedL10n.string("error.asr.noSpeech"))
@@ -156,5 +190,23 @@ public actor ChunkedUtterancePipeline {
         }
 
         return .success(ChunkedUtteranceSuccess(text: finalText, chunkWarnings: chunkWarnings))
+    }
+
+    private func transcribeChunk(samples: [Float]) async -> ASRChunkResult {
+        let asr = self.asr
+        let locale = self.locale
+        return await Task.detached(priority: .userInitiated) {
+            await asr.transcribeChunk(samples: samples, locale: locale)
+        }.value
+    }
+
+    private func publishPartial(
+        from stitcher: UtteranceTranscriptStitcher,
+        onPartial: @Sendable (String) -> Void
+    ) {
+        let partial = stitcher.composedSafely()
+        if !partial.isEmpty {
+            onPartial(partial)
+        }
     }
 }
