@@ -98,8 +98,10 @@
 "settings.engine.local.ios26" = "Always on-device, no network.";
 "settings.engine.local.legacy" = "On-device ASR. Transcription only, no polish.";
 "settings.engine.cloud.title" = "Cloud recognition & polish";
-"settings.engine.cloud.subtitle" = "On-device ASR + polish via your API. Text is sent to the endpoint you configure.";
+"settings.engine.cloud.subtitle" = "Cloud ASR (with your dictionary) + API polish. Audio is sent to your provider.";
+"settings.engine.cloud.badge" = "Cloud engine";
 "settings.provider.title" = "Provider";
+"settings.provider.personalDictionaryBadge" = "Personal dictionary";
 "settings.provider.subtitle" = "Pick the LLM that polishes your dictation.";
 "provider.openai" = "OpenAI";
 "provider.deepseek" = "DeepSeek";
@@ -141,6 +143,7 @@
 "settings.systemPrompt.hint" = "Used by the cloud LLM when polishing your dictation. Local engine skips this step.";
 "settings.about.title" = "About";
 "settings.preferences.title" = "Preferences";
+"settings.dictionaryAndPolish.title" = "Dictionary & polish";
 "settings.handedness.title" = "Handedness";
 "settings.handedness.left" = "Left hand";
 "settings.handedness.right" = "Right hand";
@@ -283,6 +286,7 @@
 "home.flow.active" = "Voice session active";
 "home.flow.label" = "Ready";
 "home.flow.inactive" = "Voice session inactive";
+"home.flow.notReady" = "Not ready";
 "home.flow.hint" = "Switch to any app and tap the keyboard mic to dictate.";
 "home.setup.permission.mic" = "Microphone access is off — voice input won't work.";
 "home.setup.permission.speech" = "Speech recognition is off — voice input won't work.";
@@ -346,7 +350,7 @@
 "settings.personalDictionary.intro.title" = "About your dictionary";
 "settings.personalDictionary.intro.body" = "Add words manually. Common speech-recognition mishearings are generated automatically after you save. Tap a word to edit.";
 "settings.personalDictionary.empty.title" = "No words yet";
-"settings.personalDictionary.empty.body" = "Add words you want protected during speech correction.";
+"settings.personalDictionary.empty.body" = "Add your personal dictionary to improve recognition accuracy\nSyncs across devices via iCloud";
 "settings.personalDictionary.search.prompt" = "Search words";
 "settings.personalDictionary.usageCount" = "%lld uses";
 "settings.personalDictionary.add.title" = "Add word";
@@ -358,6 +362,11 @@
 "settings.personalDictionary.clearAll.confirmTitle" = "Clear all dictionary words?";
 "settings.personalDictionary.clearAll.message" = "This removes every word the LLM was protecting. This cannot be undone.";
 "settings.personalDictionary.clearAll.confirm" = "Clear all";
+"settings.personalDictionary.iCloudSync.title" = "Sync via iCloud";
+"settings.personalDictionary.iCloudSync.settingsTitle" = "Personal dictionary iCloud sync";
+"settings.personalDictionary.iCloudSync.subtitle" = "Keep your dictionary in sync across iPhone, iPad, and Mac. Data stays in your private iCloud account and is not used for training.";
+"settings.personalDictionary.iCloudSync.error.tooLarge" = "Dictionary is too large to sync via iCloud. Remove some entries and try again.";
+"settings.personalDictionary.iCloudSync.error.generic" = "Could not sync your dictionary with iCloud. Try again later.";
 
 /* v0.3.0: Polish intensity */
 "settings.polishIntensity.title" = "Polish intensity";

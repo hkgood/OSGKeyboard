@@ -98,8 +98,10 @@
 "settings.engine.local.ios26" = "全程在手机本地，不用联网";
 "settings.engine.local.legacy" = "端侧 ASR，仅转录，无润色。";
 "settings.engine.cloud.title" = "云端识别与润色";
-"settings.engine.cloud.subtitle" = "本地转写 + 你配置的 API 润色，文字发往该第三方服务";
+"settings.engine.cloud.subtitle" = "云端 ASR（含个性词库）+ API 润色，音频将发往第三方服务";
+"settings.engine.cloud.badge" = "云端引擎";
 "settings.provider.title" = "云端引擎";
+"settings.provider.personalDictionaryBadge" = "个性词库";
 "settings.provider.subtitle" = "选择 LLM 提供商。";
 "provider.openai" = "OpenAI";
 "provider.deepseek" = "DeepSeek";
@@ -141,6 +143,7 @@
 "settings.systemPrompt.hint" = "云端润色时使用。本地识别模式不会用到此提示词。";
 "settings.about.title" = "关于";
 "settings.preferences.title" = "偏好设置";
+"settings.dictionaryAndPolish.title" = "词库与润色";
 "settings.handedness.title" = "握持偏好";
 "settings.handedness.left" = "左手";
 "settings.handedness.right" = "右手";
@@ -282,6 +285,7 @@
 "home.flow.active" = "语音会话进行中";
 "home.flow.label" = "就绪";
 "home.flow.inactive" = "语音会话未启动";
+"home.flow.notReady" = "未就绪";
 "home.flow.hint" = "切到别的 App，点键盘麦克风就能说。";
 "home.setup.permission.mic" = "麦克风还没授权，语音输入用不了。";
 "home.setup.permission.speech" = "语音识别还没授权，语音输入用不了。";
@@ -345,7 +349,7 @@
 "settings.personalDictionary.intro.title" = "关于词库";
 "settings.personalDictionary.intro.body" = "手动添加词条；保存后会自动生成常见误识别写法。点击词条可编辑。";
 "settings.personalDictionary.empty.title" = "还没有词条";
-"settings.personalDictionary.empty.body" = "添加希望在语音纠错时保护的词汇。";
+"settings.personalDictionary.empty.body" = "添加个性化词库，提升识别准确性\n词库将通过 iCloud 实现跨设备同步";
 "settings.personalDictionary.search.prompt" = "搜索词条";
 "settings.personalDictionary.usageCount" = "使用 %lld 次";
 "settings.personalDictionary.add.title" = "添加词条";
@@ -357,9 +361,14 @@
 "settings.personalDictionary.clearAll.confirmTitle" = "清空全部词条？";
 "settings.personalDictionary.clearAll.message" = "这会移除所有受保护的词汇，且无法撤销。";
 "settings.personalDictionary.clearAll.confirm" = "全部清空";
+"settings.personalDictionary.iCloudSync.title" = "通过 iCloud 同步";
+"settings.personalDictionary.iCloudSync.settingsTitle" = "个性词库 iCloud 同步";
+"settings.personalDictionary.iCloudSync.subtitle" = "在 iPhone、iPad 和 Mac 之间同步词库。数据仅保存在你的私人 iCloud 账户中，不会用于训练。";
+"settings.personalDictionary.iCloudSync.error.tooLarge" = "词库过大，无法通过 iCloud 同步。请删除部分词条后重试。";
+"settings.personalDictionary.iCloudSync.error.generic" = "无法与 iCloud 同步词库，请稍后重试。";
 
-/* v0.3.0: 润色档位 */
-"settings.polishIntensity.title" = "润色档位";
+/* v0.3.0: 润色强度 */
+"settings.polishIntensity.title" = "润色强度";
 
 /* Flow 会话策略 */
 "settings.flow.title" = "语音会话";

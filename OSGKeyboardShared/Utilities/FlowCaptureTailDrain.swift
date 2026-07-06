@@ -6,6 +6,7 @@
 // or a safety timeout elapses (symmetric to pre-roll at utterance start).
 
 import Foundation
+import os
 
 /// Tunable tail-drain policy shared by Flow capture and preview dictation.
 public struct FlowCaptureTailDrainPolicy: Sendable, Equatable {

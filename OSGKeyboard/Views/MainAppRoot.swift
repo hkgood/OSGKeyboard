@@ -38,6 +38,10 @@ struct MainAppRoot: View {
         .onAppear {
             flowManager.setAppForeground(scenePhase == .active)
             flowManager.activateOnForeground()
+            PersonalDictionaryCloudSync.shared.startObservingExternalChanges()
+            Task {
+                await PersonalDictionaryCloudSync.shared.pullAndMergeIfEnabled()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .osgKeyboardOpenURL)) { notification in
             guard let url = notification.userInfo?["url"] as? URL else { return }
@@ -50,8 +54,13 @@ struct MainAppRoot: View {
         }
         .onChange(of: scenePhase) { _, phase in
             flowManager.handleScenePhase(phase)
-            guard phase == .active, config.hasCompletedOnboarding else { return }
-            flowManager.activateOnForeground()
+            guard phase == .active else { return }
+            if config.hasCompletedOnboarding {
+                flowManager.activateOnForeground()
+            }
+            Task {
+                await PersonalDictionaryCloudSync.shared.pullAndMergeIfEnabled()
+            }
         }
     }
 

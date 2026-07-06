@@ -21,10 +21,33 @@ import Foundation
 public struct PersonalDictionary: Codable, Sendable, Equatable {
     public var entries: [Entry]
     public var version: Int
+    /// When this dictionary blob was last successfully pushed to iCloud KVS.
+    public var lastSyncedAt: Date?
 
-    public init(entries: [Entry] = [], version: Int = 1) {
+    public init(entries: [Entry] = [], version: Int = 1, lastSyncedAt: Date? = nil) {
         self.entries = entries
         self.version = version
+        self.lastSyncedAt = lastSyncedAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case entries
+        case version
+        case lastSyncedAt
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        entries = try container.decodeIfPresent([Entry].self, forKey: .entries) ?? []
+        version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
+        lastSyncedAt = try container.decodeIfPresent(Date.self, forKey: .lastSyncedAt)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(entries, forKey: .entries)
+        try container.encode(version, forKey: .version)
+        try container.encodeIfPresent(lastSyncedAt, forKey: .lastSyncedAt)
     }
 
     public struct Entry: Codable, Sendable, Equatable, Identifiable {
@@ -34,6 +57,8 @@ public struct PersonalDictionary: Codable, Sendable, Equatable {
         public var category: Category
         public var source: Source
         public var createdAt: Date
+        /// Last mutation time — used for iCloud merge conflict resolution.
+        public var updatedAt: Date
         public var usageCount: Int
 
         public init(
@@ -43,6 +68,7 @@ public struct PersonalDictionary: Codable, Sendable, Equatable {
             category: Category,
             source: Source,
             createdAt: Date = Date(),
+            updatedAt: Date? = nil,
             usageCount: Int = 0
         ) {
             self.id = id
@@ -51,7 +77,43 @@ public struct PersonalDictionary: Codable, Sendable, Equatable {
             self.category = category
             self.source = source
             self.createdAt = createdAt
+            self.updatedAt = updatedAt ?? createdAt
             self.usageCount = usageCount
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case id
+            case term
+            case aliases
+            case category
+            case source
+            case createdAt
+            case updatedAt
+            case usageCount
+        }
+
+        public init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(UUID.self, forKey: .id)
+            term = try container.decode(String.self, forKey: .term)
+            aliases = try container.decodeIfPresent([String].self, forKey: .aliases) ?? []
+            category = try container.decode(Category.self, forKey: .category)
+            source = try container.decode(Source.self, forKey: .source)
+            createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+            updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
+            usageCount = try container.decodeIfPresent(Int.self, forKey: .usageCount) ?? 0
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(id, forKey: .id)
+            try container.encode(term, forKey: .term)
+            try container.encode(aliases, forKey: .aliases)
+            try container.encode(category, forKey: .category)
+            try container.encode(source, forKey: .source)
+            try container.encode(createdAt, forKey: .createdAt)
+            try container.encode(updatedAt, forKey: .updatedAt)
+            try container.encode(usageCount, forKey: .usageCount)
         }
 
         public enum Category: String, Codable, Sendable, CaseIterable {
@@ -140,6 +202,7 @@ extension PersonalDictionary {
             category: .productName,
             source: .manual,
             createdAt: Date(timeIntervalSince1970: 0),
+            updatedAt: Date(timeIntervalSince1970: 0),
             usageCount: 0
         ),
     ]
@@ -182,6 +245,7 @@ extension PersonalDictionary {
             if termChanged || regenerateAliases {
                 entry.aliases = []
             }
+            entry.updatedAt = Date()
             entries[idx] = entry
             return entry
         }
@@ -193,15 +257,19 @@ extension PersonalDictionary {
             entry.term = trimmed
             entry.category = category
             entry.source = .manual
+            entry.updatedAt = Date()
             entries[idx] = entry
             return entry
         }
 
+        let now = Date()
         let entry = Entry(
             term: trimmed,
             aliases: [],
             category: category,
-            source: .manual
+            source: .manual,
+            createdAt: now,
+            updatedAt: now
         )
         entries.append(entry)
         return entry
@@ -216,6 +284,7 @@ extension PersonalDictionary {
         entries[idx].aliases = Array(
             Set(cleaned.filter { $0.lowercased() != termLower })
         ).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+        entries[idx].updatedAt = Date()
     }
 
     /// Renders the entire dictionary as a prompt fragment. Entries

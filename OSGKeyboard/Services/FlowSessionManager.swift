@@ -39,7 +39,7 @@ final class FlowSessionManager: ObservableObject {
     private var sessionASRWarmedLocaleID: String?
     private var asr: ASRService {
         if let sessionASR { return sessionASR }
-        let service = ASRServiceFactory.make()
+        let service = ASRServiceFactory.make(store: store)
         sessionASR = service
         return service
     }
@@ -342,7 +342,7 @@ final class FlowSessionManager: ObservableObject {
             return
         }
         sessionASR?.cancel()
-        sessionASR = ASRServiceFactory.make()
+        sessionASR = ASRServiceFactory.make(store: store)
         sessionASREngineMode = engineMode
         sessionASRWarmedLocaleID = nil
     }

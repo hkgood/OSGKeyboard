@@ -9,8 +9,7 @@ import os
 public enum FlowPipelineDiagnostics {
     public static func logDrain(_ report: FlowCaptureDrainReport) {
         OSGLog.flow.info(
-            "tailDrain duration=\(report.drainDurationSeconds, format: .fixed(precision: 2))s " +
-            "silenceEnd=\(report.endedBySilence) tailSamples=\(report.tailSampleCount)"
+            "tailDrain duration=\(report.drainDurationSeconds, format: .fixed(precision: 2))s silenceEnd=\(report.endedBySilence) tailSamples=\(report.tailSampleCount)"
         )
     }
 
@@ -21,8 +20,7 @@ public enum FlowPipelineDiagnostics {
         chunkWarnings: Int
     ) {
         OSGLog.flow.info(
-            "chunkPipeline chunks=\(chunkCount) lastChunkSamples=\(lastChunkSamples) " +
-            "stitchedLen=\(stitchedLength) warnings=\(chunkWarnings)"
+            "chunkPipeline chunks=\(chunkCount) lastChunkSamples=\(lastChunkSamples) stitchedLen=\(stitchedLength) warnings=\(chunkWarnings)"
         )
     }
 

@@ -40,6 +40,7 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(spacing: Spacing.md) {
                         languageAndPolishSection
+                        dictionaryAndPolishSection
                         flowSessionSection
                         engineSection
                         // v0.2.1: hide provider/api card when the
@@ -180,15 +181,6 @@ struct SettingsView: View {
 
                 Divider().background(palette.divider)
 
-                polishIntensityPreferenceRows
-
-                if config.isTranslationRowVisible {
-                    Divider().background(palette.divider)
-                    TranslationPickerRow(config: config, isVisible: true)
-                }
-
-                Divider().background(palette.divider)
-
                 cursorDragNavigationToggleRow
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
@@ -217,6 +209,30 @@ struct SettingsView: View {
                 }
                 .padding(.horizontal, Spacing.xs)
             }
+        }
+    }
+
+    // MARK: - Dictionary & polish
+
+    private var dictionaryAndPolishSection: some View {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.dictionaryAndPolish.title")
+            VStack(spacing: 0) {
+                polishIntensityPreferenceRows
+
+                Divider().background(palette.divider)
+
+                TranslationPickerRow(config: config, isVisible: config.isTranslationRowVisible)
+
+                Divider().background(palette.divider)
+
+                PersonalDictionaryICloudSyncRow()
+            }
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+                    .stroke(palette.divider, lineWidth: 0.5)
+            )
         }
     }
 

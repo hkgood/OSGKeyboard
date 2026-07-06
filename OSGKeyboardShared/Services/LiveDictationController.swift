@@ -115,7 +115,7 @@ public final class LiveDictationController: ObservableObject {
     private var didInstallTap = false
 
     public init(asr: ASRService? = nil) {
-        self.asr = asr ?? ASRServiceFactory.make()
+        self.asr = asr ?? ASRServiceFactory.make(store: AppGroupStore())
     }
 
     /// Start dictation using a persisted settings locale id (`auto`, `zh-Hans`, …).

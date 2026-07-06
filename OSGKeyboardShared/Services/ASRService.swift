@@ -121,9 +121,13 @@ public enum ASREvent: Sendable, Equatable {
 // MARK: - Factory
 
 public enum ASRServiceFactory {
-    /// Returns the on-device `SpeechAnalyzer` + `DictationTranscriber` backend.
-    public static func make() -> ASRService {
-        SpeechAnalyzerASR()
+    /// Returns on-device SpeechAnalyzer for `local`, or the user's cloud
+    /// ASR provider when `engineMode == "cloud"`.
+    public static func make(store: AppGroupStore = AppGroupStore()) -> ASRService {
+        if store.engineMode == "cloud" {
+            return CloudASRService(store: store)
+        }
+        return SpeechAnalyzerASR()
     }
 }
 

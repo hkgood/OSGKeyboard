@@ -79,6 +79,12 @@ targets:
         # specify kSecAttrAccessGroup explicitly.
         keychain-access-groups:
           - $(AppIdentifierPrefix)com.osgkeyboard.shared
+        # iCloud Key-Value Store — personal dictionary sync across
+        # iPhone / iPad / Mac (Designed for iPad). Main app only.
+        # NOTE: this entitlement is a single STRING, not an array — an
+        # array value never matches the profile and breaks automatic
+        # signing ("doesn't match the entitlements file's value").
+        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)com.osgkeyboard.ios
     resources:
       - path: OSGKeyboard/Assets.xcassets
       - path: OSGKeyboard/en.lproj

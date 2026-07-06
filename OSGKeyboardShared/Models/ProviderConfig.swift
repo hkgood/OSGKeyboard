@@ -64,7 +64,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         }
     }
     /// "local" → on-device ASR + built-in DeepSeek polish.
-    /// "cloud" → on-device ASR + user's cloud LLM polish.
+    /// "cloud" → provider cloud ASR (with personal dictionary) + user's cloud LLM polish.
     @Published public var engineMode: String {
         didSet {
             guard !isApplyingConfiguration, engineMode != configuration.engineMode else { return }

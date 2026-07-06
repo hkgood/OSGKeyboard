@@ -33,6 +33,17 @@
 "error.asr.noSpeech" = "No speech detected. Please try again.";
 "error.asr.chunkFailed" = "Segment %lld failed: %@";
 
+/* Cloud ASR errors */
+"error.cloudASR.noAPIKey" = "API Key is missing.";
+"error.cloudASR.invalidURL" = "Invalid cloud ASR endpoint.";
+"error.cloudASR.http" = "Cloud ASR returned HTTP %lld.";
+"error.cloudASR.httpWithMessage" = "Cloud ASR returned HTTP %lld: %@";
+"error.cloudASR.decoding" = "Failed to parse cloud ASR response: %@";
+"error.cloudASR.transport" = "Cloud ASR network error: %@";
+"error.cloudASR.emptyTranscript" = "Cloud ASR returned an empty transcript.";
+"error.cloudASR.audioTooLong" = "Audio segment is too long for this cloud ASR provider.";
+"error.cloudASR.providerUnsupported" = "This provider does not support cloud speech recognition yet.";
+
 /* Polish scenarios */
 "polishScenario.daily_chat" = "Daily Chat";
 "polishScenario.social_lifestyle" = "Social Network";

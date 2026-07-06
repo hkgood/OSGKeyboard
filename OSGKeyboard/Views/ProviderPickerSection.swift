@@ -48,6 +48,10 @@ struct ProviderPickerSection: View {
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textPrimary)
 
+            if provider.supportsPersonalDictionaryCloudASR {
+                personalDictionaryBadge
+            }
+
             Spacer(minLength: Spacing.xs)
 
             if selected {
@@ -79,6 +83,16 @@ struct ProviderPickerSection: View {
                     .foregroundStyle(selected ? palette.accent : palette.textSecondary)
             }
         }
+    }
+
+    /// 通义千问 / 智谱 GLM 等支持云端 ASR 热词 API 的提供商。
+    private var personalDictionaryBadge: some View {
+        Text("settings.provider.personalDictionaryBadge")
+            .font(TypeStyle.caption2)
+            .foregroundStyle(palette.accent)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, 4)
+            .background(palette.accentMuted, in: Capsule())
     }
 }
 

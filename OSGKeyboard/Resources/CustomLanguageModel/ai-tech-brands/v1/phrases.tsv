@@ -117,12 +117,18 @@ xiaomi		ai_tech_seed	tech_company	95	Xiaomi
 阿里巴巴		ai_tech_seed	tech_company	95	Alibaba
 claude opus		ai_tech_seed	ai_model	94	Claude Opus
 claude sonnet		ai_tech_seed	ai_model	94	Claude Sonnet
+open claw		ai_tech_seed	ai_brand	94	OpenClaw
+Open Claw		ai_tech_seed	ai_brand	94	OpenClaw
+OpenClaw		ai_tech_seed	ai_brand	94	OpenClaw
 Opus		ai_tech_seed	ai_model	94	Claude Opus
 Opus 4		ai_tech_seed	ai_model	94	Claude Opus
 Opus 4.7		ai_tech_seed	ai_model	94	Claude Opus
 Sonnet		ai_tech_seed	ai_model	94	Claude Sonnet
 Sonnet 4		ai_tech_seed	ai_model	94	Claude Sonnet
 Sonnet 4.6		ai_tech_seed	ai_model	94	Claude Sonnet
+养虾		ai_tech_seed	ai_brand	94	OpenClaw
+红龙虾		ai_tech_seed	ai_brand	94	OpenClaw
+龙虾		ai_tech_seed	ai_brand	94	OpenClaw
 agent		ai_tech_seed	ai_term	92	智能体
 Agent		ai_tech_seed	ai_term	92	智能体
 Agent Mode		ai_tech_seed	ai_term	92	Agent Mode
@@ -225,6 +231,10 @@ GLM		ai_tech_seed	ai_brand	90	GLM
 glm		ai_tech_seed	ai_brand	90	GLM
 GLM-4		ai_tech_seed	ai_brand	90	GLM
 GLM-5		ai_tech_seed	ai_brand	90	GLM
+Jack Ma		ai_tech_seed	tech_leader	90	马云
+jack ma		ai_tech_seed	tech_leader	90	Jack Ma
+Jay Chou		ai_tech_seed	celebrity	90	周杰伦
+jay chou		ai_tech_seed	celebrity	90	Jay Chou
 Jensen Huang		ai_tech_seed	tech_leader	90	Jensen Huang
 jensen huang		ai_tech_seed	tech_leader	90	Jensen Huang
 k8s		ai_tech_seed	dev_tool	90	Kubernetes
@@ -252,30 +262,47 @@ multi agent		ai_tech_seed	ai_term	90	multi-agent
 multi-agent		ai_tech_seed	ai_term	90	multi-agent
 NIO		ai_tech_seed	tech_company	90	NIO
 nio		ai_tech_seed	tech_company	90	NIO
+Pony Ma		ai_tech_seed	tech_leader	90	马化腾
+pony ma		ai_tech_seed	tech_leader	90	Pony Ma
 prompt engineering		ai_tech_seed	ai_term	90	prompt
 Qwen Coder		ai_tech_seed	ai_model	90	Qwen Coder
 qwen coder		ai_tech_seed	ai_model	90	Qwen Coder
+seed dance		ai_tech_seed	ai_brand	90	Seedance
+Seedance		ai_tech_seed	ai_brand	90	Seedance
 SF Custom Language Model Data		ai_tech_seed	dev_tool	90	SFCustomLanguageModelData
 SFCustomLanguageModelData		ai_tech_seed	dev_tool	90	SFCustomLanguageModelData
 Steve Jobs		ai_tech_seed	tech_leader	90	乔布斯
 steve jobs		ai_tech_seed	tech_leader	90	Steve Jobs
+SU7		ai_tech_seed	tech_company	90	Xiaomi SU7
 tool calling		ai_tech_seed	ai_term	90	tool calling
 tool-calling		ai_tech_seed	ai_term	90	tool calling
 TSMC		ai_tech_seed	tech_company	90	TSMC
 tsmc		ai_tech_seed	tech_company	90	TSMC
 X Peng		ai_tech_seed	tech_company	90	XPeng
+Xiaomi Auto		ai_tech_seed	tech_company	90	小米汽车
+Xiaomi SU7		ai_tech_seed	tech_company	90	小米汽车
+xiaomi su7		ai_tech_seed	tech_company	90	Xiaomi SU7
 XPeng		ai_tech_seed	tech_company	90	XPeng
 xpeng		ai_tech_seed	tech_company	90	XPeng
+Zhang Yiming		ai_tech_seed	tech_leader	90	张一鸣
+zhang yiming		ai_tech_seed	tech_leader	90	Zhang Yiming
 Zhipu		ai_tech_seed	ai_brand	90	GLM
 乔布斯	qiao bu si	ai_tech_seed	tech_leader	90	乔布斯
 低秩适配		ai_tech_seed	ai_term	90	LoRA
 千问 coder		ai_tech_seed	ai_model	90	Qwen Coder
+即梦视频		ai_tech_seed	ai_brand	90	Seedance
 台积电		ai_tech_seed	tech_company	90	TSMC
+周杰伦	zhou jie lun	ai_tech_seed	celebrity	90	周杰伦
 多智能体		ai_tech_seed	ai_term	90	multi-agent
 大疆		ai_tech_seed	tech_company	90	DJI
+字节 Seedance		ai_tech_seed	ai_brand	90	Seedance
+小米SU7		ai_tech_seed	tech_company	90	Xiaomi SU7
+小米汽车	xiao mi qi che	ai_tech_seed	tech_company	90	小米汽车
+小马哥		ai_tech_seed	tech_leader	90	Pony Ma
 小鹏汽车		ai_tech_seed	tech_company	90	XPeng
 嵌入		ai_tech_seed	ai_term	90	embedding
 工具调用		ai_tech_seed	ai_term	90	tool calling
+张一鸣	zhang yi ming	ai_tech_seed	tech_leader	90	张一鸣
 微调	wei tiao	ai_tech_seed	ai_term	90	微调
 抖音		ai_tech_seed	tech_company	90	Douyin
 文心一言	wen xin yi yan	ai_tech_seed	ai_brand	90	文心一言
@@ -289,6 +316,8 @@ Zhipu		ai_tech_seed	ai_brand	90	GLM
 通义千问 coder		ai_tech_seed	ai_model	90	Qwen Coder
 通用人工智能		ai_tech_seed	ai_term	90	AGI
 雷军	lei jun	ai_tech_seed	tech_leader	90	雷军
+马云	ma yun	ai_tech_seed	tech_leader	90	马云
+马化腾	ma hua teng	ai_tech_seed	tech_leader	90	马化腾
 黄仁勋		ai_tech_seed	tech_leader	90	Jensen Huang
 agentic AI		ai_tech_seed	ai_term	88	agentic
 AIGC		ai_tech_seed	ai_term	88	AIGC
@@ -297,18 +326,25 @@ Alipay		ai_tech_seed	tech_company	88	Ant Group
 alipay		ai_tech_seed	tech_company	88	Alipay
 AMD		ai_tech_seed	tech_company	88	AMD
 amd		ai_tech_seed	tech_company	88	AMD
+Andy Lau		ai_tech_seed	celebrity	88	刘德华
+andy lau		ai_tech_seed	celebrity	88	Andy Lau
 Ant Group		ai_tech_seed	tech_company	88	Ant Group
 ant group		ai_tech_seed	tech_company	88	Ant Group
 Bilibili		ai_tech_seed	tech_company	88	Bilibili
 bilibili		ai_tech_seed	tech_company	88	Bilibili
+Black Myth Wukong		ai_tech_seed	tech_term	88	黑神话悟空
+black myth wukong		ai_tech_seed	tech_term	88	Black Myth Wukong
 B站		ai_tech_seed	tech_company	88	Bilibili
 chain of thought		ai_tech_seed	ai_term	88	chain of thought
 chain-of-thought		ai_tech_seed	ai_term	88	chain of thought
+Claude Cowork		ai_tech_seed	ai_brand	88	Claude Cowork
+claude cowork		ai_tech_seed	ai_brand	88	Claude Cowork
 Cognition Devin		ai_tech_seed	dev_tool	88	Devin
 context window		ai_tech_seed	ai_term	88	上下文窗口
 Core ML		ai_tech_seed	dev_tool	88	Core ML
 core ml		ai_tech_seed	dev_tool	88	Core ML
 CoreML		ai_tech_seed	dev_tool	88	Core ML
+Cowork		ai_tech_seed	ai_brand	88	Claude Cowork
 deep mind		ai_tech_seed	ai_brand	88	DeepMind
 DeepMind		ai_tech_seed	ai_brand	88	DeepMind
 Devin		ai_tech_seed	dev_tool	88	Devin
@@ -324,19 +360,32 @@ Gemini CLI		ai_tech_seed	dev_tool	88	Gemini CLI
 gemini cli		ai_tech_seed	dev_tool	88	Gemini CLI
 Gemini Flash		ai_tech_seed	ai_model	88	Gemini Flash
 gemini flash		ai_tech_seed	ai_model	88	Gemini Flash
+Gemma		ai_tech_seed	ai_model	88	Gemma
+Gemma AI		ai_tech_seed	ai_model	88	Gemma
+Gemma模型		ai_tech_seed	ai_model	88	Gemma
 gen ai		ai_tech_seed	ai_term	88	GenAI
 GenAI		ai_tech_seed	ai_term	88	GenAI
+Genshin Impact		ai_tech_seed	game_ip	88	原神
+genshin impact		ai_tech_seed	game_ip	88	Genshin Impact
 github copilot		ai_tech_seed	ai_brand	88	GitHub Copilot
 Google DeepMind		ai_tech_seed	ai_brand	88	DeepMind
+google gemma		ai_tech_seed	ai_model	88	Gemma
 GPU		ai_tech_seed	tech_term	88	GPU
 gpu		ai_tech_seed	tech_term	88	GPU
 Grok		ai_tech_seed	ai_brand	88	xAI
 hallucination		ai_tech_seed	ai_term	88	幻觉
+Harmony OS		ai_tech_seed	tech_company	88	鸿蒙
+harmony os		ai_tech_seed	tech_company	88	HarmonyOS
+HarmonyOS		ai_tech_seed	tech_company	88	鸿蒙
 he xiao peng		ai_tech_seed	tech_leader	88	He Xiaopeng
 He Xiaopeng		ai_tech_seed	tech_leader	88	何小鹏
+Honor of Kings		ai_tech_seed	game_ip	88	王者荣耀
+honor of kings		ai_tech_seed	game_ip	88	Honor of Kings
 inference		ai_tech_seed	ai_term	88	推理
 Intel		ai_tech_seed	tech_company	88	Intel
 intel		ai_tech_seed	tech_company	88	Intel
+Jackie Chan		ai_tech_seed	celebrity	88	成龙
+jackie chan		ai_tech_seed	celebrity	88	Jackie Chan
 JD		ai_tech_seed	tech_company	88	JD.com
 JD.com		ai_tech_seed	tech_company	88	JD.com
 jd.com		ai_tech_seed	tech_company	88	JD.com
@@ -344,6 +393,12 @@ Kimi Code		ai_tech_seed	dev_tool	88	Kimi Code
 kimi code		ai_tech_seed	dev_tool	88	Kimi Code
 Lenovo		ai_tech_seed	tech_company	88	Lenovo
 lenovo		ai_tech_seed	tech_company	88	Lenovo
+Lionel Messi		ai_tech_seed	athlete	88	梅西
+lionel messi		ai_tech_seed	athlete	88	Lionel Messi
+Liu Qiangdong		ai_tech_seed	tech_leader	88	刘强东
+liu qiangdong		ai_tech_seed	tech_leader	88	Liu Qiangdong
+Luo Yonghao		ai_tech_seed	tech_leader	88	罗永浩
+luo yonghao		ai_tech_seed	tech_leader	88	Luo Yonghao
 Meituan		ai_tech_seed	tech_company	88	Meituan
 meituan		ai_tech_seed	tech_company	88	Meituan
 mid journey		ai_tech_seed	ai_brand	88	Midjourney
@@ -397,12 +452,18 @@ Sora		ai_tech_seed	ai_brand	88	Sora
 sora ai		ai_tech_seed	ai_brand	88	Sora
 Sora AI		ai_tech_seed	ai_brand	88	Sora
 speech language model		ai_tech_seed	dev_tool	88	SFSpeechLanguageModel
+Stephen Chow		ai_tech_seed	celebrity	88	周星驰
+stephen chow		ai_tech_seed	celebrity	88	Stephen Chow
 Stripe		ai_tech_seed	tech_company	88	Stripe
 stripe		ai_tech_seed	tech_company	88	Stripe
+Sun Yingsha		ai_tech_seed	athlete	88	孙颖莎
+sun yingsha		ai_tech_seed	athlete	88	Sun Yingsha
 swift data		ai_tech_seed	dev_tool	88	SwiftData
 SwiftData		ai_tech_seed	dev_tool	88	SwiftData
 Taobao		ai_tech_seed	tech_company	88	Taobao
 taobao		ai_tech_seed	tech_company	88	Taobao
+Taylor Swift		ai_tech_seed	celebrity	88	Taylor Swift
+taylor swift		ai_tech_seed	celebrity	88	Taylor Swift
 thinking model		ai_tech_seed	ai_term	88	reasoning model
 tool use		ai_tech_seed	ai_term	88	tool use
 tool-use		ai_tech_seed	ai_term	88	tool use
@@ -410,64 +471,156 @@ Visual Studio Code		ai_tech_seed	dev_tool	88	VS Code
 VS Code		ai_tech_seed	dev_tool	88	VS Code
 vs code		ai_tech_seed	dev_tool	88	VS Code
 VSCode		ai_tech_seed	dev_tool	88	VS Code
+Wang Chuqin		ai_tech_seed	athlete	88	王楚钦
+wang chuqin		ai_tech_seed	athlete	88	Wang Chuqin
 x ai		ai_tech_seed	ai_brand	88	xAI
 xAI		ai_tech_seed	ai_brand	88	xAI
+Xiaomi YU7		ai_tech_seed	tech_company	88	小米YU7
+YU7		ai_tech_seed	tech_company	88	小米YU7
 zhipu		ai_tech_seed	ai_brand	88	Zhipu AI
 Zhipu AI		ai_tech_seed	ai_brand	88	智谱
 三星		ai_tech_seed	tech_company	88	Samsung
 上下文窗口	shang xia wen chuang kou	ai_tech_seed	ai_term	88	上下文窗口
+东哥		ai_tech_seed	tech_leader	88	Liu Qiangdong
 中芯国际		ai_tech_seed	tech_company	88	SMIC
 京东		ai_tech_seed	tech_company	88	JD.com
 何小鹏	he xiao peng	ai_tech_seed	tech_leader	88	何小鹏
+克劳德协同		ai_tech_seed	ai_brand	88	Claude Cowork
+刘强东	liu qiang dong	ai_tech_seed	tech_leader	88	刘强东
+刘德华	liu de hua	ai_tech_seed	celebrity	88	刘德华
+华为鸿蒙		ai_tech_seed	tech_company	88	HarmonyOS
+原神	yuan shen	ai_tech_seed	game_ip	88	原神
+周星驰	zhou xing chi	ai_tech_seed	celebrity	88	周星驰
 哔哩哔哩		ai_tech_seed	tech_company	88	Bilibili
 多模态	duo mo tai	ai_tech_seed	ai_term	88	多模态
+奥特曼		ai_tech_seed	tech_leader	88	Sam Altman
+孙颖莎	sun ying sha	ai_tech_seed	athlete	88	孙颖莎
+小米YU7	xiao mi YU7	ai_tech_seed	tech_company	88	小米YU7
 山姆奥特曼		ai_tech_seed	tech_leader	88	Sam Altman
 工具使用		ai_tech_seed	ai_term	88	tool use
 幻觉	huan jue	ai_tech_seed	ai_term	88	幻觉
 思维链		ai_tech_seed	ai_term	88	chain of thought
+成龙	cheng long	ai_tech_seed	celebrity	88	成龙
 拼多多		ai_tech_seed	tech_company	88	Pinduoduo
 推理	tui li	ai_tech_seed	ai_term	88	推理
 推理模型		ai_tech_seed	ai_term	88	reasoning model
 支付宝		ai_tech_seed	tech_company	88	Alipay
+星爷		ai_tech_seed	celebrity	88	Stephen Chow
+梅西	mei xi	ai_tech_seed	athlete	88	梅西
+泰勒斯威夫特		ai_tech_seed	celebrity	88	Taylor Swift
 淘宝		ai_tech_seed	tech_company	88	Taobao
 混合专家		ai_tech_seed	ai_term	88	MoE
+王楚钦	wang chu qin	ai_tech_seed	athlete	88	王楚钦
+王者		ai_tech_seed	game_ip	88	Honor of Kings
+王者荣耀	wang zhe rong yao	ai_tech_seed	game_ip	88	王者荣耀
 生成式AI		ai_tech_seed	ai_term	88	GenAI
 生成式人工智能		ai_tech_seed	ai_term	88	AIGC
+罗永浩	luo yong hao	ai_tech_seed	tech_leader	88	罗永浩
 美团		ai_tech_seed	tech_company	88	Meituan
+老罗		ai_tech_seed	tech_leader	88	Luo Yonghao
 联想		ai_tech_seed	tech_company	88	Lenovo
 英特尔		ai_tech_seed	tech_company	88	Intel
 蚂蚁集团		ai_tech_seed	tech_company	88	Ant Group
 通义千问 Max		ai_tech_seed	ai_model	88	Qwen Max
+霉霉		ai_tech_seed	celebrity	88	Taylor Swift
+鸿蒙	hong meng	ai_tech_seed	tech_company	88	鸿蒙
+黑神话		ai_tech_seed	tech_term	88	Black Myth Wukong
+黑神话悟空	hei shen hua wu kong	ai_tech_seed	tech_term	88	黑神话悟空
+AITO		ai_tech_seed	tech_company	86	问界
+aito		ai_tech_seed	tech_company	86	AITO
+AITO问界	wen jie	ai_tech_seed	tech_company	86	问界
 App Group		ai_tech_seed	dev_tool	86	App Group
 app group		ai_tech_seed	dev_tool	86	App Group
 App Groups		ai_tech_seed	dev_tool	86	App Group
+Apple Intelligence		ai_tech_seed	ai_brand	86	Apple Intelligence
+apple intelligence		ai_tech_seed	ai_brand	86	Apple Intelligence
+Black Myth		ai_tech_seed	tech_term	86	黑神话
+claude haiku		ai_tech_seed	ai_model	86	Haiku
+Claude Haiku		ai_tech_seed	ai_model	86	Haiku
+Colin Huang		ai_tech_seed	tech_leader	86	黄峥
+colin huang		ai_tech_seed	tech_leader	86	Colin Huang
+Coze		ai_tech_seed	ai_platform	86	Coze
+coze ai		ai_tech_seed	ai_platform	86	Coze
+Cristiano Ronaldo		ai_tech_seed	athlete	86	C罗
+cristiano ronaldo		ai_tech_seed	athlete	86	Cristiano Ronaldo
+C罗	C luo	ai_tech_seed	athlete	86	C罗
+Eileen Gu		ai_tech_seed	athlete	86	谷爱凌
+eileen gu		ai_tech_seed	athlete	86	Eileen Gu
 evals		ai_tech_seed	ai_term	86	evals
 evaluation		ai_tech_seed	ai_term	86	evals
+Fan Zhendong		ai_tech_seed	athlete	86	樊振东
+fan zhendong		ai_tech_seed	athlete	86	Fan Zhendong
+Game Science		ai_tech_seed	tech_company	86	游戏科学
+game science		ai_tech_seed	tech_company	86	Game Science
 GLM 5		ai_tech_seed	ai_model	86	GLM-5
 glm five		ai_tech_seed	ai_model	86	GLM-5
+google jules		ai_tech_seed	dev_tool	86	Jules
 Grok 4		ai_tech_seed	ai_model	86	Grok 4
 Grok 4.3		ai_tech_seed	ai_model	86	Grok 4
 Grok Build		ai_tech_seed	ai_model	86	Grok 4
 grok four		ai_tech_seed	ai_model	86	Grok 4
+Haiku		ai_tech_seed	ai_model	86	Haiku
+Harmony Intelligent Mobility		ai_tech_seed	tech_company	86	鸿蒙智行
+Honkai Star Rail		ai_tech_seed	game_ip	86	崩坏星穹铁道
+honkai star rail		ai_tech_seed	game_ip	86	Honkai Star Rail
+Hu Ge		ai_tech_seed	celebrity	86	胡歌
+hu ge		ai_tech_seed	celebrity	86	Hu Ge
+Huang Bo		ai_tech_seed	celebrity	86	黄渤
+huang bo		ai_tech_seed	celebrity	86	Huang Bo
 humanoid		ai_tech_seed	tech_term	86	人形机器人
 humanoid robot		ai_tech_seed	tech_term	86	人形机器人
+Jackson Yee		ai_tech_seed	celebrity	86	易烊千玺
+jackson yee		ai_tech_seed	celebrity	86	Jackson Yee
+Jules		ai_tech_seed	dev_tool	86	Jules
+Jules AI		ai_tech_seed	dev_tool	86	Jules
+kai fu lee		ai_tech_seed	tech_leader	86	Kai-Fu Lee
+Kai-Fu Lee		ai_tech_seed	tech_leader	86	李开复
 Kling		ai_tech_seed	ai_brand	86	可灵
 Kling AI		ai_tech_seed	ai_brand	86	可灵
 kling ai		ai_tech_seed	ai_brand	86	Kling
+Lark		ai_tech_seed	tech_company	86	飞书
+lark		ai_tech_seed	tech_company	86	Lark
+League of Legends		ai_tech_seed	game_ip	86	英雄联盟
+league of legends		ai_tech_seed	game_ip	86	League of Legends
+LeBron James		ai_tech_seed	athlete	86	詹姆斯
+lebron james		ai_tech_seed	athlete	86	LeBron James
+Li Xiang		ai_tech_seed	tech_leader	86	李想
+li xiang		ai_tech_seed	tech_leader	86	Li Xiang
+Liu Yuning		ai_tech_seed	celebrity	86	刘宇宁
+liu yuning		ai_tech_seed	celebrity	86	Liu Yuning
 llama four		ai_tech_seed	ai_model	86	Llama 4
 Llama Maverick		ai_tech_seed	ai_model	86	Llama 4
 Llama Scout		ai_tech_seed	ai_model	86	Llama 4
+LOL		ai_tech_seed	game_ip	86	League of Legends
+Louis Vuitton		ai_tech_seed	consumer_brand	86	Louis Vuitton
+louis vuitton		ai_tech_seed	consumer_brand	86	Louis Vuitton
+LV		ai_tech_seed	consumer_brand	86	Louis Vuitton
+Ma Long		ai_tech_seed	athlete	86	马龙
+ma long		ai_tech_seed	athlete	86	Ma Long
 Manus		ai_tech_seed	ai_brand	86	Manus
 manus		ai_tech_seed	ai_brand	86	Manus
 Manus AI		ai_tech_seed	ai_brand	86	Manus
 MCP client		ai_tech_seed	ai_term	86	MCP client
 mcp client		ai_tech_seed	ai_term	86	MCP client
+miHoYo		ai_tech_seed	game_ip	86	米哈游
+mihoyo		ai_tech_seed	game_ip	86	miHoYo
+MiMo		ai_tech_seed	ai_brand	86	MiMo
+nano claw		ai_tech_seed	ai_brand	86	NanoClaw
+Nano Claw		ai_tech_seed	ai_brand	86	NanoClaw
+NanoClaw		ai_tech_seed	ai_brand	86	NanoClaw
+PUBG Mobile China		ai_tech_seed	game_ip	86	和平精英
+Quan Hongchan		ai_tech_seed	athlete	86	全红婵
+quan hongchan		ai_tech_seed	athlete	86	Quan Hongchan
 Qwen Thinking		ai_tech_seed	ai_model	86	Qwen Thinking
 qwen thinking		ai_tech_seed	ai_model	86	Qwen Thinking
 RedNote		ai_tech_seed	tech_company	86	小红书
+Shen Teng		ai_tech_seed	celebrity	86	沈腾
+shen teng		ai_tech_seed	celebrity	86	Shen Teng
 speech transcriber		ai_tech_seed	dev_tool	86	SpeechTranscriber
 Speech Transcriber		ai_tech_seed	dev_tool	86	SpeechTranscriber
 SpeechTranscriber		ai_tech_seed	dev_tool	86	SpeechTranscriber
+Steam		ai_tech_seed	game_ip	86	Steam
+steam平台		ai_tech_seed	game_ip	86	Steam
 structured output		ai_tech_seed	ai_term	86	structured output
 structured outputs		ai_tech_seed	ai_term	86	structured output
 sub agent		ai_tech_seed	ai_term	86	subagent
@@ -475,20 +628,90 @@ subagent		ai_tech_seed	ai_term	86	subagent
 Swift Testing		ai_tech_seed	dev_tool	86	Swift Testing
 swift testing		ai_tech_seed	dev_tool	86	Swift Testing
 Testing framework		ai_tech_seed	dev_tool	86	Swift Testing
+Unitree		ai_tech_seed	tech_company	86	宇树科技
+unitree		ai_tech_seed	tech_company	86	Unitree
 v zero		ai_tech_seed	dev_tool	86	v0
 v0		ai_tech_seed	dev_tool	86	v0
 V0		ai_tech_seed	dev_tool	86	v0
 vercel v0		ai_tech_seed	dev_tool	86	v0
+Wang Chuanfu		ai_tech_seed	tech_leader	86	王传福
+wang chuanfu		ai_tech_seed	tech_leader	86	Wang Chuanfu
+Wang Xing		ai_tech_seed	tech_leader	86	王兴
+wang xing		ai_tech_seed	tech_leader	86	Wang Xing
+Wang Yibo		ai_tech_seed	celebrity	86	王一博
+wang yibo		ai_tech_seed	celebrity	86	Wang Yibo
+Xiao Zhan		ai_tech_seed	celebrity	86	肖战
+xiao zhan		ai_tech_seed	celebrity	86	Xiao Zhan
 Xiaohongshu		ai_tech_seed	tech_company	86	小红书
+xiaomi mimo		ai_tech_seed	ai_brand	86	MiMo
+xiaomi yu7		ai_tech_seed	tech_company	86	YU7
+Yang Mi		ai_tech_seed	celebrity	86	杨幂
+yang mi		ai_tech_seed	celebrity	86	Yang Mi
+Yang Zi		ai_tech_seed	celebrity	86	杨紫
+Yao Ming		ai_tech_seed	athlete	86	姚明
+yao ming		ai_tech_seed	athlete	86	Yao Ming
+Yu Minhong		ai_tech_seed	tech_leader	86	俞敏洪
+Zhao Liying		ai_tech_seed	celebrity	86	赵丽颖
+zhao liying		ai_tech_seed	celebrity	86	Zhao Liying
+Zheng Qinwen		ai_tech_seed	athlete	86	郑钦文
+zheng qinwen		ai_tech_seed	athlete	86	Zheng Qinwen
+Zhou Shen		ai_tech_seed	celebrity	86	周深
+zhou shen		ai_tech_seed	celebrity	86	Zhou Shen
 人形机器人	ren xing ji qi ren	ai_tech_seed	tech_term	86	人形机器人
+俞敏洪	yu min hong	ai_tech_seed	tech_leader	86	俞敏洪
+全红婵	quan hong chan	ai_tech_seed	athlete	86	全红婵
+刘宇宁	liu yu ning	ai_tech_seed	celebrity	86	刘宇宁
 可灵	ke ling	ai_tech_seed	ai_brand	86	可灵
+周深	zhou shen	ai_tech_seed	celebrity	86	周深
+和平精英	he ping jing ying	ai_tech_seed	game_ip	86	和平精英
+四字弟弟		ai_tech_seed	celebrity	86	Jackson Yee
+姚明	yao ming	ai_tech_seed	athlete	86	姚明
 子智能体		ai_tech_seed	ai_term	86	subagent
+宇树		ai_tech_seed	tech_company	86	Unitree
+宇树科技	yu shu ke ji	ai_tech_seed	tech_company	86	宇树科技
+小米 MiMo		ai_tech_seed	ai_brand	86	MiMo
+小米大模型		ai_tech_seed	ai_brand	86	MiMo
 小红书	xiao hong shu	ai_tech_seed	tech_company	86	小红书
+崩坏星穹铁道	beng huai xing qiong tie dao	ai_tech_seed	game_ip	86	崩坏星穹铁道
+扣子		ai_tech_seed	ai_platform	86	Coze
+拼多多创始人		ai_tech_seed	tech_leader	86	Colin Huang
+新东方俞敏洪	yu min hong	ai_tech_seed	tech_leader	86	俞敏洪
+易烊千玺	yi yang qian xi	ai_tech_seed	celebrity	86	易烊千玺
+星穹铁道		ai_tech_seed	game_ip	86	Honkai Star Rail
+李开复	li kai fu	ai_tech_seed	tech_leader	86	李开复
+李想	li xiang	ai_tech_seed	tech_leader	86	李想
+杨幂	yang mi	ai_tech_seed	celebrity	86	杨幂
+杨紫	yang zi	ai_tech_seed	celebrity	86	杨紫
+樊振东	fan zhen dong	ai_tech_seed	athlete	86	樊振东
 模型上下文协议客户端		ai_tech_seed	ai_term	86	MCP client
 模型评测		ai_tech_seed	ai_term	86	evals
+沈腾	shen teng	ai_tech_seed	celebrity	86	沈腾
+游戏科学	you xi ke xue	ai_tech_seed	tech_company	86	游戏科学
+王一博	wang yi bo	ai_tech_seed	celebrity	86	王一博
+王传福	wang chuan fu	ai_tech_seed	tech_leader	86	王传福
+王兴	wang xing	ai_tech_seed	tech_leader	86	王兴
+理想李想	li xiang	ai_tech_seed	tech_leader	86	李想
+米哈游	mi ha you	ai_tech_seed	game_ip	86	米哈游
 结构化输出		ai_tech_seed	ai_term	86	structured output
+美团王兴		ai_tech_seed	tech_leader	86	Wang Xing
+肖战	xiao zhan	ai_tech_seed	celebrity	86	肖战
+胡歌	hu ge	ai_tech_seed	celebrity	86	胡歌
+英雄联盟	ying xiong lian meng	ai_tech_seed	game_ip	86	英雄联盟
+苹果智能		ai_tech_seed	ai_brand	86	Apple Intelligence
+詹姆斯	zhan mu si	ai_tech_seed	athlete	86	詹姆斯
 评测集		ai_tech_seed	ai_term	86	evals
+谷歌 Jules		ai_tech_seed	dev_tool	86	Jules
+谷爱凌	gu ai ling	ai_tech_seed	athlete	86	谷爱凌
+赵丽颖	zhao li ying	ai_tech_seed	celebrity	86	赵丽颖
+路易威登		ai_tech_seed	consumer_brand	86	Louis Vuitton
 通义千问 thinking		ai_tech_seed	ai_model	86	Qwen Thinking
+郑钦文	zheng qin wen	ai_tech_seed	athlete	86	郑钦文
+问界	wen jie	ai_tech_seed	tech_company	86	问界
+飞书	fei shu	ai_tech_seed	tech_company	86	飞书
+马龙	ma long	ai_tech_seed	athlete	86	马龙
+鸿蒙智行	hong meng zhi xing	ai_tech_seed	tech_company	86	鸿蒙智行
+黄峥	huang zheng	ai_tech_seed	tech_leader	86	黄峥
+黄渤	huang bo	ai_tech_seed	celebrity	86	黄渤
 Adobe		ai_tech_seed	tech_company	85	Adobe
 adobe		ai_tech_seed	tech_company	85	Adobe
 API		ai_tech_seed	tech_term	85	API
@@ -499,6 +722,10 @@ ARM Holdings		ai_tech_seed	tech_company	85	Arm
 ASML		ai_tech_seed	tech_company	85	ASML
 asml		ai_tech_seed	tech_company	85	ASML
 autonomous driving		ai_tech_seed	tech_term	85	自动驾驶
+Bill Gates		ai_tech_seed	tech_leader	85	Bill Gates
+bill gates		ai_tech_seed	tech_leader	85	Bill Gates
+Chanel		ai_tech_seed	consumer_brand	85	Chanel
+chanel		ai_tech_seed	consumer_brand	85	Chanel
 CUDA		ai_tech_seed	tech_term	85	CUDA
 cuda		ai_tech_seed	tech_term	85	CUDA
 DALL E		ai_tech_seed	ai_brand	85	DALL-E
@@ -508,6 +735,8 @@ dalle		ai_tech_seed	ai_brand	85	DALL-E
 Databricks		ai_tech_seed	tech_company	85	Databricks
 databricks		ai_tech_seed	tech_company	85	Databricks
 diffusion		ai_tech_seed	ai_term	85	diffusion
+Disney		ai_tech_seed	consumer_brand	85	Disney
+disney		ai_tech_seed	consumer_brand	85	Disney
 Figma		ai_tech_seed	tech_company	85	Figma
 figma		ai_tech_seed	tech_company	85	Figma
 FSD		ai_tech_seed	tech_term	85	自动驾驶
@@ -543,6 +772,8 @@ next js		ai_tech_seed	dev_tool	85	Next.js
 Next.js		ai_tech_seed	dev_tool	85	Next.js
 nextjs		ai_tech_seed	dev_tool	85	Next.js
 NextJS		ai_tech_seed	dev_tool	85	Next.js
+Nike		ai_tech_seed	consumer_brand	85	Nike
+nike		ai_tech_seed	consumer_brand	85	Nike
 Oppo		ai_tech_seed	tech_company	85	Oppo
 oppo		ai_tech_seed	tech_company	85	Oppo
 OPPO		ai_tech_seed	tech_company	85	Oppo
@@ -606,18 +837,27 @@ zeekr		ai_tech_seed	tech_company	85	Zeekr
 李斌	li bin	ai_tech_seed	tech_leader	85	李斌
 极氪		ai_tech_seed	tech_company	85	Zeekr
 梁文锋	liang wen feng	ai_tech_seed	tech_leader	85	梁文锋
+比尔盖茨		ai_tech_seed	tech_leader	85	Bill Gates
 混元	hun yuan	ai_tech_seed	ai_brand	85	混元
+盖茨		ai_tech_seed	tech_leader	85	Bill Gates
 科大讯飞		ai_tech_seed	ai_brand	85	讯飞
 索尼		ai_tech_seed	tech_company	85	Sony
 网易		ai_tech_seed	tech_company	85	NetEase
+耐克		ai_tech_seed	consumer_brand	85	Nike
 腾讯混元	hun yuan	ai_tech_seed	ai_brand	85	混元
 自动驾驶	zi dong jia shi	ai_tech_seed	tech_term	85	自动驾驶
 荣耀		ai_tech_seed	tech_company	85	Honor
 讯飞		ai_tech_seed	ai_brand	85	讯飞
 讯飞星火	xing huo	ai_tech_seed	ai_brand	85	星火
+迪士尼		ai_tech_seed	consumer_brand	85	Disney
 量化	liang hua	ai_tech_seed	ai_term	85	量化
+香奈儿		ai_tech_seed	consumer_brand	85	Chanel
 高通		ai_tech_seed	tech_company	85	Qualcomm
+agentic workflow		ai_tech_seed	ai_term	84	agentic workflow
+agentic workflows		ai_tech_seed	ai_term	84	agentic workflow
 AI governance		ai_tech_seed	tech_term	84	AI治理
+AI plus		ai_tech_seed	tech_term	84	人工智能+
+AI+		ai_tech_seed	tech_term	84	人工智能+
 AI治理	AI zhi li	ai_tech_seed	tech_term	84	AI治理
 Amazon Kiro		ai_tech_seed	dev_tool	84	Kiro
 Amazon Q		ai_tech_seed	dev_tool	84	Amazon Q
@@ -630,43 +870,137 @@ AppIntents		ai_tech_seed	dev_tool	84	App Intents
 AppStoreConnect		ai_tech_seed	dev_tool	84	App Store Connect
 asset inventory		ai_tech_seed	dev_tool	84	AssetInventory
 AssetInventory		ai_tech_seed	dev_tool	84	AssetInventory
+Austin Li		ai_tech_seed	celebrity	84	李佳琦
+austin li		ai_tech_seed	celebrity	84	Austin Li
 av audio engine		ai_tech_seed	dev_tool	84	AVAudioEngine
 av audio session		ai_tech_seed	dev_tool	84	AVAudioSession
 AVAudioEngine		ai_tech_seed	dev_tool	84	AVAudioEngine
 AVAudioSession		ai_tech_seed	dev_tool	84	AVAudioSession
 AWS Q		ai_tech_seed	dev_tool	84	Amazon Q
+Bai Lu		ai_tech_seed	celebrity	84	白鹿
+bai lu		ai_tech_seed	celebrity	84	Bai Lu
+BCI		ai_tech_seed	tech_term	84	脑机接口
+Bitcoin		ai_tech_seed	fintech	84	比特币
+bitcoin		ai_tech_seed	fintech	84	Bitcoin
+black forest flux		ai_tech_seed	ai_model	84	Flux
+black pink		ai_tech_seed	celebrity	84	BLACKPINK
+Black Pink		ai_tech_seed	celebrity	84	BLACKPINK
+BLACKPINK		ai_tech_seed	celebrity	84	BLACKPINK
+BMW		ai_tech_seed	tech_company	84	宝马
+bmw		ai_tech_seed	tech_company	84	BMW
 Bolt AI		ai_tech_seed	dev_tool	84	Bolt.new
 bolt new		ai_tech_seed	dev_tool	84	Bolt.new
 Bolt.new		ai_tech_seed	dev_tool	84	Bolt.new
+brain-computer interface		ai_tech_seed	tech_term	84	脑机接口
+break out		ai_tech_seed	tech_term	84	出圈
+Browser Use		ai_tech_seed	ai_term	84	Browser Use
+browser use		ai_tech_seed	ai_term	84	Browser Use
+browser-use		ai_tech_seed	ai_term	84	Browser Use
+BTC		ai_tech_seed	fintech	84	Bitcoin
+BTS		ai_tech_seed	celebrity	84	BTS
+bts		ai_tech_seed	celebrity	84	BTS
 cap cut		ai_tech_seed	tech_company	84	CapCut
 CapCut		ai_tech_seed	tech_company	84	剪映
+Cheng Yi		ai_tech_seed	celebrity	84	成毅
+claude fable		ai_tech_seed	ai_model	84	Fable
+Claude Fable		ai_tech_seed	ai_model	84	Fable
+Codestral		ai_tech_seed	ai_model	84	Codestral
+codestral		ai_tech_seed	ai_model	84	Codestral
+coze		ai_tech_seed	ai_platform	84	扣子
+Dify		ai_tech_seed	ai_platform	84	Dify
+dify ai		ai_tech_seed	ai_platform	84	Dify
+Dify AI		ai_tech_seed	ai_platform	84	Dify
+Dilraba		ai_tech_seed	celebrity	84	迪丽热巴
+dilraba		ai_tech_seed	celebrity	84	Dilraba
+DingTalk		ai_tech_seed	tech_company	84	钉钉
+dingtalk		ai_tech_seed	tech_company	84	DingTalk
+dong ming zhu		ai_tech_seed	tech_leader	84	Dong Mingzhu
+Dong Mingzhu		ai_tech_seed	tech_leader	84	董明珠
+Dong Yuhui		ai_tech_seed	celebrity	84	董宇辉
+dong yuhui		ai_tech_seed	celebrity	84	Dong Yuhui
+Eason Chan		ai_tech_seed	celebrity	84	陈奕迅
+eason chan		ai_tech_seed	celebrity	84	Eason Chan
+Esther Yu		ai_tech_seed	celebrity	84	虞书欣
+esther yu		ai_tech_seed	celebrity	84	Esther Yu
+Fable		ai_tech_seed	ai_model	84	Fable
+Faye Wong		ai_tech_seed	celebrity	84	王菲
+Flux		ai_tech_seed	ai_model	84	Flux
+FLUX		ai_tech_seed	ai_model	84	Flux
+Fugu		ai_tech_seed	ai_brand	84	Fugu
+Fugu AI		ai_tech_seed	ai_brand	84	Fugu
 GLM 4.6		ai_tech_seed	ai_model	84	GLM-4.6
 GLM Coding Plan		ai_tech_seed	dev_tool	84	GLM Coding Plan
 glm coding plan		ai_tech_seed	dev_tool	84	GLM Coding Plan
 glm four six		ai_tech_seed	ai_model	84	GLM-4.6
 GLM-4.6		ai_tech_seed	ai_model	84	GLM-4.6
+go viral		ai_tech_seed	tech_term	84	出圈
+graph rag		ai_tech_seed	ai_term	84	GraphRAG
+Graph RAG		ai_tech_seed	ai_term	84	GraphRAG
+GraphRAG		ai_tech_seed	ai_term	84	GraphRAG
 grok build		ai_tech_seed	dev_tool	84	Grok Build
 Grok Build CLI		ai_tech_seed	dev_tool	84	Grok Build
+Gucci		ai_tech_seed	consumer_brand	84	Gucci
+gucci		ai_tech_seed	consumer_brand	84	Gucci
 Hailuo		ai_tech_seed	ai_brand	84	海螺AI
 Hangzhou Six Little Dragons		ai_tech_seed	tech_term	84	杭州六小龙
+hermes		ai_tech_seed	consumer_brand	84	Hermès
+Hermes		ai_tech_seed	ai_brand	84	Hermes Agent
+Hermes Agent		ai_tech_seed	ai_brand	84	Hermes Agent
+hermes agent		ai_tech_seed	ai_brand	84	Hermes Agent
+Hermès		ai_tech_seed	consumer_brand	84	Hermès
+Jia Ling		ai_tech_seed	celebrity	84	贾玲
+jia ling		ai_tech_seed	celebrity	84	Jia Ling
 Jimeng		ai_tech_seed	ai_brand	84	即梦
+JJ Lin		ai_tech_seed	celebrity	84	林俊杰
+jj lin		ai_tech_seed	celebrity	84	JJ Lin
 Kiro		ai_tech_seed	dev_tool	84	Kiro
 kiro		ai_tech_seed	dev_tool	84	Kiro
+kylian mbappe		ai_tech_seed	athlete	84	Kylian Mbappé
+Kylian Mbappé		ai_tech_seed	athlete	84	姆巴佩
 lang graph		ai_tech_seed	ai_platform	84	LangGraph
 LangGraph		ai_tech_seed	ai_platform	84	LangGraph
+Leapmotor		ai_tech_seed	tech_company	84	零跑
+leapmotor		ai_tech_seed	tech_company	84	Leapmotor
+Li Xian		ai_tech_seed	celebrity	84	李现
+li xian		ai_tech_seed	celebrity	84	Li Xian
+Li Ziqi		ai_tech_seed	celebrity	84	李子柒
+li ziqi		ai_tech_seed	celebrity	84	Li Ziqi
+Liu Yifei		ai_tech_seed	celebrity	84	刘亦菲
+liu yifei		ai_tech_seed	celebrity	84	Liu Yifei
 Llama 4 Maverick		ai_tech_seed	ai_model	84	Llama Maverick
 llama maverick		ai_tech_seed	ai_model	84	Llama Maverick
 local model		ai_tech_seed	ai_term	84	本地模型
 Lovable		ai_tech_seed	dev_tool	84	Lovable
 lovable		ai_tech_seed	dev_tool	84	Lovable
 Lovable AI		ai_tech_seed	dev_tool	84	Lovable
+Lu Weibing		ai_tech_seed	tech_leader	84	卢伟冰
+lu weibing		ai_tech_seed	tech_leader	84	Lu Weibing
+Luxeed		ai_tech_seed	tech_company	84	智界
+luxeed		ai_tech_seed	tech_company	84	Luxeed
+Lynk		ai_tech_seed	tech_company	84	领克
+Lynk & Co		ai_tech_seed	tech_company	84	领克
+lynk co		ai_tech_seed	tech_company	84	Lynk & Co
+MCP protocol		ai_tech_seed	ai_term	84	MCP协议
+MCP协议	MCP xie yi	ai_tech_seed	ai_term	84	MCP协议
+mercedes benz		ai_tech_seed	tech_company	84	Mercedes-Benz
+Mercedes-Benz		ai_tech_seed	tech_company	84	奔驰
+meta muse		ai_tech_seed	ai_model	84	Muse
+Michael Jordan		ai_tech_seed	athlete	84	乔丹
+michael jordan		ai_tech_seed	athlete	84	Michael Jordan
 MiniMax Video		ai_tech_seed	ai_brand	84	海螺AI
+mistral codestral		ai_tech_seed	ai_model	84	Codestral
 Mistral Large		ai_tech_seed	ai_model	84	Mistral Large
 mistral large		ai_tech_seed	ai_model	84	Mistral Large
 Mistral Large 3		ai_tech_seed	ai_model	84	Mistral Large
+Muse		ai_tech_seed	ai_model	84	Muse
+Muse Spark		ai_tech_seed	ai_model	84	Muse
 Neon		ai_tech_seed	tech_company	84	Neon
 neon database		ai_tech_seed	tech_company	84	Neon
 Neon Postgres		ai_tech_seed	tech_company	84	Neon
+Nezha		ai_tech_seed	tech_term	84	哪吒
+notebook lm		ai_tech_seed	ai_brand	84	NotebookLM
+Notebook LM		ai_tech_seed	ai_brand	84	NotebookLM
+NotebookLM		ai_tech_seed	ai_brand	84	NotebookLM
 on-device model		ai_tech_seed	ai_term	84	端侧模型
 open hands		ai_tech_seed	dev_tool	84	OpenHands
 open telemetry		ai_tech_seed	tech_term	84	OpenTelemetry
@@ -674,17 +1008,32 @@ OpenHands		ai_tech_seed	dev_tool	84	OpenHands
 OpenHands AI		ai_tech_seed	dev_tool	84	OpenHands
 OpenTelemetry		ai_tech_seed	tech_term	84	OpenTelemetry
 OTel		ai_tech_seed	tech_term	84	OpenTelemetry
+Perplexity Computer		ai_tech_seed	ai_brand	84	Perplexity Computer
+perplexity computer		ai_tech_seed	ai_brand	84	Perplexity Computer
+Personal Computer		ai_tech_seed	ai_brand	84	Perplexity Computer
+Porsche		ai_tech_seed	tech_company	84	保时捷
+porsche		ai_tech_seed	tech_company	84	Porsche
 Prisma		ai_tech_seed	dev_tool	84	Prisma
 prisma orm		ai_tech_seed	dev_tool	84	Prisma
 Prisma ORM		ai_tech_seed	dev_tool	84	Prisma
 prompt cache		ai_tech_seed	ai_term	84	prompt caching
 prompt caching		ai_tech_seed	ai_term	84	prompt caching
+PUBG Mobile		ai_tech_seed	game_ip	84	PUBG Mobile
+pubg mobile		ai_tech_seed	game_ip	84	PUBG Mobile
 Q Developer		ai_tech_seed	dev_tool	84	Amazon Q
 Replit Agent		ai_tech_seed	dev_tool	84	Replit Agent
 replit agent		ai_tech_seed	dev_tool	84	Replit Agent
 Replit AI		ai_tech_seed	dev_tool	84	Replit Agent
+Robin Zeng		ai_tech_seed	tech_leader	84	曾毓群
+robin zeng		ai_tech_seed	tech_leader	84	Robin Zeng
+sakana fugu		ai_tech_seed	ai_brand	84	Fugu
+Scale		ai_tech_seed	tech_company	84	Scale AI
+Scale AI		ai_tech_seed	tech_company	84	Scale AI
+scale ai		ai_tech_seed	tech_company	84	Scale AI
 semantic retrieval		ai_tech_seed	ai_term	84	semantic search
 semantic search		ai_tech_seed	ai_term	84	semantic search
+Seres		ai_tech_seed	tech_company	84	赛力斯
+seres		ai_tech_seed	tech_company	84	Seres
 shad cn		ai_tech_seed	dev_tool	84	shadcn/ui
 shadcn		ai_tech_seed	dev_tool	84	shadcn/ui
 shadcn ui		ai_tech_seed	dev_tool	84	shadcn/ui
@@ -693,105 +1042,342 @@ Speech AssetInventory		ai_tech_seed	dev_tool	84	AssetInventory
 SQLite		ai_tech_seed	tech_term	84	SQLite
 sqlite		ai_tech_seed	tech_term	84	SQLite
 StackBlitz Bolt		ai_tech_seed	dev_tool	84	Bolt.new
+Stephen Curry		ai_tech_seed	athlete	84	库里
+stephen curry		ai_tech_seed	athlete	84	Stephen Curry
+Suno		ai_tech_seed	ai_brand	84	Suno
+suno ai		ai_tech_seed	ai_brand	84	Suno
+Suno AI		ai_tech_seed	ai_brand	84	Suno
 Tailwind		ai_tech_seed	dev_tool	84	Tailwind CSS
 Tailwind CSS		ai_tech_seed	dev_tool	84	Tailwind CSS
 tailwind css		ai_tech_seed	dev_tool	84	Tailwind CSS
+Tencent Games		ai_tech_seed	game_ip	84	腾讯游戏
 test flight		ai_tech_seed	dev_tool	84	TestFlight
 TestFlight		ai_tech_seed	dev_tool	84	TestFlight
 Trae		ai_tech_seed	dev_tool	84	Trae
 trae		ai_tech_seed	dev_tool	84	Trae
 Trae AI		ai_tech_seed	dev_tool	84	Trae
 Trae CN		ai_tech_seed	dev_tool	84	Trae
+Valorant		ai_tech_seed	game_ip	84	无畏契约
+valorant		ai_tech_seed	game_ip	84	Valorant
 vector retrieval		ai_tech_seed	ai_term	84	vector search
 vector search		ai_tech_seed	ai_term	84	vector search
+Wang Manyu		ai_tech_seed	athlete	84	王曼昱
+wang manyu		ai_tech_seed	athlete	84	Wang Manyu
+Wanxiang		ai_tech_seed	ai_brand	84	通义万相
+WeCom		ai_tech_seed	tech_company	84	企业微信
+wecom		ai_tech_seed	tech_company	84	WeCom
+William Ding		ai_tech_seed	tech_leader	84	丁磊
+william ding		ai_tech_seed	tech_leader	84	William Ding
 world model		ai_tech_seed	ai_term	84	世界模型
+Wu Jing		ai_tech_seed	celebrity	84	吴京
+wu jing		ai_tech_seed	celebrity	84	Wu Jing
 xiao hong shu		ai_tech_seed	tech_company	84	Xiaohongshu
+Yang Yang		ai_tech_seed	celebrity	84	杨洋
+Yangwang		ai_tech_seed	tech_company	84	仰望
+yangwang		ai_tech_seed	tech_company	84	Yangwang
+yu minhong		ai_tech_seed	tech_leader	84	Yu Minhong
 Yuanbao		ai_tech_seed	ai_brand	84	腾讯元宝
+Zenless Zone Zero		ai_tech_seed	game_ip	84	绝区零
+zenless zone zero		ai_tech_seed	game_ip	84	Zenless Zone Zero
+Zhang Yimou		ai_tech_seed	celebrity	84	张艺谋
+zhang yimou		ai_tech_seed	celebrity	84	Zhang Yimou
+ZZZ		ai_tech_seed	game_ip	84	Zenless Zone Zero
+丁磊	ding lei	ai_tech_seed	tech_leader	84	丁磊
+万相	tong yi wan xiang	ai_tech_seed	ai_brand	84	通义万相
 世界模型	shi jie mo xing	ai_tech_seed	ai_term	84	世界模型
+乔丹	qiao dan	ai_tech_seed	athlete	84	乔丹
+人工智能+	ren gong zhi neng jia	ai_tech_seed	tech_term	84	人工智能+
+仰望	yang wang	ai_tech_seed	tech_company	84	仰望
+企业微信	qi ye wei xin	ai_tech_seed	tech_company	84	企业微信
+保时捷	bao shi jie	ai_tech_seed	tech_company	84	保时捷
+出圈	chu quan	ai_tech_seed	tech_term	84	出圈
+刘亦菲	liu yi fei	ai_tech_seed	celebrity	84	刘亦菲
 剪映	jian ying	ai_tech_seed	tech_company	84	剪映
+卢伟冰	lu wei bing	ai_tech_seed	tech_leader	84	卢伟冰
 即梦	ji meng	ai_tech_seed	ai_brand	84	即梦
 即梦AI	ji meng	ai_tech_seed	ai_brand	84	即梦
+古驰		ai_tech_seed	consumer_brand	84	Gucci
+可灵AI	ke ling AI	ai_tech_seed	ai_brand	84	可灵AI
 向量搜索		ai_tech_seed	ai_term	84	vector search
+吴京	wu jing	ai_tech_seed	celebrity	84	吴京
+哪吒	na zha	ai_tech_seed	tech_term	84	哪吒
+哪吒2	na zha	ai_tech_seed	tech_term	84	哪吒
+奔驰	ben chi	ai_tech_seed	tech_company	84	奔驰
+姆巴佩	mu ba pei	ai_tech_seed	athlete	84	姆巴佩
+宝马	bao ma	ai_tech_seed	tech_company	84	宝马
+库里	ku li	ai_tech_seed	athlete	84	库里
+张艺谋	zhang yi mou	ai_tech_seed	celebrity	84	张艺谋
+成毅	cheng yi	ai_tech_seed	celebrity	84	成毅
 提示词缓存		ai_tech_seed	ai_term	84	prompt caching
+无畏契约	wu wei qi yue	ai_tech_seed	game_ip	84	无畏契约
+智界	zhi jie	ai_tech_seed	tech_company	84	智界
 智谱 coding plan		ai_tech_seed	dev_tool	84	GLM Coding Plan
+曾毓群	zeng yu qun	ai_tech_seed	tech_leader	84	曾毓群
 本地模型	ben di mo xing	ai_tech_seed	ai_term	84	本地模型
+李佳琦	li jia qi	ai_tech_seed	celebrity	84	李佳琦
+李子柒	li zi qi	ai_tech_seed	celebrity	84	李子柒
+李现	li xian	ai_tech_seed	celebrity	84	李现
+杨洋	yang yang	ai_tech_seed	celebrity	84	杨洋
 杭州六小龙	hang zhou liu xiao long	ai_tech_seed	tech_term	84	杭州六小龙
+林俊杰	lin jun jie	ai_tech_seed	celebrity	84	林俊杰
+比特币	bi te bi	ai_tech_seed	fintech	84	比特币
 海螺AI	hai luo AI	ai_tech_seed	ai_brand	84	海螺AI
+深度思考	shen du si kao	ai_tech_seed	ai_term	84	深度思考
+深度思考模式	shen du si kao	ai_tech_seed	ai_term	84	深度思考
+热巴		ai_tech_seed	celebrity	84	Dilraba
+爱马仕		ai_tech_seed	consumer_brand	84	Hermès
+王曼昱	wang man yu	ai_tech_seed	athlete	84	王曼昱
+王菲	wang fei	ai_tech_seed	celebrity	84	王菲
+白鹿	bai lu	ai_tech_seed	celebrity	84	白鹿
+神仙姐姐		ai_tech_seed	celebrity	84	Liu Yifei
 端侧模型	duan ce mo xing	ai_tech_seed	ai_term	84	端侧模型
+绝区零	jue qu ling	ai_tech_seed	game_ip	84	绝区零
+缪斯		ai_tech_seed	ai_model	84	Muse
+罗翔	luo xiang	ai_tech_seed	celebrity	84	罗翔
+罗翔说刑法	luo xiang	ai_tech_seed	celebrity	84	罗翔
+脑机接口	nao ji jie kou	ai_tech_seed	tech_term	84	脑机接口
 腾讯元宝	teng xun yuan bao	ai_tech_seed	ai_brand	84	腾讯元宝
+腾讯游戏	teng xun you xi	ai_tech_seed	game_ip	84	腾讯游戏
+董宇辉	dong yu hui	ai_tech_seed	celebrity	84	董宇辉
+董明珠	dong ming zhu	ai_tech_seed	tech_leader	84	董明珠
+虞书欣	yu shu xin	ai_tech_seed	celebrity	84	虞书欣
 语义搜索		ai_tech_seed	ai_term	84	semantic search
+贾玲	jia ling	ai_tech_seed	celebrity	84	贾玲
+赛力斯	sai li si	ai_tech_seed	tech_company	84	赛力斯
+迪丽热巴	di li re ba	ai_tech_seed	celebrity	84	迪丽热巴
+通义万相	tong yi wan xiang	ai_tech_seed	ai_brand	84	通义万相
+钉钉	ding ding	ai_tech_seed	tech_company	84	钉钉
+防弹少年团		ai_tech_seed	celebrity	84	BTS
+陈奕迅	chen yi xun	ai_tech_seed	celebrity	84	陈奕迅
+零跑	ling pao	ai_tech_seed	tech_company	84	零跑
+领克	ling ke	ai_tech_seed	tech_company	84	领克
 01.AI		ai_tech_seed	ai_brand	82	零一万物
+360周鸿祎		ai_tech_seed	tech_leader	82	Zhou Hongyi
+a16z		ai_tech_seed	fintech	82	a16z
+A16Z		ai_tech_seed	fintech	82	a16z
+A2A		ai_tech_seed	ai_term	82	A2A
 activity kit		ai_tech_seed	dev_tool	82	ActivityKit
 ActivityKit		ai_tech_seed	dev_tool	82	ActivityKit
+Adidas		ai_tech_seed	consumer_brand	82	Adidas
+adidas		ai_tech_seed	consumer_brand	82	Adidas
+Agent Skills		ai_tech_seed	ai_term	82	Agent Skills
+agent skills		ai_tech_seed	ai_term	82	Agent Skills
+agent to agent		ai_tech_seed	ai_term	82	A2A
+Agent2Agent		ai_tech_seed	ai_term	82	A2A
+agentic code		ai_tech_seed	ai_term	82	agentic coding
+agentic coding		ai_tech_seed	ai_term	82	agentic coding
+agents a1		ai_tech_seed	ai_model	82	Agents-A1
+Agents A1		ai_tech_seed	ai_model	82	Agents-A1
+Agents-A1		ai_tech_seed	ai_model	82	Agents-A1
+AI fatigue		ai_tech_seed	tech_term	82	AI疲劳
 AI native		ai_tech_seed	ai_term	82	AI native
+AI Studio		ai_tech_seed	dev_tool	82	Google AI Studio
 AI video		ai_tech_seed	tech_term	82	AI视频
 AI workflow		ai_tech_seed	ai_term	82	AI workflow
 ai workflow		ai_tech_seed	ai_term	82	AI workflow
 AI 工作流		ai_tech_seed	ai_term	82	AI workflow
 AI-native		ai_tech_seed	ai_term	82	AI native
+Aion		ai_tech_seed	tech_company	82	广汽埃安
+aion		ai_tech_seed	tech_company	82	Aion
 Airbnb		ai_tech_seed	tech_company	82	Airbnb
 airbnb		ai_tech_seed	tech_company	82	Airbnb
 AI原生		ai_tech_seed	ai_term	82	AI native
+AI疲劳	AI pi lao	ai_tech_seed	tech_term	82	AI疲劳
 AI视频	AI shi pin	ai_tech_seed	tech_term	82	AI视频
+Amazon Bedrock		ai_tech_seed	ai_platform	82	Bedrock
+Amazon Nova		ai_tech_seed	ai_model	82	Amazon Nova
+amazon nova		ai_tech_seed	ai_model	82	Amazon Nova
 Amazon Q Developer		ai_tech_seed	dev_tool	82	Q Developer
+andreessen horowitz		ai_tech_seed	fintech	82	a16z
+Andreessen Horowitz		ai_tech_seed	fintech	82	Andreessen Horowitz
+Andrew Ng		ai_tech_seed	tech_leader	82	Andrew Ng
+andrew ng		ai_tech_seed	tech_leader	82	Andrew Ng
+Anta		ai_tech_seed	consumer_brand	82	安踏
+anta		ai_tech_seed	consumer_brand	82	Anta
 Apache Kafka		ai_tech_seed	tech_term	82	Kafka
+apple siri		ai_tech_seed	ai_brand	82	Siri
+Arc'teryx		ai_tech_seed	consumer_brand	82	始祖鸟
+arcteryx		ai_tech_seed	consumer_brand	82	Arc'teryx
+Ariana Grande		ai_tech_seed	celebrity	82	Ariana Grande
+ariana grande		ai_tech_seed	celebrity	82	Ariana Grande
 AutoGen		ai_tech_seed	ai_platform	82	AutoGen
 autogen		ai_tech_seed	ai_platform	82	AutoGen
+Avatr		ai_tech_seed	tech_company	82	阿维塔
+avatr		ai_tech_seed	tech_company	82	Avatr
+aws bedrock		ai_tech_seed	ai_platform	82	Bedrock
 bai chuan		ai_tech_seed	ai_brand	82	百川
 Baichuan		ai_tech_seed	ai_brand	82	百川
 baichuan		ai_tech_seed	ai_brand	82	Baichuan
+Balenciaga		ai_tech_seed	consumer_brand	82	Balenciaga
+balenciaga		ai_tech_seed	consumer_brand	82	Balenciaga
+Bedrock		ai_tech_seed	ai_platform	82	Bedrock
+Berkshire Hathaway		ai_tech_seed	fintech	82	伯克希尔
+berkshire hathaway		ai_tech_seed	fintech	82	Berkshire Hathaway
+beyonce		ai_tech_seed	celebrity	82	Beyoncé
+Beyoncé		ai_tech_seed	celebrity	82	Beyoncé
+BFL		ai_tech_seed	ai_brand	82	Black Forest Labs
+Billie Eilish		ai_tech_seed	celebrity	82	Billie Eilish
+billie eilish		ai_tech_seed	celebrity	82	Billie Eilish
+Black Forest Labs		ai_tech_seed	ai_brand	82	Black Forest Labs
+black forest labs		ai_tech_seed	ai_brand	82	Black Forest Labs
+Blizzard		ai_tech_seed	game_ip	82	暴雪
+blizzard		ai_tech_seed	game_ip	82	Blizzard
 blockchain		ai_tech_seed	tech_term	82	区块链
+brain computer interface		ai_tech_seed	tech_term	82	BCI
+BrainCo		ai_tech_seed	tech_company	82	强脑科技
+brainco		ai_tech_seed	tech_company	82	BrainCo
 Bun		ai_tech_seed	dev_tool	82	Bun
 bun js		ai_tech_seed	dev_tool	82	Bun
 Bun runtime		ai_tech_seed	dev_tool	82	Bun
+Cai Xukun		ai_tech_seed	celebrity	82	蔡徐坤
+cai xukun		ai_tech_seed	celebrity	82	Cai Xukun
+Cartier		ai_tech_seed	consumer_brand	82	Cartier
+cartier		ai_tech_seed	consumer_brand	82	Cartier
+Cascade		ai_tech_seed	dev_tool	82	Windsurf Cascade
+Cerebras		ai_tech_seed	tech_company	82	Cerebras
+cerebras systems		ai_tech_seed	tech_company	82	Cerebras
+Cerebras Systems		ai_tech_seed	tech_company	82	Cerebras
+Claude Mythos		ai_tech_seed	ai_model	82	Claude Mythos
+claude mythos		ai_tech_seed	ai_model	82	Claude Mythos
+Claude Skills		ai_tech_seed	ai_term	82	Agent Skills
 Cloudflare		ai_tech_seed	tech_company	82	Cloudflare
 cloudflare		ai_tech_seed	tech_company	82	Cloudflare
 Codeium Windsurf		ai_tech_seed	dev_tool	82	Windsurf
+Cody		ai_tech_seed	dev_tool	82	Sourcegraph Cody
 Cognition		ai_tech_seed	ai_brand	82	Cognition
 cognition ai		ai_tech_seed	ai_brand	82	Cognition
 Cognition AI		ai_tech_seed	ai_brand	82	Cognition
 Coinbase		ai_tech_seed	tech_company	82	Coinbase
 coinbase		ai_tech_seed	tech_company	82	Coinbase
 context compression		ai_tech_seed	ai_term	82	上下文压缩
+CoreWeave		ai_tech_seed	tech_company	82	CoreWeave
+coreweave		ai_tech_seed	tech_company	82	CoreWeave
+counter strike 2		ai_tech_seed	game_ip	82	CS2
 Create ML		ai_tech_seed	dev_tool	82	Create ML
 create ml		ai_tech_seed	dev_tool	82	Create ML
 CreateML		ai_tech_seed	dev_tool	82	Create ML
 crew ai		ai_tech_seed	ai_platform	82	CrewAI
 Crew AI		ai_tech_seed	ai_platform	82	CrewAI
 CrewAI		ai_tech_seed	ai_platform	82	CrewAI
+CS2		ai_tech_seed	game_ip	82	CS2
+CSGO		ai_tech_seed	game_ip	82	CS2
+deep agent		ai_tech_seed	ai_term	82	deep agent
+deep agents		ai_tech_seed	ai_term	82	deep agent
 deep research		ai_tech_seed	ai_term	82	deep research
+Denza		ai_tech_seed	tech_company	82	腾势
+denza		ai_tech_seed	tech_company	82	Denza
+Devstral		ai_tech_seed	ai_model	82	Devstral
+devstral		ai_tech_seed	ai_model	82	Devstral
+digital human		ai_tech_seed	ai_term	82	数字人
+Dior		ai_tech_seed	consumer_brand	82	Dior
+dior		ai_tech_seed	consumer_brand	82	Dior
 distillation		ai_tech_seed	ai_term	82	distillation
+Donald Trump		ai_tech_seed	tech_leader	82	特朗普
+donald trump		ai_tech_seed	tech_leader	82	Donald Trump
+dota 2		ai_tech_seed	game_ip	82	DOTA2
+Dota 2		ai_tech_seed	game_ip	82	DOTA2
+DOTA2		ai_tech_seed	game_ip	82	DOTA2
+dota2		ai_tech_seed	game_ip	82	Dota 2
+Drake		ai_tech_seed	celebrity	82	Drake
+drake rapper		ai_tech_seed	celebrity	82	Drake
 Drizzle		ai_tech_seed	dev_tool	82	Drizzle
 drizzle orm		ai_tech_seed	dev_tool	82	Drizzle
 Drizzle ORM		ai_tech_seed	dev_tool	82	Drizzle
+Duan Yongping		ai_tech_seed	tech_leader	82	段永平
+duan yongping		ai_tech_seed	tech_leader	82	Duan Yongping
+Elden Ring		ai_tech_seed	game_ip	82	艾尔登法环
+elden ring		ai_tech_seed	game_ip	82	Elden Ring
 embodied agent		ai_tech_seed	ai_term	82	具身智能体
 embodied AI		ai_tech_seed	tech_term	82	具身智能
 end-to-end		ai_tech_seed	tech_term	82	端到端
+Erling Haaland		ai_tech_seed	athlete	82	哈兰德
+erling haaland		ai_tech_seed	athlete	82	Erling Haaland
+ETH		ai_tech_seed	fintech	82	Ethereum
+Ethereum		ai_tech_seed	fintech	82	以太坊
+ethereum		ai_tech_seed	fintech	82	Ethereum
+Fangchengbao		ai_tech_seed	tech_company	82	方程豹
+fangchengbao		ai_tech_seed	tech_company	82	Fangchengbao
 fast api		ai_tech_seed	dev_tool	82	FastAPI
 FastAPI		ai_tech_seed	dev_tool	82	FastAPI
+Federal Reserve		ai_tech_seed	fintech	82	美联储
+federal reserve		ai_tech_seed	fintech	82	Federal Reserve
+fei fei li		ai_tech_seed	tech_leader	82	Fei-Fei Li
+Fei-Fei Li		ai_tech_seed	tech_leader	82	李飞飞
+Ferrari		ai_tech_seed	tech_company	82	法拉利
+ferrari		ai_tech_seed	tech_company	82	Ferrari
+Fireworks		ai_tech_seed	ai_platform	82	Fireworks AI
+Fireworks AI		ai_tech_seed	ai_platform	82	Fireworks AI
+fireworks ai		ai_tech_seed	ai_platform	82	Fireworks AI
+Foxconn		ai_tech_seed	tech_company	82	富士康
+foxconn		ai_tech_seed	tech_company	82	Foxconn
 full self driving		ai_tech_seed	tech_term	82	FSD
+G.E.M.		ai_tech_seed	celebrity	82	邓紫棋
 Geely		ai_tech_seed	tech_company	82	Geely
 geely		ai_tech_seed	tech_company	82	Geely
+gem		ai_tech_seed	celebrity	82	G.E.M.
 Go		ai_tech_seed	dev_tool	82	Go
 golang		ai_tech_seed	dev_tool	82	Go
 Golang		ai_tech_seed	dev_tool	82	Go
+Goldman Sachs		ai_tech_seed	fintech	82	高盛
+goldman sachs		ai_tech_seed	fintech	82	Goldman Sachs
+Gong Li		ai_tech_seed	celebrity	82	巩俐
+Google AI Studio		ai_tech_seed	dev_tool	82	Google AI Studio
+google ai studio		ai_tech_seed	dev_tool	82	Google AI Studio
+google imagen		ai_tech_seed	ai_model	82	Imagen
+google veo		ai_tech_seed	ai_model	82	Veo
 Groq		ai_tech_seed	ai_brand	82	Groq
 groq		ai_tech_seed	ai_brand	82	Groq
 GROQ		ai_tech_seed	ai_brand	82	Groq
+Haidilao		ai_tech_seed	consumer_brand	82	海底捞
+haidilao		ai_tech_seed	consumer_brand	82	Haidilao
 hailuo ai		ai_tech_seed	ai_brand	82	Hailuo
+harvey		ai_tech_seed	ai_brand	82	Harvey AI
+Harvey		ai_tech_seed	ai_brand	82	Harvey AI
+Harvey AI		ai_tech_seed	ai_brand	82	Harvey AI
 horizon		ai_tech_seed	tech_company	82	Horizon Robotics
 Horizon Robotics		ai_tech_seed	tech_company	82	Horizon Robotics
+Huang Xiaoming		ai_tech_seed	celebrity	82	黄晓明
+huang xiaoming		ai_tech_seed	celebrity	82	Huang Xiaoming
 hybrid retrieval		ai_tech_seed	ai_term	82	hybrid search
 hybrid search		ai_tech_seed	ai_term	82	hybrid search
 IBM		ai_tech_seed	tech_company	82	IBM
 ibm		ai_tech_seed	tech_company	82	IBM
+IM Motors		ai_tech_seed	tech_company	82	智己
+im motors		ai_tech_seed	tech_company	82	IM Motors
 image-to-video		ai_tech_seed	tech_term	82	图生视频
+Imagen		ai_tech_seed	ai_model	82	Imagen
+Imagen AI		ai_tech_seed	ai_model	82	Imagen
+Jacky Cheung		ai_tech_seed	celebrity	82	张学友
+jacky cheung		ai_tech_seed	celebrity	82	Jacky Cheung
 Jeff Bezos		ai_tech_seed	tech_leader	82	Jeff Bezos
 jeff bezos		ai_tech_seed	tech_leader	82	Jeff Bezos
 jimeng ai		ai_tech_seed	ai_brand	82	Jimeng
+Jolin Tsai		ai_tech_seed	celebrity	82	蔡依林
+jolin tsai		ai_tech_seed	celebrity	82	Jolin Tsai
 Kafka		ai_tech_seed	tech_term	82	Kafka
 kafka		ai_tech_seed	tech_term	82	Kafka
+Kobe Bryant		ai_tech_seed	athlete	82	科比
+kobe bryant		ai_tech_seed	athlete	82	Kobe Bryant
+Lady Gaga		ai_tech_seed	celebrity	82	Lady Gaga
+lady gaga		ai_tech_seed	celebrity	82	Lady Gaga
+Lamborghini		ai_tech_seed	tech_company	82	兰博基尼
+lamborghini		ai_tech_seed	tech_company	82	Lamborghini
+Leonardo DiCaprio		ai_tech_seed	celebrity	82	Leonardo DiCaprio
+leonardo dicaprio		ai_tech_seed	celebrity	82	Leonardo DiCaprio
+Li L9		ai_tech_seed	tech_company	82	理想L9
+li l9		ai_tech_seed	tech_company	82	Li L9
+Li MEGA		ai_tech_seed	tech_company	82	理想MEGA
+li ning		ai_tech_seed	consumer_brand	82	Li-Ning
+Li-Ning		ai_tech_seed	consumer_brand	82	李宁
+light rag		ai_tech_seed	ai_term	82	LightRAG
+Light RAG		ai_tech_seed	ai_term	82	LightRAG
+LightRAG		ai_tech_seed	ai_term	82	LightRAG
+lindy		ai_tech_seed	ai_brand	82	Lindy AI
+Lindy		ai_tech_seed	ai_brand	82	Lindy AI
+Lindy AI		ai_tech_seed	ai_brand	82	Lindy AI
 ling yi wan wu		ai_tech_seed	ai_brand	82	零一万物
+Liu Cixin		ai_tech_seed	celebrity	82	刘慈欣
+liu cixin		ai_tech_seed	celebrity	82	Liu Cixin
 Live Activities		ai_tech_seed	dev_tool	82	Live Activities
 live activities		ai_tech_seed	dev_tool	82	Live Activities
 llama index		ai_tech_seed	ai_platform	82	LlamaIndex
@@ -799,32 +1385,74 @@ LlamaIndex		ai_tech_seed	ai_platform	82	LlamaIndex
 LM Studio		ai_tech_seed	ai_platform	82	LM Studio
 lm studio		ai_tech_seed	ai_platform	82	LM Studio
 LMStudio		ai_tech_seed	ai_platform	82	LM Studio
+long context		ai_tech_seed	ai_term	82	长上下文
+Lu Han		ai_tech_seed	celebrity	82	鹿晗
+lu han		ai_tech_seed	celebrity	82	Lu Han
+MAEXTRO		ai_tech_seed	tech_company	82	尊界
+maextro		ai_tech_seed	tech_company	82	MAEXTRO
+Mao Buyi		ai_tech_seed	celebrity	82	毛不易
+Masayoshi Son		ai_tech_seed	tech_leader	82	孙正义
+masayoshi son		ai_tech_seed	tech_leader	82	Masayoshi Son
+McDonald's		ai_tech_seed	consumer_brand	82	McDonald's
+mcdonalds		ai_tech_seed	consumer_brand	82	McDonald's
 MCP Inspector		ai_tech_seed	dev_tool	82	MCP Inspector
 mcp inspector		ai_tech_seed	dev_tool	82	MCP Inspector
 MCP 调试器		ai_tech_seed	dev_tool	82	MCP Inspector
+MediaTek		ai_tech_seed	tech_company	82	MediaTek
+mediatek		ai_tech_seed	tech_company	82	MediaTek
+MEGA		ai_tech_seed	tech_company	82	理想MEGA
+Meng Ziyi		ai_tech_seed	celebrity	82	孟子义
+meng ziyi		ai_tech_seed	celebrity	82	Meng Ziyi
+Micron		ai_tech_seed	tech_company	82	Micron
+micron		ai_tech_seed	tech_company	82	Micron
 Microsoft AutoGen		ai_tech_seed	ai_platform	82	AutoGen
+Mistral Codestral		ai_tech_seed	ai_model	82	Mistral Codestral
+mistral devstral		ai_tech_seed	ai_model	82	Devstral
+mistral pixtral		ai_tech_seed	ai_model	82	Pixtral
+Momenta		ai_tech_seed	tech_company	82	Momenta
+momenta		ai_tech_seed	tech_company	82	Momenta
 Mongo DB		ai_tech_seed	tech_company	82	MongoDB
 MongoDB		ai_tech_seed	tech_company	82	MongoDB
 mongodb		ai_tech_seed	tech_company	82	MongoDB
+Mythos		ai_tech_seed	ai_model	82	Claude Mythos
+Na Ying		ai_tech_seed	celebrity	82	那英
+Neil Shen		ai_tech_seed	tech_leader	82	沈南鹏
+neil shen		ai_tech_seed	tech_leader	82	Neil Shen
+new jeans		ai_tech_seed	celebrity	82	NewJeans
+New Jeans		ai_tech_seed	celebrity	82	NewJeans
 new quality productive forces		ai_tech_seed	tech_term	82	新质生产力
+NewJeans		ai_tech_seed	celebrity	82	NewJeans
+nezha		ai_tech_seed	tech_term	82	Nezha
+Nezha 2		ai_tech_seed	tech_term	82	哪吒2
+NIM inference		ai_tech_seed	ai_platform	82	NVIDIA NIM
 Nintendo		ai_tech_seed	tech_company	82	Nintendo
 nintendo		ai_tech_seed	tech_company	82	Nintendo
 node js		ai_tech_seed	dev_tool	82	Node.js
 Node.js		ai_tech_seed	dev_tool	82	Node.js
 nodejs		ai_tech_seed	dev_tool	82	Node.js
 NodeJS		ai_tech_seed	dev_tool	82	Node.js
+Nongfu Spring		ai_tech_seed	consumer_brand	82	Nongfu Spring
+nongfu spring		ai_tech_seed	consumer_brand	82	Nongfu Spring
 Notion		ai_tech_seed	tech_company	82	Notion
 notion		ai_tech_seed	tech_company	82	Notion
+Nova model		ai_tech_seed	ai_model	82	Amazon Nova
+Novak Djokovic		ai_tech_seed	athlete	82	德约科维奇
+novak djokovic		ai_tech_seed	athlete	82	Novak Djokovic
 NPU		ai_tech_seed	tech_term	82	NPU
 npu		ai_tech_seed	tech_term	82	NPU
+NVIDIA NIM		ai_tech_seed	ai_platform	82	NVIDIA NIM
+nvidia nim		ai_tech_seed	ai_platform	82	NVIDIA NIM
 Ollama		ai_tech_seed	ai_platform	82	Ollama
 ollama		ai_tech_seed	ai_platform	82	Ollama
+open harmony		ai_tech_seed	tech_company	82	OpenHarmony
 open router		ai_tech_seed	ai_platform	82	OpenRouter
 Open Router		ai_tech_seed	ai_platform	82	OpenRouter
 open web ui		ai_tech_seed	ai_platform	82	Open WebUI
 Open WebUI		ai_tech_seed	ai_platform	82	Open WebUI
 open weight		ai_tech_seed	ai_term	82	open weight
 open weights		ai_tech_seed	ai_term	82	open weight
+openai whisper		ai_tech_seed	ai_model	82	Whisper
+OpenHarmony		ai_tech_seed	tech_company	82	OpenHarmony
 OpenRouter		ai_tech_seed	ai_platform	82	OpenRouter
 OpenWebUI		ai_tech_seed	ai_platform	82	Open WebUI
 Optimus		ai_tech_seed	tech_term	82	人形机器人
@@ -835,24 +1463,43 @@ Palantir		ai_tech_seed	tech_company	82	Palantir
 palantir		ai_tech_seed	tech_company	82	Palantir
 PayPal		ai_tech_seed	tech_company	82	PayPal
 paypal		ai_tech_seed	tech_company	82	PayPal
+perplexity personal computer		ai_tech_seed	ai_brand	82	Personal Computer
+Pixtral		ai_tech_seed	ai_model	82	Pixtral
+pixtral		ai_tech_seed	ai_model	82	Pixtral
 planet scale		ai_tech_seed	tech_company	82	PlanetScale
 PlanetScale		ai_tech_seed	tech_company	82	PlanetScale
 PlanetScale MySQL		ai_tech_seed	tech_company	82	PlanetScale
+PlayStation		ai_tech_seed	game_ip	82	PlayStation
+playstation		ai_tech_seed	game_ip	82	PlayStation
+pony ai		ai_tech_seed	tech_company	82	Pony.ai
+Pony.ai		ai_tech_seed	tech_company	82	小马智行
+Pop Mart		ai_tech_seed	consumer_brand	82	泡泡玛特
+pop mart		ai_tech_seed	consumer_brand	82	Pop Mart
 pre-training		ai_tech_seed	ai_term	82	pretraining
 pretraining		ai_tech_seed	ai_term	82	pretraining
+PS5		ai_tech_seed	game_ip	82	PlayStation
 q developer		ai_tech_seed	dev_tool	82	Q Developer
+rag flow		ai_tech_seed	ai_platform	82	RAGFlow
+RAGFlow		ai_tech_seed	ai_platform	82	RAGFlow
 React Server Components		ai_tech_seed	dev_tool	82	React Server Components
 react server components		ai_tech_seed	dev_tool	82	React Server Components
 red note		ai_tech_seed	tech_company	82	RedNote
 Redis		ai_tech_seed	tech_company	82	Redis
 redis		ai_tech_seed	tech_company	82	Redis
+Ren Jialun		ai_tech_seed	celebrity	82	任嘉伦
+ren jialun		ai_tech_seed	celebrity	82	Ren Jialun
 rerank		ai_tech_seed	ai_term	82	reranker
 reranker		ai_tech_seed	ai_term	82	reranker
+Rihanna		ai_tech_seed	celebrity	82	Rihanna
+rihanna		ai_tech_seed	celebrity	82	Rihanna
 RSC		ai_tech_seed	dev_tool	82	React Server Components
 Rust		ai_tech_seed	dev_tool	82	Rust
 rust		ai_tech_seed	dev_tool	82	Rust
 SaaS		ai_tech_seed	tech_term	82	SaaS
 saas		ai_tech_seed	tech_term	82	SaaS
+Sakana		ai_tech_seed	ai_brand	82	Sakana AI
+Sakana AI		ai_tech_seed	ai_brand	82	Sakana AI
+sakana ai		ai_tech_seed	ai_brand	82	Sakana AI
 Satya Nadella		ai_tech_seed	tech_leader	82	Satya Nadella
 satya nadella		ai_tech_seed	tech_leader	82	Satya Nadella
 SDK		ai_tech_seed	tech_term	82	SDK
@@ -866,12 +1513,23 @@ sf symbols		ai_tech_seed	dev_tool	82	SF Symbols
 SFSymbols		ai_tech_seed	dev_tool	82	SF Symbols
 Shopify		ai_tech_seed	tech_company	82	Shopify
 shopify		ai_tech_seed	tech_company	82	Shopify
+Siri		ai_tech_seed	ai_brand	82	Siri
+Siri AI		ai_tech_seed	ai_brand	82	Siri
+SK Hynix		ai_tech_seed	tech_company	82	SK Hynix
+sk hynix		ai_tech_seed	tech_company	82	SK Hynix
+Sourcegraph Cody		ai_tech_seed	dev_tool	82	Sourcegraph Cody
+sourcegraph cody		ai_tech_seed	dev_tool	82	Sourcegraph Cody
 SPM		ai_tech_seed	dev_tool	82	Swift Package Manager
 Spotify		ai_tech_seed	tech_company	82	Spotify
 spotify		ai_tech_seed	tech_company	82	Spotify
+Starbucks		ai_tech_seed	consumer_brand	82	Starbucks
+starbucks		ai_tech_seed	consumer_brand	82	Starbucks
+Stelato		ai_tech_seed	tech_company	82	享界
+stelato		ai_tech_seed	tech_company	82	Stelato
 step fun		ai_tech_seed	ai_brand	82	StepFun
 StepFun		ai_tech_seed	ai_brand	82	StepFun
 streaming		ai_tech_seed	ai_term	82	流式
+Sun Li		ai_tech_seed	celebrity	82	孙俪
 Sundar Pichai		ai_tech_seed	tech_leader	82	Sundar Pichai
 sundar pichai		ai_tech_seed	tech_leader	82	Sundar Pichai
 Swift Package Manager		ai_tech_seed	dev_tool	82	Swift Package Manager
@@ -881,88 +1539,285 @@ Swift UI		ai_tech_seed	dev_tool	82	SwiftUI
 SwiftUI		ai_tech_seed	dev_tool	82	SwiftUI
 text-to-image		ai_tech_seed	tech_term	82	文生图
 text-to-video		ai_tech_seed	tech_term	82	文生视频
+tf boys		ai_tech_seed	celebrity	82	TFBOYS
+TF Boys		ai_tech_seed	celebrity	82	TFBOYS
+TFBOYS		ai_tech_seed	celebrity	82	TFBOYS
+Together		ai_tech_seed	ai_platform	82	Together AI
+Together AI		ai_tech_seed	ai_platform	82	Together AI
+together ai		ai_tech_seed	ai_platform	82	Together AI
 TRAE		ai_tech_seed	dev_tool	82	TRAE
+Udio		ai_tech_seed	ai_brand	82	Udio
+udio ai		ai_tech_seed	ai_brand	82	Udio
+Udio AI		ai_tech_seed	ai_brand	82	Udio
 vector database		ai_tech_seed	ai_term	82	vector database
+Veo		ai_tech_seed	ai_model	82	Veo
+Veo AI		ai_tech_seed	ai_model	82	Veo
 Vercel		ai_tech_seed	tech_company	82	Vercel
 vercel		ai_tech_seed	tech_company	82	Vercel
+video foundation model		ai_tech_seed	ai_term	82	视频大模型
 vision os		ai_tech_seed	dev_tool	82	visionOS
 Vision Pro		ai_tech_seed	dev_tool	82	visionOS
 visionOS		ai_tech_seed	dev_tool	82	visionOS
+Voyah		ai_tech_seed	tech_company	82	岚图
+voyah		ai_tech_seed	tech_company	82	Voyah
 Vue		ai_tech_seed	dev_tool	82	Vue
 vue		ai_tech_seed	dev_tool	82	Vue
 Vue.js		ai_tech_seed	dev_tool	82	Vue
 Vue3		ai_tech_seed	dev_tool	82	Vue
+wan xiang		ai_tech_seed	ai_brand	82	Wanxiang
+Wang Leehom		ai_tech_seed	celebrity	82	王力宏
+Wang Xiaochuan		ai_tech_seed	tech_leader	82	王小川
+wang xiaochuan		ai_tech_seed	tech_leader	82	Wang Xiaochuan
+Warren Buffett		ai_tech_seed	tech_leader	82	巴菲特
+warren buffett		ai_tech_seed	tech_leader	82	Warren Buffett
 Weibo		ai_tech_seed	tech_company	82	Weibo
 weibo		ai_tech_seed	tech_company	82	Weibo
+WeRide		ai_tech_seed	tech_company	82	文远知行
+weride		ai_tech_seed	tech_company	82	WeRide
+Whisper		ai_tech_seed	ai_model	82	Whisper
+Whisper ASR		ai_tech_seed	ai_model	82	Whisper
 widget kit		ai_tech_seed	dev_tool	82	WidgetKit
 WidgetKit		ai_tech_seed	dev_tool	82	WidgetKit
 Windsurf		ai_tech_seed	dev_tool	82	Windsurf
 windsurf		ai_tech_seed	dev_tool	82	Windsurf
+Windsurf Cascade		ai_tech_seed	dev_tool	82	Windsurf Cascade
+windsurf cascade		ai_tech_seed	dev_tool	82	Windsurf Cascade
 workflow orchestration		ai_tech_seed	ai_term	82	工作流编排
+Wu Lei		ai_tech_seed	celebrity	82	吴磊
+wu lei		ai_tech_seed	celebrity	82	Wu Lei
+Wuthering Waves		ai_tech_seed	game_ip	82	鸣潮
+wuthering waves		ai_tech_seed	game_ip	82	Wuthering Waves
 xcode gen		ai_tech_seed	dev_tool	82	XcodeGen
 XcodeGen		ai_tech_seed	dev_tool	82	XcodeGen
 Yi		ai_tech_seed	ai_brand	82	零一万物
+ying shi ju feng tim		ai_tech_seed	tech_leader	82	影视飓风Tim
+Yu Donglai		ai_tech_seed	tech_leader	82	于东来
+yu donglai		ai_tech_seed	tech_leader	82	Yu Donglai
+zero claw		ai_tech_seed	ai_brand	82	ZeroClaw
+Zero Claw		ai_tech_seed	ai_brand	82	ZeroClaw
+ZeroClaw		ai_tech_seed	ai_brand	82	ZeroClaw
+Zhang Yi actor		ai_tech_seed	celebrity	82	张译
+Zhang Ziyi		ai_tech_seed	celebrity	82	章子怡
+zhang ziyi		ai_tech_seed	celebrity	82	Zhang Ziyi
+Zhou Hongyi		ai_tech_seed	tech_leader	82	周鸿祎
+zhou hongyi		ai_tech_seed	tech_leader	82	Zhou Hongyi
+Zhou Xun		ai_tech_seed	celebrity	82	周迅
+zi yu		ai_tech_seed	celebrity	82	Ziyu
+Ziyu		ai_tech_seed	celebrity	82	梓渝
 上下文压缩	shang xia wen ya suo	ai_tech_seed	ai_term	82	上下文压缩
+于东来	yu dong lai	ai_tech_seed	tech_leader	82	于东来
+享界	xiang jie	ai_tech_seed	tech_company	82	享界
+以太坊	yi tai fang	ai_tech_seed	fintech	82	以太坊
+任嘉伦	ren jia lun	ai_tech_seed	celebrity	82	任嘉伦
 任天堂		ai_tech_seed	tech_company	82	Nintendo
+伯克希尔	bo ke xi er	ai_tech_seed	fintech	82	伯克希尔
+何同学	he tong xue	ai_tech_seed	celebrity	82	何同学
+何同学UP主	he tong xue	ai_tech_seed	celebrity	82	何同学
 余承东	yu cheng dong	ai_tech_seed	tech_leader	82	余承东
 元宝	yuan bao	ai_tech_seed	ai_brand	82	元宝
 全自动驾驶		ai_tech_seed	tech_term	82	FSD
+兰博基尼	lan bo ji ni	ai_tech_seed	tech_company	82	兰博基尼
 具身智能	ju shen zhi neng	ai_tech_seed	tech_term	82	具身智能
 具身智能体	ju shen zhi neng ti	ai_tech_seed	ai_term	82	具身智能体
+养龙虾	yang long xia	ai_tech_seed	tech_term	82	养龙虾
+农夫山泉		ai_tech_seed	consumer_brand	82	Nongfu Spring
+刘慈欣	liu ci xin	ai_tech_seed	celebrity	82	刘慈欣
 区块链	qu kuai lian	ai_tech_seed	tech_term	82	区块链
+卡地亚		ai_tech_seed	consumer_brand	82	Cartier
 吉利		ai_tech_seed	tech_company	82	Geely
 向量数据库		ai_tech_seed	ai_term	82	vector database
+吴恩达		ai_tech_seed	tech_leader	82	Andrew Ng
+吴磊	wu lei	ai_tech_seed	celebrity	82	吴磊
+周迅	zhou xun	ai_tech_seed	celebrity	82	周迅
+周鸿祎	zhou hong yi	ai_tech_seed	tech_leader	82	周鸿祎
+哈兰德	ha lan de	ai_tech_seed	athlete	82	哈兰德
 商汤		ai_tech_seed	tech_company	82	SenseTime
 图生视频	tu sheng shi pin	ai_tech_seed	tech_term	82	图生视频
 地平线		ai_tech_seed	tech_company	82	Horizon Robotics
+埃安		ai_tech_seed	tech_company	82	Aion
+奈飞		ai_tech_seed	consumer_brand	82	Netflix
+始祖鸟	shi zu niao	ai_tech_seed	consumer_brand	82	始祖鸟
 字节 Trae		ai_tech_seed	dev_tool	82	TRAE
+孙俪	sun li	ai_tech_seed	celebrity	82	孙俪
+孙正义	sun zheng yi	ai_tech_seed	tech_leader	82	孙正义
+孟子义	meng zi yi	ai_tech_seed	celebrity	82	孟子义
+安踏	an ta	ai_tech_seed	consumer_brand	82	安踏
+富士康	fu shi kang	ai_tech_seed	tech_company	82	富士康
+尊界	zun jie	ai_tech_seed	tech_company	82	尊界
+小李子		ai_tech_seed	celebrity	82	Leonardo DiCaprio
+小马智行	xiao ma zhi xing	ai_tech_seed	tech_company	82	小马智行
+岚图	lan tu	ai_tech_seed	tech_company	82	岚图
+川普		ai_tech_seed	tech_leader	82	Donald Trump
 工作流编排	gong zuo liu bian pai	ai_tech_seed	ai_term	82	工作流编排
+巩俐	gong li	ai_tech_seed	celebrity	82	巩俐
+巴菲特	ba fei te	ai_tech_seed	tech_leader	82	巴菲特
+巴黎世家		ai_tech_seed	consumer_brand	82	Balenciaga
+广汽埃安	guang qi ai an	ai_tech_seed	tech_company	82	广汽埃安
 开放权重		ai_tech_seed	ai_term	82	open weight
+开源鸿蒙		ai_tech_seed	tech_company	82	OpenHarmony
+张学友	zhang xue you	ai_tech_seed	celebrity	82	张学友
+张译	zhang yi yan	ai_tech_seed	celebrity	82	张译
+强脑科技	qiang nao ke ji	ai_tech_seed	tech_company	82	强脑科技
+影视飓风	ying shi ju feng	ai_tech_seed	tech_leader	82	影视飓风
+影视飓风Tim	ying shi ju feng	ai_tech_seed	tech_leader	82	影视飓风
 微博		ai_tech_seed	tech_company	82	Weibo
+德约		ai_tech_seed	athlete	82	Novak Djokovic
+德约科维奇	de yue ke wei qi	ai_tech_seed	athlete	82	德约科维奇
+数字人	shu zi ren	ai_tech_seed	ai_term	82	数字人
 文生图	wen sheng tu	ai_tech_seed	tech_term	82	文生图
 文生视频	wen sheng shi pin	ai_tech_seed	tech_term	82	文生视频
+文远知行	wen yuan zhi xing	ai_tech_seed	tech_company	82	文远知行
 新质生产力	xin zhi sheng chan li	ai_tech_seed	tech_term	82	新质生产力
+方程豹	fang cheng bao	ai_tech_seed	tech_company	82	方程豹
+星巴克		ai_tech_seed	consumer_brand	82	Starbucks
+智己	zhi ji	ai_tech_seed	tech_company	82	智己
+暴雪	bao xue	ai_tech_seed	game_ip	82	暴雪
+李宁	li ning	ai_tech_seed	consumer_brand	82	李宁
+李飞飞	li fei fei	ai_tech_seed	tech_leader	82	李飞飞
+梓渝	zi yu	ai_tech_seed	celebrity	82	梓渝
+段永平	duan yong ping	ai_tech_seed	tech_leader	82	段永平
+毛不易	mao bu yi	ai_tech_seed	celebrity	82	毛不易
+沃伦巴菲特		ai_tech_seed	tech_leader	82	Warren Buffett
+沈南鹏	shen nan peng	ai_tech_seed	tech_leader	82	沈南鹏
+法拉利	fa la li	ai_tech_seed	tech_company	82	法拉利
+泡泡玛特	pao pao ma te	ai_tech_seed	consumer_brand	82	泡泡玛特
 流式	liu shi	ai_tech_seed	ai_term	82	流式
+海力士		ai_tech_seed	tech_company	82	SK Hynix
+海底捞	hai di lao	ai_tech_seed	consumer_brand	82	海底捞
 深度研究		ai_tech_seed	ai_term	82	deep research
 混合搜索		ai_tech_seed	ai_term	82	hybrid search
 灵动岛实时活动		ai_tech_seed	dev_tool	82	Live Activities
+特朗普	te lang pu	ai_tech_seed	tech_leader	82	特朗普
+王力宏	wang li hong	ai_tech_seed	celebrity	82	王力宏
+王小川	wang xiao chuan	ai_tech_seed	tech_leader	82	王小川
+理想L9	li xiang L9	ai_tech_seed	tech_company	82	理想L9
+理想MEGA	li xiang MEGA	ai_tech_seed	tech_company	82	理想MEGA
 百川		ai_tech_seed	ai_brand	82	百川
 皮查伊		ai_tech_seed	tech_leader	82	Sundar Pichai
 知识蒸馏		ai_tech_seed	ai_term	82	distillation
+碧昂丝		ai_tech_seed	celebrity	82	Beyoncé
+科比	ke bi	ai_tech_seed	athlete	82	科比
+章子怡	zhang zi yi	ai_tech_seed	celebrity	82	章子怡
 端到端	duan dao duan	ai_tech_seed	tech_term	82	端到端
 纳德拉		ai_tech_seed	tech_leader	82	Satya Nadella
+美光		ai_tech_seed	tech_company	82	Micron
+美联储	mei lian chu	ai_tech_seed	fintech	82	美联储
+老头环		ai_tech_seed	game_ip	82	Elden Ring
+联发科		ai_tech_seed	tech_company	82	MediaTek
+胖东来		ai_tech_seed	tech_leader	82	Yu Donglai
+腾势	teng shi	ai_tech_seed	tech_company	82	腾势
+艾尔登法环	ai er deng fa huan	ai_tech_seed	game_ip	82	艾尔登法环
 蒸馏		ai_tech_seed	ai_term	82	distillation
+蔡依林	cai yi lin	ai_tech_seed	celebrity	82	蔡依林
+蔡徐坤	cai xu kun	ai_tech_seed	celebrity	82	蔡徐坤
+蕾哈娜		ai_tech_seed	celebrity	82	Rihanna
+视频大模型	shi pin da mo xing	ai_tech_seed	ai_term	82	视频大模型
 贝索斯		ai_tech_seed	tech_leader	82	Jeff Bezos
+迪奥		ai_tech_seed	consumer_brand	82	Dior
+邓紫棋	deng zi qi	ai_tech_seed	celebrity	82	邓紫棋
+那英	na ying	ai_tech_seed	celebrity	82	那英
 重排序模型		ai_tech_seed	ai_term	82	reranker
+长上下文	chang shang xia wen	ai_tech_seed	ai_term	82	长上下文
 阶跃星辰		ai_tech_seed	ai_brand	82	StepFun
+阿维塔	a wei ta	ai_tech_seed	tech_company	82	阿维塔
+阿迪达斯		ai_tech_seed	consumer_brand	82	Adidas
 零一万物		ai_tech_seed	ai_brand	82	零一万物
 预训练		ai_tech_seed	ai_term	82	pretraining
+高盛	gao sheng	ai_tech_seed	fintech	82	高盛
+魔门塔		ai_tech_seed	tech_company	82	Momenta
+鸣潮	ming chao	ai_tech_seed	game_ip	82	鸣潮
+鹿晗	lu han	ai_tech_seed	celebrity	82	鹿晗
+麦当劳		ai_tech_seed	consumer_brand	82	McDonald's
+黄晓明	huang xiao ming	ai_tech_seed	celebrity	82	黄晓明
 01 ai		ai_tech_seed	ai_brand	80	01.AI
+6G		ai_tech_seed	tech_term	80	6G
+a2a		ai_tech_seed	ai_term	80	Agent2Agent
+Activision		ai_tech_seed	game_ip	80	动视
+activision		ai_tech_seed	game_ip	80	Activision
+aespa		ai_tech_seed	celebrity	80	aespa
+aespa组合		ai_tech_seed	celebrity	80	aespa
 agent harness		ai_tech_seed	ai_term	80	LLM harness
+agent industrialization		ai_tech_seed	tech_term	80	智能体产业化
 agentic harness		ai_tech_seed	ai_term	80	agent harness
+AI native app		ai_tech_seed	ai_term	80	AI原生应用
+AI原生应用	AI yuan sheng ying yong	ai_tech_seed	ai_term	80	AI原生应用
+Anduril		ai_tech_seed	tech_company	80	Anduril
+anduril industries		ai_tech_seed	tech_company	80	Anduril
+ARCFOX		ai_tech_seed	tech_company	80	极狐
+arcfox		ai_tech_seed	tech_company	80	ARCFOX
+Armani		ai_tech_seed	consumer_brand	80	Armani
+armani		ai_tech_seed	consumer_brand	80	Armani
 Astro		ai_tech_seed	dev_tool	80	Astro
 astro js		ai_tech_seed	dev_tool	80	Astro
 Atlassian		ai_tech_seed	tech_company	80	Atlassian
 atlassian		ai_tech_seed	tech_company	80	Atlassian
+Augment		ai_tech_seed	dev_tool	80	Augment
+augment code		ai_tech_seed	dev_tool	80	Augment
+Augment Code		ai_tech_seed	dev_tool	80	Augment
 authentically human		ai_tech_seed	tech_term	80	活人感
+blackpink jennie		ai_tech_seed	celebrity	80	Jennie
+Blackstone		ai_tech_seed	fintech	80	黑石
+blackstone		ai_tech_seed	fintech	80	Blackstone
+Brad Pitt		ai_tech_seed	celebrity	80	Brad Pitt
+brad pitt		ai_tech_seed	celebrity	80	Brad Pitt
+Bridgewater		ai_tech_seed	fintech	80	桥水
+bridgewater		ai_tech_seed	fintech	80	Bridgewater
 Broadcom		ai_tech_seed	tech_company	80	Broadcom
 broadcom		ai_tech_seed	tech_company	80	Broadcom
+Burberry		ai_tech_seed	consumer_brand	80	Burberry
+burberry		ai_tech_seed	consumer_brand	80	Burberry
+B站陈睿	chen rui	ai_tech_seed	tech_leader	80	陈睿
+Cambricon		ai_tech_seed	tech_company	80	寒武纪
+cambricon		ai_tech_seed	tech_company	80	Cambricon
 Canva		ai_tech_seed	tech_company	80	Canva
 canva		ai_tech_seed	tech_company	80	Canva
+Cao Dewang		ai_tech_seed	tech_leader	80	曹德旺
+cao dewang		ai_tech_seed	tech_leader	80	Cao Dewang
+Charles Zhang		ai_tech_seed	tech_leader	80	张朝阳
+charles zhang		ai_tech_seed	tech_leader	80	Charles Zhang
+Charlie Munger		ai_tech_seed	tech_leader	80	芒格
+charlie munger		ai_tech_seed	tech_leader	80	Charlie Munger
+Chen Kun		ai_tech_seed	celebrity	80	陈坤
+Chen Rui		ai_tech_seed	tech_leader	80	陈睿
+chen rui		ai_tech_seed	tech_leader	80	Chen Rui
+claude skills		ai_tech_seed	ai_term	80	Claude Skills
 Clerk		ai_tech_seed	dev_tool	80	Clerk
 clerk auth		ai_tech_seed	dev_tool	80	Clerk
 click house		ai_tech_seed	tech_term	80	ClickHouse
 ClickHouse		ai_tech_seed	tech_term	80	ClickHouse
+coca cola		ai_tech_seed	consumer_brand	80	Coca-Cola
+Coca-Cola		ai_tech_seed	consumer_brand	80	Coca-Cola
 Codeium		ai_tech_seed	ai_brand	80	Codeium
 codeium		ai_tech_seed	ai_brand	80	Codeium
 Cohere		ai_tech_seed	ai_brand	80	Cohere
 cohere		ai_tech_seed	ai_brand	80	Cohere
+cohere command		ai_tech_seed	ai_model	80	Command R
+Command R		ai_tech_seed	ai_model	80	Command R
+command r		ai_tech_seed	ai_model	80	Command R
 computer use		ai_tech_seed	ai_term	80	computer use
 computer-use		ai_tech_seed	ai_term	80	computer use
 Confluence		ai_tech_seed	tech_company	80	Atlassian
 Convex		ai_tech_seed	tech_company	80	Convex
 Convex database		ai_tech_seed	tech_company	80	Convex
 convex dev		ai_tech_seed	tech_company	80	Convex
+Copilot Studio		ai_tech_seed	ai_platform	80	Copilot Studio
+copilot studio		ai_tech_seed	ai_platform	80	Copilot Studio
+Costco		ai_tech_seed	consumer_brand	80	Costco
+costco		ai_tech_seed	consumer_brand	80	Costco
+counter strike		ai_tech_seed	game_ip	80	Counter-Strike
+Counter-Strike		ai_tech_seed	game_ip	80	Counter-Strike
+Dario Amodei		ai_tech_seed	tech_leader	80	Dario Amodei
+dario amodei		ai_tech_seed	tech_leader	80	Dario Amodei
+Decagon		ai_tech_seed	ai_brand	80	Decagon
+decagon ai		ai_tech_seed	ai_brand	80	Decagon
+Decagon AI		ai_tech_seed	ai_brand	80	Decagon
+Deepal		ai_tech_seed	tech_company	80	深蓝
+deepal		ai_tech_seed	tech_company	80	Deepal
+DeepRobotics		ai_tech_seed	tech_company	80	云深处科技
+DeepSeek moment		ai_tech_seed	tech_term	80	DeepSeek时刻
+DeepSeek时刻	DeepSeek shi ke	ai_tech_seed	tech_term	80	DeepSeek时刻
+Demis Hassabis		ai_tech_seed	tech_leader	80	Demis Hassabis
+demis hassabis		ai_tech_seed	tech_leader	80	Demis Hassabis
 Deno		ai_tech_seed	dev_tool	80	Deno
 deno		ai_tech_seed	dev_tool	80	Deno
 Deno Deploy		ai_tech_seed	dev_tool	80	Deno
@@ -971,33 +1826,135 @@ discord		ai_tech_seed	tech_company	80	Discord
 duck db		ai_tech_seed	tech_term	80	DuckDB
 Duck DB		ai_tech_seed	tech_term	80	DuckDB
 DuckDB		ai_tech_seed	tech_term	80	DuckDB
+East Buy		ai_tech_seed	tech_company	80	东方甄选
 eleven labs		ai_tech_seed	ai_brand	80	ElevenLabs
 Eleven Labs		ai_tech_seed	ai_brand	80	ElevenLabs
 ElevenLabs		ai_tech_seed	ai_brand	80	ElevenLabs
 emotional value		ai_tech_seed	tech_term	80	情绪价值
+Epic		ai_tech_seed	game_ip	80	Epic Games
+Epic Games		ai_tech_seed	game_ip	80	Epic Games
+epic games		ai_tech_seed	game_ip	80	Epic Games
 Firebase		ai_tech_seed	tech_company	80	Firebase
 firebase		ai_tech_seed	tech_company	80	Firebase
+Gemini Live		ai_tech_seed	ai_brand	80	Gemini Live
+gemini live		ai_tech_seed	ai_brand	80	Gemini Live
+Geoffrey Hinton		ai_tech_seed	tech_leader	80	Geoffrey Hinton
+geoffrey hinton		ai_tech_seed	tech_leader	80	Geoffrey Hinton
 GitLab		ai_tech_seed	tech_company	80	GitLab
 gitlab		ai_tech_seed	tech_company	80	GitLab
+Granite		ai_tech_seed	ai_model	80	Granite
+Granite model		ai_tech_seed	ai_model	80	Granite
+Hailuo Video		ai_tech_seed	ai_brand	80	海螺视频
+Hema		ai_tech_seed	consumer_brand	80	盒马
+hema		ai_tech_seed	consumer_brand	80	Hema
+Hesai		ai_tech_seed	tech_company	80	禾赛
+hesai		ai_tech_seed	tech_company	80	Hesai
+Hillhouse		ai_tech_seed	fintech	80	高瓴
+hillhouse		ai_tech_seed	fintech	80	Hillhouse
+Honkai		ai_tech_seed	game_ip	80	崩坏
+honkai		ai_tech_seed	game_ip	80	Honkai
 Horizon		ai_tech_seed	tech_company	80	地平线
+Hua Chenyu		ai_tech_seed	celebrity	80	华晨宇
+Huang Zitao		ai_tech_seed	celebrity	80	黄子韬
+huang zitao		ai_tech_seed	celebrity	80	Huang Zitao
+ibm granite		ai_tech_seed	ai_model	80	Granite
+Ideogram		ai_tech_seed	ai_brand	80	Ideogram
+ideogram ai		ai_tech_seed	ai_brand	80	Ideogram
+Ideogram AI		ai_tech_seed	ai_brand	80	Ideogram
+IKEA		ai_tech_seed	consumer_brand	80	宜家
+ikea		ai_tech_seed	consumer_brand	80	IKEA
+Jennie		ai_tech_seed	celebrity	80	Jennie
+Jerome Powell		ai_tech_seed	tech_leader	80	鲍威尔
+jerome powell		ai_tech_seed	tech_leader	80	Jerome Powell
 Jira		ai_tech_seed	tech_company	80	Atlassian
+Joker Xue		ai_tech_seed	celebrity	80	薛之谦
+joker xue		ai_tech_seed	celebrity	80	Joker Xue
+jp morgan		ai_tech_seed	fintech	80	JPMorgan
+JPMorgan		ai_tech_seed	fintech	80	摩根大通
+Kanye West		ai_tech_seed	celebrity	80	Kanye West
+kanye west		ai_tech_seed	celebrity	80	Kanye West
+Kendrick Lamar		ai_tech_seed	celebrity	80	Kendrick Lamar
+kendrick lamar		ai_tech_seed	celebrity	80	Kendrick Lamar
+Kunpeng		ai_tech_seed	tech_company	80	鲲鹏
+kunpeng		ai_tech_seed	tech_company	80	Kunpeng
+KV cache		ai_tech_seed	ai_term	80	KV cache
+kv cache		ai_tech_seed	ai_term	80	KV cache
+KV缓存		ai_tech_seed	ai_term	80	KV cache
 lang chain		ai_tech_seed	ai_platform	80	LangChain
 LangChain		ai_tech_seed	ai_platform	80	LangChain
 Langchain		ai_tech_seed	ai_platform	80	LangChain
+Lay Zhang		ai_tech_seed	celebrity	80	张艺兴
+lay zhang		ai_tech_seed	celebrity	80	Lay Zhang
+Lei Jiayin		ai_tech_seed	celebrity	80	雷佳音
+Leonardo		ai_tech_seed	ai_brand	80	Leonardo AI
+Leonardo AI		ai_tech_seed	ai_brand	80	Leonardo AI
+leonardo ai		ai_tech_seed	ai_brand	80	Leonardo AI
+Li Na tennis		ai_tech_seed	athlete	80	李娜
 libSQL		ai_tech_seed	tech_company	80	Turso
+Lin Shidong		ai_tech_seed	athlete	80	林诗栋
+Liu Xiang		ai_tech_seed	athlete	80	刘翔
+livestream commerce		ai_tech_seed	tech_term	80	直播带货
 LLM harness		ai_tech_seed	ai_term	80	LLM harness
 llm harness		ai_tech_seed	ai_term	80	LLM harness
+Lotus		ai_tech_seed	tech_company	80	路特斯
+lotus		ai_tech_seed	tech_company	80	Lotus
 low altitude economy		ai_tech_seed	tech_term	80	低空经济
+Luckin Coffee		ai_tech_seed	consumer_brand	80	瑞幸咖啡
+luckin coffee		ai_tech_seed	consumer_brand	80	Luckin Coffee
+Ma Li		ai_tech_seed	celebrity	80	马丽
+Manycore		ai_tech_seed	tech_company	80	群核科技
+Marvel		ai_tech_seed	tech_term	80	漫威
+marvel		ai_tech_seed	tech_term	80	Marvel
 Megvii		ai_tech_seed	tech_company	80	Megvii
 megvii		ai_tech_seed	tech_company	80	Megvii
+mem zero		ai_tech_seed	ai_platform	80	Mem0
+Mem0		ai_tech_seed	ai_platform	80	Mem0
+Mem0 AI		ai_tech_seed	ai_platform	80	Mem0
+merch economy		ai_tech_seed	tech_term	80	谷子
 Metal		ai_tech_seed	dev_tool	80	Metal
 metal		ai_tech_seed	dev_tool	80	Metal
 Metal Performance Shaders		ai_tech_seed	dev_tool	80	Metal
 Metaso		ai_tech_seed	ai_brand	80	秘塔AI
+Microsoft Copilot Studio		ai_tech_seed	ai_platform	80	Copilot Studio
+million context		ai_tech_seed	ai_term	80	百万上下文
+Mistral Small		ai_tech_seed	ai_model	80	Mistral Small
+mistral small		ai_tech_seed	ai_model	80	Mistral Small
+Mixue		ai_tech_seed	consumer_brand	80	蜜雪冰城
+mixue		ai_tech_seed	consumer_brand	80	Mixue
+model distillation		ai_tech_seed	ai_term	80	模型蒸馏
+MONA		ai_tech_seed	tech_company	80	小鹏MONA
+Moore Threads		ai_tech_seed	tech_company	80	摩尔线程
+moore threads		ai_tech_seed	tech_company	80	Moore Threads
+Morgan Stanley		ai_tech_seed	fintech	80	摩根士丹利
+morgan stanley		ai_tech_seed	fintech	80	Morgan Stanley
+multi-agent collaboration		ai_tech_seed	ai_term	80	多智能体协作
+Nasdaq		ai_tech_seed	fintech	80	纳斯达克
+nasdaq		ai_tech_seed	fintech	80	Nasdaq
+national subsidy		ai_tech_seed	tech_term	80	国补
+nemo claw		ai_tech_seed	ai_brand	80	NemoClaw
+Nemo Claw		ai_tech_seed	ai_brand	80	NemoClaw
+NemoClaw		ai_tech_seed	ai_brand	80	NemoClaw
+Neta Auto		ai_tech_seed	tech_company	80	哪吒汽车
+neta auto		ai_tech_seed	tech_company	80	Neta Auto
+New Balance		ai_tech_seed	consumer_brand	80	New Balance
+new balance		ai_tech_seed	consumer_brand	80	New Balance
+New Oriental		ai_tech_seed	tech_company	80	New Oriental
+new oriental		ai_tech_seed	tech_company	80	New Oriental
 on device ai		ai_tech_seed	ai_term	80	on-device AI
 on-device AI		ai_tech_seed	ai_term	80	on-device AI
 optimus		ai_tech_seed	tech_term	80	Optimus
+Perfect Diary		ai_tech_seed	consumer_brand	80	完美日记
+perfect diary		ai_tech_seed	consumer_brand	80	Perfect Diary
+pix verse		ai_tech_seed	ai_brand	80	PixVerse
+PixVerse		ai_tech_seed	ai_brand	80	PixVerse
+Pixverse		ai_tech_seed	ai_brand	80	PixVerse
+playstation 5		ai_tech_seed	game_ip	80	PS5
+Prada		ai_tech_seed	consumer_brand	80	Prada
+prada		ai_tech_seed	consumer_brand	80	Prada
 Quark AI		ai_tech_seed	ai_brand	80	夸克AI
+Rafael Nadal		ai_tech_seed	athlete	80	纳达尔
+Ray Dalio		ai_tech_seed	tech_leader	80	达利欧
+ray dalio		ai_tech_seed	tech_leader	80	Ray Dalio
 real person vibe		ai_tech_seed	tech_term	80	活人感
 reality kit		ai_tech_seed	dev_tool	80	RealityKit
 RealityKit		ai_tech_seed	dev_tool	80	RealityKit
@@ -1005,23 +1962,49 @@ Reddit		ai_tech_seed	tech_company	80	Reddit
 reddit		ai_tech_seed	tech_company	80	Reddit
 Rivian		ai_tech_seed	tech_company	80	Rivian
 rivian		ai_tech_seed	tech_company	80	Rivian
+Robert Downey Jr		ai_tech_seed	celebrity	80	Robert Downey Jr
+robert downey jr		ai_tech_seed	celebrity	80	Robert Downey Jr
+RoboSense		ai_tech_seed	tech_company	80	速腾聚创
+robosense		ai_tech_seed	tech_company	80	RoboSense
+Roger Federer		ai_tech_seed	athlete	80	费德勒
+Rolex		ai_tech_seed	consumer_brand	80	Rolex
+rolex		ai_tech_seed	consumer_brand	80	Rolex
 Roo Code		ai_tech_seed	dev_tool	80	Roo Code
 roo code		ai_tech_seed	dev_tool	80	Roo Code
 RooCode		ai_tech_seed	dev_tool	80	Roo Code
 Runway		ai_tech_seed	ai_brand	80	Runway
 runway ai		ai_tech_seed	ai_brand	80	Runway
 Runway ML		ai_tech_seed	ai_brand	80	Runway
+Sam's Club		ai_tech_seed	consumer_brand	80	山姆会员店
+samba nova		ai_tech_seed	tech_company	80	SambaNova
+Samba Nova		ai_tech_seed	tech_company	80	SambaNova
+SambaNova		ai_tech_seed	tech_company	80	SambaNova
+sams club		ai_tech_seed	consumer_brand	80	Sam's Club
+Semantic Kernel		ai_tech_seed	ai_platform	80	Semantic Kernel
+semantic kernel		ai_tech_seed	ai_platform	80	Semantic Kernel
+Sequoia		ai_tech_seed	fintech	80	红杉
+sequoia		ai_tech_seed	fintech	80	Sequoia
+Sequoia China		ai_tech_seed	fintech	80	红杉中国
+sequoia china		ai_tech_seed	fintech	80	Sequoia China
+Shu Qi		ai_tech_seed	celebrity	80	舒淇
 silicon flow		ai_tech_seed	ai_platform	80	SiliconFlow
 Silicon Flow		ai_tech_seed	ai_platform	80	SiliconFlow
 SiliconFlow		ai_tech_seed	ai_platform	80	SiliconFlow
+six g		ai_tech_seed	tech_term	80	6G
+SK		ai_tech_seed	ai_platform	80	Semantic Kernel
 Slack		ai_tech_seed	tech_company	80	Slack
 slack		ai_tech_seed	tech_company	80	Slack
 SLM		ai_tech_seed	ai_term	80	SLM
 slm		ai_tech_seed	ai_term	80	SLM
 Snowflake		ai_tech_seed	tech_company	80	Snowflake
 snowflake		ai_tech_seed	tech_company	80	Snowflake
+solopreneur		ai_tech_seed	tech_term	80	超级个体
+spec driven		ai_tech_seed	ai_term	80	spec driven
+spec-driven		ai_tech_seed	ai_term	80	spec driven
+Su Bingtian		ai_tech_seed	athlete	80	苏炳添
 Supabase		ai_tech_seed	tech_company	80	Supabase
 supabase		ai_tech_seed	tech_company	80	Supabase
+super individual		ai_tech_seed	tech_term	80	超级个体
 svelte kit		ai_tech_seed	dev_tool	80	SvelteKit
 SvelteKit		ai_tech_seed	dev_tool	80	SvelteKit
 swe agent		ai_tech_seed	ai_term	80	SWE-agent
@@ -1030,57 +2013,231 @@ swe bench		ai_tech_seed	ai_term	80	SWE-bench
 SWE bench		ai_tech_seed	ai_term	80	SWE-bench
 SWE-agent		ai_tech_seed	ai_term	80	SWE-agent
 SWE-bench		ai_tech_seed	ai_term	80	SWE-bench
+synthetic data		ai_tech_seed	ai_term	80	合成数据
+tab nine		ai_tech_seed	dev_tool	80	Tabnine
+Tabnine		ai_tech_seed	dev_tool	80	Tabnine
+Tang Wei		ai_tech_seed	celebrity	80	汤唯
+Teens in Times		ai_tech_seed	celebrity	80	时代少年团
 Terraform		ai_tech_seed	tech_company	80	Terraform
 terraform		ai_tech_seed	tech_company	80	Terraform
+Terry Gou		ai_tech_seed	tech_leader	80	郭台铭
+terry gou		ai_tech_seed	tech_leader	80	Terry Gou
+Three Body Problem		ai_tech_seed	tech_term	80	三体
+Three-Body		ai_tech_seed	tech_term	80	三体
+TNT		ai_tech_seed	celebrity	80	时代少年团
+Tom Hanks		ai_tech_seed	celebrity	80	Tom Hanks
+tom hanks		ai_tech_seed	celebrity	80	Tom Hanks
+Toyota		ai_tech_seed	tech_company	80	丰田
+toyota		ai_tech_seed	tech_company	80	Toyota
 TPU		ai_tech_seed	tech_term	80	TPU
 tpu		ai_tech_seed	tech_term	80	TPU
 Turso		ai_tech_seed	tech_company	80	Turso
 turso		ai_tech_seed	tech_company	80	Turso
+Vidu		ai_tech_seed	ai_brand	80	Vidu
+vidu ai		ai_tech_seed	ai_brand	80	Vidu
+Vidu AI		ai_tech_seed	ai_brand	80	Vidu
 vLLM		ai_tech_seed	ai_platform	80	vLLM
 vllm		ai_tech_seed	ai_platform	80	vLLM
 VLLM		ai_tech_seed	ai_platform	80	vLLM
+Volkswagen		ai_tech_seed	tech_company	80	大众
+volkswagen		ai_tech_seed	tech_company	80	Volkswagen
+W&B		ai_tech_seed	dev_tool	80	Weights & Biases
+Wang Feng		ai_tech_seed	celebrity	80	汪峰
+Weights & Biases		ai_tech_seed	dev_tool	80	Weights & Biases
+weights and biases		ai_tech_seed	dev_tool	80	Weights & Biases
+Xbox		ai_tech_seed	game_ip	80	Xbox
+xbox series		ai_tech_seed	game_ip	80	Xbox
+Yann LeCun		ai_tech_seed	tech_leader	80	Yann LeCun
+yann lecun		ai_tech_seed	tech_leader	80	Yann LeCun
+Ye		ai_tech_seed	celebrity	80	Kanye West
+YMTC		ai_tech_seed	tech_company	80	长江存储
+ymtc		ai_tech_seed	tech_company	80	YMTC
 Zed		ai_tech_seed	dev_tool	80	Zed
 Zed AI		ai_tech_seed	dev_tool	80	Zed
 zed editor		ai_tech_seed	dev_tool	80	Zed
+Zhang Xiaofei		ai_tech_seed	celebrity	80	张小斐
+Zhong Shanshan		ai_tech_seed	tech_leader	80	钟睒睒
 Zoom		ai_tech_seed	tech_company	80	Zoom
 zoom		ai_tech_seed	tech_company	80	Zoom
+三体	san ti	ai_tech_seed	tech_term	80	三体
+东方甄选	dong fang zhen xuan	ai_tech_seed	tech_company	80	东方甄选
+丰田	feng tian	ai_tech_seed	tech_company	80	丰田
+云深处科技	yun shen chu ke ji	ai_tech_seed	tech_company	80	云深处科技
 低空经济	di kong jing ji	ai_tech_seed	tech_term	80	低空经济
+刘翔	liu xiang	ai_tech_seed	athlete	80	刘翔
+动视	dong shi	ai_tech_seed	game_ip	80	动视
+劳力士		ai_tech_seed	consumer_brand	80	Rolex
+华晨宇	hua chen yu	ai_tech_seed	celebrity	80	华晨宇
+博柏利		ai_tech_seed	consumer_brand	80	Burberry
+可口可乐		ai_tech_seed	consumer_brand	80	Coca-Cola
+合成数据	he cheng shu ju	ai_tech_seed	ai_term	80	合成数据
+哈萨比斯		ai_tech_seed	tech_leader	80	Demis Hassabis
+哪吒汽车	na zha qi che	ai_tech_seed	tech_company	80	哪吒汽车
+国补	guo bu	ai_tech_seed	tech_term	80	国补
+多智能体协作	duo zhi neng ti xie zuo	ai_tech_seed	ai_term	80	多智能体协作
+大众	da zhong	ai_tech_seed	tech_company	80	大众
 夸克AI	kua ke AI	ai_tech_seed	ai_brand	80	夸克AI
+完美日记	wan mei ri ji	ai_tech_seed	consumer_brand	80	完美日记
+宜家	yi jia	ai_tech_seed	consumer_brand	80	宜家
+寒武纪	han wu ji	ai_tech_seed	tech_company	80	寒武纪
 小语言模型		ai_tech_seed	ai_term	80	SLM
+小鹏MONA	xiao peng MONA	ai_tech_seed	tech_company	80	小鹏MONA
+山姆		ai_tech_seed	consumer_brand	80	Sam's Club
+山姆会员店	shan mu hui yuan dian	ai_tech_seed	consumer_brand	80	山姆会员店
+崩坏	beng huai	ai_tech_seed	game_ip	80	崩坏
+开市客		ai_tech_seed	consumer_brand	80	Costco
+张小斐	zhang xiao fei	ai_tech_seed	celebrity	80	张小斐
+张朝阳	zhang chao yang	ai_tech_seed	tech_leader	80	张朝阳
+张艺兴	zhang yi xing	ai_tech_seed	celebrity	80	张艺兴
 情绪价值	qing xu jia zhi	ai_tech_seed	tech_term	80	情绪价值
+摩尔线程	mo er xian cheng	ai_tech_seed	tech_company	80	摩尔线程
+摩根士丹利	mo gen shi dan li	ai_tech_seed	fintech	80	摩根士丹利
+摩根大通	mo gen da tong	ai_tech_seed	fintech	80	摩根大通
 擎天柱		ai_tech_seed	tech_term	80	Optimus
+新东方		ai_tech_seed	tech_company	80	New Oriental
+新百伦		ai_tech_seed	consumer_brand	80	New Balance
+时代少年团	shi dai shao nian tuan	ai_tech_seed	celebrity	80	时代少年团
 旷视		ai_tech_seed	tech_company	80	Megvii
+普拉达		ai_tech_seed	consumer_brand	80	Prada
+智能体产业化	zhi neng ti chan ye hua	ai_tech_seed	tech_term	80	智能体产业化
 智能体框架		ai_tech_seed	ai_term	80	agent harness
+曹德旺	cao de wang	ai_tech_seed	tech_leader	80	曹德旺
+李娜	li na	ai_tech_seed	athlete	80	李娜
+杨立昆		ai_tech_seed	tech_leader	80	Yann LeCun
+杰弗里辛顿		ai_tech_seed	tech_leader	80	Geoffrey Hinton
+极狐	ji hu	ai_tech_seed	tech_company	80	极狐
+林诗栋	lin shi dong	ai_tech_seed	athlete	80	林诗栋
+桥水	qiao shui	ai_tech_seed	fintech	80	桥水
+桥水基金		ai_tech_seed	fintech	80	Bridgewater
+模型蒸馏	mo xing zheng liu	ai_tech_seed	ai_term	80	模型蒸馏
+汤唯	tang wei	ai_tech_seed	celebrity	80	汤唯
+汪峰	wang feng	ai_tech_seed	celebrity	80	汪峰
 活人感	huo ren gan	ai_tech_seed	tech_term	80	活人感
+海螺视频	hai luo shi pin	ai_tech_seed	ai_brand	80	海螺视频
+深蓝	shen lan	ai_tech_seed	tech_company	80	深蓝
+漫威	man wei	ai_tech_seed	tech_term	80	漫威
+瑞幸		ai_tech_seed	consumer_brand	80	Luckin Coffee
+瑞幸咖啡	rui xing ka fei	ai_tech_seed	consumer_brand	80	瑞幸咖啡
 电脑使用		ai_tech_seed	ai_term	80	computer use
+百万上下文	bai wan shang xia wen	ai_tech_seed	ai_term	80	百万上下文
+盒马	he ma	ai_tech_seed	consumer_brand	80	盒马
+盒马鲜生	he ma	ai_tech_seed	consumer_brand	80	盒马
+直播带货	zhi bo dai huo	ai_tech_seed	tech_term	80	直播带货
+禾赛	he sai	ai_tech_seed	tech_company	80	禾赛
 秘塔AI	mi ta AI	ai_tech_seed	ai_brand	80	秘塔AI
 端侧AI		ai_tech_seed	ai_term	80	on-device AI
+第六代移动通信		ai_tech_seed	tech_term	80	6G
+红杉	hong shan	ai_tech_seed	fintech	80	红杉
+红杉中国	hong shan zhong guo	ai_tech_seed	fintech	80	红杉中国
+红杉资本		ai_tech_seed	fintech	80	Sequoia
+纳斯达克	na si da ke	ai_tech_seed	fintech	80	纳斯达克
+纳达尔	na da er	ai_tech_seed	athlete	80	纳达尔
+群核科技	qun he ke ji	ai_tech_seed	tech_company	80	群核科技
+老师好我叫何同学	lao shi hao wo jiao he tong xue	ai_tech_seed	celebrity	80	老师好我叫何同学
+舒淇	shu qi	ai_tech_seed	celebrity	80	舒淇
+芒格	mang ge	ai_tech_seed	tech_leader	80	芒格
+苏炳添	su bing tian	ai_tech_seed	athlete	80	苏炳添
+薛之谦	xue zhi qian	ai_tech_seed	celebrity	80	薛之谦
+蜜雪冰城	mi xue bing cheng	ai_tech_seed	consumer_brand	80	蜜雪冰城
+规格驱动		ai_tech_seed	ai_term	80	spec driven
+谷子	gu zi	ai_tech_seed	tech_term	80	谷子
+谷子经济	gu zi	ai_tech_seed	tech_term	80	谷子
+费德勒	fei de le	ai_tech_seed	athlete	80	费德勒
+超级个体	chao ji ge ti	ai_tech_seed	tech_term	80	超级个体
+路特斯	lu te si	ai_tech_seed	tech_company	80	路特斯
+辛顿		ai_tech_seed	tech_leader	80	Geoffrey Hinton
+达利欧	da li ou	ai_tech_seed	tech_leader	80	达利欧
+达里奥		ai_tech_seed	tech_leader	80	Dario Amodei
+速腾聚创	su teng ju chuang	ai_tech_seed	tech_company	80	速腾聚创
+郭台铭	guo tai ming	ai_tech_seed	tech_leader	80	郭台铭
+钟睒睒	zhong shan shan	ai_tech_seed	tech_leader	80	钟睒睒
+钢铁侠		ai_tech_seed	celebrity	80	Robert Downey Jr
+长江存储	chang jiang cun chu	ai_tech_seed	tech_company	80	长江存储
+阿玛尼		ai_tech_seed	consumer_brand	80	Armani
+陈坤	chen kun	ai_tech_seed	celebrity	80	陈坤
+陈睿	chen rui	ai_tech_seed	tech_leader	80	陈睿
+雷佳音	lei jia yin	ai_tech_seed	celebrity	80	雷佳音
+马丽	ma li	ai_tech_seed	celebrity	80	马丽
+高瓴	gao ling	ai_tech_seed	fintech	80	高瓴
+高瓴资本		ai_tech_seed	fintech	80	Hillhouse
+鲍威尔	bao wei er	ai_tech_seed	tech_leader	80	鲍威尔
+鲲鹏	kun peng	ai_tech_seed	tech_company	80	鲲鹏
+黄子韬	huang zi tao	ai_tech_seed	celebrity	80	黄子韬
+黑石	hei shi	ai_tech_seed	fintech	80	黑石
+黑石集团		ai_tech_seed	fintech	80	Blackstone
+A2A协议	A2A xie yi	ai_tech_seed	ai_term	78	A2A协议
+AI app		ai_tech_seed	ai_term	78	AI应用
+AI companion		ai_tech_seed	ai_term	78	AI陪伴
+AI应用	AI ying yong	ai_tech_seed	ai_term	78	AI应用
+AI陪伴	AI pei ban	ai_tech_seed	ai_term	78	AI陪伴
+Angelina Jolie		ai_tech_seed	celebrity	78	Angelina Jolie
+angelina jolie		ai_tech_seed	celebrity	78	Angelina Jolie
+Anyscale		ai_tech_seed	tech_company	78	Anyscale
+anyscale		ai_tech_seed	tech_company	78	Anyscale
 anything llm		ai_tech_seed	ai_platform	78	AnythingLLM
 Anything LLM		ai_tech_seed	ai_platform	78	AnythingLLM
 AnythingLLM		ai_tech_seed	ai_platform	78	AnythingLLM
 auth zero		ai_tech_seed	dev_tool	78	Auth0
 Auth Zero		ai_tech_seed	dev_tool	78	Auth0
 Auth0		ai_tech_seed	dev_tool	78	Auth0
+AutoGen Studio		ai_tech_seed	ai_platform	78	AutoGen Studio
+autogen studio		ai_tech_seed	ai_platform	78	AutoGen Studio
 benchmark		ai_tech_seed	ai_term	78	benchmark
 Biome		ai_tech_seed	dev_tool	78	Biome
 biome js		ai_tech_seed	dev_tool	78	Biome
+Biren		ai_tech_seed	tech_company	78	壁仞
+biren		ai_tech_seed	tech_company	78	Biren
+blackpink jisoo		ai_tech_seed	celebrity	78	Jisoo
+blackpink rose		ai_tech_seed	celebrity	78	Rosé
+Bland		ai_tech_seed	ai_brand	78	Bland AI
+Bland AI		ai_tech_seed	ai_brand	78	Bland AI
+bland ai		ai_tech_seed	ai_brand	78	Bland AI
 Block		ai_tech_seed	fintech	78	Block
 block		ai_tech_seed	fintech	78	Block
+Bosideng		ai_tech_seed	consumer_brand	78	波司登
+bosideng		ai_tech_seed	consumer_brand	78	Bosideng
+Bulgari		ai_tech_seed	consumer_brand	78	Bulgari
+bulgari		ai_tech_seed	consumer_brand	78	Bulgari
+Canada Goose		ai_tech_seed	consumer_brand	78	Canada Goose
+canada goose		ai_tech_seed	consumer_brand	78	Canada Goose
+Changan		ai_tech_seed	tech_company	78	长安
+changan		ai_tech_seed	tech_company	78	Changan
 Character AI		ai_tech_seed	ai_brand	78	Character AI
 character.ai		ai_tech_seed	ai_brand	78	Character AI
 Character.AI		ai_tech_seed	ai_brand	78	Character AI
+Chery		ai_tech_seed	tech_company	78	奇瑞
+chery		ai_tech_seed	tech_company	78	Chery
+China innovation		ai_tech_seed	tech_term	78	中国创新
+CICC		ai_tech_seed	fintech	78	中金
+cicc		ai_tech_seed	fintech	78	CICC
+CITIC		ai_tech_seed	fintech	78	中信
+citic		ai_tech_seed	fintech	78	CITIC
 Clerk Auth		ai_tech_seed	dev_tool	78	Clerk Auth
 Cline		ai_tech_seed	dev_tool	78	Cline
 cline		ai_tech_seed	dev_tool	78	Cline
 Cline AI		ai_tech_seed	dev_tool	78	Cline
+Cloudflare Agents		ai_tech_seed	ai_platform	78	Cloudflare Agents
+cloudflare agents		ai_tech_seed	ai_platform	78	Cloudflare Agents
+Coach		ai_tech_seed	consumer_brand	78	Coach
+coach		ai_tech_seed	consumer_brand	78	Coach
+Cohere Command		ai_tech_seed	ai_model	78	Cohere Command
 comfy ui		ai_tech_seed	ai_platform	78	ComfyUI
 ComfyUI		ai_tech_seed	ai_platform	78	ComfyUI
+compute democratization		ai_tech_seed	tech_term	78	算力普惠
 Continue		ai_tech_seed	dev_tool	78	Continue
 continue dev		ai_tech_seed	dev_tool	78	Continue
 Continue.dev		ai_tech_seed	dev_tool	78	Continue
+cost cut efficiency		ai_tech_seed	tech_term	78	降本增效
+CXMT		ai_tech_seed	tech_company	78	长鑫
+cxmt		ai_tech_seed	tech_company	78	CXMT
 cyber reconciliation		ai_tech_seed	tech_term	78	赛博对账
+data as factor		ai_tech_seed	tech_term	78	数据要素
+data flywheel		ai_tech_seed	ai_term	78	数据飞轮
 Datadog		ai_tech_seed	tech_company	78	Datadog
 datadog		ai_tech_seed	tech_company	78	Datadog
+deep robotics		ai_tech_seed	tech_company	78	DeepRobotics
+DeepRoute		ai_tech_seed	tech_company	78	元戎启行
+deeproute		ai_tech_seed	tech_company	78	DeepRoute
 digital avatar		ai_tech_seed	tech_term	78	数字分身
 DSPy		ai_tech_seed	ai_platform	78	DSPy
 dspy		ai_tech_seed	ai_platform	78	DSPy
@@ -1088,54 +2245,145 @@ DSPy AI		ai_tech_seed	ai_platform	78	DSPy
 Elastic		ai_tech_seed	tech_company	78	Elastic
 elastic		ai_tech_seed	tech_company	78	Elastic
 Elasticsearch		ai_tech_seed	tech_company	78	Elastic
+elder tech		ai_tech_seed	tech_term	78	银发科技
+estee lauder		ai_tech_seed	consumer_brand	78	Estée Lauder
+Estée Lauder		ai_tech_seed	consumer_brand	78	Estée Lauder
+fast gpt		ai_tech_seed	ai_platform	78	FastGPT
+FastGPT		ai_tech_seed	ai_platform	78	FastGPT
+Florasis		ai_tech_seed	consumer_brand	78	花西子
+florasis		ai_tech_seed	consumer_brand	78	Florasis
 Fly		ai_tech_seed	tech_company	78	Fly.io
 fly io		ai_tech_seed	tech_company	78	Fly.io
 Fly.io		ai_tech_seed	tech_company	78	Fly.io
+Fu Sheng		ai_tech_seed	tech_leader	78	傅盛
+fu sheng		ai_tech_seed	tech_leader	78	Fu Sheng
+Galaxy Geely		ai_tech_seed	tech_company	78	吉利银河
+Gemini Robotics		ai_tech_seed	ai_brand	78	Gemini Robotics
+gemini robotics		ai_tech_seed	ai_brand	78	Gemini Robotics
+George Soros		ai_tech_seed	tech_leader	78	索罗斯
+george soros		ai_tech_seed	tech_leader	78	George Soros
+GitHub Models		ai_tech_seed	ai_platform	78	GitHub Models
+github models		ai_tech_seed	ai_platform	78	GitHub Models
+GitHub Spark		ai_tech_seed	dev_tool	78	GitHub Spark
+github spark		ai_tech_seed	dev_tool	78	GitHub Spark
 go global		ai_tech_seed	tech_term	78	出海
 Grafana		ai_tech_seed	dev_tool	78	Grafana
 grafana		ai_tech_seed	dev_tool	78	Grafana
+granite		ai_tech_seed	ai_model	78	IBM Granite
 Great Wall		ai_tech_seed	tech_company	78	Great Wall
 great wall		ai_tech_seed	tech_company	78	Great Wall
+Grok Imagine		ai_tech_seed	ai_brand	78	Grok Imagine
+grok imagine		ai_tech_seed	ai_brand	78	Grok Imagine
+Groq Cloud		ai_tech_seed	ai_platform	78	Groq Cloud
+groq cloud		ai_tech_seed	ai_platform	78	Groq Cloud
+Honda		ai_tech_seed	tech_company	78	本田
+honda		ai_tech_seed	tech_company	78	Honda
 Hono		ai_tech_seed	dev_tool	78	Hono
 hono js		ai_tech_seed	dev_tool	78	Hono
 Hugging Face Spaces		ai_tech_seed	ai_platform	78	Hugging Face Spaces
 hugging face spaces		ai_tech_seed	ai_platform	78	Hugging Face Spaces
+Hyper		ai_tech_seed	tech_company	78	昊铂
+hyper		ai_tech_seed	tech_company	78	Hyper
+IBM Granite		ai_tech_seed	ai_model	78	IBM Granite
+Innovation Works		ai_tech_seed	tech_company	78	创新工场
+innovation works		ai_tech_seed	tech_company	78	Innovation Works
+Iron Man		ai_tech_seed	celebrity	78	钢铁侠
+IVE		ai_tech_seed	celebrity	78	IVE
+ive组合		ai_tech_seed	celebrity	78	IVE
+Jennifer Lawrence		ai_tech_seed	celebrity	78	Jennifer Lawrence
+jennifer lawrence		ai_tech_seed	celebrity	78	Jennifer Lawrence
+JetBrains Junie		ai_tech_seed	dev_tool	78	JetBrains Junie
+jetbrains junie		ai_tech_seed	dev_tool	78	JetBrains Junie
+Jin Dong		ai_tech_seed	celebrity	78	靳东
+Jisoo		ai_tech_seed	celebrity	78	Jisoo
+Junie		ai_tech_seed	dev_tool	78	JetBrains Junie
 Jupyter		ai_tech_seed	dev_tool	78	Jupyter
 jupyter		ai_tech_seed	dev_tool	78	Jupyter
 Jupyter Notebook		ai_tech_seed	dev_tool	78	Jupyter
+Kilo Code		ai_tech_seed	dev_tool	78	Kilo Code
+kilo code		ai_tech_seed	dev_tool	78	Kilo Code
+KiloCode		ai_tech_seed	dev_tool	78	Kilo Code
+L'Oréal		ai_tech_seed	consumer_brand	78	L'Oréal
+Lambda		ai_tech_seed	tech_company	78	Lambda Labs
+Lambda Labs		ai_tech_seed	tech_company	78	Lambda Labs
+lambda labs		ai_tech_seed	tech_company	78	Lambda Labs
+lancome		ai_tech_seed	consumer_brand	78	Lancôme
+Lancôme		ai_tech_seed	consumer_brand	78	兰蔻
+Langfuse		ai_tech_seed	dev_tool	78	Langfuse
+langfuse		ai_tech_seed	dev_tool	78	Langfuse
+Letta		ai_tech_seed	ai_platform	78	Letta
+letta ai		ai_tech_seed	ai_platform	78	Letta
+Letta AI		ai_tech_seed	ai_platform	78	Letta
 lib sql		ai_tech_seed	tech_term	78	libSQL
 Linear		ai_tech_seed	tech_company	78	Linear
 linear		ai_tech_seed	dev_tool	78	Linear
 linear app		ai_tech_seed	tech_company	78	Linear
+live commerce sales		ai_tech_seed	tech_term	78	带货
+Loongson		ai_tech_seed	tech_company	78	龙芯
+loongson		ai_tech_seed	tech_company	78	Loongson
+loreal		ai_tech_seed	consumer_brand	78	L'Oréal
 Lucid		ai_tech_seed	tech_company	78	Lucid
 lucid motors		ai_tech_seed	tech_company	78	Lucid
 Lucid Motors		ai_tech_seed	tech_company	78	Lucid
+Lululemon		ai_tech_seed	consumer_brand	78	Lululemon
+lululemon		ai_tech_seed	consumer_brand	78	Lululemon
+LVMH		ai_tech_seed	consumer_brand	78	LVMH
+lvmh		ai_tech_seed	consumer_brand	78	LVMH
+Make Friends Live		ai_tech_seed	tech_company	78	交个朋友
 MCP HTTP		ai_tech_seed	ai_term	78	Streamable HTTP
 memory bank		ai_tech_seed	ai_term	78	memory bank
 metaso		ai_tech_seed	ai_brand	78	Metaso
 metaverse		ai_tech_seed	tech_term	78	元宇宙
+Microsoft Agent		ai_tech_seed	ai_platform	78	Microsoft Agent
+microsoft agent		ai_tech_seed	ai_platform	78	Microsoft Agent
+microsoft phi		ai_tech_seed	ai_model	78	Phi
 MiniCPM		ai_tech_seed	ai_brand	78	面壁智能
+Miniso		ai_tech_seed	consumer_brand	78	名创优品
+miniso		ai_tech_seed	consumer_brand	78	Miniso
 Modal		ai_tech_seed	tech_company	78	Modal
 modal labs		ai_tech_seed	tech_company	78	Modal
+molt worker		ai_tech_seed	ai_platform	78	Moltworker
+Moltworker		ai_tech_seed	ai_platform	78	Moltworker
+Moncler		ai_tech_seed	consumer_brand	78	Moncler
+moncler		ai_tech_seed	consumer_brand	78	Moncler
+MUJI		ai_tech_seed	consumer_brand	78	MUJI
+muji		ai_tech_seed	consumer_brand	78	MUJI
 Nami AI		ai_tech_seed	ai_brand	78	纳米AI
 Nix		ai_tech_seed	tech_term	78	Nix
 nix		ai_tech_seed	tech_term	78	Nix
 NixOS		ai_tech_seed	tech_term	78	Nix
+north face		ai_tech_seed	consumer_brand	78	The North Face
 Nuxt		ai_tech_seed	dev_tool	78	Nuxt
 nuxt		ai_tech_seed	dev_tool	78	Nuxt
 Nuxt.js		ai_tech_seed	dev_tool	78	Nuxt
+one person company		ai_tech_seed	tech_term	78	一人公司
+papi		ai_tech_seed	celebrity	78	papi酱
+papi酱	papi jiang	ai_tech_seed	celebrity	78	papi酱
+Phi		ai_tech_seed	ai_model	78	Phi
+phi model		ai_tech_seed	ai_model	78	Phi
+plant grass recommend		ai_tech_seed	tech_term	78	种草
 Postman		ai_tech_seed	dev_tool	78	Postman
 postman		ai_tech_seed	dev_tool	78	Postman
+private domain traffic		ai_tech_seed	tech_term	78	私域
 Prometheus		ai_tech_seed	dev_tool	78	Prometheus
 prometheus		ai_tech_seed	dev_tool	78	Prometheus
+Puma		ai_tech_seed	consumer_brand	78	Puma
+puma		ai_tech_seed	consumer_brand	78	Puma
 Quark		ai_tech_seed	ai_brand	78	Quark
 quark ai		ai_tech_seed	ai_brand	78	Quark
 RAG pipeline		ai_tech_seed	ai_term	78	RAG pipeline
 rag pipeline		ai_tech_seed	ai_term	78	RAG pipeline
 Railway		ai_tech_seed	tech_company	78	Railway
 railway app		ai_tech_seed	tech_company	78	Railway
+Ray		ai_tech_seed	tech_company	78	Anyscale
 React Server Actions		ai_tech_seed	dev_tool	78	Server Actions
 reasoning effort		ai_tech_seed	ai_term	78	reasoning effort
+Recraft		ai_tech_seed	ai_brand	78	Recraft
+recraft ai		ai_tech_seed	ai_brand	78	Recraft
+Recraft AI		ai_tech_seed	ai_brand	78	Recraft
+Relevance		ai_tech_seed	ai_brand	78	Relevance AI
+Relevance AI		ai_tech_seed	ai_brand	78	Relevance AI
+relevance ai		ai_tech_seed	ai_brand	78	Relevance AI
 Remix		ai_tech_seed	dev_tool	78	Remix
 remix run		ai_tech_seed	dev_tool	78	Remix
 remote work		ai_tech_seed	tech_term	78	远程办公
@@ -1146,78 +2394,405 @@ replit		ai_tech_seed	dev_tool	78	Replit
 robin hood		ai_tech_seed	fintech	78	Robinhood
 Robin Hood		ai_tech_seed	fintech	78	Robinhood
 Robinhood		ai_tech_seed	fintech	78	Robinhood
+Rockchip		ai_tech_seed	tech_company	78	Rockchip
+rockchip		ai_tech_seed	tech_company	78	Rockchip
+Rose		ai_tech_seed	celebrity	78	Rosé
+Rosé		ai_tech_seed	celebrity	78	Rosé
+run pod		ai_tech_seed	tech_company	78	RunPod
+RunPod		ai_tech_seed	tech_company	78	RunPod
+s and p 500		ai_tech_seed	fintech	78	S&P 500
+S&P 500		ai_tech_seed	fintech	78	标普500
+SAIC		ai_tech_seed	tech_company	78	上汽
+saic		ai_tech_seed	tech_company	78	SAIC
+Scarlett Johansson		ai_tech_seed	celebrity	78	Scarlett Johansson
+scarlett johansson		ai_tech_seed	celebrity	78	Scarlett Johansson
+SenseAuto		ai_tech_seed	tech_company	78	商汤绝影
 Server Actions		ai_tech_seed	dev_tool	78	Server Actions
 server actions		ai_tech_seed	dev_tool	78	Server Actions
 service now		ai_tech_seed	tech_company	78	ServiceNow
 ServiceNow		ai_tech_seed	tech_company	78	ServiceNow
+short video		ai_tech_seed	tech_term	78	短视频
+silver economy		ai_tech_seed	tech_term	78	银发经济
+silver tech		ai_tech_seed	tech_term	78	银发科技
+Simular		ai_tech_seed	ai_brand	78	Simular
+simular ai		ai_tech_seed	ai_brand	78	Simular
+Simular AI		ai_tech_seed	ai_brand	78	Simular
+sk two		ai_tech_seed	consumer_brand	78	SK-II
+SK-II		ai_tech_seed	consumer_brand	78	SK-II
+SK2		ai_tech_seed	consumer_brand	78	SK-II
+skill		ai_tech_seed	ai_term	78	skill
+skills		ai_tech_seed	ai_term	78	skill
+Skywork		ai_tech_seed	ai_brand	78	Skywork
+skywork ai		ai_tech_seed	ai_brand	78	Skywork
+Sohu		ai_tech_seed	tech_company	78	搜狐
+sohu		ai_tech_seed	tech_company	78	Sohu
+Solana		ai_tech_seed	fintech	78	Solana
+solana crypto		ai_tech_seed	fintech	78	Solana
 Spaces		ai_tech_seed	ai_platform	78	Hugging Face Spaces
 Square		ai_tech_seed	fintech	78	Block
 square		ai_tech_seed	fintech	78	Block
 Streamable HTTP		ai_tech_seed	ai_term	78	Streamable HTTP
 streamable http		ai_tech_seed	ai_term	78	Streamable HTTP
+Su Hua		ai_tech_seed	tech_leader	78	宿华
+su hua		ai_tech_seed	tech_leader	78	Su Hua
+t head		ai_tech_seed	tech_company	78	T-Head
+T-Head		ai_tech_seed	tech_company	78	平头哥
 Tailscale		ai_tech_seed	tech_company	78	Tailscale
 tailscale		ai_tech_seed	tech_company	78	Tailscale
 test time compute		ai_tech_seed	ai_term	78	test-time compute
 test-time compute		ai_tech_seed	ai_term	78	test-time compute
+The North Face		ai_tech_seed	consumer_brand	78	北面
 tiangong		ai_tech_seed	ai_brand	78	天工
+Tiffany		ai_tech_seed	consumer_brand	78	Tiffany
+tiffany		ai_tech_seed	consumer_brand	78	Tiffany
+trade-in program		ai_tech_seed	tech_term	78	以旧换新
 Tuist		ai_tech_seed	dev_tool	78	Tuist
 tuist		ai_tech_seed	dev_tool	78	Tuist
 turbo repo		ai_tech_seed	dev_tool	78	Turborepo
 Turborepo		ai_tech_seed	dev_tool	78	Turborepo
 Twilio		ai_tech_seed	tech_company	78	Twilio
 twilio		ai_tech_seed	tech_company	78	Twilio
+Ubisoft		ai_tech_seed	game_ip	78	育碧
+ubisoft		ai_tech_seed	game_ip	78	Ubisoft
+Uniqlo		ai_tech_seed	consumer_brand	78	Uniqlo
+uniqlo		ai_tech_seed	consumer_brand	78	Uniqlo
+Vellum		ai_tech_seed	ai_platform	78	Vellum
+vellum ai		ai_tech_seed	ai_platform	78	Vellum
+Vellum AI		ai_tech_seed	ai_platform	78	Vellum
+Versace		ai_tech_seed	consumer_brand	78	Versace
+versace		ai_tech_seed	consumer_brand	78	Versace
 Visa		ai_tech_seed	tech_company	78	Visa
 visa		ai_tech_seed	tech_company	78	Visa
+WAIC		ai_tech_seed	tech_term	78	世界人工智能大会
+Walmart		ai_tech_seed	consumer_brand	78	沃尔玛
+walmart		ai_tech_seed	consumer_brand	78	Walmart
+Wang Jianlin		ai_tech_seed	tech_leader	78	王健林
+wang jianlin		ai_tech_seed	tech_leader	78	Wang Jianlin
 Web 3		ai_tech_seed	tech_term	78	Web3
 Web3		ai_tech_seed	tech_term	78	Web3
 web3		ai_tech_seed	tech_term	78	Web3
+Western Digital		ai_tech_seed	tech_company	78	Western Digital
+western digital		ai_tech_seed	tech_company	78	Western Digital
 work os		ai_tech_seed	dev_tool	78	WorkOS
 Work OS		ai_tech_seed	dev_tool	78	WorkOS
 WorkOS		ai_tech_seed	dev_tool	78	WorkOS
+Xiao Yangge		ai_tech_seed	celebrity	78	疯狂小杨哥
+Yi Jianlian		ai_tech_seed	athlete	78	易建联
+YSL		ai_tech_seed	consumer_brand	78	YSL
+ysl		ai_tech_seed	consumer_brand	78	YSL
+Zhu Xiaohu		ai_tech_seed	tech_leader	78	朱啸虎
+Zong Qinghou		ai_tech_seed	tech_leader	78	宗庆后
+一人公司	yi ren gong si	ai_tech_seed	tech_term	78	一人公司
+上汽	shang qi	ai_tech_seed	tech_company	78	上汽
+世界人工智能大会	shi jie ren gong zhi neng da hui	ai_tech_seed	tech_term	78	世界人工智能大会
+中信	zhong xin	ai_tech_seed	fintech	78	中信
+中信证券		ai_tech_seed	fintech	78	CITIC
+中国创新	zhong guo chuang xin	ai_tech_seed	tech_term	78	中国创新
+中金	zhong jin	ai_tech_seed	fintech	78	中金
+中金公司		ai_tech_seed	fintech	78	CICC
+云深处		ai_tech_seed	tech_company	78	DeepRobotics
+交个朋友	jiao ge peng you	ai_tech_seed	tech_company	78	交个朋友
+以旧换新	yi jiu huan xin	ai_tech_seed	tech_term	78	以旧换新
+优衣库		ai_tech_seed	consumer_brand	78	Uniqlo
+傅盛	fu sheng	ai_tech_seed	tech_leader	78	傅盛
 元宇宙	yuan yu zhou	ai_tech_seed	tech_term	78	元宇宙
+元戎启行	yuan rong qi xing	ai_tech_seed	tech_company	78	元戎启行
 全球化	chu hai	ai_tech_seed	tech_term	78	出海
+兰蔻	lan ke	ai_tech_seed	consumer_brand	78	兰蔻
 出海	chu hai	ai_tech_seed	tech_term	78	出海
+创新工场	chuang xin gong chang	ai_tech_seed	tech_company	78	创新工场
+加拿大鹅		ai_tech_seed	consumer_brand	78	Canada Goose
+北面	bei mian	ai_tech_seed	consumer_brand	78	北面
+吉利银河	ji li yin he	ai_tech_seed	tech_company	78	吉利银河
+名创优品	ming chuang you pin	ai_tech_seed	consumer_brand	78	名创优品
+商汤绝影	shang tang jue ying	ai_tech_seed	tech_company	78	商汤绝影
+圣罗兰		ai_tech_seed	consumer_brand	78	YSL
 基准测试		ai_tech_seed	ai_term	78	benchmark
+壁仞	bi ren	ai_tech_seed	tech_company	78	壁仞
 天工	tian gong	ai_tech_seed	ai_brand	78	天工
+天工AI	tian gong AI	ai_tech_seed	ai_brand	78	天工AI
 夸克		ai_tech_seed	ai_brand	78	Quark
+奇瑞	qi rui	ai_tech_seed	tech_company	78	奇瑞
+宗庆后	zong qing hou	ai_tech_seed	tech_leader	78	宗庆后
+宝格丽		ai_tech_seed	consumer_brand	78	Bulgari
+宿华	su hua	ai_tech_seed	tech_leader	78	宿华
+带货	dai huo	ai_tech_seed	tech_term	78	带货
+平头哥	ping tou ge	ai_tech_seed	tech_company	78	平头哥
+彪马		ai_tech_seed	consumer_brand	78	Puma
 推理强度		ai_tech_seed	ai_term	78	reasoning effort
+搜狐	sou hu	ai_tech_seed	tech_company	78	搜狐
 数字分身	shu zi fen shen	ai_tech_seed	tech_term	78	数字分身
+数据要素	shu ju yao su	ai_tech_seed	tech_term	78	数据要素
+数据飞轮	shu ju fei lun	ai_tech_seed	ai_term	78	数据飞轮
+无印良品		ai_tech_seed	consumer_brand	78	MUJI
 昆仑万维天工	tian gong	ai_tech_seed	ai_brand	78	天工
+昊铂	hao bo	ai_tech_seed	tech_company	78	昊铂
+易建联	yi jian lian	ai_tech_seed	athlete	78	易建联
+本田	ben tian	ai_tech_seed	tech_company	78	本田
+朱啸虎	zhu xiao hu	ai_tech_seed	tech_leader	78	朱啸虎
+标普500	biao pu 500	ai_tech_seed	fintech	78	标普500
+欧莱雅		ai_tech_seed	consumer_brand	78	L'Oréal
+沃尔玛	wo er ma	ai_tech_seed	consumer_brand	78	沃尔玛
+波司登	bo si deng	ai_tech_seed	consumer_brand	78	波司登
 测试时计算		ai_tech_seed	ai_term	78	test-time compute
+王健林	wang jian lin	ai_tech_seed	tech_leader	78	王健林
+瑞芯微		ai_tech_seed	tech_company	78	Rockchip
+疯狂小杨哥	feng kuang xiao yang ge	ai_tech_seed	celebrity	78	疯狂小杨哥
+盟可睐		ai_tech_seed	consumer_brand	78	Moncler
+短视频	duan shi pin	ai_tech_seed	tech_term	78	短视频
+私域	si yu	ai_tech_seed	tech_term	78	私域
+种草	zhong cao	ai_tech_seed	tech_term	78	种草
+算力普惠	suan li pu hui	ai_tech_seed	tech_term	78	算力普惠
+索罗斯	suo luo si	ai_tech_seed	tech_leader	78	索罗斯
 纳米AI	na mi AI	ai_tech_seed	ai_brand	78	纳米AI
+育碧	yu bi	ai_tech_seed	game_ip	78	育碧
+花西子	hua xi zi	ai_tech_seed	consumer_brand	78	花西子
+范思哲		ai_tech_seed	consumer_brand	78	Versace
+蒂芙尼		ai_tech_seed	consumer_brand	78	Tiffany
+蔻驰		ai_tech_seed	consumer_brand	78	Coach
+西部数据		ai_tech_seed	tech_company	78	Western Digital
 记忆库		ai_tech_seed	ai_term	78	memory bank
 赛博对账	sai bo dui zhang	ai_tech_seed	tech_term	78	赛博对账
+路威酩轩		ai_tech_seed	consumer_brand	78	LVMH
 远程办公	yuan cheng ban gong	ai_tech_seed	tech_term	78	远程办公
+银发科技	yin fa ke ji	ai_tech_seed	tech_term	78	银发科技
+银发经济	yin fa jing ji	ai_tech_seed	tech_term	78	银发经济
 长城汽车		ai_tech_seed	tech_company	78	Great Wall
+长安	chang an	ai_tech_seed	tech_company	78	长安
+长鑫	chang xin	ai_tech_seed	tech_company	78	长鑫
+长鑫存储		ai_tech_seed	tech_company	78	CXMT
+降本增效	jiang ben zeng xiao	ai_tech_seed	tech_term	78	降本增效
+雅诗兰黛		ai_tech_seed	consumer_brand	78	Estée Lauder
+露露乐蒙		ai_tech_seed	consumer_brand	78	Lululemon
 面壁智能	mian bi zhi neng	ai_tech_seed	ai_brand	78	面壁智能
+靳东	jin dong	ai_tech_seed	celebrity	78	靳东
+龙芯	long xin	ai_tech_seed	tech_company	78	龙芯
+apple writing tools		ai_tech_seed	ai_term	76	Writing Tools
+atmospheric vibe		ai_tech_seed	tech_term	76	氛围感
+Baseten		ai_tech_seed	ai_platform	76	Baseten
+baseten		ai_tech_seed	ai_platform	76	Baseten
+Batman		ai_tech_seed	celebrity	76	蝙蝠侠
+batman		ai_tech_seed	celebrity	76	Batman
+Block Goose		ai_tech_seed	dev_tool	76	Goose
+Braintrust		ai_tech_seed	dev_tool	76	Braintrust
+braintrust ai		ai_tech_seed	dev_tool	76	Braintrust
+buddy partner		ai_tech_seed	tech_term	76	搭子
+Cheetah Mobile		ai_tech_seed	tech_company	76	猎豹移动
+Chen Tianqiao		ai_tech_seed	tech_leader	76	陈天桥
+Cheng Yixiao		ai_tech_seed	tech_leader	76	程一笑
+cheng yixiao		ai_tech_seed	tech_leader	76	Cheng Yixiao
+Chow Tai Fook		ai_tech_seed	consumer_brand	76	周大福
+chow tai fook		ai_tech_seed	consumer_brand	76	Chow Tai Fook
+city walk		ai_tech_seed	tech_term	76	citywalk
+City Walk		ai_tech_seed	tech_term	76	citywalk
+citywalk		ai_tech_seed	tech_term	76	citywalk
+Converse		ai_tech_seed	consumer_brand	76	Converse
+converse		ai_tech_seed	consumer_brand	76	Converse
+CSI 300		ai_tech_seed	fintech	76	沪深300
 cyber		ai_tech_seed	tech_term	76	赛博
+data assets		ai_tech_seed	tech_term	76	数据资产
 Deepset Haystack		ai_tech_seed	ai_platform	76	Haystack
+Dogecoin		ai_tech_seed	fintech	76	狗狗币
+dogecoin		ai_tech_seed	fintech	76	Dogecoin
+Dongfeng		ai_tech_seed	tech_company	76	东风
+dongfeng		ai_tech_seed	tech_company	76	Dongfeng
+Dow Jones		ai_tech_seed	fintech	76	道琼斯
+dow jones		ai_tech_seed	fintech	76	Dow Jones
+Enflame		ai_tech_seed	tech_company	76	燧原
+enflame		ai_tech_seed	tech_company	76	Enflame
+Erke		ai_tech_seed	consumer_brand	76	鸿星尔克
+erke		ai_tech_seed	consumer_brand	76	Erke
+expert routing		ai_tech_seed	ai_term	76	MoE路由
+FAW		ai_tech_seed	tech_company	76	一汽
+faw		ai_tech_seed	tech_company	76	FAW
+Flowith		ai_tech_seed	ai_platform	76	Flowith
+flowith ai		ai_tech_seed	ai_platform	76	Flowith
+Flowith AI		ai_tech_seed	ai_platform	76	Flowith
+Focus Media		ai_tech_seed	tech_company	76	分众传媒
+Fuyao Glass		ai_tech_seed	tech_company	76	福耀玻璃
+Gemma open		ai_tech_seed	ai_model	76	Gemma开源
+Gemma开源	gemma kai yuan	ai_tech_seed	ai_model	76	Gemma开源
+Goose		ai_tech_seed	dev_tool	76	Goose
+goose ai		ai_tech_seed	dev_tool	76	Goose
+grok ipedia		ai_tech_seed	ai_brand	76	Grokipedia
+Grok pedia		ai_tech_seed	ai_brand	76	Grokipedia
+Grokipedia		ai_tech_seed	ai_brand	76	Grokipedia
+Guotai Junan		ai_tech_seed	fintech	76	国泰君安
+guotai junan		ai_tech_seed	fintech	76	Guotai Junan
+Hang Seng Index		ai_tech_seed	fintech	76	恒生指数
 Haystack		ai_tech_seed	ai_platform	76	Haystack
 haystack ai		ai_tech_seed	ai_platform	76	Haystack
+Huatai		ai_tech_seed	fintech	76	华泰
+huatai		ai_tech_seed	fintech	76	Huatai
+IDG		ai_tech_seed	fintech	76	IDG
+idg capital		ai_tech_seed	fintech	76	IDG
+initial public offering		ai_tech_seed	tech_term	76	IPO
+Innovusion		ai_tech_seed	tech_company	76	图达通
+innovusion		ai_tech_seed	tech_company	76	Innovusion
+IPO		ai_tech_seed	tech_term	76	IPO
+Jiang Nanchun		ai_tech_seed	tech_leader	76	江南春
+Kioxia		ai_tech_seed	tech_company	76	Kioxia
+kioxia		ai_tech_seed	tech_company	76	Kioxia
+KKR		ai_tech_seed	fintech	76	KKR
+kkr		ai_tech_seed	fintech	76	KKR
+Krea		ai_tech_seed	ai_brand	76	Krea
+krea ai		ai_tech_seed	ai_brand	76	Krea
+Krea AI		ai_tech_seed	ai_brand	76	Krea
 Ktor		ai_tech_seed	dev_tool	76	Ktor
 ktor		ai_tech_seed	dev_tool	76	Ktor
 Ktor server		ai_tech_seed	dev_tool	76	Ktor
+Kuai Man		ai_tech_seed	athlete	76	蒯曼
+Laoxiangji		ai_tech_seed	consumer_brand	76	老乡鸡
+Levi's		ai_tech_seed	consumer_brand	76	Levi's
+levis		ai_tech_seed	consumer_brand	76	Levi's
+Lin Gaoyuan		ai_tech_seed	athlete	76	林高远
+long-termism		ai_tech_seed	tech_term	76	长期主义
+low altitude flight		ai_tech_seed	tech_term	76	低空飞行
+MAC		ai_tech_seed	consumer_brand	76	MAC
+mac cosmetics		ai_tech_seed	consumer_brand	76	MAC
+Matrix Partners		ai_tech_seed	fintech	76	Matrix Partners
+matrix partners		ai_tech_seed	fintech	76	Matrix Partners
+Matrix Partners China		ai_tech_seed	fintech	76	经纬
+max kb		ai_tech_seed	ai_platform	76	MaxKB
+MaxKB		ai_tech_seed	ai_platform	76	MaxKB
+MBTI		ai_tech_seed	tech_term	76	MBTI
+mbti人格		ai_tech_seed	tech_term	76	MBTI
+Michael Kors		ai_tech_seed	consumer_brand	76	Michael Kors
+michael kors		ai_tech_seed	consumer_brand	76	Michael Kors
+MK		ai_tech_seed	consumer_brand	76	Michael Kors
 Modal Labs		ai_tech_seed	tech_company	76	Modal Labs
+MoE路由	MoE lu you	ai_tech_seed	ai_term	76	MoE路由
+Nami Search		ai_tech_seed	ai_brand	76	纳米搜索
 Nix OS		ai_tech_seed	tech_term	76	NixOS
 nixos		ai_tech_seed	tech_term	76	NixOS
 Nx		ai_tech_seed	dev_tool	76	Nx
 nx monorepo		ai_tech_seed	dev_tool	76	Nx
+open euler		ai_tech_seed	tech_company	76	openEuler
+openEuler		ai_tech_seed	tech_company	76	openEuler
+patient capital		ai_tech_seed	tech_term	76	耐心资本
+Phi模型	phi mo xing	ai_tech_seed	ai_model	76	Phi模型
+Phytium		ai_tech_seed	tech_company	76	飞腾
+phytium		ai_tech_seed	tech_company	76	Phytium
 pnpm		ai_tech_seed	dev_tool	76	pnpm
+product review		ai_tech_seed	tech_term	76	测评
+Qwen order milk tea		ai_tech_seed	tech_term	76	千问点奶茶
+rate cut		ai_tech_seed	fintech	76	降息
+Ray Serve		ai_tech_seed	dev_tool	76	Ray Serve
+ray serve		ai_tech_seed	dev_tool	76	Ray Serve
 red panda		ai_tech_seed	tech_company	76	Redpanda
 Redpanda		ai_tech_seed	tech_company	76	Redpanda
+relaxed vibe		ai_tech_seed	tech_term	76	松弛感
 Render		ai_tech_seed	tech_company	76	Render
 render.com		ai_tech_seed	tech_company	76	Render
+Rising Auto		ai_tech_seed	tech_company	76	飞凡
 SenseChat		ai_tech_seed	ai_brand	76	商量
 Serverless Stack		ai_tech_seed	dev_tool	76	SST
+Shiseido		ai_tech_seed	consumer_brand	76	Shiseido
+shiseido		ai_tech_seed	consumer_brand	76	Shiseido
+Skechers		ai_tech_seed	consumer_brand	76	Skechers
+skechers		ai_tech_seed	consumer_brand	76	Skechers
+speculative decoding		ai_tech_seed	ai_term	76	投机解码
 SST		ai_tech_seed	dev_tool	76	SST
 sst		ai_tech_seed	dev_tool	76	SST
 stdio transport		ai_tech_seed	ai_term	76	stdio transport
+Supreme		ai_tech_seed	consumer_brand	76	Supreme
+supreme		ai_tech_seed	consumer_brand	76	Supreme
+Supreme潮牌		ai_tech_seed	consumer_brand	76	Supreme
+ticket stub economy		ai_tech_seed	tech_term	76	票根经济
+unboxing		ai_tech_seed	tech_term	76	开箱
+unicorn startup		ai_tech_seed	tech_term	76	独角兽
+Unigroup		ai_tech_seed	tech_company	76	紫光
+unigroup		ai_tech_seed	tech_company	76	Unigroup
+Van Cleef		ai_tech_seed	consumer_brand	76	Van Cleef
+van cleef		ai_tech_seed	consumer_brand	76	Van Cleef
+Vans		ai_tech_seed	consumer_brand	76	Vans
+vans		ai_tech_seed	consumer_brand	76	Vans
+vibe marketing		ai_tech_seed	ai_term	76	vibe marketing
+virtual idol		ai_tech_seed	ai_term	76	虚拟偶像
+Viya		ai_tech_seed	celebrity	76	薇娅
+viya		ai_tech_seed	celebrity	76	Viya
+wa ic		ai_tech_seed	tech_term	76	WAIC
 web dev arena		ai_tech_seed	ai_term	76	WebDev Arena
 WebDev Arena		ai_tech_seed	ai_term	76	WebDev Arena
 WebDevArena		ai_tech_seed	ai_term	76	WebDev Arena
+Writing Tools		ai_tech_seed	ai_term	76	Writing Tools
+Xibei		ai_tech_seed	consumer_brand	76	西贝
+Xtep		ai_tech_seed	consumer_brand	76	特步
+xtep		ai_tech_seed	consumer_brand	76	Xtep
+Xu Xin		ai_tech_seed	tech_leader	76	徐新
+Zara		ai_tech_seed	consumer_brand	76	Zara
+zara		ai_tech_seed	consumer_brand	76	Zara
+zen coder		ai_tech_seed	dev_tool	76	Zencoder
+Zencoder		ai_tech_seed	dev_tool	76	Zencoder
+Zep		ai_tech_seed	ai_platform	76	Zep
+zep ai		ai_tech_seed	ai_platform	76	Zep
+Zep AI		ai_tech_seed	ai_platform	76	Zep
+zhen fund		ai_tech_seed	fintech	76	ZhenFund
+ZhenFund		ai_tech_seed	fintech	76	真格
+一汽	yi qi	ai_tech_seed	tech_company	76	一汽
+上市		ai_tech_seed	tech_term	76	IPO
+东风	dong feng	ai_tech_seed	tech_company	76	东风
+交个朋友直播间	jiao ge peng you zhi bo jian	ai_tech_seed	tech_term	76	交个朋友直播间
+低空飞行	di kong fei xing	ai_tech_seed	tech_term	76	低空飞行
+分众传媒	fen zhong chuan mei	ai_tech_seed	tech_company	76	分众传媒
+匡威		ai_tech_seed	consumer_brand	76	Converse
+千问点奶茶	qian wen dian nai cha	ai_tech_seed	tech_term	76	千问点奶茶
+华泰	hua tai	ai_tech_seed	fintech	76	华泰
+华泰证券		ai_tech_seed	fintech	76	Huatai
+周大福	zhou da fu	ai_tech_seed	consumer_brand	76	周大福
 商量	shang liang	ai_tech_seed	ai_brand	76	商量
+国泰君安	guo tai jun an	ai_tech_seed	fintech	76	国泰君安
+图达通	tu da tong	ai_tech_seed	tech_company	76	图达通
+开箱	kai xiang	ai_tech_seed	tech_term	76	开箱
+徐新	xu xin	ai_tech_seed	tech_leader	76	徐新
+恒生指数	heng sheng zhi shu	ai_tech_seed	fintech	76	恒生指数
+投机解码	tou ji jie ma	ai_tech_seed	ai_term	76	投机解码
+搭子	da zi	ai_tech_seed	tech_term	76	搭子
+数据资产	shu ju zi chan	ai_tech_seed	tech_term	76	数据资产
+斯凯奇		ai_tech_seed	consumer_brand	76	Skechers
+李维斯		ai_tech_seed	consumer_brand	76	Levi's
+松弛感	song chi gan	ai_tech_seed	tech_term	76	松弛感
+林高远	lin gao yuan	ai_tech_seed	athlete	76	林高远
 标准输入输出传输		ai_tech_seed	ai_term	76	stdio transport
+梵克雅宝		ai_tech_seed	consumer_brand	76	Van Cleef
+欧拉		ai_tech_seed	tech_company	76	openEuler
+氛围感	fen wei gan	ai_tech_seed	tech_term	76	氛围感
+氛围营销		ai_tech_seed	ai_term	76	vibe marketing
+江南春	jiang nan chun	ai_tech_seed	tech_leader	76	江南春
+沪深300	hu shen 300	ai_tech_seed	fintech	76	沪深300
+测评	ce ping	ai_tech_seed	tech_term	76	测评
+燧原	sui yuan	ai_tech_seed	tech_company	76	燧原
+特步	te bu	ai_tech_seed	consumer_brand	76	特步
+狗狗币	gou gou bi	ai_tech_seed	fintech	76	狗狗币
+独角兽	du jiao shou	ai_tech_seed	tech_term	76	独角兽
+猎豹移动	lie bao yi dong	ai_tech_seed	tech_company	76	猎豹移动
+真格	zhen ge	ai_tech_seed	fintech	76	真格
+真格基金		ai_tech_seed	fintech	76	ZhenFund
+票根经济	piao gen jing ji	ai_tech_seed	tech_term	76	票根经济
+福耀玻璃	fu yao bo li	ai_tech_seed	tech_company	76	福耀玻璃
+程一笑	cheng yi xiao	ai_tech_seed	tech_leader	76	程一笑
+紫光	zi guang	ai_tech_seed	tech_company	76	紫光
+纳米搜索	na mi sou suo	ai_tech_seed	ai_brand	76	纳米搜索
+经纬	jing wei	ai_tech_seed	fintech	76	经纬
+经纬创投		ai_tech_seed	fintech	76	Matrix Partners
+绝影	jue ying	ai_tech_seed	tech_company	76	绝影
+老乡鸡	lao xiang ji	ai_tech_seed	consumer_brand	76	老乡鸡
+耐心资本	nai xin zi ben	ai_tech_seed	tech_term	76	耐心资本
+蒯曼	kuai man	ai_tech_seed	athlete	76	蒯曼
+薇娅	wei ya	ai_tech_seed	celebrity	76	薇娅
+虚拟偶像	xu ni ou xiang	ai_tech_seed	ai_term	76	虚拟偶像
+蝙蝠侠	bian fu xia	ai_tech_seed	celebrity	76	蝙蝠侠
+西贝	xi bei	ai_tech_seed	consumer_brand	76	西贝
+资生堂		ai_tech_seed	consumer_brand	76	Shiseido
 赛博	sai bo	ai_tech_seed	tech_term	76	赛博
+道琼斯	dao qiong si	ai_tech_seed	fintech	76	道琼斯
+铠侠		ai_tech_seed	tech_company	76	Kioxia
+长期主义	chang qi zhu yi	ai_tech_seed	tech_term	76	长期主义
+陈天桥	chen tian qiao	ai_tech_seed	tech_leader	76	陈天桥
+降息	jiang xi	ai_tech_seed	fintech	76	降息
+飞凡	fei fan	ai_tech_seed	tech_company	76	飞凡
+飞腾	fei teng	ai_tech_seed	tech_company	76	飞腾
+鸿星尔克	hong xing er ke	ai_tech_seed	consumer_brand	76	鸿星尔克
 Aider		ai_tech_seed	ai_brand	75	Aider
 aider		ai_tech_seed	ai_brand	75	Aider
 Bitbucket		ai_tech_seed	tech_company	75	Bitbucket
@@ -1246,15 +2821,221 @@ warp terminal		ai_tech_seed	dev_tool	75	Warp
 数字游民	shu zi you min	ai_tech_seed	tech_term	75	数字游民
 越狱		ai_tech_seed	ai_term	75	jailbreak
 面壁		ai_tech_seed	ai_model	75	MiniCPM
+Allwinner		ai_tech_seed	tech_company	74	Allwinner
+allwinner		ai_tech_seed	tech_company	74	Allwinner
+Arize		ai_tech_seed	dev_tool	74	Arize
+arize ai		ai_tech_seed	dev_tool	74	Arize
+Arize AI		ai_tech_seed	dev_tool	74	Arize
+avoid pitfall		ai_tech_seed	tech_term	74	避雷
+Capital Today		ai_tech_seed	fintech	74	今日资本
+China Gold		ai_tech_seed	consumer_brand	74	中国黄金
+civil service exam		ai_tech_seed	tech_term	74	考公
+Crusoe		ai_tech_seed	tech_company	74	Crusoe
+crusoe energy		ai_tech_seed	tech_company	74	Crusoe
+data rights confirmation		ai_tech_seed	tech_term	74	数据确权
+emotional bluntness		ai_tech_seed	tech_term	74	钝感力
+emotional spending		ai_tech_seed	tech_term	74	情绪消费
+emotionally broken		ai_tech_seed	tech_term	74	破防
+emotionally stable		ai_tech_seed	tech_term	74	情绪稳定
+extrovert		ai_tech_seed	tech_term	74	e人
+e人	e ren	ai_tech_seed	tech_term	74	e人
+flow gpt		ai_tech_seed	ai_platform	74	FlowGPT
+Flow GPT		ai_tech_seed	ai_platform	74	FlowGPT
+FlowGPT		ai_tech_seed	ai_platform	74	FlowGPT
+fundraising		ai_tech_seed	tech_term	74	融资
+go to market		ai_tech_seed	tech_term	74	GTM
+GTM		ai_tech_seed	tech_term	74	GTM
+Helicone		ai_tech_seed	dev_tool	74	Helicone
+helicone		ai_tech_seed	dev_tool	74	Helicone
+Image Playground		ai_tech_seed	ai_term	74	Image Playground
+image playground		ai_tech_seed	ai_term	74	Image Playground
+immersive		ai_tech_seed	tech_term	74	沉浸式
+introvert		ai_tech_seed	tech_term	74	i人
+IPO listing		ai_tech_seed	tech_term	74	上市
+i人	i ren	ai_tech_seed	tech_term	74	i人
+Labelbox		ai_tech_seed	tech_company	74	Labelbox
+labelbox		ai_tech_seed	tech_company	74	Labelbox
+Lao Feng Xiang		ai_tech_seed	consumer_brand	74	老凤祥
+launch economy		ai_tech_seed	tech_term	74	首发经济
+layoffs		ai_tech_seed	tech_term	74	裁员
+office vibe		ai_tech_seed	tech_term	74	班味
+omnichannel operation		ai_tech_seed	tech_term	74	全域经营
+Omnigent		ai_tech_seed	dev_tool	74	Omnigent
+omnigent ai		ai_tech_seed	dev_tool	74	Omnigent
+paid knowledge		ai_tech_seed	tech_term	74	知识付费
+pet economy		ai_tech_seed	tech_term	74	宠物经济
+premium feel		ai_tech_seed	tech_term	74	高级感
+public domain traffic		ai_tech_seed	tech_term	74	公域
+quantitative easing		ai_tech_seed	fintech	74	量化宽松
+rate hike		ai_tech_seed	fintech	74	加息
+recommend		ai_tech_seed	tech_term	74	安利
+self-reward spending		ai_tech_seed	tech_term	74	悦己消费
+Source Code Capital		ai_tech_seed	fintech	74	源码
+sparse attention		ai_tech_seed	ai_term	74	稀疏注意力
+unrecommend		ai_tech_seed	tech_term	74	拔草
+valuation		ai_tech_seed	tech_term	74	估值
+William Feng		ai_tech_seed	tech_leader	74	沈晖
+Xu Jiayin		ai_tech_seed	tech_leader	74	许家印
+xu jiayin		ai_tech_seed	tech_leader	74	Xu Jiayin
+YYDS		ai_tech_seed	tech_term	74	YYDS
+yyds		ai_tech_seed	tech_term	74	YYDS
+中国黄金	zhong guo huang jin	ai_tech_seed	consumer_brand	74	中国黄金
+今日资本	jin ri zi ben	ai_tech_seed	fintech	74	今日资本
+估值	gu zhi	ai_tech_seed	tech_term	74	估值
+全域经营	quan yu jing ying	ai_tech_seed	tech_term	74	全域经营
+全志		ai_tech_seed	tech_company	74	Allwinner
+公域	gong yu	ai_tech_seed	tech_term	74	公域
+加息	jia xi	ai_tech_seed	fintech	74	加息
+安利	an li	ai_tech_seed	tech_term	74	安利
+宠物经济	chong wu jing ji	ai_tech_seed	tech_term	74	宠物经济
+悦己消费	yue ji xiao fei	ai_tech_seed	tech_term	74	悦己消费
+情绪消费	qing xu xiao fei	ai_tech_seed	tech_term	74	情绪消费
+情绪稳定	qing xu wen ding	ai_tech_seed	tech_term	74	情绪稳定
+拔草	ba cao	ai_tech_seed	tech_term	74	拔草
+数据确权	shu ju que quan	ai_tech_seed	tech_term	74	数据确权
+永远的神		ai_tech_seed	tech_term	74	YYDS
+沈晖	shen hui	ai_tech_seed	tech_leader	74	沈晖
+沉浸式	chen jin shi	ai_tech_seed	tech_term	74	沉浸式
+源码	yuan ma	ai_tech_seed	fintech	74	源码
+班味	ban wei	ai_tech_seed	tech_term	74	班味
+知识付费	zhi shi fu fei	ai_tech_seed	tech_term	74	知识付费
+破防	po fang	ai_tech_seed	tech_term	74	破防
+稀疏注意力	xi shu zhu yi li	ai_tech_seed	ai_term	74	稀疏注意力
+老凤祥	lao feng xiang	ai_tech_seed	consumer_brand	74	老凤祥
+考公	kao gong	ai_tech_seed	tech_term	74	考公
+苹果图像游乐场		ai_tech_seed	ai_term	74	Image Playground
+融资	rong zi	ai_tech_seed	tech_term	74	融资
+裁员	cai yuan	ai_tech_seed	tech_term	74	裁员
+许家印	xu jia yin	ai_tech_seed	tech_leader	74	许家印
+避雷	bi lei	ai_tech_seed	tech_term	74	避雷
+量化宽松	liang hua kuan song	ai_tech_seed	fintech	74	量化宽松
+钝感力	dun gan li	ai_tech_seed	tech_term	74	钝感力
+首发经济	shou fa jing ji	ai_tech_seed	tech_term	74	首发经济
+高级感	gao ji gan	ai_tech_seed	tech_term	74	高级感
+35岁危机	35 sui wei ji	ai_tech_seed	tech_term	72	35岁危机
+absolutely amazing		ai_tech_seed	tech_term	72	绝绝子
+abstract meme		ai_tech_seed	tech_term	72	抽象
+age 35 crisis		ai_tech_seed	tech_term	72	35岁危机
+annual recurring revenue		ai_tech_seed	tech_term	72	ARR
+ARR		ai_tech_seed	tech_term	72	ARR
+attention seeker		ai_tech_seed	tech_term	72	显眼包
+A轮	A lun	ai_tech_seed	tech_term	72	A轮
+Carrefour		ai_tech_seed	consumer_brand	72	家乐福
+cheers to myself		ai_tech_seed	tech_term	72	敬自己一杯
+Chen Ou		ai_tech_seed	tech_leader	72	陈欧
+Columbia		ai_tech_seed	consumer_brand	72	Columbia
+columbia sportswear		ai_tech_seed	consumer_brand	72	Columbia
+consumption voucher		ai_tech_seed	tech_term	72	消费券
+cyber immortality		ai_tech_seed	tech_term	72	赛博永生
+experience economy		ai_tech_seed	tech_term	72	体验经济
 Focus AI		ai_tech_seed	ai_platform	72	Fooocus
 Fooocus		ai_tech_seed	ai_platform	72	Fooocus
 fooocus		ai_tech_seed	ai_platform	72	Fooocus
+fortune comes		ai_tech_seed	tech_term	72	来财
+h and m		ai_tech_seed	consumer_brand	72	H&M
+H&M		ai_tech_seed	consumer_brand	72	H&M
+hard control meme		ai_tech_seed	tech_term	72	硬控
+heavy office vibe		ai_tech_seed	tech_term	72	班味很重
+HM		ai_tech_seed	consumer_brand	72	H&M
+ice snow economy		ai_tech_seed	tech_term	72	冰雪经济
+Jiangsu Super League		ai_tech_seed	tech_term	72	苏超
 Labubu		ai_tech_seed	tech_term	72	拉布布
 labubu		ai_tech_seed	tech_term	72	Labubu
+Langlangshan monster		ai_tech_seed	tech_term	72	浪浪山小妖怪
+localization		ai_tech_seed	tech_term	72	本地化
 lying flat		ai_tech_seed	tech_term	72	躺平
+mid-length video		ai_tech_seed	tech_term	72	中视频
+Patagonia		ai_tech_seed	consumer_brand	72	Patagonia
+patagonia		ai_tech_seed	consumer_brand	72	Patagonia
+PLG		ai_tech_seed	tech_term	72	PLG
+product led growth		ai_tech_seed	tech_term	72	PLG
+public institution exam		ai_tech_seed	tech_term	72	考编
+Series A		ai_tech_seed	tech_term	72	A轮
 side hustle		ai_tech_seed	tech_term	72	副业
+special forces travel		ai_tech_seed	tech_term	72	特种兵旅游
+stealth vibe		ai_tech_seed	tech_term	72	偷感
+texture quality		ai_tech_seed	tech_term	72	质感
+value investing		ai_tech_seed	tech_term	72	价值投资
+value investor		ai_tech_seed	tech_term	72	价值投资者
 village coffee		ai_tech_seed	tech_term	72	村咖
+Zhou Hang		ai_tech_seed	tech_leader	72	周航
+中视频	zhong shi pin	ai_tech_seed	tech_term	72	中视频
+价值投资	jia zhi tou zi	ai_tech_seed	tech_term	72	价值投资
+价值投资者	jia zhi tou zi zhe	ai_tech_seed	tech_term	72	价值投资者
+体验经济	ti yan jing ji	ai_tech_seed	tech_term	72	体验经济
+偷感	tou gan	ai_tech_seed	tech_term	72	偷感
+冰雪经济	bing xue jing ji	ai_tech_seed	tech_term	72	冰雪经济
 副业	fu ye	ai_tech_seed	tech_term	72	副业
+周航	zhou hang	ai_tech_seed	tech_leader	72	周航
+哪吒闹海	na zha nao hai	ai_tech_seed	tech_term	72	哪吒闹海
+家乐福	jia le fu	ai_tech_seed	consumer_brand	72	家乐福
+巴塔哥尼亚		ai_tech_seed	consumer_brand	72	Patagonia
+抽象	chou xiang	ai_tech_seed	tech_term	72	抽象
 拉布布	la bu bu	ai_tech_seed	tech_term	72	拉布布
+敬自己一杯	jing zi ji yi bei	ai_tech_seed	tech_term	72	敬自己一杯
+显眼包	xian yan bao	ai_tech_seed	tech_term	72	显眼包
+本地化	ben di hua	ai_tech_seed	tech_term	72	本地化
 村咖	cun ka	ai_tech_seed	tech_term	72	村咖
+来财	lai cai	ai_tech_seed	tech_term	72	来财
+浪浪山小妖怪	lang lang shan xiao yao guai	ai_tech_seed	tech_term	72	浪浪山小妖怪
+消费券	xiao fei quan	ai_tech_seed	tech_term	72	消费券
+特种兵旅游	te zhong bing lv you	ai_tech_seed	tech_term	72	特种兵旅游
+班味很重	ban wei hen zhong	ai_tech_seed	tech_term	72	班味很重
+硬控	ying kong	ai_tech_seed	tech_term	72	硬控
+绝绝子	jue jue zi	ai_tech_seed	tech_term	72	绝绝子
+考编	kao bian	ai_tech_seed	tech_term	72	考编
+苏超	su chao	ai_tech_seed	tech_term	72	苏超
+质感	zhi gan	ai_tech_seed	tech_term	72	质感
+赛博永生	sai bo yong sheng	ai_tech_seed	tech_term	72	赛博永生
 躺平	tang ping	ai_tech_seed	tech_term	72	躺平
+陈欧	chen ou	ai_tech_seed	tech_leader	72	陈欧
+addictive hype		ai_tech_seed	tech_term	70	上头
+B轮	B lun	ai_tech_seed	tech_term	70	B轮
+CAC		ai_tech_seed	tech_term	70	CAC
+customer acquisition cost		ai_tech_seed	tech_term	70	CAC
+cyber bodhisattva		ai_tech_seed	tech_term	70	赛博菩萨
+cyber buddha		ai_tech_seed	tech_term	70	赛博佛祖
+flexible employment		ai_tech_seed	tech_term	70	灵活就业
+fragile college student		ai_tech_seed	tech_term	70	脆皮大学生
+fresh and lively		ai_tech_seed	tech_term	70	水灵灵
+heavy stealth vibe		ai_tech_seed	tech_term	70	偷感很重
+however what can you do		ai_tech_seed	tech_term	70	如何又能怎
+Jumei		ai_tech_seed	tech_company	70	聚美优品
+layoff euphemism		ai_tech_seed	tech_term	70	优化
+lifetime value		ai_tech_seed	tech_term	70	LTV
+LTV		ai_tech_seed	tech_term	70	LTV
+monthly recurring revenue		ai_tech_seed	tech_term	70	MRR
+MRR		ai_tech_seed	tech_term	70	MRR
+nailed it		ai_tech_seed	tech_term	70	拿捏
+really or not		ai_tech_seed	tech_term	70	尊嘟假嘟
+sales led growth		ai_tech_seed	tech_term	70	SLG
+Series B		ai_tech_seed	tech_term	70	B轮
+SLG		ai_tech_seed	tech_term	70	SLG
+turn off vibe		ai_tech_seed	tech_term	70	下头
+上头	shang tou	ai_tech_seed	tech_term	70	上头
+下头	xia tou	ai_tech_seed	tech_term	70	下头
+优化	you hua	ai_tech_seed	tech_term	70	优化
+偷感很重	tou gan hen zhong	ai_tech_seed	tech_term	70	偷感很重
+如何又能怎	ru he you neng zen	ai_tech_seed	tech_term	70	如何又能怎
+尊嘟假嘟	zun du jia du	ai_tech_seed	tech_term	70	尊嘟假嘟
+拿捏	na nie	ai_tech_seed	tech_term	70	拿捏
+水灵灵	shui ling ling	ai_tech_seed	tech_term	70	水灵灵
+灵活就业	ling huo jiu ye	ai_tech_seed	tech_term	70	灵活就业
+聚美优品	ju mei you pin	ai_tech_seed	tech_company	70	聚美优品
+脆皮大学生	cui pi da xue sheng	ai_tech_seed	tech_term	70	脆皮大学生
+赛博佛祖	sai bo fo zu	ai_tech_seed	tech_term	70	赛博佛祖
+赛博菩萨	sai bo pu sa	ai_tech_seed	tech_term	70	赛博菩萨
+barbecue done		ai_tech_seed	tech_term	68	芭比Q了
+C轮	C lun	ai_tech_seed	tech_term	68	C轮
+decacorn		ai_tech_seed	tech_term	68	decacorn
+decacorn startup		ai_tech_seed	tech_term	68	decacorn
+finished		ai_tech_seed	tech_term	68	芭比Q了
+NDR		ai_tech_seed	tech_term	68	NDR
+net dollar retention		ai_tech_seed	tech_term	68	NDR
+pre a round		ai_tech_seed	tech_term	68	Pre-A
+Pre-A		ai_tech_seed	tech_term	68	Pre-A
+Series C		ai_tech_seed	tech_term	68	C轮
+thank you meme		ai_tech_seed	tech_term	68	栓Q
+栓Q	shuan Q	ai_tech_seed	tech_term	68	栓Q
+毕业	bi ye	ai_tech_seed	tech_term	68	毕业
+芭比Q了	ba bi Q le	ai_tech_seed	tech_term	68	芭比Q了

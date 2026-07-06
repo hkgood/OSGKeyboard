@@ -30,6 +30,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let detectedAppContext = "config.detectedAppContext"
         public static let detectedAppContextAt = "config.detectedAppContextAt"
         public static let personalDictionary = "config.personalDictionary.v1"
+        /// When true, the main app mirrors the personal dictionary via iCloud KVS.
+        public static let personalDictionaryICloudSyncEnabled = "config.personalDictionary.iCloudSyncEnabled"
         /// When true, the host app auto-returns to the source app after a cold-start handoff.
         public static let flowSkipAppSwitch = "config.flowSkipAppSwitch"
         /// Raw `FlowInactivityDuration` value; session expires after this idle window.
@@ -53,6 +55,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var cursorDragNavigationEnabled: Bool
     public var polishIntensity: PolishIntensity
     public var personalDictionary: PersonalDictionary
+    /// Opt-in iCloud KVS sync for the personal dictionary (main app only).
+    public var personalDictionaryICloudSyncEnabled: Bool
     /// Auto-return to the host app after `startflow` cold start (default on).
     public var flowSkipAppSwitch: Bool
     /// Idle timeout before the Flow session ends; resets on each utterance.
@@ -154,6 +158,12 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             }(),
             polishIntensity: resolvePolishIntensity(from: defaults),
             personalDictionary: decodePersonalDictionary(from: defaults),
+            personalDictionaryICloudSyncEnabled: {
+                if defaults.object(forKey: Keys.personalDictionaryICloudSyncEnabled) == nil {
+                    return true
+                }
+                return defaults.bool(forKey: Keys.personalDictionaryICloudSyncEnabled)
+            }(),
             flowSkipAppSwitch: {
                 if defaults.object(forKey: Keys.flowSkipAppSwitch) == nil {
                     return true
@@ -212,6 +222,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(polishIntensity.rawValue, forKey: Keys.polishIntensity)
         defaults.set(flowSkipAppSwitch, forKey: Keys.flowSkipAppSwitch)
         defaults.set(flowInactivityDuration.rawValue, forKey: Keys.flowInactivityDuration)
+        defaults.set(personalDictionaryICloudSyncEnabled, forKey: Keys.personalDictionaryICloudSyncEnabled)
         Self.encodePersonalDictionary(personalDictionary, to: defaults)
     }
 

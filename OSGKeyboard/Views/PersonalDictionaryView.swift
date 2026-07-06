@@ -80,60 +80,48 @@ struct PersonalDictionaryView: View {
                 saveManualEntry(term: term, editingID: editingEntry?.id)
             }
         }
+        .task {
+            reloadFromStore()
+            await PersonalDictionaryCloudSync.shared.pullAndMergeIfEnabled()
+            reloadFromStore()
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(for: .personalDictionaryDidSyncFromCloud)
+        ) { _ in
+            reloadFromStore()
+        }
     }
 
     // MARK: - List
 
     private var list: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: Spacing.lg) {
-                introBanner
-                ForEach(filteredSections, id: \.0) { category, items in
-                    section(for: category, items: items)
-                }
-            }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.vertical, Spacing.md)
-            .tabBarScrollBottomPadding()
-        }
-        .searchable(text: $searchText, prompt: "settings.personalDictionary.search.prompt")
-    }
-
-    private var introBanner: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("settings.personalDictionary.intro.title")
-                .font(TypeStyle.caption)
-                .foregroundStyle(palette.textPrimary)
-            Text("settings.personalDictionary.intro.body")
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Spacing.md)
-        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                .stroke(palette.divider, lineWidth: 0.5)
-        )
-    }
-
-    private func section(for _: PersonalDictionary.Entry.Category, items: [PersonalDictionary.Entry]) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            VStack(spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, entry in
-                    entryRow(entry)
-                    if index < items.count - 1 {
-                        Divider().background(palette.divider)
+        List {
+            ForEach(filteredSections, id: \.0) { _, items in
+                Section {
+                    ForEach(items) { entry in
+                        entryRow(entry)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                            .listRowBackground(palette.surface)
+                            .listRowSeparatorTint(palette.divider)
+                    }
+                    .onDelete { offsets in
+                        delete(items: items, at: offsets)
                     }
                 }
             }
-            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
         }
+        .listStyle(.insetGrouped)
+        .listSectionSpacing(Spacing.lg)
+        .scrollContentBackground(.hidden)
+        .background(palette.background)
+        // 让搜索栏与首个词条之间留出呼吸空间，视觉更透气。
+        .contentMargins(.top, Spacing.lg, for: .scrollContent)
+        .searchable(
+            text: $searchText,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "settings.personalDictionary.search.prompt"
+        )
+        .tabBarScrollBottomPadding()
     }
 
     private func entryRow(_ entry: PersonalDictionary.Entry) -> some View {
@@ -187,18 +175,10 @@ struct PersonalDictionaryView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive) {
-                delete(entry)
-            } label: {
-                Label("common.delete", systemImage: "trash")
-            }
-        }
     }
 
     private var emptyState: some View {
         VStack(spacing: Spacing.sm) {
-            Spacer()
             Image(systemName: "square.stack.3d.down.right.fill")
                 .font(.system(size: 36, weight: .regular))
                 .foregroundStyle(palette.textTertiary.opacity(0.5))
@@ -219,8 +199,11 @@ struct PersonalDictionaryView: View {
             .buttonStyle(.borderedProminent)
             .tint(palette.accent)
             .padding(.top, Spacing.sm)
-            Spacer()
         }
+        // 内容按自身高度居中，再上移抵消 large title 占用的顶部空间，
+        // 让空状态在整屏视觉上真正垂直居中。
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+        .padding(.bottom, 72)
     }
 
     // MARK: - Derived data
@@ -285,6 +268,12 @@ struct PersonalDictionaryView: View {
         persist()
     }
 
+    private func delete(items: [PersonalDictionary.Entry], at offsets: IndexSet) {
+        for index in offsets {
+            delete(items[index])
+        }
+    }
+
     private func clearAll() {
         dictionary = .empty
         generatingAliasEntryIDs = []
@@ -294,6 +283,13 @@ struct PersonalDictionaryView: View {
     private func persist() {
         dictionary.version += 1
         store.setPersonalDictionary(dictionary)
+        Task {
+            try? await PersonalDictionaryCloudSync.shared.pushLocalIfEnabled(dictionary)
+        }
+    }
+
+    private func reloadFromStore() {
+        dictionary = store.personalDictionary
     }
 }
 

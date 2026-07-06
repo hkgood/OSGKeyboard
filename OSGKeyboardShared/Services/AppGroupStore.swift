@@ -155,6 +155,16 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setPersonalDictionary(_ dictionary: PersonalDictionary) {
         mutateConfiguration { $0.personalDictionary = dictionary }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public var personalDictionaryICloudSyncEnabled: Bool {
+        get { configuration.personalDictionaryICloudSyncEnabled }
+        set { setPersonalDictionaryICloudSyncEnabled(newValue) }
+    }
+
+    public func setPersonalDictionaryICloudSyncEnabled(_ enabled: Bool) {
+        mutateConfiguration { $0.personalDictionaryICloudSyncEnabled = enabled }
     }
 
     // MARK: - Client

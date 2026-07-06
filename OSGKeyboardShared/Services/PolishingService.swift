@@ -10,8 +10,8 @@
 // English dictation while halving the network round-trip.
 //
 // Engine matrix:
-//   - `engineMode == "cloud"`  → on-device ASR, then user's cloud LLM
-//   - `engineMode == "local"`  → on-device ASR, then built-in DeepSeek
+//   - `engineMode == "cloud"`  → provider cloud ASR + user's cloud LLM
+//   - `engineMode == "local"`  → on-device ASR + built-in DeepSeek
 //   - Ultra-short, structure-free utterances skip the LLM entirely
 //   - Cloud without API key     → raw + `.missingAPIKey` warning
 //   - Local without build key   → raw + `.missingAPIKey` warning

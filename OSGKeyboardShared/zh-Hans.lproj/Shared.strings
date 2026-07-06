@@ -33,6 +33,17 @@
 "error.asr.noSpeech" = "未识别到语音内容，请重试。";
 "error.asr.chunkFailed" = "第 %lld 段识别失败：%@";
 
+/* Cloud ASR errors */
+"error.cloudASR.noAPIKey" = "未填写 API Key。";
+"error.cloudASR.invalidURL" = "云端识别接口地址无效。";
+"error.cloudASR.http" = "云端识别返回 HTTP %lld。";
+"error.cloudASR.httpWithMessage" = "云端识别返回 HTTP %lld：%@";
+"error.cloudASR.decoding" = "解析云端识别响应失败：%@";
+"error.cloudASR.transport" = "云端识别网络错误：%@";
+"error.cloudASR.emptyTranscript" = "云端识别返回了空文本。";
+"error.cloudASR.audioTooLong" = "音频片段超过该云端识别服务的时长限制。";
+"error.cloudASR.providerUnsupported" = "该服务商暂不支持云端语音识别。";
+
 /* 润色场景 */
 "polishScenario.daily_chat" = "日常聊天";
 "polishScenario.social_lifestyle" = "小红书";

@@ -140,7 +140,8 @@ struct HomeView: View {
     }
 
     private var headerGradientColors: [Color] {
-        if sessionIsLive {
+        // 云端引擎未配置（缺 API Key）时不算就绪，保持中性灰渐变。
+        if sessionIsLive, !needsCloudSetup {
             return [
                 palette.accent.opacity(0.28),
                 palette.accent.opacity(0.10),
@@ -175,7 +176,14 @@ struct HomeView: View {
                 .fill(flowStatusColor)
                 .frame(width: 6, height: 6)
 
-            if flowManager.isActive,
+            if needsCloudSetup {
+                // 云端引擎缺 API Key：不显示就绪 / 计时 / 结束按钮。
+                Text("home.flow.notReady")
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.warning)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            } else if flowManager.isActive,
                let expires = flowManager.sessionExpiresAt {
                 Text("home.flow.label")
                     .font(TypeStyle.caption2)
@@ -195,7 +203,10 @@ struct HomeView: View {
                     .minimumScaleFactor(0.85)
             }
 
-            if flowManager.isActive {
+            if needsCloudSetup {
+                // 无按钮：引导卡片已提示去设置填 API Key。
+                EmptyView()
+            } else if flowManager.isActive {
                 Button {
                     flowManager.endSession()
                 } label: {
@@ -306,6 +317,7 @@ struct HomeView: View {
     }
 
     private var flowStatusColor: Color {
+        if needsCloudSetup { return palette.warning }
         if flowManager.isActive { return palette.accent }
         if flowManager.isStarting { return palette.accent }
         if needsPermissionSetup { return palette.warning }
