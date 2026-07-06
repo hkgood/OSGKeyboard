@@ -22,7 +22,7 @@
   <h2>What we collect</h2>
   <ul>
     <li><strong>Voice audio</strong> — captured only while you actively record. Audio is transcribed on-device with Apple's <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code>; raw audio is not uploaded by OSGKeyboard.</li>
-    <li><strong>Transcribed text</strong> — after on-device ASR, the transcript (not audio) is sent for polish. On the <strong>local engine</strong>, polish uses a built-in DeepSeek endpoint configured at build time. On the <strong>cloud engine</strong>, polish and optional translation use the OpenAI-compatible API you configure (e.g. OpenAI, Qwen DashScope, Moonshot, Zhipu, or your own server).</li>
+    <li><strong>Transcribed text</strong> — after on-device ASR, the transcript (not audio) is sent for polish. On the <strong>local engine</strong>, polish uses a built-in DeepSeek endpoint configured at build time. On the <strong>cloud engine</strong>, polish and optional translation use the OpenAI-compatible API you configure (e.g. OpenAI, Qwen DashScope, Moonshot, Zhipu, Xiaomi MiMo, or your own server).</li>
     <li><strong>API credentials</strong> — your cloud-engine LLM API key is stored in the iOS Keychain on your device and is read only when an LLM request is made. It is shared with the main app through a shared Keychain group, never through UserDefaults.</li>
     <li><strong>App preferences</strong> — engine mode, recognition language, polish intensity, translation target, handedness, cursor-navigation toggle, and keyboard settings are stored in App Group <code>UserDefaults</code> on your device so the main app and keyboard extension stay in sync.</li>
     <li><strong>Personal dictionary</strong> — terms and aliases you add in the Dictionary tab are stored locally on your device. They are included in LLM polish prompts so your vocabulary is preserved; dictionary data is not uploaded to a separate server.</li>
@@ -74,7 +74,7 @@
   <h2>我们处理的数据</h2>
   <ul>
     <li><strong>语音音频</strong> — 仅在你主动录音时采集。音频在设备端通过 <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code> 转写，OSGKeyboard 不会上传原始录音。</li>
-    <li><strong>转写文字</strong> — 端侧 ASR 完成后，转写文字（非音频）会发送润色。<strong>本地引擎</strong>使用构建时配置的内置 DeepSeek 端点；<strong>云端引擎</strong>的润色与可选翻译使用你配置的 OpenAI 兼容 API（OpenAI / 通义 DashScope / Moonshot / 智谱 / 自建服务等）。</li>
+    <li><strong>转写文字</strong> — 端侧 ASR 完成后，转写文字（非音频）会发送润色。<strong>本地引擎</strong>使用构建时配置的内置 DeepSeek 端点；<strong>云端引擎</strong>的润色与可选翻译使用你配置的 OpenAI 兼容 API（OpenAI / 通义 DashScope / Moonshot / 智谱 / 小米 MiMo / 自建服务等）。</li>
     <li><strong>API 凭证</strong> — 云端引擎的 LLM API Key 保存在设备 Keychain，仅在发起 LLM 请求时读取；通过共享 Keychain 组与主 App 共享，<strong>不会</strong>写入 <code>UserDefaults</code>。</li>
     <li><strong>应用偏好</strong> — 引擎模式、识别语言、润色档位、翻译目标、握持偏好、光标导航开关、键盘设置等保存在 App Group <code>UserDefaults</code>，仅用于主 App 与键盘扩展之间的状态同步。</li>
     <li><strong>个性词库</strong> — 你在「词库」Tab 添加的词条与别名保存在本机。润色时会写入 LLM 提示词以保留你的词汇；词库数据不会上传到独立服务器。</li>

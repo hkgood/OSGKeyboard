@@ -84,6 +84,27 @@ final class FlowSessionBridgeTests: XCTestCase {
         XCTAssertNil(FlowSessionBridge.remainingSessionDuration(defaults: defaults))
     }
 
+    func testConsumeTranscriptionErrorIncludesKind() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.storeTranscriptionError(
+            "no speech",
+            kind: .noSpeech,
+            defaults: defaults
+        )
+        let error = FlowSessionBridge.consumeTranscriptionError(defaults: defaults)
+        XCTAssertEqual(error?.message, "no speech")
+        XCTAssertEqual(error?.kind, .noSpeech)
+        XCTAssertNil(FlowSessionBridge.consumeTranscriptionError(defaults: defaults))
+    }
+
+    func testTranscriptionPartialRoundTrip() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.storeTranscriptionPartial("你好世界", defaults: defaults)
+        XCTAssertEqual(FlowSessionBridge.transcriptionPartial(defaults: defaults), "你好世界")
+        FlowSessionBridge.storeTranscriptionResult("final", defaults: defaults)
+        XCTAssertNil(FlowSessionBridge.transcriptionPartial(defaults: defaults))
+    }
+
     func testDarwinNotificationPostsWithoutCrashing() {
         FlowSessionDarwin.postSessionChanged()
     }

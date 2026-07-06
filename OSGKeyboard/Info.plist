@@ -40,6 +40,54 @@
 	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.utilities</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>weixin</string>
+		<string>mqq</string>
+		<string>wxwork</string>
+		<string>dingtalk</string>
+		<string>lark</string>
+		<string>tg</string>
+		<string>whatsapp</string>
+		<string>line</string>
+		<string>fb-messenger</string>
+		<string>slack</string>
+		<string>msteams</string>
+		<string>discord</string>
+		<string>notion</string>
+		<string>bear</string>
+		<string>obsidian</string>
+		<string>drafts5</string>
+		<string>googlegmail</string>
+		<string>ms-outlook</string>
+		<string>googlechrome</string>
+		<string>sinaweibo</string>
+		<string>xhsdiscover</string>
+		<string>sgnl</string>
+		<string>kakaotalk</string>
+		<string>viber</string>
+		<string>zalo</string>
+		<string>skype</string>
+		<string>zoomus</string>
+		<string>things</string>
+		<string>todoist</string>
+		<string>evernote</string>
+		<string>onenote</string>
+		<string>readdle-spark</string>
+		<string>firefox</string>
+		<string>microsoft-edge</string>
+		<string>fb</string>
+		<string>instagram</string>
+		<string>twitter</string>
+		<string>barcelona</string>
+		<string>snapchat</string>
+		<string>reddit</string>
+		<string>pinterest</string>
+		<string>zhihu</string>
+		<string>bilibili</string>
+		<string>snssdk1128</string>
+		<string>tiktok</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
@@ -49,6 +97,8 @@
 	<string>OSGKeyboard uses the microphone for voice dictation and keeps a background audio session active while a voice session is running.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>OSGKeyboard uses on-device speech recognition to transcribe your voice. Audio is processed on your device and is not uploaded for transcription.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

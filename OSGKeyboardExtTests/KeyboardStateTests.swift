@@ -60,23 +60,61 @@ final class KeyboardStateTests: XCTestCase {
         }
     }
 
-    func testModeSwitchFromPolishToOff() {
+    func testFlowStructuredErrorKinds() {
         let s = KeyboardState()
-        XCTAssertEqual(s.mode, .polish)
-        s.mode = .off
-        XCTAssertEqual(s.mode, .off)
-        s.mode = .transcribe
-        XCTAssertEqual(s.mode, .transcribe)
-        s.mode = .polish
-        XCTAssertEqual(s.mode, .polish)
+        s.phase = .error(.manualOpenRequired, message: "open app")
+        if case .error(.manualOpenRequired, let msg) = s.phase {
+            XCTAssertEqual(msg, "open app")
+        } else {
+            XCTFail("expected manualOpenRequired")
+        }
+
+        s.phase = .error(.polishDegraded("warn"), message: "warn")
+        if case .error(.polishDegraded("warn"), _) = s.phase {} else {
+            XCTFail("expected polishDegraded")
+        }
+
+        s.phase = .error(.flowResultTimeout, message: "timeout")
+        if case .error(.flowResultTimeout, _) = s.phase {} else {
+            XCTFail("expected flowResultTimeout")
+        }
+
+        s.phase = .error(.flowSessionExpired, message: "expired")
+        if case .error(.flowSessionExpired, _) = s.phase {} else {
+            XCTFail("expected flowSessionExpired")
+        }
+
+        s.phase = .error(.fullAccessRequired, message: "full access")
+        if case .error(.fullAccessRequired, _) = s.phase {} else {
+            XCTFail("expected fullAccessRequired")
+        }
+
+        s.phase = .error(.noSpeechDetected, message: "no speech")
+        if case .error(.noSpeechDetected, _) = s.phase {} else {
+            XCTFail("expected noSpeechDetected")
+        }
+
+        s.phase = .error(.recognitionInterrupted, message: "interrupted")
+        if case .error(.recognitionInterrupted, _) = s.phase {} else {
+            XCTFail("expected recognitionInterrupted")
+        }
+
+        s.phase = .error(.hostAudioUnavailable, message: "audio")
+        if case .error(.hostAudioUnavailable, _) = s.phase {} else {
+            XCTFail("expected hostAudioUnavailable")
+        }
+
+        let flowError = FlowTranscriptionError(message: "asr failed", kind: .asrFailed)
+        XCTAssertEqual(
+            KeyboardState.Phase.ErrorKind.fromFlowTranscription(flowError),
+            .hostTranscriptionFailed("asr failed")
+        )
     }
 
-    func testInputModeRoundTripsThroughRawValue() {
-        // The mode is persisted by rawValue (see `AppGroupStore.setModeId`)
-        // so the round-trip is part of the public contract.
-        for mode in KeyboardState.InputMode.allCases {
-            let raw = mode.rawValue
-            XCTAssertNotNil(KeyboardState.InputMode(rawValue: raw))
-        }
+    func testInputModeIsPolishOnly() {
+        let s = KeyboardState()
+        XCTAssertEqual(s.mode, .polish)
+        XCTAssertEqual(KeyboardState.InputMode.allCases, [.polish])
+        XCTAssertEqual(KeyboardState.InputMode(rawValue: "polish"), .polish)
     }
 }

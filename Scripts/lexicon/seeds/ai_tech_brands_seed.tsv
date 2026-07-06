@@ -379,3 +379,242 @@ embodied AI		具身智能	tech_term	80
 数字游民	shu zi you min	digital nomad	tech_term	75
 远程办公	yuan cheng ban gong	remote work	tech_term	78
 副业	fu ye	side hustle	tech_term	72
+
+# --- 2026 AI models, agents & coding tools ---
+GPT-5		gpt five|GPT five|ChatGPT 5	ai_model	98
+GPT-5.5		gpt five five|GPT five point five|gpt-5.5	ai_model	98
+GPT-4o		gpt four o|GPT four oh|gpt4o	ai_model	92
+Claude Code		claude code|ClaudeCode|克劳德代码	dev_tool	96
+Claude Sonnet		claude sonnet|Sonnet|Sonnet 4|Sonnet 4.6	ai_model	94
+Claude Opus		claude opus|Opus|Opus 4|Opus 4.7	ai_model	94
+Composer		cursor composer|Composer 2|Composer 2.5	dev_tool	92
+Cursor Composer		cursor composer|Composer	dev_tool	92
+OpenAI Codex		openai codex|Codex|codex cli	dev_tool	92
+Codex CLI		codex cli|OpenAI Codex	dev_tool	90
+Gemini CLI		gemini cli	dev_tool	88
+Gemini 2.5 Pro		gemini two five pro|Gemini Pro	ai_model	90
+Gemini 3 Pro		gemini three pro|Gemini Pro	ai_model	92
+Gemini Flash		gemini flash|Gemini 3 Flash|Gemini 2.5 Flash	ai_model	88
+DeepSeek V3		deepseek v three|DeepSeek-V3	ai_model	92
+DeepSeek R1		deepseek r one|DeepSeek-R1	ai_model	95
+DeepSeek V4		deepseek v four|DeepSeek-V4|DeepSeek V4 Pro	ai_model	92
+Qwen Coder		qwen coder|千问 coder|通义千问 coder	ai_model	90
+Qwen Max		qwen max|Qwen3 Max|通义千问 Max	ai_model	88
+Qwen Thinking		qwen thinking|通义千问 thinking	ai_model	86
+Kimi K2		kimi k two|Kimi K2.6|Kimi K2.5	ai_model	90
+Kimi Code		kimi code|Moonshot Kimi Code	dev_tool	88
+GLM Coding Plan		glm coding plan|智谱 coding plan	dev_tool	84
+GLM-4.6		glm four six|GLM 4.6	ai_model	84
+GLM-5		glm five|GLM 5	ai_model	86
+Grok 4		grok four|Grok 4.3|Grok Build	ai_model	86
+Grok Build		grok build|Grok Build CLI	dev_tool	84
+Llama 4		llama four|Llama Maverick|Llama Scout	ai_model	86
+Llama Maverick		llama maverick|Llama 4 Maverick	ai_model	84
+Mistral Large		mistral large|Mistral Large 3	ai_model	84
+Devin		devin|Cognition Devin	dev_tool	88
+Cognition		cognition ai|Cognition AI	ai_brand	82
+Kiro		kiro|Amazon Kiro	dev_tool	84
+Amazon Q		amazon q|AWS Q|Q Developer	dev_tool	84
+Q Developer		q developer|Amazon Q Developer	dev_tool	82
+OpenCode		open code|opencode|OpenCode AI	dev_tool	88
+OpenHands		open hands|OpenHands AI	dev_tool	84
+Roo Code		roo code|RooCode	dev_tool	80
+Continue		continue dev|Continue.dev	dev_tool	78
+Zed		zed editor|Zed AI	dev_tool	80
+Trae		trae|Trae AI|Trae CN	dev_tool	84
+TRAE		trae|字节 Trae	dev_tool	82
+Lovable		lovable|Lovable AI	dev_tool	84
+Bolt.new		bolt new|Bolt AI|StackBlitz Bolt	dev_tool	84
+v0		vercel v0|v zero|V0	dev_tool	86
+Replit Agent		replit agent|Replit AI	dev_tool	84
+Manus		manus|Manus AI	ai_brand	86
+AutoGen		autogen|Microsoft AutoGen	ai_platform	82
+CrewAI		crew ai|Crew AI	ai_platform	82
+LangGraph		lang graph|LangGraph	ai_platform	84
+DSPy		dspy|DSPy AI	ai_platform	78
+LlamaIndex		llama index|LlamaIndex	ai_platform	82
+Haystack		haystack ai|Deepset Haystack	ai_platform	76
+ComfyUI		comfy ui|ComfyUI	ai_platform	78
+Fooocus		fooocus|Focus AI	ai_platform	72
+LM Studio		lm studio|LMStudio	ai_platform	82
+Open WebUI		open web ui|OpenWebUI	ai_platform	82
+AnythingLLM		anything llm|Anything LLM	ai_platform	78
+
+# --- Agent, MCP & AI engineering terms ---
+Agent Mode		agent mode|代理模式|智能体模式	ai_term	92
+智能体模式	zhi neng ti mo shi	Agent Mode	ai_term	90
+multi-agent		multi agent|多智能体	ai_term	90
+多智能体	duo zhi neng ti	multi-agent	ai_term	88
+subagent		sub agent|子智能体	ai_term	86
+子智能体	zi zhi neng ti	subagent	ai_term	84
+tool use		tool-use|工具使用	ai_term	88
+tool calling		tool-calling|工具调用	ai_term	90
+structured output		structured outputs|结构化输出	ai_term	86
+结构化输出	jie gou hua shu chu	structured output	ai_term	84
+context engineering		context engineering|上下文工程	ai_term	92
+上下文工程	shang xia wen gong cheng	context engineering	ai_term	90
+prompt caching		prompt cache|提示词缓存	ai_term	84
+提示词缓存	ti shi ci huan cun	prompt caching	ai_term	82
+semantic search		语义搜索|semantic retrieval	ai_term	84
+语义搜索	yu yi sou suo	semantic search	ai_term	82
+vector search		向量搜索|vector retrieval	ai_term	84
+向量搜索	xiang liang sou suo	vector search	ai_term	82
+hybrid search		混合搜索|hybrid retrieval	ai_term	82
+reranker		rerank|重排序模型	ai_term	82
+重排序模型	chong pai xu mo xing	reranker	ai_term	80
+evals		evaluation|模型评测|评测集	ai_term	86
+模型评测	mo xing ping ce	evals	ai_term	84
+SWE-agent		swe agent|SWE Agent	ai_term	80
+WebDev Arena		web dev arena|WebDevArena	ai_term	76
+LLM harness		llm harness|agent harness	ai_term	80
+agent harness		agentic harness|智能体框架	ai_term	80
+reasoning effort		reasoning effort|推理强度	ai_term	78
+推理强度	tui li qiang du	reasoning effort	ai_term	76
+test-time compute		test time compute|测试时计算	ai_term	78
+上下文压缩	shang xia wen ya suo	context compression	ai_term	82
+context compression		上下文压缩	ai_term	80
+memory bank		memory bank|记忆库	ai_term	78
+AI workflow		ai workflow|AI 工作流	ai_term	82
+工作流编排	gong zuo liu bian pai	workflow orchestration	ai_term	82
+workflow orchestration		工作流编排	ai_term	80
+MCP server		mcp server|模型上下文协议服务器	ai_term	90
+MCP client		mcp client|模型上下文协议客户端	ai_term	86
+MCP Inspector		mcp inspector|MCP 调试器	dev_tool	82
+Streamable HTTP		streamable http|MCP HTTP	ai_term	78
+stdio transport		stdio transport|标准输入输出传输	ai_term	76
+
+# --- Developer platforms, databases & infra ---
+Neon		neon database|Neon Postgres	tech_company	84
+PlanetScale		planet scale|PlanetScale MySQL	tech_company	82
+Turso		turso|libSQL	tech_company	80
+libSQL		lib sql|Turso	tech_term	78
+Convex		convex dev|Convex database	tech_company	80
+Clerk		clerk auth|Clerk	dev_tool	80
+Auth0		auth zero|Auth Zero	dev_tool	78
+WorkOS		work os|Work OS	dev_tool	78
+Clerk Auth		clerk auth|Clerk	dev_tool	78
+Drizzle		drizzle orm|Drizzle ORM	dev_tool	82
+Prisma		prisma orm|Prisma ORM	dev_tool	84
+Drizzle ORM		drizzle orm|Drizzle	dev_tool	82
+Prisma ORM		prisma orm|Prisma	dev_tool	82
+Postgres		postgres|PostgreSQL|postgre sql	tech_term	88
+PostgreSQL		postgresql|Postgres|postgre sql	tech_term	88
+SQLite		sqlite|SQLite	tech_term	84
+DuckDB		duck db|Duck DB	tech_term	80
+ClickHouse		click house|ClickHouse	tech_term	80
+Kafka		kafka|Apache Kafka	tech_term	82
+Redpanda		red panda|Redpanda	tech_company	76
+OpenTelemetry		open telemetry|OTel	tech_term	84
+OTel		otel|OpenTelemetry	tech_term	82
+Grafana		grafana	dev_tool	78
+Prometheus		prometheus	dev_tool	78
+Sentry		sentry	dev_tool	82
+SST		sst|Serverless Stack	dev_tool	76
+Tailscale		tailscale	tech_company	78
+Fly.io		fly io|Fly	tech_company	78
+Render		render.com|Render	tech_company	76
+Railway		railway app|Railway	tech_company	78
+Modal		modal labs|Modal	tech_company	78
+Modal Labs		modal labs|Modal	tech_company	76
+Hugging Face Spaces		hugging face spaces|Spaces	ai_platform	78
+Nix		nix|NixOS	tech_term	78
+NixOS		nixos|Nix OS	tech_term	76
+Bun		bun js|Bun runtime	dev_tool	82
+Deno		deno|Deno Deploy	dev_tool	80
+Biome		biome js|Biome	dev_tool	78
+Turborepo		turbo repo|Turborepo	dev_tool	78
+Nx		nx monorepo|Nx	dev_tool	76
+pnpm		pnpm	dev_tool	76
+shadcn/ui		shadcn ui|shadcn|shad cn	dev_tool	84
+Tailwind CSS		tailwind css|Tailwind	dev_tool	84
+React Server Components		react server components|RSC	dev_tool	82
+RSC		react server components	dev_tool	80
+Server Actions		server actions|React Server Actions	dev_tool	78
+Astro		astro js|Astro	dev_tool	80
+SvelteKit		svelte kit|SvelteKit	dev_tool	80
+Remix		remix run|Remix	dev_tool	78
+Nuxt		nuxt|Nuxt.js	dev_tool	78
+Hono		hono js|Hono	dev_tool	78
+FastAPI		fast api|FastAPI	dev_tool	82
+Ktor		ktor|Ktor server	dev_tool	76
+
+# --- Apple, Swift & on-device speech stack ---
+SwiftData		swift data|SwiftData	dev_tool	88
+Swift Testing		swift testing|Testing framework	dev_tool	86
+App Intents		app intents|AppIntents	dev_tool	84
+WidgetKit		widget kit|WidgetKit	dev_tool	82
+ActivityKit		activity kit|ActivityKit	dev_tool	82
+Live Activities		live activities|灵动岛实时活动	dev_tool	82
+App Group		app group|App Groups	dev_tool	86
+Core ML		core ml|CoreML	dev_tool	88
+Create ML		create ml|CreateML	dev_tool	82
+SpeechAnalyzer		speech analyzer|Speech Analyzer	dev_tool	92
+DictationTranscriber		dictation transcriber|Dictation Transcriber	dev_tool	92
+SpeechTranscriber		speech transcriber|Speech Transcriber	dev_tool	86
+SFCustomLanguageModelData		custom language model data|SF Custom Language Model Data	dev_tool	90
+SFSpeechLanguageModel		speech language model|SF Speech Language Model	dev_tool	88
+AssetInventory		asset inventory|Speech AssetInventory	dev_tool	84
+AVAudioEngine		av audio engine|AVAudioEngine	dev_tool	84
+AVAudioSession		av audio session|AVAudioSession	dev_tool	84
+TestFlight		test flight|TestFlight	dev_tool	84
+App Store Connect		app store connect|AppStoreConnect	dev_tool	84
+XcodeGen		xcode gen|XcodeGen	dev_tool	82
+Tuist		tuist	dev_tool	78
+Swift Package Manager		swift package manager|SPM	dev_tool	82
+SPM		swift package manager	dev_tool	80
+SF Symbols		sf symbols|SFSymbols	dev_tool	82
+visionOS		vision os|Vision Pro	dev_tool	82
+RealityKit		reality kit|RealityKit	dev_tool	80
+Metal		metal|Metal Performance Shaders	dev_tool	80
+
+# --- China AI, creator tools & current tech buzzwords ---
+可灵	ke ling	Kling|Kling AI	ai_brand	86
+Kling		kling ai|可灵	ai_brand	86
+海螺AI	hai luo AI	Hailuo|MiniMax Video	ai_brand	84
+Hailuo		hailuo ai|海螺AI	ai_brand	82
+即梦	ji meng	Jimeng|即梦AI	ai_brand	84
+Jimeng		jimeng ai|即梦	ai_brand	82
+剪映	jian ying	CapCut	tech_company	84
+CapCut		cap cut|剪映	tech_company	84
+腾讯元宝	teng xun yuan bao	Yuanbao	ai_brand	84
+元宝	yuan bao	腾讯元宝|Yuanbao	ai_brand	82
+纳米AI	na mi AI	Nami AI	ai_brand	78
+秘塔AI	mi ta AI	Metaso	ai_brand	80
+Metaso		metaso|秘塔AI	ai_brand	78
+夸克AI	kua ke AI	Quark AI	ai_brand	80
+Quark		quark ai|夸克	ai_brand	78
+天工	tian gong	tiangong|昆仑万维天工	ai_brand	78
+商量	shang liang	SenseChat	ai_brand	76
+杭州六小龙	hang zhou liu xiao long	Hangzhou Six Little Dragons	tech_term	84
+AI治理	AI zhi li	AI governance	tech_term	84
+AI governance		AI治理	tech_term	82
+世界模型	shi jie mo xing	world model	ai_term	84
+world model		世界模型	ai_term	82
+端到端	duan dao duan	end-to-end	tech_term	82
+end-to-end		端到端	tech_term	80
+端侧模型	duan ce mo xing	on-device model	ai_term	84
+on-device model		端侧模型	ai_term	82
+本地模型	ben di mo xing	local model	ai_term	84
+local model		本地模型	ai_term	82
+具身智能体	ju shen zhi neng ti	embodied agent	ai_term	82
+embodied agent		具身智能体	ai_term	80
+人形机器人	ren xing ji qi ren	humanoid robot|humanoid	tech_term	86
+humanoid robot		人形机器人	tech_term	84
+新质生产力	xin zhi sheng chan li	new quality productive forces	tech_term	82
+数字分身	shu zi fen shen	digital avatar	tech_term	78
+digital avatar		数字分身	tech_term	76
+AI视频	AI shi pin	AI video	tech_term	82
+AI video		AI视频	tech_term	80
+文生图	wen sheng tu	text-to-image	tech_term	82
+图生视频	tu sheng shi pin	image-to-video	tech_term	82
+文生视频	wen sheng shi pin	text-to-video	tech_term	82
+小红书	xiao hong shu	Xiaohongshu|RedNote	tech_company	86
+Xiaohongshu		xiao hong shu|小红书|RedNote	tech_company	84
+RedNote		red note|Xiaohongshu|小红书	tech_company	82
+活人感	huo ren gan	authentically human|real person vibe	tech_term	80
+情绪价值	qing xu jia zhi	emotional value	tech_term	80
+赛博对账	sai bo dui zhang	cyber reconciliation	tech_term	78
+赛博	sai bo	cyber	tech_term	76
+村咖	cun ka	village coffee	tech_term	72
+拉布布	la bu bu	Labubu	tech_term	72
+Labubu		labubu|拉布布	tech_term	72

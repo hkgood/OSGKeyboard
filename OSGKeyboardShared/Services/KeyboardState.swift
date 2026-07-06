@@ -35,26 +35,37 @@ public final class KeyboardState: ObservableObject {
             case asr(String)
             case llm(LLMError)
             case appGroupUnavailable
+            /// Keyboard extension lacks Full Access for host-app jumps.
+            case fullAccessRequired
+            /// Auto-jump to the host app failed; user must open it manually.
+            case manualOpenRequired
+            /// Host delivered raw transcript; polish step failed or was skipped.
+            case polishDegraded(String)
+            /// Host ASR finished with no usable speech.
+            case noSpeechDetected
+            /// Host ASR was interrupted before a final transcript arrived.
+            case recognitionInterrupted
+            /// Host could not start background audio capture.
+            case hostAudioUnavailable
+            /// Host ASR or pipeline failed with a user-facing message.
+            case hostTranscriptionFailed(String)
+            /// Flow result did not arrive before the keyboard watchdog expired.
+            case flowResultTimeout
+            /// Host Flow session ended while the keyboard was idle.
+            case flowSessionExpired
             case unknown(String)
         }
 
         public enum Reason: Equatable { case mic, speech }
     }
 
+    /// Voice input always runs through polish; legacy off/transcribe modes removed.
     public enum InputMode: String, CaseIterable, Identifiable {
-        case off
-        case transcribe
         case polish
 
         public var id: String { rawValue }
 
-        public var labelKey: String {
-            switch self {
-            case .off:        return "mode.off"
-            case .transcribe: return "mode.transcribe"
-            case .polish:     return "mode.polish"
-            }
-        }
+        public var labelKey: String { "mode.polish" }
     }
 
     @Published public var phase: Phase = .idle
@@ -78,20 +89,6 @@ public final class KeyboardState: ObservableObject {
     @Published public var micDisabledHint: String = ""
     /// "local" → on-device ASR only. "cloud" → ASR + LLM polish.
     @Published public var engineMode: String = "cloud"
-    /// Which on-device ASR engine to use when `engineMode == "local"`.
-    /// Mirrored from `ProviderConfig.localASRBackend` for UI display
-    /// and for `state` consumers that want a single source of truth.
-    @Published public var localASRBackend: LocalASRBackend = .speechAnalyzer
-    /// v0.2.0: kept for source compatibility with the previous Qwen3
-    /// CoreML local engine. Always `true` now — iOS `SpeechAnalyzer`
-    /// ships with iOS 26 and has no per-user weights to download or
-    /// preload. Existing read sites will see `true` and behave the
-    /// same as the "stack ready" branch did.
-    @Published public var localModelsReady: Bool = true
-    /// v0.2.0: kept for source compatibility with the previous Qwen3
-    /// CoreML local engine. Always `false` now — there are no weights
-    /// for the host app to preload.
-    @Published public var localModelsLoaded: Bool = false
     /// v0.2.1 follow-up: derived — translation is on iff a target
     /// locale has been selected (mirrors `ProviderConfig.translationEnabled`
     /// so the chip / pipeline read the same source of truth).
@@ -103,9 +100,6 @@ public final class KeyboardState: ObservableObject {
     /// Defaults to `offLocaleId` so the keyboard boots in the "off"
     /// state on first install.
     @Published public var translationTargetLocaleId: String = TranslationLanguageCatalog.offLocaleId
-    /// v0.2.0: mirrored from App Group — kept for source compatibility.
-    /// Local engine always runs built-in polish; the flag is ignored.
-    @Published public var localModeCloudPolishEnabled: Bool = true
     /// Mirrored from App Group — swaps delete / return on the bottom row.
     @Published public var handednessPreference: HandednessPreference = .left
     /// Press-and-drag pads beside the mic for four-way caret movement.
@@ -159,7 +153,6 @@ public final class KeyboardState: ObservableObject {
     public var setMode:             (InputMode) -> Void = { _ in }
     public var setLocale:           (String) -> Void = { _ in }
     public var setEngineMode:        (String) -> Void = { _ in }
-    public var setLocalASRBackend:  (LocalASRBackend) -> Void = { _ in }
     /// v0.2.1 follow-up: only the locale picker remains — `enabled`
     /// is derived from the locale id, so there's no separate toggle to
     /// persist. Wired in `KeyboardViewController.installStateActions`.
@@ -209,4 +202,20 @@ public final class KeyboardState: ObservableObject {
         return s
     }
     #endif
+}
+
+extension KeyboardState.Phase.ErrorKind {
+    /// Maps a host-app Flow transcription failure into a keyboard error kind.
+    public static func fromFlowTranscription(_ error: FlowTranscriptionError) -> Self {
+        switch error.kind {
+        case .noSpeech:
+            return .noSpeechDetected
+        case .recognitionInterrupted:
+            return .recognitionInterrupted
+        case .audioUnavailable:
+            return .hostAudioUnavailable
+        case .asrFailed, .generic:
+            return .hostTranscriptionFailed(error.message)
+        }
+    }
 }

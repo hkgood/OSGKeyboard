@@ -13,15 +13,23 @@ public enum FlowSessionKeys {
     public static let keyboardRecordingState = "flow.keyboardRecordingState"
     public static let transcriptionLanguage = "flow.transcriptionLanguage"
     public static let transcriptionResult = "flow.transcriptionResult"
+    /// Live pipelined ASR partial for the keyboard transcript line.
+    public static let transcriptionPartial = "flow.transcriptionPartial"
     /// Soft warning when polish failed but raw transcript was delivered.
     public static let transcriptionPolishWarning = "flow.transcriptionPolishWarning"
     public static let transcriptionError = "flow.transcriptionError"
+    /// Structured kind paired with `transcriptionError` for keyboard UI.
+    public static let transcriptionErrorKind = "flow.transcriptionErrorKind"
     public static let audioLevels = "flow.audioLevels"
+    /// Bundle id of the app that opened `osgkeyboard://startflow` (scheme D).
+    public static let pendingHostBundleId = "flow.pendingHostBundleId"
+    /// Wall-clock timestamp of the last utterance completion or session start.
+    public static let lastActivityAt = "flow.lastActivityAt"
 
     /// Heartbeat older than this while the host is foreground → likely killed.
     public static let heartbeatStaleInterval: TimeInterval = 3
 
-    /// Default Flow session length when started from the keyboard.
+    /// Legacy fixed session length — prefer `FlowSessionPolicy.sessionDuration()`.
     public static let defaultSessionDuration: TimeInterval = 480
 
     /// Maximum duration for a single keyboard utterance (3.5 minutes).
@@ -36,15 +44,7 @@ public enum FlowSessionKeys {
     /// Keyboard watchdog after the user stops recording (not utterance max length).
     /// Must cover worst-case post-stop backlog: remaining SpeechAnalyzer chunks
     /// plus cloud LLM polish (see `PolishingService.effectiveTimeout` cap).
-    ///
-    /// As of v0.2.0 the local engine uses iOS `SpeechAnalyzer` only, so the
-    /// previous Qwen3-specific timeout (240 s) collapses into the shared
-    /// local path. We keep `localASRBackend` on the signature for symmetry
-    /// with other shared helpers.
-    public static func keyboardResultTimeout(
-        engineMode: String,
-        localASRBackend: LocalASRBackend
-    ) -> TimeInterval {
+    public static func keyboardResultTimeout(engineMode: String) -> TimeInterval {
         if engineMode == "local" {
             return 180
         }
@@ -57,5 +57,14 @@ public enum FlowSessionKeys {
         case stopped
         case processing
         case aborted
+    }
+
+    /// Structured host → keyboard transcription failure kind.
+    public enum TranscriptionErrorKind: String, Sendable, Equatable {
+        case noSpeech
+        case recognitionInterrupted
+        case audioUnavailable
+        case asrFailed
+        case generic
     }
 }

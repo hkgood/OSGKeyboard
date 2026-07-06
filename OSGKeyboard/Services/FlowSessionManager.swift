@@ -19,12 +19,12 @@ final class FlowSessionManager: ObservableObject {
     @Published private(set) var sessionExpiresAt: Date?
     /// Non-nil when continuous capture failed or permissions are missing.
     @Published private(set) var sessionWarning: String?
+    /// Cold-start handoff overlay state (scheme B).
+    @Published var coldStartContext: FlowColdStartContext?
 
     private let capture = FlowContinuousCapture()
     private let store = AppGroupStore()
-    /// Cloud-engine polish; local engine now ALSO runs through the
-    /// polisher when `localModeCloudPolishEnabled` is on — the same
-    /// `PolishingService` short-circuits to raw when the toggle is off.
+    /// Cloud-engine polish; local engine runs through built-in DeepSeek polish.
     private var polisher: PolishingService {
         PolishingService()
     }
@@ -33,12 +33,13 @@ final class FlowSessionManager: ObservableObject {
     /// factory-built service straight back without going through the
     /// old `OnDeviceModelWarmup` registry.
     private var sessionASR: ASRService?
+    /// Tracks which engine mode `sessionASR` was created for.
+    private var sessionASREngineMode: String?
+    /// Locale id last passed to `warmup(locale:)`.
+    private var sessionASRWarmedLocaleID: String?
     private var asr: ASRService {
         if let sessionASR { return sessionASR }
-        let service = ASRServiceFactory.make(
-            engineMode: store.engineMode,
-            localBackend: store.localASRBackend
-        )
+        let service = ASRServiceFactory.make()
         sessionASR = service
         return service
     }
@@ -62,108 +63,77 @@ final class FlowSessionManager: ObservableObject {
     /// True while the host app scene is `.active` — drives foreground renewal.
     private var isAppForeground = false
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+    /// True while handling a keyboard-initiated `startflow` cold start.
+    private var isColdStartHandoff = false
 
     init() {
-        Task { @MainActor [weak self] in
-            await self?.bootstrapFromStorageIfNeeded()
-        }
+        // Sessions are (re)started explicitly on app foreground via
+        // `activateOnForeground()`. We deliberately do NOT silently reattach a
+        // stored session here — after a force-quit that would resurrect capture
+        // (and keep a stale Live Activity alive) without the user re-opening.
     }
 
     // MARK: - Public
 
     /// Starts a Flow session: permissions → continuous capture → App Group active.
-    func startSession(duration: TimeInterval = FlowSessionKeys.defaultSessionDuration) {
+    func startSession(duration: TimeInterval? = nil, coldStart: Bool = false) {
         guard AppGroup.isAvailable else {
             debug("cannot start flow session: App Group unavailable")
             return
         }
 
+        if coldStart {
+            isColdStartHandoff = true
+        }
+
         if isActive {
             extendSession(duration: duration)
-            return
-        }
-
-        startTask?.cancel()
-        startTask = Task { @MainActor [weak self] in
-            await self?.startSessionAsync(duration: duration)
-        }
-    }
-
-    /// Called on launch / foreground when onboarding is complete.
-    func autoStartIfNeeded() {
-        guard AppGroup.isAvailable else { return }
-        guard !isActive, !isStarting else { return }
-
-        guard AppPermissions.flowRequirementsMet else {
-            sessionWarning = permissionWarningMessage()
-            return
-        }
-
-        let markedActive = AppGroup.defaults.bool(forKey: FlowSessionKeys.flowSessionActive)
-        if markedActive, FlowSessionBridge.remainingSessionDuration() != nil {
-            Task { await bootstrapFromStorageIfNeeded() }
-            return
-        }
-
-        startSession()
-    }
-
-    /// Reattach capture when the host app was killed but the session has not expired.
-    func bootstrapFromStorageIfNeeded() async {
-        guard AppGroup.isAvailable, !isActive else { return }
-
-        let markedActive = AppGroup.defaults.bool(forKey: FlowSessionKeys.flowSessionActive)
-        guard markedActive, let remaining = FlowSessionBridge.remainingSessionDuration(), remaining > 0 else {
-            if markedActive {
-                FlowSessionBridge.markSessionInactive()
+            if coldStart {
+                Task { @MainActor [weak self] in
+                    self?.handleColdStartAfterSessionReady()
+                }
             }
             return
         }
 
+        guard !isStarting else { return }
+
+        startTask?.cancel()
+        startTask = Task { @MainActor [weak self] in
+            await self?.startSessionAsync(duration: duration)
+            self?.handleColdStartAfterSessionReady()
+        }
+    }
+
+    /// Auto-start (or renew) the Flow session on every app foreground when
+    /// permissions allow — the "always auto-open, no off switch" policy. Also
+    /// clears any orphaned Live Activity a previously force-quit process left
+    /// behind (its `endSession()` could not run at kill time).
+    func activateOnForeground() {
+        guard AppGroup.isAvailable else { return }
         guard AppPermissions.flowRequirementsMet else {
             sessionWarning = permissionWarningMessage()
+            FlowLiveActivityController.endSession()
             return
         }
+        startSession()
+    }
 
-        isStarting = true
-        sessionWarning = nil
-        defer { isStarting = false }
+    func dismissColdStartOverlay() {
+        coldStartContext = nil
+        isColdStartHandoff = false
+    }
 
-        do {
-            try capture.start()
-        } catch {
-            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-            sessionWarning = message
-            FlowSessionBridge.markSessionInactive()
-            debug("bootstrap capture failed: \(message)")
-            return
-        }
-
-        FlowSessionBridge.writeHeartbeat()
-        FlowSessionDarwin.postSessionChanged()
-        isActive = true
-        ScreenWakeLock.acquire()
-        if let expires = FlowSessionBridge.sessionExpiresAt() {
-            sessionExpiresAt = Date(timeIntervalSince1970: expires)
-        }
-
-        startHeartbeat()
-        startPolling()
-        startLevelPublishing()
-        scheduleExpiry(after: remaining)
-
-        // v0.2.0: iOS `SpeechAnalyzer` needs no warm-up. We still
-        // re-bind the cached `sessionASR` so a config flip mid-session
-        // (e.g. switching from cloud to local) is honoured.
-        bindSessionASR()
-
-        debug("Flow session restored (\(Int(remaining))s remaining)")
+    func returnToPendingHostFromColdStart() {
+        _ = HostReturnService.openPendingHostIfPossible()
+        dismissColdStartOverlay()
     }
 
     func endSession() {
         guard isActive else { return }
         debug("Flow session ended")
 
+        dismissColdStartOverlay()
         startTask?.cancel()
         startTask = nil
         pollingTask?.cancel()
@@ -192,8 +162,11 @@ final class FlowSessionManager: ObservableObject {
         endBackgroundKeepAlive()
         ScreenWakeLock.release()
         sessionASR = nil
+        sessionASREngineMode = nil
+        sessionASRWarmedLocaleID = nil
         FlowSessionBridge.markSessionInactive()
         FlowSessionDarwin.postSessionChanged()
+        FlowLiveActivityController.endSession()
         isActive = false
         sessionExpiresAt = nil
         sessionWarning = nil
@@ -201,31 +174,27 @@ final class FlowSessionManager: ObservableObject {
         lastFinal = ""
     }
 
-    func extendSession(duration: TimeInterval = FlowSessionKeys.defaultSessionDuration) {
-        FlowSessionBridge.extendSession(by: duration)
-        sessionExpiresAt = Date().addingTimeInterval(duration)
-        scheduleExpiry(after: duration)
+    func extendSession(duration: TimeInterval? = nil) {
+        let resolved = duration ?? FlowSessionPolicy.sessionDuration()
+        FlowSessionBridge.extendSession(by: resolved)
+        sessionExpiresAt = Date().addingTimeInterval(resolved)
+        scheduleExpiry(after: resolved)
     }
 
     /// Called from `OSGKeyboardApp` when `scenePhase` changes.
     func setAppForeground(_ foreground: Bool) {
         isAppForeground = foreground
-        if foreground, isActive {
-            renewSessionIfNeededWhileForeground()
-        }
     }
 
     /// Full scene lifecycle — keeps Flow + ASR alive across app switches.
     func handleScenePhase(_ phase: ScenePhase) {
         switch phase {
         case .active:
-            FlowAppLifecycle.shared.setForeground(true)
             setAppForeground(true)
             resumeAfterForeground()
         case .inactive:
             writeHeartbeatIfActive()
         case .background:
-            FlowAppLifecycle.shared.setForeground(false)
             setAppForeground(false)
             beginBackgroundKeepAlive()
         @unknown default:
@@ -269,7 +238,8 @@ final class FlowSessionManager: ObservableObject {
             await self?.reactivateCaptureIfNeeded()
             // v0.2.0: iOS `SpeechAnalyzer` is bundled with the OS; no
             // on-device weights to reload after a background trip.
-            self?.bindSessionASR()
+            self?.bindSessionASRIfNeeded()
+            self?.scheduleASRWarmup()
         }
     }
 
@@ -291,25 +261,29 @@ final class FlowSessionManager: ObservableObject {
         }
     }
 
-    /// Extend the session before it expires while the host app stays in foreground.
-    private func renewSessionIfNeededWhileForeground() {
-        guard isActive, isAppForeground else { return }
-        guard let remaining = FlowSessionBridge.remainingSessionDuration() else { return }
-        let threshold = FlowSessionKeys.defaultSessionDuration * 0.25
-        guard remaining < threshold else { return }
-        extendSession()
-        debug("Flow session renewed in foreground (\(Int(threshold))s threshold)")
+    /// Extend expiry after utterance completion based on the inactivity policy.
+    private func touchSessionActivity() {
+        guard isActive else { return }
+        FlowSessionBridge.touchLastActivity()
+        if let expires = FlowSessionBridge.sessionExpiresAt() {
+            sessionExpiresAt = Date(timeIntervalSince1970: expires)
+            let remaining = expires - Date().timeIntervalSince1970
+            if remaining > 0 {
+                scheduleExpiry(after: remaining)
+            }
+        }
     }
 
     // MARK: - Session start
 
-    private func startSessionAsync(duration: TimeInterval) async {
+    private func startSessionAsync(duration: TimeInterval?) async {
         isStarting = true
         sessionWarning = nil
         defer { isStarting = false }
 
         guard AppPermissions.flowRequirementsMet else {
             sessionWarning = permissionWarningMessage()
+            isColdStartHandoff = false
             return
         }
 
@@ -318,34 +292,75 @@ final class FlowSessionManager: ObservableObject {
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             sessionWarning = message
+            isColdStartHandoff = false
             debug("continuous capture failed: \(message)")
             return
         }
 
-        FlowSessionBridge.markSessionActive(duration: duration)
+        let resolvedDuration = duration ?? FlowSessionPolicy.sessionDuration()
+        FlowSessionBridge.markSessionActive(duration: resolvedDuration)
         FlowSessionDarwin.postSessionChanged()
         isActive = true
         ScreenWakeLock.acquire()
-        sessionExpiresAt = Date().addingTimeInterval(duration)
+        sessionExpiresAt = Date().addingTimeInterval(resolvedDuration)
 
         startHeartbeat()
         startPolling()
         startLevelPublishing()
-        scheduleExpiry(after: duration)
+        scheduleExpiry(after: resolvedDuration)
 
-        // v0.2.0: iOS `SpeechAnalyzer` needs no warm-up; just refresh
-        // the cached ASR service in case the user flipped engines
-        // while the session was idle.
-        bindSessionASR()
+        bindSessionASRIfNeeded()
+        scheduleASRWarmup()
+        FlowLiveActivityController.startSession()
 
-        debug("Flow session started (\(Int(duration))s), continuous capture running")
+        debug("Flow session started (\(Int(resolvedDuration))s inactivity window), continuous capture running")
     }
 
-    private func bindSessionASR() {
-        sessionASR = ASRServiceFactory.make(
-            engineMode: store.engineMode,
-            localBackend: store.localASRBackend
+    @MainActor
+    private func handleColdStartAfterSessionReady() {
+        guard isColdStartHandoff, isActive else { return }
+
+        let hostEntry = HostReturnService.pendingHostEntry()
+        let skipSwitch = FlowSessionPolicy.skipAppSwitch()
+
+        if skipSwitch, hostEntry != nil, HostReturnService.openPendingHostIfPossible() {
+            dismissColdStartOverlay()
+            return
+        }
+
+        coldStartContext = FlowColdStartContext(
+            hostEntry: hostEntry,
+            showReturnAlert: hostEntry != nil
         )
+    }
+
+    private func bindSessionASRIfNeeded(force: Bool = false) {
+        let engineMode = store.engineMode
+        if !force,
+           let sessionASR,
+           sessionASREngineMode == engineMode {
+            return
+        }
+        sessionASR?.cancel()
+        sessionASR = ASRServiceFactory.make()
+        sessionASREngineMode = engineMode
+        sessionASRWarmedLocaleID = nil
+    }
+
+    private func scheduleASRWarmup() {
+        Task { @MainActor [weak self] in
+            await self?.warmupASRIfNeeded()
+        }
+    }
+
+    private func warmupASRIfNeeded() async {
+        bindSessionASRIfNeeded()
+        let locale = SpeechLocaleResolver.resolve(store.localeId)
+        let localeID = locale.identifier(.bcp47)
+        guard sessionASRWarmedLocaleID != localeID else { return }
+        await asr.warmup(locale: locale)
+        sessionASRWarmedLocaleID = localeID
+        FlowDiagnostics.log("ASR warmup complete locale=\(localeID)")
     }
 
     private func permissionWarningMessage() -> String {
@@ -384,7 +399,10 @@ final class FlowSessionManager: ObservableObject {
 
     private func beginUtterance() {
         guard capture.running else {
-            failUtterance(message: AppL10n.string("flow.error.audioUnavailable"))
+            failUtterance(
+                message: AppL10n.string("flow.error.audioUnavailable"),
+                kind: .audioUnavailable
+            )
             return
         }
         guard !isUtteranceProcessing else {
@@ -392,8 +410,8 @@ final class FlowSessionManager: ObservableObject {
             return
         }
 
-        // Honor engine / ASR backend changes without restarting the session.
-        bindSessionASR()
+        // Usually already warm from session start; refresh without blocking the mic gate.
+        scheduleASRWarmup()
 
         currentPartial = ""
         lastFinal = ""
@@ -410,8 +428,9 @@ final class FlowSessionManager: ObservableObject {
 
         isUtteranceRecording = true
         utteranceRecordingStartedAt = Date()
+        FlowLiveActivityController.update(phase: .recording)
         FlowDiagnostics.log(
-            "beginUtterance engine=\(store.engineMode) asr=\(store.localASRBackend.rawValue) " +
+            "beginUtterance engine=\(store.engineMode) " +
             "asrType=\(type(of: asr)) pipelined=true max=\(Int(FlowSessionKeys.maxUtteranceDuration))s"
         )
 
@@ -419,6 +438,7 @@ final class FlowSessionManager: ObservableObject {
             let outcome = await pipeline.transcribe(stream: stream) { partial in
                 Task { @MainActor in
                     manager?.currentPartial = partial
+                    FlowSessionBridge.storeTranscriptionPartial(partial)
                 }
             }
             // Re-bind `manager` inside the `@MainActor` block so the
@@ -439,9 +459,9 @@ final class FlowSessionManager: ObservableObject {
                 case .failure(let message):
                     manager.debug("asr error: \(message)")
                     if manager.isUtteranceRecording {
-                        manager.failUtterance(message: message)
+                        manager.failUtterance(message: message, kind: .asrFailed)
                     } else if manager.isUtteranceProcessing {
-                        manager.finishProcessing(withError: message)
+                        manager.finishProcessing(withError: message, kind: .asrFailed)
                     }
                 case .cancelled:
                     break
@@ -461,6 +481,7 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.setRecordingState(.processing)
         isUtteranceRecording = false
         isUtteranceProcessing = true
+        FlowLiveActivityController.update(phase: .processing)
 
         // Do NOT cancel `asrTask` or `asr` — the preview pipeline relies on
         // the consumer staying alive until `.final` lands (see
@@ -487,11 +508,16 @@ final class FlowSessionManager: ObservableObject {
         currentPartial = ""
         lastFinal = ""
         chunkWarnings = []
+        FlowSessionBridge.storeTranscriptionPartial("")
         FlowSessionBridge.setRecordingState(.idle)
+        FlowLiveActivityController.update(phase: .idle)
         debug("utterance aborted")
     }
 
-    private func failUtterance(message: String) {
+    private func failUtterance(
+        message: String,
+        kind: FlowSessionKeys.TranscriptionErrorKind = .asrFailed
+    ) {
         isUtteranceRecording = false
         isUtteranceProcessing = false
         utteranceRecordingStartedAt = nil
@@ -505,12 +531,17 @@ final class FlowSessionManager: ObservableObject {
         currentPartial = ""
         lastFinal = ""
         chunkWarnings = []
-        FlowSessionBridge.storeTranscriptionError(message)
+        FlowSessionBridge.storeTranscriptionPartial("")
+        FlowSessionBridge.storeTranscriptionError(message, kind: kind)
         FlowSessionBridge.setRecordingState(.idle)
+        FlowLiveActivityController.update(phase: .idle)
         debug("utterance failed: \(message)")
     }
 
-    private func finishProcessing(withError message: String) {
+    private func finishProcessing(
+        withError message: String,
+        kind: FlowSessionKeys.TranscriptionErrorKind = .asrFailed
+    ) {
         isUtteranceProcessing = false
         utteranceRecordingStartedAt = nil
         finalizeTask?.cancel()
@@ -519,8 +550,10 @@ final class FlowSessionManager: ObservableObject {
         currentPartial = ""
         lastFinal = ""
         chunkWarnings = []
-        FlowSessionBridge.storeTranscriptionError(message)
+        FlowSessionBridge.storeTranscriptionPartial("")
+        FlowSessionBridge.storeTranscriptionError(message, kind: kind)
         FlowSessionBridge.setRecordingState(.idle)
+        FlowLiveActivityController.update(phase: .idle)
         debug("utterance processing failed: \(message)")
     }
 
@@ -529,12 +562,13 @@ final class FlowSessionManager: ObservableObject {
         defer {
             isUtteranceProcessing = false
             FlowSessionBridge.setRecordingState(.idle)
+            FlowLiveActivityController.update(phase: .idle)
+            touchSessionActivity()
         }
 
         let asrWait = asrWaitTimeout()
         FlowDiagnostics.log(
-            "finalize start asrWait=\(Int(asrWait))s engine=\(store.engineMode) " +
-            "backend=\(store.localASRBackend.rawValue)"
+            "finalize start asrWait=\(Int(asrWait))s engine=\(store.engineMode)"
         )
 
         let asrDeadline = Date().addingTimeInterval(asrWait)
@@ -560,10 +594,13 @@ final class FlowSessionManager: ObservableObject {
             let key = (asrTask?.isCancelled == true)
                 ? "flow.error.recognitionInterrupted"
                 : "flow.error.noSpeech"
+            let kind: FlowSessionKeys.TranscriptionErrorKind =
+                (asrTask?.isCancelled == true) ? .recognitionInterrupted : .noSpeech
             FlowDiagnostics.log("finalize failed: empty transcript after \(String(format: "%.1f", asrElapsed))s")
             utteranceRecordingStartedAt = nil
             FlowSessionBridge.storeTranscriptionError(
-                AppL10n.string(key)
+                AppL10n.string(key),
+                kind: kind
             )
             return
         }
@@ -576,33 +613,12 @@ final class FlowSessionManager: ObservableObject {
         // from the keyboard extension are visible before polish/translate.
         let pipelineStore = AppGroupStore()
 
-        if !pipelineStore.shouldRunCloudLLMStep {
-            // Local engine with cloud polish off — ASR-only.
-            FlowSessionBridge.storeTranscriptionResult(text, polishWarning: chunkNote)
-            FlowDiagnostics.log(
-                "finalize ASR-only total=\(String(format: "%.1f", Date().timeIntervalSince(pipelineStarted)))s " +
-                "len=\(text.count)"
-            )
-            SpeechHistoryStore.shared.recordUtterance(
-                text: text,
-                engineMode: engineMode,
-                duration: recordingDuration,
-                wasTranslation: false
-            )
-            currentPartial = ""
-            lastFinal = ""
-            chunkWarnings = []
-            debug("utterance finalized length=\(text.count)")
-            return
-        }
-
         var delivered = text
         let polishStarted = Date()
         let polishMode = pipelineStore.polishModeForPipeline
         FlowDiagnostics.log(
             "finalize LLM mode=\(Self.polishModeLogLabel(polishMode)) " +
-            "translationTarget=\(pipelineStore.translationTargetLocaleId) " +
-            "cloudPolish=\(pipelineStore.localModeCloudPolishEnabled)"
+            "translationTarget=\(pipelineStore.translationTargetLocaleId)"
         )
         do {
             let polished = try await polisher.polish(
@@ -640,6 +656,7 @@ final class FlowSessionManager: ObservableObject {
         currentPartial = ""
         lastFinal = ""
         chunkWarnings = []
+        FlowSessionBridge.storeTranscriptionPartial("")
         chunkedPipeline = nil
         debug("utterance finalized length=\(text.count)")
     }
@@ -712,7 +729,6 @@ final class FlowSessionManager: ObservableObject {
         heartbeatTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 FlowSessionBridge.writeHeartbeat()
-                self?.renewSessionIfNeededWhileForeground()
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 guard self?.isActive == true else { break }
             }

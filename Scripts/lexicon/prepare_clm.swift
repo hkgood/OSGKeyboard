@@ -29,7 +29,7 @@ struct PrepareOptions {
             .deletingLastPathComponent()
 
         var input = repoRoot.appendingPathComponent(
-            "OSGKeyboard/Resources/CustomLanguageModel/v1/OSGKeyboardCLM.bin"
+            "OSGKeyboardShared/Resources/CustomLanguageModel/v1/OSGKeyboardCLM.bin"
         )
         var output = repoRoot.appendingPathComponent(
             "OSGKeyboard/Resources/CustomLanguageModel/v1/compiled"

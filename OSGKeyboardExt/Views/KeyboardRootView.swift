@@ -141,12 +141,8 @@ public struct KeyboardRootView: View {
                 flowSessionActive: state.flowSessionActive,
                 micDisabled: state.micDisabled,
                 micDisabledHint: state.micDisabledHint,
-                isLocalEngine: state.isLocalEngine,
-                localModelsReady: state.localModelsReady,
-                localModelsLoaded: state.localModelsLoaded,
                 cursorDragHintActive: state.cursorDragActive,
-                openSettings: state.openSettings,
-                startFlowSession: state.startFlowSession
+                openSettings: state.openSettings
             )
             .frame(height: KeyboardLayoutMetrics.transcriptLineHeight)
         }
@@ -337,12 +333,8 @@ private struct TranscriptLine: View {
     let flowSessionActive: Bool
     let micDisabled: Bool
     let micDisabledHint: String
-    let isLocalEngine: Bool
-    let localModelsReady: Bool
-    let localModelsLoaded: Bool
     let cursorDragHintActive: Bool
     let openSettings: () -> Void
-    let startFlowSession: () -> Void
 
     var body: some View {
         ZStack {
@@ -367,39 +359,14 @@ private struct TranscriptLine: View {
                         .foregroundStyle(palette.warning)
                         .lineLimit(1)
                         .truncationMode(.tail)
-                } else if isLocalEngine, !localModelsReady {
-                    Button(action: openSettings) {
-                        HStack(spacing: 4) {
-                            Text(ExtL10n.string("keyboard.models.notDownloaded"))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 10, weight: .semibold))
-                        }
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.warning)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(maxWidth: .infinity)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint(ExtL10n.text("keyboard.models.downloadHint"))
                 } else if flowSessionActive {
                     ExtL10n.text("keyboard.placeholder.idle")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textTertiary)
                 } else {
-                    HStack(spacing: 6) {
-                        ExtL10n.text("keyboard.flow.sessionInactive")
-                            .font(TypeStyle.caption)
-                            .foregroundStyle(palette.textTertiary)
-                        Button(action: startFlowSession) {
-                            ExtL10n.text("keyboard.flow.start")
-                                .font(TypeStyle.caption)
-                                .foregroundStyle(palette.accent)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityHint(ExtL10n.text("keyboard.flow.startA11y"))
-                    }
+                    ExtL10n.text("keyboard.flow.sessionInactive")
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textTertiary)
                 }
             case .requestingPermissions:
                 HStack(spacing: 6) {

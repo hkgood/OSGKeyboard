@@ -17,7 +17,8 @@ public enum UtteranceStreamChunker {
         AsyncStream { continuation in
             let task = Task {
                 var buffer: [Float] = []
-                buffer.reserveCapacity(config.maxChunkSamples + config.pauseExtensionSamples)
+                let initialCapacity = config.maxChunkSamples(forChunkIndex: 0) + config.pauseExtensionSamples
+                buffer.reserveCapacity(initialCapacity)
                 var chunkIndex = 0
 
                 func emit(upTo splitEnd: Int, isLast: Bool) {
@@ -40,8 +41,12 @@ public enum UtteranceStreamChunker {
                     guard !snap.samples.isEmpty else { continue }
                     buffer.append(contentsOf: snap.samples)
 
-                    while buffer.count >= config.maxChunkSamples {
-                        let split = pauseAwareSplitIndex(in: buffer, config: config)
+                    while buffer.count >= config.maxChunkSamples(forChunkIndex: chunkIndex) {
+                        let split = pauseAwareSplitIndex(
+                            in: buffer,
+                            config: config,
+                            chunkIndex: chunkIndex
+                        )
                         emit(upTo: split, isLast: false)
                     }
                 }
@@ -66,9 +71,10 @@ public enum UtteranceStreamChunker {
     /// Pick a split index at or after `maxChunkSamples`, preferring a pause.
     static func pauseAwareSplitIndex(
         in buffer: [Float],
-        config: FlowUtteranceChunkConfig
+        config: FlowUtteranceChunkConfig,
+        chunkIndex: Int = 1
     ) -> Int {
-        let minSplit = config.maxChunkSamples
+        let minSplit = config.maxChunkSamples(forChunkIndex: chunkIndex)
         guard buffer.count >= minSplit else { return buffer.count }
 
         let searchEnd = min(buffer.count, minSplit + config.pauseExtensionSamples)

@@ -14,7 +14,7 @@
 // This class is still imported by:
 //   - `OSGKeyboard/Views/PreviewASRController.swift` (typealias)
 //   - `OSGKeyboard/Views/KeyboardPreviewSheet.swift` (in-app preview)
-//   - `OSGKeyboard/Views/DictationCaptureView.swift` (host-app fallback)
+//   - `OSGKeyboard/Views/KeyboardPreviewSheet.swift` (host-app ASR preview)
 //   - `OSGKeyboardTests/PreviewASRControllerStateTests.swift`
 //
 // Do NOT remove without updating those call sites. The earlier
@@ -104,14 +104,7 @@ public final class LiveDictationController: ObservableObject {
     private var didInstallTap = false
 
     public init(asr: ASRService? = nil) {
-        // Resolve through the factory so the user's `LocalASRBackend`
-        // selection is honoured. Tests can pass a stub `asr` directly
-        // to bypass the factory and exercise the controller in
-        // isolation.
-        self.asr = asr ?? ASRServiceFactory.make(
-            engineMode: ProviderConfig.shared.engineMode,
-            localBackend: ProviderConfig.shared.localASRBackend
-        )
+        self.asr = asr ?? ASRServiceFactory.make()
     }
 
     /// Start dictation using a persisted settings locale id (`auto`, `zh-Hans`, …).

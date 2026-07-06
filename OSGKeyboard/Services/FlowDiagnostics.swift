@@ -1,22 +1,14 @@
 // FlowDiagnostics.swift
 // OSGKeyboard · Main App
 //
-// Structured logging for the Flow dictation pipeline. Visible in Xcode
-// console (DEBUG) and Console.app via `subsystem: com.osgkeyboard.ios`.
+// Structured logging for the Flow dictation pipeline. Delegates to
+// `OSGLog.flow` for Console.app visibility.
 
 import Foundation
-import os
+import OSGKeyboardShared
 
 enum FlowDiagnostics {
-    private static let logger = Logger(
-        subsystem: "com.osgkeyboard.ios",
-        category: "Flow"
-    )
-
     static func log(_ message: String) {
-        logger.info("\(message, privacy: .public)")
-        #if DEBUG
-        print("🌊[OSGFlow] \(message)")
-        #endif
+        OSGLog.flow.info("\(message, privacy: .public)")
     }
 }

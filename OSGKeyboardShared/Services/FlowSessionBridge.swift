@@ -2,15 +2,31 @@
 // OSGKeyboard · Shared
 //
 // TypeWhisper-style Flow session bridge: keyboard writes recording
-// signals; host app writes transcription results. Legacy one-shot
-// dictation handoff remains in `DictationBridge`.
+// signals; host app writes transcription results.
 
 import Foundation
+
+public struct FlowTranscriptionError: Equatable, Sendable {
+    public let message: String
+    public let kind: FlowSessionKeys.TranscriptionErrorKind
+
+    public init(message: String, kind: FlowSessionKeys.TranscriptionErrorKind) {
+        self.message = message
+        self.kind = kind
+    }
+}
 
 public enum FlowSessionBridge {
     private static func resolvedDefaults(_ defaults: UserDefaults?) -> UserDefaults {
         if let defaults { return defaults }
-        return AppGroup.isAvailable ? AppGroup.defaults : .standard
+        guard let available = AppGroup.defaultsIfAvailable else {
+            #if DEBUG
+            fatalError("App Group unavailable — inject UserDefaults in tests or fix entitlements.")
+            #else
+            fatalError("App Group unavailable.")
+            #endif
+        }
+        return available
     }
 
     /// Force cross-process visibility. Must only be called on the main thread.
@@ -23,13 +39,16 @@ public enum FlowSessionBridge {
     // MARK: - Session lifecycle (host app)
 
     public static func markSessionActive(
-        duration: TimeInterval = FlowSessionKeys.defaultSessionDuration,
+        duration: TimeInterval? = nil,
         defaults: UserDefaults? = nil
     ) {
         let store = resolvedDefaults(defaults)
-        let expires = Date().timeIntervalSince1970 + duration
+        let resolvedDuration = duration ?? FlowSessionPolicy.sessionDuration(defaults: store)
+        let now = Date().timeIntervalSince1970
+        let expires = now + resolvedDuration
         store.set(true, forKey: FlowSessionKeys.flowSessionActive)
         store.set(expires, forKey: FlowSessionKeys.flowSessionExpires)
+        store.set(now, forKey: FlowSessionKeys.lastActivityAt)
         writeHeartbeat(defaults: store)
         setRecordingState(.idle, defaults: store)
         clearTranscription(defaults: store)
@@ -53,14 +72,47 @@ public enum FlowSessionBridge {
     }
 
     public static func extendSession(
-        by duration: TimeInterval = FlowSessionKeys.defaultSessionDuration,
+        by duration: TimeInterval? = nil,
         defaults: UserDefaults? = nil
     ) {
         let store = resolvedDefaults(defaults)
-        let expires = Date().timeIntervalSince1970 + duration
+        let resolvedDuration = duration ?? FlowSessionPolicy.sessionDuration(defaults: store)
+        let expires = Date().timeIntervalSince1970 + resolvedDuration
         store.set(true, forKey: FlowSessionKeys.flowSessionActive)
         store.set(expires, forKey: FlowSessionKeys.flowSessionExpires)
         flush(store)
+    }
+
+    /// Resets the inactivity timer after utterance completion or explicit activity.
+    public static func touchLastActivity(defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        let now = Date().timeIntervalSince1970
+        let duration = FlowSessionPolicy.sessionDuration(defaults: store)
+        store.set(now, forKey: FlowSessionKeys.lastActivityAt)
+        store.set(now + duration, forKey: FlowSessionKeys.flowSessionExpires)
+        store.set(true, forKey: FlowSessionKeys.flowSessionActive)
+        flush(store)
+    }
+
+    // MARK: - Host return (scheme D)
+
+    public static func setPendingHostBundleId(_ bundleId: String?, defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        if let bundleId, !bundleId.isEmpty {
+            store.set(bundleId, forKey: FlowSessionKeys.pendingHostBundleId)
+        } else {
+            store.removeObject(forKey: FlowSessionKeys.pendingHostBundleId)
+        }
+        flush(store)
+    }
+
+    public static func pendingHostBundleId(defaults: UserDefaults? = nil) -> String? {
+        let store = resolvedDefaults(defaults)
+        return store.string(forKey: FlowSessionKeys.pendingHostBundleId)
+    }
+
+    public static func clearPendingHostBundleId(defaults: UserDefaults? = nil) {
+        setPendingHostBundleId(nil, defaults: defaults)
     }
 
     // MARK: - Session validity (keyboard)
@@ -70,7 +122,6 @@ public enum FlowSessionBridge {
     /// background while the continuous audio session is frozen.
     public static func isSessionActive(defaults: UserDefaults? = nil) -> Bool {
         let store = resolvedDefaults(defaults)
-        flush(store)
         guard store.bool(forKey: FlowSessionKeys.flowSessionActive) else { return false }
 
         let expires = store.double(forKey: FlowSessionKeys.flowSessionExpires)
@@ -81,7 +132,6 @@ public enum FlowSessionBridge {
     /// actively processing). Used for auto-start heuristics, not gating record.
     public static func isHostReachable(defaults: UserDefaults? = nil) -> Bool {
         let store = resolvedDefaults(defaults)
-        flush(store)
         guard isSessionActive(defaults: store) else { return false }
 
         let heartbeat = store.double(forKey: FlowSessionKeys.flowHeartbeat)
@@ -144,6 +194,7 @@ public enum FlowSessionBridge {
         let store = resolvedDefaults(defaults)
         store.set(trimmed, forKey: FlowSessionKeys.transcriptionResult)
         store.removeObject(forKey: FlowSessionKeys.transcriptionError)
+        store.removeObject(forKey: FlowSessionKeys.transcriptionPartial)
         if let polishWarning, !polishWarning.isEmpty {
             store.set(polishWarning, forKey: FlowSessionKeys.transcriptionPolishWarning)
         } else {
@@ -151,16 +202,46 @@ public enum FlowSessionBridge {
         }
         setRecordingState(.idle, defaults: store)
         flush(store)
+        FlowSessionDarwin.postTranscriptionChanged()
+    }
+
+    /// Host app: publish pipelined ASR partial while recording or finalizing.
+    public static func storeTranscriptionPartial(
+        _ text: String,
+        defaults: UserDefaults? = nil
+    ) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let store = resolvedDefaults(defaults)
+        if trimmed.isEmpty {
+            store.removeObject(forKey: FlowSessionKeys.transcriptionPartial)
+        } else {
+            store.set(trimmed, forKey: FlowSessionKeys.transcriptionPartial)
+        }
+        flush(store)
+        FlowSessionDarwin.postTranscriptionChanged()
+    }
+
+    /// Keyboard: read the latest partial without clearing it.
+    public static func transcriptionPartial(defaults: UserDefaults? = nil) -> String? {
+        let store = resolvedDefaults(defaults)
+        guard let text = store.string(forKey: FlowSessionKeys.transcriptionPartial),
+              !text.isEmpty else {
+            return nil
+        }
+        return text
     }
 
     public static func storeTranscriptionError(
         _ message: String,
+        kind: FlowSessionKeys.TranscriptionErrorKind = .generic,
         defaults: UserDefaults? = nil
     ) {
         let store = resolvedDefaults(defaults)
         store.set(message, forKey: FlowSessionKeys.transcriptionError)
+        store.set(kind.rawValue, forKey: FlowSessionKeys.transcriptionErrorKind)
         setRecordingState(.idle, defaults: store)
         flush(store)
+        FlowSessionDarwin.postTranscriptionChanged()
     }
 
     /// Returns and clears a pending transcription result, if any.
@@ -174,7 +255,6 @@ public enum FlowSessionBridge {
         defaults: UserDefaults? = nil
     ) -> TranscriptionDelivery? {
         let store = resolvedDefaults(defaults)
-        flush(store)
         guard let text = store.string(forKey: FlowSessionKeys.transcriptionResult), !text.isEmpty else {
             return nil
         }
@@ -186,20 +266,21 @@ public enum FlowSessionBridge {
     }
 
     /// Returns and clears a pending transcription error, if any.
-    public static func consumeTranscriptionError(defaults: UserDefaults? = nil) -> String? {
+    public static func consumeTranscriptionError(defaults: UserDefaults? = nil) -> FlowTranscriptionError? {
         let store = resolvedDefaults(defaults)
-        flush(store)
         guard let message = store.string(forKey: FlowSessionKeys.transcriptionError), !message.isEmpty else {
             return nil
         }
+        let kindRaw = store.string(forKey: FlowSessionKeys.transcriptionErrorKind)
+        let kind = FlowSessionKeys.TranscriptionErrorKind(rawValue: kindRaw ?? "") ?? .generic
         store.removeObject(forKey: FlowSessionKeys.transcriptionError)
+        store.removeObject(forKey: FlowSessionKeys.transcriptionErrorKind)
         flush(store)
-        return message
+        return FlowTranscriptionError(message: message, kind: kind)
     }
 
     public static func audioLevels(defaults: UserDefaults? = nil) -> [Float] {
         let store = resolvedDefaults(defaults)
-        flush(store)
         if let levels = store.array(forKey: FlowSessionKeys.audioLevels) as? [Double], !levels.isEmpty {
             return levels.map { Float($0) }
         }
@@ -235,12 +316,16 @@ public enum FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.transcriptionLanguage)
         clearTranscription(defaults: store)
         store.removeObject(forKey: FlowSessionKeys.audioLevels)
+        store.removeObject(forKey: FlowSessionKeys.pendingHostBundleId)
+        store.removeObject(forKey: FlowSessionKeys.lastActivityAt)
         flush(store)
     }
 
     private static func clearTranscription(defaults: UserDefaults) {
         defaults.removeObject(forKey: FlowSessionKeys.transcriptionResult)
+        defaults.removeObject(forKey: FlowSessionKeys.transcriptionPartial)
         defaults.removeObject(forKey: FlowSessionKeys.transcriptionPolishWarning)
         defaults.removeObject(forKey: FlowSessionKeys.transcriptionError)
+        defaults.removeObject(forKey: FlowSessionKeys.transcriptionErrorKind)
     }
 }

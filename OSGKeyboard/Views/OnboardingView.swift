@@ -107,9 +107,7 @@ struct OnboardingView: View {
     private func applyOnboardingDefaultsIfNeeded() {
         guard !config.hasCompletedOnboarding, config.onboardingPage == 0 else { return }
         // First-time users with no API key: default to local for a faster path.
-        // v0.2.0: no per-user ASR backend selection — iOS `SpeechAnalyzer`
-        // is the only local option, so we don't need to mutate
-        // `config.localASRBackend` here.
+        // v0.2.0: iOS SpeechAnalyzer is the only on-device ASR path.
         if config.apiKey.isEmpty, config.engineMode == "cloud" {
             config.engineMode = "local"
         }

@@ -39,30 +39,36 @@ final class KeyboardOnboardingOverlayTests: XCTestCase {
 
     func testOnboardingFlagsRoundTrip() {
         store.onboardingPage = 3
-        store.hasCompletedOnboarding = true
         XCTAssertEqual(store.onboardingPage, 3)
+        store.hasCompletedOnboarding = true
         XCTAssertTrue(store.hasCompletedOnboarding)
+        // Completing onboarding clears the in-progress page index.
+        XCTAssertEqual(store.onboardingPage, 0)
     }
 
     func testOnboardingFlagsSurviveReconstruct() {
         store.onboardingPage = 4
-        store.hasCompletedOnboarding = true
 
         // Simulate the keyboard extension being torn down and rebuilt
         // (which is what happens on every `viewDidLoad` cycle).
-        let store2 = AppGroupStore(defaults: defaults)
+        var store2 = AppGroupStore(defaults: defaults)
         XCTAssertEqual(store2.onboardingPage, 4)
-        XCTAssertTrue(store2.hasCompletedOnboarding)
+
+        store2.hasCompletedOnboarding = true
+        let store3 = AppGroupStore(defaults: defaults)
+        XCTAssertTrue(store3.hasCompletedOnboarding)
+        XCTAssertEqual(store3.onboardingPage, 0)
     }
 
     // MARK: - App context detection round-trip
 
-    func testDetectedAppContextRoundTrip() {
+    func testDetectedAppContextRoundTrip() throws {
         let now = Date()
         store.setDetectedAppContext(.code, at: now)
         let result = store.detectedAppContext
         XCTAssertEqual(result?.context, .code)
-        XCTAssertEqual(result?.observedAt.timeIntervalSinceReferenceDate,
+        let observedAt = try XCTUnwrap(result?.observedAt)
+        XCTAssertEqual(observedAt.timeIntervalSinceReferenceDate,
                        now.timeIntervalSinceReferenceDate,
                        accuracy: 0.001)
     }

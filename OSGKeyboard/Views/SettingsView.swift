@@ -40,6 +40,7 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(spacing: Spacing.md) {
                         languageAndPolishSection
+                        flowSessionSection
                         engineSection
                         // v0.2.1: hide provider/api card when the
                         // local engine is active regardless of the
@@ -98,6 +99,44 @@ struct SettingsView: View {
             .task { await loadDynamicLocales() }
             // v0.2.0: no on-device model manager to refresh — the
             // iOS ASR backend is always ready.
+        }
+    }
+
+    // MARK: - Flow session
+
+    private var flowSessionSection: some View {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.flow.title")
+            VStack(spacing: 0) {
+                Toggle(isOn: $config.flowSkipAppSwitch) {
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
+                        Text("settings.flow.skipAppSwitch.title")
+                            .font(TypeStyle.body)
+                            .foregroundStyle(palette.textPrimary)
+                        Text("settings.flow.skipAppSwitch.subtitle")
+                            .font(TypeStyle.caption2)
+                            .foregroundStyle(palette.textTertiary)
+                    }
+                }
+                .tint(palette.accent)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.sm)
+                .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+
+                Divider().background(palette.divider)
+
+                FlowInactivityPickerRow(
+                    selection: Binding(
+                        get: { config.flowInactivityDuration },
+                        set: { config.flowInactivityDuration = $0 }
+                    )
+                )
+            }
+            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+                    .stroke(palette.divider, lineWidth: 0.5)
+            )
         }
     }
 
@@ -428,6 +467,31 @@ private struct AppLanguagePickerRow: View {
                 get: { selection.rawValue },
                 set: { newValue in
                     selection = AppUILanguage(rawValue: newValue) ?? .auto
+                }
+            )
+        )
+    }
+}
+
+// MARK: - Flow inactivity picker row
+
+private struct FlowInactivityPickerRow: View {
+    @Binding var selection: FlowInactivityDuration
+
+    private var options: [(id: String, label: String)] {
+        FlowInactivityDuration.allCases.map { duration in
+            (duration.rawValue, AppL10n.string(duration.labelKey))
+        }
+    }
+
+    var body: some View {
+        PickerRow(
+            title: AppL10n.string("settings.flow.inactivity.title"),
+            options: options,
+            selection: Binding(
+                get: { selection.rawValue },
+                set: { newValue in
+                    selection = FlowInactivityDuration(rawValue: newValue) ?? .default
                 }
             )
         )
