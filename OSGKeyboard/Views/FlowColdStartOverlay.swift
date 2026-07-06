@@ -37,8 +37,11 @@ struct FlowColdStartOverlay: View {
                 .ignoresSafeArea()
 
             VStack(spacing: Spacing.xl) {
-                Image(systemName: "waveform.circle.fill")
-                    .font(.system(size: 56))
+                Image("OSGBrandMark")
+                    .renderingMode(.template)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 64, height: 64)
                     .foregroundStyle(palette.accent)
                     .accessibilityHidden(true)
 

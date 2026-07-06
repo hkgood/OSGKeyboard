@@ -36,6 +36,13 @@ struct HomeView: View {
         micStatus != .granted || speechStatus != .granted
     }
 
+    /// Can the user start a session right now from the Home footer? Only when
+    /// nothing is live/starting and permissions are already granted (otherwise
+    /// the permission guidance card is the correct call to action).
+    private var canManuallyStartSession: Bool {
+        !sessionIsLive && !needsPermissionSetup
+    }
+
     private var shouldShowKeyboardHint: Bool {
         !keyboardHintDismissed
             && !KeyboardSetupBridge.isReadyForOnboardingSkip
@@ -193,6 +200,18 @@ struct HomeView: View {
                     flowManager.endSession()
                 } label: {
                     Text("home.flow.endShort")
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.accent)
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, Spacing.xs)
+            } else if canManuallyStartSession {
+                // Sessions auto-start on foreground, but after a manual stop /
+                // expiry the user needs a reliable, no-jump way back in.
+                Button {
+                    flowManager.activateOnForeground()
+                } label: {
+                    Text("home.flow.startShort")
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.accent)
                 }

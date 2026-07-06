@@ -61,12 +61,18 @@ final class KeyboardFlowCoordinator {
         isPendingFlowStart || isFlowRecording || isAwaitingFlowResult
     }
 
+    /// Session/transcription changes are pushed in real time by Darwin
+    /// notifications (see `KeyboardConfigSync.installDarwinObservers`), so this
+    /// loop is only a low-frequency safety net for coalesced/dropped Darwin
+    /// signals — hence 3 s rather than 1 Hz to save battery while idle.
+    private static let sessionMonitorIntervalNs: UInt64 = 3_000_000_000
+
     func startSessionMonitor() {
         flowSessionMonitorTask?.cancel()
         flowSessionMonitorTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 self?.refreshSessionState()
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                try? await Task.sleep(nanoseconds: Self.sessionMonitorIntervalNs)
             }
         }
     }
@@ -168,8 +174,14 @@ final class KeyboardFlowCoordinator {
         debug("openHostApp path=\(path) success=\(success)")
         guard !success else { return }
 
+        // The open genuinely failed (iOS blocked it / no Full Access). Don't
+        // let the 30s watchdog spin — cancel the pending start immediately and
+        // guide the user to open OSGKeyboard manually.
         if path == "startflow", isPendingFlowStart {
-            state.lastTranscript = ExtL10n.string("keyboard.flow.manualOpenHost")
+            isPendingFlowStart = false
+            flowStartDeadline = 0
+            stopFlowWatchdog()
+            showManualOpenHint(path: "startflow")
             return
         }
 

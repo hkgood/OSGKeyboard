@@ -163,6 +163,10 @@ public final class FlowContinuousCapture {
     private var didInstallTap = false
     private var isRunning = false
 
+    private var routeObserver: NSObjectProtocol?
+    private var interruptionObserver: NSObjectProtocol?
+    private let log = Logger(subsystem: "com.osgkeyboard.shared", category: "FlowCapture")
+
     public init() {}
 
     public var running: Bool { isRunning }
@@ -170,7 +174,16 @@ public final class FlowContinuousCapture {
     /// Configure `.playAndRecord`, install a permanent input tap, start the engine.
     public func start() throws {
         guard !isRunning else { return }
+        try activateEngine()
+        isRunning = true
+        installSessionObservers()
+    }
 
+    /// Bring up the audio session + engine for the *current* hardware route.
+    /// Reused for route-change / interruption recovery, so it always rebuilds
+    /// the tap against the live hardware format (which changes when the user
+    /// plugs in AirPods or a wired headset mid-session).
+    private func activateEngine() throws {
         let session = AVAudioSession.sharedInstance()
         do {
             try session.setCategory(
@@ -204,23 +217,22 @@ public final class FlowContinuousCapture {
             throw StartError.converterCreateFailed
         }
 
-        if !didInstallTap {
-            let utteranceFlag = isUtteranceActive
-            let relay = streamRelay
-            let preroll = prerollStore
-            let levels = levelStore
-            let tap = Self.makeAudioTapBlock(
-                converter: converter,
-                targetFormat: targetFormat,
-                hwFormat: hwFormat,
-                utteranceFlag: utteranceFlag,
-                levelStore: levels,
-                prerollStore: preroll,
-                streamRelay: relay
-            )
-            inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat, block: tap)
-            didInstallTap = true
+        // Rebuild the tap so its bound hardware format matches the new route.
+        if didInstallTap {
+            inputNode.removeTap(onBus: 0)
+            didInstallTap = false
         }
+        let tap = Self.makeAudioTapBlock(
+            converter: converter,
+            targetFormat: targetFormat,
+            hwFormat: hwFormat,
+            utteranceFlag: isUtteranceActive,
+            levelStore: levelStore,
+            prerollStore: prerollStore,
+            streamRelay: streamRelay
+        )
+        inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat, block: tap)
+        didInstallTap = true
 
         audioEngine.prepare()
         do {
@@ -228,11 +240,11 @@ public final class FlowContinuousCapture {
         } catch {
             throw StartError.engineStartFailed(error.localizedDescription)
         }
-        isRunning = true
     }
 
     /// Tear down the engine and release the audio session.
     public func stop() {
+        removeSessionObservers()
         isUtteranceActive.withLock { $0 = false }
         streamRelay.finish()
 
@@ -263,6 +275,98 @@ public final class FlowContinuousCapture {
         try? session.setActive(true, options: .notifyOthersOnDeactivation)
         if !audioEngine.isRunning {
             try? audioEngine.start()
+        }
+    }
+
+    // MARK: - Route / interruption recovery
+
+    private func installSessionObservers() {
+        let center = NotificationCenter.default
+        if routeObserver == nil {
+            routeObserver = center.addObserver(
+                forName: AVAudioSession.routeChangeNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] note in
+                // Extract Sendable primitives here (Notification isn't Sendable)
+                // before hopping onto the main actor.
+                let reasonRaw = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
+                MainActor.assumeIsolated { self?.handleRouteChange(reasonRaw: reasonRaw) }
+            }
+        }
+        if interruptionObserver == nil {
+            interruptionObserver = center.addObserver(
+                forName: AVAudioSession.interruptionNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] note in
+                let typeRaw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
+                let optionsRaw = note.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt
+                MainActor.assumeIsolated {
+                    self?.handleInterruption(typeRaw: typeRaw, optionsRaw: optionsRaw)
+                }
+            }
+        }
+    }
+
+    private func removeSessionObservers() {
+        let center = NotificationCenter.default
+        if let routeObserver { center.removeObserver(routeObserver) }
+        if let interruptionObserver { center.removeObserver(interruptionObserver) }
+        routeObserver = nil
+        interruptionObserver = nil
+    }
+
+    private func handleRouteChange(reasonRaw: UInt?) {
+        guard isRunning else { return }
+        guard let reasonRaw,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonRaw) else { return }
+        // Only rebuild for real device swaps (plugging / unplugging a headset
+        // or AirPods). Ignore `.categoryChange`, which we trigger ourselves.
+        switch reason {
+        case .oldDeviceUnavailable, .newDeviceAvailable:
+            log.info("Audio route changed (\(reasonRaw, privacy: .public)) — rebuilding engine")
+            rebuildEngine()
+        default:
+            break
+        }
+    }
+
+    private func handleInterruption(typeRaw: UInt?, optionsRaw: UInt?) {
+        guard let typeRaw,
+              let type = AVAudioSession.InterruptionType(rawValue: typeRaw) else { return }
+        switch type {
+        case .began:
+            // The system already paused our engine; wait for `.ended`.
+            log.info("Audio interruption began")
+        case .ended:
+            guard isRunning else { return }
+            let shouldResume: Bool
+            if let optionsRaw {
+                shouldResume = AVAudioSession.InterruptionOptions(rawValue: optionsRaw).contains(.shouldResume)
+            } else {
+                shouldResume = true
+            }
+            if shouldResume {
+                log.info("Audio interruption ended — resuming capture")
+                rebuildEngine()
+            }
+        @unknown default:
+            break
+        }
+    }
+
+    /// Stop and rebuild the engine against the current route, keeping
+    /// `isRunning` intact so the session survives the swap transparently.
+    private func rebuildEngine() {
+        guard isRunning else { return }
+        if audioEngine.isRunning {
+            audioEngine.stop()
+        }
+        do {
+            try activateEngine()
+        } catch {
+            log.error("Engine rebuild failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 

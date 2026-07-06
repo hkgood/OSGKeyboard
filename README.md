@@ -18,7 +18,7 @@
 OSGKeyboard is a free, source-available alternative to commercial voice-input tools. It runs as a **Custom Keyboard Extension** on iOS, so you can use it in **any app** — Messages, Notes, Mail, WeChat, ChatGPT, Claude, Cursor, you name it.
 
 1. Tap the mic to start recording
-2. Speak naturally (up to 60 seconds per take)
+2. Speak naturally (up to 3.5 minutes / 210 seconds per take)
 3. Tap again to stop — the AI polishes your words into clean text and inserts at the cursor
 
 Audio is transcribed **on-device** by Apple's `SpeechAnalyzer` + `DictationTranscriber` (iOS 26+). Only the **polished transcript** is sent to your chosen cloud LLM. **No audio ever leaves your phone.**
@@ -29,7 +29,7 @@ Under the hood, OSGKeyboard uses a **Flow session model**: a long-lived audio se
 
 ## Features
 
-- 🎙 **Tap-to-toggle recording** with a Typeless-style circular mic button, 60-second per-take cap with live countdown
+- 🎙 **Tap-to-toggle recording** with a Typeless-style circular mic button, 3.5-minute (210s) per-take cap with live countdown
 - 🧠 **On-device ASR** (`SpeechAnalyzer` + `DictationTranscriber`, iOS 26+)
 - ✍️ **AI polishing** — adds structure, punctuation, fixes grammar, optionally produces lists
 - 🧩 **Local + cloud polish toggle** — local engine is ASR-only by default; opt into a post-ASR cloud polish step (DeepSeek by default) when the iOS speech recognition isn't strong enough for your environment (noisy far-field audio, strong accents, etc.)
@@ -168,7 +168,8 @@ To set it as the new default for first-time users, also bump the `defaultProvide
 - **~60 MB memory cap** for the keyboard extension (iOS sandbox). The Flow session is hosted in the main app, so audio buffers and ASR models live there, not in the extension.
 - **"Allow Full Access" required.** Without it, the keyboard can't reach the microphone or make network requests for cloud polish.
 - **Password fields and some `WKWebView` textareas** are blocked by iOS itself — not something we can work around.
-- **60-second per-take cap.** A long take is automatically stopped and dispatched for transcription; a new take can be started immediately.
+- **3.5-minute (210s) per-take cap.** A long take is automatically stopped and dispatched for transcription; a new take can be started immediately.
+- **Force-quitting the host app does not resurrect the old session.** The Live Activity is cleared immediately; the next time you open the app (with permissions granted) a fresh voice session starts automatically.
 - **3-minute per-utterance ASR cap.** If you exceed it, the pipeline gracefully splits into multiple stitched chunks.
 - **No on-device LLM polish.** The local engine is ASR-only; "AI polish" is always cloud-based and configurable. On-device model support was explored in v0.2.0 and rolled back in v0.2.1 to keep the dependency surface at zero SPM packages.
 - **URL scheme `osgkeyboard://`** can be opened by any app on the device. We don't trust it for anything beyond "wake the host app and (re)start the Flow session"; it never carries your API key or other secrets.

@@ -61,33 +61,24 @@ private struct FlowLiveActivityLockScreenView: View {
             Spacer(minLength: 0)
             FlowLiveActivityTrailingGlyph(phase: phase)
         }
-        .padding(.horizontal, 4)
+        // iOS Live Activity lock-screen content needs margins so the leading
+        // logo and trailing glyph don't touch the card edges.
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 }
 
 /// Branded mark used in compactLeading so users see OSGKeyboard, not the system mic icon.
+/// Transparent white OSG glyphs render directly on the black Dynamic Island.
 private struct FlowLiveActivityBrandMark: View {
     let size: CGFloat
 
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color(red: 0.35, green: 0.55, blue: 1.0),
-                            Color(red: 0.22, green: 0.38, blue: 0.92)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-            Image(systemName: "keyboard")
-                .font(.system(size: size * 0.48, weight: .semibold))
-                .foregroundStyle(.white)
-        }
-        .frame(width: size, height: size)
-        .accessibilityLabel("OSGKeyboard")
+        Image("OSGLogo")
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: size, height: size)
+            .accessibilityLabel("OSGKeyboard")
     }
 }
 
@@ -105,8 +96,10 @@ private struct FlowLiveActivityTrailingGlyph: View {
                 .progressViewStyle(.circular)
                 .tint(.white)
         case .idle:
-            Image(systemName: "mic.fill")
-                .foregroundStyle(.secondary)
+            // Session ready but NOT listening — avoid a mic glyph so users
+            // don't think the keyboard is recording in the background.
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
         }
     }
 }

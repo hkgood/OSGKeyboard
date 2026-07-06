@@ -37,7 +37,7 @@ struct MainAppRoot: View {
         .animation(.easeInOut(duration: 0.2), value: flowManager.coldStartContext != nil)
         .onAppear {
             flowManager.setAppForeground(scenePhase == .active)
-            flowManager.restoreSessionIfNeeded()
+            flowManager.activateOnForeground()
         }
         .onReceive(NotificationCenter.default.publisher(for: .osgKeyboardOpenURL)) { notification in
             guard let url = notification.userInfo?["url"] as? URL else { return }
@@ -45,13 +45,13 @@ struct MainAppRoot: View {
         }
         .onChange(of: config.hasCompletedOnboarding) { _, done in
             if done {
-                flowManager.warmupAfterOnboardingIfNeeded()
+                flowManager.activateOnForeground()
             }
         }
         .onChange(of: scenePhase) { _, phase in
             flowManager.handleScenePhase(phase)
             guard phase == .active, config.hasCompletedOnboarding else { return }
-            flowManager.restoreSessionIfNeeded()
+            flowManager.activateOnForeground()
         }
     }
 

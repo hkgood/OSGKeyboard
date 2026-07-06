@@ -8,14 +8,28 @@ import ActivityKit
 import Foundation
 import OSGKeyboardShared
 
-@MainActor
 enum FlowLiveActivityController {
-    private static var currentActivity: Activity<FlowActivityAttributes>?
+    nonisolated(unsafe) private static var currentActivity: Activity<FlowActivityAttributes>?
+
+    /// If the host app is force-quit its `endSession()` never runs, orphaning
+    /// the Live Activity. A `staleDate` lets the system grey it out and become
+    /// willing to reclaim it without our process — refreshed on every update
+    /// so a genuinely active, in-use session never looks stale.
+    private static let staleWindow: TimeInterval = 60 * 60
+
+    private static func freshContent(
+        phase: FlowActivityAttributes.ContentState.Phase
+    ) -> ActivityContent<FlowActivityAttributes.ContentState> {
+        ActivityContent(
+            state: FlowActivityAttributes.ContentState(phase: phase),
+            staleDate: Date().addingTimeInterval(staleWindow)
+        )
+    }
 
     /// Begin showing OSGKeyboard in the Dynamic Island for an active Flow session.
     static func startSession() {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            debug("Live Activity disabled in Settings")
+            FlowDiagnostics.log("Live Activity disabled in Settings")
             return
         }
 
@@ -26,25 +40,21 @@ enum FlowLiveActivityController {
             return
         }
 
-        let state = FlowActivityAttributes.ContentState(phase: .idle)
-        let content = ActivityContent(state: state, staleDate: nil)
-
         do {
             currentActivity = try Activity.request(
                 attributes: FlowActivityAttributes(),
-                content: content,
+                content: freshContent(phase: .idle),
                 pushType: nil
             )
-            debug("Live Activity started")
+            FlowDiagnostics.log("Live Activity started")
         } catch {
-            debug("Live Activity start failed: \(error.localizedDescription)")
+            FlowDiagnostics.log("Live Activity start failed: \(error.localizedDescription)")
         }
     }
 
     static func update(phase: FlowActivityAttributes.ContentState.Phase) {
         guard let activity = currentActivity else { return }
-        let state = FlowActivityAttributes.ContentState(phase: phase)
-        let content = ActivityContent(state: state, staleDate: nil)
+        let content = freshContent(phase: phase)
         Task {
             await activity.update(content)
         }
@@ -60,17 +70,19 @@ enum FlowLiveActivityController {
         currentActivity = nil
         Task {
             await activity.end(nil, dismissalPolicy: .immediate)
-            debug("Live Activity ended")
+            FlowDiagnostics.log("Live Activity ended")
         }
     }
 
     /// Host relaunch can leave orphan activities; clear them before starting anew.
     private static func endStaleActivities() {
-        for activity in Activity<FlowActivityAttributes>.activities {
-            Task {
+        let staleActivities = Activity<FlowActivityAttributes>.activities
+        currentActivity = nil
+        guard !staleActivities.isEmpty else { return }
+        Task {
+            for activity in staleActivities {
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
         }
-        currentActivity = nil
     }
 }

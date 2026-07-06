@@ -34,6 +34,12 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>weixin</string>
@@ -57,13 +63,31 @@
 		<string>googlechrome</string>
 		<string>sinaweibo</string>
 		<string>xhsdiscover</string>
+		<string>sgnl</string>
+		<string>kakaotalk</string>
+		<string>viber</string>
+		<string>zalo</string>
+		<string>skype</string>
+		<string>zoomus</string>
+		<string>things</string>
+		<string>todoist</string>
+		<string>evernote</string>
+		<string>onenote</string>
+		<string>readdle-spark</string>
+		<string>firefox</string>
+		<string>microsoft-edge</string>
+		<string>fb</string>
+		<string>instagram</string>
+		<string>twitter</string>
+		<string>barcelona</string>
+		<string>snapchat</string>
+		<string>reddit</string>
+		<string>pinterest</string>
+		<string>zhihu</string>
+		<string>bilibili</string>
+		<string>snssdk1128</string>
+		<string>tiktok</string>
 	</array>
-	<key>CFBundleVersion</key>
-	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>LSApplicationCategoryType</key>
-	<string>public.app-category.utilities</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
@@ -73,6 +97,8 @@
 	<string>OSGKeyboard uses the microphone for voice dictation and keeps a background audio session active while a voice session is running.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>OSGKeyboard uses on-device speech recognition to transcribe your voice. Audio is processed on your device and is not uploaded for transcription.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -82,8 +108,6 @@
 	<array>
 		<string>audio</string>
 	</array>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>

@@ -67,9 +67,10 @@ final class FlowSessionManager: ObservableObject {
     private var isColdStartHandoff = false
 
     init() {
-        Task { @MainActor [weak self] in
-            await self?.bootstrapFromStorageIfNeeded()
-        }
+        // Sessions are (re)started explicitly on app foreground via
+        // `activateOnForeground()`. We deliberately do NOT silently reattach a
+        // stored session here — after a force-quit that would resurrect capture
+        // (and keep a stale Live Activity alive) without the user re-opening.
     }
 
     // MARK: - Public
@@ -95,6 +96,8 @@ final class FlowSessionManager: ObservableObject {
             return
         }
 
+        guard !isStarting else { return }
+
         startTask?.cancel()
         startTask = Task { @MainActor [weak self] in
             await self?.startSessionAsync(duration: duration)
@@ -102,23 +105,15 @@ final class FlowSessionManager: ObservableObject {
         }
     }
 
-    /// Restores an in-flight session after relaunch; does not auto-start a new one.
-    func restoreSessionIfNeeded() {
+    /// Auto-start (or renew) the Flow session on every app foreground when
+    /// permissions allow — the "always auto-open, no off switch" policy. Also
+    /// clears any orphaned Live Activity a previously force-quit process left
+    /// behind (its `endSession()` could not run at kill time).
+    func activateOnForeground() {
         guard AppGroup.isAvailable else { return }
-        guard !isActive, !isStarting else { return }
-
-        let markedActive = AppGroup.defaults.bool(forKey: FlowSessionKeys.flowSessionActive)
-        if markedActive, FlowSessionBridge.remainingSessionDuration() != nil {
-            Task { await bootstrapFromStorageIfNeeded() }
-        }
-    }
-
-    /// One-shot warmup after onboarding when permissions are already granted.
-    func warmupAfterOnboardingIfNeeded() {
-        guard AppGroup.isAvailable else { return }
-        guard !isActive, !isStarting else { return }
         guard AppPermissions.flowRequirementsMet else {
             sessionWarning = permissionWarningMessage()
+            FlowLiveActivityController.endSession()
             return
         }
         startSession()
@@ -132,60 +127,6 @@ final class FlowSessionManager: ObservableObject {
     func returnToPendingHostFromColdStart() {
         _ = HostReturnService.openPendingHostIfPossible()
         dismissColdStartOverlay()
-    }
-
-    /// Reattach capture when the host app was killed but the session has not expired.
-    func bootstrapFromStorageIfNeeded() async {
-        guard AppGroup.isAvailable, !isActive else { return }
-
-        let markedActive = AppGroup.defaults.bool(forKey: FlowSessionKeys.flowSessionActive)
-        guard markedActive, let remaining = FlowSessionBridge.remainingSessionDuration(), remaining > 0 else {
-            if markedActive {
-                FlowSessionBridge.markSessionInactive()
-            }
-            return
-        }
-
-        guard AppPermissions.flowRequirementsMet else {
-            sessionWarning = permissionWarningMessage()
-            return
-        }
-
-        isStarting = true
-        sessionWarning = nil
-        defer { isStarting = false }
-
-        do {
-            try capture.start()
-        } catch {
-            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-            sessionWarning = message
-            FlowSessionBridge.markSessionInactive()
-            debug("bootstrap capture failed: \(message)")
-            return
-        }
-
-        FlowSessionBridge.writeHeartbeat()
-        FlowSessionDarwin.postSessionChanged()
-        isActive = true
-        ScreenWakeLock.acquire()
-        if let expires = FlowSessionBridge.sessionExpiresAt() {
-            sessionExpiresAt = Date(timeIntervalSince1970: expires)
-        }
-
-        startHeartbeat()
-        startPolling()
-        startLevelPublishing()
-        scheduleExpiry(after: remaining)
-
-        // v0.2.0: iOS `SpeechAnalyzer` needs no warm-up. We still
-        // re-bind the cached `sessionASR` so a config flip mid-session
-        // (e.g. switching from cloud to local) is honoured.
-        bindSessionASRIfNeeded()
-        scheduleASRWarmup()
-        FlowLiveActivityController.startSession()
-
-        debug("Flow session restored (\(Int(remaining))s remaining)")
     }
 
     func endSession() {

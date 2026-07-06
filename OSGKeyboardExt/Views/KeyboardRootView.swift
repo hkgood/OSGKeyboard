@@ -142,8 +142,7 @@ public struct KeyboardRootView: View {
                 micDisabled: state.micDisabled,
                 micDisabledHint: state.micDisabledHint,
                 cursorDragHintActive: state.cursorDragActive,
-                openSettings: state.openSettings,
-                startFlowSession: state.startFlowSession
+                openSettings: state.openSettings
             )
             .frame(height: KeyboardLayoutMetrics.transcriptLineHeight)
         }
@@ -336,7 +335,6 @@ private struct TranscriptLine: View {
     let micDisabledHint: String
     let cursorDragHintActive: Bool
     let openSettings: () -> Void
-    let startFlowSession: () -> Void
 
     var body: some View {
         ZStack {
@@ -366,18 +364,9 @@ private struct TranscriptLine: View {
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textTertiary)
                 } else {
-                    HStack(spacing: 6) {
-                        ExtL10n.text("keyboard.flow.sessionInactive")
-                            .font(TypeStyle.caption)
-                            .foregroundStyle(palette.textTertiary)
-                        Button(action: startFlowSession) {
-                            ExtL10n.text("keyboard.flow.start")
-                                .font(TypeStyle.caption)
-                                .foregroundStyle(palette.accent)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityHint(ExtL10n.text("keyboard.flow.startA11y"))
-                    }
+                    ExtL10n.text("keyboard.flow.sessionInactive")
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textTertiary)
                 }
             case .requestingPermissions:
                 HStack(spacing: 6) {

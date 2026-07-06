@@ -156,6 +156,153 @@ public enum HostAppURLRegistry {
             displayNameKey: "hostApp.xiaohongshu",
             returnURLString: "xhsdiscover://",
             tier: 4
+        ),
+        // Tier 2 (cont.) — global IM / calls
+        HostAppEntry(
+            bundleId: "org.whispersystems.signal",
+            displayNameKey: "hostApp.signal",
+            returnURLString: "sgnl://",
+            tier: 2
+        ),
+        HostAppEntry(
+            bundleId: "com.iwilab.KakaoTalk",
+            displayNameKey: "hostApp.kakaotalk",
+            returnURLString: "kakaotalk://",
+            tier: 2
+        ),
+        HostAppEntry(
+            bundleId: "com.viber",
+            displayNameKey: "hostApp.viber",
+            returnURLString: "viber://",
+            tier: 2
+        ),
+        HostAppEntry(
+            bundleId: "com.vng.zaloapp",
+            displayNameKey: "hostApp.zalo",
+            returnURLString: "zalo://",
+            tier: 2
+        ),
+        HostAppEntry(
+            bundleId: "com.skype.skype",
+            displayNameKey: "hostApp.skype",
+            returnURLString: "skype://",
+            tier: 2
+        ),
+        HostAppEntry(
+            bundleId: "us.zoom.videomeetings",
+            displayNameKey: "hostApp.zoom",
+            returnURLString: "zoomus://",
+            tier: 2
+        ),
+        // Tier 3 (cont.) — notes / mail / browser
+        HostAppEntry(
+            bundleId: "com.culturedcode.ThingsiPhone",
+            displayNameKey: "hostApp.things",
+            returnURLString: "things://",
+            tier: 3
+        ),
+        HostAppEntry(
+            bundleId: "com.todoist.ios",
+            displayNameKey: "hostApp.todoist",
+            returnURLString: "todoist://",
+            tier: 3
+        ),
+        HostAppEntry(
+            bundleId: "com.evernote.iPhone.Evernote",
+            displayNameKey: "hostApp.evernote",
+            returnURLString: "evernote://",
+            tier: 3
+        ),
+        HostAppEntry(
+            bundleId: "com.microsoft.onenote",
+            displayNameKey: "hostApp.onenote",
+            returnURLString: "onenote://",
+            tier: 3
+        ),
+        HostAppEntry(
+            bundleId: "com.readdle.smartemail",
+            displayNameKey: "hostApp.spark",
+            returnURLString: "readdle-spark://",
+            tier: 3
+        ),
+        HostAppEntry(
+            bundleId: "org.mozilla.ios.Firefox",
+            displayNameKey: "hostApp.firefox",
+            returnURLString: "firefox://",
+            tier: 3
+        ),
+        HostAppEntry(
+            bundleId: "com.microsoft.msedge",
+            displayNameKey: "hostApp.edge",
+            returnURLString: "microsoft-edge://",
+            tier: 3
+        ),
+        // Tier 4 (cont.) — global / China social
+        HostAppEntry(
+            bundleId: "com.facebook.Facebook",
+            displayNameKey: "hostApp.facebook",
+            returnURLString: "fb://",
+            tier: 4
+        ),
+        HostAppEntry(
+            bundleId: "com.burbn.instagram",
+            displayNameKey: "hostApp.instagram",
+            returnURLString: "instagram://",
+            tier: 4
+        ),
+        HostAppEntry(
+            bundleId: "com.atebits.Tweetie2",
+            displayNameKey: "hostApp.x",
+            returnURLString: "twitter://",
+            tier: 4
+        ),
+        HostAppEntry(
+            bundleId: "com.burbn.barcelona",
+            displayNameKey: "hostApp.threads",
+            returnURLString: "barcelona://",
+            tier: 4
+        ),
+        HostAppEntry(
+            bundleId: "com.toyopagroup.picaboo",
+            displayNameKey: "hostApp.snapchat",
+            returnURLString: "snapchat://",
+            tier: 4
+        ),
+        HostAppEntry(
+            bundleId: "com.reddit.Reddit",
+            displayNameKey: "hostApp.reddit",
+            returnURLString: "reddit://",
+            tier: 4
+        ),
+        HostAppEntry(
+            bundleId: "pinterest",
+            displayNameKey: "hostApp.pinterest",
+            returnURLString: "pinterest://",
+            tier: 4
+        ),
+        HostAppEntry(
+            bundleId: "com.zhihu.ios",
+            displayNameKey: "hostApp.zhihu",
+            returnURLString: "zhihu://",
+            tier: 4
+        ),
+        HostAppEntry(
+            bundleId: "tv.danmaku.bili",
+            displayNameKey: "hostApp.bilibili",
+            returnURLString: "bilibili://",
+            tier: 4
+        ),
+        HostAppEntry(
+            bundleId: "com.ss.iphone.ugc.Aweme",
+            displayNameKey: "hostApp.douyin",
+            returnURLString: "snssdk1128://",
+            tier: 4
+        ),
+        HostAppEntry(
+            bundleId: "com.zhiliaoapp.musically",
+            displayNameKey: "hostApp.tiktok",
+            returnURLString: "tiktok://",
+            tier: 4
         )
     ]
 

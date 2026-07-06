@@ -140,6 +140,30 @@ targets:
           - googlechrome
           - sinaweibo
           - xhsdiscover
+          - sgnl
+          - kakaotalk
+          - viber
+          - zalo
+          - skype
+          - zoomus
+          - things
+          - todoist
+          - evernote
+          - onenote
+          - readdle-spark
+          - firefox
+          - microsoft-edge
+          - fb
+          - instagram
+          - twitter
+          - barcelona
+          - snapchat
+          - reddit
+          - pinterest
+          - zhihu
+          - bilibili
+          - snssdk1128
+          - tiktok
         # All network calls are HTTPS (NSAppTransportSecurity above);
         # nothing in the app uses non-exempt encryption. Declaring
         # `ITSAppUsesNonExemptEncryption: false` lets us skip the
