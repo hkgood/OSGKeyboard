@@ -14,6 +14,13 @@ import os
 private enum FlowCaptureConstants {
     static let levelBarCount = 24
     static let targetSampleRate: Double = 16_000
+    static let drainPollIntervalNs: UInt64 = 20_000_000
+}
+
+private enum UtteranceGatePhase: Equatable {
+    case idle
+    case recording
+    case draining
 }
 
 /// Thread-safe relay for utterance-scoped ASR snapshots.
@@ -158,7 +165,14 @@ public final class FlowContinuousCapture {
     private let streamRelay = FlowCaptureStreamRelay()
     private let prerollStore = FlowPrerollStore()
     private let levelStore = FlowLevelStore(barCount: FlowCaptureConstants.levelBarCount)
-    private let isUtteranceActive = OSAllocatedUnfairLock(initialState: false)
+    private let gate = OSAllocatedUnfairLock(initialState: UtteranceGatePhase.idle)
+    private let drainTracker = FlowCaptureDrainTracker()
+    private let tailSampleCounter = OSAllocatedUnfairLock(initialState: 0)
+
+    private var audioConverter: AVAudioConverter?
+    private var targetFormat: AVAudioFormat?
+    private var hwFormat: AVAudioFormat?
+    private var drainPolicy = FlowCaptureTailDrainPolicy.flowDefault
 
     private var didInstallTap = false
     private var isRunning = false
@@ -184,15 +198,15 @@ public final class FlowContinuousCapture {
         }
 
         let inputNode = audioEngine.inputNode
-        let hwFormat = inputNode.outputFormat(forBus: 0)
-        guard hwFormat.sampleRate > 0, hwFormat.channelCount > 0 else {
+        let hardwareFormat = inputNode.outputFormat(forBus: 0)
+        guard hardwareFormat.sampleRate > 0, hardwareFormat.channelCount > 0 else {
             throw StartError.invalidHardwareFormat(
-                sampleRate: hwFormat.sampleRate,
-                channels: Int(hwFormat.channelCount)
+                sampleRate: hardwareFormat.sampleRate,
+                channels: Int(hardwareFormat.channelCount)
             )
         }
 
-        guard let targetFormat = AVAudioFormat(
+        guard let resolvedTargetFormat = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
             sampleRate: FlowCaptureConstants.targetSampleRate,
             channels: 1,
@@ -200,25 +214,35 @@ public final class FlowContinuousCapture {
         ) else {
             throw StartError.formatCreateFailed
         }
-        guard let converter = AVAudioConverter(from: hwFormat, to: targetFormat) else {
+        guard let converter = AVAudioConverter(from: hardwareFormat, to: resolvedTargetFormat) else {
             throw StartError.converterCreateFailed
         }
 
+        audioConverter = converter
+        targetFormat = resolvedTargetFormat
+        hwFormat = hardwareFormat
+
         if !didInstallTap {
-            let utteranceFlag = isUtteranceActive
+            let gateLock = gate
             let relay = streamRelay
             let preroll = prerollStore
             let levels = levelStore
+            let tracker = drainTracker
+            let tailCounter = tailSampleCounter
+            let policy = drainPolicy
             let tap = Self.makeAudioTapBlock(
                 converter: converter,
-                targetFormat: targetFormat,
-                hwFormat: hwFormat,
-                utteranceFlag: utteranceFlag,
+                targetFormat: resolvedTargetFormat,
+                hwFormat: hardwareFormat,
+                gate: gateLock,
                 levelStore: levels,
                 prerollStore: preroll,
-                streamRelay: relay
+                streamRelay: relay,
+                drainTracker: tracker,
+                tailSampleCounter: tailCounter,
+                drainPolicy: policy
             )
-            inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat, block: tap)
+            inputNode.installTap(onBus: 0, bufferSize: 4096, format: hardwareFormat, block: tap)
             didInstallTap = true
         }
 
@@ -233,7 +257,9 @@ public final class FlowContinuousCapture {
 
     /// Tear down the engine and release the audio session.
     public func stop() {
-        isUtteranceActive.withLock { $0 = false }
+        gate.withLock { $0 = .idle }
+        drainTracker.reset()
+        tailSampleCounter.withLock { $0 = 0 }
         streamRelay.finish()
 
         if didInstallTap {
@@ -244,6 +270,9 @@ public final class FlowContinuousCapture {
             audioEngine.stop()
         }
         isRunning = false
+        audioConverter = nil
+        targetFormat = nil
+        hwFormat = nil
         try? AVAudioSession.sharedInstance().setActive(
             false,
             options: .notifyOthersOnDeactivation
@@ -269,26 +298,114 @@ public final class FlowContinuousCapture {
     /// Begin forwarding downsampled buffers to ASR for one utterance.
     public func beginUtterance() -> AsyncStream<AudioBufferSnapshot> {
         let (stream, continuation) = AsyncStream<AudioBufferSnapshot>.makeStream()
+        drainTracker.reset()
+        tailSampleCounter.withLock { $0 = 0 }
         // Bind the consumer before opening the gate so early tap frames
         // are not dropped on the floor.
         streamRelay.bind(continuation)
         streamRelay.replay(prerollStore.drain())
-        isUtteranceActive.withLock { $0 = true }
+        gate.withLock { $0 = .recording }
         return stream
     }
 
-    /// Stop forwarding buffers; finishes the ASR stream.
-    public func endUtterance() {
-        isUtteranceActive.withLock { $0 = false }
+    /// Drain trailing PCM after the user stops, then finish the ASR stream.
+    public func endUtteranceAndDrain(
+        policy: FlowCaptureTailDrainPolicy = .flowDefault
+    ) async -> FlowCaptureDrainReport {
+        let currentPhase = gate.withLock { $0 }
+        guard currentPhase == .recording else {
+            return .skipped
+        }
+
+        drainPolicy = policy
+        gate.withLock { $0 = .draining }
+        drainTracker.beginDrain()
+
+        var endedBySilence = false
+        while true {
+            let decision = drainTracker.shouldFinish(policy: policy)
+            if decision.finished {
+                endedBySilence = decision.endedBySilence
+                break
+            }
+            if Task.isCancelled { break }
+            try? await Task.sleep(nanoseconds: FlowCaptureConstants.drainPollIntervalNs)
+        }
+
+        let flushSamples = flushConverterTailToStream()
+        tailSampleCounter.withLock { $0 += flushSamples }
+
         streamRelay.finish()
+        gate.withLock { $0 = .idle }
+
+        let tailSamples = tailSampleCounter.withLock { $0 }
+        let report = FlowCaptureDrainReport(
+            drainDurationSeconds: drainTracker.elapsedSeconds(),
+            endedBySilence: endedBySilence,
+            tailSampleCount: tailSamples
+        )
+        drainTracker.reset()
+        tailSampleCounter.withLock { $0 = 0 }
+        FlowPipelineDiagnostics.logDrain(report)
+        return report
     }
 
+    /// Immediate stop without tail drain (abort / session teardown).
     public func cancelUtterance() {
-        endUtterance()
+        gate.withLock { $0 = .idle }
+        drainTracker.reset()
+        tailSampleCounter.withLock { $0 = 0 }
+        streamRelay.finish()
     }
 
     public func currentAudioLevels() -> [Float] {
         levelStore.snapshot()
+    }
+
+    // MARK: - Converter flush
+
+    @discardableResult
+    private func flushConverterTailToStream() -> Int {
+        guard let converter = audioConverter,
+              let targetFormat,
+              let hwFormat else {
+            return 0
+        }
+
+        var flushedSamples = 0
+        let capacity = AVAudioFrameCount(max(512, hwFormat.sampleRate / 20))
+        guard let outBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity) else {
+            return 0
+        }
+
+        var endOfStreamSignaled = false
+        while true {
+            outBuffer.frameLength = 0
+            var error: NSError?
+            let status = converter.convert(to: outBuffer, error: &error) { _, outStatus in
+                if endOfStreamSignaled {
+                    outStatus.pointee = .noDataNow
+                    return nil
+                }
+                endOfStreamSignaled = true
+                outStatus.pointee = .endOfStream
+                return nil
+            }
+
+            if status == .error || error != nil {
+                break
+            }
+            guard status == .haveData, outBuffer.frameLength > 0 else {
+                break
+            }
+
+            let snapshot = AudioBufferSnapshot(buffer: outBuffer)
+            guard !snapshot.samples.isEmpty else { break }
+            streamRelay.yield(snapshot)
+            flushedSamples += snapshot.samples.count
+        }
+
+        return flushedSamples
     }
 
     // MARK: - Audio tap (nonisolated — runs on realtime thread)
@@ -297,10 +414,13 @@ public final class FlowContinuousCapture {
         converter: AVAudioConverter,
         targetFormat: AVAudioFormat,
         hwFormat: AVAudioFormat,
-        utteranceFlag: OSAllocatedUnfairLock<Bool>,
+        gate: OSAllocatedUnfairLock<UtteranceGatePhase>,
         levelStore: FlowLevelStore,
         prerollStore: FlowPrerollStore,
-        streamRelay: FlowCaptureStreamRelay
+        streamRelay: FlowCaptureStreamRelay,
+        drainTracker: FlowCaptureDrainTracker,
+        tailSampleCounter: OSAllocatedUnfairLock<Int>,
+        drainPolicy: FlowCaptureTailDrainPolicy
     ) -> @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void {
         return { buffer, _ in
             levelStore.update(from: buffer, barCount: FlowCaptureConstants.levelBarCount)
@@ -322,9 +442,15 @@ public final class FlowContinuousCapture {
             let snapshot = AudioBufferSnapshot(buffer: outBuffer)
             guard !snapshot.samples.isEmpty else { return }
 
-            if utteranceFlag.withLock({ $0 }) {
+            let phase = gate.withLock { $0 }
+            switch phase {
+            case .recording, .draining:
                 streamRelay.yield(snapshot)
-            } else {
+                if phase == .draining {
+                    drainTracker.noteAudio(samples: snapshot.samples, policy: drainPolicy)
+                    tailSampleCounter.withLock { $0 += snapshot.samples.count }
+                }
+            case .idle:
                 prerollStore.append(snapshot)
             }
         }

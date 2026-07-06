@@ -41,6 +41,12 @@ import AVFoundation
 import Speech
 import os
 
+private enum LiveCaptureGatePhase: Equatable {
+    case idle
+    case recording
+    case draining
+}
+
 /// Thread-safe relay so the AVAudioEngine tap can yield snapshots without
 /// hopping through `@MainActor` (which adds latency and can reorder frames).
 private final class CaptureStreamRelay: @unchecked Sendable {
@@ -100,6 +106,11 @@ public final class LiveDictationController: ObservableObject {
     public var asrTask: Task<Void, Never>?
     private let streamRelay = CaptureStreamRelay()
     private var chunkedPipeline: ChunkedUtterancePipeline?
+    private let captureGate = OSAllocatedUnfairLock(initialState: LiveCaptureGatePhase.idle)
+    private let drainTracker = FlowCaptureDrainTracker()
+    private var audioConverter: AVAudioConverter?
+    private var targetFormat: AVAudioFormat?
+    private var hwFormat: AVAudioFormat?
     private var didConfigureAudioSession = false
     private var didInstallTap = false
 
@@ -218,10 +229,6 @@ public final class LiveDictationController: ObservableObject {
         // If a previous `asrTask` is somehow still running (e.g. the
         // user smashed the disc twice quickly), `start()` cancels it
         // at the entry point as a safety net.
-        teardownCapturePipeline()
-        // Fallback: if we already have a meaningful partial but the
-        // backend never emits `.final`, promote the partial so the
-        // preview still inserts text after "停止录音".
         let partial = currentPartial.trimmingCharacters(in: .whitespacesAndNewlines)
         if !partial.isEmpty && lastFinal.isEmpty {
             lastFinal = partial
@@ -230,9 +237,10 @@ public final class LiveDictationController: ObservableObject {
         if phase == .recording {
             phase = .processing
         }
-        // Deactivate so the user's music resumes if the preview is
-        // dismissed mid-recording.
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+
+        Task { @MainActor [weak self] in
+            await self?.drainTailAndTeardownCapture()
+        }
 
         // Safety net: if the ASR pipeline never produces a `.final`
         // (analyzer hang, system glitch, dropped continuation), force
@@ -311,6 +319,12 @@ public final class LiveDictationController: ObservableObject {
             return
         }
 
+        audioConverter = converter
+        self.targetFormat = targetFormat
+        self.hwFormat = hwFormat
+        drainTracker.reset()
+        captureGate.withLock { $0 = .recording }
+
         let (stream, continuation) = AsyncStream<AudioBufferSnapshot>.makeStream()
         streamRelay.bind(continuation)
 
@@ -333,8 +347,16 @@ public final class LiveDictationController: ObservableObject {
             }
         }
         let relay = streamRelay
+        let gate = captureGate
+        let tracker = drainTracker
+        let policy = FlowCaptureTailDrainPolicy.flowDefault
         let onSnapshot: @Sendable (AudioBufferSnapshot) -> Void = { snapshot in
+            let phase = gate.withLock { $0 }
+            guard phase == .recording || phase == .draining else { return }
             relay.yield(snapshot)
+            if phase == .draining {
+                tracker.noteAudio(samples: snapshot.samples, policy: policy)
+            }
         }
         let tap = Self.makeAudioTapBlock(
             converter: converter,
@@ -521,7 +543,88 @@ public final class LiveDictationController: ObservableObject {
         }
     }
 
-    private func teardownCapturePipeline() {
+    private func drainTailAndTeardownCapture() async {
+        let beganDrain = captureGate.withLock { phase -> Bool in
+            switch phase {
+            case .recording:
+                phase = .draining
+                return true
+            case .draining, .idle:
+                return false
+            }
+        }
+        guard beganDrain else { return }
+
+        drainTracker.beginDrain()
+
+        let policy = FlowCaptureTailDrainPolicy.flowDefault
+        while true {
+            let decision = drainTracker.shouldFinish(policy: policy)
+            if decision.finished { break }
+            if Task.isCancelled { break }
+            try? await Task.sleep(nanoseconds: 20_000_000)
+        }
+
+        _ = flushConverterTailToStream()
+        streamRelay.finish()
+        teardownCaptureEngine()
+        captureGate.withLock { $0 = .idle }
+        drainTracker.reset()
+        audioConverter = nil
+        targetFormat = nil
+        hwFormat = nil
+
+        try? AVAudioSession.sharedInstance().setActive(
+            false,
+            options: .notifyOthersOnDeactivation
+        )
+    }
+
+    @discardableResult
+    private func flushConverterTailToStream() -> Int {
+        guard let converter = audioConverter,
+              let targetFormat,
+              let hwFormat else {
+            return 0
+        }
+
+        var flushedSamples = 0
+        let capacity = AVAudioFrameCount(max(512, hwFormat.sampleRate / 20))
+        guard let outBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity) else {
+            return 0
+        }
+
+        var endOfStreamSignaled = false
+        while true {
+            outBuffer.frameLength = 0
+            var error: NSError?
+            let status = converter.convert(to: outBuffer, error: &error) { _, outStatus in
+                if endOfStreamSignaled {
+                    outStatus.pointee = .noDataNow
+                    return nil
+                }
+                endOfStreamSignaled = true
+                outStatus.pointee = .endOfStream
+                return nil
+            }
+
+            if status == .error || error != nil {
+                break
+            }
+            guard status == .haveData, outBuffer.frameLength > 0 else {
+                break
+            }
+
+            let snapshot = AudioBufferSnapshot(buffer: outBuffer)
+            guard !snapshot.samples.isEmpty else { break }
+            streamRelay.yield(snapshot)
+            flushedSamples += snapshot.samples.count
+        }
+
+        return flushedSamples
+    }
+
+    private func teardownCaptureEngine() {
         if didInstallTap {
             audioEngine.inputNode.removeTap(onBus: 0)
             didInstallTap = false
@@ -529,6 +632,10 @@ public final class LiveDictationController: ObservableObject {
         if audioEngine.isRunning {
             audioEngine.stop()
         }
+    }
+
+    private func teardownCapturePipeline() {
+        teardownCaptureEngine()
         streamRelay.finish()
     }
 

@@ -16,6 +16,8 @@ public struct FlowUtteranceChunkConfig: Sendable, Equatable {
     public let pauseExtensionMaxSeconds: TimeInterval
     /// RMS below this is treated as a pause candidate (Float32 mono @ 16 kHz).
     public let pauseRMSThreshold: Float
+    /// Final chunk shorter than this is re-transcribed merged with the prior tail overlap.
+    public let minFinalChunkDurationSeconds: TimeInterval
     public let sampleRate: Int
 
     public init(
@@ -24,6 +26,7 @@ public struct FlowUtteranceChunkConfig: Sendable, Equatable {
         overlapDurationSeconds: TimeInterval,
         pauseExtensionMaxSeconds: TimeInterval,
         pauseRMSThreshold: Float,
+        minFinalChunkDurationSeconds: TimeInterval = 0.8,
         sampleRate: Int
     ) {
         self.firstChunkDurationSeconds = firstChunkDurationSeconds
@@ -31,6 +34,7 @@ public struct FlowUtteranceChunkConfig: Sendable, Equatable {
         self.overlapDurationSeconds = overlapDurationSeconds
         self.pauseExtensionMaxSeconds = pauseExtensionMaxSeconds
         self.pauseRMSThreshold = pauseRMSThreshold
+        self.minFinalChunkDurationSeconds = minFinalChunkDurationSeconds
         self.sampleRate = sampleRate
     }
 
@@ -40,6 +44,7 @@ public struct FlowUtteranceChunkConfig: Sendable, Equatable {
         overlapDurationSeconds: TimeInterval,
         pauseExtensionMaxSeconds: TimeInterval,
         pauseRMSThreshold: Float,
+        minFinalChunkDurationSeconds: TimeInterval = 0.8,
         sampleRate: Int
     ) {
         self.firstChunkDurationSeconds = maxChunkDurationSeconds
@@ -47,6 +52,7 @@ public struct FlowUtteranceChunkConfig: Sendable, Equatable {
         self.overlapDurationSeconds = overlapDurationSeconds
         self.pauseExtensionMaxSeconds = pauseExtensionMaxSeconds
         self.pauseRMSThreshold = pauseRMSThreshold
+        self.minFinalChunkDurationSeconds = minFinalChunkDurationSeconds
         self.sampleRate = sampleRate
     }
 
@@ -75,6 +81,10 @@ public struct FlowUtteranceChunkConfig: Sendable, Equatable {
         Int(pauseExtensionMaxSeconds * Double(sampleRate))
     }
 
+    public var minFinalChunkSamples: Int {
+        Int(minFinalChunkDurationSeconds * Double(sampleRate))
+    }
+
     /// Default for keyboard Flow utterances (≤ 3 min, pipelined ASR).
     public static let flowDefault = FlowUtteranceChunkConfig(
         firstChunkDurationSeconds: 2.5,
@@ -82,6 +92,7 @@ public struct FlowUtteranceChunkConfig: Sendable, Equatable {
         overlapDurationSeconds: 0.5,
         pauseExtensionMaxSeconds: 2,
         pauseRMSThreshold: 0.015,
+        minFinalChunkDurationSeconds: 0.8,
         sampleRate: 16_000
     )
 }

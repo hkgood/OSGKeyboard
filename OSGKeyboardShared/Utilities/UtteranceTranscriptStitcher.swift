@@ -21,6 +21,12 @@ public struct UtteranceTranscriptStitcher: Sendable {
         }
     }
 
+    /// Drop the highest-index segment (used when re-transcribing a merged tail chunk).
+    public mutating func removeLastSegment() {
+        guard !segments.isEmpty else { return }
+        segments.removeLast()
+    }
+
     public func composed() -> String {
         guard let first = segments.first else { return "" }
         var result = first.text
@@ -28,6 +34,21 @@ public struct UtteranceTranscriptStitcher: Sendable {
             result = Self.mergeWithOverlap(previous: result, next: segment.text)
         }
         return result
+    }
+
+    /// Prefer overlap-aware merge, but fall back to naive join when dedup would drop real content.
+    public func composedSafely() -> String {
+        let merged = composed()
+        guard segments.count >= 2 else { return merged }
+        let naive = segments.map(\.text).joined(separator: " ")
+        if merged.count + 16 < naive.count {
+            FlowPipelineDiagnostics.logStitcherSafeFallback(
+                naiveLength: naive.count,
+                mergedLength: merged.count
+            )
+            return naive
+        }
+        return merged
     }
 
     /// Merge `next` onto `previous`, dropping duplicated suffix/prefix overlap.

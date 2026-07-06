@@ -63,4 +63,33 @@ final class UtteranceStreamChunkerTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(received.count, 2)
         XCTAssertTrue(received.last?.isLast == true)
     }
+
+    func testFinalChunkIncludesLateArrivingTailSamples() async {
+        let config = FlowUtteranceChunkConfig(
+            firstChunkDurationSeconds: 0.5,
+            subsequentChunkDurationSeconds: 1.0,
+            overlapDurationSeconds: 0,
+            pauseExtensionMaxSeconds: 0,
+            pauseRMSThreshold: 0.02,
+            sampleRate: 1_000
+        )
+        let head = [Float](repeating: 0.05, count: 600)
+        let tail = [Float](repeating: 0.08, count: 250)
+
+        let (stream, continuation) = AsyncStream<AudioBufferSnapshot>.makeStream()
+        continuation.yield(AudioBufferSnapshot(samples: head, sampleRate: Double(config.sampleRate)))
+        continuation.yield(AudioBufferSnapshot(samples: tail, sampleRate: Double(config.sampleRate)))
+        continuation.finish()
+
+        var received: [UtteranceAudioChunk] = []
+        for await chunk in UtteranceStreamChunker.chunks(from: stream, config: config) {
+            received.append(chunk)
+        }
+
+        guard let last = received.last else {
+            return XCTFail("expected at least one chunk")
+        }
+        XCTAssertTrue(last.isLast)
+        XCTAssertGreaterThanOrEqual(last.samples.count, tail.count)
+    }
 }
