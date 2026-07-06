@@ -156,6 +156,7 @@ final class FlowSessionManager: ObservableObject {
         // (e.g. switching from cloud to local) is honoured.
         bindSessionASRIfNeeded()
         scheduleASRWarmup()
+        FlowLiveActivityController.startSession()
 
         debug("Flow session restored (\(Int(remaining))s remaining)")
     }
@@ -196,6 +197,7 @@ final class FlowSessionManager: ObservableObject {
         sessionASRWarmedLocaleID = nil
         FlowSessionBridge.markSessionInactive()
         FlowSessionDarwin.postSessionChanged()
+        FlowLiveActivityController.endSession()
         isActive = false
         sessionExpiresAt = nil
         sessionWarning = nil
@@ -339,6 +341,7 @@ final class FlowSessionManager: ObservableObject {
         // while the session was idle.
         bindSessionASRIfNeeded()
         scheduleASRWarmup()
+        FlowLiveActivityController.startSession()
 
         debug("Flow session started (\(Int(duration))s), continuous capture running")
     }
@@ -437,6 +440,7 @@ final class FlowSessionManager: ObservableObject {
 
         isUtteranceRecording = true
         utteranceRecordingStartedAt = Date()
+        FlowLiveActivityController.update(phase: .recording)
         FlowDiagnostics.log(
             "beginUtterance engine=\(store.engineMode) " +
             "asrType=\(type(of: asr)) pipelined=true max=\(Int(FlowSessionKeys.maxUtteranceDuration))s"
@@ -489,6 +493,7 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.setRecordingState(.processing)
         isUtteranceRecording = false
         isUtteranceProcessing = true
+        FlowLiveActivityController.update(phase: .processing)
 
         // Do NOT cancel `asrTask` or `asr` — the preview pipeline relies on
         // the consumer staying alive until `.final` lands (see
@@ -517,6 +522,7 @@ final class FlowSessionManager: ObservableObject {
         chunkWarnings = []
         FlowSessionBridge.storeTranscriptionPartial("")
         FlowSessionBridge.setRecordingState(.idle)
+        FlowLiveActivityController.update(phase: .idle)
         debug("utterance aborted")
     }
 
@@ -540,6 +546,7 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.storeTranscriptionPartial("")
         FlowSessionBridge.storeTranscriptionError(message, kind: kind)
         FlowSessionBridge.setRecordingState(.idle)
+        FlowLiveActivityController.update(phase: .idle)
         debug("utterance failed: \(message)")
     }
 
@@ -558,6 +565,7 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.storeTranscriptionPartial("")
         FlowSessionBridge.storeTranscriptionError(message, kind: kind)
         FlowSessionBridge.setRecordingState(.idle)
+        FlowLiveActivityController.update(phase: .idle)
         debug("utterance processing failed: \(message)")
     }
 
@@ -566,6 +574,7 @@ final class FlowSessionManager: ObservableObject {
         defer {
             isUtteranceProcessing = false
             FlowSessionBridge.setRecordingState(.idle)
+            FlowLiveActivityController.update(phase: .idle)
         }
 
         let asrWait = asrWaitTimeout()

@@ -54,6 +54,8 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewDidLoad() {
         super.viewDidLoad()
+        // Voice-first keyboard — hide the misleading "English" subtitle in Settings.
+        primaryLanguage = "mis"
         OSGLog.keyboardExt.info("viewDidLoad — extension booted")
         CustomLanguageModelManager.shared.prepareInBackgroundIfNeeded()
         setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
