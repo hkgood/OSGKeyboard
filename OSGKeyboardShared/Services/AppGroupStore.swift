@@ -57,6 +57,7 @@ public struct AppGroupStore: @unchecked Sendable {
     public var polishModeForPipeline: PolishingService.PolishMode { configuration.polishModeForPipeline }
     public var polishProviderIdOverride: String? { configuration.polishProviderIdOverride }
     public var isCloudAPIKeyMissingForVoiceInput: Bool { configuration.isCloudAPIKeyMissingForVoiceInput }
+    public var localASRCustomLanguageModelEnabled: Bool { configuration.localASRCustomLanguageModelEnabled }
 
     /// Whether the keyboard top-bar translation chip should render.
     public var isTranslationChipVisible: Bool { true }
@@ -112,6 +113,10 @@ public struct AppGroupStore: @unchecked Sendable {
         mutateConfiguration { $0.polishIntensity = intensity }
     }
 
+    public func setLocalASRCustomLanguageModelEnabled(_ enabled: Bool) {
+        mutateConfiguration { $0.localASRCustomLanguageModelEnabled = enabled }
+    }
+
     public var hasCompletedOnboarding: Bool {
         get { configuration.hasCompletedOnboarding }
         set { setHasCompletedOnboarding(newValue) }
@@ -129,6 +134,8 @@ public struct AppGroupStore: @unchecked Sendable {
                 config.onboardingPage = 0
             }
         }
+        // Mirror to the reboot-durable Keychain marker (keyboard-side completion).
+        Keychain.setOnboardingCompleted(completed)
     }
 
     public func setOnboardingPage(_ page: Int) {
@@ -165,6 +172,22 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setPersonalDictionaryICloudSyncEnabled(_ enabled: Bool) {
         mutateConfiguration { $0.personalDictionaryICloudSyncEnabled = enabled }
+    }
+
+    public var settingsICloudSyncEnabled: Bool {
+        get { configuration.settingsICloudSyncEnabled }
+        set { setSettingsICloudSyncEnabled(newValue) }
+    }
+
+    public func setSettingsICloudSyncEnabled(_ enabled: Bool) {
+        mutateConfiguration { $0.settingsICloudSyncEnabled = enabled }
+    }
+
+    /// Timestamp of the last settings blob applied from iCloud KVS.
+    public var settingsCloudUpdatedAt: Date? {
+        let raw = defaults.double(forKey: AppGroupConfiguration.Keys.settingsCloudUpdatedAt)
+        guard raw > 0 else { return nil }
+        return Date(timeIntervalSince1970: raw)
     }
 
     // MARK: - Client

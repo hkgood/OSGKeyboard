@@ -198,28 +198,30 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
 
     func warmup(locale: Locale) async {
         guard let resolvedLocale = await DictationTranscriber.supportedLocale(equivalentTo: locale) else {
+            Self.debug("warmup locale unsupported requested=\(locale.identifier(.bcp47))")
             return
         }
         let localeID = resolvedLocale.identifier(.bcp47)
         let cachedLocaleID = lock.withLock { chunkPreparedLocaleID }
         if cachedLocaleID == localeID, lock.withLock({ chunkAnalyzerFormat != nil }) {
+            Self.debug("warmup cache hit locale=\(localeID)")
             return
         }
 
-        let lmConfiguration = CustomLanguageModelManager.shared.configurationForTranscription(
-            locale: resolvedLocale
-        )
-        let transcriber = CustomLanguageModelManager.makeDictationTranscriber(
-            locale: resolvedLocale,
-            lmConfiguration: lmConfiguration
+        let setup = Self.makeDiagnosticTranscriber(locale: resolvedLocale)
+        Self.debug(
+            "warmup start locale=\(localeID) customLMEnabled=\(setup.customLanguageModelEnabled) " +
+            "customLMAttached=\(setup.usesCustomLanguageModel) " +
+            "clmState=\(Self.describeCLMState(setup.clmState))"
         )
 
         do {
-            try await Self.prepareAssetsIfNeeded(for: transcriber, locale: resolvedLocale)
+            try await Self.prepareAssetsIfNeeded(for: setup.transcriber, locale: resolvedLocale)
             guard let format = await SpeechAnalyzer.bestAvailableAudioFormat(
-                compatibleWith: [transcriber],
+                compatibleWith: [setup.transcriber],
                 considering: Self.captureFormat
             ) else {
+                Self.debug("warmup format unsupported locale=\(localeID)")
                 return
             }
             lock.withLock {
@@ -236,13 +238,25 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
         guard !samples.isEmpty else { return .success("") }
         if Task.isCancelled { return .cancelled }
 
+        let startedAt = Date()
+        let rms = Self.rms(of: samples)
+        Self.debug(
+            "chunk start samples=\(samples.count) rms=\(String(format: "%.4f", rms)) " +
+            "locale=\(locale.identifier(.bcp47))"
+        )
         do {
             let text = try await transcribeSamples(samples, locale: locale, reuseChunkPrep: true)
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            Self.debug(
+                "chunk success textLen=\(trimmed.count) elapsed=\(Self.elapsed(startedAt))s " +
+                "empty=\(trimmed.isEmpty)"
+            )
             return trimmed.isEmpty ? .success("") : .success(trimmed)
         } catch is CancellationError {
+            Self.debug("chunk cancelled elapsed=\(Self.elapsed(startedAt))s")
             return .cancelled
         } catch {
+            Self.debug("chunk failed elapsed=\(Self.elapsed(startedAt))s error=\(error.localizedDescription)")
             return .failure(error.localizedDescription)
         }
     }
@@ -257,12 +271,11 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
             throw ASRChunkError.localeUnsupported
         }
         let localeID = resolvedLocale.identifier(.bcp47)
-        let lmConfiguration = CustomLanguageModelManager.shared.configurationForTranscription(
-            locale: resolvedLocale
-        )
-        let transcriber = CustomLanguageModelManager.makeDictationTranscriber(
-            locale: resolvedLocale,
-            lmConfiguration: lmConfiguration
+        let setup = Self.makeDiagnosticTranscriber(locale: resolvedLocale)
+        Self.debug(
+            "chunk setup locale=\(localeID) customLMEnabled=\(setup.customLanguageModelEnabled) " +
+            "customLMAttached=\(setup.usesCustomLanguageModel) " +
+            "clmState=\(Self.describeCLMState(setup.clmState))"
         )
 
         let analyzerFormat: AVAudioFormat
@@ -271,10 +284,14 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
            cachedPrep.0 == localeID,
            let cached = cachedPrep.1 {
             analyzerFormat = cached
+            Self.debug(
+                "chunk using cached analyzer format sr=\(Int(cached.sampleRate)) " +
+                "channels=\(cached.channelCount) common=\(cached.commonFormat.rawValue)"
+            )
         } else {
-            try await Self.prepareAssetsIfNeeded(for: transcriber, locale: resolvedLocale)
+            try await Self.prepareAssetsIfNeeded(for: setup.transcriber, locale: resolvedLocale)
             guard let format = await SpeechAnalyzer.bestAvailableAudioFormat(
-                compatibleWith: [transcriber],
+                compatibleWith: [setup.transcriber],
                 considering: Self.captureFormat
             ) else {
                 throw ASRChunkError.formatUnsupported
@@ -284,6 +301,10 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
                 chunkPreparedLocaleID = localeID
                 chunkAnalyzerFormat = format
             }
+            Self.debug(
+                "chunk prepared analyzer format sr=\(Int(format.sampleRate)) " +
+                "channels=\(format.channelCount) common=\(format.commonFormat.rawValue)"
+            )
         }
 
         let snapshot = AudioBufferSnapshot(samples: samples, sampleRate: 16_000)
@@ -291,12 +312,12 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
             throw ASRChunkError.formatUnsupported
         }
 
-        let analyzer = SpeechAnalyzer(modules: [transcriber])
+        let analyzer = SpeechAnalyzer(modules: [setup.transcriber])
         try await analyzer.prepareToAnalyze(in: analyzerFormat)
 
         let resultsTask = Task<String, Error> {
             var accumulator = ProgressiveDictationTranscriptAccumulator()
-            for try await result in transcriber.results {
+            for try await result in setup.transcriber.results {
                 if Task.isCancelled { break }
                 let text = String(result.text.characters)
                 _ = accumulator.ingest(range: result.range, text: text)
@@ -369,15 +390,15 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
                     }
                     // Each pipelined chunk is ≤ 30 s; long dictation preset keeps a
                     // single chunk coherent (Flow utterances run up to 3 min).
-                    let lmConfiguration = CustomLanguageModelManager.shared.configurationForTranscription(
-                        locale: resolvedLocale
-                    )
-                    let transcriber = CustomLanguageModelManager.makeDictationTranscriber(
-                        locale: resolvedLocale,
-                        lmConfiguration: lmConfiguration
+                    let setup = Self.makeDiagnosticTranscriber(locale: resolvedLocale)
+                    Self.debug(
+                        "stream setup locale=\(resolvedLocale.identifier(.bcp47)) " +
+                        "customLMEnabled=\(setup.customLanguageModelEnabled) " +
+                        "customLMAttached=\(setup.usesCustomLanguageModel) " +
+                        "clmState=\(Self.describeCLMState(setup.clmState))"
                     )
                     do {
-                        try await Self.prepareAssetsIfNeeded(for: transcriber, locale: resolvedLocale)
+                        try await Self.prepareAssetsIfNeeded(for: setup.transcriber, locale: resolvedLocale)
                     } catch {
                         Self.debug("asset prepare failed: \(error.localizedDescription)")
                         continuation.yield(.error(SharedL10n.string("error.asr.assetsNotReady")))
@@ -385,11 +406,11 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
                         return
                     }
 
-                    let newAnalyzer = SpeechAnalyzer(modules: [transcriber])
+                    let newAnalyzer = SpeechAnalyzer(modules: [setup.transcriber])
                     self.lock.withLock { self.analyzer = newAnalyzer }
 
                     guard let analyzerFormat = await SpeechAnalyzer.bestAvailableAudioFormat(
-                        compatibleWith: [transcriber],
+                        compatibleWith: [setup.transcriber],
                         considering: Self.captureFormat
                     ) else {
                         continuation.yield(.error(SharedL10n.string("error.asr.formatUnsupported")))
@@ -405,7 +426,7 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
                     // while `analyzeSequence` drains the input stream.
                     let resultsTask = Task<String, Error> {
                         var accumulator = ProgressiveDictationTranscriptAccumulator()
-                        for try await result in transcriber.results {
+                        for try await result in setup.transcriber.results {
                             if Task.isCancelled { break }
                             let text = String(result.text.characters)
                             guard let full = accumulator.ingest(range: result.range, text: text) else {
@@ -457,23 +478,91 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
         }
     }
 
+    private struct DiagnosticTranscriber {
+        let transcriber: DictationTranscriber
+        let customLanguageModelEnabled: Bool
+        let usesCustomLanguageModel: Bool
+        let clmState: CustomLanguageModelManager.PrepareState
+    }
+
+    private static func makeDiagnosticTranscriber(locale: Locale) -> DiagnosticTranscriber {
+        let defaults = AppGroup.defaultsIfAvailable
+        let clmKey = AppGroupConfiguration.Keys.localASRCustomLanguageModelEnabled
+        let clmEnabled = defaults?.object(forKey: clmKey) == nil
+            ? true
+            : (defaults?.bool(forKey: clmKey) ?? true)
+        let clmState = CustomLanguageModelManager.shared.currentState()
+        let lmConfiguration = clmEnabled
+            ? CustomLanguageModelManager.shared.configurationForTranscription(locale: locale)
+            : nil
+        let transcriber = CustomLanguageModelManager.makeDictationTranscriber(
+            locale: locale,
+            lmConfiguration: lmConfiguration
+        )
+        return DiagnosticTranscriber(
+            transcriber: transcriber,
+            customLanguageModelEnabled: clmEnabled,
+            usesCustomLanguageModel: lmConfiguration != nil,
+            clmState: clmState
+        )
+    }
+
+    private static func describeCLMState(_ state: CustomLanguageModelManager.PrepareState) -> String {
+        switch state {
+        case .idle:
+            return "idle"
+        case .preparing:
+            return "preparing"
+        case .ready:
+            return "ready"
+        case .failed(let message):
+            return "failed(\(message))"
+        }
+    }
+
+    private static func rms(of samples: [Float]) -> Float {
+        guard !samples.isEmpty else { return 0 }
+        var sum: Float = 0
+        for sample in samples {
+            sum += sample * sample
+        }
+        return sqrtf(sum / Float(samples.count))
+    }
+
+    private static func elapsed(_ start: Date) -> String {
+        String(format: "%.2f", Date().timeIntervalSince(start))
+    }
+
     private static func debug(_ message: String) {
-        #if DEBUG
-        print("🎙️[ASRService] \(message)")
-        #endif
+        OSGLog.asr.info("\(message, privacy: .public)")
     }
 
     private static func prepareAssetsIfNeeded(
         for transcriber: DictationTranscriber,
         locale: Locale
     ) async throws {
+        let localeID = locale.identifier(.bcp47)
+        let startedAt = Date()
         do {
             _ = try await AssetInventory.reserve(locale: locale)
+            Self.debug("asset reserve ok locale=\(localeID)")
         } catch {
-            // Reservation may already exist or slots are full; continue.
+            // Reservation may already exist or slots are full; continue, but
+            // log it so local-ASR setup failures are not hidden behind a later
+            // "no speech" timeout.
+            Self.debug("asset reserve non-fatal locale=\(localeID) error=\(error.localizedDescription)")
         }
-        if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
-            try await request.downloadAndInstall()
+        do {
+            if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
+                Self.debug("asset install required locale=\(localeID)")
+                try await request.downloadAndInstall()
+                Self.debug("asset install done locale=\(localeID) elapsed=\(elapsed(startedAt))s")
+            } else {
+                Self.debug("asset already installed locale=\(localeID) elapsed=\(elapsed(startedAt))s")
+            }
+        } catch {
+            Self.debug("asset prepare failed locale=\(localeID) elapsed=\(elapsed(startedAt))s error=\(error.localizedDescription)")
+            throw error
         }
     }
 

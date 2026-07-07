@@ -1,14 +1,13 @@
 // FlowColdStartOverlay.swift
 // OSGKeyboard · Main App
 //
-// Minimal cold-start handoff UI: swipe-back guidance and optional return alert.
+// Minimal cold-start handoff UI: bottom-bar swipe guidance and optional return link.
 
 import SwiftUI
 import OSGKeyboardShared
 
 struct FlowColdStartContext: Equatable {
     let hostEntry: HostAppEntry?
-    var showReturnAlert: Bool
 }
 
 struct FlowColdStartOverlay: View {
@@ -18,78 +17,62 @@ struct FlowColdStartOverlay: View {
     let onReturnToHost: () -> Void
     let onDismiss: () -> Void
 
-    @State private var showAlert: Bool
+    @State private var swipeOffset: CGFloat = 0
 
-    init(
-        context: FlowColdStartContext,
-        onReturnToHost: @escaping () -> Void,
-        onDismiss: @escaping () -> Void
-    ) {
-        self.context = context
-        self.onReturnToHost = onReturnToHost
-        self.onDismiss = onDismiss
-        _showAlert = State(initialValue: context.showReturnAlert)
-    }
+    private let homeBarWidth: CGFloat = 134
 
     var body: some View {
         ZStack {
             palette.background.opacity(0.96)
                 .ignoresSafeArea()
 
-            VStack(spacing: Spacing.xl) {
-                Image("OSGBrandMark")
-                    .renderingMode(.template)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 64, height: 64)
-                    .foregroundStyle(palette.accent)
-                    .accessibilityHidden(true)
+            VStack(spacing: 0) {
+                Spacer()
 
-                Text("flow.coldStart.title")
-                    .font(TypeStyle.title3)
-                    .foregroundStyle(palette.textPrimary)
-                    .multilineTextAlignment(.center)
-
-                Text(swipeHintKey)
-                    .font(TypeStyle.body)
-                    .foregroundStyle(palette.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, Spacing.lg)
-
-                swipeHintAnimation
-                    .padding(.top, Spacing.md)
-
-                Button(action: onDismiss) {
-                    Text("flow.coldStart.dismiss")
-                        .font(TypeStyle.body.weight(.semibold))
+                VStack(spacing: Spacing.xl) {
+                    Image("OSGBrandMark")
+                        .renderingMode(.template)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 64, height: 64)
                         .foregroundStyle(palette.accent)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, Spacing.md)
+                        .accessibilityHidden(true)
+
+                    Text("flow.coldStart.title")
+                        .font(TypeStyle.title3)
+                        .foregroundStyle(palette.textPrimary)
+                        .multilineTextAlignment(.center)
+
+                    Text("flow.coldStart.swipeHint")
+                        .font(TypeStyle.body)
+                        .foregroundStyle(palette.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, Spacing.lg)
+
+                    if context.hostEntry != nil {
+                        Button(action: onReturnToHost) {
+                            Text(returnButtonTitle)
+                                .font(TypeStyle.body.weight(.semibold))
+                                .foregroundStyle(palette.accent)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .buttonStyle(.plain)
                 .padding(.horizontal, Spacing.xl)
-                .padding(.top, Spacing.lg)
-            }
-            .padding(Spacing.xl)
-        }
-        .alert(alertTitle, isPresented: $showAlert) {
-            if context.hostEntry != nil {
-                Button(returnButtonTitle, action: onReturnToHost)
-            }
-            Button("flow.coldStart.dismiss", role: .cancel, action: onDismiss)
-        } message: {
-            Text("flow.coldStart.alert.message")
-        }
-    }
 
-    private var swipeHintKey: LocalizedStringKey {
-        context.hostEntry == nil
-            ? "flow.coldStart.swipeHint"
-            : "flow.coldStart.swipeHint.withSystemBack"
-    }
+                Spacer()
 
-    private var alertTitle: String {
-        AppL10n.string("flow.coldStart.alert.title")
+                bottomSwipeGuide
+                    .padding(.bottom, Spacing.md)
+
+                Text("flow.coldStart.tapToDismiss")
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textTertiary)
+                    .padding(.bottom, Spacing.xl)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onDismiss)
     }
 
     private var returnButtonTitle: String {
@@ -100,15 +83,38 @@ struct FlowColdStartOverlay: View {
         return AppL10n.format("flow.coldStart.return.named", appName)
     }
 
-    private var swipeHintAnimation: some View {
+    private var bottomSwipeGuide: some View {
         VStack(spacing: Spacing.sm) {
-            Image(systemName: "chevron.up")
-                .font(.system(size: 20, weight: .semibold))
+            Image(systemName: "arrow.down")
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(palette.textTertiary)
-            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .fill(palette.textTertiary.opacity(0.5))
-                .frame(width: 120, height: 5)
+
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 2.5, style: .continuous)
+                    .fill(palette.textTertiary.opacity(0.35))
+                    .frame(width: homeBarWidth, height: 5)
+
+                Circle()
+                    .fill(palette.accent)
+                    .frame(width: 8, height: 8)
+                    .offset(x: swipeOffset)
+            }
+            .frame(width: homeBarWidth, height: 16)
+
+            HStack(spacing: Spacing.xs) {
+                Image(systemName: "arrow.left")
+                    .font(.system(size: 12, weight: .semibold))
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundStyle(palette.textTertiary)
         }
         .accessibilityLabel(AppL10n.string("flow.coldStart.swipeAccessibility"))
+        .onAppear {
+            swipeOffset = 0
+            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) {
+                swipeOffset = homeBarWidth - 8
+            }
+        }
     }
 }

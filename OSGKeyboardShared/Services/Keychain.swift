@@ -180,4 +180,76 @@ public enum Keychain: @unchecked Sendable {
             throw KeychainError.unexpectedStatus(status)
         }
     }
+
+    // MARK: - Onboarding completion (reboot-durable flag)
+
+    // App Group UserDefaults can transiently read empty right after a device
+    // reboot (data protection / `cfprefsd` not warmed), which made the app
+    // falsely re-show onboarding. This Keychain marker uses the same
+    // `AfterFirstUnlockThisDeviceOnly` class — reliably readable once the app
+    // can run, device-local, never synced — so it stays a trustworthy fallback
+    // that survives the App Group read race.
+    private static let onboardingService = "com.osgkeyboard.onboarding"
+    private static let onboardingAccount = "hasCompletedOnboarding"
+
+    /// Durable "user finished onboarding" marker. `false` when unset or unreadable.
+    public static func hasCompletedOnboarding() -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: onboardingService,
+            kSecAttrAccount as String: onboardingAccount,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne,
+        ]
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess,
+              let data = result as? Data,
+              let str = String(data: data, encoding: .utf8) else {
+            OSGLog.config.info("[onboarding] Keychain read: status=\(status, privacy: .public) → false")
+            return false
+        }
+        let completed = str == "1"
+        OSGLog.config.info(
+            "[onboarding] Keychain read: status=ok value=\(str, privacy: .public) → \(completed, privacy: .public)"
+        )
+        return completed
+    }
+
+    /// Mirror the onboarding-completed flag. Best-effort and idempotent — a
+    /// no-op when the stored value already matches, so it can be called from
+    /// frequently-saved config paths without Keychain churn.
+    public static func setOnboardingCompleted(_ completed: Bool) {
+        guard hasCompletedOnboarding() != completed else {
+            OSGLog.config.info("[onboarding] Keychain write skipped (already \(completed, privacy: .public))")
+            return
+        }
+
+        let baseQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: onboardingService,
+            kSecAttrAccount as String: onboardingAccount,
+        ]
+
+        guard completed else {
+            let delStatus = SecItemDelete(baseQuery as CFDictionary)
+            OSGLog.config.info("[onboarding] Keychain delete: status=\(delStatus, privacy: .public)")
+            return
+        }
+
+        let data = Data("1".utf8)
+        let updateStatus = SecItemUpdate(
+            baseQuery as CFDictionary,
+            [kSecValueData as String: data] as CFDictionary
+        )
+        if updateStatus == errSecItemNotFound {
+            var addQuery = baseQuery
+            addQuery[kSecValueData as String] = data
+            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+            OSGLog.config.info("[onboarding] Keychain add: status=\(addStatus, privacy: .public)")
+        } else {
+            OSGLog.config.info("[onboarding] Keychain update: status=\(updateStatus, privacy: .public)")
+        }
+    }
 }

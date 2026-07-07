@@ -72,7 +72,10 @@ final class KeyboardConfigSync {
 
     func syncOnboardingStateFromAppGroup() {
         let store = AppGroupStore()
-        state.hasCompletedOnboarding = store.hasCompletedOnboarding
+        // Fall back to the reboot-durable Keychain marker so a device restart
+        // does not resurrect the in-keyboard onboarding overlay when the App
+        // Group value transiently reads empty.
+        state.hasCompletedOnboarding = store.hasCompletedOnboarding || Keychain.hasCompletedOnboarding()
         state.onboardingPage = store.onboardingPage
     }
 

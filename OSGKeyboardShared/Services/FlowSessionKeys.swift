@@ -26,8 +26,15 @@ public enum FlowSessionKeys {
     /// Wall-clock timestamp of the last utterance completion or session start.
     public static let lastActivityAt = "flow.lastActivityAt"
 
-    /// Heartbeat older than this while the host is foreground → likely killed.
+    /// Heartbeat older than this → host is not actively reachable for recording.
     public static let heartbeatStaleInterval: TimeInterval = 3
+
+    /// Session flag still set but heartbeat older than this → host process is
+    /// dead (force-quit, reboot). Keyboard / host should clear persisted state.
+    public static let heartbeatZombieInterval: TimeInterval = 60
+
+    /// After mic stop, fail fast when the host heartbeat is gone longer than this.
+    public static let keyboardHostDisconnectFailFast: TimeInterval = 15
 
     /// Legacy fixed session length — prefer `FlowSessionPolicy.sessionDuration()`.
     public static let defaultSessionDuration: TimeInterval = 480

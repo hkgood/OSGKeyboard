@@ -38,14 +38,19 @@ struct MainAppRoot: View {
         .onAppear {
             flowManager.setAppForeground(scenePhase == .active)
             flowManager.activateOnForeground()
-            PersonalDictionaryCloudSync.shared.startObservingExternalChanges()
+            AppCloudSync.shared.startObservingExternalChanges()
+            // Registering here also flushes any URL buffered during a cold
+            // launch (the keyboard → app `startflow` handoff arrives via the
+            // scene delegate before this view is on screen).
+            AppOpenURLRouter.shared.register { url in
+                handleIncomingURL(url)
+            }
             Task {
-                await PersonalDictionaryCloudSync.shared.pullAndMergeIfEnabled()
+                await AppCloudSync.shared.pullAllIfEnabled()
             }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .osgKeyboardOpenURL)) { notification in
-            guard let url = notification.userInfo?["url"] as? URL else { return }
-            handleIncomingURL(url)
+        .onReceive(NotificationCenter.default.publisher(for: .settingsDidSyncFromCloud)) { _ in
+            config.reloadFromPersistedStorage()
         }
         .onChange(of: config.hasCompletedOnboarding) { _, done in
             if done {
@@ -59,7 +64,7 @@ struct MainAppRoot: View {
                 flowManager.activateOnForeground()
             }
             Task {
-                await PersonalDictionaryCloudSync.shared.pullAndMergeIfEnabled()
+                await AppCloudSync.shared.pullAllIfEnabled()
             }
         }
     }

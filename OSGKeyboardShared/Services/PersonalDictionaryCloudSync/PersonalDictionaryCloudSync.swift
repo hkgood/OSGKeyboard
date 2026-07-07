@@ -80,7 +80,12 @@ public final class PersonalDictionaryCloudSync {
     /// Enable sync: merge local + remote, persist locally, then upload.
     public func enableSync() async throws {
         let store = makeStore()
-        store.setPersonalDictionaryICloudSyncEnabled(true)
+        ICloudSyncPreferences.pushDictionaryEnabled(true, kvs: kvs)
+        ICloudSyncPreferences.cacheToAppGroup(
+            settingsEnabled: store.settingsICloudSyncEnabled,
+            dictionaryEnabled: true,
+            store: store
+        )
 
         let local = store.personalDictionary
         let remote = loadRemote() ?? .empty
@@ -90,7 +95,9 @@ public final class PersonalDictionaryCloudSync {
     }
 
     public func disableSync() {
-        makeStore().setPersonalDictionaryICloudSyncEnabled(false)
+        let store = makeStore()
+        ICloudSyncPreferences.pushDictionaryEnabled(false, kvs: kvs)
+        store.setPersonalDictionaryICloudSyncEnabled(false)
     }
 
     // MARK: - Core operations

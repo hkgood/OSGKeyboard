@@ -326,6 +326,32 @@ final class IntelligentPolishTests: XCTestCase {
         XCTAssertEqual(output, "this is a broken sentence")
     }
 
+    func testCleanRawASRFallbackRemovesChineseInteriorSpaces() {
+        let input = "  你 是不是 已经 解决了 这个 问题 ？  "
+        let output = TranscriptPostProcessor.cleanRawASRFallback(input)
+        XCTAssertEqual(output, "你是不是已经解决了这个问题？")
+    }
+
+    func testCleanRawASRFallbackPreservesEnglishAndMixedSpaces() {
+        let input = "iOS 版本 uses Swift UI"
+        let output = TranscriptPostProcessor.cleanRawASRFallback(input)
+        XCTAssertEqual(output, "iOS 版本 uses Swift UI")
+    }
+
+    @MainActor
+    func testFlowFallbackDeliveryCleansTextAndCarriesWeakNetworkWarning() {
+        let delivery = FlowSessionManager.makeFallbackDelivery(
+            rawText: "  你 是不是 已经 解决了 这个 问题 ？  ",
+            error: LLMError.transport("offline"),
+            engineMode: "cloud",
+            chunkWarning: nil
+        )
+
+        XCTAssertEqual(delivery.text, "你是不是已经解决了这个问题？")
+        XCTAssertFalse(delivery.text.contains("未润色"))
+        XCTAssertEqual(delivery.polishWarning, SharedL10n.string("flow.warning.polishDegraded"))
+    }
+
     func testHasStructureSignalDetectsChineseEnumeration() {
         XCTAssertTrue(TranscriptPostProcessor.hasStructureSignal(in: "首先测试其次上线"))
         XCTAssertTrue(TranscriptPostProcessor.hasStructureSignal(in: "第一点修复"))

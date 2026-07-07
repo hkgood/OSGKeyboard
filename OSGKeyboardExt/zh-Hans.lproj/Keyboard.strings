@@ -139,6 +139,7 @@
 "keyboard.flow.startingSession" = "正在启动语音会话…";
 "keyboard.flow.transcribing" = "识别中…";
 "keyboard.flow.resultTimeout" = "等待识别结果超时，请重试";
+"keyboard.flow.hostDisconnected" = "语音会话已断开，请打开 OSGKeyboard 重新启动";
 "keyboard.flow.manualOpenHost" = "无法自动跳转，请从主屏幕打开 OSGKeyboard 后返回";
 
 /* Keyboard status badges */

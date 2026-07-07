@@ -80,7 +80,8 @@ public final class KeyboardState: ObservableObject {
     @Published public var onDeviceSupported: Bool = false
     /// Seconds remaining in the current utterance (Flow tap-to-talk).
     @Published public var utteranceRemainingSeconds: Int = Int(FlowSessionKeys.maxUtteranceDuration)
-    /// Whether the host app's Flow voice session is currently valid.
+    /// Whether the host app's Flow voice session is live and reachable (fresh
+    /// heartbeat). Do not use the App Group session flag alone for UI gating.
     @Published public var flowSessionActive: Bool = false
     /// When true, the mic is intentionally disabled (e.g. cloud engine
     /// selected but the provider-specific API key is missing).

@@ -32,10 +32,16 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let personalDictionary = "config.personalDictionary.v1"
         /// When true, the main app mirrors the personal dictionary via iCloud KVS.
         public static let personalDictionaryICloudSyncEnabled = "config.personalDictionary.iCloudSyncEnabled"
+        /// When true, the main app mirrors user settings via iCloud KVS.
+        public static let settingsICloudSyncEnabled = "config.settings.iCloudSyncEnabled"
+        /// Wall-clock stamp of the last settings blob applied from iCloud KVS.
+        public static let settingsCloudUpdatedAt = "config.settings.cloudUpdatedAt"
         /// When true, the host app auto-returns to the source app after a cold-start handoff.
         public static let flowSkipAppSwitch = "config.flowSkipAppSwitch"
         /// Raw `FlowInactivityDuration` value; session expires after this idle window.
         public static let flowInactivityDuration = "config.flowInactivityDuration"
+        /// Diagnostic switch: when false, local ASR skips the custom language model.
+        public static let localASRCustomLanguageModelEnabled = "config.localASR.customLanguageModelEnabled"
     }
 
     // MARK: - Stored fields
@@ -57,10 +63,14 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var personalDictionary: PersonalDictionary
     /// Opt-in iCloud KVS sync for the personal dictionary (main app only).
     public var personalDictionaryICloudSyncEnabled: Bool
+    /// Opt-in iCloud KVS sync for user settings (main app only).
+    public var settingsICloudSyncEnabled: Bool
     /// Auto-return to the host app after `startflow` cold start (default on).
     public var flowSkipAppSwitch: Bool
     /// Idle timeout before the Flow session ends; resets on each utterance.
     public var flowInactivityDuration: FlowInactivityDuration
+    /// Whether local `SpeechAnalyzer` should attach the prepared custom language model.
+    public var localASRCustomLanguageModelEnabled: Bool
 
     // MARK: - Derived
 
@@ -164,6 +174,12 @@ public struct AppGroupConfiguration: Sendable, Equatable {
                 }
                 return defaults.bool(forKey: Keys.personalDictionaryICloudSyncEnabled)
             }(),
+            settingsICloudSyncEnabled: {
+                if defaults.object(forKey: Keys.settingsICloudSyncEnabled) == nil {
+                    return true
+                }
+                return defaults.bool(forKey: Keys.settingsICloudSyncEnabled)
+            }(),
             flowSkipAppSwitch: {
                 if defaults.object(forKey: Keys.flowSkipAppSwitch) == nil {
                     return true
@@ -172,7 +188,13 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             }(),
             flowInactivityDuration: FlowInactivityDuration.fromStored(
                 defaults.string(forKey: Keys.flowInactivityDuration)
-            )
+            ),
+            localASRCustomLanguageModelEnabled: {
+                if defaults.object(forKey: Keys.localASRCustomLanguageModelEnabled) == nil {
+                    return true
+                }
+                return defaults.bool(forKey: Keys.localASRCustomLanguageModelEnabled)
+            }()
         )
 
         let preset = LLMProvider.provider(id: config.providerId)
@@ -222,7 +244,9 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(polishIntensity.rawValue, forKey: Keys.polishIntensity)
         defaults.set(flowSkipAppSwitch, forKey: Keys.flowSkipAppSwitch)
         defaults.set(flowInactivityDuration.rawValue, forKey: Keys.flowInactivityDuration)
+        defaults.set(localASRCustomLanguageModelEnabled, forKey: Keys.localASRCustomLanguageModelEnabled)
         defaults.set(personalDictionaryICloudSyncEnabled, forKey: Keys.personalDictionaryICloudSyncEnabled)
+        defaults.set(settingsICloudSyncEnabled, forKey: Keys.settingsICloudSyncEnabled)
         Self.encodePersonalDictionary(personalDictionary, to: defaults)
     }
 

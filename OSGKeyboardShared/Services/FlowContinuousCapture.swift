@@ -123,6 +123,48 @@ private final class FlowLevelStore: @unchecked Sendable {
     }
 }
 
+/// Route-adaptive downsampling converter, safe to call from the realtime tap.
+///
+/// `AVAudioEngine.installTap(format:)` traps with an **uncatchable** NSException
+/// when the format passed to it does not match the input node's *live* format.
+/// After an audio-route change — which the on-device `SpeechAnalyzer` triggers
+/// during warmup by reconfiguring the shared `AVAudioSession` — the value
+/// returned by `inputNode.outputFormat(forBus:)` can lag behind the real
+/// hardware rate (e.g. it reports 48 kHz while the node has already switched to
+/// 24 kHz). Installing a tap with that stale explicit format crashes the whole
+/// app (`Failed to create tap due to format mismatch`).
+///
+/// We therefore install the tap with `format: nil` (which always uses the
+/// node's live format) and rebuild the sample-rate converter *here* whenever the
+/// incoming buffer's format actually changes, so downsampling to the ASR target
+/// rate is always valid regardless of route churn.
+private final class AdaptiveDownsampler: @unchecked Sendable {
+    // `AVAudioConverter` / `AVAudioFormat` are not `Sendable`, so the state and
+    // the returned converter are guarded manually via the unchecked lock APIs.
+    private let lock = OSAllocatedUnfairLock<(converter: AVAudioConverter, source: AVAudioFormat)?>(uncheckedState: nil)
+    let targetFormat: AVAudioFormat
+
+    init(targetFormat: AVAudioFormat) {
+        self.targetFormat = targetFormat
+    }
+
+    /// Returns a converter valid for `sourceFormat`, rebuilding it lazily when
+    /// the hardware route (and thus the buffer format) changes.
+    func converter(for sourceFormat: AVAudioFormat) -> AVAudioConverter? {
+        lock.withLockUnchecked { state in
+            if let state, state.source == sourceFormat {
+                return state.converter
+            }
+            guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
+                state = nil
+                return nil
+            }
+            state = (converter, sourceFormat)
+            return converter
+        }
+    }
+}
+
 @MainActor
 public final class FlowContinuousCapture {
 
@@ -169,16 +211,18 @@ public final class FlowContinuousCapture {
     private let drainTracker = FlowCaptureDrainTracker()
     private let tailSampleCounter = OSAllocatedUnfairLock(initialState: 0)
 
-    private var audioConverter: AVAudioConverter?
+    private var downsampler: AdaptiveDownsampler?
     private var targetFormat: AVAudioFormat?
     private var hwFormat: AVAudioFormat?
     private var drainPolicy = FlowCaptureTailDrainPolicy.flowDefault
 
     private var didInstallTap = false
     private var isRunning = false
+    private var isRebuilding = false
 
     private var routeObserver: NSObjectProtocol?
     private var interruptionObserver: NSObjectProtocol?
+    private var mediaResetObserver: NSObjectProtocol?
     private let log = Logger(subsystem: "com.osgkeyboard.shared", category: "FlowCapture")
 
     public init() {}
@@ -227,11 +271,11 @@ public final class FlowContinuousCapture {
         ) else {
             throw StartError.formatCreateFailed
         }
-        guard let converter = AVAudioConverter(from: hardwareFormat, to: resolvedTargetFormat) else {
-            throw StartError.converterCreateFailed
-        }
 
-        audioConverter = converter
+        // Route-adaptive converter: it rebuilds itself from the live buffer
+        // format inside the tap, so it never assumes a fixed hardware rate.
+        let downsampler = AdaptiveDownsampler(targetFormat: resolvedTargetFormat)
+        self.downsampler = downsampler
         targetFormat = resolvedTargetFormat
         hwFormat = hardwareFormat
 
@@ -249,9 +293,7 @@ public final class FlowContinuousCapture {
         let tailCounter = tailSampleCounter
         let policy = drainPolicy
         let tap = Self.makeAudioTapBlock(
-            converter: converter,
-            targetFormat: resolvedTargetFormat,
-            hwFormat: hardwareFormat,
+            downsampler: downsampler,
             gate: gateLock,
             levelStore: levels,
             prerollStore: preroll,
@@ -260,7 +302,10 @@ public final class FlowContinuousCapture {
             tailSampleCounter: tailCounter,
             drainPolicy: policy
         )
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: hardwareFormat, block: tap)
+        // `format: nil` binds the tap to the input node's *live* format. Passing
+        // an explicit (possibly stale) format here is what crashed the app on a
+        // route change (48 kHz client vs 24 kHz hardware); nil can never mismatch.
+        inputNode.installTap(onBus: 0, bufferSize: 4096, format: nil, block: tap)
         didInstallTap = true
 
         audioEngine.prepare()
@@ -287,7 +332,7 @@ public final class FlowContinuousCapture {
             audioEngine.stop()
         }
         isRunning = false
-        audioConverter = nil
+        downsampler = nil
         targetFormat = nil
         hwFormat = nil
         try? AVAudioSession.sharedInstance().setActive(
@@ -339,14 +384,35 @@ public final class FlowContinuousCapture {
                 }
             }
         }
+        // Apple QA1749: when the system media server resets, the engine,
+        // converter and audio session all become orphaned and must be
+        // rebuilt from scratch — otherwise capture silently produces no
+        // audio (another cause of "waveform moves but ASR is empty").
+        if mediaResetObserver == nil {
+            mediaResetObserver = center.addObserver(
+                forName: AVAudioSession.mediaServicesWereResetNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.handleMediaServicesReset() }
+            }
+        }
     }
 
     private func removeSessionObservers() {
         let center = NotificationCenter.default
         if let routeObserver { center.removeObserver(routeObserver) }
         if let interruptionObserver { center.removeObserver(interruptionObserver) }
+        if let mediaResetObserver { center.removeObserver(mediaResetObserver) }
         routeObserver = nil
         interruptionObserver = nil
+        mediaResetObserver = nil
+    }
+
+    private func handleMediaServicesReset() {
+        guard isRunning else { return }
+        log.info("Media services were reset — rebuilding engine and converter")
+        rebuildEngine()
     }
 
     private func handleRouteChange(reasonRaw: UInt?) {
@@ -388,7 +454,9 @@ public final class FlowContinuousCapture {
     /// Stop and rebuild the engine against the current route, keeping
     /// `isRunning` intact so the session survives the swap transparently.
     private func rebuildEngine() {
-        guard isRunning else { return }
+        guard isRunning, !isRebuilding else { return }
+        isRebuilding = true
+        defer { isRebuilding = false }
         if audioEngine.isRunning {
             audioEngine.stop()
         }
@@ -436,9 +504,15 @@ public final class FlowContinuousCapture {
             try? await Task.sleep(nanoseconds: FlowCaptureConstants.drainPollIntervalNs)
         }
 
-        let flushSamples = flushConverterTailToStream()
-        tailSampleCounter.withLock { $0 += flushSamples }
-
+        // NOTE: We intentionally do NOT signal `.endOfStream` to the shared
+        // downsampling converter here. `AVAudioConverter` is stateful: once its
+        // input block returns `.endOfStream`, the converter is permanently
+        // finished and every subsequent `.haveData` conversion (from the live
+        // tap) returns no data — which silently starved every utterance after
+        // the first (Apple docs + AVAudioConverter reuse guidance). Trailing
+        // speech is already preserved by the live `.draining` forwarding loop
+        // above; the converter's sub-millisecond internal filter tail is not
+        // worth poisoning a session-long converter for.
         streamRelay.finish()
         gate.withLock { $0 = .idle }
 
@@ -466,58 +540,10 @@ public final class FlowContinuousCapture {
         levelStore.snapshot()
     }
 
-    // MARK: - Converter flush
-
-    @discardableResult
-    private func flushConverterTailToStream() -> Int {
-        guard let converter = audioConverter,
-              let targetFormat,
-              let hwFormat else {
-            return 0
-        }
-
-        var flushedSamples = 0
-        let capacity = AVAudioFrameCount(max(512, hwFormat.sampleRate / 20))
-        guard let outBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity) else {
-            return 0
-        }
-
-        var endOfStreamSignaled = false
-        while true {
-            outBuffer.frameLength = 0
-            var error: NSError?
-            let status = converter.convert(to: outBuffer, error: &error) { _, outStatus in
-                if endOfStreamSignaled {
-                    outStatus.pointee = .noDataNow
-                    return nil
-                }
-                endOfStreamSignaled = true
-                outStatus.pointee = .endOfStream
-                return nil
-            }
-
-            if status == .error || error != nil {
-                break
-            }
-            guard status == .haveData, outBuffer.frameLength > 0 else {
-                break
-            }
-
-            let snapshot = AudioBufferSnapshot(buffer: outBuffer)
-            guard !snapshot.samples.isEmpty else { break }
-            streamRelay.yield(snapshot)
-            flushedSamples += snapshot.samples.count
-        }
-
-        return flushedSamples
-    }
-
     // MARK: - Audio tap (nonisolated — runs on realtime thread)
 
     private nonisolated static func makeAudioTapBlock(
-        converter: AVAudioConverter,
-        targetFormat: AVAudioFormat,
-        hwFormat: AVAudioFormat,
+        downsampler: AdaptiveDownsampler,
         gate: OSAllocatedUnfairLock<UtteranceGatePhase>,
         levelStore: FlowLevelStore,
         prerollStore: FlowPrerollStore,
@@ -529,8 +555,15 @@ public final class FlowContinuousCapture {
         return { buffer, _ in
             levelStore.update(from: buffer, barCount: FlowCaptureConstants.levelBarCount)
 
+            // Derive the converter from the *live* buffer format so a mid-session
+            // route change (e.g. 48 kHz → 24 kHz) is handled transparently.
+            let sourceFormat = buffer.format
+            let targetFormat = downsampler.targetFormat
+            guard sourceFormat.sampleRate > 0,
+                  let converter = downsampler.converter(for: sourceFormat) else { return }
+
             let outFrames = AVAudioFrameCount(
-                Double(buffer.frameLength) * targetFormat.sampleRate / hwFormat.sampleRate
+                Double(buffer.frameLength) * targetFormat.sampleRate / sourceFormat.sampleRate
             )
             guard outFrames > 0,
                   let outBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: outFrames)

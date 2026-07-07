@@ -36,6 +36,8 @@ final class KeyboardFlowCoordinator {
     private var wasFlowSessionActive = false
     private var flowSessionMonitorTask: Task<Void, Never>?
     private var isAwaitingFlowResult = false
+    private var lastFlowAutoStartAttempt: TimeInterval = 0
+    private static let flowAutoStartCooldown: TimeInterval = 20
 
     init(
         state: KeyboardState,
@@ -87,10 +89,16 @@ final class KeyboardFlowCoordinator {
         refreshFlowPartialIfNeeded()
         consumePendingFlowDeliveryIfNeeded()
 
-        let active = FlowSessionBridge.isSessionActive()
-        state.flowSessionActive = active
+        recoverFromDeadHostIfNeeded()
 
-        if wasFlowSessionActive && !active && !isFlowRecording && !isPendingFlowStart {
+        if FlowSessionBridge.clearIfHostStale() {
+            debug("cleared zombie Flow session from App Group")
+        }
+
+        let reachable = FlowSessionBridge.isHostReachable()
+        state.flowSessionActive = reachable
+
+        if wasFlowSessionActive && !reachable && !isFlowRecording && !isPendingFlowStart {
             switch state.phase {
             case .recording, .processing:
                 break
@@ -98,7 +106,9 @@ final class KeyboardFlowCoordinator {
                 showFlowSessionExpiredHint()
             }
         }
-        wasFlowSessionActive = active
+        wasFlowSessionActive = reachable
+
+        maybeAutoStartFlowSession()
     }
 
     func toggleRecording() {
@@ -135,7 +145,13 @@ final class KeyboardFlowCoordinator {
 
         detectAndStoreAppContext()
 
-        if FlowSessionBridge.isSessionActive() {
+        let reachable = FlowSessionBridge.isHostReachable()
+        debug(
+            "pressBegan hostReachable=\(reachable) " +
+            "staleness=\(FlowSessionBridge.heartbeatStaleness().map { String(format: "%.1f", $0) } ?? "nil") " +
+            "container=\(AppGroup.containerPathForDiagnostics)"
+        )
+        if reachable {
             startFlowRecording()
         } else {
             beginFlowStart()
@@ -153,6 +169,7 @@ final class KeyboardFlowCoordinator {
         stopUtteranceCountdown()
         ExtensionScreenWakeLock.release()
         FlowSessionBridge.setRecordingState(.stopped)
+        debug("pressEnded wrote .stopped (readback=\(FlowSessionBridge.recordingState().rawValue))")
         state.phase = .processing
         state.lastTranscript = ExtL10n.string("keyboard.flow.transcribing")
         startFlowResultWatchdog()
@@ -225,9 +242,61 @@ final class KeyboardFlowCoordinator {
             }
         }
 
-        if isPendingFlowStart, FlowSessionBridge.isSessionActive() {
+        if isPendingFlowStart, FlowSessionBridge.isHostReachable() {
             completeFlowStartHandoff()
         }
+    }
+
+    /// When the host process died mid-utterance, abort local recording / waiting
+    /// so the user is not stuck until the long result watchdog fires.
+    private func recoverFromDeadHostIfNeeded() {
+        guard FlowSessionBridge.isHostStale() else { return }
+
+        if isFlowRecording {
+            isFlowRecording = false
+            stopUtteranceCountdown()
+            ExtensionScreenWakeLock.release()
+            FlowSessionBridge.setRecordingState(.aborted)
+            stopFlowWatchdog()
+            state.level = 0
+            state.phase = .idle
+            state.lastTranscript = ""
+            debug("aborted recording — host heartbeat zombie")
+            return
+        }
+
+        if isAwaitingFlowResult {
+            failHostDisconnected()
+        }
+    }
+
+    /// Restores the pre-ABCD behaviour: when the keyboard appears and the host
+    /// is not reachable, automatically jump to the main app to start Flow.
+    private func maybeAutoStartFlowSession() {
+        guard !FlowSessionBridge.isHostReachable() else { return }
+        guard !isPendingFlowStart, !isFlowRecording, !isAwaitingFlowResult else { return }
+        guard hasFullAccess(), AppGroup.isAvailable else { return }
+        guard case .idle = state.phase else { return }
+
+        let now = Date().timeIntervalSince1970
+        guard now - lastFlowAutoStartAttempt >= Self.flowAutoStartCooldown else { return }
+        lastFlowAutoStartAttempt = now
+        beginFlowStart()
+    }
+
+    private func failHostDisconnected() {
+        isAwaitingFlowResult = false
+        isFlowRecording = false
+        isPendingFlowStart = false
+        stopUtteranceCountdown()
+        ExtensionScreenWakeLock.release()
+        FlowSessionBridge.setRecordingState(.aborted)
+        stopFlowWatchdog()
+        state.level = 0
+        let message = ExtL10n.string("keyboard.flow.hostDisconnected")
+        state.phase = .error(.flowSessionExpired, message: message)
+        scheduleAutoClearError()
+        debug("host disconnected while awaiting Flow result")
     }
 
     private func showFlowSessionExpiredHint() {
@@ -252,6 +321,10 @@ final class KeyboardFlowCoordinator {
     }
 
     private func startFlowRecording() {
+        guard FlowSessionBridge.isHostReachable() else {
+            beginFlowStart()
+            return
+        }
         isPendingFlowStart = false
         flowStartDeadline = 0
         stopFlowWatchdog()
@@ -266,7 +339,9 @@ final class KeyboardFlowCoordinator {
         }
         startUtteranceCountdown()
         startFlowLevelWatchdog()
-        debug("startFlowRecording")
+        // Read back in-process to confirm the write landed before we rely on
+        // the host polling it out cross-process.
+        debug("startFlowRecording wrote .recording (readback=\(FlowSessionBridge.recordingState().rawValue))")
     }
 
     private func startUtteranceCountdown() {
@@ -305,7 +380,7 @@ final class KeyboardFlowCoordinator {
         stopFlowWatchdog()
         flowWatchdogTask = Task { @MainActor [weak self] in
             while let self, !Task.isCancelled, self.isPendingFlowStart {
-                if FlowSessionBridge.isSessionActive() {
+                if FlowSessionBridge.isHostReachable() {
                     self.completeFlowStartHandoff()
                     return
                 }
@@ -362,17 +437,20 @@ final class KeyboardFlowCoordinator {
         isAwaitingFlowResult = true
         let startedAt = Date().timeIntervalSince1970
         let resultTimeout = FlowWatchdog.resultTimeout(engineMode: state.engineMode)
+        debug("resultWatchdog started timeout=\(Int(resultTimeout))s engine=\(state.engineMode)")
         flowWatchdogTask = Task { @MainActor [weak self] in
             while let self, !Task.isCancelled {
                 if let delivery = FlowSessionBridge.consumeTranscriptionDelivery() {
                     self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
+                    self.debug("resultWatchdog consumed delivery len=\(delivery.text.count)")
                     self.textInserter.handleFlowTranscript(delivery)
                     return
                 }
                 if let error = FlowSessionBridge.consumeTranscriptionError() {
                     self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
+                    self.debug("resultWatchdog consumed error kind=\(error.kind.rawValue)")
                     self.state.phase = .error(
                         .fromFlowTranscription(error),
                         message: error.message
@@ -382,9 +460,22 @@ final class KeyboardFlowCoordinator {
                 }
                 self.refreshFlowPartialIfNeeded()
                 let now = Date().timeIntervalSince1970
+                let staleness = FlowSessionBridge.heartbeatStaleness() ?? .infinity
+                if staleness > FlowSessionKeys.heartbeatZombieInterval {
+                    self.debug("resultWatchdog: host heartbeat zombie (staleness=\(String(format: "%.1f", staleness))s)")
+                    self.failHostDisconnected()
+                    return
+                }
+                if !FlowSessionBridge.isHostReachable(),
+                   now - startedAt > FlowSessionKeys.keyboardHostDisconnectFailFast {
+                    self.debug("resultWatchdog: host unreachable after \(String(format: "%.1f", now - startedAt))s")
+                    self.failHostDisconnected()
+                    return
+                }
                 if now - startedAt > resultTimeout {
                     self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
+                    self.debug("resultWatchdog TIMEOUT after \(Int(resultTimeout))s — no result from host")
                     let msg = ExtL10n.string("keyboard.flow.resultTimeout")
                     self.state.phase = .error(.flowResultTimeout, message: msg)
                     self.scheduleAutoClearError()

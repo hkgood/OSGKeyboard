@@ -117,9 +117,9 @@ public enum FlowSessionBridge {
 
     // MARK: - Session validity (keyboard)
 
-    /// True when the session contract is still valid (not expired).
-    /// Does not require a fresh heartbeat — the host may be suspended in
-    /// background while the continuous audio session is frozen.
+    /// True when the App Group session contract is still valid (not expired).
+    /// Does **not** mean the host process is alive — use `isHostReachable()` for
+    /// recording gates and "session ready" UI.
     public static func isSessionActive(defaults: UserDefaults? = nil) -> Bool {
         let store = resolvedDefaults(defaults)
         guard store.bool(forKey: FlowSessionKeys.flowSessionActive) else { return false }
@@ -128,17 +128,45 @@ public enum FlowSessionBridge {
         return expires > Date().timeIntervalSince1970
     }
 
+    /// Seconds since the host last wrote `flowHeartbeat`; nil when never written.
+    public static func heartbeatStaleness(defaults: UserDefaults? = nil) -> TimeInterval? {
+        let store = resolvedDefaults(defaults)
+        let heartbeat = store.double(forKey: FlowSessionKeys.flowHeartbeat)
+        guard heartbeat > 0 else { return nil }
+        return Date().timeIntervalSince1970 - heartbeat
+    }
+
     /// True when the host app recently wrote a heartbeat (foreground or
-    /// actively processing). Used for auto-start heuristics, not gating record.
+    /// actively processing). Gating record / "session ready" UI must use this,
+    /// not `isSessionActive()` alone.
     public static func isHostReachable(defaults: UserDefaults? = nil) -> Bool {
         let store = resolvedDefaults(defaults)
         guard isSessionActive(defaults: store) else { return false }
-
-        let heartbeat = store.double(forKey: FlowSessionKeys.flowHeartbeat)
-        guard heartbeat > 0 else { return false }
-
-        let staleness = Date().timeIntervalSince1970 - heartbeat
+        guard let staleness = heartbeatStaleness(defaults: store) else { return false }
         return staleness <= FlowSessionKeys.heartbeatStaleInterval
+    }
+
+    /// True when the session contract flag is still set but the host heartbeat
+    /// proves the process is gone (reboot, force-quit, long suspend).
+    public static func isHostStale(
+        staleAfter: TimeInterval = FlowSessionKeys.heartbeatZombieInterval,
+        defaults: UserDefaults? = nil
+    ) -> Bool {
+        let store = resolvedDefaults(defaults)
+        guard isSessionActive(defaults: store) else { return false }
+        guard let staleness = heartbeatStaleness(defaults: store) else { return true }
+        return staleness > staleAfter
+    }
+
+    /// Clears orphaned App Group Flow state when the host is provably dead.
+    @discardableResult
+    public static func clearIfHostStale(
+        staleAfter: TimeInterval = FlowSessionKeys.heartbeatZombieInterval,
+        defaults: UserDefaults? = nil
+    ) -> Bool {
+        guard isHostStale(staleAfter: staleAfter, defaults: defaults) else { return false }
+        clearFlowState(defaults: defaults)
+        return true
     }
 
     public static func sessionExpiresAt(defaults: UserDefaults? = nil) -> TimeInterval? {

@@ -368,6 +368,11 @@
 "settings.personalDictionary.iCloudSync.error.tooLarge" = "Dictionary is too large to sync via iCloud. Remove some entries and try again.";
 "settings.personalDictionary.iCloudSync.error.generic" = "Could not sync your dictionary with iCloud. Try again later.";
 
+"settings.iCloudSync.title" = "iCloud Sync";
+"settings.appSettings.iCloudSync.title" = "Sync settings via iCloud";
+"settings.appSettings.iCloudSync.subtitle" = "Keep engine, language, polish, and Flow preferences in sync across your devices. API keys stay on each device.";
+"settings.appSettings.iCloudSync.error.generic" = "Could not sync settings with iCloud. Try again later.";
+
 /* v0.3.0: Polish intensity */
 "settings.polishIntensity.title" = "Polish intensity";
 
@@ -381,15 +386,14 @@
 "settings.flow.inactivity.3h" = "3 hours";
 "settings.flow.inactivity.12h" = "12 hours";
 "settings.flow.inactivity.24h" = "24 hours";
+"settings.localModels.customLM.title" = "Use custom language model";
+"settings.localModels.customLM.subtitle" = "Diagnostic switch. Turn off to test pure Apple on-device recognition if local ASR gets stuck or returns no speech.";
 
 /* Cold-start handoff (scheme B) */
 "flow.coldStart.title" = "Voice is ready";
-"flow.coldStart.swipeHint" = "Swipe up from the bottom edge to return to your previous app.";
-"flow.coldStart.swipeHint.withSystemBack" = "Tap ‹ in the top-left or swipe up from the bottom to return.";
-"flow.coldStart.dismiss" = "Got it";
-"flow.coldStart.swipeAccessibility" = "Swipe up from the bottom to return";
-"flow.coldStart.alert.title" = "Voice is ready";
-"flow.coldStart.alert.message" = "You can return to continue typing, or swipe up from the bottom.";
+"flow.coldStart.swipeHint" = "Swipe right along the bar at the bottom to return to your previous app.";
+"flow.coldStart.swipeAccessibility" = "Swipe right along the bottom bar to return";
+"flow.coldStart.tapToDismiss" = "Tap anywhere to close";
 "flow.coldStart.return.named" = "Return to %@";
 "flow.coldStart.return.generic" = "Return to app";
 

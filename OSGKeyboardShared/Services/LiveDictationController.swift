@@ -565,7 +565,12 @@ public final class LiveDictationController: ObservableObject {
             try? await Task.sleep(nanoseconds: 20_000_000)
         }
 
-        _ = flushConverterTailToStream()
+        // Trailing speech is preserved by the live `.draining` forwarding
+        // loop above. We deliberately do NOT signal `.endOfStream` to the
+        // converter to squeeze its internal filter tail: that both races the
+        // still-running audio-thread tap on the same non-thread-safe converter
+        // and (in reused-converter paths) permanently locks it. The dropped
+        // tail is sub-millisecond and inaudible.
         streamRelay.finish()
         teardownCaptureEngine()
         captureGate.withLock { $0 = .idle }
@@ -578,50 +583,6 @@ public final class LiveDictationController: ObservableObject {
             false,
             options: .notifyOthersOnDeactivation
         )
-    }
-
-    @discardableResult
-    private func flushConverterTailToStream() -> Int {
-        guard let converter = audioConverter,
-              let targetFormat,
-              let hwFormat else {
-            return 0
-        }
-
-        var flushedSamples = 0
-        let capacity = AVAudioFrameCount(max(512, hwFormat.sampleRate / 20))
-        guard let outBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity) else {
-            return 0
-        }
-
-        var endOfStreamSignaled = false
-        while true {
-            outBuffer.frameLength = 0
-            var error: NSError?
-            let status = converter.convert(to: outBuffer, error: &error) { _, outStatus in
-                if endOfStreamSignaled {
-                    outStatus.pointee = .noDataNow
-                    return nil
-                }
-                endOfStreamSignaled = true
-                outStatus.pointee = .endOfStream
-                return nil
-            }
-
-            if status == .error || error != nil {
-                break
-            }
-            guard status == .haveData, outBuffer.frameLength > 0 else {
-                break
-            }
-
-            let snapshot = AudioBufferSnapshot(buffer: outBuffer)
-            guard !snapshot.samples.isEmpty else { break }
-            streamRelay.yield(snapshot)
-            flushedSamples += snapshot.samples.count
-        }
-
-        return flushedSamples
     }
 
     private func teardownCaptureEngine() {

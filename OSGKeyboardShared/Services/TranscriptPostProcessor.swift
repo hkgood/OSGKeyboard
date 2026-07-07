@@ -43,6 +43,19 @@ public enum TranscriptPostProcessor: Sendable {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Conservative cleanup for raw ASR fallback delivery. This is used when
+    /// polish/translation cannot run, so it must not rewrite meaning or invent
+    /// punctuation; it only removes formatting artifacts that ASR/chunking can
+    /// introduce.
+    public static func cleanRawASRFallback(_ text: String) -> String {
+        var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        result = repairMidSentenceLineBreaks(result)
+        result = collapseHorizontalWhitespace(result)
+        result = removeCJKBoundarySpaces(result)
+        result = normalizePunctuationSpacing(result)
+        return normalizeWhitespaceAndPunctuation(result)
+    }
+
     // MARK: - Post-LLM pipeline
 
     /// Apply deterministic cleanup and quality gate to LLM output.
@@ -220,6 +233,53 @@ public enum TranscriptPostProcessor: Sendable {
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private static func collapseHorizontalWhitespace(_ text: String) -> String {
+        text.replacingOccurrences(
+            of: #"[^\S\r\n]+"#,
+            with: " ",
+            options: .regularExpression
+        )
+    }
+
+    private static func removeCJKBoundarySpaces(_ text: String) -> String {
+        var output = ""
+        let characters = Array(text)
+        for index in characters.indices {
+            let current = characters[index]
+            if current.isWhitespace,
+               let previous = previousNonWhitespace(in: characters, before: index),
+               let next = nextNonWhitespace(in: characters, after: index),
+               shouldDropSpaceBetween(previous: previous, next: next) {
+                continue
+            }
+            output.append(current)
+        }
+        return output
+    }
+
+    private static func normalizePunctuationSpacing(_ text: String) -> String {
+        var output = ""
+        let characters = Array(text)
+        for index in characters.indices {
+            let current = characters[index]
+            if current.isWhitespace,
+               let next = nextNonWhitespace(in: characters, after: index),
+               isClosingPunctuation(next) {
+                continue
+            }
+            if isOpeningPunctuation(current),
+               let next = nextNonWhitespace(in: characters, after: index),
+               next.isWhitespace {
+                output.append(current)
+                continue
+            }
+            output.append(current)
+        }
+        return output
+            .replacingOccurrences(of: #"([（「“])\s+"#, with: "$1", options: .regularExpression)
+            .replacingOccurrences(of: #"\s+([，。！？；：、,.!?;:])"#, with: "$1", options: .regularExpression)
+    }
+
     // MARK: - Prefix / quote cleanup
 
     public static func stripExplanatoryPrefix(from text: String) -> String {
@@ -269,6 +329,41 @@ public enum TranscriptPostProcessor: Sendable {
         let pAscii = p.isASCII && alphanumerics.contains(p)
         let nAscii = n.isASCII && alphanumerics.contains(n)
         return (pAscii && nAscii) ? " " : ""
+    }
+
+    private static func previousNonWhitespace(in characters: [Character], before index: Int) -> Character? {
+        guard index > characters.startIndex else { return nil }
+        for i in stride(from: index - 1, through: characters.startIndex, by: -1) {
+            if !characters[i].isWhitespace { return characters[i] }
+        }
+        return nil
+    }
+
+    private static func nextNonWhitespace(in characters: [Character], after index: Int) -> Character? {
+        let nextIndex = index + 1
+        guard nextIndex < characters.endIndex else { return nil }
+        for i in nextIndex..<characters.endIndex {
+            if !characters[i].isWhitespace { return characters[i] }
+        }
+        return nil
+    }
+
+    private static func shouldDropSpaceBetween(previous: Character, next: Character) -> Bool {
+        (isCJKCharacter(previous) && isCJKCharacter(next)) || isClosingPunctuation(next)
+    }
+
+    private static func isCJKCharacter(_ character: Character) -> Bool {
+        character.unicodeScalars.contains(where: isCJKScalar)
+    }
+
+    private static func isClosingPunctuation(_ character: Character) -> Bool {
+        let closing: Set<Character> = ["，", "。", "！", "？", "；", "：", "、", ",", ".", "!", "?", ";", ":"]
+        return closing.contains(character)
+    }
+
+    private static func isOpeningPunctuation(_ character: Character) -> Bool {
+        let opening: Set<Character> = ["（", "「", "“"]
+        return opening.contains(character)
     }
 
     private static func extractEmojis(from text: String) -> [String] {

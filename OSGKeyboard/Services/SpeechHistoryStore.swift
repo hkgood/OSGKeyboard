@@ -62,6 +62,12 @@ final class SpeechHistoryStore: ObservableObject {
         )
     }
 
+    func delete(id: UUID) {
+        guard entries.contains(where: { $0.id == id }) else { return }
+        entries.removeAll { $0.id == id }
+        persist()
+    }
+
     func clearAll() {
         entries.removeAll()
         persist()

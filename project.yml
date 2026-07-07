@@ -35,9 +35,15 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     GENERATE_INFOPLIST_FILE: NO
     ENABLE_MODULE_VERIFIER: YES
+    MODULE_VERIFIER_SUPPORTED_LANGUAGES: "objective-c objective-c++"
+    MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS: "gnu17 gnu++17"
+    CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED: YES
+    ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS: YES
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+    STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "0.4.1"
-    CURRENT_PROJECT_VERSION: "17"
+    MARKETING_VERSION: "0.5.0"
+    CURRENT_PROJECT_VERSION: "18"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -325,10 +331,12 @@ targets:
         DYLIB_INSTALL_NAME_BASE: "@rpath"
         APPLICATION_EXTENSION_API_ONLY: YES
         ENABLE_MODULE_VERIFIER: YES
-        # Frameworks inherit the host app's signing identity; no profile
-        # is required, but pinning the team keeps the build reproducible.
-        CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: X329MZU23S
+        # Embedded frameworks are re-signed by the containing app at package
+        # time. Signing this framework as a standalone build product is noisy
+        # and not recommended by Xcode.
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGN_IDENTITY: ""
     dependencies:
       - sdk: Speech.framework
       - sdk: AVFoundation.framework

@@ -182,6 +182,10 @@ struct SettingsView: View {
                 Divider().background(palette.divider)
 
                 cursorDragNavigationToggleRow
+
+                Divider().background(palette.divider)
+
+                SettingsICloudSyncRow()
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
             .overlay(

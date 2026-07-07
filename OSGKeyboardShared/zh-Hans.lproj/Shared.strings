@@ -7,6 +7,7 @@
 /* v0.2.0: flow-level warnings surfaced alongside the final transcript. */
 "flow.warning.cloudPolishMissingKey" = "云端润色需要先在设置中填写 API Key，本次已插入原始识别结果。";
 "flow.warning.localPolishUnavailable" = "内置润色暂不可用，本次已插入原始识别结果。";
+"flow.warning.polishDegraded" = "弱网识别，本次未润色，已插入原始识别结果。";
 
 /* LLM providers */
 "provider.openai" = "OpenAI";

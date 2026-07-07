@@ -32,16 +32,7 @@ struct HistoryView: View {
                 if store.entries.isEmpty {
                     emptyState
                 } else {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: Spacing.xl) {
-                            ForEach(store.groupedByDay, id: \.day) { group in
-                                daySection(day: group.day, items: group.items)
-                            }
-                        }
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.vertical, Spacing.md)
-                        .tabBarScrollBottomPadding()
-                    }
+                    list
                 }
             }
             .background(palette.background)
@@ -74,6 +65,38 @@ struct HistoryView: View {
         }
     }
 
+    // MARK: - List
+
+    private var list: some View {
+        List {
+            ForEach(store.groupedByDay, id: \.day) { group in
+                Section {
+                    ForEach(group.items) { entry in
+                        historyRow(entry)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                            .listRowBackground(palette.surface)
+                            .listRowSeparatorTint(palette.divider)
+                    }
+                    .onDelete { offsets in
+                        delete(items: group.items, at: offsets)
+                    }
+                } header: {
+                    Text(Self.dayFormatter.string(from: group.day))
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.textTertiary)
+                        .textCase(.uppercase)
+                        .tracking(0.5)
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .listSectionSpacing(Spacing.lg)
+        .scrollContentBackground(.hidden)
+        .background(palette.background)
+        .contentMargins(.top, Spacing.md, for: .scrollContent)
+        .tabBarScrollBottomPadding()
+    }
+
     private var emptyState: some View {
         VStack(spacing: Spacing.sm) {
             Spacer()
@@ -86,30 +109,6 @@ struct HistoryView: View {
             Spacer()
         }
         .padding(.horizontal, Spacing.xl)
-    }
-
-    private func daySection(day: Date, items: [SpeechHistoryEntry]) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(Self.dayFormatter.string(from: day))
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textTertiary)
-                .textCase(.uppercase)
-                .tracking(0.5)
-
-            VStack(spacing: 0) {
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, entry in
-                    historyRow(entry)
-                    if index < items.count - 1 {
-                        Divider().background(palette.divider)
-                    }
-                }
-            }
-            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
-        }
     }
 
     private func historyRow(_ entry: SpeechHistoryEntry) -> some View {
@@ -125,5 +124,13 @@ struct HistoryView: View {
         }
         .padding(Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Mutations
+
+    private func delete(items: [SpeechHistoryEntry], at offsets: IndexSet) {
+        for index in offsets {
+            store.delete(id: items[index].id)
+        }
     }
 }

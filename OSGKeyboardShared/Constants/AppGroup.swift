@@ -23,6 +23,15 @@ public enum AppGroup {
         ) != nil
     }()
 
+    /// On-disk container path (or `"nil"`) for diagnostics. When this reads
+    /// `nil` in a process, that process cannot share App Group state — the
+    /// `CFPrefsPlistSource … Container: (null)` console warning comes from here.
+    public static var containerPathForDiagnostics: String {
+        FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: identifier
+        )?.path ?? "nil"
+    }
+
     /// Shared UserDefaults when the App Group suite is available; `nil` otherwise.
     ///
     /// Prefer this in Release builds and in the keyboard extension so callers

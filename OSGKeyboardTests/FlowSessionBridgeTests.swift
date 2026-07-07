@@ -23,6 +23,40 @@ final class FlowSessionBridgeTests: XCTestCase {
         defaults.set(staleHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
         XCTAssertTrue(FlowSessionBridge.isSessionActive(defaults: defaults))
         XCTAssertFalse(FlowSessionBridge.isHostReachable(defaults: defaults))
+        XCTAssertFalse(FlowSessionBridge.isHostStale(defaults: defaults))
+    }
+
+    func testHostStaleWhenHeartbeatVeryOld() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        let zombieHeartbeat = Date().timeIntervalSince1970 - 120
+        defaults.set(zombieHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
+
+        XCTAssertTrue(FlowSessionBridge.isSessionActive(defaults: defaults))
+        XCTAssertFalse(FlowSessionBridge.isHostReachable(defaults: defaults))
+        XCTAssertTrue(FlowSessionBridge.isHostStale(defaults: defaults))
+    }
+
+    func testClearIfHostStaleRemovesZombieSession() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        FlowSessionBridge.setRecordingState(.stopped, defaults: defaults)
+        let zombieHeartbeat = Date().timeIntervalSince1970 - 120
+        defaults.set(zombieHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
+
+        XCTAssertTrue(FlowSessionBridge.clearIfHostStale(defaults: defaults))
+        XCTAssertFalse(FlowSessionBridge.isSessionActive(defaults: defaults))
+        XCTAssertEqual(FlowSessionBridge.recordingState(defaults: defaults), .idle)
+    }
+
+    func testHostStaleWhenSessionActiveButNoHeartbeat() {
+        let defaults = makeDefaults()
+        defaults.set(true, forKey: FlowSessionKeys.flowSessionActive)
+        defaults.set(Date().timeIntervalSince1970 + 3_600, forKey: FlowSessionKeys.flowSessionExpires)
+
+        XCTAssertTrue(FlowSessionBridge.isHostStale(defaults: defaults))
+        XCTAssertTrue(FlowSessionBridge.clearIfHostStale(defaults: defaults))
+        XCTAssertFalse(FlowSessionBridge.isSessionActive(defaults: defaults))
     }
 
     func testSessionInactiveWhenExpired() {

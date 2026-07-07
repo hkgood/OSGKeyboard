@@ -49,6 +49,8 @@ final class FlowSessionManager: ObservableObject {
     private var expiryTask: Task<Void, Never>?
     private var levelTask: Task<Void, Never>?
     private var startTask: Task<Void, Never>?
+    /// Last recording state the poll loop observed — logs only on transition.
+    private var lastObservedRecordingState: FlowSessionKeys.RecordingState = .idle
     private var isUtteranceRecording = false
     /// True from `stopped` until the result/error is written back to App Group.
     private var isUtteranceProcessing = false
@@ -86,6 +88,8 @@ final class FlowSessionManager: ObservableObject {
             isColdStartHandoff = true
         }
 
+        reconcilePersistedFlowStateBeforeStart()
+
         if isActive {
             extendSession(duration: duration)
             if coldStart {
@@ -102,6 +106,33 @@ final class FlowSessionManager: ObservableObject {
         startTask = Task { @MainActor [weak self] in
             await self?.startSessionAsync(duration: duration)
             self?.handleColdStartAfterSessionReady()
+        }
+    }
+
+    /// Clears App Group Flow state left behind when the host process was killed
+    /// or the device rebooted while the session flag was still set.
+    private func reconcilePersistedFlowStateBeforeStart() {
+        if FlowSessionBridge.isHostStale() {
+            if isActive {
+                endSession()
+            } else {
+                FlowSessionBridge.clearFlowState()
+                FlowLiveActivityController.endSession()
+            }
+            debug("reconciled zombie persisted Flow state")
+            return
+        }
+
+        guard !isActive else { return }
+
+        let orphaned = FlowSessionBridge.recordingState()
+        switch orphaned {
+        case .recording, .stopped, .processing:
+            FlowSessionBridge.setRecordingState(.idle)
+            FlowSessionBridge.clearPendingTranscription()
+            debug("cleared orphaned keyboard recording state: \(orphaned.rawValue)")
+        case .idle, .aborted:
+            break
         }
     }
 
@@ -196,6 +227,9 @@ final class FlowSessionManager: ObservableObject {
             writeHeartbeatIfActive()
         case .background:
             setAppForeground(false)
+            if coldStartContext != nil {
+                dismissColdStartOverlay()
+            }
             beginBackgroundKeepAlive()
         @unknown default:
             break
@@ -328,16 +362,13 @@ final class FlowSessionManager: ObservableObject {
             return
         }
 
-        coldStartContext = FlowColdStartContext(
-            hostEntry: hostEntry,
-            showReturnAlert: hostEntry != nil
-        )
+        coldStartContext = FlowColdStartContext(hostEntry: hostEntry)
     }
 
     private func bindSessionASRIfNeeded(force: Bool = false) {
         let engineMode = store.engineMode
         if !force,
-           let sessionASR,
+           sessionASR != nil,
            sessionASREngineMode == engineMode {
             return
         }
@@ -374,6 +405,11 @@ final class FlowSessionManager: ObservableObject {
 
     private func startPolling() {
         pollingTask?.cancel()
+        lastObservedRecordingState = FlowSessionBridge.recordingState()
+        FlowDiagnostics.log(
+            "polling started: initialRecordingState=\(lastObservedRecordingState.rawValue) " +
+            "container=\(AppGroup.containerPathForDiagnostics)"
+        )
         pollingTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 self?.handleKeyboardSignal()
@@ -383,7 +419,17 @@ final class FlowSessionManager: ObservableObject {
     }
 
     private func handleKeyboardSignal() {
-        switch FlowSessionBridge.recordingState() {
+        let signal = FlowSessionBridge.recordingState()
+        if signal != lastObservedRecordingState {
+            // The single most important cross-process signal: proves whether the
+            // host actually SEES the keyboard's recording state writes.
+            FlowDiagnostics.log(
+                "poll observed recordingState \(lastObservedRecordingState.rawValue) → \(signal.rawValue) " +
+                "[rec=\(isUtteranceRecording) proc=\(isUtteranceProcessing) fg=\(isAppForeground)]"
+            )
+            lastObservedRecordingState = signal
+        }
+        switch signal {
         case .recording:
             guard !isUtteranceRecording, !isUtteranceProcessing else { return }
             beginUtterance()
@@ -431,7 +477,9 @@ final class FlowSessionManager: ObservableObject {
         FlowLiveActivityController.update(phase: .recording)
         FlowDiagnostics.log(
             "beginUtterance engine=\(store.engineMode) " +
-            "asrType=\(type(of: asr)) pipelined=true max=\(Int(FlowSessionKeys.maxUtteranceDuration))s"
+            "asrType=\(type(of: asr)) pipelined=true " +
+            "localCustomLM=\(store.localASRCustomLanguageModelEnabled) " +
+            "max=\(Int(FlowSessionKeys.maxUtteranceDuration))s"
         )
 
         asrTask = Task.detached(priority: .userInitiated) { [weak manager = self] in
@@ -638,12 +686,18 @@ final class FlowSessionManager: ObservableObject {
             // so the keyboard can show the "fill in your key" hint
             // inline rather than a generic failure message. The raw
             // transcript is still delivered — no data loss.
-            let warning = Self.warningFromPolishError(error, engineMode: engineMode) ?? chunkNote
+            let fallback = Self.makeFallbackDelivery(
+                rawText: text,
+                error: error,
+                engineMode: engineMode,
+                chunkWarning: chunkNote
+            )
             FlowDiagnostics.log(
                 "polish failed after \(String(format: "%.1f", Date().timeIntervalSince(polishStarted)))s: " +
                 "\(error.localizedDescription)"
             )
-            FlowSessionBridge.storeTranscriptionResult(text, polishWarning: warning)
+            delivered = fallback.text
+            FlowSessionBridge.storeTranscriptionResult(fallback.text, polishWarning: fallback.polishWarning)
         }
 
         SpeechHistoryStore.shared.recordUtterance(
@@ -684,15 +738,41 @@ final class FlowSessionManager: ObservableObject {
     /// v0.2.0: surface the local-mode cloud-polish error path with a
     /// localised hint ("please fill in your DeepSeek key in Settings")
     /// rather than letting the keyboard show a generic network error.
+    static func makeFallbackDelivery(
+        rawText: String,
+        error: Error,
+        engineMode: String,
+        chunkWarning: String?
+    ) -> TranscriptionDelivery {
+        let fallbackText = TranscriptPostProcessor.cleanRawASRFallback(rawText)
+        let warning = warningFromPolishError(error, engineMode: engineMode)
+            ?? polishDegradedWarning()
+            ?? chunkWarning
+        return TranscriptionDelivery(text: fallbackText, polishWarning: warning)
+    }
+
     private static func warningFromPolishError(_ error: Error, engineMode: String) -> String? {
-        guard let polishError = error as? PolishingService.PolishError,
-              polishError == .missingAPIKey else {
-            return nil
+        if let polishError = error as? PolishingService.PolishError {
+            switch polishError {
+            case .missingAPIKey:
+                if engineMode == "local" {
+                    return SharedL10n.string("flow.warning.localPolishUnavailable")
+                }
+                return SharedL10n.string("flow.warning.cloudPolishMissingKey")
+            case .timeout:
+                return polishDegradedWarning()
+            case .noTranscript:
+                return nil
+            }
         }
-        if engineMode == "local" {
-            return AppL10n.string("flow.warning.localPolishUnavailable")
+        if error is LLMError {
+            return polishDegradedWarning()
         }
-        return AppL10n.string("flow.warning.cloudPolishMissingKey")
+        return nil
+    }
+
+    private static func polishDegradedWarning() -> String? {
+        SharedL10n.string("flow.warning.polishDegraded")
     }
 
     private func asrWaitTimeout() -> TimeInterval {

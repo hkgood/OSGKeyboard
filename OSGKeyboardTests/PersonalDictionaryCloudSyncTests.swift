@@ -8,23 +8,7 @@ import XCTest
 
 // MARK: - Fake KVS
 
-private final class FakeUbiquitousKeyValueStore: UbiquitousKeyValueStoreing, @unchecked Sendable {
-    private var storage: [String: Data] = [:]
-
-    func data(forKey key: String) -> Data? {
-        storage[key]
-    }
-
-    func set(_ value: Data?, forKey key: String) {
-        if let value {
-            storage[key] = value
-        } else {
-            storage.removeValue(forKey: key)
-        }
-    }
-
-    func synchronize() -> Bool { true }
-}
+// See FakeUbiquitousKeyValueStore.swift
 
 // MARK: - Tests
 
@@ -170,6 +154,7 @@ final class PersonalDictionaryCloudSyncTests: XCTestCase {
         try await sync.enableSync()
 
         XCTAssertTrue(store.personalDictionaryICloudSyncEnabled)
+        XCTAssertEqual(kvs.object(forKey: ICloudSyncPreferences.dictionaryEnabledKey) as? Bool, true)
         XCTAssertEqual(Set(store.personalDictionary.entries.map(\.term)), Set(["LocalTerm", "RemoteTerm"]))
         XCTAssertNotNil(sync.loadRemote())
     }
