@@ -36,7 +36,11 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         didSet {
             guard oldValue != apiKey, !isSyncingProviderAPIKey else { return }
             do {
-                try Keychain.setAPIKey(apiKey, for: providerId)
+                try Keychain.setAPIKey(
+                    apiKey,
+                    for: providerId,
+                    useICloudSync: configuration.settingsICloudSyncEnabled
+                )
             } catch {
                 OSGLog.config.warning("Keychain write failed: \(error.localizedDescription, privacy: .public)")
             }

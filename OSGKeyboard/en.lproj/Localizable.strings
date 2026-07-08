@@ -369,8 +369,9 @@
 "settings.personalDictionary.iCloudSync.error.generic" = "Could not sync your dictionary with iCloud. Try again later.";
 
 "settings.iCloudSync.title" = "iCloud Sync";
-"settings.appSettings.iCloudSync.title" = "Sync settings via iCloud";
-"settings.appSettings.iCloudSync.subtitle" = "Keep engine, language, polish, and Flow preferences in sync across your devices. API keys stay on each device.";
+"settings.appSettings.iCloudSync.title" = "iCloud Sync";
+"settings.appSettings.iCloudSync.subtitle" = "Sync settings, usage stats, speech history, and API keys across your devices via iCloud. API keys use your private iCloud Keychain.";
+"settings.appSettings.iCloudSync.syncNow" = "Sync Now";
 "settings.appSettings.iCloudSync.error.generic" = "Could not sync settings with iCloud. Try again later.";
 
 /* v0.3.0: Polish intensity */
@@ -391,7 +392,14 @@
 
 /* Cold-start handoff (scheme B) */
 "flow.coldStart.title" = "Voice is ready";
-"flow.coldStart.swipeHint" = "Swipe right along the bar at the bottom to return to your previous app.";
+"flow.coldStart.preparing" = "Getting voice ready";
+"flow.coldStart.preparingHint" = "Keep OSGKeyboard open for a moment while we start the microphone session.";
+"flow.coldStart.permission.title" = "Permission required";
+"flow.coldStart.audio.title" = "Voice could not start";
+"flow.coldStart.error.audioTimeout" = "The microphone did not become ready in time. It may be busy in another app. Please try again.";
+"flow.coldStart.action.settings" = "Open Settings";
+"flow.coldStart.action.retry" = "Try Again";
+"flow.coldStart.swipeHint" = "Swipe right along the bottom bar\nto return to your previous app.";
 "flow.coldStart.swipeAccessibility" = "Swipe right along the bottom bar to return";
 "flow.coldStart.tapToDismiss" = "Tap anywhere to close";
 "flow.coldStart.return.named" = "Return to %@";

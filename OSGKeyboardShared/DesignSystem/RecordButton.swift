@@ -10,7 +10,10 @@ public struct RecordButton: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     public enum Phase: Equatable {
-        case idle
+        /// Green — host ready; tap records immediately.
+        case idleReady
+        /// Orange — voice input unavailable (missing key, session not ready, etc.).
+        case idleUnavailable
         case recording
         case processing
         case error
@@ -75,7 +78,7 @@ public struct RecordButton: View {
                 .animation(Motion.soft, value: level)
 
             Circle()
-                .stroke(Color.white.opacity(phase == .idle ? 0.08 : 0.12), lineWidth: 0.5)
+                .stroke(Color.white.opacity(isIdle ? 0.08 : 0.12), lineWidth: 0.5)
                 .frame(width: Layout.outerRing, height: Layout.outerRing)
 
             ZStack {
@@ -87,7 +90,7 @@ public struct RecordButton: View {
 
                 Group {
                     switch phase {
-                    case .idle:
+                    case .idleReady, .idleUnavailable:
                         Image(systemName: "mic.fill")
                             .font(.system(size: 36, weight: .medium))
                             .foregroundStyle(.white)
@@ -128,9 +131,9 @@ public struct RecordButton: View {
             .animation(Motion.soft, value: remainingSeconds)
         }
         .contentShape(Circle())
-        .opacity(isEnabled ? 1 : 0.45)
         .onTapGesture {
-            guard isEnabled, phase != .processing else { return }
+            guard phase != .processing else { return }
+            guard isEnabled || phase == .idleUnavailable else { return }
             onToggle()
         }
         .onAppear { breath = (phase == .recording) }
@@ -138,6 +141,15 @@ public struct RecordButton: View {
             breath = (new == .recording)
         }
         .accessibilityLabel(Text(SharedL10n.string("keyboard.tapToTalkA11y")))
+    }
+
+    private var isIdle: Bool {
+        switch phase {
+        case .idleReady, .idleUnavailable:
+            return true
+        case .recording, .processing, .error:
+            return false
+        }
     }
 
     private func formatRemaining(_ seconds: Int) -> String {
@@ -159,13 +171,13 @@ public struct RecordButton: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
-        case .error:
+        case .error, .idleUnavailable:
             return LinearGradient(
                 colors: [palette.warning.opacity(0.85), palette.warning.opacity(0.55)],
                 startPoint: .top,
                 endPoint: .bottom
             )
-        case .idle:
+        case .idleReady:
             return LinearGradient(
                 colors: [palette.accent.opacity(0.95), palette.accent.opacity(0.75)],
                 startPoint: .top,

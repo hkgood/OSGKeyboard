@@ -16,7 +16,7 @@ public protocol CloudASRTranscribing: Sendable {
 }
 
 public enum CloudASRClientFactory {
-    public static func make(store: AppGroupStore, session: URLSession = .shared) -> CloudASRTranscribing {
+    public static func make(store: any ConfigurationStore, session: URLSession = .shared) -> CloudASRTranscribing {
         let strategy = CloudASRModelCatalog.strategy(for: store.providerId)
         switch strategy {
         case .zhipuHotwords:
@@ -29,7 +29,7 @@ public enum CloudASRClientFactory {
             return AlibabaFunASRClient(
                 apiKey: store.apiKey,
                 model: CloudASRModelCatalog.defaultModel(for: store.providerId),
-                store: store,
+                persistence: store.cloudASRPersistence,
                 session: session
             )
         case .prompt:
@@ -149,12 +149,12 @@ struct ZhipuCloudASRClient: CloudASRTranscribing {
 
 // MARK: - Alibaba Fun-ASR Flash (vocabulary_id + context)
 
-struct AlibabaFunASRClient: CloudASRTranscribing {
+/// `UserDefaults` is not `Sendable`; we only touch `persistence` on the
+/// actor-isolated cloud ASR path, same as the previous `AppGroupStore` holder.
+struct AlibabaFunASRClient: CloudASRTranscribing, @unchecked Sendable {
     let apiKey: String
     let model: String
-    // Hold the (@unchecked Sendable) AppGroupStore rather than a raw
-    // UserDefaults so this struct stays Sendable under strict concurrency.
-    let store: AppGroupStore
+    let persistence: UserDefaults
     let session: URLSession
 
     func prepare(dictionary: PersonalDictionary) async throws {
@@ -162,7 +162,7 @@ struct AlibabaFunASRClient: CloudASRTranscribing {
             dictionary: dictionary,
             apiKey: apiKey,
             targetModel: CloudASRModelCatalog.alibabaVocabularyTargetModel,
-            defaults: store.defaults,
+            defaults: persistence,
             session: session
         )
     }
@@ -179,7 +179,7 @@ struct AlibabaFunASRClient: CloudASRTranscribing {
             dictionary: dictionary,
             apiKey: apiKey,
             targetModel: CloudASRModelCatalog.alibabaVocabularyTargetModel,
-            defaults: store.defaults,
+            defaults: persistence,
             session: session
         )
 

@@ -48,7 +48,7 @@ public actor PolishingService {
         case translate(targetLocaleId: String)
     }
 
-    private let store: AppGroupStore
+    private let store: any ConfigurationStore
     private let timeout: TimeInterval
     /// Optional injected client (mostly for testing). When nil we build
     /// one from `store.makeClient()` per call.
@@ -60,7 +60,7 @@ public actor PolishingService {
     /// own slack on top of the length-scaled budget in `polishRemote`, so
     /// no `+1` is baked in here.
     public init(
-        store: AppGroupStore = AppGroupStore(),
+        store: any ConfigurationStore = AppGroupStore(),
         client: LLMClient? = nil,
         timeout: TimeInterval? = nil
     ) {
@@ -346,7 +346,7 @@ public actor PolishingService {
     }
 
     internal static func resolvedProviderId(
-        store: AppGroupStore,
+        store: any ConfigurationStore,
         providerIdOverride: String?
     ) -> String {
         if let providerIdOverride {
@@ -360,7 +360,7 @@ public actor PolishingService {
     }
 
     internal static func resolveLLMEndpoint(
-        store: AppGroupStore,
+        store: any ConfigurationStore,
         preset: LLMProvider,
         providerIdOverride: String?
     ) -> (baseURL: String, model: String) {

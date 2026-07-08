@@ -64,3 +64,9 @@ OSGKeyboard/Resources/CustomLanguageModel/v1/compiled/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Local debug capture logs and screenshots
+.flow-capture.log
+.flow-oslog-capture.log
+.flow-*.log
+.osg_*.png

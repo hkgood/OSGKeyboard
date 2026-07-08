@@ -75,6 +75,12 @@ struct HomeStatsCard: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             refreshDictionaryCount()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .personalDictionaryDidSyncFromCloud)) { _ in
+            refreshDictionaryCount()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .usageStatisticsDidSyncFromCloud)) { _ in
+            stats.reloadFromDisk()
+        }
     }
 
     private func statCell(systemImage: String, value: String, label: LocalizedStringKey) -> some View {

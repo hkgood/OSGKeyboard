@@ -108,6 +108,10 @@ struct HomeView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             refreshPermissionStatuses()
         }
+        .onChange(of: previewFocused) { _, focused in
+            guard focused else { return }
+            Task { await flowManager.refreshForInlineKeyboardFocus() }
+        }
     }
 
     private func refreshPermissionStatuses() {

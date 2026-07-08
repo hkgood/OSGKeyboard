@@ -2,7 +2,6 @@
 // OSGKeyboard · Main App
 //
 // Settings-row toggle for mirroring user preferences through iCloud KVS.
-// API keys remain in Keychain and are never uploaded.
 
 import SwiftUI
 import OSGKeyboardShared
@@ -14,6 +13,7 @@ struct SettingsICloudSyncRow: View {
     @State private var isEnabled: Bool = AppGroupStore().settingsICloudSyncEnabled
     @State private var syncErrorMessage: String?
     @State private var isApplyingToggle = false
+    @State private var isSyncingNow = false
 
     private let store = AppGroupStore()
 
@@ -32,6 +32,25 @@ struct SettingsICloudSyncRow: View {
             }
             .tint(palette.accent)
             .disabled(isApplyingToggle)
+
+            if isEnabled {
+                Button {
+                    syncNow()
+                } label: {
+                    HStack(spacing: Spacing.xs) {
+                        if isSyncingNow {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                        Text("settings.appSettings.iCloudSync.syncNow")
+                            .font(TypeStyle.caption)
+                    }
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(palette.accent)
+                .disabled(isSyncingNow || isApplyingToggle)
+                .padding(.top, Spacing.xxs)
+            }
 
             if let syncErrorMessage {
                 Text(syncErrorMessage)
@@ -75,7 +94,7 @@ struct SettingsICloudSyncRow: View {
         syncErrorMessage = nil
         Task {
             do {
-                try await SettingsCloudSync.shared.enableSync()
+                try await CloudSyncContext.shared.settingsSyncService.enableSync()
                 reloadFromStore()
             } catch let error as SettingsCloudSyncError {
                 isEnabled = false
@@ -89,9 +108,22 @@ struct SettingsICloudSyncRow: View {
     }
 
     private func disableSync() {
-        SettingsCloudSync.shared.disableSync()
+        CloudSyncContext.shared.settingsSyncService.disableSync()
         isEnabled = false
         syncErrorMessage = nil
+    }
+
+    private func syncNow() {
+        isSyncingNow = true
+        syncErrorMessage = nil
+        Task {
+            do {
+                try await CloudSyncContext.shared.syncNow()
+            } catch {
+                syncErrorMessage = AppL10n.string("settings.appSettings.iCloudSync.error.generic")
+            }
+            isSyncingNow = false
+        }
     }
 
     private func localizedSyncError(_ error: SettingsCloudSyncError) -> String {

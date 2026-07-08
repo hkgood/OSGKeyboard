@@ -123,7 +123,7 @@ public enum ASREvent: Sendable, Equatable {
 public enum ASRServiceFactory {
     /// Returns on-device SpeechAnalyzer for `local`, or the user's cloud
     /// ASR provider when `engineMode == "cloud"`.
-    public static func make(store: AppGroupStore = AppGroupStore()) -> ASRService {
+    public static func make(store: any ConfigurationStore = AppGroupStore()) -> ASRService {
         if store.engineMode == "cloud" {
             return CloudASRService(store: store)
         }

@@ -141,5 +141,46 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testDarwinNotificationPostsWithoutCrashing() {
         FlowSessionDarwin.postSessionChanged()
+        FlowSessionDarwin.postHostReadyChanged()
+    }
+
+    func testHostReadyRequiresExplicitContract() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(duration: 60, defaults: defaults)
+        XCTAssertTrue(FlowSessionBridge.isHostReachable(defaults: defaults))
+        XCTAssertFalse(FlowSessionBridge.isHostReady(defaults: defaults))
+
+        FlowSessionBridge.setHostReady(true, defaults: defaults)
+        XCTAssertTrue(FlowSessionBridge.isHostReady(defaults: defaults))
+    }
+
+    func testHostReadyFalseWhenHeartbeatStale() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        FlowSessionBridge.setHostReady(true, defaults: defaults)
+        XCTAssertTrue(FlowSessionBridge.isHostReady(defaults: defaults))
+
+        let staleHeartbeat = Date().timeIntervalSince1970 - 10
+        defaults.set(staleHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
+        XCTAssertFalse(FlowSessionBridge.isHostReady(defaults: defaults))
+    }
+
+    func testHeartbeatRefreshKeepsHostReadyPublished() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        FlowSessionBridge.setHostReady(true, defaults: defaults)
+
+        FlowSessionBridge.writeHeartbeat(defaults: defaults)
+
+        XCTAssertTrue(FlowSessionBridge.isHostReady(defaults: defaults))
+    }
+
+    func testClearFlowStateClearsHostReady() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(defaults: defaults)
+        FlowSessionBridge.setHostReady(true, defaults: defaults)
+        FlowSessionBridge.clearFlowState(defaults: defaults)
+        XCTAssertFalse(defaults.bool(forKey: FlowSessionKeys.flowHostReady))
+        XCTAssertFalse(FlowSessionBridge.isHostReady(defaults: defaults))
     }
 }

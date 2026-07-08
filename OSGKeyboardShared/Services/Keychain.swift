@@ -1,33 +1,13 @@
 // Keychain.swift
 // OSGKeyboard · Shared
 //
-// Single-purpose Keychain helper for the user's LLM API key.
+// Keychain helper for LLM API keys and onboarding markers.
 //
-// Why this exists
-// ---------------
-// Both the host app and the keyboard extension need to read the same API
-// key (the host writes it in Settings; the extension uses it to
-// authenticate LLM requests). Storing it in App Group `UserDefaults` is
-// plaintext on disk and shows up in any unencrypted backup. The Keychain
-// gives us at-rest encryption and proper lifecycle.
-//
-// Cross-process sharing
-// ---------------------
-// App and extension have different bundle IDs, so their default Keychain
-// access groups differ and they cannot see each other's items out of the
-// box. We add `com.apple.security.keychain-access-groups` to both
-// targets' entitlements with the entry `com.osgkeyboard.shared`; this
-// becomes each process's *first* (and therefore default) access group, so
-// we never need to specify `kSecAttrAccessGroup` in queries — the system
-// resolves it for us.
-//
-// Accessibility class
-// -------------------
-// `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`:
-//   - Available after the user unlocks the device at least once after
-//     boot (so background jobs work even with a locked phone).
-//   - "ThisDeviceOnly" — does not migrate to a restored device and is
-//     NOT included in iCloud Keychain. API keys should not sync.
+// API keys:
+// - Local (device-only) items use `AfterFirstUnlockThisDeviceOnly`.
+// - When settings iCloud sync is enabled, keys are stored as synchronizable
+//   generic passwords (`kSecAttrSynchronizable = true`) and replicate through
+//   the user's iCloud Keychain — never through KVS JSON.
 
 import Foundation
 import Security
@@ -48,19 +28,42 @@ public enum Keychain: @unchecked Sendable {
         return "provider.\(normalized)"
     }
 
-    // MARK: - Read
-
-    /// Read the stored API key. Returns `nil` when nothing is stored,
-    /// or when the underlying call returns a non-success status we can't
-    /// usefully surface (e.g. transient `errSecInteractionNotAllowed`).
-    public static func apiKey(for providerId: String) -> String? {
-        let query: [String: Any] = [
+    private static func baseQuery(providerId: String, synchronizable: Bool) -> [String: Any] {
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account(for: providerId),
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecAttrSynchronizable as String: synchronizable ? kCFBooleanTrue! : kCFBooleanFalse!,
         ]
+        #if os(macOS)
+        query[kSecUseDataProtectionKeychain as String] = true
+        #endif
+        return query
+    }
+
+    // MARK: - Read
+
+    public static func apiKey(for providerId: String, preferICloudSync: Bool = false) -> String? {
+        if preferICloudSync, let synced = readKey(providerId: providerId, synchronizable: true) {
+            return synced
+        }
+        if let local = readKey(providerId: providerId, synchronizable: false) {
+            return local
+        }
+        if preferICloudSync {
+            return readKey(providerId: providerId, synchronizable: true)
+        }
+        return nil
+    }
+
+    public static func apiKey() -> String? {
+        apiKey(for: defaultProviderId)
+    }
+
+    private static func readKey(providerId: String, synchronizable: Bool) -> String? {
+        var query = baseQuery(providerId: providerId, synchronizable: synchronizable)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         switch status {
@@ -80,21 +83,17 @@ public enum Keychain: @unchecked Sendable {
         }
     }
 
-    /// Backward-compatible shorthand for the default cloud provider.
-    public static func apiKey() -> String? {
-        apiKey(for: defaultProviderId)
-    }
-
-    /// Legacy account used by older builds before provider-scoped keys.
-    /// New code should avoid this and use `apiKey(for:)`.
     public static func legacyAPIKey() -> String? {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: legacyAccount,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
+        #if os(macOS)
+        query[kSecUseDataProtectionKeychain as String] = true
+        #endif
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         guard status == errSecSuccess,
@@ -106,35 +105,37 @@ public enum Keychain: @unchecked Sendable {
 
     // MARK: - Write
 
-    /// Store (or update) the API key. An empty string deletes the entry,
-    /// so clearing the field in the UI removes the key from the Keychain
-    /// rather than leaving an empty-string placeholder.
-    public static func setAPIKey(_ key: String, for providerId: String) throws {
+    public static func setAPIKey(_ key: String, for providerId: String, useICloudSync: Bool = false) throws {
         if key.isEmpty {
-            try deleteAPIKey(for: providerId)
+            try deleteAPIKey(for: providerId, useICloudSync: useICloudSync)
             return
         }
+        if useICloudSync {
+            try writeKey(key, providerId: providerId, synchronizable: true)
+            try? deleteKey(providerId: providerId, synchronizable: false)
+        } else {
+            try writeKey(key, providerId: providerId, synchronizable: false)
+        }
+    }
+
+    public static func setAPIKey(_ key: String) throws {
+        try setAPIKey(key, for: defaultProviderId, useICloudSync: false)
+    }
+
+    private static func writeKey(_ key: String, providerId: String, synchronizable: Bool) throws {
         let data = Data(key.utf8)
-        let baseQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account(for: providerId),
-        ]
-        // Try update first — covers the common path where the key already
-        // exists (every settings edit after the first).
-        let updateAttrs: [String: Any] = [
-            kSecValueData as String: data,
-        ]
+        var baseQuery = baseQuery(providerId: providerId, synchronizable: synchronizable)
+        let updateAttrs: [String: Any] = [kSecValueData as String: data]
         let updateStatus = SecItemUpdate(baseQuery as CFDictionary, updateAttrs as CFDictionary)
         switch updateStatus {
         case errSecSuccess:
             return
         case errSecItemNotFound:
-            // No existing item — add one with our accessibility class.
-            var addQuery = baseQuery
-            addQuery[kSecValueData as String] = data
-            addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-            let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+            baseQuery[kSecValueData as String] = data
+            baseQuery[kSecAttrAccessible as String] = synchronizable
+                ? kSecAttrAccessibleAfterFirstUnlock
+                : kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            let addStatus = SecItemAdd(baseQuery as CFDictionary, nil)
             if addStatus != errSecSuccess {
                 throw KeychainError.unexpectedStatus(addStatus)
             }
@@ -143,64 +144,73 @@ public enum Keychain: @unchecked Sendable {
         }
     }
 
-    /// Backward-compatible shorthand for the default cloud provider.
-    public static func setAPIKey(_ key: String) throws {
-        try setAPIKey(key, for: defaultProviderId)
-    }
-
     // MARK: - Delete
 
+    public static func deleteAPIKey(for providerId: String, useICloudSync: Bool = false) throws {
+        try deleteKey(providerId: providerId, synchronizable: false)
+        if useICloudSync {
+            try deleteKey(providerId: providerId, synchronizable: true)
+        }
+    }
+
     public static func deleteAPIKey(for providerId: String) throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account(for: providerId),
-        ]
+        try deleteAPIKey(for: providerId, useICloudSync: false)
+    }
+
+    public static func deleteAPIKey() throws {
+        try deleteAPIKey(for: defaultProviderId)
+    }
+
+    private static func deleteKey(providerId: String, synchronizable: Bool) throws {
+        let query = baseQuery(providerId: providerId, synchronizable: synchronizable)
         let status = SecItemDelete(query as CFDictionary)
-        // `errSecItemNotFound` is success-from-the-user's-perspective — the
-        // desired end state is "no key", which is what we already have.
         if status != errSecSuccess && status != errSecItemNotFound {
             throw KeychainError.unexpectedStatus(status)
         }
     }
 
-    /// Backward-compatible shorthand for the default cloud provider.
-    public static func deleteAPIKey() throws {
-        try deleteAPIKey(for: defaultProviderId)
-    }
-
     public static func deleteLegacyAPIKey() throws {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: legacyAccount,
         ]
+        #if os(macOS)
+        query[kSecUseDataProtectionKeychain as String] = true
+        #endif
         let status = SecItemDelete(query as CFDictionary)
         if status != errSecSuccess && status != errSecItemNotFound {
             throw KeychainError.unexpectedStatus(status)
+        }
+    }
+
+    /// Copy non-empty local keys into synchronizable Keychain items.
+    public static func migrateLocalKeysToICloud() {
+        for provider in LLMProvider.presets {
+            guard let local = readKey(providerId: provider.id, synchronizable: false), !local.isEmpty else {
+                continue
+            }
+            try? writeKey(local, providerId: provider.id, synchronizable: true)
+            try? deleteKey(providerId: provider.id, synchronizable: false)
         }
     }
 
     // MARK: - Onboarding completion (reboot-durable flag)
 
-    // App Group UserDefaults can transiently read empty right after a device
-    // reboot (data protection / `cfprefsd` not warmed), which made the app
-    // falsely re-show onboarding. This Keychain marker uses the same
-    // `AfterFirstUnlockThisDeviceOnly` class — reliably readable once the app
-    // can run, device-local, never synced — so it stays a trustworthy fallback
-    // that survives the App Group read race.
     private static let onboardingService = "com.osgkeyboard.onboarding"
     private static let onboardingAccount = "hasCompletedOnboarding"
 
-    /// Durable "user finished onboarding" marker. `false` when unset or unreadable.
     public static func hasCompletedOnboarding() -> Bool {
-        let query: [String: Any] = [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: onboardingService,
             kSecAttrAccount as String: onboardingAccount,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne,
         ]
+        #if os(macOS)
+        query[kSecUseDataProtectionKeychain as String] = true
+        #endif
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
         guard status == errSecSuccess,
@@ -216,20 +226,20 @@ public enum Keychain: @unchecked Sendable {
         return completed
     }
 
-    /// Mirror the onboarding-completed flag. Best-effort and idempotent — a
-    /// no-op when the stored value already matches, so it can be called from
-    /// frequently-saved config paths without Keychain churn.
     public static func setOnboardingCompleted(_ completed: Bool) {
         guard hasCompletedOnboarding() != completed else {
             OSGLog.config.info("[onboarding] Keychain write skipped (already \(completed, privacy: .public))")
             return
         }
 
-        let baseQuery: [String: Any] = [
+        var baseQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: onboardingService,
             kSecAttrAccount as String: onboardingAccount,
         ]
+        #if os(macOS)
+        baseQuery[kSecUseDataProtectionKeychain as String] = true
+        #endif
 
         guard completed else {
             let delStatus = SecItemDelete(baseQuery as CFDictionary)

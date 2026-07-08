@@ -313,6 +313,10 @@ public final class KeyboardViewController: UIInputViewController {
             switch self.state.phase {
             case .error:
                 self.state.phase = .idle
+                // Re-derive mic availability right away so a now-ready host
+                // turns the mic green immediately instead of lingering orange
+                // until the next monitor tick.
+                self.flowCoordinator.refreshSessionState()
             default:
                 break
             }

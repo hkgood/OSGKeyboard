@@ -17,7 +17,7 @@ struct FlowLiveActivityWidget: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    FlowLiveActivityBrandMark(size: 28)
+                    FlowLiveActivityBrandMark(height: 16)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     FlowLiveActivityPhaseLabel(phase: context.state.phase)
@@ -32,11 +32,13 @@ struct FlowLiveActivityWidget: Widget {
                         .foregroundStyle(.secondary)
                 }
             } compactLeading: {
-                FlowLiveActivityBrandMark(size: 22)
+                FlowLiveActivityBrandMark(height: 12)
             } compactTrailing: {
                 FlowLiveActivityTrailingGlyph(phase: context.state.phase)
             } minimal: {
-                FlowLiveActivityBrandMark(size: 18)
+                // The minimal slot is a tiny circle; a short wordmark keeps
+                // the natural ratio without overflowing its bounds.
+                FlowLiveActivityBrandMark(height: 6)
             }
             .keylineTint(Color(red: 0.35, green: 0.55, blue: 1.0))
         }
@@ -50,7 +52,7 @@ private struct FlowLiveActivityLockScreenView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            FlowLiveActivityBrandMark(size: 32)
+            FlowLiveActivityBrandMark(height: 18)
             VStack(alignment: .leading, spacing: 4) {
                 Text("OSGKeyboard")
                     .font(.headline)
@@ -71,13 +73,18 @@ private struct FlowLiveActivityLockScreenView: View {
 /// Branded mark used in compactLeading so users see OSGKeyboard, not the system mic icon.
 /// Transparent white OSG glyphs render directly on the black Dynamic Island.
 private struct FlowLiveActivityBrandMark: View {
-    let size: CGFloat
+    /// The OSG wordmark is wide and short; pin the width to its true aspect
+    /// ratio so it never collapses into a thin sliver inside a square frame.
+    private static let aspectRatio: CGFloat = 912.0 / 251.0
+
+    /// Rendered glyph height; width follows the wordmark's natural ratio.
+    let height: CGFloat
 
     var body: some View {
         Image("OSGLogo")
             .resizable()
             .aspectRatio(contentMode: .fit)
-            .frame(width: size, height: size)
+            .frame(width: height * Self.aspectRatio, height: height)
             .accessibilityLabel("OSGKeyboard")
     }
 }

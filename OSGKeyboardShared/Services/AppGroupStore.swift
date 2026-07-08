@@ -16,15 +16,25 @@ public struct AppGroupStore: @unchecked Sendable {
             self.defaults = defaults
             return
         }
-        guard let available = AppGroup.defaultsIfAvailable else {
-            #if DEBUG
-            fatalError("App Group unavailable — inject UserDefaults in tests or fix entitlements.")
-            #else
-            // Callers must check `AppGroup.isAvailable` before constructing.
-            fatalError("App Group unavailable.")
-            #endif
+        if let available = AppGroup.defaultsIfAvailable {
+            self.defaults = available
+            return
         }
-        self.defaults = available
+        #if os(iOS)
+        // iOS app + keyboard extension MUST share the App Group suite; a
+        // silent `.standard` fallback would desync them. Keep this a hard
+        // failure so a provisioning mistake is impossible to miss.
+        #if DEBUG
+        fatalError("App Group unavailable — inject UserDefaults in tests or fix entitlements.")
+        #else
+        fatalError("App Group unavailable.")
+        #endif
+        #else
+        // macOS is a standalone menu-bar app with no keyboard extension to
+        // stay in sync with, so a missing App Group container is expected;
+        // fall back to the app's standard defaults.
+        self.defaults = .standard
+        #endif
     }
 
     private var configuration: AppGroupConfiguration {
@@ -162,6 +172,14 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setPersonalDictionary(_ dictionary: PersonalDictionary) {
         mutateConfiguration { $0.personalDictionary = dictionary }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func deletePersonalDictionaryEntry(id: UUID, at date: Date = Date()) {
+        mutateConfiguration { config in
+            config.personalDictionary.entries.removeAll { $0.id == id }
+            config.personalDictionary.deletedEntryIDs[id] = date
+        }
         AppGroupConfigDarwin.postConfigChanged()
     }
 

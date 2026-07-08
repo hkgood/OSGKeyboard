@@ -10,6 +10,10 @@ public enum FlowSessionKeys {
     public static let flowSessionActive = "flow.flowSessionActive"
     public static let flowSessionExpires = "flow.flowSessionExpires"
     public static let flowHeartbeat = "flow.flowHeartbeat"
+    /// Host-published contract: capture + polling idle and able to accept utterances.
+    public static let flowHostReady = "flow.flowHostReady"
+    /// Wall-clock timestamp paired with `flowHostReady` (seconds since 1970).
+    public static let flowHostReadyAt = "flow.flowHostReadyAt"
     public static let keyboardRecordingState = "flow.keyboardRecordingState"
     public static let transcriptionLanguage = "flow.transcriptionLanguage"
     public static let transcriptionResult = "flow.transcriptionResult"
@@ -28,6 +32,9 @@ public enum FlowSessionKeys {
 
     /// Heartbeat older than this → host is not actively reachable for recording.
     public static let heartbeatStaleInterval: TimeInterval = 3
+
+    /// `flowHostReadyAt` must be within this window of the latest heartbeat.
+    public static let hostReadyMaxHeartbeatSkew: TimeInterval = 5
 
     /// Session flag still set but heartbeat older than this → host process is
     /// dead (force-quit, reboot). Keyboard / host should clear persisted state.

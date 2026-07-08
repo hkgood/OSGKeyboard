@@ -7,17 +7,36 @@
 import Foundation
 
 extension PersonalDictionary {
+    public static let kvsKeyV2 = "personalDictionary.v2"
+    public static let legacyKVSKey = "personalDictionary.v1"
+    public static let tombstoneRetention: TimeInterval = 90 * 24 * 60 * 60
+
     /// Merges two dictionary snapshots for cross-device sync.
     ///
     /// Rules:
+    /// - Apply `clearedAt` and deletion tombstones before entry union.
     /// - Same `id`: keep the entry with the newer `updatedAt`.
     /// - Same canonical term (case-insensitive) but different `id`: union
     ///   aliases, take max `usageCount`, keep the newer entry's fields.
     public static func merge(local: PersonalDictionary, remote: PersonalDictionary) -> PersonalDictionary {
+        let clearedAt = later(of: local.clearedAt, and: remote.clearedAt)
+        var deletedIDs = local.deletedEntryIDs
+        for (id, date) in remote.deletedEntryIDs {
+            if let existing = deletedIDs[id] {
+                deletedIDs[id] = max(existing, date)
+            } else {
+                deletedIDs[id] = date
+            }
+        }
+        deletedIDs = pruneTombstones(deletedIDs, clearedAt: clearedAt)
+
         var mergedByID: [UUID: Entry] = [:]
         var canonicalOwner: [String: UUID] = [:]
 
         func insertOrMerge(_ candidate: Entry) {
+            if deletedIDs[candidate.id] != nil { return }
+            if let clearedAt, candidate.createdAt <= clearedAt { return }
+
             let key = candidate.term.lowercased()
             if let existingID = canonicalOwner[key], var existing = mergedByID[existingID] {
                 if candidate.id == existingID {
@@ -56,8 +75,49 @@ extension PersonalDictionary {
         return PersonalDictionary(
             entries: mergedEntries,
             version: max(local.version, remote.version) + 1,
-            lastSyncedAt: lastSyncedAt
+            lastSyncedAt: lastSyncedAt,
+            deletedEntryIDs: deletedIDs,
+            clearedAt: clearedAt
         )
+    }
+
+    public mutating func recordDeletion(of entryID: UUID, at date: Date = Date()) {
+        deletedEntryIDs[entryID] = date
+        entries.removeAll { $0.id == entryID }
+    }
+
+    public mutating func recordClearAll(at date: Date = Date()) {
+        entries.removeAll()
+        clearedAt = date
+    }
+
+    public mutating func pruneTombstonesIfNeeded() {
+        deletedEntryIDs = Self.pruneTombstones(deletedEntryIDs, clearedAt: clearedAt)
+    }
+
+    private static func pruneTombstones(
+        _ tombstones: [UUID: Date],
+        clearedAt: Date?
+    ) -> [UUID: Date] {
+        let cutoff = Date().addingTimeInterval(-tombstoneRetention)
+        return tombstones.filter { _, deletedAt in
+            if deletedAt < cutoff { return false }
+            if let clearedAt, deletedAt <= clearedAt { return false }
+            return true
+        }
+    }
+
+    private static func later(of lhs: Date?, and rhs: Date?) -> Date? {
+        switch (lhs, rhs) {
+        case let (left?, right?):
+            return max(left, right)
+        case (nil, let right?):
+            return right
+        case (let left?, nil):
+            return left
+        case (nil, nil):
+            return nil
+        }
     }
 
     private static func resolveEntryConflict(existing: Entry, incoming: Entry) -> Entry {

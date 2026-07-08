@@ -67,12 +67,16 @@ final class FlowSessionManager: ObservableObject {
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
     /// True while handling a keyboard-initiated `startflow` cold start.
     private var isColdStartHandoff = false
+    private static let coldStartAudioProofTimeout: TimeInterval = 2.5
 
     init() {
         // Sessions are (re)started explicitly on app foreground via
         // `activateOnForeground()`. We deliberately do NOT silently reattach a
         // stored session here — after a force-quit that would resurrect capture
         // (and keep a stale Live Activity alive) without the user re-opening.
+        capture.onEngineLiveChanged = { [weak self] _ in
+            self?.refreshHostReady()
+        }
     }
 
     // MARK: - Public
@@ -86,15 +90,17 @@ final class FlowSessionManager: ObservableObject {
 
         if coldStart {
             isColdStartHandoff = true
+            showColdStartPreparing()
         }
 
         reconcilePersistedFlowStateBeforeStart()
 
         if isActive {
             extendSession(duration: duration)
+            refreshHostReady()
             if coldStart {
                 Task { @MainActor [weak self] in
-                    self?.handleColdStartAfterSessionReady()
+                    await self?.prepareExistingSessionForColdStartReturn()
                 }
             }
             return
@@ -144,6 +150,10 @@ final class FlowSessionManager: ObservableObject {
         guard AppGroup.isAvailable else { return }
         guard AppPermissions.flowRequirementsMet else {
             sessionWarning = permissionWarningMessage()
+            FlowSessionBridge.setHostReady(false)
+            if isColdStartHandoff {
+                showColdStartPermissionFailure()
+            }
             FlowLiveActivityController.endSession()
             return
         }
@@ -151,6 +161,10 @@ final class FlowSessionManager: ObservableObject {
     }
 
     func dismissColdStartOverlay() {
+        guard coldStartContext?.state != .preparing else { return }
+        if isActive {
+            refreshHostReady()
+        }
         coldStartContext = nil
         isColdStartHandoff = false
     }
@@ -160,11 +174,21 @@ final class FlowSessionManager: ObservableObject {
         dismissColdStartOverlay()
     }
 
+    func retryColdStartReadiness() {
+        guard AppGroup.isAvailable else { return }
+        startSession(coldStart: true)
+    }
+
+    func openColdStartPermissionSettings() {
+        AppPermissions.openSystemSettings()
+    }
+
     func endSession() {
         guard isActive else { return }
         debug("Flow session ended")
 
-        dismissColdStartOverlay()
+        coldStartContext = nil
+        isColdStartHandoff = false
         startTask?.cancel()
         startTask = nil
         pollingTask?.cancel()
@@ -282,17 +306,60 @@ final class FlowSessionManager: ObservableObject {
 
         if capture.running {
             capture.reassertIfRunning()
+            if capture.engineHasRecentAudio() {
+                sessionWarning = nil
+            }
+            refreshHostReady()
             return
         }
 
         do {
             try capture.start()
+            sessionWarning = nil
             debug("capture restarted after foreground")
+            refreshHostReady()
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             sessionWarning = message
             debug("capture restart failed: \(message)")
+            refreshHostReady()
         }
+    }
+
+    /// Publish whether the keyboard can start a new utterance without jumping to the host app.
+    private func refreshHostReady() {
+        guard isActive else {
+            FlowSessionBridge.setHostReady(false)
+            return
+        }
+
+        let pollingAlive = pollingTask != nil && pollingTask?.isCancelled != true
+        // Steady-state ready uses structural engine liveness. The stricter
+        // "recent audio frame" proof is reserved for cold-start handoff only
+        // (`waitForAudioProof`) so brief UI-driven session hiccups do not
+        // drop the keyboard back to orange while the host app is foreground.
+        let canAcceptUtterance = capture.engineIsLive
+            && pollingAlive
+            && !isUtteranceRecording
+            && !isUtteranceProcessing
+            && sessionWarning == nil
+
+        FlowSessionBridge.setHostReady(canAcceptUtterance)
+    }
+
+    /// Home preview field gained focus while this app is the Flow host.
+    /// Reactivate capture and refresh the App Group ready contract so the
+    /// custom keyboard extension sees green immediately.
+    func refreshForInlineKeyboardFocus() async {
+        guard isActive else { return }
+        await reactivateCaptureIfNeeded()
+        refreshHostReady()
+        if !FlowSessionBridge.isHostReady() {
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            await reactivateCaptureIfNeeded()
+            refreshHostReady()
+        }
+        FlowSessionBridge.writeHeartbeat()
     }
 
     /// Extend expiry after utterance completion based on the inactivity policy.
@@ -317,6 +384,10 @@ final class FlowSessionManager: ObservableObject {
 
         guard AppPermissions.flowRequirementsMet else {
             sessionWarning = permissionWarningMessage()
+            FlowSessionBridge.setHostReady(false)
+            if isColdStartHandoff {
+                showColdStartPermissionFailure()
+            }
             isColdStartHandoff = false
             return
         }
@@ -326,8 +397,23 @@ final class FlowSessionManager: ObservableObject {
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             sessionWarning = message
-            isColdStartHandoff = false
+            FlowSessionBridge.setHostReady(false)
+            if isColdStartHandoff {
+                showColdStartAudioFailure(message: message)
+            }
             debug("continuous capture failed: \(message)")
+            return
+        }
+
+        guard await waitForAudioProof() else {
+            let message = AppL10n.string("flow.coldStart.error.audioTimeout")
+            sessionWarning = message
+            capture.stop()
+            FlowSessionBridge.setHostReady(false)
+            if isColdStartHandoff {
+                showColdStartAudioFailure(message: message)
+            }
+            debug("continuous capture did not produce audio frames before timeout")
             return
         }
 
@@ -347,22 +433,79 @@ final class FlowSessionManager: ObservableObject {
         scheduleASRWarmup()
         FlowLiveActivityController.startSession()
 
+        refreshHostReady()
         debug("Flow session started (\(Int(resolvedDuration))s inactivity window), continuous capture running")
+    }
+
+    private func prepareExistingSessionForColdStartReturn() async {
+        guard isColdStartHandoff, isActive else { return }
+        await reactivateCaptureIfNeeded()
+        guard await waitForAudioProof() else {
+            let message = AppL10n.string("flow.coldStart.error.audioTimeout")
+            sessionWarning = message
+            FlowSessionBridge.setHostReady(false)
+            showColdStartAudioFailure(message: message)
+            debug("existing session failed cold-start audio proof")
+            return
+        }
+        sessionWarning = nil
+        refreshHostReady()
+        handleColdStartAfterSessionReady()
+    }
+
+    private func waitForAudioProof() async -> Bool {
+        await capture.awaitAudioFlowing(timeout: Self.coldStartAudioProofTimeout)
     }
 
     @MainActor
     private func handleColdStartAfterSessionReady() {
         guard isColdStartHandoff, isActive else { return }
 
-        let hostEntry = HostReturnService.pendingHostEntry()
-        let skipSwitch = FlowSessionPolicy.skipAppSwitch()
-
-        if skipSwitch, hostEntry != nil, HostReturnService.openPendingHostIfPossible() {
-            dismissColdStartOverlay()
+        refreshHostReady()
+        guard FlowSessionBridge.isHostReady() else {
+            let message = AppL10n.string("flow.coldStart.error.audioTimeout")
+            sessionWarning = message
+            showColdStartAudioFailure(message: message)
+            debug("cold-start blocked: host ready contract not published")
             return
         }
 
-        coldStartContext = FlowColdStartContext(hostEntry: hostEntry)
+        let hostEntry = HostReturnService.pendingHostEntry()
+        let skipSwitch = FlowSessionPolicy.skipAppSwitch()
+        coldStartContext = FlowColdStartContext(hostEntry: hostEntry, state: .ready)
+
+        if skipSwitch, hostEntry != nil {
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 450_000_000)
+                guard let self, self.coldStartContext?.state == .ready else { return }
+                if HostReturnService.openPendingHostIfPossible() {
+                    self.dismissColdStartOverlay()
+                }
+            }
+        }
+    }
+
+    private func showColdStartPreparing() {
+        coldStartContext = FlowColdStartContext(
+            hostEntry: HostReturnService.pendingHostEntry(),
+            state: .preparing
+        )
+    }
+
+    private func showColdStartPermissionFailure() {
+        FlowSessionBridge.setHostReady(false)
+        coldStartContext = FlowColdStartContext(
+            hostEntry: HostReturnService.pendingHostEntry(),
+            state: .failed(.permission(message: permissionWarningMessage()))
+        )
+    }
+
+    private func showColdStartAudioFailure(message: String) {
+        FlowSessionBridge.setHostReady(false)
+        coldStartContext = FlowColdStartContext(
+            hostEntry: HostReturnService.pendingHostEntry(),
+            state: .failed(.audio(message: message))
+        )
     }
 
     private func bindSessionASRIfNeeded(force: Bool = false) {
@@ -434,8 +577,16 @@ final class FlowSessionManager: ObservableObject {
             guard !isUtteranceRecording, !isUtteranceProcessing else { return }
             beginUtterance()
         case .stopped:
-            guard isUtteranceRecording else { return }
-            endUtterance()
+            if isUtteranceRecording {
+                endUtterance()
+            } else if !isUtteranceProcessing {
+                FlowSessionBridge.setRecordingState(.idle)
+                FlowSessionBridge.storeTranscriptionError(
+                    AppL10n.string("flow.error.recognitionInterrupted"),
+                    kind: .recognitionInterrupted
+                )
+                debug("stopped without active utterance — notified keyboard")
+            }
         case .aborted:
             abortUtterance()
         case .idle, .processing:
@@ -444,7 +595,7 @@ final class FlowSessionManager: ObservableObject {
     }
 
     private func beginUtterance() {
-        guard capture.running else {
+        guard capture.engineIsLive else {
             failUtterance(
                 message: AppL10n.string("flow.error.audioUnavailable"),
                 kind: .audioUnavailable
@@ -474,6 +625,7 @@ final class FlowSessionManager: ObservableObject {
 
         isUtteranceRecording = true
         utteranceRecordingStartedAt = Date()
+        refreshHostReady()
         FlowLiveActivityController.update(phase: .recording)
         FlowDiagnostics.log(
             "beginUtterance engine=\(store.engineMode) " +
@@ -528,6 +680,7 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.setRecordingState(.processing)
         isUtteranceRecording = false
         isUtteranceProcessing = true
+        refreshHostReady()
         FlowLiveActivityController.update(phase: .processing)
 
         // Do NOT cancel `asrTask` or `asr` — drain trailing PCM, then finalize.
@@ -559,6 +712,7 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.storeTranscriptionPartial("")
         FlowSessionBridge.setRecordingState(.idle)
         FlowLiveActivityController.update(phase: .idle)
+        refreshHostReady()
         debug("utterance aborted")
     }
 
@@ -583,6 +737,7 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.storeTranscriptionError(message, kind: kind)
         FlowSessionBridge.setRecordingState(.idle)
         FlowLiveActivityController.update(phase: .idle)
+        refreshHostReady()
         debug("utterance failed: \(message)")
     }
 
@@ -602,6 +757,7 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.storeTranscriptionError(message, kind: kind)
         FlowSessionBridge.setRecordingState(.idle)
         FlowLiveActivityController.update(phase: .idle)
+        refreshHostReady()
         debug("utterance processing failed: \(message)")
     }
 
@@ -612,6 +768,7 @@ final class FlowSessionManager: ObservableObject {
             FlowSessionBridge.setRecordingState(.idle)
             FlowLiveActivityController.update(phase: .idle)
             touchSessionActivity()
+            refreshHostReady()
         }
 
         let asrWait = asrWaitTimeout()
@@ -808,9 +965,14 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.writeHeartbeat()
         heartbeatTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
+                guard let self else { break }
+                if self.isActive, !self.capture.engineIsLive {
+                    await self.reactivateCaptureIfNeeded()
+                }
                 FlowSessionBridge.writeHeartbeat()
+                self.refreshHostReady()
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
-                guard self?.isActive == true else { break }
+                guard self.isActive else { break }
             }
         }
     }

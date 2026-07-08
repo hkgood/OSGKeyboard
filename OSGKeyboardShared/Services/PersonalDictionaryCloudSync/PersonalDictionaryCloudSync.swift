@@ -24,7 +24,8 @@ public enum PersonalDictionaryCloudSyncError: Error, Equatable, Sendable {
 public final class PersonalDictionaryCloudSync {
     public static let shared = PersonalDictionaryCloudSync()
 
-    public static let kvsKey = "personalDictionary.v1"
+    public static let kvsKey = PersonalDictionary.kvsKeyV2
+    public static let legacyKVSKey = PersonalDictionary.legacyKVSKey
     /// Stay below the ~1 MB per-key KVS limit.
     public static let maxPayloadBytes = 900_000
 
@@ -124,8 +125,11 @@ public final class PersonalDictionaryCloudSync {
     }
 
     public func loadRemote() -> PersonalDictionary? {
-        guard let data = kvs.data(forKey: Self.kvsKey) else { return nil }
-        return try? decode(data)
+        if let data = kvs.data(forKey: Self.kvsKey) {
+            return try? decode(data)
+        }
+        guard let legacyData = kvs.data(forKey: Self.legacyKVSKey) else { return nil }
+        return try? decode(legacyData)
     }
 
     // MARK: - Encoding

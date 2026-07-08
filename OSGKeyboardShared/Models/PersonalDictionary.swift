@@ -23,17 +23,31 @@ public struct PersonalDictionary: Codable, Sendable, Equatable {
     public var version: Int
     /// When this dictionary blob was last successfully pushed to iCloud KVS.
     public var lastSyncedAt: Date?
+    /// Tombstones for deleted entries — prevents remote resurrections.
+    public var deletedEntryIDs: [UUID: Date]
+    /// When set, entries created at or before this instant are excluded from merge.
+    public var clearedAt: Date?
 
-    public init(entries: [Entry] = [], version: Int = 1, lastSyncedAt: Date? = nil) {
+    public init(
+        entries: [Entry] = [],
+        version: Int = 1,
+        lastSyncedAt: Date? = nil,
+        deletedEntryIDs: [UUID: Date] = [:],
+        clearedAt: Date? = nil
+    ) {
         self.entries = entries
         self.version = version
         self.lastSyncedAt = lastSyncedAt
+        self.deletedEntryIDs = deletedEntryIDs
+        self.clearedAt = clearedAt
     }
 
     private enum CodingKeys: String, CodingKey {
         case entries
         case version
         case lastSyncedAt
+        case deletedEntryIDs
+        case clearedAt
     }
 
     public init(from decoder: Decoder) throws {
@@ -41,6 +55,8 @@ public struct PersonalDictionary: Codable, Sendable, Equatable {
         entries = try container.decodeIfPresent([Entry].self, forKey: .entries) ?? []
         version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
         lastSyncedAt = try container.decodeIfPresent(Date.self, forKey: .lastSyncedAt)
+        deletedEntryIDs = try container.decodeIfPresent([UUID: Date].self, forKey: .deletedEntryIDs) ?? [:]
+        clearedAt = try container.decodeIfPresent(Date.self, forKey: .clearedAt)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -48,6 +64,10 @@ public struct PersonalDictionary: Codable, Sendable, Equatable {
         try container.encode(entries, forKey: .entries)
         try container.encode(version, forKey: .version)
         try container.encodeIfPresent(lastSyncedAt, forKey: .lastSyncedAt)
+        if !deletedEntryIDs.isEmpty {
+            try container.encode(deletedEntryIDs, forKey: .deletedEntryIDs)
+        }
+        try container.encodeIfPresent(clearedAt, forKey: .clearedAt)
     }
 
     public struct Entry: Codable, Sendable, Equatable, Identifiable {

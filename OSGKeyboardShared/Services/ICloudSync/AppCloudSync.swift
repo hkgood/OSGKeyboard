@@ -2,7 +2,8 @@
 // OSGKeyboard · Shared
 //
 // Single entry point for iCloud KVS sync in the main app: preferences
-// toggles, settings payload, and personal dictionary.
+// toggles, usage statistics, settings payload, speech history, and
+// personal dictionary.
 
 import Foundation
 
@@ -14,18 +15,28 @@ public final class AppCloudSync {
     private let makeStore: () -> AppGroupStore
     private let settingsSync: SettingsCloudSync
     private let dictionarySync: PersonalDictionaryCloudSync
+    private let usageStatisticsSync: UsageStatisticsCloudSync
+    private let speechHistorySync: SpeechHistoryCloudSync
     private var externalChangeObserver: NSObjectProtocol?
 
     public init(
         kvs: UbiquitousKeyValueStoreing = NSUbiquitousKeyValueStore.default,
         makeStore: @escaping () -> AppGroupStore = { AppGroupStore() },
+        historyDefaults: @escaping () -> UserDefaults = { .standard },
         settingsSync: SettingsCloudSync? = nil,
-        dictionarySync: PersonalDictionaryCloudSync? = nil
+        dictionarySync: PersonalDictionaryCloudSync? = nil,
+        usageStatisticsSync: UsageStatisticsCloudSync? = nil,
+        speechHistorySync: SpeechHistoryCloudSync? = nil
     ) {
         self.kvs = kvs
         self.makeStore = makeStore
-        self.settingsSync = settingsSync ?? SettingsCloudSync(kvs: kvs, makeStore: makeStore)
+        self.settingsSync = settingsSync
+            ?? SettingsCloudSync(kvs: kvs, makeStore: makeStore, historyDefaults: historyDefaults)
         self.dictionarySync = dictionarySync ?? PersonalDictionaryCloudSync(kvs: kvs, makeStore: makeStore)
+        self.usageStatisticsSync = usageStatisticsSync
+            ?? UsageStatisticsCloudSync(kvs: kvs, makeStore: makeStore)
+        self.speechHistorySync = speechHistorySync
+            ?? SpeechHistoryCloudSync(kvs: kvs, makeStore: makeStore, historyDefaults: historyDefaults)
     }
 
     public func startObservingExternalChanges() {
@@ -62,9 +73,28 @@ public final class AppCloudSync {
         )
 
         await settingsSync.pullAndMergeIfEnabled()
+        await usageStatisticsSync.pullAndMergeIfEnabled()
+        await speechHistorySync.pullAndMergeIfEnabled()
         await dictionarySync.pullAndMergeIfEnabled()
+    }
+
+    /// Low-risk manual sync: pull remote changes, merge, then push local state.
+    public func syncNow() async throws {
+        let store = makeStore()
+        await pullAllIfEnabled()
+
+        if store.settingsICloudSyncEnabled {
+            try await settingsSync.pushLocalIfEnabled()
+            try await usageStatisticsSync.pushLocalIfEnabled()
+            try await speechHistorySync.pushLocalIfEnabled()
+        }
+        if store.personalDictionaryICloudSyncEnabled {
+            try await dictionarySync.pushLocalIfEnabled(store.personalDictionary)
+        }
     }
 
     public var settingsSyncService: SettingsCloudSync { settingsSync }
     public var dictionarySyncService: PersonalDictionaryCloudSync { dictionarySync }
+    public var usageStatisticsSyncService: UsageStatisticsCloudSync { usageStatisticsSync }
+    public var speechHistorySyncService: SpeechHistoryCloudSync { speechHistorySync }
 }

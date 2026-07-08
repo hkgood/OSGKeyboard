@@ -36,6 +36,15 @@ public enum FlowSessionBridge {
         }
     }
 
+    /// Keyboard/read side: refresh App Group defaults after the extension was
+    /// suspended so decisions are not based on stale in-process caches.
+    public static func reloadFromDisk(defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        if Thread.isMainThread {
+            store.synchronize()
+        }
+    }
+
     // MARK: - Session lifecycle (host app)
 
     public static func markSessionActive(
@@ -62,12 +71,17 @@ public enum FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.flowHeartbeat)
         setRecordingState(.idle, defaults: store)
         clearTranscription(defaults: store)
+        clearHostReady(defaults: store, notify: false)
         flush(store)
     }
 
     public static func writeHeartbeat(defaults: UserDefaults? = nil) {
         let store = resolvedDefaults(defaults)
-        store.set(Date().timeIntervalSince1970, forKey: FlowSessionKeys.flowHeartbeat)
+        let now = Date().timeIntervalSince1970
+        store.set(now, forKey: FlowSessionKeys.flowHeartbeat)
+        if store.bool(forKey: FlowSessionKeys.flowHostReady) {
+            store.set(now, forKey: FlowSessionKeys.flowHostReadyAt)
+        }
         flush(store)
     }
 
@@ -118,8 +132,7 @@ public enum FlowSessionBridge {
     // MARK: - Session validity (keyboard)
 
     /// True when the App Group session contract is still valid (not expired).
-    /// Does **not** mean the host process is alive — use `isHostReachable()` for
-    /// recording gates and "session ready" UI.
+    /// Does **not** mean the host can accept utterances — use `isHostReady()`.
     public static func isSessionActive(defaults: UserDefaults? = nil) -> Bool {
         let store = resolvedDefaults(defaults)
         guard store.bool(forKey: FlowSessionKeys.flowSessionActive) else { return false }
@@ -137,13 +150,51 @@ public enum FlowSessionBridge {
     }
 
     /// True when the host app recently wrote a heartbeat (foreground or
-    /// actively processing). Gating record / "session ready" UI must use this,
-    /// not `isSessionActive()` alone.
+    /// actively processing). Use for zombie / disconnect detection — **not**
+    /// for mic-ready UI; prefer `isHostReady()`.
     public static func isHostReachable(defaults: UserDefaults? = nil) -> Bool {
         let store = resolvedDefaults(defaults)
         guard isSessionActive(defaults: store) else { return false }
         guard let staleness = heartbeatStaleness(defaults: store) else { return false }
         return staleness <= FlowSessionKeys.heartbeatStaleInterval
+    }
+
+    // MARK: - Host ready contract (host app → keyboard)
+
+    /// Host app: publish whether Flow can accept a new utterance right now.
+    public static func setHostReady(
+        _ ready: Bool,
+        defaults: UserDefaults? = nil,
+        notify: Bool = true
+    ) {
+        let store = resolvedDefaults(defaults)
+        if ready {
+            let now = Date().timeIntervalSince1970
+            store.set(true, forKey: FlowSessionKeys.flowHostReady)
+            store.set(now, forKey: FlowSessionKeys.flowHostReadyAt)
+            writeHeartbeat(defaults: store)
+        } else {
+            clearHostReady(defaults: store, notify: false)
+        }
+        flush(store)
+        if notify {
+            FlowSessionDarwin.postHostReadyChanged()
+        }
+    }
+
+    /// True when the host has published a fresh ready contract (stricter than heartbeat alone).
+    public static func isHostReady(defaults: UserDefaults? = nil) -> Bool {
+        let store = resolvedDefaults(defaults)
+        guard isHostReachable(defaults: store) else { return false }
+        return store.bool(forKey: FlowSessionKeys.flowHostReady)
+    }
+
+    private static func clearHostReady(defaults: UserDefaults, notify: Bool) {
+        defaults.removeObject(forKey: FlowSessionKeys.flowHostReady)
+        defaults.removeObject(forKey: FlowSessionKeys.flowHostReadyAt)
+        if notify {
+            FlowSessionDarwin.postHostReadyChanged()
+        }
     }
 
     /// True when the session contract flag is still set but the host heartbeat
@@ -346,6 +397,7 @@ public enum FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.audioLevels)
         store.removeObject(forKey: FlowSessionKeys.pendingHostBundleId)
         store.removeObject(forKey: FlowSessionKeys.lastActivityAt)
+        clearHostReady(defaults: store, notify: false)
         flush(store)
     }
 

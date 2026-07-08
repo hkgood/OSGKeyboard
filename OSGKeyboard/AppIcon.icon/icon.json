@@ -31,8 +31,6 @@
     "circles" : [
       "watchOS"
     ],
-    "squares" : [
-      "iOS"
-    ]
+    "squares" : "shared"
   }
 }

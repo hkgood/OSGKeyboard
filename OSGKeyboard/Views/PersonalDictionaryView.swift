@@ -263,7 +263,7 @@ struct PersonalDictionaryView: View {
     }
 
     private func delete(_ entry: PersonalDictionary.Entry) {
-        dictionary.entries.removeAll { $0.id == entry.id }
+        dictionary.recordDeletion(of: entry.id)
         generatingAliasEntryIDs.remove(entry.id)
         persist()
     }
@@ -275,7 +275,7 @@ struct PersonalDictionaryView: View {
     }
 
     private func clearAll() {
-        dictionary = .empty
+        dictionary.recordClearAll()
         generatingAliasEntryIDs = []
         persist()
     }
