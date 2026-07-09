@@ -37,7 +37,7 @@ struct MacSettingsView: View {
                 providerSection
             }
             if viewModel.config.engineMode == "local" {
-                qwen3Section
+                MacLocalASRModelSettingsView(viewModel: viewModel)
             }
             inputSection
             syncSection
@@ -147,12 +147,6 @@ struct MacSettingsView: View {
                 systemImage: "cpu",
                 selected: viewModel.config.engineMode == "local"
             ) { viewModel.setEngineMode("local") }
-
-            if viewModel.config.engineMode == "local", !viewModel.qwen3ModelInstalled {
-                Label(MacL10n.string("mac.settings.qwen3Missing", language: lang), systemImage: "exclamationmark.triangle")
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.warning)
-            }
         }
     }
 
@@ -196,25 +190,7 @@ struct MacSettingsView: View {
         }
     }
 
-    // MARK: - Qwen3 model path
-
-    private var qwen3Section: some View {
-        Section {
-            HStack(spacing: Spacing.sm) {
-                TextField("", text: qwen3PathBinding, prompt: Text(verbatim: "~/Models/Qwen3-ASR"))
-                    .macFieldStyle()
-                Button(MacL10n.string("mac.settings.qwen3Browse", language: lang)) {
-                    pickQwen3Folder()
-                }
-            }
-        } header: {
-            Text(MacL10n.string("mac.settings.qwen3Model", language: lang))
-        } footer: {
-            Text(MacL10n.string("mac.settings.qwen3ModelDesc", language: lang))
-                .font(TypeStyle.caption)
-                .foregroundStyle(palette.textSecondary)
-        }
-    }
+    // MARK: - Qwen3 model path (legacy — see MacLocalASRModelSettingsView)
 
     // MARK: - Row helpers
 
@@ -366,17 +342,6 @@ struct MacSettingsView: View {
         )
     }
 
-    private var qwen3PathBinding: Binding<String> {
-        Binding(
-            get: { MacLocalASRPreferences.qwen3ModelPath },
-            set: { newPath in
-                MacLocalASRPreferences.qwen3ModelPath = newPath
-                Task { await MacQwen3ASREngine.shared.unload() }
-                viewModel.warmUpQwen3IfNeeded()
-            }
-        )
-    }
-
     // MARK: - AppKit actions (macOS only)
 
     private func openAccessibilitySettings() {
@@ -412,20 +377,5 @@ struct MacSettingsView: View {
 
     private var accessibilityStatusNeeded: String {
         lang.resolvedLanguageCode().hasPrefix("zh") ? "未授权" : "Needed"
-    }
-
-    private func pickQwen3Folder() {
-        #if os(macOS)
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        panel.begin { response in
-            guard response == .OK, let url = panel.url else { return }
-            MacLocalASRPreferences.qwen3ModelPath = url.path
-            Task { await MacQwen3ASREngine.shared.unload() }
-            viewModel.warmUpQwen3IfNeeded()
-        }
-        #endif
     }
 }

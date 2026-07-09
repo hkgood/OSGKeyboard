@@ -38,6 +38,17 @@ struct FlowColdStartOverlay: View {
     /// Fraction of the screen height the bottom gradient occupies.
     private let gradientHeightFraction: CGFloat = 0.50
 
+    /// Ready and failure states dismiss on blank tap; preparing stays
+    /// informational only (no accidental dismiss while proving audio).
+    private var allowsBlankTapDismiss: Bool {
+        switch context.state {
+        case .ready, .failed:
+            return true
+        case .preparing:
+            return false
+        }
+    }
+
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .bottom) {
@@ -56,20 +67,22 @@ struct FlowColdStartOverlay: View {
                 .frame(maxWidth: .infinity, alignment: .bottom)
                 .allowsHitTesting(false)
 
+                if allowsBlankTapDismiss {
+                    // Captures taps on empty overlay space (dismiss) and blocks
+                    // pass-through to the host shell underneath. Action buttons in
+                    // `content` sit above this layer and remain tappable.
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture(perform: onDismiss)
+                        .ignoresSafeArea()
+                }
+
                 VStack(spacing: Spacing.lg) {
                     content
                         .padding(.horizontal, Spacing.xl)
 
                     homeIndicator
                         .padding(.bottom, max(geo.safeAreaInsets.bottom, Spacing.sm))
-                }
-                .allowsHitTesting(false)
-
-                if context.state == .ready {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture(perform: onDismiss)
-                        .ignoresSafeArea()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)

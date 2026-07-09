@@ -92,6 +92,7 @@ public struct AppGroupStore: @unchecked Sendable {
                 config.model = openAI.defaultModel
             }
         }
+        AppGroupConfigDarwin.postConfigChanged()
     }
 
     public func setUILanguage(_ language: AppUILanguage) {

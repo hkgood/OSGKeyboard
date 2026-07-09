@@ -42,6 +42,10 @@ final class KeyboardFlowCoordinator {
     private static let hostReadyGrace: TimeInterval = 4
     private var flowSessionMonitorTask: Task<Void, Never>?
     private var isAwaitingFlowResult = false
+    private var activeSessionId: UUID?
+    private var currentUtteranceId: UUID?
+    private var currentCommandSeq: Int64 = 0
+    private var lastAvailabilityTraceSignature = ""
 
     init(
         state: KeyboardState,
@@ -133,7 +137,9 @@ final class KeyboardFlowCoordinator {
 
     private func recomputeMicVoiceAvailability() {
         FlowSessionBridge.reloadFromDisk()
-        let hostReady = FlowSessionBridge.isHostReady()
+        let readySnapshot = FlowSessionBridge.readySnapshot()
+        activeSessionId = readySnapshot?.sessionId ?? activeSessionId
+        let hostReady = readySnapshot?.ready == true && FlowSessionBridge.isHostReady()
         let now = Date().timeIntervalSince1970
         if hostReady { lastHostReadyAt = now }
         // Grace window: the host was ready very recently, so treat a momentary
@@ -145,7 +151,7 @@ final class KeyboardFlowCoordinator {
         let hostWarming = !hostReady
             && FlowSessionBridge.isSessionActive()
             && (FlowSessionBridge.isHostReachable() || isPendingFlowStart || withinReadyGrace)
-        state.flowSessionActive = hostReady
+        state.flowSessionActive = FlowSessionBridge.isSessionActive()
         state.micVoiceAvailability = MicVoiceAvailabilityResolver.resolve(
             phase: state.phase,
             micDisabled: state.micDisabled,
@@ -154,6 +160,20 @@ final class KeyboardFlowCoordinator {
             hostReady: hostReady,
             isPreparingSession: isPendingFlowStart || hostWarming
         )
+        let signature = [
+            "phase=\(String(describing: state.phase))",
+            "availability=\(String(describing: state.micVoiceAvailability))",
+            hostReady ? "hostReady=1" : "hostReady=0",
+            state.flowSessionActive ? "sessionActive=1" : "sessionActive=0",
+            isPendingFlowStart ? "pending=1" : "pending=0",
+            isFlowRecording ? "recording=1" : "recording=0",
+            isAwaitingFlowResult ? "awaiting=1" : "awaiting=0",
+            readySnapshot?.reason.rawValue ?? "snapshot=nil"
+        ].joined(separator: "|")
+        if signature != lastAvailabilityTraceSignature {
+            lastAvailabilityTraceSignature = signature
+            traceState("availability.update", extra: signature)
+        }
     }
 
     /// Session is live but the ready contract has not landed yet — poll
@@ -228,7 +248,8 @@ final class KeyboardFlowCoordinator {
             scheduleAutoClearError()
             recomputeMicVoiceAvailability()
         case .unavailable(.preparingSession):
-            return
+            detectAndStoreAppContext()
+            beginFlowStart()
         case .unavailable(.hostNotReady):
             detectAndStoreAppContext()
             beginFlowStart()
@@ -247,8 +268,8 @@ final class KeyboardFlowCoordinator {
         isFlowRecording = false
         stopUtteranceCountdown()
         ExtensionScreenWakeLock.release()
-        FlowSessionBridge.setRecordingState(.stopped)
-        debug("pressEnded wrote .stopped (readback=\(FlowSessionBridge.recordingState().rawValue))")
+        writeCommand(.stopRecording)
+        debug("pressEnded wrote stop command")
         state.phase = .processing
         state.lastTranscript = ExtL10n.string("keyboard.flow.transcribing")
         recomputeMicVoiceAvailability()
@@ -256,7 +277,10 @@ final class KeyboardFlowCoordinator {
     }
 
     func beginFlowStart() {
-        guard !isPendingFlowStart else { return }
+        guard !isPendingFlowStart else {
+            traceState("beginFlowStart.ignored", extra: "reason=pendingAlreadyTrue")
+            return
+        }
         isPendingFlowStart = true
         isFlowRecording = false
         flowStartDeadline = Date().timeIntervalSince1970 + FlowWatchdog.startTimeout
@@ -264,11 +288,11 @@ final class KeyboardFlowCoordinator {
         recomputeMicVoiceAvailability()
         openHostApp("startflow")
         startFlowStartWatchdog()
-        debug("beginFlowStart")
+        traceState("beginFlowStart.started")
     }
 
     func handleHostAppOpenResult(path: String, success: Bool) {
-        debug("openHostApp path=\(path) success=\(success)")
+        traceState("openHostApp.result", extra: "path=\(path) success=\(success)")
         guard !success else { return }
 
         // The open genuinely failed (iOS blocked it / no Full Access). Don't
@@ -278,6 +302,7 @@ final class KeyboardFlowCoordinator {
             isPendingFlowStart = false
             flowStartDeadline = 0
             stopFlowWatchdog()
+            traceState("openHostApp.failed", extra: "path=startflow cancelPending=1")
             showManualOpenHint(path: "startflow")
             recomputeMicVoiceAvailability()
             return
@@ -290,9 +315,10 @@ final class KeyboardFlowCoordinator {
         guard !isAwaitingFlowResult else { return }
         if isFlowRecording || isPendingFlowStart {
             if isFlowRecording {
-                FlowSessionBridge.setRecordingState(.aborted)
+                writeCommand(.abort)
                 ExtensionScreenWakeLock.release()
             }
+            currentUtteranceId = nil
             isFlowRecording = false
             isPendingFlowStart = false
             stopUtteranceCountdown()
@@ -304,17 +330,56 @@ final class KeyboardFlowCoordinator {
 
     // MARK: - Private
 
+    private func nextCommandSeq() -> Int64 {
+        let millis = Int64(Date().timeIntervalSince1970 * 1_000)
+        currentCommandSeq = max(currentCommandSeq + 1, millis)
+        return currentCommandSeq
+    }
+
+    private func writeCommand(_ action: FlowCommand.Action) {
+        guard let activeSessionId, let currentUtteranceId else { return }
+        let command = FlowCommand(
+            sessionId: activeSessionId,
+            utteranceId: currentUtteranceId,
+            commandSeq: nextCommandSeq(),
+            action: action,
+            localeId: state.localeId
+        )
+        FlowSessionBridge.writeCommand(command)
+        debug(
+            "command \(action.rawValue) seq=\(command.commandSeq) " +
+            "utterance=\(currentUtteranceId.uuidString)"
+        )
+    }
+
     private func consumePendingFlowDeliveryIfNeeded() {
         if isAwaitingFlowResult {
-            if let delivery = FlowSessionBridge.consumeTranscriptionDelivery() {
+            if let result = matchingResult(), result.status == .final, let text = result.text, !text.isEmpty {
                 isAwaitingFlowResult = false
                 stopFlowWatchdog()
-                textInserter.handleFlowTranscript(delivery)
+                FlowSessionBridge.writeAck(
+                    FlowAck(
+                        sessionId: result.sessionId,
+                        utteranceId: result.utteranceId,
+                        commandSeq: result.commandSeq
+                    )
+                )
+                FlowSessionBridge.clearResult()
+                currentUtteranceId = nil
+                textInserter.handleFlowTranscript(
+                    TranscriptionDelivery(text: text, polishWarning: result.warning)
+                )
                 return
             }
-            if let error = FlowSessionBridge.consumeTranscriptionError() {
+            if let result = matchingResult(), isTerminalFailure(result) {
                 isAwaitingFlowResult = false
                 stopFlowWatchdog()
+                FlowSessionBridge.clearResult()
+                currentUtteranceId = nil
+                let error = FlowTranscriptionError(
+                    message: result.text ?? ExtL10n.string("keyboard.flow.resultTimeout"),
+                    kind: result.errorKind ?? .generic
+                )
                 state.phase = .error(
                     .fromFlowTranscription(error),
                     message: error.message
@@ -330,6 +395,20 @@ final class KeyboardFlowCoordinator {
         }
     }
 
+    private func matchingResult() -> FlowResult? {
+        guard let result = FlowSessionBridge.latestResult() else { return nil }
+        guard let activeSessionId, let currentUtteranceId else { return nil }
+        guard result.sessionId == activeSessionId,
+              result.utteranceId == currentUtteranceId else {
+            return nil
+        }
+        return result
+    }
+
+    private func isTerminalFailure(_ result: FlowResult) -> Bool {
+        result.status == .error || result.status == .timeout || result.status == .aborted
+    }
+
     /// When the host process died mid-utterance, abort local recording / waiting
     /// so the user is not stuck until the long result watchdog fires.
     private func recoverFromDeadHostIfNeeded() {
@@ -339,7 +418,8 @@ final class KeyboardFlowCoordinator {
             isFlowRecording = false
             stopUtteranceCountdown()
             ExtensionScreenWakeLock.release()
-            FlowSessionBridge.setRecordingState(.aborted)
+            writeCommand(.abort)
+            currentUtteranceId = nil
             stopFlowWatchdog()
             state.level = 0
             state.phase = .idle
@@ -355,12 +435,14 @@ final class KeyboardFlowCoordinator {
     }
 
     private func failHostDisconnected() {
+        traceState("hostDisconnected.fail")
         isAwaitingFlowResult = false
         isFlowRecording = false
         isPendingFlowStart = false
         stopUtteranceCountdown()
         ExtensionScreenWakeLock.release()
-        FlowSessionBridge.setRecordingState(.aborted)
+        writeCommand(.abort)
+        currentUtteranceId = nil
         stopFlowWatchdog()
         state.level = 0
         let message = ExtL10n.string("keyboard.flow.hostDisconnected")
@@ -396,6 +478,7 @@ final class KeyboardFlowCoordinator {
     private func startFlowRecording() {
         recomputeMicVoiceAvailability()
         guard state.micVoiceAvailability.isReady else {
+            traceState("startFlowRecording.blocked", extra: "availability=\(String(describing: state.micVoiceAvailability))")
             beginFlowStart()
             return
         }
@@ -403,8 +486,14 @@ final class KeyboardFlowCoordinator {
         flowStartDeadline = 0
         stopFlowWatchdog()
 
-        FlowSessionBridge.setTranscriptionLanguage(state.localeId)
-        FlowSessionBridge.setRecordingState(.recording)
+        guard let sessionId = FlowSessionBridge.readySnapshot()?.sessionId else {
+            traceState("startFlowRecording.blocked", extra: "reason=missingSessionIdInReadySnapshot")
+            beginFlowStart()
+            return
+        }
+        activeSessionId = sessionId
+        currentUtteranceId = UUID()
+        writeCommand(.startRecording)
         isFlowRecording = true
         state.lastTranscript = ""
         state.phase = .recording
@@ -414,9 +503,7 @@ final class KeyboardFlowCoordinator {
         }
         startUtteranceCountdown()
         startFlowLevelWatchdog()
-        // Read back in-process to confirm the write landed before we rely on
-        // the host polling it out cross-process.
-        debug("startFlowRecording wrote .recording (readback=\(FlowSessionBridge.recordingState().rawValue))")
+        traceState("startFlowRecording.started")
     }
 
     private func startUtteranceCountdown() {
@@ -450,6 +537,7 @@ final class KeyboardFlowCoordinator {
         state.phase = .idle
         state.lastTranscript = ""
         recomputeMicVoiceAvailability()
+        traceState("pendingStart.cancelledByUser")
     }
 
     private func startFlowStartWatchdog() {
@@ -465,6 +553,7 @@ final class KeyboardFlowCoordinator {
                 if self.flowStartDeadline > 0, now > self.flowStartDeadline {
                     self.isPendingFlowStart = false
                     self.flowStartDeadline = 0
+                    self.traceState("startWatchdog.timeout")
                     self.showManualOpenHint(path: "startflow")
                     return
                 }
@@ -480,7 +569,7 @@ final class KeyboardFlowCoordinator {
         state.lastTranscript = ""
         refreshSessionState()
         startFlowRecording()
-        debug("completeFlowStartHandoff → auto startFlowRecording")
+        traceState("completeFlowStartHandoff.done")
     }
 
     private func startFlowLevelWatchdog() {
@@ -492,6 +581,12 @@ final class KeyboardFlowCoordinator {
                     self.state.level = Double(peak)
                 }
                 self.refreshFlowPartialIfNeeded()
+                let staleness = FlowSessionBridge.heartbeatStaleness() ?? .infinity
+                if staleness > 5 {
+                    self.debug("levelWatchdog: host heartbeat stale while recording")
+                    self.failHostDisconnected()
+                    return
+                }
                 try? await Task.sleep(nanoseconds: FlowWatchdog.pollIntervalNs)
             }
         }
@@ -501,7 +596,10 @@ final class KeyboardFlowCoordinator {
         guard isFlowRecording || isAwaitingFlowResult else { return }
         switch state.phase {
         case .recording, .processing:
-            if let partial = FlowSessionBridge.transcriptionPartial() {
+            if let result = matchingResult(),
+               result.status == .partial,
+               let partial = result.text,
+               !partial.isEmpty {
                 state.lastTranscript = partial
             }
         default:
@@ -517,16 +615,33 @@ final class KeyboardFlowCoordinator {
         debug("resultWatchdog started timeout=\(Int(resultTimeout))s engine=\(state.engineMode)")
         flowWatchdogTask = Task { @MainActor [weak self] in
             while let self, !Task.isCancelled {
-                if let delivery = FlowSessionBridge.consumeTranscriptionDelivery() {
+                if let result = self.matchingResult(), result.status == .final, let text = result.text, !text.isEmpty {
                     self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
-                    self.debug("resultWatchdog consumed delivery len=\(delivery.text.count)")
-                    self.textInserter.handleFlowTranscript(delivery)
+                    FlowSessionBridge.writeAck(
+                        FlowAck(
+                            sessionId: result.sessionId,
+                            utteranceId: result.utteranceId,
+                            commandSeq: result.commandSeq
+                        )
+                    )
+                    FlowSessionBridge.clearResult()
+                    self.currentUtteranceId = nil
+                    self.debug("resultWatchdog consumed delivery len=\(text.count)")
+                    self.textInserter.handleFlowTranscript(
+                        TranscriptionDelivery(text: text, polishWarning: result.warning)
+                    )
                     return
                 }
-                if let error = FlowSessionBridge.consumeTranscriptionError() {
+                if let result = self.matchingResult(), self.isTerminalFailure(result) {
                     self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
+                    FlowSessionBridge.clearResult()
+                    self.currentUtteranceId = nil
+                    let error = FlowTranscriptionError(
+                        message: result.text ?? ExtL10n.string("keyboard.flow.resultTimeout"),
+                        kind: result.errorKind ?? .generic
+                    )
                     self.debug("resultWatchdog consumed error kind=\(error.kind.rawValue)")
                     self.state.phase = .error(
                         .fromFlowTranscription(error),
@@ -539,6 +654,11 @@ final class KeyboardFlowCoordinator {
                 self.refreshFlowPartialIfNeeded()
                 let now = Date().timeIntervalSince1970
                 let staleness = FlowSessionBridge.heartbeatStaleness() ?? .infinity
+                if self.isFlowRecording, staleness > 5 {
+                    self.debug("level/result watchdog: host heartbeat stale while recording")
+                    self.failHostDisconnected()
+                    return
+                }
                 if staleness > FlowSessionKeys.heartbeatZombieInterval {
                     self.debug("resultWatchdog: host heartbeat zombie (staleness=\(String(format: "%.1f", staleness))s)")
                     self.failHostDisconnected()
@@ -553,6 +673,7 @@ final class KeyboardFlowCoordinator {
                 if now - startedAt > resultTimeout {
                     self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
+                    self.currentUtteranceId = nil
                     self.debug("resultWatchdog TIMEOUT after \(Int(resultTimeout))s — no result from host")
                     let msg = ExtL10n.string("keyboard.flow.resultTimeout")
                     self.state.phase = .error(.flowResultTimeout, message: msg)
@@ -572,5 +693,30 @@ final class KeyboardFlowCoordinator {
 
     private func debug(_ message: String) {
         OSGLog.keyboardExt.info("\(message, privacy: .public)")
+    }
+
+    private func traceState(_ event: String, extra: String? = nil) {
+        let staleness = FlowSessionBridge.heartbeatStaleness().map { String(format: "%.1f", $0) } ?? "nil"
+        let sessionId = activeSessionId?.uuidString ?? "nil"
+        let utteranceId = currentUtteranceId?.uuidString ?? "nil"
+        let summary = [
+            "event=\(event)",
+            "phase=\(String(describing: state.phase))",
+            "availability=\(String(describing: state.micVoiceAvailability))",
+            "pending=\(isPendingFlowStart)",
+            "recording=\(isFlowRecording)",
+            "awaiting=\(isAwaitingFlowResult)",
+            "sessionId=\(sessionId)",
+            "utteranceId=\(utteranceId)",
+            "cmdSeq=\(currentCommandSeq)",
+            "sessionActive=\(FlowSessionBridge.isSessionActive())",
+            "hostReady=\(FlowSessionBridge.isHostReady())",
+            "heartbeatStaleness=\(staleness)"
+        ].joined(separator: " ")
+        if let extra, !extra.isEmpty {
+            debug("[trace] \(summary) \(extra)")
+        } else {
+            debug("[trace] \(summary)")
+        }
     }
 }

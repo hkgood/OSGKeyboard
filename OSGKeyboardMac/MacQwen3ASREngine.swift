@@ -50,14 +50,15 @@ actor MacQwen3ASREngine {
     func transcribe(
         samples: [Float],
         language: String?,
-        modelPath: String
+        modelPath: String,
+        context: String? = nil
     ) async throws -> String {
         try await prepareIfNeeded(modelPath: modelPath)
         guard let stt else {
             throw MacLocalASRError.qwen3LoadFailed("Engine not initialized")
         }
 
-        let result = try await stt.transcribe(audio: samples, language: language)
+        let result = try await stt.transcribe(audio: samples, language: language, context: context)
         let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else {
             throw MacLocalASRError.emptyTranscript

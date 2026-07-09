@@ -107,8 +107,9 @@ final class MacDictationViewModel: ObservableObject {
     /// Pre-load MLX weights + Metal shaders so the first dictation is fast.
     func warmUpQwen3IfNeeded() {
         guard config.engineMode == "local",
-              MacLocalASRPreferences.backend == .qwen3MLX,
-              MacLocalASRPreferences.qwen3ModelIsInstalled() else { return }
+              let model = MacLocalASRService.selectedModelDefinition(),
+              model.backend == .mlx,
+              MacLocalASRService.isModelInstalled(model) else { return }
         let path = MacLocalASRPreferences.qwen3ModelPath
         Task.detached(priority: .utility) {
             _ = try? await MacQwen3ASREngine.shared.prepareIfNeeded(modelPath: path)
@@ -154,6 +155,39 @@ final class MacDictationViewModel: ObservableObject {
         let seconds = sessionSeconds % 60
         if minutes > 0 { return "\(minutes)m \(seconds)s" }
         return "\(seconds)s"
+    }
+
+    var localModelReady: Bool {
+        _ = localModelRevision
+        if let model = MacLocalASRService.selectedModelDefinition() {
+            return MacLocalASRService.isModelInstalled(model)
+        }
+        return MacLocalASRPreferences.qwen3ModelIsInstalled()
+    }
+
+    /// Context-aware warning when local engine is selected but the active model is not ready.
+    var localModelWarningMessage: String? {
+        _ = localModelRevision
+        guard config.engineMode == "local" else { return nil }
+        if localModelReady { return nil }
+        guard let model = MacLocalASRService.selectedModelDefinition() else {
+            return MacL10n.string("mac.settings.localModelFallbackApple", language: config.uiLanguage)
+        }
+        if model.installKind == .manual {
+            return MacL10n.string("mac.settings.mlxModelMissing", language: config.uiLanguage)
+        }
+        return MacL10n.format(
+            "mac.settings.selectedModelMissing",
+            language: config.uiLanguage,
+            model.displayName
+        )
+    }
+
+    @Published private(set) var localModelRevision = 0
+
+    func bumpLocalModelRevision() {
+        localModelRevision += 1
+        objectWillChange.send()
     }
 
     var qwen3ModelInstalled: Bool {

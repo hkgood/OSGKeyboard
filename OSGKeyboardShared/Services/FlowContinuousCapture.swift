@@ -384,19 +384,26 @@ public final class FlowContinuousCapture {
 
     /// Re-activate capture after returning from background without
     /// reinstalling the tap (iOS may deactivate the audio session).
-    public func reassertIfRunning() {
-        guard isRunning else { return }
+    @discardableResult
+    public func reassertIfRunning() -> Bool {
+        guard isRunning else { return false }
         let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(
-            .playAndRecord,
-            mode: .measurement,
-            options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
-        )
-        try? session.setActive(true, options: .notifyOthersOnDeactivation)
-        if !audioEngine.isRunning {
-            try? audioEngine.start()
+        do {
+            try session.setCategory(
+                .playAndRecord,
+                mode: .measurement,
+                options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
+            )
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+            if !audioEngine.isRunning {
+                try audioEngine.start()
+            }
+            notifyEngineLiveChanged()
+            return engineIsLive
+        } catch {
+            notifyEngineLiveChanged()
+            return false
         }
-        notifyEngineLiveChanged()
     }
 
     public func awaitAudioFlowing(

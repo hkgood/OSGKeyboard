@@ -7,20 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-07-09
+
 ### Added
+- **macOS local ASR models**: the desktop app ships a bundled model catalog with one-click download of Sherpa Qwen3 (hotwords) and SenseVoice models, plus a shared model storage directory; downloads show a circular progress ring with pause / resume, and each row has inline Download / Delete actions. / **macOS 本地 ASR 模型**：桌面 App 内置模型目录，可一键下载 Sherpa Qwen3（热词）与 SenseVoice 模型，并共用同一模型存储目录；下载显示带暂停 / 继续的环形进度，每行提供内联的下载 / 删除操作。
+- **Shared model directory for MLX**: Qwen3-ASR MLX now uses a fixed subfolder inside the shared model storage — drop converted weights into the folder opened by "Open folder"; no per-model directory picker. / **MLX 共用模型目录**：Qwen3-ASR MLX 改用共享模型存储中的固定子目录——把转换好的权重放入「打开目录」指向的文件夹即可，不再逐模型选目录。
 - **iCloud sync hardening**: per-field settings merge (`appSettings.v2`), per-device usage statistics (G-Counter), tombstoned dictionary/history merge, and a low-risk **Sync Now** action in Settings. / **iCloud 同步加固**：设置按字段合并（`appSettings.v2`）、统计按设备 G-Counter 累计、词库/历史带墓碑合并，并在设置中新增低风险的**立即同步**操作。
 
 ### Changed
 - **API key sync**: cloud provider API keys now replicate through **iCloud Keychain** when settings sync is on — never through iCloud KVS JSON. / **API 密钥同步**：开启设置同步后，云端服务商 API 密钥改由 **iCloud 钥匙串**复制，不再写入 iCloud KVS JSON。
 - **Speech history cap**: synced history limit is **300** entries (aligned with the sync payload). / **语音历史上限**：可同步历史上限为 **300** 条（与同步载荷一致）。
+- **macOS app name**: the built product is now `OSGKeyboard.app` (was `OSGKeyboardMac.app`); Dock, About, and Finder all read **OSGKeyboard**. / **macOS 应用名称**：编译产物改为 `OSGKeyboard.app`（原 `OSGKeyboardMac.app`）；Dock、关于窗口与 Finder 均显示 **OSGKeyboard**。
+- **macOS local recognition label**: the Settings entry is now simply "Local Recognition" and no longer names a specific model. / **macOS 本地识别标签**：设置项改为「本地识别」，不再绑定具体模型名称。
 
 ### Fixed
+- **macOS menu-bar icon in light mode**: the status-bar icon now follows the *system* menu-bar appearance, so forcing the app into Light while the system is Dark no longer renders an unreadable dark icon; a refreshed status mark is used. / **macOS 菜单栏图标（浅色模式）**：状态栏图标改为跟随*系统*菜单栏外观，App 强制浅色而系统为深色时不再出现看不清的深色图标；并更新了状态栏图标。
+- **macOS light-mode sidebar**: restored the native translucent sidebar material so the light appearance matches system apps (e.g. System Settings, Notes) instead of a flat grey fill. / **macOS 浅色侧边栏**：恢复原生半透明侧栏材质，浅色外观与系统应用（如系统设置、备忘录）一致，不再是扁平灰底。
 - **Settings sync wiping API keys**: pulling a legacy settings blob without API key fields no longer deletes local Keychain entries. / **设置同步清空 API 密钥**：拉取不含 API 密钥字段的旧版设置包时，不再删除本地 Keychain 项。
 - **Cross-device settings conflicts**: changing different settings on two devices no longer lets one device's full blob overwrite the other's unrelated fields. / **跨设备设置冲突**：两台设备分别修改不同设置项时，不再因整包覆盖而冲掉对方未改动的字段。
 - **Usage statistics under-counting**: offline usage on multiple devices now sums correctly instead of taking per-field `max()`. / **使用统计少计**：多设备离线各自累计后合并为求和，不再对总量取 `max()`。
 - **Dictionary/history resurrection**: deletes and "clear all" on one device propagate via tombstones so older remote entries cannot come back. / **词库/历史复活**：单设备删除或清空会通过墓碑传播，远端旧条目无法复活。
 - **Flow false-ready mic state**: the keyboard mic now stays orange until the host app publishes a real ready contract (capture engine live + polling idle), not merely a fresh heartbeat; green tap-to-talk and jump-to-host behavior share the same `MicVoiceAvailability` gate, and orphaned `stopped` signals self-heal instead of hanging until timeout. / **Flow 伪就绪麦克风状态**：键盘麦克风在主 App 发布真实就绪合约（音频引擎在跑且轮询空闲）之前保持橙色，不再仅凭心跳误判；绿色「点按说话」与跳转主 App 共用同一 `MicVoiceAvailability` 闸门，孤立的 `stopped` 信号会自愈而不再长时间卡住。
 - **Flow mic stuck orange after ready**: a single stale cross-process heartbeat read no longer flips a healthy session into a sticky "session ended" error that forced the mic orange. The "session ended" hint now fires only when the (heartbeat-independent) session contract truly drops; a brief read jitter is smoothed by a ready grace window, and a lingering expired hint auto-recovers to green once the host is ready again. / **就绪后麦克风卡橙色**：单次跨进程心跳读数抖动不再把健康会话打成粘滞的「会话已结束」错误、强制麦克风变橙。「会话已结束」提示现仅在（不依赖心跳的）会话合约真正失效时触发；短暂读数抖动由就绪宽限期平滑，遗留的过期提示会在宿主重新就绪后自动恢复为绿色。
+- **Orphaned Live Activity after force-quit**: force-quitting the app no longer leaves a stale OSGKeyboard status stuck on the Lock Screen / Dynamic Island. The `staleDate` is now ~45s (refreshed by the heartbeat while the session is alive) so the system reclaims a dead session's island on its own, and every app foreground now sweeps leftover Live Activities *before* trying to (re)start a session — so even a start that later fails (e.g. mic proof timeout) still clears the zombie island. / **强杀后遗留 Live Activity**：强制退出 App 不再在锁屏 / 灵动岛留下无法消失的 OSGKeyboard 状态。`staleDate` 缩短为约 45 秒（会话存活期间由心跳持续刷新），系统会自动回收已死会话的灵动岛；且每次 App 回到前台都会**先**清扫遗留的 Live Activity 再尝试（重新）启动会话——即便本次启动随后失败（如麦克风就绪超时），也不会留下僵尸灵动岛。
 
 ## [0.5.0] - 2026-07-07
 

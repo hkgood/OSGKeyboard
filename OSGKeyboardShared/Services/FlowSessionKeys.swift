@@ -7,6 +7,10 @@
 import Foundation
 
 public enum FlowSessionKeys {
+    public static let flowCommandPayload = "flow.commandPayload.v1"
+    public static let flowResultPayload = "flow.resultPayload.v1"
+    public static let flowAckPayload = "flow.ackPayload.v1"
+    public static let flowReadyPayload = "flow.readyPayload.v1"
     public static let flowSessionActive = "flow.flowSessionActive"
     public static let flowSessionExpires = "flow.flowSessionExpires"
     public static let flowHeartbeat = "flow.flowHeartbeat"
@@ -74,7 +78,7 @@ public enum FlowSessionKeys {
     }
 
     /// Structured host → keyboard transcription failure kind.
-    public enum TranscriptionErrorKind: String, Sendable, Equatable {
+    public enum TranscriptionErrorKind: String, Sendable, Equatable, Codable {
         case noSpeech
         case recognitionInterrupted
         case audioUnavailable

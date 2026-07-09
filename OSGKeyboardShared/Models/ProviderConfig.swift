@@ -74,7 +74,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
             guard !isApplyingConfiguration, engineMode != configuration.engineMode else { return }
             configuration.engineMode = engineMode
             applyEngineModeSideEffects()
-            persistConfiguration()
+            persistConfiguration(postConfigChanged: true)
         }
     }
     @Published public var hasCompletedOnboarding: Bool {

@@ -56,7 +56,6 @@ struct MacRootView: View {
             Spacer()
             devicesFooter
         }
-        .background(palette.surfaceMuted)
     }
 
     private func sidebarRow(_ section: MacSection) -> some View {

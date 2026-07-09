@@ -52,7 +52,7 @@ private struct FlowLiveActivityLockScreenView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            FlowLiveActivityBrandMark(height: 18)
+            FlowLiveActivityBrandMark(height: 13)
             VStack(alignment: .leading, spacing: 4) {
                 Text("OSGKeyboard")
                     .font(.headline)
@@ -99,9 +99,10 @@ private struct FlowLiveActivityTrailingGlyph: View {
                 .foregroundStyle(.red)
                 .symbolEffect(.variableColor.iterative, options: .repeating)
         case .processing:
-            ProgressView()
-                .progressViewStyle(.circular)
-                .tint(.white)
+            Image(systemName: "ellipsis")
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.white)
+                .symbolEffect(.variableColor.iterative, options: .repeating)
         case .idle:
             // Session ready but NOT listening — avoid a mic glyph so users
             // don't think the keyboard is recording in the background.

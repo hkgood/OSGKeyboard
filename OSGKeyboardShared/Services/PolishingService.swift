@@ -252,7 +252,10 @@ public actor PolishingService {
         providerId: String
     ) -> String {
         let dictionary = store.personalDictionary
-        let dictionaryBlock = dictionary.promptFragment()
+        let dictionaryBlock = Self.mergedDictionaryBlock(
+            dictionary: dictionary,
+            supplement: context.dictionarySupplement
+        )
         let contextGuideline = context.appContext.polishGuideline
         let intensityGuideline = context.intensity.promptGuideline
         let contract = Self.globalOutputContract(useChinese: shouldUseChineseGuidance(providerId: providerId))
@@ -319,6 +322,17 @@ public actor PolishingService {
             Output the processed text directly. **No explanation, no quotes, no preamble.**
             """
         }
+    }
+
+    internal static func mergedDictionaryBlock(
+        dictionary: PersonalDictionary,
+        supplement: String?
+    ) -> String {
+        let base = dictionary.promptFragment()
+        let extra = supplement?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if base.isEmpty { return extra }
+        if extra.isEmpty { return base }
+        return base + "\n" + extra
     }
 
     private func shouldUseChineseGuidance(providerId: String) -> Bool {

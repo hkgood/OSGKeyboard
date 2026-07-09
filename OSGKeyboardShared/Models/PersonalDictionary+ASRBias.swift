@@ -111,4 +111,29 @@ extension PersonalDictionary {
         if hasNonASCII { return "zh" }
         return "en"
     }
+
+    /// Alias → canonical term pairs for deterministic post-ASR correction.
+    /// Sorted longest-alias-first by the caller (`LocalASRTranscriptCorrector`).
+    public func localCorrectionPairs() -> [LocalASRCorrectionPair] {
+        var seen = Set<String>()
+        var pairs: [LocalASRCorrectionPair] = []
+        for entry in effectiveEntries {
+            let term = entry.term.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !term.isEmpty else { continue }
+            for alias in entry.aliases {
+                let trimmed = alias.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { continue }
+                guard trimmed.caseInsensitiveCompare(term) != .orderedSame else { continue }
+                let key = "\(trimmed.lowercased())|\(term.lowercased())"
+                guard seen.insert(key).inserted else { continue }
+                pairs.append(LocalASRCorrectionPair(alias: trimmed, term: term))
+            }
+        }
+        return pairs.sorted { lhs, rhs in
+            if lhs.alias.count != rhs.alias.count {
+                return lhs.alias.count > rhs.alias.count
+            }
+            return lhs.alias.localizedCaseInsensitiveCompare(rhs.alias) == .orderedAscending
+        }
+    }
 }

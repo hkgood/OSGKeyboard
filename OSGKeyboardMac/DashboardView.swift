@@ -183,37 +183,48 @@ struct BottomDictationBar: View {
         .fixedSize()
     }
 
+    // 麦克风按钮始终居中固定：录音时的波形放进按钮内部，
+    // “按停止”提示作为浮层显示在按钮上方，二者均不参与布局，
+    // 因此按下 Option 触发录音时按钮位置不会发生偏移。
     private var recordControl: some View {
-        HStack(spacing: Spacing.sm) {
-            if viewModel.isRecording {
-                MiniWaveform(level: viewModel.audioLevel)
+        recordButton
+            .overlay(alignment: .top) {
+                if viewModel.isRecording {
+                    Text(MacL10n.string("mac.record.pressStop", language: lang))
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textTertiary)
+                        .fixedSize()
+                        .offset(y: -22)
+                }
             }
-            Button(action: viewModel.toggleRecording) {
-                ZStack {
-                    Circle()
-                        .fill(viewModel.isRecording ? palette.recordRed : palette.accent)
-                        .frame(width: 52, height: 52)
-                        .macGlassSurface(in: Circle(), fillOpacity: 0.2)
-                        .shadow(
-                            color: (viewModel.isRecording ? palette.recordRed : palette.accent).opacity(0.5),
-                            radius: pulse ? 14 : 6
-                        )
-                    Image(systemName: viewModel.isRecording ? "stop.fill" : "mic.fill")
+    }
+
+    private var recordButton: some View {
+        Button(action: viewModel.toggleRecording) {
+            ZStack {
+                Circle()
+                    .fill(viewModel.isRecording ? palette.recordRed : palette.accent)
+                    .frame(width: 52, height: 52)
+                    .macGlassSurface(in: Circle(), fillOpacity: 0.2)
+                    .shadow(
+                        color: (viewModel.isRecording ? palette.recordRed : palette.accent).opacity(0.5),
+                        radius: pulse ? 14 : 6
+                    )
+                if viewModel.isRecording {
+                    // 与 iOS 一致：录音时在红色按钮内部显示实时波形
+                    MiniWaveform(level: viewModel.audioLevel, barCount: 4, tint: palette.textOnAccent)
+                } else {
+                    Image(systemName: "mic.fill")
                         .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(palette.textOnAccent)
                 }
             }
-            .buttonStyle(.plain)
-            .disabled(viewModel.isProcessing)
-            .onAppear {
-                withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
-                    pulse = true
-                }
-            }
-            if viewModel.isRecording {
-                Text(MacL10n.string("mac.record.pressStop", language: lang))
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textTertiary)
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.isProcessing)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
+                pulse = true
             }
         }
     }

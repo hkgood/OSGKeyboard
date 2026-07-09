@@ -24,6 +24,10 @@ public struct PolishContext: Sendable {
     /// bias terminology choices.
     public let precedingText: String?
 
+    /// Extra dictionary block appended after `PersonalDictionary.promptFragment()`
+    /// (e.g. builtin `phrases.tsv` terms on macOS local ASR).
+    public let dictionarySupplement: String?
+
     /// Cap on how many characters of `precedingText` we actually
     /// include in the prompt. The full preceding text is often
     /// hundreds of KB in a long note — we only need the tail.
@@ -33,11 +37,13 @@ public struct PolishContext: Sendable {
         appContext: AppContext = .unknown,
         intensity: PolishIntensity = .default,
         precedingText: String? = nil,
+        dictionarySupplement: String? = nil,
         maxPrecedingChars: Int = 500
     ) {
         self.appContext = appContext
         self.intensity = intensity
         self.precedingText = precedingText
+        self.dictionarySupplement = dictionarySupplement
         self.maxPrecedingChars = maxPrecedingChars
     }
 

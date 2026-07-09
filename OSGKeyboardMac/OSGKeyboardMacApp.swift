@@ -86,6 +86,20 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         MacAppearancePreference.applyToApp(.current)
         configurePopover()
         configureStatusItem()
+
+        // The menu bar always follows the *system* appearance, so the status
+        // item must ignore the app's forced light/dark override. Re-pin the
+        // button appearance whenever the system theme flips.
+        DistributedNotificationCenter.default.addObserver(
+            self,
+            selector: #selector(systemAppearanceDidChange),
+            name: NSNotification.Name("AppleInterfaceThemeChangedNotification"),
+            object: nil
+        )
+    }
+
+    deinit {
+        DistributedNotificationCenter.default.removeObserver(self)
     }
 
     /// Keep the app alive after the last window closes — it lives in the menu bar.
@@ -96,18 +110,47 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     private func configureStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
-            // Prefer the brand mark; fall back to an SF Symbol so the item is
-            // never invisible even if the asset fails to resolve.
-            let image = NSImage(named: "OSGBrandMark")
-                ?? NSImage(systemSymbolName: "mic.circle.fill", accessibilityDescription: "OSGKeyboard")
-            image?.isTemplate = true
-            image?.size = NSSize(width: 18, height: 18)
-            button.image = image
+            button.image = Self.makeStatusBarImage()
             button.image?.accessibilityDescription = "OSGKeyboard"
             button.action = #selector(togglePopover(_:))
             button.target = self
         }
         statusItem = item
+        applyStatusItemAppearance()
+    }
+
+    /// Builds the menu-bar glyph from the dedicated horizontal status mark.
+    /// Height is pinned to the tallest practical menu-bar slot so the logo reads
+    /// clearly; width follows the asset's aspect ratio.
+    private static func makeStatusBarImage() -> NSImage? {
+        guard let image = NSImage(named: "OSGStatusMark")
+            ?? NSImage(named: "OSGBrandMark")
+            ?? NSImage(systemSymbolName: "mic.circle.fill", accessibilityDescription: "OSGKeyboard") else {
+            return nil
+        }
+        let height: CGFloat = 9
+        let aspect = max(image.size.width / max(image.size.height, 1), 1)
+        image.size = NSSize(width: height * aspect, height: height)
+        image.isTemplate = true
+        return image
+    }
+
+    /// Pins the status-bar button to the current *system* appearance so its
+    /// template image tint matches the real menu-bar background — regardless of
+    /// the in-app light/dark preference forced on `NSApp.appearance`.
+    private func applyStatusItemAppearance() {
+        guard let button = statusItem?.button else { return }
+        let isDark = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")?
+            .lowercased().contains("dark") ?? false
+        button.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
+    }
+
+    @objc private func systemAppearanceDidChange() {
+        // The global-domain default lags the notification by a hair; hop to the
+        // next runloop tick so `AppleInterfaceStyle` reflects the new value.
+        DispatchQueue.main.async { [weak self] in
+            self?.applyStatusItemAppearance()
+        }
     }
 
     private func configurePopover() {

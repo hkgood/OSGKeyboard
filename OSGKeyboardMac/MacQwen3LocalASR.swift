@@ -12,7 +12,8 @@ enum MacQwen3LocalASR {
         samples: [Float],
         sampleRate: Int,
         locale: Locale,
-        modelPath: String
+        modelPath: String,
+        bias: LocalASRBiasPayload? = nil
     ) async throws -> String {
         guard MacLocalASRPreferences.qwen3ModelIsInstalled(at: modelPath) else {
             throw MacLocalASRError.qwen3ModelMissing
@@ -24,11 +25,14 @@ enum MacQwen3LocalASR {
         }
 
         let language = MacQwen3LanguageHint.from(locale: locale)
+        let context = bias?.promptBias?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let promptContext = (context?.isEmpty == false) ? context : nil
         do {
             return try await MacQwen3ASREngine.shared.transcribe(
                 samples: samples,
                 language: language,
-                modelPath: modelPath
+                modelPath: modelPath,
+                context: promptContext
             )
         } catch let error as MacLocalASRError {
             throw error

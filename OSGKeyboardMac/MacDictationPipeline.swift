@@ -31,9 +31,30 @@ enum MacDictationPipeline {
 
         let locale = Locale(identifier: store.localeId.isEmpty ? "zh-CN" : store.localeId)
         let raw: String
+        var localBias: LocalASRBiasPayload?
 
         if store.engineMode == "local" {
-            raw = try await MacLocalASRService.transcribe(samples: samples, locale: locale)
+            MacAppContextService.captureAndPersist(to: store)
+            let capabilities = MacLocalASRService.currentCapabilities()
+            let bias = LocalASRBiasAdapter.adapt(
+                LocalASRBiasRequest(
+                    dictionary: store.personalDictionary,
+                    locale: locale,
+                    frontAppBundleId: MacAppContextService.frontmostBundleIdentifier(),
+                    capabilities: capabilities
+                )
+            )
+            localBias = bias
+            LocalASRBiasDiagnosticsStore.save(
+                payload: bias,
+                modelId: MacLocalASRService.selectedModelDefinition()?.id,
+                backendLabel: MacLocalASRService.currentBackendLabel()
+            )
+            raw = try await MacLocalASRService.transcribe(
+                samples: samples,
+                locale: locale,
+                bias: bias
+            )
         } else {
             let strategy = CloudASRModelCatalog.strategy(for: store.providerId)
             guard strategy != .localFallback else { throw MacDictationError.providerHasNoCloudASR }
@@ -51,13 +72,33 @@ enum MacDictationPipeline {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw MacDictationError.emptyTranscript }
 
+        let postASR: String
+        if let localBias, !localBias.correctionPairs.isEmpty {
+            postASR = LocalASRTranscriptCorrector.apply(trimmed, pairs: localBias.correctionPairs)
+        } else {
+            postASR = trimmed
+        }
+
+        let polishContext: PolishContext?
+        if let supplement = localBias?.polishFragment.trimmingCharacters(in: .whitespacesAndNewlines),
+           !supplement.isEmpty {
+            polishContext = PolishContext(
+                appContext: store.detectedAppContext?.context ?? .unknown,
+                intensity: store.polishIntensity,
+                dictionarySupplement: supplement
+            )
+        } else {
+            polishContext = nil
+        }
+
         if let polished = try? await PolishingService(store: store).polish(
-            trimmed,
-            mode: store.polishModeForPipeline
+            postASR,
+            mode: store.polishModeForPipeline,
+            context: polishContext
         ),
            !polished.isEmpty {
             return polished
         }
-        return trimmed
+        return postASR
     }
 }
