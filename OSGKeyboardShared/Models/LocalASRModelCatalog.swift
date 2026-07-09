@@ -9,19 +9,41 @@ public enum LocalASRModelBackend: String, Codable, Sendable, Equatable {
     case mlx
     case sherpaQwen3
     case sherpaSenseVoice
+    case sherpaParaformer
     case appleSpeech
 }
 
 public enum LocalASRInstallKind: String, Codable, Sendable, Equatable {
     case manual
     case archive
+    /// Multi-file install from a remote repository (ModelScope / HuggingFace file API).
+    case repository
     case runtime
+}
+
+public struct LocalASRDownloadFile: Codable, Sendable, Equatable {
+    public let remotePath: String
+    public let localPath: String
+    public let sizeBytes: Int?
 }
 
 public struct LocalASRDownloadSource: Codable, Sendable, Equatable {
     public let type: String
     public let priority: Int
+    /// Full URL for a single archive download.
     public let url: String
+    /// Base URL template for repository installs; must contain `{path}`.
+    public let baseURL: String?
+    public let files: [LocalASRDownloadFile]?
+
+    public var isRepository: Bool {
+        guard let files, !files.isEmpty else { return false }
+        return baseURL?.contains("{path}") == true
+    }
+
+    public var isArchive: Bool {
+        !url.isEmpty && !isRepository
+    }
 }
 
 public struct LocalASRModelLayout: Codable, Sendable, Equatable {
@@ -30,6 +52,7 @@ public struct LocalASRModelLayout: Codable, Sendable, Equatable {
     public var decoder: String?
     public var tokenizer: String?
     public var senseVoiceModel: String?
+    public var paraformerModel: String?
     public var tokens: String?
 }
 
@@ -91,6 +114,8 @@ public enum LocalASRModelCatalog {
             return .sherpaQwen3
         case .sherpaSenseVoice:
             return .sherpaSenseVoice
+        case .sherpaParaformer:
+            return .sherpaParaformer
         case .appleSpeech:
             return .appleSpeech
         }
@@ -115,6 +140,42 @@ public enum LocalASRModelCatalog {
         #endif
     }
     #endif
+}
+
+/// Region-aware ordering for local ASR model download mirrors.
+public enum LocalASRDownloadSourceSorter {
+
+    /// `true` when the system region is mainland China (`CN`).
+    public static func isChinaMainland(region: Locale.Region? = Locale.current.region) -> Bool {
+        region?.identifier == "CN"
+    }
+
+    /// Lower rank = tried earlier. CN: ModelScope → HuggingFace → GitHub; elsewhere: HF → GitHub → ModelScope.
+    public static func typeRank(_ type: String, chinaFirst: Bool) -> Int {
+        switch type.lowercased() {
+        case "modelscope":
+            return chinaFirst ? 0 : 2
+        case "huggingface":
+            return chinaFirst ? 1 : 0
+        case "github":
+            return 1
+        default:
+            return 3
+        }
+    }
+
+    public static func sorted(
+        _ sources: [LocalASRDownloadSource],
+        region: Locale.Region? = Locale.current.region
+    ) -> [LocalASRDownloadSource] {
+        let chinaFirst = isChinaMainland(region: region)
+        return sources.sorted { lhs, rhs in
+            let leftRank = typeRank(lhs.type, chinaFirst: chinaFirst)
+            let rightRank = typeRank(rhs.type, chinaFirst: chinaFirst)
+            if leftRank != rightRank { return leftRank < rightRank }
+            return lhs.priority < rhs.priority
+        }
+    }
 }
 
 public enum LocalASRModelCatalogError: Error, LocalizedError {

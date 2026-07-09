@@ -79,4 +79,13 @@ public struct LocalASRCapabilities: Sendable, Equatable {
         supportsStreaming: false,
         hotwordReloadCost: .none
     )
+
+    /// FunASR Paraformer (Sherpa offline) — no project hotword API.
+    public static let sherpaParaformer = LocalASRCapabilities(
+        hotwordMode: .none,
+        maxHotwordCount: 0,
+        maxPromptCharacters: 0,
+        supportsStreaming: false,
+        hotwordReloadCost: .none
+    )
 }

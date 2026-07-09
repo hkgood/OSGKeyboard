@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "defaultModelId": "qwen3-mlx-1.7b",
+  "defaultModelId": "sherpa-qwen3-0.6b-int8",
   "runtimes": [
     {
       "id": "sherpa-onnx-1.13.4-macos-arm64",
@@ -37,20 +37,8 @@
   ],
   "models": [
     {
-      "id": "qwen3-mlx-1.7b",
-      "displayName": "Qwen3-ASR 1.7B (MLX)",
-      "backend": "mlx",
-      "sizeBytes": 1400000000,
-      "recommendedLocales": ["zh-CN", "en-US"],
-      "supportsHotwords": true,
-      "hotwordMode": "promptOnly",
-      "installKind": "manual",
-      "installRelativePath": "models/qwen3-asr-1.7b-mlx",
-      "requiredRelativeFiles": ["config.json", "model.safetensors", "vocab.json", "merges.txt"]
-    },
-    {
       "id": "sherpa-qwen3-0.6b-int8",
-      "displayName": "Qwen3-ASR 0.6B (Sherpa · hotwords)",
+      "displayName": "Qwen3-ASR 0.6B",
       "backend": "sherpaQwen3",
       "runtimePlatform": "macos",
       "sizeBytes": 650000000,
@@ -75,8 +63,83 @@
       ]
     },
     {
+      "id": "sherpa-qwen3-1.7b-int8",
+      "displayName": "Qwen3-ASR 1.7B",
+      "backend": "sherpaQwen3",
+      "runtimePlatform": "macos",
+      "sizeBytes": 1900000000,
+      "recommendedLocales": ["zh-CN", "en-US"],
+      "supportsHotwords": true,
+      "hotwordMode": "recognizerScoped",
+      "installKind": "repository",
+      "installRelativePath": "models/sherpa-qwen3-1.7b-int8",
+      "archiveBaseName": "sherpa-onnx-qwen3-asr-1.7B-int8",
+      "layout": {
+        "convFrontend": "conv_frontend.onnx",
+        "encoder": "encoder.int8.onnx",
+        "decoder": "decoder.int8.onnx",
+        "tokenizer": "tokenizer"
+      },
+      "sources": [
+        {
+          "type": "modelscope",
+          "priority": 1,
+          "url": "",
+          "baseURL": "https://www.modelscope.cn/models/zengshuishui/Qwen3-ASR-onnx/resolve/master/{path}",
+          "files": [
+            { "remotePath": "model_1.7B/conv_frontend.onnx", "localPath": "conv_frontend.onnx", "sizeBytes": 12000000 },
+            { "remotePath": "model_1.7B/encoder.int8.onnx", "localPath": "encoder.int8.onnx", "sizeBytes": 900000000 },
+            { "remotePath": "model_1.7B/decoder.int8.onnx", "localPath": "decoder.int8.onnx", "sizeBytes": 700000000 },
+            { "remotePath": "model_1.7B/tokenizer/merges.txt", "localPath": "tokenizer/merges.txt", "sizeBytes": 500000 },
+            { "remotePath": "model_1.7B/tokenizer/vocab.json", "localPath": "tokenizer/vocab.json", "sizeBytes": 3000000 },
+            { "remotePath": "model_1.7B/tokenizer/tokenizer.json", "localPath": "tokenizer/tokenizer.json", "sizeBytes": 7000000 },
+            { "remotePath": "model_1.7B/tokenizer/tokenizer_config.json", "localPath": "tokenizer/tokenizer_config.json", "sizeBytes": 10000 }
+          ]
+        },
+        {
+          "type": "huggingface",
+          "priority": 1,
+          "url": "",
+          "baseURL": "https://huggingface.co/zengshuishui/Qwen3-ASR-onnx/resolve/main/{path}",
+          "files": [
+            { "remotePath": "model_1.7B/conv_frontend.onnx", "localPath": "conv_frontend.onnx", "sizeBytes": 12000000 },
+            { "remotePath": "model_1.7B/encoder.int8.onnx", "localPath": "encoder.int8.onnx", "sizeBytes": 900000000 },
+            { "remotePath": "model_1.7B/decoder.int8.onnx", "localPath": "decoder.int8.onnx", "sizeBytes": 700000000 },
+            { "remotePath": "model_1.7B/tokenizer/merges.txt", "localPath": "tokenizer/merges.txt", "sizeBytes": 500000 },
+            { "remotePath": "model_1.7B/tokenizer/vocab.json", "localPath": "tokenizer/vocab.json", "sizeBytes": 3000000 },
+            { "remotePath": "model_1.7B/tokenizer/tokenizer.json", "localPath": "tokenizer/tokenizer.json", "sizeBytes": 7000000 },
+            { "remotePath": "model_1.7B/tokenizer/tokenizer_config.json", "localPath": "tokenizer/tokenizer_config.json", "sizeBytes": 10000 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sherpa-paraformer-zh-int8",
+      "displayName": "Paraformer Large",
+      "backend": "sherpaParaformer",
+      "runtimePlatform": "macos",
+      "sizeBytes": 220000000,
+      "recommendedLocales": ["zh-CN", "en-US"],
+      "supportsHotwords": false,
+      "hotwordMode": "none",
+      "installKind": "archive",
+      "installRelativePath": "models/sherpa-paraformer-zh-int8",
+      "archiveBaseName": "sherpa-onnx-paraformer-zh-int8-2025-10-07",
+      "layout": {
+        "paraformerModel": "model.int8.onnx",
+        "tokens": "tokens.txt"
+      },
+      "sources": [
+        {
+          "type": "github",
+          "priority": 1,
+          "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-int8-2025-10-07.tar.bz2"
+        }
+      ]
+    },
+    {
       "id": "sherpa-sensevoice-small-int8",
-      "displayName": "SenseVoice Small (Sherpa)",
+      "displayName": "SenseVoice Small",
       "backend": "sherpaSenseVoice",
       "runtimePlatform": "macos",
       "sizeBytes": 250000000,

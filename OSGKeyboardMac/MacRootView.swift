@@ -49,34 +49,19 @@ struct MacRootView: View {
             brandHeader
             VStack(spacing: 4) {
                 ForEach(MacSection.allCases) { section in
-                    sidebarRow(section)
+                    MacSidebarRow(
+                        section: section,
+                        isSelected: viewModel.selectedSection == section,
+                        language: uiLanguage
+                    ) {
+                        withAnimation(Motion.soft) { viewModel.selectedSection = section }
+                    }
                 }
             }
             .padding(.horizontal, MacMetrics.sidebarInset)
             Spacer()
             devicesFooter
         }
-    }
-
-    private func sidebarRow(_ section: MacSection) -> some View {
-        let isSelected = viewModel.selectedSection == section
-
-        return Button {
-            viewModel.selectedSection = section
-        } label: {
-            Label(section.title(language: uiLanguage), systemImage: section.systemImage)
-                .font(.system(size: 13))
-                .foregroundStyle(isSelected ? palette.textOnAccent : palette.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, 7)
-                .background(
-                    isSelected ? palette.accent : Color.clear,
-                    in: RoundedRectangle(cornerRadius: 7, style: .continuous)
-                )
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     /// Brand mark pinned above the nav list. Top padding clears the traffic
@@ -123,8 +108,49 @@ struct MacRootView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .id(viewModel.selectedSection)
+            .transition(.opacity)
             MacStatusFooter(viewModel: viewModel)
         }
         .background(palette.background)
+    }
+}
+
+// MARK: - Sidebar row
+
+/// A navigation row with an animated hover highlight and selection state,
+/// matching the macOS System Settings feel.
+private struct MacSidebarRow: View {
+    let section: MacSection
+    let isSelected: Bool
+    let language: AppUILanguage
+    let action: () -> Void
+
+    @Environment(\.themePalette) private var palette
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Label(section.title(language: language), systemImage: section.systemImage)
+                .font(.system(size: 13))
+                .foregroundStyle(isSelected ? palette.textOnAccent : palette.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Spacing.sm)
+                .padding(.vertical, 7)
+                .background(
+                    rowBackground,
+                    in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .animation(Motion.quick, value: isSelected)
+        .animation(Motion.quick, value: isHovering)
+        .onHover { isHovering = $0 }
+    }
+
+    private var rowBackground: Color {
+        if isSelected { return palette.accent }
+        return isHovering ? palette.textPrimary.opacity(0.06) : .clear
     }
 }

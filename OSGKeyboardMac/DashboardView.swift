@@ -34,11 +34,15 @@ struct DashboardView: View {
                         Text(MacL10n.format("mac.foregroundApp", language: lang, appName))
                             .font(TypeStyle.caption)
                             .foregroundStyle(palette.textTertiary)
+                            .transition(.opacity)
                     }
                     statGrid
                     dictationCanvas
                 }
-                .padding(Spacing.lg)
+                .animation(Motion.soft, value: viewModel.foregroundAppName)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, Spacing.sm)
+                .padding(.bottom, Spacing.lg)
             }
             BottomDictationBar(viewModel: viewModel)
                 .padding(.horizontal, Spacing.lg)
@@ -91,23 +95,30 @@ struct DashboardView: View {
 
     private var dictationCanvas: some View {
         MacCard(padding: Spacing.lg) {
-            if viewModel.transcript.isEmpty {
-                Text(
-                    viewModel.isRecording
-                        ? MacL10n.string("mac.status.listening", language: lang)
-                        : MacL10n.string("mac.status.ready", language: lang)
-                )
-                .font(.system(size: 26, weight: .light))
-                .foregroundStyle(palette.textTertiary)
-                .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
-            } else {
-                Text(viewModel.transcript)
-                    .font(.system(size: 22, weight: .regular))
-                    .foregroundStyle(palette.textPrimary)
-                    .textSelection(.enabled)
+            ZStack(alignment: .topLeading) {
+                if viewModel.transcript.isEmpty {
+                    Text(
+                        viewModel.isRecording
+                            ? MacL10n.string("mac.status.listening", language: lang)
+                            : MacL10n.string("mac.status.ready", language: lang)
+                    )
+                    .font(.system(size: 26, weight: .light))
+                    .foregroundStyle(palette.textTertiary)
+                    .contentTransition(.opacity)
                     .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
+                    .transition(.opacity)
+                } else {
+                    Text(viewModel.transcript)
+                        .font(.system(size: 22, weight: .regular))
+                        .foregroundStyle(palette.textPrimary)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
+                        .transition(.opacity)
+                }
             }
         }
+        .animation(Motion.soft, value: viewModel.transcript.isEmpty)
+        .animation(Motion.quick, value: viewModel.isRecording)
     }
 }
 
@@ -132,12 +143,11 @@ struct BottomDictationBar: View {
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.sm)
-        .macGlassSurface(in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous), fillOpacity: 0.78)
+        .macGlassSurface(in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous), fillOpacity: 1)
         .overlay(
             RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
                 .stroke(palette.dividerStrong, lineWidth: 0.5)
         )
-        .shadow(color: palette.textPrimary.opacity(0.12), radius: 18, y: 8)
     }
 
     private var readinessChip: some View {
@@ -152,10 +162,12 @@ struct BottomDictationBar: View {
             )
             .font(TypeStyle.caption2)
             .foregroundStyle(palette.textSecondary)
+            .contentTransition(.opacity)
         }
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, 5)
         .background(palette.surfaceElevated, in: Capsule())
+        .animation(Motion.quick, value: viewModel.isProcessing)
     }
 
     private var translationPicker: some View {
@@ -195,8 +207,10 @@ struct BottomDictationBar: View {
                         .foregroundStyle(palette.textTertiary)
                         .fixedSize()
                         .offset(y: -22)
+                        .transition(.opacity.combined(with: .offset(y: 6)))
                 }
             }
+            .animation(Motion.quick, value: viewModel.isRecording)
     }
 
     private var recordButton: some View {
@@ -205,25 +219,31 @@ struct BottomDictationBar: View {
                 Circle()
                     .fill(viewModel.isRecording ? palette.recordRed : palette.accent)
                     .frame(width: 52, height: 52)
-                    .macGlassSurface(in: Circle(), fillOpacity: 0.2)
                     .shadow(
-                        color: (viewModel.isRecording ? palette.recordRed : palette.accent).opacity(0.5),
-                        radius: pulse ? 14 : 6
+                        color: (viewModel.isRecording ? palette.recordRed : palette.accent).opacity(0.35),
+                        radius: pulse ? 10 : 5
                     )
-                if viewModel.isRecording {
-                    // 与 iOS 一致：录音时在红色按钮内部显示实时波形
-                    MiniWaveform(level: viewModel.audioLevel, barCount: 4, tint: palette.textOnAccent)
-                } else {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(palette.textOnAccent)
+                Group {
+                    if viewModel.isRecording {
+                        // 与 iOS 一致：录音时在红色按钮内部显示实时波形
+                        MiniWaveform(level: viewModel.audioLevel, barCount: 4, tint: palette.textOnAccent)
+                    } else {
+                        Image(systemName: "mic.fill")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(palette.textOnAccent)
+                    }
                 }
+                .transition(.opacity.combined(with: .scale(scale: 0.7)))
             }
         }
         .buttonStyle(.plain)
         .disabled(viewModel.isProcessing)
+        .opacity(viewModel.isProcessing ? 0.55 : 1)
+        .scaleEffect(viewModel.isRecording ? 1.06 : 1)
+        .animation(Motion.soft, value: viewModel.isRecording)
+        .animation(Motion.quick, value: viewModel.isProcessing)
         .onAppear {
-            withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
+            withAnimation(Motion.breath) {
                 pulse = true
             }
         }

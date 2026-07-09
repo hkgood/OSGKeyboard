@@ -34,12 +34,15 @@ struct MacHistoryView: View {
         Group {
             if historyStore.entries.isEmpty {
                 emptyState
+                    .transition(.opacity)
             } else {
                 form
+                    .transition(.opacity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(palette.background)
+        .animation(Motion.soft, value: historyStore.entries.isEmpty)
     }
 
     // MARK: - Grouped cards
@@ -64,7 +67,7 @@ struct MacHistoryView: View {
             titleVisibility: .visible
         ) {
             Button(MacL10n.string("mac.history.clearConfirm", language: lang), role: .destructive) {
-                historyStore.clearAll()
+                withAnimation(Motion.soft) { historyStore.clearAll() }
             }
             Button(MacL10n.string("mac.cancel", language: lang), role: .cancel) {}
         } message: {
@@ -95,7 +98,7 @@ struct MacHistoryView: View {
             time: Self.timeFormatter.string(from: entry.createdAt),
             language: lang,
             copy: { viewModel.copyToClipboard(entry.text) },
-            delete: { historyStore.delete(id: entry.id) }
+            delete: { withAnimation(Motion.soft) { historyStore.delete(id: entry.id) } }
         )
     }
 
@@ -144,12 +147,13 @@ private struct MacHistoryRow: View {
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.borderless)
-            .foregroundStyle(palette.textTertiary)
+            .foregroundStyle(isHovering ? palette.danger : palette.textTertiary)
             .opacity(isHovering ? 1 : 0)
             .accessibilityLabel(MacL10n.string("mac.delete", language: language))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
+        .animation(Motion.quick, value: isHovering)
         .onHover { isHovering = $0 }
         .contextMenu {
             Button(action: copy) {

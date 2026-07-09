@@ -38,20 +38,17 @@ private struct MacGlassSurface<S: Shape>: ViewModifier {
     let fillOpacity: Double
 
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
-            content
-                .background(palette.surface.opacity(fillOpacity), in: shape)
-                .glassEffect(.regular, in: shape)
-        } else {
-            content
-                .background(palette.surface.opacity(fillOpacity), in: shape)
-        }
+        // Flat, shadowless surface fill. We deliberately avoid `glassEffect`
+        // here: on macOS 26 Liquid Glass adds a raised drop shadow to every
+        // card, which reads as visual noise for content containers. Hierarchy
+        // is carried by the surface colour + hairline border instead.
+        content
+            .background(palette.surface.opacity(fillOpacity), in: shape)
     }
 }
 
 extension View {
-    /// Applies Liquid Glass on macOS 26 while keeping the same semantic
-    /// surface colour on older systems.
+    /// Applies a flat semantic surface fill (no drop shadow) behind `content`.
     func macGlassSurface<S: Shape>(
         in shape: S,
         fillOpacity: Double = 0.72
@@ -97,7 +94,7 @@ struct MacCard<Content: View>: View {
 
         content()
             .padding(padding)
-            .macGlassSurface(in: shape)
+            .macGlassSurface(in: shape, fillOpacity: 1)
             .overlay(
                 shape
                     .stroke(palette.divider, lineWidth: 0.5)
@@ -135,6 +132,8 @@ struct StatCard: View {
                     .foregroundStyle(accent ? palette.accent : palette.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
+                    .contentTransition(.numericText())
+                    .animation(Motion.soft, value: value)
                 Text(caption)
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
@@ -165,7 +164,7 @@ struct MiniWaveform: View {
             }
         }
         .frame(height: 22)
-        .animation(.easeOut(duration: 0.12), value: level)
+        .animation(Motion.instant, value: level)
         .onAppear {
             withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: true)) {
                 phase = 1
@@ -214,12 +213,14 @@ struct MacStatusFooter: View {
                 systemImage: viewModel.isCloudMode ? "cloud" : "cpu"
             )
             .foregroundStyle(palette.textSecondary)
+            .contentTransition(.opacity)
 
             Label(
                 MacTranslationDisplay.label(for: viewModel.config.translationTargetLocaleId, language: lang),
                 systemImage: "translate"
             )
             .foregroundStyle(palette.textSecondary)
+            .contentTransition(.opacity)
 
             Label(MacL10n.string("mac.connected", language: lang), systemImage: "link")
                 .foregroundStyle(palette.accent)
@@ -228,5 +229,7 @@ struct MacStatusFooter: View {
         .labelStyle(.titleAndIcon)
         .padding(.horizontal, Spacing.lg)
         .padding(.vertical, Spacing.xs)
+        .animation(Motion.quick, value: viewModel.isCloudMode)
+        .animation(Motion.quick, value: viewModel.config.translationTargetLocaleId)
     }
 }

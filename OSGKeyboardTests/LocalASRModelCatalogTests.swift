@@ -9,9 +9,19 @@ final class LocalASRModelCatalogTests: XCTestCase {
     func testBundledCatalogLoads() throws {
         let catalog = try LocalASRModelCatalog.loadBundled()
         XCTAssertEqual(catalog.schemaVersion, 1)
-        XCTAssertFalse(catalog.models.isEmpty)
-        XCTAssertTrue(catalog.models.contains { $0.id == "qwen3-mlx-1.7b" })
+        XCTAssertEqual(catalog.defaultModelId, "sherpa-qwen3-0.6b-int8")
+        XCTAssertFalse(catalog.models.contains { $0.id == "qwen3-mlx-1.7b" })
         XCTAssertTrue(catalog.models.contains { $0.id == "sherpa-qwen3-0.6b-int8" })
+        XCTAssertTrue(catalog.models.contains { $0.id == "sherpa-qwen3-1.7b-int8" })
+        XCTAssertTrue(catalog.models.contains { $0.id == "sherpa-paraformer-zh-int8" })
+    }
+
+    func testSherpaQwen317BUsesRepositoryInstall() throws {
+        let catalog = try LocalASRModelCatalog.loadBundled()
+        let model = try XCTUnwrap(LocalASRModelCatalog.model("sherpa-qwen3-1.7b-int8", in: catalog))
+        XCTAssertEqual(model.installKind, .repository)
+        XCTAssertTrue(model.sources?.contains(where: { $0.type == "modelscope" && $0.isRepository }) == true)
+        XCTAssertTrue(model.sources?.contains(where: { $0.type == "huggingface" && $0.isRepository }) == true)
     }
 
     func testCapabilitiesForSherpaQwen3() throws {
@@ -20,6 +30,14 @@ final class LocalASRModelCatalogTests: XCTestCase {
         let caps = LocalASRModelCatalog.capabilities(for: model)
         XCTAssertEqual(caps.hotwordMode, .recognizerScoped)
         XCTAssertTrue(model.supportsHotwords)
+    }
+
+    func testCapabilitiesForParaformer() throws {
+        let catalog = try LocalASRModelCatalog.loadBundled()
+        let model = try XCTUnwrap(LocalASRModelCatalog.model("sherpa-paraformer-zh-int8", in: catalog))
+        let caps = LocalASRModelCatalog.capabilities(for: model)
+        XCTAssertEqual(caps.hotwordMode, .none)
+        XCTAssertFalse(model.supportsHotwords)
     }
 
     func testManifestRoundTrip() throws {
@@ -54,11 +72,11 @@ final class LocalASRModelCatalogTests: XCTestCase {
         )
         LocalASRBiasDiagnosticsStore.save(
             payload: payload,
-            modelId: "qwen3-mlx-1.7b",
-            backendLabel: "MLX"
+            modelId: "sherpa-qwen3-0.6b-int8",
+            backendLabel: "Sherpa Qwen3"
         )
         let snapshot = LocalASRBiasDiagnosticsStore.load()
-        XCTAssertEqual(snapshot?.modelId, "qwen3-mlx-1.7b")
+        XCTAssertEqual(snapshot?.modelId, "sherpa-qwen3-0.6b-int8")
         XCTAssertEqual(snapshot?.diagnostics.userTermCount, 2)
         XCTAssertEqual(snapshot?.hotwordCount, 1)
         LocalASRBiasDiagnosticsStore.clear()

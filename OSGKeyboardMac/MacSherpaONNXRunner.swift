@@ -77,6 +77,33 @@ enum MacSherpaONNXRunner {
         return try await run(binary: runtimeBinary, arguments: arguments)
     }
 
+    static func transcribeParaformer(
+        samples: [Float],
+        sampleRate: Int,
+        modelRoot: URL,
+        layout: LocalASRModelLayout,
+        runtimeBinary: URL
+    ) async throws -> String {
+        guard sampleRate == 16_000 else {
+            throw MacLocalASRError.qwen3InferenceFailed("Sherpa expects 16 kHz audio")
+        }
+        guard let paraformer = layout.paraformerModel,
+              let tokens = layout.tokens else {
+            throw MacLocalASRError.qwen3InferenceFailed("Incomplete Paraformer layout")
+        }
+
+        let wavURL = try writeTemporaryWAV(samples: samples, sampleRate: sampleRate)
+        defer { try? FileManager.default.removeItem(at: wavURL) }
+
+        let arguments = [
+            "--tokens=\(modelRoot.appendingPathComponent(tokens).path)",
+            "--paraformer=\(modelRoot.appendingPathComponent(paraformer).path)",
+            "--num-threads=2",
+            wavURL.path,
+        ]
+        return try await run(binary: runtimeBinary, arguments: arguments)
+    }
+
     // MARK: - Private
 
     private static func writeTemporaryWAV(samples: [Float], sampleRate: Int) throws -> URL {

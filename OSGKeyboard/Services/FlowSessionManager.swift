@@ -88,6 +88,7 @@ final class FlowSessionManager: ObservableObject {
         capture.onEngineLiveChanged = { [weak self] _ in
             self?.refreshHostReady()
         }
+        FlowTerminationCoordinator.register(self)
     }
 
     // MARK: - Public
@@ -208,6 +209,73 @@ final class FlowSessionManager: ObservableObject {
 
     func openColdStartPermissionSettings() {
         AppPermissions.openSystemSettings()
+    }
+
+    /// 强杀专用同步 teardown：不等待 ASR/LLM；Live Activity 由
+    /// `FlowTerminationCoordinator` 同步 `end`。
+    func prepareForProcessTermination() {
+        debug("prepareForProcessTermination")
+
+        coldStartContext = nil
+        isColdStartHandoff = false
+        coldStartRecoveryTask?.cancel()
+        coldStartRecoveryTask = nil
+        startTask?.cancel()
+        startTask = nil
+        commandObserver = nil
+        pollingTask?.cancel()
+        pollingTask = nil
+        heartbeatTask?.cancel()
+        heartbeatTask = nil
+        expiryTask?.cancel()
+        expiryTask = nil
+        levelTask?.cancel()
+        levelTask = nil
+        finalizeTask?.cancel()
+        finalizeTask = nil
+        utteranceSafetyTask?.cancel()
+        utteranceSafetyTask = nil
+        asrTask?.cancel()
+        asrTask = nil
+        chunkedPipeline = nil
+
+        if isUtteranceRecording || isUtteranceProcessing {
+            capture.cancelUtterance()
+            asr.cancel()
+        }
+
+        capture.cancelUtterance()
+        if capture.running {
+            capture.stop()
+        }
+
+        endBackgroundKeepAlive()
+        ScreenWakeLock.release()
+
+        sessionASR?.cancel()
+        sessionASR = nil
+        sessionASREngineMode = nil
+        sessionASRWarmedLocaleID = nil
+
+        if isActive || FlowSessionBridge.isSessionActive() {
+            FlowSessionBridge.markSessionInactive()
+            FlowSessionDarwin.postSessionChanged()
+        }
+
+        activeSessionId = nil
+        currentUtteranceId = nil
+        currentCommandSeq = 0
+        lastHandledCommandSeq = 0
+        isUtteranceRecording = false
+        isUtteranceProcessing = false
+        isActive = false
+        isStarting = false
+        sessionExpiresAt = nil
+        sessionWarning = nil
+        currentPartial = ""
+        lastFinal = ""
+        chunkWarnings = []
+        FlowSessionBridge.setHostReady(false)
     }
 
     func endSession() {

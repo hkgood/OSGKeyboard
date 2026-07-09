@@ -49,6 +49,14 @@ enum MacSherpaLocalASR {
                 layout: layout,
                 runtimeBinary: binary
             )
+        case .sherpaParaformer:
+            return try await MacSherpaONNXRunner.transcribeParaformer(
+                samples: samples,
+                sampleRate: sampleRate,
+                modelRoot: modelRoot,
+                layout: layout,
+                runtimeBinary: binary
+            )
         default:
             throw MacLocalASRError.qwen3InferenceFailed("Unsupported Sherpa backend")
         }

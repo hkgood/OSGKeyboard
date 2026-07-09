@@ -22,6 +22,7 @@ struct MacContentView: View {
             Text(viewModel.statusMessage)
                 .font(TypeStyle.caption)
                 .foregroundStyle(palette.textSecondary)
+                .contentTransition(.opacity)
 
             if !viewModel.transcript.isEmpty {
                 ScrollView {
@@ -34,6 +35,7 @@ struct MacContentView: View {
                 .frame(maxHeight: 120)
                 .padding(Spacing.xs)
                 .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.small, style: .continuous))
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
             Divider().overlay(palette.divider)
@@ -43,6 +45,8 @@ struct MacContentView: View {
         }
         .padding(Spacing.md)
         .background(palette.background)
+        .animation(Motion.soft, value: viewModel.transcript.isEmpty)
+        .animation(Motion.quick, value: viewModel.statusMessage)
     }
 
     private var statusRow: some View {
@@ -103,20 +107,24 @@ struct MacContentView: View {
             Spacer()
             if viewModel.isRecording {
                 MiniWaveform(level: viewModel.audioLevel, barCount: 4)
+                    .transition(.opacity.combined(with: .scale(scale: 0.7)))
             }
         }
+        .animation(Motion.quick, value: viewModel.isRecording)
     }
 
     private var recordButton: some View {
         Button(action: viewModel.toggleRecording) {
             HStack {
                 Image(systemName: viewModel.isRecording ? "stop.fill" : "mic.fill")
+                    .contentTransition(.symbolEffect(.replace))
                 Text(
                     viewModel.isRecording
                         ? MacL10n.string("mac.record.stop", language: lang)
                         : MacL10n.string("mac.record.start", language: lang)
                 )
                 .font(TypeStyle.bodyEmph)
+                .contentTransition(.opacity)
             }
             .frame(maxWidth: .infinity, minHeight: 40)
             .background(
@@ -127,6 +135,9 @@ struct MacContentView: View {
         }
         .buttonStyle(.plain)
         .disabled(viewModel.isProcessing)
+        .opacity(viewModel.isProcessing ? 0.55 : 1)
+        .animation(Motion.soft, value: viewModel.isRecording)
+        .animation(Motion.quick, value: viewModel.isProcessing)
     }
 
     private var footer: some View {

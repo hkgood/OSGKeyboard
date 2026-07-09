@@ -184,9 +184,7 @@ public actor LocalASRModelManager {
         _ model: LocalASRModelDefinition,
         catalog: LocalASRCatalogDocument
     ) async throws {
-        guard model.installKind == .archive,
-              let relative = model.installRelativePath,
-              let baseName = model.archiveBaseName,
+        guard let relative = model.installRelativePath,
               let sources = model.sources,
               !sources.isEmpty else {
             throw LocalASRModelManagerError.validationFailed("Model is not downloadable.")
@@ -198,38 +196,70 @@ public actor LocalASRModelManager {
             message: model.displayName,
             activeItemId: model.id
         )
-        if model.backend == .sherpaQwen3 || model.backend == .sherpaSenseVoice {
+        if model.backend == .sherpaQwen3 || model.backend == .sherpaSenseVoice || model.backend == .sherpaParaformer {
             try await ensureRuntimeInstalled(catalog: catalog)
         }
-        let sortedSources = sources.sorted { $0.priority < $1.priority }
+
+        let sortedSources = LocalASRDownloadSourceSorter.sorted(sources)
         var lastError: Error?
-        for source in sortedSources {
-            do {
-                try await installArchive(
-                    from: source.url,
-                    installRelativePath: relative,
-                    archiveBaseName: baseName,
-                    layoutModel: model,
-                    itemId: model.id,
-                    displayName: model.displayName
-                )
-                var manifest = loadManifest(defaultModelId: catalog.defaultModelId)
-                if !manifest.installedModelIDs.contains(model.id) {
-                    manifest.installedModelIDs.append(model.id)
-                }
-                manifest.updatedAt = Date()
-                try saveManifest(manifest)
-                progress = LocalASRModelInstallProgress(
-                    phase: .completed,
-                    fraction: 1,
-                    message: model.displayName,
-                    activeItemId: model.id
-                )
-                return
-            } catch {
-                lastError = error
+
+        switch model.installKind {
+        case .archive:
+            guard let baseName = model.archiveBaseName else {
+                throw LocalASRModelManagerError.validationFailed("Model is not downloadable.")
             }
+            for source in sortedSources where source.isArchive {
+                do {
+                    try await installArchive(
+                        from: source.url,
+                        installRelativePath: relative,
+                        archiveBaseName: baseName,
+                        layoutModel: model,
+                        itemId: model.id,
+                        displayName: model.displayName
+                    )
+                    try markModelInstalled(model, catalog: catalog)
+                    progress = LocalASRModelInstallProgress(
+                        phase: .completed,
+                        fraction: 1,
+                        message: model.displayName,
+                        activeItemId: model.id
+                    )
+                    return
+                } catch {
+                    lastError = error
+                }
+            }
+        case .repository:
+            guard let baseName = model.archiveBaseName else {
+                throw LocalASRModelManagerError.validationFailed("Model is not downloadable.")
+            }
+            for source in sortedSources where source.isRepository {
+                do {
+                    try await installRepository(
+                        source: source,
+                        installRelativePath: relative,
+                        archiveBaseName: baseName,
+                        layoutModel: model,
+                        itemId: model.id,
+                        displayName: model.displayName
+                    )
+                    try markModelInstalled(model, catalog: catalog)
+                    progress = LocalASRModelInstallProgress(
+                        phase: .completed,
+                        fraction: 1,
+                        message: model.displayName,
+                        activeItemId: model.id
+                    )
+                    return
+                } catch {
+                    lastError = error
+                }
+            }
+        default:
+            throw LocalASRModelManagerError.validationFailed("Model is not downloadable.")
         }
+
         progress = LocalASRModelInstallProgress(
             phase: .failed,
             fraction: 0,
@@ -238,11 +268,24 @@ public actor LocalASRModelManager {
         throw lastError ?? LocalASRModelManagerError.downloadFailed("All mirrors failed")
     }
 
+    private func markModelInstalled(
+        _ model: LocalASRModelDefinition,
+        catalog: LocalASRCatalogDocument
+    ) throws {
+        var manifest = loadManifest(defaultModelId: catalog.defaultModelId)
+        if !manifest.installedModelIDs.contains(model.id) {
+            manifest.installedModelIDs.append(model.id)
+        }
+        manifest.updatedAt = Date()
+        try saveManifest(manifest)
+    }
+
     public func installRuntime(
         _ runtime: LocalASRRuntimeDefinition,
         catalog: LocalASRCatalogDocument
     ) async throws {
-        guard let source = runtime.sources.sorted(by: { $0.priority < $1.priority }).first else {
+        let sortedSources = LocalASRDownloadSourceSorter.sorted(runtime.sources)
+        guard !sortedSources.isEmpty else {
             throw LocalASRModelManagerError.downloadFailed("No runtime source configured.")
         }
         progress = LocalASRModelInstallProgress(
@@ -251,25 +294,34 @@ public actor LocalASRModelManager {
             message: runtime.displayName,
             activeItemId: runtime.id
         )
-        try await installArchive(
-            from: source.url,
-            installRelativePath: runtime.installRelativePath,
-            archiveBaseName: runtime.installRelativePath.split(separator: "/").last.map(String.init) ?? runtime.id,
-            layoutModel: nil,
-            expectedBinaryCandidates: runtime.binaryCandidates,
-            itemId: runtime.id,
-            displayName: runtime.displayName
-        )
-        guard isRuntimeInstalled(runtime) else {
-            throw LocalASRModelManagerError.binaryMissing
+        var lastError: Error?
+        for source in sortedSources where source.isArchive {
+            do {
+                try await installArchive(
+                    from: source.url,
+                    installRelativePath: runtime.installRelativePath,
+                    archiveBaseName: runtime.installRelativePath.split(separator: "/").last.map(String.init) ?? runtime.id,
+                    layoutModel: nil,
+                    expectedBinaryCandidates: runtime.binaryCandidates,
+                    itemId: runtime.id,
+                    displayName: runtime.displayName
+                )
+                guard isRuntimeInstalled(runtime) else {
+                    throw LocalASRModelManagerError.binaryMissing
+                }
+                var manifest = loadManifest(defaultModelId: catalog.defaultModelId)
+                if !manifest.installedRuntimeIDs.contains(runtime.id) {
+                    manifest.installedRuntimeIDs.append(runtime.id)
+                }
+                manifest.updatedAt = Date()
+                try saveManifest(manifest)
+                progress = LocalASRModelInstallProgress(phase: .completed, fraction: 1, message: runtime.displayName)
+                return
+            } catch {
+                lastError = error
+            }
         }
-        var manifest = loadManifest(defaultModelId: catalog.defaultModelId)
-        if !manifest.installedRuntimeIDs.contains(runtime.id) {
-            manifest.installedRuntimeIDs.append(runtime.id)
-        }
-        manifest.updatedAt = Date()
-        try saveManifest(manifest)
-        progress = LocalASRModelInstallProgress(phase: .completed, fraction: 1, message: runtime.displayName)
+        throw lastError ?? LocalASRModelManagerError.downloadFailed("All runtime mirrors failed")
     }
 
     public func modelRootURL(_ model: LocalASRModelDefinition) -> URL? {
@@ -285,7 +337,8 @@ public actor LocalASRModelManager {
         _ model: LocalASRModelDefinition,
         catalog: LocalASRCatalogDocument
     ) throws {
-        guard model.installKind == .archive, let relative = model.installRelativePath else { return }
+        guard model.installKind == .archive || model.installKind == .repository,
+              let relative = model.installRelativePath else { return }
         let dir = installDirectory(for: relative)
         if fileManager.fileExists(atPath: dir.path) {
             try fileManager.removeItem(at: dir)
@@ -443,6 +496,115 @@ public actor LocalASRModelManager {
             activeItemId: itemId
         )
         try? fileManager.removeItem(at: archiveURL)
+    }
+
+    private func installRepository(
+        source: LocalASRDownloadSource,
+        installRelativePath: String,
+        archiveBaseName: String,
+        layoutModel: LocalASRModelDefinition,
+        itemId: String,
+        displayName: String
+    ) async throws {
+        guard let baseURL = source.baseURL,
+              let files = source.files,
+              !files.isEmpty else {
+            throw LocalASRModelManagerError.downloadFailed("Invalid repository source.")
+        }
+
+        let destinationRoot = installDirectory(for: installRelativePath)
+            .appendingPathComponent(archiveBaseName, isDirectory: true)
+        let stagingRoot = rootDirectory().appendingPathComponent("staging/\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: stagingRoot, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: stagingRoot) }
+
+        if fileManager.fileExists(atPath: destinationRoot.path) {
+            try fileManager.removeItem(at: destinationRoot)
+        }
+        try fileManager.createDirectory(at: destinationRoot, withIntermediateDirectories: true)
+
+        let totalBytes = files.reduce(Int64(0)) { partial, file in
+            partial + Int64(file.sizeBytes ?? 0)
+        }
+        var completedBytes: Int64 = 0
+
+        for (index, file) in files.enumerated() {
+            let remoteURLString = baseURL.replacingOccurrences(of: "{path}", with: file.remotePath)
+            guard let remoteURL = URL(string: remoteURLString) else {
+                throw LocalASRModelManagerError.downloadFailed("Invalid URL for \(file.remotePath)")
+            }
+
+            let localURL = destinationRoot.appendingPathComponent(file.localPath)
+            try fileManager.createDirectory(
+                at: localURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+
+            // Snapshot the running total so the progress closure captures an
+            // immutable value (avoids concurrent access to `completedBytes`).
+            let priorBytes = completedBytes
+            progress = LocalASRModelInstallProgress(
+                phase: .downloading,
+                fraction: 0.10 + (Double(index) / Double(files.count)) * 0.45,
+                message: displayName,
+                bytesReceived: priorBytes,
+                bytesTotal: totalBytes > 0 ? totalBytes : nil,
+                activeItemId: itemId
+            )
+
+            do {
+                let controller = LocalASRModelDownloadClient.makeController(destinationURL: localURL) { update in
+                    Task {
+                        let aggregateReceived = priorBytes + update.bytesReceived
+                        let aggregateTotal = totalBytes > 0 ? totalBytes : update.bytesTotal
+                        await LocalASRModelManager.shared.updateDownloadProgress(
+                            itemId: itemId,
+                            displayName: displayName,
+                            update: LocalASRDownloadProgressUpdate(
+                                bytesReceived: aggregateReceived,
+                                bytesTotal: max(aggregateTotal, 1)
+                            )
+                        )
+                    }
+                }
+                activeDownloadController = controller
+                try await controller.download(from: remoteURL)
+                activeDownloadController = nil
+                pausedResumeData = nil
+            } catch {
+                activeDownloadController = nil
+                pausedResumeData = nil
+                throw LocalASRModelManagerError.downloadFailed(error.localizedDescription)
+            }
+
+            if let size = file.sizeBytes {
+                completedBytes += Int64(size)
+            } else if let attrs = try? fileManager.attributesOfItem(atPath: localURL.path),
+                      let size = attrs[.size] as? Int64 {
+                completedBytes += size
+            }
+        }
+
+        progress = LocalASRModelInstallProgress(
+            phase: .validating,
+            fraction: 0.82,
+            message: displayName,
+            activeItemId: itemId
+        )
+        guard LocalASRModelInstallState.isInstalled(
+            layoutModel,
+            manualMLXPath: nil,
+            fileManager: fileManager
+        ) else {
+            throw LocalASRModelManagerError.validationFailed("Required model files missing after download.")
+        }
+
+        progress = LocalASRModelInstallProgress(
+            phase: .finalizing,
+            fraction: 0.95,
+            message: displayName,
+            activeItemId: itemId
+        )
     }
 
     public func ensureRuntimeInstalled(catalog: LocalASRCatalogDocument) async throws {

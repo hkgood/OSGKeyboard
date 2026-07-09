@@ -25,7 +25,7 @@ public enum LocalASRModelInstallState {
             let base = URL(fileURLWithPath: manualMLXPath ?? "", isDirectory: true)
             guard fileManager.fileExists(atPath: base.path) else { return false }
             return required.allSatisfy { fileManager.fileExists(atPath: base.appendingPathComponent($0).path) }
-        case .archive:
+        case .archive, .repository:
             guard let relative = model.installRelativePath,
                   let layout = model.layout,
                   let baseName = model.archiveBaseName else { return false }
@@ -41,7 +41,7 @@ public enum LocalASRModelInstallState {
         _ model: LocalASRModelDefinition,
         fileManager: FileManager = .default
     ) -> URL? {
-        guard model.installKind == .archive,
+        guard model.installKind == .archive || model.installKind == .repository,
               let relative = model.installRelativePath,
               let baseName = model.archiveBaseName else { return nil }
         return installDirectory(for: relative, fileManager: fileManager)
@@ -97,6 +97,11 @@ public enum LocalASRModelInstallState {
             guard let onnx = layout.senseVoiceModel,
                   let tokens = layout.tokens else { return false }
             return fileManager.fileExists(atPath: root.appendingPathComponent(onnx).path)
+                && fileManager.fileExists(atPath: root.appendingPathComponent(tokens).path)
+        case .sherpaParaformer:
+            guard let paraformer = layout.paraformerModel,
+                  let tokens = layout.tokens else { return false }
+            return fileManager.fileExists(atPath: root.appendingPathComponent(paraformer).path)
                 && fileManager.fileExists(atPath: root.appendingPathComponent(tokens).path)
         default:
             return false

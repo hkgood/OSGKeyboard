@@ -1,7 +1,7 @@
 // MacLocalASRModelSettingsView.swift
 // OSGKeyboard · Mac
 //
-// Local ASR model catalog, download progress, MLX path, and bias diagnostics.
+// Local ASR model catalog, download progress, and bias diagnostics.
 
 import AppKit
 import SwiftUI
@@ -29,9 +29,11 @@ final class MacLocalASRModelSettingsViewModel: ObservableObject {
         catalog = try? LocalASRModelCatalog.loadBundled()
         if let catalog {
             let manifest = LocalASRInstalledManifestIO.load(defaultModelId: catalog.defaultModelId)
-            selectedModelId = manifest.selectedModelId.isEmpty
-                ? MacLocalASRPreferences.selectedModelId
-                : manifest.selectedModelId
+            selectedModelId = MacLocalASRPreferences.migratedModelId(
+                manifest.selectedModelId.isEmpty
+                    ? MacLocalASRPreferences.selectedModelId
+                    : manifest.selectedModelId
+            )
         }
         diagnosticsSnapshot = LocalASRBiasDiagnosticsStore.load()
         onLocalModelStateChanged?()
@@ -46,7 +48,7 @@ final class MacLocalASRModelSettingsViewModel: ObservableObject {
     }
 
     func installedDiskUsage(_ model: LocalASRModelDefinition) -> String? {
-        guard model.installKind == .archive,
+        guard model.installKind == .archive || model.installKind == .repository,
               let relative = model.installRelativePath,
               isInstalled(model) else { return nil }
         let dir = LocalASRModelInstallState.installDirectory(for: relative)
@@ -140,15 +142,6 @@ final class MacLocalASRModelSettingsViewModel: ObservableObject {
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
-    /// Opens (creating if needed) the model's shared subfolder so the user can
-    /// drop in manually-converted weights (used by the MLX model).
-    func revealModelFolder(_ model: LocalASRModelDefinition) {
-        guard let relative = model.installRelativePath else { return }
-        let url = LocalASRModelInstallState.installDirectory(for: relative)
-        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        NSWorkspace.shared.open(url)
-    }
-
     func revealStorageRoot() {
         let url = LocalASRModelInstallState.rootDirectory()
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
@@ -212,7 +205,6 @@ struct MacLocalASRModelSettingsView: View {
         Group {
             if let catalog = modelVM.catalog {
                 modelPickerSection(catalog: catalog)
-                runtimeSection(catalog: catalog)
             } else {
                 Text(MacL10n.string("mac.localASR.catalogMissing", language: lang))
                     .foregroundStyle(palette.textSecondary)
@@ -226,6 +218,16 @@ struct MacLocalASRModelSettingsView: View {
 
     private func modelPickerSection(catalog: LocalASRCatalogDocument) -> some View {
         Section {
+            if let runtime = modelVM.currentRuntime(in: catalog) {
+                LabeledContent(runtime.displayName) {
+                    Text(
+                        modelVM.isRuntimeInstalled(runtime)
+                            ? MacL10n.string("mac.localASR.installed", language: lang)
+                            : MacL10n.string("mac.localASR.notInstalled", language: lang)
+                    )
+                }
+            }
+
             ForEach(catalog.models) { model in
                 modelRow(model)
             }
@@ -251,31 +253,6 @@ struct MacLocalASRModelSettingsView: View {
             }
         } header: {
             Text(MacL10n.string("mac.localASR.models", language: lang))
-        } footer: {
-            Text(MacL10n.string("mac.localASR.modelsDesc", language: lang))
-                .font(TypeStyle.caption)
-                .foregroundStyle(palette.textSecondary)
-        }
-    }
-
-    private func runtimeSection(catalog: LocalASRCatalogDocument) -> some View {
-        Group {
-            if let runtime = modelVM.currentRuntime(in: catalog) {
-                Section {
-                    LabeledContent(runtime.displayName) {
-                        Text(
-                            modelVM.isRuntimeInstalled(runtime)
-                                ? MacL10n.string("mac.localASR.installed", language: lang)
-                                : MacL10n.string("mac.localASR.notInstalled", language: lang)
-                        )
-                    }
-                    Text(MacL10n.string("mac.localASR.runtimeDesc", language: lang))
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.textSecondary)
-                } header: {
-                    Text(MacL10n.string("mac.localASR.runtime", language: lang))
-                }
-            }
         }
     }
 
@@ -293,9 +270,22 @@ struct MacLocalASRModelSettingsView: View {
                     HStack(spacing: Spacing.sm) {
                         Image(systemName: selected ? "largecircle.fill.circle" : "circle")
                             .foregroundStyle(selected ? palette.accent : palette.textTertiary)
+                            .contentTransition(.symbolEffect(.replace))
+                            .animation(Motion.quick, value: selected)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(model.displayName)
-                                .foregroundStyle(palette.textPrimary)
+                            HStack(spacing: Spacing.xs) {
+                                Text(model.displayName)
+                                    .foregroundStyle(palette.textPrimary)
+                                if model.supportsHotwords {
+                                    Text(MacL10n.string("mac.localASR.personalDictionaryTag", language: lang))
+                                        .font(TypeStyle.caption2)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(palette.accent.opacity(0.15))
+                                        .foregroundStyle(palette.accent)
+                                        .clipShape(Capsule())
+                                }
+                            }
                             Text(modelSubtitle(model, installed: installed))
                                 .font(TypeStyle.caption)
                                 .foregroundStyle(palette.textSecondary)
@@ -308,6 +298,8 @@ struct MacLocalASRModelSettingsView: View {
                 Spacer()
 
                 modelRowActions(model: model, installed: installed, installing: installing)
+                    .animation(Motion.soft, value: installing)
+                    .animation(Motion.soft, value: installed)
             }
         }
         .padding(.vertical, 2)
@@ -344,18 +336,13 @@ struct MacLocalASRModelSettingsView: View {
                     )
                 }
             }
-        } else if model.installKind == .manual {
-            Button(MacL10n.string("mac.localASR.openFolder", language: lang)) {
-                modelVM.revealModelFolder(model)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
         } else if installed {
             Button(MacL10n.string("mac.localASR.delete", language: lang), role: .destructive) {
                 modelVM.deleteModel(model)
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
+            .tint(palette.danger)
         } else {
             Button(MacL10n.string("mac.localASR.download", language: lang)) {
                 modelVM.installModel(model)
@@ -382,7 +369,7 @@ struct MacLocalASRModelSettingsView: View {
                 .trim(from: 0, to: fraction)
                 .stroke(palette.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 .rotationEffect(.degrees(-90))
-                .animation(.linear(duration: 0.15), value: fraction)
+                .animation(Motion.instant, value: fraction)
             if modelVM.installProgress.phase == .paused {
                 Image(systemName: "pause.fill")
                     .font(.system(size: 10, weight: .bold))
@@ -399,16 +386,10 @@ struct MacLocalASRModelSettingsView: View {
 
     private func modelSubtitle(_ model: LocalASRModelDefinition, installed: Bool) -> String {
         let size = modelVM.formattedSize(model.sizeBytes)
-        let hotword = model.supportsHotwords
-            ? MacL10n.string("mac.localASR.hotwordsYes", language: lang)
-            : MacL10n.string("mac.localASR.hotwordsNo", language: lang)
-        let state = installed
-            ? MacL10n.string("mac.localASR.installed", language: lang)
-            : MacL10n.string("mac.localASR.notInstalled", language: lang)
         if let usage = modelVM.installedDiskUsage(model) {
-            return "\(size) · \(hotword) · \(state) · \(usage)"
+            return "\(size) · \(usage)"
         }
-        return "\(size) · \(hotword) · \(state)"
+        return size
     }
 
     private var diagnosticsSection: some View {

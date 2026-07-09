@@ -15,7 +15,7 @@ enum MacQwen3LocalASR {
         modelPath: String,
         bias: LocalASRBiasPayload? = nil
     ) async throws -> String {
-        guard MacLocalASRPreferences.qwen3ModelIsInstalled(at: modelPath) else {
+        guard modelDirectoryIsInstalled(at: modelPath) else {
             throw MacLocalASRError.qwen3ModelMissing
         }
         guard sampleRate == 16_000 else {
@@ -39,5 +39,20 @@ enum MacQwen3LocalASR {
         } catch {
             throw MacLocalASRError.qwen3InferenceFailed(error.localizedDescription)
         }
+    }
+
+    private static func modelDirectoryIsInstalled(at path: String) -> Bool {
+        var isDir: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDir), isDir.boolValue else {
+            return false
+        }
+        let fm = FileManager.default
+        let config = (path as NSString).appendingPathComponent("config.json")
+        let weights = (path as NSString).appendingPathComponent("model.safetensors")
+        guard fm.fileExists(atPath: config), fm.fileExists(atPath: weights) else {
+            return false
+        }
+        let names = (try? fm.contentsOfDirectory(atPath: path)) ?? []
+        return names.contains("vocab.json") && names.contains("merges.txt")
     }
 }

@@ -16,6 +16,7 @@ struct OSGKeyboardMacApp: App {
     // Mac-local appearance preference. Drives both the SwiftUI colour scheme
     // and — via `applyToApp` — the AppKit window chrome / popover.
     @AppStorage(MacAppearancePreference.storageKey) private var appearanceRaw = MacAppearancePreference.system.rawValue
+    @AppStorage(MacOnboardingState.storageKey) private var hasCompletedMacOnboarding = false
 
     private var appearance: MacAppearancePreference {
         MacAppearancePreference(rawValue: appearanceRaw) ?? .system
@@ -23,7 +24,16 @@ struct OSGKeyboardMacApp: App {
 
     var body: some Scene {
         Window("OSGKeyboard", id: "main") {
-            MacRootView(viewModel: viewModel)
+            Group {
+                if hasCompletedMacOnboarding {
+                    MacRootView(viewModel: viewModel)
+                } else {
+                    MacOnboardingView(
+                        viewModel: viewModel,
+                        hasCompletedOnboarding: $hasCompletedMacOnboarding
+                    )
+                }
+            }
                 .macSystemPalette()
                 .environment(\.locale, viewModel.config.uiLanguage.swiftUILocale)
                 .preferredColorScheme(appearance.colorScheme)
@@ -177,12 +187,41 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 private struct MacMenuBarPopover: View {
     @ObservedObject private var viewModel = MacDictationViewModel.shared
     @AppStorage(MacAppearancePreference.storageKey) private var appearanceRaw = MacAppearancePreference.system.rawValue
+    @AppStorage(MacOnboardingState.storageKey) private var hasCompletedMacOnboarding = false
 
     var body: some View {
-        MacContentView(viewModel: viewModel)
+        Group {
+            if hasCompletedMacOnboarding {
+                MacContentView(viewModel: viewModel)
+            } else {
+                onboardingPrompt
+            }
+        }
             .frame(width: 340)
             .macSystemPalette()
             .environment(\.locale, viewModel.config.uiLanguage.swiftUILocale)
             .preferredColorScheme(MacAppearancePreference(rawValue: appearanceRaw)?.colorScheme ?? nil)
+    }
+
+    private var onboardingPrompt: some View {
+        VStack(spacing: Spacing.md) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(.accent)
+
+            Text(MacL10n.string("mac.onboarding.popover.title", language: viewModel.config.uiLanguage))
+                .font(TypeStyle.headline)
+
+            Text(MacL10n.string("mac.onboarding.popover.subtitle", language: viewModel.config.uiLanguage))
+                .font(TypeStyle.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            Button(MacL10n.string("mac.openWindow", language: viewModel.config.uiLanguage)) {
+                MacMainWindow.open()
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .padding(Spacing.lg)
     }
 }

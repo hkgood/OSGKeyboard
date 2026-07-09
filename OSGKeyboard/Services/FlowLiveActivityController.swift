@@ -116,4 +116,21 @@ enum FlowLiveActivityController {
             }
         }
     }
+
+    /// `applicationWillTerminate` 专用：阻塞到所有 `end` 完成，避免进程先退出而锁屏卡片残留。
+    nonisolated static func endAllSynchronouslyOnTerminate() {
+        let semaphore = DispatchSemaphore(value: 0)
+        Task.detached(priority: .userInitiated) {
+            let activities = Activity<FlowActivityAttributes>.activities
+            let count = activities.count
+            for activity in activities {
+                await activity.end(activity.content, dismissalPolicy: .immediate)
+            }
+            FlowDiagnostics.log("Live Activity ended synchronously on terminate (count=\(count))")
+            semaphore.signal()
+        }
+        semaphore.wait()
+        currentPhase = .idle
+        currentActivity = nil
+    }
 }

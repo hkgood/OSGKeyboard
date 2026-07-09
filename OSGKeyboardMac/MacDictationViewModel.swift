@@ -101,25 +101,11 @@ final class MacDictationViewModel: ObservableObject {
     func onAppear() async {
         await MacICloudSyncBootstrap.pullIfEnabled()
         refreshForegroundAppName()
-        warmUpQwen3IfNeeded()
-    }
-
-    /// Pre-load MLX weights + Metal shaders so the first dictation is fast.
-    func warmUpQwen3IfNeeded() {
-        guard config.engineMode == "local",
-              let model = MacLocalASRService.selectedModelDefinition(),
-              model.backend == .mlx,
-              MacLocalASRService.isModelInstalled(model) else { return }
-        let path = MacLocalASRPreferences.qwen3ModelPath
-        Task.detached(priority: .utility) {
-            _ = try? await MacQwen3ASREngine.shared.prepareIfNeeded(modelPath: path)
-        }
     }
 
     func reloadConfigFromCloud() {
         config.reloadFromPersistedStorage()
         statusMessage = MacL10n.string("mac.status.ready", language: config.uiLanguage)
-        warmUpQwen3IfNeeded()
     }
 
     func refreshDictionaryFromCloud() {
@@ -159,10 +145,8 @@ final class MacDictationViewModel: ObservableObject {
 
     var localModelReady: Bool {
         _ = localModelRevision
-        if let model = MacLocalASRService.selectedModelDefinition() {
-            return MacLocalASRService.isModelInstalled(model)
-        }
-        return MacLocalASRPreferences.qwen3ModelIsInstalled()
+        guard let model = MacLocalASRService.selectedModelDefinition() else { return false }
+        return MacLocalASRService.isModelInstalled(model)
     }
 
     /// Context-aware warning when local engine is selected but the active model is not ready.
@@ -172,9 +156,6 @@ final class MacDictationViewModel: ObservableObject {
         if localModelReady { return nil }
         guard let model = MacLocalASRService.selectedModelDefinition() else {
             return MacL10n.string("mac.settings.localModelFallbackApple", language: config.uiLanguage)
-        }
-        if model.installKind == .manual {
-            return MacL10n.string("mac.settings.mlxModelMissing", language: config.uiLanguage)
         }
         return MacL10n.format(
             "mac.settings.selectedModelMissing",
@@ -188,10 +169,6 @@ final class MacDictationViewModel: ObservableObject {
     func bumpLocalModelRevision() {
         localModelRevision += 1
         objectWillChange.send()
-    }
-
-    var qwen3ModelInstalled: Bool {
-        MacLocalASRPreferences.qwen3ModelIsInstalled()
     }
 
     // MARK: - Preferences
@@ -210,7 +187,6 @@ final class MacDictationViewModel: ObservableObject {
 
     func setEngineMode(_ mode: String) {
         config.engineMode = mode
-        if mode == "local" { warmUpQwen3IfNeeded() }
     }
 
     // MARK: - Recording

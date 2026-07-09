@@ -70,3 +70,6 @@ __pycache__/
 .flow-oslog-capture.log
 .flow-*.log
 .osg_*.png
+
+# Standalone experiment: 灵动岛录音机制验证 demo (throwaway)
+AudioIntentProbe/

@@ -407,6 +407,7 @@ targets:
         excludes:
           - "AppIcon.appiconset"
       - path: OSGKeyboardMac
+      - path: OSGKeyboard/Services/OpenSourceLicenseCatalog.swift
       - path: OSGKeyboardShared
         excludes:
           - "en.lproj"
@@ -431,6 +432,8 @@ targets:
       - path: OSGKeyboardShared/zh-Hans.lproj/Shared.strings
         buildPhase: resources
       - path: OSGKeyboard/Resources/CustomLanguageModel/v1/phrases.tsv
+        buildPhase: resources
+      - path: OSGKeyboard/Resources/PrivacyPolicy.html
         buildPhase: resources
       - path: OSGKeyboardShared/Resources/LocalASR/local-asr-catalog.json
         buildPhase: resources

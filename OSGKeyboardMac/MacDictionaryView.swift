@@ -48,12 +48,15 @@ struct MacDictionaryView: View {
         Group {
             if entries.isEmpty {
                 emptyState
+                    .transition(.opacity)
             } else {
                 form
+                    .transition(.opacity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(palette.background)
+        .animation(Motion.soft, value: entries.isEmpty)
         .task {
             await MacICloudSyncBootstrap.dictionarySync.pullAndMergeIfEnabled()
             viewModel.refreshDictionaryFromCloud()
@@ -86,6 +89,7 @@ struct MacDictionaryView: View {
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
         .background(palette.background)
+        .animation(Motion.soft, value: query)
         .safeAreaInset(edge: .top, spacing: 0) { centeredSearchField }
         .confirmationDialog(
             MacL10n.string("mac.dict.deleteTitle", language: lang),
@@ -93,7 +97,9 @@ struct MacDictionaryView: View {
             titleVisibility: .visible
         ) {
             Button(MacL10n.string("mac.delete", language: lang), role: .destructive) {
-                if let entry = entryPendingDeletion { delete(entry) }
+                if let entry = entryPendingDeletion {
+                    withAnimation(Motion.soft) { delete(entry) }
+                }
                 entryPendingDeletion = nil
             }
             Button(MacL10n.string("mac.cancel", language: lang), role: .cancel) {
@@ -215,12 +221,13 @@ private struct MacDictionaryRow: View {
                     .frame(width: 24, height: 24)
             }
             .buttonStyle(.borderless)
-            .foregroundStyle(palette.textTertiary)
+            .foregroundStyle(isHovering ? palette.danger : palette.textTertiary)
             .opacity(isHovering ? 1 : 0)
             .accessibilityLabel(MacL10n.string("mac.delete", language: language))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
+        .animation(Motion.quick, value: isHovering)
         .onHover { isHovering = $0 }
         .contextMenu {
             Button(action: copy) {

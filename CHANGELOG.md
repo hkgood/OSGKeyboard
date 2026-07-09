@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Force-quit mic release**: on termination the host app now synchronously stops `AVAudioEngine`, deactivates `AVAudioSession`, and ends Live Activities (Dynamic Island + Lock Screen) in `applicationWillTerminate`, reducing “microphone in use” errors after reopening. / **强杀麦克风释放**：进程终止时在 `applicationWillTerminate` 内同步停止 `AVAudioEngine`、释放 `AVAudioSession` 并结束 Live Activity（灵动岛 + 锁屏），降低强杀后重开提示麦克风被占用的概率。
+
 ## [0.5.2] - 2026-07-09
 
 ### Added

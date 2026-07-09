@@ -16,6 +16,8 @@ struct MacSettingsView: View {
 
     @AppStorage(MacAppearancePreference.storageKey)
     private var appearanceRaw = MacAppearancePreference.system.rawValue
+    @AppStorage(MacOnboardingState.storageKey)
+    private var hasCompletedMacOnboarding = true
     @State private var accessibilityTrusted = MacTextInsertionService.isAccessibilityTrusted
     @State private var showProviderPicker = false
 
@@ -30,22 +32,26 @@ struct MacSettingsView: View {
     ]
 
     var body: some View {
-        Form {
-            generalSection
-            recognitionSection
-            if viewModel.config.engineMode == "cloud" {
-                providerSection
+        NavigationStack {
+            Form {
+                generalSection
+                recognitionSection
+                if viewModel.config.engineMode == "cloud" {
+                    providerSection
+                        .transition(.opacity)
+                }
+                if viewModel.config.engineMode == "local" {
+                    MacLocalASRModelSettingsView(viewModel: viewModel)
+                        .transition(.opacity)
+                }
+                inputSection
+                legalSection
             }
-            if viewModel.config.engineMode == "local" {
-                MacLocalASRModelSettingsView(viewModel: viewModel)
-            }
-            inputSection
-            syncSection
+            .formStyle(.grouped)
+            .tint(palette.accent)
+            .scrollContentBackground(.hidden)
+            .background(palette.background)
         }
-        .formStyle(.grouped)
-        .tint(palette.accent)
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
         .onAppear { refreshAccessibilityState() }
     }
 
@@ -70,13 +76,7 @@ struct MacSettingsView: View {
                     Text(localeLabel(locale)).tag(locale.id)
                 }
             }
-        }
-    }
 
-    // MARK: - iCloud
-
-    private var syncSection: some View {
-        Section("iCloud") {
             MacSettingsICloudSyncRow(defaults: viewModel.defaults, language: lang)
             MacDictionaryICloudSyncRow(defaults: viewModel.defaults, language: lang)
         }
@@ -139,14 +139,14 @@ struct MacSettingsView: View {
                 subtitle: MacL10n.string("mac.settings.cloudEngineDesc", language: lang),
                 systemImage: "cloud",
                 selected: viewModel.config.engineMode == "cloud"
-            ) { viewModel.setEngineMode("cloud") }
+            ) { withAnimation(Motion.soft) { viewModel.setEngineMode("cloud") } }
 
             methodRow(
                 title: MacL10n.string("mac.settings.localEngine", language: lang),
                 subtitle: MacL10n.string("mac.settings.localEngineDesc", language: lang),
                 systemImage: "cpu",
                 selected: viewModel.config.engineMode == "local"
-            ) { viewModel.setEngineMode("local") }
+            ) { withAnimation(Motion.soft) { viewModel.setEngineMode("local") } }
         }
     }
 
@@ -176,6 +176,8 @@ struct MacSettingsView: View {
                     )
                     .font(TypeStyle.caption)
                     .foregroundStyle(accessibilityTrusted ? palette.accent : palette.warning)
+                    .contentTransition(.opacity)
+                    .animation(Motion.quick, value: accessibilityTrusted)
 
                     Button(MacL10n.string("mac.settings.openAccessibility", language: lang)) {
                         openAccessibilitySettings()
@@ -190,7 +192,27 @@ struct MacSettingsView: View {
         }
     }
 
-    // MARK: - Qwen3 model path (legacy — see MacLocalASRModelSettingsView)
+    // MARK: - Legal
+
+    private var legalSection: some View {
+        Section(MacL10n.string("mac.settings.about", language: lang)) {
+            NavigationLink {
+                MacPrivacyPolicyView(uiLanguage: lang)
+            } label: {
+                Text(MacL10n.string("mac.settings.privacyPolicy", language: lang))
+            }
+
+            NavigationLink {
+                MacOpenSourceLicensesView(uiLanguage: lang)
+            } label: {
+                Text(MacL10n.string("mac.settings.thirdPartyLicenses", language: lang))
+            }
+
+            Button(MacL10n.string("mac.settings.restartOnboarding", language: lang)) {
+                hasCompletedMacOnboarding = false
+            }
+        }
+    }
 
     // MARK: - Row helpers
 
@@ -228,7 +250,9 @@ struct MacSettingsView: View {
                 Spacer(minLength: Spacing.sm)
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                     .foregroundStyle(selected ? palette.accent : palette.textTertiary)
+                    .contentTransition(.symbolEffect(.replace))
             }
+            .animation(Motion.quick, value: selected)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
