@@ -26,6 +26,14 @@ options:
 # Carthage (matches the long-standing "zero dependencies" promise in the
 # README). Optional post-ASR cloud polish routes through DeepSeek (or
 # any OpenAI-compatible endpoint) using the existing `LLMClient`.
+#
+# macOS only: `mlx-swift-asr` (MLXASR) for Qwen3-ASR-1.7B on-device ASR.
+# iOS targets remain zero-SPM.
+
+packages:
+  MLXSwiftASR:
+    url: https://github.com/ontypehq/mlx-swift-asr
+    branch: main
 
 settings:
   base:
@@ -42,8 +50,8 @@ settings:
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "0.5.0"
-    CURRENT_PROJECT_VERSION: "18"
+    MARKETING_VERSION: "0.5.2"
+    CURRENT_PROJECT_VERSION: "19"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -319,6 +327,7 @@ targets:
     resources:
       - path: OSGKeyboardShared/Resources/CustomLanguageModel/v1/OSGKeyboardCLM.bin
       - path: OSGKeyboardShared/Resources/CustomLanguageModel/v1/compiled-manifest.json
+      - path: OSGKeyboardShared/Resources/LocalASR/local-asr-catalog.json
     info:
       path: OSGKeyboardShared/Info.plist
     settings:
@@ -375,6 +384,107 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.ext.tests
         TARGETED_DEVICE_FAMILY: "1"
 
+  # =========================================================
+  # macOS 菜单栏 App (Phase 1 · 云端 MVP)
+  # =========================================================
+  # Standalone menu-bar utility: record → cloud ASR → polish → clipboard.
+  # Reuses the platform-agnostic core files from OSGKeyboardShared at the
+  # source level (no framework), excluding the iOS-only files that import
+  # SpeechAnalyzer / AVAudioSession / UIKit / SwiftUI views. Local mode uses
+  # Qwen3-ASR MLX via mlx-swift-asr (requires macOS 15+, Apple Silicon).
+  OSGKeyboardMac:
+    type: application
+    platform: macOS
+    deploymentTarget: "15.0"
+    sources:
+      # Same Icon Composer asset as the iOS app — do not ship a separate PNG
+      # appiconset; actool crashes if both coexist.
+      - path: OSGKeyboard/AppIcon.icon
+        buildPhase: resources
+      # Reuse the iOS asset catalog for provider logos + brand mark. Exclude
+      # the PNG appiconset so it doesn't clash with AppIcon.icon above.
+      - path: OSGKeyboard/Assets.xcassets
+        excludes:
+          - "AppIcon.appiconset"
+      - path: OSGKeyboardMac
+      - path: OSGKeyboard/Services/OpenSourceLicenseCatalog.swift
+      - path: OSGKeyboardShared
+        excludes:
+          - "en.lproj"
+          - "zh-Hans.lproj"
+          - "Info.plist"
+          - "**/*.swift.example"
+          - "DesignSystem/WaveformView.swift"
+          - "DesignSystem/TranslationChip.swift"
+          - "DesignSystem/RecordButton.swift"
+          - "Services/ASRService.swift"
+          - "Services/CloudASR/CloudASRService.swift"
+          - "Services/ChunkedUtterancePipeline.swift"
+          - "Services/FlowContinuousCapture.swift"
+          - "Services/LiveDictationController.swift"
+          - "Services/KeyboardState.swift"
+          - "Services/CursorNavigation.swift"
+          - "Services/CustomLanguageModelManager.swift"
+          - "Models/MicVoiceAvailability+Keyboard.swift"
+          - "Utilities/ProgressiveDictationTranscriptAccumulator.swift"
+      - path: OSGKeyboardShared/en.lproj/Shared.strings
+        buildPhase: resources
+      - path: OSGKeyboardShared/zh-Hans.lproj/Shared.strings
+        buildPhase: resources
+      - path: OSGKeyboard/Resources/CustomLanguageModel/v1/phrases.tsv
+        buildPhase: resources
+      - path: OSGKeyboard/Resources/PrivacyPolicy.html
+        buildPhase: resources
+      - path: OSGKeyboardShared/Resources/LocalASR/local-asr-catalog.json
+        buildPhase: resources
+    entitlements:
+      path: OSGKeyboardMac/OSGKeyboardMac.entitlements
+      properties:
+        # Sandbox disabled on purpose: this menu-bar dictation utility uses the
+        # Accessibility API to monitor a global hotkey and inject ⌘V into other
+        # apps — both are forbidden by App Sandbox. Ship via Developer ID +
+        # notarization (not Mac App Store / TestFlight, which force the sandbox).
+        com.apple.security.app-sandbox: false
+        com.apple.security.device.audio-input: true
+        com.apple.security.network.client: true
+        com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)com.osgkeyboard.ios
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)com.osgkeyboard.shared
+    info:
+      path: OSGKeyboardMac/Info.plist
+      properties:
+        CFBundleDisplayName: OSGKeyboard
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations:
+          - en
+          - zh-Hans
+        LSApplicationCategoryType: public.app-category.utilities
+        NSMicrophoneUsageDescription: "OSGKeyboard uses the microphone to transcribe your voice via your configured cloud speech provider."
+        NSSpeechRecognitionUsageDescription: "OSGKeyboard uses on-device speech recognition for local dictation mode."
+        NSHumanReadableCopyright: "OSGKeyboard"
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_NAME: OSGKeyboard
+        INFOPLIST_KEY_CFBundleDisplayName: OSGKeyboard
+        INFOPLIST_KEY_CFBundleName: OSGKeyboard
+        PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.mac
+        MACOSX_DEPLOYMENT_TARGET: "15.0"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # macOS app is not an app extension; override the framework-wide flag.
+        APPLICATION_EXTENSION_API_ONLY: NO
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: X329MZU23S
+        # Required for Developer ID distribution + notarization (outside App Store).
+        ENABLE_HARDENED_RUNTIME: YES
+    dependencies:
+      - sdk: Speech.framework
+      - sdk: AVFoundation.framework
+      - package: MLXSwiftASR
+        product: MLXASR
+
 schemes:
   OSGKeyboard:
     build:
@@ -389,5 +499,14 @@ schemes:
       targets:
         - OSGKeyboardTests
         - OSGKeyboardExtTests
+    archive:
+      config: Release
+
+  OSGKeyboardMac:
+    build:
+      targets:
+        OSGKeyboardMac: all
+    run:
+      config: Debug
     archive:
       config: Release

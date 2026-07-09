@@ -48,7 +48,7 @@ public actor PolishingService {
         case translate(targetLocaleId: String)
     }
 
-    private let store: AppGroupStore
+    private let store: any ConfigurationStore
     private let timeout: TimeInterval
     /// Optional injected client (mostly for testing). When nil we build
     /// one from `store.makeClient()` per call.
@@ -60,7 +60,7 @@ public actor PolishingService {
     /// own slack on top of the length-scaled budget in `polishRemote`, so
     /// no `+1` is baked in here.
     public init(
-        store: AppGroupStore = AppGroupStore(),
+        store: any ConfigurationStore = AppGroupStore(),
         client: LLMClient? = nil,
         timeout: TimeInterval? = nil
     ) {
@@ -252,7 +252,10 @@ public actor PolishingService {
         providerId: String
     ) -> String {
         let dictionary = store.personalDictionary
-        let dictionaryBlock = dictionary.promptFragment()
+        let dictionaryBlock = Self.mergedDictionaryBlock(
+            dictionary: dictionary,
+            supplement: context.dictionarySupplement
+        )
         let contextGuideline = context.appContext.polishGuideline
         let intensityGuideline = context.intensity.promptGuideline
         let contract = Self.globalOutputContract(useChinese: shouldUseChineseGuidance(providerId: providerId))
@@ -321,6 +324,17 @@ public actor PolishingService {
         }
     }
 
+    internal static func mergedDictionaryBlock(
+        dictionary: PersonalDictionary,
+        supplement: String?
+    ) -> String {
+        let base = dictionary.promptFragment()
+        let extra = supplement?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if base.isEmpty { return extra }
+        if extra.isEmpty { return base }
+        return base + "\n" + extra
+    }
+
     private func shouldUseChineseGuidance(providerId: String) -> Bool {
         switch providerId {
         case "zhipu", "moonshot", "qwen", "deepseek":
@@ -346,7 +360,7 @@ public actor PolishingService {
     }
 
     internal static func resolvedProviderId(
-        store: AppGroupStore,
+        store: any ConfigurationStore,
         providerIdOverride: String?
     ) -> String {
         if let providerIdOverride {
@@ -360,7 +374,7 @@ public actor PolishingService {
     }
 
     internal static func resolveLLMEndpoint(
-        store: AppGroupStore,
+        store: any ConfigurationStore,
         preset: LLMProvider,
         providerIdOverride: String?
     ) -> (baseURL: String, model: String) {

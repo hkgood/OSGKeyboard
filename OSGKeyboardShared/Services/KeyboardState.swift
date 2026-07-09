@@ -82,7 +82,10 @@ public final class KeyboardState: ObservableObject {
     @Published public var utteranceRemainingSeconds: Int = Int(FlowSessionKeys.maxUtteranceDuration)
     /// Whether the host app's Flow voice session is live and reachable (fresh
     /// heartbeat). Do not use the App Group session flag alone for UI gating.
+    /// Prefer `micVoiceAvailability` for mic color and tap behavior.
     @Published public var flowSessionActive: Bool = false
+    /// Unified mic color / tap / hint source for the keyboard extension.
+    @Published public var micVoiceAvailability: MicVoiceAvailability = .unavailable(.hostNotReady)
     /// When true, the mic is intentionally disabled (e.g. cloud engine
     /// selected but the provider-specific API key is missing).
     @Published public var micDisabled: Bool = false

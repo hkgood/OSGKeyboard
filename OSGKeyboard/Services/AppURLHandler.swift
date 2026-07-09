@@ -59,6 +59,14 @@ final class AppURLHandler: NSObject, UIApplicationDelegate {
         configuration.delegateClass = AppSceneDelegate.self
         return configuration
     }
+
+    /// 后台音频会话仍 running 时，用户强杀常会进入此回调（约 5 秒清理窗口）。
+    /// 同步释放麦克风 + 结束 Live Activity，避免重开后「麦克风被占用」。
+    func applicationWillTerminate(_ application: UIApplication) {
+        MainActor.assumeIsolated {
+            FlowTerminationCoordinator.performSynchronousTerminationCleanup()
+        }
+    }
 }
 
 final class AppSceneDelegate: NSObject, UIWindowSceneDelegate {

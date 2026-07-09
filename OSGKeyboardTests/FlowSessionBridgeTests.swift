@@ -141,5 +141,155 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testDarwinNotificationPostsWithoutCrashing() {
         FlowSessionDarwin.postSessionChanged()
+        FlowSessionDarwin.postCommandChanged()
+        FlowSessionDarwin.postHostReadyChanged()
+    }
+
+    func testHostReadyRequiresExplicitContract() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(duration: 60, defaults: defaults)
+        XCTAssertTrue(FlowSessionBridge.isHostReachable(defaults: defaults))
+        XCTAssertFalse(FlowSessionBridge.isHostReady(defaults: defaults))
+
+        FlowSessionBridge.setHostReady(true, defaults: defaults)
+        XCTAssertTrue(FlowSessionBridge.isHostReady(defaults: defaults))
+    }
+
+    func testHostReadyFalseWhenHeartbeatStale() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        FlowSessionBridge.setHostReady(true, defaults: defaults)
+        XCTAssertTrue(FlowSessionBridge.isHostReady(defaults: defaults))
+
+        let staleHeartbeat = Date().timeIntervalSince1970 - 10
+        defaults.set(staleHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
+        XCTAssertFalse(FlowSessionBridge.isHostReady(defaults: defaults))
+    }
+
+    func testHeartbeatRefreshKeepsHostReadyPublished() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        FlowSessionBridge.setHostReady(true, defaults: defaults)
+
+        FlowSessionBridge.writeHeartbeat(defaults: defaults)
+
+        XCTAssertTrue(FlowSessionBridge.isHostReady(defaults: defaults))
+    }
+
+    func testClearFlowStateClearsHostReady() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(defaults: defaults)
+        FlowSessionBridge.setHostReady(true, defaults: defaults)
+        FlowSessionBridge.clearFlowState(defaults: defaults)
+        XCTAssertFalse(defaults.bool(forKey: FlowSessionKeys.flowHostReady))
+        XCTAssertFalse(FlowSessionBridge.isHostReady(defaults: defaults))
+    }
+
+    func testFlowCommandRoundTrip() {
+        let defaults = makeDefaults()
+        let sessionId = UUID()
+        let utteranceId = UUID()
+        let command = FlowCommand(
+            sessionId: sessionId,
+            utteranceId: utteranceId,
+            commandSeq: 42,
+            action: .startRecording,
+            localeId: "zh-Hans",
+            createdAt: 123
+        )
+
+        FlowSessionBridge.writeCommand(command, defaults: defaults)
+
+        XCTAssertEqual(FlowSessionBridge.latestCommand(defaults: defaults), command)
+    }
+
+    func testFlowResultRoundTripPreservesUtteranceIdentity() {
+        let defaults = makeDefaults()
+        let sessionId = UUID()
+        let utteranceId = UUID()
+        let result = FlowResult(
+            sessionId: sessionId,
+            utteranceId: utteranceId,
+            commandSeq: 43,
+            status: .final,
+            text: "hello",
+            warning: "raw fallback",
+            createdAt: 124
+        )
+
+        FlowSessionBridge.writeResult(result, defaults: defaults)
+
+        XCTAssertEqual(FlowSessionBridge.latestResult(defaults: defaults), result)
+        FlowSessionBridge.clearResult(defaults: defaults)
+        XCTAssertNil(FlowSessionBridge.latestResult(defaults: defaults))
+    }
+
+    func testFlowAckRoundTrip() {
+        let defaults = makeDefaults()
+        let ack = FlowAck(
+            sessionId: UUID(),
+            utteranceId: UUID(),
+            commandSeq: 44,
+            consumedAt: 125
+        )
+
+        FlowSessionBridge.writeAck(ack, defaults: defaults)
+
+        XCTAssertEqual(FlowSessionBridge.latestAck(defaults: defaults), ack)
+    }
+
+    func testReadySnapshotDrivesHostReady() {
+        let defaults = makeDefaults()
+        let sessionId = UUID()
+        let now = Date().timeIntervalSince1970
+        FlowSessionBridge.markSessionActive(duration: 60, sessionId: sessionId, defaults: defaults)
+        let snapshot = FlowReadySnapshot(
+            sessionId: sessionId,
+            ready: true,
+            reason: .ready,
+            heartbeatAt: now,
+            readyAt: now,
+            audioProofAt: now,
+            engineMode: "local",
+            localeId: "zh-Hans",
+            sessionExpiresAt: now + 60
+        )
+
+        FlowSessionBridge.writeReadySnapshot(snapshot, defaults: defaults)
+
+        XCTAssertEqual(FlowSessionBridge.readySnapshot(defaults: defaults), snapshot)
+        XCTAssertTrue(FlowSessionBridge.isHostReady(defaults: defaults))
+    }
+
+    func testClearFlowStateRemovesProtocolPayloads() {
+        let defaults = makeDefaults()
+        let sessionId = UUID()
+        let utteranceId = UUID()
+        FlowSessionBridge.writeCommand(
+            FlowCommand(
+                sessionId: sessionId,
+                utteranceId: utteranceId,
+                commandSeq: 1,
+                action: .startRecording,
+                localeId: "en-US"
+            ),
+            defaults: defaults
+        )
+        FlowSessionBridge.writeResult(
+            FlowResult(
+                sessionId: sessionId,
+                utteranceId: utteranceId,
+                commandSeq: 1,
+                status: .partial,
+                text: "hello"
+            ),
+            defaults: defaults
+        )
+
+        FlowSessionBridge.clearFlowState(defaults: defaults)
+
+        XCTAssertNil(FlowSessionBridge.latestCommand(defaults: defaults))
+        XCTAssertNil(FlowSessionBridge.latestResult(defaults: defaults))
+        XCTAssertNil(FlowSessionBridge.readySnapshot(defaults: defaults))
     }
 }

@@ -36,6 +36,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let settingsICloudSyncEnabled = "config.settings.iCloudSyncEnabled"
         /// Wall-clock stamp of the last settings blob applied from iCloud KVS.
         public static let settingsCloudUpdatedAt = "config.settings.cloudUpdatedAt"
+        /// Cached per-field settings merge payload (`SyncedAppSettingsV2`).
+        public static let settingsCloudPayloadV2 = "config.settings.cloudPayload.v2"
         /// When true, the host app auto-returns to the source app after a cold-start handoff.
         public static let flowSkipAppSwitch = "config.flowSkipAppSwitch"
         /// Raw `FlowInactivityDuration` value; session expires after this idle window.
@@ -104,8 +106,13 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     }
 
     /// API key lives in the Keychain (cross-process, encrypted at rest).
+    /// When settings iCloud sync is on, reads synchronizable Keychain items first.
     public var apiKey: String {
-        Keychain.apiKey(for: providerId) ?? ""
+        Self.resolveAPIKey(
+            defaults: nil,
+            providerId: providerId,
+            preferICloudSync: settingsICloudSyncEnabled
+        )
     }
 
     public func makeClient() -> LLMClient {
@@ -206,7 +213,11 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         }
 
         // One-shot legacy migration: plaintext apiKey in UserDefaults → Keychain.
-        _ = resolveAPIKey(defaults: defaults, providerId: config.providerId)
+        _ = resolveAPIKey(
+            defaults: defaults,
+            providerId: config.providerId,
+            preferICloudSync: config.settingsICloudSyncEnabled
+        )
 
         // Cloud no longer exposes off/transcribe; migrate legacy values.
         if config.engineMode == "cloud", config.modeId != "polish" {
@@ -295,19 +306,23 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     }
 
     /// Read the API key from the Keychain, falling back to a one-time migration from UserDefaults.
-    static func resolveAPIKey(defaults: UserDefaults?, providerId: String) -> String {
-        if let stored = Keychain.apiKey(for: providerId), !stored.isEmpty {
+    static func resolveAPIKey(
+        defaults: UserDefaults?,
+        providerId: String,
+        preferICloudSync: Bool = false
+    ) -> String {
+        if let stored = Keychain.apiKey(for: providerId, preferICloudSync: preferICloudSync), !stored.isEmpty {
             return stored
         }
         if let legacyKeychain = Keychain.legacyAPIKey(), !legacyKeychain.isEmpty {
-            try? Keychain.setAPIKey(legacyKeychain, for: providerId)
+            try? Keychain.setAPIKey(legacyKeychain, for: providerId, useICloudSync: preferICloudSync)
             try? Keychain.deleteLegacyAPIKey()
             return legacyKeychain
         }
         if let defaults,
            let legacy = defaults.string(forKey: Keys.apiKeyLegacy),
            !legacy.isEmpty {
-            try? Keychain.setAPIKey(legacy, for: providerId)
+            try? Keychain.setAPIKey(legacy, for: providerId, useICloudSync: preferICloudSync)
             defaults.removeObject(forKey: Keys.apiKeyLegacy)
             return legacy
         }

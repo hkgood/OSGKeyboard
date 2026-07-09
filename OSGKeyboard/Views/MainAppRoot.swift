@@ -29,7 +29,9 @@ struct MainAppRoot: View {
                 FlowColdStartOverlay(
                     context: context,
                     onReturnToHost: { flowManager.returnToPendingHostFromColdStart() },
-                    onDismiss: { flowManager.dismissColdStartOverlay() }
+                    onDismiss: { flowManager.dismissColdStartOverlay() },
+                    onRetry: { flowManager.retryColdStartReadiness() },
+                    onOpenSettings: { flowManager.openColdStartPermissionSettings() }
                 )
                 .transition(.opacity)
             }

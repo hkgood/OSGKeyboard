@@ -8,8 +8,12 @@ import Foundation
 
 public enum FlowSessionDarwin {
     public static let notificationName = "com.osgkeyboard.flow.session.changed"
+    /// Posted when the keyboard writes a command for the host app.
+    public static let commandNotificationName = "com.osgkeyboard.flow.command.changed"
     /// Posted when the host app writes a transcription result or error.
     public static let transcriptionNotificationName = "com.osgkeyboard.flow.transcription.changed"
+    /// Posted when the host app publishes or clears the ready contract.
+    public static let hostReadyNotificationName = "com.osgkeyboard.flow.host.ready.changed"
 
     public static func postSessionChanged() {
         CFNotificationCenterPostNotification(
@@ -21,10 +25,30 @@ public enum FlowSessionDarwin {
         )
     }
 
+    public static func postCommandChanged() {
+        CFNotificationCenterPostNotification(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            CFNotificationName(commandNotificationName as CFString),
+            nil,
+            nil,
+            true
+        )
+    }
+
     public static func postTranscriptionChanged() {
         CFNotificationCenterPostNotification(
             CFNotificationCenterGetDarwinNotifyCenter(),
             CFNotificationName(transcriptionNotificationName as CFString),
+            nil,
+            nil,
+            true
+        )
+    }
+
+    public static func postHostReadyChanged() {
+        CFNotificationCenterPostNotification(
+            CFNotificationCenterGetDarwinNotifyCenter(),
+            CFNotificationName(hostReadyNotificationName as CFString),
             nil,
             nil,
             true

@@ -8,7 +8,7 @@ import Foundation
 import os
 
 public final class CloudASRService: ASRService, @unchecked Sendable {
-    private let store: AppGroupStore
+    private let store: any ConfigurationStore
     private let session: URLSession
     private let localFallback: ASRService
     private let lock = OSAllocatedUnfairLock()
@@ -18,7 +18,7 @@ public final class CloudASRService: ASRService, @unchecked Sendable {
     private var cancelled = false
 
     public init(
-        store: AppGroupStore = AppGroupStore(),
+        store: any ConfigurationStore = AppGroupStore(),
         session: URLSession = .shared,
         localFallback: ASRService? = nil
     ) {

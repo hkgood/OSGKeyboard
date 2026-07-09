@@ -138,8 +138,7 @@ public struct KeyboardRootView: View {
             TranscriptLine(
                 phase: state.phase,
                 transcript: state.lastTranscript,
-                flowSessionActive: state.flowSessionActive,
-                micDisabled: state.micDisabled,
+                micVoiceAvailability: state.micVoiceAvailability,
                 micDisabledHint: state.micDisabledHint,
                 cursorDragHintActive: state.cursorDragActive,
                 openSettings: state.openSettings
@@ -192,7 +191,6 @@ public struct KeyboardRootView: View {
     private var micActionRow: some View {
         let editingBlocked = voiceInputBlocksEditing
         let swapKeys = state.handednessPreference.swapsActionKeys
-        let micDisabled = state.micDisabled
         let cursorPadsEnabled = state.cursorDragNavigationEnabled && !editingBlocked
 
         // Dragging hides the mic + bottom keys (kept in the layout via
@@ -208,7 +206,7 @@ public struct KeyboardRootView: View {
                     phase: buttonPhase,
                     level: state.level,
                     remainingSeconds: state.phase == .recording ? state.utteranceRemainingSeconds : nil,
-                    isEnabled: !micDisabled,
+                    isEnabled: !state.micDisabled,
                     onToggle: state.tapMic
                 )
                 .frame(width: KeyboardLayoutMetrics.micSize, height: KeyboardLayoutMetrics.micSize)
@@ -284,13 +282,17 @@ public struct KeyboardRootView: View {
     }
 
     private var buttonPhase: RecordButton.Phase {
-        switch state.phase {
-        case .idle:                       return .idle
-        case .requestingPermissions:      return .idle
-        case .recording:                  return .recording
-        case .processing:                 return .processing
-        case .error:                      return .error
-        case .denied:                     return .error
+        if case .error = state.phase { return .error }
+        if case .denied = state.phase { return .error }
+        switch state.micVoiceAvailability {
+        case .ready:
+            return .idleReady
+        case .unavailable:
+            return .idleUnavailable
+        case .recording:
+            return .recording
+        case .processing:
+            return .processing
         }
     }
 }
@@ -330,8 +332,7 @@ private struct TranscriptLine: View {
 
     let phase: KeyboardViewController.State.Phase
     let transcript: String
-    let flowSessionActive: Bool
-    let micDisabled: Bool
+    let micVoiceAvailability: MicVoiceAvailability
     let micDisabledHint: String
     let cursorDragHintActive: Bool
     let openSettings: () -> Void
@@ -353,64 +354,77 @@ private struct TranscriptLine: View {
     private var phaseContent: some View {
         switch phase {
         case .idle:
-                if micDisabled {
-                    Text(micDisabledHint)
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.warning)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                } else if flowSessionActive {
-                    ExtL10n.text("keyboard.placeholder.idle")
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.textTertiary)
-                } else {
-                    ExtL10n.text("keyboard.flow.sessionInactive")
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.textTertiary)
-                }
-            case .requestingPermissions:
-                HStack(spacing: 6) {
-                    ProgressView().controlSize(.mini).tint(palette.textSecondary)
-                    ExtL10n.text("keyboard.placeholder.preparing")
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.textSecondary)
-                }
-            case .recording:
-                Text(transcript.isEmpty ? " " : transcript)
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textPrimary)
-                    .lineLimit(1)
-                    .truncationMode(.head)
-                    .frame(maxWidth: .infinity)
-            case .processing:
-                Text(transcript.isEmpty ? ExtL10n.string("keyboard.placeholder.processing") : transcript)
+            idleHint
+        case .requestingPermissions:
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.mini).tint(palette.textSecondary)
+                ExtL10n.text("keyboard.placeholder.preparing")
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            case .error(_, let msg):
-                Text(msg ?? "")
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.warning)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            case .denied(let reason):
-                Button(action: openSettings) {
-                    HStack(spacing: 4) {
-                        Text(deniedMessage(for: reason))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .semibold))
-                    }
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.warning)
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
+            }
+        case .recording:
+            Text(transcript.isEmpty ? " " : transcript)
+                .font(TypeStyle.caption)
+                .foregroundStyle(palette.textPrimary)
+                .lineLimit(1)
+                .truncationMode(.head)
+                .frame(maxWidth: .infinity)
+        case .processing:
+            Text(transcript.isEmpty ? ExtL10n.string("keyboard.placeholder.processing") : transcript)
+                .font(TypeStyle.caption)
+                .foregroundStyle(palette.textSecondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        case .error(_, let msg):
+            Text(msg ?? "")
+                .font(TypeStyle.caption)
+                .foregroundStyle(palette.warning)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        case .denied(let reason):
+            Button(action: openSettings) {
+                HStack(spacing: 4) {
+                    Text(deniedMessage(for: reason))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
                 }
-                .buttonStyle(.plain)
-                .accessibilityHint(ExtL10n.text("keyboard.deniedHint"))
+                .font(TypeStyle.caption)
+                .foregroundStyle(palette.warning)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(ExtL10n.text("keyboard.deniedHint"))
         }
+    }
+
+    @ViewBuilder
+    private var idleHint: some View {
+        let isWarning = micVoiceAvailability.isUnavailable
+        Group {
+            switch micVoiceAvailability {
+            case .ready:
+                ExtL10n.text("keyboard.placeholder.idle")
+            case .unavailable(.missingAPIKey):
+                Text(micDisabledHint)
+            case .unavailable(.hostNotReady):
+                ExtL10n.text("keyboard.flow.sessionInactive")
+            case .unavailable(.preparingSession):
+                ExtL10n.text("keyboard.flow.startingSession")
+            case .unavailable(.noFullAccess):
+                ExtL10n.text("keyboard.error.fullAccessRequired")
+            case .unavailable(.appGroupUnavailable):
+                ExtL10n.text("keyboard.error.appGroupCommunication")
+            case .recording, .processing:
+                EmptyView()
+            }
+        }
+        .font(TypeStyle.caption)
+        .foregroundStyle(isWarning ? palette.warning : palette.textTertiary)
+        .lineLimit(1)
+        .truncationMode(.tail)
     }
 
     private func deniedMessage(for reason: KeyboardViewController.State.Phase.Reason) -> String {

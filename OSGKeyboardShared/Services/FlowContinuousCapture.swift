@@ -123,6 +123,26 @@ private final class FlowLevelStore: @unchecked Sendable {
     }
 }
 
+/// Last observed audio tap timestamp. This lets the host publish "ready"
+/// only after the microphone pipeline has produced real frames.
+private final class FlowAudioProofStore: @unchecked Sendable {
+    private let lock = OSAllocatedUnfairLock(initialState: TimeInterval(0))
+
+    func markFrameReceived() {
+        lock.withLock { $0 = Date().timeIntervalSince1970 }
+    }
+
+    func reset() {
+        lock.withLock { $0 = 0 }
+    }
+
+    func hasRecentFrame(maxAge: TimeInterval) -> Bool {
+        let timestamp = lock.withLock { $0 }
+        guard timestamp > 0 else { return false }
+        return Date().timeIntervalSince1970 - timestamp <= maxAge
+    }
+}
+
 /// Route-adaptive downsampling converter, safe to call from the realtime tap.
 ///
 /// `AVAudioEngine.installTap(format:)` traps with an **uncatchable** NSException
@@ -207,6 +227,7 @@ public final class FlowContinuousCapture {
     private let streamRelay = FlowCaptureStreamRelay()
     private let prerollStore = FlowPrerollStore()
     private let levelStore = FlowLevelStore(barCount: FlowCaptureConstants.levelBarCount)
+    private let audioProofStore = FlowAudioProofStore()
     private let gate = OSAllocatedUnfairLock(initialState: UtteranceGatePhase.idle)
     private let drainTracker = FlowCaptureDrainTracker()
     private let tailSampleCounter = OSAllocatedUnfairLock(initialState: 0)
@@ -229,12 +250,28 @@ public final class FlowContinuousCapture {
 
     public var running: Bool { isRunning }
 
+    /// True when the capture session flag, tap, and audio engine are all live.
+    public var engineIsLive: Bool {
+        isRunning && didInstallTap && audioEngine.isRunning
+    }
+
+    /// True only when the engine is live and the input tap has recently
+    /// delivered an actual audio frame.
+    public func engineHasRecentAudio(maxAge: TimeInterval = 1) -> Bool {
+        engineIsLive && audioProofStore.hasRecentFrame(maxAge: maxAge)
+    }
+
+    /// Called on the main actor when `engineIsLive` may have changed.
+    public var onEngineLiveChanged: ((Bool) -> Void)?
+
     /// Configure `.playAndRecord`, install a permanent input tap, start the engine.
     public func start() throws {
         guard !isRunning else { return }
+        audioProofStore.reset()
         try activateEngine()
         isRunning = true
         installSessionObservers()
+        notifyEngineLiveChanged()
     }
 
     /// Bring up the audio session + engine for the *current* hardware route.
@@ -289,6 +326,7 @@ public final class FlowContinuousCapture {
         let relay = streamRelay
         let preroll = prerollStore
         let levels = levelStore
+        let proof = audioProofStore
         let tracker = drainTracker
         let tailCounter = tailSampleCounter
         let policy = drainPolicy
@@ -296,6 +334,7 @@ public final class FlowContinuousCapture {
             downsampler: downsampler,
             gate: gateLock,
             levelStore: levels,
+            audioProofStore: proof,
             prerollStore: preroll,
             streamRelay: relay,
             drainTracker: tracker,
@@ -332,6 +371,7 @@ public final class FlowContinuousCapture {
             audioEngine.stop()
         }
         isRunning = false
+        audioProofStore.reset()
         downsampler = nil
         targetFormat = nil
         hwFormat = nil
@@ -339,22 +379,45 @@ public final class FlowContinuousCapture {
             false,
             options: .notifyOthersOnDeactivation
         )
+        notifyEngineLiveChanged()
     }
 
     /// Re-activate capture after returning from background without
     /// reinstalling the tap (iOS may deactivate the audio session).
-    public func reassertIfRunning() {
-        guard isRunning else { return }
+    @discardableResult
+    public func reassertIfRunning() -> Bool {
+        guard isRunning else { return false }
         let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(
-            .playAndRecord,
-            mode: .measurement,
-            options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
-        )
-        try? session.setActive(true, options: .notifyOthersOnDeactivation)
-        if !audioEngine.isRunning {
-            try? audioEngine.start()
+        do {
+            try session.setCategory(
+                .playAndRecord,
+                mode: .measurement,
+                options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
+            )
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+            if !audioEngine.isRunning {
+                try audioEngine.start()
+            }
+            notifyEngineLiveChanged()
+            return engineIsLive
+        } catch {
+            notifyEngineLiveChanged()
+            return false
         }
+    }
+
+    public func awaitAudioFlowing(
+        timeout: TimeInterval,
+        recentFrameMaxAge: TimeInterval = 1
+    ) async -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if engineHasRecentAudio(maxAge: recentFrameMaxAge) {
+                return true
+            }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        return engineHasRecentAudio(maxAge: recentFrameMaxAge)
     }
 
     // MARK: - Route / interruption recovery
@@ -434,6 +497,7 @@ public final class FlowContinuousCapture {
         switch type {
         case .began:
             log.info("Audio interruption began")
+            notifyEngineLiveChanged()
         case .ended:
             guard isRunning else { return }
             let shouldResume: Bool
@@ -462,9 +526,15 @@ public final class FlowContinuousCapture {
         }
         do {
             try activateEngine()
+            notifyEngineLiveChanged()
         } catch {
             log.error("Engine rebuild failed: \(error.localizedDescription, privacy: .public)")
+            notifyEngineLiveChanged()
         }
+    }
+
+    private func notifyEngineLiveChanged() {
+        onEngineLiveChanged?(engineIsLive)
     }
 
     /// Begin forwarding downsampled buffers to ASR for one utterance.
@@ -546,6 +616,7 @@ public final class FlowContinuousCapture {
         downsampler: AdaptiveDownsampler,
         gate: OSAllocatedUnfairLock<UtteranceGatePhase>,
         levelStore: FlowLevelStore,
+        audioProofStore: FlowAudioProofStore,
         prerollStore: FlowPrerollStore,
         streamRelay: FlowCaptureStreamRelay,
         drainTracker: FlowCaptureDrainTracker,
@@ -553,6 +624,7 @@ public final class FlowContinuousCapture {
         drainPolicy: FlowCaptureTailDrainPolicy
     ) -> @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void {
         return { buffer, _ in
+            audioProofStore.markFrameReceived()
             levelStore.update(from: buffer, barCount: FlowCaptureConstants.levelBarCount)
 
             // Derive the converter from the *live* buffer format so a mid-session

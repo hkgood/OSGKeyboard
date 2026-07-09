@@ -64,3 +64,12 @@ OSGKeyboard/Resources/CustomLanguageModel/v1/compiled/
 # Python bytecode
 __pycache__/
 *.pyc
+
+# Local debug capture logs and screenshots
+.flow-capture.log
+.flow-oslog-capture.log
+.flow-*.log
+.osg_*.png
+
+# Standalone experiment: 灵动岛录音机制验证 demo (throwaway)
+AudioIntentProbe/

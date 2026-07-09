@@ -6,6 +6,158 @@
 
 import Foundation
 
+public struct FlowCommand: Codable, Equatable, Sendable {
+    public enum Action: String, Codable, Sendable {
+        case startRecording
+        case stopRecording
+        case abort
+    }
+
+    public let protocolVersion: Int
+    public let sessionId: UUID
+    public let utteranceId: UUID
+    public let commandSeq: Int64
+    public let action: Action
+    public let localeId: String
+    public let createdAt: TimeInterval
+
+    public init(
+        protocolVersion: Int = 1,
+        sessionId: UUID,
+        utteranceId: UUID,
+        commandSeq: Int64,
+        action: Action,
+        localeId: String,
+        createdAt: TimeInterval = Date().timeIntervalSince1970
+    ) {
+        self.protocolVersion = protocolVersion
+        self.sessionId = sessionId
+        self.utteranceId = utteranceId
+        self.commandSeq = commandSeq
+        self.action = action
+        self.localeId = localeId
+        self.createdAt = createdAt
+    }
+}
+
+public struct FlowResult: Codable, Equatable, Sendable {
+    public enum Status: String, Codable, Sendable {
+        case partial
+        case final
+        case error
+        case aborted
+        case timeout
+    }
+
+    public let protocolVersion: Int
+    public let sessionId: UUID
+    public let utteranceId: UUID
+    public let commandSeq: Int64
+    public let status: Status
+    public let text: String?
+    public let warning: String?
+    public let errorKind: FlowSessionKeys.TranscriptionErrorKind?
+    public let createdAt: TimeInterval
+
+    public init(
+        protocolVersion: Int = 1,
+        sessionId: UUID,
+        utteranceId: UUID,
+        commandSeq: Int64,
+        status: Status,
+        text: String? = nil,
+        warning: String? = nil,
+        errorKind: FlowSessionKeys.TranscriptionErrorKind? = nil,
+        createdAt: TimeInterval = Date().timeIntervalSince1970
+    ) {
+        self.protocolVersion = protocolVersion
+        self.sessionId = sessionId
+        self.utteranceId = utteranceId
+        self.commandSeq = commandSeq
+        self.status = status
+        self.text = text
+        self.warning = warning
+        self.errorKind = errorKind
+        self.createdAt = createdAt
+    }
+}
+
+public struct FlowAck: Codable, Equatable, Sendable {
+    public let protocolVersion: Int
+    public let sessionId: UUID
+    public let utteranceId: UUID
+    public let commandSeq: Int64
+    public let consumedAt: TimeInterval
+
+    public init(
+        protocolVersion: Int = 1,
+        sessionId: UUID,
+        utteranceId: UUID,
+        commandSeq: Int64,
+        consumedAt: TimeInterval = Date().timeIntervalSince1970
+    ) {
+        self.protocolVersion = protocolVersion
+        self.sessionId = sessionId
+        self.utteranceId = utteranceId
+        self.commandSeq = commandSeq
+        self.consumedAt = consumedAt
+    }
+}
+
+public struct FlowReadySnapshot: Codable, Equatable, Sendable {
+    public enum Reason: String, Codable, Sendable {
+        case ready
+        case noSession
+        case starting
+        case audioEngineNotLive
+        case waitingForAudioProof
+        case recording
+        case processing
+        case permissionMissing
+        case appGroupUnavailable
+        case hostLost
+        case error
+    }
+
+    public let protocolVersion: Int
+    public let sessionId: UUID?
+    public let ready: Bool
+    public let reason: Reason
+    public let heartbeatAt: TimeInterval
+    public let readyAt: TimeInterval?
+    public let audioProofAt: TimeInterval?
+    public let engineMode: String
+    public let localeId: String
+    public let busyUtteranceId: UUID?
+    public let sessionExpiresAt: TimeInterval?
+
+    public init(
+        protocolVersion: Int = 1,
+        sessionId: UUID?,
+        ready: Bool,
+        reason: Reason,
+        heartbeatAt: TimeInterval = Date().timeIntervalSince1970,
+        readyAt: TimeInterval? = nil,
+        audioProofAt: TimeInterval? = nil,
+        engineMode: String,
+        localeId: String,
+        busyUtteranceId: UUID? = nil,
+        sessionExpiresAt: TimeInterval? = nil
+    ) {
+        self.protocolVersion = protocolVersion
+        self.sessionId = sessionId
+        self.ready = ready
+        self.reason = reason
+        self.heartbeatAt = heartbeatAt
+        self.readyAt = readyAt
+        self.audioProofAt = audioProofAt
+        self.engineMode = engineMode
+        self.localeId = localeId
+        self.busyUtteranceId = busyUtteranceId
+        self.sessionExpiresAt = sessionExpiresAt
+    }
+}
+
 public struct FlowTranscriptionError: Equatable, Sendable {
     public let message: String
     public let kind: FlowSessionKeys.TranscriptionErrorKind
@@ -36,10 +188,105 @@ public enum FlowSessionBridge {
         }
     }
 
+    private static func encode<T: Encodable>(_ value: T) -> Data? {
+        try? JSONEncoder().encode(value)
+    }
+
+    private static func decode<T: Decodable>(_ type: T.Type, from data: Data?) -> T? {
+        guard let data else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
+    }
+
+    /// Keyboard/read side: refresh App Group defaults after the extension was
+    /// suspended so decisions are not based on stale in-process caches.
+    public static func reloadFromDisk(defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        if Thread.isMainThread {
+            store.synchronize()
+        }
+    }
+
+    // MARK: - Typed Flow protocol
+
+    public static func writeCommand(_ command: FlowCommand, defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        if let data = encode(command) {
+            store.set(data, forKey: FlowSessionKeys.flowCommandPayload)
+        }
+        flush(store)
+        FlowSessionDarwin.postCommandChanged()
+    }
+
+    public static func latestCommand(defaults: UserDefaults? = nil) -> FlowCommand? {
+        let store = resolvedDefaults(defaults)
+        return decode(FlowCommand.self, from: store.data(forKey: FlowSessionKeys.flowCommandPayload))
+    }
+
+    public static func writeResult(_ result: FlowResult, defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        if let data = encode(result) {
+            store.set(data, forKey: FlowSessionKeys.flowResultPayload)
+        }
+        flush(store)
+        FlowSessionDarwin.postTranscriptionChanged()
+    }
+
+    public static func latestResult(defaults: UserDefaults? = nil) -> FlowResult? {
+        let store = resolvedDefaults(defaults)
+        return decode(FlowResult.self, from: store.data(forKey: FlowSessionKeys.flowResultPayload))
+    }
+
+    public static func clearResult(defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        store.removeObject(forKey: FlowSessionKeys.flowResultPayload)
+        flush(store)
+    }
+
+    public static func writeAck(_ ack: FlowAck, defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        if let data = encode(ack) {
+            store.set(data, forKey: FlowSessionKeys.flowAckPayload)
+        }
+        flush(store)
+    }
+
+    public static func latestAck(defaults: UserDefaults? = nil) -> FlowAck? {
+        let store = resolvedDefaults(defaults)
+        return decode(FlowAck.self, from: store.data(forKey: FlowSessionKeys.flowAckPayload))
+    }
+
+    public static func writeReadySnapshot(_ snapshot: FlowReadySnapshot, defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        if let data = encode(snapshot) {
+            store.set(data, forKey: FlowSessionKeys.flowReadyPayload)
+        }
+        if snapshot.ready {
+            store.set(true, forKey: FlowSessionKeys.flowHostReady)
+            if let readyAt = snapshot.readyAt {
+                store.set(readyAt, forKey: FlowSessionKeys.flowHostReadyAt)
+            }
+        } else {
+            clearHostReady(defaults: store, notify: false)
+            store.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
+        }
+        if let expires = snapshot.sessionExpiresAt {
+            store.set(expires, forKey: FlowSessionKeys.flowSessionExpires)
+        }
+        store.set(snapshot.heartbeatAt, forKey: FlowSessionKeys.flowHeartbeat)
+        flush(store)
+        FlowSessionDarwin.postHostReadyChanged()
+    }
+
+    public static func readySnapshot(defaults: UserDefaults? = nil) -> FlowReadySnapshot? {
+        let store = resolvedDefaults(defaults)
+        return decode(FlowReadySnapshot.self, from: store.data(forKey: FlowSessionKeys.flowReadyPayload))
+    }
+
     // MARK: - Session lifecycle (host app)
 
     public static func markSessionActive(
         duration: TimeInterval? = nil,
+        sessionId: UUID? = nil,
         defaults: UserDefaults? = nil
     ) {
         let store = resolvedDefaults(defaults)
@@ -50,8 +297,26 @@ public enum FlowSessionBridge {
         store.set(expires, forKey: FlowSessionKeys.flowSessionExpires)
         store.set(now, forKey: FlowSessionKeys.lastActivityAt)
         writeHeartbeat(defaults: store)
-        setRecordingState(.idle, defaults: store)
         clearTranscription(defaults: store)
+        store.removeObject(forKey: FlowSessionKeys.flowCommandPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowResultPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowAckPayload)
+        if let sessionId {
+            let snapshot = FlowReadySnapshot(
+                sessionId: sessionId,
+                ready: false,
+                reason: .starting,
+                heartbeatAt: now,
+                engineMode: AppGroupConfiguration.load(fromAvailable: store).engineMode,
+                localeId: AppGroupConfiguration.load(fromAvailable: store).localeId,
+                sessionExpiresAt: expires
+            )
+            if let data = encode(snapshot) {
+                store.set(data, forKey: FlowSessionKeys.flowReadyPayload)
+            }
+        } else {
+            store.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
+        }
         flush(store)
     }
 
@@ -60,14 +325,22 @@ public enum FlowSessionBridge {
         store.set(false, forKey: FlowSessionKeys.flowSessionActive)
         store.removeObject(forKey: FlowSessionKeys.flowSessionExpires)
         store.removeObject(forKey: FlowSessionKeys.flowHeartbeat)
-        setRecordingState(.idle, defaults: store)
         clearTranscription(defaults: store)
+        store.removeObject(forKey: FlowSessionKeys.flowCommandPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowResultPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowAckPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
+        clearHostReady(defaults: store, notify: false)
         flush(store)
     }
 
     public static func writeHeartbeat(defaults: UserDefaults? = nil) {
         let store = resolvedDefaults(defaults)
-        store.set(Date().timeIntervalSince1970, forKey: FlowSessionKeys.flowHeartbeat)
+        let now = Date().timeIntervalSince1970
+        store.set(now, forKey: FlowSessionKeys.flowHeartbeat)
+        if store.bool(forKey: FlowSessionKeys.flowHostReady) {
+            store.set(now, forKey: FlowSessionKeys.flowHostReadyAt)
+        }
         flush(store)
     }
 
@@ -118,8 +391,7 @@ public enum FlowSessionBridge {
     // MARK: - Session validity (keyboard)
 
     /// True when the App Group session contract is still valid (not expired).
-    /// Does **not** mean the host process is alive — use `isHostReachable()` for
-    /// recording gates and "session ready" UI.
+    /// Does **not** mean the host can accept utterances — use `isHostReady()`.
     public static func isSessionActive(defaults: UserDefaults? = nil) -> Bool {
         let store = resolvedDefaults(defaults)
         guard store.bool(forKey: FlowSessionKeys.flowSessionActive) else { return false }
@@ -137,13 +409,60 @@ public enum FlowSessionBridge {
     }
 
     /// True when the host app recently wrote a heartbeat (foreground or
-    /// actively processing). Gating record / "session ready" UI must use this,
-    /// not `isSessionActive()` alone.
+    /// actively processing). Use for zombie / disconnect detection — **not**
+    /// for mic-ready UI; prefer `isHostReady()`.
     public static func isHostReachable(defaults: UserDefaults? = nil) -> Bool {
         let store = resolvedDefaults(defaults)
         guard isSessionActive(defaults: store) else { return false }
         guard let staleness = heartbeatStaleness(defaults: store) else { return false }
         return staleness <= FlowSessionKeys.heartbeatStaleInterval
+    }
+
+    // MARK: - Host ready contract (host app → keyboard)
+
+    /// Host app: publish whether Flow can accept a new utterance right now.
+    public static func setHostReady(
+        _ ready: Bool,
+        defaults: UserDefaults? = nil,
+        notify: Bool = true
+    ) {
+        let store = resolvedDefaults(defaults)
+        if ready {
+            let now = Date().timeIntervalSince1970
+            store.set(true, forKey: FlowSessionKeys.flowHostReady)
+            store.set(now, forKey: FlowSessionKeys.flowHostReadyAt)
+            writeHeartbeat(defaults: store)
+        } else {
+            clearHostReady(defaults: store, notify: false)
+        }
+        flush(store)
+        if notify {
+            FlowSessionDarwin.postHostReadyChanged()
+        }
+    }
+
+    /// True when the host has published a fresh ready contract (stricter than heartbeat alone).
+    public static func isHostReady(defaults: UserDefaults? = nil) -> Bool {
+        let store = resolvedDefaults(defaults)
+        if let snapshot = readySnapshot(defaults: store) {
+            guard snapshot.ready else { return false }
+            guard isHostReachable(defaults: store) else { return false }
+            if let readyAt = snapshot.readyAt {
+                let skew = abs(snapshot.heartbeatAt - readyAt)
+                guard skew <= FlowSessionKeys.hostReadyMaxHeartbeatSkew else { return false }
+            }
+            return true
+        }
+        guard isHostReachable(defaults: store) else { return false }
+        return store.bool(forKey: FlowSessionKeys.flowHostReady)
+    }
+
+    private static func clearHostReady(defaults: UserDefaults, notify: Bool) {
+        defaults.removeObject(forKey: FlowSessionKeys.flowHostReady)
+        defaults.removeObject(forKey: FlowSessionKeys.flowHostReadyAt)
+        if notify {
+            FlowSessionDarwin.postHostReadyChanged()
+        }
     }
 
     /// True when the session contract flag is still set but the host heartbeat
@@ -342,10 +661,15 @@ public enum FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.flowHeartbeat)
         store.removeObject(forKey: FlowSessionKeys.keyboardRecordingState)
         store.removeObject(forKey: FlowSessionKeys.transcriptionLanguage)
+        store.removeObject(forKey: FlowSessionKeys.flowCommandPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowResultPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowAckPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
         clearTranscription(defaults: store)
         store.removeObject(forKey: FlowSessionKeys.audioLevels)
         store.removeObject(forKey: FlowSessionKeys.pendingHostBundleId)
         store.removeObject(forKey: FlowSessionKeys.lastActivityAt)
+        clearHostReady(defaults: store, notify: false)
         flush(store)
     }
 

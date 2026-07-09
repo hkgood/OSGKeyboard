@@ -1,9 +1,8 @@
 // SyncedAppSettings.swift
 // OSGKeyboard · Shared
 //
-// User-facing app settings mirrored through iCloud KVS. Excludes
-// device-local state (onboarding progress, detected app context,
-// personal dictionary blob, and API keys in Keychain).
+// Legacy v1 settings blob (read-only migration input). New sync uses
+// `SyncedAppSettingsV2`. API keys never belong in KVS payloads.
 
 import Foundation
 
@@ -23,6 +22,8 @@ public struct SyncedAppSettings: Codable, Sendable, Equatable {
     public var polishIntensity: PolishIntensity
     public var flowSkipAppSwitch: Bool
     public var flowInactivityDuration: FlowInactivityDuration
+    /// Deprecated — decoded for backward compatibility only; never applied.
+    public var providerAPIKeys: [String: String]
 
     public init(
         updatedAt: Date = Date(),
@@ -39,7 +40,8 @@ public struct SyncedAppSettings: Codable, Sendable, Equatable {
         cursorDragNavigationEnabled: Bool,
         polishIntensity: PolishIntensity,
         flowSkipAppSwitch: Bool,
-        flowInactivityDuration: FlowInactivityDuration
+        flowInactivityDuration: FlowInactivityDuration,
+        providerAPIKeys: [String: String] = [:]
     ) {
         self.updatedAt = updatedAt
         self.providerId = providerId
@@ -56,11 +58,51 @@ public struct SyncedAppSettings: Codable, Sendable, Equatable {
         self.polishIntensity = polishIntensity
         self.flowSkipAppSwitch = flowSkipAppSwitch
         self.flowInactivityDuration = flowInactivityDuration
+        self.providerAPIKeys = providerAPIKeys
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        providerId = try container.decode(String.self, forKey: .providerId)
+        baseURL = try container.decode(String.self, forKey: .baseURL)
+        model = try container.decode(String.self, forKey: .model)
+        modeId = try container.decode(String.self, forKey: .modeId)
+        localeId = try container.decode(String.self, forKey: .localeId)
+        engineMode = try container.decode(String.self, forKey: .engineMode)
+        hasAcknowledgedCloudSharing = try container.decode(Bool.self, forKey: .hasAcknowledgedCloudSharing)
+        uiLanguage = try container.decode(AppUILanguage.self, forKey: .uiLanguage)
+        translationTargetLocaleId = try container.decode(String.self, forKey: .translationTargetLocaleId)
+        handednessPreference = try container.decode(HandednessPreference.self, forKey: .handednessPreference)
+        cursorDragNavigationEnabled = try container.decode(Bool.self, forKey: .cursorDragNavigationEnabled)
+        polishIntensity = try container.decode(PolishIntensity.self, forKey: .polishIntensity)
+        flowSkipAppSwitch = try container.decode(Bool.self, forKey: .flowSkipAppSwitch)
+        flowInactivityDuration = try container.decode(FlowInactivityDuration.self, forKey: .flowInactivityDuration)
+        providerAPIKeys = try container.decodeIfPresent([String: String].self, forKey: .providerAPIKeys) ?? [:]
+    }
+
+    /// Apply legacy scalar fields only — never touches Keychain.
+    func applyingScalars(to configuration: inout AppGroupConfiguration) {
+        configuration.providerId = providerId
+        configuration.baseURL = baseURL
+        configuration.model = model
+        configuration.modeId = modeId
+        configuration.localeId = localeId
+        configuration.engineMode = engineMode
+        configuration.hasAcknowledgedCloudSharing = hasAcknowledgedCloudSharing
+        configuration.uiLanguage = uiLanguage
+        configuration.translationTargetLocaleId = translationTargetLocaleId
+        configuration.handednessPreference = handednessPreference
+        configuration.cursorDragNavigationEnabled = cursorDragNavigationEnabled
+        configuration.polishIntensity = polishIntensity
+        configuration.flowSkipAppSwitch = flowSkipAppSwitch
+        configuration.flowInactivityDuration = flowInactivityDuration
     }
 }
 
 public extension SyncedAppSettings {
-    /// Build a cloud payload from the current App Group configuration.
+    static let legacyKVSKey = "appSettings.v1"
+
     static func from(configuration: AppGroupConfiguration, updatedAt: Date = Date()) -> SyncedAppSettings {
         SyncedAppSettings(
             updatedAt: updatedAt,
@@ -79,29 +121,5 @@ public extension SyncedAppSettings {
             flowSkipAppSwitch: configuration.flowSkipAppSwitch,
             flowInactivityDuration: configuration.flowInactivityDuration
         )
-    }
-
-    /// Apply syncable fields onto a configuration, preserving device-local
-    /// fields such as onboarding progress and the personal dictionary.
-    func applying(to configuration: inout AppGroupConfiguration) {
-        configuration.providerId = providerId
-        configuration.baseURL = baseURL
-        configuration.model = model
-        configuration.modeId = modeId
-        configuration.localeId = localeId
-        configuration.engineMode = engineMode
-        configuration.hasAcknowledgedCloudSharing = hasAcknowledgedCloudSharing
-        configuration.uiLanguage = uiLanguage
-        configuration.translationTargetLocaleId = translationTargetLocaleId
-        configuration.handednessPreference = handednessPreference
-        configuration.cursorDragNavigationEnabled = cursorDragNavigationEnabled
-        configuration.polishIntensity = polishIntensity
-        configuration.flowSkipAppSwitch = flowSkipAppSwitch
-        configuration.flowInactivityDuration = flowInactivityDuration
-    }
-
-    /// Last-write-wins merge for whole settings blobs.
-    static func merge(local: SyncedAppSettings, remote: SyncedAppSettings) -> SyncedAppSettings {
-        remote.updatedAt >= local.updatedAt ? remote : local
     }
 }

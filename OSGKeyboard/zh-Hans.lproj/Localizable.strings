@@ -368,8 +368,9 @@
 "settings.personalDictionary.iCloudSync.error.generic" = "无法与 iCloud 同步词库，请稍后重试。";
 
 "settings.iCloudSync.title" = "iCloud 同步";
-"settings.appSettings.iCloudSync.title" = "设置 iCloud 同步";
-"settings.appSettings.iCloudSync.subtitle" = "在多台设备间同步引擎、语言、润色和 Flow 偏好。API 密钥仍保留在各设备本地。";
+"settings.appSettings.iCloudSync.title" = "iCloud 同步";
+"settings.appSettings.iCloudSync.subtitle" = "通过 iCloud 在多台设备间同步设置、使用统计、语音历史与 API 密钥。API 密钥经私人 iCloud 钥匙串同步。";
+"settings.appSettings.iCloudSync.syncNow" = "立即同步";
 "settings.appSettings.iCloudSync.error.generic" = "无法与 iCloud 同步设置，请稍后重试。";
 
 /* v0.3.0: 润色强度 */
@@ -390,7 +391,14 @@
 
 /* 冷启动兜底（方案 B） */
 "flow.coldStart.title" = "语音已就绪";
-"flow.coldStart.swipeHint" = "沿屏幕底部的横条，从左向右滑动，返回上一个 App。";
+"flow.coldStart.preparing" = "正在就绪";
+"flow.coldStart.preparingHint" = "请先停留片刻，我们正在启动麦克风会话。";
+"flow.coldStart.permission.title" = "需要权限";
+"flow.coldStart.audio.title" = "语音暂时无法启动";
+"flow.coldStart.error.audioTimeout" = "麦克风未能及时就绪，可能正被通话或其他 App 占用。请稍后重试。";
+"flow.coldStart.action.settings" = "前往设置";
+"flow.coldStart.action.retry" = "重试";
+"flow.coldStart.swipeHint" = "沿屏幕底部的横条，从左向右滑动\n返回上一个 App。";
 "flow.coldStart.swipeAccessibility" = "沿底部横条从左向右滑动返回";
 "flow.coldStart.tapToDismiss" = "点按屏幕关闭";
 "flow.coldStart.return.named" = "返回%@";

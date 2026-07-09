@@ -18,6 +18,7 @@ final class KeyboardConfigSync {
 
     private var flowSessionDarwinObserver: FlowSessionDarwinObserver?
     private var transcriptionDarwinObserver: FlowSessionDarwinObserver?
+    private var hostReadyDarwinObserver: FlowSessionDarwinObserver?
     private var configDarwinObserver: FlowSessionDarwinObserver?
 
     init(
@@ -36,6 +37,11 @@ final class KeyboardConfigSync {
         }
         transcriptionDarwinObserver = FlowSessionDarwinObserver(
             notificationName: FlowSessionDarwin.transcriptionNotificationName
+        ) { [weak self] in
+            self?.onFlowSessionChanged()
+        }
+        hostReadyDarwinObserver = FlowSessionDarwinObserver(
+            notificationName: FlowSessionDarwin.hostReadyNotificationName
         ) { [weak self] in
             self?.onFlowSessionChanged()
         }

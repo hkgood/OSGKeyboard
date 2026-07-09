@@ -95,18 +95,3 @@ struct ProviderPickerSection: View {
             .background(palette.accentMuted, in: Capsule())
     }
 }
-
-enum ProviderLogo {
-    static func assetName(for providerId: String) -> String? {
-        switch providerId {
-        case "openai": return "openai"
-        case "deepseek": return "deepseek"
-        case "qwen": return "qwen"
-        case "moonshot": return "moonshot"
-        case "zhipu": return "zhipu"
-        case "mimo": return "mimo"
-        case "custom": return "custom"
-        default: return nil
-        }
-    }
-}
