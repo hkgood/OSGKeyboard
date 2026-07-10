@@ -54,9 +54,10 @@ final class FlowSessionManager: ObservableObject {
     private var currentUtteranceId: UUID?
     private var currentCommandSeq: Int64 = 0
     private var lastHandledCommandSeq: Int64 = 0
-    private var isUtteranceRecording = false
+    /// Published so Home / debug UI can show "recording" instead of a false "ready".
+    @Published private(set) var isUtteranceRecording = false
     /// True from `stopped` until the result/error is written back to App Group.
-    private var isUtteranceProcessing = false
+    @Published private(set) var isUtteranceProcessing = false
     private var finalizeTask: Task<Void, Never>?
     private var asrTask: Task<Void, Never>?
     private var utteranceSafetyTask: Task<Void, Never>?
@@ -77,16 +78,49 @@ final class FlowSessionManager: ObservableObject {
     private var coldStartRecoveryTask: Task<Void, Never>?
     /// Initial proof window — cold mic sessions often need >2.5s after app switch.
     private static let coldStartAudioProofTimeout: TimeInterval = 6
-    /// Extra window after the first timeout while the overlay shows a failure hint.
-    private static let coldStartRecoveryProofTimeout: TimeInterval = 12
+    /// Guards the once-per-process launch reconciliation (scene reconnects
+    /// recreate the `@StateObject`-owned manager within the same process).
+    private static var didRunLaunchReconciliation = false
 
     init() {
         // Sessions are (re)started explicitly on app foreground via
         // `activateOnForeground()`. We deliberately do NOT silently reattach a
         // stored session here — after a force-quit that would resurrect capture
         // (and keep a stale Live Activity alive) without the user re-opening.
+        //
+        // Launch reconciliation: a brand-new process can never own an
+        // in-flight session, so whatever the previous generation persisted
+        // (force-quit skips `applicationWillTerminate` entirely when the app
+        // was suspended) is void. Rotating the generation token also lets the
+        // keyboard invalidate stale ready snapshots instantly instead of
+        // waiting out the 60 s heartbeat-zombie window.
+        //
+        // Once per PROCESS, not per manager: iOS can disconnect and later
+        // reconnect the sole scene without killing the process, which
+        // recreates the `@StateObject` (and thus this init). Re-rotating then
+        // would wipe live state that belongs to this very process.
+        if AppGroup.isAvailable, !Self.didRunLaunchReconciliation {
+            Self.didRunLaunchReconciliation = true
+            let previous = FlowSessionBridge.rotateHostGeneration()
+            if previous != nil || FlowSessionBridge.isSessionActive() {
+                FlowSessionBridge.clearFlowStateOnHostLaunch()
+                FlowLiveActivityController.clearOrphanedActivities()
+                FlowSessionDarwin.postSessionChanged()
+                debug("launch reconciliation: voided previous-generation Flow state")
+            }
+        }
+
         capture.onEngineLiveChanged = { [weak self] _ in
             self?.refreshHostReady()
+        }
+        // A system interruption (call / Siri) stops audio frames mid-utterance;
+        // fail fast so the user is not silently recording into a gap.
+        capture.onInterruptionBegan = { [weak self] in
+            guard let self, self.isUtteranceRecording else { return }
+            self.failUtterance(
+                message: AppL10n.string("flow.error.recognitionInterrupted"),
+                kind: .recognitionInterrupted
+            )
         }
         FlowTerminationCoordinator.register(self)
     }
@@ -126,6 +160,10 @@ final class FlowSessionManager: ObservableObject {
             traceState("startSession.ignored", extra: "reason=alreadyStarting")
             return
         }
+        // Claim the flag synchronously: on a cold start the URL router and
+        // `activateOnForeground()` both fire in the same runloop turn, and
+        // setting it inside the async body let two start bodies interleave.
+        isStarting = true
 
         startTask?.cancel()
         startTask = Task { @MainActor [weak self] in
@@ -190,11 +228,15 @@ final class FlowSessionManager: ObservableObject {
     func dismissColdStartOverlay() {
         coldStartRecoveryTask?.cancel()
         coldStartRecoveryTask = nil
+        // Clear handoff flags BEFORE any refreshHostReady call. Otherwise
+        // refresh → reconcileColdStartOverlayIfRecovered → dismiss → refresh
+        // recurses until the main-thread stack overflows (EXC_BAD_ACCESS,
+        // "Thread stack size exceeded due to excessive recursion").
+        coldStartContext = nil
+        isColdStartHandoff = false
         if isActive {
             refreshHostReady()
         }
-        coldStartContext = nil
-        isColdStartHandoff = false
     }
 
     func returnToPendingHostFromColdStart() {
@@ -204,6 +246,21 @@ final class FlowSessionManager: ObservableObject {
 
     func retryColdStartReadiness() {
         guard AppGroup.isAvailable else { return }
+        // A failed cold start leaves capture in a running-but-dead state on
+        // purpose (the recovery loop keeps probing it). A user-initiated
+        // retry must instead begin from a clean pipeline: tear down capture
+        // and the cached ASR instance so `startSession` rebuilds both —
+        // otherwise the retry reuses the zombie engine and is guaranteed to
+        // hit the same audio-proof timeout.
+        coldStartRecoveryTask?.cancel()
+        coldStartRecoveryTask = nil
+        if capture.running {
+            capture.stop()
+        }
+        sessionASR?.cancel()
+        sessionASR = nil
+        sessionASREngineMode = nil
+        sessionASRWarmedLocaleID = nil
         startSession(coldStart: true)
     }
 
@@ -241,7 +298,10 @@ final class FlowSessionManager: ObservableObject {
 
         if isUtteranceRecording || isUtteranceProcessing {
             capture.cancelUtterance()
-            asr.cancel()
+            // `asr` is a computed property that ALLOCATES a fresh ASRService
+            // when `sessionASR` is nil — never do that inside the ~5 s
+            // termination window; only cancel an instance that exists.
+            sessionASR?.cancel()
         }
 
         capture.cancelUtterance()
@@ -407,16 +467,42 @@ final class FlowSessionManager: ObservableObject {
 
     private func reactivateCaptureIfNeeded() async {
         guard isActive else { return }
+        // A system interruption (call / Siri) may be in progress. Probe it:
+        // `setActive(true)` inside `reassertIfRunning` fails while the
+        // interruption is live and succeeds once it ends — which also covers
+        // the documented case where iOS never delivers `.ended` (the latch
+        // must not depend on that notification, or the session is dead until
+        // its TTL). While the probe fails we deliberately do NOT stop or
+        // rebuild: tearing the engine down would remove the observers the
+        // `.ended` rebuild relies on and churn the shared session mid-call.
+        if capture.isInterrupted {
+            guard capture.reassertIfRunning(), !capture.isInterrupted else { return }
+        }
 
         if capture.running {
             let reasserted = capture.reassertIfRunning()
-            if reasserted, capture.engineHasRecentAudio() {
+            if reasserted, await capture.awaitAudioFlowing(timeout: 2) {
                 sessionWarning = nil
-            } else if !reasserted {
-                sessionWarning = AppL10n.string("flow.error.audioUnavailable")
+                refreshHostReady()
+                return
             }
-            refreshHostReady()
-            return
+            // The await above is a suspension point: the session may have
+            // ended (expiry, user, teardown) while we waited. Never restart
+            // the microphone for a session that no longer exists.
+            guard isActive, !Task.isCancelled else { return }
+            // Never tear capture down underneath a live utterance either — a
+            // stalled route transition mid-recording must surface through the
+            // utterance pipeline (safety timer / empty-transcript error), not
+            // as a silent stop that truncates the take with no error at all.
+            guard !isUtteranceRecording, !isUtteranceProcessing else {
+                refreshHostReady()
+                return
+            }
+            // Reassert failed, or the engine reports running yet produces no
+            // frames (zombie after suspend / mediaserverd reset) — fall
+            // through to a full rebuild instead of leaving it half-dead.
+            capture.stop()
+            debug("capture zombie after foreground — rebuilding")
         }
 
         do {
@@ -442,7 +528,8 @@ final class FlowSessionManager: ObservableObject {
                     reason: .noSession,
                     engineMode: store.engineMode,
                     localeId: store.localeId,
-                    sessionExpiresAt: FlowSessionBridge.sessionExpiresAt()
+                    sessionExpiresAt: FlowSessionBridge.sessionExpiresAt(),
+                    hostGeneration: FlowSessionBridge.currentHostGeneration()
                 )
             )
             return
@@ -486,7 +573,8 @@ final class FlowSessionManager: ObservableObject {
                 engineMode: store.engineMode,
                 localeId: store.localeId,
                 busyUtteranceId: isUtteranceRecording || isUtteranceProcessing ? currentUtteranceId : nil,
-                sessionExpiresAt: FlowSessionBridge.sessionExpiresAt()
+                sessionExpiresAt: FlowSessionBridge.sessionExpiresAt(),
+                hostGeneration: FlowSessionBridge.currentHostGeneration()
             )
         )
         let signature = [
@@ -509,8 +597,18 @@ final class FlowSessionManager: ObservableObject {
     /// shows a stale preparing/failed snapshot, heal automatically.
     private func reconcileColdStartOverlayIfRecovered() {
         guard isColdStartHandoff, isActive else { return }
-        guard FlowSessionBridge.isHostReady() else { return }
         guard let context = coldStartContext else { return }
+
+        // Mid-utterance is not "ready" — dismiss the ready overlay so Home
+        // does not keep advertising "语音已就绪" while utt.rec=1.
+        if isUtteranceRecording || isUtteranceProcessing {
+            if case .ready = context.state {
+                dismissColdStartOverlay()
+            }
+            return
+        }
+
+        guard FlowSessionBridge.isHostReady() else { return }
 
         switch context.state {
         case .preparing:
@@ -556,10 +654,11 @@ final class FlowSessionManager: ObservableObject {
     // MARK: - Session start
 
     private func startSessionAsync(duration: TimeInterval?) async {
-        traceState("startSessionAsync.begin")
-        isStarting = true
-        sessionWarning = nil
+        // `isStarting` was claimed synchronously in `startSession()`.
         defer { isStarting = false }
+        guard !Task.isCancelled else { return }
+        traceState("startSessionAsync.begin")
+        sessionWarning = nil
 
         guard AppPermissions.flowRequirementsMet else {
             sessionWarning = permissionWarningMessage()
@@ -586,7 +685,9 @@ final class FlowSessionManager: ObservableObject {
             return
         }
 
-        guard await waitForAudioProof() else {
+        let audioProved = await waitForAudioProof()
+        guard !Task.isCancelled else { return }
+        guard audioProved else {
             let message = AppL10n.string("flow.coldStart.error.audioTimeout")
             sessionWarning = message
             traceState("startSessionAsync.failed", extra: "reason=audioProofTimeout")
@@ -658,6 +759,16 @@ final class FlowSessionManager: ObservableObject {
 
         refreshHostReady()
         guard FlowSessionBridge.isHostReady() else {
+            // Busy ≠ broken: a startflow arriving mid-utterance (e.g. tapping
+            // the Live Activity while dictating) finds a healthy session that
+            // is simply recording/processing. Showing the audio-failure
+            // overlay here would be a lie — and its recovery loop could even
+            // stop capture and kill the live utterance.
+            if isUtteranceRecording || isUtteranceProcessing {
+                dismissColdStartOverlay()
+                debug("cold-start handoff ignored: session busy with an utterance")
+                return
+            }
             let message = AppL10n.string("flow.coldStart.error.audioTimeout")
             sessionWarning = message
             showColdStartAudioFailure(message: message)
@@ -687,18 +798,54 @@ final class FlowSessionManager: ObservableObject {
         }
     }
 
-    /// Keeps proving mic readiness after the first timeout instead of tearing
-    /// capture down — many handoffs become ready a few seconds later.
+    /// Actively rebuilds the audio pipeline after a failed cold start instead
+    /// of passively waiting for frames that a dead engine will never produce.
+    /// Escalates per attempt: reassert the session → full engine rebuild →
+    /// bounce the audio session and rebuild. Force-quit relaunches routinely
+    /// inherit stale mediaserverd state that only a rebuild clears.
     private func scheduleColdStartRecovery(duration: TimeInterval?) {
         coldStartRecoveryTask?.cancel()
         coldStartRecoveryTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            let recovered = await self.capture.awaitAudioFlowing(
-                timeout: Self.coldStartRecoveryProofTimeout
-            )
+            var recovered = false
+            for attempt in 1...3 {
+                guard !Task.isCancelled, self.isColdStartHandoff else { return }
+                switch attempt {
+                case 1:
+                    _ = self.capture.reassertIfRunning()
+                case 2:
+                    self.capture.stop()
+                    try? self.capture.start()
+                default:
+                    self.capture.stop()
+                    try? await Task.sleep(nanoseconds: 300_000_000)
+                    guard !Task.isCancelled else { return }
+                    try? self.capture.start()
+                }
+                recovered = await self.capture.awaitAudioFlowing(
+                    timeout: TimeInterval(attempt + 1)
+                )
+                self.traceState(
+                    "coldStartRecovery.attempt",
+                    extra: "attempt=\(attempt) recovered=\(recovered)"
+                )
+                if recovered { break }
+            }
             guard !Task.isCancelled else { return }
             guard self.isColdStartHandoff else { return }
-            guard recovered else { return }
+            guard recovered else {
+                // Out of attempts — leave the failure overlay up; its retry
+                // button now performs a full teardown so the user always has
+                // a working escape hatch (no more force-quit loops). Only
+                // tear capture down when no session owns it: for an active
+                // session the 1 Hz heartbeat keeps self-healing, and a stop
+                // here would just fight it.
+                if !self.isActive {
+                    self.capture.stop()
+                }
+                self.traceState("coldStartRecovery.exhausted")
+                return
+            }
 
             self.sessionWarning = nil
             self.traceState("coldStartRecovery.recovered")
@@ -1027,12 +1174,22 @@ final class FlowSessionManager: ObservableObject {
 
         // Do NOT cancel `asrTask` or `asr` — drain trailing PCM, then finalize.
 
+        // Capture ids now: a cancelled finalize must still clear *this*
+        // utterance's processing gate even if currentUtteranceId was cleared
+        // by a racing fail/abort path.
+        let drainingSessionId = activeSessionId
+        let drainingUtteranceId = currentUtteranceId
+        let drainingCommandSeq = currentCommandSeq
         finalizeTask?.cancel()
         finalizeTask = Task { @MainActor [weak self] in
             guard let self else { return }
             let drainReport = await self.capture.endUtteranceAndDrain()
             FlowDiagnostics.logDrain(drainReport)
-            await self.finalizeUtterance()
+            await self.finalizeUtterance(
+                sessionId: drainingSessionId,
+                utteranceId: drainingUtteranceId,
+                commandSeq: drainingCommandSeq
+            )
         }
         debug("utterance stopped, draining tail")
     }
@@ -1109,20 +1266,22 @@ final class FlowSessionManager: ObservableObject {
         debug("utterance processing failed: \(message)")
     }
 
-    private func finalizeUtterance() async {
-        let finalizeSessionId = activeSessionId
-        let finalizeUtteranceId = currentUtteranceId
+    private func finalizeUtterance(
+        sessionId finalizeSessionId: UUID?,
+        utteranceId finalizeUtteranceId: UUID?,
+        commandSeq finalizeCommandSeq: Int64
+    ) async {
         let pipelineStarted = Date()
+        // ALWAYS clear the processing gate for this utterance. The previous
+        // guard required currentUtteranceId to still match; a racing
+        // fail/abort/cancel path could nil the id (or leave processing stuck)
+        // and then skip refreshHostReady — keyboard stayed white forever
+        // while host logs still said "utterance finalized".
         defer {
-            if activeSessionId == finalizeSessionId,
-               currentUtteranceId == finalizeUtteranceId {
-                isUtteranceProcessing = false
-                FlowLiveActivityController.update(phase: .idle)
-                touchSessionActivity()
-                currentUtteranceId = nil
-                currentCommandSeq = 0
-                refreshHostReady()
-            }
+            completeFinalizeCleanup(
+                sessionId: finalizeSessionId,
+                utteranceId: finalizeUtteranceId
+            )
         }
 
         let asrWait = asrWaitTimeout()
@@ -1134,6 +1293,10 @@ final class FlowSessionManager: ObservableObject {
         while Date() < asrDeadline {
             if !lastFinal.isEmpty { break }
             if asrTask?.isCancelled == true { break }
+            // Honour cooperative cancel so a replaced finalize exits promptly,
+            // but still run defer cleanup (unlike an early `return` mid-polish
+            // that used to leave processing=true when ids no longer matched).
+            if Task.isCancelled { break }
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
 
@@ -1151,14 +1314,21 @@ final class FlowSessionManager: ObservableObject {
             text = currentPartial.trimmingCharacters(in: .whitespacesAndNewlines)
         }
         guard !text.isEmpty else {
-            let key = (asrTask?.isCancelled == true)
+            let key = (asrTask?.isCancelled == true || Task.isCancelled)
                 ? "flow.error.recognitionInterrupted"
                 : "flow.error.noSpeech"
             let kind: FlowSessionKeys.TranscriptionErrorKind =
-                (asrTask?.isCancelled == true) ? .recognitionInterrupted : .noSpeech
+                (asrTask?.isCancelled == true || Task.isCancelled)
+                ? .recognitionInterrupted : .noSpeech
             FlowDiagnostics.log("finalize failed: empty transcript after \(String(format: "%.1f", asrElapsed))s")
             utteranceRecordingStartedAt = nil
-            storeCurrentError(AppL10n.string(key), kind: kind)
+            storeFinalizedError(
+                AppL10n.string(key),
+                kind: kind,
+                sessionId: finalizeSessionId,
+                utteranceId: finalizeUtteranceId,
+                commandSeq: finalizeCommandSeq
+            )
             return
         }
 
@@ -1178,23 +1348,33 @@ final class FlowSessionManager: ObservableObject {
             "translationTarget=\(pipelineStore.translationTargetLocaleId)"
         )
         do {
+            // If the finalize task was cancelled (cold-start churn / abort),
+            // skip the LLM round-trip and deliver the raw transcript so the
+            // keyboard is not left waiting on a result that never arrives.
+            if Task.isCancelled {
+                throw CancellationError()
+            }
             let polished = try await polisher.polish(
                 text,
                 mode: polishMode,
                 providerIdOverride: pipelineStore.polishProviderIdOverride
             )
             delivered = polished
-            storeCurrentFinal(polished, warning: chunkNote)
+            storeFinalizedResult(
+                polished,
+                warning: chunkNote,
+                sessionId: finalizeSessionId,
+                utteranceId: finalizeUtteranceId,
+                commandSeq: finalizeCommandSeq
+            )
             FlowDiagnostics.log(
                 "polish done in \(String(format: "%.1f", Date().timeIntervalSince(polishStarted)))s " +
                 "total=\(String(format: "%.1f", Date().timeIntervalSince(pipelineStarted)))s"
             )
         } catch {
-            // v0.2.0: local + cloud-polish-on + no API key surfaces
-            // `.missingAPIKey`. We translate it into a polishWarning
-            // so the keyboard can show the "fill in your key" hint
-            // inline rather than a generic failure message. The raw
-            // transcript is still delivered — no data loss.
+            // CancellationError is common when the user jumps back via
+            // startflow mid-polish; still deliver raw text. Other errors
+            // keep the existing polish-warning fallback.
             let fallback = Self.makeFallbackDelivery(
                 rawText: text,
                 error: error,
@@ -1206,7 +1386,13 @@ final class FlowSessionManager: ObservableObject {
                 "\(error.localizedDescription)"
             )
             delivered = fallback.text
-            storeCurrentFinal(fallback.text, warning: fallback.polishWarning)
+            storeFinalizedResult(
+                fallback.text,
+                warning: fallback.polishWarning,
+                sessionId: finalizeSessionId,
+                utteranceId: finalizeUtteranceId,
+                commandSeq: finalizeCommandSeq
+            )
         }
 
         SpeechHistoryStore.shared.recordUtterance(
@@ -1221,6 +1407,92 @@ final class FlowSessionManager: ObservableObject {
         chunkWarnings = []
         chunkedPipeline = nil
         debug("utterance finalized length=\(text.count)")
+    }
+
+    /// Drop the processing gate and republish hostReady after finalize.
+    /// Must not depend on a perfect id match — a racing fail/abort/cancel
+    /// used to skip this block and leave the keyboard stuck on white「识别中」
+    /// even after "utterance finalized" was logged.
+    private func completeFinalizeCleanup(sessionId: UUID?, utteranceId: UUID?) {
+        // A newer utterance may have started; never clobber its gate.
+        if let current = currentUtteranceId,
+           let finished = utteranceId,
+           current != finished {
+            debug(
+                "finalize cleanup skipped — newer utterance live " +
+                "finished=\(finished.uuidString.prefix(8)) current=\(current.uuidString.prefix(8))"
+            )
+            return
+        }
+
+        let wasProcessing = isUtteranceProcessing
+        isUtteranceProcessing = false
+        FlowLiveActivityController.update(phase: .idle)
+        if isActive {
+            touchSessionActivity()
+        }
+        if currentUtteranceId == utteranceId || currentUtteranceId == nil {
+            currentUtteranceId = nil
+            currentCommandSeq = 0
+        }
+        refreshHostReady()
+        debug(
+            "finalize cleanup done wasProcessing=\(wasProcessing ? 1 : 0) " +
+            "utterance=\(utteranceId?.uuidString.prefix(8) ?? "nil") " +
+            "session=\(sessionId?.uuidString.prefix(8) ?? "nil")"
+        )
+    }
+
+    private func storeFinalizedResult(
+        _ text: String,
+        warning: String?,
+        sessionId: UUID?,
+        utteranceId: UUID?,
+        commandSeq: Int64
+    ) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            storeFinalizedError(
+                AppL10n.string("flow.error.noSpeech"),
+                kind: .noSpeech,
+                sessionId: sessionId,
+                utteranceId: utteranceId,
+                commandSeq: commandSeq
+            )
+            return
+        }
+        guard let sessionId, let utteranceId else { return }
+        FlowSessionBridge.writeResult(
+            FlowResult(
+                sessionId: sessionId,
+                utteranceId: utteranceId,
+                commandSeq: commandSeq,
+                status: .final,
+                text: trimmed,
+                warning: warning
+            )
+        )
+    }
+
+    private func storeFinalizedError(
+        _ message: String,
+        kind: FlowSessionKeys.TranscriptionErrorKind,
+        sessionId: UUID?,
+        utteranceId: UUID?,
+        commandSeq: Int64,
+        status: FlowResult.Status = .error
+    ) {
+        guard let sessionId, let utteranceId else { return }
+        FlowSessionBridge.writeResult(
+            FlowResult(
+                sessionId: sessionId,
+                utteranceId: utteranceId,
+                commandSeq: commandSeq,
+                status: status,
+                text: message,
+                errorKind: kind
+            )
+        )
     }
 
     private static func polishModeLogLabel(_ mode: PolishingService.PolishMode) -> String {
@@ -1252,35 +1524,12 @@ final class FlowSessionManager: ObservableObject {
         engineMode: String,
         chunkWarning: String?
     ) -> TranscriptionDelivery {
-        let fallbackText = TranscriptPostProcessor.cleanRawASRFallback(rawText)
-        let warning = warningFromPolishError(error, engineMode: engineMode)
-            ?? polishDegradedWarning()
-            ?? chunkWarning
-        return TranscriptionDelivery(text: fallbackText, polishWarning: warning)
-    }
-
-    private static func warningFromPolishError(_ error: Error, engineMode: String) -> String? {
-        if let polishError = error as? PolishingService.PolishError {
-            switch polishError {
-            case .missingAPIKey:
-                if engineMode == "local" {
-                    return SharedL10n.string("flow.warning.localPolishUnavailable")
-                }
-                return SharedL10n.string("flow.warning.cloudPolishMissingKey")
-            case .timeout:
-                return polishDegradedWarning()
-            case .noTranscript:
-                return nil
-            }
-        }
-        if error is LLMError {
-            return polishDegradedWarning()
-        }
-        return nil
-    }
-
-    private static func polishDegradedWarning() -> String? {
-        SharedL10n.string("flow.warning.polishDegraded")
+        TranscriptionPolishFallback.makeDelivery(
+            rawText: rawText,
+            error: error,
+            engineMode: engineMode,
+            chunkWarning: chunkWarning
+        )
     }
 
     private func asrWaitTimeout() -> TimeInterval {
@@ -1318,8 +1567,8 @@ final class FlowSessionManager: ObservableObject {
             // Refresh the Live Activity `staleDate` every N heartbeat ticks
             // (1 Hz) — well inside `FlowLiveActivityController.staleWindow` so a
             // live session never looks stale, while a force-quit stops these
-            // refreshes and lets the system reclaim the orphaned island.
-            let liveActivityKeepAliveEveryTicks = 15
+            // refreshes and lets the island go stale within ~30 s.
+            let liveActivityKeepAliveEveryTicks = 10
             var tick = 0
             while !Task.isCancelled {
                 guard let self else { break }
@@ -1349,6 +1598,30 @@ final class FlowSessionManager: ObservableObject {
 
     private func debug(_ message: String) {
         FlowDiagnostics.log(message)
+    }
+
+    // MARK: - Temporary Flow debug panel (remove after orange-mic investigation)
+
+    /// Snapshot for the on-screen debug panel. Safe to call from the main actor.
+    func makeDebugRows() -> [FlowDebugRow] {
+        let snapshot = FlowSessionBridge.readySnapshot()
+        let hostRows = FlowDebugAppGroupSnapshot.rows()
+        let memRows: [FlowDebugRow] = [
+            FlowDebugRow("isActive", isActive ? "1" : "0"),
+            FlowDebugRow("isStarting", isStarting ? "1" : "0"),
+            FlowDebugRow("coldStart", isColdStartHandoff ? "1" : "0"),
+            FlowDebugRow("engineLive", capture.engineIsLive ? "1" : "0"),
+            FlowDebugRow("audioFresh", capture.engineHasRecentAudio(maxAge: 2) ? "1" : "0"),
+            FlowDebugRow("mem.reason", snapshot?.reason.rawValue ?? "nil"),
+            FlowDebugRow("utt.rec", isUtteranceRecording ? "1" : "0"),
+            FlowDebugRow("utt.proc", isUtteranceProcessing ? "1" : "0"),
+            FlowDebugRow("sessionId", activeSessionId.map { String($0.uuidString.prefix(8)) } ?? "nil"),
+            FlowDebugRow("warning", sessionWarning == nil ? "0" : "1"),
+            FlowDebugRow("overlay", coldStartContext.map { String(describing: $0.state) } ?? "nil"),
+            FlowDebugRow("bridgeReady", FlowSessionBridge.isHostReady() ? "1" : "0")
+        ]
+        // Prefer App Group snap.reason near the top of the shared block.
+        return memRows + hostRows
     }
 
     private func traceIgnoredCommand(reason: String, command: FlowCommand, detail: String) {

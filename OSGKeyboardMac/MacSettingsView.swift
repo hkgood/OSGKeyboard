@@ -1,9 +1,10 @@
 // MacSettingsView.swift
 // OSGKeyboard · Mac
 //
-// Settings built on the native grouped `Form` — the same container macOS
-// System Settings uses. This gives system-accurate cards, dividers, insets
-// and right-aligned controls for free, on both light and dark.
+// Settings uses native grouped `Form` for correct control layout (Picker /
+// Toggle / LabeledContent). Title and Form share the same plain
+// `pageHorizontalInset` padding (Form scroll margins are zeroed first) so
+// card chrome lines up with the page title.
 
 import SwiftUI
 #if os(macOS)
@@ -20,6 +21,7 @@ struct MacSettingsView: View {
     private var hasCompletedMacOnboarding = true
     @State private var accessibilityTrusted = MacTextInsertionService.isAccessibilityTrusted
     @State private var showProviderPicker = false
+    @State private var showAsrProviderPicker = false
 
     private var lang: AppUILanguage { viewModel.config.uiLanguage }
     private let recognitionLocales: [(id: String, key: String, fallback: String)] = [
@@ -33,23 +35,43 @@ struct MacSettingsView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                generalSection
-                recognitionSection
-                if viewModel.config.engineMode == "cloud" {
-                    providerSection
-                        .transition(.opacity)
+            VStack(spacing: 0) {
+                MacPageHeader(
+                    title: MacL10n.string("mac.section.settings", language: lang),
+                    subtitle: MacL10n.string("mac.page.settings.subtitle", language: lang)
+                )
+
+                Form {
+                    generalSection
+                    recognitionSection
+                    polishProviderSection
+                    if viewModel.config.engineMode == "cloud" {
+                        asrProviderSection
+                            .transition(.opacity)
+                    }
+                    if viewModel.config.engineMode == "local" {
+                        MacLocalASRModelSettingsView(viewModel: viewModel)
+                            .transition(.opacity)
+                    }
+                    inputSection
+                    legalSection
                 }
-                if viewModel.config.engineMode == "local" {
-                    MacLocalASRModelSettingsView(viewModel: viewModel)
-                        .transition(.opacity)
-                }
-                inputSection
-                legalSection
+                .formStyle(.grouped)
+                // Zero Form's own scroll margins, then inset via padding so the
+                // section cards line up with MacPageHeader (contentMargins alone
+                // does not match plain padding on macOS).
+                //
+                // grouped Form adds its own built-in section inset on top of our
+                // padding, so cards sat ~`groupedFormSectionInset` wider than the
+                // History page. Subtract that inset here so the card OUTER edge
+                // lands on `pageHorizontalInset` (40pt), matching History and the
+                // page title's left edge.
+                .contentMargins(.horizontal, 0, for: .scrollContent)
+                .padding(.horizontal, MacMetrics.pageHorizontalInset - MacMetrics.groupedFormSectionInset)
+                .tint(palette.accent)
+                .scrollContentBackground(.hidden)
+                .background(palette.background)
             }
-            .formStyle(.grouped)
-            .tint(palette.accent)
-            .scrollContentBackground(.hidden)
             .background(palette.background)
         }
         .onAppear { refreshAccessibilityState() }
@@ -82,27 +104,21 @@ struct MacSettingsView: View {
         }
     }
 
-    // MARK: - Cloud provider
+    // MARK: - Polish LLM
 
-    private var providerSection: some View {
-        Section(MacL10n.string("mac.settings.cloudProvider", language: lang)) {
-            LabeledContent(MacL10n.string("mac.settings.service", language: lang)) {
-                Button {
-                    showProviderPicker = true
-                } label: {
-                    HStack(spacing: 6) {
-                        providerLogo(currentProvider.id)
-                        Text(currentProvider.name)
-                            .foregroundStyle(palette.textPrimary)
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(palette.textTertiary)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .popover(isPresented: $showProviderPicker, arrowEdge: .bottom) {
-                    providerPickerList
+    private var polishProviderSection: some View {
+        Section(MacL10n.string("mac.settings.polishProvider", language: lang)) {
+            providerPickerRow(
+                title: MacL10n.string("mac.settings.service", language: lang),
+                provider: currentPolishProvider,
+                isPresented: $showProviderPicker
+            ) {
+                providerPickerList(
+                    providers: viewModel.polishSelectableProviders,
+                    selectedId: viewModel.config.providerId
+                ) { provider in
+                    viewModel.selectProvider(provider)
+                    showProviderPicker = false
                 }
             }
 
@@ -118,6 +134,17 @@ struct MacSettingsView: View {
             }
 
             LabeledContent {
+                TextField(text: $viewModel.config.baseURL, prompt: Text(verbatim: "")) {
+                    Text(MacL10n.string("mac.settings.baseURL", language: lang))
+                }
+                .labelsHidden()
+                .macFieldStyle()
+                .frame(maxWidth: MacMetrics.controlWidth)
+            } label: {
+                Text(MacL10n.string("mac.settings.baseURL", language: lang))
+            }
+
+            LabeledContent {
                 TextField(text: $viewModel.config.model, prompt: Text(verbatim: "")) {
                     Text(MacL10n.string("mac.settings.model", language: lang))
                 }
@@ -127,6 +154,86 @@ struct MacSettingsView: View {
             } label: {
                 Text(MacL10n.string("mac.settings.model", language: lang))
             }
+        }
+    }
+
+    // MARK: - Cloud ASR
+
+    private var asrProviderSection: some View {
+        Section(MacL10n.string("mac.settings.asrProvider", language: lang)) {
+            providerPickerRow(
+                title: MacL10n.string("mac.settings.asrService", language: lang),
+                provider: currentAsrProvider,
+                isPresented: $showAsrProviderPicker
+            ) {
+                providerPickerList(
+                    providers: viewModel.asrSelectableProviders,
+                    selectedId: viewModel.config.asrProviderId
+                ) { provider in
+                    viewModel.selectAsrProvider(provider)
+                    showAsrProviderPicker = false
+                }
+            }
+
+            LabeledContent {
+                SecureField(text: $viewModel.config.asrApiKey, prompt: Text(verbatim: "sk-…")) {
+                    Text(MacL10n.string("mac.settings.apiKey", language: lang))
+                }
+                .labelsHidden()
+                .macFieldStyle()
+                .frame(maxWidth: MacMetrics.controlWidth)
+            } label: {
+                Text(MacL10n.string("mac.settings.asrApiKey", language: lang))
+            }
+
+            if CloudASRModelCatalog.strategy(for: viewModel.config.asrProviderId) == .prompt {
+                LabeledContent {
+                    TextField(text: $viewModel.config.asrBaseURL, prompt: Text(verbatim: "")) {
+                        Text(MacL10n.string("mac.settings.baseURL", language: lang))
+                    }
+                    .labelsHidden()
+                    .macFieldStyle()
+                    .frame(maxWidth: MacMetrics.controlWidth)
+                } label: {
+                    Text(MacL10n.string("mac.settings.baseURL", language: lang))
+                }
+            }
+
+            LabeledContent {
+                TextField(text: $viewModel.config.asrModel, prompt: Text(verbatim: "")) {
+                    Text(MacL10n.string("mac.settings.asrModel", language: lang))
+                }
+                .labelsHidden()
+                .macFieldStyle()
+                .frame(maxWidth: MacMetrics.controlWidth)
+            } label: {
+                Text(MacL10n.string("mac.settings.asrModel", language: lang))
+            }
+        }
+    }
+
+    private func providerPickerRow<Content: View>(
+        title: String,
+        provider: LLMProvider,
+        isPresented: Binding<Bool>,
+        @ViewBuilder picker: @escaping () -> Content
+    ) -> some View {
+        LabeledContent(title) {
+            Button {
+                isPresented.wrappedValue = true
+            } label: {
+                HStack(spacing: 6) {
+                    providerLogo(provider.id)
+                    Text(provider.name)
+                        .foregroundStyle(palette.textPrimary)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(palette.textTertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: isPresented, arrowEdge: .bottom, content: picker)
         }
     }
 
@@ -160,6 +267,19 @@ struct MacSettingsView: View {
                     subtitle: MacL10n.string("mac.settings.hotkeyDesc", language: lang)
                 )
             }
+
+            Picker(selection: hotkeyTriggerBinding) {
+                ForEach(MacHotkeyTrigger.allCases) { trigger in
+                    Text(MacL10n.string(trigger.labelKey, language: lang))
+                        .tag(trigger.rawValue)
+                }
+            } label: {
+                rowLabel(
+                    MacL10n.string("mac.settings.hotkeyTrigger", language: lang),
+                    subtitle: MacL10n.string("mac.settings.hotkeyTriggerDesc", language: lang)
+                )
+            }
+            .disabled(!viewModel.hotkeyEnabled)
 
             Toggle(isOn: autoPasteBinding) {
                 rowLabel(
@@ -258,28 +378,34 @@ struct MacSettingsView: View {
         .buttonStyle(.plain)
     }
 
-    private var currentProvider: LLMProvider {
-        viewModel.selectableProviders.first { $0.id == viewModel.config.providerId }
-            ?? viewModel.selectableProviders.first
+    private var currentPolishProvider: LLMProvider {
+        viewModel.polishSelectableProviders.first { $0.id == viewModel.config.providerId }
+            ?? viewModel.polishSelectableProviders.first
             ?? LLMProvider.presets[0]
     }
 
-    /// Custom dropdown list shown in a popover. SwiftUI's `Menu` label / items
-    /// silently drop bundled (non-SF-Symbol) images on macOS, so we render the
-    /// brand marks in a plain view stack instead.
-    private var providerPickerList: some View {
+    private var currentAsrProvider: LLMProvider {
+        viewModel.asrSelectableProviders.first { $0.id == viewModel.config.asrProviderId }
+            ?? viewModel.asrSelectableProviders.first
+            ?? LLMProvider.presets[0]
+    }
+
+    private func providerPickerList(
+        providers: [LLMProvider],
+        selectedId: String,
+        onSelect: @escaping (LLMProvider) -> Void
+    ) -> some View {
         VStack(spacing: 0) {
-            ForEach(viewModel.selectableProviders) { provider in
+            ForEach(providers) { provider in
                 Button {
-                    viewModel.selectProvider(provider)
-                    showProviderPicker = false
+                    onSelect(provider)
                 } label: {
                     HStack(spacing: Spacing.sm) {
                         providerLogo(provider.id)
                         Text(provider.name)
                             .foregroundStyle(palette.textPrimary)
                         Spacer(minLength: Spacing.md)
-                        if provider.id == currentProvider.id {
+                        if provider.id == selectedId {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundStyle(palette.accent)
@@ -356,6 +482,13 @@ struct MacSettingsView: View {
         Binding(
             get: { viewModel.hotkeyEnabled },
             set: { viewModel.setHotkeyEnabled($0) }
+        )
+    }
+
+    private var hotkeyTriggerBinding: Binding<String> {
+        Binding(
+            get: { viewModel.hotkeyTrigger.rawValue },
+            set: { viewModel.setHotkeyTrigger(MacHotkeyTrigger(rawValue: $0) ?? .rightOption) }
         )
     }
 

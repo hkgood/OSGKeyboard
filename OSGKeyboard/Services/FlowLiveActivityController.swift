@@ -15,11 +15,17 @@ enum FlowLiveActivityController {
     nonisolated(unsafe) private static var currentPhase: FlowActivityAttributes.ContentState.Phase = .idle
 
     /// If the host app is force-quit its `endSession()` never runs, orphaning
-    /// the Live Activity. A short `staleDate` lets the system grey it out and
-    /// reclaim it on its own within ~45s of the process dying. While the host is
-    /// alive the heartbeat calls `keepAlive()` well inside this window, so a
-    /// genuinely active session never looks stale.
-    private static let staleWindow: TimeInterval = 45
+    /// the Live Activity. `staleDate` semantics (verified against ActivityKit
+    /// behaviour, not folklore): the *Dynamic Island* presentation is reliably
+    /// removed shortly after the stale date passes, but the *lock-screen*
+    /// banner may linger greyed-out depending on the iOS version — it is NOT
+    /// guaranteed to be dismissed. Treating staleDate as "auto-cleanup" is
+    /// therefore wrong on its own; the full zombie defence is this short
+    /// window + launch-time reconciliation (`clearOrphanedActivities`) + the
+    /// widget rendering an explicit "disconnected" state via
+    /// `context.isStale`. While the host is alive the heartbeat calls
+    /// `keepAlive()` every ~10 s, well inside this window.
+    private static let staleWindow: TimeInterval = 30
 
     private static func freshContent(
         phase: FlowActivityAttributes.ContentState.Phase
@@ -118,6 +124,8 @@ enum FlowLiveActivityController {
     }
 
     /// `applicationWillTerminate` 专用：阻塞到所有 `end` 完成，避免进程先退出而锁屏卡片残留。
+    /// 等待必须带超时：ActivityKit 的 `end` 走异步 XPC，若在 watchdog 杀进程前
+    /// 没有返回，无限期 `wait()` 会吞掉整个 ~5 秒终止窗口，反而让后续清理全部没跑。
     nonisolated static func endAllSynchronouslyOnTerminate() {
         let semaphore = DispatchSemaphore(value: 0)
         Task.detached(priority: .userInitiated) {
@@ -129,7 +137,7 @@ enum FlowLiveActivityController {
             FlowDiagnostics.log("Live Activity ended synchronously on terminate (count=\(count))")
             semaphore.signal()
         }
-        semaphore.wait()
+        _ = semaphore.wait(timeout: .now() + 2)
         currentPhase = .idle
         currentActivity = nil
     }

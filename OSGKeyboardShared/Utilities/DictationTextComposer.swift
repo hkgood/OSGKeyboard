@@ -60,6 +60,27 @@ public enum DictationTextComposer {
         return isCJK(last) && isCJK(first)
     }
 
+    /// Separator to place between existing document text and an inserted
+    /// transcript. Inserting at a cursor that sits right after "Hello" must
+    /// produce "Hello world", not "Helloworld" — but CJK, whitespace, and
+    /// opening-punctuation boundaries take no space.
+    public static func insertionSeparator(previousContext: String?, insertion: String) -> String {
+        guard let previousContext,
+              let last = previousContext.unicodeScalars.last,
+              let first = insertion.unicodeScalars.first else {
+            return ""
+        }
+        if CharacterSet.whitespacesAndNewlines.contains(last) { return "" }
+        if isCJK(last) || isCJK(first) { return "" }
+        // No space after opening brackets/quotes ("(", "[", "「", """…).
+        if CharacterSet(charactersIn: "([{\u{201C}\u{2018}\u{300C}\u{300E}\u{3010}\u{FF08}").contains(last) {
+            return ""
+        }
+        // No space before closing/clause punctuation (".", ",", ")", "!"…).
+        if CharacterSet.punctuationCharacters.contains(first) { return "" }
+        return " "
+    }
+
     static func normalizeForOverlap(_ text: String) -> String {
         text.unicodeScalars.filter {
             !CharacterSet.whitespacesAndNewlines.contains($0)

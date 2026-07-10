@@ -39,14 +39,18 @@ struct MainAppRoot: View {
         .animation(.easeInOut(duration: 0.2), value: flowManager.coldStartContext != nil)
         .onAppear {
             flowManager.setAppForeground(scenePhase == .active)
-            flowManager.activateOnForeground()
-            AppCloudSync.shared.startObservingExternalChanges()
-            // Registering here also flushes any URL buffered during a cold
-            // launch (the keyboard → app `startflow` handoff arrives via the
-            // scene delegate before this view is on screen).
+            // Register the URL handler BEFORE the foreground auto-start.
+            // Registering flushes any URL buffered during a cold launch (the
+            // keyboard → app `startflow` handoff arrives via the scene
+            // delegate before this view is on screen), so a cold start takes
+            // the cold-start path first and `activateOnForeground()`'s plain
+            // start then no-ops on the isStarting guard — instead of two
+            // start bodies racing each other on the main actor.
             AppOpenURLRouter.shared.register { url in
                 handleIncomingURL(url)
             }
+            flowManager.activateOnForeground()
+            AppCloudSync.shared.startObservingExternalChanges()
             Task {
                 await AppCloudSync.shared.pullAllIfEnabled()
             }

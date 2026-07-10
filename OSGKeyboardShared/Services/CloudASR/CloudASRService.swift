@@ -133,7 +133,7 @@ public final class CloudASRService: ASRService, @unchecked Sendable {
     }
 
     private func bindClientIfNeeded() {
-        let providerId = store.providerId
+        let providerId = store.asrProviderId
         let strategy = CloudASRModelCatalog.strategy(for: providerId)
         lock.withLock {
             guard boundProviderId != providerId else { return }

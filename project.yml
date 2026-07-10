@@ -11,8 +11,8 @@ options:
   # Minimum OS: iOS 26. We dropped older iOS support so the
   # legacy speech + AVAudioSession branching could be removed in
   # favour of iOS 26's `SpeechAnalyzer` (always on-device) and
-  # `AVAudioApplication.requestRecordPermission` (iOS 17+). iPhone
-  # only — no Mac Catalyst, no visionOS.
+  # `AVAudioApplication.requestRecordPermission` (iOS 17+). iPhone + iPad;
+  # no Mac Catalyst, no visionOS.
   deploymentTarget:
     iOS: "26.0"
   developmentLanguage: en
@@ -124,6 +124,11 @@ targets:
           UIColorName: "BackgroundColor"
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         NSMicrophoneUsageDescription: "OSGKeyboard uses the microphone for voice dictation and keeps a background audio session active while a voice session is running."
@@ -193,7 +198,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
         SUPPORTS_MACCATALYST: NO
@@ -266,7 +271,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.keyboard
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
@@ -297,7 +302,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.liveactivity
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
@@ -333,7 +338,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.shared
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         DEFINES_MODULE: YES
         SKIP_INSTALL: YES
         BUILD_LIBRARY_FOR_DISTRIBUTION: NO
@@ -365,7 +370,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.tests
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
 
   # =========================================================
   # 键盘扩展单元测试 (TEST-4)
@@ -382,7 +387,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.ext.tests
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
 
   # =========================================================
   # macOS 菜单栏 App (Phase 1 · 云端 MVP)
@@ -419,12 +424,10 @@ targets:
           - "DesignSystem/RecordButton.swift"
           - "Services/ASRService.swift"
           - "Services/CloudASR/CloudASRService.swift"
-          - "Services/ChunkedUtterancePipeline.swift"
           - "Services/FlowContinuousCapture.swift"
           - "Services/LiveDictationController.swift"
           - "Services/KeyboardState.swift"
           - "Services/CursorNavigation.swift"
-          - "Services/CustomLanguageModelManager.swift"
           - "Models/MicVoiceAvailability+Keyboard.swift"
           - "Utilities/ProgressiveDictationTranscriptAccumulator.swift"
       - path: OSGKeyboardShared/en.lproj/Shared.strings
@@ -432,6 +435,10 @@ targets:
       - path: OSGKeyboardShared/zh-Hans.lproj/Shared.strings
         buildPhase: resources
       - path: OSGKeyboard/Resources/CustomLanguageModel/v1/phrases.tsv
+        buildPhase: resources
+      - path: OSGKeyboardShared/Resources/CustomLanguageModel/v1/OSGKeyboardCLM.bin
+        buildPhase: resources
+      - path: OSGKeyboardShared/Resources/CustomLanguageModel/v1/compiled-manifest.json
         buildPhase: resources
       - path: OSGKeyboard/Resources/PrivacyPolicy.html
         buildPhase: resources

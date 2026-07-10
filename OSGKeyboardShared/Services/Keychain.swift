@@ -22,12 +22,29 @@ public enum Keychain: @unchecked Sendable {
     private static let legacyAccount = "current"
     private static let defaultProviderId = "openai"
 
-    private static func account(for providerId: String) -> String {
+    private static func normalizedProviderId(_ providerId: String) -> String {
         let trimmed = providerId.trimmingCharacters(in: .whitespacesAndNewlines)
-        let normalized = trimmed.isEmpty ? defaultProviderId : trimmed.lowercased()
-        return "provider.\(normalized)"
+        return trimmed.isEmpty ? defaultProviderId : trimmed.lowercased()
     }
 
+    /// LLM polish credentials (`provider.<id>`).
+    private static func account(for providerId: String) -> String {
+        "provider.\(normalizedProviderId(providerId))"
+    }
+
+    /// Cloud ASR credentials (`asr.<id>`), independent from polish keys.
+    private static func asrAccount(for providerId: String) -> String {
+        "asr.\(normalizedProviderId(providerId))"
+    }
+
+    // NOTE on kSecAttrAccessGroup: we deliberately rely on the DEFAULT
+    // access group (the first entry in each target's keychain-access-groups,
+    // which project.yml pins to `$(AppIdentifierPrefix)com.osgkeyboard.shared`
+    // for every target). Setting the attribute explicitly would require the
+    // team-prefixed string at runtime, which is not portably available
+    // without injecting TeamID through the build system. If a SECOND access
+    // group is ever added to any target, revisit this — reordered groups
+    // would silently change which store these queries hit.
     private static func baseQuery(providerId: String, synchronizable: Bool) -> [String: Any] {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -42,6 +59,130 @@ public enum Keychain: @unchecked Sendable {
     }
 
     // MARK: - Read
+
+    // MARK: - ASR keys
+
+    public static func asrApiKey(for providerId: String, preferICloudSync: Bool = false) -> String? {
+        if preferICloudSync, let synced = readASRKey(providerId: providerId, synchronizable: true) {
+            return synced
+        }
+        if let local = readASRKey(providerId: providerId, synchronizable: false) {
+            return local
+        }
+        if preferICloudSync {
+            return readASRKey(providerId: providerId, synchronizable: true)
+        }
+        return nil
+    }
+
+    public static func asrApiKeyOutcome(
+        for providerId: String,
+        preferICloudSync: Bool = false
+    ) -> ReadOutcome {
+        let first = readASRKeyOutcome(providerId: providerId, synchronizable: preferICloudSync)
+        if case .found = first { return first }
+        let second = readASRKeyOutcome(providerId: providerId, synchronizable: !preferICloudSync)
+        if case .found = second { return second }
+        if case .unavailable = first { return first }
+        if case .unavailable = second { return second }
+        return .notFound
+    }
+
+    public static func setASRAPIKey(_ key: String, for providerId: String, useICloudSync: Bool = false) throws {
+        if key.isEmpty {
+            try deleteASRAPIKey(for: providerId, useICloudSync: useICloudSync)
+            return
+        }
+        if useICloudSync {
+            try writeASRKey(key, providerId: providerId, synchronizable: true)
+            try? deleteASRKey(providerId: providerId, synchronizable: false)
+        } else {
+            try writeASRKey(key, providerId: providerId, synchronizable: false)
+        }
+    }
+
+    public static func deleteASRAPIKey(for providerId: String, useICloudSync: Bool = false) throws {
+        try deleteASRKey(providerId: providerId, synchronizable: false)
+        if useICloudSync {
+            try deleteASRKey(providerId: providerId, synchronizable: true)
+        }
+    }
+
+    private static func readASRKey(providerId: String, synchronizable: Bool) -> String? {
+        if case .found(let value) = readASRKeyOutcome(providerId: providerId, synchronizable: synchronizable) {
+            return value
+        }
+        return nil
+    }
+
+    private static func readASRKeyOutcome(providerId: String, synchronizable: Bool) -> ReadOutcome {
+        var query = baseASRQuery(providerId: providerId, synchronizable: synchronizable)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        switch status {
+        case errSecSuccess:
+            guard let data = result as? Data,
+                  let str = String(data: data, encoding: .utf8) else {
+                return .notFound
+            }
+            return .found(str)
+        case errSecItemNotFound:
+            // Pre-split installs stored one key under `provider.<id>` for both stages.
+            return readKeyOutcome(providerId: providerId, synchronizable: synchronizable)
+        default:
+            #if DEBUG
+            print("⚠️ [OSGKeyboard] ASR Keychain read returned OSStatus \(status); reporting unavailable.")
+            #endif
+            return .unavailable(status)
+        }
+    }
+
+    private static func baseASRQuery(providerId: String, synchronizable: Bool) -> [String: Any] {
+        var query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: asrAccount(for: providerId),
+            kSecAttrSynchronizable as String: synchronizable ? kCFBooleanTrue! : kCFBooleanFalse!,
+        ]
+        #if os(macOS)
+        query[kSecUseDataProtectionKeychain as String] = true
+        #endif
+        return query
+    }
+
+    private static func writeASRKey(_ key: String, providerId: String, synchronizable: Bool) throws {
+        let data = Data(key.utf8)
+        var baseQuery = baseASRQuery(providerId: providerId, synchronizable: synchronizable)
+        let updateAttrs: [String: Any] = [kSecValueData as String: data]
+        let updateStatus = SecItemUpdate(baseQuery as CFDictionary, updateAttrs as CFDictionary)
+        switch updateStatus {
+        case errSecSuccess:
+            return
+        case errSecItemNotFound:
+            baseQuery[kSecValueData as String] = data
+            baseQuery[kSecAttrAccessible as String] = synchronizable
+                ? kSecAttrAccessibleAfterFirstUnlock
+                : kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            let addStatus = SecItemAdd(baseQuery as CFDictionary, nil)
+            if addStatus != errSecSuccess {
+                throw KeychainError.unexpectedStatus(addStatus)
+            }
+        default:
+            throw KeychainError.unexpectedStatus(updateStatus)
+        }
+    }
+
+    private static func deleteASRKey(providerId: String, synchronizable: Bool) throws {
+        let query = baseASRQuery(providerId: providerId, synchronizable: synchronizable)
+        let status = SecItemDelete(query as CFDictionary)
+        if status != errSecSuccess, status != errSecItemNotFound {
+            throw KeychainError.unexpectedStatus(status)
+        }
+    }
+
+    // MARK: - LLM keys
 
     public static func apiKey(for providerId: String, preferICloudSync: Bool = false) -> String? {
         if preferICloudSync, let synced = readKey(providerId: providerId, synchronizable: true) {
@@ -60,7 +201,43 @@ public enum Keychain: @unchecked Sendable {
         apiKey(for: defaultProviderId)
     }
 
+    /// Distinguishes "no key stored" from "keychain temporarily unreadable".
+    public enum ReadOutcome: Equatable {
+        case found(String)
+        case notFound
+        /// The keychain could not be read (e.g. `errSecInteractionNotAllowed`
+        /// while the device is locked before first unlock). NOT the same as
+        /// "no key configured" — telling the user to re-enter their key in
+        /// this state would be wrong; the read succeeds once unlocked.
+        case unavailable(OSStatus)
+    }
+
+    /// Like `apiKey(for:)`, but reports WHY a key was not returned so
+    /// callers can distinguish a missing key (user action needed) from a
+    /// transiently locked keychain (retry later).
+    public static func apiKeyOutcome(
+        for providerId: String,
+        preferICloudSync: Bool = false
+    ) -> ReadOutcome {
+        let first = readKeyOutcome(providerId: providerId, synchronizable: preferICloudSync)
+        if case .found = first { return first }
+        let second = readKeyOutcome(providerId: providerId, synchronizable: !preferICloudSync)
+        if case .found = second { return second }
+        // Neither store had it: surface "unavailable" when either read was
+        // blocked, since the key may well exist behind the lock.
+        if case .unavailable = first { return first }
+        if case .unavailable = second { return second }
+        return .notFound
+    }
+
     private static func readKey(providerId: String, synchronizable: Bool) -> String? {
+        if case .found(let value) = readKeyOutcome(providerId: providerId, synchronizable: synchronizable) {
+            return value
+        }
+        return nil
+    }
+
+    private static func readKeyOutcome(providerId: String, synchronizable: Bool) -> ReadOutcome {
         var query = baseQuery(providerId: providerId, synchronizable: synchronizable)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -70,16 +247,16 @@ public enum Keychain: @unchecked Sendable {
         case errSecSuccess:
             guard let data = result as? Data,
                   let str = String(data: data, encoding: .utf8) else {
-                return nil
+                return .notFound
             }
-            return str
+            return .found(str)
         case errSecItemNotFound:
-            return nil
+            return .notFound
         default:
             #if DEBUG
-            print("⚠️ [OSGKeyboard] Keychain read returned OSStatus \(status); treating as no key.")
+            print("⚠️ [OSGKeyboard] Keychain read returned OSStatus \(status); reporting unavailable.")
             #endif
-            return nil
+            return .unavailable(status)
         }
     }
 
@@ -192,6 +369,13 @@ public enum Keychain: @unchecked Sendable {
             }
             try? writeKey(local, providerId: provider.id, synchronizable: true)
             try? deleteKey(providerId: provider.id, synchronizable: false)
+        }
+        for provider in LLMProvider.asrSelectablePresets {
+            guard let local = readASRKey(providerId: provider.id, synchronizable: false), !local.isEmpty else {
+                continue
+            }
+            try? writeASRKey(local, providerId: provider.id, synchronizable: true)
+            try? deleteASRKey(providerId: provider.id, synchronizable: false)
         }
     }
 

@@ -13,10 +13,18 @@ import Foundation
 /// Keep this protocol narrow: only what the shared pipeline needs today.
 /// Platform-specific settings UI and iCloud sync stay on concrete stores.
 public protocol ConfigurationStore: Sendable {
+    /// Polish / LLM provider id.
     var providerId: String { get }
     var baseURL: String { get }
     var apiKey: String { get }
     var model: String { get }
+
+    /// Cloud ASR provider id — independent from polish when `engineMode == "cloud"`.
+    var asrProviderId: String { get }
+    var asrBaseURL: String { get }
+    var asrApiKey: String { get }
+    var asrModel: String { get }
+
     var engineMode: String { get }
     var polishIntensity: PolishIntensity { get }
     var personalDictionary: PersonalDictionary { get }

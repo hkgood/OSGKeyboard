@@ -15,6 +15,7 @@ import UIKit
 struct HomeView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @ObservedObject private var config = ProviderConfig.shared
     @EnvironmentObject private var flowManager: FlowSessionManager
@@ -23,6 +24,10 @@ struct HomeView: View {
     @State private var keyboardHintDismissed = HomeGuideState.isKeyboardHintDismissed
     @State private var micStatus = AppPermissions.micStatus
     @State private var speechStatus = AppPermissions.speechStatus
+
+    private var usesWideLayout: Bool {
+        horizontalSizeClass == .regular
+    }
 
     private var sessionIsLive: Bool {
         flowManager.isActive || flowManager.isStarting
@@ -52,6 +57,32 @@ struct HomeView: View {
     }
 
     var body: some View {
+        Group {
+            if usesWideLayout {
+                wideBody
+            } else {
+                phoneBody
+            }
+        }
+        .onAppear {
+            refreshPermissionStatuses()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            refreshPermissionStatuses()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            refreshPermissionStatuses()
+        }
+        .onChange(of: previewFocused) { _, focused in
+            guard focused else { return }
+            Task { await flowManager.refreshForInlineKeyboardFocus() }
+        }
+    }
+
+    // MARK: - Phone layout
+
+    private var phoneBody: some View {
         GeometryReader { geo in
             let gradientHeight = geo.size.height * 0.30 + geo.safeAreaInsets.top
 
@@ -98,20 +129,63 @@ struct HomeView: View {
                 }
             }
         }
-        .onAppear {
-            refreshPermissionStatuses()
+    }
+
+    // MARK: - Wide layout (iPad / regular width)
+
+    private var wideBody: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                wideHeroHeader
+
+                WideHomeStatsCluster()
+
+                if showsFlowSessionExtras {
+                    flowSessionExtras
+                }
+
+                widePreviewStage
+            }
+            .padding(.horizontal, WideLayoutMetrics.pageHorizontalInset)
+            .padding(.top, Spacing.sm)
+            .padding(.bottom, Spacing.md)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            refreshPermissionStatuses()
+        .background(palette.background)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if previewFocused {
+                previewFocused = false
+            }
         }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-            refreshPermissionStatuses()
+    }
+
+    private var wideHeroHeader: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text("home.wide.tagline")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(palette.textPrimary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+
+            Text("home.wide.tagline.subtitle")
+                .font(TypeStyle.footnote)
+                .foregroundStyle(palette.textTertiary)
         }
-        .onChange(of: previewFocused) { _, focused in
-            guard focused else { return }
-            Task { await flowManager.refreshForInlineKeyboardFocus() }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var widePreviewStage: some View {
+        WideCard(padding: Spacing.md, cornerRadius: Radius.large) {
+            previewFieldContent
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: WideLayoutMetrics.dictationCanvasMinHeight,
+                    maxHeight: .infinity,
+                    alignment: .topLeading
+                )
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     private func refreshPermissionStatuses() {
@@ -187,7 +261,18 @@ struct HomeView: View {
                     .foregroundStyle(palette.warning)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
+            } else if flowManager.isUtteranceRecording {
+                Text("home.flow.recording")
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.textPrimary)
+                    .lineLimit(1)
+            } else if flowManager.isUtteranceProcessing {
+                Text("home.flow.processing")
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.textPrimary)
+                    .lineLimit(1)
             } else if flowManager.isActive,
+               FlowSessionBridge.isHostReady(),
                let expires = flowManager.sessionExpiresAt {
                 Text("home.flow.label")
                     .font(TypeStyle.caption2)
@@ -322,10 +407,14 @@ struct HomeView: View {
 
     private var flowStatusColor: Color {
         if needsCloudSetup { return palette.warning }
-        if flowManager.isActive { return palette.accent }
+        if flowManager.isUtteranceRecording { return palette.accent }
+        if flowManager.isUtteranceProcessing { return palette.accent }
+        if flowManager.isActive, FlowSessionBridge.isHostReady() { return palette.accent }
         if flowManager.isStarting { return palette.accent }
         if needsPermissionSetup { return palette.warning }
         if flowManager.sessionWarning != nil { return palette.warning }
+        // Active but not host-ready (e.g. mid-utterance / audio proof) — amber.
+        if flowManager.isActive { return palette.warning }
         return palette.textTertiary
     }
 
@@ -337,8 +426,18 @@ struct HomeView: View {
         if flowManager.isStarting {
             return AppL10n.string("home.flow.starting")
         }
-        if flowManager.isActive {
+        if flowManager.isUtteranceRecording {
+            return AppL10n.string("home.flow.recording")
+        }
+        if flowManager.isUtteranceProcessing {
+            return AppL10n.string("home.flow.processing")
+        }
+        if flowManager.isActive, FlowSessionBridge.isHostReady() {
             return AppL10n.string("home.flow.label")
+        }
+        if flowManager.isActive {
+            // Session flag is up but the ready contract is not — do not lie.
+            return AppL10n.string("home.flow.notReady")
         }
         return AppL10n.string("home.flow.inactive")
     }
@@ -346,12 +445,7 @@ struct HomeView: View {
     // MARK: - Preview field
 
     private var previewField: some View {
-        TextField("home.preview.placeholder", text: $previewText, axis: .vertical)
-            .font(TypeStyle.body)
-            .foregroundStyle(palette.textPrimary)
-            .tint(palette.accent)
-            .focused($previewFocused)
-            .lineLimit(1...100)
+        previewFieldContent
             .frame(maxWidth: .infinity, minHeight: 180, maxHeight: .infinity, alignment: .topLeading)
             .padding(Spacing.md)
             .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
@@ -359,9 +453,17 @@ struct HomeView: View {
                 RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
                     .stroke(previewFocused ? palette.dividerStrong : palette.dividerStrong.opacity(0.75), lineWidth: 1)
             )
-            // TextField only hit-tests the text line(s); expand taps to the full card.
             .contentShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             .onTapGesture { previewFocused = true }
+    }
+
+    private var previewFieldContent: some View {
+        TextField("home.preview.placeholder", text: $previewText, axis: .vertical)
+            .font(TypeStyle.body)
+            .foregroundStyle(palette.textPrimary)
+            .tint(palette.accent)
+            .focused($previewFocused)
+            .lineLimit(1...100)
     }
 
     private var engineStatusLine: some View {

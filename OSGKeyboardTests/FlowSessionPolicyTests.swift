@@ -17,10 +17,10 @@ final class FlowSessionPolicyTests: XCTestCase {
         XCTAssertTrue(FlowSessionPolicy.skipAppSwitch(defaults: defaults))
     }
 
-    func testInactivityDurationDefaultsToTwelveHours() {
+    func testInactivityDurationDefaultsToThirtyMinutes() {
         let defaults = makeDefaults()
-        XCTAssertEqual(FlowSessionPolicy.inactivityDuration(defaults: defaults), .twelveHours)
-        XCTAssertEqual(FlowSessionPolicy.sessionDuration(defaults: defaults), 12 * 60 * 60)
+        XCTAssertEqual(FlowSessionPolicy.inactivityDuration(defaults: defaults), .thirtyMinutes)
+        XCTAssertEqual(FlowSessionPolicy.sessionDuration(defaults: defaults), 30 * 60)
     }
 
     func testTouchLastActivityExtendsExpiry() {

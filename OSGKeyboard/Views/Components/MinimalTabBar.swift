@@ -39,6 +39,18 @@ enum AppTab: Int, CaseIterable {
         case .settings: return "tab.settings"
         }
     }
+
+    /// Sidebar label for iPad `NavigationSplitView` (SF Symbol + title).
+    var sidebarTitle: LocalizedStringKey { accessibilityKey }
+
+    var sidebarSystemImage: String {
+        switch self {
+        case .keyboard: return "house"
+        case .history: return "clock.arrow.circlepath"
+        case .dictionary: return "character.book.closed"
+        case .settings: return "gearshape"
+        }
+    }
 }
 
 struct MinimalTabBar: View {

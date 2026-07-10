@@ -53,6 +53,44 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
             persistConfiguration()
         }
     }
+    @Published public var asrProviderId: String {
+        didSet {
+            guard !isApplyingConfiguration, asrProviderId != configuration.asrProviderId else { return }
+            configuration.asrProviderId = asrProviderId
+            isSyncingASRProviderAPIKey = true
+            asrApiKey = configuration.asrApiKey
+            isSyncingASRProviderAPIKey = false
+            persistConfiguration()
+        }
+    }
+    @Published public var asrBaseURL: String {
+        didSet {
+            guard !isApplyingConfiguration, asrBaseURL != configuration.asrBaseURL else { return }
+            configuration.asrBaseURL = asrBaseURL
+            persistConfiguration()
+        }
+    }
+    @Published public var asrApiKey: String {
+        didSet {
+            guard oldValue != asrApiKey, !isSyncingASRProviderAPIKey else { return }
+            do {
+                try Keychain.setASRAPIKey(
+                    asrApiKey,
+                    for: asrProviderId,
+                    useICloudSync: configuration.settingsICloudSyncEnabled
+                )
+            } catch {
+                OSGLog.config.warning("ASR Keychain write failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+    }
+    @Published public var asrModel: String {
+        didSet {
+            guard !isApplyingConfiguration, asrModel != configuration.asrModel else { return }
+            configuration.asrModel = asrModel
+            persistConfiguration()
+        }
+    }
     @Published public var modeId: String {
         didSet {
             guard !isApplyingConfiguration, modeId != configuration.modeId else { return }
@@ -67,8 +105,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
             persistConfiguration()
         }
     }
-    /// "local" → on-device ASR + built-in DeepSeek polish.
-    /// "cloud" → provider cloud ASR (with personal dictionary) + user's cloud LLM polish.
+    /// "local" → on-device ASR + user's LLM polish (or built-in DeepSeek).
+    /// "cloud" → user's cloud ASR + user's cloud LLM polish (independent picks).
     @Published public var engineMode: String {
         didSet {
             guard !isApplyingConfiguration, engineMode != configuration.engineMode else { return }
@@ -213,25 +251,38 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     }
 
     public var isConfigured: Bool {
-        // Local engine uses on-device ASR + built-in DeepSeek polish and
-        // does not need a user API key. Cloud needs base URL, key, and model.
-        if isLocalEngine { return true }
-        return !baseURL.isEmpty && !apiKey.isEmpty && !model.isEmpty
+        if isLocalEngine {
+            return isPolishConfigured
+        }
+        return isASRConfigured && isPolishConfigured
+    }
+
+    public var isPolishConfigured: Bool {
+        if !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return !baseURL.isEmpty && !model.isEmpty
+        }
+        return PreconfiguredKeys.isDeepseekConfigured
+    }
+
+    public var isASRConfigured: Bool {
+        guard !isLocalEngine else { return true }
+        return !asrApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && (!asrBaseURL.isEmpty || CloudASRModelCatalog.strategy(for: asrProviderId) != .prompt)
     }
 
     /// On-device ASR only; no cloud API required.
     public var isLocalEngine: Bool { configuration.isLocalEngine }
 
-    /// Local engine always polishes via the built-in DeepSeek path.
-    public var shouldPolishLocalTranscript: Bool { isLocalEngine }
-
-    /// Cloud engine uses `providerId`. Local engine pins DeepSeek.
-    public var localModeProviderId: String { "deepseek" }
+    /// Built-in DeepSeek path when the user has not supplied their own LLM key.
+    public var localModeProviderId: String {
+        apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "deepseek" : providerId
+    }
 
     private let defaults: UserDefaults
     private var configuration: AppGroupConfiguration
     private var isApplyingConfiguration = false
     private var isSyncingProviderAPIKey = false
+    private var isSyncingASRProviderAPIKey = false
 
     public init(defaults: UserDefaults? = nil) {
         guard let resolvedDefaults = defaults ?? AppGroup.defaultsIfAvailable else {
@@ -270,6 +321,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         baseURL = configuration.baseURL
         apiKey = configuration.apiKey
         model = configuration.model
+        asrProviderId = configuration.asrProviderId
+        asrBaseURL = configuration.asrBaseURL
+        asrModel = configuration.asrModel
         modeId = configuration.modeId
         localeId = configuration.localeId
         engineMode = configuration.engineMode
@@ -284,6 +338,12 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         flowSkipAppSwitch = configuration.flowSkipAppSwitch
         flowInactivityDuration = configuration.flowInactivityDuration
         localASRCustomLanguageModelEnabled = configuration.localASRCustomLanguageModelEnabled
+        isSyncingProviderAPIKey = true
+        apiKey = configuration.apiKey
+        isSyncingProviderAPIKey = false
+        isSyncingASRProviderAPIKey = true
+        asrApiKey = configuration.asrApiKey
+        isSyncingASRProviderAPIKey = false
         isApplyingConfiguration = false
     }
 
@@ -292,6 +352,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     private func applyEngineModeSideEffects() {
         if engineMode == "cloud", providerId == "deepseek" {
             apply(preset: LLMProvider.provider(id: "openai"))
+        }
+        if engineMode == "cloud", asrProviderId == "deepseek" {
+            applyAsr(preset: LLMProvider.provider(id: "openai"))
         }
     }
 
@@ -324,6 +387,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         providerId = fresh.providerId
         baseURL = fresh.baseURL
         model = fresh.model
+        asrProviderId = fresh.asrProviderId
+        asrBaseURL = fresh.asrBaseURL
+        asrModel = fresh.asrModel
         modeId = fresh.modeId
         localeId = fresh.localeId
         engineMode = fresh.engineMode
@@ -341,6 +407,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         isSyncingProviderAPIKey = true
         apiKey = fresh.apiKey
         isSyncingProviderAPIKey = false
+        isSyncingASRProviderAPIKey = true
+        asrApiKey = fresh.asrApiKey
+        isSyncingASRProviderAPIKey = false
         isApplyingConfiguration = false
     }
 
@@ -370,6 +439,23 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         persistConfiguration()
     }
 
+    public func applyAsr(preset: LLMProvider) {
+        isApplyingConfiguration = true
+        asrProviderId = preset.id
+        if !preset.defaultBaseURL.isEmpty {
+            asrBaseURL = preset.defaultBaseURL
+        }
+        asrModel = CloudASRModelCatalog.defaultModel(for: preset.id)
+        configuration.asrProviderId = asrProviderId
+        configuration.asrBaseURL = asrBaseURL
+        configuration.asrModel = asrModel
+        isSyncingASRProviderAPIKey = true
+        asrApiKey = configuration.asrApiKey
+        isSyncingASRProviderAPIKey = false
+        isApplyingConfiguration = false
+        persistConfiguration()
+    }
+
     public func reset() {
         isApplyingConfiguration = true
         let preset = LLMProvider.provider(id: "openai")
@@ -377,12 +463,19 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         baseURL = preset.defaultBaseURL
         apiKey = ""
         model = preset.defaultModel
+        asrProviderId = preset.id
+        asrBaseURL = preset.defaultBaseURL
+        asrModel = CloudASRModelCatalog.defaultModel(for: preset.id)
+        asrApiKey = ""
         handednessPreference = .left
         localASRCustomLanguageModelEnabled = true
         hasAcknowledgedCloudSharing = false
         configuration.providerId = preset.id
         configuration.baseURL = preset.defaultBaseURL
         configuration.model = preset.defaultModel
+        configuration.asrProviderId = preset.id
+        configuration.asrBaseURL = preset.defaultBaseURL
+        configuration.asrModel = CloudASRModelCatalog.defaultModel(for: preset.id)
         configuration.handednessPreference = .left
         configuration.localASRCustomLanguageModelEnabled = true
         configuration.hasAcknowledgedCloudSharing = false

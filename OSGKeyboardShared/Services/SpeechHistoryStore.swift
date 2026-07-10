@@ -34,6 +34,7 @@ public final class SpeechHistoryStore: ObservableObject {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
+        rebaseOnPersistedStateBeforeMutation()
         let entry = SpeechHistoryEntry(text: trimmed, engineMode: engineMode)
         payload.entries.insert(entry, at: 0)
         payload.trimEntries()
@@ -42,6 +43,7 @@ public final class SpeechHistoryStore: ObservableObject {
     }
 
     public func delete(id: UUID) {
+        rebaseOnPersistedStateBeforeMutation()
         guard payload.entries.contains(where: { $0.id == id }) else { return }
         payload.deletedEntryIDs[id] = Date()
         payload.entries.removeAll { $0.id == id }
@@ -51,10 +53,22 @@ public final class SpeechHistoryStore: ObservableObject {
     }
 
     public func clearAll() {
+        rebaseOnPersistedStateBeforeMutation()
         payload.recordClearAll()
         payload.updatedAt = Date()
         payload.pruneTombstonesIfNeeded()
         applyPayload(postCloudPush: true)
+    }
+
+    /// Cloud pulls write the merged history to disk but only *schedule* the
+    /// in-memory reload (the notification observer hops through a Task).
+    /// Mutating a stale snapshot and saving it wholesale would erase whatever
+    /// that merge just brought in — always rebase on the persisted state
+    /// before mutating.
+    private func rebaseOnPersistedStateBeforeMutation() {
+        let disk = SpeechHistoryStorage.load(from: defaults)
+        guard disk != payload else { return }
+        payload = SyncedSpeechHistory.merge(local: payload, remote: disk)
     }
 
     public func snapshot() -> SyncedSpeechHistory {

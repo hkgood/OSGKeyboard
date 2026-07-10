@@ -45,6 +45,7 @@
       "recommendedLocales": ["zh-CN", "en-US"],
       "supportsHotwords": true,
       "hotwordMode": "recognizerScoped",
+      "badgeKey": "mac.localASR.badge.balanced",
       "installKind": "archive",
       "installRelativePath": "models/sherpa-qwen3-0.6b-int8",
       "archiveBaseName": "sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25",
@@ -71,6 +72,7 @@
       "recommendedLocales": ["zh-CN", "en-US"],
       "supportsHotwords": true,
       "hotwordMode": "recognizerScoped",
+      "badgeKey": "mac.localASR.badge.quality",
       "installKind": "repository",
       "installRelativePath": "models/sherpa-qwen3-1.7b-int8",
       "archiveBaseName": "sherpa-onnx-qwen3-asr-1.7B-int8",
@@ -114,30 +116,6 @@
       ]
     },
     {
-      "id": "sherpa-paraformer-zh-int8",
-      "displayName": "Paraformer Large",
-      "backend": "sherpaParaformer",
-      "runtimePlatform": "macos",
-      "sizeBytes": 220000000,
-      "recommendedLocales": ["zh-CN", "en-US"],
-      "supportsHotwords": false,
-      "hotwordMode": "none",
-      "installKind": "archive",
-      "installRelativePath": "models/sherpa-paraformer-zh-int8",
-      "archiveBaseName": "sherpa-onnx-paraformer-zh-int8-2025-10-07",
-      "layout": {
-        "paraformerModel": "model.int8.onnx",
-        "tokens": "tokens.txt"
-      },
-      "sources": [
-        {
-          "type": "github",
-          "priority": 1,
-          "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-paraformer-zh-int8-2025-10-07.tar.bz2"
-        }
-      ]
-    },
-    {
       "id": "sherpa-sensevoice-small-int8",
       "displayName": "SenseVoice Small",
       "backend": "sherpaSenseVoice",
@@ -146,6 +124,7 @@
       "recommendedLocales": ["zh-CN", "en-US", "ja-JP", "ko-KR"],
       "supportsHotwords": false,
       "hotwordMode": "none",
+      "badgeKey": "mac.localASR.badge.fastest",
       "installKind": "archive",
       "installRelativePath": "models/sherpa-sensevoice-small-int8",
       "archiveBaseName": "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17",

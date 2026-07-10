@@ -21,7 +21,7 @@ OSGKeyboard is a free, source-available alternative to commercial voice-input to
 2. Speak naturally (up to 3.5 minutes / 210 seconds per take)
 3. Tap again to stop — the AI polishes your words into clean text and inserts at the cursor
 
-Audio is transcribed **on-device** by Apple's `SpeechAnalyzer` + `DictationTranscriber` (iOS 26+). Only the **polished transcript** is sent to your chosen cloud LLM. **No audio ever leaves your phone.**
+By default, audio is transcribed **on-device** by Apple's `SpeechAnalyzer` + `DictationTranscriber` (iOS 26+) — **no audio leaves your phone** unless you say so. If polish is enabled, only the transcript text goes to your chosen LLM. Optionally, you can switch to a **cloud ASR engine** (explicit opt-in with a confirmation): in that mode your recordings are uploaded to the ASR provider you configure.
 
 Under the hood, OSGKeyboard uses a **Flow session model**: a long-lived audio session runs in the host app, the keyboard extension writes tiny "start / stop" signals to the App Group, and the polished text is delivered back to the keyboard for insertion. You do not need to jump back to the host app between recordings.
 
@@ -34,7 +34,7 @@ Under the hood, OSGKeyboard uses a **Flow session model**: a long-lived audio se
 - ✍️ **AI polishing** — adds structure, punctuation, fixes grammar, optionally produces lists
 - 🧩 **Local + cloud polish toggle** — local engine is ASR-only by default; opt into a post-ASR cloud polish step (DeepSeek by default) when the iOS speech recognition isn't strong enough for your environment (noisy far-field audio, strong accents, etc.)
 - 🔌 **Bring-your-own API** — works with any OpenAI-compatible endpoint (OpenAI, DeepSeek, Qwen DashScope, Moonshot, Zhipu, your own self-hosted server, …)
-- 🔒 **Privacy first** — audio never leaves your device; only the final transcript is sent to the LLM you choose
+- 🔒 **Privacy first** — on-device ASR by default, so audio never leaves your device unless you explicitly opt into the cloud engine; polish sends only the transcript to the LLM you choose
 - 🎨 **Native SwiftUI** — dark theme, frosted glass, pure Swift 6, ~3,600 lines of code
 - 🪶 **Zero dependencies** — no SwiftPM packages, no CocoaPods, no Carthage
 - 🔁 **Flow session** — keep recording across multiple takes without bouncing back to the host app
@@ -46,7 +46,7 @@ Under the hood, OSGKeyboard uses a **Flow session model**: a long-lived audio se
 ### Requirements
 
 - macOS with **Xcode 26** (matches `project.yml` deployment target iOS 26)
-- iPhone running **iOS 26.0+**
+- iPhone or iPad running **iOS 26.0+** (iPad fully supported: Split View / Stage Manager, adaptive layout)
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen): `brew install xcodegen`
 - An OpenAI-compatible API key (e.g. from [OpenAI](https://platform.openai.com/api-keys), [DeepSeek](https://platform.deepseek.com/api_keys), or [Qwen DashScope](https://dashscope.console.aliyun.com/apiKey)). Not needed if you stay on the "local ASR only" engine.
 
@@ -64,6 +64,17 @@ xcodebuild -project OSGKeyboard.xcodeproj -scheme OSGKeyboard \
 > The `OSGKeyboard.xcodeproj` is **not** committed — it is regenerated from
 > `project.yml` by `Scripts/generate-xcodeproj.sh`. Always re-run the script
 > after `git pull` if `project.yml` has changed.
+
+### macOS distribution (decision)
+
+The macOS menu-bar app ships via **Developer ID direct distribution** (notarized,
+non-sandboxed), NOT the Mac App Store. This is deliberate: its core features —
+global hold-to-talk hotkey, Accessibility-based text insertion into other apps,
+and synthesized ⌘V — are incompatible with the Mac App Store sandbox, and a
+sandboxed Accessibility grant also tends to reset after every app update.
+`OSGKeyboardMac.entitlements` therefore keeps `com.apple.security.app-sandbox`
+set to `false`; do not flip it back on without redesigning the insertion path.
+(The iOS app targets the iOS App Store as usual — see `AUDIT_APPSTORE.md`.)
 
 ### Enable the keyboard in iOS
 
@@ -130,9 +141,9 @@ OSGKeyboard/
 
 **Engine modes:**
 
-- `cloud` (default) — on-device ASR via `SpeechAnalyzer`, transcript is sent to your configured LLM for polish.
-- `local` — on-device ASR via `SpeechAnalyzer` only; transcript is inserted as-is. No network round-trip.
-- `local` + "Cloud polish after ASR" toggle (Settings → Engine) — same on-device ASR, but the transcript is routed through your configured LLM before insertion. Useful when iOS speech recognition isn't accurate enough in your environment.
+- `local` (default) — on-device ASR via `SpeechAnalyzer`; transcript is inserted as-is. No network round-trip.
+- `local` + "Cloud polish after ASR" toggle (Settings → Engine) — same on-device ASR, but the transcript (text only) is routed through your configured LLM before insertion. Useful when iOS speech recognition isn't accurate enough in your environment.
+- `cloud` (opt-in, requires an explicit confirmation) — **your voice recordings are uploaded** to the ASR provider you configure (e.g. OpenAI `/audio/transcriptions`, DashScope, Zhipu), and the resulting transcript is sent to your LLM for polish. Choose this only when you accept your provider's privacy terms.
 
 **Cross-process plumbing (host app ↔ keyboard extension):**
 

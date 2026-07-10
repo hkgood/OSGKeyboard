@@ -8,17 +8,22 @@ struct ProviderPickerSection: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     @ObservedObject var config: ProviderConfig
+    var role: CloudProviderRole = .polish
+
+    private var selectedProviderId: String {
+        role == .asr ? config.asrProviderId : config.providerId
+    }
 
     var body: some View {
-        // v0.2.1 follow-up: filter out presets marked as
-        // `isUserSelectable == false` (DeepSeek is local-engine only).
-        let visiblePresets = LLMProvider.userSelectablePresets
+        let visiblePresets = role == .asr
+            ? LLMProvider.asrSelectablePresets
+            : LLMProvider.userSelectablePresets
         VStack(spacing: 0) {
             ForEach(Array(visiblePresets.enumerated()), id: \.element.id) { index, provider in
                 Button {
                     select(provider)
                 } label: {
-                    row(provider, selected: provider.id == config.providerId)
+                    row(provider, selected: provider.id == selectedProviderId)
                 }
                 .buttonStyle(.plain)
                 if index < visiblePresets.count - 1 {
@@ -35,7 +40,12 @@ struct ProviderPickerSection: View {
 
     private func select(_ provider: LLMProvider) {
         withAnimation(Motion.quick) {
-            config.apply(preset: provider)
+            switch role {
+            case .polish:
+                config.apply(preset: provider)
+            case .asr:
+                config.applyAsr(preset: provider)
+            }
         }
     }
 

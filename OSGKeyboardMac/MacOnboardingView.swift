@@ -198,7 +198,7 @@ struct MacOnboardingView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .frame(minWidth: 860, minHeight: 600)
+        .frame(minWidth: MacMetrics.windowMinWidth, minHeight: MacMetrics.windowMinHeight)
         .onAppear {
             applyDefaults()
             model.reload()

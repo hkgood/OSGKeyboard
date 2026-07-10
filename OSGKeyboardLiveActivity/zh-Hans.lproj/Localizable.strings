@@ -1,0 +1,6 @@
+/* Live Activity 文案。键为 FlowLiveActivityWidget 中的英文字面量 —
+   SwiftUI Text(_:) 会把字符串字面量按 LocalizedStringKey 在本表解析。 */
+"Voice session active" = "语音会话进行中";
+"Listening…" = "正在聆听…";
+"Transcribing…" = "正在转写…";
+"Session disconnected · tap to reconnect" = "会话已断开 · 点按重连";

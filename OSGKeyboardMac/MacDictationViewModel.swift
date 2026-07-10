@@ -28,7 +28,7 @@ enum MacSection: String, CaseIterable, Identifiable {
 
     var systemImage: String {
         switch self {
-        case .dashboard: return "square.grid.2x2"
+        case .dashboard: return "house"
         case .history: return "clock.arrow.circlepath"
         case .dictionary: return "character.book.closed"
         case .settings: return "gearshape"
@@ -45,7 +45,13 @@ final class MacDictationViewModel: ObservableObject {
     @Published var selectedSection: MacSection = .dashboard
 
     @Published var isRecording = false
+    /// True while microphone permission / engine start is in flight.
+    /// Drives the overlay so the HUD appears on Option-down immediately,
+    /// instead of waiting for the async `beginRecording` to finish.
+    @Published private(set) var isPreparingToRecord = false
     @Published var isProcessing = false
+    /// True once live ASR has surfaced at least one partial during this take.
+    @Published private(set) var isStreamingPartial = false
     @Published var transcript = ""
     @Published var statusMessage = ""
     @Published var audioLevel: Float = 0
@@ -55,6 +61,7 @@ final class MacDictationViewModel: ObservableObject {
 
     @Published var autoPasteEnabled: Bool
     @Published var hotkeyEnabled: Bool
+    @Published var hotkeyTrigger: MacHotkeyTrigger
 
     @Published var config: ProviderConfig
 
@@ -64,6 +71,12 @@ final class MacDictationViewModel: ObservableObject {
     private var levelTimer: Timer?
     private var sessionTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
+    /// In-flight `beginRecording` started by the hotkey — cancelled if the
+    /// key is released before the engine is ready (avoids a stuck session).
+    private var hotkeyBeginTask: Task<Void, Never>?
+    /// Live chunked ASR while recording (cloud / supported local paths).
+    /// Finished in `finishRecording` so partials can become the final draft.
+    private var liveCaptureTask: Task<MacLiveASRCaptureResult, Never>?
 
     let usageStatistics: UsageStatisticsStore
     let speechHistory = SpeechHistoryStore.shared
@@ -71,6 +84,7 @@ final class MacDictationViewModel: ObservableObject {
     private enum StoredKeys {
         static let autoPaste = "mac.autoPasteEnabled"
         static let hotkey = "mac.hotkeyEnabled"
+        static let hotkeyTrigger = MacHotkeyTrigger.storageKey
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -79,6 +93,9 @@ final class MacDictationViewModel: ObservableObject {
         self.usageStatistics = UsageStatisticsStore(defaults: defaults)
         self.autoPasteEnabled = defaults.object(forKey: StoredKeys.autoPaste) as? Bool ?? true
         self.hotkeyEnabled = defaults.object(forKey: StoredKeys.hotkey) as? Bool ?? true
+        self.hotkeyTrigger = MacHotkeyTrigger(
+            rawValue: defaults.string(forKey: StoredKeys.hotkeyTrigger) ?? ""
+        ) ?? .rightOption
 
         MacICloudSyncBootstrap.configure(defaults: defaults)
         statusMessage = MacL10n.string("mac.status.ready", language: config.uiLanguage)
@@ -114,10 +131,16 @@ final class MacDictationViewModel: ObservableObject {
 
     // MARK: - Derived
 
+    var polishSelectableProviders: [LLMProvider] {
+        LLMProvider.userSelectablePresets
+    }
+
+    var asrSelectableProviders: [LLMProvider] {
+        LLMProvider.asrSelectablePresets
+    }
+
     var selectableProviders: [LLMProvider] {
-        LLMProvider.presets.filter {
-            $0.isUserSelectable && $0.cloudASRStrategy != .localFallback
-        }
+        asrSelectableProviders
     }
 
     var dictionaryTermCount: Int {
@@ -185,6 +208,12 @@ final class MacDictationViewModel: ObservableObject {
         if enabled { hotkeyService.start() } else { hotkeyService.stop() }
     }
 
+    func setHotkeyTrigger(_ trigger: MacHotkeyTrigger) {
+        hotkeyTrigger = trigger
+        defaults.set(trigger.rawValue, forKey: StoredKeys.hotkeyTrigger)
+        hotkeyService.trigger = trigger
+    }
+
     func setEngineMode(_ mode: String) {
         config.engineMode = mode
     }
@@ -192,23 +221,45 @@ final class MacDictationViewModel: ObservableObject {
     // MARK: - Recording
 
     func toggleRecording() {
-        if isRecording { finishRecording() } else { beginRecording() }
+        if isRecording || isPreparingToRecord {
+            cancelOrFinishRecording()
+        } else {
+            Task { await beginRecording() }
+        }
     }
 
-    func beginRecording() {
-        guard !isProcessing else { return }
+    func beginRecording() async {
+        guard !isProcessing, !isRecording, !isPreparingToRecord else { return }
+        isPreparingToRecord = true
         let store = AppGroupStore(defaults: defaults)
         MacAppContextService.captureAndPersist(to: store)
         refreshForegroundAppName()
 
         do {
-            try recorder.start()
+            try await recorder.start()
+            // Hotkey may have been released while we awaited mic permission /
+            // engine start — abandon cleanly instead of latching a stuck session.
+            isPreparingToRecord = false
+            if Task.isCancelled {
+                _ = recorder.stop()
+                return
+            }
             isRecording = true
             transcript = ""
+            isStreamingPartial = false
             statusMessage = MacL10n.string("mac.status.listening", language: config.uiLanguage)
             startTimers()
+            startLiveCaptureIfSupported(store: store)
+            // Tiny race: Option released between the cancel check and
+            // `isRecording = true`. Treat it as end-of-hold and finish.
+            if Task.isCancelled {
+                finishRecording()
+            }
         } catch {
-            statusMessage = error.localizedDescription
+            isPreparingToRecord = false
+            if !Task.isCancelled {
+                statusMessage = error.localizedDescription
+            }
         }
     }
 
@@ -216,49 +267,166 @@ final class MacDictationViewModel: ObservableObject {
         guard isRecording else { return }
         isRecording = false
         isProcessing = true
-        statusMessage = MacL10n.string("mac.status.transcribing", language: config.uiLanguage)
+        let hadLivePartial = isStreamingPartial
+        statusMessage = MacL10n.string(
+            hadLivePartial ? "mac.status.polishing" : "mac.status.transcribing",
+            language: config.uiLanguage
+        )
         stopTimers()
         audioLevel = 0
         let samples = recorder.stop()
         let store = AppGroupStore(defaults: defaults)
+        let liveTask = liveCaptureTask
+        liveCaptureTask = nil
 
         Task { [weak self] in
             guard let self else { return }
             do {
-                let text = try await MacDictationPipeline.run(samples: samples, store: store)
-                self.transcript = text
-                let pasted = try self.deliver(text)
-                self.recordUsage(for: text)
-                self.speechHistory.append(text: text)
-                self.statusMessage = self.statusAfterDelivery(pasted: pasted)
+                let result: MacDictationResult
+                if let liveTask {
+                    let capture = await liveTask.value
+                    let trimmedLive = capture.raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !capture.shouldFallbackToBatch, !trimmedLive.isEmpty {
+                        if self.transcript.isEmpty {
+                            self.transcript = trimmedLive
+                        }
+                        result = try await MacDictationPipeline.polishCapturedASR(
+                            raw: capture.raw,
+                            store: store,
+                            localBias: capture.localBias,
+                            chunkWarning: capture.chunkWarning
+                        )
+                    } else {
+                        result = try await MacDictationPipeline.run(
+                            samples: samples,
+                            store: store,
+                            onPartial: { [weak self] partial in
+                                Task { @MainActor in
+                                    self?.transcript = partial
+                                }
+                            }
+                        )
+                    }
+                } else {
+                    result = try await MacDictationPipeline.run(
+                        samples: samples,
+                        store: store,
+                        onPartial: { [weak self] partial in
+                            Task { @MainActor in
+                                self?.transcript = partial
+                            }
+                        }
+                    )
+                }
+                self.transcript = result.text
+                let pasted = try await self.deliver(result.text)
+                self.recordUsage(for: result.text)
+                self.speechHistory.append(text: result.text)
+                self.statusMessage = self.statusAfterDelivery(
+                    pasted: pasted,
+                    polishWarning: result.polishWarning,
+                    chunkWarning: result.chunkWarning
+                )
             } catch {
                 self.statusMessage = error.localizedDescription
             }
+            self.isStreamingPartial = false
             self.isProcessing = false
         }
     }
 
-    private func deliver(_ text: String) throws -> Bool {
-        try MacTextInsertionService.insert(text, autoPaste: autoPasteEnabled)
+    private func startLiveCaptureIfSupported(store: AppGroupStore) {
+        guard MacDictationPipeline.supportsLivePartials(store: store) else { return }
+        let stream = recorder.makeSnapshotStream()
+        liveCaptureTask = Task { [weak self] in
+            await MacDictationPipeline.captureLive(
+                stream: stream,
+                store: store,
+                onPartial: { [weak self] partial in
+                    Task { @MainActor in
+                        guard let self else { return }
+                        guard self.isRecording || self.isProcessing else { return }
+                        let trimmed = partial.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmed.isEmpty else { return }
+                        self.transcript = partial
+                        self.isStreamingPartial = true
+                    }
+                }
+            )
+        }
     }
 
-    private func statusAfterDelivery(pasted: Bool) -> String {
+    private func cancelLiveCapture() {
+        liveCaptureTask?.cancel()
+        liveCaptureTask = nil
+        isStreamingPartial = false
+    }
+
+    /// Stops an in-flight prepare, or finishes an active recording.
+    private func cancelOrFinishRecording() {
+        if isRecording {
+            finishRecording()
+            return
+        }
+        if isPreparingToRecord {
+            hotkeyBeginTask?.cancel()
+            hotkeyBeginTask = nil
+            // If the button-triggered prepare wasn't tracked by hotkeyBeginTask,
+            // still clear the preparing flag and stop any engine that raced in.
+            isPreparingToRecord = false
+            cancelLiveCapture()
+            _ = recorder.stop()
+        }
+    }
+
+    private func deliver(_ text: String) async throws -> Bool {
+        try await MacTextInsertionService.insert(text, autoPaste: autoPasteEnabled)
+    }
+
+    private func statusAfterDelivery(
+        pasted: Bool,
+        polishWarning: String? = nil,
+        chunkWarning: String? = nil
+    ) -> String {
         let lang = config.uiLanguage
+        let base: String
         if autoPasteEnabled, pasted {
-            return MacL10n.string("mac.status.copiedAndPasted", language: lang)
+            base = MacL10n.string("mac.status.copiedAndPasted", language: lang)
+        } else if autoPasteEnabled, !pasted {
+            base = MacL10n.string("mac.status.copied", language: lang)
+        } else {
+            base = MacL10n.string("mac.status.copied", language: lang)
         }
-        if autoPasteEnabled, !pasted {
-            return MacL10n.string("mac.status.copied", language: lang)
+
+        if let polishWarning, !polishWarning.isEmpty {
+            return MacL10n.format("mac.status.deliveryWithNote", language: lang, base, polishWarning)
         }
-        return MacL10n.string("mac.status.copied", language: lang)
+        if let chunkWarning, !chunkWarning.isEmpty {
+            return MacL10n.format("mac.status.deliveryWithNote", language: lang, base, chunkWarning)
+        }
+        return base
     }
 
     private func wireHotkeyService() {
+        hotkeyService.trigger = hotkeyTrigger
         hotkeyService.onPressBegan = { [weak self] in
-            self?.beginRecording()
+            guard let self else { return }
+            self.hotkeyBeginTask?.cancel()
+            self.hotkeyBeginTask = Task { [weak self] in
+                await self?.beginRecording()
+            }
         }
         hotkeyService.onPressEnded = { [weak self] in
-            self?.finishRecording()
+            guard let self else { return }
+            // Cancel a still-preparing start so a quick Option tap never
+            // latches recording. If recording already began, finish it.
+            if self.isRecording {
+                self.hotkeyBeginTask = nil
+                self.finishRecording()
+            } else {
+                self.hotkeyBeginTask?.cancel()
+                self.hotkeyBeginTask = nil
+            }
         }
         if hotkeyEnabled { hotkeyService.start() }
     }
@@ -302,6 +470,10 @@ final class MacDictationViewModel: ObservableObject {
 
     func selectProvider(_ provider: LLMProvider) {
         config.apply(preset: provider)
+    }
+
+    func selectAsrProvider(_ provider: LLMProvider) {
+        config.applyAsr(preset: provider)
     }
 
     func refreshForegroundAppName() {

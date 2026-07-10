@@ -13,7 +13,20 @@ final class LocalASRModelCatalogTests: XCTestCase {
         XCTAssertFalse(catalog.models.contains { $0.id == "qwen3-mlx-1.7b" })
         XCTAssertTrue(catalog.models.contains { $0.id == "sherpa-qwen3-0.6b-int8" })
         XCTAssertTrue(catalog.models.contains { $0.id == "sherpa-qwen3-1.7b-int8" })
-        XCTAssertTrue(catalog.models.contains { $0.id == "sherpa-paraformer-zh-int8" })
+        XCTAssertTrue(catalog.models.contains { $0.id == "sherpa-sensevoice-small-int8" })
+        XCTAssertFalse(catalog.models.contains { $0.id == "sherpa-paraformer-zh-int8" })
+        XCTAssertEqual(
+            LocalASRModelCatalog.model("sherpa-sensevoice-small-int8", in: catalog)?.badgeKey,
+            "mac.localASR.badge.fastest"
+        )
+        XCTAssertEqual(
+            LocalASRModelCatalog.model("sherpa-qwen3-0.6b-int8", in: catalog)?.badgeKey,
+            "mac.localASR.badge.balanced"
+        )
+        XCTAssertEqual(
+            LocalASRModelCatalog.model("sherpa-qwen3-1.7b-int8", in: catalog)?.badgeKey,
+            "mac.localASR.badge.quality"
+        )
     }
 
     func testSherpaQwen317BUsesRepositoryInstall() throws {
@@ -32,9 +45,9 @@ final class LocalASRModelCatalogTests: XCTestCase {
         XCTAssertTrue(model.supportsHotwords)
     }
 
-    func testCapabilitiesForParaformer() throws {
+    func testCapabilitiesForSenseVoice() throws {
         let catalog = try LocalASRModelCatalog.loadBundled()
-        let model = try XCTUnwrap(LocalASRModelCatalog.model("sherpa-paraformer-zh-int8", in: catalog))
+        let model = try XCTUnwrap(LocalASRModelCatalog.model("sherpa-sensevoice-small-int8", in: catalog))
         let caps = LocalASRModelCatalog.capabilities(for: model)
         XCTAssertEqual(caps.hotwordMode, .none)
         XCTAssertFalse(model.supportsHotwords)

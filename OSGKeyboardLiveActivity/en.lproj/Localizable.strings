@@ -1,0 +1,7 @@
+/* Live Activity captions. Keys are the English literals used in
+   FlowLiveActivityWidget — SwiftUI Text(_:) resolves string literals as
+   LocalizedStringKey against this table automatically. */
+"Voice session active" = "Voice session active";
+"Listening…" = "Listening…";
+"Transcribing…" = "Transcribing…";
+"Session disconnected · tap to reconnect" = "Session disconnected · tap to reconnect";

@@ -180,6 +180,8 @@ public enum TypeStyle {
     public static let title3     = Font.system(size: 20, weight: .semibold)
     public static let title2     = Font.system(size: 22, weight: .bold)
     public static let title      = Font.system(size: 28, weight: .bold)
+    /// Home brand line + History / Dictionary / Settings page titles.
+    public static let pageTitle  = Font.system(size: 30, weight: .semibold)
     public static let largeTitle = Font.system(size: 34, weight: .bold)
     /// Subtle status line under the brand mark (home header).
     public static let status     = Font.system(size: 13, weight: .regular)

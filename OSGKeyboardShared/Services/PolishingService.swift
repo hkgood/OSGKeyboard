@@ -10,8 +10,8 @@
 // English dictation while halving the network round-trip.
 //
 // Engine matrix:
-//   - `engineMode == "cloud"`  → provider cloud ASR + user's cloud LLM
-//   - `engineMode == "local"`  → on-device ASR + built-in DeepSeek
+//   - `engineMode == "cloud"`  → user's cloud ASR + user's cloud LLM (independent)
+//   - `engineMode == "local"`  → on-device ASR + user's LLM (or built-in DeepSeek)
 //   - Ultra-short, structure-free utterances skip the LLM entirely
 //   - Cloud without API key     → raw + `.missingAPIKey` warning
 //   - Local without build key   → raw + `.missingAPIKey` warning
@@ -37,6 +37,10 @@ public actor PolishingService {
         /// Local engine DeepSeek step: `PreconfiguredKeys.deepseek` is
         /// still the repo placeholder, or cloud engine Keychain is empty.
         case missingAPIKey
+        /// The keychain was unreadable (device locked before first unlock)
+        /// — the key likely EXISTS; treat as transient, never as "please
+        /// re-enter your API key".
+        case keychainLocked
     }
 
     /// v0.2.1: what the LLM should do with the raw transcript. The
@@ -95,8 +99,13 @@ public actor PolishingService {
             return TranscriptPostProcessor.localClean(trimmed)
         }
 
-        if store.engineMode == "cloud", injectedClient == nil {
-            guard !store.apiKey.isEmpty else {
+        if injectedClient == nil {
+            let providerId = Self.resolvedProviderId(store: store, providerIdOverride: providerIdOverride)
+            let hasPolishKey = Self.hasPolishAPIKey(store: store, providerId: providerId)
+            guard hasPolishKey else {
+                if case .unavailable = Keychain.apiKeyOutcome(for: providerId, preferICloudSync: true) {
+                    throw PolishError.keychainLocked
+                }
                 throw PolishError.missingAPIKey
             }
         }
@@ -150,10 +159,14 @@ public actor PolishingService {
             )
             let apiKey: String
             if effectiveProviderId == "deepseek" {
-                guard PreconfiguredKeys.isDeepseekConfigured else {
+                let userKey = store.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !userKey.isEmpty {
+                    apiKey = userKey
+                } else if PreconfiguredKeys.isDeepseekConfigured {
+                    apiKey = PreconfiguredKeys.deepseek
+                } else {
                     throw PolishError.missingAPIKey
                 }
-                apiKey = PreconfiguredKeys.deepseek
             } else {
                 apiKey = store.apiKey
             }
@@ -356,7 +369,11 @@ public actor PolishingService {
     /// (unpolished, unsegmented) ASR text.
     internal func effectiveTimeout(for text: String) -> TimeInterval {
         let scaled = timeout + (Double(text.count) / 100.0) * 10.0
-        return min(max(scaled, timeout), 120)
+        // The cap participates in the keyboard-watchdog budget — see
+        // `FlowSessionKeys.keyboardResultTimeout`. Raising it here without
+        // going through that constant would silently break the invariant
+        // "keyboard timeout > host worst case".
+        return min(max(scaled, timeout), FlowSessionKeys.maxPolishTimeout)
     }
 
     internal static func resolvedProviderId(
@@ -366,11 +383,25 @@ public actor PolishingService {
         if let providerIdOverride {
             return providerIdOverride
         }
-        if store.engineMode == "local" {
+        let id = store.providerId
+        // Local installs without a user LLM key keep using the built-in DeepSeek path.
+        if store.engineMode == "local",
+           id != "deepseek",
+           store.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           PreconfiguredKeys.isDeepseekConfigured {
             return "deepseek"
         }
-        let id = store.providerId
-        return id == "deepseek" ? "openai" : id
+        return id == "deepseek" && store.engineMode == "cloud" ? "openai" : id
+    }
+
+    internal static func hasPolishAPIKey(store: any ConfigurationStore, providerId: String) -> Bool {
+        if !store.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return true
+        }
+        if providerId == "deepseek", PreconfiguredKeys.isDeepseekConfigured {
+            return true
+        }
+        return false
     }
 
     internal static func resolveLLMEndpoint(
@@ -396,6 +427,8 @@ extension PolishingService.PolishError: LocalizedError {
             return "LLM polish timed out."
         case .missingAPIKey:
             return "Missing API key (cloud: Settings API key; local: build configuration)."
+        case .keychainLocked:
+            return "API key unavailable while the device is locked — will work after unlock."
         }
     }
 }

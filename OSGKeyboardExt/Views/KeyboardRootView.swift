@@ -33,6 +33,11 @@ private enum KeyboardLayoutMetrics {
     static let topBarToTranscriptSpacing: CGFloat = Spacing.xs / 2
     /// Outer inset for the bottom action row from screen edges (8 pt → 24 pt, +200%).
     static let sideActionHorizontalInset: CGFloat = Spacing.xs * 3
+    /// iPad: cap the content column. A full-width (~1180 pt) keyboard would
+    /// park delete/return at the far screen edges and turn each cursor-drag
+    /// pad into a ~450 pt runway — capping keeps the reach ergonomics of the
+    /// phone layout. iPhone widths are all below this, so it is a no-op there.
+    static let contentMaxWidth: CGFloat = 700
 
     // MARK: - Content-driven keyboard height (single source of truth)
     static let outerPaddingTop: CGFloat = 2
@@ -109,6 +114,8 @@ public struct KeyboardRootView: View {
             .padding(.bottom, KeyboardLayoutMetrics.outerPaddingBottom)
             // 透明背景：让系统键盘 chrome 透出，不自行铺色（深浅模式一致）。
             .background(Color.clear)
+            .frame(maxWidth: KeyboardLayoutMetrics.contentMaxWidth)
+            .frame(maxWidth: .infinity)
             .frame(height: Self.totalHeight)
             // Feed the resolved palette to all nested chips/buttons.
             .environment(\.themePalette, palette)

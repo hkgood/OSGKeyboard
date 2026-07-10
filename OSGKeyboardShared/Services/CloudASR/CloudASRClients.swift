@@ -17,31 +17,35 @@ public protocol CloudASRTranscribing: Sendable {
 
 public enum CloudASRClientFactory {
     public static func make(store: any ConfigurationStore, session: URLSession = .shared) -> CloudASRTranscribing {
-        let strategy = CloudASRModelCatalog.strategy(for: store.providerId)
+        let providerId = store.asrProviderId
+        let strategy = CloudASRModelCatalog.strategy(for: providerId)
+        let asrModel = store.asrModel.isEmpty
+            ? CloudASRModelCatalog.defaultModel(for: providerId)
+            : store.asrModel
         switch strategy {
         case .zhipuHotwords:
             return ZhipuCloudASRClient(
-                apiKey: store.apiKey,
-                model: CloudASRModelCatalog.defaultModel(for: store.providerId),
+                apiKey: store.asrApiKey,
+                model: asrModel,
                 session: session
             )
         case .alibabaVocabulary:
             return AlibabaFunASRClient(
-                apiKey: store.apiKey,
-                model: CloudASRModelCatalog.defaultModel(for: store.providerId),
+                apiKey: store.asrApiKey,
+                model: asrModel,
                 persistence: store.cloudASRPersistence,
                 session: session
             )
         case .prompt:
             return PromptCloudASRClient(
-                providerId: store.providerId,
-                baseURL: store.baseURL,
-                apiKey: store.apiKey,
-                model: CloudASRModelCatalog.defaultModel(for: store.providerId),
+                providerId: providerId,
+                baseURL: store.asrBaseURL,
+                apiKey: store.asrApiKey,
+                model: asrModel,
                 session: session
             )
         case .localFallback:
-            return UnsupportedCloudASRClient(providerId: store.providerId)
+            return UnsupportedCloudASRClient(providerId: providerId)
         }
     }
 }

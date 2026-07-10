@@ -276,14 +276,17 @@ struct MacLocalASRModelSettingsView: View {
                             HStack(spacing: Spacing.xs) {
                                 Text(model.displayName)
                                     .foregroundStyle(palette.textPrimary)
+                                if let badgeKey = model.badgeKey {
+                                    modelBadge(
+                                        MacL10n.string(badgeKey, language: lang),
+                                        emphasized: true
+                                    )
+                                }
                                 if model.supportsHotwords {
-                                    Text(MacL10n.string("mac.localASR.personalDictionaryTag", language: lang))
-                                        .font(TypeStyle.caption2)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(palette.accent.opacity(0.15))
-                                        .foregroundStyle(palette.accent)
-                                        .clipShape(Capsule())
+                                    modelBadge(
+                                        MacL10n.string("mac.localASR.personalDictionaryTag", language: lang),
+                                        emphasized: false
+                                    )
                                 }
                             }
                             Text(modelSubtitle(model, installed: installed))
@@ -303,6 +306,20 @@ struct MacLocalASRModelSettingsView: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    private func modelBadge(_ title: String, emphasized: Bool) -> some View {
+        Text(title)
+            .font(TypeStyle.caption2)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+                emphasized
+                    ? palette.accent.opacity(0.18)
+                    : palette.textTertiary.opacity(0.12)
+            )
+            .foregroundStyle(emphasized ? palette.accent : palette.textSecondary)
+            .clipShape(Capsule())
     }
 
     @ViewBuilder

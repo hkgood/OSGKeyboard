@@ -20,7 +20,8 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertEqual(config.providerId, "openai")
         XCTAssertEqual(config.modeId, "polish")
         XCTAssertEqual(config.localeId, "auto")
-        XCTAssertEqual(config.engineMode, "cloud")
+        // Privacy-critical: the default engine must keep audio on-device.
+        XCTAssertEqual(config.engineMode, "local")
         XCTAssertFalse(config.hasCompletedOnboarding)
         XCTAssertEqual(config.onboardingPage, 0)
         XCTAssertFalse(config.hasAcknowledgedCloudSharing)
@@ -31,7 +32,7 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertEqual(config.polishIntensity, .default)
         XCTAssertTrue(config.personalDictionary.entries.isEmpty)
         XCTAssertTrue(config.flowSkipAppSwitch)
-        XCTAssertEqual(config.flowInactivityDuration, .twelveHours)
+        XCTAssertEqual(config.flowInactivityDuration, .thirtyMinutes)
     }
 
     func testSaveAndLoadRoundTrip() {
@@ -40,9 +41,13 @@ final class AppGroupConfigurationTests: XCTestCase {
         config.providerId = "anthropic"
         config.baseURL = "https://example.com/v1"
         config.model = "claude-test"
+        config.asrProviderId = "zhipu"
+        config.asrBaseURL = "https://open.bigmodel.cn/api/paas/v4"
+        config.asrModel = "glm-asr-2512"
         config.modeId = "polish"
         config.localeId = "zh-Hans"
-        config.engineMode = "local"
+        // Non-default value so the round-trip proves persistence.
+        config.engineMode = "cloud"
         config.hasCompletedOnboarding = true
         config.onboardingPage = 2
         config.hasAcknowledgedCloudSharing = true
@@ -52,15 +57,19 @@ final class AppGroupConfigurationTests: XCTestCase {
         config.cursorDragNavigationEnabled = false
         config.polishIntensity = .light
         config.flowSkipAppSwitch = false
-        config.flowInactivityDuration = .thirtyMinutes
+        // Use a non-default value so the round-trip actually proves persistence.
+        config.flowInactivityDuration = .threeHours
         config.save(to: defaults)
 
         let loaded = AppGroupConfiguration.load(fromAvailable: defaults)
         XCTAssertEqual(loaded.providerId, "anthropic")
         XCTAssertEqual(loaded.baseURL, "https://example.com/v1")
         XCTAssertEqual(loaded.model, "claude-test")
+        XCTAssertEqual(loaded.asrProviderId, "zhipu")
+        XCTAssertEqual(loaded.asrBaseURL, "https://open.bigmodel.cn/api/paas/v4")
+        XCTAssertEqual(loaded.asrModel, "glm-asr-2512")
         XCTAssertEqual(loaded.localeId, "zh-Hans")
-        XCTAssertEqual(loaded.engineMode, "local")
+        XCTAssertEqual(loaded.engineMode, "cloud")
         XCTAssertTrue(loaded.hasCompletedOnboarding)
         XCTAssertEqual(loaded.onboardingPage, 2)
         XCTAssertTrue(loaded.hasAcknowledgedCloudSharing)
@@ -71,7 +80,37 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertFalse(loaded.cursorDragNavigationEnabled)
         XCTAssertEqual(loaded.polishIntensity, .light)
         XCTAssertFalse(loaded.flowSkipAppSwitch)
-        XCTAssertEqual(loaded.flowInactivityDuration, .thirtyMinutes)
+        XCTAssertEqual(loaded.flowInactivityDuration, .threeHours)
+    }
+
+    /// Existing installs (onboarding completed, no explicit engineMode key)
+    /// ran on the old "cloud"/12h defaults — a silent flip to the new
+    /// privacy defaults would change their engine under them AND propagate
+    /// through settings sync as a fake fresh edit to their other devices.
+    func testDefaultMigrationPreservesExistingInstallBehavior() {
+        let defaults = makeDefaults()
+        defaults.set(true, forKey: AppGroupConfiguration.Keys.hasCompletedOnboarding)
+
+        let config = AppGroupConfiguration.load(fromAvailable: defaults)
+
+        XCTAssertEqual(config.engineMode, "cloud", "pre-picker installs stay on their old default")
+        XCTAssertEqual(config.flowInactivityDuration, .twelveHours)
+        // The resolution is persisted so it is stable and sync-invisible.
+        XCTAssertEqual(defaults.string(forKey: AppGroupConfiguration.Keys.engineMode), "cloud")
+        XCTAssertEqual(
+            defaults.string(forKey: AppGroupConfiguration.Keys.flowInactivityDuration),
+            FlowInactivityDuration.twelveHours.rawValue
+        )
+    }
+
+    func testDefaultMigrationGivesFreshInstallPrivacyDefaults() {
+        let defaults = makeDefaults()
+
+        let config = AppGroupConfiguration.load(fromAvailable: defaults)
+
+        XCTAssertEqual(config.engineMode, "local")
+        XCTAssertEqual(config.flowInactivityDuration, .thirtyMinutes)
+        XCTAssertEqual(defaults.string(forKey: AppGroupConfiguration.Keys.engineMode), "local")
     }
 
     func testTranslationEnabledDerivedFromTargetLocale() {

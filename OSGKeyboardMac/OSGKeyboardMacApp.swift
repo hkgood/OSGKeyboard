@@ -57,7 +57,9 @@ struct OSGKeyboardMacApp: App {
         // very top, matching macOS System Settings.
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentMinSize)
-        .defaultSize(width: 1_024, height: 720)
+        // Open at the minimum size — same as `MacMetrics.windowMin*`, so the
+        // first launch already matches the smallest allowed window.
+        .defaultSize(width: MacMetrics.windowMinWidth, height: MacMetrics.windowMinHeight)
     }
 }
 
@@ -94,8 +96,11 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         MacAppearancePreference.applyToApp(.current)
+        MacTextInsertionService.beginTrackingFrontmostApp()
         configurePopover()
         configureStatusItem()
+        MacDictationOverlayController.shared.start(observing: MacDictationViewModel.shared)
+        CustomLanguageModelManager.shared.prepareInBackgroundIfNeeded()
 
         // The menu bar always follows the *system* appearance, so the status
         // item must ignore the app's forced light/dark override. Re-pin the

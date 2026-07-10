@@ -1,7 +1,8 @@
 // DashboardView.swift
 // OSGKeyboard · Mac
 //
-// Primary workspace: session stats, dictation canvas, floating record bar.
+// Primary workspace: brand voice, asymmetric stats, dictation stage, and
+// the record bar. History lives on its own page — no duplicate list here.
 
 import SwiftUI
 
@@ -20,33 +21,24 @@ struct DashboardView: View {
         self._stats = ObservedObject(wrappedValue: viewModel.usageStatistics)
     }
 
-    // Four equal-width columns — same metrics as the iOS home stats card.
-    private let columns = Array(
-        repeating: GridItem(.flexible(minimum: 120), spacing: Spacing.md),
-        count: 4
-    )
-
     var body: some View {
         VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.lg) {
-                    if let appName = viewModel.foregroundAppName {
-                        Text(MacL10n.format("mac.foregroundApp", language: lang, appName))
-                            .font(TypeStyle.caption)
-                            .foregroundStyle(palette.textTertiary)
-                            .transition(.opacity)
-                    }
-                    statGrid
-                    dictationCanvas
-                }
-                .animation(Motion.soft, value: viewModel.foregroundAppName)
-                .padding(.horizontal, Spacing.lg)
-                .padding(.top, Spacing.sm)
-                .padding(.bottom, Spacing.lg)
+            VStack(alignment: .leading, spacing: Spacing.lg) {
+                heroHeader
+                statCluster
+                dictationStage
             }
+            .padding(.horizontal, MacMetrics.pageHorizontalInset)
+            .padding(.top, Spacing.sm)
+
+            // Leftover window height splits evenly above / below the mic bar
+            // so spacing stays balanced at any window size.
+            Spacer(minLength: Spacing.xs)
+
             BottomDictationBar(viewModel: viewModel)
-                .padding(.horizontal, Spacing.lg)
-                .padding(.bottom, Spacing.sm)
+                .padding(.horizontal, MacMetrics.pageHorizontalInset)
+
+            Spacer(minLength: Spacing.xs)
         }
         .onAppear { stats.reloadFromDisk() }
         .onReceive(NotificationCenter.default.publisher(for: .usageStatisticsDidSyncFromCloud)) { _ in
@@ -54,18 +46,41 @@ struct DashboardView: View {
         }
     }
 
-    private var statGrid: some View {
-        LazyVGrid(columns: columns, spacing: Spacing.md) {
-            StatCard(
-                title: MacL10n.string("mac.stat.dictationTime", language: lang),
-                value: UsageStatisticsStore.formatDuration(
-                    stats.dictationDurationSeconds,
-                    language: lang
-                ),
-                caption: MacL10n.string("mac.stat.cumulativeDuration", language: lang),
-                systemImage: "waveform",
-                accent: true
-            )
+    // MARK: - Hero
+
+    private var heroHeader: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text(MacL10n.string("mac.brand.tagline", language: lang))
+                .font(TypeStyle.pageTitle)
+                .foregroundStyle(palette.textPrimary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+
+            HStack(spacing: Spacing.sm) {
+                Text(MacL10n.string("mac.brand.tagline.subtitle", language: lang))
+                    .font(TypeStyle.footnote)
+                    .foregroundStyle(palette.textTertiary)
+
+                if let appName = viewModel.foregroundAppName {
+                    Text("·")
+                        .foregroundStyle(palette.textTertiary.opacity(0.45))
+                    Text(MacL10n.format("mac.foregroundApp", language: lang, appName))
+                        .font(TypeStyle.footnote)
+                        .foregroundStyle(palette.textTertiary)
+                        .transition(.opacity)
+                        .lineLimit(1)
+                }
+            }
+            .animation(Motion.soft, value: viewModel.foregroundAppName)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Stats (hero word count, full width but content-height —
+    // never stretched to match a taller sibling and left with dead air)
+
+    private var statCluster: some View {
+        VStack(spacing: Spacing.md) {
             StatCard(
                 title: MacL10n.string("mac.stat.words", language: lang),
                 value: UsageStatisticsStore.formatCount(
@@ -73,28 +88,44 @@ struct DashboardView: View {
                     language: lang
                 ),
                 caption: MacL10n.string("mac.stat.transcribed", language: lang),
-                systemImage: "text.alignleft"
+                systemImage: "text.alignleft",
+                accent: true,
+                prominent: true
             )
-            StatCard(
-                title: MacL10n.string("mac.stat.translation", language: lang),
-                value: UsageStatisticsStore.formatCount(
-                    stats.translationCharacterCount,
-                    language: lang
-                ),
-                caption: MacL10n.string("mac.stat.cumulativeTranslation", language: lang),
-                systemImage: "character.bubble"
-            )
-            StatCard(
-                title: MacL10n.string("mac.stat.dictionary", language: lang),
-                value: "\(viewModel.dictionaryTermCount)",
-                caption: MacL10n.string("mac.stat.customTerms", language: lang),
-                systemImage: "character.book.closed"
-            )
+
+            HStack(spacing: Spacing.md) {
+                StatCard(
+                    title: MacL10n.string("mac.stat.dictationTime", language: lang),
+                    value: UsageStatisticsStore.formatDuration(
+                        stats.dictationDurationSeconds,
+                        language: lang
+                    ),
+                    caption: MacL10n.string("mac.stat.cumulativeDuration", language: lang),
+                    systemImage: "waveform"
+                )
+                StatCard(
+                    title: MacL10n.string("mac.stat.translation", language: lang),
+                    value: UsageStatisticsStore.formatCount(
+                        stats.translationCharacterCount,
+                        language: lang
+                    ),
+                    caption: MacL10n.string("mac.stat.cumulativeTranslation", language: lang),
+                    systemImage: "character.bubble"
+                )
+                StatCard(
+                    title: MacL10n.string("mac.stat.dictionary", language: lang),
+                    value: "\(viewModel.dictionaryTermCount)",
+                    caption: MacL10n.string("mac.stat.customTerms", language: lang),
+                    systemImage: "character.book.closed"
+                )
+            }
         }
     }
 
-    private var dictationCanvas: some View {
-        MacCard(padding: Spacing.lg) {
+    // MARK: - Dictation stage
+
+    private var dictationStage: some View {
+        MacCard(padding: Spacing.md, cornerRadius: Radius.large) {
             ZStack(alignment: .topLeading) {
                 if viewModel.transcript.isEmpty {
                     Text(
@@ -102,24 +133,37 @@ struct DashboardView: View {
                             ? MacL10n.string("mac.status.listening", language: lang)
                             : MacL10n.string("mac.status.ready", language: lang)
                     )
-                    .font(.system(size: 26, weight: .light))
+                    .font(.system(size: 22, weight: .light))
                     .foregroundStyle(palette.textTertiary)
                     .contentTransition(.opacity)
-                    .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
+                    .frame(
+                        maxWidth: .infinity,
+                        minHeight: MacMetrics.dictationCanvasMinHeight,
+                        maxHeight: .infinity,
+                        alignment: .topLeading
+                    )
                     .transition(.opacity)
                 } else {
                     Text(viewModel.transcript)
-                        .font(.system(size: 22, weight: .regular))
+                        .font(.system(size: 20, weight: .regular))
                         .foregroundStyle(palette.textPrimary)
+                        .lineSpacing(4)
                         .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
+                        .frame(
+                            maxWidth: .infinity,
+                            minHeight: MacMetrics.dictationCanvasMinHeight,
+                            maxHeight: .infinity,
+                            alignment: .topLeading
+                        )
                         .transition(.opacity)
                 }
             }
+            .frame(minHeight: MacMetrics.dictationCanvasMinHeight, maxHeight: 160)
         }
         .animation(Motion.soft, value: viewModel.transcript.isEmpty)
         .animation(Motion.quick, value: viewModel.isRecording)
     }
+
 }
 
 // MARK: - Floating record bar
@@ -142,12 +186,10 @@ struct BottomDictationBar: View {
             recordControl
         }
         .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
-        .macGlassSurface(in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous), fillOpacity: 1)
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                .stroke(palette.dividerStrong, lineWidth: 0.5)
-        )
+        .padding(.vertical, Spacing.xs)
+        // No surface fill — the mic bar sits on the page background so Home
+        // stays flat and the canvas above can stay shorter without a second
+        // floating card competing for height.
     }
 
     private var readinessChip: some View {
@@ -189,15 +231,14 @@ struct BottomDictationBar: View {
             .foregroundStyle(palette.textSecondary)
             .padding(.horizontal, Spacing.sm)
             .padding(.vertical, 7)
-            .macGlassSurface(in: Capsule(), fillOpacity: 0.66)
+            .background(palette.surfaceElevated, in: Capsule())
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
     }
 
-    // 麦克风按钮始终居中固定：录音时的波形放进按钮内部，
-    // “按停止”提示作为浮层显示在按钮上方，二者均不参与布局，
-    // 因此按下 Option 触发录音时按钮位置不会发生偏移。
+    // Mic stays geometrically centred: waveform lives inside the button,
+    // “press stop” floats above — neither participates in layout.
     private var recordControl: some View {
         recordButton
             .overlay(alignment: .top) {
@@ -225,7 +266,6 @@ struct BottomDictationBar: View {
                     )
                 Group {
                     if viewModel.isRecording {
-                        // 与 iOS 一致：录音时在红色按钮内部显示实时波形
                         MiniWaveform(level: viewModel.audioLevel, barCount: 4, tint: palette.textOnAccent)
                     } else {
                         Image(systemName: "mic.fill")

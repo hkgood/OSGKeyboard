@@ -97,8 +97,11 @@ final class AppSceneDelegate: NSObject, UIWindowSceneDelegate {
             for item in items {
                 // `sourceApplication` is only non-nil when the caller belongs to
                 // the same Apple Developer Team (our own keyboard extension) —
-                // exactly what the host-return whitelist relies on.
-                if let source = item.source {
+                // exactly what the host-return whitelist relies on. Record it
+                // ONLY for the `startflow` handoff: overwriting it for every
+                // deep link (e.g. `osgkeyboard://settings`) could point a later
+                // cold-start "return to host" at the wrong app.
+                if let source = item.source, item.url.host == "startflow" {
                     FlowSessionBridge.setPendingHostBundleId(source)
                 }
                 AppOpenURLRouter.shared.route(item.url)

@@ -91,8 +91,11 @@ public final class KeyboardState: ObservableObject {
     @Published public var micDisabled: Bool = false
     /// One-line helper shown above the mic while `micDisabled == true`.
     @Published public var micDisabledHint: String = ""
-    /// "local" → on-device ASR only. "cloud" → ASR + LLM polish.
-    @Published public var engineMode: String = "cloud"
+    /// "local" → on-device ASR only. "cloud" → cloud ASR + LLM polish.
+    /// Boot value must match the privacy-safe app default (`local`) so the
+    /// keyboard never assumes the audio-uploading engine before the App
+    /// Group config has been read.
+    @Published public var engineMode: String = "local"
     /// v0.2.1 follow-up: derived — translation is on iff a target
     /// locale has been selected (mirrors `ProviderConfig.translationEnabled`
     /// so the chip / pipeline read the same source of truth).
@@ -146,6 +149,46 @@ public final class KeyboardState: ObservableObject {
         case none
         case startRecording
         case openSettings
+    }
+
+    // MARK: - Temporary Flow debug (remove after orange-mic investigation)
+
+    /// Mirrored from `KeyboardFlowCoordinator` for the on-screen debug panel.
+    @Published public var debugPendingFlowStart: Bool = false
+    @Published public var debugFlowRecording: Bool = false
+    @Published public var debugAwaitingFlowResult: Bool = false
+    @Published public var debugHasFullAccess: Bool = false
+
+    /// Snapshot for the keyboard debug panel.
+    public func makeFlowDebugRows(hasFullAccess: Bool) -> [FlowDebugRow] {
+        debugHasFullAccess = hasFullAccess
+        let micLabel: String = {
+            switch micVoiceAvailability {
+            case .ready: return "ready"
+            case .recording: return "recording"
+            case .processing: return "processing"
+            case .unavailable(let reason):
+                switch reason {
+                case .hostNotReady: return "unavailable(hostNotReady)"
+                case .preparingSession: return "unavailable(preparingSession)"
+                case .noFullAccess: return "unavailable(noFullAccess)"
+                case .appGroupUnavailable: return "unavailable(appGroupUnavailable)"
+                case .missingAPIKey: return "unavailable(missingAPIKey)"
+                }
+            }
+        }()
+        let localRows: [FlowDebugRow] = [
+            FlowDebugRow("mic", micLabel),
+            FlowDebugRow("phase", String(describing: phase)),
+            FlowDebugRow("pendingStart", debugPendingFlowStart ? "1" : "0"),
+            FlowDebugRow("kb.recording", debugFlowRecording ? "1" : "0"),
+            FlowDebugRow("kb.awaiting", debugAwaitingFlowResult ? "1" : "0"),
+            FlowDebugRow("fullAccess", hasFullAccess ? "1" : "0"),
+            FlowDebugRow("micDisabled", micDisabled ? "1" : "0"),
+            FlowDebugRow("flowSessionPub", flowSessionActive ? "1" : "0"),
+            FlowDebugRow("engine", engineMode)
+        ]
+        return localRows + FlowDebugAppGroupSnapshot.rows()
     }
 
     // Action hooks — injected by the view controller at install time.

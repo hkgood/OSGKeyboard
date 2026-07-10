@@ -58,7 +58,7 @@ enum MacLocalASRPreferences {
     /// Maps removed catalog entries to the current default Sherpa model.
     static func migratedModelId(_ id: String) -> String {
         switch id {
-        case "qwen3-mlx-1.7b":
+        case "qwen3-mlx-1.7b", "sherpa-paraformer-zh-int8":
             return "sherpa-qwen3-0.6b-int8"
         default:
             return id
@@ -120,7 +120,7 @@ enum MacLocalASRService {
             return try await transcribeWithModel(model, samples: samples, locale: locale, bias: bias)
         }
 
-        return try await MacSpeechLocalASR.transcribe(samples: samples, locale: locale)
+        return try await MacSpeechLocalASR.transcribe(samples: samples, locale: locale, bias: bias)
     }
 
     private static func transcribeWithModel(
@@ -141,7 +141,7 @@ enum MacLocalASRService {
                 bias: bias
             )
         case .appleSpeech:
-            return try await MacSpeechLocalASR.transcribe(samples: samples, locale: locale)
+            return try await MacSpeechLocalASR.transcribe(samples: samples, locale: locale, bias: bias)
         }
     }
 }

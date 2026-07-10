@@ -44,6 +44,10 @@ final class KeyboardFlowCoordinator {
     private var isAwaitingFlowResult = false
     private var activeSessionId: UUID?
     private var currentUtteranceId: UUID?
+    /// Utterance whose final result we already inserted (or failed). Prevents
+    /// `adoptHostBusyStateIfNeeded` from re-entering `.processing` after a
+    /// stale App Group snapshot still says `reason=processing`.
+    private var lastConsumedUtteranceId: UUID?
     private var currentCommandSeq: Int64 = 0
     private var lastAvailabilityTraceSignature = ""
 
@@ -139,6 +143,12 @@ final class KeyboardFlowCoordinator {
         FlowSessionBridge.reloadFromDisk()
         let readySnapshot = FlowSessionBridge.readySnapshot()
         activeSessionId = readySnapshot?.sessionId ?? activeSessionId
+
+        // If the host is mid-utterance but this extension process lost local
+        // ownership (jetsam / recreate after app switch), re-adopt it so we
+        // show red/white instead of a fake orange "starting" state.
+        adoptHostBusyStateIfNeeded(snapshot: readySnapshot)
+
         let hostReady = readySnapshot?.ready == true && FlowSessionBridge.isHostReady()
         let now = Date().timeIntervalSince1970
         if hostReady { lastHostReadyAt = now }
@@ -148,10 +158,20 @@ final class KeyboardFlowCoordinator {
         // across cross-process read jitter and anchors this smoothing.
         let withinReadyGrace = lastHostReadyAt > 0
             && (now - lastHostReadyAt) <= Self.hostReadyGrace
+        // Host busy (recording/processing) is NOT "still starting". Treating
+        // it as preparingSession was the orange-stuck bug after cold start:
+        // host utt.rec=1 → ready=false → keyboard forever "正在启动…".
+        let hostBusy = readySnapshot?.reason == .recording
+            || readySnapshot?.reason == .processing
         let hostWarming = !hostReady
+            && !hostBusy
             && FlowSessionBridge.isSessionActive()
             && (FlowSessionBridge.isHostReachable() || isPendingFlowStart || withinReadyGrace)
         state.flowSessionActive = FlowSessionBridge.isSessionActive()
+        state.debugPendingFlowStart = isPendingFlowStart
+        state.debugFlowRecording = isFlowRecording
+        state.debugAwaitingFlowResult = isAwaitingFlowResult
+        state.debugHasFullAccess = hasFullAccess()
         state.micVoiceAvailability = MicVoiceAvailabilityResolver.resolve(
             phase: state.phase,
             micDisabled: state.micDisabled,
@@ -176,11 +196,95 @@ final class KeyboardFlowCoordinator {
         }
     }
 
+    /// Re-attach to a host utterance this keyboard process no longer owns.
+    private func adoptHostBusyStateIfNeeded(snapshot: FlowReadySnapshot?) {
+        guard let snapshot, let sessionId = snapshot.sessionId else { return }
+        // Ignore snapshots from a dead host generation.
+        if let snapGen = snapshot.hostGeneration,
+           let liveGen = FlowSessionBridge.currentHostGeneration(),
+           snapGen != liveGen {
+            return
+        }
+
+        // Host already finished — never re-adopt a consumed utterance, and
+        // clear sticky local processing left behind by a stale busy snapshot.
+        if snapshot.reason != .recording, snapshot.reason != .processing {
+            clearStickyProcessingIfNeeded(hostReady: snapshot.ready)
+            return
+        }
+
+        switch snapshot.reason {
+        case .recording:
+            guard !isFlowRecording else { return }
+            guard !isAwaitingFlowResult else { return }
+            // Require the host's utterance id — inventing one makes matchingResult
+            // forever miss the real delivery and leaves the mic white forever.
+            guard let busyId = snapshot.busyUtteranceId else { return }
+            guard busyId != lastConsumedUtteranceId else { return }
+            activeSessionId = sessionId
+            currentUtteranceId = busyId
+            isPendingFlowStart = false
+            flowStartDeadline = 0
+            stopHostReadyWait()
+            isFlowRecording = true
+            state.phase = .recording
+            if state.lastTranscript.isEmpty {
+                state.lastTranscript = ""
+            }
+            if let view = wakeLockView() {
+                ExtensionScreenWakeLock.acquire(from: view)
+            }
+            startUtteranceCountdown()
+            startFlowLevelWatchdog()
+            traceState("adoptHostBusy.recording", extra: "session=\(sessionId)")
+        case .processing:
+            guard !isAwaitingFlowResult else { return }
+            guard let busyId = snapshot.busyUtteranceId else { return }
+            guard busyId != lastConsumedUtteranceId else { return }
+            activeSessionId = sessionId
+            currentUtteranceId = busyId
+            isPendingFlowStart = false
+            flowStartDeadline = 0
+            isFlowRecording = false
+            stopUtteranceCountdown()
+            ExtensionScreenWakeLock.release()
+            state.phase = .processing
+            if state.lastTranscript.isEmpty {
+                state.lastTranscript = ExtL10n.string("keyboard.flow.transcribing")
+            }
+            startFlowResultWatchdog()
+            traceState("adoptHostBusy.processing", extra: "session=\(sessionId)")
+        default:
+            break
+        }
+    }
+
+    /// After insert, a stale `reason=processing` snapshot can bounce the mic
+    /// back to white loading. When the host is no longer busy, force idle.
+    private func clearStickyProcessingIfNeeded(hostReady: Bool) {
+        guard !isAwaitingFlowResult, !isFlowRecording else { return }
+        guard case .processing = state.phase else { return }
+        state.phase = .idle
+        state.lastTranscript = ""
+        stopFlowWatchdog()
+        currentUtteranceId = nil
+        traceState(
+            "stickyProcessing.cleared",
+            extra: hostReady ? "hostReady=1" : "hostReady=0"
+        )
+    }
+
     /// Session is live but the ready contract has not landed yet — poll
     /// quickly instead of sticking on "session inactive" orange.
     private func startHostReadyWaitIfNeeded() {
         guard !isPendingFlowStart else { return }
         guard FlowSessionBridge.isSessionActive() else {
+            stopHostReadyWait()
+            return
+        }
+        // Host busy ≠ waiting for ready. Do not spin the ready-wait poll.
+        if let reason = FlowSessionBridge.readySnapshot()?.reason,
+           reason == .recording || reason == .processing {
             stopHostReadyWait()
             return
         }
@@ -196,7 +300,9 @@ final class KeyboardFlowCoordinator {
                 guard let self, !Task.isCancelled else { return }
                 FlowSessionBridge.reloadFromDisk()
                 self.recomputeMicVoiceAvailability()
-                if self.state.micVoiceAvailability.isReady {
+                if self.state.micVoiceAvailability.isReady
+                    || self.state.micVoiceAvailability == .recording
+                    || self.state.micVoiceAvailability == .processing {
                     return
                 }
                 try? await Task.sleep(nanoseconds: 150_000_000)
@@ -365,6 +471,7 @@ final class KeyboardFlowCoordinator {
                     )
                 )
                 FlowSessionBridge.clearResult()
+                lastConsumedUtteranceId = result.utteranceId
                 currentUtteranceId = nil
                 textInserter.handleFlowTranscript(
                     TranscriptionDelivery(text: text, polishWarning: result.warning)
@@ -375,6 +482,7 @@ final class KeyboardFlowCoordinator {
                 isAwaitingFlowResult = false
                 stopFlowWatchdog()
                 FlowSessionBridge.clearResult()
+                lastConsumedUtteranceId = result.utteranceId
                 currentUtteranceId = nil
                 let error = FlowTranscriptionError(
                     message: result.text ?? ExtL10n.string("keyboard.flow.resultTimeout"),
@@ -626,6 +734,7 @@ final class KeyboardFlowCoordinator {
                         )
                     )
                     FlowSessionBridge.clearResult()
+                    self.lastConsumedUtteranceId = result.utteranceId
                     self.currentUtteranceId = nil
                     self.debug("resultWatchdog consumed delivery len=\(text.count)")
                     self.textInserter.handleFlowTranscript(
@@ -637,6 +746,7 @@ final class KeyboardFlowCoordinator {
                     self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
                     FlowSessionBridge.clearResult()
+                    self.lastConsumedUtteranceId = result.utteranceId
                     self.currentUtteranceId = nil
                     let error = FlowTranscriptionError(
                         message: result.text ?? ExtL10n.string("keyboard.flow.resultTimeout"),

@@ -108,4 +108,11 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
     public static var userSelectablePresets: [LLMProvider] {
         presets.filter(\.isUserSelectable)
     }
+
+    /// Cloud ASR presets (excludes providers without a cloud transcription API).
+    public static var asrSelectablePresets: [LLMProvider] {
+        userSelectablePresets.filter {
+            CloudASRModelCatalog.strategy(for: $0.id) != .localFallback
+        }
+    }
 }

@@ -15,7 +15,7 @@ struct MacContentView: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             header
             recordButton
-            Text(MacL10n.string("mac.hint.holdOption", language: lang))
+            Text(MacL10n.string(viewModel.hotkeyTrigger.hintKey, language: lang))
                 .font(TypeStyle.caption)
                 .foregroundStyle(palette.textTertiary)
                 .frame(maxWidth: .infinity, alignment: .center)

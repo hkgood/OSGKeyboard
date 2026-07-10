@@ -26,8 +26,12 @@ public final class PersonalDictionaryCloudSync {
 
     public static let kvsKey = PersonalDictionary.kvsKeyV2
     public static let legacyKVSKey = PersonalDictionary.legacyKVSKey
-    /// Stay below the ~1 MB per-key KVS limit.
-    public static let maxPayloadBytes = 900_000
+    /// The 1 MB iCloud KVS quota covers the WHOLE store, not one key —
+    /// this payload shares it with speech history, settings, and usage
+    /// stats. Exceeding the total quota makes KVS reject writes for ALL
+    /// keys (`QuotaViolation`), silently stopping every sync.
+    /// Budget: ~400 KB dictionary + ~400 KB history + headroom.
+    public static let maxPayloadBytes = 400_000
 
     private let kvs: UbiquitousKeyValueStoreing
     private let makeStore: () -> AppGroupStore
@@ -75,7 +79,14 @@ public final class PersonalDictionaryCloudSync {
     public func pushLocalIfEnabled(_ dictionary: PersonalDictionary) async throws {
         let store = makeStore()
         guard store.personalDictionaryICloudSyncEnabled else { return }
-        try push(dictionary)
+        // Read-merge-write: KVS is last-writer-wins; uploading the local
+        // view verbatim would drop entries another device added since our
+        // last pull. Tombstones in `merge` keep deletions intact.
+        let merged = loadRemote().map { PersonalDictionary.merge(local: dictionary, remote: $0) } ?? dictionary
+        if merged != dictionary {
+            store.setPersonalDictionary(merged)
+        }
+        try push(merged)
     }
 
     /// Enable sync: merge local + remote, persist locally, then upload.

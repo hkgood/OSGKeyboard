@@ -10,15 +10,18 @@ import OSGKeyboardShared
 final class KeyboardTextInserter {
     private let state: KeyboardState
     private let insertText: (String) -> Void
+    private let contextBeforeInput: () -> String?
     private let scheduleAutoClearError: () -> Void
 
     init(
         state: KeyboardState,
         insertText: @escaping (String) -> Void,
+        contextBeforeInput: @escaping () -> String?,
         scheduleAutoClearError: @escaping () -> Void
     ) {
         self.state = state
         self.insertText = insertText
+        self.contextBeforeInput = contextBeforeInput
         self.scheduleAutoClearError = scheduleAutoClearError
     }
 
@@ -30,7 +33,13 @@ final class KeyboardTextInserter {
             return
         }
         // Host app already polished when configured; keyboard only inserts.
-        insertText(trimmed)
+        // Word-boundary hygiene: dictating "world" with the cursor right
+        // after "Hello" must yield "Hello world", not "Helloworld".
+        let separator = DictationTextComposer.insertionSeparator(
+            previousContext: contextBeforeInput(),
+            insertion: trimmed
+        )
+        insertText(separator + trimmed)
         state.lastTranscript = ""
         state.level = 0
         if let warning = delivery.polishWarning {

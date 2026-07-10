@@ -1,9 +1,8 @@
 // MacHistoryView.swift
 // OSGKeyboard · Mac
 //
-// Single-column, day-grouped transcript log rendered as grouped cards (the
-// same native `Form` container as Settings). Every entry shows its full text
-// inline — no master/detail split, so content never pushes the sidebar out.
+// Day-grouped transcript log. ScrollView is full-bleed (scrollbar on the
+// window edge); title + cards share `pageHorizontalInset` on their content.
 
 import SwiftUI
 
@@ -31,36 +30,39 @@ struct MacHistoryView: View {
     }()
 
     var body: some View {
-        Group {
-            if historyStore.entries.isEmpty {
-                emptyState
-                    .transition(.opacity)
-            } else {
-                form
-                    .transition(.opacity)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(palette.background)
-        .animation(Motion.soft, value: historyStore.entries.isEmpty)
-    }
-
-    // MARK: - Grouped cards
-
-    private var form: some View {
-        Form {
-            ForEach(historyStore.groupedByDay, id: \.day) { group in
-                Section(Self.dayFormatter.string(from: group.day)) {
-                    ForEach(group.items) { entry in
-                        row(entry)
+        VStack(spacing: 0) {
+            MacPageHeader(
+                title: MacL10n.string("mac.section.history", language: lang),
+                subtitle: MacL10n.string("mac.page.history.subtitle", language: lang)
+            ) {
+                if !historyStore.entries.isEmpty {
+                    Button {
+                        showClearConfirmation = true
+                    } label: {
+                        Label(
+                            MacL10n.string("mac.history.clearConfirm", language: lang),
+                            systemImage: "trash"
+                        )
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textSecondary)
                     }
+                    .buttonStyle(.plain)
                 }
             }
+
+            Group {
+                if historyStore.entries.isEmpty {
+                    emptyState
+                        .transition(.opacity)
+                } else {
+                    list
+                        .transition(.opacity)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
         .background(palette.background)
-        .safeAreaInset(edge: .top, spacing: 0) { toolbar }
+        .animation(Motion.soft, value: historyStore.entries.isEmpty)
         .confirmationDialog(
             MacL10n.string("mac.history.clearTitle", language: lang),
             isPresented: $showClearConfirmation,
@@ -75,21 +77,43 @@ struct MacHistoryView: View {
         }
     }
 
-    private var toolbar: some View {
-        HStack {
-            Spacer()
-            Button {
-                showClearConfirmation = true
-            } label: {
-                Label(MacL10n.string("mac.history.clearConfirm", language: lang), systemImage: "trash")
-                    .font(TypeStyle.caption)
+    // MARK: - List
+
+    private var list: some View {
+        // Full-bleed ScrollView → scrollbar on the detail pane's right edge.
+        // Horizontal inset lives on the content so cards align with the title.
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: Spacing.md) {
+                ForEach(historyStore.groupedByDay, id: \.day) { group in
+                    daySection(group)
+                }
             }
-            .buttonStyle(.borderless)
-            .foregroundStyle(palette.textSecondary)
+            .padding(.horizontal, MacMetrics.pageHorizontalInset)
+            .padding(.bottom, Spacing.md)
         }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.xs)
-        .background(palette.background)
+    }
+
+    private func daySection(_ group: (day: Date, items: [SpeechHistoryEntry])) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text(Self.dayFormatter.string(from: group.day))
+                .font(TypeStyle.caption)
+                .foregroundStyle(palette.textTertiary)
+
+            MacCard(padding: 0) {
+                VStack(spacing: 0) {
+                    ForEach(Array(group.items.enumerated()), id: \.element.id) { index, entry in
+                        row(entry)
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.vertical, Spacing.sm)
+                        if index < group.items.count - 1 {
+                            // Full-bleed like macOS list rows (not iOS inset separators).
+                            Divider()
+                                .overlay(palette.divider)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private func row(_ entry: SpeechHistoryEntry) -> some View {
@@ -107,11 +131,17 @@ struct MacHistoryView: View {
     private var emptyState: some View {
         VStack(spacing: Spacing.sm) {
             Image(systemName: "text.bubble")
-                .font(.system(size: 34))
-                .foregroundStyle(palette.textTertiary.opacity(0.6))
+                .font(.system(size: 34, weight: .light))
+                .foregroundStyle(palette.textTertiary.opacity(0.55))
+                .symbolRenderingMode(.hierarchical)
             Text(MacL10n.string("mac.history.empty", language: lang))
-                .font(TypeStyle.body)
+                .font(TypeStyle.headline)
                 .foregroundStyle(palette.textSecondary)
+            Text(MacL10n.string("mac.history.emptyBody", language: lang))
+                .font(TypeStyle.footnote)
+                .foregroundStyle(palette.textTertiary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: 320)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

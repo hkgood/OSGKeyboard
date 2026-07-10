@@ -45,8 +45,16 @@ public final class UsageStatisticsCloudSync {
     public func pushLocalIfEnabled() async throws {
         let store = makeStore()
         guard store.settingsICloudSyncEnabled else { return }
+        // Read-merge-write: this fires after every utterance, so pushing the
+        // local view verbatim would clobber counter slices another device
+        // advanced since our last pull (KVS is last-writer-wins). The
+        // G-Counter merge makes the push commutative instead.
         let local = SyncedUsageStatisticsStorage.load(from: store.defaults)
-        try push(local)
+        let merged = loadRemote().map { SyncedUsageStatisticsV2.merge(local: local, remote: $0) } ?? local
+        if merged != local {
+            apply(merged, to: store.defaults, postNotification: true)
+        }
+        try push(merged)
     }
 
     /// Called when settings sync is first enabled to union local + remote totals.

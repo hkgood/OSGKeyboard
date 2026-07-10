@@ -53,6 +53,10 @@ public struct AppGroupStore: @unchecked Sendable {
     public var baseURL: String { configuration.baseURL }
     public var apiKey: String { configuration.apiKey }
     public var model: String { configuration.model }
+    public var asrProviderId: String { configuration.asrProviderId }
+    public var asrBaseURL: String { configuration.resolvedASRBaseURL }
+    public var asrApiKey: String { configuration.asrApiKey }
+    public var asrModel: String { configuration.resolvedASRModel }
     public var modeId: String { configuration.modeId }
     public var localeId: String { configuration.localeId }
     public var engineMode: String { configuration.engineMode }
@@ -90,6 +94,12 @@ public struct AppGroupStore: @unchecked Sendable {
                 config.providerId = openAI.id
                 config.baseURL = openAI.defaultBaseURL
                 config.model = openAI.defaultModel
+            }
+            if mode == "cloud", config.asrProviderId == "deepseek" {
+                let openAI = LLMProvider.provider(id: "openai")
+                config.asrProviderId = openAI.id
+                config.asrBaseURL = openAI.defaultBaseURL
+                config.asrModel = CloudASRModelCatalog.defaultModel(for: openAI.id)
             }
         }
         AppGroupConfigDarwin.postConfigChanged()

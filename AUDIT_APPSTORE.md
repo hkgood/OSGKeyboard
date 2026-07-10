@@ -116,7 +116,7 @@
 - **6.7"** (1290×2796) — 必需
 - **6.1"** (1179×2556) — 必需（iPhone 17 Pro）
 - 5.5" 已被苹果官方文档降级为"可选"（iPhone 8 Plus 等已停产机型）
-- iPad 截图 — 项目声明 iPhone only，无需提供
+- iPad 截图 — **现已必需**：项目自 TARGETED_DEVICE_FAMILY "1,2" 起支持 iPad，App Store Connect 要求提供 13″ iPad Pro 截图套组（本条为后续更新覆盖原「iPhone only 无需提供」的结论）
 - 每套至少 3 张、最多 10 张
 
 **本审计交付**:

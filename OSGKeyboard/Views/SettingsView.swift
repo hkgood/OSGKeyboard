@@ -43,16 +43,11 @@ struct SettingsView: View {
                         dictionaryAndPolishSection
                         flowSessionSection
                         engineSection
-                        // v0.2.1: hide provider/api card when the
-                        // local engine is active regardless of the
-                        // cloud-polish toggle. Local mode is
-                        // contractually ASR-only, so provider/model/
-                        // base URL/API key controls have no use —
-                        // and exposing them invites the user to fill
-                        // out a DeepSeek key they can't use.
+                        polishProviderSection
+                        polishApiSection
                         if config.engineMode == "cloud" {
-                            providerSection
-                            apiSection
+                            asrProviderSection
+                            asrApiSection
                         }
                         if config.engineMode == "local" {
                             localEngineSettingsSection
@@ -253,19 +248,39 @@ struct SettingsView: View {
         }
     }
 
-    private var providerSection: some View {
+    private var polishProviderSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.provider.title")
-            ProviderPickerSection(config: config)
+            sectionHeader("settings.polishProvider.title")
+            Text("settings.polishProvider.subtitle")
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textTertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            ProviderPickerSection(config: config, role: .polish)
         }
     }
 
-    // MARK: - API
-
-    private var apiSection: some View {
+    private var asrProviderSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.api.title")
+            sectionHeader("settings.asrProvider.title")
+            Text("settings.asrProvider.subtitle")
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textTertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            ProviderPickerSection(config: config, role: .asr)
+        }
+    }
+
+    private var polishApiSection: some View {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.polishApi.title")
             APISettingsCard(config: config)
+        }
+    }
+
+    private var asrApiSection: some View {
+        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            sectionHeader("settings.asrApi.title")
+            ASRSettingsCard(config: config)
         }
     }
 

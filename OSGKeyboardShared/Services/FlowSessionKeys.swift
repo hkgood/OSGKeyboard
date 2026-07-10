@@ -33,6 +33,11 @@ public enum FlowSessionKeys {
     public static let pendingHostBundleId = "flow.pendingHostBundleId"
     /// Wall-clock timestamp of the last utterance completion or session start.
     public static let lastActivityAt = "flow.lastActivityAt"
+    /// One-shot token rotated by every host-process launch. State written by
+    /// a previous generation is void by definition — a fresh launch proves the
+    /// previous process is dead, whether or not its `applicationWillTerminate`
+    /// cleanup ever ran (it does NOT run when a suspended app is force-quit).
+    public static let hostGeneration = "flow.hostGeneration.v1"
 
     /// Heartbeat older than this → host is not actively reachable for recording.
     public static let heartbeatStaleInterval: TimeInterval = 3
@@ -59,14 +64,23 @@ public enum FlowSessionKeys {
     public static let localASRWaitTimeout: TimeInterval = 120
     public static let cloudASRWaitTimeout: TimeInterval = 120
 
-    /// Keyboard watchdog after the user stops recording (not utterance max length).
-    /// Must cover worst-case post-stop backlog: remaining SpeechAnalyzer chunks
-    /// plus cloud LLM polish (see `PolishingService.effectiveTimeout` cap).
+    /// Hard cap on a single LLM polish request. `PolishingService`'s scaled
+    /// per-request timeout clamps to this value, so it participates in the
+    /// keyboard-watchdog budget below.
+    public static let maxPolishTimeout: TimeInterval = 120
+
+    /// Extra slack for result serialization, cross-process propagation, and
+    /// the host's own polling cadence.
+    public static let resultDeliveryMargin: TimeInterval = 20
+
+    /// Keyboard watchdog after the user stops recording (not utterance max
+    /// length). Derived from the host-side budget so it always outlasts the
+    /// host's worst case (ASR drain wait + polish cap + margin) — hand-tuned
+    /// constants drifted below the real host maximum, making the keyboard
+    /// report a timeout for transcriptions that were still going to succeed.
     public static func keyboardResultTimeout(engineMode: String) -> TimeInterval {
-        if engineMode == "local" {
-            return 180
-        }
-        return 240
+        let asrWait = engineMode == "local" ? localASRWaitTimeout : cloudASRWaitTimeout
+        return asrWait + maxPolishTimeout + resultDeliveryMargin
     }
 
     public enum RecordingState: String, Sendable, Equatable {

@@ -238,6 +238,142 @@ final class FlowSessionBridgeTests: XCTestCase {
         XCTAssertEqual(FlowSessionBridge.latestAck(defaults: defaults), ack)
     }
 
+    func testNotReadySnapshotDoesNotRefreshHeartbeat() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        let zombieHeartbeat = Date().timeIntervalSince1970 - 120
+        defaults.set(zombieHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
+
+        // A host stuck in a failed cold start writes not-ready snapshots on
+        // every engine flap; those must NOT revive the heartbeat, or zombie
+        // detection is postponed forever.
+        FlowSessionBridge.writeReadySnapshot(
+            FlowReadySnapshot(
+                sessionId: UUID(),
+                ready: false,
+                reason: .waitingForAudioProof,
+                engineMode: "local",
+                localeId: "zh-Hans"
+            ),
+            defaults: defaults
+        )
+
+        XCTAssertTrue(FlowSessionBridge.isHostStale(defaults: defaults))
+    }
+
+    func testBusySnapshotStillRefreshesHeartbeat() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        let staleHeartbeat = Date().timeIntervalSince1970 - 10
+        defaults.set(staleHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
+
+        // Recording/processing proves the host is alive even though the
+        // snapshot is not "ready" — the heartbeat must keep flowing so the
+        // keyboard does not declare a mid-utterance host dead.
+        let sessionId = UUID()
+        FlowSessionBridge.writeReadySnapshot(
+            FlowReadySnapshot(
+                sessionId: sessionId,
+                ready: false,
+                reason: .recording,
+                engineMode: "local",
+                localeId: "zh-Hans",
+                busyUtteranceId: UUID()
+            ),
+            defaults: defaults
+        )
+
+        XCTAssertTrue(FlowSessionBridge.isHostReachable(defaults: defaults))
+        // Not-ready busy snapshots must remain readable so the keyboard can
+        // distinguish "host is recording" from "host is still starting".
+        let snap = FlowSessionBridge.readySnapshot(defaults: defaults)
+        XCTAssertEqual(snap?.reason, .recording)
+        XCTAssertEqual(snap?.ready, false)
+        XCTAssertEqual(snap?.sessionId, sessionId)
+    }
+
+    func testNotReadyStartingSnapshotIsRetainedWithoutRevivingHeartbeat() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        let zombieHeartbeat = Date().timeIntervalSince1970 - 120
+        defaults.set(zombieHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
+
+        FlowSessionBridge.writeReadySnapshot(
+            FlowReadySnapshot(
+                sessionId: UUID(),
+                ready: false,
+                reason: .waitingForAudioProof,
+                engineMode: "local",
+                localeId: "zh-Hans"
+            ),
+            defaults: defaults
+        )
+
+        XCTAssertTrue(FlowSessionBridge.isHostStale(defaults: defaults))
+        XCTAssertEqual(
+            FlowSessionBridge.readySnapshot(defaults: defaults)?.reason,
+            .waitingForAudioProof
+        )
+    }
+
+    func testStaleGenerationSnapshotIsNotReady() {
+        let defaults = makeDefaults()
+        let sessionId = UUID()
+        let now = Date().timeIntervalSince1970
+        FlowSessionBridge.rotateHostGeneration(defaults: defaults)
+        let liveGeneration = FlowSessionBridge.currentHostGeneration(defaults: defaults)
+        FlowSessionBridge.markSessionActive(duration: 60, sessionId: sessionId, defaults: defaults)
+        FlowSessionBridge.writeReadySnapshot(
+            FlowReadySnapshot(
+                sessionId: sessionId,
+                ready: true,
+                reason: .ready,
+                heartbeatAt: now,
+                readyAt: now,
+                engineMode: "local",
+                localeId: "zh-Hans",
+                hostGeneration: liveGeneration
+            ),
+            defaults: defaults
+        )
+        XCTAssertTrue(FlowSessionBridge.isHostReady(defaults: defaults))
+
+        // Host relaunches (force-quit path) → new generation. The old ready
+        // snapshot must be void instantly, without waiting out the 60 s
+        // heartbeat-zombie window.
+        FlowSessionBridge.rotateHostGeneration(defaults: defaults)
+        XCTAssertFalse(FlowSessionBridge.isHostReady(defaults: defaults))
+    }
+
+    func testClearFlowStateOnHostLaunchPreservesPendingHost() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        FlowSessionBridge.setHostReady(true, defaults: defaults)
+        FlowSessionBridge.setPendingHostBundleId("com.example.host", defaults: defaults)
+
+        FlowSessionBridge.clearFlowStateOnHostLaunch(defaults: defaults)
+
+        XCTAssertFalse(FlowSessionBridge.isSessionActive(defaults: defaults))
+        XCTAssertFalse(FlowSessionBridge.isHostReady(defaults: defaults))
+        // The startflow scene-delegate write happens before the session
+        // manager exists — launch reconciliation must not eat it.
+        XCTAssertEqual(
+            FlowSessionBridge.pendingHostBundleId(defaults: defaults),
+            "com.example.host"
+        )
+    }
+
+    func testRotateHostGenerationReturnsPreviousToken() {
+        let defaults = makeDefaults()
+        XCTAssertNil(FlowSessionBridge.rotateHostGeneration(defaults: defaults))
+        let first = FlowSessionBridge.currentHostGeneration(defaults: defaults)
+        XCTAssertNotNil(first)
+
+        let previous = FlowSessionBridge.rotateHostGeneration(defaults: defaults)
+        XCTAssertEqual(previous, first)
+        XCTAssertNotEqual(FlowSessionBridge.currentHostGeneration(defaults: defaults), first)
+    }
+
     func testReadySnapshotDrivesHostReady() {
         let defaults = makeDefaults()
         let sessionId = UUID()
