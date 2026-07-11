@@ -1,10 +1,8 @@
 // MacSettingsView.swift
 // OSGKeyboard · Mac
 //
-// Settings uses native grouped `Form` for correct control layout (Picker /
-// Toggle / LabeledContent). Title and Form share the same plain
-// `pageHorizontalInset` padding (Form scroll margins are zeroed first) so
-// card chrome lines up with the page title.
+// Settings uses native grouped `Form`. LLM / ASR provider blocks use a merged
+// `MacSettingsProviderCard` with responsive rows and theme-aware controls.
 
 import SwiftUI
 #if os(macOS)
@@ -20,8 +18,6 @@ struct MacSettingsView: View {
     @AppStorage(MacOnboardingState.storageKey)
     private var hasCompletedMacOnboarding = true
     @State private var accessibilityTrusted = MacTextInsertionService.isAccessibilityTrusted
-    @State private var showProviderPicker = false
-    @State private var showAsrProviderPicker = false
 
     private var lang: AppUILanguage { viewModel.config.uiLanguage }
     private let recognitionLocales: [(id: String, key: String, fallback: String)] = [
@@ -41,33 +37,25 @@ struct MacSettingsView: View {
                     subtitle: MacL10n.string("mac.page.settings.subtitle", language: lang)
                 )
 
-                Form {
-                    generalSection
-                    recognitionSection
-                    polishProviderSection
-                    if viewModel.config.engineMode == "cloud" {
-                        asrProviderSection
-                            .transition(.opacity)
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: Spacing.xl) {
+                        generalSection
+                        recognitionSection
+                        if viewModel.config.engineMode == "cloud" {
+                            asrProviderSection
+                                .transition(.opacity)
+                        }
+                        if viewModel.config.engineMode == "local" {
+                            MacLocalASRModelSettingsView(viewModel: viewModel)
+                                .transition(.opacity)
+                        }
+                        polishProviderSection
+                        inputSection
+                        legalSection
                     }
-                    if viewModel.config.engineMode == "local" {
-                        MacLocalASRModelSettingsView(viewModel: viewModel)
-                            .transition(.opacity)
-                    }
-                    inputSection
-                    legalSection
+                    .padding(.horizontal, MacMetrics.pageHorizontalInset)
+                    .padding(.bottom, Spacing.md)
                 }
-                .formStyle(.grouped)
-                // Zero Form's own scroll margins, then inset via padding so the
-                // section cards line up with MacPageHeader (contentMargins alone
-                // does not match plain padding on macOS).
-                //
-                // grouped Form adds its own built-in section inset on top of our
-                // padding, so cards sat ~`groupedFormSectionInset` wider than the
-                // History page. Subtract that inset here so the card OUTER edge
-                // lands on `pageHorizontalInset` (40pt), matching History and the
-                // page title's left edge.
-                .contentMargins(.horizontal, 0, for: .scrollContent)
-                .padding(.horizontal, MacMetrics.pageHorizontalInset - MacMetrics.groupedFormSectionInset)
                 .tint(palette.accent)
                 .scrollContentBackground(.hidden)
                 .background(palette.background)
@@ -80,79 +68,83 @@ struct MacSettingsView: View {
     // MARK: - General
 
     private var generalSection: some View {
-        Section(MacL10n.string("mac.settings.general", language: lang)) {
-            Picker(MacL10n.string("mac.settings.appearance", language: lang), selection: $appearanceRaw) {
-                ForEach(MacAppearancePreference.allCases) { pref in
-                    Text(MacL10n.string(pref.labelKey, language: lang)).tag(pref.rawValue)
+        MacSettingsSection(title: MacL10n.string("mac.settings.general", language: lang)) {
+            VStack(spacing: MacMetrics.settingsRowGap) {
+                MacProviderSettingRow(title: MacL10n.string("mac.settings.appearance", language: lang)) {
+                    MacInlinePicker(
+                        selection: $appearanceRaw,
+                        options: MacAppearancePreference.allCases.map {
+                            MacInlinePickerOption(value: $0.rawValue, label: MacL10n.string($0.labelKey, language: lang))
+                        },
+                        fillsWidth: true
+                    )
                 }
-            }
 
-            Picker(MacL10n.string("mac.settings.interfaceLanguage", language: lang), selection: interfaceLanguageBinding) {
-                ForEach(AppUILanguage.allCases, id: \.self) { language in
-                    Text(MacL10n.string(language.labelKey, language: lang)).tag(language.rawValue)
+                MacProviderSettingRow(title: MacL10n.string("mac.settings.interfaceLanguage", language: lang)) {
+                    MacInlinePicker(
+                        selection: interfaceLanguageBinding,
+                        options: AppUILanguage.allCases.map {
+                            MacInlinePickerOption(value: $0.rawValue, label: MacL10n.string($0.labelKey, language: lang))
+                        },
+                        fillsWidth: true
+                    )
                 }
-            }
 
-            Picker(MacL10n.string("mac.settings.recognitionLanguage", language: lang), selection: recognitionLanguageBinding) {
-                ForEach(recognitionLocales, id: \.id) { locale in
-                    Text(localeLabel(locale)).tag(locale.id)
+                MacProviderSettingRow(title: MacL10n.string("mac.settings.recognitionLanguage", language: lang)) {
+                    MacInlinePicker(
+                        selection: recognitionLanguageBinding,
+                        options: recognitionLocales.map {
+                            MacInlinePickerOption(value: $0.id, label: localeLabel($0))
+                        },
+                        fillsWidth: true
+                    )
                 }
-            }
 
-            MacSettingsICloudSyncRow(defaults: viewModel.defaults, language: lang)
-            MacDictionaryICloudSyncRow(defaults: viewModel.defaults, language: lang)
+                MacSettingsICloudSyncRow(defaults: viewModel.defaults, language: lang)
+            }
         }
     }
 
     // MARK: - Polish LLM
 
     private var polishProviderSection: some View {
-        Section(MacL10n.string("mac.settings.polishProvider", language: lang)) {
-            providerPickerRow(
-                title: MacL10n.string("mac.settings.service", language: lang),
-                provider: currentPolishProvider,
-                isPresented: $showProviderPicker
-            ) {
-                providerPickerList(
+        MacSettingsSection(title: MacL10n.string("mac.settings.polishProvider", language: lang)) {
+            MacSettingsProviderCard {
+                MacProviderPickerRow(
+                    title: MacL10n.string("mac.settings.service", language: lang),
                     providers: viewModel.polishSelectableProviders,
-                    selectedId: viewModel.config.providerId
-                ) { provider in
-                    viewModel.selectProvider(provider)
-                    showProviderPicker = false
-                }
-            }
-
-            LabeledContent {
-                SecureField(text: $viewModel.config.apiKey, prompt: Text(verbatim: "sk-…")) {
-                    Text(MacL10n.string("mac.settings.apiKey", language: lang))
-                }
-                .labelsHidden()
-                .macFieldStyle()
-                .frame(maxWidth: MacMetrics.controlWidth)
-            } label: {
-                Text(MacL10n.string("mac.settings.apiKey", language: lang))
-            }
-
-            LabeledContent {
-                TextField(text: $viewModel.config.baseURL, prompt: Text(verbatim: "")) {
-                    Text(MacL10n.string("mac.settings.baseURL", language: lang))
-                }
-                .labelsHidden()
-                .macFieldStyle()
-                .frame(maxWidth: MacMetrics.controlWidth)
-            } label: {
-                Text(MacL10n.string("mac.settings.baseURL", language: lang))
-            }
-
-            LabeledContent {
-                TextField(text: $viewModel.config.model, prompt: Text(verbatim: "")) {
-                    Text(MacL10n.string("mac.settings.model", language: lang))
-                }
-                .labelsHidden()
-                .macFieldStyle()
-                .frame(maxWidth: MacMetrics.controlWidth)
-            } label: {
-                Text(MacL10n.string("mac.settings.model", language: lang))
+                    selection: polishProviderBinding
+                )
+                MacCredentialField(
+                    title: MacL10n.string("mac.settings.apiKey", language: lang),
+                    placeholder: "sk-…",
+                    text: $viewModel.config.apiKey,
+                    isSecret: true
+                )
+                MacCredentialField(
+                    title: MacL10n.string("mac.settings.baseURL", language: lang),
+                    placeholder: currentPolishProvider.defaultBaseURL,
+                    text: $viewModel.config.baseURL
+                )
+                MacProviderModelRow(
+                    title: MacL10n.string("mac.settings.model", language: lang),
+                    placeholder: currentPolishProvider.defaultModel,
+                    model: $viewModel.config.model,
+                    apiKey: viewModel.config.apiKey,
+                    fetchModels: fetchMacLLMModels,
+                    language: lang
+                )
+                .id(viewModel.config.providerId)
+                MacProviderThinkingRow(
+                    title: MacL10n.string("mac.settings.thinking", language: lang),
+                    subtitle: MacL10n.string("mac.settings.thinkingSubtitle", language: lang),
+                    isOn: $viewModel.config.llmThinkingEnabled
+                )
+                MacProviderToolsRow(
+                    title: MacL10n.string("mac.settings.connectionCheck", language: lang),
+                    validate: validateMacLLM,
+                    language: lang
+                )
             }
         }
     }
@@ -160,154 +152,148 @@ struct MacSettingsView: View {
     // MARK: - Cloud ASR
 
     private var asrProviderSection: some View {
-        Section(MacL10n.string("mac.settings.asrProvider", language: lang)) {
-            providerPickerRow(
-                title: MacL10n.string("mac.settings.asrService", language: lang),
-                provider: currentAsrProvider,
-                isPresented: $showAsrProviderPicker
-            ) {
-                providerPickerList(
+        MacSettingsSection(title: MacL10n.string("mac.settings.asrProvider", language: lang)) {
+            MacSettingsProviderCard {
+                MacProviderPickerRow(
+                    title: MacL10n.string("mac.settings.asrService", language: lang),
                     providers: viewModel.asrSelectableProviders,
-                    selectedId: viewModel.config.asrProviderId
-                ) { provider in
-                    viewModel.selectAsrProvider(provider)
-                    showAsrProviderPicker = false
+                    selection: asrProviderBinding
+                )
+                if viewModel.config.asrProviderId == "volcengine" {
+                    volcengineAsrRows
+                } else {
+                    genericAsrRows
                 }
-            }
-
-            LabeledContent {
-                SecureField(text: $viewModel.config.asrApiKey, prompt: Text(verbatim: "sk-…")) {
-                    Text(MacL10n.string("mac.settings.apiKey", language: lang))
-                }
-                .labelsHidden()
-                .macFieldStyle()
-                .frame(maxWidth: MacMetrics.controlWidth)
-            } label: {
-                Text(MacL10n.string("mac.settings.asrApiKey", language: lang))
-            }
-
-            if CloudASRModelCatalog.strategy(for: viewModel.config.asrProviderId) == .prompt {
-                LabeledContent {
-                    TextField(text: $viewModel.config.asrBaseURL, prompt: Text(verbatim: "")) {
-                        Text(MacL10n.string("mac.settings.baseURL", language: lang))
-                    }
-                    .labelsHidden()
-                    .macFieldStyle()
-                    .frame(maxWidth: MacMetrics.controlWidth)
-                } label: {
-                    Text(MacL10n.string("mac.settings.baseURL", language: lang))
-                }
-            }
-
-            LabeledContent {
-                TextField(text: $viewModel.config.asrModel, prompt: Text(verbatim: "")) {
-                    Text(MacL10n.string("mac.settings.asrModel", language: lang))
-                }
-                .labelsHidden()
-                .macFieldStyle()
-                .frame(maxWidth: MacMetrics.controlWidth)
-            } label: {
-                Text(MacL10n.string("mac.settings.asrModel", language: lang))
+                MacProviderToolsRow(
+                    title: MacL10n.string("mac.settings.connectionCheck", language: lang),
+                    validate: validateMacASR,
+                    language: lang
+                )
             }
         }
     }
 
-    private func providerPickerRow<Content: View>(
-        title: String,
-        provider: LLMProvider,
-        isPresented: Binding<Bool>,
-        @ViewBuilder picker: @escaping () -> Content
-    ) -> some View {
-        LabeledContent(title) {
-            Button {
-                isPresented.wrappedValue = true
-            } label: {
-                HStack(spacing: 6) {
-                    providerLogo(provider.id)
-                    Text(provider.name)
-                        .foregroundStyle(palette.textPrimary)
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(palette.textTertiary)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .popover(isPresented: isPresented, arrowEdge: .bottom, content: picker)
+    @ViewBuilder
+    private var volcengineAsrRows: some View {
+        MacCredentialField(
+            title: MacL10n.string("mac.settings.volcengineAppId", language: lang),
+            placeholder: "APP ID",
+            text: Binding(
+                get: { macVolcengineFields.appID },
+                set: { updateMacVolcengine(appID: $0) }
+            ),
+            isSecret: true
+        )
+        MacCredentialField(
+            title: MacL10n.string("mac.settings.volcengineAccessToken", language: lang),
+            placeholder: "Access Token",
+            text: Binding(
+                get: { macVolcengineFields.accessToken },
+                set: { updateMacVolcengine(accessToken: $0) }
+            ),
+            isSecret: true
+        )
+        MacCredentialField(
+            title: MacL10n.string("mac.settings.volcengineResourceId", language: lang),
+            placeholder: CloudASRModelCatalog.defaultModel(for: "volcengine"),
+            text: Binding(
+                get: { macVolcengineFields.resourceID },
+                set: { updateMacVolcengine(resourceID: $0) }
+            ),
+            defaultValue: CloudASRModelCatalog.defaultModel(for: "volcengine")
+        )
+        MacProviderNoteRow(text: MacL10n.string("mac.settings.volcengineNote", language: lang))
+    }
+
+    @ViewBuilder
+    private var genericAsrRows: some View {
+        if CloudASRModelCatalog.showsASREndpointField(for: viewModel.config.asrProviderId) {
+            MacCredentialField(
+                title: MacL10n.string("mac.settings.baseURL", language: lang),
+                placeholder: currentAsrProvider.defaultBaseURL,
+                text: $viewModel.config.asrBaseURL
+            )
         }
+
+        MacCredentialField(
+            title: MacL10n.string("mac.settings.asrApiKey", language: lang),
+            placeholder: "sk-…",
+            text: $viewModel.config.asrApiKey,
+            isSecret: true
+        )
+        MacProviderModelRow(
+            title: MacL10n.string("mac.settings.asrModel", language: lang),
+            placeholder: CloudASRModelCatalog.defaultModel(for: viewModel.config.asrProviderId),
+            model: $viewModel.config.asrModel,
+            apiKey: viewModel.config.asrApiKey,
+            fetchModels: fetchMacASRModels,
+            language: lang
+        )
+        .id(viewModel.config.asrProviderId)
     }
 
     // MARK: - Recognition method
 
     private var recognitionSection: some View {
-        Section(MacL10n.string("mac.settings.recognition", language: lang)) {
-            methodRow(
+        MacSettingsSection(title: MacL10n.string("mac.settings.recognition", language: lang)) {
+            VStack(spacing: MacMetrics.settingsRowGap) {
+                methodRow(
                 title: MacL10n.string("mac.settings.cloudEngine", language: lang),
                 subtitle: MacL10n.string("mac.settings.cloudEngineDesc", language: lang),
                 systemImage: "cloud",
                 selected: viewModel.config.engineMode == "cloud"
             ) { withAnimation(Motion.soft) { viewModel.setEngineMode("cloud") } }
-
-            methodRow(
+                methodRow(
                 title: MacL10n.string("mac.settings.localEngine", language: lang),
                 subtitle: MacL10n.string("mac.settings.localEngineDesc", language: lang),
                 systemImage: "cpu",
                 selected: viewModel.config.engineMode == "local"
             ) { withAnimation(Motion.soft) { viewModel.setEngineMode("local") } }
+            }
         }
     }
 
     // MARK: - Hotkey / paste
 
     private var inputSection: some View {
-        Section(MacL10n.string("mac.settings.input", language: lang)) {
-            Toggle(isOn: hotkeyBinding) {
-                rowLabel(
-                    MacL10n.string("mac.settings.hotkey", language: lang),
-                    subtitle: MacL10n.string("mac.settings.hotkeyDesc", language: lang)
-                )
-            }
-
-            Picker(selection: hotkeyTriggerBinding) {
-                ForEach(MacHotkeyTrigger.allCases) { trigger in
-                    Text(MacL10n.string(trigger.labelKey, language: lang))
-                        .tag(trigger.rawValue)
-                }
-            } label: {
-                rowLabel(
-                    MacL10n.string("mac.settings.hotkeyTrigger", language: lang),
-                    subtitle: MacL10n.string("mac.settings.hotkeyTriggerDesc", language: lang)
-                )
-            }
-            .disabled(!viewModel.hotkeyEnabled)
-
-            Toggle(isOn: autoPasteBinding) {
-                rowLabel(
-                    MacL10n.string("mac.settings.autoPaste", language: lang),
-                    subtitle: MacL10n.string("mac.settings.autoPasteDesc", language: lang)
-                )
-            }
-
-            LabeledContent {
-                HStack(spacing: Spacing.sm) {
-                    Label(
-                        accessibilityTrusted ? accessibilityStatusGranted : accessibilityStatusNeeded,
-                        systemImage: accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.circle"
+        MacSettingsSection(title: MacL10n.string("mac.settings.input", language: lang)) {
+            VStack(spacing: MacMetrics.settingsRowGap) {
+                MacProviderSettingRow(title: MacL10n.string("mac.settings.hotkeyTrigger", language: lang)) {
+                    MacInlinePicker(
+                        selection: hotkeyTriggerBinding,
+                        options: MacHotkeyTrigger.allCases.map {
+                            MacInlinePickerOption(value: $0.rawValue, label: MacL10n.string($0.labelKey, language: lang))
+                        },
+                        fillsWidth: true
                     )
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(accessibilityTrusted ? palette.accent : palette.warning)
-                    .contentTransition(.opacity)
-                    .animation(Motion.quick, value: accessibilityTrusted)
+                }
+                MacProviderSettingRow(
+                    title: MacL10n.string("mac.settings.autoPaste", language: lang),
+                    verticalAlignment: .center
+                ) {
+                    Toggle("", isOn: autoPasteBinding)
+                        .labelsHidden()
+                        .toggleStyle(MacToggleStyle())
+                }
+                MacProviderSettingRow(
+                    title: MacL10n.string("mac.settings.accessibility", language: lang),
+                    verticalAlignment: .center
+                ) {
+                    HStack(spacing: Spacing.sm) {
+                        MacSettingsToolButton(title: MacL10n.string("mac.settings.openAccessibility", language: lang)) {
+                            openAccessibilitySettings()
+                        }
 
-                    Button(MacL10n.string("mac.settings.openAccessibility", language: lang)) {
-                        openAccessibilitySettings()
+                        Label(
+                            accessibilityTrusted ? accessibilityStatusGranted : accessibilityStatusNeeded,
+                            systemImage: accessibilityTrusted ? "checkmark.circle.fill" : "exclamationmark.circle"
+                        )
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(accessibilityTrusted ? palette.accent : palette.warning)
+                        .contentTransition(.opacity)
+                        .animation(Motion.quick, value: accessibilityTrusted)
                     }
                 }
-            } label: {
-                rowLabel(
-                    MacL10n.string("mac.settings.accessibility", language: lang),
-                    subtitle: MacL10n.string("mac.settings.accessibilityDesc", language: lang)
-                )
             }
         }
     }
@@ -315,36 +301,31 @@ struct MacSettingsView: View {
     // MARK: - Legal
 
     private var legalSection: some View {
-        Section(MacL10n.string("mac.settings.about", language: lang)) {
-            NavigationLink {
-                MacPrivacyPolicyView(uiLanguage: lang)
-            } label: {
-                Text(MacL10n.string("mac.settings.privacyPolicy", language: lang))
-            }
-
-            NavigationLink {
-                MacOpenSourceLicensesView(uiLanguage: lang)
-            } label: {
-                Text(MacL10n.string("mac.settings.thirdPartyLicenses", language: lang))
-            }
-
-            Button(MacL10n.string("mac.settings.restartOnboarding", language: lang)) {
-                hasCompletedMacOnboarding = false
+        MacSettingsSection(title: MacL10n.string("mac.settings.about", language: lang)) {
+            VStack(spacing: MacMetrics.settingsRowGap) {
+                NavigationLink {
+                    MacPrivacyPolicyView(uiLanguage: lang)
+                } label: {
+                    MacFormLinkRow(title: MacL10n.string("mac.settings.privacyPolicy", language: lang))
+                }
+                .buttonStyle(.plain)
+                NavigationLink {
+                    MacOpenSourceLicensesView(uiLanguage: lang)
+                } label: {
+                    MacFormLinkRow(title: MacL10n.string("mac.settings.thirdPartyLicenses", language: lang))
+                }
+                .buttonStyle(.plain)
+                Button(MacL10n.string("mac.settings.restartOnboarding", language: lang)) {
+                    hasCompletedMacOnboarding = false
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, minHeight: MacMetrics.settingsRowMinHeight, alignment: .leading)
+                .padding(.horizontal, MacMetrics.settingsCardInset)
             }
         }
     }
 
     // MARK: - Row helpers
-
-    private func rowLabel(_ title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-            Text(subtitle)
-                .font(TypeStyle.caption)
-                .foregroundStyle(palette.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
 
     private func methodRow(
         title: String,
@@ -372,6 +353,8 @@ struct MacSettingsView: View {
                     .foregroundStyle(selected ? palette.accent : palette.textTertiary)
                     .contentTransition(.symbolEffect(.replace))
             }
+            .frame(minHeight: MacMetrics.settingsRowMinHeight)
+            .padding(.horizontal, MacMetrics.settingsCardInset)
             .animation(Motion.quick, value: selected)
             .contentShape(Rectangle())
         }
@@ -390,60 +373,59 @@ struct MacSettingsView: View {
             ?? LLMProvider.presets[0]
     }
 
-    private func providerPickerList(
-        providers: [LLMProvider],
-        selectedId: String,
-        onSelect: @escaping (LLMProvider) -> Void
-    ) -> some View {
-        VStack(spacing: 0) {
-            ForEach(providers) { provider in
-                Button {
-                    onSelect(provider)
-                } label: {
-                    HStack(spacing: Spacing.sm) {
-                        providerLogo(provider.id)
-                        Text(provider.name)
-                            .foregroundStyle(palette.textPrimary)
-                        Spacer(minLength: Spacing.md)
-                        if provider.id == selectedId {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(palette.accent)
-                        }
-                    }
-                    .padding(.horizontal, Spacing.md)
-                    .frame(height: 34)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.vertical, Spacing.xs)
-        .frame(width: 260)
+    private var macVolcengineFields: VolcengineASRFields {
+        VolcengineASRFields.parse(
+            apiKey: viewModel.config.asrApiKey,
+            resourceFallback: viewModel.config.asrModel.isEmpty
+                ? CloudASRModelCatalog.defaultModel(for: "volcengine")
+                : viewModel.config.asrModel
+        )
     }
 
-    /// Brand mark tinted to the current label colour (black on light / white
-    /// on dark). Template rendering + an explicit frame make the vector assets
-    /// resolve at a text-matched size inside the pop-up menu — without a size
-    /// hint they collapse to zero and disappear.
-    @ViewBuilder
-    private func providerLogo(_ providerId: String) -> some View {
-        if let asset = ProviderLogo.assetName(for: providerId) {
-            Image(asset)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 16, height: 16)
-                .foregroundStyle(palette.textPrimary)
+    private func updateMacVolcengine(appID: String? = nil, accessToken: String? = nil, resourceID: String? = nil) {
+        var fields = macVolcengineFields
+        if let appID { fields.appID = appID }
+        if let accessToken { fields.accessToken = accessToken }
+        if let resourceID {
+            fields.resourceID = resourceID
+            viewModel.config.asrModel = resourceID
         }
+        viewModel.config.asrApiKey = fields.encodedAPIKey
     }
 
-    @ViewBuilder
-    private func providerLabel(_ provider: LLMProvider) -> some View {
-        Label {
-            Text(provider.name)
-        } icon: {
-            providerLogo(provider.id)
-        }
+    private func validateMacLLM() async throws {
+        let client = LLMClientFactory.make(
+            providerId: viewModel.config.providerId,
+            baseURL: viewModel.config.baseURL,
+            apiKey: viewModel.config.apiKey,
+            model: viewModel.config.model,
+            thinkingEnabled: viewModel.config.llmThinkingEnabled
+        )
+        _ = try await client.polish("ping", systemPrompt: "Reply with the single word PONG.")
+    }
+
+    private func fetchMacLLMModels() async throws -> [String] {
+        try await ProviderModelService.listLLMModels(
+            providerId: viewModel.config.providerId,
+            baseURL: viewModel.config.baseURL,
+            apiKey: viewModel.config.apiKey,
+            currentModel: viewModel.config.model
+        )
+    }
+
+    private func validateMacASR() async throws {
+        let persisted = AppGroupStore(defaults: viewModel.defaults)
+        let store = LiveConfigurationStore(config: viewModel.config, fallback: persisted)
+        try await CloudASRConnectionCheck.validate(store: store)
+    }
+
+    private func fetchMacASRModels() async throws -> [String] {
+        try await ProviderModelService.listASRModels(
+            providerId: viewModel.config.asrProviderId,
+            baseURL: viewModel.config.asrBaseURL,
+            apiKey: viewModel.config.asrApiKey,
+            currentModel: viewModel.config.asrModel
+        )
     }
 
     // MARK: - Bindings
@@ -455,12 +437,23 @@ struct MacSettingsView: View {
         )
     }
 
-    private var providerBinding: Binding<String> {
+    private var polishProviderBinding: Binding<String> {
         Binding(
             get: { viewModel.config.providerId },
             set: { newId in
-                if let provider = viewModel.selectableProviders.first(where: { $0.id == newId }) {
+                if let provider = viewModel.polishSelectableProviders.first(where: { $0.id == newId }) {
                     viewModel.selectProvider(provider)
+                }
+            }
+        )
+    }
+
+    private var asrProviderBinding: Binding<String> {
+        Binding(
+            get: { viewModel.config.asrProviderId },
+            set: { newId in
+                if let provider = viewModel.asrSelectableProviders.first(where: { $0.id == newId }) {
+                    viewModel.selectAsrProvider(provider)
                 }
             }
         )
@@ -475,13 +468,6 @@ struct MacSettingsView: View {
             set: { newValue in
                 viewModel.config.localeId = newValue == "auto" ? "" : newValue
             }
-        )
-    }
-
-    private var hotkeyBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.hotkeyEnabled },
-            set: { viewModel.setHotkeyEnabled($0) }
         )
     }
 

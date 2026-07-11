@@ -98,7 +98,7 @@ struct MacDictionaryView: View {
     private var list: some View {
         // Full-bleed ScrollView → scrollbar on the detail pane's right edge.
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: Spacing.md) {
+            LazyVStack(alignment: .leading, spacing: Spacing.xl) {
                 if sections.isEmpty {
                     MacCard {
                         Text(MacL10n.string("mac.dict.noMatch", language: lang))
@@ -120,22 +120,18 @@ struct MacDictionaryView: View {
     private func categorySection(
         _ section: (category: PersonalDictionary.Entry.Category, items: [PersonalDictionary.Entry])
     ) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
             Text(MacL10n.string(section.category.labelKey, language: lang))
-                .font(TypeStyle.caption)
-                .foregroundStyle(palette.textTertiary)
+                .font(MacSettingsType.sectionTitle)
+                .foregroundStyle(palette.textSecondary)
+                .textCase(.uppercase)
 
             MacCard(padding: 0) {
                 VStack(spacing: 0) {
-                    ForEach(Array(section.items.enumerated()), id: \.element.id) { index, entry in
+                    ForEach(section.items, id: \.id) { entry in
                         row(entry)
                             .padding(.horizontal, Spacing.md)
                             .padding(.vertical, Spacing.sm)
-                        if index < section.items.count - 1 {
-                            // Full-bleed like macOS list rows (not iOS inset separators).
-                            Divider()
-                                .overlay(palette.divider)
-                        }
                     }
                 }
             }

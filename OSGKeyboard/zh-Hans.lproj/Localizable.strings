@@ -4,9 +4,7 @@
 
 /* Onboarding */
 "onboarding.progress" = "第 %1$d / %2$d 步";
-"onboarding.welcome.tagline" = "能说就不打字";
-"onboarding.welcome.subtitle" = "开源语音输入法";
-"onboarding.welcome.subtitle2" = "不读取、不上传任何输入内容。";
+"onboarding.welcome.tagline" = "开口即文字。";
 "onboarding.permission.preface" = "系统会弹出两次授权，请「允许」权限申请。";
 "onboarding.permission.mic.title" = "麦克风";
 "onboarding.permission.mic.body" = "用于录制语音。";
@@ -29,7 +27,10 @@
 "onboarding.enable.step3.suffix" = "，选中 OSGKeyboard";
 "onboarding.enable.openSettings" = "去设置";
 "onboarding.api.title" = "选择语音转文字 AI 引擎";
-"onboarding.api.localModels.hint" = "本地引擎使用内置语音识别与内置润色，无需填写 API Key。";
+"onboarding.api.localModels.hint" = "本地引擎使用内置语音识别，无需填写 API Key。";
+"onboarding.polish.title" = "文本润色（LLM）";
+"onboarding.polish.subtitle" = "识别完成后整理文字，可与 ASR 服务商不同。";
+"onboarding.polish.localHint" = "已包含内置润色。在此填入 API Key 可替换为自定义模型。";
 "settings.onboarding.replay" = "重新开始权限引导";
 
 /* Common navigation */
@@ -43,7 +44,8 @@
 "common.clear" = "清空";
 "common.delete" = "删除";
 "common.space" = "空格";
-"common.newline" = "换行";
+"common.newline" = "回车";
+"common.send" = "发送";
 
 /* Privacy footnote (onboarding engine page) */
 "privacy.audio.title" = "支持本地转写";
@@ -92,13 +94,13 @@
 "settings.reset.title" = "重置所有设置?";
 "settings.reset.message" = "将清空 API Key、模型、接口地址、语音历史及云端确认状态。";
 "settings.reset.confirm" = "重置所有设置";
-"settings.engine.title" = "识别方式";
-"settings.engine.subtitle" = "本地：端侧识别，仅转录；云端：通过 API 润色。";
-"settings.engine.local.title" = "本地识别";
+"settings.engine.title" = "语音转写方式";
+"settings.engine.subtitle" = "本地：系统内置转写；云端：ASR 转写，可用 LLM 润色。";
+"settings.engine.local.title" = "本地转写";
 "settings.engine.local.ios26" = "全程在手机本地，不用联网";
-"settings.engine.local.legacy" = "端侧 ASR，仅转录，无润色。";
-"settings.engine.cloud.title" = "云端识别与润色";
-"settings.engine.cloud.subtitle" = "云端 ASR 与润色 LLM 分开配置；音频发送至转写服务商。";
+"settings.engine.local.legacy" = "通过系统内置服务语音转写";
+"settings.engine.cloud.title" = "云端转写";
+"settings.engine.cloud.subtitle" = "通过云端 ASR 转写，可用 LLM 润色";
 "settings.engine.cloud.badge" = "云端引擎";
 "settings.provider.title" = "云端引擎";
 "settings.provider.personalDictionaryBadge" = "个性词库";
@@ -111,6 +113,26 @@
 "settings.asrApi.title" = "转写接口";
 "settings.asr.model" = "ASR 模型";
 "settings.asr.testConnection" = "测试转写";
+"settings.provider.supplier" = "供应商";
+"settings.provider.tools" = "连接检查";
+"settings.provider.validate" = "验证";
+"settings.provider.fetchModels" = "拉取模型";
+"settings.provider.loadingModels" = "正在拉取模型…";
+"settings.provider.modelsLoaded" = "已拉取 %lld 个模型";
+"settings.provider.selectModel" = "选择模型";
+"settings.provider.modelSelected" = "已选择 %@";
+"settings.provider.modelsEmptyHint" = "先点右侧刷新拉取模型";
+"settings.provider.fillDefault" = "填入默认值";
+"settings.provider.thinking" = "思考";
+"settings.provider.thinkingSubtitle" = "速度更慢、质量更高，建议关闭";
+"settings.provider.thinkingOn" = "开启";
+"settings.provider.thinkingOff" = "关闭";
+"settings.provider.thinkingHint" = "默认关闭。仅在需要更慢、更深的推理时开启。";
+"settings.provider.note" = "提示";
+"settings.asr.volcengine.appId" = "APP ID";
+"settings.asr.volcengine.accessToken" = "Access Token";
+"settings.asr.volcengine.resourceId" = "Resource ID";
+"settings.asr.volcengine.note" = "Secret Key 当前无需填写。Resource ID 默认使用 volc.seedasr.sauc.duration。";
 "provider.openai" = "OpenAI";
 "provider.deepseek" = "DeepSeek";
 "provider.qwen" = "通义千问";
@@ -312,16 +334,8 @@
 "home.flow.startShort" = "开启";
 "home.preview.label" = "输入测试";
 "home.preview.placeholder" = "点这里试试键盘";
-"home.stats.dictationDuration" = "听写时长";
-"home.stats.dictationCharacters" = "听写字数";
-"home.stats.translationCharacters" = "翻译字数";
-"home.stats.dictionaryEntries" = "个性词库";
 "home.wide.tagline" = "随处语音听写";
 "home.wide.tagline.subtitle" = "切换到任意 App，点键盘麦克风即可听写。";
-"home.wide.stat.transcribed" = "累计听写字数";
-"home.wide.stat.cumulativeDuration" = "累计听写时长";
-"home.wide.stat.cumulativeTranslation" = "累计翻译字数";
-"home.wide.stat.customTerms" = "自定义词条";
 "home.wide.mode.cloud" = "云端";
 "home.wide.mode.local" = "本机";
 "home.wide.devices" = "iPhone 与 iPad";
@@ -386,10 +400,12 @@
 "settings.personalDictionary.iCloudSync.error.tooLarge" = "词库过大，无法通过 iCloud 同步。请删除部分词条后重试。";
 "settings.personalDictionary.iCloudSync.error.generic" = "无法与 iCloud 同步词库，请稍后重试。";
 
-"settings.iCloudSync.title" = "iCloud 同步";
-"settings.appSettings.iCloudSync.title" = "iCloud 同步";
-"settings.appSettings.iCloudSync.subtitle" = "通过 iCloud 在多台设备间同步设置、使用统计、语音历史与 API 密钥。API 密钥经私人 iCloud 钥匙串同步。";
+"settings.iCloudSync.title" = "跨设备iCloud 同步";
+"settings.appSettings.iCloudSync.title" = "跨设备iCloud 同步";
+"settings.appSettings.iCloudSync.subtitle" = "通过 iCloud 跨设备同步设置、历史记录、API Key";
 "settings.appSettings.iCloudSync.syncNow" = "立即同步";
+"settings.appSettings.iCloudSync.syncing" = "同步中…";
+"settings.appSettings.iCloudSync.synced" = "已同步";
 "settings.appSettings.iCloudSync.error.generic" = "无法与 iCloud 同步设置，请稍后重试。";
 
 /* v0.3.0: 润色强度 */

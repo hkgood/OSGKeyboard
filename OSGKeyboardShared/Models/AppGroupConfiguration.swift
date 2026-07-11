@@ -8,6 +8,11 @@
 import Foundation
 
 public struct AppGroupConfiguration: Sendable, Equatable {
+    /// Default polish LLM for fresh installs (local + cloud pickers).
+    public static let defaultPolishProviderId = "deepseek"
+    /// Default cloud ASR provider for fresh installs (independent from polish).
+    public static let defaultCloudASRProviderId = "volcengine"
+
     // MARK: - Keys
 
     public enum Keys {
@@ -31,6 +36,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let handednessPreference = "config.handednessPreference"
         public static let cursorDragNavigationEnabled = "config.cursorDragNavigationEnabled"
         public static let polishIntensity = "config.polishIntensity"
+        public static let llmThinkingEnabled = "config.llmThinkingEnabled"
         public static let detectedAppContext = "config.detectedAppContext"
         public static let detectedAppContextAt = "config.detectedAppContextAt"
         public static let personalDictionary = "config.personalDictionary.v1"
@@ -70,6 +76,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var handednessPreference: HandednessPreference
     public var cursorDragNavigationEnabled: Bool
     public var polishIntensity: PolishIntensity
+    /// Enables provider-specific reasoning / thinking controls for polish LLM requests.
+    public var llmThinkingEnabled: Bool
     public var personalDictionary: PersonalDictionary
     /// Opt-in iCloud KVS sync for the personal dictionary (main app only).
     public var personalDictionaryICloudSyncEnabled: Bool
@@ -150,7 +158,9 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         OpenAICompatibleClient(
             baseURL: baseURL,
             apiKey: apiKey,
-            model: model
+            model: model,
+            providerId: providerId,
+            thinkingEnabled: llmThinkingEnabled
         )
     }
 
@@ -193,8 +203,9 @@ public struct AppGroupConfiguration: Sendable, Equatable {
 
     /// Loads configuration from a known-available UserDefaults suite.
     public static func load(fromAvailable defaults: UserDefaults) -> AppGroupConfiguration {
+        let storedProviderId = defaults.string(forKey: Keys.providerId)
         var config = AppGroupConfiguration(
-            providerId: defaults.string(forKey: Keys.providerId) ?? "openai",
+            providerId: storedProviderId ?? defaultPolishProviderId,
             baseURL: "",
             model: "",
             asrProviderId: defaults.string(forKey: Keys.asrProviderId) ?? "",
@@ -228,6 +239,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
                 return defaults.bool(forKey: Keys.cursorDragNavigationEnabled)
             }(),
             polishIntensity: resolvePolishIntensity(from: defaults),
+            llmThinkingEnabled: defaults.bool(forKey: Keys.llmThinkingEnabled),
             personalDictionary: decodePersonalDictionary(from: defaults),
             personalDictionaryICloudSyncEnabled: {
                 if defaults.object(forKey: Keys.personalDictionaryICloudSyncEnabled) == nil {
@@ -267,7 +279,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         }
 
         if config.asrProviderId.isEmpty {
-            config.asrProviderId = config.providerId
+            // Pre-split installs only stored `providerId`; copy it so ASR keeps working.
+            config.asrProviderId = storedProviderId ?? defaultCloudASRProviderId
             defaults.set(config.asrProviderId, forKey: Keys.asrProviderId)
         }
         let asrPreset = LLMProvider.provider(id: config.asrProviderId)
@@ -277,6 +290,17 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         if config.asrModel.isEmpty {
             config.asrModel = defaults.string(forKey: Keys.asrModel)
                 ?? CloudASRModelCatalog.defaultModel(for: config.asrProviderId)
+        }
+
+        // Legacy qwen cloud ASR → bailian realtime (HTTP Flash path removed).
+        if config.asrProviderId == "qwen" {
+            let bailian = LLMProvider.provider(id: "bailian")
+            config.asrProviderId = "bailian"
+            config.asrBaseURL = bailian.defaultBaseURL
+            config.asrModel = CloudASRModelCatalog.alibabaFunASRRealtime
+            defaults.set(config.asrProviderId, forKey: Keys.asrProviderId)
+            defaults.set(config.asrBaseURL, forKey: Keys.asrBaseURL)
+            defaults.set(config.asrModel, forKey: Keys.asrModel)
         }
 
         // One-shot legacy migration: plaintext apiKey in UserDefaults → Keychain.
@@ -311,26 +335,6 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             config.modeId = "polish"
             defaults.set("polish", forKey: Keys.modeId)
         }
-        // DeepSeek is local-engine only — never a cloud picker choice.
-        if config.engineMode == "cloud", config.providerId == "deepseek" {
-            let openAI = LLMProvider.provider(id: "openai")
-            config.providerId = openAI.id
-            config.baseURL = openAI.defaultBaseURL
-            config.model = openAI.defaultModel
-            defaults.set(openAI.id, forKey: Keys.providerId)
-            defaults.set(openAI.defaultBaseURL, forKey: Keys.baseURL)
-            defaults.set(openAI.defaultModel, forKey: Keys.model)
-        }
-        if config.engineMode == "cloud", config.asrProviderId == "deepseek" {
-            let openAI = LLMProvider.provider(id: "openai")
-            config.asrProviderId = openAI.id
-            config.asrBaseURL = openAI.defaultBaseURL
-            config.asrModel = CloudASRModelCatalog.defaultModel(for: openAI.id)
-            defaults.set(openAI.id, forKey: Keys.asrProviderId)
-            defaults.set(openAI.defaultBaseURL, forKey: Keys.asrBaseURL)
-            defaults.set(openAI.defaultModel, forKey: Keys.asrModel)
-        }
-
         return config
     }
 
@@ -352,6 +356,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(handednessPreference.rawValue, forKey: Keys.handednessPreference)
         defaults.set(cursorDragNavigationEnabled, forKey: Keys.cursorDragNavigationEnabled)
         defaults.set(polishIntensity.rawValue, forKey: Keys.polishIntensity)
+        defaults.set(llmThinkingEnabled, forKey: Keys.llmThinkingEnabled)
         defaults.set(flowSkipAppSwitch, forKey: Keys.flowSkipAppSwitch)
         defaults.set(flowInactivityDuration.rawValue, forKey: Keys.flowInactivityDuration)
         defaults.set(localASRCustomLanguageModelEnabled, forKey: Keys.localASRCustomLanguageModelEnabled)

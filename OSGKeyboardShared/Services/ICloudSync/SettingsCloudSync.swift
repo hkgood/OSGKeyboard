@@ -62,9 +62,10 @@ public final class SettingsCloudSync {
     public func enableSync() async throws {
         let store = makeStore()
         ICloudSyncPreferences.pushSettingsEnabled(true, kvs: kvs)
+        ICloudSyncPreferences.pushDictionaryEnabled(true, kvs: kvs)
         ICloudSyncPreferences.cacheToAppGroup(
             settingsEnabled: true,
-            dictionaryEnabled: store.personalDictionaryICloudSyncEnabled,
+            dictionaryEnabled: true,
             store: store
         )
 
@@ -93,7 +94,9 @@ public final class SettingsCloudSync {
     public func disableSync() {
         let store = makeStore()
         ICloudSyncPreferences.pushSettingsEnabled(false, kvs: kvs)
+        ICloudSyncPreferences.pushDictionaryEnabled(false, kvs: kvs)
         store.setSettingsICloudSyncEnabled(false)
+        store.setPersonalDictionaryICloudSyncEnabled(false)
     }
 
     public func pullAndMerge(store: AppGroupStore) async {

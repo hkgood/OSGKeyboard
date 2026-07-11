@@ -101,7 +101,7 @@ flowchart LR
 关键代码：
 
 - [`OSGKeyboardMac/MacDictationPipeline.swift`](../OSGKeyboardMac/MacDictationPipeline.swift) — 本地分支未传 `personalDictionary`
-- [`OSGKeyboardMac/MacLocalASRService.swift`](../OSGKeyboardMac/MacLocalASRService.swift) — Qwen3 / Apple Speech 二选一
+- [`OSGKeyboardMac/MacLocalASRService.swift`](../OSGKeyboardMac/MacLocalASRService.swift) — Sherpa catalog models / Apple Speech fallback
 - [`OSGKeyboardShared/Models/PersonalDictionary+ASRBias.swift`](../OSGKeyboardShared/Models/PersonalDictionary+ASRBias.swift) — 云侧 `asrHotwords` / `asrPromptBias` / 阿里热词表
 - [`OSGKeyboardShared/Services/PolishingService.swift`](../OSGKeyboardShared/Services/PolishingService.swift) — 润色层消费 `dictionary.promptFragment()`
 
@@ -113,9 +113,9 @@ flowchart LR
 
 ### 3.4 本地模型现状
 
-- 默认路径：`~/Library/Application Support/OSGKeyboard/models/qwen3-asr-1.7b-mlx`
-- 校验：`config.json`、`model.safetensors`、`vocab.json`、`merges.txt`
-- Qwen3 引擎：[`MacQwen3LocalASR.swift`](../OSGKeyboardMac/MacQwen3LocalASR.swift) / [`MacQwen3ASREngine.swift`](../OSGKeyboardMac/MacQwen3ASREngine.swift) — **无 prompt / hotword 入参**
+- 默认模型：`sherpa-qwen3-0.6b-int8`（catalog 管理，安装于 `~/Library/Application Support/OSGKeyboard/`）
+- 运行时：`sherpa-onnx-offline` 二进制（按架构下载，见 `local-asr-catalog.json`）
+- Sherpa 引擎：[`MacSherpaLocalASR.swift`](../OSGKeyboardMac/MacSherpaLocalASR.swift) / [`MacSherpaONNXRunner.swift`](../OSGKeyboardMac/MacSherpaONNXRunner.swift) — Qwen3 支持 recognizer-scoped hotwords
 
 ---
 
@@ -369,8 +369,8 @@ OSG 已有 `PersonalDictionary.Entry.Source.recentEdit` 与合并逻辑，可与
 ~/Library/Application Support/OSGKeyboard/
   LocalASRModels/
     manifest.json                 # 已安装模型、版本、backend、capabilities
-    qwen3-mlx-1.7b/               # 当前 MLX 布局（可与现路径兼容）
-    sherpa-qwen3-0.6b/
+    runtimes/sherpa-onnx-1.13.4-macos-arm64/
+    models/sherpa-qwen3-0.6b-int8/
     sherpa-sensevoice-small/
 ```
 
@@ -567,7 +567,7 @@ flowchart TD
 |------|------|
 | Mac 听写管道 | `OSGKeyboardMac/MacDictationPipeline.swift` |
 | 本地 ASR 入口 | `OSGKeyboardMac/MacLocalASRService.swift` |
-| Qwen3 MLX | `OSGKeyboardMac/MacQwen3LocalASR.swift`, `MacQwen3ASREngine.swift` |
+| Sherpa local ASR | `OSGKeyboardMac/MacSherpaLocalASR.swift`, `MacSherpaONNXRunner.swift` |
 | Apple Speech fallback | `OSGKeyboardMac/MacSpeechLocalASR.swift` |
 | 用户词库 | `OSGKeyboardShared/Models/PersonalDictionary.swift` |
 | 云 bias | `OSGKeyboardShared/Models/PersonalDictionary+ASRBias.swift` |

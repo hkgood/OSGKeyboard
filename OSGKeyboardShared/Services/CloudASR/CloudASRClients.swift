@@ -13,6 +13,28 @@ public protocol CloudASRTranscribing: Sendable {
         locale: Locale,
         dictionary: PersonalDictionary
     ) async throws -> String
+
+    /// Settings "validate connection" probe. Verifies transport + auth only.
+    func probeConnection() async throws
+}
+
+extension CloudASRTranscribing {
+    /// Default probe: transcribe ~1 s of near-silence. An empty transcript
+    /// counts as success — HTTP/streaming providers only need to prove that
+    /// transport + auth work. Providers whose service rejects silent/short
+    /// audio (e.g. DashScope realtime returns `emptyAudio`) override this.
+    public func probeConnection() async throws {
+        do {
+            _ = try await transcribe(
+                samples: [Float](repeating: 0.01, count: 16_000),
+                sampleRate: 16_000,
+                locale: Locale(identifier: "zh-CN"),
+                dictionary: .empty
+            )
+        } catch CloudASRError.emptyTranscript {
+            return
+        }
+    }
 }
 
 public enum CloudASRClientFactory {
@@ -29,11 +51,12 @@ public enum CloudASRClientFactory {
                 model: asrModel,
                 session: session
             )
-        case .alibabaVocabulary:
-            return AlibabaFunASRClient(
+        case .bailianStreaming:
+            return BailianRealtimeASRClient(
                 apiKey: store.asrApiKey,
+                endpoint: store.asrBaseURL,
                 model: asrModel,
-                persistence: store.cloudASRPersistence,
+                vocabularyID: nil,
                 session: session
             )
         case .prompt:
@@ -42,6 +65,22 @@ public enum CloudASRClientFactory {
                 baseURL: store.asrBaseURL,
                 apiKey: store.asrApiKey,
                 model: asrModel,
+                session: session
+            )
+        case .openRouterJson:
+            return PromptCloudASRClient(
+                providerId: providerId,
+                baseURL: store.asrBaseURL,
+                apiKey: store.asrApiKey,
+                model: asrModel,
+                session: session,
+                requestFormat: .openRouterJson
+            )
+        case .volcengineStreaming:
+            return VolcengineCloudASRClient(
+                apiKey: store.asrApiKey,
+                endpoint: store.asrBaseURL,
+                resourceID: asrModel,
                 session: session
             )
         case .localFallback:
@@ -151,25 +190,14 @@ struct ZhipuCloudASRClient: CloudASRTranscribing {
     }
 }
 
-// MARK: - Alibaba Fun-ASR Flash (vocabulary_id + context)
+// MARK: - Alibaba Fun-ASR Flash (HTTP sync, context text bias)
 
-/// `UserDefaults` is not `Sendable`; we only touch `persistence` on the
-/// actor-isolated cloud ASR path, same as the previous `AppGroupStore` holder.
-struct AlibabaFunASRClient: CloudASRTranscribing, @unchecked Sendable {
+struct AlibabaFunASRClient: CloudASRTranscribing {
     let apiKey: String
     let model: String
-    let persistence: UserDefaults
     let session: URLSession
 
-    func prepare(dictionary: PersonalDictionary) async throws {
-        _ = try await AlibabaVocabularySync.ensureVocabularyID(
-            dictionary: dictionary,
-            apiKey: apiKey,
-            targetModel: CloudASRModelCatalog.alibabaVocabularyTargetModel,
-            defaults: persistence,
-            session: session
-        )
-    }
+    func prepare(dictionary: PersonalDictionary) async throws {}
 
     func transcribe(
         samples: [Float],
@@ -178,14 +206,6 @@ struct AlibabaFunASRClient: CloudASRTranscribing, @unchecked Sendable {
         dictionary: PersonalDictionary
     ) async throws -> String {
         guard !apiKey.isEmpty else { throw CloudASRError.noAPIKey }
-
-        let vocabularyID = try await AlibabaVocabularySync.ensureVocabularyID(
-            dictionary: dictionary,
-            apiKey: apiKey,
-            targetModel: CloudASRModelCatalog.alibabaVocabularyTargetModel,
-            defaults: persistence,
-            session: session
-        )
 
         let dataURI = PCMSampleWavEncoder.dataURI(samples: samples, sampleRate: sampleRate)
         let urlString = CloudASRModelCatalog.alibabaAPIBase + CloudASRModelCatalog.alibabaMultimodalPath
@@ -211,13 +231,10 @@ struct AlibabaFunASRClient: CloudASRTranscribing, @unchecked Sendable {
             ],
         ])
 
-        var parameters: [String: Any] = [
+        let parameters: [String: Any] = [
             "format": "wav",
             "sample_rate": "\(sampleRate)",
         ]
-        if let vocabularyID, !vocabularyID.isEmpty {
-            parameters["vocabulary_id"] = vocabularyID
-        }
 
         let body: [String: Any] = [
             "model": model,
@@ -235,11 +252,11 @@ struct AlibabaFunASRClient: CloudASRTranscribing, @unchecked Sendable {
 
         let (data, response) = try await session.data(for: request)
         try ZhipuCloudASRClient.validateHTTP(response: response, data: data)
-        guard let text = Self.parseText(from: data)?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !text.isEmpty else {
-            throw CloudASRError.emptyTranscript
+        if let text = Self.parseText(from: data)?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !text.isEmpty {
+            return text
         }
-        return text
+        return ""
     }
 
     private static func parseText(from data: Data) -> String? {
@@ -256,7 +273,13 @@ struct AlibabaFunASRClient: CloudASRTranscribing, @unchecked Sendable {
     }
 }
 
-// MARK: - Prompt-biased transcription (OpenAI / MiMo / custom)
+// MARK: - Prompt-biased transcription (OpenAI / MiMo / Groq / custom)
+
+enum PromptCloudASRRequestFormat: Sendable {
+    case multipart
+    /// OpenRouter expects JSON `{ model, input_audio: { data, format } }`.
+    case openRouterJson
+}
 
 struct PromptCloudASRClient: CloudASRTranscribing {
     let providerId: String
@@ -264,6 +287,26 @@ struct PromptCloudASRClient: CloudASRTranscribing {
     let apiKey: String
     let model: String
     let session: URLSession
+    var requestFormat: PromptCloudASRRequestFormat = .multipart
+
+    /// Groq / OpenRouter batch uploads cap around 30 s per request.
+    private static let whisperCompatibleMaxDurationSeconds: TimeInterval = 30
+
+    init(
+        providerId: String,
+        baseURL: String,
+        apiKey: String,
+        model: String,
+        session: URLSession,
+        requestFormat: PromptCloudASRRequestFormat = .multipart
+    ) {
+        self.providerId = providerId
+        self.baseURL = baseURL
+        self.apiKey = apiKey
+        self.model = model
+        self.session = session
+        self.requestFormat = requestFormat
+    }
 
     func prepare(dictionary: PersonalDictionary) async throws {}
 
@@ -281,6 +324,13 @@ struct PromptCloudASRClient: CloudASRTranscribing {
                 dictionary: dictionary
             )
         }
+        if requestFormat == .openRouterJson {
+            return try await transcribeOpenRouterJSON(
+                samples: samples,
+                sampleRate: sampleRate,
+                dictionary: dictionary
+            )
+        }
         return try await transcribeOpenAIStyle(
             samples: samples,
             sampleRate: sampleRate,
@@ -288,11 +338,21 @@ struct PromptCloudASRClient: CloudASRTranscribing {
         )
     }
 
+    private func enforceWhisperDuration(samples: [Float], sampleRate: Int) throws {
+        let duration = Double(samples.count) / Double(sampleRate)
+        guard duration <= Self.whisperCompatibleMaxDurationSeconds else {
+            throw CloudASRError.audioTooLong
+        }
+    }
+
     private func transcribeOpenAIStyle(
         samples: [Float],
         sampleRate: Int,
         dictionary: PersonalDictionary
     ) async throws -> String {
+        if providerId == "groq" || providerId == "openai" || providerId == "custom" {
+            try enforceWhisperDuration(samples: samples, sampleRate: sampleRate)
+        }
         let wav = PCMSampleWavEncoder.encode(samples: samples, sampleRate: sampleRate)
         let trimmedBase = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
         let urlString = "\(trimmedBase)/audio/transcriptions"
@@ -324,6 +384,45 @@ struct PromptCloudASRClient: CloudASRTranscribing {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.httpBody = body
+        request.timeoutInterval = 90
+
+        let (data, response) = try await session.data(for: request)
+        try ZhipuCloudASRClient.validateHTTP(response: response, data: data)
+        guard let text = Self.parseOpenAIText(from: data)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !text.isEmpty else {
+            throw CloudASRError.emptyTranscript
+        }
+        return text
+    }
+
+    private func transcribeOpenRouterJSON(
+        samples: [Float],
+        sampleRate: Int,
+        dictionary: PersonalDictionary
+    ) async throws -> String {
+        try enforceWhisperDuration(samples: samples, sampleRate: sampleRate)
+        let wav = PCMSampleWavEncoder.encode(samples: samples, sampleRate: sampleRate)
+        let trimmedBase = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
+        let urlString = "\(trimmedBase)/audio/transcriptions"
+        guard let url = URL(string: urlString) else { throw CloudASRError.invalidURL }
+
+        var body: [String: Any] = [
+            "model": model,
+            "input_audio": [
+                "data": wav.base64EncodedString(),
+                "format": "wav",
+            ],
+        ]
+        let prompt = dictionary.asrPromptBias(maxCharacters: 600)
+        if !prompt.isEmpty {
+            body["prompt"] = prompt
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
         request.timeoutInterval = 90
 
         let (data, response) = try await session.data(for: request)

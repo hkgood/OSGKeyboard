@@ -170,8 +170,7 @@ struct PersonalDictionaryView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(palette.textTertiary)
             }
-            .padding(.horizontal, Spacing.md)
-            .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+            .settingsListRow()
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

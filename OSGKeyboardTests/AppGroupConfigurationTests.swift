@@ -17,7 +17,8 @@ final class AppGroupConfigurationTests: XCTestCase {
         let defaults = makeDefaults()
         let config = AppGroupConfiguration.load(fromAvailable: defaults)
 
-        XCTAssertEqual(config.providerId, "openai")
+        XCTAssertEqual(config.providerId, "deepseek")
+        XCTAssertEqual(config.asrProviderId, "volcengine")
         XCTAssertEqual(config.modeId, "polish")
         XCTAssertEqual(config.localeId, "auto")
         // Privacy-critical: the default engine must keep audio on-device.
@@ -125,14 +126,14 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertFalse(config.translationEnabled)
     }
 
-    func testCloudDeepSeekProviderMigratesToOpenAI() {
+    func testCloudDeepSeekProviderIsPreserved() {
         let defaults = makeDefaults()
         defaults.set("deepseek", forKey: AppGroupConfiguration.Keys.providerId)
         defaults.set("cloud", forKey: AppGroupConfiguration.Keys.engineMode)
 
         let config = AppGroupConfiguration.load(fromAvailable: defaults)
-        XCTAssertEqual(config.providerId, "openai")
-        XCTAssertEqual(defaults.string(forKey: AppGroupConfiguration.Keys.providerId), "openai")
+        XCTAssertEqual(config.providerId, "deepseek")
+        XCTAssertEqual(defaults.string(forKey: AppGroupConfiguration.Keys.providerId), "deepseek")
     }
 
     func testPolishIntensityLegacyOffMigratesToMedium() {

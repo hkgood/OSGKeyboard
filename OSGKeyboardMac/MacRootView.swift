@@ -38,7 +38,7 @@ struct MacRootView: View {
     private var sidebar: some View {
         VStack(spacing: 0) {
             brandHeader
-            VStack(spacing: 4) {
+            VStack(spacing: 6) {
                 ForEach(MacSection.allCases) { section in
                     MacSidebarRow(
                         section: section,
@@ -70,8 +70,8 @@ struct MacRootView: View {
         }
         .padding(.leading, MacMetrics.sidebarContentInset)
         .padding(.trailing, MacMetrics.sidebarInset)
-        .padding(.top, Spacing.lg)
-        .padding(.bottom, Spacing.md)
+        .padding(.top, 30)
+        .padding(.bottom, 30)
     }
 
     private var devicesFooter: some View {
@@ -127,10 +127,10 @@ private struct MacSidebarRow: View {
                 .foregroundStyle(isSelected ? palette.accent : palette.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, 7)
+                .padding(.vertical, 9)
                 .background(
                     rowBackground,
-                    in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
                 )
                 .contentShape(Rectangle())
         }

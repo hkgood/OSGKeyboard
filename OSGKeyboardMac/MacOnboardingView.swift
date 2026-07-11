@@ -422,12 +422,15 @@ struct MacOnboardingView: View {
 
     private var cloudAPIFields: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            Picker(MacL10n.string("mac.settings.service", language: lang), selection: providerBinding) {
-                ForEach(viewModel.selectableProviders) { provider in
-                    Text(provider.name).tag(provider.id)
+            MacInlinePicker(
+                selection: providerBinding,
+                options: viewModel.selectableProviders.map {
+                    MacInlinePickerOption(
+                        value: $0.id,
+                        label: ProviderDisplayName.name(for: $0.id, language: lang)
+                    )
                 }
-            }
-            .labelsHidden()
+            )
             .frame(maxWidth: .infinity, alignment: .leading)
 
             SecureField(text: $viewModel.config.apiKey, prompt: Text(verbatim: "sk-...")) {

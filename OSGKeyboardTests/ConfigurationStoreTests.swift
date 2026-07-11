@@ -62,9 +62,9 @@ final class ConfigurationStoreTests: XCTestCase {
         XCTAssertTrue(asrClient is ZhipuCloudASRClient)
     }
 
-    func testLegacyInstallCopiesProviderIdToAsrProviderId() {
+    func testLegacyInstallCopiesProviderIdToAsrProviderIdThenMigratesQwen() {
         defaults.set("qwen", forKey: AppGroupConfiguration.Keys.providerId)
         let config = AppGroupConfiguration.load(fromAvailable: defaults)
-        XCTAssertEqual(config.asrProviderId, "qwen")
+        XCTAssertEqual(config.asrProviderId, "bailian")
     }
 }

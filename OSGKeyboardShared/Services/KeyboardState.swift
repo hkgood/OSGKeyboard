@@ -107,8 +107,11 @@ public final class KeyboardState: ObservableObject {
     /// Defaults to `offLocaleId` so the keyboard boots in the "off"
     /// state on first install.
     @Published public var translationTargetLocaleId: String = TranslationLanguageCatalog.offLocaleId
-    /// Mirrored from App Group — swaps delete / return on the bottom row.
+    /// Mirrored from App Group — swaps delete / space on the bottom row.
     @Published public var handednessPreference: HandednessPreference = .left
+    /// Mirrors the host field's return-key intent. The action stays a newline
+    /// insert; host apps decide whether that submits or creates a line break.
+    @Published public var returnKeyRole: ReturnKeyRole = .newline
     /// Press-and-drag pads beside the mic for four-way caret movement.
     @Published public var cursorDragNavigationEnabled: Bool = true
     /// `true` while a cursor-drag pad is being pressed — drives the hint
@@ -149,6 +152,18 @@ public final class KeyboardState: ObservableObject {
         case none
         case startRecording
         case openSettings
+    }
+
+    public enum ReturnKeyRole: Equatable {
+        case newline
+        case send
+
+        public var titleKey: String {
+            switch self {
+            case .newline: return "common.newline"
+            case .send:    return "common.send"
+            }
+        }
     }
 
     // MARK: - Temporary Flow debug (remove after orange-mic investigation)

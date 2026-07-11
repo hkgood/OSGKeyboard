@@ -27,6 +27,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
     public var handednessPreference: SyncedField<HandednessPreference>
     public var cursorDragNavigationEnabled: SyncedField<Bool>
     public var polishIntensity: SyncedField<PolishIntensity>
+    public var llmThinkingEnabled: SyncedField<Bool>
     public var flowSkipAppSwitch: SyncedField<Bool>
     public var flowInactivityDuration: SyncedField<FlowInactivityDuration>
 
@@ -47,6 +48,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         handednessPreference: SyncedField<HandednessPreference>,
         cursorDragNavigationEnabled: SyncedField<Bool>,
         polishIntensity: SyncedField<PolishIntensity>,
+        llmThinkingEnabled: SyncedField<Bool>,
         flowSkipAppSwitch: SyncedField<Bool>,
         flowInactivityDuration: SyncedField<FlowInactivityDuration>
     ) {
@@ -66,6 +68,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         self.handednessPreference = handednessPreference
         self.cursorDragNavigationEnabled = cursorDragNavigationEnabled
         self.polishIntensity = polishIntensity
+        self.llmThinkingEnabled = llmThinkingEnabled
         self.flowSkipAppSwitch = flowSkipAppSwitch
         self.flowInactivityDuration = flowInactivityDuration
     }
@@ -87,6 +90,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         case handednessPreference
         case cursorDragNavigationEnabled
         case polishIntensity
+        case llmThinkingEnabled
         case flowSkipAppSwitch
         case flowInactivityDuration
     }
@@ -115,6 +119,10 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             forKey: .cursorDragNavigationEnabled
         )
         polishIntensity = try container.decode(SyncedField<PolishIntensity>.self, forKey: .polishIntensity)
+        llmThinkingEnabled = try container.decodeIfPresent(
+            SyncedField<Bool>.self,
+            forKey: .llmThinkingEnabled
+        ) ?? SyncedField(value: false, updatedAt: polishIntensity.updatedAt, deviceID: polishIntensity.deviceID)
         flowSkipAppSwitch = try container.decode(SyncedField<Bool>.self, forKey: .flowSkipAppSwitch)
         flowInactivityDuration = try container.decode(
             SyncedField<FlowInactivityDuration>.self,
@@ -161,6 +169,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             handednessPreference.updatedAt,
             cursorDragNavigationEnabled.updatedAt,
             polishIntensity.updatedAt,
+            llmThinkingEnabled.updatedAt,
             flowSkipAppSwitch.updatedAt,
             flowInactivityDuration.updatedAt,
         ].max() ?? .distantPast
@@ -197,6 +206,7 @@ public extension SyncedAppSettingsV2 {
             handednessPreference: field(configuration.handednessPreference),
             cursorDragNavigationEnabled: field(configuration.cursorDragNavigationEnabled),
             polishIntensity: field(configuration.polishIntensity),
+            llmThinkingEnabled: field(configuration.llmThinkingEnabled),
             flowSkipAppSwitch: field(configuration.flowSkipAppSwitch),
             flowInactivityDuration: field(configuration.flowInactivityDuration)
         )
@@ -225,6 +235,7 @@ public extension SyncedAppSettingsV2 {
             handednessPreference: field(legacy.handednessPreference),
             cursorDragNavigationEnabled: field(legacy.cursorDragNavigationEnabled),
             polishIntensity: field(legacy.polishIntensity),
+            llmThinkingEnabled: field(false),
             flowSkipAppSwitch: field(legacy.flowSkipAppSwitch),
             flowInactivityDuration: field(legacy.flowInactivityDuration)
         )
@@ -256,6 +267,7 @@ public extension SyncedAppSettingsV2 {
                 remote: remote.cursorDragNavigationEnabled
             ),
             polishIntensity: .merge(local: local.polishIntensity, remote: remote.polishIntensity),
+            llmThinkingEnabled: .merge(local: local.llmThinkingEnabled, remote: remote.llmThinkingEnabled),
             flowSkipAppSwitch: .merge(local: local.flowSkipAppSwitch, remote: remote.flowSkipAppSwitch),
             flowInactivityDuration: .merge(
                 local: local.flowInactivityDuration,
@@ -280,6 +292,7 @@ public extension SyncedAppSettingsV2 {
         configuration.handednessPreference = handednessPreference.value
         configuration.cursorDragNavigationEnabled = cursorDragNavigationEnabled.value
         configuration.polishIntensity = polishIntensity.value
+        configuration.llmThinkingEnabled = llmThinkingEnabled.value
         configuration.flowSkipAppSwitch = flowSkipAppSwitch.value
         configuration.flowInactivityDuration = flowInactivityDuration.value
     }
@@ -306,6 +319,7 @@ public extension SyncedAppSettingsV2 {
         patch(&copy.handednessPreference, value: configuration.handednessPreference)
         patch(&copy.cursorDragNavigationEnabled, value: configuration.cursorDragNavigationEnabled)
         patch(&copy.polishIntensity, value: configuration.polishIntensity)
+        patch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
         patch(&copy.flowSkipAppSwitch, value: configuration.flowSkipAppSwitch)
         patch(&copy.flowInactivityDuration, value: configuration.flowInactivityDuration)
         return copy
@@ -335,6 +349,7 @@ public extension SyncedAppSettingsV2 {
         touch(&copy.handednessPreference, value: configuration.handednessPreference)
         touch(&copy.cursorDragNavigationEnabled, value: configuration.cursorDragNavigationEnabled)
         touch(&copy.polishIntensity, value: configuration.polishIntensity)
+        touch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
         touch(&copy.flowSkipAppSwitch, value: configuration.flowSkipAppSwitch)
         touch(&copy.flowInactivityDuration, value: configuration.flowInactivityDuration)
         return copy

@@ -60,6 +60,7 @@ final class SettingsCloudSyncTests: XCTestCase {
             handednessPreference: SyncedField(value: .left, updatedAt: stampA, deviceID: deviceA),
             cursorDragNavigationEnabled: SyncedField(value: true, updatedAt: stampA, deviceID: deviceA),
             polishIntensity: SyncedField(value: .medium, updatedAt: stampA, deviceID: deviceA),
+            llmThinkingEnabled: SyncedField(value: false, updatedAt: stampA, deviceID: deviceA),
             flowSkipAppSwitch: SyncedField(value: true, updatedAt: stampA, deviceID: deviceA),
             flowInactivityDuration: SyncedField(value: .twelveHours, updatedAt: stampA, deviceID: deviceA)
         )
@@ -79,6 +80,7 @@ final class SettingsCloudSyncTests: XCTestCase {
             handednessPreference: SyncedField(value: .right, updatedAt: stampB, deviceID: deviceB),
             cursorDragNavigationEnabled: SyncedField(value: false, updatedAt: stampB, deviceID: deviceB),
             polishIntensity: SyncedField(value: .light, updatedAt: stampB, deviceID: deviceB),
+            llmThinkingEnabled: SyncedField(value: true, updatedAt: stampB, deviceID: deviceB),
             flowSkipAppSwitch: SyncedField(value: false, updatedAt: stampB, deviceID: deviceB),
             flowInactivityDuration: SyncedField(value: .threeHours, updatedAt: stampB, deviceID: deviceB)
         )
@@ -129,6 +131,7 @@ final class SettingsCloudSyncTests: XCTestCase {
         try await settingsSync.enableSync()
 
         XCTAssertTrue(store.settingsICloudSyncEnabled)
+        XCTAssertTrue(store.personalDictionaryICloudSyncEnabled)
         XCTAssertEqual(Keychain.apiKey(for: "openai", preferICloudSync: true), "sk-local-openai")
     }
 

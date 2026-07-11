@@ -9,33 +9,47 @@ struct ProviderPickerSection: View {
 
     @ObservedObject var config: ProviderConfig
     var role: CloudProviderRole = .polish
+    /// 嵌入合并卡片时为 `false`，由外层统一绘制圆角背景。
+    var showsSurface: Bool = true
 
     private var selectedProviderId: String {
         role == .asr ? config.asrProviderId : config.providerId
     }
 
-    var body: some View {
-        let visiblePresets = role == .asr
+    private var visiblePresets: [LLMProvider] {
+        role == .asr
             ? LLMProvider.asrSelectablePresets
             : LLMProvider.userSelectablePresets
-        VStack(spacing: 0) {
-            ForEach(Array(visiblePresets.enumerated()), id: \.element.id) { index, provider in
-                Button {
-                    select(provider)
-                } label: {
-                    row(provider, selected: provider.id == selectedProviderId)
+    }
+
+    private var selectedProvider: LLMProvider {
+        visiblePresets.first(where: { $0.id == selectedProviderId })
+            ?? LLMProvider.provider(id: selectedProviderId)
+    }
+
+    var body: some View {
+        // 只有右侧芯片是 Menu 的 label；标题留在行外，避免菜单弹出时
+        // 把整行 label 一起隐藏，导致左侧「供应商」文字消失。
+        SettingsProviderRow(title: AppL10n.string("settings.provider.supplier")) {
+            Menu {
+                ForEach(visiblePresets, id: \.id) { provider in
+                    Button {
+                        select(provider)
+                    } label: {
+                        let name = ProviderDisplayName.name(for: provider.id)
+                        if provider.id == selectedProviderId {
+                            Label(name, systemImage: "checkmark")
+                        } else {
+                            Text(name)
+                        }
+                    }
                 }
-                .buttonStyle(.plain)
-                if index < visiblePresets.count - 1 {
-                    Divider().background(palette.divider)
-                }
+            } label: {
+                providerChip
             }
+            .buttonStyle(.plain)
         }
-        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                .stroke(palette.divider, lineWidth: 0.5)
-        )
+        .modifier(SettingsSurfaceCardModifier(enabled: showsSurface))
     }
 
     private func select(_ provider: LLMProvider) {
@@ -49,48 +63,45 @@ struct ProviderPickerSection: View {
         }
     }
 
-    @ViewBuilder
-    private func row(_ provider: LLMProvider, selected: Bool) -> some View {
+    /// 收起状态展示：当前所选供应商 logo + 名称 + 展开箭头。
+    private var providerChip: some View {
         HStack(spacing: Spacing.sm) {
-            providerMark(provider, selected: selected)
+            providerMark(selectedProvider)
 
-            Text(ProviderDisplayName.name(for: provider.id))
+            Text(ProviderDisplayName.name(for: selectedProvider.id))
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textPrimary)
 
-            if provider.supportsPersonalDictionaryCloudASR {
+            if selectedProvider.supportsPersonalDictionaryCloudASR {
                 personalDictionaryBadge
             }
 
             Spacer(minLength: Spacing.xs)
 
-            if selected {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(palette.accent)
-            }
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(palette.textTertiary)
         }
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
     }
 
     @ViewBuilder
-    private func providerMark(_ provider: LLMProvider, selected: Bool) -> some View {
+    private func providerMark(_ provider: LLMProvider) -> some View {
         ZStack {
             Circle()
-                .fill(selected ? palette.accentMuted : palette.surfaceElevated)
+                .fill(palette.accentMuted)
                 .frame(width: 32, height: 32)
             if let asset = ProviderLogo.assetName(for: provider.id) {
                 Image(asset)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 18, height: 18)
-                    .foregroundStyle(selected ? palette.accent : palette.textPrimary)
+                    .foregroundStyle(palette.accent)
             } else {
                 Text(String(provider.name.prefix(1)))
                     .font(TypeStyle.caption)
-                    .foregroundStyle(selected ? palette.accent : palette.textSecondary)
+                    .foregroundStyle(palette.accent)
             }
         }
     }

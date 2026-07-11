@@ -23,7 +23,7 @@ enum AppTab: Int, CaseIterable {
         }
     }
 
-    /// Matches `HomeStatsCard` dictionary stat cell (filled variant).
+    /// Filled SF Symbol override for the dictionary tab.
     var sfSymbol: String? {
         switch self {
         case .dictionary: return "square.stack.3d.down.right.fill"

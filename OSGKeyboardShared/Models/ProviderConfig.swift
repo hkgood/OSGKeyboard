@@ -111,7 +111,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         didSet {
             guard !isApplyingConfiguration, engineMode != configuration.engineMode else { return }
             configuration.engineMode = engineMode
-            applyEngineModeSideEffects()
             persistConfiguration(postConfigChanged: true)
         }
     }
@@ -179,7 +178,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         }
     }
     /// Which hand the user holds the phone with — mirrors to the keyboard
-    /// extension so delete / return can swap on the bottom row.
+    /// extension so delete / space can swap on the bottom row.
     @Published public var handednessPreference: HandednessPreference {
         didSet {
             guard !isApplyingConfiguration,
@@ -215,6 +214,17 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
             guard !isApplyingConfiguration, polishIntensity != configuration.polishIntensity else { return }
             configuration.polishIntensity = polishIntensity
             persistConfiguration()
+        }
+    }
+
+    /// Enables provider-specific reasoning / thinking controls when the
+    /// selected polish LLM supports them.
+    @Published public var llmThinkingEnabled: Bool {
+        didSet {
+            guard !isApplyingConfiguration,
+                  llmThinkingEnabled != configuration.llmThinkingEnabled else { return }
+            configuration.llmThinkingEnabled = llmThinkingEnabled
+            persistConfiguration(postConfigChanged: true)
         }
     }
 
@@ -335,6 +345,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         handednessPreference = configuration.handednessPreference
         cursorDragNavigationEnabled = configuration.cursorDragNavigationEnabled
         polishIntensity = configuration.polishIntensity
+        llmThinkingEnabled = configuration.llmThinkingEnabled
         flowSkipAppSwitch = configuration.flowSkipAppSwitch
         flowInactivityDuration = configuration.flowInactivityDuration
         localASRCustomLanguageModelEnabled = configuration.localASRCustomLanguageModelEnabled
@@ -347,15 +358,34 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         isApplyingConfiguration = false
     }
 
-    /// Keep cloud vs local provider choices isolated when the user
-    /// switches engines in Settings / onboarding.
-    private func applyEngineModeSideEffects() {
-        if engineMode == "cloud", providerId == "deepseek" {
-            apply(preset: LLMProvider.provider(id: "openai"))
-        }
-        if engineMode == "cloud", asrProviderId == "deepseek" {
-            applyAsr(preset: LLMProvider.provider(id: "openai"))
-        }
+    public func reset() {
+        isApplyingConfiguration = true
+        let polishPreset = LLMProvider.provider(id: AppGroupConfiguration.defaultPolishProviderId)
+        let asrPreset = LLMProvider.provider(id: AppGroupConfiguration.defaultCloudASRProviderId)
+        providerId = polishPreset.id
+        baseURL = polishPreset.defaultBaseURL
+        apiKey = ""
+        model = polishPreset.defaultModel
+        asrProviderId = asrPreset.id
+        asrBaseURL = asrPreset.defaultBaseURL
+        asrModel = CloudASRModelCatalog.defaultModel(for: asrPreset.id)
+        asrApiKey = ""
+        handednessPreference = .left
+        localASRCustomLanguageModelEnabled = true
+        llmThinkingEnabled = false
+        hasAcknowledgedCloudSharing = false
+        configuration.providerId = polishPreset.id
+        configuration.baseURL = polishPreset.defaultBaseURL
+        configuration.model = polishPreset.defaultModel
+        configuration.asrProviderId = asrPreset.id
+        configuration.asrBaseURL = asrPreset.defaultBaseURL
+        configuration.asrModel = CloudASRModelCatalog.defaultModel(for: asrPreset.id)
+        configuration.handednessPreference = .left
+        configuration.localASRCustomLanguageModelEnabled = true
+        configuration.llmThinkingEnabled = false
+        configuration.hasAcknowledgedCloudSharing = false
+        isApplyingConfiguration = false
+        persistConfiguration()
     }
 
     private func persistConfiguration(postConfigChanged: Bool = false) {
@@ -401,6 +431,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         handednessPreference = fresh.handednessPreference
         cursorDragNavigationEnabled = fresh.cursorDragNavigationEnabled
         polishIntensity = fresh.polishIntensity
+        llmThinkingEnabled = fresh.llmThinkingEnabled
         flowSkipAppSwitch = fresh.flowSkipAppSwitch
         flowInactivityDuration = fresh.flowInactivityDuration
         localASRCustomLanguageModelEnabled = fresh.localASRCustomLanguageModelEnabled
@@ -452,33 +483,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         isSyncingASRProviderAPIKey = true
         asrApiKey = configuration.asrApiKey
         isSyncingASRProviderAPIKey = false
-        isApplyingConfiguration = false
-        persistConfiguration()
-    }
-
-    public func reset() {
-        isApplyingConfiguration = true
-        let preset = LLMProvider.provider(id: "openai")
-        providerId = preset.id
-        baseURL = preset.defaultBaseURL
-        apiKey = ""
-        model = preset.defaultModel
-        asrProviderId = preset.id
-        asrBaseURL = preset.defaultBaseURL
-        asrModel = CloudASRModelCatalog.defaultModel(for: preset.id)
-        asrApiKey = ""
-        handednessPreference = .left
-        localASRCustomLanguageModelEnabled = true
-        hasAcknowledgedCloudSharing = false
-        configuration.providerId = preset.id
-        configuration.baseURL = preset.defaultBaseURL
-        configuration.model = preset.defaultModel
-        configuration.asrProviderId = preset.id
-        configuration.asrBaseURL = preset.defaultBaseURL
-        configuration.asrModel = CloudASRModelCatalog.defaultModel(for: preset.id)
-        configuration.handednessPreference = .left
-        configuration.localASRCustomLanguageModelEnabled = true
-        configuration.hasAcknowledgedCloudSharing = false
         isApplyingConfiguration = false
         persistConfiguration()
     }

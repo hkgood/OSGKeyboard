@@ -83,7 +83,7 @@ struct MacHistoryView: View {
         // Full-bleed ScrollView → scrollbar on the detail pane's right edge.
         // Horizontal inset lives on the content so cards align with the title.
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: Spacing.md) {
+            LazyVStack(alignment: .leading, spacing: Spacing.xl) {
                 ForEach(historyStore.groupedByDay, id: \.day) { group in
                     daySection(group)
                 }
@@ -94,22 +94,18 @@ struct MacHistoryView: View {
     }
 
     private func daySection(_ group: (day: Date, items: [SpeechHistoryEntry])) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
             Text(Self.dayFormatter.string(from: group.day))
-                .font(TypeStyle.caption)
-                .foregroundStyle(palette.textTertiary)
+                .font(MacSettingsType.sectionTitle)
+                .foregroundStyle(palette.textSecondary)
+                .textCase(.uppercase)
 
             MacCard(padding: 0) {
                 VStack(spacing: 0) {
-                    ForEach(Array(group.items.enumerated()), id: \.element.id) { index, entry in
+                    ForEach(group.items, id: \.id) { entry in
                         row(entry)
                             .padding(.horizontal, Spacing.md)
                             .padding(.vertical, Spacing.sm)
-                        if index < group.items.count - 1 {
-                            // Full-bleed like macOS list rows (not iOS inset separators).
-                            Divider()
-                                .overlay(palette.divider)
-                        }
                     }
                 }
             }

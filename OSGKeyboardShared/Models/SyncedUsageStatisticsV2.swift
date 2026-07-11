@@ -5,30 +5,78 @@
 
 import Foundation
 
+/// Local-calendar day key (`yyyy-MM-dd`) for daily usage buckets. String keys
+/// sort lexicographically in chronological order, which keeps pruning and
+/// range queries index-free.
+public enum UsageStatisticsDayKey {
+    public static func key(for date: Date, calendar: Calendar = .current) -> String {
+        let c = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+
+    /// Drops buckets older than `days` so the synced blob stays small even
+    /// after months of use (the chart only ever needs the last 7 days).
+    public static func prune(_ daily: inout [String: Int], keepingDays days: Int, now: Date = Date(), calendar: Calendar = .current) {
+        guard let cutoff = calendar.date(byAdding: .day, value: -days, to: now) else { return }
+        let cutoffKey = key(for: cutoff, calendar: calendar)
+        daily = daily.filter { $0.key >= cutoffKey }
+    }
+}
+
 public struct UsageStatisticsDeviceSlice: Codable, Equatable, Sendable {
     public var updatedAt: Date
     public var dictationDurationSeconds: TimeInterval
     public var dictationCharacterCount: Int
     public var translationCharacterCount: Int
+    /// Grow-only per-day dictation character counts, keyed by local `yyyy-MM-dd`.
+    /// Powers the home page's 7-day chart; merged per-key with `max` (each device
+    /// only ever grows its own days) and summed across devices when aggregated.
+    public var dailyDictationCharacters: [String: Int]
 
     public init(
         updatedAt: Date = Date(),
         dictationDurationSeconds: TimeInterval = 0,
         dictationCharacterCount: Int = 0,
-        translationCharacterCount: Int = 0
+        translationCharacterCount: Int = 0,
+        dailyDictationCharacters: [String: Int] = [:]
     ) {
         self.updatedAt = updatedAt
         self.dictationDurationSeconds = dictationDurationSeconds
         self.dictationCharacterCount = dictationCharacterCount
         self.translationCharacterCount = translationCharacterCount
+        self.dailyDictationCharacters = dailyDictationCharacters
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case updatedAt
+        case dictationDurationSeconds
+        case dictationCharacterCount
+        case translationCharacterCount
+        case dailyDictationCharacters
+    }
+
+    // Custom decode so slices written before the daily-buckets field still load
+    // (the missing key defaults to an empty map rather than failing the decode).
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        dictationDurationSeconds = try container.decode(TimeInterval.self, forKey: .dictationDurationSeconds)
+        dictationCharacterCount = try container.decode(Int.self, forKey: .dictationCharacterCount)
+        translationCharacterCount = try container.decode(Int.self, forKey: .translationCharacterCount)
+        dailyDictationCharacters = try container.decodeIfPresent([String: Int].self, forKey: .dailyDictationCharacters) ?? [:]
     }
 
     public static func merge(local: UsageStatisticsDeviceSlice, remote: UsageStatisticsDeviceSlice) -> UsageStatisticsDeviceSlice {
-        UsageStatisticsDeviceSlice(
+        var mergedDaily = local.dailyDictationCharacters
+        for (day, value) in remote.dailyDictationCharacters {
+            mergedDaily[day] = max(mergedDaily[day] ?? 0, value)
+        }
+        return UsageStatisticsDeviceSlice(
             updatedAt: max(local.updatedAt, remote.updatedAt),
             dictationDurationSeconds: max(local.dictationDurationSeconds, remote.dictationDurationSeconds),
             dictationCharacterCount: max(local.dictationCharacterCount, remote.dictationCharacterCount),
-            translationCharacterCount: max(local.translationCharacterCount, remote.translationCharacterCount)
+            translationCharacterCount: max(local.translationCharacterCount, remote.translationCharacterCount),
+            dailyDictationCharacters: mergedDaily
         )
     }
 
@@ -73,6 +121,17 @@ public struct SyncedUsageStatisticsV2: Codable, Equatable, Sendable {
             dictationCharacterCount: dictation,
             translationCharacterCount: translation
         )
+    }
+
+    /// Cross-device daily dictation characters (summed per `yyyy-MM-dd`).
+    public var aggregatedDailyDictationCharacters: [String: Int] {
+        var result: [String: Int] = [:]
+        for slice in devices.values {
+            for (day, value) in slice.dailyDictationCharacters {
+                result[day, default: 0] += value
+            }
+        }
+        return result
     }
 
     public static func merge(local: SyncedUsageStatisticsV2, remote: SyncedUsageStatisticsV2) -> SyncedUsageStatisticsV2 {

@@ -26,14 +26,8 @@ options:
 # Carthage (matches the long-standing "zero dependencies" promise in the
 # README). Optional post-ASR cloud polish routes through DeepSeek (or
 # any OpenAI-compatible endpoint) using the existing `LLMClient`.
-#
-# macOS only: `mlx-swift-asr` (MLXASR) for Qwen3-ASR-1.7B on-device ASR.
-# iOS targets remain zero-SPM.
-
-packages:
-  MLXSwiftASR:
-    url: https://github.com/ontypehq/mlx-swift-asr
-    branch: main
+# iOS targets remain zero-SPM. macOS local ASR downloads the sherpa-onnx
+# runtime on demand instead of linking SwiftPM speech packages.
 
 settings:
   base:
@@ -50,8 +44,8 @@ settings:
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "0.5.2"
-    CURRENT_PROJECT_VERSION: "19"
+    MARKETING_VERSION: "0.5.3"
+    CURRENT_PROJECT_VERSION: "22"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -354,6 +348,7 @@ targets:
     dependencies:
       - sdk: Speech.framework
       - sdk: AVFoundation.framework
+      - sdk: Charts.framework
 
   # =========================================================
   # 单元测试
@@ -396,7 +391,7 @@ targets:
   # Reuses the platform-agnostic core files from OSGKeyboardShared at the
   # source level (no framework), excluding the iOS-only files that import
   # SpeechAnalyzer / AVAudioSession / UIKit / SwiftUI views. Local mode uses
-  # Qwen3-ASR MLX via mlx-swift-asr (requires macOS 15+, Apple Silicon).
+  # a downloaded sherpa-onnx runtime plus catalog-managed ONNX models.
   OSGKeyboardMac:
     type: application
     platform: macOS
@@ -489,8 +484,7 @@ targets:
     dependencies:
       - sdk: Speech.framework
       - sdk: AVFoundation.framework
-      - package: MLXSwiftASR
-        product: MLXASR
+      - sdk: Charts.framework
 
 schemes:
   OSGKeyboard:

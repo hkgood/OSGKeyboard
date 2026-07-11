@@ -138,21 +138,43 @@ final class FlowSessionManager: ObservableObject {
             return
         }
 
+        reconcilePersistedFlowStateBeforeStart()
+
+        // Healthy / busy sessions must not flash the cold-start overlay when a
+        // spurious `startflow` arrives (e.g. keyboard finalize race).
+        if coldStart, isActive {
+            extendSession(duration: duration)
+            refreshHostReady()
+            let decision = FlowHandoffPolicy.coldStartOverlayDecision(
+                sessionIsActive: true,
+                hostIsReady: FlowSessionBridge.isHostReady(),
+                isUtteranceBusy: isUtteranceRecording || isUtteranceProcessing
+            )
+            switch decision {
+            case .silence:
+                traceState(
+                    "startSession.coldStart.silenced",
+                    extra: FlowSessionBridge.isHostReady() ? "reason=alreadyReady" : "reason=busy"
+                )
+                return
+            case .present:
+                isColdStartHandoff = true
+                showColdStartPreparing()
+                Task { @MainActor [weak self] in
+                    await self?.prepareExistingSessionForColdStartReturn()
+                }
+                return
+            }
+        }
+
         if coldStart {
             isColdStartHandoff = true
             showColdStartPreparing()
         }
 
-        reconcilePersistedFlowStateBeforeStart()
-
         if isActive {
             extendSession(duration: duration)
             refreshHostReady()
-            if coldStart {
-                Task { @MainActor [weak self] in
-                    await self?.prepareExistingSessionForColdStartReturn()
-                }
-            }
             return
         }
 
@@ -1354,8 +1376,9 @@ final class FlowSessionManager: ObservableObject {
             if Task.isCancelled {
                 throw CancellationError()
             }
-            let polished = try await polisher.polish(
-                text,
+            let polished = try await Self.polishWithHostTimeout(
+                polisher: polisher,
+                text: text,
                 mode: polishMode,
                 providerIdOverride: pipelineStore.polishProviderIdOverride
             )
@@ -1540,6 +1563,22 @@ final class FlowSessionManager: ObservableObject {
             return FlowSessionKeys.localASRWaitTimeout
         }
         return FlowSessionKeys.cloudASRWaitTimeout
+    }
+
+    /// Host-level polish cap — does not wait for a cancelled LLM task to unwind.
+    private static func polishWithHostTimeout(
+        polisher: PolishingService,
+        text: String,
+        mode: PolishingService.PolishMode,
+        providerIdOverride: String?
+    ) async throws -> String {
+        try await HardTimeout.run(seconds: FlowSessionKeys.maxPolishTimeout) {
+            try await polisher.polish(
+                text,
+                mode: mode,
+                providerIdOverride: providerIdOverride
+            )
+        }
     }
 
     // MARK: - Level publishing (main thread only)

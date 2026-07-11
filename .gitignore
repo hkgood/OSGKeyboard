@@ -73,3 +73,8 @@ __pycache__/
 
 # Standalone experiment: 灵动岛录音机制验证 demo (throwaway)
 AudioIntentProbe/
+
+# Local crash-log pulls and one-off diff/working notes (not for the repo)
+.crash-pull/
+all-changes-vs-main.patch
+CHANGES.md

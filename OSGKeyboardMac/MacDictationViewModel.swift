@@ -92,7 +92,9 @@ final class MacDictationViewModel: ObservableObject {
         self.config = ProviderConfig(defaults: defaults)
         self.usageStatistics = UsageStatisticsStore(defaults: defaults)
         self.autoPasteEnabled = defaults.object(forKey: StoredKeys.autoPaste) as? Bool ?? true
-        self.hotkeyEnabled = defaults.object(forKey: StoredKeys.hotkey) as? Bool ?? true
+        // Global hotkey is always on — the settings toggle was removed, so any
+        // previously-stored "off" value is intentionally ignored.
+        self.hotkeyEnabled = true
         self.hotkeyTrigger = MacHotkeyTrigger(
             rawValue: defaults.string(forKey: StoredKeys.hotkeyTrigger) ?? ""
         ) ?? .rightOption
@@ -284,7 +286,7 @@ final class MacDictationViewModel: ObservableObject {
             do {
                 let result: MacDictationResult
                 if let liveTask {
-                    let capture = await liveTask.value
+                    let capture = await Self.awaitLiveCapture(liveTask)
                     let trimmedLive = capture.raw.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !capture.shouldFallbackToBatch, !trimmedLive.isEmpty {
                         if self.transcript.isEmpty {
@@ -360,6 +362,25 @@ final class MacDictationViewModel: ObservableObject {
         liveCaptureTask?.cancel()
         liveCaptureTask = nil
         isStreamingPartial = false
+    }
+
+    /// Hard timeout so a hung realtime ASR drain cannot leave `isProcessing` stuck.
+    private static func awaitLiveCapture(
+        _ task: Task<MacLiveASRCaptureResult, Never>
+    ) async -> MacLiveASRCaptureResult {
+        await HardTimeout.value(
+            seconds: FlowSessionKeys.cloudASRWaitTimeout,
+            operation: { await task.value },
+            onTimeout: {
+                task.cancel()
+                return MacLiveASRCaptureResult(
+                    raw: "",
+                    chunkWarning: nil,
+                    localBias: nil,
+                    shouldFallbackToBatch: true
+                )
+            }
+        )
     }
 
     /// Stops an in-flight prepare, or finishes an active recording.

@@ -11,11 +11,27 @@
 
 /* LLM providers */
 "provider.openai" = "OpenAI";
+"provider.ark" = "火山方舟 Ark";
 "provider.deepseek" = "DeepSeek";
 "provider.qwen" = "通义千问";
 "provider.zhipu" = "智谱 GLM";
 "provider.moonshot" = "月之暗面";
+"provider.siliconflow" = "硅基流动";
+"provider.groq" = "Groq";
+"provider.minimax" = "MiniMax";
 "provider.mimo" = "小米 MiMo";
+"provider.openrouter" = "OpenRouter";
+"provider.gemini" = "Google Gemini";
+"provider.anthropic" = "Anthropic Claude";
+"provider.xai" = "xAI Grok";
+"provider.mistral" = "Mistral AI";
+"provider.cometapi" = "CometAPI";
+"provider.alibabaCoding" = "阿里 Coding";
+"provider.codingPlanX" = "CodingPlanX";
+"provider.volcengine" = "火山引擎 ASR";
+"provider.bailian" = "百炼实时 ASR";
+"provider.whisper" = "Whisper (OpenAI)";
+"provider.codex_oauth" = "Codex OAuth";
 "provider.custom" = "自定义";
 
 /* LLM errors */
@@ -44,6 +60,15 @@
 "error.cloudASR.emptyTranscript" = "云端识别返回了空文本。";
 "error.cloudASR.audioTooLong" = "音频片段超过该云端识别服务的时长限制。";
 "error.cloudASR.providerUnsupported" = "该服务商暂不支持云端语音识别。";
+"error.cloudASR.streamingNotImplemented" = "该服务商需要流式 ASR（WebSocket），当前版本尚未接入。可改用通义、智谱、Groq 或 OpenAI。";
+
+/* 服务商工具 */
+"providerTools.error.invalidURL" = "模型接口地址无效。";
+"providerTools.error.missingAPIKey" = "未填写 API Key。";
+"providerTools.error.http" = "模型接口返回 HTTP %lld。";
+"providerTools.error.empty" = "未返回可用模型。";
+"providerTools.error.decoding" = "解析模型列表失败。";
+"providerTools.error.transport" = "拉取模型时发生网络错误。";
 
 /* 润色场景 */
 "polishScenario.daily_chat" = "日常聊天";
@@ -120,14 +145,17 @@
 "mac.status.pasted" = "已插入前台应用";
 "mac.status.copiedAndPasted" = "已复制并插入";
 "mac.status.deliveryWithNote" = "%@ — %@";
-"mac.stat.dictationTime" = "听写时长";
-"mac.stat.words" = "听写字数";
-"mac.stat.translation" = "翻译字数";
-"mac.stat.dictionary" = "词库";
-"mac.stat.cumulativeDuration" = "累计时长";
-"mac.stat.transcribed" = "累计转写";
-"mac.stat.cumulativeTranslation" = "累计翻译";
-"mac.stat.customTerms" = "自定义词条";
+"stat.dictationTime" = "听写时长";
+"stat.words" = "听写字数";
+"stat.translation" = "翻译字数";
+"stat.dictionary" = "词库";
+"stat.cumulativeDuration" = "累计时长";
+"stat.transcribed" = "累计转写";
+"stat.cumulativeTranslation" = "累计翻译";
+"stat.customTerms" = "自定义词条";
+"stat.weekChart.title" = "近 7 天";
+"stat.weekChart.caption" = "听写字数";
+"stat.weekChart.empty" = "本周还没有听写记录";
 "mac.status.chipReady" = "就绪";
 "mac.status.chipProcessing" = "处理中";
 "mac.overlay.listening" = "聆听中";
@@ -173,6 +201,25 @@
 "mac.settings.service" = "服务商";
 "mac.settings.apiKey" = "API 密钥";
 "mac.settings.model" = "模型";
+"mac.settings.modelFetchHint" = "填写 API Key 后拉取模型。";
+"mac.settings.connectionCheck" = "连接检查";
+"mac.settings.validate" = "验证";
+"mac.settings.fetchModels" = "拉取模型";
+"mac.settings.validating" = "正在验证…";
+"mac.settings.validateSuccess" = "成功 · 重试";
+"mac.settings.validateFailure" = "失败 · 重试";
+"mac.settings.loadingModels" = "正在拉取模型…";
+"mac.settings.modelsLoaded" = "已拉取 %lld 个模型。";
+"mac.settings.selectModel" = "选择模型";
+"mac.settings.modelSelected" = "已选择 %@";
+"mac.settings.modelsEmptyHint" = "先点右侧刷新拉取模型";
+"mac.settings.thinking" = "思考";
+"mac.settings.thinkingSubtitle" = "速度更慢、质量更高，建议关闭";
+"mac.settings.thinkingHint" = "默认关闭。仅在需要更慢、更深的推理时开启。";
+"mac.settings.volcengineAppId" = "APP ID";
+"mac.settings.volcengineAccessToken" = "Access Token";
+"mac.settings.volcengineResourceId" = "Resource ID";
+"mac.settings.volcengineNote" = "Secret Key 当前无需填写。Resource ID 默认使用 volc.seedasr.sauc.duration。";
 "mac.settings.recognition" = "识别方式";
 "mac.settings.cloudEngine" = "云端引擎与 AI 润色";
 "mac.settings.cloudEngineDesc" = "通过服务商 API 进行高质量转写，并自动润色语法与风格。";
@@ -209,7 +256,7 @@
 "mac.settings.mlxModelMissing" = "请在下方选择 Qwen3 MLX 模型目录，或改用其他已安装的模型。";
 "mac.settings.selectedModelMissing" = "「%@」尚未安装，暂时使用 Apple Speech。";
 "mac.settings.localModelFallbackApple" = "没有可用的本地模型，暂时使用 Apple Speech。";
-"mac.settings.accessibility" = "辅助功能";
+"mac.settings.accessibility" = "辅助功能权限";
 "mac.settings.accessibilityDesc" = "全局快捷键与自动粘贴需要此权限。";
 "mac.settings.openAccessibility" = "打开系统设置";
 "mac.settings.appearance" = "外观";
@@ -300,8 +347,8 @@
 "mac.localASR.phase.completed" = "已完成";
 "mac.error.accessibilityRequired" = "请在系统设置中为 OSGKeyboard 启用辅助功能";
 "mac.foregroundApp" = "前台应用：%@";
-"mac.sync.settingsTitle" = "iCloud 同步";
-"mac.sync.settingsSubtitle" = "通过 iCloud 在多台设备间同步设置、使用统计、语音历史与 API 密钥。";
+"mac.sync.settingsTitle" = "跨设备iCloud 同步";
+"mac.sync.settingsSubtitle" = "通过 iCloud 跨设备同步设置、历史记录、API Key";
 "mac.sync.syncNow" = "立即同步";
 "mac.sync.dictTitle" = "个人词库 iCloud 同步";
 "mac.sync.dictSubtitle" = "在所有设备间同步个人词库。";

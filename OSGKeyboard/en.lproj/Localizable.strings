@@ -4,9 +4,7 @@
 
 /* Onboarding */
 "onboarding.progress" = "Step %1$d of %2$d";
-"onboarding.welcome.tagline" = "Speak instead of type";
-"onboarding.welcome.subtitle" = "Open-source voice keyboard";
-"onboarding.welcome.subtitle2" = "We never read or upload anything you type.";
+"onboarding.welcome.tagline" = "Speak it. It’s typed.";
 "onboarding.permission.preface" = "iOS will ask for two permissions — please allow both.";
 "onboarding.permission.mic.title" = "Microphone";
 "onboarding.permission.mic.body" = "Records your voice.";
@@ -29,7 +27,10 @@
 "onboarding.enable.step3.suffix" = "and select OSGKeyboard";
 "onboarding.enable.openSettings" = "Open Settings";
 "onboarding.api.title" = "Choose Engine";
-"onboarding.api.localModels.hint" = "Local engine uses built-in on-device speech recognition and built-in polish — no API key needed.";
+"onboarding.api.localModels.hint" = "Local engine uses built-in on-device speech recognition — no API key needed.";
+"onboarding.polish.title" = "Text polish (LLM)";
+"onboarding.polish.subtitle" = "Cleans up the transcript after recognition. Can differ from the ASR provider.";
+"onboarding.polish.localHint" = "Built-in polish is included. Add your own API key here to override.";
 "settings.onboarding.replay" = "Restart permission setup";
 
 /* Common navigation */
@@ -44,6 +45,7 @@
 "common.delete" = "Delete";
 "common.space" = "Space";
 "common.newline" = "Return";
+"common.send" = "Send";
 
 /* Privacy footnote (onboarding engine page) */
 "privacy.audio.title" = "On-device transcription";
@@ -92,13 +94,13 @@
 "settings.reset.title" = "Reset all settings?";
 "settings.reset.message" = "API key, model, base URL, voice history, and cloud consent will be cleared.";
 "settings.reset.confirm" = "Reset all settings";
-"settings.engine.title" = "Recognition method";
-"settings.engine.subtitle" = "Local: on-device ASR only. Cloud: ASR + polish via your API.";
-"settings.engine.local.title" = "On-device recognition";
+"settings.engine.title" = "Speech transcription method";
+"settings.engine.subtitle" = "Local: built-in system transcription. Cloud: ASR transcription with optional LLM polish.";
+"settings.engine.local.title" = "On-device transcription";
 "settings.engine.local.ios26" = "Always on-device, no network.";
-"settings.engine.local.legacy" = "On-device ASR. Transcription only, no polish.";
-"settings.engine.cloud.title" = "Cloud recognition & polish";
-"settings.engine.cloud.subtitle" = "Cloud ASR and polish LLM are configured separately. Audio goes to your ASR provider.";
+"settings.engine.local.legacy" = "Transcribe with the built-in system speech service";
+"settings.engine.cloud.title" = "Cloud transcription";
+"settings.engine.cloud.subtitle" = "Cloud ASR transcription, with optional LLM polish";
 "settings.engine.cloud.badge" = "Cloud engine";
 "settings.provider.title" = "Provider";
 "settings.provider.personalDictionaryBadge" = "Personal dictionary";
@@ -111,6 +113,26 @@
 "settings.asrApi.title" = "ASR API";
 "settings.asr.model" = "ASR model";
 "settings.asr.testConnection" = "Test ASR";
+"settings.provider.supplier" = "Provider";
+"settings.provider.tools" = "Connection check";
+"settings.provider.validate" = "Validate";
+"settings.provider.fetchModels" = "Fetch models";
+"settings.provider.loadingModels" = "Loading models…";
+"settings.provider.modelsLoaded" = "%lld models loaded";
+"settings.provider.selectModel" = "Select model";
+"settings.provider.modelSelected" = "Selected %@";
+"settings.provider.modelsEmptyHint" = "Tap refresh to load models";
+"settings.provider.fillDefault" = "Fill default";
+"settings.provider.thinking" = "Thinking";
+"settings.provider.thinkingSubtitle" = "Slower, higher quality — recommended off";
+"settings.provider.thinkingOn" = "On";
+"settings.provider.thinkingOff" = "Off";
+"settings.provider.thinkingHint" = "Off by default. Turn on only when you want slower, deeper reasoning.";
+"settings.provider.note" = "Note";
+"settings.asr.volcengine.appId" = "APP ID";
+"settings.asr.volcengine.accessToken" = "Access Token";
+"settings.asr.volcengine.resourceId" = "Resource ID";
+"settings.asr.volcengine.note" = "Secret Key is not required. Resource ID defaults to volc.seedasr.sauc.duration.";
 "provider.openai" = "OpenAI";
 "provider.deepseek" = "DeepSeek";
 "provider.qwen" = "Qwen (DashScope)";
@@ -313,16 +335,8 @@
 "home.flow.startShort" = "Start";
 "home.preview.label" = "Try typing";
 "home.preview.placeholder" = "Tap to type and test…";
-"home.stats.dictationDuration" = "Dictation time";
-"home.stats.dictationCharacters" = "Dictation chars";
-"home.stats.translationCharacters" = "Translation chars";
-"home.stats.dictionaryEntries" = "Dictionary";
 "home.wide.tagline" = "Voice dictation, anywhere.";
 "home.wide.tagline.subtitle" = "Switch to any app and tap the keyboard mic to dictate.";
-"home.wide.stat.transcribed" = "Total dictated";
-"home.wide.stat.cumulativeDuration" = "Cumulative duration";
-"home.wide.stat.cumulativeTranslation" = "Cumulative translation";
-"home.wide.stat.customTerms" = "Custom terms";
 "home.wide.mode.cloud" = "Cloud";
 "home.wide.mode.local" = "On-device";
 "home.wide.devices" = "iPhone & iPad";
@@ -387,10 +401,12 @@
 "settings.personalDictionary.iCloudSync.error.tooLarge" = "Dictionary is too large to sync via iCloud. Remove some entries and try again.";
 "settings.personalDictionary.iCloudSync.error.generic" = "Could not sync your dictionary with iCloud. Try again later.";
 
-"settings.iCloudSync.title" = "iCloud Sync";
-"settings.appSettings.iCloudSync.title" = "iCloud Sync";
-"settings.appSettings.iCloudSync.subtitle" = "Sync settings, usage stats, speech history, and API keys across your devices via iCloud. API keys use your private iCloud Keychain.";
+"settings.iCloudSync.title" = "Cross-Device iCloud Sync";
+"settings.appSettings.iCloudSync.title" = "Cross-Device iCloud Sync";
+"settings.appSettings.iCloudSync.subtitle" = "Sync settings, history, and API keys across devices via iCloud.";
 "settings.appSettings.iCloudSync.syncNow" = "Sync Now";
+"settings.appSettings.iCloudSync.syncing" = "Syncing…";
+"settings.appSettings.iCloudSync.synced" = "Synced";
 "settings.appSettings.iCloudSync.error.generic" = "Could not sync settings with iCloud. Try again later.";
 
 /* v0.3.0: Polish intensity */

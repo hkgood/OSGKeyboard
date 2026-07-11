@@ -43,15 +43,13 @@ struct SettingsView: View {
                         dictionaryAndPolishSection
                         flowSessionSection
                         engineSection
-                        polishProviderSection
-                        polishApiSection
                         if config.engineMode == "cloud" {
-                            asrProviderSection
-                            asrApiSection
+                            asrSettingsSection
                         }
                         if config.engineMode == "local" {
                             localEngineSettingsSection
                         }
+                        polishSettingsSection
                         if presentation == .tab {
                             footerLinks
                         }
@@ -115,9 +113,7 @@ struct SettingsView: View {
                     }
                 }
                 .tint(palette.accent)
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.sm)
-                .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+                .settingsListRow()
 
                 Divider().background(palette.divider)
 
@@ -222,10 +218,6 @@ struct SettingsView: View {
                 Divider().background(palette.divider)
 
                 TranslationPickerRow(config: config, isVisible: config.isTranslationRowVisible)
-
-                Divider().background(palette.divider)
-
-                PersonalDictionaryICloudSyncRow()
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
             .overlay(
@@ -248,40 +240,36 @@ struct SettingsView: View {
         }
     }
 
-    private var polishProviderSection: some View {
+    private var polishSettingsSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
             sectionHeader("settings.polishProvider.title")
-            Text("settings.polishProvider.subtitle")
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textTertiary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            ProviderPickerSection(config: config, role: .polish)
+            cloudProviderSettingsCard {
+                ProviderPickerSection(config: config, role: .polish, showsSurface: false)
+                Divider().background(palette.divider)
+                APISettingsCard(config: config, showsSurface: false)
+            }
         }
     }
 
-    private var asrProviderSection: some View {
+    private var asrSettingsSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
             sectionHeader("settings.asrProvider.title")
-            Text("settings.asrProvider.subtitle")
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textTertiary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            ProviderPickerSection(config: config, role: .asr)
+            cloudProviderSettingsCard {
+                ProviderPickerSection(config: config, role: .asr, showsSurface: false)
+                Divider().background(palette.divider)
+                ASRSettingsCard(config: config, showsSurface: false)
+            }
         }
     }
 
-    private var polishApiSection: some View {
-        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.polishApi.title")
-            APISettingsCard(config: config)
+    @ViewBuilder
+    private func cloudProviderSettingsCard<Content: View>(
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(spacing: 0) {
+            content()
         }
-    }
-
-    private var asrApiSection: some View {
-        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.asrApi.title")
-            ASRSettingsCard(config: config)
-        }
+        .modifier(SettingsSurfaceCardModifier(enabled: true))
     }
 
     // MARK: - Language helpers
@@ -352,8 +340,7 @@ struct SettingsView: View {
                 .foregroundStyle(palette.textPrimary)
         }
         .tint(palette.accent)
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+        .settingsListRow()
     }
 
     // MARK: - Footer links (tab settings only)
@@ -375,8 +362,7 @@ struct SettingsView: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(palette.textTertiary)
                     }
-                    .padding(.horizontal, Spacing.md)
-                    .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+                    .settingsListRow()
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -432,8 +418,7 @@ struct SettingsView: View {
                 MaterialIcon(name: .openInNew, size: 18)
                     .foregroundStyle(palette.textTertiary)
             }
-            .padding(.horizontal, Spacing.md)
-            .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+            .settingsListRow()
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -453,8 +438,7 @@ struct SettingsView: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(palette.textTertiary)
         }
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+        .settingsListRow()
         .contentShape(Rectangle())
     }
 
@@ -596,8 +580,7 @@ private struct PickerRow: View {
                 }
             }
         }
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+        .settingsListRow()
     }
 
     private var currentLabel: String {
@@ -654,8 +637,7 @@ private struct LocalePickerRow: View {
                 }
             }
         }
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+        .settingsListRow()
     }
 
     private func label(for localeId: String) -> String {

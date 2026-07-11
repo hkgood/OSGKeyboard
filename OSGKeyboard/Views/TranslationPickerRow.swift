@@ -69,12 +69,9 @@ struct TranslationPickerRow: View {
                     }
                 }
             }
-            .padding(.horizontal, Spacing.md)
-            .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+            .settingsListRow()
         }
     }
-
-    // MARK: - Selection plumbing
 
     /// Currently selected id — the picker always reads
     /// `translationTargetLocaleId` directly (the previous

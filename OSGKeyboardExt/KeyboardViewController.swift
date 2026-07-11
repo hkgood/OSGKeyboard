@@ -105,6 +105,12 @@ public final class KeyboardViewController: UIInputViewController {
         super.viewDidAppear(animated)
         disableSystemGestureDelays()
         keyboardHeightConstraint?.constant = targetKeyboardHeight
+        refreshReturnKeyRole()
+    }
+
+    public override func textDidChange(_ textInput: UITextInput?) {
+        super.textDidChange(textInput)
+        refreshReturnKeyRole()
     }
 
     public override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge {
@@ -192,6 +198,21 @@ public final class KeyboardViewController: UIInputViewController {
         }
         state.setCursorDragActive = { [weak self] active in
             self?.cursorDrag.setCursorDragActive(active)
+        }
+    }
+
+    private func refreshReturnKeyRole() {
+        state.returnKeyRole = returnKeyRole(for: textDocumentProxy.returnKeyType ?? .default)
+    }
+
+    private func returnKeyRole(for returnKeyType: UIReturnKeyType) -> State.ReturnKeyRole {
+        switch returnKeyType {
+        case .send, .go, .search, .join, .route, .google, .yahoo, .continue, .emergencyCall:
+            return .send
+        case .default, .next, .done:
+            return .newline
+        @unknown default:
+            return .newline
         }
     }
 

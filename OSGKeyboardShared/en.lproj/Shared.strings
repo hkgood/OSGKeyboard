@@ -11,11 +11,27 @@
 
 /* LLM providers */
 "provider.openai" = "OpenAI";
+"provider.ark" = "Volcengine Ark";
 "provider.deepseek" = "DeepSeek";
 "provider.qwen" = "Qwen (DashScope)";
 "provider.zhipu" = "Zhipu GLM";
 "provider.moonshot" = "Moonshot";
+"provider.siliconflow" = "SiliconFlow";
+"provider.groq" = "Groq";
+"provider.minimax" = "MiniMax";
 "provider.mimo" = "Xiaomi MiMo";
+"provider.openrouter" = "OpenRouter";
+"provider.gemini" = "Google Gemini";
+"provider.anthropic" = "Anthropic Claude";
+"provider.xai" = "xAI Grok";
+"provider.mistral" = "Mistral AI";
+"provider.cometapi" = "CometAPI";
+"provider.alibabaCoding" = "Alibaba Coding";
+"provider.codingPlanX" = "CodingPlanX";
+"provider.volcengine" = "Volcengine ASR";
+"provider.bailian" = "Bailian Realtime ASR";
+"provider.whisper" = "Whisper (OpenAI)";
+"provider.codex_oauth" = "Codex OAuth";
 "provider.custom" = "Custom";
 
 /* LLM errors */
@@ -44,6 +60,15 @@
 "error.cloudASR.emptyTranscript" = "Cloud ASR returned an empty transcript.";
 "error.cloudASR.audioTooLong" = "Audio segment is too long for this cloud ASR provider.";
 "error.cloudASR.providerUnsupported" = "This provider does not support cloud speech recognition yet.";
+"error.cloudASR.streamingNotImplemented" = "This provider requires streaming ASR (WebSocket), which is not available in this build yet. Try Qwen, Zhipu, Groq, or OpenAI.";
+
+/* Provider tools */
+"providerTools.error.invalidURL" = "Invalid model endpoint.";
+"providerTools.error.missingAPIKey" = "API Key is missing.";
+"providerTools.error.http" = "Model endpoint returned HTTP %lld.";
+"providerTools.error.empty" = "No models returned.";
+"providerTools.error.decoding" = "Failed to parse model list.";
+"providerTools.error.transport" = "Network error while loading models.";
 
 /* Polish scenarios */
 "polishScenario.daily_chat" = "Daily Chat";
@@ -120,14 +145,17 @@
 "mac.status.pasted" = "Inserted into front app";
 "mac.status.copiedAndPasted" = "Copied and inserted";
 "mac.status.deliveryWithNote" = "%@ — %@";
-"mac.stat.dictationTime" = "Dictation Time";
-"mac.stat.words" = "Dictation Chars";
-"mac.stat.translation" = "Translation Chars";
-"mac.stat.dictionary" = "Dictionary";
-"mac.stat.cumulativeDuration" = "Total time";
-"mac.stat.transcribed" = "Transcribed";
-"mac.stat.cumulativeTranslation" = "Translated";
-"mac.stat.customTerms" = "Custom terms";
+"stat.dictationTime" = "Dictation Time";
+"stat.words" = "Dictation Chars";
+"stat.translation" = "Translation Chars";
+"stat.dictionary" = "Dictionary";
+"stat.cumulativeDuration" = "Total time";
+"stat.transcribed" = "Transcribed";
+"stat.cumulativeTranslation" = "Translated";
+"stat.customTerms" = "Custom terms";
+"stat.weekChart.title" = "Last 7 days";
+"stat.weekChart.caption" = "Dictation chars";
+"stat.weekChart.empty" = "No dictation yet this week";
 "mac.status.chipReady" = "Ready";
 "mac.status.chipProcessing" = "Processing";
 "mac.overlay.listening" = "Listening";
@@ -173,6 +201,25 @@
 "mac.settings.service" = "Service";
 "mac.settings.apiKey" = "API Key";
 "mac.settings.model" = "Model";
+"mac.settings.modelFetchHint" = "Enter an API Key, then fetch models.";
+"mac.settings.connectionCheck" = "Connection check";
+"mac.settings.validate" = "Validate";
+"mac.settings.fetchModels" = "Fetch models";
+"mac.settings.validating" = "Validating…";
+"mac.settings.validateSuccess" = "Success · Retry";
+"mac.settings.validateFailure" = "Failed · Retry";
+"mac.settings.loadingModels" = "Loading models…";
+"mac.settings.modelsLoaded" = "%lld models loaded.";
+"mac.settings.selectModel" = "Select model";
+"mac.settings.modelSelected" = "Selected %@";
+"mac.settings.modelsEmptyHint" = "Tap refresh to load models";
+"mac.settings.thinking" = "Thinking";
+"mac.settings.thinkingSubtitle" = "Slower, higher quality — recommended off";
+"mac.settings.thinkingHint" = "Off by default. Enable only for slower, deeper reasoning.";
+"mac.settings.volcengineAppId" = "APP ID";
+"mac.settings.volcengineAccessToken" = "Access Token";
+"mac.settings.volcengineResourceId" = "Resource ID";
+"mac.settings.volcengineNote" = "Secret Key is not required. Resource ID defaults to volc.seedasr.sauc.duration.";
 "mac.settings.recognition" = "RECOGNITION METHOD";
 "mac.settings.cloudEngine" = "Cloud Engine & AI Refinement";
 "mac.settings.cloudEngineDesc" = "Premium transcription via your provider's API, plus AI grammar and style polishing.";
@@ -209,7 +256,7 @@
 "mac.settings.mlxModelMissing" = "Select a Qwen3 MLX model folder below, or choose another installed model.";
 "mac.settings.selectedModelMissing" = "%@ is not installed — using Apple Speech for now.";
 "mac.settings.localModelFallbackApple" = "No local model is ready — using Apple Speech for now.";
-"mac.settings.accessibility" = "Accessibility";
+"mac.settings.accessibility" = "Accessibility Permission";
 "mac.settings.accessibilityDesc" = "Required for global shortcut and auto-paste.";
 "mac.settings.openAccessibility" = "Open System Settings";
 "mac.settings.appearance" = "Appearance";
@@ -300,8 +347,8 @@
 "mac.localASR.phase.completed" = "Completed";
 "mac.error.accessibilityRequired" = "Enable Accessibility for OSGKeyboard in System Settings";
 "mac.foregroundApp" = "Front app: %@";
-"mac.sync.settingsTitle" = "iCloud Sync";
-"mac.sync.settingsSubtitle" = "Sync settings, usage stats, speech history, and API keys across your devices via iCloud.";
+"mac.sync.settingsTitle" = "Cross-Device iCloud Sync";
+"mac.sync.settingsSubtitle" = "Sync settings, history, and API keys across devices via iCloud.";
 "mac.sync.syncNow" = "Sync Now";
 "mac.sync.dictTitle" = "Personal dictionary iCloud sync";
 "mac.sync.dictSubtitle" = "Keep your dictionary in sync across all devices.";

@@ -66,7 +66,7 @@ private struct FlowLiveActivityLockScreenView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            FlowLiveActivityBrandMark(height: 13)
+            FlowLiveActivityBrandMark(height: 10.4)
             VStack(alignment: .leading, spacing: 4) {
                 Text("OSGKeyboard")
                     .font(.headline)

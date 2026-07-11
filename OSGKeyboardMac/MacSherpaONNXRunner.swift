@@ -231,3 +231,23 @@ enum MacSherpaONNXRunner {
         }
     }
 }
+
+enum MacQwen3LanguageHint {
+    /// Map persisted BCP-47 locale ids to Qwen3 prompt language names.
+    /// Returns `nil` for auto-detect.
+    static func from(locale: Locale) -> String? {
+        let raw = locale.identifier.lowercased()
+        if raw.isEmpty || raw == "auto" { return nil }
+        if raw.hasPrefix("zh") { return "Chinese" }
+        if raw.hasPrefix("en") { return "English" }
+        if raw.hasPrefix("ja") { return "Japanese" }
+        if raw.hasPrefix("ko") { return "Korean" }
+        if raw.hasPrefix("fr") { return "French" }
+        if raw.hasPrefix("de") { return "German" }
+        if raw.hasPrefix("es") { return "Spanish" }
+        if raw.hasPrefix("pt") { return "Portuguese" }
+        if raw.hasPrefix("ru") { return "Russian" }
+        if raw.hasPrefix("ar") { return "Arabic" }
+        return nil
+    }
+}

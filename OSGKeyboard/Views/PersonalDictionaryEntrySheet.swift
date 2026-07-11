@@ -30,8 +30,7 @@ struct PersonalDictionaryEntrySheet: View {
                     .focused($termFocused)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
-                    .padding(.horizontal, Spacing.md)
-                    .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+                    .settingsListRow()
                     .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: Radius.large, style: .continuous)

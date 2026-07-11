@@ -12,7 +12,7 @@
 //   │              (transcript preview)         │
 //   │              ┊                          │
 //   │              ◯ mic (centred)              │  ← action cluster:
-//   │   [delete]  [  space  ]  [return]         │     mic + bottom row
+//   │   [delete]  [ return ]  [space]           │     mic + bottom row
 //   │              ┊                          │
 //   └───────────────────────────────────────────┘
 
@@ -191,7 +191,7 @@ public struct KeyboardRootView: View {
 
     // MARK: - Action cluster
 
-    /// Mic centred above a bottom row: delete · space · return (or swapped).
+    /// Mic centred above a bottom row: delete · smart return · space (or swapped).
     /// The side cursor-drag pads are SwiftUI layout wrappers around UIKit
     /// pan recognizers, avoiding SwiftUI gesture delivery issues in
     /// keyboard extensions.
@@ -225,13 +225,13 @@ public struct KeyboardRootView: View {
 
             HStack(spacing: KeyboardLayoutMetrics.bottomActionSpacing) {
                 if swapKeys {
-                    bottomReturnButton(disabled: editingBlocked)
                     bottomSpaceButton(disabled: editingBlocked)
+                    bottomReturnButton(disabled: editingBlocked)
                     bottomDeleteButton(disabled: editingBlocked)
                 } else {
                     bottomDeleteButton(disabled: editingBlocked)
-                    bottomSpaceButton(disabled: editingBlocked)
                     bottomReturnButton(disabled: editingBlocked)
+                    bottomSpaceButton(disabled: editingBlocked)
                 }
             }
             .opacity(dragging ? 0 : 1)
@@ -265,17 +265,18 @@ public struct KeyboardRootView: View {
         RectangularToolbarButton(spaceStyle: true, label: "space", disabled: disabled) {
             state.insertSpace()
         }
-        .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
-    }
-
-    private func bottomReturnButton(disabled: Bool) -> some View {
-        RectangularToolbarButton(systemName: "return", label: "newline", disabled: disabled) {
-            state.insertNewline()
-        }
         .frame(
             width: KeyboardLayoutMetrics.bottomActionFixedWidth,
             height: KeyboardLayoutMetrics.bottomActionRowHeight
         )
+    }
+
+    private func bottomReturnButton(disabled: Bool) -> some View {
+        let title = ExtL10n.string(state.returnKeyRole.titleKey)
+        return RectangularToolbarButton(title: title, label: title, disabled: disabled) {
+            state.insertNewline()
+        }
+        .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
     }
 
     /// Option C: block typing keys during the full voice-input pipeline.

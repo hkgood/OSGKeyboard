@@ -40,7 +40,8 @@ enum MacDictationPipeline {
     /// Whether the active engine can surface `onPartial` text while recording.
     static func supportsLivePartials(store: AppGroupStore) -> Bool {
         if store.engineMode == "local" { return true }
-        return CloudASRModelCatalog.strategy(for: store.asrProviderId) != .localFallback
+        let strategy = CloudASRModelCatalog.strategy(for: store.asrProviderId)
+        return strategy != .localFallback
     }
 
     /// Runs ASR then polish. Polish failures return cleaned raw ASR plus a warning.

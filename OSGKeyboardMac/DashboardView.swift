@@ -22,23 +22,32 @@ struct DashboardView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: Spacing.lg) {
-                heroHeader
-                statCluster
-                dictationStage
+        // Scrollable like the other pages so the shared status footer always
+        // stays pinned to the window's bottom edge. `minHeight: viewport` keeps
+        // the balanced Spacer layout when the window is tall (no scrollbar) and
+        // lets the content scroll only when the window is too short to fit it.
+        GeometryReader { proxy in
+            ScrollView {
+                VStack(spacing: 0) {
+                    VStack(alignment: .leading, spacing: Spacing.lg) {
+                        heroHeader
+                        statCluster
+                        dictationStage
+                    }
+                    .padding(.horizontal, MacMetrics.pageHorizontalInset)
+                    .padding(.top, Spacing.sm)
+
+                    // Leftover window height splits evenly above / below the mic
+                    // bar so spacing stays balanced at any window size.
+                    Spacer(minLength: Spacing.xs)
+
+                    BottomDictationBar(viewModel: viewModel)
+                        .padding(.horizontal, MacMetrics.pageHorizontalInset)
+
+                    Spacer(minLength: Spacing.xs)
+                }
+                .frame(maxWidth: .infinity, minHeight: proxy.size.height)
             }
-            .padding(.horizontal, MacMetrics.pageHorizontalInset)
-            .padding(.top, Spacing.sm)
-
-            // Leftover window height splits evenly above / below the mic bar
-            // so spacing stays balanced at any window size.
-            Spacer(minLength: Spacing.xs)
-
-            BottomDictationBar(viewModel: viewModel)
-                .padding(.horizontal, MacMetrics.pageHorizontalInset)
-
-            Spacer(minLength: Spacing.xs)
         }
         .onAppear { stats.reloadFromDisk() }
         .onReceive(NotificationCenter.default.publisher(for: .usageStatisticsDidSyncFromCloud)) { _ in
@@ -76,50 +85,18 @@ struct DashboardView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Stats (hero word count, full width but content-height —
-    // never stretched to match a taller sibling and left with dead air)
+    // MARK: - Stats (7-day chart + cumulative grid — shared cluster)
 
     private var statCluster: some View {
-        VStack(spacing: Spacing.md) {
-            StatCard(
-                title: MacL10n.string("mac.stat.words", language: lang),
-                value: UsageStatisticsStore.formatCount(
-                    stats.dictationCharacterCount,
-                    language: lang
-                ),
-                caption: MacL10n.string("mac.stat.transcribed", language: lang),
-                systemImage: "text.alignleft",
-                accent: true,
-                prominent: true
-            )
-
-            HStack(spacing: Spacing.md) {
-                StatCard(
-                    title: MacL10n.string("mac.stat.dictationTime", language: lang),
-                    value: UsageStatisticsStore.formatDuration(
-                        stats.dictationDurationSeconds,
-                        language: lang
-                    ),
-                    caption: MacL10n.string("mac.stat.cumulativeDuration", language: lang),
-                    systemImage: "waveform"
-                )
-                StatCard(
-                    title: MacL10n.string("mac.stat.translation", language: lang),
-                    value: UsageStatisticsStore.formatCount(
-                        stats.translationCharacterCount,
-                        language: lang
-                    ),
-                    caption: MacL10n.string("mac.stat.cumulativeTranslation", language: lang),
-                    systemImage: "character.bubble"
-                )
-                StatCard(
-                    title: MacL10n.string("mac.stat.dictionary", language: lang),
-                    value: "\(viewModel.dictionaryTermCount)",
-                    caption: MacL10n.string("mac.stat.customTerms", language: lang),
-                    systemImage: "character.book.closed"
-                )
-            }
-        }
+        UsageStatsCluster(
+            layout: .split,
+            language: lang,
+            points: stats.last7Days,
+            dictationCharacterCount: stats.dictationCharacterCount,
+            dictationDurationSeconds: stats.dictationDurationSeconds,
+            translationCharacterCount: stats.translationCharacterCount,
+            dictionaryTermCount: viewModel.dictionaryTermCount
+        )
     }
 
     // MARK: - Dictation stage
@@ -220,18 +197,29 @@ struct BottomDictationBar: View {
                 }
             }
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: Spacing.sm) {
                 Image(systemName: "translate")
+                    .foregroundStyle(palette.textSecondary)
                 Text(currentTranslationLabel)
+                    .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: Spacing.xs)
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(palette.textTertiary)
             }
-            .font(TypeStyle.caption)
-            .foregroundStyle(palette.textSecondary)
+            .font(MacSettingsType.control)
             .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, 7)
-            .background(palette.surfaceElevated, in: Capsule())
+            .frame(minHeight: MacMetrics.settingsControlHeight)
+            .background(
+                palette.surfaceElevated,
+                in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+                    .stroke(palette.divider, lineWidth: 0.5)
+            )
         }
         .menuStyle(.borderlessButton)
         .fixedSize()

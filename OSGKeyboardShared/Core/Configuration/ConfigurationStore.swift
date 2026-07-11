@@ -27,6 +27,7 @@ public protocol ConfigurationStore: Sendable {
 
     var engineMode: String { get }
     var polishIntensity: PolishIntensity { get }
+    var llmThinkingEnabled: Bool { get }
     var personalDictionary: PersonalDictionary { get }
 
     /// Foreground-app context for polish prompts (keyboard extension publishes this).

@@ -85,6 +85,16 @@ struct HomeView: View {
     private var phoneBody: some View {
         GeometryReader { geo in
             let gradientHeight = geo.size.height * 0.30 + geo.safeAreaInsets.top
+            // 小屏（如 iPhone SE）压缩顶部留白，把空间让给自适应的输入框，
+            // 避免固定块之和超出视口、底部状态行被 tab 栏遮挡。
+            let isCompact = geo.size.height < 700
+            // logo 上下留白对称，避免视觉上偏下。
+            let logoTopPadding = isCompact ? Spacing.lg : Spacing.xxl
+            let logoBottomPadding = isCompact ? Spacing.lg : Spacing.xxl
+            let extrasBottomPadding = isCompact ? Spacing.sm : Spacing.lg
+            let statusTopPadding = isCompact ? Spacing.sm : Spacing.xl
+            // 输入框最小高度：小屏可压得更矮，让底部状态行始终留在 tab 栏之上。
+            let previewMinHeight: CGFloat = isCompact ? 72 : 160
 
             ZStack(alignment: .top) {
                 sessionHeaderGradient(height: gradientHeight)
@@ -92,23 +102,25 @@ struct HomeView: View {
                     .allowsHitTesting(false)
 
                 VStack(spacing: 0) {
-                    logoHeader
-                        .padding(.top, Spacing.xxxl)
-                        .padding(.bottom, Spacing.xxl)
+                    logoHeader(compact: isCompact)
+                        .padding(.top, logoTopPadding)
+                        .padding(.bottom, logoBottomPadding)
 
                     if showsFlowSessionExtras {
                         flowSessionExtras
                             .padding(.horizontal, Spacing.lg)
-                            .padding(.bottom, Spacing.lg)
+                            .padding(.bottom, extrasBottomPadding)
                     }
 
-                    HomeStatsCard()
+                    HomeUsageStatsSection(layout: .stacked, compact: isCompact)
                         .padding(.horizontal, Spacing.lg)
                         .padding(.bottom, Spacing.md)
 
-                    previewField
+                    // 唯一的弹性区块：吸收全部剩余空间（大屏铺满、小屏优先让位）。
+                    previewField(minHeight: previewMinHeight)
                         .padding(.horizontal, Spacing.lg)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .layoutPriority(-1)
 
                     HStack(spacing: Spacing.sm) {
                         engineStatusLine
@@ -116,7 +128,7 @@ struct HomeView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.horizontal, Spacing.lg)
-                    .padding(.top, Spacing.xl)
+                    .padding(.top, statusTopPadding)
                     .padding(.bottom, Spacing.sm)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -138,7 +150,7 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 wideHeroHeader
 
-                WideHomeStatsCluster()
+                HomeUsageStatsSection(layout: .split)
 
                 if showsFlowSessionExtras {
                     flowSessionExtras
@@ -235,12 +247,15 @@ struct HomeView: View {
 
     // MARK: - Header
 
-    private var logoHeader: some View {
-        VStack(spacing: Spacing.xxl) {
+    // logo 尺寸保持 144:41 比例；小屏进一步缩小，给下方内容让空间。
+    private func logoHeader(compact: Bool) -> some View {
+        let logoWidth: CGFloat = compact ? 104 : 124
+        let logoHeight = logoWidth * (41.0 / 144.0)
+        return VStack(spacing: Spacing.xxl) {
             Image("osglogo")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 144, height: 41)
+                .frame(width: logoWidth, height: logoHeight)
                 .accessibilityHidden(true)
         }
         .frame(maxWidth: .infinity)
@@ -444,9 +459,9 @@ struct HomeView: View {
 
     // MARK: - Preview field
 
-    private var previewField: some View {
+    private func previewField(minHeight: CGFloat) -> some View {
         previewFieldContent
-            .frame(maxWidth: .infinity, minHeight: 180, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, minHeight: minHeight, maxHeight: .infinity, alignment: .topLeading)
             .padding(Spacing.md)
             .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             .overlay(

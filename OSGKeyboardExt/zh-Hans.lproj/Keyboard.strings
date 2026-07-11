@@ -24,7 +24,8 @@
 "common.cancel" = "取消";
 "common.delete" = "删除";
 "common.space" = "空格";
-"common.newline" = "换行";
+"common.newline" = "回车";
+"common.send" = "发送";
 
 /* Privacy footnote (onboarding welcome page) */
 "privacy.audio.title" = "支持本地转写";
@@ -69,13 +70,13 @@
 "settings.reset.title" = "重置所有设置?";
 "settings.reset.message" = "API key、model 和 base URL 都会被清空。";
 "settings.reset.confirm" = "重置所有设置";
-"settings.engine.title" = "识别方式";
-"settings.engine.subtitle" = "选择识别方式。本地引擎无需 API Key,仅做语音转录。";
-"settings.engine.local.title" = "本地识别";
+"settings.engine.title" = "语音转写方式";
+"settings.engine.subtitle" = "本地：系统内置转写；云端：ASR 转写，可用 LLM 润色。";
+"settings.engine.local.title" = "本地转写";
 "settings.engine.local.ios26" = "始终端侧,无需联网。";
-"settings.engine.local.legacy" = "端侧 ASR,仅转录,无润色。";
-"settings.engine.cloud.title" = "云端识别与润色";
-"settings.engine.cloud.subtitle" = "ASR 转录 + LLM 润色,需要 API Key。";
+"settings.engine.local.legacy" = "通过系统内置服务语音转写";
+"settings.engine.cloud.title" = "云端转写";
+"settings.engine.cloud.subtitle" = "通过云端 ASR 转写，可用 LLM 润色";
 "settings.provider.title" = "云端引擎";
 "settings.provider.subtitle" = "选择 LLM 提供商。";
 "settings.api.title" = "接口";

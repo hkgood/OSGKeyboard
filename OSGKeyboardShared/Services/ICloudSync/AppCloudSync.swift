@@ -93,7 +93,12 @@ public final class AppCloudSync {
         let store = makeStore()
         ICloudSyncPreferences.migrateLegacyTogglesIfNeeded(kvs: kvs, store: store)
 
-        let toggles = ICloudSyncPreferences.load(from: kvs, store: store)
+        var toggles = ICloudSyncPreferences.load(from: kvs, store: store)
+        // Merged UI toggle: settings sync implies dictionary sync.
+        if toggles.settings, !toggles.dictionary {
+            ICloudSyncPreferences.pushDictionaryEnabled(true, kvs: kvs)
+            toggles.dictionary = true
+        }
         ICloudSyncPreferences.cacheToAppGroup(
             settingsEnabled: toggles.settings,
             dictionaryEnabled: toggles.dictionary,

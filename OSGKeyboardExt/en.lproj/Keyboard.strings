@@ -25,6 +25,7 @@
 "common.delete" = "Delete";
 "common.space" = "Space";
 "common.newline" = "Return";
+"common.send" = "Send";
 
 /* Privacy footnote (onboarding welcome page) */
 "privacy.audio.title" = "On-device transcription";
@@ -69,13 +70,13 @@
 "settings.reset.title" = "Reset all settings?";
 "settings.reset.message" = "API key, model, and base URL will be cleared.";
 "settings.reset.confirm" = "Reset all settings";
-"settings.engine.title" = "Recognition method";
-"settings.engine.subtitle" = "Pick the recognition engine. Local engine does transcription only, no API key needed.";
-"settings.engine.local.title" = "On-device recognition";
+"settings.engine.title" = "Speech transcription method";
+"settings.engine.subtitle" = "Local: built-in system transcription. Cloud: ASR transcription with optional LLM polish.";
+"settings.engine.local.title" = "On-device transcription";
 "settings.engine.local.ios26" = "Always on-device, no network.";
-"settings.engine.local.legacy" = "On-device ASR. Transcription only, no polish.";
-"settings.engine.cloud.title" = "Cloud recognition & polish";
-"settings.engine.cloud.subtitle" = "ASR + LLM polish. API key required.";
+"settings.engine.local.legacy" = "Transcribe with the built-in system speech service";
+"settings.engine.cloud.title" = "Cloud transcription";
+"settings.engine.cloud.subtitle" = "Cloud ASR transcription, with optional LLM polish";
 "settings.provider.title" = "Provider";
 "settings.provider.subtitle" = "Pick the LLM that polishes your dictation.";
 "settings.api.title" = "API";

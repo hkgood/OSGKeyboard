@@ -14,6 +14,9 @@ struct SettingsICloudSyncRow: View {
     @State private var syncErrorMessage: String?
     @State private var isApplyingToggle = false
     @State private var isSyncingNow = false
+    /// Transient success flag: shows a brief "已同步" confirmation so a fast
+    /// sync gives visible feedback instead of a spinner that flashes once.
+    @State private var showSyncedConfirmation = false
 
     private let store = AppGroupStore()
 
@@ -38,13 +41,21 @@ struct SettingsICloudSyncRow: View {
                     syncNow()
                 } label: {
                     HStack(spacing: Spacing.xs) {
+                        Text(syncButtonTitleKey)
+                            .font(TypeStyle.caption)
+                        Spacer(minLength: 0)
                         if isSyncingNow {
                             ProgressView()
-                                .controlSize(.small)
+                                .controlSize(.mini)
+                        } else if showSyncedConfirmation {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .semibold))
                         }
-                        Text("settings.appSettings.iCloudSync.syncNow")
-                            .font(TypeStyle.caption)
                     }
+                    // Fill the row so the whole strip is tappable, not just
+                    // the caption glyphs (previously easy to miss).
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(palette.accent)
@@ -60,12 +71,15 @@ struct SettingsICloudSyncRow: View {
                     .padding(.top, Spacing.xxs)
             }
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight, alignment: .leading)
+        .settingsListRow(alignment: .leading)
         .onAppear { reloadFromStore() }
         .onReceive(
             NotificationCenter.default.publisher(for: .settingsDidSyncFromCloud)
+        ) { _ in
+            reloadFromStore()
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(for: .personalDictionaryDidSyncFromCloud)
         ) { _ in
             reloadFromStore()
         }
@@ -85,6 +99,16 @@ struct SettingsICloudSyncRow: View {
         )
     }
 
+    private var syncButtonTitleKey: LocalizedStringKey {
+        if isSyncingNow {
+            return "settings.appSettings.iCloudSync.syncing"
+        }
+        if showSyncedConfirmation {
+            return "settings.appSettings.iCloudSync.synced"
+        }
+        return "settings.appSettings.iCloudSync.syncNow"
+    }
+
     private func reloadFromStore() {
         isEnabled = store.settingsICloudSyncEnabled
     }
@@ -95,6 +119,15 @@ struct SettingsICloudSyncRow: View {
         Task {
             do {
                 try await CloudSyncContext.shared.settingsSyncService.enableSync()
+                do {
+                    try await CloudSyncContext.shared.dictionarySyncService.enableSync()
+                } catch let error as PersonalDictionaryCloudSyncError {
+                    CloudSyncContext.shared.settingsSyncService.disableSync()
+                    isEnabled = false
+                    syncErrorMessage = localizedDictionarySyncError(error)
+                    isApplyingToggle = false
+                    return
+                }
                 reloadFromStore()
             } catch let error as SettingsCloudSyncError {
                 isEnabled = false
@@ -114,15 +147,23 @@ struct SettingsICloudSyncRow: View {
     }
 
     private func syncNow() {
+        guard !isSyncingNow else { return }
         isSyncingNow = true
+        showSyncedConfirmation = false
         syncErrorMessage = nil
         Task {
             do {
                 try await CloudSyncContext.shared.syncNow()
+                isSyncingNow = false
+                withAnimation { showSyncedConfirmation = true }
+                // Auto-dismiss the confirmation so the label returns to
+                // its default "立即同步" state.
+                try? await Task.sleep(nanoseconds: 1_800_000_000)
+                withAnimation { showSyncedConfirmation = false }
             } catch {
+                isSyncingNow = false
                 syncErrorMessage = AppL10n.string("settings.appSettings.iCloudSync.error.generic")
             }
-            isSyncingNow = false
         }
     }
 
@@ -130,6 +171,15 @@ struct SettingsICloudSyncRow: View {
         switch error {
         case .encodeFailed, .decodeFailed:
             return AppL10n.string("settings.appSettings.iCloudSync.error.generic")
+        }
+    }
+
+    private func localizedDictionarySyncError(_ error: PersonalDictionaryCloudSyncError) -> String {
+        switch error {
+        case .payloadTooLarge:
+            return AppL10n.string("settings.personalDictionary.iCloudSync.error.tooLarge")
+        case .encodeFailed, .decodeFailed:
+            return AppL10n.string("settings.personalDictionary.iCloudSync.error.generic")
         }
     }
 }

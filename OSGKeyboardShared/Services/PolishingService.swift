@@ -170,7 +170,13 @@ public actor PolishingService {
             } else {
                 apiKey = store.apiKey
             }
-            client = OpenAICompatibleClient(baseURL: baseURL, apiKey: apiKey, model: model)
+            client = LLMClientFactory.make(
+                providerId: effectiveProviderId,
+                baseURL: baseURL,
+                apiKey: apiKey,
+                model: model,
+                thinkingEnabled: store.llmThinkingEnabled
+            )
         }
 
         let prompt: String
@@ -350,7 +356,7 @@ public actor PolishingService {
 
     private func shouldUseChineseGuidance(providerId: String) -> Bool {
         switch providerId {
-        case "zhipu", "moonshot", "qwen", "deepseek":
+        case "zhipu", "moonshot", "qwen", "deepseek", "ark", "minimax", "siliconflow", "mimo":
             return true
         default:
             return false
@@ -391,7 +397,7 @@ public actor PolishingService {
            PreconfiguredKeys.isDeepseekConfigured {
             return "deepseek"
         }
-        return id == "deepseek" && store.engineMode == "cloud" ? "openai" : id
+        return id
     }
 
     internal static func hasPolishAPIKey(store: any ConfigurationStore, providerId: String) -> Bool {
