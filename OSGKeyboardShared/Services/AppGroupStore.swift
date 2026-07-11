@@ -53,6 +53,10 @@ public struct AppGroupStore: @unchecked Sendable {
     public var baseURL: String { configuration.baseURL }
     public var apiKey: String { configuration.apiKey }
     public var model: String { configuration.model }
+    public var asrProviderId: String { configuration.asrProviderId }
+    public var asrBaseURL: String { configuration.resolvedASRBaseURL }
+    public var asrApiKey: String { configuration.asrApiKey }
+    public var asrModel: String { configuration.resolvedASRModel }
     public var modeId: String { configuration.modeId }
     public var localeId: String { configuration.localeId }
     public var engineMode: String { configuration.engineMode }
@@ -62,6 +66,7 @@ public struct AppGroupStore: @unchecked Sendable {
     public var handednessPreference: HandednessPreference { configuration.handednessPreference }
     public var cursorDragNavigationEnabled: Bool { configuration.cursorDragNavigationEnabled }
     public var polishIntensity: PolishIntensity { configuration.polishIntensity }
+    public var llmThinkingEnabled: Bool { configuration.llmThinkingEnabled }
     public var isTranslationEffective: Bool { configuration.isTranslationEffective }
     public var isLocalEngine: Bool { configuration.isLocalEngine }
     public var polishModeForPipeline: PolishingService.PolishMode { configuration.polishModeForPipeline }
@@ -83,15 +88,7 @@ public struct AppGroupStore: @unchecked Sendable {
     }
 
     public func setEngineMode(_ mode: String) {
-        mutateConfiguration { config in
-            config.engineMode = mode
-            if mode == "cloud", config.providerId == "deepseek" {
-                let openAI = LLMProvider.provider(id: "openai")
-                config.providerId = openAI.id
-                config.baseURL = openAI.defaultBaseURL
-                config.model = openAI.defaultModel
-            }
-        }
+        mutateConfiguration { $0.engineMode = mode }
         AppGroupConfigDarwin.postConfigChanged()
     }
 
@@ -122,6 +119,11 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setPolishIntensity(_ intensity: PolishIntensity) {
         mutateConfiguration { $0.polishIntensity = intensity }
+    }
+
+    public func setLLMThinkingEnabled(_ enabled: Bool) {
+        mutateConfiguration { $0.llmThinkingEnabled = enabled }
+        AppGroupConfigDarwin.postConfigChanged()
     }
 
     public func setLocalASRCustomLanguageModelEnabled(_ enabled: Bool) {

@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hans">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <!-- Primary SEO -->
-  <title>OSGKeyboard — On-device voice-to-text keyboard for iOS</title>
-  <meta name="description" content="OSGKeyboard is a source-available iOS keyboard that turns speech into polished text in any app. On-device recognition (iOS 26+), AI polish, translation, and a personal dictionary. Local or cloud engine — your voice never leaves the device.">
-  <meta name="keywords" content="voice keyboard, voice to text, dictation, iOS keyboard, speech to text, on-device ASR, SpeechAnalyzer, AI polish, translation keyboard, open source keyboard, OSGKeyboard">
+  <title>OSGKeyboard — 开口即文字 · iOS &amp; Mac 语音输入</title>
+  <meta name="description" content="OSGKeyboard：iPhone、iPad、Mac 通用的语音输入工具。本地识别，AI 润色，任意 App 即说即写。Tap or hold Option — polished text lands at your cursor.">
+  <meta name="keywords" content="voice keyboard, dictation, speech to text, iOS keyboard, macOS dictation, 语音输入, 听写, OSGKeyboard, 开口即文字">
   <meta name="author" content="OSGKeyboard">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="theme-color" content="#0a0a0b">
@@ -18,8 +18,8 @@
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="OSGKeyboard">
-  <meta property="og:title" content="OSGKeyboard — On-device voice-to-text keyboard for iOS">
-  <meta property="og:description" content="Turn speech into polished text in any app. On-device recognition (iOS 26+), AI polish, translation, personal dictionary. Your voice never leaves the device.">
+  <meta property="og:title" content="OSGKeyboard — 开口即文字 · iOS &amp; Mac 语音输入">
+  <meta property="og:description" content="本地识别，AI 润色，任意 App 即说即写。iPhone、iPad、Mac 通用。">
   <meta property="og:url" content="https://hkgood.github.io/OSGKeyboard/">
   <meta property="og:image" content="https://hkgood.github.io/OSGKeyboard/assets/app-icon.png">
   <meta property="og:image:width" content="1024">
@@ -29,8 +29,8 @@
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="OSGKeyboard — On-device voice-to-text keyboard for iOS">
-  <meta name="twitter:description" content="Turn speech into polished text in any app. On-device recognition, AI polish, translation, personal dictionary.">
+  <meta name="twitter:title" content="OSGKeyboard — 开口即文字">
+  <meta name="twitter:description" content="iPhone、iPad、Mac 语音输入。本地识别，AI 润色，任意 App 即说即写。">
   <meta name="twitter:image" content="https://hkgood.github.io/OSGKeyboard/assets/app-icon.png">
 
   <!-- Structured data -->
@@ -39,22 +39,22 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "OSGKeyboard",
-    "operatingSystem": "iOS 26.0 or later",
+    "operatingSystem": "iOS 26.0 or later, macOS 14.0 or later",
     "applicationCategory": "UtilitiesApplication",
     "url": "https://hkgood.github.io/OSGKeyboard/",
     "image": "https://hkgood.github.io/OSGKeyboard/assets/app-icon.png",
-    "description": "A source-available iOS keyboard that turns speech into polished text in any app. On-device recognition (iOS 26+), AI polish, translation, and a personal dictionary. Local or cloud engine.",
-    "softwareVersion": "0.3.6",
+    "description": "Voice input for iPhone, iPad, and Mac. On-device recognition, AI polish, personal dictionary, and iCloud sync. Speak in any app — polished text lands at your cursor.",
+    "softwareVersion": "0.5.3",
     "isAccessibleForFree": true,
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
     "author": { "@type": "Organization", "name": "OSGKeyboard" },
     "featureList": [
-      "On-device speech recognition (SpeechAnalyzer, iOS 26+)",
-      "AI polish with three intensity levels",
-      "Post-polish translation",
-      "Personal dictionary",
-      "Long-lived Flow session",
-      "Local or cloud engine"
+      "Custom keyboard for iOS and iPadOS",
+      "macOS global dictation with Option hotkey",
+      "On-device speech recognition",
+      "AI text polish with multiple LLM providers",
+      "Personal dictionary with iCloud sync",
+      "Post-polish translation"
     ]
   }
   </script>
@@ -389,6 +389,30 @@
     .step h3 { margin: 0 0 0.35rem; font-size: 1.05rem; font-weight: 650; }
     .step p { margin: 0; color: var(--text-secondary); font-size: 0.95rem; }
 
+    /* Platforms */
+    .platforms {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+    }
+    @media (max-width: 640px) { .platforms { grid-template-columns: 1fr; } }
+
+    .platform {
+      padding: 1.5rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: var(--bg-soft);
+    }
+    .platform-head {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.75rem;
+    }
+    .platform-head .material-symbols-outlined { font-size: 22px; color: var(--accent); }
+    .platform h3 { margin: 0; font-size: 1.05rem; font-weight: 650; }
+    .platform p { margin: 0; font-size: 0.93rem; color: var(--text-secondary); line-height: 1.55; }
+
     /* Closing */
     .closing {
       border-top: 1px solid var(--line);
@@ -424,8 +448,8 @@
       </a>
       <div class="nav-right">
         <div class="lang-toggle" role="group" aria-label="Language">
-          <button type="button" class="active" data-lang="en">EN</button>
-          <button type="button" data-lang="zh">中文</button>
+          <button type="button" data-lang="en">EN</button>
+          <button type="button" class="active" data-lang="zh">中文</button>
         </div>
         <a class="ghost-link" href="https://github.com/hkgood/OSGKeyboard" rel="noopener">
           <span class="material-symbols-outlined" aria-hidden="true">code</span>
@@ -442,24 +466,24 @@
         <div>
           <div class="eyebrow">
             <span class="material-symbols-outlined" aria-hidden="true">verified</span>
-            <span data-i18n="hero.eyebrow">Source available · iOS 26+</span>
+            <span data-i18n="hero.eyebrow">iOS · iPadOS · macOS</span>
           </div>
-          <h1 data-i18n="hero.title">Speak naturally.<br>Get polished text anywhere.</h1>
-          <p class="lead" data-i18n="hero.lead">A source-available keyboard that transcribes your voice on-device, then polishes — and optionally translates — the result. Works in every app you type in.</p>
+          <h1 data-i18n="hero.title">开口即文字。</h1>
+          <p class="lead" data-i18n="hero.lead">iPhone、iPad、Mac 通用的语音输入工具。本地识别，AI 润色，任意 App 即说即写。</p>
           <div class="hero-cta">
             <a class="btn btn-primary" href="https://github.com/hkgood/OSGKeyboard" rel="noopener">
               <span class="material-symbols-outlined" aria-hidden="true">download</span>
-              <span data-i18n="hero.cta.primary">Get it on GitHub</span>
+              <span data-i18n="hero.cta.primary">立即获取</span>
             </a>
             <a class="btn btn-quiet" href="privacy/">
               <span class="material-symbols-outlined" aria-hidden="true">shield</span>
-              <span data-i18n="hero.cta.secondary">Privacy</span>
+              <span data-i18n="hero.cta.secondary">隐私政策</span>
             </a>
           </div>
           <div class="hero-meta">
-            <span><span class="material-symbols-outlined" aria-hidden="true">devices</span><span data-i18n="hero.meta1">On-device recognition</span></span>
-            <span><span class="material-symbols-outlined" aria-hidden="true">bolt</span><span data-i18n="hero.meta2">Local or cloud AI</span></span>
-            <span><span class="material-symbols-outlined" aria-hidden="true">lock</span><span data-i18n="hero.meta3">Audio never leaves your phone</span></span>
+            <span><span class="material-symbols-outlined" aria-hidden="true">devices</span><span data-i18n="hero.meta1">默认本地识别</span></span>
+            <span><span class="material-symbols-outlined" aria-hidden="true">auto_awesome</span><span data-i18n="hero.meta2">AI 自动润色</span></span>
+            <span><span class="material-symbols-outlined" aria-hidden="true">apps</span><span data-i18n="hero.meta3">任意 App 可用</span></span>
           </div>
         </div>
 
@@ -483,42 +507,66 @@
       </div>
     </section>
 
+    <!-- Platforms -->
+    <section class="block wrap">
+      <div class="block-head">
+        <h2 data-i18n="platforms.title">两个平台，同一种体验</h2>
+        <p data-i18n="platforms.subtitle">手机上用键盘，Mac 上按住 Option — 说完即落字。</p>
+      </div>
+      <div class="platforms">
+        <div class="platform">
+          <div class="platform-head">
+            <span class="material-symbols-outlined" aria-hidden="true">smartphone</span>
+            <h3 data-i18n="platform.ios.t">iOS / iPadOS</h3>
+          </div>
+          <p data-i18n="platform.ios.b">自定义键盘 + Flow 会话。点按麦克风说话，连续听写不用跳 App。灵动岛显示录音状态。</p>
+        </div>
+        <div class="platform">
+          <div class="platform-head">
+            <span class="material-symbols-outlined" aria-hidden="true">laptop_mac</span>
+            <h3 data-i18n="platform.mac.t">macOS</h3>
+          </div>
+          <p data-i18n="platform.mac.b">菜单栏常驻，按住 Option 全局听写。底部浮层实时反馈，支持 SenseVoice / Qwen3 本地模型。</p>
+        </div>
+      </div>
+    </section>
+
     <!-- Features -->
     <section class="block wrap">
       <div class="block-head">
-        <h2 data-i18n="features.title">Everything you need to type by voice</h2>
-        <p data-i18n="features.subtitle">On-device by default, refined by AI when you want it — in a single, native keyboard.</p>
+        <h2 data-i18n="features.title">开口即写，所需尽在此</h2>
+        <p data-i18n="features.subtitle">本地优先，AI 加持 — 从识别到润色，一条链路搞定。</p>
       </div>
       <div class="features">
         <div class="feature">
           <div class="ficon"><span class="material-symbols-outlined" aria-hidden="true">mic</span></div>
-          <h3 data-i18n="feat.dictation.t">Tap-to-talk dictation</h3>
-          <p data-i18n="feat.dictation.b">Tap to start, tap to stop. Up to 3.5 minutes per take, with a live countdown.</p>
+          <h3 data-i18n="feat.dictation.t">点按听写</h3>
+          <p data-i18n="feat.dictation.b">点一下开始，再点一下结束。单次最长 3.5 分钟，倒计时实时显示。</p>
         </div>
         <div class="feature">
           <div class="ficon"><span class="material-symbols-outlined" aria-hidden="true">devices</span></div>
-          <h3 data-i18n="feat.ondevice.t">On-device recognition</h3>
-          <p data-i18n="feat.ondevice.b">iOS 26 SpeechAnalyzer transcribes on your iPhone. Audio never leaves the device.</p>
+          <h3 data-i18n="feat.ondevice.t">本地识别</h3>
+          <p data-i18n="feat.ondevice.b">iOS 端侧 SpeechAnalyzer；Mac 可选 SenseVoice / Qwen3。默认不上传录音。</p>
         </div>
         <div class="feature">
           <div class="ficon"><span class="material-symbols-outlined" aria-hidden="true">auto_awesome</span></div>
-          <h3 data-i18n="feat.polish.t">AI polish</h3>
-          <p data-i18n="feat.polish.b">Punctuation, structure, and clarity in three intensity levels. Only text is sent — never audio.</p>
+          <h3 data-i18n="feat.polish.t">AI 润色</h3>
+          <p data-i18n="feat.polish.b">自动补标点、整理结构。内置润色开箱即用，也可接入 DeepSeek、OpenAI 等 API。</p>
         </div>
         <div class="feature">
           <div class="ficon"><span class="material-symbols-outlined" aria-hidden="true">translate</span></div>
-          <h3 data-i18n="feat.translate.t">Built-in translation</h3>
-          <p data-i18n="feat.translate.b">Translate after polish into English, 中文, 日本語, 한국어 and more — right from the keyboard.</p>
+          <h3 data-i18n="feat.translate.t">润色后翻译</h3>
+          <p data-i18n="feat.translate.b">润色完成后一键翻译为 English、中文、日本語、한국어 等。</p>
         </div>
         <div class="feature">
           <div class="ficon"><span class="material-symbols-outlined" aria-hidden="true">menu_book</span></div>
-          <h3 data-i18n="feat.dict.t">Personal dictionary</h3>
-          <p data-i18n="feat.dict.b">Keep names, products, and jargon accurate. The AI preserves your terms every time.</p>
+          <h3 data-i18n="feat.dict.t">个性词库</h3>
+          <p data-i18n="feat.dict.b">人名、产品名、专业术语 — AI 润色时原样保留，iCloud 多设备同步。</p>
         </div>
         <div class="feature">
-          <div class="ficon"><span class="material-symbols-outlined" aria-hidden="true">all_inclusive</span></div>
-          <h3 data-i18n="feat.flow.t">Flow session</h3>
-          <p data-i18n="feat.flow.b">A long-lived session keeps the recorder warm, so you can dictate take after take.</p>
+          <div class="ficon"><span class="material-symbols-outlined" aria-hidden="true">cloud_sync</span></div>
+          <h3 data-i18n="feat.sync.t">iCloud 同步</h3>
+          <p data-i18n="feat.sync.b">设置、词库、听写历史在多设备间自动同步，换机无缝衔接。</p>
         </div>
       </div>
     </section>
@@ -526,21 +574,21 @@
     <!-- How it works -->
     <section class="block wrap">
       <div class="block-head">
-        <h2 data-i18n="steps.title">Three steps to your first message</h2>
-        <p data-i18n="steps.subtitle">Set up once, then dictate anywhere you type.</p>
+        <h2 data-i18n="steps.title">三步，开始第一句话</h2>
+        <p data-i18n="steps.subtitle">设置一次，之后在任意输入处开口即写。</p>
       </div>
       <div class="steps">
         <div class="step">
-          <h3 data-i18n="step1.t">Enable the keyboard</h3>
-          <p data-i18n="step1.b">Add OSGKeyboard in iOS Settings and allow Full Access — needed for the mic and network.</p>
+          <h3 data-i18n="step1.t">安装并授权</h3>
+          <p data-i18n="step1.b">iOS 添加键盘并开启完全访问；Mac 授予麦克风与辅助功能权限。</p>
         </div>
         <div class="step">
-          <h3 data-i18n="step2.t">Choose your engine</h3>
-          <p data-i18n="step2.b">Local: on-device ASR with built-in polish, no API key. Cloud: use your own OpenAI-compatible key.</p>
+          <h3 data-i18n="step2.t">选引擎与润色</h3>
+          <p data-i18n="step2.b">本地识别 + 内置润色零配置可用；也可填入自己的 API Key 接入任意兼容模型。</p>
         </div>
         <div class="step">
-          <h3 data-i18n="step3.t">Tap to talk</h3>
-          <p data-i18n="step3.b">Switch to OSGKeyboard, tap the mic, speak, tap again. Polished text lands at your cursor.</p>
+          <h3 data-i18n="step3.t">开口说话</h3>
+          <p data-i18n="step3.b">切换到 OSGKeyboard 键盘，或按住 Option 键。润色好的文字自动插入光标处。</p>
         </div>
       </div>
     </section>
@@ -549,13 +597,13 @@
     <section class="closing">
       <div class="wrap closing-inner">
         <div>
-          <span class="lock"><span class="material-symbols-outlined" aria-hidden="true">lock</span><span data-i18n="close.badge">Privacy by design</span></span>
-          <h2 data-i18n="close.title">Your voice stays yours</h2>
-          <p data-i18n="close.body">Speech is processed on-device. We never log ordinary keystrokes. Only transcribed text — never audio — is sent for polish or translation.</p>
+          <span class="lock"><span class="material-symbols-outlined" aria-hidden="true">lock</span><span data-i18n="close.badge">隐私优先</span></span>
+          <h2 data-i18n="close.title">你的声音，始终属于你</h2>
+          <p data-i18n="close.body">默认在设备端识别，录音不上传。润色只发送转写文字，不记录日常击键。云端引擎需你主动开启，并适用所配置服务商的隐私条款。</p>
         </div>
         <a class="btn btn-quiet" href="privacy/">
           <span class="material-symbols-outlined" aria-hidden="true">description</span>
-          <span data-i18n="close.cta">Read the privacy policy</span>
+          <span data-i18n="close.cta">查看隐私政策</span>
         </a>
       </div>
     </section>
@@ -563,7 +611,7 @@
 
   <footer class="wrap">
     <div class="footer-inner">
-      <span data-i18n="footer.copy">© OSGKeyboard · v0.3.6 · source available, non-commercial</span>
+      <span data-i18n="footer.copy">© OSGKeyboard · v0.5.3 · 源码可见</span>
       <span class="footer-links">
         <a href="https://github.com/hkgood/OSGKeyboard" rel="noopener" data-i18n="footer.source">Source</a>
         <a href="privacy/" data-i18n="footer.privacy">Privacy</a>
@@ -576,90 +624,102 @@
     const copy = {
       en: {
         "nav.github": "GitHub",
-        "hero.eyebrow": "Source available · iOS 26+",
-        "hero.title": "Speak naturally.<br>Get polished text anywhere.",
-        "hero.lead": "A source-available keyboard that transcribes your voice on-device, then polishes — and optionally translates — the result. Works in every app you type in.",
-        "hero.cta.primary": "Get it on GitHub",
+        "hero.eyebrow": "iOS · iPadOS · macOS",
+        "hero.title": "Speak it. It's typed.",
+        "hero.lead": "Voice input for iPhone, iPad, and Mac. On-device recognition, AI polish — speak in any app.",
+        "hero.cta.primary": "Get it now",
         "hero.cta.secondary": "Privacy",
-        "hero.meta1": "On-device recognition",
-        "hero.meta2": "Local or cloud AI",
-        "hero.meta3": "Audio never leaves your phone",
+        "hero.meta1": "On-device by default",
+        "hero.meta2": "AI polish",
+        "hero.meta3": "Works in every app",
         "mock.app": "Notes",
         "mock.line": "Tomorrow at 3 PM, sync with the design team on the new onboarding flow.",
-        "mock.chipEngine": "On-device",
+        "mock.chipEngine": "Local",
         "mock.chipTranslate": "Translate",
+        "platforms.title": "Two platforms, one experience",
+        "platforms.subtitle": "Keyboard on phone, hold Option on Mac — speak and it's typed.",
+        "platform.ios.t": "iOS / iPadOS",
+        "platform.ios.b": "Custom keyboard + Flow session. Tap the mic, dictate take after take without leaving your app. Live Activity on Dynamic Island.",
+        "platform.mac.t": "macOS",
+        "platform.mac.b": "Menu-bar app with global Option hotkey. Bottom overlay with live feedback. Optional SenseVoice / Qwen3 local models.",
         "features.title": "Everything you need to type by voice",
-        "features.subtitle": "On-device by default, refined by AI when you want it — in a single, native keyboard.",
-        "feat.dictation.t": "Tap-to-talk dictation",
-        "feat.dictation.b": "Tap to start, tap to stop. Up to 3.5 minutes per take, with a live countdown.",
+        "features.subtitle": "Local first, AI refined — recognition to polish in one flow.",
+        "feat.dictation.t": "Tap-to-talk",
+        "feat.dictation.b": "Tap to start, tap to stop. Up to 3.5 minutes per take with a live countdown.",
         "feat.ondevice.t": "On-device recognition",
-        "feat.ondevice.b": "iOS 26 SpeechAnalyzer transcribes on your iPhone. Audio never leaves the device.",
+        "feat.ondevice.b": "iOS SpeechAnalyzer; Mac SenseVoice / Qwen3 optional. Audio stays local by default.",
         "feat.polish.t": "AI polish",
-        "feat.polish.b": "Punctuation, structure, and clarity in three intensity levels. Only text is sent — never audio.",
-        "feat.translate.t": "Built-in translation",
-        "feat.translate.b": "Translate after polish into English, 中文, 日本語, 한국어 and more — right from the keyboard.",
+        "feat.polish.b": "Punctuation and structure, three intensity levels. Built-in polish or bring your own DeepSeek / OpenAI API.",
+        "feat.translate.t": "Post-polish translation",
+        "feat.translate.b": "Translate into English, 中文, 日本語, 한국어 and more after polish.",
         "feat.dict.t": "Personal dictionary",
-        "feat.dict.b": "Keep names, products, and jargon accurate. The AI preserves your terms every time.",
-        "feat.flow.t": "Flow session",
-        "feat.flow.b": "A long-lived session keeps the recorder warm, so you can dictate take after take.",
+        "feat.dict.b": "Names, products, jargon — preserved verbatim by the AI, synced via iCloud.",
+        "feat.sync.t": "iCloud sync",
+        "feat.sync.b": "Settings, dictionary, and history sync across devices seamlessly.",
         "steps.title": "Three steps to your first message",
-        "steps.subtitle": "Set up once, then dictate anywhere you type.",
-        "step1.t": "Enable the keyboard",
-        "step1.b": "Add OSGKeyboard in iOS Settings and allow Full Access — needed for the mic and network.",
-        "step2.t": "Choose your engine",
-        "step2.b": "Local: on-device ASR with built-in polish, no API key. Cloud: use your own OpenAI-compatible key.",
-        "step3.t": "Tap to talk",
-        "step3.b": "Switch to OSGKeyboard, tap the mic, speak, tap again. Polished text lands at your cursor.",
-        "close.badge": "Privacy by design",
+        "steps.subtitle": "Set up once, then dictate anywhere.",
+        "step1.t": "Install & authorize",
+        "step1.b": "Add the iOS keyboard with Full Access; grant mic + Accessibility on Mac.",
+        "step2.t": "Pick engine & polish",
+        "step2.b": "Local ASR + built-in polish works out of the box. Or add your own API key.",
+        "step3.t": "Start talking",
+        "step3.b": "Switch to OSGKeyboard, or hold Option on Mac. Polished text lands at your cursor.",
+        "close.badge": "Privacy first",
         "close.title": "Your voice stays yours",
-        "close.body": "Speech is processed on-device. We never log ordinary keystrokes. Only transcribed text — never audio — is sent for polish or translation.",
+        "close.body": "On-device recognition by default — audio is not uploaded. Polish receives text only; we never log keystrokes. Cloud engine requires explicit opt-in.",
         "close.cta": "Read the privacy policy",
-        "footer.copy": "© OSGKeyboard · v0.3.6 · source available, non-commercial",
+        "footer.copy": "© OSGKeyboard · v0.5.3 · source available",
         "footer.source": "Source",
         "footer.privacy": "Privacy",
         "footer.license": "License"
       },
       zh: {
         "nav.github": "GitHub",
-        "hero.eyebrow": "源码可见 · iOS 26+",
-        "hero.title": "自然地说，<br>随处得到润色好的文字。",
-        "hero.lead": "源码可见的语音键盘：在设备端转写你的语音，再润色，并可选翻译。适用于所有需要输入的 App。",
-        "hero.cta.primary": "前往 GitHub",
+        "hero.eyebrow": "iOS · iPadOS · macOS",
+        "hero.title": "开口即文字。",
+        "hero.lead": "iPhone、iPad、Mac 通用的语音输入工具。本地识别，AI 润色，任意 App 即说即写。",
+        "hero.cta.primary": "立即获取",
         "hero.cta.secondary": "隐私政策",
-        "hero.meta1": "设备端识别",
-        "hero.meta2": "本地或云端 AI",
-        "hero.meta3": "音频不离开手机",
+        "hero.meta1": "默认本地识别",
+        "hero.meta2": "AI 自动润色",
+        "hero.meta3": "任意 App 可用",
         "mock.app": "备忘录",
         "mock.line": "明天下午三点，和设计团队同步新引导流程。",
         "mock.chipEngine": "本地",
         "mock.chipTranslate": "翻译",
-        "features.title": "语音输入所需的一切",
-        "features.subtitle": "默认全程端侧，需要时再交给 AI 润色——都在一个原生键盘里完成。",
+        "platforms.title": "两个平台，同一种体验",
+        "platforms.subtitle": "手机上用键盘，Mac 上按住 Option — 说完即落字。",
+        "platform.ios.t": "iOS / iPadOS",
+        "platform.ios.b": "自定义键盘 + Flow 会话。点按麦克风说话，连续听写不用跳 App。灵动岛显示录音状态。",
+        "platform.mac.t": "macOS",
+        "platform.mac.b": "菜单栏常驻，按住 Option 全局听写。底部浮层实时反馈，支持 SenseVoice / Qwen3 本地模型。",
+        "features.title": "开口即写，所需尽在此",
+        "features.subtitle": "本地优先，AI 加持 — 从识别到润色，一条链路搞定。",
         "feat.dictation.t": "点按听写",
         "feat.dictation.b": "点一下开始，再点一下结束。单次最长 3.5 分钟，倒计时实时显示。",
-        "feat.ondevice.t": "设备端识别",
-        "feat.ondevice.b": "由 iOS 26 SpeechAnalyzer 在本机转写，音频不会离开设备。",
+        "feat.ondevice.t": "本地识别",
+        "feat.ondevice.b": "iOS 端侧 SpeechAnalyzer；Mac 可选 SenseVoice / Qwen3。默认不上传录音。",
         "feat.polish.t": "AI 润色",
-        "feat.polish.b": "自动补全标点、结构与表达，分三档强度。仅发送文字，绝不发送音频。",
-        "feat.translate.t": "内置翻译",
-        "feat.translate.b": "润色后可翻译为 English、中文、日本語、한국어 等——直接在键盘上完成。",
+        "feat.polish.b": "自动补标点、整理结构。内置润色开箱即用，也可接入 DeepSeek、OpenAI 等 API。",
+        "feat.translate.t": "润色后翻译",
+        "feat.translate.b": "润色完成后一键翻译为 English、中文、日本語、한국어 等。",
         "feat.dict.t": "个性词库",
-        "feat.dict.b": "让人名、产品名与专有名词保持准确，AI 每次都会原样保留你的词汇。",
-        "feat.flow.t": "Flow 会话",
-        "feat.flow.b": "长生命周期会话让录音随时就绪，连续多次听写无需跳回主 App。",
-        "steps.title": "三步发出第一条消息",
-        "steps.subtitle": "只需设置一次，随后在任意输入处开口即写。",
-        "step1.t": "启用键盘",
-        "step1.b": "在 iOS 设置中添加 OSGKeyboard 并允许完全访问——麦克风与网络所需。",
-        "step2.t": "选择引擎",
-        "step2.b": "本地：设备端 ASR + 内置润色，无需 API Key。云端：使用你自己的 OpenAI 兼容 Key。",
-        "step3.t": "点按说话",
-        "step3.b": "切换到 OSGKeyboard，点麦克风，说话，再点结束，润色好的文字自动插入光标处。",
-        "close.badge": "隐私优先设计",
+        "feat.dict.b": "人名、产品名、专业术语 — AI 润色时原样保留，iCloud 多设备同步。",
+        "feat.sync.t": "iCloud 同步",
+        "feat.sync.b": "设置、词库、听写历史在多设备间自动同步，换机无缝衔接。",
+        "steps.title": "三步，开始第一句话",
+        "steps.subtitle": "设置一次，之后在任意输入处开口即写。",
+        "step1.t": "安装并授权",
+        "step1.b": "iOS 添加键盘并开启完全访问；Mac 授予麦克风与辅助功能权限。",
+        "step2.t": "选引擎与润色",
+        "step2.b": "本地识别 + 内置润色零配置可用；也可填入自己的 API Key 接入任意兼容模型。",
+        "step3.t": "开口说话",
+        "step3.b": "切换到 OSGKeyboard 键盘，或按住 Option 键。润色好的文字自动插入光标处。",
+        "close.badge": "隐私优先",
         "close.title": "你的声音，始终属于你",
-        "close.body": "语音在设备端处理，我们不记录普通击键。只有转写后的文字（绝非音频）会被发送用于润色或翻译。",
+        "close.body": "默认在设备端识别，录音不上传。润色只发送转写文字，不记录日常击键。云端引擎需你主动开启，并适用所配置服务商的隐私条款。",
         "close.cta": "查看隐私政策",
-        "footer.copy": "© OSGKeyboard · v0.3.6 · 源码可见，禁止商用",
+        "footer.copy": "© OSGKeyboard · v0.5.3 · 源码可见",
         "footer.source": "源代码",
         "footer.privacy": "隐私",
         "footer.license": "许可协议"
@@ -667,13 +727,12 @@
     };
 
     function applyLang(lang) {
-      const strings = copy[lang] || copy.en;
+      const strings = copy[lang] || copy.zh;
       document.documentElement.lang = lang === "zh" ? "zh-Hans" : "en";
       document.querySelectorAll("[data-i18n]").forEach((el) => {
         const value = strings[el.getAttribute("data-i18n")];
         if (value == null) return;
-        if (el.getAttribute("data-i18n") === "hero.title") el.innerHTML = value;
-        else el.textContent = value;
+        el.textContent = value;
       });
       document.querySelectorAll(".lang-toggle button").forEach((btn) => {
         btn.classList.toggle("active", btn.dataset.lang === lang);
@@ -686,8 +745,7 @@
     });
 
     const saved = (() => { try { return localStorage.getItem("osg-lang"); } catch (_) { return null; } })();
-    const zh = navigator.language && navigator.language.toLowerCase().startsWith("zh");
-    applyLang(saved || (zh ? "zh" : "en"));
+    applyLang(saved || "zh");
   </script>
 </body>
 </html>

@@ -64,8 +64,7 @@ struct OpenSourceLicensesView: View {
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(palette.textTertiary)
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, 10)
+        .settingsListRow()
         .contentShape(Rectangle())
     }
 }

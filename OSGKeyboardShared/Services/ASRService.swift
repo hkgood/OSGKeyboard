@@ -30,7 +30,7 @@ extension AVAudioPCMBuffer: @unchecked @retroactive Sendable {}
 
 // MARK: - Protocol
 
-public protocol ASRService: Sendable {
+public protocol ASRService: ASRChunkTranscribing, Sendable {
     /// Start a transcription session. The returned stream emits `.partial`
     /// updates and exactly one `.final` (or `.error`) before finishing.
     /// `SpeechAnalyzer` is always fully on-device, so there is no
@@ -52,12 +52,6 @@ public protocol ASRService: Sendable {
 
     /// Transcribe one PCM chunk (Flow pipelined path). Default wraps `transcribe(stream:)`.
     func transcribeChunk(samples: [Float], locale: Locale) async -> ASRChunkResult
-}
-
-public enum ASRChunkResult: Sendable, Equatable {
-    case success(String)
-    case failure(String)
-    case cancelled
 }
 
 extension ASRService {

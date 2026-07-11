@@ -165,16 +165,89 @@ enum MacSherpaONNXRunner {
             .filter { !$0.isEmpty }
 
         for line in lines.reversed() {
-            if line.hasPrefix("{"), let data = line.data(using: .utf8),
-               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-               let text = object["text"] as? String {
-                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty { return trimmed }
+            if line.hasPrefix("{") {
+                // Sherpa's JSON result line (`{"text": ..., "lang": ..., ...}`).
+                // Trust only its `text` field — including when it's empty
+                // (silence/no-speech) — and never fall through to the raw
+                // JSON below, or the JSON blob itself gets inserted as text.
+                if let data = line.data(using: .utf8),
+                   let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let text = object["text"] as? String {
+                    return sanitizeTranscript(text)
+                }
+                continue
             }
+            if isMetadataNoiseLine(line) { continue }
             if !line.hasPrefix("/"), !line.hasPrefix("--"), line.count > 1 {
-                return line
+                let cleaned = sanitizeTranscript(line)
+                if !cleaned.isEmpty { return cleaned }
             }
         }
         return ""
+    }
+
+    /// Qwen3-ASR (via sherpa-onnx) often prefixes the transcript with a
+    /// scaffold such as `language Chinese<asr_text>…`. Older runtimes leave
+    /// that intact in `result.text`; incomplete generations can even stop at
+    /// the bare word `language`. Strip the scaffold so only spoken text remains.
+    private static func sanitizeTranscript(_ raw: String) -> String {
+        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.isEmpty { return "" }
+
+        // Prefer the payload after the last `<asr_text>` marker.
+        if let marker = text.range(of: "<asr_text>", options: .backwards) {
+            text = String(text[marker.upperBound...])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        } else if let match = text.range(
+            of: #"^language\s+\S+\s*"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) {
+            // Fallback when the marker token was lost but the language prefix remains.
+            text = String(text[match.upperBound...])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        // Drop leftover control tokens / bare scaffold words.
+        if isMetadataNoiseLine(text) { return "" }
+        return text
+    }
+
+    /// Lines that are sherpa/Qwen metadata rather than spoken content.
+    private static func isMetadataNoiseLine(_ line: String) -> Bool {
+        let lowered = line.lowercased()
+        switch lowered {
+        case "language", "emotion", "event", "text",
+             "<asr_text>", "</asr_text>", "<|im_end|>":
+            return true
+        default:
+            // Exact scaffold with no spoken payload, e.g. "language Chinese".
+            if lowered.range(
+                of: #"^language(\s+\S+)?$"#,
+                options: .regularExpression
+            ) != nil {
+                return true
+            }
+            return false
+        }
+    }
+}
+
+enum MacQwen3LanguageHint {
+    /// Map persisted BCP-47 locale ids to Qwen3 prompt language names.
+    /// Returns `nil` for auto-detect.
+    static func from(locale: Locale) -> String? {
+        let raw = locale.identifier.lowercased()
+        if raw.isEmpty || raw == "auto" { return nil }
+        if raw.hasPrefix("zh") { return "Chinese" }
+        if raw.hasPrefix("en") { return "English" }
+        if raw.hasPrefix("ja") { return "Japanese" }
+        if raw.hasPrefix("ko") { return "Korean" }
+        if raw.hasPrefix("fr") { return "French" }
+        if raw.hasPrefix("de") { return "German" }
+        if raw.hasPrefix("es") { return "Spanish" }
+        if raw.hasPrefix("pt") { return "Portuguese" }
+        if raw.hasPrefix("ru") { return "Russian" }
+        if raw.hasPrefix("ar") { return "Arabic" }
+        return nil
     }
 }

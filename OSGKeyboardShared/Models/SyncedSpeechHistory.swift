@@ -12,7 +12,16 @@ public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
     public static let legacyKVSKey = "speechHistory.v1"
     public static let maxEntries = 300
     /// Tombstones older than this window may be pruned during merge.
-    public static let tombstoneRetention: TimeInterval = 90 * 24 * 60 * 60
+    /// Tombstones guard against deleted entries "resurrecting" when a
+    /// long-offline device rejoins and re-merges them. A short wall-clock
+    /// retention re-opened that window after only 90 days; a year keeps the
+    /// window closed for any realistically dormant device while staying tiny
+    /// on the wire (a tombstone is ~60 bytes of JSON), and the count cap
+    /// bounds the worst case regardless of clock.
+    public static let tombstoneRetention: TimeInterval = 365 * 24 * 60 * 60
+    /// Hard cap independent of wall clock — the oldest tombstones are
+    /// dropped first once exceeded.
+    public static let maxTombstones = 500
 
     public var schemaVersion: Int
     public var updatedAt: Date
@@ -107,15 +116,19 @@ public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
         clearedAt: Date?
     ) -> [UUID: Date] {
         let cutoff = Date().addingTimeInterval(-tombstoneRetention)
-        return tombstones.filter { _, deletedAt in
-            if deletedAt < cutoff {
-                return false
-            }
-            if let clearedAt, deletedAt <= clearedAt {
-                return false
-            }
+        var kept = tombstones.filter { _, deletedAt in
+            if deletedAt < cutoff { return false }
+            if let clearedAt, deletedAt <= clearedAt { return false }
             return true
         }
+        // Enforce the count cap that makes the 365-day retention safe on the
+        // KVS byte budget: keep the NEWEST tombstones (dropping an old one
+        // early only re-opens the resurrection window for that one entry).
+        if kept.count > maxTombstones {
+            let newest = kept.sorted { $0.value > $1.value }.prefix(maxTombstones)
+            kept = Dictionary(uniqueKeysWithValues: newest.map { ($0.key, $0.value) })
+        }
+        return kept
     }
 
     private static func later(of lhs: Date?, and rhs: Date?) -> Date? {

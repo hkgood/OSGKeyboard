@@ -11,8 +11,8 @@ options:
   # Minimum OS: iOS 26. We dropped older iOS support so the
   # legacy speech + AVAudioSession branching could be removed in
   # favour of iOS 26's `SpeechAnalyzer` (always on-device) and
-  # `AVAudioApplication.requestRecordPermission` (iOS 17+). iPhone
-  # only — no Mac Catalyst, no visionOS.
+  # `AVAudioApplication.requestRecordPermission` (iOS 17+). iPhone + iPad;
+  # no Mac Catalyst, no visionOS.
   deploymentTarget:
     iOS: "26.0"
   developmentLanguage: en
@@ -26,14 +26,8 @@ options:
 # Carthage (matches the long-standing "zero dependencies" promise in the
 # README). Optional post-ASR cloud polish routes through DeepSeek (or
 # any OpenAI-compatible endpoint) using the existing `LLMClient`.
-#
-# macOS only: `mlx-swift-asr` (MLXASR) for Qwen3-ASR-1.7B on-device ASR.
-# iOS targets remain zero-SPM.
-
-packages:
-  MLXSwiftASR:
-    url: https://github.com/ontypehq/mlx-swift-asr
-    branch: main
+# iOS targets remain zero-SPM. macOS local ASR downloads the sherpa-onnx
+# runtime on demand instead of linking SwiftPM speech packages.
 
 settings:
   base:
@@ -50,8 +44,8 @@ settings:
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "0.5.2"
-    CURRENT_PROJECT_VERSION: "19"
+    MARKETING_VERSION: "0.5.3"
+    CURRENT_PROJECT_VERSION: "22"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -124,6 +118,11 @@ targets:
           UIColorName: "BackgroundColor"
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         NSMicrophoneUsageDescription: "OSGKeyboard uses the microphone for voice dictation and keeps a background audio session active while a voice session is running."
@@ -193,7 +192,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.utilities
         SUPPORTS_MACCATALYST: NO
@@ -266,7 +265,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.keyboard
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
@@ -297,7 +296,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.liveactivity
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MACCATALYST: NO
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
@@ -333,7 +332,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.shared
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         DEFINES_MODULE: YES
         SKIP_INSTALL: YES
         BUILD_LIBRARY_FOR_DISTRIBUTION: NO
@@ -349,6 +348,7 @@ targets:
     dependencies:
       - sdk: Speech.framework
       - sdk: AVFoundation.framework
+      - sdk: Charts.framework
 
   # =========================================================
   # 单元测试
@@ -365,7 +365,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.tests
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
 
   # =========================================================
   # 键盘扩展单元测试 (TEST-4)
@@ -382,7 +382,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.ext.tests
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
 
   # =========================================================
   # macOS 菜单栏 App (Phase 1 · 云端 MVP)
@@ -391,7 +391,7 @@ targets:
   # Reuses the platform-agnostic core files from OSGKeyboardShared at the
   # source level (no framework), excluding the iOS-only files that import
   # SpeechAnalyzer / AVAudioSession / UIKit / SwiftUI views. Local mode uses
-  # Qwen3-ASR MLX via mlx-swift-asr (requires macOS 15+, Apple Silicon).
+  # a downloaded sherpa-onnx runtime plus catalog-managed ONNX models.
   OSGKeyboardMac:
     type: application
     platform: macOS
@@ -419,12 +419,10 @@ targets:
           - "DesignSystem/RecordButton.swift"
           - "Services/ASRService.swift"
           - "Services/CloudASR/CloudASRService.swift"
-          - "Services/ChunkedUtterancePipeline.swift"
           - "Services/FlowContinuousCapture.swift"
           - "Services/LiveDictationController.swift"
           - "Services/KeyboardState.swift"
           - "Services/CursorNavigation.swift"
-          - "Services/CustomLanguageModelManager.swift"
           - "Models/MicVoiceAvailability+Keyboard.swift"
           - "Utilities/ProgressiveDictationTranscriptAccumulator.swift"
       - path: OSGKeyboardShared/en.lproj/Shared.strings
@@ -432,6 +430,10 @@ targets:
       - path: OSGKeyboardShared/zh-Hans.lproj/Shared.strings
         buildPhase: resources
       - path: OSGKeyboard/Resources/CustomLanguageModel/v1/phrases.tsv
+        buildPhase: resources
+      - path: OSGKeyboardShared/Resources/CustomLanguageModel/v1/OSGKeyboardCLM.bin
+        buildPhase: resources
+      - path: OSGKeyboardShared/Resources/CustomLanguageModel/v1/compiled-manifest.json
         buildPhase: resources
       - path: OSGKeyboard/Resources/PrivacyPolicy.html
         buildPhase: resources
@@ -482,8 +484,7 @@ targets:
     dependencies:
       - sdk: Speech.framework
       - sdk: AVFoundation.framework
-      - package: MLXSwiftASR
-        product: MLXASR
+      - sdk: Charts.framework
 
 schemes:
   OSGKeyboard:

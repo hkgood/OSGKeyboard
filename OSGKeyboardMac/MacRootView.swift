@@ -18,15 +18,6 @@ struct MacRootView: View {
 
     private var uiLanguage: AppUILanguage { viewModel.config.uiLanguage }
 
-    /// `List` selection is optional; keep the view model's non-optional section
-    /// in sync without letting a nil selection blank the detail pane.
-    private var selection: Binding<MacSection?> {
-        Binding(
-            get: { viewModel.selectedSection },
-            set: { if let new = $0 { viewModel.selectedSection = new } }
-        )
-    }
-
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebar
@@ -35,7 +26,7 @@ struct MacRootView: View {
             detail
         }
         .navigationSplitViewStyle(.balanced)
-        .frame(minWidth: 860, minHeight: 600)
+        .frame(minWidth: MacMetrics.windowMinWidth, minHeight: MacMetrics.windowMinHeight)
         .onAppear {
             // Let the AppKit status-bar popover reopen this window on demand.
             MacWindowBridge.shared.open = { openWindow(id: "main") }
@@ -47,7 +38,7 @@ struct MacRootView: View {
     private var sidebar: some View {
         VStack(spacing: 0) {
             brandHeader
-            VStack(spacing: 4) {
+            VStack(spacing: 6) {
                 ForEach(MacSection.allCases) { section in
                     MacSidebarRow(
                         section: section,
@@ -72,15 +63,15 @@ struct MacRootView: View {
                 .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
-                .frame(height: 30)
+                .frame(height: 28)
                 .foregroundStyle(palette.accent)
                 .accessibilityLabel("OSGKeyboard")
             Spacer()
         }
         .padding(.leading, MacMetrics.sidebarContentInset)
         .padding(.trailing, MacMetrics.sidebarInset)
-        .padding(.top, Spacing.lg)
-        .padding(.bottom, Spacing.lg)
+        .padding(.top, 30)
+        .padding(.bottom, 30)
     }
 
     private var devicesFooter: some View {
@@ -88,10 +79,10 @@ struct MacRootView: View {
             MacL10n.string("mac.devices", language: uiLanguage),
             systemImage: "laptopcomputer.and.iphone"
         )
-        .font(TypeStyle.caption)
+        .font(TypeStyle.caption2)
         .foregroundStyle(palette.textTertiary)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, MacMetrics.sidebarInset)
+        .padding(.horizontal, MacMetrics.sidebarInset + Spacing.sm)
         .padding(.vertical, Spacing.sm)
     }
 
@@ -118,8 +109,8 @@ struct MacRootView: View {
 
 // MARK: - Sidebar row
 
-/// A navigation row with an animated hover highlight and selection state,
-/// matching the macOS System Settings feel.
+/// Navigation row with a restrained selected state: muted accent fill +
+/// accent label (not a solid green pill), matching System Settings polish.
 private struct MacSidebarRow: View {
     let section: MacSection
     let isSelected: Bool
@@ -132,14 +123,14 @@ private struct MacSidebarRow: View {
     var body: some View {
         Button(action: action) {
             Label(section.title(language: language), systemImage: section.systemImage)
-                .font(.system(size: 13))
-                .foregroundStyle(isSelected ? palette.textOnAccent : palette.textPrimary)
+                .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                .foregroundStyle(isSelected ? palette.accent : palette.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, 7)
+                .padding(.vertical, 9)
                 .background(
                     rowBackground,
-                    in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
                 )
                 .contentShape(Rectangle())
         }
@@ -150,7 +141,7 @@ private struct MacSidebarRow: View {
     }
 
     private var rowBackground: Color {
-        if isSelected { return palette.accent }
-        return isHovering ? palette.textPrimary.opacity(0.06) : .clear
+        if isSelected { return palette.accentMuted }
+        return isHovering ? palette.textPrimary.opacity(0.05) : .clear
     }
 }

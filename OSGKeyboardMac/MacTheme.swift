@@ -6,7 +6,8 @@
 // semantic colours, resolved to a concrete value for the *active* appearance.
 // The brand green is kept only as the accent. Light mode uses a warm,
 // iOS-matched surface set (the default `windowBackgroundColor` reads cold
-// grey on macOS); Dark mode keeps the native AppKit semantic colours.
+// grey on macOS); Dark mode uses stepped elevated greys so cards stay
+// readable against the page background.
 
 import AppKit
 import SwiftUI
@@ -33,8 +34,8 @@ enum MacSystemPalette {
             surfaceMuted:    resolved(dark ? darkMuted : warmMuted, dark: dark),
 
             accent:          Palette.accent,
-            accentMuted:     Palette.accent.opacity(0.16),
-            accentGlow:      Palette.accent.opacity(0.35),
+            accentMuted:     Palette.accent.opacity(dark ? 0.22 : 0.14),
+            accentGlow:      Palette.accent.opacity(dark ? 0.40 : 0.32),
 
             danger:          resolved(.systemRed, dark: dark),
             success:         Palette.accent,
@@ -45,8 +46,12 @@ enum MacSystemPalette {
             textTertiary:    resolved(.tertiaryLabelColor, dark: dark),
             textOnAccent:    Color.white,
 
-            divider:         resolved(.separatorColor, dark: dark),
-            dividerStrong:   resolved(.separatorColor, dark: dark),
+            divider:         dark
+                ? Color.white.opacity(0.08)
+                : Color.black.opacity(0.06),
+            dividerStrong:   dark
+                ? Color.white.opacity(0.12)
+                : Color.black.opacity(0.10),
 
             recordRed:       resolved(.systemRed, dark: dark)
         )

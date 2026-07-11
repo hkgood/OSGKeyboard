@@ -25,8 +25,10 @@ struct LocalModelsGroup: View {
             speechRow
             Divider().background(palette.divider)
             polishRow
+#if DEBUG
             Divider().background(palette.divider)
             customLanguageModelDiagnosticRow
+#endif
         }
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
         .overlay(
@@ -45,8 +47,7 @@ struct LocalModelsGroup: View {
             Spacer(minLength: Spacing.xs)
             engineBadge("settings.localModels.speechEngine")
         }
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+        .settingsListRow()
     }
 
     // MARK: Polish row
@@ -61,12 +62,12 @@ struct LocalModelsGroup: View {
             Spacer(minLength: Spacing.xs)
             engineBadge("settings.localModels.polishEngine")
         }
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+        .settingsListRow()
     }
 
-    // MARK: Custom language model diagnostic row
+    // MARK: Custom language model diagnostic row (DEBUG builds only)
 
+#if DEBUG
     private var customLanguageModelDiagnosticRow: some View {
         Toggle(isOn: $config.localASRCustomLanguageModelEnabled) {
             VStack(alignment: .leading, spacing: Spacing.xxs) {
@@ -79,10 +80,9 @@ struct LocalModelsGroup: View {
             }
         }
         .tint(palette.accent)
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+        .settingsListRow()
     }
+#endif
 
     // MARK: Helpers
 

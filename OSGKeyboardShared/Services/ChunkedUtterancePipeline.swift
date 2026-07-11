@@ -67,13 +67,13 @@ private actor ChunkWorkQueue {
 }
 
 public actor ChunkedUtterancePipeline {
-    private let asr: ASRService
+    private let asr: any ASRChunkTranscribing
     private let locale: Locale
     private let config: FlowUtteranceChunkConfig
     private var cancelled = false
 
     public init(
-        asr: ASRService,
+        asr: any ASRChunkTranscribing,
         locale: Locale,
         config: FlowUtteranceChunkConfig = .flowDefault
     ) {

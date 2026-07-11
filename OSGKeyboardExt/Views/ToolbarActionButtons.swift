@@ -10,6 +10,7 @@ import OSGKeyboardShared
 
 private enum ToolbarButtonMetrics {
     static let iconSize: CGFloat = 14
+    static let titleSize: CGFloat = 16
     static let cornerRadius: CGFloat = 12
     static let spaceBarCapsuleWidth: CGFloat = 31
     static let pressScale: CGFloat = 0.94
@@ -138,6 +139,7 @@ struct RectangularToolbarButton: View {
 
     let systemName: String?
     let spaceStyle: Bool
+    let title: String?
     let label: String
     let disabled: Bool
     let action: () -> Void
@@ -145,14 +147,25 @@ struct RectangularToolbarButton: View {
     init(systemName: String, label: String, disabled: Bool = false, action: @escaping () -> Void) {
         self.systemName = systemName
         self.spaceStyle = false
+        self.title = nil
         self.label = label
         self.disabled = disabled
         self.action = action
     }
 
+    init(title: String, label: String, disabled: Bool = false, action: @escaping () -> Void) {
+        self.systemName = nil
+        self.spaceStyle = false
+        self.label = label
+        self.disabled = disabled
+        self.action = action
+        self.title = title
+    }
+
     init(spaceStyle: Bool, label: String, disabled: Bool = false, action: @escaping () -> Void) {
         self.systemName = nil
         self.spaceStyle = spaceStyle
+        self.title = nil
         self.label = label
         self.disabled = disabled
         self.action = action
@@ -169,6 +182,10 @@ struct RectangularToolbarButton: View {
             } else if let systemName {
                 Image(systemName: systemName)
                     .font(.system(size: ToolbarButtonMetrics.iconSize, weight: .semibold))
+                    .foregroundStyle(palette.textPrimary)
+            } else if let title {
+                Text(title)
+                    .font(.system(size: ToolbarButtonMetrics.titleSize, weight: .semibold))
                     .foregroundStyle(palette.textPrimary)
             }
         }

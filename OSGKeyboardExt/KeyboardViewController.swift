@@ -57,7 +57,11 @@ public final class KeyboardViewController: UIInputViewController {
         // Voice-first keyboard — hide the misleading "English" subtitle in Settings.
         primaryLanguage = "mis"
         OSGLog.keyboardExt.info("viewDidLoad — extension booted")
-        CustomLanguageModelManager.shared.prepareInBackgroundIfNeeded()
+        // Deliberately NO CustomLanguageModelManager prewarm here: the
+        // extension never runs ASR (the host app owns the microphone and
+        // the SpeechAnalyzer pipeline), and compiling/caching an LM inside
+        // the keyboard's ~60 MB jetsam budget risks the system killing the
+        // keyboard outright. The host app prewarms it on session start.
         setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
         installKeyboardHeight()
         configureDictationBehavior()
@@ -84,6 +88,7 @@ public final class KeyboardViewController: UIInputViewController {
         setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
         configureDictationBehavior()
         KeyboardSetupBridge.markExtensionAppearance(hasFullAccess: hasFullAccess)
+        state.debugHasFullAccess = hasFullAccess
         flowCoordinator.refreshSessionState()
         flowCoordinator.startSessionMonitor()
         configSync.syncOnboardingStateFromAppGroup()
@@ -100,6 +105,12 @@ public final class KeyboardViewController: UIInputViewController {
         super.viewDidAppear(animated)
         disableSystemGestureDelays()
         keyboardHeightConstraint?.constant = targetKeyboardHeight
+        refreshReturnKeyRole()
+    }
+
+    public override func textDidChange(_ textInput: UITextInput?) {
+        super.textDidChange(textInput)
+        refreshReturnKeyRole()
     }
 
     public override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge {
@@ -126,6 +137,7 @@ public final class KeyboardViewController: UIInputViewController {
         textInserter = KeyboardTextInserter(
             state: state,
             insertText: { [weak self] text in self?.textDocumentProxy.insertText(text) },
+            contextBeforeInput: { [weak self] in self?.textDocumentProxy.documentContextBeforeInput },
             scheduleAutoClearError: { [weak self] in self?.scheduleAutoClearError() }
         )
 
@@ -186,6 +198,21 @@ public final class KeyboardViewController: UIInputViewController {
         }
         state.setCursorDragActive = { [weak self] active in
             self?.cursorDrag.setCursorDragActive(active)
+        }
+    }
+
+    private func refreshReturnKeyRole() {
+        state.returnKeyRole = returnKeyRole(for: textDocumentProxy.returnKeyType ?? .default)
+    }
+
+    private func returnKeyRole(for returnKeyType: UIReturnKeyType) -> State.ReturnKeyRole {
+        switch returnKeyType {
+        case .send, .go, .search, .join, .route, .google, .yahoo, .continue, .emergencyCall:
+            return .send
+        case .default, .next, .done:
+            return .newline
+        @unknown default:
+            return .newline
         }
     }
 

@@ -2,7 +2,7 @@
 // OSGKeyboard · Shared
 //
 // Which hand the user holds the phone with — controls bottom-row key order
-// on the keyboard (delete ↔ return swap for right-handed use).
+// on the keyboard (delete ↔ space swap for right-handed use).
 
 import Foundation
 
@@ -19,7 +19,7 @@ public enum HandednessPreference: String, CaseIterable, Identifiable, Sendable, 
         }
     }
 
-    /// Right-handed preference places return on the left and delete on the right.
+    /// Right-handed preference places space on the left and delete on the right.
     public var swapsActionKeys: Bool { self == .right }
 
     public static func fromStored(_ raw: String?) -> HandednessPreference {

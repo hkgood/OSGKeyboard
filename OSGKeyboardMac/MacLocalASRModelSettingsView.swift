@@ -198,6 +198,9 @@ struct MacLocalASRModelSettingsView: View {
     @ObservedObject var viewModel: MacDictationViewModel
     @StateObject private var modelVM = MacLocalASRModelSettingsViewModel()
     @Environment(\.themePalette) private var palette
+    /// Only one model installs at a time, so a single hover flag drives the
+    /// active download ring's pause/resume affordance.
+    @State private var isHoveringProgress = false
 
     private var lang: AppUILanguage { viewModel.config.uiLanguage }
 
@@ -217,42 +220,54 @@ struct MacLocalASRModelSettingsView: View {
     }
 
     private func modelPickerSection(catalog: LocalASRCatalogDocument) -> some View {
-        Section {
-            if let runtime = modelVM.currentRuntime(in: catalog) {
-                LabeledContent(runtime.displayName) {
-                    Text(
-                        modelVM.isRuntimeInstalled(runtime)
-                            ? MacL10n.string("mac.localASR.installed", language: lang)
-                            : MacL10n.string("mac.localASR.notInstalled", language: lang)
-                    )
+        MacSettingsSection(title: MacL10n.string("mac.localASR.models", language: lang)) {
+            VStack(spacing: MacMetrics.settingsRowGap) {
+                if let runtime = modelVM.currentRuntime(in: catalog) {
+                    MacFormSubtitleRow(title: runtime.displayName) {
+                        Text(
+                            modelVM.isRuntimeInstalled(runtime)
+                                ? MacL10n.string("mac.localASR.installed", language: lang)
+                                : MacL10n.string("mac.localASR.notInstalled", language: lang)
+                        )
+                        .font(TypeStyle.body)
+                        .foregroundStyle(palette.textSecondary)
+                    }
                 }
-            }
 
-            ForEach(catalog.models) { model in
-                modelRow(model)
-            }
+                ForEach(Array(catalog.models.enumerated()), id: \.element.id) { _, model in
+                    modelRow(model)
+                        .frame(minHeight: MacMetrics.settingsRowMinHeight)
+                        .padding(.horizontal, MacMetrics.settingsCardInset)
+                }
 
-            if modelVM.isInstalling,
-               modelVM.installProgress.phase == .extracting
-                || modelVM.installProgress.phase == .validating
-                || modelVM.installProgress.phase == .finalizing {
-                ProgressView(value: modelVM.installProgress.fraction) {
-                    Text(modelVM.progressLabel(for: modelVM.installProgress, language: lang))
+                if modelVM.isInstalling,
+                   modelVM.installProgress.phase == .extracting
+                    || modelVM.installProgress.phase == .validating
+                    || modelVM.installProgress.phase == .finalizing {
+                    ProgressView(value: modelVM.installProgress.fraction) {
+                        Text(modelVM.progressLabel(for: modelVM.installProgress, language: lang))
+                            .font(TypeStyle.caption)
+                    }
+                    .frame(minHeight: MacMetrics.settingsRowMinHeight)
+                    .padding(.horizontal, MacMetrics.settingsCardInset)
+                }
+
+                if !modelVM.statusMessage.isEmpty {
+                    Text(modelVM.statusMessage)
                         .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textSecondary)
+                        .frame(minHeight: MacMetrics.settingsRowMinHeight)
+                        .padding(.horizontal, MacMetrics.settingsCardInset)
                 }
-            }
 
-            if !modelVM.statusMessage.isEmpty {
-                Text(modelVM.statusMessage)
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textSecondary)
+                HStack(spacing: 0) {
+                    MacSettingsToolButton(title: MacL10n.string("mac.localASR.openStorage", language: lang)) {
+                        modelVM.revealStorageRoot()
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, MacMetrics.settingsCardInset)
             }
-
-            Button(MacL10n.string("mac.localASR.openStorage", language: lang)) {
-                modelVM.revealStorageRoot()
-            }
-        } header: {
-            Text(MacL10n.string("mac.localASR.models", language: lang))
         }
     }
 
@@ -276,14 +291,17 @@ struct MacLocalASRModelSettingsView: View {
                             HStack(spacing: Spacing.xs) {
                                 Text(model.displayName)
                                     .foregroundStyle(palette.textPrimary)
+                                if let badgeKey = model.badgeKey {
+                                    modelBadge(
+                                        MacL10n.string(badgeKey, language: lang),
+                                        emphasized: true
+                                    )
+                                }
                                 if model.supportsHotwords {
-                                    Text(MacL10n.string("mac.localASR.personalDictionaryTag", language: lang))
-                                        .font(TypeStyle.caption2)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(palette.accent.opacity(0.15))
-                                        .foregroundStyle(palette.accent)
-                                        .clipShape(Capsule())
+                                    modelBadge(
+                                        MacL10n.string("mac.localASR.personalDictionaryTag", language: lang),
+                                        emphasized: false
+                                    )
                                 }
                             }
                             Text(modelSubtitle(model, installed: installed))
@@ -302,7 +320,21 @@ struct MacLocalASRModelSettingsView: View {
                     .animation(Motion.soft, value: installed)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 0)
+    }
+
+    private func modelBadge(_ title: String, emphasized: Bool) -> some View {
+        Text(title)
+            .font(TypeStyle.caption2)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+                emphasized
+                    ? palette.accent.opacity(0.18)
+                    : palette.textTertiary.opacity(0.12)
+            )
+            .foregroundStyle(emphasized ? palette.accent : palette.textSecondary)
+            .clipShape(Capsule())
     }
 
     @ViewBuilder
@@ -312,49 +344,39 @@ struct MacLocalASRModelSettingsView: View {
         installing: Bool
     ) -> some View {
         if installing {
-            HStack(spacing: Spacing.sm) {
-                circularInstallProgress(for: model)
-                if modelVM.installProgress.phase == .downloading
-                    || modelVM.installProgress.phase == .paused {
-                    Button {
-                        if modelVM.isDownloadPaused {
-                            modelVM.resumeDownload()
-                        } else {
-                            modelVM.pauseDownload()
-                        }
-                    } label: {
-                        Image(systemName: modelVM.isDownloadPaused ? "play.fill" : "pause.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                            .frame(width: 28, height: 28)
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                    .help(
-                        modelVM.isDownloadPaused
-                            ? MacL10n.string("mac.localASR.resume", language: lang)
-                            : MacL10n.string("mac.localASR.pause", language: lang)
-                    )
-                }
-            }
+            installProgressControl(for: model)
+                .animation(Motion.quick, value: isHoveringProgress)
+                .animation(Motion.quick, value: modelVM.isDownloadPaused)
         } else if installed {
-            Button(MacL10n.string("mac.localASR.delete", language: lang), role: .destructive) {
+            MacSettingsToolButton(
+                title: MacL10n.string("mac.localASR.delete", language: lang),
+                fill: palette.danger.opacity(0.15),
+                foreground: palette.danger,
+                showsBorder: false
+            ) {
                 modelVM.deleteModel(model)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .tint(palette.danger)
         } else {
-            Button(MacL10n.string("mac.localASR.download", language: lang)) {
+            MacSettingsToolButton(
+                title: MacL10n.string("mac.localASR.download", language: lang),
+                fill: palette.accent,
+                foreground: .white,
+                showsBorder: false
+            ) {
                 modelVM.installModel(model)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
         }
     }
 
-    private func circularInstallProgress(for model: LocalASRModelDefinition) -> some View {
+    /// Single download ring. Shows the percentage while downloading; on hover it
+    /// reveals a clickable pause icon, and once paused it keeps a resume (play)
+    /// icon so the state stays clear without a second button.
+    private func installProgressControl(for model: LocalASRModelDefinition) -> some View {
+        let phase = modelVM.installProgress.phase
+        let pausable = phase == .downloading || phase == .paused
+        let paused = modelVM.isDownloadPaused
         let fraction: Double = {
-            if modelVM.installProgress.phase == .downloading || modelVM.installProgress.phase == .paused,
+            if pausable,
                let received = modelVM.installProgress.bytesReceived,
                let total = modelVM.installProgress.bytesTotal,
                total > 0 {
@@ -362,6 +384,7 @@ struct MacLocalASRModelSettingsView: View {
             }
             return modelVM.installProgress.fraction
         }()
+
         return ZStack {
             Circle()
                 .stroke(palette.textTertiary.opacity(0.25), lineWidth: 3)
@@ -370,18 +393,44 @@ struct MacLocalASRModelSettingsView: View {
                 .stroke(palette.accent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .animation(Motion.instant, value: fraction)
-            if modelVM.installProgress.phase == .paused {
-                Image(systemName: "pause.fill")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(palette.textSecondary)
-            } else {
-                Text("\(Int(fraction * 100))%")
-                    .font(.system(size: 9, weight: .medium, design: .rounded))
-                    .foregroundStyle(palette.textSecondary)
-            }
+
+            progressCenter(pausable: pausable, paused: paused, fraction: fraction)
         }
         .frame(width: 36, height: 36)
+        .contentShape(Circle())
+        .onHover { hovering in
+            guard pausable else { return }
+            isHoveringProgress = hovering
+        }
+        .onTapGesture {
+            guard pausable else { return }
+            if paused { modelVM.resumeDownload() } else { modelVM.pauseDownload() }
+        }
+        .help(
+            pausable
+                ? (paused
+                    ? MacL10n.string("mac.localASR.resume", language: lang)
+                    : MacL10n.string("mac.localASR.pause", language: lang))
+                : modelVM.progressLabel(for: modelVM.installProgress, language: lang)
+        )
         .accessibilityLabel(modelVM.progressLabel(for: modelVM.installProgress, language: lang))
+    }
+
+    @ViewBuilder
+    private func progressCenter(pausable: Bool, paused: Bool, fraction: Double) -> some View {
+        if pausable, paused {
+            Image(systemName: "play.fill")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(palette.accent)
+        } else if pausable, isHoveringProgress {
+            Image(systemName: "pause.fill")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(palette.textSecondary)
+        } else {
+            Text("\(Int(fraction * 100))%")
+                .font(.system(size: 9, weight: .medium, design: .rounded))
+                .foregroundStyle(palette.textSecondary)
+        }
     }
 
     private func modelSubtitle(_ model: LocalASRModelDefinition, installed: Bool) -> String {

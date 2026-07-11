@@ -9,37 +9,50 @@ import SwiftUI
 import WidgetKit
 
 struct FlowLiveActivityWidget: Widget {
+    /// Deep link that restarts the Flow session. When the host process is
+    /// dead the activity goes stale; tapping it must take the *cold-start*
+    /// path (same as the keyboard's mic button), not just open the app.
+    private static let reconnectURL = URL(string: "osgkeyboard://startflow")
+
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: FlowActivityAttributes.self) { context in
-            FlowLiveActivityLockScreenView(phase: context.state.phase)
-                .activityBackgroundTint(Color.black.opacity(0.82))
-                .activitySystemActionForegroundColor(.white)
+            FlowLiveActivityLockScreenView(
+                phase: context.state.phase,
+                isStale: context.isStale
+            )
+            .activityBackgroundTint(Color.black.opacity(0.82))
+            .activitySystemActionForegroundColor(.white)
+            // Deep-link to a session restart only when the host is dead —
+            // tapping a HEALTHY activity should just open the app, not
+            // force a cold-start handoff into a running session.
+            .widgetURL(context.isStale ? Self.reconnectURL : nil)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     FlowLiveActivityBrandMark(height: 16)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    FlowLiveActivityPhaseLabel(phase: context.state.phase)
+                    FlowLiveActivityPhaseLabel(phase: context.state.phase, isStale: context.isStale)
                 }
                 DynamicIslandExpandedRegion(.center) {
                     Text("OSGKeyboard")
                         .font(.headline)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    FlowLiveActivityPhaseCaption(phase: context.state.phase)
+                    FlowLiveActivityPhaseCaption(phase: context.state.phase, isStale: context.isStale)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             } compactLeading: {
                 FlowLiveActivityBrandMark(height: 12)
             } compactTrailing: {
-                FlowLiveActivityTrailingGlyph(phase: context.state.phase)
+                FlowLiveActivityTrailingGlyph(phase: context.state.phase, isStale: context.isStale)
             } minimal: {
                 // The minimal slot is a tiny circle; a short wordmark keeps
                 // the natural ratio without overflowing its bounds.
                 FlowLiveActivityBrandMark(height: 6)
             }
+            .widgetURL(context.isStale ? Self.reconnectURL : nil)
             .keylineTint(Color(red: 0.35, green: 0.55, blue: 1.0))
         }
     }
@@ -49,20 +62,24 @@ struct FlowLiveActivityWidget: Widget {
 
 private struct FlowLiveActivityLockScreenView: View {
     let phase: FlowActivityAttributes.ContentState.Phase
+    let isStale: Bool
 
     var body: some View {
         HStack(spacing: 12) {
-            FlowLiveActivityBrandMark(height: 13)
+            FlowLiveActivityBrandMark(height: 10.4)
             VStack(alignment: .leading, spacing: 4) {
                 Text("OSGKeyboard")
                     .font(.headline)
-                FlowLiveActivityPhaseCaption(phase: phase)
+                FlowLiveActivityPhaseCaption(phase: phase, isStale: isStale)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
-            FlowLiveActivityTrailingGlyph(phase: phase)
+            FlowLiveActivityTrailingGlyph(phase: phase, isStale: isStale)
         }
+        // A stale activity means the host process is gone — never advertise
+        // "Voice session active" for a dead session; grey the card instead.
+        .opacity(isStale ? 0.55 : 1)
         // iOS Live Activity lock-screen content needs margins so the leading
         // logo and trailing glyph don't touch the card edges.
         .padding(.horizontal, 16)
@@ -91,8 +108,19 @@ private struct FlowLiveActivityBrandMark: View {
 
 private struct FlowLiveActivityTrailingGlyph: View {
     let phase: FlowActivityAttributes.ContentState.Phase
+    var isStale: Bool = false
 
     var body: some View {
+        if isStale {
+            Image(systemName: "bolt.slash.circle")
+                .foregroundStyle(.secondary)
+        } else {
+            phaseGlyph
+        }
+    }
+
+    @ViewBuilder
+    private var phaseGlyph: some View {
         switch phase {
         case .recording:
             Image(systemName: "waveform")
@@ -114,8 +142,19 @@ private struct FlowLiveActivityTrailingGlyph: View {
 
 private struct FlowLiveActivityPhaseLabel: View {
     let phase: FlowActivityAttributes.ContentState.Phase
+    var isStale: Bool = false
 
     var body: some View {
+        if isStale {
+            Image(systemName: "bolt.slash.circle")
+                .foregroundStyle(.secondary)
+        } else {
+            phaseLabel
+        }
+    }
+
+    @ViewBuilder
+    private var phaseLabel: some View {
         switch phase {
         case .recording:
             Text("REC")
@@ -133,8 +172,20 @@ private struct FlowLiveActivityPhaseLabel: View {
 
 private struct FlowLiveActivityPhaseCaption: View {
     let phase: FlowActivityAttributes.ContentState.Phase
+    var isStale: Bool = false
 
     var body: some View {
+        if isStale {
+            // Host process is gone — be honest about it and turn the card
+            // into a recovery entry point (tap deep-links to startflow).
+            Text("Session disconnected · tap to reconnect")
+        } else {
+            phaseCaption
+        }
+    }
+
+    @ViewBuilder
+    private var phaseCaption: some View {
         switch phase {
         case .idle:
             Text("Voice session active")

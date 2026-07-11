@@ -70,7 +70,9 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
     /// Fire-and-forget preparation for the host app. Safe to call repeatedly.
     /// Retries after exponential backoff when a prior attempt failed.
     public func prepareInBackgroundIfNeeded() {
+        #if os(iOS)
         guard AppGroup.isAvailable else { return }
+        #endif
 
         let shouldStart = lock.withLock { () -> Bool in
             if case .preparing = state { return false }
@@ -167,8 +169,8 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
             throw PrepareError.missingPreparedArtifacts
         }
 
-        AppGroup.defaultsIfAvailable?.set(fingerprint, forKey: Storage.fingerprintKey)
-        AppGroup.defaultsIfAvailable?.set(Date().timeIntervalSince1970, forKey: Storage.preparedAtKey)
+        Self.persistenceDefaults.set(fingerprint, forKey: Storage.fingerprintKey)
+        Self.persistenceDefaults.set(Date().timeIntervalSince1970, forKey: Storage.preparedAtKey)
         Self.clearRetryState()
 
         lock.withLock {
@@ -180,8 +182,9 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
         return configuration
     }
 
-    // MARK: - DictationTranscriber factory
+    // MARK: - DictationTranscriber factory (iOS host app)
 
+    #if os(iOS)
     public static func makeDictationTranscriber(
         locale: Locale,
         lmConfiguration: SFSpeechLanguageModel.Configuration?
@@ -201,6 +204,34 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
             reportingOptions: preset.reportingOptions,
             attributeOptions: preset.attributeOptions
         )
+    }
+    #endif
+
+    // MARK: - Legacy Speech request (macOS Apple Speech fallback)
+
+    /// Up to 100 short phrases for `SFSpeechRecognitionRequest.contextualStrings`.
+    public static func contextualStringsForRecognition(
+        bias: LocalASRBiasPayload?,
+        maxCount: Int = 100
+    ) -> [String] {
+        guard let bias, !bias.hardHotwords.isEmpty else { return [] }
+        return Array(bias.hardHotwords.prefix(max(1, maxCount)))
+    }
+
+    /// Applies bundled CLM + optional contextual strings to a legacy on-device request.
+    public static func applyCustomLanguageModel(
+        to request: SFSpeechURLRecognitionRequest,
+        locale: Locale,
+        bias: LocalASRBiasPayload?
+    ) {
+        request.requiresOnDeviceRecognition = true
+        if let configuration = shared.configurationForTranscription(locale: locale) {
+            request.customizedLanguageModel = configuration
+        }
+        let phrases = contextualStringsForRecognition(bias: bias)
+        if !phrases.isEmpty {
+            request.contextualStrings = phrases
+        }
     }
 
     // MARK: - Bundle / disk helpers
@@ -238,14 +269,28 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
     }
 
     static func preparedDirectoryURL() -> URL? {
-        guard let container = FileManager.default.containerURL(
+        if let container = FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: AppGroup.identifier
-        ) else {
+        ) {
+            let directory = container.appendingPathComponent(Storage.subdirectory, isDirectory: true)
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            return directory
+        }
+        #if os(macOS)
+        guard let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first else {
             return nil
         }
-        let directory = container.appendingPathComponent(Storage.subdirectory, isDirectory: true)
+        let directory = appSupport
+            .appendingPathComponent("OSGKeyboard", isDirectory: true)
+            .appendingPathComponent(Storage.subdirectory, isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         return directory
+        #else
+        return nil
+        #endif
     }
 
     static func loadCachedConfigurationFromDisk() -> SFSpeechLanguageModel.Configuration? {
@@ -279,7 +324,7 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
     }
 
     private static func storedFingerprint() -> String? {
-        AppGroup.defaultsIfAvailable?.string(forKey: Storage.fingerprintKey)
+        persistenceDefaults.string(forKey: Storage.fingerprintKey)
     }
 
     private static func removeItemIfExists(at url: URL) throws {
@@ -310,26 +355,28 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
 
     // MARK: - Retry / backoff
 
+    private static var persistenceDefaults: UserDefaults {
+        AppGroup.defaultsIfAvailable ?? .standard
+    }
+
     private static func storedAttemptCount() -> Int {
-        AppGroup.defaultsIfAvailable?.integer(forKey: Storage.attemptCountKey) ?? 0
+        persistenceDefaults.integer(forKey: Storage.attemptCountKey)
     }
 
     private static func storedLastFailureAt() -> TimeInterval? {
-        let value = AppGroup.defaultsIfAvailable?.double(forKey: Storage.lastFailureAtKey) ?? 0
+        let value = persistenceDefaults.double(forKey: Storage.lastFailureAtKey)
         return value > 0 ? value : nil
     }
 
     private static func recordFailure() {
-        guard let defaults = AppGroup.defaultsIfAvailable else { return }
         let nextAttempt = storedAttemptCount() + 1
-        defaults.set(nextAttempt, forKey: Storage.attemptCountKey)
-        defaults.set(Date().timeIntervalSince1970, forKey: Storage.lastFailureAtKey)
+        persistenceDefaults.set(nextAttempt, forKey: Storage.attemptCountKey)
+        persistenceDefaults.set(Date().timeIntervalSince1970, forKey: Storage.lastFailureAtKey)
     }
 
     private static func clearRetryState() {
-        guard let defaults = AppGroup.defaultsIfAvailable else { return }
-        defaults.removeObject(forKey: Storage.attemptCountKey)
-        defaults.removeObject(forKey: Storage.lastFailureAtKey)
+        persistenceDefaults.removeObject(forKey: Storage.attemptCountKey)
+        persistenceDefaults.removeObject(forKey: Storage.lastFailureAtKey)
     }
 
     /// Returns false when retry budget is exhausted or backoff has not elapsed.

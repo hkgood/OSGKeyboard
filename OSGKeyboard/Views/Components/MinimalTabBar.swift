@@ -23,7 +23,7 @@ enum AppTab: Int, CaseIterable {
         }
     }
 
-    /// Matches `HomeStatsCard` dictionary stat cell (filled variant).
+    /// Filled SF Symbol override for the dictionary tab.
     var sfSymbol: String? {
         switch self {
         case .dictionary: return "square.stack.3d.down.right.fill"
@@ -37,6 +37,18 @@ enum AppTab: Int, CaseIterable {
         case .history: return "tab.history"
         case .dictionary: return "tab.dictionary"
         case .settings: return "tab.settings"
+        }
+    }
+
+    /// Sidebar label for iPad `NavigationSplitView` (SF Symbol + title).
+    var sidebarTitle: LocalizedStringKey { accessibilityKey }
+
+    var sidebarSystemImage: String {
+        switch self {
+        case .keyboard: return "house"
+        case .history: return "clock.arrow.circlepath"
+        case .dictionary: return "character.book.closed"
+        case .settings: return "gearshape"
         }
     }
 }

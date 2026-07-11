@@ -159,28 +159,78 @@ private final class FlowAudioProofStore: @unchecked Sendable {
 /// incoming buffer's format actually changes, so downsampling to the ASR target
 /// rate is always valid regardless of route churn.
 private final class AdaptiveDownsampler: @unchecked Sendable {
-    // `AVAudioConverter` / `AVAudioFormat` are not `Sendable`, so the state and
-    // the returned converter are guarded manually via the unchecked lock APIs.
-    private let lock = OSAllocatedUnfairLock<(converter: AVAudioConverter, source: AVAudioFormat)?>(uncheckedState: nil)
+    // `AVAudioConverter` / `AVAudioFormat` / `AVAudioPCMBuffer` are not
+    // `Sendable`, so the state is guarded manually via the unchecked lock
+    // APIs. The scratch output buffer is REUSED across tap callbacks —
+    // allocating on the realtime audio thread risks priority inversion, and
+    // taps on one bus are serialized, so a single scratch is safe as long as
+    // callers copy its contents out before returning (AudioBufferSnapshot
+    // does exactly that).
+    private struct State {
+        var converter: AVAudioConverter
+        var source: AVAudioFormat
+        var scratch: AVAudioPCMBuffer
+    }
+
+    private let lock = OSAllocatedUnfairLock<State?>(uncheckedState: nil)
     let targetFormat: AVAudioFormat
+
+    /// Frame headroom for the reusable output buffer. Taps deliver ≤4096
+    /// input frames; output frames = input × (16k / hardwareRate), which
+    /// exceeds input only for sub-16 kHz hardware (rare telephony routes),
+    /// so 2× the tap size covers every realistic ratio.
+    private static let scratchCapacity: AVAudioFrameCount = 8_192
 
     init(targetFormat: AVAudioFormat) {
         self.targetFormat = targetFormat
     }
 
-    /// Returns a converter valid for `sourceFormat`, rebuilding it lazily when
-    /// the hardware route (and thus the buffer format) changes.
-    func converter(for sourceFormat: AVAudioFormat) -> AVAudioConverter? {
-        lock.withLockUnchecked { state in
-            if let state, state.source == sourceFormat {
-                return state.converter
+    /// Downsamples `buffer` into the reusable scratch buffer and returns it,
+    /// rebuilding the converter lazily when the hardware route (and thus the
+    /// source format) changes. The returned buffer is only valid until the
+    /// next call — copy its samples out synchronously.
+    func convertReusingScratch(_ buffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+        let sourceFormat = buffer.format
+        guard sourceFormat.sampleRate > 0 else { return nil }
+        return lock.withLockUnchecked { state -> AVAudioPCMBuffer? in
+            if state == nil || state!.source != sourceFormat {
+                guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat),
+                      let scratch = AVAudioPCMBuffer(
+                        pcmFormat: targetFormat,
+                        frameCapacity: Self.scratchCapacity
+                      ) else {
+                    state = nil
+                    return nil
+                }
+                state = State(converter: converter, source: sourceFormat, scratch: scratch)
             }
-            guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
-                state = nil
-                return nil
+            guard let current = state else { return nil }
+
+            let wanted = AVAudioFrameCount(
+                Double(buffer.frameLength) * targetFormat.sampleRate / sourceFormat.sampleRate
+            )
+            guard wanted > 0, wanted <= current.scratch.frameCapacity else { return nil }
+            current.scratch.frameLength = 0
+
+            // ONE-SHOT input: the converter keeps pulling until the output
+            // buffer's frameCapacity is full, and the scratch is deliberately
+            // oversized — feeding the same tap buffer on every pull would
+            // duplicate the audio ~6× (stuttering ASR input). After the
+            // single feed we report "ran dry", so the expected status is
+            // `.inputRanDry` (output not full), not `.haveData`.
+            var provided = false
+            var error: NSError?
+            let status = current.converter.convert(to: current.scratch, error: &error) { _, outStatus in
+                if provided {
+                    outStatus.pointee = .noDataNow
+                    return nil
+                }
+                provided = true
+                outStatus.pointee = .haveData
+                return buffer
             }
-            state = (converter, sourceFormat)
-            return converter
+            guard status != .error, error == nil, current.scratch.frameLength > 0 else { return nil }
+            return current.scratch
         }
     }
 }
@@ -240,6 +290,10 @@ public final class FlowContinuousCapture {
     private var didInstallTap = false
     private var isRunning = false
     private var isRebuilding = false
+    private var interrupted = false
+    /// When the engine last (re)activated — a freshly started engine has
+    /// produced no frames yet and must not be misclassified as a zombie.
+    private var lastActivationAt = Date.distantPast
 
     private var routeObserver: NSObjectProtocol?
     private var interruptionObserver: NSObjectProtocol?
@@ -249,6 +303,11 @@ public final class FlowContinuousCapture {
     public init() {}
 
     public var running: Bool { isRunning }
+
+    /// True between interruption `.began` and `.ended` (phone call, Siri).
+    /// While set, `setActive(true)` is guaranteed to fail — owners should
+    /// wait for `.ended` (which rebuilds the engine) instead of retrying.
+    public var isInterrupted: Bool { interrupted }
 
     /// True when the capture session flag, tap, and audio engine are all live.
     public var engineIsLive: Bool {
@@ -264,9 +323,33 @@ public final class FlowContinuousCapture {
     /// Called on the main actor when `engineIsLive` may have changed.
     public var onEngineLiveChanged: ((Bool) -> Void)?
 
+    /// Called on the main actor when the system interrupted capture (phone
+    /// call, Siri). The session owner should fail any mic-open utterance —
+    /// audio frames stop arriving, so continuing to "record" only captures
+    /// a silence gap the user cannot see.
+    public var onInterruptionBegan: (() -> Void)?
+
     /// Configure `.playAndRecord`, install a permanent input tap, start the engine.
+    ///
+    /// Idempotent: "already running and healthy" is a warm-start fast path,
+    /// while "already running but producing no audio" is a zombie state
+    /// (force-quit relaunch, failed cold start, mediaserverd reset) that is
+    /// torn down and rebuilt in place. It must never be a silent no-op —
+    /// a `guard !isRunning` early-return here turned every cold-start retry
+    /// into a guaranteed audio-proof timeout.
     public func start() throws {
-        guard !isRunning else { return }
+        if isRunning {
+            let startedMomentsAgo = Date().timeIntervalSince(lastActivationAt) < 2
+            if engineIsLive && (engineHasRecentAudio(maxAge: 2) || startedMomentsAgo) {
+                // Healthy warm engine — or one so fresh it simply hasn't
+                // produced its first frame yet (interleaved start attempts
+                // land here; rebuilding a 100 ms-old engine only multiplies
+                // audio-session churn in the fragile post-relaunch window).
+                return
+            }
+            log.info("start(): zombie engine detected (running but no live audio) — forcing rebuild")
+            stop()
+        }
         audioProofStore.reset()
         try activateEngine()
         isRunning = true
@@ -353,6 +436,7 @@ public final class FlowContinuousCapture {
         } catch {
             throw StartError.engineStartFailed(error.localizedDescription)
         }
+        lastActivationAt = Date()
     }
 
     /// Tear down the engine and release the audio session.
@@ -371,6 +455,7 @@ public final class FlowContinuousCapture {
             audioEngine.stop()
         }
         isRunning = false
+        interrupted = false
         audioProofStore.reset()
         downsampler = nil
         targetFormat = nil
@@ -384,6 +469,13 @@ public final class FlowContinuousCapture {
 
     /// Re-activate capture after returning from background without
     /// reinstalling the tap (iOS may deactivate the audio session).
+    ///
+    /// Doubles as the interruption-recovery probe: `setActive(true)` FAILS
+    /// while a call/Siri interruption is live and succeeds once it ends, so a
+    /// successful reassert proves the interruption is over. iOS does not
+    /// guarantee delivery of `.ended` (commonly dropped when the app was
+    /// suspended during the call), so this is the only reliable way to clear
+    /// the `interrupted` latch in that case.
     @discardableResult
     public func reassertIfRunning() -> Bool {
         guard isRunning else { return false }
@@ -395,6 +487,7 @@ public final class FlowContinuousCapture {
                 options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
             )
             try session.setActive(true, options: .notifyOthersOnDeactivation)
+            interrupted = false
             if !audioEngine.isRunning {
                 try audioEngine.start()
             }
@@ -415,7 +508,14 @@ public final class FlowContinuousCapture {
             if engineHasRecentAudio(maxAge: recentFrameMaxAge) {
                 return true
             }
-            try? await Task.sleep(nanoseconds: 50_000_000)
+            do {
+                try await Task.sleep(nanoseconds: 50_000_000)
+            } catch {
+                // Cancelled — bail out instead of busy-spinning the main
+                // actor for the rest of the window (a cancelled Task.sleep
+                // returns immediately, starving concurrent start attempts).
+                return false
+            }
         }
         return engineHasRecentAudio(maxAge: recentFrameMaxAge)
     }
@@ -497,8 +597,11 @@ public final class FlowContinuousCapture {
         switch type {
         case .began:
             log.info("Audio interruption began")
+            interrupted = true
             notifyEngineLiveChanged()
+            onInterruptionBegan?()
         case .ended:
+            interrupted = false
             guard isRunning else { return }
             let shouldResume: Bool
             if let optionsRaw {
@@ -627,26 +730,12 @@ public final class FlowContinuousCapture {
             audioProofStore.markFrameReceived()
             levelStore.update(from: buffer, barCount: FlowCaptureConstants.levelBarCount)
 
-            // Derive the converter from the *live* buffer format so a mid-session
-            // route change (e.g. 48 kHz → 24 kHz) is handled transparently.
-            let sourceFormat = buffer.format
-            let targetFormat = downsampler.targetFormat
-            guard sourceFormat.sampleRate > 0,
-                  let converter = downsampler.converter(for: sourceFormat) else { return }
-
-            let outFrames = AVAudioFrameCount(
-                Double(buffer.frameLength) * targetFormat.sampleRate / sourceFormat.sampleRate
-            )
-            guard outFrames > 0,
-                  let outBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: outFrames)
-            else { return }
-
-            var error: NSError?
-            let status = converter.convert(to: outBuffer, error: &error) { _, outStatus in
-                outStatus.pointee = .haveData
-                return buffer
-            }
-            guard status == .haveData, error == nil, outBuffer.frameLength > 0 else { return }
+            // The downsampler derives its converter from the *live* buffer
+            // format (mid-session route changes handled transparently) and
+            // returns a REUSED scratch buffer — no per-callback allocation
+            // on the realtime thread. The snapshot below copies the samples
+            // out before the next tap callback can overwrite the scratch.
+            guard let outBuffer = downsampler.convertReusingScratch(buffer) else { return }
 
             let snapshot = AudioBufferSnapshot(buffer: outBuffer)
             guard !snapshot.samples.isEmpty else { return }

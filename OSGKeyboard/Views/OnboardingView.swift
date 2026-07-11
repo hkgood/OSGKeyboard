@@ -1,12 +1,13 @@
 // OnboardingView.swift
 // OSGKeyboard · Main App
 //
-// Five-step onboarding:
+// Six-step onboarding:
 //   1) Welcome
 //   2) Microphone permission
 //   3) Speech recognition permission
 //   4) Enable keyboard + Allow Full Access
-//   5) Engine / API setup
+//   5) Engine / ASR setup
+//   6) Polish LLM setup
 
 import SwiftUI
 import OSGKeyboardShared
@@ -18,8 +19,9 @@ private enum OnboardingPage: Int, CaseIterable {
     case speech
     case keyboard
     case api
+    case polish
 
-    static let count = 5
+    static let count = 6
 }
 
 struct OnboardingView: View {
@@ -61,6 +63,8 @@ struct OnboardingView: View {
                             EnableKeyboardPage()
                         case .api:
                             APISetupPage(config: config)
+                        case .polish:
+                            PolishSetupPage(config: config)
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -234,14 +238,14 @@ struct OnboardingView: View {
         }
     }
 
-    private var isLastPage: Bool { config.onboardingPage == OnboardingPage.api.rawValue }
+    private var isLastPage: Bool { config.onboardingPage == OnboardingPage.polish.rawValue }
 
     private var canAdvance: Bool {
         switch currentPage {
-        case .welcome, .keyboard:
+        case .welcome, .keyboard, .api:
             return !isLastPage || onboardingCompleteReady
-        case .api:
-            return !isLastPage || onboardingCompleteReady
+        case .polish:
+            return onboardingCompleteReady
         case .microphone:
             return micStatus != .undetermined
         case .speech:
@@ -250,9 +254,8 @@ struct OnboardingView: View {
     }
 
     private var onboardingCompleteReady: Bool {
-        // v0.2.0: the local engine uses iOS `SpeechAnalyzer`, which is
-        // always available — no model download gate. The cloud engine
-        // still requires base URL + API key + model.
+        // Local engine: built-in polish satisfies `isPolishConfigured`.
+        // Cloud engine: ASR (step 5) + polish LLM (step 6) must both be ready.
         if config.isLocalEngine { return true }
         return config.isConfigured
     }
@@ -364,7 +367,6 @@ private struct OnboardingTitleBlock: View {
 // MARK: - Welcome
 
 private struct WelcomePage: View {
-    @Environment(\.themePalette) private var palette: ThemePalette
     @State private var logoAppeared = false
 
     var body: some View {
@@ -386,25 +388,12 @@ private struct WelcomePage: View {
                 }
 
             OnboardingTitleBlock(
-                title: "onboarding.welcome.tagline",
-                subtitle: "onboarding.welcome.subtitle",
-                secondarySubtitle: "onboarding.welcome.subtitle2"
+                title: "onboarding.welcome.tagline"
             )
             .opacity(logoAppeared ? 1 : 0)
             .offset(y: logoAppeared ? 0 : 10)
             .padding(.top, OnboardingLayoutMetrics.heroTextGap)
             .animation(.spring(response: 0.8, dampingFraction: 0.85).delay(0.12), value: logoAppeared)
-
-            if let url = LegalLinks.privacyPolicyURL {
-                Link(destination: url) {
-                    Text("legal.privacyPolicy")
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.accent)
-                }
-                .padding(.top, Spacing.xxxl)
-                .opacity(logoAppeared ? 1 : 0)
-                .animation(.easeOut(duration: 0.45).delay(0.28), value: logoAppeared)
-            }
 
             Spacer()
         }
@@ -708,7 +697,7 @@ private struct EnableKeyboardPage: View {
     }
 }
 
-// MARK: - API setup
+// MARK: - Engine / ASR setup
 
 private struct APISetupPage: View {
     @Environment(\.themePalette) private var palette: ThemePalette
@@ -728,16 +717,60 @@ private struct APISetupPage: View {
                     .padding(.horizontal, Spacing.lg)
 
                 if config.engineMode == "cloud" {
-                    ProviderPickerSection(config: config)
-                        .padding(.horizontal, Spacing.lg)
-                    APISettingsCard(config: config)
-                        .padding(.horizontal, Spacing.lg)
+                    VStack(spacing: 0) {
+                        ProviderPickerSection(config: config, role: .asr, showsSurface: false)
+                        Divider().background(palette.divider)
+                        ASRSettingsCard(config: config, showsSurface: false)
+                    }
+                    .modifier(SettingsSurfaceCardModifier(enabled: true))
+                    .padding(.horizontal, Spacing.lg)
                 } else {
-                    // Local engine: built-in ASR + built-in polish (no API card).
-                    LocalModelsGroup(config: config)
-                        .padding(.horizontal, Spacing.lg)
+                    Text("onboarding.api.localModels.hint")
+                        .font(TypeStyle.body)
+                        .foregroundStyle(palette.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, Spacing.xl)
+                }
+            }
+            .padding(.bottom, Spacing.xxxl)
+        }
+    }
+}
+
+// MARK: - Polish LLM setup
+
+private struct PolishSetupPage: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
+    @ObservedObject var config: ProviderConfig
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: Spacing.lg) {
+                OnboardingHeroIcon(systemName: "wand.and.stars", circleSize: 72, iconSize: 30)
+                    .padding(.top, Spacing.xl)
+
+                OnboardingTitleBlock(
+                    title: "onboarding.polish.title",
+                    subtitle: "onboarding.polish.subtitle"
+                )
+                .padding(.horizontal, Spacing.lg)
+
+                if config.isLocalEngine {
+                    Text("onboarding.polish.localHint")
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, Spacing.xl)
                 }
 
+                VStack(spacing: 0) {
+                    ProviderPickerSection(config: config, role: .polish, showsSurface: false)
+                    Divider().background(palette.divider)
+                    APISettingsCard(config: config, showsSurface: false)
+                }
+                .modifier(SettingsSurfaceCardModifier(enabled: true))
+                .padding(.horizontal, Spacing.lg)
             }
             .padding(.bottom, Spacing.xxxl)
         }

@@ -12,7 +12,7 @@
 //   │              (transcript preview)         │
 //   │              ┊                          │
 //   │              ◯ mic (centred)              │  ← action cluster:
-//   │   [delete]  [  space  ]  [return]         │     mic + bottom row
+//   │   [delete]  [ return ]  [space]           │     mic + bottom row
 //   │              ┊                          │
 //   └───────────────────────────────────────────┘
 
@@ -33,6 +33,11 @@ private enum KeyboardLayoutMetrics {
     static let topBarToTranscriptSpacing: CGFloat = Spacing.xs / 2
     /// Outer inset for the bottom action row from screen edges (8 pt → 24 pt, +200%).
     static let sideActionHorizontalInset: CGFloat = Spacing.xs * 3
+    /// iPad: cap the content column. A full-width (~1180 pt) keyboard would
+    /// park delete/return at the far screen edges and turn each cursor-drag
+    /// pad into a ~450 pt runway — capping keeps the reach ergonomics of the
+    /// phone layout. iPhone widths are all below this, so it is a no-op there.
+    static let contentMaxWidth: CGFloat = 700
 
     // MARK: - Content-driven keyboard height (single source of truth)
     static let outerPaddingTop: CGFloat = 2
@@ -109,6 +114,8 @@ public struct KeyboardRootView: View {
             .padding(.bottom, KeyboardLayoutMetrics.outerPaddingBottom)
             // 透明背景：让系统键盘 chrome 透出，不自行铺色（深浅模式一致）。
             .background(Color.clear)
+            .frame(maxWidth: KeyboardLayoutMetrics.contentMaxWidth)
+            .frame(maxWidth: .infinity)
             .frame(height: Self.totalHeight)
             // Feed the resolved palette to all nested chips/buttons.
             .environment(\.themePalette, palette)
@@ -184,7 +191,7 @@ public struct KeyboardRootView: View {
 
     // MARK: - Action cluster
 
-    /// Mic centred above a bottom row: delete · space · return (or swapped).
+    /// Mic centred above a bottom row: delete · smart return · space (or swapped).
     /// The side cursor-drag pads are SwiftUI layout wrappers around UIKit
     /// pan recognizers, avoiding SwiftUI gesture delivery issues in
     /// keyboard extensions.
@@ -218,13 +225,13 @@ public struct KeyboardRootView: View {
 
             HStack(spacing: KeyboardLayoutMetrics.bottomActionSpacing) {
                 if swapKeys {
-                    bottomReturnButton(disabled: editingBlocked)
                     bottomSpaceButton(disabled: editingBlocked)
+                    bottomReturnButton(disabled: editingBlocked)
                     bottomDeleteButton(disabled: editingBlocked)
                 } else {
                     bottomDeleteButton(disabled: editingBlocked)
-                    bottomSpaceButton(disabled: editingBlocked)
                     bottomReturnButton(disabled: editingBlocked)
+                    bottomSpaceButton(disabled: editingBlocked)
                 }
             }
             .opacity(dragging ? 0 : 1)
@@ -258,17 +265,18 @@ public struct KeyboardRootView: View {
         RectangularToolbarButton(spaceStyle: true, label: "space", disabled: disabled) {
             state.insertSpace()
         }
-        .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
-    }
-
-    private func bottomReturnButton(disabled: Bool) -> some View {
-        RectangularToolbarButton(systemName: "return", label: "newline", disabled: disabled) {
-            state.insertNewline()
-        }
         .frame(
             width: KeyboardLayoutMetrics.bottomActionFixedWidth,
             height: KeyboardLayoutMetrics.bottomActionRowHeight
         )
+    }
+
+    private func bottomReturnButton(disabled: Bool) -> some View {
+        let title = ExtL10n.string(state.returnKeyRole.titleKey)
+        return RectangularToolbarButton(title: title, label: title, disabled: disabled) {
+            state.insertNewline()
+        }
+        .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
     }
 
     /// Option C: block typing keys during the full voice-input pipeline.

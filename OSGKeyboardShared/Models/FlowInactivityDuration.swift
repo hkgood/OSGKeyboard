@@ -15,7 +15,12 @@ public enum FlowInactivityDuration: String, CaseIterable, Identifiable, Sendable
 
     public var id: String { rawValue }
 
-    public static let `default`: FlowInactivityDuration = .twelveHours
+    /// 30 minutes, not hours: competitors cap sessions at 5–60 min for a
+    /// reason — a very long TTL keeps advertising "session active" long after
+    /// the host process is likely suspended or dead, amplifying every stale-
+    /// state bug into hours of confusing UI. Users can still opt into longer
+    /// windows explicitly.
+    public static let `default`: FlowInactivityDuration = .thirtyMinutes
 
     public var timeInterval: TimeInterval {
         switch self {

@@ -44,6 +44,9 @@ final class SettingsCloudSyncTests: XCTestCase {
             providerId: SyncedField(value: "openai", updatedAt: stampA, deviceID: deviceA),
             baseURL: SyncedField(value: "https://local.example", updatedAt: stampA, deviceID: deviceA),
             model: SyncedField(value: "gpt-local", updatedAt: stampA, deviceID: deviceA),
+            asrProviderId: SyncedField(value: "zhipu", updatedAt: stampA, deviceID: deviceA),
+            asrBaseURL: SyncedField(value: "https://asr-local.example", updatedAt: stampA, deviceID: deviceA),
+            asrModel: SyncedField(value: "glm-asr-local", updatedAt: stampA, deviceID: deviceA),
             modeId: SyncedField(value: "polish", updatedAt: stampA, deviceID: deviceA),
             localeId: SyncedField(value: "auto", updatedAt: stampA, deviceID: deviceA),
             engineMode: SyncedField(value: "cloud", updatedAt: stampA, deviceID: deviceA),
@@ -57,6 +60,7 @@ final class SettingsCloudSyncTests: XCTestCase {
             handednessPreference: SyncedField(value: .left, updatedAt: stampA, deviceID: deviceA),
             cursorDragNavigationEnabled: SyncedField(value: true, updatedAt: stampA, deviceID: deviceA),
             polishIntensity: SyncedField(value: .medium, updatedAt: stampA, deviceID: deviceA),
+            llmThinkingEnabled: SyncedField(value: false, updatedAt: stampA, deviceID: deviceA),
             flowSkipAppSwitch: SyncedField(value: true, updatedAt: stampA, deviceID: deviceA),
             flowInactivityDuration: SyncedField(value: .twelveHours, updatedAt: stampA, deviceID: deviceA)
         )
@@ -64,6 +68,9 @@ final class SettingsCloudSyncTests: XCTestCase {
             providerId: SyncedField(value: "openai", updatedAt: stampA, deviceID: deviceB),
             baseURL: SyncedField(value: "https://remote.example", updatedAt: stampB, deviceID: deviceB),
             model: SyncedField(value: "gpt-remote", updatedAt: stampB, deviceID: deviceB),
+            asrProviderId: SyncedField(value: "qwen", updatedAt: stampB, deviceID: deviceB),
+            asrBaseURL: SyncedField(value: "https://asr-remote.example", updatedAt: stampB, deviceID: deviceB),
+            asrModel: SyncedField(value: "fun-asr-remote", updatedAt: stampB, deviceID: deviceB),
             modeId: SyncedField(value: "polish", updatedAt: stampA, deviceID: deviceB),
             localeId: SyncedField(value: "ja", updatedAt: stampB, deviceID: deviceB),
             engineMode: SyncedField(value: "local", updatedAt: stampB, deviceID: deviceB),
@@ -73,6 +80,7 @@ final class SettingsCloudSyncTests: XCTestCase {
             handednessPreference: SyncedField(value: .right, updatedAt: stampB, deviceID: deviceB),
             cursorDragNavigationEnabled: SyncedField(value: false, updatedAt: stampB, deviceID: deviceB),
             polishIntensity: SyncedField(value: .light, updatedAt: stampB, deviceID: deviceB),
+            llmThinkingEnabled: SyncedField(value: true, updatedAt: stampB, deviceID: deviceB),
             flowSkipAppSwitch: SyncedField(value: false, updatedAt: stampB, deviceID: deviceB),
             flowInactivityDuration: SyncedField(value: .threeHours, updatedAt: stampB, deviceID: deviceB)
         )
@@ -80,6 +88,7 @@ final class SettingsCloudSyncTests: XCTestCase {
         let merged = SyncedAppSettingsV2.merge(local: local, remote: remote)
 
         XCTAssertEqual(merged.baseURL.value, "https://remote.example")
+        XCTAssertEqual(merged.asrProviderId.value, "qwen")
         XCTAssertEqual(merged.localeId.value, "ja")
         XCTAssertEqual(merged.engineMode.value, "local")
     }
@@ -122,6 +131,7 @@ final class SettingsCloudSyncTests: XCTestCase {
         try await settingsSync.enableSync()
 
         XCTAssertTrue(store.settingsICloudSyncEnabled)
+        XCTAssertTrue(store.personalDictionaryICloudSyncEnabled)
         XCTAssertEqual(Keychain.apiKey(for: "openai", preferICloudSync: true), "sk-local-openai")
     }
 

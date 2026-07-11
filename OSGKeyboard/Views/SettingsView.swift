@@ -43,20 +43,13 @@ struct SettingsView: View {
                         dictionaryAndPolishSection
                         flowSessionSection
                         engineSection
-                        // v0.2.1: hide provider/api card when the
-                        // local engine is active regardless of the
-                        // cloud-polish toggle. Local mode is
-                        // contractually ASR-only, so provider/model/
-                        // base URL/API key controls have no use —
-                        // and exposing them invites the user to fill
-                        // out a DeepSeek key they can't use.
                         if config.engineMode == "cloud" {
-                            providerSection
-                            apiSection
+                            asrSettingsSection
                         }
                         if config.engineMode == "local" {
                             localEngineSettingsSection
                         }
+                        polishSettingsSection
                         if presentation == .tab {
                             footerLinks
                         }
@@ -120,9 +113,7 @@ struct SettingsView: View {
                     }
                 }
                 .tint(palette.accent)
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.sm)
-                .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+                .settingsListRow()
 
                 Divider().background(palette.divider)
 
@@ -227,10 +218,6 @@ struct SettingsView: View {
                 Divider().background(palette.divider)
 
                 TranslationPickerRow(config: config, isVisible: config.isTranslationRowVisible)
-
-                Divider().background(palette.divider)
-
-                PersonalDictionaryICloudSyncRow()
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
             .overlay(
@@ -253,20 +240,36 @@ struct SettingsView: View {
         }
     }
 
-    private var providerSection: some View {
+    private var polishSettingsSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.provider.title")
-            ProviderPickerSection(config: config)
+            sectionHeader("settings.polishProvider.title")
+            cloudProviderSettingsCard {
+                ProviderPickerSection(config: config, role: .polish, showsSurface: false)
+                Divider().background(palette.divider)
+                APISettingsCard(config: config, showsSurface: false)
+            }
         }
     }
 
-    // MARK: - API
-
-    private var apiSection: some View {
+    private var asrSettingsSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.api.title")
-            APISettingsCard(config: config)
+            sectionHeader("settings.asrProvider.title")
+            cloudProviderSettingsCard {
+                ProviderPickerSection(config: config, role: .asr, showsSurface: false)
+                Divider().background(palette.divider)
+                ASRSettingsCard(config: config, showsSurface: false)
+            }
         }
+    }
+
+    @ViewBuilder
+    private func cloudProviderSettingsCard<Content: View>(
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(spacing: 0) {
+            content()
+        }
+        .modifier(SettingsSurfaceCardModifier(enabled: true))
     }
 
     // MARK: - Language helpers
@@ -337,8 +340,7 @@ struct SettingsView: View {
                 .foregroundStyle(palette.textPrimary)
         }
         .tint(palette.accent)
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+        .settingsListRow()
     }
 
     // MARK: - Footer links (tab settings only)
@@ -360,8 +362,7 @@ struct SettingsView: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(palette.textTertiary)
                     }
-                    .padding(.horizontal, Spacing.md)
-                    .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+                    .settingsListRow()
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -417,8 +418,7 @@ struct SettingsView: View {
                 MaterialIcon(name: .openInNew, size: 18)
                     .foregroundStyle(palette.textTertiary)
             }
-            .padding(.horizontal, Spacing.md)
-            .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+            .settingsListRow()
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -438,8 +438,7 @@ struct SettingsView: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(palette.textTertiary)
         }
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+        .settingsListRow()
         .contentShape(Rectangle())
     }
 
@@ -581,8 +580,7 @@ private struct PickerRow: View {
                 }
             }
         }
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+        .settingsListRow()
     }
 
     private var currentLabel: String {
@@ -639,8 +637,7 @@ private struct LocalePickerRow: View {
                 }
             }
         }
-        .padding(.horizontal, Spacing.md)
-        .frame(minHeight: SettingsListMetrics.singleLineMinHeight)
+        .settingsListRow()
     }
 
     private func label(for localeId: String) -> String {

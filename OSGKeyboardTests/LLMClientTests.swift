@@ -347,6 +347,83 @@ final class LLMClientTests: XCTestCase {
 
     /// Local engine pins DeepSeek — cloud-provider URL/model in App Group
     /// must not leak into the LLM request (regression: Qwen URL + DeepSeek key → 401).
+    func testLLMClientFactoryRoutesAnthropic() {
+        let client = LLMClientFactory.make(
+            providerId: "anthropic",
+            baseURL: "",
+            apiKey: "sk-test",
+            model: "claude-sonnet-4-6"
+        )
+        XCTAssertTrue(client is AnthropicMessagesClient)
+    }
+
+    func testLLMClientFactoryResolvesGeminiOpenAICompatBaseURL() {
+        let client = LLMClientFactory.make(
+            providerId: "gemini",
+            baseURL: "",
+            apiKey: "key",
+            model: "gemini-2.5-flash"
+        ) as! OpenAICompatibleClient
+        XCTAssertEqual(
+            client.baseURL,
+            "https://generativelanguage.googleapis.com/v1beta/openai"
+        )
+    }
+
+    /// DeepSeek V4 thinking defaults ON server-side; polish must explicitly disable it.
+    func testDeepSeekPolishDisablesThinkingByDefault() {
+        var body: [String: Any] = ["model": "deepseek-v4-flash"]
+        LLMThinkingControl.apply(
+            to: &body,
+            providerId: "deepseek",
+            baseURL: "https://api.deepseek.com/v1",
+            model: "deepseek-v4-flash",
+            enabled: false
+        )
+        let thinking = body["thinking"] as? [String: Any]
+        XCTAssertEqual(thinking?["type"] as? String, "disabled")
+        XCTAssertNil(body["reasoning_effort"], "disabled path must not send reasoning_effort (low→high on DeepSeek)")
+    }
+
+    func testDeepSeekPolishEnablesThinkingWhenToggledOn() {
+        var body: [String: Any] = ["model": "deepseek-v4-flash"]
+        LLMThinkingControl.apply(
+            to: &body,
+            providerId: "deepseek",
+            baseURL: "https://api.deepseek.com/v1",
+            model: "deepseek-v4-flash",
+            enabled: true
+        )
+        let thinking = body["thinking"] as? [String: Any]
+        XCTAssertEqual(thinking?["type"] as? String, "enabled")
+        XCTAssertEqual(body["reasoning_effort"] as? String, "high")
+    }
+
+    /// Ordinary OpenAI chat models must not get thinking fields when the toggle is off.
+    func testOpenAIChatDoesNotInjectThinkingWhenDisabled() {
+        var body: [String: Any] = ["model": "gpt-4o-mini"]
+        LLMThinkingControl.apply(
+            to: &body,
+            providerId: "openai",
+            baseURL: "https://api.openai.com/v1",
+            model: "gpt-4o-mini",
+            enabled: false
+        )
+        XCTAssertNil(body["thinking"])
+        XCTAssertNil(body["reasoning_effort"])
+        XCTAssertNil(body["thinking_config"])
+    }
+
+    func testLLMThinkingDefaultIsOffInFreshConfiguration() {
+        let suiteName = "group.com.osgkeyboard.shared.tests.thinking.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let config = ProviderConfig(defaults: defaults)
+        XCTAssertFalse(config.llmThinkingEnabled, "cloud polish thinking must default off")
+    }
+
     func testResolveLLMEndpointUsesPresetWhenProviderPinned() {
         let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

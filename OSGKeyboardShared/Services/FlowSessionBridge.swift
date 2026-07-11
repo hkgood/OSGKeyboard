@@ -130,6 +130,12 @@ public struct FlowReadySnapshot: Codable, Equatable, Sendable {
     public let localeId: String
     public let busyUtteranceId: UUID?
     public let sessionExpiresAt: TimeInterval?
+    /// Host process generation that wrote this snapshot. A snapshot whose
+    /// generation no longer matches `FlowSessionKeys.hostGeneration` was
+    /// written by a dead process and is void immediately — no need to wait
+    /// out the heartbeat-zombie window. Optional for wire compatibility with
+    /// snapshots written before this field existed.
+    public let hostGeneration: String?
 
     public init(
         protocolVersion: Int = 1,
@@ -142,7 +148,8 @@ public struct FlowReadySnapshot: Codable, Equatable, Sendable {
         engineMode: String,
         localeId: String,
         busyUtteranceId: UUID? = nil,
-        sessionExpiresAt: TimeInterval? = nil
+        sessionExpiresAt: TimeInterval? = nil,
+        hostGeneration: String? = nil
     ) {
         self.protocolVersion = protocolVersion
         self.sessionId = sessionId
@@ -155,6 +162,7 @@ public struct FlowReadySnapshot: Codable, Equatable, Sendable {
         self.localeId = localeId
         self.busyUtteranceId = busyUtteranceId
         self.sessionExpiresAt = sessionExpiresAt
+        self.hostGeneration = hostGeneration
     }
 }
 
@@ -266,13 +274,27 @@ public enum FlowSessionBridge {
                 store.set(readyAt, forKey: FlowSessionKeys.flowHostReadyAt)
             }
         } else {
+            // Keep the not-ready payload. The keyboard needs `reason`
+            // (recording / processing / waitingForAudioProof / …) to tell
+            // "host is busy" apart from "host is still starting". Deleting
+            // the payload here forced every mid-utterance ready=false into
+            // a permanent orange `preparingSession` state.
             clearHostReady(defaults: store, notify: false)
-            store.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
         }
         if let expires = snapshot.sessionExpiresAt {
             store.set(expires, forKey: FlowSessionKeys.flowSessionExpires)
         }
-        store.set(snapshot.heartbeatAt, forKey: FlowSessionKeys.flowHeartbeat)
+        // Only a genuinely live host — ready, or actively serving an
+        // utterance — may refresh the heartbeat here. A host stuck in a
+        // failed cold start would otherwise keep "reviving" itself on every
+        // engine-state flap, flickering the keyboard between reachable and
+        // dead and postponing zombie-state cleanup indefinitely.
+        let provesHostAlive = snapshot.ready
+            || snapshot.reason == .recording
+            || snapshot.reason == .processing
+        if provesHostAlive {
+            store.set(snapshot.heartbeatAt, forKey: FlowSessionKeys.flowHeartbeat)
+        }
         flush(store)
         FlowSessionDarwin.postHostReadyChanged()
     }
@@ -309,7 +331,8 @@ public enum FlowSessionBridge {
                 heartbeatAt: now,
                 engineMode: AppGroupConfiguration.load(fromAvailable: store).engineMode,
                 localeId: AppGroupConfiguration.load(fromAvailable: store).localeId,
-                sessionExpiresAt: expires
+                sessionExpiresAt: expires,
+                hostGeneration: store.string(forKey: FlowSessionKeys.hostGeneration)
             )
             if let data = encode(snapshot) {
                 store.set(data, forKey: FlowSessionKeys.flowReadyPayload)
@@ -418,6 +441,54 @@ public enum FlowSessionBridge {
         return staleness <= FlowSessionKeys.heartbeatStaleInterval
     }
 
+    // MARK: - Host process generation
+
+    /// Host app: rotate the per-process generation token. Call exactly once,
+    /// as early as possible in the host launch path. Returns the previous
+    /// generation (nil on first-ever launch) so the caller can log it.
+    ///
+    /// Rationale: `applicationWillTerminate` is best-effort — it never runs
+    /// when a *suspended* app is force-quit (the common case after a failed
+    /// cold start). Instead of anchoring cleanup on a termination callback
+    /// that may not fire, each launch proves the previous process is dead and
+    /// voids whatever session state it left behind.
+    @discardableResult
+    public static func rotateHostGeneration(defaults: UserDefaults? = nil) -> String? {
+        let store = resolvedDefaults(defaults)
+        let previous = store.string(forKey: FlowSessionKeys.hostGeneration)
+        store.set(UUID().uuidString, forKey: FlowSessionKeys.hostGeneration)
+        flush(store)
+        return previous
+    }
+
+    public static func currentHostGeneration(defaults: UserDefaults? = nil) -> String? {
+        let store = resolvedDefaults(defaults)
+        return store.string(forKey: FlowSessionKeys.hostGeneration)
+    }
+
+    /// Host launch reconciliation: clear every piece of persisted session
+    /// state a previous (dead) generation left behind. Unlike
+    /// `clearFlowState()` this keeps `pendingHostBundleId` — on a keyboard
+    /// `startflow` cold launch the scene delegate stores the host bundle id
+    /// *before* the SwiftUI hierarchy (and thus the session manager) exists,
+    /// and wiping it here would break the return-to-host affordance.
+    public static func clearFlowStateOnHostLaunch(defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        store.set(false, forKey: FlowSessionKeys.flowSessionActive)
+        store.removeObject(forKey: FlowSessionKeys.flowSessionExpires)
+        store.removeObject(forKey: FlowSessionKeys.flowHeartbeat)
+        store.removeObject(forKey: FlowSessionKeys.keyboardRecordingState)
+        store.removeObject(forKey: FlowSessionKeys.flowCommandPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowResultPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowAckPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
+        clearTranscription(defaults: store)
+        store.removeObject(forKey: FlowSessionKeys.audioLevels)
+        store.removeObject(forKey: FlowSessionKeys.lastActivityAt)
+        clearHostReady(defaults: store, notify: false)
+        flush(store)
+    }
+
     // MARK: - Host ready contract (host app → keyboard)
 
     /// Host app: publish whether Flow can accept a new utterance right now.
@@ -446,6 +517,13 @@ public enum FlowSessionBridge {
         let store = resolvedDefaults(defaults)
         if let snapshot = readySnapshot(defaults: store) {
             guard snapshot.ready else { return false }
+            // Snapshot written by a dead host generation → void immediately,
+            // without waiting out the heartbeat-zombie window.
+            if let snapshotGeneration = snapshot.hostGeneration,
+               let currentGeneration = store.string(forKey: FlowSessionKeys.hostGeneration),
+               snapshotGeneration != currentGeneration {
+                return false
+            }
             guard isHostReachable(defaults: store) else { return false }
             if let readyAt = snapshot.readyAt {
                 let skew = abs(snapshot.heartbeatAt - readyAt)

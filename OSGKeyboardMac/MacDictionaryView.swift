@@ -1,9 +1,8 @@
 // MacDictionaryView.swift
 // OSGKeyboard · Mac
 //
-// Personal dictionary synced via iCloud KVS with the iOS app. Read-only on
-// the desktop (words are authored on iPhone / iPad): grouped cards (native
-// `Form`) with search, matching the Settings and History card style.
+// Personal dictionary synced via iCloud KVS. ScrollView is full-bleed
+// (scrollbar on the window edge); title + cards share `pageHorizontalInset`.
 
 import SwiftUI
 
@@ -45,16 +44,27 @@ struct MacDictionaryView: View {
     }
 
     var body: some View {
-        Group {
-            if entries.isEmpty {
-                emptyState
-                    .transition(.opacity)
-            } else {
-                form
-                    .transition(.opacity)
+        VStack(spacing: 0) {
+            MacPageHeader(
+                title: MacL10n.string("mac.section.dictionary", language: lang),
+                subtitle: MacL10n.string("mac.page.dictionary.subtitle", language: lang)
+            ) {
+                if !entries.isEmpty {
+                    searchField
+                }
             }
+
+            Group {
+                if entries.isEmpty {
+                    emptyState
+                        .transition(.opacity)
+                } else {
+                    list
+                        .transition(.opacity)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(palette.background)
         .animation(Motion.soft, value: entries.isEmpty)
         .task {
@@ -64,33 +74,6 @@ struct MacDictionaryView: View {
         .onReceive(NotificationCenter.default.publisher(for: .personalDictionaryDidSyncFromCloud)) { _ in
             viewModel.refreshDictionaryFromCloud()
         }
-    }
-
-    // MARK: - Grouped cards
-
-    private var form: some View {
-        Form {
-            if sections.isEmpty {
-                Section {
-                    Text(MacL10n.string("mac.dict.noMatch", language: lang))
-                        .foregroundStyle(palette.textTertiary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-            } else {
-                ForEach(sections, id: \.category) { section in
-                    Section(MacL10n.string(section.category.labelKey, language: lang)) {
-                        ForEach(section.items) { entry in
-                            row(entry)
-                        }
-                    }
-                }
-            }
-        }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .background(palette.background)
-        .animation(Motion.soft, value: query)
-        .safeAreaInset(edge: .top, spacing: 0) { centeredSearchField }
         .confirmationDialog(
             MacL10n.string("mac.dict.deleteTitle", language: lang),
             isPresented: deletionDialogBinding,
@@ -110,6 +93,51 @@ struct MacDictionaryView: View {
         }
     }
 
+    // MARK: - List
+
+    private var list: some View {
+        // Full-bleed ScrollView → scrollbar on the detail pane's right edge.
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: Spacing.xl) {
+                if sections.isEmpty {
+                    MacCard {
+                        Text(MacL10n.string("mac.dict.noMatch", language: lang))
+                            .foregroundStyle(palette.textTertiary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                } else {
+                    ForEach(sections, id: \.category) { section in
+                        categorySection(section)
+                    }
+                }
+            }
+            .padding(.horizontal, MacMetrics.pageHorizontalInset)
+            .padding(.bottom, Spacing.md)
+            .animation(Motion.soft, value: query)
+        }
+    }
+
+    private func categorySection(
+        _ section: (category: PersonalDictionary.Entry.Category, items: [PersonalDictionary.Entry])
+    ) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text(MacL10n.string(section.category.labelKey, language: lang))
+                .font(MacSettingsType.sectionTitle)
+                .foregroundStyle(palette.textSecondary)
+                .textCase(.uppercase)
+
+            MacCard(padding: 0) {
+                VStack(spacing: 0) {
+                    ForEach(section.items, id: \.id) { entry in
+                        row(entry)
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.vertical, Spacing.sm)
+                    }
+                }
+            }
+        }
+    }
+
     private var deletionDialogBinding: Binding<Bool> {
         Binding(
             get: { entryPendingDeletion != nil },
@@ -117,25 +145,19 @@ struct MacDictionaryView: View {
         )
     }
 
-    private var centeredSearchField: some View {
-        HStack {
-            Spacer()
-            HStack(spacing: Spacing.xs) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(palette.textTertiary)
-                TextField(MacL10n.string("mac.dict.search", language: lang), text: $query)
-                    .textFieldStyle(.plain)
-            }
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, 7)
-            .frame(width: 240)
-            .macGlassSurface(in: Capsule(), fillOpacity: 0.72)
-            .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
-            Spacer()
+    private var searchField: some View {
+        HStack(spacing: Spacing.xs) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(palette.textTertiary)
+            TextField(MacL10n.string("mac.dict.search", language: lang), text: $query)
+                .textFieldStyle(.plain)
+                .font(TypeStyle.footnote)
         }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.xs)
-        .background(palette.background)
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, 6)
+        .frame(width: 220)
+        .background(palette.surface, in: Capsule())
+        .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
     }
 
     private func row(_ entry: PersonalDictionary.Entry) -> some View {
@@ -165,19 +187,19 @@ struct MacDictionaryView: View {
     private var emptyState: some View {
         VStack(spacing: Spacing.sm) {
             Image(systemName: "character.book.closed")
-                .font(.system(size: 34))
-                .foregroundStyle(palette.textTertiary.opacity(0.6))
+                .font(.system(size: 34, weight: .light))
+                .foregroundStyle(palette.textTertiary.opacity(0.55))
+                .symbolRenderingMode(.hierarchical)
             Text(MacL10n.string("mac.dict.empty", language: lang))
-                .font(TypeStyle.body)
+                .font(TypeStyle.headline)
                 .foregroundStyle(palette.textSecondary)
             Text(MacL10n.string("mac.dict.emptyBody", language: lang))
-                .font(TypeStyle.caption)
+                .font(TypeStyle.footnote)
                 .foregroundStyle(palette.textTertiary)
                 .multilineTextAlignment(.center)
-                .frame(maxWidth: 360)
+                .frame(maxWidth: 320)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, Spacing.xl)
     }
 
     private func delete(_ entry: PersonalDictionary.Entry) {

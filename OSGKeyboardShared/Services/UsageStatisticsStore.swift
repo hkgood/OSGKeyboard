@@ -14,6 +14,13 @@ public final class UsageStatisticsStore: ObservableObject {
     @Published public private(set) var dictationDurationSeconds: TimeInterval = 0
     @Published public private(set) var dictationCharacterCount: Int = 0
     @Published public private(set) var translationCharacterCount: Int = 0
+    /// Cross-device dictation characters per local day (`yyyy-MM-dd`), used by
+    /// the home page's 7-day chart.
+    @Published public private(set) var dailyDictationCharacters: [String: Int] = [:]
+
+    /// How many days of daily buckets to retain on disk. Well beyond the 7-day
+    /// chart window so a device that syncs in late still contributes recent days.
+    private static let dailyRetentionDays = 90
 
     public let defaults: UserDefaults
 
@@ -53,6 +60,9 @@ public final class UsageStatisticsStore: ObservableObject {
             slice.translationCharacterCount += count
         } else {
             slice.dictationCharacterCount += count
+            let dayKey = UsageStatisticsDayKey.key(for: Date())
+            slice.dailyDictationCharacters[dayKey, default: 0] += count
+            UsageStatisticsDayKey.prune(&slice.dailyDictationCharacters, keepingDays: Self.dailyRetentionDays)
         }
         slice.dictationDurationSeconds += max(0, duration)
         slice.updatedAt = Date()
@@ -69,10 +79,42 @@ public final class UsageStatisticsStore: ObservableObject {
     /// aggregated cross-device sum and NEVER writes it back (writing would
     /// corrupt the per-device slices — see `recordUtterance`).
     public func reloadFromDisk() {
-        let aggregated = SyncedUsageStatisticsStorage.load(from: defaults).aggregated
+        let payload = SyncedUsageStatisticsStorage.load(from: defaults)
+        let aggregated = payload.aggregated
         dictationDurationSeconds = aggregated.dictationDurationSeconds
         dictationCharacterCount = aggregated.dictationCharacterCount
         translationCharacterCount = aggregated.translationCharacterCount
+        dailyDictationCharacters = payload.aggregatedDailyDictationCharacters
+    }
+
+    // MARK: - 7-day chart data
+
+    /// One day's dictation total for the home page chart.
+    public struct DailyUsagePoint: Identifiable, Equatable, Sendable {
+        public let date: Date
+        public let value: Int
+        public var id: Date { date }
+    }
+
+    /// The trailing 7 local days (oldest → newest), zero-filled for days with no
+    /// dictation, so the chart always renders a full week.
+    public var last7Days: [DailyUsagePoint] {
+        Self.last7Days(from: dailyDictationCharacters)
+    }
+
+    public static func last7Days(
+        from daily: [String: Int],
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> [DailyUsagePoint] {
+        let startOfToday = calendar.startOfDay(for: now)
+        var points: [DailyUsagePoint] = []
+        for offset in stride(from: 6, through: 0, by: -1) {
+            guard let day = calendar.date(byAdding: .day, value: -offset, to: startOfToday) else { continue }
+            let key = UsageStatisticsDayKey.key(for: day, calendar: calendar)
+            points.append(DailyUsagePoint(date: day, value: daily[key] ?? 0))
+        }
+        return points
     }
 
     /// One-time cleanup: the pre-fix code overwrote a device slice with the

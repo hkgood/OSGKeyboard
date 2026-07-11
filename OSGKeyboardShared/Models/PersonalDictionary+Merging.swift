@@ -9,7 +9,16 @@ import Foundation
 extension PersonalDictionary {
     public static let kvsKeyV2 = "personalDictionary.v2"
     public static let legacyKVSKey = "personalDictionary.v1"
-    public static let tombstoneRetention: TimeInterval = 90 * 24 * 60 * 60
+    /// Tombstones guard against deleted entries "resurrecting" when a
+    /// long-offline device rejoins and re-merges them. A short wall-clock
+    /// retention re-opened that window after only 90 days; a year keeps the
+    /// window closed for any realistically dormant device while staying tiny
+    /// on the wire (a tombstone is ~60 bytes of JSON), and the count cap
+    /// bounds the worst case regardless of clock.
+    public static let tombstoneRetention: TimeInterval = 365 * 24 * 60 * 60
+    /// Hard cap independent of wall clock — the oldest tombstones are
+    /// dropped first once exceeded.
+    public static let maxTombstones = 500
 
     /// Merges two dictionary snapshots for cross-device sync.
     ///
@@ -100,11 +109,19 @@ extension PersonalDictionary {
         clearedAt: Date?
     ) -> [UUID: Date] {
         let cutoff = Date().addingTimeInterval(-tombstoneRetention)
-        return tombstones.filter { _, deletedAt in
+        var kept = tombstones.filter { _, deletedAt in
             if deletedAt < cutoff { return false }
             if let clearedAt, deletedAt <= clearedAt { return false }
             return true
         }
+        // Enforce the count cap that makes the 365-day retention safe on the
+        // KVS byte budget: keep the NEWEST tombstones (dropping an old one
+        // early only re-opens the resurrection window for that one entry).
+        if kept.count > maxTombstones {
+            let newest = kept.sorted { $0.value > $1.value }.prefix(maxTombstones)
+            kept = Dictionary(uniqueKeysWithValues: newest.map { ($0.key, $0.value) })
+        }
+        return kept
     }
 
     private static func later(of lhs: Date?, and rhs: Date?) -> Date? {

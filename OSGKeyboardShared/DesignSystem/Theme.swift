@@ -162,10 +162,13 @@ public enum Radius {
 // MARK: - Typography
 
 public enum SettingsListMetrics {
-    /// Single-line list rows (provider, footer link, picker).
-    public static let singleLineMinHeight: CGFloat = 52
-    /// Two-line rows (engine option, labeled API field).
-    public static let doubleLineMinHeight: CGFloat = 72
+    /// Floor for settings list rows (slightly above HIG 44pt).
+    /// Row height grows with content; this only enforces a touch-target minimum.
+    public static let singleLineMinHeight: CGFloat = 48
+    /// Horizontal inset inside a settings list row.
+    public static let rowHorizontalPadding: CGFloat = Spacing.md
+    /// Vertical inset inside a settings list row (`Spacing.sm`).
+    public static let rowVerticalPadding: CGFloat = 12
     /// Space between a section label and its card.
     public static let sectionLabelSpacing: CGFloat = Spacing.sm
 }
@@ -180,6 +183,8 @@ public enum TypeStyle {
     public static let title3     = Font.system(size: 20, weight: .semibold)
     public static let title2     = Font.system(size: 22, weight: .bold)
     public static let title      = Font.system(size: 28, weight: .bold)
+    /// Home brand line + History / Dictionary / Settings page titles.
+    public static let pageTitle  = Font.system(size: 30, weight: .semibold)
     public static let largeTitle = Font.system(size: 34, weight: .bold)
     /// Subtle status line under the brand mark (home header).
     public static let status     = Font.system(size: 13, weight: .regular)
@@ -261,6 +266,19 @@ private struct SecondaryButtonModifier: ViewModifier {
 }
 
 public extension View {
+    /// Standard settings list row insets: horizontal + vertical padding and a
+    /// touch-target floor. Height grows with content — do not hand-roll
+    /// per-section padding/`minHeight` for ordinary settings rows.
+    func settingsListRow(
+        minHeight: CGFloat = SettingsListMetrics.singleLineMinHeight,
+        alignment: Alignment = .center
+    ) -> some View {
+        self
+            .padding(.horizontal, SettingsListMetrics.rowHorizontalPadding)
+            .padding(.vertical, SettingsListMetrics.rowVerticalPadding)
+            .frame(minHeight: minHeight, alignment: alignment)
+    }
+
     /// Standard card surface used in the main app.
     func cardSurface(padding: CGFloat = Spacing.md) -> some View {
         modifier(CardSurfaceModifier(padding: padding))

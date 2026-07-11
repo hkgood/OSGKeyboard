@@ -41,4 +41,30 @@ final class ConfigurationStoreTests: XCTestCase {
         let service = ASRServiceFactory.make(store: store as any ConfigurationStore)
         XCTAssertTrue(service is SpeechAnalyzerASR)
     }
+
+    func testASRAndPolishProvidersAreIndependent() throws {
+        try Keychain.setAPIKey("sk-llm", for: "openai", useICloudSync: false)
+        try Keychain.setASRAPIKey("sk-asr", for: "zhipu", useICloudSync: false)
+
+        var config = AppGroupConfiguration.load(fromAvailable: defaults)
+        config.engineMode = "cloud"
+        config.providerId = "openai"
+        config.asrProviderId = "zhipu"
+        config.save(to: defaults)
+
+        let loaded = AppGroupStore(defaults: defaults)
+        XCTAssertEqual(loaded.providerId, "openai")
+        XCTAssertEqual(loaded.asrProviderId, "zhipu")
+        XCTAssertEqual(loaded.apiKey, "sk-llm")
+        XCTAssertEqual(loaded.asrApiKey, "sk-asr")
+
+        let asrClient = CloudASRClientFactory.make(store: loaded)
+        XCTAssertTrue(asrClient is ZhipuCloudASRClient)
+    }
+
+    func testLegacyInstallCopiesProviderIdToAsrProviderIdThenMigratesQwen() {
+        defaults.set("qwen", forKey: AppGroupConfiguration.Keys.providerId)
+        let config = AppGroupConfiguration.load(fromAvailable: defaults)
+        XCTAssertEqual(config.asrProviderId, "bailian")
+    }
 }

@@ -11,8 +11,6 @@ struct EnginePickerSection: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     @ObservedObject var config: ProviderConfig
-    @State private var showCloudAcknowledgment = false
-    @State private var pendingEngineSelection: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
@@ -37,17 +35,7 @@ struct EnginePickerSection: View {
                 RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
                     .stroke(palette.divider, lineWidth: 0.5)
             )
-
-            if config.engineMode == "cloud" {
-                CloudPolishDisclosureBanner()
-            }
         }
-        .cloudSharingAcknowledgment(
-            config: config,
-            isPresented: $showCloudAcknowledgment,
-            onConfirm: { applyPendingEngineSelection() },
-            onCancel: { pendingEngineSelection = nil }
-        )
     }
 
     private var localSubtitle: String {
@@ -64,11 +52,6 @@ struct EnginePickerSection: View {
         let isSelected = config.engineMode == id
         return Button {
             guard config.engineMode != id else { return }
-            if id == "cloud", !config.hasAcknowledgedCloudSharing {
-                pendingEngineSelection = id
-                showCloudAcknowledgment = true
-                return
-            }
             selectEngine(id)
         } label: {
             HStack(spacing: Spacing.sm) {
@@ -92,8 +75,7 @@ struct EnginePickerSection: View {
                         .foregroundStyle(palette.accent)
                 }
             }
-            .padding(.horizontal, Spacing.md)
-            .frame(minHeight: SettingsListMetrics.doubleLineMinHeight)
+            .settingsListRow()
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -104,17 +86,8 @@ struct EnginePickerSection: View {
             config.engineMode = id
             if id == "cloud" {
                 config.modeId = "polish"
-                if config.providerId == "deepseek" {
-                    config.apply(preset: LLMProvider.provider(id: "openai"))
-                }
             }
         }
-    }
-
-    private func applyPendingEngineSelection() {
-        guard let id = pendingEngineSelection else { return }
-        pendingEngineSelection = nil
-        selectEngine(id)
     }
 
     @ViewBuilder

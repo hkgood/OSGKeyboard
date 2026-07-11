@@ -75,6 +75,9 @@ public struct LocalASRModelDefinition: Codable, Sendable, Equatable, Identifiabl
     public let recommendedLocales: [String]
     public let supportsHotwords: Bool
     public let hotwordMode: LocalASRHotwordMode
+    /// Optional localization key for a short quality/speed badge
+    /// (e.g. `mac.localASR.badge.fastest`).
+    public let badgeKey: String?
     public let installKind: LocalASRInstallKind
     public let installRelativePath: String?
     public let archiveBaseName: String?

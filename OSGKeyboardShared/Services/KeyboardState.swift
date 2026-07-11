@@ -91,8 +91,11 @@ public final class KeyboardState: ObservableObject {
     @Published public var micDisabled: Bool = false
     /// One-line helper shown above the mic while `micDisabled == true`.
     @Published public var micDisabledHint: String = ""
-    /// "local" → on-device ASR only. "cloud" → ASR + LLM polish.
-    @Published public var engineMode: String = "cloud"
+    /// "local" → on-device ASR only. "cloud" → cloud ASR + LLM polish.
+    /// Boot value must match the privacy-safe app default (`local`) so the
+    /// keyboard never assumes the audio-uploading engine before the App
+    /// Group config has been read.
+    @Published public var engineMode: String = "local"
     /// v0.2.1 follow-up: derived — translation is on iff a target
     /// locale has been selected (mirrors `ProviderConfig.translationEnabled`
     /// so the chip / pipeline read the same source of truth).
@@ -104,8 +107,11 @@ public final class KeyboardState: ObservableObject {
     /// Defaults to `offLocaleId` so the keyboard boots in the "off"
     /// state on first install.
     @Published public var translationTargetLocaleId: String = TranslationLanguageCatalog.offLocaleId
-    /// Mirrored from App Group — swaps delete / return on the bottom row.
+    /// Mirrored from App Group — swaps delete / space on the bottom row.
     @Published public var handednessPreference: HandednessPreference = .left
+    /// Mirrors the host field's return-key intent. The action stays a newline
+    /// insert; host apps decide whether that submits or creates a line break.
+    @Published public var returnKeyRole: ReturnKeyRole = .newline
     /// Press-and-drag pads beside the mic for four-way caret movement.
     @Published public var cursorDragNavigationEnabled: Bool = true
     /// `true` while a cursor-drag pad is being pressed — drives the hint
@@ -146,6 +152,58 @@ public final class KeyboardState: ObservableObject {
         case none
         case startRecording
         case openSettings
+    }
+
+    public enum ReturnKeyRole: Equatable {
+        case newline
+        case send
+
+        public var titleKey: String {
+            switch self {
+            case .newline: return "common.newline"
+            case .send:    return "common.send"
+            }
+        }
+    }
+
+    // MARK: - Temporary Flow debug (remove after orange-mic investigation)
+
+    /// Mirrored from `KeyboardFlowCoordinator` for the on-screen debug panel.
+    @Published public var debugPendingFlowStart: Bool = false
+    @Published public var debugFlowRecording: Bool = false
+    @Published public var debugAwaitingFlowResult: Bool = false
+    @Published public var debugHasFullAccess: Bool = false
+
+    /// Snapshot for the keyboard debug panel.
+    public func makeFlowDebugRows(hasFullAccess: Bool) -> [FlowDebugRow] {
+        debugHasFullAccess = hasFullAccess
+        let micLabel: String = {
+            switch micVoiceAvailability {
+            case .ready: return "ready"
+            case .recording: return "recording"
+            case .processing: return "processing"
+            case .unavailable(let reason):
+                switch reason {
+                case .hostNotReady: return "unavailable(hostNotReady)"
+                case .preparingSession: return "unavailable(preparingSession)"
+                case .noFullAccess: return "unavailable(noFullAccess)"
+                case .appGroupUnavailable: return "unavailable(appGroupUnavailable)"
+                case .missingAPIKey: return "unavailable(missingAPIKey)"
+                }
+            }
+        }()
+        let localRows: [FlowDebugRow] = [
+            FlowDebugRow("mic", micLabel),
+            FlowDebugRow("phase", String(describing: phase)),
+            FlowDebugRow("pendingStart", debugPendingFlowStart ? "1" : "0"),
+            FlowDebugRow("kb.recording", debugFlowRecording ? "1" : "0"),
+            FlowDebugRow("kb.awaiting", debugAwaitingFlowResult ? "1" : "0"),
+            FlowDebugRow("fullAccess", hasFullAccess ? "1" : "0"),
+            FlowDebugRow("micDisabled", micDisabled ? "1" : "0"),
+            FlowDebugRow("flowSessionPub", flowSessionActive ? "1" : "0"),
+            FlowDebugRow("engine", engineMode)
+        ]
+        return localRows + FlowDebugAppGroupSnapshot.rows()
     }
 
     // Action hooks — injected by the view controller at install time.

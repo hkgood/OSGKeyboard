@@ -1,4 +1,4 @@
 /* 权限说明 — 简体中文 */
 
 "NSMicrophoneUsageDescription" = "OSGKeyboard 使用麦克风进行语音听写，并在语音会话运行期间保持后台音频会话。";
-"NSSpeechRecognitionUsageDescription" = "OSGKeyboard 使用设备端语音识别将你的语音转为文字。音频仅在设备上处理，不会上传用于转写。";
+"NSSpeechRecognitionUsageDescription" = "OSGKeyboard 默认使用设备端语音识别将你的语音转为文字。若你在设置中主动切换到云端引擎，录音会发送到你配置的识别服务商。";

@@ -50,10 +50,12 @@
 OSGKeyboard is a free, open-source custom keyboard for iOS 26 that turns
 your voice into clean, AI-polished text — in any app.
 
-Hold the mic key, speak naturally, release. The keyboard transcribes
-your voice entirely on-device (Apple's iOS 26 SpeechAnalyzer +
-DictationTranscriber), and only the final text is sent to the AI you
-choose to polish it. Your audio never leaves your iPhone.
+Hold the mic key, speak naturally, release. By default the keyboard
+transcribes your voice entirely on-device (Apple's iOS 26
+SpeechAnalyzer + DictationTranscriber), and only the final text is
+sent to the AI you choose to polish it — your audio never leaves your
+device unless you explicitly opt into the cloud ASR engine, which
+uploads recordings to the provider you configure.
 
 WHY OSGKEYBOARD
 
@@ -62,8 +64,9 @@ WHY OSGKEYBOARD
   types for you.
 • Push-to-talk, the way voice should work. No more "Hey Siri" mode that
   listens to the whole room.
-• On-device speech recognition. Powered by Apple's iOS 26 speech
-  pipeline — no cloud ASR, no audio upload.
+• On-device speech recognition by default. Powered by Apple's iOS 26
+  speech pipeline — no audio upload unless you explicitly enable the
+  optional cloud ASR engine (confirmation required).
 • Bring-your-own AI. Connect any OpenAI-compatible endpoint (OpenAI,
   DeepSeek, Qwen DashScope, Moonshot, Zhipu, your own self-hosted
   server). Your API key stays in the iOS Keychain.
@@ -76,12 +79,13 @@ WHY OSGKEYBOARD
 • Zero dependencies. No trackers, no analytics, no crash reporters.
   The whole project is ~8,700 lines of Swift you can audit in an
   afternoon.
-• Privacy first. PrivacyInfo.xcprivacy declares zero collected data;
-  we don't run a server.
+• Privacy first. PrivacyInfo.xcprivacy declares exactly what the app
+  touches (voice audio + transcripts, on-device by default, never
+  linked or tracked); we don't run a server.
 
 BUILT FOR
 
-• iOS 26 and later, iPhone only.
+• iOS 26 and later, iPhone and iPad.
 • Anyone who types more than 100 words a day on their phone.
 • Developers, writers, students, and translators who want voice input
   that respects their privacy.

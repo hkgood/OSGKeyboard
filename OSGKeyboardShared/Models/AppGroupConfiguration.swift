@@ -8,6 +8,11 @@
 import Foundation
 
 public struct AppGroupConfiguration: Sendable, Equatable {
+    /// Default polish LLM for fresh installs (local + cloud pickers).
+    public static let defaultPolishProviderId = "deepseek"
+    /// Default cloud ASR provider for fresh installs (independent from polish).
+    public static let defaultCloudASRProviderId = "volcengine"
+
     // MARK: - Keys
 
     public enum Keys {
@@ -16,6 +21,10 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         /// Legacy plaintext slot — migrated to Keychain on first read.
         public static let apiKeyLegacy = "config.apiKey"
         public static let model = "config.model"
+        /// Cloud ASR provider — independent from polish `providerId`.
+        public static let asrProviderId = "config.asrProviderId"
+        public static let asrBaseURL = "config.asrBaseURL"
+        public static let asrModel = "config.asrModel"
         public static let modeId = "config.modeId"
         public static let localeId = "config.localeId"
         public static let engineMode = "config.engineMode"
@@ -27,6 +36,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let handednessPreference = "config.handednessPreference"
         public static let cursorDragNavigationEnabled = "config.cursorDragNavigationEnabled"
         public static let polishIntensity = "config.polishIntensity"
+        public static let llmThinkingEnabled = "config.llmThinkingEnabled"
         public static let detectedAppContext = "config.detectedAppContext"
         public static let detectedAppContextAt = "config.detectedAppContextAt"
         public static let personalDictionary = "config.personalDictionary.v1"
@@ -51,6 +61,10 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var providerId: String
     public var baseURL: String
     public var model: String
+    /// Cloud-engine speech-to-text provider (OpenLess-style split from polish).
+    public var asrProviderId: String
+    public var asrBaseURL: String
+    public var asrModel: String
     public var modeId: String
     public var localeId: String
     public var engineMode: String
@@ -62,6 +76,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var handednessPreference: HandednessPreference
     public var cursorDragNavigationEnabled: Bool
     public var polishIntensity: PolishIntensity
+    /// Enables provider-specific reasoning / thinking controls for polish LLM requests.
+    public var llmThinkingEnabled: Bool
     public var personalDictionary: PersonalDictionary
     /// Opt-in iCloud KVS sync for the personal dictionary (main app only).
     public var personalDictionaryICloudSyncEnabled: Bool
@@ -95,18 +111,32 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             : .polish
     }
 
-    /// Local engine pins the LLM step to DeepSeek; cloud uses the user's provider.
-    public var polishProviderIdOverride: String? {
-        engineMode == "local" ? "deepseek" : nil
-    }
+    /// Polish LLM provider. Local engine no longer pins DeepSeek — user picks in Settings.
+    public var polishProviderIdOverride: String? { nil }
 
-    public var isCloudAPIKeyMissingForVoiceInput: Bool {
+    public var isCloudLLMKeyMissing: Bool {
         guard engineMode == "cloud" else { return false }
         return apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// API key lives in the Keychain (cross-process, encrypted at rest).
-    /// When settings iCloud sync is on, reads synchronizable Keychain items first.
+    public var isCloudASRKeyMissing: Bool {
+        guard engineMode == "cloud" else { return false }
+        return asrApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    public var isPolishKeyMissing: Bool {
+        if !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return false
+        }
+        return !PreconfiguredKeys.isDeepseekConfigured
+    }
+
+    public var isCloudAPIKeyMissingForVoiceInput: Bool {
+        guard engineMode == "cloud" else { return false }
+        return isCloudASRKeyMissing || isCloudLLMKeyMissing
+    }
+
+    /// Polish LLM uses `providerId` + Keychain `provider.<id>`.
     public var apiKey: String {
         Self.resolveAPIKey(
             defaults: nil,
@@ -115,12 +145,37 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         )
     }
 
+    /// Cloud ASR uses `asrProviderId` + Keychain `asr.<id>` (falls back to legacy `provider.<id>`).
+    public var asrApiKey: String {
+        Self.resolveASRAPIKey(
+            defaults: nil,
+            providerId: asrProviderId,
+            preferICloudSync: settingsICloudSyncEnabled
+        )
+    }
+
     public func makeClient() -> LLMClient {
         OpenAICompatibleClient(
             baseURL: baseURL,
             apiKey: apiKey,
-            model: model
+            model: model,
+            providerId: providerId,
+            thinkingEnabled: llmThinkingEnabled
         )
+    }
+
+    /// Resolved cloud ASR model — user override or catalog default.
+    public var resolvedASRModel: String {
+        let trimmed = asrModel.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { return trimmed }
+        return CloudASRModelCatalog.defaultModel(for: asrProviderId)
+    }
+
+    /// Resolved cloud ASR base URL for prompt-style providers.
+    public var resolvedASRBaseURL: String {
+        let trimmed = asrBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { return trimmed }
+        return LLMProvider.provider(id: asrProviderId).defaultBaseURL
     }
 
     // MARK: - Detected app context
@@ -148,13 +203,23 @@ public struct AppGroupConfiguration: Sendable, Equatable {
 
     /// Loads configuration from a known-available UserDefaults suite.
     public static func load(fromAvailable defaults: UserDefaults) -> AppGroupConfiguration {
+        let storedProviderId = defaults.string(forKey: Keys.providerId)
         var config = AppGroupConfiguration(
-            providerId: defaults.string(forKey: Keys.providerId) ?? "openai",
+            providerId: storedProviderId ?? defaultPolishProviderId,
             baseURL: "",
             model: "",
+            asrProviderId: defaults.string(forKey: Keys.asrProviderId) ?? "",
+            asrBaseURL: "",
+            asrModel: "",
             modeId: defaults.string(forKey: Keys.modeId) ?? "polish",
             localeId: defaults.string(forKey: Keys.localeId) ?? "auto",
-            engineMode: defaults.string(forKey: Keys.engineMode) ?? "cloud",
+            // Privacy-critical default: `local` keeps raw audio on-device
+            // (SpeechAnalyzer). The `cloud` engine uploads recorded audio to
+            // the user's configured ASR provider and must stay an explicit,
+            // acknowledged opt-in (see `hasAcknowledgedCloudSharing`) — a
+            // cloud default would contradict every privacy claim the app
+            // makes in its docs, App Store listing, and permission prompts.
+            engineMode: defaults.string(forKey: Keys.engineMode) ?? "local",
             hasCompletedOnboarding: defaults.bool(forKey: Keys.hasCompletedOnboarding),
             onboardingPage: {
                 let saved = defaults.integer(forKey: Keys.onboardingPage)
@@ -174,6 +239,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
                 return defaults.bool(forKey: Keys.cursorDragNavigationEnabled)
             }(),
             polishIntensity: resolvePolishIntensity(from: defaults),
+            llmThinkingEnabled: defaults.bool(forKey: Keys.llmThinkingEnabled),
             personalDictionary: decodePersonalDictionary(from: defaults),
             personalDictionaryICloudSyncEnabled: {
                 if defaults.object(forKey: Keys.personalDictionaryICloudSyncEnabled) == nil {
@@ -212,6 +278,31 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             config.model = defaults.string(forKey: Keys.model) ?? preset.defaultModel
         }
 
+        if config.asrProviderId.isEmpty {
+            // Pre-split installs only stored `providerId`; copy it so ASR keeps working.
+            config.asrProviderId = storedProviderId ?? defaultCloudASRProviderId
+            defaults.set(config.asrProviderId, forKey: Keys.asrProviderId)
+        }
+        let asrPreset = LLMProvider.provider(id: config.asrProviderId)
+        if config.asrBaseURL.isEmpty {
+            config.asrBaseURL = defaults.string(forKey: Keys.asrBaseURL) ?? asrPreset.defaultBaseURL
+        }
+        if config.asrModel.isEmpty {
+            config.asrModel = defaults.string(forKey: Keys.asrModel)
+                ?? CloudASRModelCatalog.defaultModel(for: config.asrProviderId)
+        }
+
+        // Legacy qwen cloud ASR → bailian realtime (HTTP Flash path removed).
+        if config.asrProviderId == "qwen" {
+            let bailian = LLMProvider.provider(id: "bailian")
+            config.asrProviderId = "bailian"
+            config.asrBaseURL = bailian.defaultBaseURL
+            config.asrModel = CloudASRModelCatalog.alibabaFunASRRealtime
+            defaults.set(config.asrProviderId, forKey: Keys.asrProviderId)
+            defaults.set(config.asrBaseURL, forKey: Keys.asrBaseURL)
+            defaults.set(config.asrModel, forKey: Keys.asrModel)
+        }
+
         // One-shot legacy migration: plaintext apiKey in UserDefaults → Keychain.
         _ = resolveAPIKey(
             defaults: defaults,
@@ -219,22 +310,31 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             preferICloudSync: config.settingsICloudSyncEnabled
         )
 
+        // One-shot default migration for installs that predate an explicit
+        // stored value. The privacy-safe defaults ("local", 30 min TTL) are
+        // for NEW installs only — an existing user who ran on the old
+        // defaults must keep their behavior, both because silently changing
+        // engines under someone is wrong, and because iCloud settings sync
+        // would stamp the flip as a fresh "edit" and propagate it to every
+        // other device, overriding choices made there. Persisting the
+        // resolved value makes the decision stable and sync-invisible.
+        let isExistingInstall = defaults.bool(forKey: Keys.hasCompletedOnboarding)
+        if defaults.string(forKey: Keys.engineMode) == nil {
+            let resolved = isExistingInstall ? "cloud" : "local"
+            config.engineMode = resolved
+            defaults.set(resolved, forKey: Keys.engineMode)
+        }
+        if defaults.string(forKey: Keys.flowInactivityDuration) == nil {
+            let resolved: FlowInactivityDuration = isExistingInstall ? .twelveHours : .default
+            config.flowInactivityDuration = resolved
+            defaults.set(resolved.rawValue, forKey: Keys.flowInactivityDuration)
+        }
+
         // Cloud no longer exposes off/transcribe; migrate legacy values.
         if config.engineMode == "cloud", config.modeId != "polish" {
             config.modeId = "polish"
             defaults.set("polish", forKey: Keys.modeId)
         }
-        // DeepSeek is local-engine only — never a cloud picker choice.
-        if config.engineMode == "cloud", config.providerId == "deepseek" {
-            let openAI = LLMProvider.provider(id: "openai")
-            config.providerId = openAI.id
-            config.baseURL = openAI.defaultBaseURL
-            config.model = openAI.defaultModel
-            defaults.set(openAI.id, forKey: Keys.providerId)
-            defaults.set(openAI.defaultBaseURL, forKey: Keys.baseURL)
-            defaults.set(openAI.defaultModel, forKey: Keys.model)
-        }
-
         return config
     }
 
@@ -242,6 +342,9 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(providerId, forKey: Keys.providerId)
         defaults.set(baseURL, forKey: Keys.baseURL)
         defaults.set(model, forKey: Keys.model)
+        defaults.set(asrProviderId, forKey: Keys.asrProviderId)
+        defaults.set(asrBaseURL, forKey: Keys.asrBaseURL)
+        defaults.set(asrModel, forKey: Keys.asrModel)
         defaults.set(modeId, forKey: Keys.modeId)
         defaults.set(localeId, forKey: Keys.localeId)
         defaults.set(engineMode, forKey: Keys.engineMode)
@@ -253,6 +356,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(handednessPreference.rawValue, forKey: Keys.handednessPreference)
         defaults.set(cursorDragNavigationEnabled, forKey: Keys.cursorDragNavigationEnabled)
         defaults.set(polishIntensity.rawValue, forKey: Keys.polishIntensity)
+        defaults.set(llmThinkingEnabled, forKey: Keys.llmThinkingEnabled)
         defaults.set(flowSkipAppSwitch, forKey: Keys.flowSkipAppSwitch)
         defaults.set(flowInactivityDuration.rawValue, forKey: Keys.flowInactivityDuration)
         defaults.set(localASRCustomLanguageModelEnabled, forKey: Keys.localASRCustomLanguageModelEnabled)
@@ -327,5 +431,17 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             return legacy
         }
         return ""
+    }
+
+    static func resolveASRAPIKey(
+        defaults: UserDefaults?,
+        providerId: String,
+        preferICloudSync: Bool = false
+    ) -> String {
+        if let stored = Keychain.asrApiKey(for: providerId, preferICloudSync: preferICloudSync), !stored.isEmpty {
+            return stored
+        }
+        // Pre-split installs: one shared key under `provider.<id>`.
+        return resolveAPIKey(defaults: defaults, providerId: providerId, preferICloudSync: preferICloudSync)
     }
 }
