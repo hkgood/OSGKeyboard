@@ -335,7 +335,6 @@
 "home.flow.startShort" = "Start";
 "home.preview.label" = "Try typing";
 "home.preview.placeholder" = "Tap to type and test…";
-"home.wide.tagline" = "Voice dictation, anywhere.";
 "home.wide.tagline.subtitle" = "Switch to any app and tap the keyboard mic to dictate.";
 "home.wide.mode.cloud" = "Cloud";
 "home.wide.mode.local" = "On-device";

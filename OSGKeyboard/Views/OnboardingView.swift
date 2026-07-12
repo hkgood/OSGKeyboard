@@ -370,6 +370,17 @@ private struct WelcomePage: View {
     @State private var logoAppeared = false
 
     var body: some View {
+        ZStack {
+            SonicParticleField(focalPoint: UnitPoint(x: 0.5, y: 0.42))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .allowsHitTesting(true)
+
+            welcomeContent
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var welcomeContent: some View {
         VStack(spacing: 0) {
             Spacer()
 
@@ -398,6 +409,7 @@ private struct WelcomePage: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .allowsHitTesting(false)
     }
 }
 

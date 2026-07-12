@@ -39,6 +39,7 @@ struct MacSettingsView: View {
 
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: Spacing.xl) {
+                        supportSection
                         generalSection
                         recognitionSection
                         if viewModel.config.engineMode == "cloud" {
@@ -295,6 +296,17 @@ struct MacSettingsView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Support developer
+
+    private var supportSection: some View {
+        MacSettingsSection(
+            title: MacL10n.string("tip.title", language: lang),
+            footer: MacL10n.string("tip.consumableNotice", language: lang)
+        ) {
+            MacSupportDeveloperTipRows(language: lang)
         }
     }
 

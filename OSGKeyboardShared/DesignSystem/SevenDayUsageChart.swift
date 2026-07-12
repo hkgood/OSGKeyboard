@@ -48,6 +48,21 @@ public struct SevenDayUsageChart: View {
         Locale(identifier: language.resolvedLanguageCode())
     }
 
+    /// The real day for each bar; used to decide which axis marks get a label.
+    private var pointDates: Set<Date> {
+        Set(points.map(\.date))
+    }
+
+    /// Axis tick positions: the 7 real days plus one trailing boundary (last + 1
+    /// day) so `centered: true` has a span to center the final day's label within.
+    private var axisDates: [Date] {
+        let dates = points.map(\.date)
+        guard let last = dates.last,
+              let boundary = Calendar.current.date(byAdding: .day, value: 1, to: last)
+        else { return dates }
+        return dates + [boundary]
+    }
+
     public var body: some View {
         Group {
             if embedsInCard {
@@ -121,8 +136,18 @@ public struct SevenDayUsageChart: View {
             .chartYScale(domain: 0...max(1, Int(ceil(Double(maxValue) * 1.15))))
             .chartYAxis(.hidden)
             .chartXAxis {
-                AxisMarks(values: points.map(\.date)) { _ in
-                    AxisValueLabel(format: .dateTime.weekday(.narrow))
+                // Center each weekday label under its bar. Date `BarMark`s draw the
+                // bar centered within its day band, but axis labels default to the
+                // day's leading tick, so `centered: true` re-centers them on the bar.
+                //
+                // `centered` positions a label between its tick and the *next* tick,
+                // so the final day (Saturday) would be dropped for lack of a trailing
+                // tick. We append one boundary tick (last day + 1) to give it a span,
+                // and only draw labels for the real 7 days.
+                AxisMarks(values: axisDates) { value in
+                    if let date = value.as(Date.self), pointDates.contains(date) {
+                        AxisValueLabel(format: .dateTime.weekday(.narrow), centered: true)
+                    }
                 }
             }
             .environment(\.locale, chartLocale)

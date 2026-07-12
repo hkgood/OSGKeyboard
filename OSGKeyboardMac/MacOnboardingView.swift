@@ -261,13 +261,20 @@ struct MacOnboardingView: View {
     @ViewBuilder
     private var heroIcon: some View {
         if model.step == .welcome {
-            Image("OSGBrandMark")
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 128, height: 128)
-                .foregroundStyle(colorScheme == .dark ? Color.white : palette.accent)
-                .accessibilityLabel("OSGKeyboard")
+            ZStack {
+                SonicParticleField()
+                    .frame(width: 300, height: 300)
+
+                Image("OSGBrandMark")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 128, height: 128)
+                    .foregroundStyle(colorScheme == .dark ? Color.white : palette.accent)
+                    .accessibilityLabel("OSGKeyboard")
+                    .allowsHitTesting(false)
+            }
+            .frame(width: 300, height: 300)
         } else {
             ZStack {
                 Circle()

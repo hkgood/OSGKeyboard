@@ -1,112 +1,109 @@
 <!DOCTYPE html>
-<html lang="zh-Hans">
+<html lang="zh-Hans" data-theme="system">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  <!-- Primary SEO -->
   <title>OSGKeyboard — 开口即文字 · iOS &amp; Mac 语音输入</title>
-  <meta name="description" content="OSGKeyboard：iPhone、iPad、Mac 通用的语音输入工具。本地识别，AI 润色，任意 App 即说即写。Tap or hold Option — polished text lands at your cursor.">
-  <meta name="keywords" content="voice keyboard, dictation, speech to text, iOS keyboard, macOS dictation, 语音输入, 听写, OSGKeyboard, 开口即文字">
-  <meta name="author" content="OSGKeyboard">
-  <meta name="robots" content="index, follow, max-image-preview:large">
-  <meta name="theme-color" content="#0a0a0b">
+  <meta name="description" content="免费开源的跨端语音输入。本地识别、BYOK 润色、个性词库。iPhone、iPad、Mac — 开口即文字。">
+  <meta name="keywords" content="voice keyboard, dictation, BYOK, open source, privacy, 语音输入, 听写, OSGKeyboard">
+  <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f7f7f5" media="(prefers-color-scheme: light)">
   <link rel="canonical" href="https://hkgood.github.io/OSGKeyboard/">
   <link rel="icon" href="assets/app-icon.png" type="image/png">
   <link rel="apple-touch-icon" href="assets/app-icon.png">
-
-  <!-- Open Graph -->
   <meta property="og:type" content="website">
-  <meta property="og:site_name" content="OSGKeyboard">
-  <meta property="og:title" content="OSGKeyboard — 开口即文字 · iOS &amp; Mac 语音输入">
-  <meta property="og:description" content="本地识别，AI 润色，任意 App 即说即写。iPhone、iPad、Mac 通用。">
+  <meta property="og:title" content="OSGKeyboard — 开口即文字">
+  <meta property="og:description" content="免费 · 跨端 · 开源 · 隐私优先 · BYOK。语音留在本机，AI 用你自己的 Key。">
   <meta property="og:url" content="https://hkgood.github.io/OSGKeyboard/">
-  <meta property="og:image" content="https://hkgood.github.io/OSGKeyboard/assets/app-icon.png">
-  <meta property="og:image:width" content="1024">
-  <meta property="og:image:height" content="1024">
-  <meta property="og:locale" content="en_US">
-  <meta property="og:locale:alternate" content="zh_CN">
-
-  <!-- Twitter -->
+  <meta property="og:image" content="https://hkgood.github.io/OSGKeyboard/assets/screenshots/mac-dashboard.png">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="OSGKeyboard — 开口即文字">
-  <meta name="twitter:description" content="iPhone、iPad、Mac 语音输入。本地识别，AI 润色，任意 App 即说即写。">
-  <meta name="twitter:image" content="https://hkgood.github.io/OSGKeyboard/assets/app-icon.png">
-
-  <!-- Structured data -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "OSGKeyboard",
-    "operatingSystem": "iOS 26.0 or later, macOS 14.0 or later",
+    "operatingSystem": "iOS, iPadOS, macOS",
     "applicationCategory": "UtilitiesApplication",
     "url": "https://hkgood.github.io/OSGKeyboard/",
     "image": "https://hkgood.github.io/OSGKeyboard/assets/app-icon.png",
-    "description": "Voice input for iPhone, iPad, and Mac. On-device recognition, AI polish, personal dictionary, and iCloud sync. Speak in any app — polished text lands at your cursor.",
-    "softwareVersion": "0.5.3",
+    "description": "Free open-source voice input for iPhone, iPad, and Mac. On-device recognition, BYOK AI polish, personal dictionary.",
+    "softwareVersion": "0.5.4",
     "isAccessibleForFree": true,
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-    "author": { "@type": "Organization", "name": "OSGKeyboard" },
-    "featureList": [
-      "Custom keyboard for iOS and iPadOS",
-      "macOS global dictation with Option hotkey",
-      "On-device speech recognition",
-      "AI text polish with multiple LLM providers",
-      "Personal dictionary with iCloud sync",
-      "Post-polish translation"
-    ]
+    "author": { "@type": "Organization", "name": "OSGKeyboard" }
   }
   </script>
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0" rel="stylesheet">
-
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,300,0,0&display=swap" rel="stylesheet">
   <style>
     :root {
-      color-scheme: light dark;
-      --bg: #ffffff;
-      --bg-soft: #f7f7f8;
-      --text: #0c0c0e;
-      --text-secondary: #55555f;
-      --text-tertiary: #90909a;
-      --line: rgba(0, 0, 0, 0.08);
-      --accent: #2d8a4a;
-      --accent-soft: rgba(45, 138, 74, 0.10);
-      --nav-bg: rgba(255, 255, 255, 0.72);
-      --max: 1020px;
-      --radius: 18px;
+      --bg: #f7f7f5;
+      --bg-elevated: #ffffff;
+      --bg-soft: #efefec;
+      --text: #121214;
+      --text-2: #5a5a62;
+      --text-3: #8e8e96;
+      --line: rgba(18, 18, 20, 0.10);
+      --line-strong: rgba(18, 18, 20, 0.16);
+      --accent: #2f9a52;
+      --accent-soft: rgba(47, 154, 82, 0.12);
+      --accent-glow: rgba(47, 154, 82, 0.28);
+      --nav: rgba(247, 247, 245, 0.78);
+      --shadow: 0 28px 80px rgba(18, 18, 20, 0.12);
+      --radius: 20px;
+      --max: 1120px;
+      --font: "Outfit", -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", sans-serif;
+    }
+
+    html[data-theme="dark"] {
+      --bg: #0a0a0b;
+      --bg-elevated: #131316;
+      --bg-soft: #18181b;
+      --text: #f4f4f2;
+      --text-2: #a8a8b0;
+      --text-3: #6f6f78;
+      --line: rgba(255, 255, 255, 0.09);
+      --line-strong: rgba(255, 255, 255, 0.14);
+      --accent: #4cc46e;
+      --accent-soft: rgba(76, 196, 110, 0.14);
+      --accent-glow: rgba(76, 196, 110, 0.32);
+      --nav: rgba(10, 10, 11, 0.78);
+      --shadow: 0 28px 80px rgba(0, 0, 0, 0.45);
     }
 
     @media (prefers-color-scheme: dark) {
-      :root {
+      html[data-theme="system"] {
         --bg: #0a0a0b;
-        --bg-soft: #131316;
-        --text: #f4f4f6;
-        --text-secondary: #a6a6b0;
-        --text-tertiary: #6e6e78;
-        --line: rgba(255, 255, 255, 0.10);
+        --bg-elevated: #131316;
+        --bg-soft: #18181b;
+        --text: #f4f4f2;
+        --text-2: #a8a8b0;
+        --text-3: #6f6f78;
+        --line: rgba(255, 255, 255, 0.09);
+        --line-strong: rgba(255, 255, 255, 0.14);
         --accent: #4cc46e;
         --accent-soft: rgba(76, 196, 110, 0.14);
-        --nav-bg: rgba(10, 10, 11, 0.72);
+        --accent-glow: rgba(76, 196, 110, 0.32);
+        --nav: rgba(10, 10, 11, 0.78);
+        --shadow: 0 28px 80px rgba(0, 0, 0, 0.45);
       }
     }
 
     * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
-
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      font-family: var(--font);
       background: var(--bg);
       color: var(--text);
-      line-height: 1.6;
+      line-height: 1.55;
       -webkit-font-smoothing: antialiased;
-      text-rendering: optimizeLegibility;
+      overflow-x: hidden;
     }
-
     a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    button { font: inherit; color: inherit; }
 
     .material-symbols-outlined {
       font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
@@ -115,343 +112,546 @@
     }
 
     .wrap {
-      max-width: var(--max);
-      margin: 0 auto;
-      padding: 0 1.5rem;
+      width: min(100% - 2.5rem, var(--max));
+      margin-inline: auto;
     }
 
-    /* Nav */
+    /* —— Nav —— */
     .nav {
       position: sticky;
       top: 0;
-      z-index: 20;
-      background: var(--nav-bg);
-      backdrop-filter: blur(20px) saturate(1.6);
-      -webkit-backdrop-filter: blur(20px) saturate(1.6);
+      z-index: 40;
+      background: var(--nav);
+      backdrop-filter: blur(18px) saturate(1.4);
+      -webkit-backdrop-filter: blur(18px) saturate(1.4);
       border-bottom: 1px solid var(--line);
     }
-
     .nav-inner {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      min-height: 60px;
+      min-height: 64px;
       gap: 1rem;
     }
-
     .brand {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 0.6rem;
-      font-weight: 650;
-      letter-spacing: -0.01em;
+      gap: 0.7rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
     }
-
-    .brand img { width: 28px; height: 28px; border-radius: 7px; }
-
-    .nav-right { display: flex; align-items: center; gap: 0.5rem; }
-
-    .lang-toggle {
+    .brand-mark {
+      width: 72px;
+      height: 22px;
+      color: var(--accent);
+    }
+    .brand-name { font-size: 1rem; }
+    .nav-actions { display: flex; align-items: center; gap: 0.35rem; }
+    .icon-btn, .pill-toggle button {
+      border: 1px solid var(--line);
+      background: transparent;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      color: var(--text-2);
+    }
+    .icon-btn:hover { color: var(--text); border-color: var(--line-strong); }
+    .icon-btn .material-symbols-outlined { font-size: 20px; }
+    .pill-toggle {
       display: inline-flex;
       padding: 2px;
       border-radius: 999px;
       border: 1px solid var(--line);
     }
-
-    .lang-toggle button {
+    .pill-toggle button {
       border: 0;
-      background: transparent;
-      color: var(--text-tertiary);
-      font: inherit;
-      font-size: 0.8rem;
+      padding: 0.28rem 0.65rem;
+      font-size: 0.78rem;
       font-weight: 600;
-      padding: 0.3rem 0.7rem;
-      border-radius: 999px;
-      cursor: pointer;
-      transition: color 0.2s, background 0.2s;
+      color: var(--text-3);
+      background: transparent;
     }
-
-    .lang-toggle button.active { background: var(--text); color: var(--bg); }
-
-    .ghost-link {
+    .pill-toggle button.active {
+      background: var(--text);
+      color: var(--bg);
+    }
+    .nav-link {
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-      padding: 0.4rem 0.6rem;
+      gap: 0.3rem;
+      padding: 0.4rem 0.7rem;
       border-radius: 999px;
-      transition: color 0.2s;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-2);
     }
-    .ghost-link:hover { color: var(--text); }
-    .ghost-link .material-symbols-outlined { font-size: 18px; }
+    .nav-link:hover { color: var(--text); }
+    .nav-link .material-symbols-outlined { font-size: 18px; }
 
-    /* Buttons */
+    /* —— Buttons —— */
     .btn {
       display: inline-flex;
       align-items: center;
       gap: 0.45rem;
+      padding: 0.85rem 1.35rem;
+      border-radius: 999px;
       font-weight: 600;
       font-size: 0.95rem;
-      padding: 0.75rem 1.3rem;
-      border-radius: 999px;
-      transition: transform 0.15s ease, opacity 0.15s ease;
+      border: 1px solid transparent;
+      transition: transform 0.18s ease, background 0.18s, border-color 0.18s;
     }
     .btn:hover { transform: translateY(-1px); }
     .btn .material-symbols-outlined { font-size: 20px; }
-
     .btn-primary { background: var(--accent); color: #fff; }
-    .btn-quiet { color: var(--text); border: 1px solid var(--line); }
-
-    /* Hero */
-    .hero { padding: 5.5rem 0 3.5rem; }
-
-    .hero-grid {
-      display: grid;
-      grid-template-columns: 1.05fr 0.95fr;
-      gap: 3rem;
-      align-items: center;
+    .btn-ghost {
+      background: transparent;
+      border-color: var(--line-strong);
+      color: var(--text);
     }
+    .btn-ghost:hover { background: var(--bg-soft); }
 
-    @media (max-width: 860px) {
-      .hero { padding: 3.5rem 0 2.5rem; }
-      .hero-grid { grid-template-columns: 1fr; gap: 2.5rem; }
-      .hero-visual { order: -1; }
+    /* —— Hero —— */
+    .hero {
+      position: relative;
+      padding: 4.5rem 0 2rem;
+      overflow: hidden;
     }
-
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: -20% 10% auto;
+      height: 70%;
+      background:
+        radial-gradient(ellipse at 30% 40%, var(--accent-soft), transparent 55%),
+        radial-gradient(ellipse at 75% 20%, rgba(47, 154, 82, 0.08), transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .hero .wrap { position: relative; z-index: 1; }
+    .hero-copy {
+      max-width: 42rem;
+      margin: 0 auto 3rem;
+      text-align: center;
+    }
     .eyebrow {
       display: inline-flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.45rem;
+      margin-bottom: 1.1rem;
       font-size: 0.8rem;
       font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
       color: var(--accent);
-      margin-bottom: 1.25rem;
     }
-    .eyebrow .material-symbols-outlined { font-size: 17px; }
-
+    .eyebrow .material-symbols-outlined { font-size: 16px; }
     h1 {
-      margin: 0 0 1.25rem;
-      font-size: clamp(2.3rem, 5.4vw, 3.6rem);
-      line-height: 1.05;
-      letter-spacing: -0.035em;
+      margin: 0 0 1rem;
+      font-size: clamp(2.6rem, 7vw, 4.4rem);
+      line-height: 1.02;
+      letter-spacing: -0.045em;
       font-weight: 700;
     }
-
     .lead {
-      margin: 0 0 2rem;
-      font-size: 1.14rem;
-      color: var(--text-secondary);
-      max-width: 33rem;
+      margin: 0 auto 1.75rem;
+      max-width: 34rem;
+      font-size: 1.12rem;
+      color: var(--text-2);
     }
-
-    .hero-cta { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.75rem; }
-
+    .hero-cta {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.7rem;
+      margin-bottom: 1.4rem;
+    }
     .hero-meta {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem 1.25rem;
-      font-size: 0.85rem;
-      color: var(--text-tertiary);
+      justify-content: center;
+      gap: 0.6rem 1.2rem;
+      font-size: 0.86rem;
+      color: var(--text-3);
     }
-    .hero-meta span { display: inline-flex; align-items: center; gap: 0.35rem; }
-    .hero-meta .material-symbols-outlined { font-size: 17px; color: var(--accent); }
-
-    /* Phone mock */
-    .phone {
-      max-width: 300px;
-      margin: 0 auto;
-      border-radius: 40px;
-      padding: 10px;
-      background: var(--bg-soft);
-      border: 1px solid var(--line);
-      box-shadow: 0 40px 90px rgba(0, 0, 0, 0.18);
-    }
-
-    .phone-screen {
-      border-radius: 32px;
-      overflow: hidden;
-      background: #16161a;
-      display: flex;
-      flex-direction: column;
-      min-height: 440px;
-    }
-
-    .screen-top { padding: 1.3rem 1.2rem 0.4rem; color: #f4f4f6; }
-    .screen-app { font-size: 0.8rem; color: #8a8a94; margin: 0 0 0.15rem; }
-    .screen-line { font-size: 0.95rem; line-height: 1.5; margin: 0; color: #e8e8ec; }
-    .screen-caret { color: #4cc46e; font-weight: 700; }
-
-    .kb {
-      margin-top: auto;
-      background: #1e1e22;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      padding: 0.9rem 0.9rem 1.1rem;
-    }
-
-    .kb-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-    .kb-chip {
-      font-size: 0.68rem;
-      font-weight: 600;
-      color: #cfcfd6;
-      padding: 0.28rem 0.6rem;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.08);
+    .hero-meta span {
       display: inline-flex;
       align-items: center;
       gap: 0.3rem;
     }
-    .kb-chip .material-symbols-outlined { font-size: 14px; }
+    .hero-meta .material-symbols-outlined { font-size: 16px; color: var(--accent); }
 
-    .kb-mic {
-      width: 60px; height: 60px;
-      margin: 0.2rem auto 0;
-      border-radius: 50%;
-      background: var(--accent);
-      display: grid;
-      place-items: center;
-      color: #fff;
-      box-shadow: 0 0 0 8px var(--accent-soft);
+    .hero-stage {
       position: relative;
+      margin-top: 2.5rem;
     }
-    .kb-mic .material-symbols-outlined { font-size: 28px; }
-    .kb-mic::after {
-      content: "";
-      position: absolute;
-      inset: -8px;
-      border-radius: 50%;
-      border: 2px solid var(--accent);
+    .hero-stage-frame {
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      background: var(--bg-elevated);
+      transform: translateY(12px);
       opacity: 0;
-      animation: ring 2.6s ease-out infinite;
+      animation: rise-in 1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s forwards;
     }
-    @keyframes ring {
-      0% { transform: scale(0.85); opacity: 0.5; }
-      100% { transform: scale(1.55); opacity: 0; }
+    .hero-stage-frame img {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      object-position: top center;
+    }
+    .sonic-ring {
+      position: absolute;
+      left: 50%;
+      bottom: -18px;
+      width: 120px;
+      height: 120px;
+      margin-left: -60px;
+      border-radius: 50%;
+      border: 1.5px solid var(--accent);
+      opacity: 0;
+      pointer-events: none;
+      animation: sonic 2.8s ease-out infinite;
+    }
+    .sonic-ring:nth-child(2) { animation-delay: 0.9s; }
+    .sonic-ring:nth-child(3) { animation-delay: 1.8s; }
+
+    @keyframes rise-in {
+      to { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes sonic {
+      0% { transform: scale(0.4); opacity: 0.45; }
+      100% { transform: scale(2.2); opacity: 0; }
     }
 
-    /* Section */
-    section.block { padding: 3.5rem 0; }
-    .block-head { max-width: 40rem; margin: 0 0 2.75rem; }
+    /* —— Reveal —— */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .reveal.in { opacity: 1; transform: none; }
+    .reveal-delay-1 { transition-delay: 0.08s; }
+    .reveal-delay-2 { transition-delay: 0.16s; }
+    .reveal-delay-3 { transition-delay: 0.24s; }
+    .reveal-delay-4 { transition-delay: 0.32s; }
+
+    /* —— Sections —— */
+    section.block { padding: 5rem 0; }
+    .block-head {
+      max-width: 38rem;
+      margin: 0 auto 2.75rem;
+      text-align: center;
+    }
     .block-head h2 {
-      margin: 0 0 0.6rem;
-      font-size: clamp(1.6rem, 3.2vw, 2.1rem);
-      letter-spacing: -0.025em;
+      margin: 0 0 0.65rem;
+      font-size: clamp(1.7rem, 3.5vw, 2.35rem);
+      letter-spacing: -0.03em;
       font-weight: 700;
     }
-    .block-head p { margin: 0; color: var(--text-secondary); font-size: 1.02rem; }
-
-    /* Features — light, editorial, no heavy cards */
-    .features {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 2rem 2.5rem;
+    .block-head p {
+      margin: 0;
+      color: var(--text-2);
+      font-size: 1.05rem;
     }
-    @media (max-width: 780px) { .features { grid-template-columns: repeat(2, 1fr); gap: 2rem; } }
-    @media (max-width: 480px) { .features { grid-template-columns: 1fr; } }
 
-    .feature .ficon {
-      width: 44px; height: 44px;
-      border-radius: 12px;
-      background: var(--accent-soft);
+    /* —— Diff pillars —— */
+    .pillars {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1rem;
+    }
+    @media (max-width: 960px) {
+      .pillars { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 620px) {
+      .pillars { grid-template-columns: 1fr 1fr; }
+    }
+    .pillar {
+      padding: 1.35rem 1.15rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--bg-elevated);
+      transition: border-color 0.25s, transform 0.25s;
+    }
+    .pillar:hover {
+      border-color: var(--accent);
+      transform: translateY(-3px);
+    }
+    .pillar .material-symbols-outlined {
+      font-size: 26px;
       color: var(--accent);
-      display: grid;
-      place-items: center;
-      margin-bottom: 0.9rem;
+      margin-bottom: 0.85rem;
     }
-    .feature .ficon .material-symbols-outlined { font-size: 24px; }
-    .feature h3 { margin: 0 0 0.35rem; font-size: 1.02rem; font-weight: 650; letter-spacing: -0.01em; }
-    .feature p { margin: 0; font-size: 0.93rem; color: var(--text-secondary); }
+    .pillar h3 {
+      margin: 0 0 0.35rem;
+      font-size: 1rem;
+      letter-spacing: -0.015em;
+    }
+    .pillar p {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--text-2);
+      line-height: 1.45;
+    }
 
-    /* Steps */
+    /* —— Story rows —— */
+    .story {
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      gap: 3rem;
+      align-items: center;
+      padding: 2.5rem 0;
+    }
+    .story.reverse { direction: rtl; }
+    .story.reverse > * { direction: ltr; }
+    @media (max-width: 860px) {
+      .story, .story.reverse {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        direction: ltr;
+      }
+    }
+    .story-copy .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.7rem;
+    }
+    .story-copy .kicker .material-symbols-outlined { font-size: 18px; }
+    .story-copy h3 {
+      margin: 0 0 0.7rem;
+      font-size: clamp(1.4rem, 2.6vw, 1.85rem);
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+    }
+    .story-copy p {
+      margin: 0;
+      color: var(--text-2);
+      font-size: 1.02rem;
+    }
+    .story-media {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--bg-soft);
+      box-shadow: var(--shadow);
+    }
+    .story-media img {
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+      object-position: top center;
+    }
+    .story-media.phone-media {
+      max-width: 280px;
+      margin-inline: auto;
+      border-radius: 28px;
+      aspect-ratio: auto;
+    }
+    .story-media.phone-media img {
+      aspect-ratio: 9 / 19.5;
+      object-fit: cover;
+    }
+
+    /* —— Device strip —— */
+    .device-strip {
+      display: grid;
+      grid-template-columns: 1.1fr 0.7fr 0.7fr;
+      gap: 1.1rem;
+      align-items: end;
+    }
+    @media (max-width: 800px) {
+      .device-strip { grid-template-columns: 1fr; }
+    }
+    .device-card {
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--bg-elevated);
+      box-shadow: var(--shadow);
+    }
+    .device-card img { width: 100%; }
+    .device-card.phone {
+      max-width: 260px;
+      margin-inline: auto;
+      border-radius: 26px;
+    }
+
+    /* —— Compare —— */
+    .compare {
+      border-radius: calc(var(--radius) + 4px);
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, var(--accent-soft), transparent 42%),
+        var(--bg-elevated);
+      padding: 2rem 1.5rem;
+      overflow: hidden;
+    }
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.25rem;
+    }
+    @media (max-width: 800px) {
+      .compare-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .compare-item {
+      padding: 0.5rem;
+    }
+    .compare-item .material-symbols-outlined {
+      font-size: 24px;
+      color: var(--accent);
+      margin-bottom: 0.6rem;
+    }
+    .compare-item h3 {
+      margin: 0 0 0.3rem;
+      font-size: 0.98rem;
+    }
+    .compare-item p {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--text-2);
+    }
+
+    /* —— Steps —— */
     .steps {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 2.5rem;
-      counter-reset: s;
+      gap: 1.5rem;
+      counter-reset: step;
     }
-    @media (max-width: 720px) { .steps { grid-template-columns: 1fr; gap: 2rem; } }
-
-    .step { position: relative; padding-top: 0.5rem; }
+    @media (max-width: 720px) {
+      .steps { grid-template-columns: 1fr; }
+    }
+    .step {
+      position: relative;
+      padding: 1.5rem 1.25rem 1.5rem 1.5rem;
+      border-top: 1px solid var(--line-strong);
+    }
     .step::before {
-      counter-increment: s;
-      content: counter(s);
-      display: grid;
-      place-items: center;
-      width: 30px; height: 30px;
-      border-radius: 50%;
-      border: 1.5px solid var(--accent);
+      counter-increment: step;
+      content: "0" counter(step);
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
       color: var(--accent);
-      font-size: 0.85rem;
-      font-weight: 700;
       margin-bottom: 0.85rem;
     }
-    .step h3 { margin: 0 0 0.35rem; font-size: 1.05rem; font-weight: 650; }
-    .step p { margin: 0; color: var(--text-secondary); font-size: 0.95rem; }
-
-    /* Platforms */
-    .platforms {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1.25rem;
+    .step h3 {
+      margin: 0 0 0.4rem;
+      font-size: 1.05rem;
     }
-    @media (max-width: 640px) { .platforms { grid-template-columns: 1fr; } }
-
-    .platform {
-      padding: 1.5rem;
-      border-radius: var(--radius);
-      border: 1px solid var(--line);
-      background: var(--bg-soft);
+    .step p {
+      margin: 0;
+      color: var(--text-2);
+      font-size: 0.93rem;
     }
-    .platform-head {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      margin-bottom: 0.75rem;
-    }
-    .platform-head .material-symbols-outlined { font-size: 22px; color: var(--accent); }
-    .platform h3 { margin: 0; font-size: 1.05rem; font-weight: 650; }
-    .platform p { margin: 0; font-size: 0.93rem; color: var(--text-secondary); line-height: 1.55; }
 
-    /* Closing */
+    /* —— Closing —— */
     .closing {
-      border-top: 1px solid var(--line);
-      border-bottom: 1px solid var(--line);
-      padding: 3.5rem 0;
+      padding: 5rem 0 4rem;
+      text-align: center;
+      position: relative;
     }
-    .closing-inner {
+    .closing::before {
+      content: "";
+      position: absolute;
+      inset: 10% 20% 20%;
+      background: radial-gradient(circle, var(--accent-soft), transparent 65%);
+      pointer-events: none;
+    }
+    .closing .wrap { position: relative; }
+    .closing .brand-mark {
+      width: 110px;
+      height: 34px;
+      margin: 0 auto 1.4rem;
+      color: var(--accent);
+    }
+    .closing h2 {
+      margin: 0 0 0.75rem;
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      letter-spacing: -0.035em;
+    }
+    .closing p {
+      margin: 0 auto 1.75rem;
+      max-width: 32rem;
+      color: var(--text-2);
+    }
+    .closing-cta {
       display: flex;
       flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1.5rem;
+      justify-content: center;
+      gap: 0.7rem;
     }
-    .closing h2 { margin: 0 0 0.5rem; font-size: 1.5rem; letter-spacing: -0.02em; }
-    .closing p { margin: 0; color: var(--text-secondary); max-width: 34rem; }
-    .closing .lock { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--accent); font-weight: 600; font-size: 0.85rem; margin-bottom: 0.75rem; }
-    .closing .lock .material-symbols-outlined { font-size: 18px; }
 
-    /* Footer */
-    footer { padding: 2.5rem 0 3rem; color: var(--text-tertiary); font-size: 0.85rem; }
-    .footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem; align-items: center; }
-    .footer-links { display: flex; flex-wrap: wrap; gap: 1.1rem; }
-    .footer-links a { color: var(--text-secondary); }
+    /* —— Footer —— */
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 2rem 0 2.75rem;
+      font-size: 0.85rem;
+      color: var(--text-3);
+    }
+    .footer-inner {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: center;
+    }
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.1rem;
+    }
+    .footer-links a { color: var(--text-2); }
     .footer-links a:hover { color: var(--text); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+      .reveal { opacity: 1; transform: none; }
+      .hero-stage-frame { opacity: 1; transform: none; }
+    }
   </style>
 </head>
 <body>
   <header class="nav">
     <div class="wrap nav-inner">
-      <a class="brand" href="#top">
-        <img src="assets/app-icon.png" width="28" height="28" alt="OSGKeyboard app icon">
-        OSGKeyboard
+      <a class="brand" href="#top" aria-label="OSGKeyboard">
+        <svg class="brand-mark" viewBox="36 367 952 291" aria-hidden="true">
+          <g fill="currentColor">
+            <path d="M627.511 512.419C627.511 448.783 576.127 397.197 512.741 397.197C449.355 397.197 397.971 448.783 397.971 512.419C397.971 576.054 449.355 627.641 512.741 627.641V637.837C443.746 637.837 387.814 581.686 387.814 512.419C387.814 443.152 443.746 387 512.741 387C581.736 387 637.668 443.152 637.668 512.419C637.668 581.686 581.736 637.837 512.741 637.837V627.641C576.127 627.641 627.511 576.054 627.511 512.419Z"/>
+            <path d="M56.2632 512.419C56.2632 581.686 112.195 637.837 181.19 637.837C250.185 637.837 306.117 581.686 306.117 512.419C306.117 443.152 250.185 387 181.19 387C112.195 387 56.2632 443.152 56.2632 512.419Z"/>
+            <path d="M399.618 562.094L399.618 552.257L512.74 552.257L512.74 562.094L399.618 562.094Z"/>
+            <path d="M512.741 483.398V473.561H625.864V483.398H512.741Z"/>
+            <path d="M843.308 387.981C910.987 387.981 966.093 441.8 968.171 508.975H843.308V518.812H968.096C965.014 585.066 910.324 637.836 843.308 637.836C774.313 637.836 718.381 581.904 718.381 512.909C718.381 443.914 774.312 387.981 843.308 387.981ZM968.234 518.812H968.096C968.187 516.855 968.234 514.888 968.234 512.909C968.234 511.593 968.211 510.281 968.171 508.975H968.234V518.812Z"/>
+          </g>
+        </svg>
+        <span class="brand-name">OSGKeyboard</span>
       </a>
-      <div class="nav-right">
-        <div class="lang-toggle" role="group" aria-label="Language">
+      <div class="nav-actions">
+        <div class="pill-toggle" role="group" aria-label="Language">
           <button type="button" data-lang="en">EN</button>
           <button type="button" class="active" data-lang="zh">中文</button>
         </div>
-        <a class="ghost-link" href="https://github.com/hkgood/OSGKeyboard" rel="noopener">
+        <button type="button" class="icon-btn" id="themeToggle" aria-label="Toggle theme">
+          <span class="material-symbols-outlined" data-theme-icon>contrast</span>
+        </button>
+        <a class="nav-link" href="https://github.com/hkgood/OSGKeyboard" rel="noopener">
           <span class="material-symbols-outlined" aria-hidden="true">code</span>
           <span data-i18n="nav.github">GitHub</span>
         </a>
@@ -462,156 +662,255 @@
   <main id="top">
     <!-- Hero -->
     <section class="hero">
-      <div class="wrap hero-grid">
-        <div>
+      <div class="wrap">
+        <div class="hero-copy">
           <div class="eyebrow">
-            <span class="material-symbols-outlined" aria-hidden="true">verified</span>
-            <span data-i18n="hero.eyebrow">iOS · iPadOS · macOS</span>
+            <span class="material-symbols-outlined" aria-hidden="true">graphic_eq</span>
+            <span data-i18n="hero.eyebrow">Free · Open · Cross-platform</span>
           </div>
           <h1 data-i18n="hero.title">开口即文字。</h1>
-          <p class="lead" data-i18n="hero.lead">iPhone、iPad、Mac 通用的语音输入工具。本地识别，AI 润色，任意 App 即说即写。</p>
+          <p class="lead" data-i18n="hero.lead">免费开源的跨端语音输入。本地识别，自带 API Key 润色，避免重复订阅。iPhone、iPad、Mac — 说完即落字。</p>
           <div class="hero-cta">
-            <a class="btn btn-primary" href="https://github.com/hkgood/OSGKeyboard" rel="noopener">
+            <a class="btn btn-primary" href="https://github.com/hkgood/OSGKeyboard/releases" rel="noopener">
               <span class="material-symbols-outlined" aria-hidden="true">download</span>
               <span data-i18n="hero.cta.primary">立即获取</span>
             </a>
-            <a class="btn btn-quiet" href="privacy/">
-              <span class="material-symbols-outlined" aria-hidden="true">shield</span>
-              <span data-i18n="hero.cta.secondary">隐私政策</span>
+            <a class="btn btn-ghost" href="https://github.com/hkgood/OSGKeyboard" rel="noopener">
+              <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
+              <span data-i18n="hero.cta.secondary">查看源码</span>
             </a>
           </div>
           <div class="hero-meta">
-            <span><span class="material-symbols-outlined" aria-hidden="true">devices</span><span data-i18n="hero.meta1">默认本地识别</span></span>
-            <span><span class="material-symbols-outlined" aria-hidden="true">auto_awesome</span><span data-i18n="hero.meta2">AI 自动润色</span></span>
-            <span><span class="material-symbols-outlined" aria-hidden="true">apps</span><span data-i18n="hero.meta3">任意 App 可用</span></span>
+            <span><span class="material-symbols-outlined" aria-hidden="true">lock</span><span data-i18n="hero.meta1">默认本地识别</span></span>
+            <span><span class="material-symbols-outlined" aria-hidden="true">key</span><span data-i18n="hero.meta2">BYOK 不重复付费</span></span>
+            <span><span class="material-symbols-outlined" aria-hidden="true">devices</span><span data-i18n="hero.meta3">iOS · iPad · Mac</span></span>
           </div>
         </div>
 
-        <div class="hero-visual">
-          <div class="phone">
-            <div class="phone-screen">
-              <div class="screen-top">
-                <p class="screen-app" data-i18n="mock.app">Notes</p>
-                <p class="screen-line" data-i18n="mock.line">Tomorrow at 3 PM, sync with the design team on the new onboarding flow.<span class="screen-caret">|</span></p>
-              </div>
-              <div class="kb">
-                <div class="kb-bar">
-                  <span class="kb-chip"><span class="material-symbols-outlined" aria-hidden="true">devices</span><span data-i18n="mock.chipEngine">On-device</span></span>
-                  <span class="kb-chip"><span class="material-symbols-outlined" aria-hidden="true">translate</span><span data-i18n="mock.chipTranslate">Translate</span></span>
-                </div>
-                <div class="kb-mic"><span class="material-symbols-outlined" aria-hidden="true">mic</span></div>
-              </div>
+        <div class="hero-stage">
+          <div class="sonic-ring" aria-hidden="true"></div>
+          <div class="sonic-ring" aria-hidden="true"></div>
+          <div class="sonic-ring" aria-hidden="true"></div>
+          <div class="hero-stage-frame">
+            <img src="assets/screenshots/mac-dashboard.png" width="1440" height="900" alt="OSGKeyboard Mac dashboard" loading="eager">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Differentiation -->
+    <section class="block" id="why">
+      <div class="wrap">
+        <div class="block-head reveal">
+          <h2 data-i18n="diff.title">和闭源订阅工具不一样</h2>
+          <p data-i18n="diff.subtitle">我们把差异化写进产品设计，而不是定价页。</p>
+        </div>
+        <div class="pillars">
+          <article class="pillar reveal">
+            <span class="material-symbols-outlined" aria-hidden="true">volunteer_activism</span>
+            <h3 data-i18n="diff.free.t">免费</h3>
+            <p data-i18n="diff.free.b">核心功能全部开放，无需订阅解锁。</p>
+          </article>
+          <article class="pillar reveal reveal-delay-1">
+            <span class="material-symbols-outlined" aria-hidden="true">devices</span>
+            <h3 data-i18n="diff.cross.t">跨端</h3>
+            <p data-i18n="diff.cross.b">iPhone、iPad、Mac 同源体验，词库可同步。</p>
+          </article>
+          <article class="pillar reveal reveal-delay-2">
+            <span class="material-symbols-outlined" aria-hidden="true">code</span>
+            <h3 data-i18n="diff.open.t">开源</h3>
+            <p data-i18n="diff.open.b">源码可审计。你信任的是代码，不是口号。</p>
+          </article>
+          <article class="pillar reveal reveal-delay-3">
+            <span class="material-symbols-outlined" aria-hidden="true">shield_lock</span>
+            <h3 data-i18n="diff.privacy.t">隐私</h3>
+            <p data-i18n="diff.privacy.b">默认本机识别，录音不上云，无追踪器。</p>
+          </article>
+          <article class="pillar reveal reveal-delay-4">
+            <span class="material-symbols-outlined" aria-hidden="true">vpn_key</span>
+            <h3 data-i18n="diff.byok.t">BYOK</h3>
+            <p data-i18n="diff.byok.b">带上你自己的 API Key，避免平台重复收费。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Product stories -->
+    <section class="block" id="product" style="padding-top: 1rem;">
+      <div class="wrap">
+        <div class="block-head reveal">
+          <h2 data-i18n="product.title">开口之后，全链路都在你掌控</h2>
+          <p data-i18n="product.subtitle">从键盘到桌面，从词库到设置 — 真实产品界面。</p>
+        </div>
+
+        <div class="story reveal">
+          <div class="story-copy">
+            <div class="kicker">
+              <span class="material-symbols-outlined" aria-hidden="true">laptop_mac</span>
+              <span data-i18n="story.mac.k">macOS</span>
+            </div>
+            <h3 data-i18n="story.mac.t">按住 Option，全局听写</h3>
+            <p data-i18n="story.mac.b">菜单栏常驻，底部浮层实时反馈。本地 ASR 就绪时，文字直接落在当前光标处。</p>
+          </div>
+          <div class="story-media">
+            <img src="assets/screenshots/mac-recording.png" width="1440" height="900" alt="Mac recording" loading="lazy">
+          </div>
+        </div>
+
+        <div class="story reverse reveal">
+          <div class="story-copy">
+            <div class="kicker">
+              <span class="material-symbols-outlined" aria-hidden="true">smartphone</span>
+              <span data-i18n="story.ios.k">iPhone / iPad</span>
+            </div>
+            <h3 data-i18n="story.ios.t">任意 App 里的自定义键盘</h3>
+            <p data-i18n="story.ios.b">点按麦克风说话。绿色就绪、红色录音，状态一目了然 — 不用离开正在写的东西。</p>
+          </div>
+          <div class="story-media phone-media">
+            <img src="assets/screenshots/iphone-keyboard_recording.png" width="720" height="1560" alt="iPhone keyboard recording" loading="lazy">
+          </div>
+        </div>
+
+        <div class="story reveal">
+          <div class="story-copy">
+            <div class="kicker">
+              <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
+              <span data-i18n="story.dict.k">Personal dictionary</span>
+            </div>
+            <h3 data-i18n="story.dict.t">个性词库，让识别更懂你</h3>
+            <p data-i18n="story.dict.b">人名、产品名、专业术语原样保留。AI 润色时不会被「改坏」，并可跨设备同步。</p>
+          </div>
+          <div class="story-media">
+            <img src="assets/screenshots/mac-dictionary.png" width="1440" height="900" alt="Dictionary" loading="lazy">
+          </div>
+        </div>
+
+        <div class="story reverse reveal">
+          <div class="story-copy">
+            <div class="kicker">
+              <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+              <span data-i18n="story.settings.k">BYOK &amp; engines</span>
+            </div>
+            <h3 data-i18n="story.settings.t">引擎与 Key，都由你决定</h3>
+            <p data-i18n="story.settings.b">本地识别或云端引擎。DeepSeek、OpenAI 兼容端点 — 填入你的 Key，费用只付给你选的服务商。</p>
+          </div>
+          <div class="story-media">
+            <img src="assets/screenshots/mac-settings.png" width="1440" height="900" alt="Settings" loading="lazy">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cross-device gallery -->
+    <section class="block" style="padding-top: 0;">
+      <div class="wrap">
+        <div class="block-head reveal">
+          <h2 data-i18n="gallery.title">同一套产品语言</h2>
+          <p data-i18n="gallery.subtitle">桌面听写、手机键盘、统计与历史 — 一条体验线。</p>
+        </div>
+        <div class="device-strip reveal">
+          <div class="device-card">
+            <img src="assets/screenshots/mac-history.png" width="1440" height="900" alt="Mac history" loading="lazy">
+          </div>
+          <div class="device-card phone">
+            <img src="assets/screenshots/iphone-home.png" width="720" height="1560" alt="iPhone home" loading="lazy">
+          </div>
+          <div class="device-card phone">
+            <img src="assets/screenshots/iphone-keyboard_idle.png" width="720" height="1560" alt="iPhone keyboard idle" loading="lazy">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Compare -->
+    <section class="block" id="byok">
+      <div class="wrap">
+        <div class="block-head reveal">
+          <h2 data-i18n="compare.title">为什么选 BYOK</h2>
+          <p data-i18n="compare.subtitle">很多工具把 AI 用量包进订阅。你已经有 Key 时，不该再付一遍。</p>
+        </div>
+        <div class="compare reveal">
+          <div class="compare-grid">
+            <div class="compare-item">
+              <span class="material-symbols-outlined" aria-hidden="true">payments</span>
+              <h3 data-i18n="compare.1.t">避免重复消费</h3>
+              <p data-i18n="compare.1.b">用已有的 DeepSeek / OpenAI 额度，不另开「听写订阅」。</p>
+            </div>
+            <div class="compare-item">
+              <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+              <h3 data-i18n="compare.2.t">费用透明</h3>
+              <p data-i18n="compare.2.b">账单在服务商侧，OSGKeyboard 不经手你的模型费用。</p>
+            </div>
+            <div class="compare-item">
+              <span class="material-symbols-outlined" aria-hidden="true">swap_horiz</span>
+              <h3 data-i18n="compare.3.t">随时换模型</h3>
+              <p data-i18n="compare.3.b">OpenAI 兼容端点即可接入；本地模型也可选。</p>
+            </div>
+            <div class="compare-item">
+              <span class="material-symbols-outlined" aria-hidden="true">encrypted</span>
+              <h3 data-i18n="compare.4.t">Key 在本机</h3>
+              <p data-i18n="compare.4.b">存入系统 Keychain，不经过我们的服务器。</p>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Platforms -->
-    <section class="block wrap">
-      <div class="block-head">
-        <h2 data-i18n="platforms.title">两个平台，同一种体验</h2>
-        <p data-i18n="platforms.subtitle">手机上用键盘，Mac 上按住 Option — 说完即落字。</p>
-      </div>
-      <div class="platforms">
-        <div class="platform">
-          <div class="platform-head">
-            <span class="material-symbols-outlined" aria-hidden="true">smartphone</span>
-            <h3 data-i18n="platform.ios.t">iOS / iPadOS</h3>
+    <!-- Steps -->
+    <section class="block" id="start">
+      <div class="wrap">
+        <div class="block-head reveal">
+          <h2 data-i18n="steps.title">三步，开始第一句话</h2>
+          <p data-i18n="steps.subtitle">设置一次，之后在任意输入处开口即写。</p>
+        </div>
+        <div class="steps">
+          <div class="step reveal">
+            <h3 data-i18n="step1.t">安装并授权</h3>
+            <p data-i18n="step1.b">iOS 添加键盘并开启完全访问；Mac 授予麦克风与辅助功能。</p>
           </div>
-          <p data-i18n="platform.ios.b">自定义键盘 + Flow 会话。点按麦克风说话，连续听写不用跳 App。灵动岛显示录音状态。</p>
-        </div>
-        <div class="platform">
-          <div class="platform-head">
-            <span class="material-symbols-outlined" aria-hidden="true">laptop_mac</span>
-            <h3 data-i18n="platform.mac.t">macOS</h3>
+          <div class="step reveal reveal-delay-1">
+            <h3 data-i18n="step2.t">选引擎，可选填 Key</h3>
+            <p data-i18n="step2.b">本地识别开箱即用；需要 AI 润色时填入你自己的 API Key。</p>
           </div>
-          <p data-i18n="platform.mac.b">菜单栏常驻，按住 Option 全局听写。底部浮层实时反馈，支持 SenseVoice / Qwen3 本地模型。</p>
+          <div class="step reveal reveal-delay-2">
+            <h3 data-i18n="step3.t">开口说话</h3>
+            <p data-i18n="step3.b">切换到 OSGKeyboard，或按住 Option。润色文字落入光标处。</p>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Features -->
-    <section class="block wrap">
-      <div class="block-head">
-        <h2 data-i18n="features.title">开口即写，所需尽在此</h2>
-        <p data-i18n="features.subtitle">本地优先，AI 加持 — 从识别到润色，一条链路搞定。</p>
-      </div>
-      <div class="features">
-        <div class="feature">
-          <div class="ficon"><span class="material-symbols-outlined" aria-hidden="true">mic</span></div>
-          <h3 data-i18n="feat.dictation.t">点按听写</h3>
-          <p data-i18n="feat.dictation.b">点一下开始，再点一下结束。单次最长 3.5 分钟，倒计时实时显示。</p>
-        </div>
-        <div class="feature">
-          <div class="ficon"><span class="material-symbols-outlined" aria-hidden="true">devices</span></div>
-          <h3 data-i18n="feat.ondevice.t">本地识别</h3>
-          <p data-i18n="feat.ondevice.b">iOS 端侧 SpeechAnalyzer；Mac 可选 SenseVoice / Qwen3。默认不上传录音。</p>
-        </div>
-        <div class="feature">
-          <div class="ficon"><span class="material-symbols-outlined" aria-hidden="true">auto_awesome</span></div>
-          <h3 data-i18n="feat.polish.t">AI 润色</h3>
-          <p data-i18n="feat.polish.b">自动补标点、整理结构。内置润色开箱即用，也可接入 DeepSeek、OpenAI 等 API。</p>
-        </div>
-        <div class="feature">
-          <div class="ficon"><span class="material-symbols-outlined" aria-hidden="true">translate</span></div>
-          <h3 data-i18n="feat.translate.t">润色后翻译</h3>
-          <p data-i18n="feat.translate.b">润色完成后一键翻译为 English、中文、日本語、한국어 等。</p>
-        </div>
-        <div class="feature">
-          <div class="ficon"><span class="material-symbols-outlined" aria-hidden="true">menu_book</span></div>
-          <h3 data-i18n="feat.dict.t">个性词库</h3>
-          <p data-i18n="feat.dict.b">人名、产品名、专业术语 — AI 润色时原样保留，iCloud 多设备同步。</p>
-        </div>
-        <div class="feature">
-          <div class="ficon"><span class="material-symbols-outlined" aria-hidden="true">cloud_sync</span></div>
-          <h3 data-i18n="feat.sync.t">iCloud 同步</h3>
-          <p data-i18n="feat.sync.b">设置、词库、听写历史在多设备间自动同步，换机无缝衔接。</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- How it works -->
-    <section class="block wrap">
-      <div class="block-head">
-        <h2 data-i18n="steps.title">三步，开始第一句话</h2>
-        <p data-i18n="steps.subtitle">设置一次，之后在任意输入处开口即写。</p>
-      </div>
-      <div class="steps">
-        <div class="step">
-          <h3 data-i18n="step1.t">安装并授权</h3>
-          <p data-i18n="step1.b">iOS 添加键盘并开启完全访问；Mac 授予麦克风与辅助功能权限。</p>
-        </div>
-        <div class="step">
-          <h3 data-i18n="step2.t">选引擎与润色</h3>
-          <p data-i18n="step2.b">本地识别 + 内置润色零配置可用；也可填入自己的 API Key 接入任意兼容模型。</p>
-        </div>
-        <div class="step">
-          <h3 data-i18n="step3.t">开口说话</h3>
-          <p data-i18n="step3.b">切换到 OSGKeyboard 键盘，或按住 Option 键。润色好的文字自动插入光标处。</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Closing / privacy -->
+    <!-- Closing -->
     <section class="closing">
-      <div class="wrap closing-inner">
-        <div>
-          <span class="lock"><span class="material-symbols-outlined" aria-hidden="true">lock</span><span data-i18n="close.badge">隐私优先</span></span>
-          <h2 data-i18n="close.title">你的声音，始终属于你</h2>
-          <p data-i18n="close.body">默认在设备端识别，录音不上传。润色只发送转写文字，不记录日常击键。云端引擎需你主动开启，并适用所配置服务商的隐私条款。</p>
+      <div class="wrap reveal">
+        <svg class="brand-mark" viewBox="36 367 952 291" aria-hidden="true">
+          <g fill="currentColor">
+            <path d="M627.511 512.419C627.511 448.783 576.127 397.197 512.741 397.197C449.355 397.197 397.971 448.783 397.971 512.419C397.971 576.054 449.355 627.641 512.741 627.641V637.837C443.746 637.837 387.814 581.686 387.814 512.419C387.814 443.152 443.746 387 512.741 387C581.736 387 637.668 443.152 637.668 512.419C637.668 581.686 581.736 637.837 512.741 637.837V627.641C576.127 627.641 627.511 576.054 627.511 512.419Z"/>
+            <path d="M56.2632 512.419C56.2632 581.686 112.195 637.837 181.19 637.837C250.185 637.837 306.117 581.686 306.117 512.419C306.117 443.152 250.185 387 181.19 387C112.195 387 56.2632 443.152 56.2632 512.419Z"/>
+            <path d="M399.618 562.094L399.618 552.257L512.74 552.257L512.74 562.094L399.618 562.094Z"/>
+            <path d="M512.741 483.398V473.561H625.864V483.398H512.741Z"/>
+            <path d="M843.308 387.981C910.987 387.981 966.093 441.8 968.171 508.975H843.308V518.812H968.096C965.014 585.066 910.324 637.836 843.308 637.836C774.313 637.836 718.381 581.904 718.381 512.909C718.381 443.914 774.312 387.981 843.308 387.981ZM968.234 518.812H968.096C968.187 516.855 968.234 514.888 968.234 512.909C968.234 511.593 968.211 510.281 968.171 508.975H968.234V518.812Z"/>
+          </g>
+        </svg>
+        <h2 data-i18n="close.title">开口即文字。其余交给你。</h2>
+        <p data-i18n="close.body">免费、跨端、开源、隐私优先。语音留在本机，AI 用你自己的 Key。</p>
+        <div class="closing-cta">
+          <a class="btn btn-primary" href="https://github.com/hkgood/OSGKeyboard/releases" rel="noopener">
+            <span class="material-symbols-outlined" aria-hidden="true">download</span>
+            <span data-i18n="close.cta">立即获取</span>
+          </a>
+          <a class="btn btn-ghost" href="privacy/">
+            <span class="material-symbols-outlined" aria-hidden="true">policy</span>
+            <span data-i18n="close.privacy">隐私政策</span>
+          </a>
         </div>
-        <a class="btn btn-quiet" href="privacy/">
-          <span class="material-symbols-outlined" aria-hidden="true">description</span>
-          <span data-i18n="close.cta">查看隐私政策</span>
-        </a>
       </div>
     </section>
   </main>
 
-  <footer class="wrap">
-    <div class="footer-inner">
-      <span data-i18n="footer.copy">© OSGKeyboard · v0.5.3 · 源码可见</span>
+  <footer>
+    <div class="wrap footer-inner">
+      <span data-i18n="footer.copy">© OSGKeyboard · v0.5.4 · 源码可见</span>
       <span class="footer-links">
         <a href="https://github.com/hkgood/OSGKeyboard" rel="noopener" data-i18n="footer.source">Source</a>
         <a href="privacy/" data-i18n="footer.privacy">Privacy</a>
@@ -624,102 +923,130 @@
     const copy = {
       en: {
         "nav.github": "GitHub",
-        "hero.eyebrow": "iOS · iPadOS · macOS",
+        "hero.eyebrow": "Free · Open · Cross-platform",
         "hero.title": "Speak it. It's typed.",
-        "hero.lead": "Voice input for iPhone, iPad, and Mac. On-device recognition, AI polish — speak in any app.",
+        "hero.lead": "Free, open-source voice input across iPhone, iPad, and Mac. On-device recognition. Bring your own API key — no double-billing.",
         "hero.cta.primary": "Get it now",
-        "hero.cta.secondary": "Privacy",
+        "hero.cta.secondary": "View source",
         "hero.meta1": "On-device by default",
-        "hero.meta2": "AI polish",
-        "hero.meta3": "Works in every app",
-        "mock.app": "Notes",
-        "mock.line": "Tomorrow at 3 PM, sync with the design team on the new onboarding flow.",
-        "mock.chipEngine": "Local",
-        "mock.chipTranslate": "Translate",
-        "platforms.title": "Two platforms, one experience",
-        "platforms.subtitle": "Keyboard on phone, hold Option on Mac — speak and it's typed.",
-        "platform.ios.t": "iOS / iPadOS",
-        "platform.ios.b": "Custom keyboard + Flow session. Tap the mic, dictate take after take without leaving your app. Live Activity on Dynamic Island.",
-        "platform.mac.t": "macOS",
-        "platform.mac.b": "Menu-bar app with global Option hotkey. Bottom overlay with live feedback. Optional SenseVoice / Qwen3 local models.",
-        "features.title": "Everything you need to type by voice",
-        "features.subtitle": "Local first, AI refined — recognition to polish in one flow.",
-        "feat.dictation.t": "Tap-to-talk",
-        "feat.dictation.b": "Tap to start, tap to stop. Up to 3.5 minutes per take with a live countdown.",
-        "feat.ondevice.t": "On-device recognition",
-        "feat.ondevice.b": "iOS SpeechAnalyzer; Mac SenseVoice / Qwen3 optional. Audio stays local by default.",
-        "feat.polish.t": "AI polish",
-        "feat.polish.b": "Punctuation and structure, three intensity levels. Built-in polish or bring your own DeepSeek / OpenAI API.",
-        "feat.translate.t": "Post-polish translation",
-        "feat.translate.b": "Translate into English, 中文, 日本語, 한국어 and more after polish.",
-        "feat.dict.t": "Personal dictionary",
-        "feat.dict.b": "Names, products, jargon — preserved verbatim by the AI, synced via iCloud.",
-        "feat.sync.t": "iCloud sync",
-        "feat.sync.b": "Settings, dictionary, and history sync across devices seamlessly.",
-        "steps.title": "Three steps to your first message",
-        "steps.subtitle": "Set up once, then dictate anywhere.",
+        "hero.meta2": "BYOK — no double pay",
+        "hero.meta3": "iOS · iPad · Mac",
+        "diff.title": "Not another closed subscription",
+        "diff.subtitle": "The differences are designed in — not gated behind a paywall.",
+        "diff.free.t": "Free",
+        "diff.free.b": "Every core feature is available. No subscription unlock.",
+        "diff.cross.t": "Cross-platform",
+        "diff.cross.b": "iPhone, iPad, and Mac — one product language, optional sync.",
+        "diff.open.t": "Open source",
+        "diff.open.b": "Audit the code. Trust the repo, not the marketing.",
+        "diff.privacy.t": "Privacy",
+        "diff.privacy.b": "On-device ASR by default. No trackers. Audio stays local.",
+        "diff.byok.t": "BYOK",
+        "diff.byok.b": "Bring your own API key. Avoid paying twice for AI.",
+        "product.title": "After you speak, you stay in control",
+        "product.subtitle": "From keyboard to desktop — real product UI.",
+        "story.mac.k": "macOS",
+        "story.mac.t": "Hold Option. Dictate anywhere.",
+        "story.mac.b": "Menu-bar app with a live overlay. Local ASR ready — polished text lands at your cursor.",
+        "story.ios.k": "iPhone / iPad",
+        "story.ios.t": "A custom keyboard in every app",
+        "story.ios.b": "Tap the mic. Green ready, red recording — stay in whatever you were writing.",
+        "story.dict.k": "Personal dictionary",
+        "story.dict.t": "Terms the AI must never rewrite",
+        "story.dict.b": "Names, products, jargon stay verbatim — and can sync across devices.",
+        "story.settings.k": "BYOK & engines",
+        "story.settings.t": "You choose the engine and the key",
+        "story.settings.b": "Local or cloud ASR. DeepSeek / OpenAI-compatible endpoints — you pay only your provider.",
+        "gallery.title": "One product language",
+        "gallery.subtitle": "Desktop dictation, mobile keyboard, stats and history — one line.",
+        "compare.title": "Why BYOK matters",
+        "compare.subtitle": "Many tools fold AI usage into a subscription. If you already have a key, you shouldn't pay again.",
+        "compare.1.t": "No double billing",
+        "compare.1.b": "Use your existing DeepSeek / OpenAI credits — skip a dictation tax.",
+        "compare.2.t": "Transparent cost",
+        "compare.2.b": "Billing stays with your provider. We never touch model fees.",
+        "compare.3.t": "Swap models freely",
+        "compare.3.b": "Any OpenAI-compatible endpoint — or keep it fully local.",
+        "compare.4.t": "Keys stay on-device",
+        "compare.4.b": "Stored in Keychain. Never routed through our servers.",
+        "steps.title": "Three steps to your first line",
+        "steps.subtitle": "Set up once. Dictate anywhere after.",
         "step1.t": "Install & authorize",
         "step1.b": "Add the iOS keyboard with Full Access; grant mic + Accessibility on Mac.",
-        "step2.t": "Pick engine & polish",
-        "step2.b": "Local ASR + built-in polish works out of the box. Or add your own API key.",
+        "step2.t": "Pick engine, optional key",
+        "step2.b": "Local ASR works out of the box. Add your API key when you want AI polish.",
         "step3.t": "Start talking",
-        "step3.b": "Switch to OSGKeyboard, or hold Option on Mac. Polished text lands at your cursor.",
-        "close.badge": "Privacy first",
-        "close.title": "Your voice stays yours",
-        "close.body": "On-device recognition by default — audio is not uploaded. Polish receives text only; we never log keystrokes. Cloud engine requires explicit opt-in.",
-        "close.cta": "Read the privacy policy",
-        "footer.copy": "© OSGKeyboard · v0.5.3 · source available",
+        "step3.b": "Switch to OSGKeyboard, or hold Option. Polished text lands at the cursor.",
+        "close.title": "Speak it. The rest is yours.",
+        "close.body": "Free, cross-platform, open, privacy-first. Voice stays local. AI uses your key.",
+        "close.cta": "Get it now",
+        "close.privacy": "Privacy policy",
+        "footer.copy": "© OSGKeyboard · v0.5.4 · source available",
         "footer.source": "Source",
         "footer.privacy": "Privacy",
         "footer.license": "License"
       },
       zh: {
         "nav.github": "GitHub",
-        "hero.eyebrow": "iOS · iPadOS · macOS",
+        "hero.eyebrow": "免费 · 开源 · 跨端",
         "hero.title": "开口即文字。",
-        "hero.lead": "iPhone、iPad、Mac 通用的语音输入工具。本地识别，AI 润色，任意 App 即说即写。",
+        "hero.lead": "免费开源的跨端语音输入。本地识别，自带 API Key 润色，避免重复订阅。iPhone、iPad、Mac — 说完即落字。",
         "hero.cta.primary": "立即获取",
-        "hero.cta.secondary": "隐私政策",
+        "hero.cta.secondary": "查看源码",
         "hero.meta1": "默认本地识别",
-        "hero.meta2": "AI 自动润色",
-        "hero.meta3": "任意 App 可用",
-        "mock.app": "备忘录",
-        "mock.line": "明天下午三点，和设计团队同步新引导流程。",
-        "mock.chipEngine": "本地",
-        "mock.chipTranslate": "翻译",
-        "platforms.title": "两个平台，同一种体验",
-        "platforms.subtitle": "手机上用键盘，Mac 上按住 Option — 说完即落字。",
-        "platform.ios.t": "iOS / iPadOS",
-        "platform.ios.b": "自定义键盘 + Flow 会话。点按麦克风说话，连续听写不用跳 App。灵动岛显示录音状态。",
-        "platform.mac.t": "macOS",
-        "platform.mac.b": "菜单栏常驻，按住 Option 全局听写。底部浮层实时反馈，支持 SenseVoice / Qwen3 本地模型。",
-        "features.title": "开口即写，所需尽在此",
-        "features.subtitle": "本地优先，AI 加持 — 从识别到润色，一条链路搞定。",
-        "feat.dictation.t": "点按听写",
-        "feat.dictation.b": "点一下开始，再点一下结束。单次最长 3.5 分钟，倒计时实时显示。",
-        "feat.ondevice.t": "本地识别",
-        "feat.ondevice.b": "iOS 端侧 SpeechAnalyzer；Mac 可选 SenseVoice / Qwen3。默认不上传录音。",
-        "feat.polish.t": "AI 润色",
-        "feat.polish.b": "自动补标点、整理结构。内置润色开箱即用，也可接入 DeepSeek、OpenAI 等 API。",
-        "feat.translate.t": "润色后翻译",
-        "feat.translate.b": "润色完成后一键翻译为 English、中文、日本語、한국어 等。",
-        "feat.dict.t": "个性词库",
-        "feat.dict.b": "人名、产品名、专业术语 — AI 润色时原样保留，iCloud 多设备同步。",
-        "feat.sync.t": "iCloud 同步",
-        "feat.sync.b": "设置、词库、听写历史在多设备间自动同步，换机无缝衔接。",
+        "hero.meta2": "BYOK 不重复付费",
+        "hero.meta3": "iOS · iPad · Mac",
+        "diff.title": "和闭源订阅工具不一样",
+        "diff.subtitle": "我们把差异化写进产品设计，而不是定价页。",
+        "diff.free.t": "免费",
+        "diff.free.b": "核心功能全部开放，无需订阅解锁。",
+        "diff.cross.t": "跨端",
+        "diff.cross.b": "iPhone、iPad、Mac 同源体验，词库可同步。",
+        "diff.open.t": "开源",
+        "diff.open.b": "源码可审计。你信任的是代码，不是口号。",
+        "diff.privacy.t": "隐私",
+        "diff.privacy.b": "默认本机识别，录音不上云，无追踪器。",
+        "diff.byok.t": "BYOK",
+        "diff.byok.b": "带上你自己的 API Key，避免平台重复收费。",
+        "product.title": "开口之后，全链路都在你掌控",
+        "product.subtitle": "从键盘到桌面，从词库到设置 — 真实产品界面。",
+        "story.mac.k": "macOS",
+        "story.mac.t": "按住 Option，全局听写",
+        "story.mac.b": "菜单栏常驻，底部浮层实时反馈。本地 ASR 就绪时，文字直接落在当前光标处。",
+        "story.ios.k": "iPhone / iPad",
+        "story.ios.t": "任意 App 里的自定义键盘",
+        "story.ios.b": "点按麦克风说话。绿色就绪、红色录音，状态一目了然 — 不用离开正在写的东西。",
+        "story.dict.k": "个性词库",
+        "story.dict.t": "个性词库，让识别更懂你",
+        "story.dict.b": "人名、产品名、专业术语原样保留。AI 润色时不会被「改坏」，并可跨设备同步。",
+        "story.settings.k": "BYOK & 引擎",
+        "story.settings.t": "引擎与 Key，都由你决定",
+        "story.settings.b": "本地识别或云端引擎。DeepSeek、OpenAI 兼容端点 — 填入你的 Key，费用只付给你选的服务商。",
+        "gallery.title": "同一套产品语言",
+        "gallery.subtitle": "桌面听写、手机键盘、统计与历史 — 一条体验线。",
+        "compare.title": "为什么选 BYOK",
+        "compare.subtitle": "很多工具把 AI 用量包进订阅。你已经有 Key 时，不该再付一遍。",
+        "compare.1.t": "避免重复消费",
+        "compare.1.b": "用已有的 DeepSeek / OpenAI 额度，不另开「听写订阅」。",
+        "compare.2.t": "费用透明",
+        "compare.2.b": "账单在服务商侧，OSGKeyboard 不经手你的模型费用。",
+        "compare.3.t": "随时换模型",
+        "compare.3.b": "OpenAI 兼容端点即可接入；本地模型也可选。",
+        "compare.4.t": "Key 在本机",
+        "compare.4.b": "存入系统 Keychain，不经过我们的服务器。",
         "steps.title": "三步，开始第一句话",
         "steps.subtitle": "设置一次，之后在任意输入处开口即写。",
         "step1.t": "安装并授权",
-        "step1.b": "iOS 添加键盘并开启完全访问；Mac 授予麦克风与辅助功能权限。",
-        "step2.t": "选引擎与润色",
-        "step2.b": "本地识别 + 内置润色零配置可用；也可填入自己的 API Key 接入任意兼容模型。",
+        "step1.b": "iOS 添加键盘并开启完全访问；Mac 授予麦克风与辅助功能。",
+        "step2.t": "选引擎，可选填 Key",
+        "step2.b": "本地识别开箱即用；需要 AI 润色时填入你自己的 API Key。",
         "step3.t": "开口说话",
-        "step3.b": "切换到 OSGKeyboard 键盘，或按住 Option 键。润色好的文字自动插入光标处。",
-        "close.badge": "隐私优先",
-        "close.title": "你的声音，始终属于你",
-        "close.body": "默认在设备端识别，录音不上传。润色只发送转写文字，不记录日常击键。云端引擎需你主动开启，并适用所配置服务商的隐私条款。",
-        "close.cta": "查看隐私政策",
-        "footer.copy": "© OSGKeyboard · v0.5.3 · 源码可见",
+        "step3.b": "切换到 OSGKeyboard，或按住 Option。润色文字落入光标处。",
+        "close.title": "开口即文字。其余交给你。",
+        "close.body": "免费、跨端、开源、隐私优先。语音留在本机，AI 用你自己的 Key。",
+        "close.cta": "立即获取",
+        "close.privacy": "隐私政策",
+        "footer.copy": "© OSGKeyboard · v0.5.4 · 源码可见",
         "footer.source": "源代码",
         "footer.privacy": "隐私",
         "footer.license": "许可协议"
@@ -731,21 +1058,66 @@
       document.documentElement.lang = lang === "zh" ? "zh-Hans" : "en";
       document.querySelectorAll("[data-i18n]").forEach((el) => {
         const value = strings[el.getAttribute("data-i18n")];
-        if (value == null) return;
-        el.textContent = value;
+        if (value != null) el.textContent = value;
       });
-      document.querySelectorAll(".lang-toggle button").forEach((btn) => {
+      document.querySelectorAll(".pill-toggle button[data-lang]").forEach((btn) => {
         btn.classList.toggle("active", btn.dataset.lang === lang);
       });
       try { localStorage.setItem("osg-lang", lang); } catch (_) {}
     }
 
-    document.querySelectorAll(".lang-toggle button").forEach((btn) => {
+    function applyTheme(theme) {
+      document.documentElement.setAttribute("data-theme", theme);
+      const icon = document.querySelector("[data-theme-icon]");
+      if (icon) {
+        icon.textContent = theme === "dark" ? "light_mode" : theme === "light" ? "dark_mode" : "contrast";
+      }
+      try { localStorage.setItem("osg-theme", theme); } catch (_) {}
+    }
+
+    function cycleTheme() {
+      const current = document.documentElement.getAttribute("data-theme") || "system";
+      const next = current === "system" ? "light" : current === "light" ? "dark" : "system";
+      applyTheme(next);
+    }
+
+    document.querySelectorAll(".pill-toggle button[data-lang]").forEach((btn) => {
       btn.addEventListener("click", () => applyLang(btn.dataset.lang));
     });
+    document.getElementById("themeToggle")?.addEventListener("click", cycleTheme);
 
-    const saved = (() => { try { return localStorage.getItem("osg-lang"); } catch (_) { return null; } })();
-    applyLang(saved || "zh");
+    const savedLang = (() => { try { return localStorage.getItem("osg-lang"); } catch (_) { return null; } })();
+    const savedTheme = (() => { try { return localStorage.getItem("osg-theme"); } catch (_) { return null; } })();
+    applyLang(savedLang || ((navigator.language || "").startsWith("zh") ? "zh" : "en"));
+    applyTheme(savedTheme || "system");
+
+    // Scroll reveal
+    const reveals = document.querySelectorAll(".reveal");
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in");
+            io.unobserve(entry.target);
+          }
+        });
+      }, { rootMargin: "0px 0px -8% 0px", threshold: 0.12 });
+      reveals.forEach((el) => io.observe(el));
+    } else {
+      reveals.forEach((el) => el.classList.add("in"));
+    }
+
+    // Soft parallax after hero entrance animation settles
+    const stage = document.querySelector(".hero-stage-frame");
+    if (stage && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      let ready = false;
+      setTimeout(() => { ready = true; }, 1100);
+      window.addEventListener("scroll", () => {
+        if (!ready) return;
+        const y = Math.min(window.scrollY * 0.08, 36);
+        stage.style.transform = `translateY(${y}px)`;
+      }, { passive: true });
+    }
   </script>
 </body>
 </html>

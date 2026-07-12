@@ -39,6 +39,9 @@ struct SettingsView: View {
                 palette.background.ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: Spacing.md) {
+                        if presentation == .tab {
+                            SupportDeveloperSection(language: config.uiLanguage)
+                        }
                         languageAndPolishSection
                         dictionaryAndPolishSection
                         flowSessionSection

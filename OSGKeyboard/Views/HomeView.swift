@@ -174,7 +174,7 @@ struct HomeView: View {
 
     private var wideHeroHeader: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text("home.wide.tagline")
+            Text("onboarding.welcome.tagline")
                 .font(.system(size: 30, weight: .semibold))
                 .foregroundStyle(palette.textPrimary)
                 .lineLimit(2)

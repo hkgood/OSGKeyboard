@@ -38,6 +38,7 @@
 | Field | Value |
 |---|---|
 | **Price** | Free (0 USD) |
+| **In-App Purchases** | Optional voluntary tip — Consumable `ByRockyACoffee` (¥28 China tier; no feature unlock) |
 | **Availability** | All App Store territories (default) |
 | **Pre-order** | No |
 | **Volume purchase** | No |
@@ -82,6 +83,12 @@ WHY OSGKEYBOARD
 • Privacy first. PrivacyInfo.xcprivacy declares exactly what the app
   touches (voice audio + transcripts, on-device by default, never
   linked or tracked); we don't run a server.
+
+OPTIONAL SUPPORT
+
+OSGKeyboard is completely free — every feature is available without
+payment. If you'd like to support development, Settings includes an
+optional in-app tip (Consumable). It does not unlock anything extra.
 
 BUILT FOR
 
@@ -270,6 +277,11 @@ to end, please:
    one running.
 5. The privacy policy is at
    https://hkgood.github.io/OSGKeyboard/privacy/
+
+6. Optional tip (Consumable IAP ByRockyACoffee): open
+   Settings → "Support the Developer". All features remain free before
+   and after purchase; the tip does not unlock anything. Consumable
+   tips cannot be restored (stated in UI).
 
 Source code: https://github.com/hkgood/OSGKeyboard
 ```

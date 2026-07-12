@@ -38,8 +38,9 @@ struct DashboardView: View {
                     .padding(.top, Spacing.sm)
 
                     // Leftover window height splits evenly above / below the mic
-                    // bar so spacing stays balanced at any window size.
-                    Spacer(minLength: Spacing.xs)
+                    // bar so spacing stays balanced at any window size. The top
+                    // gap keeps a larger floor so the mic never hugs the canvas.
+                    Spacer(minLength: 30)
 
                     BottomDictationBar(viewModel: viewModel)
                         .padding(.horizontal, MacMetrics.pageHorizontalInset)

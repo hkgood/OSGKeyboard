@@ -334,7 +334,6 @@
 "home.flow.startShort" = "开启";
 "home.preview.label" = "输入测试";
 "home.preview.placeholder" = "点这里试试键盘";
-"home.wide.tagline" = "随处语音听写";
 "home.wide.tagline.subtitle" = "切换到任意 App，点键盘麦克风即可听写。";
 "home.wide.mode.cloud" = "云端";
 "home.wide.mode.local" = "本机";

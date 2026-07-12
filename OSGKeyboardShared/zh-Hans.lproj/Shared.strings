@@ -269,7 +269,7 @@
 "mac.onboarding.next" = "下一步";
 "mac.onboarding.finish" = "完成";
 "mac.onboarding.skipForNow" = "暂时跳过";
-"mac.onboarding.welcome.title" = "欢迎使用 OSGKeyboard";
+"mac.onboarding.welcome.title" = "开口即文字。";
 "mac.onboarding.welcome.subtitle" = "用一分钟完成听写基础配置。这里的选项之后都可以在设置里修改。";
 "mac.onboarding.welcome.privacy" = "除非你选择云端服务商，语音会优先留在本机处理。";
 "mac.onboarding.welcome.hotkey" = "按住 Option 键即可在任意应用开始听写。";
@@ -358,3 +358,18 @@
 "settings.appLanguage.auto" = "自动";
 "settings.appLanguage.english" = "英文";
 "settings.appLanguage.chinese" = "中文";
+
+/* 自愿打赏（消耗型 IAP — 不解锁功能） */
+"tip.title" = "支持开发者";
+"tip.body" = "OSGKeyboard 全功能免费、无任何付费墙。若觉得好用，可以自愿打赏一杯咖啡——不会解锁额外功能。";
+"tip.button" = "打赏 %@";
+"tip.buttonFallback" = "打赏支持";
+"tip.consumableNotice" = "消耗型应用内购买，无法恢复购买（Apple 规则）。";
+"tip.thankYou.title" = "感谢支持！";
+"tip.thankYou.message" = "你的支持帮助我们继续免费、开源地维护 OSGKeyboard。";
+"tip.thankYou.past" = "你已支持 %lld 次，感谢！";
+"tip.error.title" = "购买失败";
+"tip.error.productUnavailable" = "暂时无法加载打赏商品，请稍后再试。";
+"tip.error.pending" = "购买待审批，请稍后查看。";
+"tip.error.unknown" = "无法完成购买。";
+"tip.alert.dismiss" = "好";

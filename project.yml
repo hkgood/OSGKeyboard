@@ -44,8 +44,8 @@ settings:
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "0.5.3"
-    CURRENT_PROJECT_VERSION: "22"
+    MARKETING_VERSION: "0.5.4"
+    CURRENT_PROJECT_VERSION: "23"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -211,6 +211,7 @@ targets:
         embed: true
       - sdk: Speech.framework
       - sdk: ActivityKit.framework
+      - sdk: StoreKit.framework
 
   # =========================================================
   # Keyboard Extension
@@ -349,6 +350,7 @@ targets:
       - sdk: Speech.framework
       - sdk: AVFoundation.framework
       - sdk: Charts.framework
+      - sdk: StoreKit.framework
 
   # =========================================================
   # 单元测试
@@ -485,6 +487,7 @@ targets:
       - sdk: Speech.framework
       - sdk: AVFoundation.framework
       - sdk: Charts.framework
+      - sdk: StoreKit.framework
 
 schemes:
   OSGKeyboard:
@@ -495,6 +498,7 @@ schemes:
         OSGKeyboardLiveActivity: all
     run:
       config: Debug
+      storeKitConfiguration: OSGKeyboard.storekit
     test:
       config: Debug
       targets:

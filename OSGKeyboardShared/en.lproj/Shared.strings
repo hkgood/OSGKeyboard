@@ -269,7 +269,7 @@
 "mac.onboarding.next" = "Next";
 "mac.onboarding.finish" = "Finish";
 "mac.onboarding.skipForNow" = "Skip for now";
-"mac.onboarding.welcome.title" = "Welcome to OSGKeyboard";
+"mac.onboarding.welcome.title" = "Speak it. It’s typed.";
 "mac.onboarding.welcome.subtitle" = "Set up dictation in a minute. Everything here can be changed later in Settings.";
 "mac.onboarding.welcome.privacy" = "Your voice stays local unless you choose a cloud provider.";
 "mac.onboarding.welcome.hotkey" = "Hold Option to dictate from any app.";
@@ -358,3 +358,18 @@
 "settings.appLanguage.auto" = "Auto";
 "settings.appLanguage.english" = "English";
 "settings.appLanguage.chinese" = "Chinese";
+
+/* Voluntary support tip (Consumable IAP — no feature unlock) */
+"tip.title" = "Support the Developer";
+"tip.body" = "OSGKeyboard is completely free with every feature unlocked. If you find it useful, you can leave an optional tip — it does not unlock anything extra.";
+"tip.button" = "Tip %@";
+"tip.buttonFallback" = "Send a Tip";
+"tip.consumableNotice" = "Consumable in-app purchase. Tips cannot be restored (Apple policy).";
+"tip.thankYou.title" = "Thank you!";
+"tip.thankYou.message" = "Your support helps keep OSGKeyboard free and open for everyone.";
+"tip.thankYou.past" = "You've supported us %lld time(s). Thank you!";
+"tip.error.title" = "Purchase Failed";
+"tip.error.productUnavailable" = "The tip product is unavailable right now. Try again later.";
+"tip.error.pending" = "Your purchase is pending approval.";
+"tip.error.unknown" = "The purchase could not be completed.";
+"tip.alert.dismiss" = "OK";
