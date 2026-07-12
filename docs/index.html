@@ -319,6 +319,12 @@
       border-block: 1px solid var(--line);
       padding: 4.25rem 0;
     }
+    /* Comparison section: white / elevated surface */
+    section.block.block-band-white {
+      background: var(--bg-elevated);
+      border-block: 1px solid var(--line);
+      padding: 4.25rem 0;
+    }
     /* Alternate wash so consecutive bands don’t read as one slab */
     section.block.block-band-wash {
       background: var(--hero-wash);
@@ -342,90 +348,129 @@
       font-size: 1.05rem;
     }
 
-    /* —— Diff pillars (hover / tap → detail stage) —— */
+    /* —— Diff explorer (pill tabs + elevated stage) —— */
+    .diff-explorer {
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
     .pillars {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 0.75rem;
+      display: flex;
+      flex-wrap: nowrap;
+      justify-content: center;
+      gap: 0.25rem;
+      margin: 0 auto;
+      padding: 0.3rem;
+      width: fit-content;
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--bg-elevated);
+      box-shadow: 0 1px 0 rgba(18, 18, 20, 0.04);
+      scrollbar-width: none;
     }
-    @media (max-width: 960px) {
-      .pillars { grid-template-columns: repeat(3, 1fr); }
-    }
-    @media (max-width: 620px) {
-      .pillars { grid-template-columns: 1fr 1fr; }
-    }
+    .pillars::-webkit-scrollbar { display: none; }
     .pillar {
       appearance: none;
-      width: 100%;
-      text-align: left;
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.65rem 1.05rem;
+      border: 0;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--text-2);
       font: inherit;
-      color: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: -0.015em;
       cursor: pointer;
-      padding: 1.15rem 1rem;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--bg-elevated);
-      transition: border-color 0.22s, transform 0.22s, background 0.22s, box-shadow 0.22s;
+      white-space: nowrap;
+      transition: color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    .pillar .material-symbols-outlined {
+      font-size: 18px;
+      color: currentColor;
+      opacity: 0.85;
     }
     .pillar:hover {
-      transform: translateY(-2px);
-      border-color: var(--line-strong);
+      color: var(--text);
+      background: var(--bg-soft);
     }
     .pillar.is-active,
     .pillar:focus-visible {
-      border-color: var(--accent);
-      background: var(--accent-soft);
-      box-shadow: 0 0 0 1px var(--accent);
+      color: #fff;
+      background: var(--accent);
+      box-shadow: 0 8px 22px var(--accent-glow);
       outline: none;
-      transform: translateY(-2px);
     }
-    .pillar .material-symbols-outlined {
-      font-size: 24px;
-      color: var(--accent);
-      margin-bottom: 0.65rem;
-      display: block;
+    .pillar.is-active .material-symbols-outlined,
+    .pillar:focus-visible .material-symbols-outlined {
+      opacity: 1;
+      color: #fff;
     }
-    .pillar h3 {
-      margin: 0 0 0.3rem;
-      font-size: 1rem;
-      letter-spacing: -0.015em;
-    }
-    .pillar .pillar-lead {
-      margin: 0;
-      font-size: 0.82rem;
-      color: var(--text-2);
-      line-height: 1.4;
-    }
-    .pillar-hint {
-      display: inline-block;
-      margin-top: 0.7rem;
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      color: var(--accent);
-      opacity: 0.75;
-    }
-    .pillar.is-active .pillar-hint { opacity: 1; }
 
     .pillar-stage {
-      margin-top: 1rem;
-      border-radius: calc(var(--radius) + 4px);
+      position: relative;
+      border-radius: 28px;
       border: 1px solid var(--line);
-      background: var(--hero-wash);
-      padding: 1.5rem 1.35rem;
-      min-height: 9.5rem;
+      background: var(--bg-elevated);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.55) inset,
+        0 24px 60px rgba(18, 18, 20, 0.08);
+      padding: clamp(1.5rem, 3.5vw, 2.35rem);
+      overflow: hidden;
+      min-height: 12rem;
+    }
+    .pillar-stage::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: min(52%, 420px);
+      height: 180px;
+      background: radial-gradient(ellipse at 20% 0%, var(--accent-soft), transparent 70%);
+      pointer-events: none;
+    }
+    html[data-theme="dark"] .pillar-stage {
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.04) inset,
+        0 24px 60px rgba(0, 0, 0, 0.35);
+    }
+    @media (prefers-color-scheme: dark) {
+      html[data-theme="system"] .pillar-stage {
+        box-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.04) inset,
+          0 24px 60px rgba(0, 0, 0, 0.35);
+      }
+    }
+    .pillar-panel {
+      position: relative;
+      z-index: 1;
     }
     .pillar-panel[hidden] { display: none !important; }
+    .pillar-panel:not([hidden]) {
+      animation: panel-in 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    @keyframes panel-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
     .pillar-panel-kicker {
-      margin: 0 0 1rem;
-      font-size: 0.9rem;
-      color: var(--text-2);
-      max-width: 42rem;
+      margin: 0 0 1.5rem;
+      max-width: 38rem;
+      font-size: clamp(1.05rem, 2.2vw, 1.25rem);
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      line-height: 1.35;
+      color: var(--text);
     }
     .pillar-points {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 1.1rem;
+      gap: 1.15rem 1.35rem;
     }
     @media (max-width: 900px) {
       .pillar-points { grid-template-columns: 1fr 1fr; }
@@ -433,22 +478,31 @@
     @media (max-width: 520px) {
       .pillar-points { grid-template-columns: 1fr; }
     }
+    .pillar-point {
+      padding: 1rem 0.15rem 0.15rem;
+      border-top: 1px solid var(--line);
+    }
     .pillar-point .material-symbols-outlined {
-      font-size: 22px;
+      width: 2.1rem;
+      height: 2.1rem;
+      display: grid;
+      place-items: center;
+      margin-bottom: 0.7rem;
+      border-radius: 10px;
+      font-size: 18px;
       color: var(--accent);
-      margin-bottom: 0.45rem;
-      display: block;
+      background: var(--accent-soft);
     }
     .pillar-point h4 {
-      margin: 0 0 0.28rem;
-      font-size: 0.95rem;
+      margin: 0 0 0.35rem;
+      font-size: 0.98rem;
       letter-spacing: -0.015em;
     }
     .pillar-point p {
       margin: 0;
-      font-size: 0.86rem;
+      font-size: 0.88rem;
       color: var(--text-2);
-      line-height: 1.45;
+      line-height: 1.5;
     }
 
     /* —— Competitor matrix —— */
@@ -664,42 +718,33 @@
       <div class="wrap">
         <div class="block-head reveal">
           <h2 data-i18n="diff.title">开源，尽是不同</h2>
-          <p data-i18n="diff.subtitle">悬停或点按下方卡片，展开每一项差异——内容写在产品里，不写在定价页。</p>
+          <p data-i18n="diff.subtitle">差异写在产品里，不写在定价页。切换下方主题，看清每一项。</p>
         </div>
-        <div class="pillars reveal" role="tablist" aria-label="OSGKeyboard differentiators">
+        <div class="diff-explorer reveal">
+        <div class="pillars" role="tablist" aria-label="OSGKeyboard differentiators">
           <button type="button" class="pillar is-active" role="tab" id="tab-free" aria-selected="true" aria-controls="panel-free" data-pillar="free">
             <span class="material-symbols-outlined" aria-hidden="true">volunteer_activism</span>
-            <h3 data-i18n="diff.free.t">免费</h3>
-            <p class="pillar-lead" data-i18n="diff.free.b">核心全开，没有 Pro 墙。</p>
-            <span class="pillar-hint" data-i18n="diff.hint">展开详情</span>
+            <span data-i18n="diff.free.t">免费</span>
           </button>
           <button type="button" class="pillar" role="tab" id="tab-cross" aria-selected="false" aria-controls="panel-cross" data-pillar="cross" tabindex="-1">
             <span class="material-symbols-outlined" aria-hidden="true">devices</span>
-            <h3 data-i18n="diff.cross.t">跨端</h3>
-            <p class="pillar-lead" data-i18n="diff.cross.b">iPhone · iPad · Mac 同源。</p>
-            <span class="pillar-hint" data-i18n="diff.hint">展开详情</span>
+            <span data-i18n="diff.cross.t">跨端</span>
           </button>
           <button type="button" class="pillar" role="tab" id="tab-open" aria-selected="false" aria-controls="panel-open" data-pillar="open" tabindex="-1">
             <span class="material-symbols-outlined" aria-hidden="true">code</span>
-            <h3 data-i18n="diff.open.t">开源</h3>
-            <p class="pillar-lead" data-i18n="diff.open.b">代码可审计，信任可验证。</p>
-            <span class="pillar-hint" data-i18n="diff.hint">展开详情</span>
+            <span data-i18n="diff.open.t">开源</span>
           </button>
           <button type="button" class="pillar" role="tab" id="tab-privacy" aria-selected="false" aria-controls="panel-privacy" data-pillar="privacy" tabindex="-1">
             <span class="material-symbols-outlined" aria-hidden="true">shield_lock</span>
-            <h3 data-i18n="diff.privacy.t">隐私</h3>
-            <p class="pillar-lead" data-i18n="diff.privacy.b">默认本地，录音不上云。</p>
-            <span class="pillar-hint" data-i18n="diff.hint">展开详情</span>
+            <span data-i18n="diff.privacy.t">隐私</span>
           </button>
           <button type="button" class="pillar" role="tab" id="tab-byok" aria-selected="false" aria-controls="panel-byok" data-pillar="byok" tabindex="-1">
             <span class="material-symbols-outlined" aria-hidden="true">vpn_key</span>
-            <h3 data-i18n="diff.byok.t">BYOK</h3>
-            <p class="pillar-lead" data-i18n="diff.byok.b">本地免费；云端 Key 自付。</p>
-            <span class="pillar-hint" data-i18n="diff.hint">展开详情</span>
+            <span data-i18n="diff.byok.t">BYOK</span>
           </button>
         </div>
 
-        <div class="pillar-stage reveal">
+        <div class="pillar-stage">
           <div class="pillar-panel" id="panel-free" role="tabpanel" aria-labelledby="tab-free" data-panel="free">
             <p class="pillar-panel-kicker" data-i18n="diff.free.k">没有「基础版听写、进阶版解锁」——认真用也不用升级。</p>
             <div class="pillar-points">
@@ -830,11 +875,12 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
     </section>
 
     <!-- Competitor matrix -->
-    <section class="block block-band" id="vs">
+    <section class="block block-band-white" id="vs">
       <div class="wrap">
         <div class="block-head reveal">
           <h2 data-i18n="vs.title">和常见听写工具比一比</h2>
@@ -909,7 +955,7 @@
     </section>
 
     <!-- Steps -->
-    <section class="block block-band-wash" id="start">
+    <section class="block block-band" id="start">
       <div class="wrap">
         <div class="block-head reveal">
           <h2 data-i18n="steps.title">开箱可用，只要三步</h2>
@@ -958,7 +1004,7 @@
         "hero.meta2": "BYOK — no double pay",
         "hero.meta3": "iOS · iPad · Mac",
         "diff.title": "Open source. Built different.",
-        "diff.subtitle": "Hover or tap a card to expand each difference — designed into the product, not the pricing page.",
+        "diff.subtitle": "Designed into the product — not the pricing page. Switch a theme below to see each difference.",
         "diff.hint": "Show details",
         "diff.free.t": "Free",
         "diff.free.b": "Core open. No Pro wall.",
@@ -1054,7 +1100,7 @@
         "hero.meta2": "BYOK 不重复付费",
         "hero.meta3": "iOS · iPad · Mac",
         "diff.title": "开源，尽是不同",
-        "diff.subtitle": "悬停或点按下方卡片，展开每一项差异——内容写在产品里，不写在定价页。",
+        "diff.subtitle": "差异写在产品里，不写在定价页。切换下方主题，看清每一项。",
         "diff.hint": "展开详情",
         "diff.free.t": "免费",
         "diff.free.b": "核心全开，没有 Pro 墙。",
