@@ -54,13 +54,19 @@ struct MainSplitView: View {
 
     private var brandHeader: some View {
         HStack {
-            Image("osglogo")
+            // Match macOS sidebar: template wide mark tinted with accent so
+            // light / dark both stay readable (PNG `osglogo` can fail to
+            // show under NavigationSplitView chrome on some iPad sizes).
+            Image("OSGLogoWide")
+                .renderingMode(.template)
                 .resizable()
                 .scaledToFit()
                 .frame(height: 28)
+                .foregroundStyle(palette.accent)
                 .accessibilityLabel("OSGKeyboard")
-            Spacer()
+            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
         .padding(.leading, WideLayoutMetrics.sidebarContentInset)
         .padding(.trailing, WideLayoutMetrics.sidebarInset)
         .padding(.top, Spacing.lg)

@@ -156,6 +156,10 @@ struct SettingsView: View {
 
                 Divider().background(palette.divider)
 
+                AppearancePickerRow()
+
+                Divider().background(palette.divider)
+
                 LocalePickerRow(
                     locales: effectiveLocales,
                     selection: Binding(
@@ -491,6 +495,27 @@ private struct AppLanguagePickerRow: View {
                     selection = AppUILanguage(rawValue: newValue) ?? .auto
                 }
             )
+        )
+    }
+}
+
+// MARK: - Appearance picker row
+
+private struct AppearancePickerRow: View {
+    @AppStorage(AppearancePreference.storageKey)
+    private var appearanceRaw = AppearancePreference.system.rawValue
+
+    private var options: [(id: String, label: String)] {
+        AppearancePreference.allCases.map { preference in
+            (preference.rawValue, AppL10n.string(preference.labelKey))
+        }
+    }
+
+    var body: some View {
+        PickerRow(
+            title: AppL10n.string("settings.appearance.title"),
+            options: options,
+            selection: $appearanceRaw
         )
     }
 }

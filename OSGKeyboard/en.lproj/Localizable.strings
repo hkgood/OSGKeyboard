@@ -91,6 +91,10 @@
 "settings.appLanguage.auto" = "Auto";
 "settings.appLanguage.english" = "English";
 "settings.appLanguage.chinese" = "Chinese";
+"settings.appearance.title" = "Appearance";
+"settings.appearance.system" = "System";
+"settings.appearance.light" = "Light";
+"settings.appearance.dark" = "Dark";
 "settings.reset.title" = "Reset all settings?";
 "settings.reset.message" = "API key, model, base URL, voice history, and cloud consent will be cleared.";
 "settings.reset.confirm" = "Reset all settings";

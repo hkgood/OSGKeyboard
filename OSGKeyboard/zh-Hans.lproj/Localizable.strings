@@ -91,6 +91,10 @@
 "settings.appLanguage.auto" = "自动";
 "settings.appLanguage.english" = "英文";
 "settings.appLanguage.chinese" = "中文";
+"settings.appearance.title" = "外观";
+"settings.appearance.system" = "跟随系统";
+"settings.appearance.light" = "浅色";
+"settings.appearance.dark" = "深色";
 "settings.reset.title" = "重置所有设置?";
 "settings.reset.message" = "将清空 API Key、模型、接口地址、语音历史及云端确认状态。";
 "settings.reset.confirm" = "重置所有设置";

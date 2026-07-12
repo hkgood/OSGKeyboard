@@ -469,6 +469,10 @@ targets:
         NSSpeechRecognitionUsageDescription: "OSGKeyboard uses on-device speech recognition for local dictation mode."
         NSHumanReadableCopyright: "OSGKeyboard"
         ITSAppUsesNonExemptEncryption: false
+        CFBundleURLTypes:
+          - CFBundleURLName: com.osgkeyboard.mac.seed
+            CFBundleURLSchemes:
+              - osgkeyboard
     settings:
       base:
         PRODUCT_NAME: OSGKeyboard

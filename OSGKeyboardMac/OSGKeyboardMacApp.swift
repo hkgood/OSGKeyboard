@@ -52,6 +52,20 @@ struct OSGKeyboardMacApp: App {
                 .onReceive(NotificationCenter.default.publisher(for: .speechHistoryDidSyncFromCloud)) { _ in
                     viewModel.speechHistory.reloadFromDisk()
                 }
+                .onOpenURL { url in
+                    #if DEBUG
+                    guard url.scheme == "osgkeyboard", url.host == "seed-demo" else { return }
+                    DemoDataSeeder.seedRichPlaceholderData(
+                        defaults: .standard,
+                        historyDefaults: .standard
+                    )
+                    viewModel.reloadConfigFromCloud()
+                    viewModel.refreshDictionaryFromCloud()
+                    viewModel.usageStatistics.reloadFromDisk()
+                    viewModel.speechHistory.reloadFromDisk()
+                    hasCompletedMacOnboarding = true
+                    #endif
+                }
         }
         // Borderless titlebar → content (sidebar + traffic lights) runs to the
         // very top, matching macOS System Settings.

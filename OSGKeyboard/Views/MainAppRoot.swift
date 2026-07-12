@@ -80,6 +80,11 @@ struct MainAppRoot: View {
         switch url.host {
         case "startflow":
             flowManager.startSession(coldStart: true)
+        #if DEBUG
+        case "seed-demo":
+            DemoDataSeeder.seedRichPlaceholderData()
+            config.reloadFromPersistedStorage()
+        #endif
         default:
             break
         }
