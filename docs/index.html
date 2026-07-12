@@ -370,7 +370,85 @@
       line-height: 1.45;
     }
 
-    /* —— Compare —— */
+    /* —— Competitor matrix —— */
+    .vs-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--line);
+      border-radius: calc(var(--radius) + 4px);
+      background: var(--bg-elevated);
+    }
+    .vs-table {
+      width: 100%;
+      min-width: 720px;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .vs-table th,
+    .vs-table td {
+      padding: 0.85rem 1rem;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+      line-height: 1.45;
+    }
+    .vs-table thead th {
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      background: var(--bg-soft);
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .vs-table tbody th {
+      font-weight: 600;
+      color: var(--text-2);
+      white-space: nowrap;
+      width: 7.5rem;
+      background: var(--bg-elevated);
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      box-shadow: 4px 0 12px rgba(18, 18, 20, 0.04);
+    }
+    .vs-table tbody tr:last-child th,
+    .vs-table tbody tr:last-child td {
+      border-bottom: 0;
+    }
+    .vs-table .col-osg {
+      background: var(--accent-soft);
+      color: var(--text);
+      font-weight: 500;
+    }
+    .vs-table thead .col-osg {
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .vs-table .cell-mute { color: var(--text-3); }
+    .vs-table .cell-price {
+      white-space: pre-line;
+      color: var(--text-2);
+    }
+    .vs-table .cell-price-warn {
+      color: var(--text);
+      font-weight: 500;
+    }
+    .vs-table .col-osg.cell-price {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .vs-note {
+      margin: 1rem 0 0;
+      font-size: 0.9rem;
+      color: var(--text-2);
+    }
+    .vs-foot {
+      margin: 0.45rem 0 0;
+      font-size: 0.78rem;
+      color: var(--text-3);
+    }
+
+    /* —— BYOK points —— */
     .compare {
       border-radius: calc(var(--radius) + 4px);
       border: 1px solid var(--line);
@@ -540,67 +618,143 @@
     <section class="block" id="why">
       <div class="wrap">
         <div class="block-head reveal">
-          <h2 data-i18n="diff.title">和闭源订阅工具不一样</h2>
-          <p data-i18n="diff.subtitle">我们把差异化写进产品设计，而不是定价页。</p>
+          <h2 data-i18n="diff.title">开源，尽是不同</h2>
+          <p data-i18n="diff.subtitle">免费、跨端、可审计、默认本地——差异写在产品里，不写在定价页。</p>
         </div>
         <div class="pillars">
           <article class="pillar reveal">
             <span class="material-symbols-outlined" aria-hidden="true">volunteer_activism</span>
             <h3 data-i18n="diff.free.t">免费</h3>
-            <p data-i18n="diff.free.b">核心功能全部开放，无需订阅解锁。</p>
+            <p data-i18n="diff.free.b">听写、历史、词库、跨端核心全开，没有 Pro 墙，不靠订阅解锁。</p>
           </article>
           <article class="pillar reveal reveal-delay-1">
             <span class="material-symbols-outlined" aria-hidden="true">devices</span>
             <h3 data-i18n="diff.cross.t">跨端</h3>
-            <p data-i18n="diff.cross.b">iPhone、iPad、Mac 同源体验，词库可同步。</p>
+            <p data-i18n="diff.cross.b">iPhone 键盘、iPad 分栏、Mac 全局热键，同一套体验；词库可同步。</p>
           </article>
           <article class="pillar reveal reveal-delay-2">
             <span class="material-symbols-outlined" aria-hidden="true">code</span>
             <h3 data-i18n="diff.open.t">开源</h3>
-            <p data-i18n="diff.open.b">源码可审计。你信任的是代码，不是口号。</p>
+            <p data-i18n="diff.open.b">GitHub 可审计、可 fork。你信任的是代码，不是隐私口号。</p>
           </article>
           <article class="pillar reveal reveal-delay-3">
             <span class="material-symbols-outlined" aria-hidden="true">shield_lock</span>
             <h3 data-i18n="diff.privacy.t">隐私</h3>
-            <p data-i18n="diff.privacy.b">默认本机识别，录音不上云，无追踪器。</p>
+            <p data-i18n="diff.privacy.b">默认本机识别，录音不上云；无追踪器，也不强制注册账号。</p>
           </article>
           <article class="pillar reveal reveal-delay-4">
             <span class="material-symbols-outlined" aria-hidden="true">vpn_key</span>
             <h3 data-i18n="diff.byok.t">BYOK</h3>
-            <p data-i18n="diff.byok.b">带上你自己的 API Key，避免平台重复收费。</p>
+            <p data-i18n="diff.byok.b">不填 Key 也能本地听写；要 AI 润色再带自己的 Key，不重复付费。</p>
           </article>
         </div>
       </div>
     </section>
 
-    <!-- Compare -->
+    <!-- Competitor matrix -->
+    <section class="block" id="vs">
+      <div class="wrap">
+        <div class="block-head reveal">
+          <h2 data-i18n="vs.title">和常见听写工具比一比</h2>
+          <p data-i18n="vs.subtitle">免费额度用着用着就撞墙；订阅不便宜。开源这条路：本地免费，云端 Key 自付。</p>
+        </div>
+        <div class="vs-scroll reveal">
+          <table class="vs-table">
+            <thead>
+              <tr>
+                <th scope="col"></th>
+                <th scope="col">Typeless</th>
+                <th scope="col">Superwhisper</th>
+                <th scope="col">Openless</th>
+                <th scope="col" class="col-osg">OSGKeyboard</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row" data-i18n="vs.row.open">开源</th>
+                <td class="cell-mute" data-i18n="vs.no">—</td>
+                <td class="cell-mute" data-i18n="vs.no">—</td>
+                <td data-i18n="vs.yes">✓</td>
+                <td class="col-osg" data-i18n="vs.yes">✓</td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="vs.row.price">付费</th>
+                <td class="cell-price cell-price-warn" data-i18n="vs.typeless.price">每周约 8,000 词免费额度；订阅不便宜：Pro 约 $12/月起（年付）/ $30/月（月付）</td>
+                <td class="cell-price cell-price-warn" data-i18n="vs.superwhisper.price">免费档额度有限；订阅/买断不便宜：Pro 约 $8.5/月，买断约 $250</td>
+                <td class="cell-price" data-i18n="vs.openless.price">App 免费；识别 / 润色按你的 Key 计费</td>
+                <td class="col-osg cell-price" data-i18n="vs.osg.price">本地模式完全免费；云端润色 Key 自付（不另收听写订阅）</td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="vs.row.local">可本地识别</th>
+                <td class="cell-mute" data-i18n="vs.no">—</td>
+                <td data-i18n="vs.yes">✓</td>
+                <td data-i18n="vs.yes">✓</td>
+                <td class="col-osg" data-i18n="vs.yes">✓</td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="vs.row.byok">BYOK</th>
+                <td class="cell-mute" data-i18n="vs.no">—</td>
+                <td data-i18n="vs.partial">部分（Pro）</td>
+                <td data-i18n="vs.yes">✓</td>
+                <td class="col-osg" data-i18n="vs.yes">✓</td>
+              </tr>
+              <tr>
+                <th scope="row">Mac</th>
+                <td data-i18n="vs.yes">✓</td>
+                <td data-i18n="vs.yes">✓</td>
+                <td data-i18n="vs.yes">✓</td>
+                <td class="col-osg" data-i18n="vs.yes">✓</td>
+              </tr>
+              <tr>
+                <th scope="row" data-i18n="vs.row.mobile">iPhone / iPad</th>
+                <td data-i18n="vs.yes">✓</td>
+                <td data-i18n="vs.yes">✓</td>
+                <td class="cell-mute" data-i18n="vs.no">—</td>
+                <td class="col-osg" data-i18n="vs.yes">✓</td>
+              </tr>
+              <tr>
+                <th scope="row">Windows</th>
+                <td data-i18n="vs.yes">✓</td>
+                <td data-i18n="vs.yes">✓</td>
+                <td data-i18n="vs.yes">✓</td>
+                <td class="col-osg cell-mute" data-i18n="vs.no">—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="vs-note reveal" data-i18n="vs.note">与 Openless 同属开源阵营；我们补上 iPhone / iPad，暂无 Windows。</p>
+        <p class="vs-foot reveal" data-i18n="vs.foot">价格与功能据各产品公开说明整理，可能更新，以官方为准。</p>
+      </div>
+    </section>
+
+    <!-- BYOK -->
     <section class="block" id="byok">
       <div class="wrap">
         <div class="block-head reveal">
-          <h2 data-i18n="compare.title">为什么选 BYOK</h2>
-          <p data-i18n="compare.subtitle">很多工具把 AI 用量包进订阅。你已经有 Key 时，不该再付一遍。</p>
+          <h2 data-i18n="compare.title">BYOK，不花冤枉钱</h2>
+          <p data-i18n="compare.subtitle">订阅常把「听写壳」和「模型用量」捆在一起。本地识别免费起步；AI 润色按你已有的额度计费。</p>
         </div>
         <div class="compare reveal">
           <div class="compare-grid">
             <div class="compare-item">
               <span class="material-symbols-outlined" aria-hidden="true">payments</span>
-              <h3 data-i18n="compare.1.t">避免重复消费</h3>
-              <p data-i18n="compare.1.b">用已有的 DeepSeek / OpenAI 额度，不另开「听写订阅」。</p>
+              <h3 data-i18n="compare.1.t">躲开重复付费</h3>
+              <p data-i18n="compare.1.b">已有 DeepSeek / OpenAI 额度就直接用，不必再开一份「听写订阅」。</p>
             </div>
             <div class="compare-item">
               <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
-              <h3 data-i18n="compare.2.t">费用透明</h3>
-              <p data-i18n="compare.2.b">账单在服务商侧，OSGKeyboard 不经手你的模型费用。</p>
+              <h3 data-i18n="compare.2.t">费用看得见</h3>
+              <p data-i18n="compare.2.b">模型账单只在服务商侧；OSGKeyboard 不经手、不加价。</p>
             </div>
             <div class="compare-item">
               <span class="material-symbols-outlined" aria-hidden="true">swap_horiz</span>
-              <h3 data-i18n="compare.3.t">随时换模型</h3>
-              <p data-i18n="compare.3.b">OpenAI 兼容端点即可接入；本地模型也可选。</p>
+              <h3 data-i18n="compare.3.t">模型你说了算</h3>
+              <p data-i18n="compare.3.b">OpenAI 兼容端点即可接入；不需要 AI 时，本地识别照用不填 Key。</p>
             </div>
             <div class="compare-item">
               <span class="material-symbols-outlined" aria-hidden="true">encrypted</span>
-              <h3 data-i18n="compare.4.t">Key 在本机</h3>
-              <p data-i18n="compare.4.b">存入系统 Keychain，不经过我们的服务器。</p>
+              <h3 data-i18n="compare.4.t">Key 留在本机</h3>
+              <p data-i18n="compare.4.b">写入系统 Keychain，不经过我们的服务器。</p>
             </div>
           </div>
         </div>
@@ -611,21 +765,21 @@
     <section class="block" id="start">
       <div class="wrap">
         <div class="block-head reveal">
-          <h2 data-i18n="steps.title">三步，开始第一句话</h2>
-          <p data-i18n="steps.subtitle">设置一次，之后在任意输入处开口即写。</p>
+          <h2 data-i18n="steps.title">开箱可用，只要三步</h2>
+          <p data-i18n="steps.subtitle">不用订阅、不用注册账号。装好权限，说第一句就行。</p>
         </div>
         <div class="steps">
           <div class="step reveal">
-            <h3 data-i18n="step1.t">安装并授权</h3>
-            <p data-i18n="step1.b">iOS 添加键盘并开启完全访问；Mac 授予麦克风与辅助功能。</p>
+            <h3 data-i18n="step1.t">装好并授权</h3>
+            <p data-i18n="step1.b">iOS：设置 → 键盘 → 开启完全访问。Mac：麦克风 + 辅助功能。完成时键盘列表能看到 OSG，或菜单栏出现图标。</p>
           </div>
           <div class="step reveal reveal-delay-1">
-            <h3 data-i18n="step2.t">选引擎，可选填 Key</h3>
-            <p data-i18n="step2.b">本地识别开箱即用；需要 AI 润色时填入你自己的 API Key。</p>
+            <h3 data-i18n="step2.t">先本地，Key 可选</h3>
+            <p data-i18n="step2.b">默认本地识别即可开口；要 AI 润色再填自己的 API Key。不配 Key 也能落字。</p>
           </div>
           <div class="step reveal reveal-delay-2">
-            <h3 data-i18n="step3.t">开口说话</h3>
-            <p data-i18n="step3.b">切换到 OSGKeyboard，或按住 Option。润色文字落入光标处。</p>
+            <h3 data-i18n="step3.t">开口即写</h3>
+            <p data-i18n="step3.b">iOS 切到 OSGKeyboard 点麦克风；Mac 按住 Option。文字出现在当前光标处。</p>
           </div>
         </div>
       </div>
@@ -656,36 +810,52 @@
         "hero.meta1": "On-device by default",
         "hero.meta2": "BYOK — no double pay",
         "hero.meta3": "iOS · iPad · Mac",
-        "diff.title": "Not another closed subscription",
-        "diff.subtitle": "The differences are designed in — not gated behind a paywall.",
+        "diff.title": "Open source. Built different.",
+        "diff.subtitle": "Free, cross-platform, auditable, on-device by default — designed in, not gated by pricing.",
         "diff.free.t": "Free",
-        "diff.free.b": "Every core feature is available. No subscription unlock.",
+        "diff.free.b": "Dictation, history, dictionary, and cross-device cores stay open. No Pro wall.",
         "diff.cross.t": "Cross-platform",
-        "diff.cross.b": "iPhone, iPad, and Mac — one product language, optional sync.",
+        "diff.cross.b": "iPhone keyboard, iPad split view, Mac global hotkey — one product language; dictionary can sync.",
         "diff.open.t": "Open source",
-        "diff.open.b": "Audit the code. Trust the repo, not the marketing.",
+        "diff.open.b": "Audit and fork on GitHub. Trust the code, not a privacy slogan.",
         "diff.privacy.t": "Privacy",
-        "diff.privacy.b": "On-device ASR by default. No trackers. Audio stays local.",
+        "diff.privacy.b": "On-device ASR by default. Audio stays local. No trackers, no forced account.",
         "diff.byok.t": "BYOK",
-        "diff.byok.b": "Bring your own API key. Avoid paying twice for AI.",
-        "compare.title": "Why BYOK matters",
-        "compare.subtitle": "Many tools fold AI usage into a subscription. If you already have a key, you shouldn't pay again.",
+        "diff.byok.b": "Local dictation works without a key. Bring your own key only when you want AI polish.",
+        "vs.title": "How we compare",
+        "vs.subtitle": "Free tiers run out. Subscriptions add up. Open source: local free, cloud on your key.",
+        "vs.row.open": "Open source",
+        "vs.row.price": "Pricing",
+        "vs.row.local": "On-device ASR",
+        "vs.row.byok": "BYOK",
+        "vs.row.mobile": "iPhone / iPad",
+        "vs.yes": "✓",
+        "vs.no": "—",
+        "vs.partial": "Partial (Pro)",
+        "vs.typeless.price": "≈8,000 words/week free.\nSubscription isn’t cheap: Pro ~$12/mo (annual) / $30/mo (monthly).",
+        "vs.superwhisper.price": "Limited free tier.\nSub / lifetime isn’t cheap: Pro ~$8.5/mo, lifetime ~$250.",
+        "vs.openless.price": "Free app; ASR / polish billed to your key.",
+        "vs.osg.price": "Local mode fully free.\nCloud polish via your key — no dictation subscription.",
+        "vs.note": "Same open-source lane as Openless — we add iPhone / iPad; Windows isn’t available yet.",
+        "vs.foot": "Prices and features from public product pages; may change — check each vendor.",
+        "compare.title": "BYOK — skip the markup",
+        "compare.subtitle": "Subscriptions often bundle the dictation shell with model usage. Local ASR starts free; AI polish bills your existing credits.",
         "compare.1.t": "No double billing",
-        "compare.1.b": "Use your existing DeepSeek / OpenAI credits — skip a dictation tax.",
-        "compare.2.t": "Transparent cost",
-        "compare.2.b": "Billing stays with your provider. We never touch model fees.",
-        "compare.3.t": "Swap models freely",
-        "compare.3.b": "Any OpenAI-compatible endpoint — or keep it fully local.",
+        "compare.1.b": "Use DeepSeek / OpenAI credits you already have — skip another dictation subscription.",
+        "compare.2.t": "Costs you can see",
+        "compare.2.b": "Model invoices stay with your provider. We never touch or markup them.",
+        "compare.3.t": "You pick the model",
+        "compare.3.b": "Any OpenAI-compatible endpoint. Skip the key entirely when local ASR is enough.",
         "compare.4.t": "Keys stay on-device",
         "compare.4.b": "Stored in Keychain. Never routed through our servers.",
-        "steps.title": "Three steps to your first line",
-        "steps.subtitle": "Set up once. Dictate anywhere after.",
+        "steps.title": "Ready in three steps",
+        "steps.subtitle": "No subscription. No account. Grant permissions once, then speak.",
         "step1.t": "Install & authorize",
-        "step1.b": "Add the iOS keyboard with Full Access; grant mic + Accessibility on Mac.",
-        "step2.t": "Pick engine, optional key",
-        "step2.b": "Local ASR works out of the box. Add your API key when you want AI polish.",
-        "step3.t": "Start talking",
-        "step3.b": "Switch to OSGKeyboard, or hold Option. Polished text lands at the cursor.",
+        "step1.b": "iOS: Settings → Keyboard → Full Access. Mac: Microphone + Accessibility. Done when OSG appears in the keyboard list or the menu bar.",
+        "step2.t": "Local first, key optional",
+        "step2.b": "On-device ASR works out of the box. Add your API key only for AI polish — text still lands without one.",
+        "step3.t": "Speak it. It's typed.",
+        "step3.b": "iOS: switch to OSGKeyboard and tap the mic. Mac: hold Option. Text appears at the cursor.",
         "footer.copy": "© OSGKeyboard · v0.5.4 · source available",
         "footer.source": "Source",
         "footer.privacy": "Privacy",
@@ -701,36 +871,52 @@
         "hero.meta1": "默认本地识别",
         "hero.meta2": "BYOK 不重复付费",
         "hero.meta3": "iOS · iPad · Mac",
-        "diff.title": "和闭源订阅工具不一样",
-        "diff.subtitle": "我们把差异化写进产品设计，而不是定价页。",
+        "diff.title": "开源，尽是不同",
+        "diff.subtitle": "免费、跨端、可审计、默认本地——差异写在产品里，不写在定价页。",
         "diff.free.t": "免费",
-        "diff.free.b": "核心功能全部开放，无需订阅解锁。",
+        "diff.free.b": "听写、历史、词库、跨端核心全开，没有 Pro 墙，不靠订阅解锁。",
         "diff.cross.t": "跨端",
-        "diff.cross.b": "iPhone、iPad、Mac 同源体验，词库可同步。",
+        "diff.cross.b": "iPhone 键盘、iPad 分栏、Mac 全局热键，同一套体验；词库可同步。",
         "diff.open.t": "开源",
-        "diff.open.b": "源码可审计。你信任的是代码，不是口号。",
+        "diff.open.b": "GitHub 可审计、可 fork。你信任的是代码，不是隐私口号。",
         "diff.privacy.t": "隐私",
-        "diff.privacy.b": "默认本机识别，录音不上云，无追踪器。",
+        "diff.privacy.b": "默认本机识别，录音不上云；无追踪器，也不强制注册账号。",
         "diff.byok.t": "BYOK",
-        "diff.byok.b": "带上你自己的 API Key，避免平台重复收费。",
-        "compare.title": "为什么选 BYOK",
-        "compare.subtitle": "很多工具把 AI 用量包进订阅。你已经有 Key 时，不该再付一遍。",
-        "compare.1.t": "避免重复消费",
-        "compare.1.b": "用已有的 DeepSeek / OpenAI 额度，不另开「听写订阅」。",
-        "compare.2.t": "费用透明",
-        "compare.2.b": "账单在服务商侧，OSGKeyboard 不经手你的模型费用。",
-        "compare.3.t": "随时换模型",
-        "compare.3.b": "OpenAI 兼容端点即可接入；本地模型也可选。",
-        "compare.4.t": "Key 在本机",
-        "compare.4.b": "存入系统 Keychain，不经过我们的服务器。",
-        "steps.title": "三步，开始第一句话",
-        "steps.subtitle": "设置一次，之后在任意输入处开口即写。",
-        "step1.t": "安装并授权",
-        "step1.b": "iOS 添加键盘并开启完全访问；Mac 授予麦克风与辅助功能。",
-        "step2.t": "选引擎，可选填 Key",
-        "step2.b": "本地识别开箱即用；需要 AI 润色时填入你自己的 API Key。",
-        "step3.t": "开口说话",
-        "step3.b": "切换到 OSGKeyboard，或按住 Option。润色文字落入光标处。",
+        "diff.byok.b": "不填 Key 也能本地听写；要 AI 润色再带自己的 Key，不重复付费。",
+        "vs.title": "和常见听写工具比一比",
+        "vs.subtitle": "免费额度用着用着就撞墙；订阅不便宜。开源这条路：本地免费，云端 Key 自付。",
+        "vs.row.open": "开源",
+        "vs.row.price": "付费",
+        "vs.row.local": "可本地识别",
+        "vs.row.byok": "BYOK",
+        "vs.row.mobile": "iPhone / iPad",
+        "vs.yes": "✓",
+        "vs.no": "—",
+        "vs.partial": "部分（Pro）",
+        "vs.typeless.price": "每周约 8,000 词免费额度。\n订阅不便宜：Pro 约 $12/月起（年付）/ $30/月（月付）。",
+        "vs.superwhisper.price": "免费档额度有限。\n订阅/买断不便宜：Pro 约 $8.5/月，买断约 $250。",
+        "vs.openless.price": "App 免费；识别 / 润色按你的 Key 计费。",
+        "vs.osg.price": "本地模式完全免费。\n云端润色 Key 自付（不另收听写订阅）。",
+        "vs.note": "与 Openless 同属开源阵营；我们补上 iPhone / iPad，暂无 Windows。",
+        "vs.foot": "价格与功能据各产品公开说明整理，可能更新，以官方为准。",
+        "compare.title": "BYOK，不花冤枉钱",
+        "compare.subtitle": "订阅常把「听写壳」和「模型用量」捆在一起。本地识别免费起步；AI 润色按你已有的额度计费。",
+        "compare.1.t": "躲开重复付费",
+        "compare.1.b": "已有 DeepSeek / OpenAI 额度就直接用，不必再开一份「听写订阅」。",
+        "compare.2.t": "费用看得见",
+        "compare.2.b": "模型账单只在服务商侧；OSGKeyboard 不经手、不加价。",
+        "compare.3.t": "模型你说了算",
+        "compare.3.b": "OpenAI 兼容端点即可接入；不需要 AI 时，本地识别照用不填 Key。",
+        "compare.4.t": "Key 留在本机",
+        "compare.4.b": "写入系统 Keychain，不经过我们的服务器。",
+        "steps.title": "开箱可用，只要三步",
+        "steps.subtitle": "不用订阅、不用注册账号。装好权限，说第一句就行。",
+        "step1.t": "装好并授权",
+        "step1.b": "iOS：设置 → 键盘 → 开启完全访问。Mac：麦克风 + 辅助功能。完成时键盘列表能看到 OSG，或菜单栏出现图标。",
+        "step2.t": "先本地，Key 可选",
+        "step2.b": "默认本地识别即可开口；要 AI 润色再填自己的 API Key。不配 Key 也能落字。",
+        "step3.t": "开口即写",
+        "step3.b": "iOS 切到 OSGKeyboard 点麦克风；Mac 按住 Option。文字出现在当前光标处。",
         "footer.copy": "© OSGKeyboard · v0.5.4 · 源码可见",
         "footer.source": "源代码",
         "footer.privacy": "隐私",

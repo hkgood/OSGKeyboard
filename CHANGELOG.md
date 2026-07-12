@@ -8,11 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Landing competitor matrix**: compare Typeless / Superwhisper / Openless / OSGKeyboard on open source, pricing, on-device ASR, BYOK, and platforms (incl. honest Windows gap). / **落地页竞品对照**：对比 Typeless / Superwhisper / Openless / OSGKeyboard 的开源、付费、本地识别、BYOK 与平台（含暂无 Windows）。
 - **Voluntary support tip**: Settings (top of the page) includes an optional ¥28 Consumable in-app tip (StoreKit 2). All features stay free — no paywall or unlock. / **自愿打赏**：设置页顶部新增可选 ¥28 消耗型应用内打赏（StoreKit 2）。全功能仍免费，无付费墙或功能解锁。
 - **iOS appearance preference**: Settings → Preferences adds System / Light / Dark (iPhone + iPad), matching the Mac control. / **iOS 外观偏好**：设置 → 偏好设置新增跟随系统 / 浅色 / 深色（iPhone 与 iPad），与 Mac 一致。
 - **DEBUG demo seed URL**: `osgkeyboard://seed-demo` fills Home stats, History, and Dictionary with placeholder data and turns iCloud sync off (script: `scripts/seed_demo_data.py`). / **DEBUG 演示数据**：`osgkeyboard://seed-demo` 填充首页统计、历史与词库占位数据并关闭 iCloud 同步（脚本：`scripts/seed_demo_data.py`）。
 
 ### Changed
+- **Landing section copy**: richer pillars / BYOK / setup steps; titles →「开源，尽是不同」「BYOK，不花冤枉钱」「开箱可用，只要三步」。 / **落地页文案**：丰富差异柱、BYOK 与上手三步；标题改为「开源，尽是不同」「BYOK，不花冤枉钱」「开箱可用，只要三步」。
 - **Unified welcome slogan**: iPad Home now reuses the iOS onboarding brand line, and macOS onboarding shows the same “Speak it. It’s typed.” welcome slogan. / **统一欢迎口号**：iPad 首页复用 iOS 引导页品牌句，macOS 引导页也显示同一句「开口即文字。」欢迎口号。
 - **GitHub Pages landing**: redesign as a commercial product page with zh/en, light/dark, brand mark, scroll motion, and App Store screenshots; emphasizes free, cross-platform, open source, privacy, and BYOK. / **GitHub Pages 落地页**：改版为商业产品页，支持中英与日夜模式、品牌标、滚动动效与 App Store 截图；突出免费、跨端、开源、隐私与 BYOK。
 - **Landing hero device family**: Mac + iPad + iPhone nested in one mockup cluster (no outer card stroke); screens swap with language/theme. / **落地页 Hero 设备组**：Mac、iPad、iPhone 叠放在同一组设备框内（无外卡片描边）；截图随语言/主题切换。
