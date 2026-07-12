@@ -370,139 +370,6 @@
       line-height: 1.45;
     }
 
-    /* —— Story rows —— */
-    /* Never force aspect-ratio + object-fit:cover on product shots — that crops/squashes. */
-    .story {
-      display: grid;
-      grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-      gap: clamp(1.5rem, 4vw, 3rem);
-      align-items: center;
-      padding: 2.75rem 0;
-    }
-    .story.story--phone {
-      grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
-    }
-    .story.story--media-first {
-      grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
-    }
-    .story.story--media-first.story--phone {
-      grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
-    }
-    .story.story--media-first .story-copy { order: 2; }
-    .story.story--media-first .story-media { order: 1; }
-    @media (max-width: 860px) {
-      .story,
-      .story.story--phone,
-      .story.story--media-first,
-      .story.story--media-first.story--phone {
-        grid-template-columns: 1fr;
-        gap: 1.35rem;
-      }
-      .story.story--media-first .story-copy,
-      .story.story--media-first .story-media { order: initial; }
-      .story .story-media { order: -1; }
-    }
-    .story-copy .kicker {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--accent);
-      margin-bottom: 0.7rem;
-    }
-    .story-copy .kicker .material-symbols-outlined { font-size: 18px; }
-    .story-copy h3 {
-      margin: 0 0 0.7rem;
-      font-size: clamp(1.4rem, 2.6vw, 1.85rem);
-      letter-spacing: -0.025em;
-      line-height: 1.2;
-    }
-    .story-copy p {
-      margin: 0;
-      color: var(--text-2);
-      font-size: 1.02rem;
-    }
-    .shot {
-      margin: 0;
-      line-height: 0;
-      /* Desktop/Mac window PNGs already include chrome — no card fill behind them. */
-      border: none;
-      background: transparent;
-      box-shadow: none;
-      border-radius: 0;
-      overflow: visible;
-    }
-    .shot img {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
-    .shot--phone {
-      border-radius: 28px;
-      max-width: 300px;
-      width: 100%;
-      margin-inline: auto;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      background: var(--bg-elevated);
-      box-shadow: var(--shadow);
-    }
-
-    /* —— Device strip —— */
-    .device-strip {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-end;
-      justify-content: center;
-      gap: 1.5rem 1.75rem;
-    }
-    .device-card {
-      margin: 0;
-      line-height: 0;
-      border: none;
-      background: transparent;
-      box-shadow: none;
-      border-radius: 0;
-      overflow: visible;
-    }
-    .device-card img {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
-    .device-card.mac {
-      flex: 1 1 520px;
-      max-width: 720px;
-    }
-    .device-card.phone {
-      flex: 0 0 auto;
-      width: min(260px, 46vw);
-      border-radius: 26px;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      background: var(--bg-elevated);
-      box-shadow: var(--shadow);
-    }
-    .device-caption {
-      margin-top: 0.65rem;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-3);
-      text-align: center;
-      line-height: 1.3;
-    }
-    .device-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    .device-item.mac {
-      flex: 1 1 520px;
-      max-width: 720px;
-    }
-    .device-item.mac .device-card { width: 100%; }
-
     /* —— Compare —— */
     .compare {
       border-radius: calc(var(--radius) + 4px);
@@ -570,43 +437,6 @@
       margin: 0;
       color: var(--text-2);
       font-size: 0.93rem;
-    }
-
-    /* —— Closing —— */
-    .closing {
-      padding: 5rem 0 4rem;
-      text-align: center;
-      position: relative;
-    }
-    .closing::before {
-      content: "";
-      position: absolute;
-      inset: 10% 20% 20%;
-      background: radial-gradient(circle, var(--accent-soft), transparent 65%);
-      pointer-events: none;
-    }
-    .closing .wrap { position: relative; }
-    .closing .brand-mark {
-      width: 110px;
-      height: 34px;
-      margin: 0 auto 1.4rem;
-      color: var(--accent);
-    }
-    .closing h2 {
-      margin: 0 0 0.75rem;
-      font-size: clamp(1.8rem, 4vw, 2.6rem);
-      letter-spacing: -0.035em;
-    }
-    .closing p {
-      margin: 0 auto 1.75rem;
-      max-width: 32rem;
-      color: var(--text-2);
-    }
-    .closing-cta {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 0.7rem;
     }
 
     /* —— Footer —— */
@@ -743,110 +573,6 @@
       </div>
     </section>
 
-    <!-- Product stories -->
-    <section class="block" id="product" style="padding-top: 1rem;">
-      <div class="wrap">
-        <div class="block-head reveal">
-          <h2 data-i18n="product.title">开口之后，全链路都在你掌控</h2>
-          <p data-i18n="product.subtitle">从键盘到桌面，从词库到设置 — 真实产品界面。</p>
-        </div>
-
-        <div class="story reveal">
-          <div class="story-copy">
-            <div class="kicker">
-              <span class="material-symbols-outlined" aria-hidden="true">laptop_mac</span>
-              <span data-i18n="story.mac.k">macOS</span>
-            </div>
-            <h3 data-i18n="story.mac.t">首页听写，边说边落字</h3>
-            <p data-i18n="story.mac.b">红色录音态实时显示转写。本地 ASR 就绪时，文字出现在听写区，也可插入前台 App 光标处。</p>
-          </div>
-          <div class="story-media">
-            <figure class="shot">
-              <img data-shot="mac-recording" src="assets/screenshots/zh/dark/mac-recording.png" width="1440" height="900" alt="Mac dictation recording" loading="lazy">
-            </figure>
-          </div>
-        </div>
-
-        <div class="story story--phone story--media-first reveal">
-          <div class="story-copy">
-            <div class="kicker">
-              <span class="material-symbols-outlined" aria-hidden="true">smartphone</span>
-              <span data-i18n="story.ios.k">iPhone</span>
-            </div>
-            <h3 data-i18n="story.ios.t">自定义键盘：绿就绪，红录音</h3>
-            <p data-i18n="story.ios.b">主 App 可试键盘；系统设置添加后，任意 App 切换到 OSGKeyboard 即可听写。「本地」标识默认不上云。</p>
-          </div>
-          <div class="story-media">
-            <figure class="shot shot--phone">
-              <img data-shot="iphone-keyboard_recording" src="assets/screenshots/zh/light/iphone-keyboard_recording.png" width="552" height="1200" alt="iPhone keyboard recording" loading="lazy">
-            </figure>
-          </div>
-        </div>
-
-        <div class="story reveal">
-          <div class="story-copy">
-            <div class="kicker">
-              <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
-              <span data-i18n="story.dict.k">个性词库</span>
-            </div>
-            <h3 data-i18n="story.dict.t">个性词库，让识别更懂你</h3>
-            <p data-i18n="story.dict.b">人名、产品名、专业术语按类整理。AI 润色时原样保留，避免被「改坏」。</p>
-          </div>
-          <div class="story-media">
-            <figure class="shot">
-              <img data-shot="mac-dictionary" src="assets/screenshots/zh/dark/mac-dictionary.png" width="1440" height="900" alt="Mac personal dictionary" loading="lazy">
-            </figure>
-          </div>
-        </div>
-
-        <div class="story story--media-first reveal">
-          <div class="story-copy">
-            <div class="kicker">
-              <span class="material-symbols-outlined" aria-hidden="true">shield_lock</span>
-              <span data-i18n="story.settings.k">隐私 · 本地引擎</span>
-            </div>
-            <h3 data-i18n="story.settings.t">默认本地识别，高隐私低延迟</h3>
-            <p data-i18n="story.settings.b">设置里可选本地或云端引擎。截图中本地识别已勾选；云端与 API Key 仅在你主动配置时使用。</p>
-          </div>
-          <div class="story-media">
-            <figure class="shot">
-              <img data-shot="mac-settings" src="assets/screenshots/zh/dark/mac-settings.png" width="1440" height="900" alt="Mac settings local ASR" loading="lazy">
-            </figure>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Cross-device gallery -->
-    <section class="block" style="padding-top: 0;">
-      <div class="wrap">
-        <div class="block-head reveal">
-          <h2 data-i18n="gallery.title">跨端同一套体验</h2>
-          <p data-i18n="gallery.subtitle">Mac 历史归档，iPhone 用量与键盘 — 完整窗口，不做裁切。</p>
-        </div>
-        <div class="device-strip reveal">
-          <div class="device-item mac">
-            <figure class="device-card mac">
-              <img data-shot="mac-history" src="assets/screenshots/zh/dark/mac-history.png" width="1440" height="900" alt="Mac history" loading="lazy">
-            </figure>
-            <div class="device-caption" data-i18n="gallery.cap.mac">Mac · 听写历史</div>
-          </div>
-          <div class="device-item">
-            <figure class="device-card phone">
-              <img data-shot="iphone-home" src="assets/screenshots/zh/light/iphone-home.png" width="552" height="1200" alt="iPhone home" loading="lazy">
-            </figure>
-            <div class="device-caption" data-i18n="gallery.cap.home">iPhone · 首页统计</div>
-          </div>
-          <div class="device-item">
-            <figure class="device-card phone">
-              <img data-shot="iphone-keyboard_idle" src="assets/screenshots/zh/light/iphone-keyboard_idle.png" width="552" height="1200" alt="iPhone keyboard idle" loading="lazy">
-            </figure>
-            <div class="device-caption" data-i18n="gallery.cap.kb">iPhone · 键盘待机</div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- Compare -->
     <section class="block" id="byok">
       <div class="wrap">
@@ -905,32 +631,6 @@
       </div>
     </section>
 
-    <!-- Closing -->
-    <section class="closing">
-      <div class="wrap reveal">
-        <svg class="brand-mark" viewBox="36 367 952 291" aria-hidden="true">
-          <g fill="currentColor">
-            <path d="M627.511 512.419C627.511 448.783 576.127 397.197 512.741 397.197C449.355 397.197 397.971 448.783 397.971 512.419C397.971 576.054 449.355 627.641 512.741 627.641V637.837C443.746 637.837 387.814 581.686 387.814 512.419C387.814 443.152 443.746 387 512.741 387C581.736 387 637.668 443.152 637.668 512.419C637.668 581.686 581.736 637.837 512.741 637.837V627.641C576.127 627.641 627.511 576.054 627.511 512.419Z"/>
-            <path d="M56.2632 512.419C56.2632 581.686 112.195 637.837 181.19 637.837C250.185 637.837 306.117 581.686 306.117 512.419C306.117 443.152 250.185 387 181.19 387C112.195 387 56.2632 443.152 56.2632 512.419Z"/>
-            <path d="M399.618 562.094L399.618 552.257L512.74 552.257L512.74 562.094L399.618 562.094Z"/>
-            <path d="M512.741 483.398V473.561H625.864V483.398H512.741Z"/>
-            <path d="M843.308 387.981C910.987 387.981 966.093 441.8 968.171 508.975H843.308V518.812H968.096C965.014 585.066 910.324 637.836 843.308 637.836C774.313 637.836 718.381 581.904 718.381 512.909C718.381 443.914 774.312 387.981 843.308 387.981ZM968.234 518.812H968.096C968.187 516.855 968.234 514.888 968.234 512.909C968.234 511.593 968.211 510.281 968.171 508.975H968.234V518.812Z"/>
-          </g>
-        </svg>
-        <h2 data-i18n="close.title">开口即文字。其余交给你。</h2>
-        <p data-i18n="close.body">免费、跨端、开源、隐私优先。语音留在本机，AI 用你自己的 Key。</p>
-        <div class="closing-cta">
-          <a class="btn btn-primary" href="https://github.com/hkgood/OSGKeyboard/releases" rel="noopener">
-            <span class="material-symbols-outlined" aria-hidden="true">download</span>
-            <span data-i18n="close.cta">立即获取</span>
-          </a>
-          <a class="btn btn-ghost" href="privacy/">
-            <span class="material-symbols-outlined" aria-hidden="true">policy</span>
-            <span data-i18n="close.privacy">隐私政策</span>
-          </a>
-        </div>
-      </div>
-    </section>
   </main>
 
   <footer>
@@ -968,25 +668,6 @@
         "diff.privacy.b": "On-device ASR by default. No trackers. Audio stays local.",
         "diff.byok.t": "BYOK",
         "diff.byok.b": "Bring your own API key. Avoid paying twice for AI.",
-        "product.title": "After you speak, you stay in control",
-        "product.subtitle": "From keyboard to desktop — real product UI.",
-        "story.mac.k": "macOS",
-        "story.mac.t": "Dictate on the home screen — live transcript",
-        "story.mac.b": "Red recording state streams text into the dictation area. With local ASR ready, insert at the frontmost app cursor when you choose.",
-        "story.ios.k": "iPhone",
-        "story.ios.t": "Custom keyboard: green ready, red recording",
-        "story.ios.b": "Try it in the main app; after adding the keyboard in Settings, switch to OSGKeyboard in any app. The Local chip means audio stays on-device by default.",
-        "story.dict.k": "Personal dictionary",
-        "story.dict.t": "Terms the AI must never rewrite",
-        "story.dict.b": "Names, products, and jargon — grouped and preserved verbatim during polish.",
-        "story.settings.k": "Privacy · local engine",
-        "story.settings.t": "Local recognition by default",
-        "story.settings.b": "Choose local or cloud in Settings. This shot shows local ASR selected; cloud engines and API keys only when you opt in.",
-        "gallery.title": "One experience across devices",
-        "gallery.subtitle": "Mac history, iPhone stats and keyboard — full frames, never cropped.",
-        "gallery.cap.mac": "Mac · History",
-        "gallery.cap.home": "iPhone · Home stats",
-        "gallery.cap.kb": "iPhone · Keyboard idle",
         "compare.title": "Why BYOK matters",
         "compare.subtitle": "Many tools fold AI usage into a subscription. If you already have a key, you shouldn't pay again.",
         "compare.1.t": "No double billing",
@@ -1005,10 +686,6 @@
         "step2.b": "Local ASR works out of the box. Add your API key when you want AI polish.",
         "step3.t": "Start talking",
         "step3.b": "Switch to OSGKeyboard, or hold Option. Polished text lands at the cursor.",
-        "close.title": "Speak it. The rest is yours.",
-        "close.body": "Free, cross-platform, open, privacy-first. Voice stays local. AI uses your key.",
-        "close.cta": "Get it now",
-        "close.privacy": "Privacy policy",
         "footer.copy": "© OSGKeyboard · v0.5.4 · source available",
         "footer.source": "Source",
         "footer.privacy": "Privacy",
@@ -1036,25 +713,6 @@
         "diff.privacy.b": "默认本机识别，录音不上云，无追踪器。",
         "diff.byok.t": "BYOK",
         "diff.byok.b": "带上你自己的 API Key，避免平台重复收费。",
-        "product.title": "开口之后，全链路都在你掌控",
-        "product.subtitle": "从键盘到桌面，从词库到设置 — 真实产品界面。",
-        "story.mac.k": "macOS",
-        "story.mac.t": "首页听写，边说边落字",
-        "story.mac.b": "红色录音态实时显示转写。本地 ASR 就绪时，文字出现在听写区，也可插入前台 App 光标处。",
-        "story.ios.k": "iPhone",
-        "story.ios.t": "自定义键盘：绿就绪，红录音",
-        "story.ios.b": "主 App 可试键盘；系统设置添加后，任意 App 切换到 OSGKeyboard 即可听写。「本地」标识默认不上云。",
-        "story.dict.k": "个性词库",
-        "story.dict.t": "个性词库，让识别更懂你",
-        "story.dict.b": "人名、产品名、专业术语按类整理。AI 润色时原样保留，避免被「改坏」。",
-        "story.settings.k": "隐私 · 本地引擎",
-        "story.settings.t": "默认本地识别，高隐私低延迟",
-        "story.settings.b": "设置里可选本地或云端引擎。截图中本地识别已勾选；云端与 API Key 仅在你主动配置时使用。",
-        "gallery.title": "跨端同一套体验",
-        "gallery.subtitle": "Mac 历史归档，iPhone 用量与键盘 — 完整窗口，不做裁切。",
-        "gallery.cap.mac": "Mac · 听写历史",
-        "gallery.cap.home": "iPhone · 首页统计",
-        "gallery.cap.kb": "iPhone · 键盘待机",
         "compare.title": "为什么选 BYOK",
         "compare.subtitle": "很多工具把 AI 用量包进订阅。你已经有 Key 时，不该再付一遍。",
         "compare.1.t": "避免重复消费",
@@ -1073,10 +731,6 @@
         "step2.b": "本地识别开箱即用；需要 AI 润色时填入你自己的 API Key。",
         "step3.t": "开口说话",
         "step3.b": "切换到 OSGKeyboard，或按住 Option。润色文字落入光标处。",
-        "close.title": "开口即文字。其余交给你。",
-        "close.body": "免费、跨端、开源、隐私优先。语音留在本机，AI 用你自己的 Key。",
-        "close.cta": "立即获取",
-        "close.privacy": "隐私政策",
         "footer.copy": "© OSGKeyboard · v0.5.4 · 源码可见",
         "footer.source": "源代码",
         "footer.privacy": "隐私",
