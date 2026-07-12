@@ -15,7 +15,7 @@
   <meta property="og:title" content="OSGKeyboard — 开口即文字">
   <meta property="og:description" content="免费 · 跨端 · 开源 · 隐私优先 · BYOK。语音留在本机，AI 用你自己的 Key。">
   <meta property="og:url" content="https://hkgood.github.io/OSGKeyboard/">
-  <meta property="og:image" content="https://hkgood.github.io/OSGKeyboard/assets/screenshots/mac-dashboard.png">
+  <meta property="og:image" content="https://hkgood.github.io/OSGKeyboard/assets/screenshots/zh/dark/mac-dashboard.png">
   <meta name="twitter:card" content="summary_large_image">
   <script type="application/ld+json">
   {
@@ -728,7 +728,7 @@
           <div class="sonic-ring" aria-hidden="true"></div>
           <div class="sonic-ring" aria-hidden="true"></div>
           <div class="hero-stage-frame">
-              <img src="assets/screenshots/mac-dashboard.png" width="1440" height="900" alt="OSGKeyboard Mac dashboard" loading="eager">
+              <img data-shot="mac-dashboard" src="assets/screenshots/zh/dark/mac-dashboard.png" width="1440" height="900" alt="OSGKeyboard Mac dashboard" loading="eager">
           </div>
         </div>
       </div>
@@ -790,7 +790,7 @@
           </div>
           <div class="story-media">
             <figure class="shot">
-              <img src="assets/screenshots/mac-recording.png" width="1440" height="900" alt="Mac dictation recording" loading="lazy">
+              <img data-shot="mac-recording" src="assets/screenshots/zh/dark/mac-recording.png" width="1440" height="900" alt="Mac dictation recording" loading="lazy">
             </figure>
           </div>
         </div>
@@ -806,7 +806,7 @@
           </div>
           <div class="story-media">
             <figure class="shot shot--phone">
-              <img src="assets/screenshots/iphone-keyboard_recording.png" width="552" height="1200" alt="iPhone keyboard recording" loading="lazy">
+              <img data-shot="iphone-keyboard_recording" src="assets/screenshots/zh/light/iphone-keyboard_recording.png" width="552" height="1200" alt="iPhone keyboard recording" loading="lazy">
             </figure>
           </div>
         </div>
@@ -822,7 +822,7 @@
           </div>
           <div class="story-media">
             <figure class="shot">
-              <img src="assets/screenshots/mac-dictionary.png" width="1440" height="900" alt="Mac personal dictionary" loading="lazy">
+              <img data-shot="mac-dictionary" src="assets/screenshots/zh/dark/mac-dictionary.png" width="1440" height="900" alt="Mac personal dictionary" loading="lazy">
             </figure>
           </div>
         </div>
@@ -838,7 +838,7 @@
           </div>
           <div class="story-media">
             <figure class="shot">
-              <img src="assets/screenshots/mac-settings.png" width="1440" height="900" alt="Mac settings local ASR" loading="lazy">
+              <img data-shot="mac-settings" src="assets/screenshots/zh/dark/mac-settings.png" width="1440" height="900" alt="Mac settings local ASR" loading="lazy">
             </figure>
           </div>
         </div>
@@ -855,19 +855,19 @@
         <div class="device-strip reveal">
           <div class="device-item mac">
             <figure class="device-card mac">
-              <img src="assets/screenshots/mac-history.png" width="1440" height="900" alt="Mac history" loading="lazy">
+              <img data-shot="mac-history" src="assets/screenshots/zh/dark/mac-history.png" width="1440" height="900" alt="Mac history" loading="lazy">
             </figure>
             <div class="device-caption" data-i18n="gallery.cap.mac">Mac · 听写历史</div>
           </div>
           <div class="device-item">
             <figure class="device-card phone">
-              <img src="assets/screenshots/iphone-home.png" width="552" height="1200" alt="iPhone home" loading="lazy">
+              <img data-shot="iphone-home" src="assets/screenshots/zh/light/iphone-home.png" width="552" height="1200" alt="iPhone home" loading="lazy">
             </figure>
             <div class="device-caption" data-i18n="gallery.cap.home">iPhone · 首页统计</div>
           </div>
           <div class="device-item">
             <figure class="device-card phone">
-              <img src="assets/screenshots/iphone-keyboard_idle.png" width="552" height="1200" alt="iPhone keyboard idle" loading="lazy">
+              <img data-shot="iphone-keyboard_idle" src="assets/screenshots/zh/light/iphone-keyboard_idle.png" width="552" height="1200" alt="iPhone keyboard idle" loading="lazy">
             </figure>
             <div class="device-caption" data-i18n="gallery.cap.kb">iPhone · 键盘待机</div>
           </div>
@@ -1123,6 +1123,32 @@
         btn.classList.toggle("active", btn.dataset.lang === lang);
       });
       try { localStorage.setItem("osg-lang", lang); } catch (_) {}
+      applyShots(lang);
+    }
+
+    function resolvedTheme() {
+      const theme = document.documentElement.getAttribute("data-theme") || "system";
+      if (theme === "light" || theme === "dark") return theme;
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+
+    function shotURL(name, langOverride) {
+      let lang = langOverride;
+      if (!lang) {
+        try { lang = localStorage.getItem("osg-lang"); } catch (_) {}
+      }
+      if (!lang) lang = document.documentElement.lang.startsWith("zh") ? "zh" : "en";
+      const theme = resolvedTheme();
+      return `assets/screenshots/${lang}/${theme}/${name}.png`;
+    }
+
+    function applyShots(langOverride) {
+      document.querySelectorAll("img[data-shot]").forEach((img) => {
+        const name = img.getAttribute("data-shot");
+        if (!name) return;
+        const next = shotURL(name, langOverride);
+        if (img.getAttribute("src") !== next) img.setAttribute("src", next);
+      });
     }
 
     function applyTheme(theme) {
@@ -1132,6 +1158,7 @@
         icon.textContent = theme === "dark" ? "light_mode" : theme === "light" ? "dark_mode" : "contrast";
       }
       try { localStorage.setItem("osg-theme", theme); } catch (_) {}
+      applyShots();
     }
 
     function cycleTheme() {
@@ -1149,6 +1176,14 @@
     const savedTheme = (() => { try { return localStorage.getItem("osg-theme"); } catch (_) { return null; } })();
     applyLang(savedLang || ((navigator.language || "").startsWith("zh") ? "zh" : "en"));
     applyTheme(savedTheme || "system");
+
+    try {
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+        if ((document.documentElement.getAttribute("data-theme") || "system") === "system") {
+          applyShots();
+        }
+      });
+    } catch (_) {}
 
     // Scroll reveal
     const reveals = document.querySelectorAll(".reveal");
