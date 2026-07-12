@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OSGKeyboard — 开口即文字 · iOS &amp; Mac 语音输入</title>
-  <meta name="description" content="免费开源的跨端语音输入。本地识别、BYOK 润色、个性词库。iPhone、iPad、Mac — 开口即文字。">
+  <meta name="description" content="免费开源的跨端语音输入。本地识别、BYOK 润色、个性词库。iPhone、iPad、Mac — 开口即文字">
   <meta name="keywords" content="voice keyboard, dictation, BYOK, open source, privacy, 语音输入, 听写, OSGKeyboard">
   <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)">
   <meta name="theme-color" content="#f7f7f5" media="(prefers-color-scheme: light)">
@@ -313,6 +313,18 @@
 
     /* —— Sections —— */
     section.block { padding: 5rem 0; }
+    /* Full-bleed bands to separate adjacent marketing blocks */
+    section.block.block-band {
+      background: var(--bg-soft);
+      border-block: 1px solid var(--line);
+      padding: 4.25rem 0;
+    }
+    /* Alternate wash so consecutive bands don’t read as one slab */
+    section.block.block-band-wash {
+      background: var(--hero-wash);
+      border-block: 1px solid var(--line);
+      padding: 4.25rem 0;
+    }
     .block-head {
       max-width: 38rem;
       margin: 0 auto 2.75rem;
@@ -330,11 +342,11 @@
       font-size: 1.05rem;
     }
 
-    /* —— Diff pillars —— */
+    /* —— Diff pillars (hover / tap → detail stage) —— */
     .pillars {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: 1rem;
+      gap: 0.75rem;
     }
     @media (max-width: 960px) {
       .pillars { grid-template-columns: repeat(3, 1fr); }
@@ -343,29 +355,98 @@
       .pillars { grid-template-columns: 1fr 1fr; }
     }
     .pillar {
-      padding: 1.35rem 1.15rem;
+      appearance: none;
+      width: 100%;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      cursor: pointer;
+      padding: 1.15rem 1rem;
       border: 1px solid var(--line);
       border-radius: var(--radius);
       background: var(--bg-elevated);
-      transition: border-color 0.25s, transform 0.25s;
+      transition: border-color 0.22s, transform 0.22s, background 0.22s, box-shadow 0.22s;
     }
     .pillar:hover {
+      transform: translateY(-2px);
+      border-color: var(--line-strong);
+    }
+    .pillar.is-active,
+    .pillar:focus-visible {
       border-color: var(--accent);
-      transform: translateY(-3px);
+      background: var(--accent-soft);
+      box-shadow: 0 0 0 1px var(--accent);
+      outline: none;
+      transform: translateY(-2px);
     }
     .pillar .material-symbols-outlined {
-      font-size: 26px;
+      font-size: 24px;
       color: var(--accent);
-      margin-bottom: 0.85rem;
+      margin-bottom: 0.65rem;
+      display: block;
     }
     .pillar h3 {
-      margin: 0 0 0.35rem;
+      margin: 0 0 0.3rem;
       font-size: 1rem;
       letter-spacing: -0.015em;
     }
-    .pillar p {
+    .pillar .pillar-lead {
       margin: 0;
-      font-size: 0.88rem;
+      font-size: 0.82rem;
+      color: var(--text-2);
+      line-height: 1.4;
+    }
+    .pillar-hint {
+      display: inline-block;
+      margin-top: 0.7rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--accent);
+      opacity: 0.75;
+    }
+    .pillar.is-active .pillar-hint { opacity: 1; }
+
+    .pillar-stage {
+      margin-top: 1rem;
+      border-radius: calc(var(--radius) + 4px);
+      border: 1px solid var(--line);
+      background: var(--hero-wash);
+      padding: 1.5rem 1.35rem;
+      min-height: 9.5rem;
+    }
+    .pillar-panel[hidden] { display: none !important; }
+    .pillar-panel-kicker {
+      margin: 0 0 1rem;
+      font-size: 0.9rem;
+      color: var(--text-2);
+      max-width: 42rem;
+    }
+    .pillar-points {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.1rem;
+    }
+    @media (max-width: 900px) {
+      .pillar-points { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 520px) {
+      .pillar-points { grid-template-columns: 1fr; }
+    }
+    .pillar-point .material-symbols-outlined {
+      font-size: 22px;
+      color: var(--accent);
+      margin-bottom: 0.45rem;
+      display: block;
+    }
+    .pillar-point h4 {
+      margin: 0 0 0.28rem;
+      font-size: 0.95rem;
+      letter-spacing: -0.015em;
+    }
+    .pillar-point p {
+      margin: 0;
+      font-size: 0.86rem;
       color: var(--text-2);
       line-height: 1.45;
     }
@@ -437,49 +518,13 @@
       color: var(--text);
       font-weight: 600;
     }
-    .vs-note {
-      margin: 1rem 0 0;
-      font-size: 0.9rem;
-      color: var(--text-2);
-    }
     .vs-foot {
-      margin: 0.45rem 0 0;
+      margin: 0;
+      padding: 0.85rem 1rem 1rem;
+      border-top: 1px solid var(--line);
       font-size: 0.78rem;
       color: var(--text-3);
-    }
-
-    /* —— BYOK points —— */
-    .compare {
-      border-radius: calc(var(--radius) + 4px);
-      border: 1px solid var(--line);
-      background: var(--hero-wash);
-      padding: 2rem 1.5rem;
-      overflow: hidden;
-    }
-    .compare-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.25rem;
-    }
-    @media (max-width: 800px) {
-      .compare-grid { grid-template-columns: 1fr 1fr; }
-    }
-    .compare-item {
-      padding: 0.5rem;
-    }
-    .compare-item .material-symbols-outlined {
-      font-size: 24px;
-      color: var(--accent);
-      margin-bottom: 0.6rem;
-    }
-    .compare-item h3 {
-      margin: 0 0 0.3rem;
-      font-size: 0.98rem;
-    }
-    .compare-item p {
-      margin: 0;
-      font-size: 0.88rem;
-      color: var(--text-2);
+      text-align: center;
     }
 
     /* —— Steps —— */
@@ -589,7 +634,7 @@
             <span class="material-symbols-outlined" aria-hidden="true">graphic_eq</span>
             <span data-i18n="hero.eyebrow">Free · Open · Cross-platform</span>
           </div>
-          <h1 data-i18n="hero.title">开口即文字。</h1>
+          <h1 data-i18n="hero.title">开口即文字</h1>
           <p class="lead" data-i18n="hero.lead">免费开源的跨端语音输入。本地识别，自带 API Key 润色，避免重复订阅。iPhone、iPad、Mac — 说完即落字。</p>
           <div class="hero-cta">
             <a class="btn btn-primary" href="https://github.com/hkgood/OSGKeyboard/releases" rel="noopener">
@@ -619,40 +664,177 @@
       <div class="wrap">
         <div class="block-head reveal">
           <h2 data-i18n="diff.title">开源，尽是不同</h2>
-          <p data-i18n="diff.subtitle">免费、跨端、可审计、默认本地——差异写在产品里，不写在定价页。</p>
+          <p data-i18n="diff.subtitle">悬停或点按下方卡片，展开每一项差异——内容写在产品里，不写在定价页。</p>
         </div>
-        <div class="pillars">
-          <article class="pillar reveal">
+        <div class="pillars reveal" role="tablist" aria-label="OSGKeyboard differentiators">
+          <button type="button" class="pillar is-active" role="tab" id="tab-free" aria-selected="true" aria-controls="panel-free" data-pillar="free">
             <span class="material-symbols-outlined" aria-hidden="true">volunteer_activism</span>
             <h3 data-i18n="diff.free.t">免费</h3>
-            <p data-i18n="diff.free.b">听写、历史、词库、跨端核心全开，没有 Pro 墙，不靠订阅解锁。</p>
-          </article>
-          <article class="pillar reveal reveal-delay-1">
+            <p class="pillar-lead" data-i18n="diff.free.b">核心全开，没有 Pro 墙。</p>
+            <span class="pillar-hint" data-i18n="diff.hint">展开详情</span>
+          </button>
+          <button type="button" class="pillar" role="tab" id="tab-cross" aria-selected="false" aria-controls="panel-cross" data-pillar="cross" tabindex="-1">
             <span class="material-symbols-outlined" aria-hidden="true">devices</span>
             <h3 data-i18n="diff.cross.t">跨端</h3>
-            <p data-i18n="diff.cross.b">iPhone 键盘、iPad 分栏、Mac 全局热键，同一套体验；词库可同步。</p>
-          </article>
-          <article class="pillar reveal reveal-delay-2">
+            <p class="pillar-lead" data-i18n="diff.cross.b">iPhone · iPad · Mac 同源。</p>
+            <span class="pillar-hint" data-i18n="diff.hint">展开详情</span>
+          </button>
+          <button type="button" class="pillar" role="tab" id="tab-open" aria-selected="false" aria-controls="panel-open" data-pillar="open" tabindex="-1">
             <span class="material-symbols-outlined" aria-hidden="true">code</span>
             <h3 data-i18n="diff.open.t">开源</h3>
-            <p data-i18n="diff.open.b">GitHub 可审计、可 fork。你信任的是代码，不是隐私口号。</p>
-          </article>
-          <article class="pillar reveal reveal-delay-3">
+            <p class="pillar-lead" data-i18n="diff.open.b">代码可审计，信任可验证。</p>
+            <span class="pillar-hint" data-i18n="diff.hint">展开详情</span>
+          </button>
+          <button type="button" class="pillar" role="tab" id="tab-privacy" aria-selected="false" aria-controls="panel-privacy" data-pillar="privacy" tabindex="-1">
             <span class="material-symbols-outlined" aria-hidden="true">shield_lock</span>
             <h3 data-i18n="diff.privacy.t">隐私</h3>
-            <p data-i18n="diff.privacy.b">默认本机识别，录音不上云；无追踪器，也不强制注册账号。</p>
-          </article>
-          <article class="pillar reveal reveal-delay-4">
+            <p class="pillar-lead" data-i18n="diff.privacy.b">默认本地，录音不上云。</p>
+            <span class="pillar-hint" data-i18n="diff.hint">展开详情</span>
+          </button>
+          <button type="button" class="pillar" role="tab" id="tab-byok" aria-selected="false" aria-controls="panel-byok" data-pillar="byok" tabindex="-1">
             <span class="material-symbols-outlined" aria-hidden="true">vpn_key</span>
             <h3 data-i18n="diff.byok.t">BYOK</h3>
-            <p data-i18n="diff.byok.b">不填 Key 也能本地听写；要 AI 润色再带自己的 Key，不重复付费。</p>
-          </article>
+            <p class="pillar-lead" data-i18n="diff.byok.b">本地免费；云端 Key 自付。</p>
+            <span class="pillar-hint" data-i18n="diff.hint">展开详情</span>
+          </button>
+        </div>
+
+        <div class="pillar-stage reveal">
+          <div class="pillar-panel" id="panel-free" role="tabpanel" aria-labelledby="tab-free" data-panel="free">
+            <p class="pillar-panel-kicker" data-i18n="diff.free.k">没有「基础版听写、进阶版解锁」——认真用也不用升级。</p>
+            <div class="pillar-points">
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">mic</span>
+                <h4 data-i18n="diff.free.1.t">听写与历史</h4>
+                <p data-i18n="diff.free.1.b">录音转写、历史回看不设订阅门槛。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
+                <h4 data-i18n="diff.free.2.t">个性词库</h4>
+                <p data-i18n="diff.free.2.b">专有名词、产品名照常加，不为词条付费。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">devices</span>
+                <h4 data-i18n="diff.free.3.t">跨端核心</h4>
+                <p data-i18n="diff.free.3.b">iPhone / iPad / Mac 能力同一档，不按设备加价。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">favorite</span>
+                <h4 data-i18n="diff.free.4.t">打赏可选</h4>
+                <p data-i18n="diff.free.4.b">自愿支持开发；不解锁任何功能。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="pillar-panel" id="panel-cross" role="tabpanel" aria-labelledby="tab-cross" data-panel="cross" hidden>
+            <p class="pillar-panel-kicker" data-i18n="diff.cross.k">学会一次交互语言，三端接着用——不是三套互不相干的 App。</p>
+            <div class="pillar-points">
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">smartphone</span>
+                <h4 data-i18n="diff.cross.1.t">iPhone</h4>
+                <p data-i18n="diff.cross.1.b">系统自定义键盘，在任意输入框开口落字。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">tablet_mac</span>
+                <h4 data-i18n="diff.cross.2.t">iPad</h4>
+                <p data-i18n="diff.cross.2.b">分栏侧栏 + 首页同源，大屏也是同一产品语言。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">laptop_mac</span>
+                <h4 data-i18n="diff.cross.3.t">Mac</h4>
+                <p data-i18n="diff.cross.3.b">按住 Option 全局听写，菜单栏常驻，不抢焦点。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">cloud_sync</span>
+                <h4 data-i18n="diff.cross.4.t">词库可同步</h4>
+                <p data-i18n="diff.cross.4.b">可选 iCloud 同步个性词；关掉也完全能离线用。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="pillar-panel" id="panel-open" role="tabpanel" aria-labelledby="tab-open" data-panel="open" hidden>
+            <p class="pillar-panel-kicker" data-i18n="diff.open.k">闭源工具让你相信隐私页；我们让你直接读仓库。</p>
+            <div class="pillar-points">
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                <h4 data-i18n="diff.open.1.t">可审计</h4>
+                <p data-i18n="diff.open.1.b">识别、润色、存储路径都在 GitHub，可自行核对。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">fork_right</span>
+                <h4 data-i18n="diff.open.2.t">可 fork</h4>
+                <p data-i18n="diff.open.2.b">改键位、换引擎、裁功能——仓库在，路就在。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">gavel</span>
+                <h4 data-i18n="diff.open.3.t">许可清晰</h4>
+                <p data-i18n="diff.open.3.b">开源许可写在仓库里，不是营销口号。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">build</span>
+                <h4 data-i18n="diff.open.4.t">可自建</h4>
+                <p data-i18n="diff.open.4.b">按文档用 Xcode 编译安装，不依赖我们的商店账号。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="pillar-panel" id="panel-privacy" role="tabpanel" aria-labelledby="tab-privacy" data-panel="privacy" hidden>
+            <p class="pillar-panel-kicker" data-i18n="diff.privacy.k">默认路径就是本地——隐私不是付费升级项。</p>
+            <div class="pillar-points">
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">phonelink_lock</span>
+                <h4 data-i18n="diff.privacy.1.t">默认本机识别</h4>
+                <p data-i18n="diff.privacy.1.b">开箱走本地 ASR；不上我们的识别服务器。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">cloud_off</span>
+                <h4 data-i18n="diff.privacy.2.t">录音不上云</h4>
+                <p data-i18n="diff.privacy.2.b">我们不收集你的语音流做训练或分析。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">block</span>
+                <h4 data-i18n="diff.privacy.3.t">无追踪器</h4>
+                <p data-i18n="diff.privacy.3.b">不做广告标识符、行为画像那一套。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">person_off</span>
+                <h4 data-i18n="diff.privacy.4.t">无强制账号</h4>
+                <p data-i18n="diff.privacy.4.b">不用注册就能听写；数据默认留在本机。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="pillar-panel" id="panel-byok" role="tabpanel" aria-labelledby="tab-byok" data-panel="byok" hidden>
+            <p class="pillar-panel-kicker" data-i18n="compare.subtitle">订阅常把「听写壳」和「模型用量」捆在一起。本地识别免费起步；AI 润色按你已有的额度计费。</p>
+            <div class="pillar-points">
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">payments</span>
+                <h4 data-i18n="compare.1.t">躲开重复付费</h4>
+                <p data-i18n="compare.1.b">已有 DeepSeek / OpenAI 额度就直接用，不必再开一份「听写订阅」。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                <h4 data-i18n="compare.2.t">费用看得见</h4>
+                <p data-i18n="compare.2.b">模型账单只在服务商侧；OSGKeyboard 不经手、不加价。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">swap_horiz</span>
+                <h4 data-i18n="compare.3.t">模型你说了算</h4>
+                <p data-i18n="compare.3.b">OpenAI 兼容端点即可接入；不需要 AI 时，本地识别照用不填 Key。</p>
+              </div>
+              <div class="pillar-point">
+                <span class="material-symbols-outlined" aria-hidden="true">encrypted</span>
+                <h4 data-i18n="compare.4.t">Key 留在本机</h4>
+                <p data-i18n="compare.4.b">写入系统 Keychain，不经过我们的服务器。</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- Competitor matrix -->
-    <section class="block" id="vs">
+    <section class="block block-band" id="vs">
       <div class="wrap">
         <div class="block-head reveal">
           <h2 data-i18n="vs.title">和常见听写工具比一比</h2>
@@ -721,48 +903,13 @@
               </tr>
             </tbody>
           </table>
-        </div>
-        <p class="vs-note reveal" data-i18n="vs.note">与 Openless 同属开源阵营；我们补上 iPhone / iPad，暂无 Windows。</p>
-        <p class="vs-foot reveal" data-i18n="vs.foot">价格与功能据各产品公开说明整理，可能更新，以官方为准。</p>
-      </div>
-    </section>
-
-    <!-- BYOK -->
-    <section class="block" id="byok">
-      <div class="wrap">
-        <div class="block-head reveal">
-          <h2 data-i18n="compare.title">BYOK，不花冤枉钱</h2>
-          <p data-i18n="compare.subtitle">订阅常把「听写壳」和「模型用量」捆在一起。本地识别免费起步；AI 润色按你已有的额度计费。</p>
-        </div>
-        <div class="compare reveal">
-          <div class="compare-grid">
-            <div class="compare-item">
-              <span class="material-symbols-outlined" aria-hidden="true">payments</span>
-              <h3 data-i18n="compare.1.t">躲开重复付费</h3>
-              <p data-i18n="compare.1.b">已有 DeepSeek / OpenAI 额度就直接用，不必再开一份「听写订阅」。</p>
-            </div>
-            <div class="compare-item">
-              <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
-              <h3 data-i18n="compare.2.t">费用看得见</h3>
-              <p data-i18n="compare.2.b">模型账单只在服务商侧；OSGKeyboard 不经手、不加价。</p>
-            </div>
-            <div class="compare-item">
-              <span class="material-symbols-outlined" aria-hidden="true">swap_horiz</span>
-              <h3 data-i18n="compare.3.t">模型你说了算</h3>
-              <p data-i18n="compare.3.b">OpenAI 兼容端点即可接入；不需要 AI 时，本地识别照用不填 Key。</p>
-            </div>
-            <div class="compare-item">
-              <span class="material-symbols-outlined" aria-hidden="true">encrypted</span>
-              <h3 data-i18n="compare.4.t">Key 留在本机</h3>
-              <p data-i18n="compare.4.b">写入系统 Keychain，不经过我们的服务器。</p>
-            </div>
-          </div>
+          <p class="vs-foot" data-i18n="vs.foot">价格与功能据各产品公开说明整理，可能更新，以官方为准。</p>
         </div>
       </div>
     </section>
 
     <!-- Steps -->
-    <section class="block" id="start">
+    <section class="block block-band-wash" id="start">
       <div class="wrap">
         <div class="block-head reveal">
           <h2 data-i18n="steps.title">开箱可用，只要三步</h2>
@@ -811,17 +958,63 @@
         "hero.meta2": "BYOK — no double pay",
         "hero.meta3": "iOS · iPad · Mac",
         "diff.title": "Open source. Built different.",
-        "diff.subtitle": "Free, cross-platform, auditable, on-device by default — designed in, not gated by pricing.",
+        "diff.subtitle": "Hover or tap a card to expand each difference — designed into the product, not the pricing page.",
+        "diff.hint": "Show details",
         "diff.free.t": "Free",
-        "diff.free.b": "Dictation, history, dictionary, and cross-device cores stay open. No Pro wall.",
+        "diff.free.b": "Core open. No Pro wall.",
+        "diff.free.k": "No “basic dictation / unlock advanced” split — serious use doesn’t require an upgrade.",
+        "diff.free.1.t": "Dictation & history",
+        "diff.free.1.b": "Transcribe and revisit history with no subscription gate.",
+        "diff.free.2.t": "Personal dictionary",
+        "diff.free.2.b": "Add names and product terms — never pay per entry.",
+        "diff.free.3.t": "Cross-device core",
+        "diff.free.3.b": "iPhone / iPad / Mac stay on one tier — no per-device upsell.",
+        "diff.free.4.t": "Tips optional",
+        "diff.free.4.b": "Support the project if you want — tips unlock nothing.",
         "diff.cross.t": "Cross-platform",
-        "diff.cross.b": "iPhone keyboard, iPad split view, Mac global hotkey — one product language; dictionary can sync.",
+        "diff.cross.b": "iPhone · iPad · Mac, one language.",
+        "diff.cross.k": "Learn the interaction once — three surfaces, not three unrelated apps.",
+        "diff.cross.1.t": "iPhone",
+        "diff.cross.1.b": "System keyboard extension — speak into any text field.",
+        "diff.cross.2.t": "iPad",
+        "diff.cross.2.b": "Split sidebar + Home share the same product language.",
+        "diff.cross.3.t": "Mac",
+        "diff.cross.3.b": "Hold Option to dictate globally; menu bar stays out of your way.",
+        "diff.cross.4.t": "Dictionary sync",
+        "diff.cross.4.b": "Optional iCloud for terms — turn it off and stay fully local.",
         "diff.open.t": "Open source",
-        "diff.open.b": "Audit and fork on GitHub. Trust the code, not a privacy slogan.",
+        "diff.open.b": "Auditable code. Verifiable trust.",
+        "diff.open.k": "Closed tools ask you to trust a privacy page. We hand you the repo.",
+        "diff.open.1.t": "Auditable",
+        "diff.open.1.b": "ASR, polish, and storage paths live on GitHub — inspect them yourself.",
+        "diff.open.2.t": "Forkable",
+        "diff.open.2.b": "Change hotkeys, swap engines, trim features — the code is there.",
+        "diff.open.3.t": "Clear license",
+        "diff.open.3.b": "The open-source license is in the repo, not a slogan.",
+        "diff.open.4.t": "Self-build",
+        "diff.open.4.b": "Build with Xcode from the docs — no dependency on our store account.",
         "diff.privacy.t": "Privacy",
-        "diff.privacy.b": "On-device ASR by default. Audio stays local. No trackers, no forced account.",
+        "diff.privacy.b": "On-device by default. Audio stays local.",
+        "diff.privacy.k": "Local is the default path — privacy isn’t a paid upgrade.",
+        "diff.privacy.1.t": "On-device ASR",
+        "diff.privacy.1.b": "Ships on local recognition — not our transcription servers.",
+        "diff.privacy.2.t": "No cloud audio",
+        "diff.privacy.2.b": "We don’t collect your voice stream for training or analytics.",
+        "diff.privacy.3.t": "No trackers",
+        "diff.privacy.3.b": "No ad IDs, no behavioral profiling stack.",
+        "diff.privacy.4.t": "No forced account",
+        "diff.privacy.4.b": "Dictate without signing up; data stays on-device by default.",
         "diff.byok.t": "BYOK",
-        "diff.byok.b": "Local dictation works without a key. Bring your own key only when you want AI polish.",
+        "diff.byok.b": "Local free; cloud on your key.",
+        "compare.subtitle": "Subscriptions often bundle the dictation shell with model usage. Local ASR starts free; AI polish bills your existing credits.",
+        "compare.1.t": "No double billing",
+        "compare.1.b": "Use DeepSeek / OpenAI credits you already have — skip another dictation subscription.",
+        "compare.2.t": "Costs you can see",
+        "compare.2.b": "Model invoices stay with your provider. We never touch or markup them.",
+        "compare.3.t": "You pick the model",
+        "compare.3.b": "Any OpenAI-compatible endpoint. Skip the key entirely when local ASR is enough.",
+        "compare.4.t": "Keys stay on-device",
+        "compare.4.b": "Stored in Keychain. Never routed through our servers.",
         "vs.title": "How we compare",
         "vs.subtitle": "Free tiers run out. Subscriptions add up. Open source: local free, cloud on your key.",
         "vs.row.open": "Open source",
@@ -836,18 +1029,7 @@
         "vs.superwhisper.price": "Limited free tier.\nSub / lifetime isn’t cheap: Pro ~$8.5/mo, lifetime ~$250.",
         "vs.openless.price": "Free app; ASR / polish billed to your key.",
         "vs.osg.price": "Local mode fully free.\nCloud polish via your key — no dictation subscription.",
-        "vs.note": "Same open-source lane as Openless — we add iPhone / iPad; Windows isn’t available yet.",
         "vs.foot": "Prices and features from public product pages; may change — check each vendor.",
-        "compare.title": "BYOK — skip the markup",
-        "compare.subtitle": "Subscriptions often bundle the dictation shell with model usage. Local ASR starts free; AI polish bills your existing credits.",
-        "compare.1.t": "No double billing",
-        "compare.1.b": "Use DeepSeek / OpenAI credits you already have — skip another dictation subscription.",
-        "compare.2.t": "Costs you can see",
-        "compare.2.b": "Model invoices stay with your provider. We never touch or markup them.",
-        "compare.3.t": "You pick the model",
-        "compare.3.b": "Any OpenAI-compatible endpoint. Skip the key entirely when local ASR is enough.",
-        "compare.4.t": "Keys stay on-device",
-        "compare.4.b": "Stored in Keychain. Never routed through our servers.",
         "steps.title": "Ready in three steps",
         "steps.subtitle": "No subscription. No account. Grant permissions once, then speak.",
         "step1.t": "Install & authorize",
@@ -864,7 +1046,7 @@
       zh: {
         "nav.github": "GitHub",
         "hero.eyebrow": "免费 · 开源 · 跨端",
-        "hero.title": "开口即文字。",
+        "hero.title": "开口即文字",
         "hero.lead": "免费开源的跨端语音输入。本地识别，自带 API Key 润色，避免重复订阅。iPhone、iPad、Mac — 说完即落字。",
         "hero.cta.primary": "立即获取",
         "hero.cta.secondary": "查看源码",
@@ -872,17 +1054,54 @@
         "hero.meta2": "BYOK 不重复付费",
         "hero.meta3": "iOS · iPad · Mac",
         "diff.title": "开源，尽是不同",
-        "diff.subtitle": "免费、跨端、可审计、默认本地——差异写在产品里，不写在定价页。",
+        "diff.subtitle": "悬停或点按下方卡片，展开每一项差异——内容写在产品里，不写在定价页。",
+        "diff.hint": "展开详情",
         "diff.free.t": "免费",
-        "diff.free.b": "听写、历史、词库、跨端核心全开，没有 Pro 墙，不靠订阅解锁。",
+        "diff.free.b": "核心全开，没有 Pro 墙。",
+        "diff.free.k": "没有「基础版听写、进阶版解锁」——认真用也不用升级。",
+        "diff.free.1.t": "听写与历史",
+        "diff.free.1.b": "录音转写、历史回看不设订阅门槛。",
+        "diff.free.2.t": "个性词库",
+        "diff.free.2.b": "专有名词、产品名照常加，不为词条付费。",
+        "diff.free.3.t": "跨端核心",
+        "diff.free.3.b": "iPhone / iPad / Mac 能力同一档，不按设备加价。",
+        "diff.free.4.t": "打赏可选",
+        "diff.free.4.b": "自愿支持开发；不解锁任何功能。",
         "diff.cross.t": "跨端",
-        "diff.cross.b": "iPhone 键盘、iPad 分栏、Mac 全局热键，同一套体验；词库可同步。",
+        "diff.cross.b": "iPhone · iPad · Mac 同源。",
+        "diff.cross.k": "学会一次交互语言，三端接着用——不是三套互不相干的 App。",
+        "diff.cross.1.t": "iPhone",
+        "diff.cross.1.b": "系统自定义键盘，在任意输入框开口落字。",
+        "diff.cross.2.t": "iPad",
+        "diff.cross.2.b": "分栏侧栏 + 首页同源，大屏也是同一产品语言。",
+        "diff.cross.3.t": "Mac",
+        "diff.cross.3.b": "按住 Option 全局听写，菜单栏常驻，不抢焦点。",
+        "diff.cross.4.t": "词库可同步",
+        "diff.cross.4.b": "可选 iCloud 同步个性词；关掉也完全能离线用。",
         "diff.open.t": "开源",
-        "diff.open.b": "GitHub 可审计、可 fork。你信任的是代码，不是隐私口号。",
+        "diff.open.b": "代码可审计，信任可验证。",
+        "diff.open.k": "闭源工具让你相信隐私页；我们让你直接读仓库。",
+        "diff.open.1.t": "可审计",
+        "diff.open.1.b": "识别、润色、存储路径都在 GitHub，可自行核对。",
+        "diff.open.2.t": "可 fork",
+        "diff.open.2.b": "改键位、换引擎、裁功能——仓库在，路就在。",
+        "diff.open.3.t": "许可清晰",
+        "diff.open.3.b": "开源许可写在仓库里，不是营销口号。",
+        "diff.open.4.t": "可自建",
+        "diff.open.4.b": "按文档用 Xcode 编译安装，不依赖我们的商店账号。",
         "diff.privacy.t": "隐私",
-        "diff.privacy.b": "默认本机识别，录音不上云；无追踪器，也不强制注册账号。",
+        "diff.privacy.b": "默认本地，录音不上云。",
+        "diff.privacy.k": "默认路径就是本地——隐私不是付费升级项。",
+        "diff.privacy.1.t": "默认本机识别",
+        "diff.privacy.1.b": "开箱走本地 ASR；不上我们的识别服务器。",
+        "diff.privacy.2.t": "录音不上云",
+        "diff.privacy.2.b": "我们不收集你的语音流做训练或分析。",
+        "diff.privacy.3.t": "无追踪器",
+        "diff.privacy.3.b": "不做广告标识符、行为画像那一套。",
+        "diff.privacy.4.t": "无强制账号",
+        "diff.privacy.4.b": "不用注册就能听写；数据默认留在本机。",
         "diff.byok.t": "BYOK",
-        "diff.byok.b": "不填 Key 也能本地听写；要 AI 润色再带自己的 Key，不重复付费。",
+        "diff.byok.b": "本地免费；云端 Key 自付。",
         "vs.title": "和常见听写工具比一比",
         "vs.subtitle": "免费额度用着用着就撞墙；订阅不便宜。开源这条路：本地免费，云端 Key 自付。",
         "vs.row.open": "开源",
@@ -897,9 +1116,7 @@
         "vs.superwhisper.price": "免费档额度有限。\n订阅/买断不便宜：Pro 约 $8.5/月，买断约 $250。",
         "vs.openless.price": "App 免费；识别 / 润色按你的 Key 计费。",
         "vs.osg.price": "本地模式完全免费。\n云端润色 Key 自付（不另收听写订阅）。",
-        "vs.note": "与 Openless 同属开源阵营；我们补上 iPhone / iPad，暂无 Windows。",
         "vs.foot": "价格与功能据各产品公开说明整理，可能更新，以官方为准。",
-        "compare.title": "BYOK，不花冤枉钱",
         "compare.subtitle": "订阅常把「听写壳」和「模型用量」捆在一起。本地识别免费起步；AI 润色按你已有的额度计费。",
         "compare.1.t": "躲开重复付费",
         "compare.1.b": "已有 DeepSeek / OpenAI 额度就直接用，不必再开一份「听写订阅」。",
@@ -983,6 +1200,56 @@
       btn.addEventListener("click", () => applyLang(btn.dataset.lang));
     });
     document.getElementById("themeToggle")?.addEventListener("click", cycleTheme);
+
+    // Diff pillars → detail stage (hover on pointer devices, click/tap everywhere)
+    (function initPillarTabs() {
+      const tabs = Array.from(document.querySelectorAll(".pillar[data-pillar]"));
+      const panels = Array.from(document.querySelectorAll(".pillar-panel[data-panel]"));
+      if (!tabs.length || !panels.length) return;
+
+      const finePointer = window.matchMedia("(hover: hover) and (pointer: fine)");
+
+      function activate(id, { focusTab = false } = {}) {
+        tabs.forEach((tab) => {
+          const on = tab.dataset.pillar === id;
+          tab.classList.toggle("is-active", on);
+          tab.setAttribute("aria-selected", on ? "true" : "false");
+          tab.tabIndex = on ? 0 : -1;
+        });
+        panels.forEach((panel) => {
+          const on = panel.dataset.panel === id;
+          panel.hidden = !on;
+        });
+        if (focusTab) {
+          const active = tabs.find((t) => t.dataset.pillar === id);
+          active?.focus();
+        }
+      }
+
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => activate(tab.dataset.pillar));
+        tab.addEventListener("keydown", (e) => {
+          const i = tabs.indexOf(tab);
+          if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+            e.preventDefault();
+            activate(tabs[(i + 1) % tabs.length].dataset.pillar, { focusTab: true });
+          } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+            e.preventDefault();
+            activate(tabs[(i - 1 + tabs.length) % tabs.length].dataset.pillar, { focusTab: true });
+          } else if (e.key === "Home") {
+            e.preventDefault();
+            activate(tabs[0].dataset.pillar, { focusTab: true });
+          } else if (e.key === "End") {
+            e.preventDefault();
+            activate(tabs[tabs.length - 1].dataset.pillar, { focusTab: true });
+          }
+        });
+        tab.addEventListener("mouseenter", () => {
+          if (finePointer.matches) activate(tab.dataset.pillar);
+        });
+        tab.addEventListener("focus", () => activate(tab.dataset.pillar));
+      });
+    })();
 
     const savedLang = (() => { try { return localStorage.getItem("osg-lang"); } catch (_) { return null; } })();
     const savedTheme = (() => { try { return localStorage.getItem("osg-theme"); } catch (_) { return null; } })();
