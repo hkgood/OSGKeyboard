@@ -44,12 +44,12 @@ public struct LocalASRCapabilities: Sendable, Equatable {
         self.hotwordReloadCost = hotwordReloadCost
     }
 
-    /// Qwen3 MLX via mlx-swift-asr — `context` soft prompt on `transcribe`.
+    /// Qwen3 MLX via mlx-audio-swift — `context` soft prompt on streaming + batch.
     public static let qwen3MLX = LocalASRCapabilities(
         hotwordMode: .promptOnly,
         maxHotwordCount: 0,
         maxPromptCharacters: 800,
-        supportsStreaming: false,
+        supportsStreaming: true,
         hotwordReloadCost: .none
     )
 

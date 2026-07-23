@@ -22,33 +22,35 @@ struct DashboardView: View {
     }
 
     var body: some View {
-        // Scrollable like the other pages so the shared status footer always
-        // stays pinned to the window's bottom edge. `minHeight: viewport` keeps
-        // the balanced Spacer layout when the window is tall (no scrollbar) and
-        // lets the content scroll only when the window is too short to fit it.
+        // 布局意图：标题 + 统计卡片顶对齐，麦克风栏底对齐，中间的听写预览卡片
+        // 吸收全部剩余高度（弹性），因此拉高窗口时是卡片变高而非上下留白。
+        //
+        // 不用 ScrollView：ScrollView 在测量内容时给子视图的是「理想高度」提案，
+        // 会让 `.frame(maxHeight: .infinity)` 的卡片停在最小高度、多余空间变留白。
+        // 主窗口最小高度 600，内容恒可容纳，故直接用 GeometryReader 定高铺满
+        // （与 iOS 端 HomeView 的弹性预览框同款、已验证可行的模式）。
         GeometryReader { proxy in
-            ScrollView {
-                VStack(spacing: 0) {
-                    VStack(alignment: .leading, spacing: Spacing.lg) {
-                        heroHeader
-                        statCluster
-                        dictationStage
-                    }
-                    .padding(.horizontal, MacMetrics.pageHorizontalInset)
-                    .padding(.top, Spacing.sm)
-
-                    // Leftover window height splits evenly above / below the mic
-                    // bar so spacing stays balanced at any window size. The top
-                    // gap keeps a larger floor so the mic never hugs the canvas.
-                    Spacer(minLength: 30)
-
-                    BottomDictationBar(viewModel: viewModel)
-                        .padding(.horizontal, MacMetrics.pageHorizontalInset)
-
-                    Spacer(minLength: Spacing.xs)
+            VStack(spacing: 0) {
+                // 顶部固定区块：品牌标题 + 统计卡片。
+                VStack(alignment: .leading, spacing: Spacing.lg) {
+                    heroHeader
+                    statCluster
                 }
-                .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+                .padding(.horizontal, MacMetrics.pageHorizontalInset)
+                .padding(.top, Spacing.sm)
+
+                // 中间弹性区块：预览卡片撑满标题与麦克风之间的剩余空间。
+                dictationStage
+                    .padding(.horizontal, MacMetrics.pageHorizontalInset)
+                    .padding(.vertical, Spacing.lg)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                // 底部固定区块：麦克风按钮 + 两侧信息。
+                BottomDictationBar(viewModel: viewModel)
+                    .padding(.horizontal, MacMetrics.pageHorizontalInset)
+                    .padding(.bottom, Spacing.xs)
             }
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .top)
         }
         .onAppear { stats.reloadFromDisk() }
         .onReceive(NotificationCenter.default.publisher(for: .usageStatisticsDidSyncFromCloud)) { _ in
@@ -105,7 +107,24 @@ struct DashboardView: View {
     private var dictationStage: some View {
         MacCard(padding: Spacing.md, cornerRadius: Radius.large) {
             ZStack(alignment: .topLeading) {
-                if viewModel.transcript.isEmpty {
+                if viewModel.hasHomePreview {
+                    // 总览：累积所有会话文本，内部滚动、自动贴底显示最新一句。
+                    ScrollView {
+                        Text(viewModel.homePreviewText)
+                            .font(.system(size: 20, weight: .regular))
+                            .foregroundStyle(palette.textPrimary)
+                            .lineSpacing(4)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                    }
+                    .defaultScrollAnchor(.bottom)
+                    .frame(
+                        maxWidth: .infinity,
+                        minHeight: MacMetrics.dictationCanvasMinHeight,
+                        maxHeight: .infinity,
+                        alignment: .topLeading
+                    )
+                } else {
                     Text(
                         viewModel.isRecording
                             ? MacL10n.string("mac.status.listening", language: lang)
@@ -121,24 +140,13 @@ struct DashboardView: View {
                         alignment: .topLeading
                     )
                     .transition(.opacity)
-                } else {
-                    Text(viewModel.transcript)
-                        .font(.system(size: 20, weight: .regular))
-                        .foregroundStyle(palette.textPrimary)
-                        .lineSpacing(4)
-                        .textSelection(.enabled)
-                        .frame(
-                            maxWidth: .infinity,
-                            minHeight: MacMetrics.dictationCanvasMinHeight,
-                            maxHeight: .infinity,
-                            alignment: .topLeading
-                        )
-                        .transition(.opacity)
                 }
             }
-            .frame(minHeight: MacMetrics.dictationCanvasMinHeight, maxHeight: 160)
+            // 不再封顶：卡片跟随外层弹性容器把剩余窗口高度全部吃满。
+            .frame(minHeight: MacMetrics.dictationCanvasMinHeight, maxHeight: .infinity)
         }
-        .animation(Motion.soft, value: viewModel.transcript.isEmpty)
+        .frame(maxHeight: .infinity)
+        .animation(Motion.soft, value: viewModel.hasHomePreview)
         .animation(Motion.quick, value: viewModel.isRecording)
     }
 

@@ -65,6 +65,9 @@ OSGKeyboard/Resources/CustomLanguageModel/v1/compiled/
 __pycache__/
 *.pyc
 
+# Vendored mlx-audio-swift (fetched by Scripts/ensure-mlx-audio-swift.sh)
+ThirdParty/mlx-audio-swift/
+
 # Local debug capture logs and screenshots
 .flow-capture.log
 .flow-oslog-capture.log

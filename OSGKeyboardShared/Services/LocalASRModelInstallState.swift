@@ -84,6 +84,11 @@ public enum LocalASRModelInstallState {
         fileManager: FileManager
     ) -> Bool {
         switch model.backend {
+        case .mlx:
+            guard let config = layout.mlxConfig,
+                  let weights = layout.mlxWeights else { return false }
+            return fileManager.fileExists(atPath: root.appendingPathComponent(config).path)
+                && fileManager.fileExists(atPath: root.appendingPathComponent(weights).path)
         case .sherpaQwen3:
             guard let conv = layout.convFrontend,
                   let encoder = layout.encoder,

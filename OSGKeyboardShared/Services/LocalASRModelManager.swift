@@ -182,7 +182,8 @@ public actor LocalASRModelManager {
 
     public func installModel(
         _ model: LocalASRModelDefinition,
-        catalog: LocalASRCatalogDocument
+        catalog: LocalASRCatalogDocument,
+        preferredSource: LocalASRDownloadSourcePreference = .auto
     ) async throws {
         guard let relative = model.installRelativePath,
               let sources = model.sources,
@@ -196,11 +197,7 @@ public actor LocalASRModelManager {
             message: model.displayName,
             activeItemId: model.id
         )
-        if model.backend == .sherpaQwen3 || model.backend == .sherpaSenseVoice || model.backend == .sherpaParaformer {
-            try await ensureRuntimeInstalled(catalog: catalog)
-        }
-
-        let sortedSources = LocalASRDownloadSourceSorter.sorted(sources)
+        let sortedSources = LocalASRDownloadSourceSorter.sorted(sources, preferred: preferredSource)
         var lastError: Error?
 
         switch model.installKind {
@@ -518,9 +515,10 @@ public actor LocalASRModelManager {
         try fileManager.createDirectory(at: stagingRoot, withIntermediateDirectories: true)
         defer { try? fileManager.removeItem(at: stagingRoot) }
 
-        if fileManager.fileExists(atPath: destinationRoot.path) {
-            try fileManager.removeItem(at: destinationRoot)
-        }
+        // Do NOT wipe an existing destination: files land here only after a full
+        // download completes (partials stay in URLSession's temp dir), so already
+        // present files are complete and can be reused when a prior attempt failed
+        // partway or we fall back to another mirror.
         try fileManager.createDirectory(at: destinationRoot, withIntermediateDirectories: true)
 
         let totalBytes = files.reduce(Int64(0)) { partial, file in
@@ -529,12 +527,21 @@ public actor LocalASRModelManager {
         var completedBytes: Int64 = 0
 
         for (index, file) in files.enumerated() {
+            let localURL = destinationRoot.appendingPathComponent(file.localPath)
+
+            // Skip files a previous attempt already finished (non-empty on disk).
+            if fileManager.fileExists(atPath: localURL.path),
+               let attrs = try? fileManager.attributesOfItem(atPath: localURL.path),
+               let size = attrs[.size] as? Int64, size > 0 {
+                completedBytes += Int64(file.sizeBytes ?? Int(size))
+                continue
+            }
+
             let remoteURLString = baseURL.replacingOccurrences(of: "{path}", with: file.remotePath)
             guard let remoteURL = URL(string: remoteURLString) else {
                 throw LocalASRModelManagerError.downloadFailed("Invalid URL for \(file.remotePath)")
             }
 
-            let localURL = destinationRoot.appendingPathComponent(file.localPath)
             try fileManager.createDirectory(
                 at: localURL.deletingLastPathComponent(),
                 withIntermediateDirectories: true

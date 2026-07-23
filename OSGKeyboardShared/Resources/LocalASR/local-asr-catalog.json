@@ -1,142 +1,109 @@
 {
   "schemaVersion": 1,
-  "defaultModelId": "sherpa-qwen3-0.6b-int8",
-  "runtimes": [
-    {
-      "id": "sherpa-onnx-1.13.4-macos-arm64",
-      "displayName": "sherpa-onnx 1.13.4 (Apple Silicon)",
-      "installRelativePath": "runtimes/sherpa-onnx-1.13.4-macos-arm64",
-      "binaryCandidates": ["bin/sherpa-onnx-offline", "sherpa-onnx-offline"],
-      "archiveFileName": "sherpa-onnx-v1.13.4-osx-arm64-static-no-tts.tar.bz2",
-      "sizeBytes": 120000000,
-      "platform": "macos-arm64",
-      "sources": [
-        {
-          "type": "github",
-          "priority": 1,
-          "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.4/sherpa-onnx-v1.13.4-osx-arm64-static-no-tts.tar.bz2"
-        }
-      ]
-    },
-    {
-      "id": "sherpa-onnx-1.13.4-macos-x64",
-      "displayName": "sherpa-onnx 1.13.4 (Intel)",
-      "installRelativePath": "runtimes/sherpa-onnx-1.13.4-macos-x64",
-      "binaryCandidates": ["bin/sherpa-onnx-offline", "sherpa-onnx-offline"],
-      "archiveFileName": "sherpa-onnx-v1.13.4-osx-x64-static-no-tts.tar.bz2",
-      "sizeBytes": 130000000,
-      "platform": "macos-x64",
-      "sources": [
-        {
-          "type": "github",
-          "priority": 1,
-          "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.4/sherpa-onnx-v1.13.4-osx-x64-static-no-tts.tar.bz2"
-        }
-      ]
-    }
-  ],
+  "defaultModelId": "qwen3-mlx-0.6b-4bit",
+  "runtimes": [],
   "models": [
     {
-      "id": "sherpa-qwen3-0.6b-int8",
+      "id": "qwen3-mlx-0.6b-4bit",
       "displayName": "Qwen3-ASR 0.6B",
-      "backend": "sherpaQwen3",
+      "backend": "mlx",
       "runtimePlatform": "macos",
-      "sizeBytes": 650000000,
+      "sizeBytes": 730000000,
       "recommendedLocales": ["zh-CN", "en-US"],
       "supportsHotwords": true,
-      "hotwordMode": "recognizerScoped",
+      "hotwordMode": "promptOnly",
       "badgeKey": "mac.localASR.badge.balanced",
-      "installKind": "archive",
-      "installRelativePath": "models/sherpa-qwen3-0.6b-int8",
-      "archiveBaseName": "sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25",
-      "layout": {
-        "convFrontend": "conv_frontend.onnx",
-        "encoder": "encoder.int8.onnx",
-        "decoder": "decoder.int8.onnx",
-        "tokenizer": "tokenizer"
-      },
-      "sources": [
-        {
-          "type": "github",
-          "priority": 1,
-          "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2"
-        }
-      ]
-    },
-    {
-      "id": "sherpa-qwen3-1.7b-int8",
-      "displayName": "Qwen3-ASR 1.7B",
-      "backend": "sherpaQwen3",
-      "runtimePlatform": "macos",
-      "sizeBytes": 1900000000,
-      "recommendedLocales": ["zh-CN", "en-US"],
-      "supportsHotwords": true,
-      "hotwordMode": "recognizerScoped",
-      "badgeKey": "mac.localASR.badge.quality",
       "installKind": "repository",
-      "installRelativePath": "models/sherpa-qwen3-1.7b-int8",
-      "archiveBaseName": "sherpa-onnx-qwen3-asr-1.7B-int8",
+      "installRelativePath": "models/qwen3-mlx-0.6b-4bit",
+      "archiveBaseName": "Qwen3-ASR-0.6B-4bit",
       "layout": {
-        "convFrontend": "conv_frontend.onnx",
-        "encoder": "encoder.int8.onnx",
-        "decoder": "decoder.int8.onnx",
-        "tokenizer": "tokenizer"
+        "mlxConfig": "config.json",
+        "mlxWeights": "model.safetensors"
       },
       "sources": [
         {
-          "type": "modelscope",
+          "type": "hfmirror",
           "priority": 1,
           "url": "",
-          "baseURL": "https://www.modelscope.cn/models/zengshuishui/Qwen3-ASR-onnx/resolve/master/{path}",
+          "baseURL": "https://hf-mirror.com/mlx-community/Qwen3-ASR-0.6B-4bit/resolve/main/{path}",
           "files": [
-            { "remotePath": "model_1.7B/conv_frontend.onnx", "localPath": "conv_frontend.onnx", "sizeBytes": 12000000 },
-            { "remotePath": "model_1.7B/encoder.int8.onnx", "localPath": "encoder.int8.onnx", "sizeBytes": 900000000 },
-            { "remotePath": "model_1.7B/decoder.int8.onnx", "localPath": "decoder.int8.onnx", "sizeBytes": 700000000 },
-            { "remotePath": "model_1.7B/tokenizer/merges.txt", "localPath": "tokenizer/merges.txt", "sizeBytes": 500000 },
-            { "remotePath": "model_1.7B/tokenizer/vocab.json", "localPath": "tokenizer/vocab.json", "sizeBytes": 3000000 },
-            { "remotePath": "model_1.7B/tokenizer/tokenizer.json", "localPath": "tokenizer/tokenizer.json", "sizeBytes": 7000000 },
-            { "remotePath": "model_1.7B/tokenizer/tokenizer_config.json", "localPath": "tokenizer/tokenizer_config.json", "sizeBytes": 10000 }
+            { "remotePath": "config.json", "localPath": "config.json", "sizeBytes": 5000 },
+            { "remotePath": "generation_config.json", "localPath": "generation_config.json", "sizeBytes": 200 },
+            { "remotePath": "preprocessor_config.json", "localPath": "preprocessor_config.json", "sizeBytes": 500 },
+            { "remotePath": "model.safetensors", "localPath": "model.safetensors", "sizeBytes": 708236945 },
+            { "remotePath": "model.safetensors.index.json", "localPath": "model.safetensors.index.json", "sizeBytes": 80000 },
+            { "remotePath": "tokenizer_config.json", "localPath": "tokenizer_config.json", "sizeBytes": 10000 },
+            { "remotePath": "merges.txt", "localPath": "merges.txt", "sizeBytes": 1700000 },
+            { "remotePath": "vocab.json", "localPath": "vocab.json", "sizeBytes": 2800000 }
           ]
         },
         {
           "type": "huggingface",
           "priority": 1,
           "url": "",
-          "baseURL": "https://huggingface.co/zengshuishui/Qwen3-ASR-onnx/resolve/main/{path}",
+          "baseURL": "https://huggingface.co/mlx-community/Qwen3-ASR-0.6B-4bit/resolve/main/{path}",
           "files": [
-            { "remotePath": "model_1.7B/conv_frontend.onnx", "localPath": "conv_frontend.onnx", "sizeBytes": 12000000 },
-            { "remotePath": "model_1.7B/encoder.int8.onnx", "localPath": "encoder.int8.onnx", "sizeBytes": 900000000 },
-            { "remotePath": "model_1.7B/decoder.int8.onnx", "localPath": "decoder.int8.onnx", "sizeBytes": 700000000 },
-            { "remotePath": "model_1.7B/tokenizer/merges.txt", "localPath": "tokenizer/merges.txt", "sizeBytes": 500000 },
-            { "remotePath": "model_1.7B/tokenizer/vocab.json", "localPath": "tokenizer/vocab.json", "sizeBytes": 3000000 },
-            { "remotePath": "model_1.7B/tokenizer/tokenizer.json", "localPath": "tokenizer/tokenizer.json", "sizeBytes": 7000000 },
-            { "remotePath": "model_1.7B/tokenizer/tokenizer_config.json", "localPath": "tokenizer/tokenizer_config.json", "sizeBytes": 10000 }
+            { "remotePath": "config.json", "localPath": "config.json", "sizeBytes": 5000 },
+            { "remotePath": "generation_config.json", "localPath": "generation_config.json", "sizeBytes": 200 },
+            { "remotePath": "preprocessor_config.json", "localPath": "preprocessor_config.json", "sizeBytes": 500 },
+            { "remotePath": "model.safetensors", "localPath": "model.safetensors", "sizeBytes": 708236945 },
+            { "remotePath": "model.safetensors.index.json", "localPath": "model.safetensors.index.json", "sizeBytes": 80000 },
+            { "remotePath": "tokenizer_config.json", "localPath": "tokenizer_config.json", "sizeBytes": 10000 },
+            { "remotePath": "merges.txt", "localPath": "merges.txt", "sizeBytes": 1700000 },
+            { "remotePath": "vocab.json", "localPath": "vocab.json", "sizeBytes": 2800000 }
           ]
         }
       ]
     },
     {
-      "id": "sherpa-sensevoice-small-int8",
-      "displayName": "SenseVoice Small",
-      "backend": "sherpaSenseVoice",
+      "id": "qwen3-mlx-1.7b-4bit",
+      "displayName": "Qwen3-ASR 1.7B",
+      "backend": "mlx",
       "runtimePlatform": "macos",
-      "sizeBytes": 250000000,
-      "recommendedLocales": ["zh-CN", "en-US", "ja-JP", "ko-KR"],
-      "supportsHotwords": false,
-      "hotwordMode": "none",
-      "badgeKey": "mac.localASR.badge.fastest",
-      "installKind": "archive",
-      "installRelativePath": "models/sherpa-sensevoice-small-int8",
-      "archiveBaseName": "sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17",
+      "sizeBytes": 1700000000,
+      "recommendedLocales": ["zh-CN", "en-US"],
+      "supportsHotwords": true,
+      "hotwordMode": "promptOnly",
+      "badgeKey": "mac.localASR.badge.quality",
+      "installKind": "repository",
+      "installRelativePath": "models/qwen3-mlx-1.7b-4bit",
+      "archiveBaseName": "Qwen3-ASR-1.7B-4bit",
       "layout": {
-        "senseVoiceModel": "model.int8.onnx",
-        "tokens": "tokens.txt"
+        "mlxConfig": "config.json",
+        "mlxWeights": "model.safetensors"
       },
       "sources": [
         {
-          "type": "github",
+          "type": "hfmirror",
           "priority": 1,
-          "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17.tar.bz2"
+          "url": "",
+          "baseURL": "https://hf-mirror.com/mlx-community/Qwen3-ASR-1.7B-4bit/resolve/main/{path}",
+          "files": [
+            { "remotePath": "config.json", "localPath": "config.json", "sizeBytes": 5000 },
+            { "remotePath": "generation_config.json", "localPath": "generation_config.json", "sizeBytes": 200 },
+            { "remotePath": "preprocessor_config.json", "localPath": "preprocessor_config.json", "sizeBytes": 500 },
+            { "remotePath": "model.safetensors", "localPath": "model.safetensors", "sizeBytes": 1650000000 },
+            { "remotePath": "model.safetensors.index.json", "localPath": "model.safetensors.index.json", "sizeBytes": 90000 },
+            { "remotePath": "tokenizer_config.json", "localPath": "tokenizer_config.json", "sizeBytes": 10000 },
+            { "remotePath": "merges.txt", "localPath": "merges.txt", "sizeBytes": 1700000 },
+            { "remotePath": "vocab.json", "localPath": "vocab.json", "sizeBytes": 2800000 }
+          ]
+        },
+        {
+          "type": "huggingface",
+          "priority": 1,
+          "url": "",
+          "baseURL": "https://huggingface.co/mlx-community/Qwen3-ASR-1.7B-4bit/resolve/main/{path}",
+          "files": [
+            { "remotePath": "config.json", "localPath": "config.json", "sizeBytes": 5000 },
+            { "remotePath": "generation_config.json", "localPath": "generation_config.json", "sizeBytes": 200 },
+            { "remotePath": "preprocessor_config.json", "localPath": "preprocessor_config.json", "sizeBytes": 500 },
+            { "remotePath": "model.safetensors", "localPath": "model.safetensors", "sizeBytes": 1650000000 },
+            { "remotePath": "model.safetensors.index.json", "localPath": "model.safetensors.index.json", "sizeBytes": 90000 },
+            { "remotePath": "tokenizer_config.json", "localPath": "tokenizer_config.json", "sizeBytes": 10000 },
+            { "remotePath": "merges.txt", "localPath": "merges.txt", "sizeBytes": 1700000 },
+            { "remotePath": "vocab.json", "localPath": "vocab.json", "sizeBytes": 2800000 }
+          ]
         }
       ]
     }

@@ -22,12 +22,16 @@ options:
 
 # v0.2.0: dropped the local `Qwen3Speech` SPM fork. The "local" engine
 # now uses iOS 26 `SpeechAnalyzer` + `DictationTranscriber` exclusively,
-# which keeps the dependency surface at zero SPM packages / Pods /
+# which keeps the iOS dependency surface at zero SPM packages / Pods /
 # Carthage (matches the long-standing "zero dependencies" promise in the
 # README). Optional post-ASR cloud polish routes through DeepSeek (or
 # any OpenAI-compatible endpoint) using the existing `LLMClient`.
-# iOS targets remain zero-SPM. macOS local ASR downloads the sherpa-onnx
-# runtime on demand instead of linking SwiftPM speech packages.
+# iOS targets remain zero-SPM-linked. macOS local ASR links mlx-audio-swift
+# (ThirdParty/) for Qwen3 MLX streaming; weights download via catalog.
+
+packages:
+  MLXAudio:
+    path: ThirdParty/mlx-audio-swift
 
 settings:
   base:
@@ -393,7 +397,7 @@ targets:
   # Reuses the platform-agnostic core files from OSGKeyboardShared at the
   # source level (no framework), excluding the iOS-only files that import
   # SpeechAnalyzer / AVAudioSession / UIKit / SwiftUI views. Local mode uses
-  # a downloaded sherpa-onnx runtime plus catalog-managed ONNX models.
+  # Qwen3 MLX streaming via mlx-audio-swift plus catalog-managed weights.
   OSGKeyboardMac:
     type: application
     platform: macOS
@@ -488,6 +492,8 @@ targets:
         # Required for Developer ID distribution + notarization (outside App Store).
         ENABLE_HARDENED_RUNTIME: YES
     dependencies:
+      - package: MLXAudio
+        product: MLXAudioSTT
       - sdk: Speech.framework
       - sdk: AVFoundation.framework
       - sdk: Charts.framework

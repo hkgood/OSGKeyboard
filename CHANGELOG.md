@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Mac MLX streaming ASR**: local dictation uses Qwen3-ASR via mlx-audio-swift with overlay partial preview, tail drain, vocabulary prompt, and polish-before-insert. / **Mac MLX 流式 ASR**：本地听写改用 mlx-audio-swift 的 Qwen3-ASR，支持浮层 partial 预览、尾部截断、词库 prompt 与润色后再插入。
+
+### Changed
+- **Mac local ASR engine**: removed Sherpa offline CLI; default model is Qwen3 MLX 0.6B 4-bit (1.7B optional download). / **Mac 本地 ASR 引擎**：移除 Sherpa offline CLI；默认模型改为 Qwen3 MLX 0.6B 4-bit（1.7B 可选下载）。
 - **Landing competitor matrix**: compare Typeless / Superwhisper / Openless / OSGKeyboard on open source, pricing, on-device ASR, BYOK, and platforms (incl. honest Windows gap). / **落地页竞品对照**：对比 Typeless / Superwhisper / Openless / OSGKeyboard 的开源、付费、本地识别、BYOK 与平台（含暂无 Windows）。
 - **Voluntary support tip**: Settings (top of the page) includes an optional ¥28 Consumable in-app tip (StoreKit 2). All features stay free — no paywall or unlock. / **自愿打赏**：设置页顶部新增可选 ¥28 消耗型应用内打赏（StoreKit 2）。全功能仍免费，无付费墙或功能解锁。
 - **iOS appearance preference**: Settings → Preferences adds System / Light / Dark (iPhone + iPad), matching the Mac control. / **iOS 外观偏好**：设置 → 偏好设置新增跟随系统 / 浅色 / 深色（iPhone 与 iPad），与 Mac 一致。
@@ -21,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Landing hero polish**: replace CSS device frames with the marketing composite; full-bleed pale-green hero wash (no side gaps / no radial gradient); Mac story shots sit on transparent chrome. / **落地页 Hero 抛光**：设备框改为营销合成图；首屏淡绿单色通栏（无两侧留白 / 无径向渐变）；Mac 故事截图去卡片底。
 
 ### Fixed
+- **Model download for China networks**: add the `hf-mirror.com` mirror as the mainland-China-first source (bypasses the flaky HF Xet backend), drop the dead ModelScope link, and correct the model file list; add automatic resume-on-drop retry with cross-mirror fallback and a manual "Download source" picker in Settings. / **国内网络模型下载**：新增 `hf-mirror.com` 镜像并在中国大陆优先（绕开不稳定的 HF Xet 后端），删除失效的 ModelScope 链接并修正模型文件清单；下载中断自动断点续传重试并在镜像间回退，设置里新增手动「下载源」选择。
 - **iPad sidebar brand mark**: use the template `OSGLogoWide` mark with accent tint so the logo stays visible in the split-view sidebar. / **iPad 侧栏品牌标**：改用可着色的 `OSGLogoWide`，保证分栏侧栏始终显示 logo。
 
 ## [0.5.3] - 2026-07-11

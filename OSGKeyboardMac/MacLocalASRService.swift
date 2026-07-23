@@ -2,14 +2,12 @@
 // OSGKeyboard · Mac
 //
 // On-device ASR for macOS. Routes through the bundled local ASR catalog:
-// Sherpa Qwen3 (default), Paraformer, SenseVoice, Apple Speech fallback.
+// Qwen3 MLX streaming (default), Apple Speech fallback.
 
 import Foundation
 
 enum MacLocalASRBackend: String, Sendable, CaseIterable {
-    case sherpaQwen3
-    case sherpaParaformer
-    case sherpaSenseVoice
+    case mlxQwen3
     case appleSpeech
 }
 
@@ -42,36 +40,53 @@ enum MacLocalASRError: Error, LocalizedError {
 enum MacLocalASRPreferences {
     static let backendKey = "mac.localASR.backend"
     static let selectedModelIdKey = LocalASRPreferenceKeys.selectedModelId
-    /// Legacy MLX path key — retained for migration only.
-    static let qwen3ModelRelativePath = "models/qwen3-asr-1.7b-mlx"
+    static let downloadSourceKey = LocalASRPreferenceKeys.downloadSource
+
+    /// Preferred model download mirror; `.auto` picks by region (hf-mirror-friendly).
+    static var downloadSource: LocalASRDownloadSourcePreference {
+        get {
+            guard let raw = UserDefaults.standard.string(forKey: downloadSourceKey),
+                  let value = LocalASRDownloadSourcePreference(rawValue: raw) else {
+                return .auto
+            }
+            return value
+        }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: downloadSourceKey) }
+    }
 
     static var selectedModelId: String {
         get {
             if let raw = UserDefaults.standard.string(forKey: selectedModelIdKey), !raw.isEmpty {
                 return migratedModelId(raw)
             }
-            return legacyBackend == .appleSpeech ? "apple-speech-fallback" : "sherpa-qwen3-0.6b-int8"
+            return legacyBackend == .appleSpeech ? "apple-speech-fallback" : "qwen3-mlx-0.6b-4bit"
         }
         set { UserDefaults.standard.set(newValue, forKey: selectedModelIdKey) }
     }
 
-    /// Maps removed catalog entries to the current default Sherpa model.
+    /// Maps removed Sherpa / legacy catalog entries to the current MLX default.
     static func migratedModelId(_ id: String) -> String {
         switch id {
-        case "qwen3-mlx-1.7b", "sherpa-paraformer-zh-int8":
-            return "sherpa-qwen3-0.6b-int8"
+        case "sherpa-qwen3-0.6b-int8",
+             "sherpa-qwen3-1.7b-int8",
+             "sherpa-sensevoice-small-int8",
+             "sherpa-paraformer-zh-int8",
+             "qwen3-mlx-1.7b":
+            return "qwen3-mlx-0.6b-4bit"
         default:
             return id
         }
     }
 
     static var legacyBackend: MacLocalASRBackend {
-        guard let raw = UserDefaults.standard.string(forKey: backendKey),
-              let value = MacLocalASRBackend(rawValue: raw) else {
-            return .sherpaQwen3
+        guard let raw = UserDefaults.standard.string(forKey: backendKey) else {
+            return .mlxQwen3
         }
-        if raw == "qwen3MLX" { return .sherpaQwen3 }
-        return value
+        if raw == "qwen3MLX" || raw == "sherpaQwen3" || raw == "mlxQwen3" {
+            return .mlxQwen3
+        }
+        if raw == "appleSpeech" { return .appleSpeech }
+        return .mlxQwen3
     }
 }
 
@@ -110,6 +125,12 @@ enum MacLocalASRService {
         )
     }
 
+    /// Whether the active local engine uses MLX streaming for live partials.
+    static func usesMLXLiveStreaming() -> Bool {
+        guard let model = selectedModelDefinition() else { return false }
+        return model.backend == .mlx && isModelInstalled(model)
+    }
+
     /// Transcribe using the selected catalog model, falling back to Apple Speech.
     static func transcribe(
         samples: [Float],
@@ -131,17 +152,16 @@ enum MacLocalASRService {
     ) async throws -> String {
         switch model.backend {
         case .mlx:
-            throw MacLocalASRError.qwen3ModelMissing
-        case .sherpaQwen3, .sherpaSenseVoice, .sherpaParaformer:
-            return try await MacSherpaLocalASR.transcribe(
+            return try await MacMLXStreamingASRProvider.shared.transcribeBatch(
                 samples: samples,
-                sampleRate: 16_000,
-                locale: locale,
                 model: model,
+                locale: locale,
                 bias: bias
             )
         case .appleSpeech:
             return try await MacSpeechLocalASR.transcribe(samples: samples, locale: locale, bias: bias)
+        case .sherpaQwen3, .sherpaSenseVoice, .sherpaParaformer:
+            throw MacLocalASRError.qwen3ModelMissing
         }
     }
 }

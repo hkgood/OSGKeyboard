@@ -2,7 +2,7 @@
 
 > **文档状态**：架构规划（非实现规格）  
 > **适用范围**：macOS 本地听写；与 iOS 键盘扩展、云 ASR 路径的关系见各节说明。  
-> **核心结论**：短期不换主模型，优先打通 **词库感知管道**；中期用 POC 验证 **Sherpa Qwen3 hard hotwords** 是否值得成为热词主线。
+> **核心结论**：macOS 本地听写默认 **Qwen3 MLX 真流式**（mlx-audio-swift）；词库经 `LocalASRBiasAdapter` 以 soft prompt + 后处理注入。Sherpa offline 已移除。
 
 ---
 

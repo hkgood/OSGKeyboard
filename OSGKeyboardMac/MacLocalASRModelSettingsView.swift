@@ -10,6 +10,7 @@ import SwiftUI
 final class MacLocalASRModelSettingsViewModel: ObservableObject {
     @Published var catalog: LocalASRCatalogDocument?
     @Published var selectedModelId: String = MacLocalASRPreferences.selectedModelId
+    @Published var downloadSource: LocalASRDownloadSourcePreference = MacLocalASRPreferences.downloadSource
     @Published var installProgress = LocalASRModelInstallProgress.idle
     @Published var diagnosticsSnapshot = LocalASRBiasDiagnosticsStore.load()
     @Published var statusMessage = ""
@@ -76,15 +77,21 @@ final class MacLocalASRModelSettingsViewModel: ObservableObject {
         onLocalModelStateChanged?()
     }
 
+    func setDownloadSource(_ source: LocalASRDownloadSourcePreference) {
+        downloadSource = source
+        MacLocalASRPreferences.downloadSource = source
+    }
+
     func installModel(_ model: LocalASRModelDefinition) {
         guard let catalog, !isInstalling else { return }
         statusMessage = ""
         isInstalling = true
         isDownloadPaused = false
         startProgressPolling()
+        let preferredSource = downloadSource
         Task {
             do {
-                try await manager.installModel(model, catalog: catalog)
+                try await manager.installModel(model, catalog: catalog, preferredSource: preferredSource)
                 installProgress = await manager.currentProgress()
                 selectModel(model.id)
                 statusMessage = MacL10n.string("mac.localASR.installDone")
@@ -222,18 +229,6 @@ struct MacLocalASRModelSettingsView: View {
     private func modelPickerSection(catalog: LocalASRCatalogDocument) -> some View {
         MacSettingsSection(title: MacL10n.string("mac.localASR.models", language: lang)) {
             VStack(spacing: MacMetrics.settingsRowGap) {
-                if let runtime = modelVM.currentRuntime(in: catalog) {
-                    MacFormSubtitleRow(title: runtime.displayName) {
-                        Text(
-                            modelVM.isRuntimeInstalled(runtime)
-                                ? MacL10n.string("mac.localASR.installed", language: lang)
-                                : MacL10n.string("mac.localASR.notInstalled", language: lang)
-                        )
-                        .font(TypeStyle.body)
-                        .foregroundStyle(palette.textSecondary)
-                    }
-                }
-
                 ForEach(Array(catalog.models.enumerated()), id: \.element.id) { _, model in
                     modelRow(model)
                         .frame(minHeight: MacMetrics.settingsRowMinHeight)
@@ -260,6 +255,10 @@ struct MacLocalASRModelSettingsView: View {
                         .padding(.horizontal, MacMetrics.settingsCardInset)
                 }
 
+                downloadSourceRow
+                    .frame(minHeight: MacMetrics.settingsRowMinHeight)
+                    .padding(.horizontal, MacMetrics.settingsCardInset)
+
                 HStack(spacing: 0) {
                     MacSettingsToolButton(title: MacL10n.string("mac.localASR.openStorage", language: lang)) {
                         modelVM.revealStorageRoot()
@@ -268,6 +267,29 @@ struct MacLocalASRModelSettingsView: View {
                 }
                 .padding(.horizontal, MacMetrics.settingsCardInset)
             }
+        }
+    }
+
+    private var downloadSourceRow: some View {
+        HStack(spacing: Spacing.sm) {
+            Text(MacL10n.string("mac.localASR.downloadSource", language: lang))
+                .foregroundStyle(palette.textSecondary)
+            Spacer(minLength: 0)
+            Picker("", selection: Binding(
+                get: { modelVM.downloadSource },
+                set: { modelVM.setDownloadSource($0) }
+            )) {
+                Text(MacL10n.string("mac.localASR.downloadSource.auto", language: lang))
+                    .tag(LocalASRDownloadSourcePreference.auto)
+                Text(MacL10n.string("mac.localASR.downloadSource.hfMirror", language: lang))
+                    .tag(LocalASRDownloadSourcePreference.hfMirror)
+                Text(MacL10n.string("mac.localASR.downloadSource.huggingface", language: lang))
+                    .tag(LocalASRDownloadSourcePreference.huggingface)
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .fixedSize()
+            .disabled(modelVM.isInstalling)
         }
     }
 

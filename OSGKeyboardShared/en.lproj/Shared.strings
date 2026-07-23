@@ -164,6 +164,7 @@
 "mac.overlay.polishing" = "Polishing";
 "mac.overlay.live" = "Live";
 "mac.overlay.done" = "Done";
+"mac.overlay.dragHint" = "Drag to move · double-click to reset";
 "mac.record.start" = "Record";
 "mac.record.stop" = "Stop";
 "mac.record.pressStop" = "Press Stop";
@@ -305,7 +306,11 @@
 "mac.error.qwen3LoadFailed" = "Failed to load Qwen3 model: %@";
 "mac.error.qwen3InferenceFailed" = "Qwen3 transcription failed: %@";
 "mac.localASR.models" = "Local ASR Engine & Models";
-"mac.localASR.modelsDesc" = "Models download directly. China uses ModelScope first; elsewhere Hugging Face first, then GitHub. Qwen3 1.7B downloads as multiple files.";
+"mac.localASR.modelsDesc" = "Models download directly. Mainland China uses the hf-mirror mirror first; elsewhere the official Hugging Face endpoint first. Interrupted downloads resume automatically and fall back across mirrors.";
+"mac.localASR.downloadSource" = "Download source";
+"mac.localASR.downloadSource.auto" = "Automatic (by region)";
+"mac.localASR.downloadSource.hfMirror" = "hf-mirror (recommended in China)";
+"mac.localASR.downloadSource.huggingface" = "Hugging Face (official)";
 "mac.localASR.download" = "Download";
 "mac.localASR.selectFolder" = "Choose folder";
 "mac.localASR.openFolder" = "Open folder";

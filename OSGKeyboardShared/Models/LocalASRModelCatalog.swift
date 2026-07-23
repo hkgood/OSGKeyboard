@@ -53,6 +53,8 @@ public struct LocalASRModelLayout: Codable, Sendable, Equatable {
     public var tokenizer: String?
     public var senseVoiceModel: String?
     public var paraformerModel: String?
+    public var mlxConfig: String?
+    public var mlxWeights: String?
     public var tokens: String?
 }
 
@@ -145,6 +147,25 @@ public enum LocalASRModelCatalog {
     #endif
 }
 
+/// User-facing override for which mirror to try first when installing models.
+public enum LocalASRDownloadSourcePreference: String, Codable, Sendable, CaseIterable {
+    /// Pick automatically based on the system region (China-friendly default).
+    case auto
+    /// Force the HF mirror (`hf-mirror.com`) first — best for mainland China.
+    case hfMirror
+    /// Force the official Hugging Face endpoint first.
+    case huggingface
+
+    /// The catalog `type` string this preference pins to the front (nil for `.auto`).
+    public var pinnedType: String? {
+        switch self {
+        case .auto: return nil
+        case .hfMirror: return "hfmirror"
+        case .huggingface: return "huggingface"
+        }
+    }
+}
+
 /// Region-aware ordering for local ASR model download mirrors.
 public enum LocalASRDownloadSourceSorter {
 
@@ -153,31 +174,49 @@ public enum LocalASRDownloadSourceSorter {
         region?.identifier == "CN"
     }
 
-    /// Lower rank = tried earlier. CN: ModelScope → HuggingFace → GitHub; elsewhere: HF → GitHub → ModelScope.
+    /// Whether to try the China-friendly mirror (`hf-mirror.com`) first.
+    ///
+    /// Default is "yes unless the region is *definitely* overseas": an unknown
+    /// region (common when a VPN/proxy masks locale) falls back to the mirror,
+    /// which is reachable both inside and outside China, so mainland users work
+    /// out of the box while overseas users only lose it when their region is set.
+    public static func preferChinaMirror(region: Locale.Region? = Locale.current.region) -> Bool {
+        guard let region else { return true }
+        return region.identifier == "CN"
+    }
+
+    /// Lower rank = tried earlier.
+    /// China-first: hf-mirror → HuggingFace → ModelScope → GitHub.
+    /// Overseas:    HuggingFace → hf-mirror → GitHub → ModelScope.
     public static func typeRank(_ type: String, chinaFirst: Bool) -> Int {
         switch type.lowercased() {
-        case "modelscope":
-            return chinaFirst ? 0 : 2
+        case "hfmirror", "hf-mirror":
+            return chinaFirst ? 0 : 1
         case "huggingface":
             return chinaFirst ? 1 : 0
+        case "modelscope":
+            return chinaFirst ? 2 : 3
         case "github":
-            return 1
+            return chinaFirst ? 3 : 2
         default:
-            return 3
+            return 4
         }
     }
 
     public static func sorted(
         _ sources: [LocalASRDownloadSource],
-        region: Locale.Region? = Locale.current.region
+        region: Locale.Region? = Locale.current.region,
+        preferred: LocalASRDownloadSourcePreference = .auto
     ) -> [LocalASRDownloadSource] {
-        let chinaFirst = isChinaMainland(region: region)
-        return sources.sorted { lhs, rhs in
-            let leftRank = typeRank(lhs.type, chinaFirst: chinaFirst)
-            let rightRank = typeRank(rhs.type, chinaFirst: chinaFirst)
-            if leftRank != rightRank { return leftRank < rightRank }
-            return lhs.priority < rhs.priority
+        let chinaFirst = preferChinaMirror(region: region)
+        let pinned = preferred.pinnedType?.lowercased()
+        func rank(_ source: LocalASRDownloadSource) -> (Int, Int) {
+            if let pinned, source.type.lowercased() == pinned {
+                return (-1, source.priority)
+            }
+            return (typeRank(source.type, chinaFirst: chinaFirst), source.priority)
         }
+        return sources.sorted { rank($0) < rank($1) }
     }
 }
 

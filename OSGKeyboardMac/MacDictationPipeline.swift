@@ -1,7 +1,7 @@
 // MacDictationPipeline.swift
 // OSGKeyboard · Mac
 //
-// Dictation pipeline: samples → ASR (cloud or local, chunked when long) → polish.
+// Dictation pipeline: samples → ASR (cloud or local MLX streaming) → polish.
 
 import Foundation
 
@@ -32,14 +32,11 @@ struct MacLiveASRCaptureResult: Sendable {
 }
 
 enum MacDictationPipeline {
-    /// First-chunk threshold: longer local utterances use pipelined chunk ASR.
-    private static let chunkedLocalThresholdSamples = Int(
-        FlowUtteranceChunkConfig.flowDefault.maxChunkDurationSeconds(forChunkIndex: 0) * 16_000
-    )
-
     /// Whether the active engine can surface `onPartial` text while recording.
     static func supportsLivePartials(store: AppGroupStore) -> Bool {
-        if store.engineMode == "local" { return true }
+        if store.engineMode == "local" {
+            return MacLocalASRService.usesMLXLiveStreaming()
+        }
         let strategy = CloudASRModelCatalog.strategy(for: store.asrProviderId)
         return strategy != .localFallback
     }
@@ -53,28 +50,17 @@ enum MacDictationPipeline {
         guard !samples.isEmpty else { throw MacDictationError.noAudio }
 
         let locale = resolvedLocale(store: store)
-        var chunkWarning: String?
         let raw: String
         var localBias: LocalASRBiasPayload?
 
         if store.engineMode == "local" {
             localBias = resolveLocalBias(store: store, locale: locale)
-            if samples.count > chunkedLocalThresholdSamples {
-                let chunked = try await transcribeLocalChunked(
-                    samples: samples,
-                    locale: locale,
-                    bias: localBias,
-                    onPartial: onPartial
-                )
-                raw = chunked.text
-                chunkWarning = chunked.chunkWarning
-            } else {
-                raw = try await MacLocalASRService.transcribe(
-                    samples: samples,
-                    locale: locale,
-                    bias: localBias
-                )
-            }
+            raw = try await MacLocalASRService.transcribe(
+                samples: samples,
+                locale: locale,
+                bias: localBias
+            )
+            onPartial?(raw)
         } else {
             let strategy = CloudASRModelCatalog.strategy(for: store.asrProviderId)
             guard strategy != .localFallback else { throw MacDictationError.providerHasNoCloudASR }
@@ -93,16 +79,26 @@ enum MacDictationPipeline {
             raw: raw,
             store: store,
             localBias: localBias,
-            chunkWarning: chunkWarning
+            chunkWarning: nil
         )
     }
 
     /// Consumes a live mic snapshot stream until finished; yields stitched partials.
     static func captureLive(
         stream: AsyncStream<AudioBufferSnapshot>,
+        finishSignal: AsyncStream<Void>,
         store: AppGroupStore,
         onPartial: @escaping @Sendable (String) -> Void
     ) async -> MacLiveASRCaptureResult {
+        if store.engineMode == "local", MacLocalASRService.usesMLXLiveStreaming() {
+            return await MacMLXLiveCapture.run(
+                audioStream: stream,
+                finishSignal: finishSignal,
+                store: store,
+                onPartial: onPartial
+            )
+        }
+
         let locale = resolvedLocale(store: store)
         let localBias: LocalASRBiasPayload?
         if store.engineMode == "local" {
@@ -112,11 +108,7 @@ enum MacDictationPipeline {
         }
 
         do {
-            let adapter = try makeChunkASRAdapter(
-                store: store,
-                locale: locale,
-                bias: localBias
-            )
+            let adapter = try makeChunkASRAdapter(store: store)
             if let cloudAdapter = adapter as? MacCloudASRChunkAdapter {
                 try? await cloudAdapter.prepare()
             }
@@ -219,12 +211,7 @@ enum MacDictationPipeline {
         }
     }
 
-    // MARK: - Chunked local ASR
-
-    private struct ChunkedLocalResult {
-        let text: String
-        let chunkWarning: String?
-    }
+    // MARK: - Private
 
     private static func resolvedLocale(store: AppGroupStore) -> Locale {
         Locale(identifier: store.localeId.isEmpty ? "zh-CN" : store.localeId)
@@ -252,65 +239,7 @@ enum MacDictationPipeline {
         return bias
     }
 
-    private static func makeChunkASRAdapter(
-        store: AppGroupStore,
-        locale: Locale,
-        bias: LocalASRBiasPayload?
-    ) throws -> any ASRChunkTranscribing {
-        if store.engineMode == "local" {
-            return MacLocalASRChunkAdapter(locale: locale, bias: bias)
-        }
-        return try MacCloudASRChunkAdapter(store: store)
-    }
-
-    private static func transcribeLocalChunked(
-        samples: [Float],
-        locale: Locale,
-        bias: LocalASRBiasPayload?,
-        onPartial: (@Sendable (String) -> Void)?
-    ) async throws -> ChunkedLocalResult {
-        let adapter = MacLocalASRChunkAdapter(locale: locale, bias: bias)
-        let pipeline = ChunkedUtterancePipeline(
-            asr: adapter,
-            locale: locale,
-            config: .flowDefault
-        )
-        let outcome = await pipeline.transcribe(
-            stream: audioStream(from: samples),
-            onPartial: { partial in
-                onPartial?(partial)
-            }
-        )
-
-        switch outcome {
-        case .success(let success):
-            let warning = success.chunkWarnings.first
-            return ChunkedLocalResult(text: success.text, chunkWarning: warning)
-        case .failure(let message):
-            throw MacLocalASRError.qwen3InferenceFailed(message)
-        case .cancelled:
-            throw MacLocalASRError.qwen3InferenceFailed("Cancelled")
-        }
-    }
-
-    /// Feeds recorded PCM into the chunker as if it arrived incrementally.
-    private static func audioStream(
-        from samples: [Float],
-        sliceSamples: Int = 8_000
-    ) -> AsyncStream<AudioBufferSnapshot> {
-        AsyncStream { continuation in
-            var offset = 0
-            while offset < samples.count {
-                let end = min(offset + sliceSamples, samples.count)
-                continuation.yield(
-                    AudioBufferSnapshot(
-                        samples: Array(samples[offset..<end]),
-                        sampleRate: 16_000
-                    )
-                )
-                offset = end
-            }
-            continuation.finish()
-        }
+    private static func makeChunkASRAdapter(store: AppGroupStore) throws -> any ASRChunkTranscribing {
+        try MacCloudASRChunkAdapter(store: store)
     }
 }

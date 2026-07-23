@@ -164,6 +164,7 @@
 "mac.overlay.polishing" = "润色中";
 "mac.overlay.live" = "实时";
 "mac.overlay.done" = "已完成";
+"mac.overlay.dragHint" = "拖动可移动位置，双击恢复默认";
 "mac.record.start" = "开始录音";
 "mac.record.stop" = "停止";
 "mac.record.pressStop" = "点击停止";
@@ -305,7 +306,11 @@
 "mac.error.qwen3LoadFailed" = "Qwen3 模型加载失败：%@";
 "mac.error.qwen3InferenceFailed" = "Qwen3 转写失败：%@";
 "mac.localASR.models" = "本地 ASR 引擎与模型";
-"mac.localASR.modelsDesc" = "模型可直接下载。中国大陆优先 ModelScope，其他地区优先 Hugging Face，再回退 GitHub。Qwen3 1.7B 以多文件方式下载。";
+"mac.localASR.modelsDesc" = "模型可直接下载。中国大陆优先 hf-mirror 镜像，其他地区优先 Hugging Face 官方；下载中断会自动断点续传并在镜像间回退。";
+"mac.localASR.downloadSource" = "下载源";
+"mac.localASR.downloadSource.auto" = "自动（按地区）";
+"mac.localASR.downloadSource.hfMirror" = "hf-mirror（中国大陆推荐）";
+"mac.localASR.downloadSource.huggingface" = "Hugging Face 官方";
 "mac.localASR.download" = "下载";
 "mac.localASR.selectFolder" = "选择目录";
 "mac.localASR.openFolder" = "打开目录";

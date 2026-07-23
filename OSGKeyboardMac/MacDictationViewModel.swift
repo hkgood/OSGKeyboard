@@ -52,7 +52,12 @@ final class MacDictationViewModel: ObservableObject {
     @Published var isProcessing = false
     /// True once live ASR has surfaced at least one partial during this take.
     @Published private(set) var isStreamingPartial = false
+    /// Live text for the *current* take (drives the floating HUD). Reset on
+    /// every new Option press.
     @Published var transcript = ""
+    /// Running overview of every finalized take this app run — the Home card
+    /// accumulates sessions here so earlier utterances are never overwritten.
+    @Published private(set) var overviewTranscript = ""
     @Published var statusMessage = ""
     @Published var audioLevel: Float = 0
     @Published var sessionSeconds: Int = 0
@@ -74,9 +79,10 @@ final class MacDictationViewModel: ObservableObject {
     /// In-flight `beginRecording` started by the hotkey — cancelled if the
     /// key is released before the engine is ready (avoids a stuck session).
     private var hotkeyBeginTask: Task<Void, Never>?
-    /// Live chunked ASR while recording (cloud / supported local paths).
+    /// Live chunked / streaming ASR while recording (cloud or MLX local).
     /// Finished in `finishRecording` so partials can become the final draft.
     private var liveCaptureTask: Task<MacLiveASRCaptureResult, Never>?
+    private var liveFinishContinuation: AsyncStream<Void>.Continuation?
 
     let usageStatistics: UsageStatisticsStore
     let speechHistory = SpeechHistoryStore.shared
@@ -152,6 +158,22 @@ final class MacDictationViewModel: ObservableObject {
 
     var currentWordCount: Int {
         transcript.split { $0 == " " || $0 == "\n" || $0 == "\t" }.count
+    }
+
+    /// Text the Home overview card shows: all finalized takes plus the live
+    /// current take appended at the end while recording / processing.
+    var homePreviewText: String {
+        let live = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        if live.isEmpty { return overviewTranscript }
+        if overviewTranscript.isEmpty { return live }
+        return overviewTranscript + "\n" + live
+    }
+
+    var hasHomePreview: Bool { !homePreviewText.isEmpty }
+
+    /// Clears the Home overview (the running session log), leaving any live take.
+    func clearOverview() {
+        overviewTranscript = ""
     }
 
     var isCloudMode: Bool { config.engineMode == "cloud" }
@@ -276,8 +298,19 @@ final class MacDictationViewModel: ObservableObject {
         )
         stopTimers()
         audioLevel = 0
-        let samples = recorder.stop()
         let store = AppGroupStore(defaults: defaults)
+        let usesDeferredStop = MacDictationPipeline.supportsLivePartials(store: store)
+            && store.engineMode == "local"
+            && MacLocalASRService.usesMLXLiveStreaming()
+        let samples: [Float]
+        if usesDeferredStop {
+            liveFinishContinuation?.yield(())
+            samples = []
+        } else {
+            liveFinishContinuation?.finish()
+            liveFinishContinuation = nil
+            samples = recorder.stop()
+        }
         let liveTask = liveCaptureTask
         liveCaptureTask = nil
 
@@ -285,8 +318,14 @@ final class MacDictationViewModel: ObservableObject {
             guard let self else { return }
             do {
                 let result: MacDictationResult
+                let capturedSamples: [Float]
                 if let liveTask {
                     let capture = await Self.awaitLiveCapture(liveTask)
+                    if usesDeferredStop {
+                        capturedSamples = self.recorder.stop()
+                    } else {
+                        capturedSamples = samples
+                    }
                     let trimmedLive = capture.raw.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !capture.shouldFallbackToBatch, !trimmedLive.isEmpty {
                         if self.transcript.isEmpty {
@@ -300,7 +339,7 @@ final class MacDictationViewModel: ObservableObject {
                         )
                     } else {
                         result = try await MacDictationPipeline.run(
-                            samples: samples,
+                            samples: capturedSamples,
                             store: store,
                             onPartial: { [weak self] partial in
                                 Task { @MainActor in
@@ -310,8 +349,9 @@ final class MacDictationViewModel: ObservableObject {
                         )
                     }
                 } else {
+                    capturedSamples = usesDeferredStop ? self.recorder.stop() : samples
                     result = try await MacDictationPipeline.run(
-                        samples: samples,
+                        samples: capturedSamples,
                         store: store,
                         onPartial: { [weak self] partial in
                             Task { @MainActor in
@@ -324,6 +364,7 @@ final class MacDictationViewModel: ObservableObject {
                 let pasted = try await self.deliver(result.text)
                 self.recordUsage(for: result.text)
                 self.speechHistory.append(text: result.text)
+                self.appendToOverview(result.text)
                 self.statusMessage = self.statusAfterDelivery(
                     pasted: pasted,
                     polishWarning: result.polishWarning,
@@ -332,17 +373,28 @@ final class MacDictationViewModel: ObservableObject {
             } catch {
                 self.statusMessage = error.localizedDescription
             }
+            // The finalized take now lives in the overview; clear the live take
+            // so the HUD flashes its completion state and the next press starts
+            // fresh without overwriting the Home overview.
+            self.transcript = ""
             self.isStreamingPartial = false
             self.isProcessing = false
+            self.liveFinishContinuation?.finish()
+            self.liveFinishContinuation = nil
         }
     }
 
     private func startLiveCaptureIfSupported(store: AppGroupStore) {
         guard MacDictationPipeline.supportsLivePartials(store: store) else { return }
         let stream = recorder.makeSnapshotStream()
+        let (finishStream, finishContinuation) = AsyncStream<Void>.makeStream(
+            bufferingPolicy: .bufferingNewest(1)
+        )
+        liveFinishContinuation = finishContinuation
         liveCaptureTask = Task { [weak self] in
             await MacDictationPipeline.captureLive(
                 stream: stream,
+                finishSignal: finishStream,
                 store: store,
                 onPartial: { [weak self] partial in
                     Task { @MainActor in
@@ -359,6 +411,8 @@ final class MacDictationViewModel: ObservableObject {
     }
 
     private func cancelLiveCapture() {
+        liveFinishContinuation?.finish()
+        liveFinishContinuation = nil
         liveCaptureTask?.cancel()
         liveCaptureTask = nil
         isStreamingPartial = false
@@ -473,6 +527,14 @@ final class MacDictationViewModel: ObservableObject {
         sessionTimer?.invalidate()
         levelTimer = nil
         sessionTimer = nil
+    }
+
+    private func appendToOverview(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        overviewTranscript = overviewTranscript.isEmpty
+            ? trimmed
+            : overviewTranscript + "\n" + trimmed
     }
 
     private func recordUsage(for text: String) {

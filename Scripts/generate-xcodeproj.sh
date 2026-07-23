@@ -35,7 +35,11 @@ if [[ ! -f "$PRECONFIG_LOCAL" ]]; then
   echo "Edit deepseek in that file before using the local engine's built-in polish."
 fi
 
+"$ROOT/Scripts/ensure-mlx-audio-swift.sh"
+
 xcodegen generate
+
+"$ROOT/Scripts/patch-spm-local-package.sh"
 
 if python3 - "$PBXPROJ" <<'PY'
 import re

@@ -9,6 +9,12 @@ import SwiftUI
 
 struct MacDictationOverlayView: View {
     @ObservedObject var viewModel: MacDictationViewModel
+    /// Called continuously while the user drags the pill (reads the live cursor
+    /// position on the controller side). Double-click resets to the default.
+    var onDragChanged: (() -> Void)?
+    var onDragEnded: (() -> Void)?
+    /// Double-click anywhere on the pill to snap it back to the default spot.
+    var onResetPosition: (() -> Void)?
     @Environment(\.themePalette) private var palette
 
     private var lang: AppUILanguage { viewModel.config.uiLanguage }
@@ -35,6 +41,9 @@ struct MacDictationOverlayView: View {
             Spacer(minLength: Spacing.xs)
             trailingControl
         }
+        // Fixed content height so the pill never changes height between
+        // 识别中 (waveform, 28pt) and 润色中 (small spinner) states.
+        .frame(height: 28)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, 11)
         .frame(minWidth: 300, idealWidth: 400, maxWidth: 520)
@@ -45,7 +54,22 @@ struct MacDictationOverlayView: View {
                 .stroke(palette.dividerStrong, lineWidth: 0.5)
         )
         .shadow(color: Color.black.opacity(0.22), radius: 14, y: 5)
-        .padding(2)
+        // Transparent margin large enough to contain the shadow's reach
+        // (radius 14 + y 5). The panel is sized to `fittingSize`, which ignores
+        // shadow, so without this room the borderless window clips the shadow
+        // into hard translucent-black corners.
+        .padding(EdgeInsets(top: 12, leading: 16, bottom: 20, trailing: 16))
+        .contentShape(Capsule(style: .continuous))
+        // Manual drag: `isMovableByWindowBackground` doesn't work on a
+        // non-activating panel, so we move the panel ourselves. The controller
+        // reads the live cursor position, so the translation value is unused.
+        .gesture(
+            DragGesture(minimumDistance: 3)
+                .onChanged { _ in onDragChanged?() }
+                .onEnded { _ in onDragEnded?() }
+        )
+        .onTapGesture(count: 2) { onResetPosition?() }
+        .help(MacL10n.string("mac.overlay.dragHint", language: lang))
         .animation(Motion.soft, value: hasPreview)
         .animation(Motion.quick, value: viewModel.isRecording)
         .animation(Motion.quick, value: viewModel.isStreamingPartial)
@@ -65,9 +89,7 @@ struct MacDictationOverlayView: View {
                     .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.head)
-                    .frame(maxWidth: showsLiveBadge ? 280 : 320, alignment: .leading)
-                    .contentTransition(.opacity)
-                    .animation(Motion.quick, value: previewText)
+                    .frame(maxWidth: showsLiveBadge ? 280 : 320, alignment: .trailing)
                     .accessibilityLabel(previewText)
             }
         } else {
@@ -133,8 +155,17 @@ struct MacDictationOverlayView: View {
         return MacL10n.string("mac.overlay.done", language: lang)
     }
 
-    @ViewBuilder
+    // Fixed-size trailing slot so the pill width / height stays steady as the
+    // control swaps between waveform, spinner and checkmark.
     private var trailingControl: some View {
+        HStack(spacing: Spacing.sm) {
+            trailingContent
+        }
+        .frame(height: 28, alignment: .trailing)
+    }
+
+    @ViewBuilder
+    private var trailingContent: some View {
         if viewModel.isRecording {
             MiniWaveform(
                 level: viewModel.audioLevel,
@@ -149,10 +180,12 @@ struct MacDictationOverlayView: View {
         } else if viewModel.isPreparingToRecord || viewModel.isProcessing {
             ProgressView()
                 .controlSize(.small)
+                .frame(width: 28, height: 28)
         } else {
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(palette.accent)
                 .symbolRenderingMode(.hierarchical)
+                .frame(width: 28, height: 28)
         }
     }
 

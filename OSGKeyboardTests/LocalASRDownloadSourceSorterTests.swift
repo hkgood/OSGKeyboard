@@ -16,24 +16,43 @@ final class LocalASRDownloadSourceSorterTests: XCTestCase {
         )
     }
 
-    func testChinaMainlandPrefersModelScope() {
+    func testChinaMainlandPrefersHFMirror() {
         let sources = [
             source("github"),
             source("huggingface"),
+            source("hfmirror"),
             source("modelscope"),
         ]
         let sorted = LocalASRDownloadSourceSorter.sorted(sources, region: Locale.Region("CN"))
-        XCTAssertEqual(sorted.map(\.type), ["modelscope", "huggingface", "github"])
+        XCTAssertEqual(sorted.map(\.type), ["hfmirror", "huggingface", "modelscope", "github"])
     }
 
     func testGlobalPrefersHuggingFace() {
         let sources = [
             source("github"),
             source("huggingface"),
+            source("hfmirror"),
             source("modelscope"),
         ]
         let sorted = LocalASRDownloadSourceSorter.sorted(sources, region: Locale.Region("US"))
-        XCTAssertEqual(sorted.map(\.type), ["huggingface", "github", "modelscope"])
+        XCTAssertEqual(sorted.map(\.type), ["huggingface", "hfmirror", "github", "modelscope"])
+    }
+
+    func testUnknownRegionFallsBackToMirror() {
+        let sources = [source("huggingface"), source("hfmirror")]
+        let sorted = LocalASRDownloadSourceSorter.sorted(sources, region: nil)
+        XCTAssertEqual(sorted.map(\.type), ["hfmirror", "huggingface"])
+    }
+
+    func testManualPreferenceOverridesRegion() {
+        let sources = [source("hfmirror"), source("huggingface")]
+        // Even in China, an explicit HF preference wins.
+        let sorted = LocalASRDownloadSourceSorter.sorted(
+            sources,
+            region: Locale.Region("CN"),
+            preferred: .huggingface
+        )
+        XCTAssertEqual(sorted.map(\.type), ["huggingface", "hfmirror"])
     }
 
     func testSameTypeUsesPriority() {
