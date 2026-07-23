@@ -52,6 +52,9 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let flowSkipAppSwitch = "config.flowSkipAppSwitch"
         /// Raw `FlowInactivityDuration` value; session expires after this idle window.
         public static let flowInactivityDuration = "config.flowInactivityDuration"
+        /// One-shot: remap previous product defaults (30m / 10m) → 5m.
+        public static let flowInactivityMigratedToFiveMinuteDefault =
+            "config.flowInactivityDuration.migratedToFiveMinuteDefault"
         /// Diagnostic switch: when false, local ASR skips the custom language model.
         public static let localASRCustomLanguageModelEnabled = "config.localASR.customLanguageModelEnabled"
     }
@@ -310,14 +313,9 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             preferICloudSync: config.settingsICloudSyncEnabled
         )
 
-        // One-shot default migration for installs that predate an explicit
-        // stored value. The privacy-safe defaults ("local", 30 min TTL) are
-        // for NEW installs only — an existing user who ran on the old
-        // defaults must keep their behavior, both because silently changing
-        // engines under someone is wrong, and because iCloud settings sync
-        // would stamp the flip as a fresh "edit" and propagate it to every
-        // other device, overriding choices made there. Persisting the
-        // resolved value makes the decision stable and sync-invisible.
+        // One-shot defaults for installs that predate explicit settings.
+        // Preserve the legacy engine choice, but use the current privacy-safe
+        // inactivity duration when the user has never selected one.
         let isExistingInstall = defaults.bool(forKey: Keys.hasCompletedOnboarding)
         if defaults.string(forKey: Keys.engineMode) == nil {
             let resolved = isExistingInstall ? "cloud" : "local"
@@ -325,9 +323,23 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             defaults.set(resolved, forKey: Keys.engineMode)
         }
         if defaults.string(forKey: Keys.flowInactivityDuration) == nil {
-            let resolved: FlowInactivityDuration = isExistingInstall ? .twelveHours : .default
+            let resolved = FlowInactivityDuration.default
             config.flowInactivityDuration = resolved
             defaults.set(resolved.rawValue, forKey: Keys.flowInactivityDuration)
+            defaults.set(true, forKey: Keys.flowInactivityMigratedToFiveMinuteDefault)
+        } else if !defaults.bool(forKey: Keys.flowInactivityMigratedToFiveMinuteDefault) {
+            // Previous product defaults were 30m then briefly 10m. Remap those
+            // once so existing installs pick up the new 5-minute default; users
+            // who later choose 30m / 10m again keep that choice.
+            let previousDefaults: Set<String> = [
+                FlowInactivityDuration.thirtyMinutes.rawValue,
+                FlowInactivityDuration.tenMinutes.rawValue,
+            ]
+            if previousDefaults.contains(config.flowInactivityDuration.rawValue) {
+                config.flowInactivityDuration = .default
+                defaults.set(FlowInactivityDuration.default.rawValue, forKey: Keys.flowInactivityDuration)
+            }
+            defaults.set(true, forKey: Keys.flowInactivityMigratedToFiveMinuteDefault)
         }
 
         // Cloud no longer exposes off/transcribe; migrate legacy values.

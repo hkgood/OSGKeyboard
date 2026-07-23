@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mac MLX streaming ASR**: local dictation uses Qwen3-ASR via mlx-audio-swift with overlay partial preview, tail drain, vocabulary prompt, and polish-before-insert. / **Mac MLX 流式 ASR**：本地听写改用 mlx-audio-swift 的 Qwen3-ASR，支持浮层 partial 预览、尾部截断、词库 prompt 与润色后再插入。
 
 ### Changed
+- **Privacy-safe Flow timeout**: new sessions default to a 5-minute inactivity window, with new 1-minute and 5-minute options in Settings; previous 30-/10-minute product defaults migrate once. / **更安全的 Flow 超时**：新会话默认在无活动 5 分钟后结束，设置中新增 1 分钟与 5 分钟选项；旧的 30/10 分钟产品默认会一次性迁移到 5 分钟。
+- **Cloud ASR privacy disclosure**: permission prompts and the bundled privacy policy now explain that audio stays on-device by default and is sent to the configured speech provider only after cloud recognition is enabled. / **云端 ASR 隐私说明**：权限弹窗与内置隐私政策现明确说明音频默认在设备端处理，仅在启用云端识别后发送至用户配置的语音服务商。
 - **Mac local ASR engine**: removed Sherpa offline CLI; default model is Qwen3 MLX 0.6B 4-bit (1.7B optional download). / **Mac 本地 ASR 引擎**：移除 Sherpa offline CLI；默认模型改为 Qwen3 MLX 0.6B 4-bit（1.7B 可选下载）。
 - **Landing competitor matrix**: compare Typeless / Superwhisper / Openless / OSGKeyboard on open source, pricing, on-device ASR, BYOK, and platforms (incl. honest Windows gap). / **落地页竞品对照**：对比 Typeless / Superwhisper / Openless / OSGKeyboard 的开源、付费、本地识别、BYOK 与平台（含暂无 Windows）。
 - **Voluntary support tip**: Settings (top of the page) includes an optional ¥28 Consumable in-app tip (StoreKit 2). All features stay free — no paywall or unlock. / **自愿打赏**：设置页顶部新增可选 ¥28 消耗型应用内打赏（StoreKit 2）。全功能仍免费，无付费墙或功能解锁。
@@ -25,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Landing hero polish**: replace CSS device frames with the marketing composite; full-bleed pale-green hero wash (no side gaps / no radial gradient); Mac story shots sit on transparent chrome. / **落地页 Hero 抛光**：设备框改为营销合成图；首屏淡绿单色通栏（无两侧留白 / 无径向渐变）；Mac 故事截图去卡片底。
 
 ### Fixed
+- **Permission pre-prompt CTA**: onboarding / Home buttons use Next instead of Allow before the system microphone and speech dialogs (App Store 5.1.1(iv)). / **权限引导按钮**：系统麦克风与语音识别弹窗前的引导/首页按钮改为「下一步」，不再使用「允许」（App Store 5.1.1(iv)）。
 - **Model download for China networks**: add the `hf-mirror.com` mirror as the mainland-China-first source (bypasses the flaky HF Xet backend), drop the dead ModelScope link, and correct the model file list; add automatic resume-on-drop retry with cross-mirror fallback and a manual "Download source" picker in Settings. / **国内网络模型下载**：新增 `hf-mirror.com` 镜像并在中国大陆优先（绕开不稳定的 HF Xet 后端），删除失效的 ModelScope 链接并修正模型文件清单；下载中断自动断点续传重试并在镜像间回退，设置里新增手动「下载源」选择。
 - **iPad sidebar brand mark**: use the template `OSGLogoWide` mark with accent tint so the logo stays visible in the split-view sidebar. / **iPad 侧栏品牌标**：改用可着色的 `OSGLogoWide`，保证分栏侧栏始终显示 logo。
 

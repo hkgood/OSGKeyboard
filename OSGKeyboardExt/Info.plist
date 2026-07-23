@@ -44,8 +44,8 @@
 		<string>$(PRODUCT_MODULE_NAME).KeyboardViewController</string>
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>OSGKeyboard uses the microphone for voice dictation and keeps a background audio session active while a voice session is running.</string>
+	<string>OSGKeyboard uses the microphone for voice dictation, including active Flow sessions while you type in other apps.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>OSGKeyboard uses on-device speech recognition to transcribe your voice. Audio is processed on your device and is not uploaded for transcription.</string>
+	<string>OSGKeyboard uses speech recognition to transcribe your voice. Audio is processed on-device by default, or sent to your configured speech provider only when you enable cloud recognition.</string>
 </dict>
 </plist>

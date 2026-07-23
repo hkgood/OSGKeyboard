@@ -209,22 +209,16 @@ We'd love your feedback — open an issue on GitHub or rate this app.
 
 ## App Privacy (App Store Connect "Privacy" section)
 
-Choose **"Data Not Collected"** in the first question.
+Choose **"Yes, we collect data from this app"** because optional cloud
+recognition sends audio and cloud polish/translation sends user text to
+the provider selected by the user. Declare **Audio Data** and **Other
+User Content** for **App Functionality**, linked to the user, and not
+used for tracking. The exact answers are listed under
+[App Privacy answers](#app-privacy-answers).
 
-The OSGKeyboard app and keyboard extension collect **no data** from
-you. All processing happens on-device or through the LLM endpoint you
-explicitly configure. The app does not embed any analytics, crash
-report, or tracking SDK.
-
-| Question | Answer |
-|---|---|
-| Data collected from this app? | **No** |
-| Data used to track you? | **No** |
-| Data linked to your identity? | **No** |
-
-The `PrivacyInfo.xcprivacy` files in both `OSGKeyboard/` and
-`OSGKeyboardExt/` declare `NSPrivacyTracking: false` and
-`NSPrivacyCollectedDataTypes: []` to match.
+On-device recognition remains the default and does not upload audio.
+The app does not embed analytics, crash-reporting, advertising, or
+tracking SDKs.
 
 ---
 
@@ -265,9 +259,11 @@ to end, please:
    through this, but you can also tap it in the keyboard settings).
    Full Access is required for the continuous-capture flow session
    (network access for the LLM polish step + shared App Group
-   container with the main app). The mic is captured on-device; the
-   network call only sends the final text transcript to the LLM
-   endpoint configured in Settings.
+   container with the main app). On-device recognition is the default
+   and does not upload audio. If the user explicitly enables cloud
+   recognition, recordings are sent to the speech provider configured
+   in Settings. Transcribed text may also be sent to the configured
+   LLM endpoint for polish or translation.
 3. In any app, switch to OSGKeyboard (globe key), then hold the
    purple mic key, speak, and release.
 4. For the LLM polish demo: open OSGKeyboard's main app, Settings,
@@ -288,6 +284,56 @@ Source code: https://github.com/hkgood/OSGKeyboard
 
 ---
 
+## App Privacy answers
+
+Use these conservative disclosures in App Store Connect → App Privacy.
+They cover optional cloud recognition and cloud text polish even though
+on-device recognition remains the default.
+
+### Data types collected
+
+#### User Content → Audio Data
+
+- **Collected:** Yes
+- **Purpose:** App Functionality
+- **Linked to the user:** Yes
+- **Used for tracking:** No
+
+Audio is sent off-device only after the user explicitly enables cloud
+recognition. The configured provider may associate requests with the
+user's provider account/API credential, so the conservative answer is
+"linked".
+
+#### User Content → Other User Content
+
+- **Collected:** Yes
+- **Purpose:** App Functionality
+- **Linked to the user:** Yes
+- **Used for tracking:** No
+
+This covers transcripts, polish prompts, optional translation text, and
+personal-dictionary terms included in those requests. A configured
+provider may associate requests with the user's provider account/API
+credential.
+
+### Do not select
+
+- Contact Info, Financial Info, Location, Contacts, Photos or Videos
+- Browsing History, Search History, Purchases, Identifiers
+- Usage Data or Diagnostics (stored locally/private iCloud only)
+- Third-Party Advertising, Developer Advertising or Marketing,
+  Analytics, Product Personalization, or Other Purposes
+- Tracking
+
+### URLs
+
+- **Privacy Policy URL:** `https://hkgood.github.io/OSGKeyboard/privacy/`
+- **User Privacy Choices URL:** leave blank (optional); users can disable
+  cloud recognition/polish, clear history, reset settings, or delete the
+  app as described in the policy.
+
+---
+
 ## Submission checklist
 
 - [ ] All 10 screenshots replaced with real Simulator captures
@@ -296,7 +342,8 @@ Source code: https://github.com/hkgood/OSGKeyboard
       Store Connect → Upload
 - [ ] Select the new build under "Builds" in the version
 - [ ] Fill in metadata from this document
-- [ ] Privacy: "Data Not Collected"
+- [ ] Privacy: Audio Data + Other User Content; App Functionality;
+      linked to user; not used for tracking
 - [ ] Encryption: skip (auto-skipped via Info.plist key)
 - [ ] Add for review
 - [ ] Submit

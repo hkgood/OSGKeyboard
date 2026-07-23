@@ -5,14 +5,15 @@
 /* Onboarding */
 "onboarding.progress" = "Step %1$d of %2$d";
 "onboarding.welcome.tagline" = "Speak it. It’s typed.";
-"onboarding.permission.preface" = "iOS will ask for two permissions — please allow both.";
+"onboarding.permission.preface" = "iOS will ask for microphone and speech recognition next.";
 "onboarding.permission.mic.title" = "Microphone";
 "onboarding.permission.mic.body" = "Records your voice.";
-"onboarding.permission.mic.allow" = "Allow";
+/* Pre-system prompt CTA — use Next/Continue, never Allow (App Store 5.1.1(iv)). */
+"onboarding.permission.mic.allow" = "Next";
 "onboarding.permission.mic.deniedHint" = "Open Settings to enable, or tap Next to set up later.";
 "onboarding.permission.speech.title" = "Speech Recognition";
 "onboarding.permission.speech.body" = "Turns your voice into text.";
-"onboarding.permission.speech.allow" = "Allow";
+"onboarding.permission.speech.allow" = "Next";
 "onboarding.permission.speech.deniedHint" = "Open Settings to enable, or tap Next to set up later.";
 "onboarding.permission.openSettings" = "Open Settings";
 "onboarding.permission.status.undetermined" = "Not requested yet";
@@ -327,7 +328,7 @@
 "home.setup.permission.mic" = "Microphone access is off — voice input won't work.";
 "home.setup.permission.speech" = "Speech recognition is off — voice input won't work.";
 "home.setup.permission.both" = "Microphone and speech recognition are off — voice input won't work.";
-"home.setup.permission.request" = "Grant access";
+"home.setup.permission.request" = "Next";
 "home.setup.cloudIncomplete" = "Cloud engine needs an API key. Open the Settings tab.";
 "home.setup.keyboardHint" = "Don't see OSGKeyboard? Add it in iOS Settings.";
 "home.setup.keyboardHint.dismiss" = "Got it";
@@ -420,6 +421,8 @@
 "settings.flow.skipAppSwitch.title" = "Skip app switch";
 "settings.flow.skipAppSwitch.subtitle" = "After a cold start, try to return to the app you came from.";
 "settings.flow.inactivity.title" = "End session after inactivity";
+"settings.flow.inactivity.1m" = "1 minute";
+"settings.flow.inactivity.5m" = "5 minutes";
 "settings.flow.inactivity.10m" = "10 minutes";
 "settings.flow.inactivity.30m" = "30 minutes";
 "settings.flow.inactivity.3h" = "3 hours";

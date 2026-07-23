@@ -48,8 +48,8 @@ settings:
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "0.5.4"
-    CURRENT_PROJECT_VERSION: "23"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "26"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -129,8 +129,8 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
-        NSMicrophoneUsageDescription: "OSGKeyboard uses the microphone for voice dictation and keeps a background audio session active while a voice session is running."
-        NSSpeechRecognitionUsageDescription: "OSGKeyboard uses on-device speech recognition to transcribe your voice. Audio is processed on your device and is not uploaded for transcription."
+        NSMicrophoneUsageDescription: "OSGKeyboard uses the microphone for voice dictation, including active Flow sessions while you type in other apps."
+        NSSpeechRecognitionUsageDescription: "OSGKeyboard uses speech recognition to transcribe your voice. Audio is processed on-device by default, or sent to your configured speech provider only when you enable cloud recognition."
         UIBackgroundModes:
           - audio
         NSSupportsLiveActivities: true
@@ -257,8 +257,8 @@ targets:
         CFBundleLocalizations:
           - en
           - zh-Hans
-        NSMicrophoneUsageDescription: "OSGKeyboard uses the microphone for voice dictation and keeps a background audio session active while a voice session is running."
-        NSSpeechRecognitionUsageDescription: "OSGKeyboard uses on-device speech recognition to transcribe your voice. Audio is processed on your device and is not uploaded for transcription."
+        NSMicrophoneUsageDescription: "OSGKeyboard uses the microphone for voice dictation, including active Flow sessions while you type in other apps."
+        NSSpeechRecognitionUsageDescription: "OSGKeyboard uses speech recognition to transcribe your voice. Audio is processed on-device by default, or sent to your configured speech provider only when you enable cloud recognition."
         NSExtension:
           NSExtensionAttributes:
             IsASCIICapable: false

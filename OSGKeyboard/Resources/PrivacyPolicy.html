@@ -22,12 +22,12 @@
   <p class="lang"><a href="#zh">中文</a> · <a href="#top">English</a></p>
   <div id="top">
   <h1>OSGKeyboard Privacy Policy</h1>
-  <p><strong>Last updated:</strong> July 8, 2026</p>
+  <p><strong>Last updated:</strong> July 23, 2026</p>
   <p>OSGKeyboard is a custom iOS keyboard that turns your voice into text. This policy explains what data the app processes and how it is used.</p>
 
   <h2>What we collect</h2>
   <ul>
-    <li><strong>Voice audio</strong> — captured only while you actively record. On-device mode transcribes locally with Apple’s speech APIs; raw audio is not uploaded by OSGKeyboard.</li>
+    <li><strong>Voice audio</strong> — captured only while you actively record. The default on-device mode transcribes locally with Apple’s speech APIs and does not upload raw audio. If you explicitly enable cloud recognition, recordings are sent to the speech provider you configure for transcription; that provider’s privacy policy applies. OSGKeyboard does not store or proxy the audio on its own servers.</li>
     <li><strong>Transcribed text</strong> — in Cloud polish mode, the final text (not audio) may be sent to the LLM provider you configure (e.g. OpenAI) for punctuation and formatting.</li>
     <li><strong>API credentials</strong> — stored in the iOS Keychain and shared between the main app and keyboard extension. When iCloud settings sync is enabled, keys replicate through iCloud Keychain (not iCloud KVS JSON).</li>
     <li><strong>App preferences</strong> — engine mode, language, and keyboard settings stored in App Group UserDefaults. Optional iCloud sync mirrors preferences, usage statistics, and voice history through your private iCloud account.</li>
@@ -48,7 +48,7 @@
   </ul>
 
   <h2>Third parties</h2>
-  <p>When you choose Cloud polish mode, transcribed text is sent to the API endpoint you configure. That provider’s privacy policy applies to those requests.</p>
+  <p>When you enable cloud recognition, recordings are sent directly to the speech provider you configure. When you choose Cloud polish mode, transcribed text is sent to the API endpoint you configure. Those providers’ privacy policies apply to the requests.</p>
 
   <h2>Data retention</h2>
   <p>Settings remain on your device until you delete the app or reset settings. With iCloud sync enabled, API keys use iCloud Keychain; preferences, statistics, and history may sync via your private iCloud account.</p>
@@ -60,12 +60,12 @@
 
   <hr id="zh">
   <h1>OSGKeyboard 隐私政策</h1>
-  <p><strong>更新日期：</strong>2026 年 7 月 8 日</p>
+  <p><strong>更新日期：</strong>2026 年 7 月 23 日</p>
   <p>OSGKeyboard 是一款 iOS 自定义键盘，可将语音转为文字。本政策说明应用处理哪些数据及用途。</p>
 
   <h2>我们处理的数据</h2>
   <ul>
-    <li><strong>语音音频</strong> — 仅在你主动录音时采集。本地模式在设备端通过 Apple 语音识别转写，OSGKeyboard 不会上传原始录音。</li>
+    <li><strong>语音音频</strong> — 仅在你主动录音时采集。默认本地模式通过 Apple 语音能力在设备端转写，不会上传原始录音。若你主动启用云端识别，录音会发送到你配置的语音服务商完成转写，并适用该服务商的隐私政策。OSGKeyboard 自身不会存储或中转音频。</li>
     <li><strong>转写文字</strong> — 云端润色模式下，最终文字（非音频）可能发送到你配置的 LLM 服务商以整理标点和格式。</li>
     <li><strong>API 凭证</strong> — 保存在设备 Keychain，在主 App 与键盘扩展间共享。开启 iCloud 设置同步后，经 iCloud 钥匙串同步（非 iCloud KVS JSON）。</li>
     <li><strong>应用偏好</strong> — 引擎、语言等设置保存在 App Group。可选 iCloud 同步经私有 iCloud 账户镜像偏好、统计与语音历史。</li>
@@ -86,7 +86,7 @@
   </ul>
 
   <h2>第三方</h2>
-  <p>选择云端润色时，转写文字会发往你配置的 API，该服务商的隐私政策适用于相关请求。</p>
+  <p>启用云端识别时，录音会直接发送到你配置的语音服务商；选择云端润色时，转写文字会发送到你配置的 API。相关请求适用对应服务商的隐私政策。</p>
 
   <h2>数据保留</h2>
   <p>设置保留在设备上，直至卸载或重置。开启 iCloud 同步后，API 密钥走 iCloud 钥匙串；偏好、统计与历史可能经私有 iCloud 账户同步。</p>

@@ -1,4 +1,4 @@
 /* Permission prompts — English */
 
-"NSMicrophoneUsageDescription" = "OSGKeyboard uses the microphone for voice dictation and keeps a background audio session active while a voice session is running.";
+"NSMicrophoneUsageDescription" = "OSGKeyboard uses the microphone for voice dictation, including active Flow sessions while you type in other apps.";
 "NSSpeechRecognitionUsageDescription" = "OSGKeyboard transcribes your voice with on-device speech recognition by default. If you explicitly switch to a cloud engine in Settings, recordings are sent to the ASR provider you configure.";

@@ -460,7 +460,8 @@ private struct MicPermissionPage: View {
         switch status {
         case .granted: return "onboarding.permission.status.granted"
         case .denied: return "onboarding.permission.openSettings"
-        case .undetermined: return "onboarding.permission.mic.allow"
+        // App Store 5.1.1(iv): pre-permission CTA must not say "Allow".
+        case .undetermined: return "common.next"
         }
     }
 
@@ -526,7 +527,8 @@ private struct SpeechPermissionPage: View {
         switch status {
         case .granted: return "onboarding.permission.status.granted"
         case .denied, .restricted: return "onboarding.permission.openSettings"
-        case .undetermined: return "onboarding.permission.speech.allow"
+        // App Store 5.1.1(iv): pre-permission CTA must not say "Allow".
+        case .undetermined: return "common.next"
         }
     }
 

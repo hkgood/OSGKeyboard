@@ -7,6 +7,8 @@
 import Foundation
 
 public enum FlowInactivityDuration: String, CaseIterable, Identifiable, Sendable, Codable {
+    case oneMinute = "1m"
+    case fiveMinutes = "5m"
     case tenMinutes = "10m"
     case thirtyMinutes = "30m"
     case threeHours = "3h"
@@ -15,15 +17,13 @@ public enum FlowInactivityDuration: String, CaseIterable, Identifiable, Sendable
 
     public var id: String { rawValue }
 
-    /// 30 minutes, not hours: competitors cap sessions at 5–60 min for a
-    /// reason — a very long TTL keeps advertising "session active" long after
-    /// the host process is likely suspended or dead, amplifying every stale-
-    /// state bug into hours of confusing UI. Users can still opt into longer
-    /// windows explicitly.
-    public static let `default`: FlowInactivityDuration = .thirtyMinutes
+    /// Privacy-safe default: users can choose a longer window explicitly.
+    public static let `default`: FlowInactivityDuration = .fiveMinutes
 
     public var timeInterval: TimeInterval {
         switch self {
+        case .oneMinute: return 60
+        case .fiveMinutes: return 5 * 60
         case .tenMinutes: return 10 * 60
         case .thirtyMinutes: return 30 * 60
         case .threeHours: return 3 * 60 * 60
@@ -34,6 +34,8 @@ public enum FlowInactivityDuration: String, CaseIterable, Identifiable, Sendable
 
     public var labelKey: String {
         switch self {
+        case .oneMinute: return "settings.flow.inactivity.1m"
+        case .fiveMinutes: return "settings.flow.inactivity.5m"
         case .tenMinutes: return "settings.flow.inactivity.10m"
         case .thirtyMinutes: return "settings.flow.inactivity.30m"
         case .threeHours: return "settings.flow.inactivity.3h"

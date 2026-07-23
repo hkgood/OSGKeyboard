@@ -33,7 +33,7 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertEqual(config.polishIntensity, .default)
         XCTAssertTrue(config.personalDictionary.entries.isEmpty)
         XCTAssertTrue(config.flowSkipAppSwitch)
-        XCTAssertEqual(config.flowInactivityDuration, .thirtyMinutes)
+        XCTAssertEqual(config.flowInactivityDuration, .fiveMinutes)
     }
 
     func testSaveAndLoadRoundTrip() {
@@ -84,24 +84,41 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertEqual(loaded.flowInactivityDuration, .threeHours)
     }
 
-    /// Existing installs (onboarding completed, no explicit engineMode key)
-    /// ran on the old "cloud"/12h defaults — a silent flip to the new
-    /// privacy defaults would change their engine under them AND propagate
-    /// through settings sync as a fake fresh edit to their other devices.
-    func testDefaultMigrationPreservesExistingInstallBehavior() {
+    /// Existing installs retain their legacy engine, but an unset inactivity
+    /// duration adopts the current privacy-safe default.
+    func testDefaultMigrationUsesPrivacySafeInactivityDuration() {
         let defaults = makeDefaults()
         defaults.set(true, forKey: AppGroupConfiguration.Keys.hasCompletedOnboarding)
 
         let config = AppGroupConfiguration.load(fromAvailable: defaults)
 
         XCTAssertEqual(config.engineMode, "cloud", "pre-picker installs stay on their old default")
-        XCTAssertEqual(config.flowInactivityDuration, .twelveHours)
+        XCTAssertEqual(config.flowInactivityDuration, .fiveMinutes)
         // The resolution is persisted so it is stable and sync-invisible.
         XCTAssertEqual(defaults.string(forKey: AppGroupConfiguration.Keys.engineMode), "cloud")
         XCTAssertEqual(
             defaults.string(forKey: AppGroupConfiguration.Keys.flowInactivityDuration),
-            FlowInactivityDuration.twelveHours.rawValue
+            FlowInactivityDuration.fiveMinutes.rawValue
         )
+    }
+
+    func testPreviousDefaultInactivityIsMigratedToFiveMinutesOnce() {
+        let defaults = makeDefaults()
+        defaults.set(FlowInactivityDuration.thirtyMinutes.rawValue,
+                     forKey: AppGroupConfiguration.Keys.flowInactivityDuration)
+
+        let first = AppGroupConfiguration.load(fromAvailable: defaults)
+        XCTAssertEqual(first.flowInactivityDuration, .fiveMinutes)
+        XCTAssertTrue(defaults.bool(
+            forKey: AppGroupConfiguration.Keys.flowInactivityMigratedToFiveMinuteDefault
+        ))
+
+        // After migration, an explicit 30-minute choice sticks.
+        var updated = first
+        updated.flowInactivityDuration = .thirtyMinutes
+        updated.save(to: defaults)
+        let second = AppGroupConfiguration.load(fromAvailable: defaults)
+        XCTAssertEqual(second.flowInactivityDuration, .thirtyMinutes)
     }
 
     func testDefaultMigrationGivesFreshInstallPrivacyDefaults() {
@@ -110,7 +127,7 @@ final class AppGroupConfigurationTests: XCTestCase {
         let config = AppGroupConfiguration.load(fromAvailable: defaults)
 
         XCTAssertEqual(config.engineMode, "local")
-        XCTAssertEqual(config.flowInactivityDuration, .thirtyMinutes)
+        XCTAssertEqual(config.flowInactivityDuration, .fiveMinutes)
         XCTAssertEqual(defaults.string(forKey: AppGroupConfiguration.Keys.engineMode), "local")
     }
 

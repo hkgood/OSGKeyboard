@@ -5,14 +5,15 @@
 /* Onboarding */
 "onboarding.progress" = "第 %1$d / %2$d 步";
 "onboarding.welcome.tagline" = "开口即文字。";
-"onboarding.permission.preface" = "系统会弹出两次授权，请「允许」权限申请。";
+"onboarding.permission.preface" = "接下来系统会分别请求麦克风与语音识别权限。";
 "onboarding.permission.mic.title" = "麦克风";
 "onboarding.permission.mic.body" = "用于录制语音。";
-"onboarding.permission.mic.allow" = "允许";
+/* 系统弹窗前的引导按钮须用「下一步/继续」，勿用「允许」（App Store 5.1.1(iv)）。 */
+"onboarding.permission.mic.allow" = "下一步";
 "onboarding.permission.mic.deniedHint" = "去设置打开，或先点「下一步」。";
 "onboarding.permission.speech.title" = "语音识别";
 "onboarding.permission.speech.body" = "把你说的话转成文字。";
-"onboarding.permission.speech.allow" = "允许";
+"onboarding.permission.speech.allow" = "下一步";
 "onboarding.permission.speech.deniedHint" = "去设置打开，或先点「下一步」。";
 "onboarding.permission.openSettings" = "打开设置";
 "onboarding.permission.status.undetermined" = "尚未请求";
@@ -326,7 +327,7 @@
 "home.setup.permission.mic" = "麦克风还没授权，语音输入用不了。";
 "home.setup.permission.speech" = "语音识别还没授权，语音输入用不了。";
 "home.setup.permission.both" = "麦克风和语音识别还没授权，语音输入用不了。";
-"home.setup.permission.request" = "去授权";
+"home.setup.permission.request" = "下一步";
 "home.setup.cloudIncomplete" = "选了云端引擎，先去「设置」填 API Key。";
 "home.setup.keyboardHint" = "列表里没有？去系统设置里添加键盘。";
 "home.setup.keyboardHint.dismiss" = "知道了";
@@ -419,6 +420,8 @@
 "settings.flow.skipAppSwitch.title" = "跳过应用切换";
 "settings.flow.skipAppSwitch.subtitle" = "冷启动完成后，尝试自动返回来源 App。";
 "settings.flow.inactivity.title" = "无活动后结束会话";
+"settings.flow.inactivity.1m" = "1 分钟";
+"settings.flow.inactivity.5m" = "5 分钟";
 "settings.flow.inactivity.10m" = "10 分钟";
 "settings.flow.inactivity.30m" = "30 分钟";
 "settings.flow.inactivity.3h" = "3 小时";

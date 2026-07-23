@@ -16,7 +16,7 @@
 <body>
   <p class="lang"><a href="#zh">中文</a></p>
   <h1>OSGKeyboard Privacy Policy</h1>
-  <p><strong>Last updated:</strong> July 9, 2026 · <em>v0.5.x</em></p>
+  <p><strong>Last updated:</strong> July 23, 2026 · <em>v1.0</em></p>
   <p>OSGKeyboard is a custom iOS keyboard that turns your voice into text. It runs as a Custom Keyboard Extension on iOS 26 and later, and uses Apple's on-device <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code> for transcription by default. An optional cloud ASR engine (explicit opt-in) uploads recordings to the provider you configure. After transcription, text may be polished or translated via a cloud LLM. This policy explains what data the app processes and how it is used.</p>
 
   <h2>What we collect</h2>
@@ -26,7 +26,7 @@
     <li><strong>API credentials</strong> — your cloud-engine LLM API key is stored in the iOS Keychain on your device and is read only when an LLM request is made. It is shared with the main app through a shared Keychain group, never through UserDefaults.</li>
     <li><strong>App preferences</strong> — engine mode, recognition language, polish intensity, translation target, handedness, cursor-navigation toggle, and keyboard settings are stored in App Group <code>UserDefaults</code> on your device so the main app and keyboard extension stay in sync.</li>
     <li><strong>Personal dictionary</strong> — terms and aliases you add in the Dictionary tab are stored locally on your device. They are included in LLM polish prompts so your vocabulary is preserved; dictionary data is not uploaded to a separate server.</li>
-    <li><strong>Voice history</strong> — the host app may keep a local list of recent successful transcripts in its History tab, on-device only, capped at 500 entries.</li>
+    <li><strong>Voice history</strong> — the host app may keep a list of recent successful transcripts in its History tab. History is capped at 300 entries. When iCloud settings sync is enabled, history may also sync through your private iCloud Key-Value Store.</li>
     <li><strong>Usage statistics</strong> — cumulative dictation time, dictation characters, translation characters, and dictionary entry count are computed and stored locally on the home screen stats card.</li>
   </ul>
 
@@ -52,7 +52,7 @@
   <p>After on-device ASR, transcribed text is sent for polish and optional translation. On the local engine this goes to a built-in DeepSeek endpoint. On the cloud engine it goes to the OpenAI-compatible API endpoint you configured in Settings. That provider's privacy policy applies to those requests. OSGKeyboard does not proxy, log, or aggregate your requests.</p>
 
   <h2>Data retention</h2>
-  <p>Settings and API keys remain on your device until you delete the app or reset settings. Transcription results are passed to the host app you are typing in and are not stored long-term by OSGKeyboard. Voice history is kept locally (up to 500 entries) and is never uploaded; you can clear it at any time from the History tab or by resetting settings.</p>
+  <p>Settings remain on your device until you delete the app or reset settings. When iCloud settings sync is enabled, API keys replicate through iCloud Keychain and preferences, statistics, and history may sync through your private iCloud account. Transcription results are passed to the host app you are typing in and are not stored long-term by OSGKeyboard. Voice history is capped at 300 entries; you can clear it from the History tab or by resetting settings.</p>
 
   <h2>Children's privacy</h2>
   <p>OSGKeyboard is not directed to children under 13 and does not knowingly collect personal data from children.</p>
@@ -68,7 +68,7 @@
 
   <hr id="zh">
   <h1>OSGKeyboard 隐私政策</h1>
-  <p><strong>更新日期：</strong>2026 年 7 月 9 日 · <em>v0.5.x</em></p>
+  <p><strong>更新日期：</strong>2026 年 7 月 23 日 · <em>v1.0</em></p>
   <p>OSGKeyboard 是一款 iOS 自定义键盘，可将语音转为文字。它以自定义键盘扩展的形式运行，需要 iOS 26 及以上系统，默认使用 Apple 端侧的 <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code> 转写；可选的云端识别引擎（需显式二次确认开启）会把录音上传到你配置的服务商。转写完成后，文字可能经云端 LLM 润色或翻译。本政策说明应用处理哪些数据及用途。</p>
 
   <h2>我们处理的数据</h2>
@@ -104,7 +104,7 @@
   <p>端侧 ASR 完成后，转写文字会发送润色与可选翻译。本地引擎发送至内置 DeepSeek 端点；云端引擎发送至你在设置中配置的 OpenAI 兼容 API 端点。该服务商的隐私政策适用于相关请求。OSGKeyboard 不代理、不记录、不聚合这些请求。</p>
 
   <h2>数据保留</h2>
-  <p>设置与 API Key 保留在设备上，直至卸载或重置。识别结果写入你正在使用的宿主 App，OSGKeyboard 不会长期存储。语音历史最多 500 条本机保存，不会上传，可随时在「历史」页清空或通过重置设置清除。</p>
+  <p>设置保留在设备上，直至卸载或重置。开启 iCloud 设置同步后，API 密钥经 iCloud 钥匙串同步，偏好、统计与历史可能经私有 iCloud 账户同步。识别结果写入你正在使用的宿主 App，OSGKeyboard 不会长期存储。语音历史上限 300 条，可随时在「历史」页清空或通过重置设置清除。</p>
 
   <h2>儿童隐私</h2>
   <p>OSGKeyboard 不面向 13 岁以下儿童，亦不会明知地从儿童处收集个人信息。</p>
