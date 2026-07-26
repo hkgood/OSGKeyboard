@@ -9,30 +9,33 @@ import XCTest
 
 final class LLMClientTests: XCTestCase {
 
-    private let polishProviderId = AppGroupConfiguration.defaultPolishProviderId
-
     override func setUpWithError() throws {
-        // The Keychain is process-global in the simulator (one simulator,
-        // one keychain DB), so an API key written by a previous test would
-        // leak into the next one unless we wipe it here. We intentionally
-        // swallow errors — `errSecItemNotFound` is fine.
-        try? Keychain.deleteAPIKey()
-        try? Keychain.deleteAPIKey(for: polishProviderId)
-        try? Keychain.deleteLegacyAPIKey()
-        try? Keychain.deleteAPIKey(for: "qwen")
+        wipeAllProviderKeys()
         StubURLProtocolStorage.config = nil
         StubURLProtocolStorage.delaySeconds = 0
         StubURLProtocolStorage.lastRequest = nil
     }
 
     override func tearDownWithError() throws {
-        try? Keychain.deleteAPIKey()
-        try? Keychain.deleteAPIKey(for: polishProviderId)
-        try? Keychain.deleteLegacyAPIKey()
-        try? Keychain.deleteAPIKey(for: "qwen")
+        wipeAllProviderKeys()
         StubURLProtocolStorage.config = nil
         StubURLProtocolStorage.delaySeconds = 0
         StubURLProtocolStorage.lastRequest = nil
+    }
+
+    private func wipeAllProviderKeys() {
+        for provider in LLMProvider.presets {
+            try? Keychain.deleteAPIKey(for: provider.id, useICloudSync: false)
+            try? Keychain.deleteAPIKey(for: provider.id, useICloudSync: true)
+        }
+        try? Keychain.deleteAPIKey()
+        try? Keychain.deleteLegacyAPIKey()
+        try? Keychain.deleteAPIKey(for: "qwen", useICloudSync: false)
+        try? Keychain.deleteAPIKey(for: "qwen", useICloudSync: true)
+    }
+
+    private func disableICloudKeychainSync(in defaults: UserDefaults) {
+        defaults.set(false, forKey: AppGroupConfiguration.Keys.settingsICloudSyncEnabled)
     }
 
     // MARK: - ProviderConfig persistence
@@ -64,17 +67,16 @@ final class LLMClientTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
+        disableICloudKeychainSync(in: defaults)
 
         let config = ProviderConfig(defaults: defaults)
-        // Local engine is the privacy-safe default for fresh installs.
-        XCTAssertTrue(config.isLocalEngine)
-        // No apiKey, no baseURL, no model — cloud would fail.
+        // Cloud without keys is not configured.
+        config.engineMode = "cloud"
         XCTAssertFalse(config.isConfigured)
-        // Switch to local engine: should flip to true regardless of
-        // the missing cloud fields.
+        // Local engine onboarding gate: no user API key required.
         config.engineMode = "local"
         XCTAssertTrue(config.isConfigured)
-        // And back to cloud: should flip to false again.
+        // Back to cloud: should flip to false again.
         config.engineMode = "cloud"
         XCTAssertFalse(config.isConfigured)
     }
@@ -275,6 +277,7 @@ final class LLMClientTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
+        disableICloudKeychainSync(in: defaults)
 
         let store = AppGroupStore(defaults: defaults)
         XCTAssertTrue(store.apiKey.isEmpty, "precondition: no Keychain key for this suite")

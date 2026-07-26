@@ -22,10 +22,21 @@ final class KeychainTests: XCTestCase {
     }
 
     private func wipePolishKeychain() throws {
+        for provider in LLMProvider.presets {
+            try? Keychain.deleteAPIKey(for: provider.id, useICloudSync: false)
+            try? Keychain.deleteAPIKey(for: provider.id, useICloudSync: true)
+        }
         try? Keychain.deleteAPIKey()
-        try? Keychain.deleteAPIKey(for: polishProviderId)
         try? Keychain.deleteLegacyAPIKey()
-        try? Keychain.deleteAPIKey(for: "qwen")
+        try? Keychain.deleteAPIKey(for: "qwen", useICloudSync: false)
+        try? Keychain.deleteAPIKey(for: "qwen", useICloudSync: true)
+    }
+
+    /// Fresh-install suites default `settingsICloudSyncEnabled` to true, which
+    /// makes API-key reads prefer the synchronizable Keychain bucket — isolate
+    /// tests from iCloud Keychain leakage across the simulator process.
+    private func disableICloudKeychainSync(in defaults: UserDefaults) {
+        defaults.set(false, forKey: AppGroupConfiguration.Keys.settingsICloudSyncEnabled)
     }
 
     // MARK: - Round-trip
@@ -83,7 +94,9 @@ final class KeychainTests: XCTestCase {
     func testAppGroupStoreReadsFromKeychain() throws {
         let suiteName = "group.com.osgkeyboard.shared.tests.kc.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
+        disableICloudKeychainSync(in: defaults)
 
         try Keychain.setAPIKey("sk-from-store", for: polishProviderId)
         let store = AppGroupStore(defaults: defaults)
@@ -102,6 +115,7 @@ final class KeychainTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
+        disableICloudKeychainSync(in: defaults)
 
         // Pre-upgrade state: apiKey lives in UserDefaults.
         defaults.set("sk-legacy-plaintext", forKey: "config.apiKey")
@@ -130,6 +144,7 @@ final class KeychainTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
+        disableICloudKeychainSync(in: defaults)
 
         // Set both.
         try? Keychain.setAPIKey("sk-new", for: polishProviderId)

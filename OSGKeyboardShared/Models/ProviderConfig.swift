@@ -268,6 +268,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     }
 
     public var isPolishConfigured: Bool {
+        // Local engine never requires a user-supplied LLM key for onboarding.
+        if isLocalEngine { return true }
         if !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return !baseURL.isEmpty && !model.isEmpty
         }

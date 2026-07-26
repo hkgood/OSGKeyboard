@@ -114,6 +114,7 @@ final class PersonalDictionaryCloudSyncTests: XCTestCase {
     // MARK: - Backward-compatible decode
 
     func testEntryDecodesWithoutUpdatedAt() throws {
+        let createdAt = Date(timeIntervalSince1970: 1_700_000_000)
         let json = """
         {
           "id": "A0000000-0000-4000-8000-000000000099",
@@ -121,14 +122,14 @@ final class PersonalDictionaryCloudSyncTests: XCTestCase {
           "aliases": [],
           "category": "custom",
           "source": "manual",
-          "createdAt": 1700000000,
+          "createdAt": \(createdAt.timeIntervalSinceReferenceDate),
           "usageCount": 2
         }
         """.data(using: .utf8)!
 
         let entry = try JSONDecoder().decode(PersonalDictionary.Entry.self, from: json)
         XCTAssertEqual(entry.term, "Legacy")
-        XCTAssertEqual(entry.updatedAt.timeIntervalSince1970, 1_700_000_000, accuracy: 1)
+        XCTAssertEqual(entry.updatedAt.timeIntervalSince1970, createdAt.timeIntervalSince1970, accuracy: 1)
     }
 
     // MARK: - Sync service
