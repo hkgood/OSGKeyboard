@@ -31,7 +31,10 @@ public enum UtteranceStreamChunker {
                     if splitEnd >= buffer.count {
                         buffer.removeAll(keepingCapacity: true)
                     } else {
-                        let overlapStart = max(0, splitEnd - config.overlapSamples)
+                        // Cap overlap so we always discard at least one sample —
+                        // otherwise `overlapSamples > splitEnd` stalls the feeder.
+                        let overlapCount = min(config.overlapSamples, max(0, splitEnd - 1))
+                        let overlapStart = splitEnd - overlapCount
                         buffer = Array(buffer[overlapStart...])
                     }
                 }
