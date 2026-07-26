@@ -19,13 +19,14 @@ final class SettingsCloudSyncTests: XCTestCase {
 
     override func setUp() async throws {
         try await super.setUp()
-        suiteName = "group.com.osgkeyboard.shared.tests.settings.\(UUID().uuidString)"
-        defaults = UserDefaults(suiteName: suiteName)!
-        defaults.removePersistentDomain(forName: suiteName)
+        let suite = "group.com.osgkeyboard.shared.tests.settings.\(UUID().uuidString)"
+        suiteName = suite
+        defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
         defaults.set(deviceA, forKey: "sync.deviceID.v1")
         store = AppGroupStore(defaults: defaults)
         kvs = FakeUbiquitousKeyValueStore()
-        settingsSync = SettingsCloudSync(kvs: kvs) { [unowned self] in store }
+        settingsSync = SettingsCloudSync(kvs: kvs) { AppGroupStore(defaults: UserDefaults(suiteName: suite)!) }
     }
 
     override func tearDown() async throws {

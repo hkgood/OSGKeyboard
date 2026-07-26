@@ -17,21 +17,22 @@ final class UsageStatisticsCloudSyncTests: XCTestCase {
     private let deviceA = "device-a"
     private let deviceB = "device-b"
 
-    override func setUp() {
-        super.setUp()
-        suiteName = "group.com.osgkeyboard.shared.tests.usage.\(UUID().uuidString)"
-        defaults = UserDefaults(suiteName: suiteName)!
-        defaults.removePersistentDomain(forName: suiteName)
+    override func setUp() async throws {
+        try await super.setUp()
+        let suite = "group.com.osgkeyboard.shared.tests.usage.\(UUID().uuidString)"
+        suiteName = suite
+        defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
         defaults.set(deviceA, forKey: "sync.deviceID.v1")
         store = AppGroupStore(defaults: defaults)
         store.setSettingsICloudSyncEnabled(true)
         kvs = FakeUbiquitousKeyValueStore()
-        sync = UsageStatisticsCloudSync(kvs: kvs) { [unowned self] in store }
+        sync = UsageStatisticsCloudSync(kvs: kvs) { AppGroupStore(defaults: UserDefaults(suiteName: suite)!) }
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         defaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func testGCounterMergeSumsAcrossDevices() {

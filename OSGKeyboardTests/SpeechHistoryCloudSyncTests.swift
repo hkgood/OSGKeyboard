@@ -18,17 +18,21 @@ final class SpeechHistoryCloudSyncTests: XCTestCase {
 
     override func setUp() async throws {
         try await super.setUp()
-        suiteName = "group.com.osgkeyboard.shared.tests.history.\(UUID().uuidString)"
-        configDefaults = UserDefaults(suiteName: suiteName)!
-        configDefaults.removePersistentDomain(forName: suiteName)
-        historyDefaults = UserDefaults(suiteName: "\(suiteName).history")!
-        historyDefaults.removePersistentDomain(forName: "\(suiteName).history")
+        let suite = "group.com.osgkeyboard.shared.tests.history.\(UUID().uuidString)"
+        let historySuite = "\(suite).history"
+        suiteName = suite
+        configDefaults = UserDefaults(suiteName: suite)!
+        configDefaults.removePersistentDomain(forName: suite)
+        historyDefaults = UserDefaults(suiteName: historySuite)!
+        historyDefaults.removePersistentDomain(forName: historySuite)
         store = AppGroupStore(defaults: configDefaults)
         store.setSettingsICloudSyncEnabled(true)
         kvs = FakeUbiquitousKeyValueStore()
-        sync = SpeechHistoryCloudSync(kvs: kvs, makeStore: { [unowned self] in store }) { [unowned self] in
-            historyDefaults
-        }
+        sync = SpeechHistoryCloudSync(
+            kvs: kvs,
+            makeStore: { AppGroupStore(defaults: UserDefaults(suiteName: suite)!) },
+            historyDefaults: { UserDefaults(suiteName: historySuite)! }
+        )
     }
 
     override func tearDown() async throws {

@@ -21,19 +21,20 @@ final class PersonalDictionaryCloudSyncTests: XCTestCase {
     private var kvs: FakeUbiquitousKeyValueStore!
     private var sync: PersonalDictionaryCloudSync!
 
-    override func setUp() {
-        super.setUp()
-        suiteName = "group.com.osgkeyboard.shared.tests.sync.\(UUID().uuidString)"
-        defaults = UserDefaults(suiteName: suiteName)!
-        defaults.removePersistentDomain(forName: suiteName)
+    override func setUp() async throws {
+        try await super.setUp()
+        let suite = "group.com.osgkeyboard.shared.tests.sync.\(UUID().uuidString)"
+        suiteName = suite
+        defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
         store = AppGroupStore(defaults: defaults)
         kvs = FakeUbiquitousKeyValueStore()
-        sync = PersonalDictionaryCloudSync(kvs: kvs) { [unowned self] in store }
+        sync = PersonalDictionaryCloudSync(kvs: kvs) { AppGroupStore(defaults: UserDefaults(suiteName: suite)!) }
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         defaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     // MARK: - Merge
