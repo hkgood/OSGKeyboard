@@ -417,6 +417,14 @@
 
 /* Flow 会话策略 */
 "settings.flow.title" = "语音会话";
+"settings.flow.keepAlive.title" = "保活方式";
+"settings.flow.keepAlive.liveActivity" = "灵动岛";
+"settings.flow.keepAlive.liveActivity.subtitle" = "麦克风常驻，可按无活动时长结束会话。";
+"settings.flow.keepAlive.pictureInPicture" = "画中画";
+"settings.flow.keepAlive.pictureInPicture.subtitle" = "波形画中画保活；句间释放麦克风。";
+"settings.flow.keepAlive.pictureInPicture.note" = "画中画将持续保活，直到你关闭小窗。此模式下始终跳过应用切换。";
+"settings.flow.keepAlive.activeSession.title" = "请先结束当前会话";
+"settings.flow.keepAlive.activeSession.message" = "更改保活方式前，请先结束正在进行的语音会话。";
 "settings.flow.skipAppSwitch.title" = "跳过应用切换";
 "settings.flow.skipAppSwitch.subtitle" = "冷启动完成后，尝试自动返回来源 App。";
 "settings.flow.inactivity.title" = "无活动后结束会话";
@@ -437,6 +445,7 @@
 "flow.coldStart.permission.title" = "需要权限";
 "flow.coldStart.audio.title" = "语音暂时无法启动";
 "flow.coldStart.error.audioTimeout" = "麦克风未能及时就绪，可能正被通话或其他 App 占用。请稍后重试。";
+"flow.pip.error.unavailable" = "无法启动画中画，请在系统设置中允许 OSGKeyboard 使用画中画。";
 "flow.coldStart.action.settings" = "前往设置";
 "flow.coldStart.action.retry" = "重试";
 "flow.coldStart.swipeHint" = "沿屏幕底部的横条，从左向右滑动\n返回上一个 App。";

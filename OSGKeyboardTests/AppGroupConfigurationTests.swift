@@ -33,6 +33,7 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertEqual(config.polishIntensity, .default)
         XCTAssertTrue(config.personalDictionary.entries.isEmpty)
         XCTAssertTrue(config.flowSkipAppSwitch)
+        XCTAssertEqual(config.flowKeepAliveMode, .liveActivity)
         XCTAssertEqual(config.flowInactivityDuration, .fiveMinutes)
     }
 
@@ -58,6 +59,7 @@ final class AppGroupConfigurationTests: XCTestCase {
         config.cursorDragNavigationEnabled = false
         config.polishIntensity = .light
         config.flowSkipAppSwitch = false
+        config.flowKeepAliveMode = .pictureInPicture
         // Use a non-default value so the round-trip actually proves persistence.
         config.flowInactivityDuration = .threeHours
         config.save(to: defaults)
@@ -81,6 +83,7 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertFalse(loaded.cursorDragNavigationEnabled)
         XCTAssertEqual(loaded.polishIntensity, .light)
         XCTAssertFalse(loaded.flowSkipAppSwitch)
+        XCTAssertEqual(loaded.flowKeepAliveMode, .pictureInPicture)
         XCTAssertEqual(loaded.flowInactivityDuration, .threeHours)
     }
 

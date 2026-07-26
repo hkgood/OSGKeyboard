@@ -25,6 +25,18 @@ public enum FlowSessionPolicy {
         inactivityDuration(defaults: defaults).timeInterval
     }
 
+    public static func keepAliveMode(defaults: UserDefaults? = nil) -> FlowKeepAliveMode {
+        let store = resolvedDefaults(defaults)
+        return FlowKeepAliveMode.fromStored(
+            store.string(forKey: AppGroupConfiguration.Keys.flowKeepAliveMode)
+        )
+    }
+
+    /// PiP sessions have no inactivity expiry; only the Live Activity path times out.
+    public static func usesInactivityExpiry(defaults: UserDefaults? = nil) -> Bool {
+        keepAliveMode(defaults: defaults) == .liveActivity
+    }
+
     private static func resolvedDefaults(_ defaults: UserDefaults?) -> UserDefaults {
         if let defaults { return defaults }
         guard let available = AppGroup.defaultsIfAvailable else {

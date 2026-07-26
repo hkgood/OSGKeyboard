@@ -418,6 +418,14 @@
 
 /* Flow session policy */
 "settings.flow.title" = "Voice session";
+"settings.flow.keepAlive.title" = "Keep-alive mode";
+"settings.flow.keepAlive.liveActivity" = "Dynamic Island";
+"settings.flow.keepAlive.liveActivity.subtitle" = "Continuous mic session with inactivity timeout.";
+"settings.flow.keepAlive.pictureInPicture" = "Picture in Picture";
+"settings.flow.keepAlive.pictureInPicture.subtitle" = "Waveform PiP keeps the app alive; mic is released between utterances.";
+"settings.flow.keepAlive.pictureInPicture.note" = "Picture in Picture stays active until you close it. Skip app switch is always on in this mode.";
+"settings.flow.keepAlive.activeSession.title" = "End the current session first";
+"settings.flow.keepAlive.activeSession.message" = "Stop the active voice session before changing keep-alive mode.";
 "settings.flow.skipAppSwitch.title" = "Skip app switch";
 "settings.flow.skipAppSwitch.subtitle" = "After a cold start, try to return to the app you came from.";
 "settings.flow.inactivity.title" = "End session after inactivity";
@@ -438,6 +446,7 @@
 "flow.coldStart.permission.title" = "Permission required";
 "flow.coldStart.audio.title" = "Voice could not start";
 "flow.coldStart.error.audioTimeout" = "The microphone did not become ready in time. It may be busy in another app. Please try again.";
+"flow.pip.error.unavailable" = "Picture in Picture could not start. Check that PiP is allowed for OSGKeyboard in Settings.";
 "flow.coldStart.action.settings" = "Open Settings";
 "flow.coldStart.action.retry" = "Try Again";
 "flow.coldStart.swipeHint" = "Swipe right along the bottom bar\nto return to your previous app.";

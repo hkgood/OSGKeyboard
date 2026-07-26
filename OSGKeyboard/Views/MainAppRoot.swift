@@ -37,6 +37,14 @@ struct MainAppRoot: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: flowManager.coldStartContext != nil)
+        .background {
+            FlowPiPHostView { view in
+                flowManager.attachPiPHostView(view)
+            }
+            .frame(width: 2, height: 2)
+            .opacity(0.001)
+            .allowsHitTesting(false)
+        }
         .onAppear {
             flowManager.setAppForeground(scenePhase == .active)
             // Register the URL handler BEFORE the foreground auto-start.

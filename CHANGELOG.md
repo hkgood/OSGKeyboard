@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **PiP Flow keep-alive**: Settings → Voice session lets you choose **Dynamic Island** (default, unchanged behaviour) or **Picture in Picture** — a live waveform PiP keeps the host alive with the mic released between utterances; closing PiP ends the session. / **PiP Flow 保活**：设置 → 语音会话可选 **灵动岛**（默认，行为不变）或 **画中画** — 实时波形 PiP 保活、句间释麦；关闭 PiP 即结束会话。
 - **Mac MLX streaming ASR**: local dictation uses Qwen3-ASR via mlx-audio-swift with overlay partial preview, tail drain, vocabulary prompt, and polish-before-insert. / **Mac MLX 流式 ASR**：本地听写改用 mlx-audio-swift 的 Qwen3-ASR，支持浮层 partial 预览、尾部截断、词库 prompt 与润色后再插入。
 
 ### Changed

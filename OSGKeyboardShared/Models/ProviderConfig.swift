@@ -237,7 +237,22 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         }
     }
 
-    /// Idle window before an active Flow session expires; resets on each utterance.
+    /// PiP vs Live Activity keep-alive (mutually exclusive).
+    @Published public var flowKeepAliveMode: FlowKeepAliveMode {
+        didSet {
+            guard !isApplyingConfiguration, flowKeepAliveMode != configuration.flowKeepAliveMode else { return }
+            configuration.flowKeepAliveMode = flowKeepAliveMode
+            if flowKeepAliveMode == .pictureInPicture {
+                configuration.flowSkipAppSwitch = true
+                if flowSkipAppSwitch != true {
+                    flowSkipAppSwitch = true
+                }
+            }
+            persistConfiguration()
+        }
+    }
+
+    /// Idle window before an active Flow session expires; Live Activity mode only.
     @Published public var flowInactivityDuration: FlowInactivityDuration {
         didSet {
             guard !isApplyingConfiguration,
@@ -347,6 +362,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         polishIntensity = configuration.polishIntensity
         llmThinkingEnabled = configuration.llmThinkingEnabled
         flowSkipAppSwitch = configuration.flowSkipAppSwitch
+        flowKeepAliveMode = configuration.flowKeepAliveMode
         flowInactivityDuration = configuration.flowInactivityDuration
         localASRCustomLanguageModelEnabled = configuration.localASRCustomLanguageModelEnabled
         isSyncingProviderAPIKey = true
@@ -433,6 +449,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         polishIntensity = fresh.polishIntensity
         llmThinkingEnabled = fresh.llmThinkingEnabled
         flowSkipAppSwitch = fresh.flowSkipAppSwitch
+        flowKeepAliveMode = fresh.flowKeepAliveMode
         flowInactivityDuration = fresh.flowInactivityDuration
         localASRCustomLanguageModelEnabled = fresh.localASRCustomLanguageModelEnabled
         isSyncingProviderAPIKey = true
