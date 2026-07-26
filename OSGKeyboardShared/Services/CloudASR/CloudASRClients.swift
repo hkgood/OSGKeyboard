@@ -5,6 +5,16 @@
 
 import Foundation
 
+private extension String {
+    var utf8MultipartData: Data { Data(utf8) }
+}
+
+private extension Data {
+    mutating func appendMultipartUTF8(_ string: String) {
+        append(string.utf8MultipartData)
+    }
+}
+
 public protocol CloudASRTranscribing: Sendable {
     func prepare(dictionary: PersonalDictionary) async throws
     func transcribe(
@@ -117,9 +127,9 @@ struct ZhipuCloudASRClient: CloudASRTranscribing {
         let boundary = "Boundary-\(UUID().uuidString)"
         var body = Data()
         func appendField(_ name: String, _ value: String) {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(value)\r\n".data(using: .utf8)!)
+            body.appendMultipartUTF8("--\(boundary)\r\n")
+            body.appendMultipartUTF8("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n")
+            body.appendMultipartUTF8("\(value)\r\n")
         }
 
         appendField("model", model)
@@ -137,12 +147,12 @@ struct ZhipuCloudASRClient: CloudASRTranscribing {
             appendField("prompt", prompt)
         }
 
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"chunk.wav\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: audio/wav\r\n\r\n".data(using: .utf8)!)
+        body.appendMultipartUTF8("--\(boundary)\r\n")
+        body.appendMultipartUTF8("Content-Disposition: form-data; name=\"file\"; filename=\"chunk.wav\"\r\n")
+        body.appendMultipartUTF8("Content-Type: audio/wav\r\n\r\n")
         body.append(wav)
-        body.append("\r\n".data(using: .utf8)!)
-        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        body.appendMultipartUTF8("\r\n")
+        body.appendMultipartUTF8("--\(boundary)--\r\n")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -361,9 +371,9 @@ struct PromptCloudASRClient: CloudASRTranscribing {
         let boundary = "Boundary-\(UUID().uuidString)"
         var body = Data()
         func appendField(_ name: String, _ value: String) {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(value)\r\n".data(using: .utf8)!)
+            body.appendMultipartUTF8("--\(boundary)\r\n")
+            body.appendMultipartUTF8("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n")
+            body.appendMultipartUTF8("\(value)\r\n")
         }
 
         appendField("model", model)
@@ -372,12 +382,12 @@ struct PromptCloudASRClient: CloudASRTranscribing {
             appendField("prompt", prompt)
         }
 
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"chunk.wav\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: audio/wav\r\n\r\n".data(using: .utf8)!)
+        body.appendMultipartUTF8("--\(boundary)\r\n")
+        body.appendMultipartUTF8("Content-Disposition: form-data; name=\"file\"; filename=\"chunk.wav\"\r\n")
+        body.appendMultipartUTF8("Content-Type: audio/wav\r\n\r\n")
         body.append(wav)
-        body.append("\r\n".data(using: .utf8)!)
-        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        body.appendMultipartUTF8("\r\n")
+        body.appendMultipartUTF8("--\(boundary)--\r\n")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

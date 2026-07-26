@@ -73,14 +73,17 @@ public enum FlowSessionKeys {
     /// the host's own polling cadence.
     public static let resultDeliveryMargin: TimeInterval = 20
 
-    /// Keyboard watchdog after the user stops recording (not utterance max
-    /// length). Derived from the host-side budget so it always outlasts the
-    /// host's worst case (ASR drain wait + polish cap + margin) — hand-tuned
-    /// constants drifted below the real host maximum, making the keyboard
-    /// report a timeout for transcriptions that were still going to succeed.
+    /// Keyboard watchdog after mic stop: ASR wait + polish cap + margin (full budget).
     public static func keyboardResultTimeout(engineMode: String) -> TimeInterval {
         let asrWait = engineMode == "local" ? localASRWaitTimeout : cloudASRWaitTimeout
         return asrWait + maxPolishTimeout + resultDeliveryMargin
+    }
+
+    /// First-tier timeout: ASR drain + cross-process margin (excludes polish wait).
+    /// After this elapses the keyboard keeps showing partial/raw text while polish runs.
+    public static func keyboardASRPhaseTimeout(engineMode: String) -> TimeInterval {
+        let asrWait = engineMode == "local" ? localASRWaitTimeout : cloudASRWaitTimeout
+        return asrWait + resultDeliveryMargin
     }
 
     public enum RecordingState: String, Sendable, Equatable {

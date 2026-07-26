@@ -142,6 +142,7 @@
 "keyboard.flow.resultTimeout" = "Timed out waiting for transcription. Try again.";
 "keyboard.flow.hostDisconnected" = "Voice session disconnected. Open OSGKeyboard to restart.";
 "keyboard.flow.manualOpenHost" = "Could not auto-open the app. Open OSGKeyboard from the Home Screen, then return.";
+"keyboard.error.noSpeech" = "No speech detected. Please try again.";
 
 /* Keyboard status badges */
 "keyboard.status.rec" = "REC";

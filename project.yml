@@ -385,6 +385,7 @@ targets:
       path: OSGKeyboardExtTests/Info.plist
     dependencies:
       - target: OSGKeyboardShared
+      - target: OSGKeyboardExt
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.ext.tests

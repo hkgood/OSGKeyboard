@@ -7,7 +7,6 @@ disabled_rules:
   - todo
   - function_body_length
   - type_body_length
-  - file_length
   - cyclomatic_complexity
   - force_cast
   - force_try
@@ -20,11 +19,18 @@ opt_in_rules:
   - sorted_imports
   - redundant_optional_initialization
 
+file_length:
+  warning: 500
+  error: 800
+
 included:
   - OSGKeyboard
   - OSGKeyboardExt
   - OSGKeyboardShared
   - OSGKeyboardTests
+  - OSGKeyboardExtTests
+  - OSGKeyboardMac
+  - OSGKeyboardLiveActivity
 
 excluded:
   - build

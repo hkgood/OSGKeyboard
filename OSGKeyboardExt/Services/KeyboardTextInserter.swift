@@ -28,8 +28,12 @@ final class KeyboardTextInserter {
     func handleFlowTranscript(_ delivery: TranscriptionDelivery) {
         let trimmed = delivery.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            state.phase = .idle
             state.level = 0
+            state.lastTranscript = ""
+            let message = ExtL10n.string("keyboard.error.noSpeech")
+            state.phase = .error(.noSpeechDetected, message: message)
+            scheduleAutoClearError()
+            OSGLog.keyboardExt.info("flow insert skipped — empty transcript")
             return
         }
         // Host app already polished when configured; keyboard only inserts.

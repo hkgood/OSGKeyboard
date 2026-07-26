@@ -1,3 +1,4 @@
+// swiftlint:disable file_length
 // FlowContinuousCapture.swift
 // OSGKeyboard · Shared
 //

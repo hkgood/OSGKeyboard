@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [0.1, 0.2, develop]
+    branches: [main, develop]
   pull_request:
-    branches: [0.1, 0.2, develop]
+    branches: [main, develop]
   workflow_dispatch:
 
 concurrency:
@@ -93,5 +93,6 @@ jobs:
             -destination 'platform=iOS Simulator,name=iPhone 17' \
             -configuration Debug \
             -only-testing:OSGKeyboardTests \
+            -only-testing:OSGKeyboardExtTests \
             CODE_SIGNING_ALLOWED=NO \
             | xcpretty

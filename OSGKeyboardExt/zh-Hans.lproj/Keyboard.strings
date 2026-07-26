@@ -142,6 +142,7 @@
 "keyboard.flow.resultTimeout" = "等待识别结果超时，请重试";
 "keyboard.flow.hostDisconnected" = "语音会话已断开，请打开 OSGKeyboard 重新启动";
 "keyboard.flow.manualOpenHost" = "无法自动跳转，请从主屏幕打开 OSGKeyboard 后返回";
+"keyboard.error.noSpeech" = "未识别到语音内容，请重试。";
 
 /* Keyboard status badges */
 "keyboard.status.rec" = "录音";

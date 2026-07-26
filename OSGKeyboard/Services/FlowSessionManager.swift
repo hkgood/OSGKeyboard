@@ -1,3 +1,4 @@
+// swiftlint:disable file_length
 // FlowSessionManager.swift
 // OSGKeyboard · Main App
 //
@@ -50,10 +51,10 @@ final class FlowSessionManager: ObservableObject {
     private var commandObserver: FlowSessionDarwinObserver?
     /// Last recording state the poll loop observed — logs only on transition.
     private var lastObservedRecordingState: FlowSessionKeys.RecordingState = .idle
+    private var commandPoller = FlowCommandPoller()
     private var activeSessionId: UUID?
     private var currentUtteranceId: UUID?
     private var currentCommandSeq: Int64 = 0
-    private var lastHandledCommandSeq: Int64 = 0
     /// Published so Home / debug UI can show "recording" instead of a false "ready".
     @Published private(set) var isUtteranceRecording = false
     /// True from `stopped` until the result/error is written back to App Group.
@@ -66,7 +67,6 @@ final class FlowSessionManager: ObservableObject {
     private var lastFinal = ""
     private var chunkWarnings: [String] = []
     private var lastReadyTraceSignature = ""
-    private var lastCommandFingerprint = ""
     private var lastIgnoredCommandSignature = ""
     /// Wall-clock span of the current mic-open utterance (excludes LLM polish).
     private var utteranceRecordingStartedAt: Date?
@@ -347,7 +347,7 @@ final class FlowSessionManager: ObservableObject {
         activeSessionId = nil
         currentUtteranceId = nil
         currentCommandSeq = 0
-        lastHandledCommandSeq = 0
+        commandPoller.reset()
         isUtteranceRecording = false
         isUtteranceProcessing = false
         isActive = false
@@ -395,7 +395,7 @@ final class FlowSessionManager: ObservableObject {
         activeSessionId = nil
         currentUtteranceId = nil
         currentCommandSeq = 0
-        lastHandledCommandSeq = 0
+        commandPoller.reset()
         isUtteranceRecording = false
         isUtteranceProcessing = false
 
@@ -733,7 +733,7 @@ final class FlowSessionManager: ObservableObject {
         let resolvedDuration = duration ?? FlowSessionPolicy.sessionDuration()
         let sessionId = activeSessionId ?? UUID()
         activeSessionId = sessionId
-        lastHandledCommandSeq = 0
+        commandPoller.reset()
         FlowSessionBridge.markSessionActive(duration: resolvedDuration, sessionId: sessionId)
         FlowSessionDarwin.postSessionChanged()
         isActive = true
@@ -963,34 +963,31 @@ final class FlowSessionManager: ObservableObject {
     }
 
     private func handleKeyboardSignal() {
-        guard let command = FlowSessionBridge.latestCommand() else {
-            lastCommandFingerprint = ""
+        guard let command = commandPoller.consumeIfNew(FlowSessionBridge.latestCommand()) else {
             return
         }
-        let fingerprint = "\(command.sessionId.uuidString)|\(command.utteranceId.uuidString)|\(command.action.rawValue)|\(command.commandSeq)"
-        guard fingerprint != lastCommandFingerprint else { return }
-        lastCommandFingerprint = fingerprint
         handleFlowCommand(command)
     }
 
     private func handleFlowCommand(_ command: FlowCommand) {
-        guard let activeSessionId, command.sessionId == activeSessionId else {
-            traceIgnoredCommand(
-                reason: "staleSession",
-                command: command,
-                detail: "commandSession=\(command.sessionId)"
-            )
+        if let reason = commandPoller.validate(command: command, activeSessionId: activeSessionId) {
+            switch reason {
+            case .staleSession:
+                traceIgnoredCommand(
+                    reason: "staleSession",
+                    command: command,
+                    detail: "commandSession=\(command.sessionId)"
+                )
+            case .seqNotIncreasing:
+                traceIgnoredCommand(
+                    reason: "seqNotIncreasing",
+                    command: command,
+                    detail: "last=\(commandPoller.lastHandledCommandSeq)"
+                )
+            }
             return
         }
-        guard command.commandSeq > lastHandledCommandSeq else {
-            traceIgnoredCommand(
-                reason: "seqNotIncreasing",
-                command: command,
-                detail: "last=\(lastHandledCommandSeq)"
-            )
-            return
-        }
-        lastHandledCommandSeq = command.commandSeq
+        commandPoller.markHandled(command)
         lastIgnoredCommandSignature = ""
 
         FlowDiagnostics.log(
@@ -1020,16 +1017,11 @@ final class FlowSessionManager: ObservableObject {
 
     private func storeCurrentPartial(_ text: String) {
         guard let activeSessionId, let currentUtteranceId else { return }
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        FlowSessionBridge.writeResult(
-            FlowResult(
-                sessionId: activeSessionId,
-                utteranceId: currentUtteranceId,
-                commandSeq: currentCommandSeq,
-                status: .partial,
-                text: trimmed
-            )
+        FlowResultDelivery.writePartial(
+            text: text,
+            sessionId: activeSessionId,
+            utteranceId: currentUtteranceId,
+            commandSeq: currentCommandSeq
         )
     }
 
@@ -1040,15 +1032,12 @@ final class FlowSessionManager: ObservableObject {
             return
         }
         guard let activeSessionId, let currentUtteranceId else { return }
-        FlowSessionBridge.writeResult(
-            FlowResult(
-                sessionId: activeSessionId,
-                utteranceId: currentUtteranceId,
-                commandSeq: currentCommandSeq,
-                status: .final,
-                text: trimmed,
-                warning: warning
-            )
+        FlowResultDelivery.writeFinal(
+            text: trimmed,
+            warning: warning,
+            sessionId: activeSessionId,
+            utteranceId: currentUtteranceId,
+            commandSeq: currentCommandSeq
         )
     }
 
@@ -1058,15 +1047,13 @@ final class FlowSessionManager: ObservableObject {
         status: FlowResult.Status = .error
     ) {
         guard let activeSessionId, let currentUtteranceId else { return }
-        FlowSessionBridge.writeResult(
-            FlowResult(
-                sessionId: activeSessionId,
-                utteranceId: currentUtteranceId,
-                commandSeq: currentCommandSeq,
-                status: status,
-                text: message,
-                errorKind: kind
-            )
+        FlowResultDelivery.writeError(
+            message: message,
+            kind: kind,
+            status: status,
+            sessionId: activeSessionId,
+            utteranceId: currentUtteranceId,
+            commandSeq: currentCommandSeq
         )
     }
 
@@ -1306,7 +1293,7 @@ final class FlowSessionManager: ObservableObject {
             )
         }
 
-        let asrWait = asrWaitTimeout()
+        let asrWait = FlowTranscriptFinalizer.asrWaitTimeout(engineMode: store.engineMode)
         FlowDiagnostics.log(
             "finalize start asrWait=\(Int(asrWait))s engine=\(store.engineMode)"
         )
@@ -1357,16 +1344,24 @@ final class FlowSessionManager: ObservableObject {
         let recordingDuration = consumeRecordingDuration()
 
         let engineMode = store.engineMode
-        let chunkNote = Self.chunkWarningMessage(chunkWarnings)
+        let chunkNote = FlowTranscriptFinalizer.chunkWarningMessage(chunkWarnings)
         // Re-read App Group at finalize so chip-side translation changes
         // from the keyboard extension are visible before polish/translate.
         let pipelineStore = AppGroupStore()
+
+        // Layered timeout UX: surface raw ASR text while polish runs.
+        FlowTranscriptFinalizer.publishRawPreviewBeforePolish(
+            text: text,
+            sessionId: finalizeSessionId,
+            utteranceId: finalizeUtteranceId,
+            commandSeq: finalizeCommandSeq
+        )
 
         var delivered = text
         let polishStarted = Date()
         let polishMode = pipelineStore.polishModeForPipeline
         FlowDiagnostics.log(
-            "finalize LLM mode=\(Self.polishModeLogLabel(polishMode)) " +
+            "finalize LLM mode=\(FlowTranscriptFinalizer.polishModeLogLabel(polishMode)) " +
             "translationTarget=\(pipelineStore.translationTargetLocaleId)"
         )
         do {
@@ -1376,7 +1371,7 @@ final class FlowSessionManager: ObservableObject {
             if Task.isCancelled {
                 throw CancellationError()
             }
-            let polished = try await Self.polishWithHostTimeout(
+            let polished = try await FlowTranscriptFinalizer.polishWithHostTimeout(
                 polisher: polisher,
                 text: text,
                 mode: polishMode,
@@ -1485,15 +1480,12 @@ final class FlowSessionManager: ObservableObject {
             return
         }
         guard let sessionId, let utteranceId else { return }
-        FlowSessionBridge.writeResult(
-            FlowResult(
-                sessionId: sessionId,
-                utteranceId: utteranceId,
-                commandSeq: commandSeq,
-                status: .final,
-                text: trimmed,
-                warning: warning
-            )
+        FlowResultDelivery.writeFinal(
+            text: trimmed,
+            warning: warning,
+            sessionId: sessionId,
+            utteranceId: utteranceId,
+            commandSeq: commandSeq
         )
     }
 
@@ -1506,30 +1498,14 @@ final class FlowSessionManager: ObservableObject {
         status: FlowResult.Status = .error
     ) {
         guard let sessionId, let utteranceId else { return }
-        FlowSessionBridge.writeResult(
-            FlowResult(
-                sessionId: sessionId,
-                utteranceId: utteranceId,
-                commandSeq: commandSeq,
-                status: status,
-                text: message,
-                errorKind: kind
-            )
+        FlowResultDelivery.writeError(
+            message: message,
+            kind: kind,
+            status: status,
+            sessionId: sessionId,
+            utteranceId: utteranceId,
+            commandSeq: commandSeq
         )
-    }
-
-    private static func polishModeLogLabel(_ mode: PolishingService.PolishMode) -> String {
-        switch mode {
-        case .polish:
-            return "polish"
-        case .translate(let targetLocaleId):
-            return "translate(\(targetLocaleId))"
-        }
-    }
-
-    private static func chunkWarningMessage(_ warnings: [String]) -> String? {
-        guard !warnings.isEmpty else { return nil }
-        return warnings.joined(separator: "\n")
     }
 
     private func consumeRecordingDuration() -> TimeInterval {
@@ -1553,32 +1529,6 @@ final class FlowSessionManager: ObservableObject {
             engineMode: engineMode,
             chunkWarning: chunkWarning
         )
-    }
-
-    private func asrWaitTimeout() -> TimeInterval {
-        // v0.2.0: local engine is iOS `SpeechAnalyzer` only, so the
-        // previous Qwen3-specific timeout collapses into the shared
-        // local path.
-        if store.engineMode == "local" {
-            return FlowSessionKeys.localASRWaitTimeout
-        }
-        return FlowSessionKeys.cloudASRWaitTimeout
-    }
-
-    /// Host-level polish cap — does not wait for a cancelled LLM task to unwind.
-    private static func polishWithHostTimeout(
-        polisher: PolishingService,
-        text: String,
-        mode: PolishingService.PolishMode,
-        providerIdOverride: String?
-    ) async throws -> String {
-        try await HardTimeout.run(seconds: FlowSessionKeys.maxPolishTimeout) {
-            try await polisher.polish(
-                text,
-                mode: mode,
-                providerIdOverride: providerIdOverride
-            )
-        }
     }
 
     // MARK: - Level publishing (main thread only)
@@ -1685,7 +1635,7 @@ final class FlowSessionManager: ObservableObject {
             "sessionId=\(sessionId)",
             "utteranceId=\(utteranceId)",
             "cmdSeq=\(currentCommandSeq)",
-            "lastCmd=\(lastHandledCommandSeq)",
+            "lastCmd=\(commandPoller.lastHandledCommandSeq)",
             "recording=\(isUtteranceRecording)",
             "processing=\(isUtteranceProcessing)",
             "storeEngine=\(store.engineMode)",
