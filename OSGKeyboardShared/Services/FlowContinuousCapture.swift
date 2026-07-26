@@ -281,6 +281,9 @@ public final class FlowContinuousCapture {
     private let gate = OSAllocatedUnfairLock(initialState: UtteranceGatePhase.idle)
     private let drainTracker = FlowCaptureDrainTracker()
     private let tailSampleCounter = OSAllocatedUnfairLock(initialState: 0)
+    private let utterancePCMStore = FlowUtterancePCMStore(
+        maxSampleCount: Int(FlowSessionKeys.maxUtteranceDuration) * 16_000
+    )
 
     private var downsampler: AdaptiveDownsampler?
     private var targetFormat: AVAudioFormat?
@@ -412,6 +415,7 @@ public final class FlowContinuousCapture {
         let proof = audioProofStore
         let tracker = drainTracker
         let tailCounter = tailSampleCounter
+        let pcmStore = utterancePCMStore
         let policy = drainPolicy
         let tap = Self.makeAudioTapBlock(
             downsampler: downsampler,
@@ -422,6 +426,7 @@ public final class FlowContinuousCapture {
             streamRelay: relay,
             drainTracker: tracker,
             tailSampleCounter: tailCounter,
+            utterancePCMStore: pcmStore,
             drainPolicy: policy
         )
         // `format: nil` binds the tap to the input node's *live* format. Passing
@@ -645,6 +650,7 @@ public final class FlowContinuousCapture {
         let (stream, continuation) = AsyncStream<AudioBufferSnapshot>.makeStream()
         drainTracker.reset()
         tailSampleCounter.withLock { $0 = 0 }
+        utterancePCMStore.reset()
         // Bind the consumer before opening the gate so early tap frames
         // are not dropped on the floor.
         streamRelay.bind(continuation)
@@ -697,11 +703,17 @@ public final class FlowContinuousCapture {
         return report
     }
 
+    /// Returns the utterance PCM accumulated during the last recording cycle.
+    public func consumeUtteranceSamples() -> [Float] {
+        utterancePCMStore.consume()
+    }
+
     /// Immediate stop without tail drain (abort / session teardown).
     public func cancelUtterance() {
         gate.withLock { $0 = .idle }
         drainTracker.reset()
         tailSampleCounter.withLock { $0 = 0 }
+        utterancePCMStore.reset()
         streamRelay.finish()
     }
 
@@ -720,6 +732,7 @@ public final class FlowContinuousCapture {
         streamRelay: FlowCaptureStreamRelay,
         drainTracker: FlowCaptureDrainTracker,
         tailSampleCounter: OSAllocatedUnfairLock<Int>,
+        utterancePCMStore: FlowUtterancePCMStore,
         drainPolicy: FlowCaptureTailDrainPolicy
     ) -> @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void {
         return { buffer, _ in
@@ -739,6 +752,7 @@ public final class FlowContinuousCapture {
             let phase = gate.withLock { $0 }
             switch phase {
             case .recording, .draining:
+                utterancePCMStore.append(snapshot.samples)
                 streamRelay.yield(snapshot)
                 if phase == .draining {
                     drainTracker.noteAudio(samples: snapshot.samples, policy: drainPolicy)

@@ -25,6 +25,18 @@ public enum FlowPipelineDiagnostics {
         OSGLog.asr.info("finalChunkRecovery \(action) chunk=\(chunkIndex)")
     }
 
+    public static func logBatchFallback(
+        sampleCount: Int,
+        stitchedLength: Int,
+        partialLength: Int,
+        batchLength: Int
+    ) {
+        OSGLog.flow.info(
+            "batchFallback samples=\(sampleCount) stitchedLen=\(stitchedLength) " +
+            "partialLen=\(partialLength) batchLen=\(batchLength)"
+        )
+    }
+
     public static func logChunkFinalize(
         chunkCount: Int,
         lastChunkSamples: Int,
