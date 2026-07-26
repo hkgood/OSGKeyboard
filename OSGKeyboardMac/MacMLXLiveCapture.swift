@@ -7,11 +7,7 @@ import Foundation
 import os
 
 enum MacMLXLiveCapture {
-    private static let tailDrainPolicy = FlowCaptureTailDrainPolicy(
-        silenceRMSThreshold: 0.015,
-        silenceDurationSeconds: 0.35,
-        maxDrainSeconds: 0.75
-    )
+    private static let tailDrainPolicy = FlowCaptureTailDrainPolicy.macMLX
 
     /// Runs MLX streaming ASR until `finishSignal` fires, then tail-drains and finalizes.
     static func run(

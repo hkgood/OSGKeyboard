@@ -666,16 +666,11 @@ public final class FlowContinuousCapture {
         gate.withLock { $0 = .draining }
         drainTracker.beginDrain()
 
-        var endedBySilence = false
-        while true {
-            let decision = drainTracker.shouldFinish(policy: policy)
-            if decision.finished {
-                endedBySilence = decision.endedBySilence
-                break
-            }
-            if Task.isCancelled { break }
-            try? await Task.sleep(nanoseconds: FlowCaptureConstants.drainPollIntervalNs)
-        }
+        let timing = await FlowUtteranceEndCoordinator.awaitTailCapture(
+            tracker: drainTracker,
+            policy: policy,
+            pollIntervalNs: FlowCaptureConstants.drainPollIntervalNs
+        )
 
         // NOTE: We intentionally do NOT signal `.endOfStream` to the shared
         // downsampling converter here. `AVAudioConverter` is stateful: once its
@@ -692,8 +687,9 @@ public final class FlowContinuousCapture {
         let tailSamples = tailSampleCounter.withLock { $0 }
         let report = FlowCaptureDrainReport(
             drainDurationSeconds: drainTracker.elapsedSeconds(),
-            endedBySilence: endedBySilence,
-            tailSampleCount: tailSamples
+            endedBySilence: timing.endedBySilence,
+            tailSampleCount: tailSamples,
+            postRollDurationSeconds: timing.postRollDurationSeconds
         )
         drainTracker.reset()
         tailSampleCounter.withLock { $0 = 0 }

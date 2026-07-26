@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Flow tail ASR drop**: after mic stop, iOS Flow now uses a longer silence drain (350 ms), a fixed 150 ms post-roll, expanded final-chunk ASR recovery, and a partial transcript guard so weak trailing syllables are less likely to disappear from the result. / **Flow 尾音识别丢失**：松手后 iOS Flow 采用更长的静音排空（350 ms）、固定 150 ms 尾音保留、增强末块 ASR 恢复与 partial 兜底，降低弱尾音从结果中消失的概率。
+
 ### Added
 - **Mac MLX streaming ASR**: local dictation uses Qwen3-ASR via mlx-audio-swift with overlay partial preview, tail drain, vocabulary prompt, and polish-before-insert. / **Mac MLX 流式 ASR**：本地听写改用 mlx-audio-swift 的 Qwen3-ASR，支持浮层 partial 预览、尾部截断、词库 prompt 与润色后再插入。
 

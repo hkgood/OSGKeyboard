@@ -64,6 +64,8 @@ final class FlowSessionManager: ObservableObject {
     private var chunkedPipeline: ChunkedUtterancePipeline?
     private var currentPartial = ""
     private var lastFinal = ""
+    /// Partial stitched text captured when the user stops recording.
+    private var bestPartialSnapshot = ""
     private var chunkWarnings: [String] = []
     private var lastReadyTraceSignature = ""
     private var lastCommandFingerprint = ""
@@ -356,6 +358,7 @@ final class FlowSessionManager: ObservableObject {
         sessionWarning = nil
         currentPartial = ""
         lastFinal = ""
+        bestPartialSnapshot = ""
         chunkWarnings = []
         FlowSessionBridge.setHostReady(false)
     }
@@ -1101,6 +1104,7 @@ final class FlowSessionManager: ObservableObject {
         currentCommandSeq = commandSeq
         currentPartial = ""
         lastFinal = ""
+        bestPartialSnapshot = ""
         chunkWarnings = []
 
         let localeId = store.localeId
@@ -1194,6 +1198,9 @@ final class FlowSessionManager: ObservableObject {
         refreshHostReady()
         FlowLiveActivityController.update(phase: .processing)
 
+        // Snapshot pipelined partial before drain — fallback if the final chunk ASR drops tail text.
+        bestPartialSnapshot = currentPartial.trimmingCharacters(in: .whitespacesAndNewlines)
+
         // Do NOT cancel `asrTask` or `asr` — drain trailing PCM, then finalize.
 
         // Capture ids now: a cancelled finalize must still clear *this*
@@ -1231,6 +1238,7 @@ final class FlowSessionManager: ObservableObject {
         capture.cancelUtterance()
         currentPartial = ""
         lastFinal = ""
+        bestPartialSnapshot = ""
         chunkWarnings = []
         currentUtteranceId = nil
         currentCommandSeq = 0
@@ -1257,6 +1265,7 @@ final class FlowSessionManager: ObservableObject {
         capture.cancelUtterance()
         currentPartial = ""
         lastFinal = ""
+        bestPartialSnapshot = ""
         chunkWarnings = []
         storeCurrentError(message, kind: kind)
         currentUtteranceId = nil
@@ -1279,6 +1288,7 @@ final class FlowSessionManager: ObservableObject {
         chunkedPipeline = nil
         currentPartial = ""
         lastFinal = ""
+        bestPartialSnapshot = ""
         chunkWarnings = []
         storeCurrentError(message, kind: kind)
         currentUtteranceId = nil
@@ -1331,7 +1341,10 @@ final class FlowSessionManager: ObservableObject {
         let asrElapsed = Date().timeIntervalSince(pipelineStarted)
         FlowDiagnostics.log("ASR phase done in \(String(format: "%.1f", asrElapsed))s finalLen=\(lastFinal.count)")
 
-        var text = lastFinal.trimmingCharacters(in: .whitespacesAndNewlines)
+        var text = UtteranceTranscriptGuard.resolve(
+            stitchedFinal: lastFinal,
+            partialSnapshot: bestPartialSnapshot
+        )
         if text.isEmpty {
             text = currentPartial.trimmingCharacters(in: .whitespacesAndNewlines)
         }
@@ -1427,6 +1440,7 @@ final class FlowSessionManager: ObservableObject {
 
         currentPartial = ""
         lastFinal = ""
+        bestPartialSnapshot = ""
         chunkWarnings = []
         chunkedPipeline = nil
         debug("utterance finalized length=\(text.count)")
