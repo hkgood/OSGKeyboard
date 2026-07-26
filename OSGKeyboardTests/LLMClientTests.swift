@@ -9,12 +9,15 @@ import XCTest
 
 final class LLMClientTests: XCTestCase {
 
+    private let polishProviderId = AppGroupConfiguration.defaultPolishProviderId
+
     override func setUpWithError() throws {
         // The Keychain is process-global in the simulator (one simulator,
         // one keychain DB), so an API key written by a previous test would
         // leak into the next one unless we wipe it here. We intentionally
         // swallow errors — `errSecItemNotFound` is fine.
         try? Keychain.deleteAPIKey()
+        try? Keychain.deleteAPIKey(for: polishProviderId)
         try? Keychain.deleteLegacyAPIKey()
         try? Keychain.deleteAPIKey(for: "qwen")
         StubURLProtocolStorage.config = nil
@@ -24,6 +27,7 @@ final class LLMClientTests: XCTestCase {
 
     override func tearDownWithError() throws {
         try? Keychain.deleteAPIKey()
+        try? Keychain.deleteAPIKey(for: polishProviderId)
         try? Keychain.deleteLegacyAPIKey()
         try? Keychain.deleteAPIKey(for: "qwen")
         StubURLProtocolStorage.config = nil
@@ -56,11 +60,14 @@ final class LLMClientTests: XCTestCase {
     /// never needs a key. Regression: see commit `isConfigured` fix
     /// that exposed this gate.
     func testIsConfiguredTrueForLocalEngineWithoutAPIKey() {
-        let suiteName = "group.com.osgkeyboard.shared.tests"
+        let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let config = ProviderConfig(defaults: defaults)
+        // Local engine is the privacy-safe default for fresh installs.
+        XCTAssertTrue(config.isLocalEngine)
         // No apiKey, no baseURL, no model — cloud would fail.
         XCTAssertFalse(config.isConfigured)
         // Switch to local engine: should flip to true regardless of
@@ -270,8 +277,21 @@ final class LLMClientTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let store = AppGroupStore(defaults: defaults)
-        // apiKey stays empty by default — we never wrote one to the suite.
-        let client = store.makeClient()
+        XCTAssertTrue(store.apiKey.isEmpty, "precondition: no Keychain key for this suite")
+        // Stub transport so a leaked key cannot hit the real network.
+        StubURLProtocolStorage.config = (401, "Unauthorized".data(using: .utf8)!)
+        defer { StubURLProtocolStorage.config = nil }
+
+        let cfg = URLSessionConfiguration.ephemeral
+        cfg.protocolClasses = [StubURLProtocol.self]
+        let session = URLSession(configuration: cfg)
+
+        let client = OpenAICompatibleClient(
+            baseURL: store.baseURL,
+            apiKey: store.apiKey,
+            model: store.model,
+            session: session
+        )
 
         do {
             _ = try await client.polish("hello", systemPrompt: "p")

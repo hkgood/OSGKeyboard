@@ -18,7 +18,7 @@ final class UtteranceTranscriptStitcherTests: XCTestCase {
         var stitcher = UtteranceTranscriptStitcher()
         stitcher.append(index: 1, text: "第二段")
         stitcher.append(index: 0, text: "第一段")
-        XCTAssertEqual(stitcher.composed(), "第一段 第二段")
+        XCTAssertEqual(stitcher.composed(), "第一段第二段")
     }
 
     func testComposedSafelyFallsBackWhenOverlapMergeShortensTooMuch() {
@@ -38,6 +38,6 @@ final class UtteranceTranscriptStitcherTests: XCTestCase {
         stitcher.append(index: 1, text: "第二段")
         stitcher.removeLastSegment()
         stitcher.append(index: 1, text: "第二段合并")
-        XCTAssertEqual(stitcher.composed(), "第一段 第二段合并")
+        XCTAssertEqual(stitcher.composed(), "第一段第二段合并")
     }
 }

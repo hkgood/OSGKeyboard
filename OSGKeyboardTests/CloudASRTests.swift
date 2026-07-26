@@ -153,9 +153,10 @@ final class CloudASRTests: XCTestCase {
             PersonalDictionary.Entry(term: "Cursor", category: .productName, source: .manual),
         ])
         let entries = dict.alibabaHotwordEntries()
-        XCTAssertEqual(entries.count, 1)
-        XCTAssertEqual(entries[0].text, "Cursor")
-        XCTAssertEqual(entries[0].weight, 4)
+        // Built-in system term OSGKeyboard is always included via `effectiveEntries`.
+        XCTAssertEqual(entries.count, 2)
+        XCTAssertEqual(entries.map(\.text).sorted(), ["Cursor", "OSGKeyboard"])
+        XCTAssertTrue(entries.allSatisfy { $0.weight == 4 })
     }
 
     func testPCMSampleWavEncoderProducesHeader() {
@@ -167,8 +168,8 @@ final class CloudASRTests: XCTestCase {
 
     func testVocabularyFingerprintChangesWhenDictionaryChanges() {
         var dict = PersonalDictionary.empty
-        let emptyFP = dict.vocabularySyncFingerprint()
-        _ = dict.upsertManual(term: "OSGKeyboard")
-        XCTAssertNotEqual(emptyFP, dict.vocabularySyncFingerprint())
+        let baselineFP = dict.vocabularySyncFingerprint()
+        _ = dict.upsertManual(term: "Cursor")
+        XCTAssertNotEqual(baselineFP, dict.vocabularySyncFingerprint())
     }
 }

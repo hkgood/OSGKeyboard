@@ -10,14 +10,20 @@ import XCTest
 
 final class KeychainTests: XCTestCase {
 
+    /// Default polish provider for fresh installs — must match `ProviderConfig` reads.
+    private let polishProviderId = AppGroupConfiguration.defaultPolishProviderId
+
     override func setUpWithError() throws {
-        try? Keychain.deleteAPIKey()
-        try? Keychain.deleteLegacyAPIKey()
-        try? Keychain.deleteAPIKey(for: "qwen")
+        try wipePolishKeychain()
     }
 
     override func tearDownWithError() throws {
+        try wipePolishKeychain()
+    }
+
+    private func wipePolishKeychain() throws {
         try? Keychain.deleteAPIKey()
+        try? Keychain.deleteAPIKey(for: polishProviderId)
         try? Keychain.deleteLegacyAPIKey()
         try? Keychain.deleteAPIKey(for: "qwen")
     }
@@ -79,7 +85,7 @@ final class KeychainTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
-        try Keychain.setAPIKey("sk-from-store")
+        try Keychain.setAPIKey("sk-from-store", for: polishProviderId)
         let store = AppGroupStore(defaults: defaults)
         XCTAssertEqual(store.apiKey, "sk-from-store")
     }
@@ -105,7 +111,7 @@ final class KeychainTests: XCTestCase {
 
         XCTAssertEqual(config.apiKey, "sk-legacy-plaintext",
                        "Migrated key must surface through ProviderConfig")
-        XCTAssertEqual(Keychain.apiKey(), "sk-legacy-plaintext",
+        XCTAssertEqual(Keychain.apiKey(for: polishProviderId), "sk-legacy-plaintext",
                        "Legacy value must land in Keychain after migration")
         XCTAssertNil(defaults.string(forKey: "config.apiKey"),
                      "Legacy UserDefaults entry must be cleared after migration")
@@ -126,7 +132,7 @@ final class KeychainTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         // Set both.
-        try? Keychain.setAPIKey("sk-new")
+        try? Keychain.setAPIKey("sk-new", for: polishProviderId)
         defaults.set("sk-old", forKey: "config.apiKey")
 
         let config = ProviderConfig(defaults: defaults)

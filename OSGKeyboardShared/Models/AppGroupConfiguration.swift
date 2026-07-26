@@ -342,8 +342,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             defaults.set(true, forKey: Keys.flowInactivityMigratedToFiveMinuteDefault)
         }
 
-        // Cloud no longer exposes off/transcribe; migrate legacy values.
-        if config.engineMode == "cloud", config.modeId != "polish" {
+        // Voice input always polishes; migrate legacy off/transcribe values.
+        if config.modeId != "polish" {
             config.modeId = "polish"
             defaults.set("polish", forKey: Keys.modeId)
         }

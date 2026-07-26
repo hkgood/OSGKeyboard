@@ -121,7 +121,7 @@ final class PersonalDictionaryCloudSyncTests: XCTestCase {
           "aliases": [],
           "category": "custom",
           "source": "manual",
-          "createdAt": 1_700_000_000,
+          "createdAt": 1700000000,
           "usageCount": 2
         }
         """.data(using: .utf8)!
