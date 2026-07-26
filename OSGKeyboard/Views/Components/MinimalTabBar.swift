@@ -18,17 +18,18 @@ enum AppTab: Int, CaseIterable {
     var icon: MaterialIconName {
         switch self {
         case .keyboard: return .keyboard
-        case .history: return .menuBook
+        case .history: return .menuBook // unused — history uses SF Symbol
         case .dictionary: return .menuBook // unused — dictionary uses SF Symbol
         case .styles: return .menuBook // unused — styles uses SF Symbol
         case .settings: return .settings
         }
     }
 
-    /// Filled SF Symbol override for the dictionary tab.
+    /// SF Symbol overrides shared with the Mac and iPad sidebars.
     var sfSymbol: String? {
         switch self {
-        case .dictionary: return "square.stack.3d.down.right.fill"
+        case .history: return "clock.arrow.circlepath"
+        case .dictionary: return "character.book.closed"
         case .styles: return "text.badge.star"
         default: return nil
         }

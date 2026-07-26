@@ -33,8 +33,20 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertEqual(config.polishIntensity, .default)
         XCTAssertTrue(config.personalDictionary.entries.isEmpty)
         XCTAssertTrue(config.flowSkipAppSwitch)
-        XCTAssertEqual(config.flowKeepAliveMode, .liveActivity)
+        XCTAssertEqual(config.flowKeepAliveMode, .pictureInPicture)
         XCTAssertEqual(config.flowInactivityDuration, .fiveMinutes)
+    }
+
+    func testLoadPreservesStoredLiveActivityKeepAliveMode() {
+        let defaults = makeDefaults()
+        defaults.set(
+            FlowKeepAliveMode.liveActivity.rawValue,
+            forKey: AppGroupConfiguration.Keys.flowKeepAliveMode
+        )
+
+        let config = AppGroupConfiguration.load(fromAvailable: defaults)
+
+        XCTAssertEqual(config.flowKeepAliveMode, .liveActivity)
     }
 
     func testSaveAndLoadRoundTrip() {

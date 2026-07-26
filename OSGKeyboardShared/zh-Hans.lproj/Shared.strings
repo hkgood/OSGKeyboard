@@ -136,7 +136,7 @@
 "mac.section.dictionary" = "词库";
 "mac.section.styles" = "润色风格";
 "mac.styles.subtitle" = "为听写润色选择或创建完整写作人格。";
-"mac.styles.add" = "添加风格";
+"mac.styles.add" = "添加润色风格";
 "mac.styles.edit" = "编辑风格";
 "mac.styles.builtin" = "内置风格";
 "mac.styles.custom" = "我的风格";
@@ -206,9 +206,13 @@
 "mac.history.clearConfirm" = "全部清空";
 "mac.dict.health" = "词库健康度";
 "mac.dict.healthDesc" = "影响识别偏置且润色时不会被改写的自定义词条。";
+"mac.dict.add" = "添加个性词";
+"mac.dict.addField" = "词语或短语";
+"mac.dict.addFooter" = "保存后将自动生成常见的语音误识别别名。";
+"mac.dict.aliasesGenerating" = "正在生成别名…";
 "mac.dict.search" = "搜索词条";
 "mac.dict.empty" = "还没有词条";
-"mac.dict.emptyBody" = "在 iPhone 或 iPad 上添加词条以提升识别准确性，它们会通过 iCloud 同步到这里。";
+"mac.dict.emptyBody" = "添加个性词以提升识别准确性，它们会通过 iCloud 在设备间同步。";
 "mac.dict.noMatch" = "无匹配结果";
 "mac.cancel" = "取消";
 "mac.save" = "保存";

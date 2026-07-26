@@ -14,6 +14,8 @@ import SwiftUI
 
 /// Fixed metrics that keep every desktop surface on the same grid.
 enum MacMetrics {
+    /// Shared height for search fields and primary actions in page headers.
+    static let pageHeaderControlHeight: CGFloat = 28
     /// Shared height for credential inputs and icon buttons — matches the iOS
     /// settings controls (38).
     static let settingsControlHeight: CGFloat = 38
@@ -442,6 +444,25 @@ struct MacSettingRow<Content: View>: View {
 }
 
 // MARK: - Page header
+
+/// Capsule-shaped primary action aligned with page-header search controls.
+struct MacHeaderActionButtonStyle: ButtonStyle {
+    @Environment(\.themePalette) private var palette
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, Spacing.md)
+            .frame(height: MacMetrics.pageHeaderControlHeight)
+            .foregroundStyle(.white)
+            .background(
+                palette.accent.opacity(configuration.isPressed ? 0.82 : 1),
+                in: Capsule()
+            )
+            .contentShape(Capsule())
+            .opacity(isEnabled ? 1 : 0.45)
+    }
+}
 
 /// Page title for History / Dictionary / Settings. Applies the shared
 /// `pageHorizontalInset` so its left edge matches inset card content below.

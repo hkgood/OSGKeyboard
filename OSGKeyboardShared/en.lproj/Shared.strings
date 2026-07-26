@@ -136,7 +136,7 @@
 "mac.section.dictionary" = "Dictionary";
 "mac.section.styles" = "Polish Styles";
 "mac.styles.subtitle" = "Choose or create a complete writing personality for polished dictation.";
-"mac.styles.add" = "Add Style";
+"mac.styles.add" = "Add Polish Style";
 "mac.styles.edit" = "Edit Style";
 "mac.styles.builtin" = "Built-in";
 "mac.styles.custom" = "My Styles";
@@ -206,9 +206,13 @@
 "mac.history.clearConfirm" = "Clear all";
 "mac.dict.health" = "Vocabulary Health";
 "mac.dict.healthDesc" = "Custom terms that bias recognition and are never rewritten.";
+"mac.dict.add" = "Add Personal Word";
+"mac.dict.addField" = "Word or phrase";
+"mac.dict.addFooter" = "Common recognition mistakes will be generated automatically after saving.";
+"mac.dict.aliasesGenerating" = "Generating aliases…";
 "mac.dict.search" = "Search words";
 "mac.dict.empty" = "No words yet";
-"mac.dict.emptyBody" = "Add words on your iPhone or iPad to improve recognition accuracy. They sync here via iCloud.";
+"mac.dict.emptyBody" = "Add personal words to improve recognition accuracy. They sync across your devices via iCloud.";
 "mac.dict.noMatch" = "No matches";
 "mac.cancel" = "Cancel";
 "mac.save" = "Save";

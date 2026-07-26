@@ -25,7 +25,7 @@ actor MacMLXStreamingASRProvider {
         locale: Locale
     ) async throws -> MacMLXStreamingSession {
         let qwen = try await loadModel(model)
-        var config = StreamingConfig(
+        let config = StreamingConfig(
             decodeIntervalSeconds: 0.5,
             boundaryDecodeIntervalSeconds: 0.2,
             boundaryBoostSeconds: 1.0,

@@ -26,7 +26,9 @@ public enum FlowColdStartOverlayDecision: Equatable, Sendable {
 
 public enum FlowHandoffPolicy {
     /// Proactive keyboard auto-launch of the host is intentionally disabled.
-    /// Opening the host must be driven by an explicit mic press (or Live Activity).
+    /// Opening the host must be driven by an explicit mic press (or a Live
+    /// Activity tap when that keep-alive mode is selected). PiP sessions
+    /// never auto-jump once `hostReady` is published.
     public static let allowsProactiveHostAutoLaunch = false
 
     /// Samples of "host truly dead" required before a cold-start jump is allowed

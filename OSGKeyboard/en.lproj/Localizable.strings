@@ -473,11 +473,19 @@
 /* Cold-start handoff (scheme B) */
 "flow.coldStart.title" = "Voice is ready";
 "flow.coldStart.preparing" = "Getting voice ready";
+"flow.coldStart.preparing.pip" = "Starting Picture in Picture";
 "flow.coldStart.preparingHint" = "Keep OSGKeyboard open for a moment while we start the microphone session.";
+"flow.coldStart.preparingHint.pip" = "Keep OSGKeyboard open while Picture in Picture starts. Then return to the keyboard to speak.";
 "flow.coldStart.permission.title" = "Permission required";
 "flow.coldStart.audio.title" = "Voice could not start";
+"flow.coldStart.pip.title" = "Picture in Picture could not start";
 "flow.coldStart.error.audioTimeout" = "The microphone did not become ready in time. It may be busy in another app. Please try again.";
-"flow.pip.error.unavailable" = "Picture in Picture could not start. Check that PiP is allowed for OSGKeyboard in Settings.";
+"flow.pip.error.unavailable" = "Picture in Picture could not start. Stay in the app and try again.";
+"flow.pip.error.unsupported" = "This device does not support Picture in Picture.";
+"flow.pip.error.hostNotReady" = "The Picture in Picture surface is not ready yet. Stay in the app and try again.";
+"flow.pip.error.notPossible" = "The system cannot start Picture in Picture right now. Keep the app in the foreground and try again.";
+"flow.pip.error.systemRejected" = "Picture in Picture was rejected by the system. Please try again shortly.";
+"flow.pip.error.timedOut" = "Picture in Picture did not appear in time. Stay in the app and try again.";
 "flow.coldStart.action.settings" = "Open Settings";
 "flow.coldStart.action.retry" = "Try Again";
 "flow.coldStart.swipeHint" = "Swipe right along the bottom bar\nto return to your previous app.";

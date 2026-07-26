@@ -401,8 +401,12 @@ struct SettingsView: View {
             sectionHeader("settings.about.title")
             VStack(spacing: 0) {
                 Button {
-                    config.hasCompletedOnboarding = false
-                    config.onboardingPage = 0
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) {
+                        config.hasCompletedOnboarding = false
+                        config.onboardingPage = 0
+                    }
                 } label: {
                     HStack(spacing: Spacing.sm) {
                         Text("settings.onboarding.replay")
@@ -582,7 +586,7 @@ private struct FlowKeepAliveModePickerRow: View {
             selection: Binding(
                 get: { selection.rawValue },
                 set: { newValue in
-                    selection = FlowKeepAliveMode(rawValue: newValue) ?? .liveActivity
+                    selection = FlowKeepAliveMode(rawValue: newValue) ?? .default
                 }
             )
         )

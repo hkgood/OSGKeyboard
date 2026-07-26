@@ -6,15 +6,15 @@
 import Foundation
 
 public enum FlowKeepAliveMode: String, CaseIterable, Identifiable, Sendable, Codable {
-    /// Continuous audio capture + Live Activity (current default behaviour).
+    /// Continuous audio capture + Live Activity.
     case liveActivity = "liveActivity"
     /// Picture-in-picture waveform keep-alive; mic released between utterances.
     case pictureInPicture = "pictureInPicture"
 
     public var id: String { rawValue }
 
-    /// Existing installs keep the Live Activity / continuous-capture path.
-    public static let `default`: FlowKeepAliveMode = .liveActivity
+    /// Used when no valid keep-alive preference has been stored.
+    public static let `default`: FlowKeepAliveMode = .pictureInPicture
 
     public var labelKey: String {
         switch self {

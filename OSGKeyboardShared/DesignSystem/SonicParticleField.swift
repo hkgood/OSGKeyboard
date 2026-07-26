@@ -176,7 +176,7 @@ public struct SonicParticleField: View {
             let opacity = (1.0 - progress) * 0.28
             let lineWidth = max(0.8, 2.4 - progress * 1.4)
 
-            var ringContext = context
+            let ringContext = context
             ringContext.stroke(
                 Path(ellipseIn: CGRect(
                     x: ripple.origin.x - radius,

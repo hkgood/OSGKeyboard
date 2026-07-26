@@ -178,10 +178,18 @@ final class KeyboardFlowCoordinator {
         // host utt.rec=1 → ready=false → keyboard forever "正在启动…".
         let hostBusy = readySnapshot?.reason == .recording
             || readySnapshot?.reason == .processing
+        // PiP sessions publish `reason=.starting` while the small window is
+        // coming up — treat that as warming so the mic stays orange (wait)
+        // instead of jumping into another cold start.
         let hostWarming = !hostReady
             && !hostBusy
             && FlowSessionBridge.isSessionActive()
-            && (FlowSessionBridge.isHostReachable() || isPendingFlowStart || withinReadyGrace)
+            && (
+                FlowSessionBridge.isHostReachable()
+                    || isPendingFlowStart
+                    || withinReadyGrace
+                    || readySnapshot?.reason == .starting
+            )
         state.flowSessionActive = FlowSessionBridge.isSessionActive()
         state.debugPendingFlowStart = isPendingFlowStart
         state.debugFlowRecording = isFlowRecording
@@ -475,7 +483,11 @@ final class KeyboardFlowCoordinator {
         isPendingFlowStart = true
         isFlowRecording = false
         flowStartDeadline = Date().timeIntervalSince1970 + FlowWatchdog.startTimeout
-        state.lastTranscript = ExtL10n.string("keyboard.flow.startingSession")
+        state.lastTranscript = ExtL10n.string(
+            FlowSessionPolicy.keepAliveMode() == .pictureInPicture
+                ? "keyboard.flow.startingSession.pip"
+                : "keyboard.flow.startingSession"
+        )
         recomputeMicVoiceAvailability()
         openHostApp("startflow")
         startFlowStartWatchdog()

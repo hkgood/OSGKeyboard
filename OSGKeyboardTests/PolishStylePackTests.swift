@@ -30,6 +30,20 @@ final class PolishStylePackTests: XCTestCase {
         }
     }
 
+    func testDatingStyleDefinesRelationshipAwareIntensityAndSafety() throws {
+        let style = try XCTUnwrap(
+            PolishStylePackCatalog.builtins.first { $0.id == "builtin.dating" }
+        )
+
+        XCTAssertTrue(style.prompt.contains("# 本风格的力度解释"))
+        XCTAssertTrue(style.prompt.contains("# 关系许可闸"))
+        XCTAssertTrue(style.prompt.contains("Light（暖而不撩）"))
+        XCTAssertTrue(style.prompt.contains("Medium（温度与趣味）"))
+        XCTAssertTrue(style.prompt.contains("Heavy（主动而明确）"))
+        XCTAssertTrue(style.prompt.contains("不把冷淡解释成欲擒故纵"))
+        XCTAssertTrue(style.prompt.contains("暧昧不能代替明确同意"))
+    }
+
     func testCatalogRejectsNinthUserPack() throws {
         var catalog = PolishStyleCatalog()
         for index in 0..<PolishStyleLimits.maximumUserPacks {
@@ -121,6 +135,20 @@ final class PolishStylePackTests: XCTestCase {
 
         XCTAssertTrue(guideline.contains("Style override"))
         XCTAssertTrue(guideline.contains("active style pack"))
+    }
+
+    func testDatingStyleUsesRelationshipSpecificIntensityGuidelines() {
+        let light = PolishIntensity.light.promptGuideline(styleID: "builtin.dating")
+        let medium = PolishIntensity.medium.promptGuideline(styleID: "builtin.dating")
+        let heavy = PolishIntensity.heavy.promptGuideline(styleID: "builtin.dating")
+
+        XCTAssertTrue(light.contains("Dating Light"))
+        XCTAssertTrue(light.contains("without adding flirtation"))
+        XCTAssertTrue(medium.contains("Dating Medium"))
+        XCTAssertTrue(medium.contains("at most one"))
+        XCTAssertTrue(heavy.contains("Dating Heavy"))
+        XCTAssertTrue(heavy.contains("Increase romantic tension and directness"))
+        XCTAssertTrue(heavy.contains("Style override"))
     }
 
     func testHeavyIntensityStillAllowsStructuredStyle() {

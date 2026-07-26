@@ -24,6 +24,15 @@ struct MacPolishStylesView: View {
         _ = viewModel.polishStylesRevision
         return store.activePolishStyleId
     }
+    private var columns: [GridItem] {
+        [
+            GridItem(
+                .adaptive(minimum: 240, maximum: 360),
+                spacing: Spacing.md,
+                alignment: .top
+            ),
+        ]
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -40,7 +49,7 @@ struct MacPolishStylesView: View {
                         systemImage: "plus"
                     )
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(MacHeaderActionButtonStyle())
                 .disabled(catalog.entries.count >= PolishStyleLimits.maximumUserPacks)
             }
 
@@ -96,72 +105,52 @@ struct MacPolishStylesView: View {
                 .font(MacSettingsType.sectionTitle)
                 .foregroundStyle(palette.textSecondary)
                 .textCase(.uppercase)
-            MacCard(padding: 0) {
-                VStack(spacing: 0) {
-                    ForEach(packs) { pack in
-                        styleRow(pack)
-                        if pack.id != packs.last?.id {
-                            Divider().background(palette.divider)
-                        }
-                    }
+
+            LazyVGrid(columns: columns, alignment: .leading, spacing: Spacing.md) {
+                ForEach(packs) { pack in
+                    styleCard(pack)
                 }
             }
         }
     }
 
-    private func styleRow(_ pack: PolishStylePack) -> some View {
-        HStack(spacing: Spacing.md) {
-            Button {
+    private func styleCard(_ pack: PolishStylePack) -> some View {
+        MacPolishStyleCard(
+            name: pack.displayName(language: lang),
+            subtitle: subtitle(for: pack),
+            iconName: iconName(for: pack),
+            isSelected: pack.id == activeID,
+            isUserStyle: pack.kind == .user,
+            language: lang,
+            activate: {
                 activate(pack)
-            } label: {
-                HStack(spacing: Spacing.md) {
-                    Image(systemName: pack.id == activeID ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(pack.id == activeID ? palette.accent : palette.textTertiary)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(pack.displayName(language: lang))
-                            .font(TypeStyle.body)
-                            .foregroundStyle(palette.textPrimary)
-                        Text(subtitle(for: pack))
-                            .font(TypeStyle.caption2)
-                            .foregroundStyle(palette.textTertiary)
-                            .lineLimit(1)
-                    }
-                    Spacer()
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-            Button {
+            },
+            duplicate: {
                 editingPack = PolishStylePack(
                     name: "\(pack.displayName(language: lang)) \(MacL10n.string("mac.styles.copy", language: lang))",
                     prompt: pack.prompt
                 )
                 showEditor = true
-            } label: {
-                Image(systemName: "plus.square.on.square")
+            },
+            edit: {
+                editingPack = pack
+                showEditor = true
+            },
+            delete: {
+                delete(pack)
             }
-            .buttonStyle(.borderless)
+        )
+    }
 
-            if pack.kind == .user {
-                Button {
-                    editingPack = pack
-                    showEditor = true
-                } label: {
-                    Image(systemName: "pencil")
-                }
-                .buttonStyle(.borderless)
-
-                Button(role: .destructive) {
-                    delete(pack)
-                } label: {
-                    Image(systemName: "trash")
-                }
-                .buttonStyle(.borderless)
-            }
+    private func iconName(for pack: PolishStylePack) -> String {
+        switch pack.id {
+        case "builtin.structured": return "list.bullet.rectangle"
+        case "builtin.formal": return "briefcase"
+        case "builtin.dating": return "heart.text.square"
+        case "builtin.chat": return "bubble.left.and.bubble.right"
+        case "builtin.light": return "wand.and.sparkles"
+        default: return "text.badge.star"
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
     }
 
     private func subtitle(for pack: PolishStylePack) -> String {
@@ -207,6 +196,126 @@ struct MacPolishStylesView: View {
             try? await MacICloudSyncBootstrap.polishStyleSync.pushLocalIfEnabled(updated)
             try? await MacICloudSyncBootstrap.settingsSync.pushLocalIfEnabled()
         }
+    }
+}
+
+private struct MacPolishStyleCard: View {
+    let name: String
+    let subtitle: String
+    let iconName: String
+    let isSelected: Bool
+    let isUserStyle: Bool
+    let language: AppUILanguage
+    let activate: () -> Void
+    let duplicate: () -> Void
+    let edit: () -> Void
+    let delete: () -> Void
+
+    @Environment(\.themePalette) private var palette
+    @State private var isHovering = false
+
+    private let shape = RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Button(action: activate) {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Image(systemName: iconName)
+                        .font(.system(size: 24, weight: .medium))
+                        .foregroundStyle(isSelected ? palette.accent : palette.textSecondary)
+
+                    Spacer(minLength: Spacing.xs)
+
+                    Text(name)
+                        .font(TypeStyle.bodyEmph)
+                        .foregroundStyle(palette.textPrimary)
+                        .lineLimit(1)
+
+                    Text(subtitle)
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.textTertiary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
+                .padding(Spacing.md)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            actionButtons
+                .padding(Spacing.sm)
+
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 21, weight: .semibold))
+                    .foregroundStyle(palette.accent)
+                    .background(palette.surface, in: Circle())
+                    .padding(Spacing.sm)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .allowsHitTesting(false)
+            }
+        }
+        .background(
+            isSelected ? palette.accentMuted : palette.surface,
+            in: shape
+        )
+        .overlay(
+            shape.stroke(
+                isSelected ? palette.accent : hoverBorder,
+                lineWidth: isSelected ? 1.5 : 0.5
+            )
+        )
+        .clipShape(shape)
+        .scaleEffect(isHovering ? 1.01 : 1)
+        .animation(Motion.quick, value: isHovering)
+        .animation(Motion.quick, value: isSelected)
+        .onHover { isHovering = $0 }
+    }
+
+    private var actionButtons: some View {
+        HStack(spacing: Spacing.xxs) {
+            cardActionButton(
+                systemImage: "plus.square.on.square",
+                accessibilityLabel: MacL10n.string("mac.styles.copy", language: language),
+                action: duplicate
+            )
+
+            if isUserStyle {
+                cardActionButton(
+                    systemImage: "pencil",
+                    accessibilityLabel: MacL10n.string("mac.styles.edit", language: language),
+                    action: edit
+                )
+                cardActionButton(
+                    systemImage: "trash",
+                    accessibilityLabel: MacL10n.string("mac.delete", language: language),
+                    foreground: palette.danger,
+                    action: delete
+                )
+            }
+        }
+    }
+
+    private func cardActionButton(
+        systemImage: String,
+        accessibilityLabel: String,
+        foreground: Color? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(foreground ?? palette.textSecondary)
+                .frame(width: 28, height: 28)
+                .background(palette.background.opacity(isHovering ? 0.9 : 0.72), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var hoverBorder: Color {
+        isHovering ? palette.dividerStrong : palette.divider
     }
 }
 

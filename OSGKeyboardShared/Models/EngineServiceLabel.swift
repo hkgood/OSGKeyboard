@@ -10,6 +10,8 @@ public enum EngineServiceLabel {
         engineMode: String,
         providerId: String,
         model: String,
+        asrProviderId: String? = nil,
+        asrModel: String? = nil,
         language: AppUILanguage? = nil
     ) -> String {
         let lang = language ?? AppGroupStore().uiLanguage
@@ -17,8 +19,17 @@ public enum EngineServiceLabel {
             let asrName = SharedL10n.string("engine.asr.appleSpeech", language: lang)
             return SharedL10n.format("engine.summary.local", language: lang, asrName)
         }
-        let providerName = ProviderDisplayName.name(for: providerId, language: lang)
-        let trimmedModel = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Cloud status line should name the speech engine, not the polish LLM.
+        let resolvedASRProvider: String = {
+            if let asrProviderId, !asrProviderId.isEmpty { return asrProviderId }
+            return providerId
+        }()
+        let resolvedASRModel: String = {
+            if let asrModel, !asrModel.isEmpty { return asrModel }
+            return model
+        }()
+        let providerName = ProviderDisplayName.name(for: resolvedASRProvider, language: lang)
+        let trimmedModel = resolvedASRModel.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmedModel.isEmpty {
             return SharedL10n.format("engine.summary.cloud", language: lang, providerName)
         }

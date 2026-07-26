@@ -5,6 +5,7 @@
 // batch ASR fallback when pipelined chunking drops weak tail segments.
 
 import Foundation
+import os
 
 public final class FlowUtterancePCMStore: @unchecked Sendable {
     private let lock = OSAllocatedUnfairLock()

@@ -125,8 +125,19 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
             OSGLog.config.info("[onboarding] didSet → \(newValue, privacy: .public), mirroring to Keychain")
             Keychain.setOnboardingCompleted(hasCompletedOnboarding)
             if hasCompletedOnboarding {
+                // Persist page reset immediately, but defer the @Published bump
+                // so MainAppRoot's OnboardingView → MainTabView swap is not
+                // coalesced with an in-flow page update (can freeze step 6).
                 configuration.onboardingPage = 0
-                onboardingPage = 0
+                let needsPublishedPageReset = onboardingPage != 0
+                persistConfiguration()
+                if needsPublishedPageReset {
+                    Task { @MainActor in
+                        guard self.hasCompletedOnboarding else { return }
+                        self.onboardingPage = 0
+                    }
+                }
+                return
             }
             persistConfiguration()
         }
@@ -319,24 +330,38 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         self.defaults = resolvedDefaults
         self.configuration = AppGroupConfiguration.load(fromAvailable: resolvedDefaults)
 
-        // Onboarding completion must survive a device reboot. App Group
-        // UserDefaults can transiently read empty right after boot, which would
-        // falsely re-show onboarding. Trust the durable Keychain marker when the
-        // App Group value looks unset, and backfill it once the App Group value
-        // is confirmed true (covers users onboarded before this safeguard).
-        let appGroupOnboarding = configuration.hasCompletedOnboarding
-        let keychainOnboarding = Keychain.hasCompletedOnboarding()
-        // Distinguish "key absent" (nil → plist not loaded / data-protection race)
-        // from "key present == false" (something actually wrote false).
-        let rawKeyPresent = resolvedDefaults.object(forKey: AppGroupConfiguration.Keys.hasCompletedOnboarding) != nil
-        OSGLog.config.info(
-            "[onboarding] init: appGroup=\(appGroupOnboarding, privacy: .public) (keyPresent=\(rawKeyPresent, privacy: .public)), keychain=\(keychainOnboarding, privacy: .public)"
-        )
-        if appGroupOnboarding {
-            Keychain.setOnboardingCompleted(true)
-        } else if keychainOnboarding {
-            configuration.hasCompletedOnboarding = true
-            OSGLog.config.info("[onboarding] init: App Group read false but Keychain true → restored to true")
+        // Fresh app container (reinstall after delete): wipe stale Keychain
+        // onboarding so the welcome flow shows again. Reboot races still use
+        // Keychain restore when the install identity already exists.
+        let isFreshInstall = Keychain.beginInstallIdentityIfNeeded()
+        if isFreshInstall {
+            configuration.hasCompletedOnboarding = false
+            resolvedDefaults.set(false, forKey: AppGroupConfiguration.Keys.hasCompletedOnboarding)
+            OSGLog.config.info("[onboarding] init: fresh install → force hasCompletedOnboarding=false")
+        } else {
+            // Onboarding completion must survive a device reboot. App Group
+            // UserDefaults can transiently read empty right after boot, which would
+            // falsely re-show onboarding. Trust the durable Keychain marker when the
+            // App Group value looks unset, and backfill it once the App Group value
+            // is confirmed true (covers users onboarded before this safeguard).
+            let appGroupOnboarding = configuration.hasCompletedOnboarding
+            let keychainOnboarding = Keychain.hasCompletedOnboarding()
+            // Distinguish "key absent" (nil → plist not loaded / data-protection race)
+            // from "key present == false" (something actually wrote false).
+            let rawKeyPresent = resolvedDefaults.object(
+                forKey: AppGroupConfiguration.Keys.hasCompletedOnboarding
+            ) != nil
+            OSGLog.config.info(
+                "[onboarding] init: appGroup=\(appGroupOnboarding, privacy: .public) (keyPresent=\(rawKeyPresent, privacy: .public)), keychain=\(keychainOnboarding, privacy: .public)"
+            )
+            if appGroupOnboarding {
+                Keychain.setOnboardingCompleted(true)
+            } else if keychainOnboarding {
+                configuration.hasCompletedOnboarding = true
+                OSGLog.config.info(
+                    "[onboarding] init: App Group read false but Keychain true → restored to true"
+                )
+            }
         }
         let finalOnboarding = configuration.hasCompletedOnboarding
         OSGLog.config.info("[onboarding] init: final=\(finalOnboarding, privacy: .public)")

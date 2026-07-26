@@ -472,11 +472,19 @@
 /* 冷启动兜底（方案 B） */
 "flow.coldStart.title" = "语音已就绪";
 "flow.coldStart.preparing" = "正在就绪";
+"flow.coldStart.preparing.pip" = "正在启动画中画";
 "flow.coldStart.preparingHint" = "请先停留片刻，我们正在启动麦克风会话。";
+"flow.coldStart.preparingHint.pip" = "请先停留片刻，我们正在启动画中画保活。就绪后可返回键盘直接说话。";
 "flow.coldStart.permission.title" = "需要权限";
 "flow.coldStart.audio.title" = "语音暂时无法启动";
+"flow.coldStart.pip.title" = "画中画暂时无法启动";
 "flow.coldStart.error.audioTimeout" = "麦克风未能及时就绪，可能正被通话或其他 App 占用。请稍后重试。";
-"flow.pip.error.unavailable" = "无法启动画中画，请在系统设置中允许 OSGKeyboard 使用画中画。";
+"flow.pip.error.unavailable" = "无法启动画中画，请留在 App 内重试。";
+"flow.pip.error.unsupported" = "此设备不支持画中画。";
+"flow.pip.error.hostNotReady" = "画中画界面尚未就绪，请留在 App 内稍后重试。";
+"flow.pip.error.notPossible" = "系统暂时无法开启画中画，请保持 App 在前台后重试。";
+"flow.pip.error.systemRejected" = "画中画启动被系统拒绝，请稍后重试。";
+"flow.pip.error.timedOut" = "画中画未能及时出现，请留在 App 内重试。";
 "flow.coldStart.action.settings" = "前往设置";
 "flow.coldStart.action.retry" = "重试";
 "flow.coldStart.swipeHint" = "沿屏幕底部的横条，从左向右滑动\n返回上一个 App。";

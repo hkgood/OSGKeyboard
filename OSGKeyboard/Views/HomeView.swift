@@ -92,9 +92,13 @@ struct HomeView: View {
             let logoTopPadding = isCompact ? Spacing.lg : Spacing.xxl
             let logoBottomPadding = isCompact ? Spacing.lg : Spacing.xxl
             let extrasBottomPadding = isCompact ? Spacing.sm : Spacing.lg
-            let statusTopPadding = isCompact ? Spacing.sm : Spacing.xl
-            // 输入框最小高度：小屏可压得更矮，让底部状态行始终留在 tab 栏之上。
-            let previewMinHeight: CGFloat = isCompact ? 72 : 160
+            // 有警告/引导时进一步压低输入框下限，把垂直空间让给底部状态行。
+            let previewMinHeight: CGFloat = {
+                if showsFlowSessionExtras {
+                    return isCompact ? 44 : 88
+                }
+                return isCompact ? 72 : 160
+            }()
 
             ZStack(alignment: .top) {
                 sessionHeaderGradient(height: gradientHeight)
@@ -116,22 +120,17 @@ struct HomeView: View {
                         .padding(.horizontal, Spacing.lg)
                         .padding(.bottom, Spacing.md)
 
-                    // 唯一的弹性区块：吸收全部剩余空间（大屏铺满、小屏优先让位）。
+                    // 弹性输入框：吸收剩余高度；底部状态通过 safeAreaInset 锚定在
+                    // tab 栏之上，警告变高时输入框自动变矮，不再被 dock 挡住。
                     previewField(minHeight: previewMinHeight)
                         .padding(.horizontal, Spacing.lg)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         .layoutPriority(-1)
-
-                    HStack(spacing: Spacing.sm) {
-                        engineStatusLine
-                        flowStatusFooter
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.top, statusTopPadding)
-                    .padding(.bottom, Spacing.sm)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    phoneStatusFooter
+                }
             }
             .background(palette.background)
             .contentShape(Rectangle())
@@ -141,6 +140,19 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    /// Engine + Flow 状态行：作为 bottom inset，始终压在自定义 tab 栏之上。
+    private var phoneStatusFooter: some View {
+        HStack(spacing: Spacing.sm) {
+            engineStatusLine
+            flowStatusFooter
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.sm)
+        .padding(.bottom, Spacing.sm)
+        .background(palette.background.opacity(0.96))
     }
 
     // MARK: - Wide layout (iPad / regular width)
@@ -486,7 +498,9 @@ struct HomeView: View {
             EngineServiceLabel.summary(
                 engineMode: config.engineMode,
                 providerId: config.providerId,
-                model: config.model
+                model: config.model,
+                asrProviderId: config.asrProviderId,
+                asrModel: config.asrModel
             )
         )
         .font(TypeStyle.caption2)

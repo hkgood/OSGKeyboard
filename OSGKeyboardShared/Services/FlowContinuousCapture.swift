@@ -218,14 +218,14 @@ private final class AdaptiveDownsampler: @unchecked Sendable {
             // duplicate the audio ~6× (stuttering ASR input). After the
             // single feed we report "ran dry", so the expected status is
             // `.inputRanDry` (output not full), not `.haveData`.
-            var provided = false
+            let provided = OSAllocatedUnfairLock(initialState: false)
             var error: NSError?
             let status = current.converter.convert(to: current.scratch, error: &error) { _, outStatus in
-                if provided {
+                if provided.withLock({ $0 }) {
                     outStatus.pointee = .noDataNow
                     return nil
                 }
-                provided = true
+                provided.withLock { $0 = true }
                 outStatus.pointee = .haveData
                 return buffer
             }

@@ -7,16 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-07-27
+
 ### Fixed
+- **Onboarding Done stuck**: finishing step 6 no longer wraps the route change in an animation transaction; `MainAppRoot` force-swaps view identity so Settings replay cannot freeze on the last page. / **引导完成卡住**：第六步完成不再包进动画事务；`MainAppRoot` 强制切换视图身份，避免从设置重走引导后停在最后一页。
+- **PiP closed loop**: activate a playback audio session before creating `AVPictureInPictureController`, never treat “armed but inactive” as success, and restore playback audio after releasing the mic between utterances so Home `hostReady` matches a real PiP window. / **PiP 闭环**：在创建画中画控制器前先激活 playback 音频会话，不再把「已武装但未激活」当成功，并在句间释麦后恢复 playback，使首页就绪状态与真实 PiP 窗口一致。
+- **Onboarding after reinstall**: fresh installs clear the durable Keychain onboarding flag via a container install identity so delete-and-reinstall shows the welcome flow again. / **重装后引导**：通过容器安装身份在全新安装时清除 Keychain 引导标记，删除重装后会再次显示欢迎流程。
+- **Cloud engine footer**: Home / preview status lines name the configured ASR provider and model instead of the polish LLM. / **云端引擎文案**：首页与预览状态行显示已配置的 ASR 服务商与模型，而不再显示润色 LLM。
+- **PiP Flow handoff**: wait for the PiP host view, distinguish real start failures, and stop pointing users at a non-existent Settings toggle; cold-start / keyboard copy now match Picture in Picture keep-alive. / **PiP Flow 交接**：等待 PiP Host 就绪、区分真实启动失败，并不再引导不存在的系统设置开关；冷启动与键盘文案对齐画中画保活。
+- **PiP start reliability**: restore unconditional `startPictureInPicture` retries, live `positiveInfinity` time range, DisplayImmediately sample buffers, and arm auto-inline PiP for background; Home status footer uses a bottom inset so the adaptive preview field shrinks instead of sitting under the tab dock. / **PiP 启动可靠性**：恢复无条件 `startPictureInPicture` 重试、直播 `positiveInfinity` 时间范围、DisplayImmediately 帧，并武装后台自动画中画；首页状态行改为 bottom inset，由自适应输入框让位，避免被 Tab 遮挡。
+- **PiP / Live Activity exclusivity**: Picture in Picture sessions no longer start or refresh Live Activities. / **PiP / 灵动岛互斥**：画中画会话不再启动或刷新灵动岛 Live Activity。
 - **Flow tail ASR drop**: after mic stop, iOS Flow now uses a longer silence drain (350 ms), a fixed 150 ms post-roll, expanded final-chunk ASR recovery, and a partial transcript guard so weak trailing syllables are less likely to disappear from the result. / **Flow 尾音识别丢失**：松手后 iOS Flow 采用更长的静音排空（350 ms）、固定 150 ms 尾音保留、增强末块 ASR 恢复与 partial 兜底，降低弱尾音从结果中消失的概率。
 - **Flow batch ASR fallback**: when pipelined chunk output is clearly shorter than the live partial, the host re-transcribes the full utterance PCM captured during recording (Mac-style safety net). / **Flow 整句 ASR 兜底**：流水线拼接结果明显短于实时 partial 时，主 App 对录音期间累积的整段 PCM 重新识别（对齐 Mac 双保险）。
 
 ### Changed
+- **Unified navigation icons**: iPhone History and Personal Dictionary tabs now use the same SF Symbols as the Mac and iPad sidebars. / **统一导航图标**：iPhone 的历史记录与个性词库 Tab 现使用与 Mac、iPad 侧边栏一致的 SF Symbols。
+- **Mac header actions**: personal-word and polish-style add buttons now match the adjacent search field height and use a consistent capsule shape. / **Mac 页头操作**：添加个性词与添加润色风格按钮现与相邻搜索框等高，并统一使用胶囊外形。
+- **Responsive Mac polish styles**: replace fixed full-width style rows with iOS-aligned adaptive cards that reflow with the window width. / **Mac 润色风格响应式布局**：将固定通栏列表改为对齐 iOS 的自适应卡片，并随窗口宽度自动重排。
 - **Mac MLX tail drain**: streaming capture now uses the shared `FlowUtteranceEndCoordinator` (silence drain + post-roll) instead of an inline poll loop. / **Mac MLX 尾音排空**：流式采集改用 Shared 层 `FlowUtteranceEndCoordinator`（静音排空 + post-roll），替代内联轮询循环。
+- **Default Flow keep-alive**: new installs default to Picture in Picture instead of Dynamic Island. / **默认 Flow 保活**：新安装默认使用画中画，不再默认灵动岛。
 
 ### Added
+- **Mac personal words**: add custom dictionary terms on macOS with automatic recognition-alias generation and iCloud sync. / **Mac 个性词**：可在 macOS 添加自定义词条，自动生成识别别名并通过 iCloud 同步。
 - **Polish style packs**: choose a complete writing personality from the new iOS tab or Mac sidebar, create custom prompts, and sync selections and custom styles through iCloud. / **润色风格包**：可在 iOS 新 Tab 或 Mac 侧栏选择完整写作人格、创建自定义提示词，并通过 iCloud 同步选择与自定义风格。
-- **PiP Flow keep-alive**: Settings → Voice session lets you choose **Dynamic Island** (default, unchanged behaviour) or **Picture in Picture** — a live waveform PiP keeps the host alive with the mic released between utterances; closing PiP ends the session. / **PiP Flow 保活**：设置 → 语音会话可选 **灵动岛**（默认，行为不变）或 **画中画** — 实时波形 PiP 保活、句间释麦；关闭 PiP 即结束会话。
+- **PiP Flow keep-alive**: Settings → Voice session lets you choose **Picture in Picture** (default) or **Dynamic Island** — a live waveform PiP keeps the host alive with the mic released between utterances; closing PiP ends the session. / **PiP Flow 保活**：设置 → 语音会话可选 **画中画**（默认）或 **灵动岛** — 实时波形 PiP 保活、句间释麦；关闭 PiP 即结束会话。
 - **Mac MLX streaming ASR**: local dictation uses Qwen3-ASR via mlx-audio-swift with overlay partial preview, tail drain, vocabulary prompt, and polish-before-insert. / **Mac MLX 流式 ASR**：本地听写改用 mlx-audio-swift 的 Qwen3-ASR，支持浮层 partial 预览、尾部截断、词库 prompt 与润色后再插入。
 
 ### Changed
