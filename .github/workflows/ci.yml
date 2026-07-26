@@ -84,5 +84,6 @@ jobs:
             -configuration Debug \
             -only-testing:OSGKeyboardTests \
             -only-testing:OSGKeyboardExtTests \
-            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGN_IDENTITY="-" \
             | xcpretty

@@ -77,8 +77,8 @@ final class FlowResultDeliveryTests: XCTestCase {
             action: .stopRecording,
             localeId: "auto"
         )
+        FlowSessionBridge.markSessionActive(duration: 60, sessionId: sessionId, defaults: defaults)
         FlowSessionBridge.writeCommand(command, defaults: defaults)
-        FlowSessionBridge.markSessionActive(duration: 60, defaults: defaults)
 
         guard let polled = poller.consumeIfNew(FlowSessionBridge.latestCommand(defaults: defaults)) else {
             return XCTFail("expected command")
