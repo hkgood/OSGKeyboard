@@ -34,6 +34,10 @@ enum MacICloudSyncBootstrap {
         cloudSync?.dictionarySyncService ?? PersonalDictionaryCloudSync(makeStore: { AppGroupStore(defaults: .standard) })
     }
 
+    static var polishStyleSync: PolishStyleCloudSync {
+        cloudSync?.polishStyleSyncService ?? PolishStyleCloudSync(makeStore: { AppGroupStore(defaults: .standard) })
+    }
+
     static var appCloudSync: AppCloudSync {
         cloudSync ?? AppCloudSync.shared
     }

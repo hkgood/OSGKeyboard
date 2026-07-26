@@ -49,27 +49,47 @@ public enum PolishIntensity: String, Codable, Sendable, CaseIterable {
     /// service appends this verbatim so the LLM has an explicit,
     /// non-ambiguous constraint per call.
     public var promptGuideline: String {
+        promptGuideline(styleID: nil)
+    }
+
+    /// Intensity guideline for the LLM prompt. When the active style limits
+    /// heavy restructuring (chat/light/dating), heavy still improves clarity
+    /// but must not override the style pack's length and format rules.
+    public func promptGuideline(styleID: String?) -> String {
+        let base: String
         switch self {
         case .light:
-            return """
+            base = """
             Light rewrite: remove isolated filler words (嗯, 呃, 那个, 就是, 然后, 对, ok, um, uh) and obvious duplicated fragments only. \
             Do not rephrase otherwise-clear wording. \
-            Still restore punctuation, sentence breaks, and content-triggered structure (lists, paragraphs) per the global output contract.
+            Still restore punctuation and sentence breaks per the global output contract and active style pack.
             """
         case .medium:
-            return """
+            base = """
             Medium rewrite: fix obvious ASR errors (homophones, missing/extra characters), remove fillers and duplicated fragments, \
             adjust obviously-broken word order. Preserve the speaker's voice. \
-            Still restore punctuation, sentence breaks, and content-triggered structure per the global output contract. \
+            Still restore punctuation and breaks per the global output contract and active style pack. \
             Do not invent facts or change numbers/proper nouns.
             """
         case .heavy:
-            return """
-            Heavy rewrite: apply medium corrections, then you may reorganize paragraphs, split long sentences, and listify enumerated content. \
-            Punctuation and structure are mandatory at every intensity. \
+            base = """
+            Heavy rewrite: apply medium corrections, then you may reorganize paragraphs, split long sentences, and listify enumerated content when the active style pack allows it. \
+            Punctuation is mandatory at every intensity. \
             Preserve every fact, number, and proper noun. Do not add information.
             """
         }
+
+        guard self == .heavy,
+              let styleID,
+              PolishStylePackCatalog.limitsHeavyRestructuring(id: styleID)
+        else {
+            return base
+        }
+
+        return base + """
+
+        Style override: the active style pack limits heavy restructuring. Do not expand length, add paragraphs for polish only, or introduce numbered lists unless the transcript explicitly enumerates items. Keep the style pack's chat rhythm, tone, and format rules authoritative.
+        """
     }
 
     /// Legacy persisted value `"off"` maps to `.medium` on read.

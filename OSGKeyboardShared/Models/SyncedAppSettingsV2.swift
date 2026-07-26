@@ -27,6 +27,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
     public var handednessPreference: SyncedField<HandednessPreference>
     public var cursorDragNavigationEnabled: SyncedField<Bool>
     public var polishIntensity: SyncedField<PolishIntensity>
+    public var activePolishStyleId: SyncedField<String>
     public var llmThinkingEnabled: SyncedField<Bool>
     public var flowSkipAppSwitch: SyncedField<Bool>
     public var flowInactivityDuration: SyncedField<FlowInactivityDuration>
@@ -48,6 +49,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         handednessPreference: SyncedField<HandednessPreference>,
         cursorDragNavigationEnabled: SyncedField<Bool>,
         polishIntensity: SyncedField<PolishIntensity>,
+        activePolishStyleId: SyncedField<String>,
         llmThinkingEnabled: SyncedField<Bool>,
         flowSkipAppSwitch: SyncedField<Bool>,
         flowInactivityDuration: SyncedField<FlowInactivityDuration>
@@ -68,6 +70,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         self.handednessPreference = handednessPreference
         self.cursorDragNavigationEnabled = cursorDragNavigationEnabled
         self.polishIntensity = polishIntensity
+        self.activePolishStyleId = activePolishStyleId
         self.llmThinkingEnabled = llmThinkingEnabled
         self.flowSkipAppSwitch = flowSkipAppSwitch
         self.flowInactivityDuration = flowInactivityDuration
@@ -90,6 +93,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         case handednessPreference
         case cursorDragNavigationEnabled
         case polishIntensity
+        case activePolishStyleId
         case llmThinkingEnabled
         case flowSkipAppSwitch
         case flowInactivityDuration
@@ -119,6 +123,14 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             forKey: .cursorDragNavigationEnabled
         )
         polishIntensity = try container.decode(SyncedField<PolishIntensity>.self, forKey: .polishIntensity)
+        activePolishStyleId = try container.decodeIfPresent(
+            SyncedField<String>.self,
+            forKey: .activePolishStyleId
+        ) ?? SyncedField(
+            value: PolishStylePackCatalog.defaultID,
+            updatedAt: polishIntensity.updatedAt,
+            deviceID: polishIntensity.deviceID
+        )
         llmThinkingEnabled = try container.decodeIfPresent(
             SyncedField<Bool>.self,
             forKey: .llmThinkingEnabled
@@ -169,6 +181,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             handednessPreference.updatedAt,
             cursorDragNavigationEnabled.updatedAt,
             polishIntensity.updatedAt,
+            activePolishStyleId.updatedAt,
             llmThinkingEnabled.updatedAt,
             flowSkipAppSwitch.updatedAt,
             flowInactivityDuration.updatedAt,
@@ -206,6 +219,7 @@ public extension SyncedAppSettingsV2 {
             handednessPreference: field(configuration.handednessPreference),
             cursorDragNavigationEnabled: field(configuration.cursorDragNavigationEnabled),
             polishIntensity: field(configuration.polishIntensity),
+            activePolishStyleId: field(configuration.activePolishStyleId),
             llmThinkingEnabled: field(configuration.llmThinkingEnabled),
             flowSkipAppSwitch: field(configuration.flowSkipAppSwitch),
             flowInactivityDuration: field(configuration.flowInactivityDuration)
@@ -235,6 +249,7 @@ public extension SyncedAppSettingsV2 {
             handednessPreference: field(legacy.handednessPreference),
             cursorDragNavigationEnabled: field(legacy.cursorDragNavigationEnabled),
             polishIntensity: field(legacy.polishIntensity),
+            activePolishStyleId: field(PolishStylePackCatalog.defaultID),
             llmThinkingEnabled: field(false),
             flowSkipAppSwitch: field(legacy.flowSkipAppSwitch),
             flowInactivityDuration: field(legacy.flowInactivityDuration)
@@ -267,6 +282,10 @@ public extension SyncedAppSettingsV2 {
                 remote: remote.cursorDragNavigationEnabled
             ),
             polishIntensity: .merge(local: local.polishIntensity, remote: remote.polishIntensity),
+            activePolishStyleId: .merge(
+                local: local.activePolishStyleId,
+                remote: remote.activePolishStyleId
+            ),
             llmThinkingEnabled: .merge(local: local.llmThinkingEnabled, remote: remote.llmThinkingEnabled),
             flowSkipAppSwitch: .merge(local: local.flowSkipAppSwitch, remote: remote.flowSkipAppSwitch),
             flowInactivityDuration: .merge(
@@ -292,6 +311,7 @@ public extension SyncedAppSettingsV2 {
         configuration.handednessPreference = handednessPreference.value
         configuration.cursorDragNavigationEnabled = cursorDragNavigationEnabled.value
         configuration.polishIntensity = polishIntensity.value
+        configuration.activePolishStyleId = activePolishStyleId.value
         configuration.llmThinkingEnabled = llmThinkingEnabled.value
         configuration.flowSkipAppSwitch = flowSkipAppSwitch.value
         configuration.flowInactivityDuration = flowInactivityDuration.value
@@ -319,6 +339,7 @@ public extension SyncedAppSettingsV2 {
         patch(&copy.handednessPreference, value: configuration.handednessPreference)
         patch(&copy.cursorDragNavigationEnabled, value: configuration.cursorDragNavigationEnabled)
         patch(&copy.polishIntensity, value: configuration.polishIntensity)
+        patch(&copy.activePolishStyleId, value: configuration.activePolishStyleId)
         patch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
         patch(&copy.flowSkipAppSwitch, value: configuration.flowSkipAppSwitch)
         patch(&copy.flowInactivityDuration, value: configuration.flowInactivityDuration)
@@ -349,6 +370,7 @@ public extension SyncedAppSettingsV2 {
         touch(&copy.handednessPreference, value: configuration.handednessPreference)
         touch(&copy.cursorDragNavigationEnabled, value: configuration.cursorDragNavigationEnabled)
         touch(&copy.polishIntensity, value: configuration.polishIntensity)
+        touch(&copy.activePolishStyleId, value: configuration.activePolishStyleId)
         touch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
         touch(&copy.flowSkipAppSwitch, value: configuration.flowSkipAppSwitch)
         touch(&copy.flowInactivityDuration, value: configuration.flowInactivityDuration)

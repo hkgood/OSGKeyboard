@@ -226,18 +226,17 @@ public actor PolishingService {
             ## 全局输出契约（所有润色档位均必须遵守，优先级最高）
             1. **禁止新增 emoji**：原文无 emoji 时输出不得出现 emoji；原文有 emoji 时仅可原样保留。
             2. **必须恢复合理标点**：逗号、句号、问号、感叹号；按语义分句，不要输出无标点长段。
-            3. **必须做内容触发型结构化**（所有档位）：
-               - 「第一点/第二个/步骤一/一是二是三是」→ 转为 `1. ` 编号列表并换行
-               - 「首先/其次/最后/另外/一方面」→ 分段换行，不强行编号
-               - 待办、会议纪要、多个问题、长文本多句 → 按语义分段
-               - 短但含结构信号的文本仍要格式化；极短且无结构的已由系统跳过
+            3. **结构服从当前风格**：
+               - 保留原文明确表达的顺序、分点、步骤和层级，不得把独立事项揉成一段
+               - 是否编号、分组或仅自然分段，由当前风格包的结构规则决定
+               - 不得为了视觉整齐而给普通聊天、单一事项或连续叙述强加列表
             4. **数字要结合上下文判断**（重要）：
                - 有意义的数字（价格、日期、数量、时间、电话、版本号）→ 保持不变
                - 但语音里的序号常被误识别成数字或时间，需结合上下文修回并列表化：
                  · 已出现「第一点」，随后的「第2:00 / 第2点0 / 第二零零」多半是「第二点」，「第3:00」多半是「第三点」
                  · 「1、2、3」「一、二、三」在列举语境里就是序号，转成 `1. ` 列表
                - 判断依据是上下文里是否在“分点/列举”，不要机械地保留听错的数字
-            5. **保守改写**：能加标点就不改词；能分段就不重写；能小改就不大改；不新增事实。
+            5. **改写边界**：具体措辞和改写幅度服从当前风格与力度，但不得新增事实、改变立场或虚构上下文。
             6. **不改**人名、地名、专有名词（除非 ASR 明显错误）。
             7. 输出语言必须与原文一致；不翻译、不扩写成 AI 文案。
             8. 只输出最终文本：不要解释、不要引号包裹、不要前缀说明。
@@ -247,17 +246,17 @@ public actor PolishingService {
             ## Global output contract (mandatory at every intensity — highest priority)
             1. **No new emojis**: if the original has none, output must have none; preserve originals only.
             2. **Restore proper punctuation**: commas, periods, question marks; break run-on speech into sentences.
-            3. **Content-triggered structure** (every intensity):
-               - "first point / second / step one / one is two is three" → numbered `1. ` list with line breaks
-               - "firstly / secondly / finally / on the other hand" → paragraph breaks, not forced numbering
-               - todos, meeting notes, multiple questions, long multi-clause speech → semantic paragraphs
+            3. **Structure follows the active style**:
+               - Preserve explicit ordering, points, steps, and hierarchy; do not collapse independent items.
+               - Let the active style decide whether to number, group, or use natural paragraphs.
+               - Do not force lists onto ordinary chat, a single item, or continuous narrative.
             4. **Judge numbers by context** (important):
                - Meaningful numbers (prices, dates, quantities, times, phone numbers, versions) → keep unchanged.
                - But spoken ordinals are often misrecognized as digits/times; use context to restore and listify:
                  · after a "first point", a following "2:00 / point 2 / two oh oh" is likely "second point", "3:00" is "third point"
                  · "1, 2, 3" or "one, two, three" in an enumerating context are ordinals → convert to a `1. ` list
                - Decide by whether the context is enumerating; do not mechanically preserve a misheard number.
-            5. **Conservative rewrite**: prefer punctuation over rewording; prefer breaks over rewriting; minimal changes.
+            5. **Rewrite boundary**: wording and rewrite depth follow the active style and intensity, but never add facts, change the user's position, or invent context.
             6. **Do not** alter person names, places, or proper nouns unless clearly misrecognized.
             7. Output language must match the input; do not translate or expand into marketing copy.
             8. Output the final text only: no explanation, no quotes, no preamble.
@@ -270,77 +269,23 @@ public actor PolishingService {
         context: PolishContext,
         providerId: String
     ) -> String {
-        let dictionary = store.personalDictionary
         let dictionaryBlock = Self.mergedDictionaryBlock(
-            dictionary: dictionary,
+            dictionary: store.personalDictionary,
             supplement: context.dictionarySupplement
         )
-        let contextGuideline = context.appContext.polishGuideline
-        let intensityGuideline = context.intensity.promptGuideline
-        let contract = Self.globalOutputContract(useChinese: shouldUseChineseGuidance(providerId: providerId))
-        let precedingBlock = context.precedingForPrompt
-            .map {
-                """
-                ## 上文（仅供参考 — 用于术语/语气/是否续接列表或换行；**禁止**改写上文，**禁止**从上文新增事实）
-                \($0)
-
-                """
-            } ?? ""
         let useChinese = shouldUseChineseGuidance(providerId: providerId)
-
-        if useChinese {
-            return """
-            你是智能语音输入法的后处理引擎。一次完成：ASR 纠错、标点恢复、语义分段、按档位润色。
-
-            \(contract)
-
-            ## 任务 1：纠错
-            - 修正明显的语音识别错误（同音字、近音字、漏字、错字）
-            - 修正专有名词、英文术语（参考下面的用户词典）
-
-            ## 任务 2：标点与结构
-            - 恢复合理标点与句子边界
-            - 识别口语中的列表、步骤、分点、会议纪要结构并格式化
-            - 长文本按语义换行分段
-
-            ## 任务 3：润色（按档位）
-            当前输入场景：\(context.appContext.rawValue)
-            风格要求：\(contextGuideline)
-            润色档位：\(intensityGuideline)
-
-            \(dictionaryBlock.isEmpty ? "" : "## 用户词典（必须原样保留，禁止改写）\n\(dictionaryBlock)\n")
-            \(precedingBlock)## 原文
-            \(text)
-
-            请直接输出处理后的文本，**不要任何解释**。
-            """
-        } else {
-            return """
-            You are the post-processing engine of a voice-input keyboard. In one pass: fix ASR errors, restore punctuation, structure content, and polish per intensity.
-
-            \(contract)
-
-            ## Task 1: Correction
-            - Fix obvious speech-recognition errors (homophones, near-misses, missing/extra characters).
-            - Correct proper nouns, English terms, and technical identifiers (see the user dictionary below).
-
-            ## Task 2: Punctuation and structure
-            - Restore proper punctuation and sentence boundaries.
-            - Detect oral lists, steps, enumerated points, meeting-note structure and format them.
-            - Break long speech into semantic paragraphs.
-
-            ## Task 3: Polish (per intensity)
-            Current input context: \(context.appContext.rawValue)
-            Style guideline: \(contextGuideline)
-            Polish intensity: \(intensityGuideline)
-
-            \(dictionaryBlock.isEmpty ? "" : "## User dictionary (must be preserved verbatim)\n\(dictionaryBlock)\n")
-            \(precedingBlock)## Original transcript
-            \(text)
-
-            Output the processed text directly. **No explanation, no quotes, no preamble.**
-            """
-        }
+        let style = PolishStylePackCatalog.resolve(
+            id: store.activePolishStyleId,
+            userCatalog: store.polishStyleCatalog
+        )
+        return PolishPromptComposer.compose(
+            text: text,
+            style: style,
+            context: context,
+            dictionaryBlock: dictionaryBlock,
+            globalContract: Self.globalOutputContract(useChinese: useChinese),
+            useChineseGuidance: useChinese
+        )
     }
 
     internal static func mergedDictionaryBlock(

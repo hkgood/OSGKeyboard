@@ -87,6 +87,11 @@
 "polishScenario.chip.document" = "Doc";
 "polishScenario.chip.todo" = "TODO";
 "polishScenario.chip.custom" = "Custom";
+"polishStyle.light" = "Light Cleanup";
+"polishStyle.structured" = "Clear Structure";
+"polishStyle.formal" = "Formal Writing";
+"polishStyle.dating" = "Dating Coach";
+"polishStyle.chat" = "Daily Chat";
 
 /* v0.3.0: Polish intensity picker */
 "polish.intensity.off" = "Off";
@@ -129,6 +134,24 @@
 "mac.section.dashboard" = "Home";
 "mac.section.history" = "History";
 "mac.section.dictionary" = "Dictionary";
+"mac.section.styles" = "Polish Styles";
+"mac.styles.subtitle" = "Choose or create a complete writing personality for polished dictation.";
+"mac.styles.add" = "Add Style";
+"mac.styles.edit" = "Edit Style";
+"mac.styles.builtin" = "Built-in";
+"mac.styles.custom" = "My Styles";
+"mac.styles.copy" = "Copy";
+"mac.styles.light" = "Minimal rewriting with recognition and punctuation fixes.";
+"mac.styles.structured" = "Clear paragraphs and lists for multiple points.";
+"mac.styles.formal" = "Professional writing for email and work.";
+"mac.styles.dating" = "Warm, playful, respectful messages that invite conversation.";
+"mac.styles.chat" = "Short, natural messages without a formal tone.";
+"mac.styles.customDescription" = "Custom complete writing personality";
+"mac.styles.error" = "Couldn’t Save Style";
+"mac.styles.validation" = "Check the name, prompt length, and the 8-style limit.";
+"mac.styles.name" = "Style name";
+"mac.styles.prompt" = "Complete prompt";
+"mac.styles.hint" = "Use {{DICTIONARY}} to place the personal dictionary. System rules are appended automatically.";
 "mac.section.settings" = "Settings";
 "mac.brand.subtitle" = "AI DICTATION";
 "mac.brand.tagline" = "Speak it. It’s typed.";
@@ -188,6 +211,8 @@
 "mac.dict.emptyBody" = "Add words on your iPhone or iPad to improve recognition accuracy. They sync here via iCloud.";
 "mac.dict.noMatch" = "No matches";
 "mac.cancel" = "Cancel";
+"mac.save" = "Save";
+"mac.done" = "Done";
 "mac.delete" = "Delete";
 "mac.dict.deleteTitle" = "Delete this word?";
 "mac.dict.deleteMessage" = "This cannot be undone.";

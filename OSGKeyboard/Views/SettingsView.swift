@@ -218,7 +218,7 @@ struct SettingsView: View {
 
     private var dictionaryAndPolishSection: some View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            sectionHeader("settings.dictionaryAndPolish.title")
+            sectionHeader("settings.polishPreferences.title")
             VStack(spacing: 0) {
                 polishIntensityPreferenceRows
 

@@ -19,6 +19,8 @@ public struct LiveConfigurationSnapshot {
     public let polishIntensity: PolishIntensity
     public let llmThinkingEnabled: Bool
     public let personalDictionary: PersonalDictionary
+    public let polishStyleCatalog: PolishStyleCatalog
+    public let activePolishStyleId: String
     public let detectedAppContext: (context: AppContext, observedAt: Date)?
     public let cloudASRPersistence: UserDefaults
 
@@ -35,6 +37,8 @@ public struct LiveConfigurationSnapshot {
         polishIntensity: PolishIntensity,
         llmThinkingEnabled: Bool,
         personalDictionary: PersonalDictionary,
+        polishStyleCatalog: PolishStyleCatalog,
+        activePolishStyleId: String,
         detectedAppContext: (context: AppContext, observedAt: Date)?,
         cloudASRPersistence: UserDefaults
     ) {
@@ -50,6 +54,8 @@ public struct LiveConfigurationSnapshot {
         self.polishIntensity = polishIntensity
         self.llmThinkingEnabled = llmThinkingEnabled
         self.personalDictionary = personalDictionary
+        self.polishStyleCatalog = polishStyleCatalog
+        self.activePolishStyleId = activePolishStyleId
         self.detectedAppContext = detectedAppContext
         self.cloudASRPersistence = cloudASRPersistence
     }
@@ -69,6 +75,8 @@ public struct LiveConfigurationSnapshot {
             polishIntensity: config.polishIntensity,
             llmThinkingEnabled: config.llmThinkingEnabled,
             personalDictionary: fallback.personalDictionary,
+            polishStyleCatalog: fallback.polishStyleCatalog,
+            activePolishStyleId: fallback.activePolishStyleId,
             detectedAppContext: fallback.detectedAppContext,
             cloudASRPersistence: fallback.defaults
         )
@@ -99,6 +107,8 @@ public struct LiveConfigurationStore: ConfigurationStore, @unchecked Sendable {
     public var polishIntensity: PolishIntensity { snapshot.polishIntensity }
     public var llmThinkingEnabled: Bool { snapshot.llmThinkingEnabled }
     public var personalDictionary: PersonalDictionary { snapshot.personalDictionary }
+    public var polishStyleCatalog: PolishStyleCatalog { snapshot.polishStyleCatalog }
+    public var activePolishStyleId: String { snapshot.activePolishStyleId }
     public var detectedAppContext: (context: AppContext, observedAt: Date)? { snapshot.detectedAppContext }
     public var cloudASRPersistence: UserDefaults { snapshot.cloudASRPersistence }
 

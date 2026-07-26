@@ -179,6 +179,7 @@
 "settings.about.title" = "About";
 "settings.preferences.title" = "Preferences";
 "settings.dictionaryAndPolish.title" = "Dictionary & polish";
+"settings.polishPreferences.title" = "Polish preferences";
 "settings.handedness.title" = "Handedness";
 "settings.handedness.left" = "Left hand";
 "settings.handedness.right" = "Right hand";
@@ -357,7 +358,37 @@
 "tab.keyboard" = "Keyboard";
 "tab.history" = "History";
 "tab.dictionary" = "Dictionary";
+"tab.styles" = "Styles";
 "tab.settings" = "Settings";
+
+/* Polish style packs */
+"polishStyles.title" = "Polish styles";
+"polishStyles.add" = "Add style";
+"polishStyles.edit" = "Edit style";
+"polishStyles.viewPrompt" = "View full prompt";
+"polishStyles.duplicate" = "Duplicate";
+"polishStyles.builtin.section" = "Built-in";
+"polishStyles.custom.section" = "My styles";
+"polishStyles.intro.title" = "Choose a writing personality";
+"polishStyles.intro.body" = "The selected style shapes every polished dictation. Your custom styles sync through iCloud when settings sync is enabled.";
+"polishStyles.light.description" = "Fix recognition errors and punctuation with minimal rewriting.";
+"polishStyles.structured.description" = "Organize multiple points into clear paragraphs and lists.";
+"polishStyles.formal.description" = "Professional, restrained writing for email and work.";
+"polishStyles.dating.description" = "Warm, playful messages that invite conversation while respecting boundaries.";
+"polishStyles.chat.description" = "Short, natural messages without a formal tone.";
+"polishStyles.custom.description" = "Custom complete writing personality";
+"polishStyles.copyName" = "%@ Copy";
+"polishStyles.editor.name" = "Name";
+"polishStyles.editor.namePlaceholder" = "Style name";
+"polishStyles.editor.prompt" = "Complete prompt";
+"polishStyles.editor.hint" = "Use {{DICTIONARY}} where the personal dictionary should be inserted. System safety, rewrite intensity, and output rules are appended automatically.";
+"polishStyles.error.title" = "Couldn’t save style";
+"polishStyles.error.emptyName" = "Enter a style name.";
+"polishStyles.error.emptyPrompt" = "The prompt cannot be empty.";
+"polishStyles.error.limit" = "You can save up to 8 custom styles.";
+"polishStyles.error.promptTooLong" = "The prompt can contain up to 6,000 characters.";
+"polishStyles.error.builtin" = "Built-in styles cannot be changed. Duplicate one to customize it.";
+"polishStyles.error.generic" = "Try again.";
 
 /* History */
 "history.title" = "History";

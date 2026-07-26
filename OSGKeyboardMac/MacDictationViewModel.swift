@@ -13,6 +13,7 @@ enum MacSection: String, CaseIterable, Identifiable {
     case dashboard
     case history
     case dictionary
+    case styles
     case settings
 
     var id: String { rawValue }
@@ -22,6 +23,7 @@ enum MacSection: String, CaseIterable, Identifiable {
         case .dashboard: return MacL10n.string("mac.section.dashboard", language: language)
         case .history: return MacL10n.string("mac.section.history", language: language)
         case .dictionary: return MacL10n.string("mac.section.dictionary", language: language)
+        case .styles: return MacL10n.string("mac.section.styles", language: language)
         case .settings: return MacL10n.string("mac.section.settings", language: language)
         }
     }
@@ -31,6 +33,7 @@ enum MacSection: String, CaseIterable, Identifiable {
         case .dashboard: return "house"
         case .history: return "clock.arrow.circlepath"
         case .dictionary: return "character.book.closed"
+        case .styles: return "text.badge.star"
         case .settings: return "gearshape"
         }
     }
@@ -63,6 +66,7 @@ final class MacDictationViewModel: ObservableObject {
     @Published var sessionSeconds: Int = 0
     @Published var foregroundAppName: String?
     @Published var dictionaryRevision = 0
+    @Published var polishStylesRevision = 0
 
     @Published var autoPasteEnabled: Bool
     @Published var hotkeyEnabled: Bool
@@ -135,6 +139,10 @@ final class MacDictationViewModel: ObservableObject {
 
     func refreshDictionaryFromCloud() {
         dictionaryRevision += 1
+    }
+
+    func refreshPolishStyles() {
+        polishStylesRevision += 1
     }
 
     // MARK: - Derived

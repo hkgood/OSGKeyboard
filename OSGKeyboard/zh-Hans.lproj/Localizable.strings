@@ -179,6 +179,7 @@
 "settings.about.title" = "关于";
 "settings.preferences.title" = "偏好设置";
 "settings.dictionaryAndPolish.title" = "词库与润色";
+"settings.polishPreferences.title" = "润色偏好";
 "settings.handedness.title" = "握持偏好";
 "settings.handedness.left" = "左手";
 "settings.handedness.right" = "右手";
@@ -356,7 +357,37 @@
 "tab.keyboard" = "键盘";
 "tab.history" = "历史";
 "tab.dictionary" = "词库";
+"tab.styles" = "风格";
 "tab.settings" = "设置";
+
+/* 润色风格包 */
+"polishStyles.title" = "润色风格";
+"polishStyles.add" = "添加风格";
+"polishStyles.edit" = "编辑风格";
+"polishStyles.viewPrompt" = "查看完整提示词";
+"polishStyles.duplicate" = "创建副本";
+"polishStyles.builtin.section" = "内置风格";
+"polishStyles.custom.section" = "我的风格";
+"polishStyles.intro.title" = "选择完整写作人格";
+"polishStyles.intro.body" = "选中的风格会影响每次听写润色。开启设置同步后，自定义风格会通过 iCloud 保存。";
+"polishStyles.light.description" = "修正识别错误与标点，尽量少改原话。";
+"polishStyles.structured.description" = "将多个事项整理为清晰段落与列表。";
+"polishStyles.formal.description" = "适合邮件和工作的专业、克制表达。";
+"polishStyles.dating.description" = "自然会撩、有温度，也尊重对方边界。";
+"polishStyles.chat.description" = "简短自然的聊天消息，避免公文腔。";
+"polishStyles.custom.description" = "自定义完整写作人格";
+"polishStyles.copyName" = "%@副本";
+"polishStyles.editor.name" = "名称";
+"polishStyles.editor.namePlaceholder" = "风格名称";
+"polishStyles.editor.prompt" = "完整提示词";
+"polishStyles.editor.hint" = "使用 {{DICTIONARY}} 指定个人词典的插入位置。系统会自动追加安全边界、润色力度和输出契约。";
+"polishStyles.error.title" = "无法保存风格";
+"polishStyles.error.emptyName" = "请输入风格名称。";
+"polishStyles.error.emptyPrompt" = "提示词不能为空。";
+"polishStyles.error.limit" = "最多可保存 8 个自定义风格。";
+"polishStyles.error.promptTooLong" = "提示词最多可输入 6,000 个字符。";
+"polishStyles.error.builtin" = "内置风格不能直接修改，请创建副本后自定义。";
+"polishStyles.error.generic" = "请重试。";
 
 /* History */
 "history.title" = "历史";

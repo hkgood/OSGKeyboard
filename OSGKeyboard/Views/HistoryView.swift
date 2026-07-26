@@ -87,6 +87,7 @@ struct HistoryView: View {
                         .textCase(.uppercase)
                         .tracking(0.5)
                 }
+                .listSectionMargins(.horizontal, Spacing.lg)
             }
         }
         .listStyle(.insetGrouped)

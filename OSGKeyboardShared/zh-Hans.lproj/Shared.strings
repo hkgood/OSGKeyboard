@@ -87,6 +87,11 @@
 "polishScenario.chip.document" = "文档";
 "polishScenario.chip.todo" = "TODO";
 "polishScenario.chip.custom" = "自定义";
+"polishStyle.light" = "轻度清理";
+"polishStyle.structured" = "清晰结构";
+"polishStyle.formal" = "正式表达";
+"polishStyle.dating" = "直男癌拯救器";
+"polishStyle.chat" = "日常聊天";
 
 /* v0.3.0: 润色档位 */
 "polish.intensity.off" = "关闭";
@@ -129,6 +134,24 @@
 "mac.section.dashboard" = "首页";
 "mac.section.history" = "历史";
 "mac.section.dictionary" = "词库";
+"mac.section.styles" = "润色风格";
+"mac.styles.subtitle" = "为听写润色选择或创建完整写作人格。";
+"mac.styles.add" = "添加风格";
+"mac.styles.edit" = "编辑风格";
+"mac.styles.builtin" = "内置风格";
+"mac.styles.custom" = "我的风格";
+"mac.styles.copy" = "副本";
+"mac.styles.light" = "修正识别与标点，尽量少改原话。";
+"mac.styles.structured" = "将多个事项整理成清晰段落与列表。";
+"mac.styles.formal" = "适合邮件和工作的专业表达。";
+"mac.styles.dating" = "自然会撩、有温度且尊重边界的聊天表达。";
+"mac.styles.chat" = "简短自然的聊天消息，避免公文腔。";
+"mac.styles.customDescription" = "自定义完整写作人格";
+"mac.styles.error" = "无法保存风格";
+"mac.styles.validation" = "请检查名称、提示词长度及 8 个风格的数量上限。";
+"mac.styles.name" = "风格名称";
+"mac.styles.prompt" = "完整提示词";
+"mac.styles.hint" = "使用 {{DICTIONARY}} 指定个人词典位置；系统规则会自动追加。";
 "mac.section.settings" = "设置";
 "mac.brand.subtitle" = "AI 听写";
 "mac.brand.tagline" = "开口即文字。";
@@ -188,6 +211,8 @@
 "mac.dict.emptyBody" = "在 iPhone 或 iPad 上添加词条以提升识别准确性，它们会通过 iCloud 同步到这里。";
 "mac.dict.noMatch" = "无匹配结果";
 "mac.cancel" = "取消";
+"mac.save" = "保存";
+"mac.done" = "完成";
 "mac.delete" = "删除";
 "mac.dict.deleteTitle" = "删除该词条？";
 "mac.dict.deleteMessage" = "此操作无法撤销。";
