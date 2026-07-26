@@ -7,11 +7,7 @@ import Foundation
 import os
 
 enum MacMLXLiveCapture {
-    private static let tailDrainPolicy = FlowCaptureTailDrainPolicy(
-        silenceRMSThreshold: 0.015,
-        silenceDurationSeconds: 0.35,
-        maxDrainSeconds: 0.75
-    )
+    private static let tailDrainPolicy = FlowCaptureTailDrainPolicy.macMLX
 
     /// Runs MLX streaming ASR until `finishSignal` fires, then tail-drains and finalizes.
     static func run(
@@ -47,6 +43,7 @@ enum MacMLXLiveCapture {
 
             let drainTracker = FlowCaptureDrainTracker()
             let draining = OSAllocatedUnfairLock(initialState: false)
+            let drainComplete = OSAllocatedUnfairLock(initialState: false)
             let pendingFeed = OSAllocatedUnfairLock(initialState: [Float]())
             let feedIntervalSamples = 1_600 // 100 ms @ 16 kHz
 
@@ -60,6 +57,11 @@ enum MacMLXLiveCapture {
                     for await _ in finishSignal {
                         draining.withLock { $0 = true }
                         drainTracker.beginDrain()
+                        _ = await FlowUtteranceEndCoordinator.awaitTailCapture(
+                            tracker: drainTracker,
+                            policy: tailDrainPolicy
+                        )
+                        drainComplete.withLock { $0 = true }
                         break
                     }
                 }
@@ -67,10 +69,12 @@ enum MacMLXLiveCapture {
                 group.addTask {
                     for await snapshot in audioStream {
                         if Task.isCancelled { break }
+                        if drainComplete.withLock({ $0 }) { break }
                         if draining.withLock({ $0 }) {
-                            drainTracker.noteAudio(samples: snapshot.samples, policy: tailDrainPolicy)
-                            let decision = drainTracker.shouldFinish(policy: tailDrainPolicy)
-                            if decision.finished { break }
+                            drainTracker.noteAudio(
+                                samples: snapshot.samples,
+                                policy: tailDrainPolicy
+                            )
                         }
                         pendingFeed.withLock { buffer in
                             buffer.append(contentsOf: snapshot.samples)

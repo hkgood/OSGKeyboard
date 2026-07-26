@@ -56,7 +56,11 @@ public enum UtteranceStreamChunker {
                 } else if chunkIndex == 0 {
                     // Empty utterance — no chunks.
                 } else {
-                    // Stream ended exactly on boundary; mark prior path complete.
+                    // Stream ended exactly on a chunk boundary; prior emit holds
+                    // all tail audio. Marker so FinalChunkRecovery paths run.
+                    continuation.yield(
+                        UtteranceAudioChunk(index: chunkIndex, samples: [], isLast: true)
+                    )
                 }
 
                 continuation.finish()

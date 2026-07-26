@@ -101,6 +101,7 @@ public actor ChunkedUtterancePipeline {
         var processedChunks = 0
         var previousChunkSamples: [Float] = []
         var lastChunkSamples = 0
+        var didRetryEmptyFinal = false
 
         let feeder = Task {
             for await chunk in UtteranceStreamChunker.chunks(from: stream, config: config) {
@@ -118,20 +119,28 @@ public actor ChunkedUtterancePipeline {
 
             guard let chunk = await queue.dequeue() else { break }
 
+            if chunk.isLast && chunk.samples.isEmpty {
+                continue
+            }
+
             processedChunks += 1
             lastChunkSamples = chunk.samples.count
 
-            if chunk.isLast,
-               chunk.samples.count < config.minFinalChunkSamples,
-               processedChunks > 1,
-               !previousChunkSamples.isEmpty {
-                let mergedSamples = Array(previousChunkSamples.suffix(config.overlapSamples))
-                    + chunk.samples
-                let mergedResult = await transcribeChunk(samples: mergedSamples)
+            if let preMerge = FinalChunkRecovery.preMergePlan(
+                chunk: chunk,
+                processedChunks: processedChunks,
+                previousChunkSamples: previousChunkSamples,
+                config: config
+            ) {
+                FlowPipelineDiagnostics.logFinalChunkRecovery(
+                    action: "preMerge",
+                    chunkIndex: chunk.index
+                )
+                let mergedResult = await transcribeChunk(samples: preMerge.samples)
                 switch mergedResult {
                 case .success(let text):
                     stitcher.removeLastSegment()
-                    stitcher.append(index: max(0, chunk.index - 1), text: text)
+                    stitcher.append(index: preMerge.stitchIndex, text: text)
                     publishPartial(from: stitcher, onPartial: onPartial)
                 case .failure(let message):
                     failedChunks += 1
@@ -153,8 +162,52 @@ public actor ChunkedUtterancePipeline {
             let result = await transcribeChunk(samples: chunk.samples)
             switch result {
             case .success(let text):
-                stitcher.append(index: chunk.index, text: text)
-                publishPartial(from: stitcher, onPartial: onPartial)
+                if chunk.isLast,
+                   !didRetryEmptyFinal,
+                   let retry = FinalChunkRecovery.emptyResultRetryPlan(
+                       chunk: chunk,
+                       previousChunkSamples: previousChunkSamples,
+                       config: config,
+                       asrText: text
+                   ) {
+                    didRetryEmptyFinal = true
+                    FlowPipelineDiagnostics.logFinalChunkRecovery(
+                        action: "emptyRetry",
+                        chunkIndex: chunk.index
+                    )
+                    let retryResult = await transcribeChunk(samples: retry.samples)
+                    switch retryResult {
+                    case .success(let retryText):
+                        let trimmed = retryText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !trimmed.isEmpty {
+                            if retry.stitchIndex < chunk.index {
+                                stitcher.removeLastSegment()
+                            }
+                            stitcher.append(index: retry.stitchIndex, text: retryText)
+                            publishPartial(from: stitcher, onPartial: onPartial)
+                        } else {
+                            stitcher.append(index: chunk.index, text: text)
+                            publishPartial(from: stitcher, onPartial: onPartial)
+                        }
+                    case .failure(let message):
+                        stitcher.append(index: chunk.index, text: text)
+                        publishPartial(from: stitcher, onPartial: onPartial)
+                        failedChunks += 1
+                        chunkWarnings.append(
+                            SharedL10n.format(
+                                "error.asr.chunkFailed",
+                                chunk.index + 1,
+                                message
+                            )
+                        )
+                    case .cancelled:
+                        feeder.cancel()
+                        return .cancelled
+                    }
+                } else {
+                    stitcher.append(index: chunk.index, text: text)
+                    publishPartial(from: stitcher, onPartial: onPartial)
+                }
             case .failure(let message):
                 failedChunks += 1
                 chunkWarnings.append(

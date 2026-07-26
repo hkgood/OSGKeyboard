@@ -64,6 +64,10 @@ final class FlowSessionManager: ObservableObject {
     private var chunkedPipeline: ChunkedUtterancePipeline?
     private var currentPartial = ""
     private var lastFinal = ""
+    /// Partial stitched text captured when the user stops recording.
+    private var bestPartialSnapshot = ""
+    /// Full utterance PCM for batch ASR fallback after pipelined chunking.
+    private var utterancePCMSamples: [Float] = []
     private var chunkWarnings: [String] = []
     private var lastReadyTraceSignature = ""
     private var lastCommandFingerprint = ""
@@ -356,6 +360,8 @@ final class FlowSessionManager: ObservableObject {
         sessionWarning = nil
         currentPartial = ""
         lastFinal = ""
+        bestPartialSnapshot = ""
+        utterancePCMSamples = []
         chunkWarnings = []
         FlowSessionBridge.setHostReady(false)
     }
@@ -1101,6 +1107,8 @@ final class FlowSessionManager: ObservableObject {
         currentCommandSeq = commandSeq
         currentPartial = ""
         lastFinal = ""
+        bestPartialSnapshot = ""
+        utterancePCMSamples = []
         chunkWarnings = []
 
         let localeId = store.localeId
@@ -1194,6 +1202,9 @@ final class FlowSessionManager: ObservableObject {
         refreshHostReady()
         FlowLiveActivityController.update(phase: .processing)
 
+        // Snapshot pipelined partial before drain — fallback if the final chunk ASR drops tail text.
+        bestPartialSnapshot = currentPartial.trimmingCharacters(in: .whitespacesAndNewlines)
+
         // Do NOT cancel `asrTask` or `asr` — drain trailing PCM, then finalize.
 
         // Capture ids now: a cancelled finalize must still clear *this*
@@ -1207,6 +1218,7 @@ final class FlowSessionManager: ObservableObject {
             guard let self else { return }
             let drainReport = await self.capture.endUtteranceAndDrain()
             FlowDiagnostics.logDrain(drainReport)
+            self.utterancePCMSamples = self.capture.consumeUtteranceSamples()
             await self.finalizeUtterance(
                 sessionId: drainingSessionId,
                 utteranceId: drainingUtteranceId,
@@ -1231,6 +1243,8 @@ final class FlowSessionManager: ObservableObject {
         capture.cancelUtterance()
         currentPartial = ""
         lastFinal = ""
+        bestPartialSnapshot = ""
+        utterancePCMSamples = []
         chunkWarnings = []
         currentUtteranceId = nil
         currentCommandSeq = 0
@@ -1257,6 +1271,8 @@ final class FlowSessionManager: ObservableObject {
         capture.cancelUtterance()
         currentPartial = ""
         lastFinal = ""
+        bestPartialSnapshot = ""
+        utterancePCMSamples = []
         chunkWarnings = []
         storeCurrentError(message, kind: kind)
         currentUtteranceId = nil
@@ -1279,6 +1295,8 @@ final class FlowSessionManager: ObservableObject {
         chunkedPipeline = nil
         currentPartial = ""
         lastFinal = ""
+        bestPartialSnapshot = ""
+        utterancePCMSamples = []
         chunkWarnings = []
         storeCurrentError(message, kind: kind)
         currentUtteranceId = nil
@@ -1331,10 +1349,21 @@ final class FlowSessionManager: ObservableObject {
         let asrElapsed = Date().timeIntervalSince(pipelineStarted)
         FlowDiagnostics.log("ASR phase done in \(String(format: "%.1f", asrElapsed))s finalLen=\(lastFinal.count)")
 
-        var text = lastFinal.trimmingCharacters(in: .whitespacesAndNewlines)
+        var text = UtteranceTranscriptGuard.resolve(
+            stitchedFinal: lastFinal,
+            partialSnapshot: bestPartialSnapshot
+        )
         if text.isEmpty {
             text = currentPartial.trimmingCharacters(in: .whitespacesAndNewlines)
         }
+
+        if UtteranceBatchFallbackPolicy.shouldRunBatchFallback(
+            stitchedFinal: lastFinal,
+            partialSnapshot: bestPartialSnapshot
+        ), !utterancePCMSamples.isEmpty {
+            text = await runBatchASRFallback(currentText: text)
+        }
+        utterancePCMSamples = []
         guard !text.isEmpty else {
             let key = (asrTask?.isCancelled == true || Task.isCancelled)
                 ? "flow.error.recognitionInterrupted"
@@ -1427,6 +1456,8 @@ final class FlowSessionManager: ObservableObject {
 
         currentPartial = ""
         lastFinal = ""
+        bestPartialSnapshot = ""
+        utterancePCMSamples = []
         chunkWarnings = []
         chunkedPipeline = nil
         debug("utterance finalized length=\(text.count)")
@@ -1553,6 +1584,49 @@ final class FlowSessionManager: ObservableObject {
             engineMode: engineMode,
             chunkWarning: chunkWarning
         )
+    }
+
+    /// Re-transcribe the full utterance PCM when pipelined chunking likely dropped tail text.
+    private func runBatchASRFallback(currentText: String) async -> String {
+        let samples = utterancePCMSamples
+        guard !samples.isEmpty else { return currentText }
+
+        let locale = SpeechLocaleResolver.resolve(store.localeId)
+        let stitched = lastFinal.trimmingCharacters(in: .whitespacesAndNewlines)
+        let partial = bestPartialSnapshot.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        FlowDiagnostics.log(
+            "batch fallback start samples=\(samples.count) stitchedLen=\(stitched.count) partialLen=\(partial.count)"
+        )
+
+        let asrService = asr
+        let result = await Task.detached(priority: .userInitiated) { [asrService] in
+            await asrService.transcribeChunk(samples: samples, locale: locale)
+        }.value
+
+        switch result {
+        case .success(let batchText):
+            let trimmedBatch = batchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmedBatch.isEmpty else { return currentText }
+            let resolved = UtteranceBatchFallbackPolicy.preferredTranscript(
+                batch: trimmedBatch,
+                stitchedFinal: stitched,
+                partialSnapshot: partial,
+                current: currentText
+            )
+            FlowPipelineDiagnostics.logBatchFallback(
+                sampleCount: samples.count,
+                stitchedLength: stitched.count,
+                partialLength: partial.count,
+                batchLength: trimmedBatch.count
+            )
+            return resolved
+        case .failure(let message):
+            FlowDiagnostics.log("batch fallback failed: \(message)")
+            return currentText
+        case .cancelled:
+            return currentText
+        }
     }
 
     private func asrWaitTimeout() -> TimeInterval {
