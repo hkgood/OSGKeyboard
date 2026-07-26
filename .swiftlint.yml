@@ -10,6 +10,8 @@ disabled_rules:
   - cyclomatic_complexity
   - force_cast
   - force_try
+  - large_tuple
+  - function_parameter_count
 
 opt_in_rules:
   - empty_count
@@ -17,7 +19,13 @@ opt_in_rules:
   - explicit_init
   - prefer_self_type_over_type_of_self
   - sorted_imports
-  - redundant_optional_initialization
+  - implicit_optional_initialization
+
+identifier_name:
+  min_length:
+    error: 1
+    warning: 2
+  allowed_symbols: ["_"]
 
 file_length:
   warning: 800
