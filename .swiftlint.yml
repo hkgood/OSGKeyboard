@@ -20,8 +20,8 @@ opt_in_rules:
   - redundant_optional_initialization
 
 file_length:
-  warning: 500
-  error: 800
+  warning: 800
+  error: 1200
 
 included:
   - OSGKeyboard

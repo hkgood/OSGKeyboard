@@ -17,15 +17,10 @@ jobs:
   # =========================================================
   lint:
     name: SwiftLint
-    # macos-14 runner ships Xcode 16.x (default 16.4 in 2026). We pin to
-    # 16.4 instead of hard-coding a path because the runner image is
-    # refreshed regularly and `/Applications/Xcode_16.0.app` is no
-    # longer pre-installed — that's the bug this PR fixes.
-    runs-on: macos-14
+    # SwiftLint is source-based; no Xcode SDK required.
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - name: Select Xcode 16.4
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app
       - name: Install SwiftLint
         run: brew install swiftlint
       - name: Run SwiftLint
@@ -44,7 +39,7 @@ jobs:
   build:
     name: Build (${{ matrix.destination }})
     needs: lint
-    runs-on: macos-14
+    runs-on: macos-15
     strategy:
       fail-fast: false
       matrix:
@@ -52,8 +47,8 @@ jobs:
           - generic/platform=iOS Simulator
     steps:
       - uses: actions/checkout@v4
-      - name: Select Xcode 16.4
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+      - name: Select Xcode 26.3
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate project
@@ -75,11 +70,11 @@ jobs:
   test:
     name: Unit tests
     needs: lint
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - name: Select Xcode 16.4
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+      - name: Select Xcode 26.3
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Generate project
