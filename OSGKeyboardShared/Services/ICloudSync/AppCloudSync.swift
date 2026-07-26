@@ -12,7 +12,7 @@ public final class AppCloudSync {
     public static let shared = AppCloudSync()
 
     private let kvs: UbiquitousKeyValueStoreing
-    private let makeStore: () -> AppGroupStore
+    private let makeStore: @MainActor () -> AppGroupStore
     private let settingsSync: SettingsCloudSync
     private let dictionarySync: PersonalDictionaryCloudSync
     private let usageStatisticsSync: UsageStatisticsCloudSync
@@ -21,8 +21,8 @@ public final class AppCloudSync {
 
     public init(
         kvs: UbiquitousKeyValueStoreing = NSUbiquitousKeyValueStore.default,
-        makeStore: @escaping () -> AppGroupStore = { AppGroupStore() },
-        historyDefaults: @escaping () -> UserDefaults = { .standard },
+        makeStore: @escaping @MainActor () -> AppGroupStore = { AppGroupStore() },
+        historyDefaults: @escaping @MainActor () -> UserDefaults = { .standard },
         settingsSync: SettingsCloudSync? = nil,
         dictionarySync: PersonalDictionaryCloudSync? = nil,
         usageStatisticsSync: UsageStatisticsCloudSync? = nil,

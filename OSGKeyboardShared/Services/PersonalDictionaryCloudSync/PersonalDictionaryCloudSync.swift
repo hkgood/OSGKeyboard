@@ -34,12 +34,12 @@ public final class PersonalDictionaryCloudSync {
     public static let maxPayloadBytes = 400_000
 
     private let kvs: UbiquitousKeyValueStoreing
-    private let makeStore: () -> AppGroupStore
+    private let makeStore: @MainActor () -> AppGroupStore
     private var externalChangeObserver: NSObjectProtocol?
 
     public init(
         kvs: UbiquitousKeyValueStoreing = NSUbiquitousKeyValueStore.default,
-        makeStore: @escaping () -> AppGroupStore = { AppGroupStore() }
+        makeStore: @escaping @MainActor () -> AppGroupStore = { AppGroupStore() }
     ) {
         self.kvs = kvs
         self.makeStore = makeStore

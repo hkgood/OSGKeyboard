@@ -26,11 +26,11 @@ public final class UsageStatisticsCloudSync {
     public static let legacyKVSKey = SyncedUsageStatisticsStorage.legacyStorageKey
 
     private let kvs: UbiquitousKeyValueStoreing
-    private let makeStore: () -> AppGroupStore
+    private let makeStore: @MainActor () -> AppGroupStore
 
     public init(
         kvs: UbiquitousKeyValueStoreing = NSUbiquitousKeyValueStore.default,
-        makeStore: @escaping () -> AppGroupStore = { AppGroupStore() }
+        makeStore: @escaping @MainActor () -> AppGroupStore = { AppGroupStore() }
     ) {
         self.kvs = kvs
         self.makeStore = makeStore

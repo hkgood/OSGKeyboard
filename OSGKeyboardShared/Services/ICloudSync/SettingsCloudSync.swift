@@ -26,13 +26,13 @@ public final class SettingsCloudSync {
     public static let legacyKVSKey = SyncedAppSettings.legacyKVSKey
 
     private let kvs: UbiquitousKeyValueStoreing
-    private let makeStore: () -> AppGroupStore
-    private let historyDefaults: () -> UserDefaults
+    private let makeStore: @MainActor () -> AppGroupStore
+    private let historyDefaults: @MainActor () -> UserDefaults
 
     public init(
         kvs: UbiquitousKeyValueStoreing = NSUbiquitousKeyValueStore.default,
-        makeStore: @escaping () -> AppGroupStore = { AppGroupStore() },
-        historyDefaults: @escaping () -> UserDefaults = { .standard }
+        makeStore: @escaping @MainActor () -> AppGroupStore = { AppGroupStore() },
+        historyDefaults: @escaping @MainActor () -> UserDefaults = { .standard }
     ) {
         self.kvs = kvs
         self.makeStore = makeStore

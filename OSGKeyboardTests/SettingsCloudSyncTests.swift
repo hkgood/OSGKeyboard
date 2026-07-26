@@ -17,8 +17,8 @@ final class SettingsCloudSyncTests: XCTestCase {
     private let deviceA = "device-a"
     private let deviceB = "device-b"
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         suiteName = "group.com.osgkeyboard.shared.tests.settings.\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
@@ -28,13 +28,13 @@ final class SettingsCloudSyncTests: XCTestCase {
         settingsSync = SettingsCloudSync(kvs: kvs) { [unowned self] in store }
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         defaults.removePersistentDomain(forName: suiteName)
         try? Keychain.deleteAPIKey(for: "openai", useICloudSync: false)
         try? Keychain.deleteAPIKey(for: "openai", useICloudSync: true)
         try? Keychain.deleteAPIKey(for: "qwen", useICloudSync: false)
         try? Keychain.deleteAPIKey(for: "qwen", useICloudSync: true)
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func testPerFieldMergeKeepsIndependentChanges() {

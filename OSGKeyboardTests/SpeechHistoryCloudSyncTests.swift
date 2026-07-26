@@ -16,8 +16,8 @@ final class SpeechHistoryCloudSyncTests: XCTestCase {
     private var kvs: FakeUbiquitousKeyValueStore!
     private var sync: SpeechHistoryCloudSync!
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         suiteName = "group.com.osgkeyboard.shared.tests.history.\(UUID().uuidString)"
         configDefaults = UserDefaults(suiteName: suiteName)!
         configDefaults.removePersistentDomain(forName: suiteName)
@@ -31,10 +31,10 @@ final class SpeechHistoryCloudSyncTests: XCTestCase {
         }
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         configDefaults.removePersistentDomain(forName: suiteName)
         historyDefaults.removePersistentDomain(forName: "\(suiteName).history")
-        super.tearDown()
+        try await super.tearDown()
     }
 
     func testMergeUnionsDistinctEntriesByID() {
