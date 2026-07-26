@@ -23,6 +23,7 @@ final class FlowSessionManager: ObservableObject {
     @Published var coldStartContext: FlowColdStartContext?
 
     private let capture = FlowContinuousCapture()
+    private let pipController = FlowPictureInPictureController()
     private let store = AppGroupStore()
     /// Cloud-engine polish; local engine runs through built-in DeepSeek polish.
     private let polisher = PolishingService()
@@ -82,6 +83,14 @@ final class FlowSessionManager: ObservableObject {
     private var coldStartRecoveryTask: Task<Void, Never>?
     /// Initial proof window — cold mic sessions often need >2.5s after app switch.
     private static let coldStartAudioProofTimeout: TimeInterval = 6
+
+    private var usesPiPKeepAlive: Bool {
+        FlowSessionPolicy.keepAliveMode() == .pictureInPicture
+    }
+
+    func attachPiPHostView(_ view: UIView) {
+        pipController.attachHostView(view)
+    }
     /// Guards the once-per-process launch reconciliation (scene reconnects
     /// recreate the `@StateObject`-owned manager within the same process).
     private static var didRunLaunchReconciliation = false
@@ -125,6 +134,11 @@ final class FlowSessionManager: ObservableObject {
                 message: AppL10n.string("flow.error.recognitionInterrupted"),
                 kind: .recognitionInterrupted
             )
+        }
+        pipController.onUserDismissed = { [weak self] in
+            guard let self, self.isActive else { return }
+            self.debug("PiP dismissed by user — ending Flow session")
+            self.endSession()
         }
         FlowTerminationCoordinator.register(self)
     }
@@ -280,7 +294,9 @@ final class FlowSessionManager: ObservableObject {
         // hit the same audio-proof timeout.
         coldStartRecoveryTask?.cancel()
         coldStartRecoveryTask = nil
-        if capture.running {
+        if usesPiPKeepAlive {
+            pipController.stop()
+        } else if capture.running {
             capture.stop()
         }
         sessionASR?.cancel()
@@ -334,6 +350,7 @@ final class FlowSessionManager: ObservableObject {
         if capture.running {
             capture.stop()
         }
+        pipController.stop()
 
         endBackgroundKeepAlive()
         ScreenWakeLock.release()
@@ -406,6 +423,7 @@ final class FlowSessionManager: ObservableObject {
         isUtteranceProcessing = false
 
         capture.stop()
+        pipController.stop()
         endBackgroundKeepAlive()
         ScreenWakeLock.release()
         sessionASR = nil
@@ -422,6 +440,10 @@ final class FlowSessionManager: ObservableObject {
     }
 
     func extendSession(duration: TimeInterval? = nil) {
+        guard !usesPiPKeepAlive else {
+            refreshHostReady()
+            return
+        }
         let resolved = duration ?? FlowSessionPolicy.sessionDuration()
         FlowSessionBridge.extendSession(by: resolved)
         sessionExpiresAt = Date().addingTimeInterval(resolved)
@@ -495,6 +517,10 @@ final class FlowSessionManager: ObservableObject {
 
     private func reactivateCaptureIfNeeded() async {
         guard isActive else { return }
+        if usesPiPKeepAlive, !isUtteranceRecording, !isUtteranceProcessing, !capture.running {
+            refreshHostReady()
+            return
+        }
         // A system interruption (call / Siri) may be in progress. Probe it:
         // `setActive(true)` inside `reassertIfRunning` fails while the
         // interruption is live and succeeds once it ends — which also covers
@@ -565,12 +591,22 @@ final class FlowSessionManager: ObservableObject {
 
         let pollingAlive = pollingTask != nil && pollingTask?.isCancelled != true
         let hasRecentAudio = capture.engineHasRecentAudio(maxAge: 2)
-        let canAcceptUtterance = capture.engineIsLive
-            && pollingAlive
-            && hasRecentAudio
-            && !isUtteranceRecording
-            && !isUtteranceProcessing
-            && sessionWarning == nil
+        let canAcceptUtterance: Bool
+        if usesPiPKeepAlive {
+            canAcceptUtterance = pipController.isPictureInPictureActive
+                && pollingAlive
+                && !isUtteranceRecording
+                && !isUtteranceProcessing
+                && sessionWarning == nil
+                && !capture.isInterrupted
+        } else {
+            canAcceptUtterance = capture.engineIsLive
+                && pollingAlive
+                && hasRecentAudio
+                && !isUtteranceRecording
+                && !isUtteranceProcessing
+                && sessionWarning == nil
+        }
 
         let reason: FlowReadySnapshot.Reason
         if canAcceptUtterance {
@@ -581,9 +617,11 @@ final class FlowSessionManager: ObservableObject {
             reason = .recording
         } else if isUtteranceProcessing {
             reason = .processing
-        } else if !capture.engineIsLive {
+        } else if usesPiPKeepAlive, !pipController.isPictureInPictureActive {
+            reason = .starting
+        } else if !usesPiPKeepAlive, !capture.engineIsLive {
             reason = .audioEngineNotLive
-        } else if !hasRecentAudio {
+        } else if !usesPiPKeepAlive, !hasRecentAudio {
             reason = .waitingForAudioProof
         } else {
             reason = .starting
@@ -656,6 +694,11 @@ final class FlowSessionManager: ObservableObject {
     /// custom keyboard extension sees green immediately.
     func refreshForInlineKeyboardFocus() async {
         guard isActive else { return }
+        if usesPiPKeepAlive {
+            refreshHostReady()
+            FlowSessionBridge.writeHeartbeat()
+            return
+        }
         await reactivateCaptureIfNeeded()
         refreshHostReady()
         if !FlowSessionBridge.isHostReady() {
@@ -668,7 +711,7 @@ final class FlowSessionManager: ObservableObject {
 
     /// Extend expiry after utterance completion based on the inactivity policy.
     private func touchSessionActivity() {
-        guard isActive else { return }
+        guard isActive, !usesPiPKeepAlive else { return }
         FlowSessionBridge.touchLastActivity()
         if let expires = FlowSessionBridge.sessionExpiresAt() {
             sessionExpiresAt = Date(timeIntervalSince1970: expires)
@@ -696,6 +739,25 @@ final class FlowSessionManager: ObservableObject {
                 showColdStartPermissionFailure()
             }
             isColdStartHandoff = false
+            return
+        }
+
+        if usesPiPKeepAlive {
+            let pipReady = await pipController.startAndWait()
+            guard pipReady else {
+                let message = AppL10n.string("flow.pip.error.unavailable")
+                sessionWarning = message
+                traceState("startSessionAsync.failed", extra: "reason=pipUnavailable")
+                FlowSessionBridge.setHostReady(false)
+                if isColdStartHandoff {
+                    showColdStartAudioFailure(message: message)
+                }
+                debug("PiP keep-alive failed to start")
+                return
+            }
+            activateFlowSessionAfterPiPProof(duration: duration)
+            traceState("startSessionAsync.ready")
+            debug("Flow session started (PiP keep-alive), mic released between utterances")
             return
         }
 
@@ -735,6 +797,31 @@ final class FlowSessionManager: ObservableObject {
         debug("Flow session started (\(Int(duration ?? FlowSessionPolicy.sessionDuration()))s inactivity window), continuous capture running")
     }
 
+    private func activateFlowSessionAfterPiPProof(duration: TimeInterval?) {
+        let sessionId = activeSessionId ?? UUID()
+        activeSessionId = sessionId
+        lastHandledCommandSeq = 0
+        FlowSessionBridge.markSessionActive(duration: duration, sessionId: sessionId)
+        FlowSessionDarwin.postSessionChanged()
+        isActive = true
+        ScreenWakeLock.acquire()
+        sessionExpiresAt = nil
+
+        startHeartbeat()
+        startCommandObserver()
+        startPolling()
+        startLevelPublishing()
+        expiryTask?.cancel()
+        expiryTask = nil
+
+        bindSessionASRIfNeeded()
+        scheduleASRWarmup()
+        FlowLiveActivityController.startSession()
+
+        refreshHostReady()
+        traceState("activateFlowSessionAfterPiPProof.done")
+    }
+
     private func activateFlowSessionAfterAudioProof(duration: TimeInterval?) {
         let resolvedDuration = duration ?? FlowSessionPolicy.sessionDuration()
         let sessionId = activeSessionId ?? UUID()
@@ -762,6 +849,12 @@ final class FlowSessionManager: ObservableObject {
 
     private func prepareExistingSessionForColdStartReturn() async {
         guard isColdStartHandoff, isActive else { return }
+        if usesPiPKeepAlive {
+            sessionWarning = nil
+            refreshHostReady()
+            handleColdStartAfterSessionReady()
+            return
+        }
         await reactivateCaptureIfNeeded()
         guard await waitForAudioProof() else {
             let message = AppL10n.string("flow.coldStart.error.audioTimeout")
@@ -815,7 +908,7 @@ final class FlowSessionManager: ObservableObject {
     }
 
     private func scheduleAutoReturnToHostIfNeeded(hostEntry: HostAppEntry?) {
-        let skipSwitch = FlowSessionPolicy.skipAppSwitch()
+        let skipSwitch = usesPiPKeepAlive || FlowSessionPolicy.skipAppSwitch()
         guard skipSwitch, hostEntry != nil else { return }
         Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 450_000_000)
@@ -835,6 +928,21 @@ final class FlowSessionManager: ObservableObject {
         coldStartRecoveryTask?.cancel()
         coldStartRecoveryTask = Task { @MainActor [weak self] in
             guard let self else { return }
+            if self.usesPiPKeepAlive {
+                let recovered = await self.pipController.startAndWait()
+                self.traceState("coldStartRecovery.pip", extra: "recovered=\(recovered)")
+                guard !Task.isCancelled, self.isColdStartHandoff else { return }
+                if recovered {
+                    if self.isActive {
+                        self.refreshHostReady()
+                        self.handleColdStartAfterSessionReady()
+                    } else {
+                        self.activateFlowSessionAfterPiPProof(duration: duration)
+                        self.handleColdStartAfterSessionReady()
+                    }
+                }
+                return
+            }
             var recovered = false
             for attempt in 1...3 {
                 guard !Task.isCancelled, self.isColdStartHandoff else { return }
@@ -1006,7 +1114,12 @@ final class FlowSessionManager: ObservableObject {
         switch command.action {
         case .startRecording:
             guard !isUtteranceRecording, !isUtteranceProcessing else { return }
-            beginUtterance(utteranceId: command.utteranceId, commandSeq: command.commandSeq)
+            Task { @MainActor [weak self] in
+                await self?.handleStartRecordingCommand(
+                    utteranceId: command.utteranceId,
+                    commandSeq: command.commandSeq
+                )
+            }
         case .stopRecording:
             guard currentUtteranceId == command.utteranceId else { return }
             if isUtteranceRecording {
@@ -1074,6 +1187,42 @@ final class FlowSessionManager: ObservableObject {
                 errorKind: kind
             )
         )
+    }
+
+    private func handleStartRecordingCommand(utteranceId: UUID?, commandSeq: Int64) async {
+        if usesPiPKeepAlive {
+            refreshHostReady()
+            let micReady = await ensureCaptureReadyForPiPUtterance()
+            guard micReady else {
+                failUtterance(
+                    message: AppL10n.string("flow.coldStart.error.audioTimeout"),
+                    kind: .audioUnavailable
+                )
+                return
+            }
+        }
+        beginUtterance(utteranceId: utteranceId, commandSeq: commandSeq)
+    }
+
+    private func ensureCaptureReadyForPiPUtterance() async -> Bool {
+        if capture.engineHasRecentAudio(maxAge: 2) {
+            return true
+        }
+        do {
+            try capture.start()
+        } catch {
+            debug("PiP utterance capture start failed: \(error.localizedDescription)")
+            return false
+        }
+        return await capture.awaitAudioFlowing(timeout: Self.coldStartAudioProofTimeout)
+    }
+
+    private func releaseCaptureAfterPiPUtteranceIfNeeded() {
+        guard usesPiPKeepAlive, capture.running else { return }
+        guard !isUtteranceRecording, !isUtteranceProcessing else { return }
+        capture.stop()
+        pipController.updateWaveformLevels([])
+        refreshHostReady()
     }
 
     private func beginUtterance(utteranceId: UUID? = nil, commandSeq: Int64 = 0) {
@@ -1219,6 +1368,10 @@ final class FlowSessionManager: ObservableObject {
             let drainReport = await self.capture.endUtteranceAndDrain()
             FlowDiagnostics.logDrain(drainReport)
             self.utterancePCMSamples = self.capture.consumeUtteranceSamples()
+            if self.usesPiPKeepAlive {
+                self.capture.stop()
+                self.pipController.updateWaveformLevels([])
+            }
             await self.finalizeUtterance(
                 sessionId: drainingSessionId,
                 utteranceId: drainingUtteranceId,
@@ -1241,6 +1394,7 @@ final class FlowSessionManager: ObservableObject {
         chunkedPipeline = nil
         asr.cancel()
         capture.cancelUtterance()
+        releaseCaptureAfterPiPUtteranceIfNeeded()
         currentPartial = ""
         lastFinal = ""
         bestPartialSnapshot = ""
@@ -1269,6 +1423,7 @@ final class FlowSessionManager: ObservableObject {
         chunkedPipeline = nil
         asr.cancel()
         capture.cancelUtterance()
+        releaseCaptureAfterPiPUtteranceIfNeeded()
         currentPartial = ""
         lastFinal = ""
         bestPartialSnapshot = ""
@@ -1293,6 +1448,8 @@ final class FlowSessionManager: ObservableObject {
         finalizeTask?.cancel()
         finalizeTask = nil
         chunkedPipeline = nil
+        capture.cancelUtterance()
+        releaseCaptureAfterPiPUtteranceIfNeeded()
         currentPartial = ""
         lastFinal = ""
         bestPartialSnapshot = ""
@@ -1663,6 +1820,9 @@ final class FlowSessionManager: ObservableObject {
             while !Task.isCancelled {
                 guard let self, self.isActive else { break }
                 let levels = self.capture.currentAudioLevels()
+                if self.usesPiPKeepAlive {
+                    self.pipController.updateWaveformLevels(levels)
+                }
                 if levels.contains(where: { $0 > 0 }) {
                     FlowSessionBridge.storeAudioLevels(levels)
                 }
@@ -1686,7 +1846,12 @@ final class FlowSessionManager: ObservableObject {
             while !Task.isCancelled {
                 guard let self else { break }
                 if self.isActive, !self.capture.engineIsLive {
-                    await self.reactivateCaptureIfNeeded()
+                    let shouldReassert = !self.usesPiPKeepAlive
+                        || self.isUtteranceRecording
+                        || self.isUtteranceProcessing
+                    if shouldReassert {
+                        await self.reactivateCaptureIfNeeded()
+                    }
                 }
                 FlowSessionBridge.writeHeartbeat()
                 self.refreshHostReady()
@@ -1701,6 +1866,7 @@ final class FlowSessionManager: ObservableObject {
     }
 
     private func scheduleExpiry(after duration: TimeInterval) {
+        guard !usesPiPKeepAlive else { return }
         expiryTask?.cancel()
         expiryTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))

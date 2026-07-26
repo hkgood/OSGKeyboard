@@ -29,6 +29,8 @@ struct SettingsView: View {
     // Dynamic locale list loaded from SFSpeechRecognizer on first appear.
     @State private var dynamicLocales: [(id: String, onDevice: Bool)] = []
     @State private var showResetConfirmation = false
+    @State private var showActiveFlowSessionAlert = false
+    @State private var pendingKeepAliveMode: FlowKeepAliveMode?
     // v0.2.0: no on-device model manager / pending download state —
     // iOS `SpeechAnalyzer` ships with iOS 26 and needs nothing
     // downloaded.
@@ -105,27 +107,41 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
             sectionHeader("settings.flow.title")
             VStack(spacing: 0) {
-                Toggle(isOn: $config.flowSkipAppSwitch) {
-                    VStack(alignment: .leading, spacing: Spacing.xxs) {
-                        Text("settings.flow.skipAppSwitch.title")
-                            .font(TypeStyle.body)
-                            .foregroundStyle(palette.textPrimary)
-                        Text("settings.flow.skipAppSwitch.subtitle")
-                            .font(TypeStyle.caption2)
-                            .foregroundStyle(palette.textTertiary)
-                    }
-                }
-                .tint(palette.accent)
-                .settingsListRow()
-
-                Divider().background(palette.divider)
-
-                FlowInactivityPickerRow(
+                FlowKeepAliveModePickerRow(
                     selection: Binding(
-                        get: { config.flowInactivityDuration },
-                        set: { config.flowInactivityDuration = $0 }
+                        get: { config.flowKeepAliveMode },
+                        set: { newMode in
+                            applyKeepAliveModeChange(newMode)
+                        }
                     )
                 )
+
+                if config.flowKeepAliveMode == .liveActivity {
+                    Divider().background(palette.divider)
+
+                    FlowInactivityPickerRow(
+                        selection: Binding(
+                            get: { config.flowInactivityDuration },
+                            set: { config.flowInactivityDuration = $0 }
+                        )
+                    )
+
+                    Divider().background(palette.divider)
+
+                    Toggle(isOn: $config.flowSkipAppSwitch) {
+                        flowSkipAppSwitchLabel
+                    }
+                    .tint(palette.accent)
+                    .settingsListRow()
+                } else {
+                    Divider().background(palette.divider)
+
+                    Text("settings.flow.keepAlive.pictureInPicture.note")
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .settingsListRow()
+                }
             }
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
             .overlay(
@@ -133,6 +149,34 @@ struct SettingsView: View {
                     .stroke(palette.divider, lineWidth: 0.5)
             )
         }
+        .alert("settings.flow.keepAlive.activeSession.title", isPresented: $showActiveFlowSessionAlert) {
+            Button("common.done", role: .cancel) {
+                pendingKeepAliveMode = nil
+            }
+        } message: {
+            Text("settings.flow.keepAlive.activeSession.message")
+        }
+    }
+
+    private var flowSkipAppSwitchLabel: some View {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
+            Text("settings.flow.skipAppSwitch.title")
+                .font(TypeStyle.body)
+                .foregroundStyle(palette.textPrimary)
+            Text("settings.flow.skipAppSwitch.subtitle")
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textTertiary)
+        }
+    }
+
+    private func applyKeepAliveModeChange(_ newMode: FlowKeepAliveMode) {
+        guard newMode != config.flowKeepAliveMode else { return }
+        if FlowSessionBridge.isSessionActive() {
+            pendingKeepAliveMode = newMode
+            showActiveFlowSessionAlert = true
+            return
+        }
+        config.flowKeepAliveMode = newMode
     }
 
     // MARK: - Engine
@@ -516,6 +560,31 @@ private struct AppearancePickerRow: View {
             title: AppL10n.string("settings.appearance.title"),
             options: options,
             selection: $appearanceRaw
+        )
+    }
+}
+
+// MARK: - Flow keep-alive mode picker row
+
+private struct FlowKeepAliveModePickerRow: View {
+    @Binding var selection: FlowKeepAliveMode
+
+    private var options: [(id: String, label: String)] {
+        FlowKeepAliveMode.allCases.map { mode in
+            (mode.rawValue, AppL10n.string(mode.labelKey))
+        }
+    }
+
+    var body: some View {
+        PickerRow(
+            title: AppL10n.string("settings.flow.keepAlive.title"),
+            options: options,
+            selection: Binding(
+                get: { selection.rawValue },
+                set: { newValue in
+                    selection = FlowKeepAliveMode(rawValue: newValue) ?? .liveActivity
+                }
+            )
         )
     }
 }

@@ -133,6 +133,7 @@ targets:
         NSSpeechRecognitionUsageDescription: "OSGKeyboard uses speech recognition to transcribe your voice. Audio is processed on-device by default, or sent to your configured speech provider only when you enable cloud recognition."
         UIBackgroundModes:
           - audio
+          - picture-in-picture
         NSSupportsLiveActivities: true
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
