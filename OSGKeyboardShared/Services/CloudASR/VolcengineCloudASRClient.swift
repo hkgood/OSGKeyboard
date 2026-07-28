@@ -1,37 +1,36 @@
 // VolcengineCloudASRClient.swift
 // OSGKeyboard · Shared
 //
-// Volcengine SAUC bigmodel ASR client. The service uses a WebSocket with a
-// small custom binary frame wrapper; this file keeps that protocol isolated
-// from the HTTP-style cloud ASR clients.
+// Volcengine SAUC bigmodel ASR client. Utterance-level WebSocket session with
+// enable_nonstream (official two-pass): interim text for on-screen partials,
+// definite utterances for polish-ready finals.
 
 import Foundation
+import os
 
-struct VolcengineCloudASRClient: CloudASRTranscribing {
+struct VolcengineCloudASRClient: CloudASRTranscribing, CloudASRStreamingCapable {
     let apiKey: String
     let endpoint: String
     let resourceID: String
     let session: URLSession
 
-    private static let targetChunkBytes = 6_400 // 200 ms @ 16 kHz, 16-bit, mono.
-    private static let finalTimeout: TimeInterval = 12
+    static let targetChunkBytes = 6_400 // 200 ms @ 16 kHz, 16-bit, mono.
+    static let finalTimeout: TimeInterval = 12
     private static let hotwordCap = 80
 
     func prepare(dictionary: PersonalDictionary) async throws {}
 
-    func transcribe(
-        samples: [Float],
-        sampleRate: Int,
+    func openStreamingSession(
         locale: Locale,
-        dictionary: PersonalDictionary
-    ) async throws -> String {
-        guard !samples.isEmpty else { throw CloudASRError.emptyTranscript }
+        dictionary: PersonalDictionary,
+        onPartial: @escaping @Sendable (String) -> Void
+    ) async throws -> any CloudASRStreamingSession {
+        _ = locale
         let credentials = try VolcengineCredentials.parse(
             apiKey: apiKey,
             fallbackResourceID: resolvedResourceID
         )
         let url = try resolvedEndpointURL()
-        let pcm = Self.pcm16Data(samples: samples)
         let connectID = UUID().uuidString
 
         var request = URLRequest(url: url)
@@ -43,52 +42,31 @@ struct VolcengineCloudASRClient: CloudASRTranscribing {
 
         let task = session.webSocketTask(with: request)
         task.resume()
-        defer {
-            task.cancel(with: .normalClosure, reason: nil)
-        }
-
-        let firstPayload = try Self.firstFramePayload(connectID: connectID, dictionary: dictionary)
-        try await send(
-            VolcengineFrame.build(
-                messageType: .fullClientRequest,
-                flags: .positiveSequence,
-                serialization: .json,
-                payload: firstPayload,
-                sequence: 1
-            ),
-            task: task
+        let live = VolcengineStreamingSession(
+            wsTask: task,
+            connectID: connectID,
+            dictionary: dictionary,
+            onPartial: onPartial
         )
+        try await live.start()
+        return live
+    }
 
-        var sequence = 2
-        var offset = 0
-        while offset < pcm.count {
-            let end = min(offset + Self.targetChunkBytes, pcm.count)
-            try await send(
-                VolcengineFrame.build(
-                    messageType: .audioOnlyRequest,
-                    flags: .positiveSequence,
-                    serialization: .none,
-                    payload: pcm.subdata(in: offset..<end),
-                    sequence: Int32(sequence)
-                ),
-                task: task
-            )
-            sequence += 1
-            offset = end
-        }
-
-        try await send(
-            VolcengineFrame.build(
-                messageType: .audioOnlyRequest,
-                flags: .negativeSequence,
-                serialization: .none,
-                payload: Data(),
-                sequence: -Int32(sequence)
-            ),
-            task: task
+    func transcribe(
+        samples: [Float],
+        sampleRate: Int,
+        locale: Locale,
+        dictionary: PersonalDictionary
+    ) async throws -> String {
+        _ = sampleRate
+        guard !samples.isEmpty else { throw CloudASRError.emptyTranscript }
+        let session = try await openStreamingSession(
+            locale: locale,
+            dictionary: dictionary,
+            onPartial: { _ in }
         )
-
-        let text = try await receiveFinalText(task: task)
+        try await session.append(samples: samples)
+        let text = try await session.finish()
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw CloudASRError.emptyTranscript }
         return trimmed
@@ -108,57 +86,7 @@ struct VolcengineCloudASRClient: CloudASRTranscribing {
         return url
     }
 
-    private func send(_ data: Data, task: URLSessionWebSocketTask) async throws {
-        do {
-            try await task.send(.data(data))
-        } catch {
-            throw CloudASRError.transport(error.localizedDescription)
-        }
-    }
-
-    private func receiveFinalText(task: URLSessionWebSocketTask) async throws -> String {
-        try await withThrowingTaskGroup(of: String.self) { group in
-            group.addTask {
-                var lastPartial = ""
-                while true {
-                    let message = try await task.receive()
-                    let data: Data
-                    switch message {
-                    case .data(let payload):
-                        data = payload
-                    case .string(let string):
-                        data = Data(string.utf8)
-                    @unknown default:
-                        continue
-                    }
-
-                    guard let frame = VolcengineFrame.parse(data) else { continue }
-                    if frame.messageType == .errorMessage {
-                        let body = String(data: frame.payload, encoding: .utf8) ?? ""
-                        let code = frame.errorCode ?? 0
-                        throw CloudASRError.transport("ASR error \(code): \(body)")
-                    }
-                    guard frame.messageType == .fullServerResponse else { continue }
-                    let parsedText = Self.text(from: frame.payload)
-                    if !parsedText.isEmpty {
-                        lastPartial = parsedText
-                    }
-                    if frame.isFinal {
-                        return parsedText.isEmpty ? lastPartial : parsedText
-                    }
-                }
-            }
-            group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(Self.finalTimeout * 1_000_000_000))
-                throw CloudASRError.transport("Volcengine final result timed out")
-            }
-            let result = try await group.next()!
-            group.cancelAll()
-            return result
-        }
-    }
-
-    private static func firstFramePayload(
+    static func firstFramePayload(
         connectID: String,
         dictionary: PersonalDictionary
     ) throws -> Data {
@@ -168,6 +96,11 @@ struct VolcengineCloudASRClient: CloudASRTranscribing {
             "enable_punc": true,
             "show_utterances": true,
             "enable_speaker_info": true,
+            // Official two-pass: stream interim for UI, nostream re-decode per
+            // VAD sentence for definite polish-ready text (scheme A).
+            "enable_nonstream": true,
+            "end_window_size": 800,
+            "force_to_speech_time": 1_000,
         ]
         if let context = hotwordContext(dictionary: dictionary) {
             request["context"] = context
@@ -206,19 +139,7 @@ struct VolcengineCloudASRClient: CloudASRTranscribing {
         return String(data: data, encoding: .utf8)
     }
 
-    private static func pcm16Data(samples: [Float]) -> Data {
-        var data = Data()
-        data.reserveCapacity(samples.count * 2)
-        for sample in samples {
-            let scaled = sample * 32_767.0
-            let clipped = Swift.max(-32_768.0, Swift.min(32_767.0, scaled))
-            var littleEndian = Int16(clipped.rounded()).littleEndian
-            withUnsafeBytes(of: &littleEndian) { data.append(contentsOf: $0) }
-        }
-        return data
-    }
-
-    private static func text(from payload: Data) -> String {
+    static func displayText(from payload: Data) -> String {
         guard let json = try? JSONSerialization.jsonObject(with: payload) as? [String: Any],
               let result = normalizedResult(from: json) else {
             return ""
@@ -232,6 +153,22 @@ struct VolcengineCloudASRClient: CloudASRTranscribing {
         return result["text"] as? String ?? ""
     }
 
+    /// Prefer definite (two-pass) utterance text for polish input.
+    static func committedText(from payload: Data) -> String {
+        guard let json = try? JSONSerialization.jsonObject(with: payload) as? [String: Any],
+              let result = normalizedResult(from: json),
+              let utterances = result["utterances"] as? [[String: Any]],
+              !utterances.isEmpty else {
+            return ""
+        }
+        let definite = utterances.compactMap { utterance -> String? in
+            let isDefinite = utterance["definite"] as? Bool ?? false
+            guard isDefinite else { return nil }
+            return utterance["text"] as? String
+        }
+        return definite.joined()
+    }
+
     private static func normalizedResult(from json: [String: Any]) -> [String: Any]? {
         if let result = json["result"] as? [String: Any] {
             return result
@@ -243,6 +180,222 @@ struct VolcengineCloudASRClient: CloudASRTranscribing {
             return json
         }
         return nil
+    }
+}
+
+// MARK: - Utterance session
+
+private final class VolcengineStreamingSession: CloudASRStreamingSession, @unchecked Sendable {
+    private let wsTask: URLSessionWebSocketTask
+    private let connectID: String
+    private let dictionary: PersonalDictionary
+    private let onPartial: @Sendable (String) -> Void
+    private let lock = OSAllocatedUnfairLock()
+    private var sequence: Int32 = 1
+    private var pcmBuffer = Data()
+    private var receiveTask: Task<Void, Never>?
+    private var failure: Error?
+    private var finished = false
+    private var lastDisplay = ""
+    private var lastCommitted = ""
+    private var sawServerFinal = false
+
+    init(
+        wsTask: URLSessionWebSocketTask,
+        connectID: String,
+        dictionary: PersonalDictionary,
+        onPartial: @escaping @Sendable (String) -> Void
+    ) {
+        self.wsTask = wsTask
+        self.connectID = connectID
+        self.dictionary = dictionary
+        self.onPartial = onPartial
+    }
+
+    func start() async throws {
+        let firstPayload = try VolcengineCloudASRClient.firstFramePayload(
+            connectID: connectID,
+            dictionary: dictionary
+        )
+        try await send(
+            VolcengineFrame.build(
+                messageType: .fullClientRequest,
+                flags: .positiveSequence,
+                serialization: .json,
+                payload: firstPayload,
+                sequence: 1
+            )
+        )
+        sequence = 2
+        receiveTask = Task { [weak self] in
+            await self?.receiveLoop()
+        }
+    }
+
+    func append(samples: [Float]) async throws {
+        try throwIfFailed()
+        let pcm = CloudASRStreamingPCM.pcm16LE(samples: samples)
+        let (frames, nextSequences): ([Data], [Int32]) = lock.withLock {
+            pcmBuffer.append(pcm)
+            var frames: [Data] = []
+            while pcmBuffer.count >= VolcengineCloudASRClient.targetChunkBytes {
+                let frame = pcmBuffer.prefix(VolcengineCloudASRClient.targetChunkBytes)
+                frames.append(Data(frame))
+                pcmBuffer.removeFirst(VolcengineCloudASRClient.targetChunkBytes)
+            }
+            let nextSequences: [Int32] = frames.indices.map { _ in
+                let seq = sequence
+                sequence += 1
+                return seq
+            }
+            return (frames, nextSequences)
+        }
+
+        for (frame, seq) in zip(frames, nextSequences) {
+            try await send(
+                VolcengineFrame.build(
+                    messageType: .audioOnlyRequest,
+                    flags: .positiveSequence,
+                    serialization: .none,
+                    payload: frame,
+                    sequence: seq
+                )
+            )
+        }
+    }
+
+    func finish() async throws -> String {
+        try throwIfFailed()
+        let (trailing, endSequence): (Data, Int32) = lock.withLock {
+            let trailing = pcmBuffer
+            pcmBuffer.removeAll(keepingCapacity: false)
+            let endSequence = sequence
+            sequence += 1
+            return (trailing, endSequence)
+        }
+
+        if !trailing.isEmpty {
+            try await send(
+                VolcengineFrame.build(
+                    messageType: .audioOnlyRequest,
+                    flags: .positiveSequence,
+                    serialization: .none,
+                    payload: trailing,
+                    sequence: endSequence
+                )
+            )
+        }
+
+        let negativeSeq = lock.withLock { () -> Int32 in
+            let seq = sequence
+            sequence += 1
+            return seq
+        }
+        try await send(
+            VolcengineFrame.build(
+                messageType: .audioOnlyRequest,
+                flags: .negativeSequence,
+                serialization: .none,
+                payload: Data(),
+                sequence: -negativeSeq
+            )
+        )
+
+        let deadline = Date().addingTimeInterval(VolcengineCloudASRClient.finalTimeout)
+        while Date() < deadline {
+            try throwIfFailed()
+            let snapshot = lock.withLock { (sawServerFinal, lastCommitted, lastDisplay) }
+            if snapshot.0 {
+                let text = snapshot.1.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? snapshot.2
+                    : snapshot.1
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                cancel()
+                if trimmed.isEmpty { throw CloudASRError.emptyTranscript }
+                return trimmed
+            }
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+        cancel()
+        throw CloudASRError.transport("Volcengine final result timed out")
+    }
+
+    func cancel() {
+        receiveTask?.cancel()
+        wsTask.cancel(with: .normalClosure, reason: nil)
+        lock.withLock { finished = true }
+    }
+
+    private func receiveLoop() async {
+        while !Task.isCancelled {
+            let message: URLSessionWebSocketTask.Message
+            do {
+                message = try await wsTask.receive()
+            } catch {
+                publishFailure(CloudASRError.transport(error.localizedDescription))
+                return
+            }
+
+            let data: Data
+            switch message {
+            case .data(let payload):
+                data = payload
+            case .string(let string):
+                data = Data(string.utf8)
+            @unknown default:
+                continue
+            }
+
+            guard let frame = VolcengineFrame.parse(data) else { continue }
+            if frame.messageType == .errorMessage {
+                let body = String(data: frame.payload, encoding: .utf8) ?? ""
+                let code = frame.errorCode ?? 0
+                publishFailure(CloudASRError.transport("ASR error \(code): \(body)"))
+                return
+            }
+            guard frame.messageType == .fullServerResponse else { continue }
+
+            let display = VolcengineCloudASRClient.displayText(from: frame.payload)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let committed = VolcengineCloudASRClient.committedText(from: frame.payload)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            let emit = lock.withLock { () -> String in
+                if !display.isEmpty {
+                    lastDisplay = display
+                }
+                if !committed.isEmpty {
+                    lastCommitted = committed
+                }
+                if frame.isFinal {
+                    sawServerFinal = true
+                }
+                return lastDisplay
+            }
+
+            if !emit.isEmpty {
+                onPartial(emit)
+            }
+        }
+    }
+
+    private func send(_ data: Data) async throws {
+        do {
+            try await wsTask.send(.data(data))
+        } catch {
+            throw CloudASRError.transport(error.localizedDescription)
+        }
+    }
+
+    private func throwIfFailed() throws {
+        let (error, done) = lock.withLock { (failure, finished) }
+        if let error { throw error }
+        if done { throw CloudASRError.transport("Volcengine session cancelled") }
+    }
+
+    private func publishFailure(_ error: Error) {
+        lock.withLock { failure = error }
+        cancel()
     }
 }
 

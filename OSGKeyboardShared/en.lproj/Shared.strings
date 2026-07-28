@@ -60,7 +60,7 @@
 "error.cloudASR.emptyTranscript" = "Cloud ASR returned an empty transcript.";
 "error.cloudASR.audioTooLong" = "Audio segment is too long for this cloud ASR provider.";
 "error.cloudASR.providerUnsupported" = "This provider does not support cloud speech recognition yet.";
-"error.cloudASR.streamingNotImplemented" = "This provider requires streaming ASR (WebSocket), which is not available in this build yet. Try Qwen, Zhipu, Groq, or OpenAI.";
+"error.cloudASR.streamingNotImplemented" = "Streaming ASR failed for this provider. Check your API key and network, or try again.";
 
 /* Provider tools */
 "providerTools.error.invalidURL" = "Invalid model endpoint.";
@@ -92,6 +92,10 @@
 "polishStyle.formal" = "Formal Writing";
 "polishStyle.dating" = "Dating Coach";
 "polishStyle.chat" = "Daily Chat";
+"polishStyle.flex" = "Flex Guide";
+"polishStyle.corp" = "Corp Speak";
+"polishStyle.diba" = "DiBa Logic";
+"polishStyle.xhs" = "RED Sisters";
 
 /* v0.3.0: Polish intensity picker */
 "polish.intensity.off" = "Off";
@@ -139,13 +143,19 @@
 "mac.styles.add" = "Add Polish Style";
 "mac.styles.edit" = "Edit Style";
 "mac.styles.builtin" = "Built-in";
+"mac.styles.fun" = "Fun styles";
 "mac.styles.custom" = "My Styles";
 "mac.styles.copy" = "Copy";
+"mac.styles.viewPrompt" = "View Prompt";
 "mac.styles.light" = "Minimal rewriting with recognition and punctuation fixes.";
 "mac.styles.structured" = "Clear paragraphs and lists for multiple points.";
 "mac.styles.formal" = "Professional writing for email and work.";
-"mac.styles.dating" = "Warm, playful, respectful messages that invite conversation.";
+"mac.styles.dating" = "Warm, playful messages with a light touch of wit.";
 "mac.styles.chat" = "Short, natural messages without a formal tone.";
+"mac.styles.flex" = "4A / study-abroad Chinglish with optional luxury seasoning.";
+"mac.styles.corp" = "Big-tech buzzwords for syncs, pushback, and blame-shifting.";
+"mac.styles.diba" = "Clean logical takedowns that leave the other side stuck.";
+"mac.styles.xhs" = "Sisterly Xiaohongshu note voice with hooks, ready to post.";
 "mac.styles.customDescription" = "Custom complete writing personality";
 "mac.styles.error" = "Couldn’t Save Style";
 "mac.styles.validation" = "Check the name, prompt length, and the 8-style limit.";
@@ -204,6 +214,10 @@
 "mac.history.clearTitle" = "Clear all history?";
 "mac.history.clearMessage" = "This cannot be undone.";
 "mac.history.clearConfirm" = "Clear all";
+"mac.history.clearDayTitle" = "Delete this day's history?";
+"mac.history.clearDayMessage" = "All transcripts from this day will be removed. This cannot be undone.";
+"mac.history.clearDayConfirm" = "Delete day";
+"mac.history.clearDayButton" = "Delete this day's history";
 "mac.dict.health" = "Vocabulary Health";
 "mac.dict.healthDesc" = "Custom terms that bias recognition and are never rewritten.";
 "mac.dict.add" = "Add Personal Word";
@@ -246,6 +260,8 @@
 "mac.settings.thinking" = "Thinking";
 "mac.settings.thinkingSubtitle" = "Slower, higher quality — recommended off";
 "mac.settings.thinkingHint" = "Off by default. Enable only for slower, deeper reasoning.";
+"mac.settings.translation" = "Polish then translate";
+"mac.settings.translationOff" = "Don't translate";
 "mac.settings.volcengineAppId" = "APP ID";
 "mac.settings.volcengineAccessToken" = "Access Token";
 "mac.settings.volcengineResourceId" = "Resource ID";

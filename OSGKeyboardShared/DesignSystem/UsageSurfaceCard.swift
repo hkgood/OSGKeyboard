@@ -15,7 +15,7 @@ public struct UsageSurfaceCard<Content: View>: View {
 
     public init(
         padding: CGFloat = Spacing.md,
-        cornerRadius: CGFloat = Radius.medium,
+        cornerRadius: CGFloat = Radius.xl,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.padding = padding
@@ -29,6 +29,7 @@ public struct UsageSurfaceCard<Content: View>: View {
         content()
             .padding(padding)
             .background(palette.surface, in: shape)
+            .clipShape(shape)
             .overlay(
                 shape.stroke(palette.divider, lineWidth: 0.5)
             )

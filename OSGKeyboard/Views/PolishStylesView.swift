@@ -21,17 +21,21 @@ struct PolishStylesView: View {
 
     private let store = AppGroupStore()
     private let columns = [
-        GridItem(.flexible(), spacing: Spacing.md),
-        GridItem(.flexible(), spacing: Spacing.md),
+        GridItem(.flexible(), spacing: Spacing.sm),
+        GridItem(.flexible(), spacing: Spacing.sm),
     ]
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.xl) {
+                CardPageContent(spacing: Spacing.xl) {
                     packGridSection(
                         title: "polishStyles.builtin.section",
-                        packs: PolishStylePackCatalog.builtins
+                        packs: PolishStylePackCatalog.BuiltinStyleGroup.practical.packs
+                    )
+                    packGridSection(
+                        title: "polishStyles.fun.section",
+                        packs: PolishStylePackCatalog.BuiltinStyleGroup.fun.packs
                     )
                     if !catalog.entries.isEmpty {
                         packGridSection(
@@ -41,12 +45,9 @@ struct PolishStylesView: View {
                         )
                     }
                 }
-                .padding(.horizontal, Spacing.md)
-                .padding(.top, Spacing.sm)
-                .padding(.bottom, Spacing.xl)
+                .tabBarScrollBottomPadding()
             }
             .background(palette.background)
-            .tabBarScrollBottomPadding()
             .navigationTitle("polishStyles.title")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -98,14 +99,8 @@ struct PolishStylesView: View {
         title: LocalizedStringKey,
         packs: [PolishStylePack]
     ) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(title)
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textSecondary)
-                .textCase(.uppercase)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            LazyVGrid(columns: columns, spacing: Spacing.md) {
+        CardSection(title) {
+            LazyVGrid(columns: columns, spacing: Spacing.sm) {
                 ForEach(packs) { pack in
                     packCard(pack)
                 }
@@ -120,20 +115,18 @@ struct PolishStylesView: View {
                 activate(pack)
             } label: {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Image(systemName: iconName(for: pack))
-                        .font(.system(size: 24, weight: .medium))
-                        .foregroundStyle(isSelected ? palette.accent : palette.textSecondary)
                     Text(pack.displayName(language: config.uiLanguage))
                         .font(TypeStyle.body)
                         .foregroundStyle(palette.textPrimary)
                         .lineLimit(1)
+                        .padding(.trailing, 32)
                     Text(descriptionKey(for: pack))
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.textTertiary)
-                        .lineLimit(3)
+                        .lineLimit(2)
                     Spacer()
                 }
-                .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
+                .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
                 .padding(Spacing.md)
                 .contentShape(Rectangle())
             }
@@ -193,17 +186,6 @@ struct PolishStylesView: View {
         }
     }
 
-    private func iconName(for pack: PolishStylePack) -> String {
-        switch pack.id {
-        case "builtin.structured": return "list.bullet.rectangle"
-        case "builtin.formal": return "briefcase"
-        case "builtin.dating": return "heart.text.square"
-        case "builtin.chat": return "bubble.left.and.bubble.right"
-        case "builtin.light": return "wand.and.sparkles"
-        default: return "text.badge.star"
-        }
-    }
-
     private func descriptionKey(for pack: PolishStylePack) -> LocalizedStringKey {
         guard pack.kind == .builtin else { return "polishStyles.custom.description" }
         switch pack.id {
@@ -211,6 +193,10 @@ struct PolishStylesView: View {
         case "builtin.formal": return "polishStyles.formal.description"
         case "builtin.dating": return "polishStyles.dating.description"
         case "builtin.chat": return "polishStyles.chat.description"
+        case "builtin.flex": return "polishStyles.flex.description"
+        case "builtin.corp": return "polishStyles.corp.description"
+        case "builtin.diba": return "polishStyles.diba.description"
+        case "builtin.xhs": return "polishStyles.xhs.description"
         default: return "polishStyles.light.description"
         }
     }
@@ -294,21 +280,15 @@ private struct PolishStylePromptDetailSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                Text(pack.prompt)
-                    .font(.body.monospaced())
-                    .foregroundStyle(palette.textPrimary)
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(Spacing.md)
-                    .background(
-                        palette.surface,
-                        in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                            .stroke(palette.divider, lineWidth: 0.5)
-                    )
-                    .padding(Spacing.md)
+                CardPageContent {
+                    Text(pack.prompt)
+                        .font(.body.monospaced())
+                        .foregroundStyle(palette.textPrimary)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(Spacing.md)
+                        .surfaceCard()
+                }
             }
             .background(palette.background)
             .navigationTitle(pack.displayName(language: language))

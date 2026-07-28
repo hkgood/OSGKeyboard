@@ -65,7 +65,7 @@ public enum ProviderModelService {
         session: URLSession = .shared
     ) async throws -> [String] {
         switch CloudASRModelCatalog.strategy(for: providerId) {
-        case .volcengineStreaming, .bailianStreaming:
+        case .volcengineStreaming, .bailianStreaming, .openaiRealtimeStreaming:
             return singleModel(currentModel, fallback: CloudASRModelCatalog.defaultModel(for: providerId))
         case .localFallback:
             return []

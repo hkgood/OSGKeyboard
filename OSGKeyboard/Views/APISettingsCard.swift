@@ -43,7 +43,7 @@ struct APISettingsCard: View {
             rowDivider
             SettingsProviderToolsRow(validate: validateConnection)
         }
-        .modifier(SettingsSurfaceCardModifier(enabled: showsSurface))
+        .surfaceCard(enabled: showsSurface)
     }
 
     private var rowDivider: some View {

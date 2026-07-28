@@ -9,6 +9,8 @@ struct HistoryView: View {
     @ObservedObject private var store = SpeechHistoryStore.shared
 
     @State private var showClearConfirmation = false
+    @State private var showDeleteDayConfirmation = false
+    @State private var dayPendingDelete: Date?
 
     private static let dayFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -62,6 +64,23 @@ struct HistoryView: View {
             } message: {
                 Text("history.clear.message")
             }
+            .confirmationDialog(
+                "history.clearDay.title",
+                isPresented: $showDeleteDayConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("history.clearDay.confirm", role: .destructive) {
+                    if let day = dayPendingDelete {
+                        store.deleteEntries(on: day)
+                    }
+                    dayPendingDelete = nil
+                }
+                Button("common.cancel", role: .cancel) {
+                    dayPendingDelete = nil
+                }
+            } message: {
+                Text("history.clearDay.message")
+            }
         }
     }
 
@@ -81,11 +100,7 @@ struct HistoryView: View {
                         delete(items: group.items, at: offsets)
                     }
                 } header: {
-                    Text(Self.dayFormatter.string(from: group.day))
-                        .font(TypeStyle.caption2)
-                        .foregroundStyle(palette.textTertiary)
-                        .textCase(.uppercase)
-                        .tracking(0.5)
+                    daySectionHeader(day: group.day)
                 }
                 .listSectionMargins(.horizontal, Spacing.lg)
             }
@@ -95,7 +110,36 @@ struct HistoryView: View {
         .scrollContentBackground(.hidden)
         .background(palette.background)
         .contentMargins(.top, Spacing.md, for: .scrollContent)
-        .tabBarScrollBottomPadding()
+        .tabBarListScrollBottomMargin()
+    }
+
+    /// Date label + per-day delete, flush with the section card's left/right edges
+    /// (Settings section labels share the same edge; system List headers inset further).
+    private func daySectionHeader(day: Date) -> some View {
+        HStack(alignment: .center, spacing: Spacing.sm) {
+            Text(Self.dayFormatter.string(from: day))
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textSecondary)
+                .textCase(.uppercase)
+
+            Spacer(minLength: 0)
+
+            Button {
+                dayPendingDelete = day
+                showDeleteDayConfirmation = true
+            } label: {
+                Text("common.delete")
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.danger)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("history.clearDay.button")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // Cancel the default List section-header content inset so the label
+        // lines up with the card's left edge (rows use leading: 0).
+        .padding(.horizontal, -SettingsListMetrics.rowHorizontalPadding)
+        .textCase(nil)
     }
 
     private var emptyState: some View {

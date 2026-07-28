@@ -83,6 +83,14 @@ public enum CloudASRClientFactory {
                 resourceID: asrModel,
                 session: session
             )
+        case .openaiRealtimeStreaming:
+            return OpenAIRealtimeASRClient(
+                apiKey: store.asrApiKey,
+                endpoint: store.asrBaseURL,
+                model: asrModel,
+                batchBaseURL: LLMProvider.provider(id: "openai").defaultBaseURL,
+                session: session
+            )
         case .localFallback:
             return UnsupportedCloudASRClient(providerId: providerId)
         }

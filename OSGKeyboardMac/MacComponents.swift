@@ -57,6 +57,10 @@ enum MacMetrics {
     /// window edge; only the content inside is inset.
     /// Doubled from `Spacing.lg` so title + cards breathe from the edges.
     static let pageHorizontalInset: CGFloat = Spacing.lg * 2
+    /// Minimum polish-style card width: at the default window the detail
+    /// pane (~540pt after sidebar + insets) fits three columns; narrowing
+    /// drops to two, widening adds a fourth+.
+    static let polishStyleCardMinWidth: CGFloat = 170
     /// Built-in horizontal inset macOS grouped `Form` adds around its section
     /// cards, on top of any padding we apply. Subtracted from
     /// `pageHorizontalInset` on the Settings Form so its card outer edge lands

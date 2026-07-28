@@ -256,6 +256,20 @@ final class IntelligentPolishTests: XCTestCase {
         XCTAssertTrue(TranscriptPostProcessor.shouldSkipLLM(for: "明天见"))
     }
 
+    func testShouldSkipLLMTier2ForAckClosings() {
+        XCTAssertTrue(TranscriptPostProcessor.shouldSkipLLM(for: "好的我知道了"))
+        XCTAssertTrue(TranscriptPostProcessor.shouldSkipLLM(for: "那就先这样吧"))
+        XCTAssertTrue(TranscriptPostProcessor.shouldSkipLLM(for: "晚点再说"))
+        XCTAssertTrue(TranscriptPostProcessor.shouldSkipLLM(for: "收到谢谢"))
+    }
+
+    func testShouldNotSkipLLMTier2ForQuestionsOrContent() {
+        XCTAssertFalse(TranscriptPostProcessor.shouldSkipLLM(for: "今晚有空吗"))
+        XCTAssertFalse(TranscriptPostProcessor.shouldSkipLLM(for: "这个还行吧"))
+        XCTAssertFalse(TranscriptPostProcessor.shouldSkipLLM(for: "周六一起吃饭"))
+        XCTAssertFalse(TranscriptPostProcessor.shouldSkipLLM(for: "防晒不由夏天"))
+    }
+
     func testShouldNotSkipLLMWhenStructurePresent() {
         XCTAssertFalse(TranscriptPostProcessor.shouldSkipLLM(for: "第一点做完第二点再做"))
     }

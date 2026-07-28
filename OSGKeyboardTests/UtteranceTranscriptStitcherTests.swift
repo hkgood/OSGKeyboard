@@ -40,4 +40,14 @@ final class UtteranceTranscriptStitcherTests: XCTestCase {
         stitcher.append(index: 1, text: "第二段合并")
         XCTAssertEqual(stitcher.composed(), "第一段 第二段合并")
     }
+
+    /// Documents the preMerge wipe hazard: append ignores empty text, so
+    /// removeLast + empty append leaves nothing. Pipeline must guard this.
+    func testEmptyAppendAfterRemoveLastWipesPriorSegment() {
+        var stitcher = UtteranceTranscriptStitcher()
+        stitcher.append(index: 0, text: "已识别内容")
+        stitcher.removeLastSegment()
+        stitcher.append(index: 0, text: "")
+        XCTAssertEqual(stitcher.composedSafely(), "")
+    }
 }

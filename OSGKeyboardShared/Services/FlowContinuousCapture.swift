@@ -52,21 +52,27 @@ private final class FlowCaptureStreamRelay: @unchecked Sendable {
     }
 }
 
-/// Rolling pre-roll while utterance gate is closed (~400 ms at typical tap rates).
+/// Rolling pre-roll while utterance gate is closed.
+///
+/// Sized by sample count (~3 s @ 16 kHz) so PiP mic spin-up between
+/// `capture.start()` and `beginUtterance` does not discard the user's
+/// opening words (the old 6-buffer cap was only ~400 ms).
 private final class FlowPrerollStore: @unchecked Sendable {
     private let lock = OSAllocatedUnfairLock()
     private var snapshots: [AudioBufferSnapshot] = []
-    private let maxCount: Int
+    private let maxSamples: Int
 
-    init(maxCount: Int = 6) {
-        self.maxCount = maxCount
+    init(maxSamples: Int = 48_000) {
+        self.maxSamples = maxSamples
     }
 
     func append(_ snapshot: AudioBufferSnapshot) {
         lock.withLock {
             snapshots.append(snapshot)
-            if snapshots.count > maxCount {
-                snapshots.removeFirst(snapshots.count - maxCount)
+            var total = snapshots.reduce(0) { $0 + $1.samples.count }
+            while total > maxSamples, !snapshots.isEmpty {
+                let removed = snapshots.removeFirst()
+                total -= removed.samples.count
             }
         }
     }

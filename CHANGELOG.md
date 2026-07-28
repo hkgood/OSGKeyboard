@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **True streaming cloud ASR**: Bailian, Volcengine, and OpenAI Realtime use one utterance-level WebSocket with live partials; Volcengine enables official two-pass (`enable_nonstream`) so interim text stays on-screen while definite ASR feeds polish. / **真流式云端 ASR**：百炼、火山与 OpenAI Realtime 按整句长连接推流并实时上屏；火山开启官方二遍识别（`enable_nonstream`），interim 仅上屏，definite 再送润色。
+- **Streaming ASR badge**: settings ASR provider chip shows 【流式识别】 for Bailian, Volcengine, and OpenAI. / **流式识别标签**：设置里 ASR 供应商对百炼、火山、OpenAI 显示【流式识别】。
+- **Fun polish styles**: new subcategory with Flex Guide, Corp Speak, and DiBa Logic alongside Dating Coach. / **趣味润色风格**：新增小分类，含装逼指南、大厂黑话、帝吧大神，并与直男癌拯救器同组。
+- **Xiaohongshu Sisters style**: fun polish pack that rewrites drafts into sisterly RED note body with Light/Medium/Heavy hooks (轻安利 / 种草感 / 爆款感). / **小红书集美风格**：趣味润色包，将草稿改写成姐妹向小红书笔记正文，并按轻安利 / 种草感 / 爆款感三档跳变。
+- **Delete day in History**: each day header has a Delete action with confirmation to clear that day's transcripts only (iOS and Mac). / **历史按天删除**：日期行右侧提供删除按钮，确认后仅清除当天记录（iOS 与 Mac）。
+- **Mac Settings translation target**: polish-provider section includes “Polish then translate” with the same locale picker as Home / menu bar. / **Mac 设置翻译目标**：润色（LLM）分区新增「润色后翻译」，与首页 / 菜单栏同一套目标语言选择。
+
+### Changed
+- **Two-tier short polish skip**: ultra-short (≤4 CJK) still skips the LLM; 5–10 CJK now skips only low-value acks/closings (e.g. “好的我知道了”), while questions and contentful shorts still polish. / **两级短句跳过润色**：≤4 字仍跳过 LLM；5–10 字仅对低价值确认/收束语跳过（如「好的我知道了」），问句与有内容短句仍走润色。
+- **ABE polish routing**: fun styles and daily chat use a local information-density gate, prompt hard-brakes, and style-specific degrade (e.g. DiBa without an opponent quote falls back to chat cleanup) without a second LLM call. / **ABE 润色路由**：趣味风格与日常聊天增加本地信息密度闸、提示词硬刹车与风格专属降级（如帝吧无对方原话时降级日常清理），不增加第二次 LLM 调用。
+- **Practical polish prompts**: Light Clean / Structured / Formal / Daily Chat share a “transcript-only, not a chatbot” boundary; Structured gains active itemization, light semantic reorder, and paragraphing hard rules inspired by high-readability polish patterns. / **实用润色提示词**：轻度清理 / 清晰结构 / 正式表达 / 日常聊天统一「只整理转写、非聊天助手」边界；清晰结构加强积极分项、轻度语义重排与分段硬规则，提升长口述可读性。
+- **Settings hierarchy**: voice-session options join Daily, while ASR and LLM configuration links sit directly below the transcription-mode choices; General and About remain secondary pages. / **设置层级**：语音会话选项并入「日常」，ASR 与 LLM 配置入口紧跟转写模式选择；通用与关于保留为二级页。
+- **Transcription option rows**: local and cloud choices now use the same text-first list-row style as the rest of Settings, without leading icons. / **转写选项行**：本地与云端选项移除前置图标，统一采用设置页的文字优先列表样式。
+- **Simplified style cards and summaries**: polish-style cards drop decorative badges, and speech-configuration summaries show only the active engine or provider/model without redundant status prefixes. / **简化风格卡与摘要**：润色风格卡移除装饰图标；语音配置摘要仅显示引擎或服务商/模型，不再附加冗余状态前缀。
+- **Mac polish style grid**: cards drop decorative icons and use a denser adaptive grid (about three columns at the default window; two when narrower, four+ when wider). / **Mac 润色风格网格**：卡片去掉装饰图标，并以更密的自适应网格排布（默认窗口约三列；变窄两列、变宽四列及以上）。
+- **OpenAI ASR default**: cloud OpenAI ASR defaults to `gpt-realtime-whisper` for streaming; batch transcription remains the fallback. / **OpenAI ASR 默认**：云端 OpenAI ASR 默认 `gpt-realtime-whisper` 走流式；批处理转写仍作降级。
+- **Dating Coach prompt**: spoken WeChat first with clever lines only as seasoning; refreshed examples to reduce copywriting AI tone. / **直男癌拯救器提示词**：以口语微信为主、巧思仅作点缀；刷新示例以降低文案式 AI 腔。
+- **Unified card-page layout**: Settings, polish styles, and related detail pages now share 20-point page margins, section labels, and card chrome. / **统一卡片页面布局**：设置、润色风格及相关详情页共用 20 点页面留白、分组标题和卡片外观。
+
+### Fixed
+- **Daily-chat short replies**: chat polish forbids interlocutor-style continuations on ultra-short drafts (e.g. “嗯” no longer becomes “嗯，我在呢”). / **日常聊天短句接话**：日常润色禁止对极短草稿做对方口吻续写（如「嗯」不再变成「嗯，我在呢」）。
+- **Card corner consistency**: the seven-day chart and shared usage cards now use the same continuous 20-point corners as the other Home cards; shared Settings cards also clip child backgrounds to their border shape. / **卡片圆角一致性**：最近 7 天图表及共享统计卡改用与首页其他卡片一致的连续 20 点圆角；共享设置卡片也会将子视图背景裁切到边框形状。
+- **PiP mic spin-up drop**: on record press, open capture and the utterance gate before waiting for audio proof, and keep ~3 s of idle preroll so speech during mic warm-up is not discarded. / **PiP 开麦丢音**：按下录音后先启动采集并打开 utterance gate，再等待音频证明；空闲 preroll 约 3 秒，避免麦克风预热期间的语音被丢掉。
+- **Empty preMerge wipe**: final-chunk preMerge that returns empty text no longer removes a prior good segment; ASR pipeline failures also recover via partial snapshot instead of clearing it. / **空 preMerge 抹字**：末块 preMerge 若识别为空，不再删除已有有效片段；流水线失败时改用 partial 快照恢复，而不再清空兜底。
+- **History day label alignment**: date headers line up with the history card's left edge like Settings section labels. / **历史日期对齐**：日期标题与下方卡片左边缘对齐，与设置页分组标题一致。
+
 ## [1.0.1] - 2026-07-27
 
 ### Fixed

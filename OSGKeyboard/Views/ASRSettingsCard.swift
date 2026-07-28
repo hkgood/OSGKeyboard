@@ -23,7 +23,7 @@ struct ASRSettingsCard: View {
             rowDivider
             SettingsProviderToolsRow(validate: validateConnection)
         }
-        .modifier(SettingsSurfaceCardModifier(enabled: showsSurface))
+        .surfaceCard(enabled: showsSurface)
     }
 
     @ViewBuilder

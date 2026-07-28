@@ -742,7 +742,7 @@ private struct APISetupPage: View {
                         Divider().background(palette.divider)
                         ASRSettingsCard(config: config, showsSurface: false)
                     }
-                    .modifier(SettingsSurfaceCardModifier(enabled: true))
+                    .surfaceCard()
                     .padding(.horizontal, Spacing.lg)
                 } else {
                     Text("onboarding.api.localModels.hint")
@@ -789,7 +789,7 @@ private struct PolishSetupPage: View {
                     Divider().background(palette.divider)
                     APISettingsCard(config: config, showsSurface: false)
                 }
-                .modifier(SettingsSurfaceCardModifier(enabled: true))
+                .surfaceCard()
                 .padding(.horizontal, Spacing.lg)
             }
             .padding(.bottom, Spacing.xxxl)

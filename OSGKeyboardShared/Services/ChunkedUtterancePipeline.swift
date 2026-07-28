@@ -139,10 +139,22 @@ public actor ChunkedUtterancePipeline {
                 let mergedResult = await transcribeChunk(samples: preMerge.samples)
                 switch mergedResult {
                 case .success(let text):
-                    stitcher.removeLastSegment()
-                    stitcher.append(index: preMerge.stitchIndex, text: text)
-                    publishPartial(from: stitcher, onPartial: onPartial)
+                    // Empty / whitespace merge must NOT wipe a prior good segment
+                    // (`append` ignores empty text, so remove-then-append would
+                    // silently drop the only transcript — the AC327-style bug).
+                    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if trimmed.isEmpty {
+                        FlowPipelineDiagnostics.logFinalChunkRecovery(
+                            action: "preMergeKeepPrior",
+                            chunkIndex: chunk.index
+                        )
+                    } else {
+                        stitcher.removeLastSegment()
+                        stitcher.append(index: preMerge.stitchIndex, text: text)
+                        publishPartial(from: stitcher, onPartial: onPartial)
+                    }
                 case .failure(let message):
+                    // Keep prior stitcher text; treat as a soft chunk warning.
                     failedChunks += 1
                     chunkWarnings.append(
                         SharedL10n.format(

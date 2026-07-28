@@ -11,6 +11,7 @@ struct MacPolishStylesView: View {
     @Environment(\.themePalette) private var palette
 
     @State private var editingPack: PolishStylePack?
+    @State private var viewingPack: PolishStylePack?
     @State private var showEditor = false
     @State private var errorMessage: String?
 
@@ -24,10 +25,12 @@ struct MacPolishStylesView: View {
         _ = viewModel.polishStylesRevision
         return store.activePolishStyleId
     }
+    /// At the default window (~540pt content), ~170pt min yields 3 columns;
+    /// narrower → 2, wider → 4+. Cards stretch equally (no max width).
     private var columns: [GridItem] {
         [
             GridItem(
-                .adaptive(minimum: 240, maximum: 360),
+                .adaptive(minimum: MacMetrics.polishStyleCardMinWidth),
                 spacing: Spacing.md,
                 alignment: .top
             ),
@@ -57,7 +60,11 @@ struct MacPolishStylesView: View {
                 LazyVStack(alignment: .leading, spacing: Spacing.xl) {
                     styleSection(
                         title: MacL10n.string("mac.styles.builtin", language: lang),
-                        packs: PolishStylePackCatalog.builtins
+                        packs: PolishStylePackCatalog.BuiltinStyleGroup.practical.packs
+                    )
+                    styleSection(
+                        title: MacL10n.string("mac.styles.fun", language: lang),
+                        packs: PolishStylePackCatalog.BuiltinStyleGroup.fun.packs
                     )
                     if !catalog.entries.isEmpty {
                         styleSection(
@@ -75,6 +82,9 @@ struct MacPolishStylesView: View {
             MacPolishStyleEditor(pack: editingPack, language: lang) { pack in
                 save(pack)
             }
+        }
+        .sheet(item: $viewingPack) { pack in
+            MacPolishStylePromptDetailSheet(pack: pack, language: lang)
         }
         .alert(
             MacL10n.string("mac.styles.error", language: lang),
@@ -118,12 +128,20 @@ struct MacPolishStylesView: View {
         MacPolishStyleCard(
             name: pack.displayName(language: lang),
             subtitle: subtitle(for: pack),
-            iconName: iconName(for: pack),
             isSelected: pack.id == activeID,
             isUserStyle: pack.kind == .user,
             language: lang,
             activate: {
                 activate(pack)
+            },
+            // Builtin → view prompt; custom → edit (matches iOS).
+            primaryAction: {
+                if pack.kind == .builtin {
+                    viewingPack = pack
+                } else {
+                    editingPack = pack
+                    showEditor = true
+                }
             },
             duplicate: {
                 editingPack = PolishStylePack(
@@ -132,25 +150,10 @@ struct MacPolishStylesView: View {
                 )
                 showEditor = true
             },
-            edit: {
-                editingPack = pack
-                showEditor = true
-            },
             delete: {
                 delete(pack)
             }
         )
-    }
-
-    private func iconName(for pack: PolishStylePack) -> String {
-        switch pack.id {
-        case "builtin.structured": return "list.bullet.rectangle"
-        case "builtin.formal": return "briefcase"
-        case "builtin.dating": return "heart.text.square"
-        case "builtin.chat": return "bubble.left.and.bubble.right"
-        case "builtin.light": return "wand.and.sparkles"
-        default: return "text.badge.star"
-        }
     }
 
     private func subtitle(for pack: PolishStylePack) -> String {
@@ -202,13 +205,12 @@ struct MacPolishStylesView: View {
 private struct MacPolishStyleCard: View {
     let name: String
     let subtitle: String
-    let iconName: String
     let isSelected: Bool
     let isUserStyle: Bool
     let language: AppUILanguage
     let activate: () -> Void
+    let primaryAction: () -> Void
     let duplicate: () -> Void
-    let edit: () -> Void
     let delete: () -> Void
 
     @Environment(\.themePalette) private var palette
@@ -220,22 +222,19 @@ private struct MacPolishStyleCard: View {
         ZStack(alignment: .topTrailing) {
             Button(action: activate) {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Image(systemName: iconName)
-                        .font(.system(size: 24, weight: .medium))
-                        .foregroundStyle(isSelected ? palette.accent : palette.textSecondary)
-
-                    Spacer(minLength: Spacing.xs)
-
                     Text(name)
                         .font(TypeStyle.bodyEmph)
                         .foregroundStyle(palette.textPrimary)
                         .lineLimit(1)
+                        .padding(.trailing, 32)
 
                     Text(subtitle)
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.textTertiary)
-                        .lineLimit(2)
+                        .lineLimit(3)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    Spacer(minLength: 0)
                 }
                 .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
                 .padding(Spacing.md)
@@ -243,8 +242,22 @@ private struct MacPolishStyleCard: View {
             }
             .buttonStyle(.plain)
 
-            actionButtons
-                .padding(Spacing.sm)
+            // Builtin: eye → view prompt; custom: pencil → edit.
+            Button(action: primaryAction) {
+                Image(systemName: isUserStyle ? "pencil" : "eye")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(palette.textSecondary)
+                    .frame(width: 28, height: 28)
+                    .background(palette.background.opacity(isHovering ? 0.9 : 0.72), in: Circle())
+            }
+            .padding(Spacing.sm)
+            .buttonStyle(.plain)
+            .accessibilityLabel(
+                MacL10n.string(
+                    isUserStyle ? "mac.styles.edit" : "mac.styles.viewPrompt",
+                    language: language
+                )
+            )
 
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
@@ -271,51 +284,57 @@ private struct MacPolishStyleCard: View {
         .animation(Motion.quick, value: isHovering)
         .animation(Motion.quick, value: isSelected)
         .onHover { isHovering = $0 }
-    }
-
-    private var actionButtons: some View {
-        HStack(spacing: Spacing.xxs) {
-            cardActionButton(
-                systemImage: "plus.square.on.square",
-                accessibilityLabel: MacL10n.string("mac.styles.copy", language: language),
-                action: duplicate
-            )
-
+        .contextMenu {
+            Button(MacL10n.string("mac.styles.copy", language: language), action: duplicate)
             if isUserStyle {
-                cardActionButton(
-                    systemImage: "pencil",
-                    accessibilityLabel: MacL10n.string("mac.styles.edit", language: language),
-                    action: edit
-                )
-                cardActionButton(
-                    systemImage: "trash",
-                    accessibilityLabel: MacL10n.string("mac.delete", language: language),
-                    foreground: palette.danger,
-                    action: delete
-                )
+                Button(MacL10n.string("mac.delete", language: language), role: .destructive, action: delete)
             }
         }
     }
 
-    private func cardActionButton(
-        systemImage: String,
-        accessibilityLabel: String,
-        foreground: Color? = nil,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(foreground ?? palette.textSecondary)
-                .frame(width: 28, height: 28)
-                .background(palette.background.opacity(isHovering ? 0.9 : 0.72), in: Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(accessibilityLabel)
-    }
-
     private var hoverBorder: Color {
         isHovering ? palette.dividerStrong : palette.divider
+    }
+}
+
+/// Read-only prompt viewer for built-in styles (mirrors iOS).
+private struct MacPolishStylePromptDetailSheet: View {
+    let pack: PolishStylePack
+    let language: AppUILanguage
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.themePalette) private var palette
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack {
+                Text(pack.displayName(language: language))
+                    .font(TypeStyle.title2)
+                Spacer()
+                Button(MacL10n.string("mac.done", language: language)) { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+            }
+
+            ScrollView {
+                Text(pack.prompt)
+                    .font(.body.monospaced())
+                    .foregroundStyle(palette.textPrimary)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(Spacing.md)
+                    .background(
+                        palette.surface,
+                        in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+                            .stroke(palette.divider, lineWidth: 1)
+                    )
+            }
+        }
+        .padding(Spacing.xl)
+        .frame(width: 680, height: 520)
+        .background(palette.background)
     }
 }
 

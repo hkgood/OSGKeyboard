@@ -543,9 +543,15 @@ final class FlowSessionManager: ObservableObject {
 
     private func reactivateCaptureIfNeeded() async {
         guard isActive else { return }
-        if usesPiPKeepAlive, !isUtteranceRecording, !isUtteranceProcessing, !capture.running {
-            refreshHostReady()
-            return
+        // PiP releases the mic between utterances (and after drain while
+        // processing). Only reassert when an utterance is actively recording
+        // with capture already running — otherwise a foreground bounce was
+        // cold-starting the mic mid-finalize (`!pri` / session churn).
+        if usesPiPKeepAlive {
+            guard isUtteranceRecording, capture.running else {
+                refreshHostReady()
+                return
+            }
         }
         // A system interruption (call / Siri) may be in progress. Probe it:
         // `setActive(true)` inside `reassertIfRunning` fails while the
@@ -1262,29 +1268,51 @@ final class FlowSessionManager: ObservableObject {
     private func handleStartRecordingCommand(utteranceId: UUID?, commandSeq: Int64) async {
         if usesPiPKeepAlive {
             refreshHostReady()
-            let micReady = await ensureCaptureReadyForPiPUtterance()
-            guard micReady else {
+            // Open the mic and utterance gate ASAP. Waiting for audio proof
+            // *before* beginUtterance left spin-up frames in a tiny preroll
+            // while the keyboard already showed "recording" — users spoke into
+            // a closed gate and got ~1s PCM for a multi-second press.
+            guard startCaptureForPiPUtteranceIfNeeded() else {
                 failUtterance(
                     message: AppL10n.string("flow.coldStart.error.audioTimeout"),
                     kind: .audioUnavailable
                 )
                 return
             }
+            beginUtterance(
+                utteranceId: utteranceId,
+                commandSeq: commandSeq,
+                requireRecentAudio: false
+            )
+            if capture.engineHasRecentAudio(maxAge: 2) {
+                return
+            }
+            let micReady = await capture.awaitAudioFlowing(
+                timeout: Self.coldStartAudioProofTimeout
+            )
+            if !micReady {
+                failUtterance(
+                    message: AppL10n.string("flow.coldStart.error.audioTimeout"),
+                    kind: .audioUnavailable
+                )
+            }
+            return
         }
         beginUtterance(utteranceId: utteranceId, commandSeq: commandSeq)
     }
 
-    private func ensureCaptureReadyForPiPUtterance() async -> Bool {
+    /// Start capture for a PiP utterance without blocking on the first frame.
+    private func startCaptureForPiPUtteranceIfNeeded() -> Bool {
         if capture.engineHasRecentAudio(maxAge: 2) {
             return true
         }
         do {
             try capture.start()
+            return true
         } catch {
             debug("PiP utterance capture start failed: \(error.localizedDescription)")
             return false
         }
-        return await capture.awaitAudioFlowing(timeout: Self.coldStartAudioProofTimeout)
     }
 
     private func releaseCaptureAfterPiPUtteranceIfNeeded() {
@@ -1297,14 +1325,31 @@ final class FlowSessionManager: ObservableObject {
         refreshHostReady()
     }
 
-    private func beginUtterance(utteranceId: UUID? = nil, commandSeq: Int64 = 0) {
-        guard capture.engineHasRecentAudio(maxAge: 2) else {
-            traceState("beginUtterance.blocked", extra: "reason=audioNotRecent")
-            failUtterance(
-                message: AppL10n.string("flow.error.audioUnavailable"),
-                kind: .audioUnavailable
-            )
-            return
+    private func beginUtterance(
+        utteranceId: UUID? = nil,
+        commandSeq: Int64 = 0,
+        requireRecentAudio: Bool = true
+    ) {
+        if requireRecentAudio {
+            guard capture.engineHasRecentAudio(maxAge: 2) else {
+                traceState("beginUtterance.blocked", extra: "reason=audioNotRecent")
+                failUtterance(
+                    message: AppL10n.string("flow.error.audioUnavailable"),
+                    kind: .audioUnavailable
+                )
+                return
+            }
+        } else {
+            // PiP cold path: capture was just started; open the gate so the
+            // first tap frames enter the ASR stream instead of preroll only.
+            guard capture.running || capture.engineIsLive else {
+                traceState("beginUtterance.blocked", extra: "reason=captureNotRunning")
+                failUtterance(
+                    message: AppL10n.string("flow.error.audioUnavailable"),
+                    kind: .audioUnavailable
+                )
+                return
+            }
         }
         guard !isUtteranceProcessing else {
             traceState("beginUtterance.ignored", extra: "reason=processing")
@@ -1339,8 +1384,18 @@ final class FlowSessionManager: ObservableObject {
 
         let locale = SpeechLocaleResolver.resolve(localeId)
         let stream = capture.beginUtterance()
-        let pipeline = ChunkedUtterancePipeline(asr: asr, locale: locale)
-        chunkedPipeline = pipeline
+        let useStreaming =
+            store.engineMode == "cloud"
+            && CloudASRModelCatalog.supportsTrueStreamingASR(for: store.asrProviderId)
+        let pipeline: ChunkedUtterancePipeline?
+        if useStreaming {
+            chunkedPipeline = nil
+            pipeline = nil
+        } else {
+            let created = ChunkedUtterancePipeline(asr: asr, locale: locale)
+            chunkedPipeline = created
+            pipeline = created
+        }
 
         isUtteranceRecording = true
         utteranceRecordingStartedAt = Date()
@@ -1349,18 +1404,33 @@ final class FlowSessionManager: ObservableObject {
         updateLiveActivityPhase(.recording)
         FlowDiagnostics.log(
             "beginUtterance engine=\(store.engineMode) " +
-            "asrType=\(type(of: asr)) pipelined=true " +
+            "asrType=\(type(of: asr)) streaming=\(useStreaming) " +
             "localCustomLM=\(store.localASRCustomLanguageModelEnabled) " +
             "max=\(Int(FlowSessionKeys.maxUtteranceDuration))s"
         )
 
+        let cloudASRForStreaming = useStreaming ? (asr as? CloudASRService) : nil
+
         asrTask = Task.detached(priority: .userInitiated) { [weak manager = self] in
-            let outcome = await pipeline.transcribe(stream: stream) { partial in
-                Task { @MainActor in
-                    guard let manager else { return }
-                    manager.currentPartial = partial
-                    manager.storeCurrentPartial(partial)
+            let outcome: ChunkedUtterancePipelineOutcome
+            if let cloud = cloudASRForStreaming {
+                outcome = await cloud.transcribeUtteranceStreaming(stream: stream, locale: locale) { partial in
+                    Task { @MainActor in
+                        guard let manager else { return }
+                        manager.currentPartial = partial
+                        manager.storeCurrentPartial(partial)
+                    }
                 }
+            } else if let pipeline {
+                outcome = await pipeline.transcribe(stream: stream) { partial in
+                    Task { @MainActor in
+                        guard let manager else { return }
+                        manager.currentPartial = partial
+                        manager.storeCurrentPartial(partial)
+                    }
+                }
+            } else {
+                outcome = .failure(SharedL10n.string("error.asr.noSpeech"))
             }
             // Re-bind `manager` inside the `@MainActor` block so the
             // weak reference is captured under the right isolation. Swift
@@ -1369,7 +1439,7 @@ final class FlowSessionManager: ObservableObject {
             await MainActor.run { [weak manager] in
                 guard let manager else { return }
                 FlowDiagnostics.log(
-                    "chunkedASR finished partialLen=\(manager.currentPartial.count) " +
+                    "asr finished streaming=\(useStreaming) partialLen=\(manager.currentPartial.count) " +
                     "finalPending=\(manager.lastFinal.isEmpty)"
                 )
                 switch outcome {
@@ -1379,7 +1449,19 @@ final class FlowSessionManager: ObservableObject {
                     manager.currentPartial = ""
                 case .failure(let message):
                     manager.debug("asr error: \(message)")
-                    if manager.isUtteranceRecording {
+                    // Prefer any non-empty partial over a hard no-speech failure.
+                    // finishProcessing used to clear bestPartialSnapshot and race
+                    // finalize into an empty transcript even when ASR had text.
+                    let recovery = [
+                        manager.currentPartial,
+                        manager.bestPartialSnapshot
+                    ]
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .first(where: { !$0.isEmpty })
+                    if let recovery {
+                        manager.lastFinal = recovery
+                        manager.debug("asr error recovered via partial len=\(recovery.count)")
+                    } else if manager.isUtteranceRecording {
                         manager.failUtterance(message: message, kind: .asrFailed)
                     } else if manager.isUtteranceProcessing {
                         manager.finishProcessing(withError: message, kind: .asrFailed)

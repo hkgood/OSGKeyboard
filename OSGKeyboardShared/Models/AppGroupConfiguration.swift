@@ -486,6 +486,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             "work": "builtin.formal",
             "document": "builtin.structured",
             "todo": "builtin.structured",
+            "social_lifestyle": "builtin.xhs",
         ]
         if let legacyID = defaults.string(forKey: Keys.legacyPolishScenarioId),
            let mappedID = legacyMappings[legacyID] {

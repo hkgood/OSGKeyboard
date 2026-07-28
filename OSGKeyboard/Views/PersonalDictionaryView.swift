@@ -121,7 +121,7 @@ struct PersonalDictionaryView: View {
             placement: .navigationBarDrawer(displayMode: .always),
             prompt: "settings.personalDictionary.search.prompt"
         )
-        .tabBarScrollBottomPadding()
+        .tabBarListScrollBottomMargin()
     }
 
     private func entryRow(_ entry: PersonalDictionary.Entry) -> some View {

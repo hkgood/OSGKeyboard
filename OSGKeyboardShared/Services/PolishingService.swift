@@ -12,7 +12,10 @@
 // Engine matrix:
 //   - `engineMode == "cloud"`  → user's cloud ASR + user's cloud LLM (independent)
 //   - `engineMode == "local"`  → on-device ASR + user's LLM (or built-in DeepSeek)
-//   - Ultra-short, structure-free utterances skip the LLM entirely
+//   - Ultra-short / low-value short utterances skip the LLM entirely
+//     (two-tier gate in TranscriptPostProcessor)
+//   - Fun / daily-chat sparse inputs use ABE routing (PolishRouter)
+//     without a second LLM round-trip
 //   - Cloud without API key     → raw + `.missingAPIKey` warning
 //   - Local without build key   → raw + `.missingAPIKey` warning
 //
@@ -91,8 +94,8 @@ public actor PolishingService {
 
         let resolvedContext = resolveContext(override: context)
 
-        // Ultra-short, structure-free inputs skip the LLM to save
-        // latency (e.g. "好", "OK", "明天见").
+        // Two-tier short-circuit: ultra-short always; 5–10 CJK only for
+        // low-value acks/closings (see TranscriptPostProcessor).
         if mode == .polish,
            systemPrompt == nil || systemPrompt?.isEmpty == true,
            TranscriptPostProcessor.shouldSkipLLM(for: trimmed) {
@@ -110,12 +113,34 @@ public actor PolishingService {
             }
         }
 
+        let route: PolishRouteDecision?
+        let routedContext: PolishContext
+        if mode == .polish, systemPrompt == nil || systemPrompt?.isEmpty == true {
+            let decision = PolishRouter.decide(
+                text: trimmed,
+                styleID: store.activePolishStyleId,
+                intensity: resolvedContext.intensity
+            )
+            route = decision
+            routedContext = PolishContext(
+                appContext: resolvedContext.appContext,
+                intensity: decision.effectiveIntensity,
+                precedingText: resolvedContext.precedingText,
+                dictionarySupplement: resolvedContext.dictionarySupplement,
+                maxPrecedingChars: resolvedContext.maxPrecedingChars
+            )
+        } else {
+            route = nil
+            routedContext = resolvedContext
+        }
+
         let llmResult = try await polishRemote(
             trimmed,
             mode: mode,
             systemPrompt: systemPrompt,
             providerIdOverride: providerIdOverride,
-            context: resolvedContext
+            context: routedContext,
+            route: route
         )
 
         // Translation and custom prompts bypass the polish post-processor.
@@ -123,7 +148,25 @@ public actor PolishingService {
             return llmResult
         }
 
-        return TranscriptPostProcessor.process(original: trimmed, llmOutput: llmResult)
+        let processed = TranscriptPostProcessor.process(original: trimmed, llmOutput: llmResult)
+        // Conservative / chat-fallback: clamp runaway expansion without a
+        // second LLM call (local ratio gate).
+        if let route, route.mode != .full {
+            return clampExpansionIfNeeded(original: trimmed, output: processed, maxRatio: 2.5)
+        }
+        return processed
+    }
+
+    /// When ABE forced a conservative path, refuse outputs that still balloon.
+    private func clampExpansionIfNeeded(
+        original: String,
+        output: String,
+        maxRatio: Double
+    ) -> String {
+        let o = max(original.count, 1)
+        let ratio = Double(output.count) / Double(o)
+        guard ratio >= maxRatio else { return output }
+        return TranscriptPostProcessor.localClean(original)
     }
 
     private func resolveContext(override: PolishContext?) -> PolishContext {
@@ -141,7 +184,8 @@ public actor PolishingService {
         mode: PolishMode,
         systemPrompt: String? = nil,
         providerIdOverride: String? = nil,
-        context: PolishContext
+        context: PolishContext,
+        route: PolishRouteDecision? = nil
     ) async throws -> String {
         let effectiveProviderId = Self.resolvedProviderId(
             store: store,
@@ -188,7 +232,8 @@ public actor PolishingService {
                 prompt = buildPrompt(
                     for: trimmed,
                     context: context,
-                    providerId: effectiveProviderId
+                    providerId: effectiveProviderId,
+                    route: route
                 )
             case .translate(let targetLocaleId):
                 let target = TranslationLanguageCatalog.resolve(targetLocaleId)
@@ -267,24 +312,39 @@ public actor PolishingService {
     internal func buildPrompt(
         for text: String,
         context: PolishContext,
-        providerId: String
+        providerId: String,
+        route: PolishRouteDecision? = nil
     ) -> String {
         let dictionaryBlock = Self.mergedDictionaryBlock(
             dictionary: store.personalDictionary,
             supplement: context.dictionarySupplement
         )
         let useChinese = shouldUseChineseGuidance(providerId: providerId)
+        let styleID = route?.effectiveStyleID ?? store.activePolishStyleId
         let style = PolishStylePackCatalog.resolve(
-            id: store.activePolishStyleId,
+            id: styleID,
             userCatalog: store.polishStyleCatalog
         )
+        let routedContext: PolishContext
+        if let route {
+            routedContext = PolishContext(
+                appContext: context.appContext,
+                intensity: route.effectiveIntensity,
+                precedingText: context.precedingText,
+                dictionarySupplement: context.dictionarySupplement,
+                maxPrecedingChars: context.maxPrecedingChars
+            )
+        } else {
+            routedContext = context
+        }
         return PolishPromptComposer.compose(
             text: text,
             style: style,
-            context: context,
+            context: routedContext,
             dictionaryBlock: dictionaryBlock,
             globalContract: Self.globalOutputContract(useChinese: useChinese),
-            useChineseGuidance: useChinese
+            useChineseGuidance: useChinese,
+            routingMode: route?.mode ?? .full
         )
     }
 

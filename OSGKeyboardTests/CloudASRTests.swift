@@ -10,7 +10,7 @@ final class CloudASRTests: XCTestCase {
         XCTAssertEqual(CloudASRModelCatalog.strategy(for: "zhipu"), .zhipuHotwords)
         XCTAssertEqual(CloudASRModelCatalog.strategy(for: "qwen"), .localFallback)
         XCTAssertEqual(CloudASRModelCatalog.strategy(for: "bailian"), .bailianStreaming)
-        XCTAssertEqual(CloudASRModelCatalog.strategy(for: "openai"), .prompt)
+        XCTAssertEqual(CloudASRModelCatalog.strategy(for: "openai"), .openaiRealtimeStreaming)
         XCTAssertEqual(CloudASRModelCatalog.strategy(for: "whisper"), .prompt)
         XCTAssertEqual(CloudASRModelCatalog.strategy(for: "mimo"), .prompt)
         XCTAssertEqual(CloudASRModelCatalog.strategy(for: "groq"), .prompt)
@@ -25,7 +25,7 @@ final class CloudASRTests: XCTestCase {
         XCTAssertEqual(CloudASRModelCatalog.defaultModel(for: "bailian"), "fun-asr-realtime")
         XCTAssertEqual(CloudASRModelCatalog.defaultModel(for: "zhipu"), "glm-asr-2512")
         XCTAssertEqual(CloudASRModelCatalog.defaultModel(for: "mimo"), "mimo-v2.5-asr")
-        XCTAssertEqual(CloudASRModelCatalog.defaultModel(for: "openai"), "gpt-4o-mini-transcribe")
+        XCTAssertEqual(CloudASRModelCatalog.defaultModel(for: "openai"), "gpt-realtime-whisper")
         XCTAssertEqual(CloudASRModelCatalog.defaultModel(for: "whisper"), "whisper-1")
         XCTAssertEqual(CloudASRModelCatalog.defaultModel(for: "groq"), "whisper-large-v3-turbo")
         XCTAssertEqual(CloudASRModelCatalog.defaultModel(for: "siliconflow"), "FunAudioLLM/SenseVoiceSmall")
@@ -63,6 +63,25 @@ final class CloudASRTests: XCTestCase {
         XCTAssertFalse(LLMProvider.provider(id: "bailian").supportsPersonalDictionaryCloudASR)
         XCTAssertFalse(LLMProvider.provider(id: "openai").supportsPersonalDictionaryCloudASR)
         XCTAssertFalse(LLMProvider.provider(id: "moonshot").supportsPersonalDictionaryCloudASR)
+    }
+
+    func testTrueStreamingASRProviders() {
+        XCTAssertTrue(CloudASRModelCatalog.supportsTrueStreamingASR(for: "bailian"))
+        XCTAssertTrue(CloudASRModelCatalog.supportsTrueStreamingASR(for: "volcengine"))
+        XCTAssertTrue(CloudASRModelCatalog.supportsTrueStreamingASR(for: "openai"))
+        XCTAssertTrue(LLMProvider.provider(id: "bailian").supportsStreamingCloudASR)
+        XCTAssertTrue(LLMProvider.provider(id: "volcengine").supportsStreamingCloudASR)
+        XCTAssertTrue(LLMProvider.provider(id: "openai").supportsStreamingCloudASR)
+        XCTAssertFalse(CloudASRModelCatalog.supportsTrueStreamingASR(for: "mimo"))
+        XCTAssertFalse(CloudASRModelCatalog.supportsTrueStreamingASR(for: "zhipu"))
+        XCTAssertFalse(CloudASRModelCatalog.supportsTrueStreamingASR(for: "groq"))
+        XCTAssertFalse(CloudASRModelCatalog.supportsTrueStreamingASR(for: "whisper"))
+    }
+
+    func testUpsample16kTo24kPreservesDurationRatio() {
+        let input = [Float](repeating: 0.25, count: 1_600) // 100 ms @ 16 kHz
+        let output = CloudASRStreamingPCM.upsample16kTo24k(input)
+        XCTAssertEqual(output.count, 2_400) // 100 ms @ 24 kHz
     }
 
     func testShowsASREndpointField() {

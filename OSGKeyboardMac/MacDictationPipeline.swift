@@ -37,8 +37,8 @@ enum MacDictationPipeline {
         if store.engineMode == "local" {
             return MacLocalASRService.usesMLXLiveStreaming()
         }
-        let strategy = CloudASRModelCatalog.strategy(for: store.asrProviderId)
-        return strategy != .localFallback
+        return CloudASRModelCatalog.supportsTrueStreamingASR(for: store.asrProviderId)
+            || CloudASRModelCatalog.strategy(for: store.asrProviderId) != .localFallback
     }
 
     /// Runs ASR then polish. Polish failures return cleaned raw ASR plus a warning.
@@ -108,6 +108,41 @@ enum MacDictationPipeline {
         }
 
         do {
+            if store.engineMode == "cloud",
+               CloudASRModelCatalog.supportsTrueStreamingASR(for: store.asrProviderId),
+               let streamingClient = CloudASRClientFactory.make(store: store) as? CloudASRStreamingCapable {
+                try? await streamingClient.prepare(dictionary: store.personalDictionary)
+                let pipeline = StreamingUtterancePipeline(
+                    client: streamingClient,
+                    locale: locale,
+                    dictionary: store.personalDictionary
+                )
+                let outcome = await pipeline.transcribe(stream: stream, onPartial: onPartial)
+                switch outcome {
+                case .success(let success):
+                    return MacLiveASRCaptureResult(
+                        raw: success.text,
+                        chunkWarning: success.chunkWarnings.first,
+                        localBias: localBias,
+                        shouldFallbackToBatch: false
+                    )
+                case .failure:
+                    return MacLiveASRCaptureResult(
+                        raw: "",
+                        chunkWarning: nil,
+                        localBias: localBias,
+                        shouldFallbackToBatch: true
+                    )
+                case .cancelled:
+                    return MacLiveASRCaptureResult(
+                        raw: "",
+                        chunkWarning: nil,
+                        localBias: localBias,
+                        shouldFallbackToBatch: true
+                    )
+                }
+            }
+
             let adapter = try makeChunkASRAdapter(store: store)
             if let cloudAdapter = adapter as? MacCloudASRChunkAdapter {
                 try? await cloudAdapter.prepare()
