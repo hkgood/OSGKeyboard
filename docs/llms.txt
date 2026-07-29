@@ -36,11 +36,10 @@ OSGKeyboard is a custom keyboard (iOS/iPadOS) and menu-bar global dictation app 
 
 ## Docs for humans and agents
 
-- Home (ZH): https://hkgood.github.io/OSGKeyboard/
-- Home (EN): https://hkgood.github.io/OSGKeyboard/en/
-- Install guide: https://hkgood.github.io/OSGKeyboard/install/
-- Compare / alternatives: https://hkgood.github.io/OSGKeyboard/compare/
-- Mac global dictation: https://hkgood.github.io/OSGKeyboard/mac-dictation/
+- Home (ZH/EN toggle): https://hkgood.github.io/OSGKeyboard/
+- Home (EN): https://hkgood.github.io/OSGKeyboard/?lang=en
+- Setup steps: https://hkgood.github.io/OSGKeyboard/#start
+- Product comparison: https://hkgood.github.io/OSGKeyboard/#vs
 - Privacy policy: https://hkgood.github.io/OSGKeyboard/privacy/
 - GitHub README (ZH): https://github.com/hkgood/OSGKeyboard/blob/main/README.md
 - GitHub README (EN): https://github.com/hkgood/OSGKeyboard/blob/main/README.en.md

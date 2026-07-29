@@ -14,7 +14,11 @@ Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands 
 
 <p align="center">
   <a href="https://apps.apple.com/app/osgkeyboard/id6781553267">
-    <img src="docs/assets/badges/appstore-en.svg" alt="Download on the App Store" height="40">
+    <img src="docs/assets/badges/appstore-en.svg" alt="Download for iPhone and iPad" height="40">
+  </a>
+  &nbsp;
+  <a href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg">
+    <img src="docs/assets/badges/macos-en.svg" alt="Download for macOS" height="40">
   </a>
 </p>
 
@@ -60,10 +64,16 @@ Speech is transcribed on-device by default. Polish sends **text only** — the t
 
 ## Get the app
 
-**App Store (recommended)**
+**iPhone / iPad (App Store)**
 
 <a href="https://apps.apple.com/app/osgkeyboard/id6781553267">
-  <img src="docs/assets/badges/appstore-en.svg" alt="Download on the App Store" height="40">
+  <img src="docs/assets/badges/appstore-en.svg" alt="Download for iPhone and iPad" height="40">
+</a>
+
+**Mac (Developer ID signed and notarized)**
+
+<a href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg">
+  <img src="docs/assets/badges/macos-en.svg" alt="Download for macOS" height="40">
 </a>
 
 ## Build from source
