@@ -443,23 +443,10 @@
       width: auto;
       display: block;
     }
-    .platform-download {
-      display: inline-flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.35rem;
-    }
-    .platform-label {
-      color: var(--text-2);
-      font-size: 0.72rem;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-    }
-    .hero .platform-label { color: var(--hero-muted); }
     .platform-downloads {
       display: flex;
       flex-wrap: wrap;
-      align-items: flex-end;
+      align-items: center;
       justify-content: center;
       gap: 1rem;
     }
@@ -943,18 +930,12 @@
           <h1 data-i18n="hero.title">开口即文字</h1>
           <p class="lead" data-i18n="hero.lead">免费开源的跨端语音输入。本地识别，自带 API Key 润色，避免重复订阅。iPhone、iPad、Mac — 说完即落字。</p>
           <div class="hero-cta">
-            <div class="platform-download">
-              <span class="platform-label" data-i18n="download.ios">iPhone / iPad</span>
-              <a class="store-badge" id="heroStoreBadge" href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267" rel="noopener" aria-label="Download for iPhone and iPad">
-                <img id="heroStoreBadgeImg" src="assets/badges/appstore-zh.svg" width="109" height="40" alt="下载 iPhone / iPad 版">
-              </a>
-            </div>
-            <div class="platform-download">
-              <span class="platform-label" data-i18n="download.mac">Mac</span>
-              <a class="store-badge" href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg" rel="noopener" aria-label="Download for macOS">
-                <img class="macos-badge-img" src="assets/badges/macos-zh.svg" width="120" height="40" alt="直接下载 macOS 版">
-              </a>
-            </div>
+            <a class="store-badge" id="heroStoreBadge" href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267" rel="noopener" aria-label="Download for iPhone and iPad">
+              <img id="heroStoreBadgeImg" src="assets/badges/appstore-zh.svg" width="109" height="40" alt="下载 iPhone / iPad 版">
+            </a>
+            <a class="store-badge" href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg" rel="noopener" aria-label="Download for macOS">
+              <img class="macos-badge-img" src="assets/badges/macos-zh.svg" width="120" height="40" alt="直接下载 macOS 版">
+            </a>
             <a class="btn btn-ghost" href="https://github.com/hkgood/OSGKeyboard" rel="noopener">
               <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
               <span data-i18n="hero.cta.secondary">查看源码</span>
@@ -1279,18 +1260,12 @@
           <p data-i18n="download.subtitle">iPhone / iPad 从 App Store 安装；Mac 直接下载已签名并公证的 DMG。</p>
         </div>
         <div class="platform-downloads">
-          <div class="platform-download">
-            <span class="platform-label" data-i18n="download.ios">iPhone / iPad</span>
-            <a class="store-badge" id="footerStoreBadge" href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267" rel="noopener" aria-label="Download for iPhone and iPad">
-              <img id="footerStoreBadgeImg" src="assets/badges/appstore-zh.svg" width="109" height="40" alt="下载 iPhone / iPad 版">
-            </a>
-          </div>
-          <div class="platform-download">
-            <span class="platform-label" data-i18n="download.mac">Mac</span>
-            <a class="store-badge" href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg" rel="noopener" aria-label="Download for macOS">
-              <img class="macos-badge-img" src="assets/badges/macos-zh.svg" width="120" height="40" alt="直接下载 macOS 版">
-            </a>
-          </div>
+          <a class="store-badge" id="footerStoreBadge" href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267" rel="noopener" aria-label="Download for iPhone and iPad">
+            <img id="footerStoreBadgeImg" src="assets/badges/appstore-zh.svg" width="109" height="40" alt="下载 iPhone / iPad 版">
+          </a>
+          <a class="store-badge" href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg" rel="noopener" aria-label="Download for macOS">
+            <img class="macos-badge-img" src="assets/badges/macos-zh.svg" width="120" height="40" alt="直接下载 macOS 版">
+          </a>
         </div>
         <div class="hero-cta" style="margin-bottom:0">
           <a class="btn btn-ghost" href="#start" data-i18n="download.install">查看安装步骤</a>
@@ -1423,8 +1398,6 @@
         "faq.link.download": "Download now →",
         "download.title": "Download now",
         "download.subtitle": "Get iPhone / iPad from the App Store, or download the signed and notarized DMG for Mac.",
-        "download.ios": "iPhone / iPad",
-        "download.mac": "Mac",
         "download.install": "Installation steps",
         "download.source": "GitHub source",
         "footer.copy": "© OSGKeyboard · v0.5.4 · source available",
@@ -1541,8 +1514,6 @@
         "faq.link.download": "立即下载 →",
         "download.title": "立即下载",
         "download.subtitle": "iPhone / iPad 从 App Store 安装；Mac 直接下载已签名并公证的 DMG。",
-        "download.ios": "iPhone / iPad",
-        "download.mac": "Mac",
         "download.install": "查看安装步骤",
         "download.source": "GitHub 源码",
         "footer.copy": "© OSGKeyboard · v0.5.4 · 源码可见",
