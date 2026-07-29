@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>安装指南 · OSGKeyboard iOS / Mac 语音输入设置</title>
+  <meta name="description" content="OSGKeyboard 安装与授权步骤：iPhone / iPad 添加自定义键盘并开启完全访问；Mac 授予麦克风与辅助功能。约两分钟开口即用。">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://hkgood.github.io/OSGKeyboard/install/">
+  <link rel="alternate" hreflang="zh-Hans" href="https://hkgood.github.io/OSGKeyboard/install/">
+  <link rel="alternate" hreflang="en" href="https://hkgood.github.io/OSGKeyboard/install/#en">
+  <link rel="icon" href="../assets/app-icon.png" type="image/png">
+  <meta property="og:title" content="OSGKeyboard 安装指南">
+  <meta property="og:description" content="iOS 键盘与 Mac 全局听写的安装、权限与首次开口步骤。">
+  <meta property="og:url" content="https://hkgood.github.io/OSGKeyboard/install/">
+  <meta property="og:image" content="https://hkgood.github.io/OSGKeyboard/assets/app-icon.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "Install OSGKeyboard on iPhone, iPad, and Mac",
+    "description": "Enable the custom keyboard with Full Access on iOS, grant Microphone and Accessibility on Mac, then start dictating.",
+    "totalTime": "PT5M",
+    "tool": [{ "@type": "HowToTool", "name": "iPhone, iPad, or Mac" }],
+    "step": [
+      { "@type": "HowToStep", "name": "Download", "text": "Install OSGKeyboard from the App Store." },
+      { "@type": "HowToStep", "name": "Authorize iOS", "text": "Settings → Keyboard → enable OSGKeyboard and Full Access." },
+      { "@type": "HowToStep", "name": "Authorize Mac", "text": "Grant Microphone and Accessibility when prompted." },
+      { "@type": "HowToStep", "name": "Dictate", "text": "Switch to OSGKeyboard on iOS or hold Option on Mac." }
+    ]
+  }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/site-pages.css">
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="../">
+        <img src="../assets/app-icon.png" alt="" width="28" height="28">
+        OSGKeyboard
+      </a>
+      <nav class="nav-links" aria-label="主导航">
+        <a href="../">首页</a>
+        <a href="../compare/">对比</a>
+        <a href="../mac-dictation/">Mac</a>
+        <a href="../en/">EN</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <p class="lang-switch"><a href="#zh">中文</a><a href="#en">English</a></p>
+
+      <section id="zh">
+        <p class="eyebrow">安装指南</p>
+        <h1>两分钟装好，开口即用</h1>
+        <p class="lead">从 App Store 安装后，完成键盘 / 权限授权即可。无需注册账号，本地识别开箱可用。</p>
+
+        <a class="store-badge" href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267" rel="noopener">
+          <img src="../assets/badges/appstore-zh.svg" width="109" height="40" alt="在 App Store 下载">
+        </a>
+
+        <h2>1. 下载安装</h2>
+        <ol>
+          <li>在 App Store 搜索 <strong>OSGKeyboard</strong>，或点击上方徽章。</li>
+          <li>安装完成后打开主 App，按首次引导走完权限与引擎选择（约 2 分钟）。</li>
+        </ol>
+
+        <h2>2. iPhone / iPad：启用自定义键盘</h2>
+        <div class="card">
+          <ol>
+            <li>打开 <strong>设置 → 通用 → 键盘 → 键盘 → 添加新键盘…</strong></li>
+            <li>选择 <strong>OSGKeyboard</strong>。</li>
+            <li>点进该键盘，开启 <strong>允许完全访问</strong>（麦克风、共享 Keychain、与主 App 通信需要它；不会上传你的普通击键）。</li>
+            <li>在任意输入框长按 🌐，切换到 OSGKeyboard，点麦克风开口。</li>
+          </ol>
+        </div>
+
+        <h2>3. Mac：麦克风 + 辅助功能</h2>
+        <div class="card">
+          <ol>
+            <li>打开 OSGKeyboard Mac 应用，按提示授予 <strong>麦克风</strong> 与 <strong>辅助功能</strong>。</li>
+            <li>菜单栏出现图标后，在任意 App 把光标放好，<strong>按住 Option</strong> 说话，松手后文字插入。</li>
+          </ol>
+          <p class="note">详见 <a href="../mac-dictation/">Mac 全局听写说明</a>。</p>
+        </div>
+
+        <h2>4. 可选：API Key 润色</h2>
+        <p>默认本地识别即可落字。若要 AI 补标点与润色，在设置中填入你自己的 API Key（DeepSeek / OpenAI / Anthropic / OpenRouter 等兼容端点）。Key 存在本机 Keychain。</p>
+
+        <h2>常见问题</h2>
+        <div class="card">
+          <p><strong>键盘列表里没有 OSG？</strong> 确认已「添加新键盘」，并重启主 App 后再试。</p>
+          <p><strong>点了麦克风没反应？</strong> 检查麦克风权限与「完全访问」是否开启。</p>
+          <p><strong>Mac 按 Option 无效？</strong> 到系统设置 → 隐私与安全性 → 辅助功能，确认 OSGKeyboard 已勾选。</p>
+        </div>
+      </section>
+
+      <hr style="border:none;border-top:1px solid var(--line);margin:3rem 0">
+
+      <section id="en">
+        <p class="eyebrow">Install guide</p>
+        <h1>Ready in a few minutes</h1>
+        <p class="lead">Install from the App Store, grant permissions once, then speak. No account required for local recognition.</p>
+
+        <a class="store-badge" href="https://apps.apple.com/app/osgkeyboard/id6781553267" rel="noopener">
+          <img src="../assets/badges/appstore-en.svg" width="120" height="40" alt="Download on the App Store">
+        </a>
+
+        <h2>1. Download</h2>
+        <ol>
+          <li>Get <strong>OSGKeyboard</strong> from the App Store (badge above).</li>
+          <li>Open the app and complete the first-run setup (~2 minutes).</li>
+        </ol>
+
+        <h2>2. iPhone / iPad: enable the keyboard</h2>
+        <div class="card">
+          <ol>
+            <li>Go to <strong>Settings → General → Keyboard → Keyboards → Add New Keyboard…</strong></li>
+            <li>Select <strong>OSGKeyboard</strong>.</li>
+            <li>Open it and enable <strong>Allow Full Access</strong> (needed for mic, shared Keychain, and host-app session — we do not exfiltrate ordinary keystrokes).</li>
+            <li>In any text field, long-press 🌐, switch to OSGKeyboard, tap the mic.</li>
+          </ol>
+        </div>
+
+        <h2>3. Mac: Microphone + Accessibility</h2>
+        <div class="card">
+          <ol>
+            <li>Launch the Mac app and grant <strong>Microphone</strong> and <strong>Accessibility</strong>.</li>
+            <li>With the menu-bar icon present, place the cursor in any app, <strong>hold Option</strong> to speak, release to insert.</li>
+          </ol>
+          <p class="note">More detail: <a href="../mac-dictation/">Mac global dictation</a>.</p>
+        </div>
+
+        <h2>4. Optional: API key polish</h2>
+        <p>Local ASR works without a key. Add your own LLM key only for AI punctuation and polish. Keys stay in Keychain on device.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <span>© OSGKeyboard</span>
+      <span class="footer-links">
+        <a href="../">Home</a>
+        <a href="../privacy/">Privacy</a>
+        <a href="https://github.com/hkgood/OSGKeyboard" rel="noopener">GitHub</a>
+      </span>
+    </div>
+  </footer>
+</body>
+</html>

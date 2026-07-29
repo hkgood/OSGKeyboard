@@ -12,6 +12,12 @@
 
 [官网](https://hkgood.github.io/OSGKeyboard/) · [English](./README.en.md) · [隐私政策](https://hkgood.github.io/OSGKeyboard/privacy/)
 
+<p align="center">
+  <a href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267">
+    <img src="docs/assets/badges/appstore-zh.svg" alt="在 App Store 下载" height="40">
+  </a>
+</p>
+
 ---
 
 ## 为什么用它
@@ -51,13 +57,19 @@
 ## 隐私
 
 - **默认本地识别** — 录音在设备上转写，不经过我们的服务器
-- **润色只发文字** — 发给 LLM 的是转写文本，不是原始音频
-- **不记录击键** — 键盘扩展不采集、不上传你的日常输入内容
+- **润色只发文字** — 发给 LLM 的是转写文本，以及用于衔接的少量光标附近文字，不是原始音频
+- **不记录击键** — 光标上下文仅在润色时临时使用，不写入日志或语音历史；密码框完全不采集
 - 详见 [隐私政策](https://hkgood.github.io/OSGKeyboard/privacy/)
 
 ---
 
 ## 获取
+
+**App Store（推荐）**
+
+<a href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267">
+  <img src="docs/assets/badges/appstore-zh.svg" alt="在 App Store 下载" height="40">
+</a>
 
 **从源码构建**（需 macOS + Xcode 26）：
 

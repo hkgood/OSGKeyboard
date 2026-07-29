@@ -8,6 +8,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **App Store download badges**: official badges on bilingual READMEs (hero + Get sections) and the website, with China-store `/cn/` links for Chinese and regionless App Store links for English. / **App Store 下载徽章**：中英文 README（顶部与获取区）与官网挂载官方徽章；中文链 `/cn/`，英文用无地区链接。
+- **Website SEO & AI discovery**: richer meta/JSON-LD/FAQ, `llms.txt`, expanded sitemap, English landing, plus install / compare / Mac-dictation content pages. / **官网 SEO 与 AI 发现**：强化 meta/JSON-LD/FAQ、`llms.txt`、sitemap，并新增英文落地页与安装 / 对比 / Mac 听写专题页。
+- **Context-aware polish safeguards**: polish can use a redacted cursor-neighborhood snapshot for natural continuation, validates protected terms and identifiers, retries once, and falls back to a conservative local cleanup when needed. / **上下文润色护栏**：润色可使用经截断脱敏的光标附近文字自然衔接，并校验受保护词与标识符；失败时重试一次，仍不合格则降级为本地保守清理。
+- **Pause-aware chunk polish**: chunked ASR carries detected silence boundaries into the polish request while keeping previews and final output marker-free. / **分块停顿感知润色**：分块 ASR 将检测到的静音边界传入润色请求，实时预览与最终输出均不会显示内部标记。
+- **True streaming cloud ASR**: Bailian, Volcengine, and OpenAI Realtime use one utterance-level WebSocket with live partials; Volcengine enables official two-pass (`enable_nonstream`) so interim text stays on-screen while definite ASR feeds polish. / **真流式云端 ASR**：百炼、火山与 OpenAI Realtime 按整句长连接推流并实时上屏；火山开启官方二遍识别（`enable_nonstream`），interim 仅上屏，definite 再送润色。
+- **Streaming ASR badge**: settings ASR provider chip shows 【流式识别】 for Bailian, Volcengine, and OpenAI. / **流式识别标签**：设置里 ASR 供应商对百炼、火山、OpenAI 显示【流式识别】。
+- **Fun polish styles**: new subcategory with Flex Guide, Corp Speak, and DiBa Logic alongside Dating Coach. / **趣味润色风格**：新增小分类，含装逼指南、大厂黑话、帝吧大神，并与直男癌拯救器同组。
+- **Xiaohongshu Sisters style**: fun polish pack that rewrites drafts into sisterly RED note body with Light/Medium/Heavy hooks (轻安利 / 种草感 / 爆款感). / **小红书集美风格**：趣味润色包，将草稿改写成姐妹向小红书笔记正文，并按轻安利 / 种草感 / 爆款感三档跳变。
+- **Delete day in History**: each day header has a Delete action with confirmation to clear that day's transcripts only (iOS and Mac). / **历史按天删除**：日期行右侧提供删除按钮，确认后仅清除当天记录（iOS 与 Mac）。
+- **Mac Settings translation target**: polish-provider section includes “Polish then translate” with the same locale picker as Home / menu bar. / **Mac 设置翻译目标**：润色（LLM）分区新增「润色后翻译」，与首页 / 菜单栏同一套目标语言选择。
+
+### Fixed
+- **macOS menu-bar dictation delivery**: menu-bar sessions now retain the external target app before the popover takes focus, use that app for polish context and local bias, and reactivate it before pasting. / **macOS 菜单栏听写投递**：菜单栏会话会在弹窗抢焦点前保留外部目标应用，并将其用于润色上下文与本地偏置，粘贴前重新激活目标应用。
+- **macOS recording and clipboard fallback**: cancelling microphone preparation no longer lets an untracked button task restart recording; clipboard restoration waits longer, preserves newer third-party writes, clears an originally empty clipboard correctly, and Accessibility failures explain that the transcript remains available for manual paste. / **macOS 录音与剪贴板降级**：取消麦克风准备后，未跟踪的按钮任务不会再次启动录音；剪贴板恢复延长等待时间、保留第三方较新的写入、正确还原原本为空的剪贴板，并在辅助功能权限失败时明确提示可手动粘贴识别结果。
+- **Polish validator false positives**: slash-form dates, fractions, and words such as `and/or` are no longer treated as hard-protected file paths; confirmed ordinal ASR repairs also stop polluting missing-number telemetry. / **润色校验误报**：斜杠日期、分数及 `and/or` 等词不再被误判为文件路径硬违规；已确认的序号 ASR 修复也不再污染数字缺失遥测。
+- **Transient chunk loss**: a failed middle ASR chunk now retries once with the same PCM before the serial worker advances, preventing brief network failures from silently removing several seconds of speech. / **瞬时分块丢字**：中段 ASR 分块失败后会使用同一份 PCM 原地重试一次，再继续串行处理，避免短暂网络抖动静默丢失数秒语音。
+- **macOS Option release freeze**: finishing a live snapshot stream no longer calls `AsyncStream.Continuation.finish()` while holding the recorder lock — the termination handler re-entered the same `NSLock` on the main thread and wedged the app when the hold-to-talk key was released. / **macOS 松开 Option 卡死**：结束实时 snapshot 流时不再在持有 recorder 锁的情况下调用 `AsyncStream.Continuation.finish()`；终止回调会在主线程重入同一把 `NSLock`，松开听写键时导致整个 App 无响应。
+- **macOS dictation HUD layout storm**: the floating pill no longer reassigns its hosting view and forces a synchronous relayout on every view-model tick (~20×/s from the level timer); it uses a fixed panel size and lets SwiftUI refresh through `@ObservedObject` instead. / **macOS 听写浮层布局风暴**：悬浮胶囊不再在每次 view-model 更新时重建 hosting 视图并强制同步重排（音量定时器约 20 次/秒）；改为固定面板尺寸，由 SwiftUI `@ObservedObject` 驱动刷新。
+- **Polish never answers the transcript**: fun styles (dating / flex / corp) could turn “你觉得这个包怎么样” into a reply such as “还行，挺顺眼的”. A top-priority “polish only, never answer” rule now sits in the global contract, every built-in style pack, the prompt safety boundary, and a router question guard that keeps question drafts as questions. / **润色不再代答转写内容**：趣味风格（直男癌/装逼指南/大厂黑话）曾把「你觉得这个包怎么样」润色成「还行，挺顺眼的」。现已在全局契约、全部内置风格包、提示词安全边界与路由问句守卫四层加入最高优先级的「只润色、不作答」规则，问句必须仍是问句。
+
+### Changed
+- **Layered bilingual polish prompts**: transcripts are sent once as user data; stable Chinese/English core rules, style policies, dictionaries, and runtime context now have explicit responsibilities for better consistency and provider prefix caching. / **分层双语润色提示词**：转写仅作为用户消息发送一次；稳定的中英文核心规则、风格策略、词典和运行时上下文职责明确，提升一致性并支持服务商前缀缓存。
+- **Two-tier short polish skip**: ultra-short (≤4 CJK) still skips the LLM; 5–10 CJK now skips only low-value acks/closings (e.g. “好的我知道了”), while questions and contentful shorts still polish. / **两级短句跳过润色**：≤4 字仍跳过 LLM；5–10 字仅对低价值确认/收束语跳过（如「好的我知道了」），问句与有内容短句仍走润色。
+- **ABE polish routing**: fun styles and daily chat use a local information-density gate, prompt hard-brakes, and style-specific degrade (e.g. DiBa without an opponent quote falls back to chat cleanup) without a second LLM call. / **ABE 润色路由**：趣味风格与日常聊天增加本地信息密度闸、提示词硬刹车与风格专属降级（如帝吧无对方原话时降级日常清理），不增加第二次 LLM 调用。
+- **Practical polish prompts**: Light Clean / Structured / Formal / Daily Chat share a “transcript-only, not a chatbot” boundary; Structured gains active itemization, light semantic reorder, and paragraphing hard rules inspired by high-readability polish patterns. / **实用润色提示词**：轻度清理 / 清晰结构 / 正式表达 / 日常聊天统一「只整理转写、非聊天助手」边界；清晰结构加强积极分项、轻度语义重排与分段硬规则，提升长口述可读性。
+- **RED Note keeps the draft's audience**: the Xiaohongshu style no longer opens with 姐妹们/集美们 or adds comment CTAs unless the draft already addresses a group, and a positive draft can no longer be rewritten with an 避雷-style hook. / **小红书不再擅自加受众**：除非原文本身在对一群人说话，否则不再添加「姐妹们/集美们」开场与评论区互动话术；正面体验也不会被写成「真诚避雷」式钩子。
+- **Style-specific forbidden-items chapters**: every built-in polish prompt now has a dedicated `# 禁止事项` section modeled on Daily Chat—no interlocutor replies, no answering question drafts—with per-style bans (e.g. dating must not turn asks into verdicts; flex/corp must not answer as the other party; XHS must not invent product claims). / **风格专属禁止事项**：全部内置润色提示词均新增「# 禁止事项」章节，结构对齐日常聊天（禁接话、禁代答问句），并按风格补充专属禁令（如直男癌不得把征求意见改成评价；装逼/黑话不得替对方作答；小红书不得编造功效细节）。
+- **Settings hierarchy**: voice-session options join Daily, while ASR and LLM configuration links sit directly below the transcription-mode choices; General and About remain secondary pages. / **设置层级**：语音会话选项并入「日常」，ASR 与 LLM 配置入口紧跟转写模式选择；通用与关于保留为二级页。
+- **Transcription option rows**: local and cloud choices now use the same text-first list-row style as the rest of Settings, without leading icons. / **转写选项行**：本地与云端选项移除前置图标，统一采用设置页的文字优先列表样式。
+- **Simplified style cards and summaries**: polish-style cards drop decorative badges, and speech-configuration summaries show only the active engine or provider/model without redundant status prefixes. / **简化风格卡与摘要**：润色风格卡移除装饰图标；语音配置摘要仅显示引擎或服务商/模型，不再附加冗余状态前缀。
+- **Mac polish style grid**: cards drop decorative icons and use a denser adaptive grid (about three columns at the default window; two when narrower, four+ when wider). / **Mac 润色风格网格**：卡片去掉装饰图标，并以更密的自适应网格排布（默认窗口约三列；变窄两列、变宽四列及以上）。
+- **OpenAI ASR default**: cloud OpenAI ASR defaults to `gpt-realtime-whisper` for streaming; batch transcription remains the fallback. / **OpenAI ASR 默认**：云端 OpenAI ASR 默认 `gpt-realtime-whisper` 走流式；批处理转写仍作降级。
+- **Dating Coach prompt**: spoken WeChat first with clever lines only as seasoning; refreshed examples to reduce copywriting AI tone. / **直男癌拯救器提示词**：以口语微信为主、巧思仅作点缀；刷新示例以降低文案式 AI 腔。
+- **Unified card-page layout**: Settings, polish styles, and related detail pages now share 20-point page margins, section labels, and card chrome. / **统一卡片页面布局**：设置、润色风格及相关详情页共用 20 点页面留白、分组标题和卡片外观。
+
+### Fixed
+- **Daily-chat short replies**: chat polish forbids interlocutor-style continuations on ultra-short drafts (e.g. “嗯” no longer becomes “嗯，我在呢”). / **日常聊天短句接话**：日常润色禁止对极短草稿做对方口吻续写（如「嗯」不再变成「嗯，我在呢」）。
+- **Card corner consistency**: the seven-day chart and shared usage cards now use the same continuous 20-point corners as the other Home cards; shared Settings cards also clip child backgrounds to their border shape. / **卡片圆角一致性**：最近 7 天图表及共享统计卡改用与首页其他卡片一致的连续 20 点圆角；共享设置卡片也会将子视图背景裁切到边框形状。
+- **PiP mic spin-up drop**: on record press, open capture and the utterance gate before waiting for audio proof, and keep ~3 s of idle preroll so speech during mic warm-up is not discarded. / **PiP 开麦丢音**：按下录音后先启动采集并打开 utterance gate，再等待音频证明；空闲 preroll 约 3 秒，避免麦克风预热期间的语音被丢掉。
+- **Empty preMerge wipe**: final-chunk preMerge that returns empty text no longer removes a prior good segment; ASR pipeline failures also recover via partial snapshot instead of clearing it. / **空 preMerge 抹字**：末块 preMerge 若识别为空，不再删除已有有效片段；流水线失败时改用 partial 快照恢复，而不再清空兜底。
+- **History day label alignment**: date headers line up with the history card's left edge like Settings section labels. / **历史日期对齐**：日期标题与下方卡片左边缘对齐，与设置页分组标题一致。
+
+## [1.0.1] - 2026-07-27
+
+### Fixed
+- **Onboarding Done stuck**: finishing step 6 no longer wraps the route change in an animation transaction; `MainAppRoot` force-swaps view identity so Settings replay cannot freeze on the last page. / **引导完成卡住**：第六步完成不再包进动画事务；`MainAppRoot` 强制切换视图身份，避免从设置重走引导后停在最后一页。
+- **PiP closed loop**: activate a playback audio session before creating `AVPictureInPictureController`, never treat “armed but inactive” as success, and restore playback audio after releasing the mic between utterances so Home `hostReady` matches a real PiP window. / **PiP 闭环**：在创建画中画控制器前先激活 playback 音频会话，不再把「已武装但未激活」当成功，并在句间释麦后恢复 playback，使首页就绪状态与真实 PiP 窗口一致。
+- **Onboarding after reinstall**: fresh installs clear the durable Keychain onboarding flag via a container install identity so delete-and-reinstall shows the welcome flow again. / **重装后引导**：通过容器安装身份在全新安装时清除 Keychain 引导标记，删除重装后会再次显示欢迎流程。
+- **Cloud engine footer**: Home / preview status lines name the configured ASR provider and model instead of the polish LLM. / **云端引擎文案**：首页与预览状态行显示已配置的 ASR 服务商与模型，而不再显示润色 LLM。
+- **PiP Flow handoff**: wait for the PiP host view, distinguish real start failures, and stop pointing users at a non-existent Settings toggle; cold-start / keyboard copy now match Picture in Picture keep-alive. / **PiP Flow 交接**：等待 PiP Host 就绪、区分真实启动失败，并不再引导不存在的系统设置开关；冷启动与键盘文案对齐画中画保活。
+- **PiP start reliability**: restore unconditional `startPictureInPicture` retries, live `positiveInfinity` time range, DisplayImmediately sample buffers, and arm auto-inline PiP for background; Home status footer uses a bottom inset so the adaptive preview field shrinks instead of sitting under the tab dock. / **PiP 启动可靠性**：恢复无条件 `startPictureInPicture` 重试、直播 `positiveInfinity` 时间范围、DisplayImmediately 帧，并武装后台自动画中画；首页状态行改为 bottom inset，由自适应输入框让位，避免被 Tab 遮挡。
+- **PiP / Live Activity exclusivity**: Picture in Picture sessions no longer start or refresh Live Activities. / **PiP / 灵动岛互斥**：画中画会话不再启动或刷新灵动岛 Live Activity。
+- **Flow tail ASR drop**: after mic stop, iOS Flow now uses a longer silence drain (350 ms), a fixed 150 ms post-roll, expanded final-chunk ASR recovery, and a partial transcript guard so weak trailing syllables are less likely to disappear from the result. / **Flow 尾音识别丢失**：松手后 iOS Flow 采用更长的静音排空（350 ms）、固定 150 ms 尾音保留、增强末块 ASR 恢复与 partial 兜底，降低弱尾音从结果中消失的概率。
+- **Flow batch ASR fallback**: when pipelined chunk output is clearly shorter than the live partial, the host re-transcribes the full utterance PCM captured during recording (Mac-style safety net). / **Flow 整句 ASR 兜底**：流水线拼接结果明显短于实时 partial 时，主 App 对录音期间累积的整段 PCM 重新识别（对齐 Mac 双保险）。
+
+### Changed
+- **Unified navigation icons**: iPhone History and Personal Dictionary tabs now use the same SF Symbols as the Mac and iPad sidebars. / **统一导航图标**：iPhone 的历史记录与个性词库 Tab 现使用与 Mac、iPad 侧边栏一致的 SF Symbols。
+- **Mac header actions**: personal-word and polish-style add buttons now match the adjacent search field height and use a consistent capsule shape. / **Mac 页头操作**：添加个性词与添加润色风格按钮现与相邻搜索框等高，并统一使用胶囊外形。
+- **Responsive Mac polish styles**: replace fixed full-width style rows with iOS-aligned adaptive cards that reflow with the window width. / **Mac 润色风格响应式布局**：将固定通栏列表改为对齐 iOS 的自适应卡片，并随窗口宽度自动重排。
+- **Mac MLX tail drain**: streaming capture now uses the shared `FlowUtteranceEndCoordinator` (silence drain + post-roll) instead of an inline poll loop. / **Mac MLX 尾音排空**：流式采集改用 Shared 层 `FlowUtteranceEndCoordinator`（静音排空 + post-roll），替代内联轮询循环。
+- **Default Flow keep-alive**: new installs default to Picture in Picture instead of Dynamic Island. / **默认 Flow 保活**：新安装默认使用画中画，不再默认灵动岛。
+
+### Added
+- **Mac personal words**: add custom dictionary terms on macOS with automatic recognition-alias generation and iCloud sync. / **Mac 个性词**：可在 macOS 添加自定义词条，自动生成识别别名并通过 iCloud 同步。
+- **Polish style packs**: choose a complete writing personality from the new iOS tab or Mac sidebar, create custom prompts, and sync selections and custom styles through iCloud. / **润色风格包**：可在 iOS 新 Tab 或 Mac 侧栏选择完整写作人格、创建自定义提示词，并通过 iCloud 同步选择与自定义风格。
+- **PiP Flow keep-alive**: Settings → Voice session lets you choose **Picture in Picture** (default) or **Dynamic Island** — a live waveform PiP keeps the host alive with the mic released between utterances; closing PiP ends the session. / **PiP Flow 保活**：设置 → 语音会话可选 **画中画**（默认）或 **灵动岛** — 实时波形 PiP 保活、句间释麦；关闭 PiP 即结束会话。
 - **Mac MLX streaming ASR**: local dictation uses Qwen3-ASR via mlx-audio-swift with overlay partial preview, tail drain, vocabulary prompt, and polish-before-insert. / **Mac MLX 流式 ASR**：本地听写改用 mlx-audio-swift 的 Qwen3-ASR，支持浮层 partial 预览、尾部截断、词库 prompt 与润色后再插入。
 
 ### Changed

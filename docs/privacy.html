@@ -3,25 +3,35 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OSGKeyboard Privacy Policy</title>
+  <title>Privacy Policy · OSGKeyboard</title>
+  <meta name="description" content="OSGKeyboard privacy policy: on-device speech recognition by default, optional cloud ASR you configure, text-only LLM polish, no analytics SDKs, no sale of personal data.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://hkgood.github.io/OSGKeyboard/privacy/">
+  <link rel="icon" href="assets/app-icon.png" type="image/png">
+  <meta property="og:title" content="OSGKeyboard Privacy Policy">
+  <meta property="og:description" content="On-device by default. Audio stays local unless you opt into a cloud engine you configure.">
+  <meta property="og:url" content="https://hkgood.github.io/OSGKeyboard/privacy/">
+  <meta property="og:type" content="website">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; max-width: 720px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
     h1, h2 { line-height: 1.3; }
     a { color: #0a7; }
     hr { margin: 2rem 0; border: none; border-top: 1px solid #ddd; }
     .lang { font-size: 0.9rem; color: #666; }
+    .top-nav { font-size: 0.9rem; margin-bottom: 1.25rem; }
   </style>
 </head>
 <body>
+  <p class="top-nav"><a href="./">← OSGKeyboard</a> · <a href="https://apps.apple.com/app/osgkeyboard/id6781553267">App Store</a></p>
   <p class="lang"><a href="#zh">中文</a></p>
   <h1>OSGKeyboard Privacy Policy</h1>
-  <p><strong>Last updated:</strong> July 23, 2026 · <em>v1.0</em></p>
+  <p><strong>Last updated:</strong> July 29, 2026 · <em>v1.0</em></p>
   <p>OSGKeyboard is a custom iOS keyboard that turns your voice into text. It runs as a Custom Keyboard Extension on iOS 26 and later, and uses Apple's on-device <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code> for transcription by default. An optional cloud ASR engine (explicit opt-in) uploads recordings to the provider you configure. After transcription, text may be polished or translated via a cloud LLM. This policy explains what data the app processes and how it is used.</p>
 
   <h2>What we collect</h2>
   <ul>
     <li><strong>Voice audio</strong> — captured only while you actively record. On the default <strong>local engine</strong>, audio is transcribed on-device with Apple's <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code> and raw audio is not uploaded. If you explicitly enable the <strong>cloud engine</strong> (a confirmation dialog is shown first), your recordings are uploaded to the ASR provider you configure (e.g. OpenAI, Qwen DashScope, Zhipu) for transcription; that provider's privacy policy applies. OSGKeyboard never stores or proxies your audio on its own servers.</li>
-    <li><strong>Transcribed text</strong> — after on-device ASR, the transcript (not audio) is sent for polish. On the <strong>local engine</strong>, polish uses a built-in DeepSeek endpoint configured at build time. On the <strong>cloud engine</strong>, polish and optional translation use the OpenAI-compatible API you configure (e.g. OpenAI, Qwen DashScope, Moonshot, Zhipu, Xiaomi MiMo, or your own server).</li>
+    <li><strong>Transcribed text and cursor context</strong> — after on-device ASR, the transcript (not audio) is sent for polish. To continue naturally at the insertion point, a small amount of text immediately before and after the cursor may be included. Secure fields are never captured; cursor context is not written to logs or voice history. On the <strong>local engine</strong>, polish uses a built-in DeepSeek endpoint configured at build time. On the <strong>cloud engine</strong>, polish and optional translation use the OpenAI-compatible API you configure (e.g. OpenAI, Qwen DashScope, Moonshot, Zhipu, Xiaomi MiMo, or your own server).</li>
     <li><strong>API credentials</strong> — your cloud-engine LLM API key is stored in the iOS Keychain on your device and is read only when an LLM request is made. It is shared with the main app through a shared Keychain group, never through UserDefaults. When you enable <strong>iCloud settings sync</strong>, API keys replicate through Apple's <strong>iCloud Keychain</strong> to your other signed-in devices — not through iCloud Key-Value Store JSON.</li>
     <li><strong>App preferences</strong> — engine mode, recognition language, polish intensity, translation target, handedness, cursor-navigation toggle, and keyboard settings are stored in App Group <code>UserDefaults</code> on your device so the main app and keyboard extension stay in sync. When iCloud settings sync is enabled, these preferences (excluding API keys) may also be mirrored in your private iCloud Key-Value Store account.</li>
     <li><strong>Personal dictionary</strong> — terms and aliases you add in the Dictionary tab are stored locally on your device. They are included in LLM polish prompts so your vocabulary is preserved. Optional <strong>iCloud dictionary sync</strong> mirrors your dictionary through your private iCloud Key-Value Store; OSGKeyboard does not operate a separate dictionary server.</li>
@@ -38,7 +48,7 @@
   </ul>
 
   <h2>How the keyboard extension talks to the host app</h2>
-  <p>OSGKeyboard uses a long-lived "Flow session" hosted in the main app. The keyboard extension writes tiny "start / stop" signals into an App Group, the main app captures the audio, transcribes it (on-device by default; via your configured cloud ASR provider if you opted into the cloud engine), then sends the transcript for polish (and optional translation) before writing the result back. On the default local engine audio never leaves your device; only transcribed text is sent to the LLM endpoint (built-in DeepSeek on the local engine, or your configured API on the cloud engine).</p>
+  <p>OSGKeyboard uses a long-lived "Flow session" hosted in the main app. The keyboard extension writes tiny "start / stop" signals and, when available, a short redacted cursor-context snapshot into an App Group. The main app captures the audio, transcribes it (on-device by default; via your configured cloud ASR provider if you opted into the cloud engine), then sends the transcript and that nearby text for polish (and optional translation) before writing the result back. On the default local engine audio never leaves your device; only text is sent to the LLM endpoint (built-in DeepSeek on the local engine, or your configured API on the cloud engine).</p>
 
   <h2>Permissions</h2>
   <ul>
@@ -67,13 +77,13 @@
 
   <hr id="zh">
   <h1>OSGKeyboard 隐私政策</h1>
-  <p><strong>更新日期：</strong>2026 年 7 月 23 日 · <em>v1.0</em></p>
+  <p><strong>更新日期：</strong>2026 年 7 月 29 日 · <em>v1.0</em></p>
   <p>OSGKeyboard 是一款 iOS 自定义键盘，可将语音转为文字。它以自定义键盘扩展的形式运行，需要 iOS 26 及以上系统，默认使用 Apple 端侧的 <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code> 转写；可选的云端识别引擎（需显式二次确认开启）会把录音上传到你配置的服务商。转写完成后，文字可能经云端 LLM 润色或翻译。本政策说明应用处理哪些数据及用途。</p>
 
   <h2>我们处理的数据</h2>
   <ul>
     <li><strong>语音音频</strong> — 仅在你主动录音时采集。默认<strong>本地引擎</strong>下，音频在设备端通过 <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code> 转写，原始录音不会上传。若你显式开启<strong>云端引擎</strong>（会先弹出确认对话框），录音会上传到你配置的识别服务商（如 OpenAI、通义 DashScope、智谱）完成转写，适用该服务商的隐私政策。OSGKeyboard 自身绝不存储或中转你的音频。</li>
-    <li><strong>转写文字</strong> — 端侧 ASR 完成后，转写文字（非音频）会发送润色。<strong>本地引擎</strong>使用构建时配置的内置 DeepSeek 端点；<strong>云端引擎</strong>的润色与可选翻译使用你配置的 OpenAI 兼容 API（OpenAI / 通义 DashScope / Moonshot / 智谱 / 小米 MiMo / 自建服务等）。</li>
+    <li><strong>转写文字与光标上下文</strong> — 端侧 ASR 完成后，转写文字（非音频）会发送润色。为了在插入点自然衔接，请求可能同时包含光标前后的少量文字。密码框绝不采集，光标上下文不会写入日志或语音历史。<strong>本地引擎</strong>使用构建时配置的内置 DeepSeek 端点；<strong>云端引擎</strong>的润色与可选翻译使用你配置的 OpenAI 兼容 API（OpenAI / 通义 DashScope / Moonshot / 智谱 / 小米 MiMo / 自建服务等）。</li>
     <li><strong>API 凭证</strong> — 云端引擎的 LLM API Key 保存在设备 Keychain，仅在发起 LLM 请求时读取；通过共享 Keychain 组与主 App 共享，<strong>不会</strong>写入 <code>UserDefaults</code>。开启<strong>iCloud 设置同步</strong>后，API 密钥经 Apple <strong>iCloud 钥匙串</strong>同步到你其他已登录设备，<strong>不会</strong>写入 iCloud 键值存储 JSON。</li>
     <li><strong>应用偏好</strong> — 引擎模式、识别语言、润色档位、翻译目标、握持偏好、光标导航开关、键盘设置等保存在 App Group <code>UserDefaults</code>，用于主 App 与键盘扩展之间的状态同步。开启 iCloud 设置同步后，这些偏好（不含 API 密钥）也可能镜像到你私有的 iCloud 键值存储账户。</li>
     <li><strong>个性词库</strong> — 你在「词库」Tab 添加的词条与别名保存在本机，润色时会写入 LLM 提示词。可选的<strong>iCloud 词库同步</strong>经私有 iCloud 键值存储在多设备间镜像；OSGKeyboard 不运营独立词库服务器。</li>
@@ -90,7 +100,7 @@
   </ul>
 
   <h2>键盘扩展与主 App 的通信方式</h2>
-  <p>OSGKeyboard 采用主 App 维护的「Flow 会话」机制：键盘扩展在 App Group 中写入轻量的「开始 / 停止」信号，主 App 采集音频并完成转写（默认在设备端；若你开启云端引擎则经你配置的识别服务商），再将转写文字发送润色（及可选翻译）后回写结果。默认本地引擎下音频不会离开设备；发送给 LLM 的仅为转写文字（本地引擎走内置 DeepSeek，云端引擎走你配置的 API）。</p>
+  <p>OSGKeyboard 采用主 App 维护的「Flow 会话」机制：键盘扩展在 App Group 中写入轻量的「开始 / 停止」信号，以及可用时经过截断的少量光标上下文；主 App 采集音频并完成转写（默认在设备端；若你开启云端引擎则经你配置的识别服务商），再将转写文字与附近文字发送润色（及可选翻译）后回写结果。默认本地引擎下音频不会离开设备；发送给 LLM 的仅为文字（本地引擎走内置 DeepSeek，云端引擎走你配置的 API）。</p>
 
   <h2>权限说明</h2>
   <ul>
