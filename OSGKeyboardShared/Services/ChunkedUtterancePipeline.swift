@@ -143,7 +143,10 @@ public actor ChunkedUtterancePipeline {
                     action: "preMerge",
                     chunkIndex: chunk.index
                 )
-                let mergedResult = await transcribeChunk(samples: preMerge.samples)
+                let mergedResult = await transcribeChunkWithRetry(
+                    samples: preMerge.samples,
+                    chunkIndex: chunk.index
+                )
                 switch mergedResult {
                 case .success(let text):
                     // Empty / whitespace merge must NOT wipe a prior good segment
@@ -182,7 +185,10 @@ public actor ChunkedUtterancePipeline {
                 continue
             }
 
-            let result = await transcribeChunk(samples: chunk.samples)
+            let result = await transcribeChunkWithRetry(
+                samples: chunk.samples,
+                chunkIndex: chunk.index
+            )
             logChunkOutcome(chunk: chunk, result: result)
             switch result {
             case .success(let text):
@@ -199,7 +205,10 @@ public actor ChunkedUtterancePipeline {
                         action: "emptyRetry",
                         chunkIndex: chunk.index
                     )
-                    let retryResult = await transcribeChunk(samples: retry.samples)
+                    let retryResult = await transcribeChunkWithRetry(
+                        samples: retry.samples,
+                        chunkIndex: chunk.index
+                    )
                     switch retryResult {
                     case .success(let retryText):
                         let trimmed = retryText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -309,6 +318,30 @@ public actor ChunkedUtterancePipeline {
         return await Task.detached(priority: .userInitiated) {
             await asr.transcribeChunk(samples: samples, locale: locale)
         }.value
+    }
+
+    /// Retry one failed chunk before advancing the serial worker. Keeping the
+    /// same PCM samples prevents a transient request failure from creating an
+    /// undetectable hole in an otherwise fluent stitched transcript.
+    private func transcribeChunkWithRetry(
+        samples: [Float],
+        chunkIndex: Int
+    ) async -> ASRChunkResult {
+        let first = await transcribeChunk(samples: samples)
+        guard case .failure(let message) = first else { return first }
+        guard !cancelled, !Task.isCancelled else { return .cancelled }
+
+        FlowTrace.warn(
+            "pipeline.chunk.retry",
+            "chunk=\(chunkIndex) samples=\(samples.count) error=\(message)"
+        )
+        do {
+            try await Task.sleep(nanoseconds: 150_000_000)
+        } catch {
+            return .cancelled
+        }
+        guard !cancelled, !Task.isCancelled else { return .cancelled }
+        return await transcribeChunk(samples: samples)
     }
 
     /// Pairs each chunk's audio with the text it produced, so an empty

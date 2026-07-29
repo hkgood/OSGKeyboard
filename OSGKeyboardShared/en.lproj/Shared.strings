@@ -396,7 +396,7 @@
 "mac.localASR.phase.finalizing" = "Finalizing";
 "mac.localASR.phase.failed" = "Failed";
 "mac.localASR.phase.completed" = "Completed";
-"mac.error.accessibilityRequired" = "Enable Accessibility for OSGKeyboard in System Settings";
+"mac.error.accessibilityRequired" = "Dictation copied to the clipboard. Press ⌘V to paste, then enable Accessibility for OSGKeyboard in System Settings.";
 "mac.foregroundApp" = "Front app: %@";
 "mac.sync.settingsTitle" = "Cross-Device iCloud Sync";
 "mac.sync.settingsSubtitle" = "Sync settings, history, and API keys across devices via iCloud.";

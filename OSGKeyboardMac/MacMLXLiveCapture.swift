@@ -14,10 +14,15 @@ enum MacMLXLiveCapture {
         audioStream: AsyncStream<AudioBufferSnapshot>,
         finishSignal: AsyncStream<Void>,
         store: AppGroupStore,
+        targetAppBundleIdentifier: String?,
         onPartial: @escaping @Sendable (String) -> Void
     ) async -> MacLiveASRCaptureResult {
         let locale = Locale(identifier: store.localeId.isEmpty ? "zh-CN" : store.localeId)
-        let bias = resolveBias(store: store, locale: locale)
+        let bias = resolveBias(
+            store: store,
+            locale: locale,
+            targetAppBundleIdentifier: targetAppBundleIdentifier
+        )
 
         guard let model = MacLocalASRService.selectedModelDefinition(),
               model.backend == .mlx,
@@ -133,14 +138,17 @@ enum MacMLXLiveCapture {
         }
     }
 
-    private static func resolveBias(store: AppGroupStore, locale: Locale) -> LocalASRBiasPayload? {
-        MacAppContextService.captureAndPersist(to: store)
+    private static func resolveBias(
+        store: AppGroupStore,
+        locale: Locale,
+        targetAppBundleIdentifier: String?
+    ) -> LocalASRBiasPayload? {
         let capabilities = MacLocalASRService.currentCapabilities()
         let bias = LocalASRBiasAdapter.adapt(
             LocalASRBiasRequest(
                 dictionary: store.personalDictionary,
                 locale: locale,
-                frontAppBundleId: MacAppContextService.frontmostBundleIdentifier(),
+                frontAppBundleId: targetAppBundleIdentifier,
                 capabilities: capabilities
             )
         )

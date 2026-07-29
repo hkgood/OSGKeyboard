@@ -60,6 +60,7 @@ enum MacDictationPipeline {
     static func run(
         samples: [Float],
         store: AppGroupStore,
+        targetAppBundleIdentifier: String? = nil,
         onPartial: (@Sendable (String) -> Void)? = nil
     ) async throws -> MacDictationResult {
         guard !samples.isEmpty else { throw MacDictationError.noAudio }
@@ -69,7 +70,11 @@ enum MacDictationPipeline {
         var localBias: LocalASRBiasPayload?
 
         if store.engineMode == "local" {
-            localBias = resolveLocalBias(store: store, locale: locale)
+            localBias = resolveLocalBias(
+                store: store,
+                locale: locale,
+                targetAppBundleIdentifier: targetAppBundleIdentifier
+            )
             raw = try await MacLocalASRService.transcribe(
                 samples: samples,
                 locale: locale,
@@ -103,6 +108,7 @@ enum MacDictationPipeline {
         stream: AsyncStream<AudioBufferSnapshot>,
         finishSignal: AsyncStream<Void>,
         store: AppGroupStore,
+        targetAppBundleIdentifier: String?,
         onPartial: @escaping @Sendable (String) -> Void
     ) async -> MacLiveASRCaptureResult {
         if store.engineMode == "local", MacLocalASRService.usesMLXLiveStreaming() {
@@ -110,6 +116,7 @@ enum MacDictationPipeline {
                 audioStream: stream,
                 finishSignal: finishSignal,
                 store: store,
+                targetAppBundleIdentifier: targetAppBundleIdentifier,
                 onPartial: onPartial
             )
         }
@@ -117,7 +124,11 @@ enum MacDictationPipeline {
         let locale = resolvedLocale(store: store)
         let localBias: LocalASRBiasPayload?
         if store.engineMode == "local" {
-            localBias = resolveLocalBias(store: store, locale: locale)
+            localBias = resolveLocalBias(
+                store: store,
+                locale: locale,
+                targetAppBundleIdentifier: targetAppBundleIdentifier
+            )
         } else {
             localBias = nil
         }
@@ -280,15 +291,15 @@ enum MacDictationPipeline {
 
     private static func resolveLocalBias(
         store: AppGroupStore,
-        locale: Locale
+        locale: Locale,
+        targetAppBundleIdentifier: String?
     ) -> LocalASRBiasPayload? {
-        MacAppContextService.captureAndPersist(to: store)
         let capabilities = MacLocalASRService.currentCapabilities()
         let bias = LocalASRBiasAdapter.adapt(
             LocalASRBiasRequest(
                 dictionary: store.personalDictionary,
                 locale: locale,
-                frontAppBundleId: MacAppContextService.frontmostBundleIdentifier(),
+                frontAppBundleId: targetAppBundleIdentifier,
                 capabilities: capabilities
             )
         )

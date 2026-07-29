@@ -104,7 +104,7 @@ enum MacMainWindow {
 /// AppKit rather than SwiftUI's `MenuBarExtra` because the latter is flaky
 /// when combined with a primary `Window` scene (the icon can silently vanish).
 @MainActor
-final class MacAppDelegate: NSObject, NSApplicationDelegate {
+final class MacAppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
 
@@ -183,6 +183,7 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func configurePopover() {
+        popover.delegate = self
         popover.behavior = .transient
         popover.animates = true
         popover.contentSize = NSSize(width: 340, height: 420)
@@ -194,10 +195,17 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
         if popover.isShown {
             popover.performClose(sender)
         } else {
+            // Capture before activation: once the popover becomes key,
+            // NSWorkspace reports OSGKeyboard instead of the user's target.
+            MacDictationViewModel.shared.prepareForPopoverPresentation()
             NSApp.activate(ignoringOtherApps: true)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        MacDictationViewModel.shared.clearPreparedPopoverTarget()
     }
 }
 

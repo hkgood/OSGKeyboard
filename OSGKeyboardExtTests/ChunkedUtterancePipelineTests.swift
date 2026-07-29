@@ -72,7 +72,7 @@ final class ChunkedUtterancePipelineTests: XCTestCase {
         XCTAssertFalse(partials.isEmpty)
     }
 
-    func testPipelineDeliversPartialSuccessWhenOneChunkFails() async {
+    func testPipelineRetriesTransientMiddleChunkFailure() async {
         let pipeline = ChunkedUtterancePipeline(
             asr: FailingSecondChunkASR(),
             locale: Locale(identifier: "zh-Hans"),
@@ -86,6 +86,30 @@ final class ChunkedUtterancePipelineTests: XCTestCase {
 
         let outcome = await pipeline.transcribe(stream: stream) { _ in }
 
+        guard case .success(let success) = outcome else {
+            return XCTFail("expected partial success, got \(outcome)")
+        }
+        XCTAssertTrue(success.text.contains("recovered-middle"), "got \(success.text)")
+        XCTAssertTrue(success.chunkWarnings.isEmpty)
+    }
+
+    func testPipelineWarnsAfterMiddleChunkRetryAlsoFails() async {
+        let pipeline = ChunkedUtterancePipeline(
+            asr: PermanentlyFailingMiddleChunkASR(),
+            locale: Locale(identifier: "zh-Hans"),
+            config: config(overlapSeconds: 0)
+        )
+
+        let (stream, continuation) = AsyncStream<AudioBufferSnapshot>.makeStream()
+        continuation.yield(
+            AudioBufferSnapshot(
+                samples: [Float](repeating: 0.1, count: 160),
+                sampleRate: 1_000
+            )
+        )
+        continuation.finish()
+
+        let outcome = await pipeline.transcribe(stream: stream) { _ in }
         guard case .success(let success) = outcome else {
             return XCTFail("expected partial success, got \(outcome)")
         }
@@ -223,6 +247,35 @@ private struct FailingSecondChunkASR: ASRService, @unchecked Sendable {
         }
         if current == 1 {
             return .failure("simulated chunk error")
+        }
+        if current == 2 {
+            return .success("recovered-middle")
+        }
+        return .success("seg\(samples.count)")
+    }
+}
+
+private struct PermanentlyFailingMiddleChunkASR: ASRService, @unchecked Sendable {
+    private let callIndex = OSAllocatedUnfairLock(initialState: 0)
+
+    func transcribe(
+        stream: AsyncStream<AudioBufferSnapshot>,
+        locale: Locale
+    ) -> AsyncStream<ASREvent> {
+        AsyncStream { $0.finish() }
+    }
+
+    func cancel() {}
+
+    func transcribeChunk(samples: [Float], locale: Locale) async -> ASRChunkResult {
+        _ = locale
+        let current = callIndex.withLock { state in
+            let value = state
+            state += 1
+            return value
+        }
+        if current == 1 || current == 2 {
+            return .failure("persistent simulated chunk error")
         }
         return .success("seg\(samples.count)")
     }

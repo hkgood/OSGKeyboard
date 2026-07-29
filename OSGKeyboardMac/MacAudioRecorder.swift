@@ -8,7 +8,14 @@
 
 @preconcurrency import AVFoundation
 
-final class MacAudioRecorder: @unchecked Sendable {
+protocol MacAudioRecording: Sendable {
+    func level() -> Float
+    func start() async throws
+    func makeSnapshotStream() -> AsyncStream<AudioBufferSnapshot>
+    func stop() -> [Float]
+}
+
+final class MacAudioRecorder: MacAudioRecording, @unchecked Sendable {
     enum RecorderError: Error, LocalizedError {
         case converterUnavailable
         case microphoneAccessDenied

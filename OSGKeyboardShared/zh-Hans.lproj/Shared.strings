@@ -396,7 +396,7 @@
 "mac.localASR.phase.finalizing" = "完成安装";
 "mac.localASR.phase.failed" = "失败";
 "mac.localASR.phase.completed" = "已完成";
-"mac.error.accessibilityRequired" = "请在系统设置中为 OSGKeyboard 启用辅助功能";
+"mac.error.accessibilityRequired" = "识别结果已复制到剪贴板，请按 ⌘V 粘贴，然后在系统设置中为 OSGKeyboard 启用辅助功能。";
 "mac.foregroundApp" = "前台应用：%@";
 "mac.sync.settingsTitle" = "跨设备iCloud 同步";
 "mac.sync.settingsSubtitle" = "通过 iCloud 跨设备同步设置、历史记录、API Key";

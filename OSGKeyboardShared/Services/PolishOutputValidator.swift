@@ -62,7 +62,10 @@ public enum PolishOutputValidator {
         }
 
         let inputNumbers = matches(#"\d+(?:[.,]\d+)*"#, in: input)
-        let missingNumbers = Array(Set(inputNumbers.filter { !output.contains($0) })).sorted()
+        let allowedOrdinalNumbers = allowedOrdinalRepairNumbers(input: input, output: output)
+        let missingNumbers = Array(Set(inputNumbers.filter {
+            !output.contains($0) && !allowedOrdinalNumbers.contains($0)
+        })).sorted()
         if !missingNumbers.isEmpty {
             violations.append(.missingNumbers(missingNumbers))
         }
@@ -106,7 +109,6 @@ public enum PolishOutputValidator {
         let patterns = [
             #"https?://[^\s<>"']+"#,
             #"\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+\b"#,
-            #"(?:^|[\s(])(?:[A-Za-z0-9_.-]+/)+[A-Za-z0-9_.-]+"#,
             #"\b[A-Za-z][A-Za-z0-9]*_[A-Za-z0-9_]+\b"#,
             #"\b[A-Za-z]+[a-z0-9][A-Z][A-Za-z0-9]*\b"#,
         ]
@@ -118,7 +120,97 @@ public enum PolishOutputValidator {
                 )))
             }
         }
+        let pathPattern = #"(?:^|[\s(])(?:~?/|\.\.?/)?(?:[A-Za-z0-9_.-]+/)+[A-Za-z0-9_.-]+"#
+        for rawValue in matches(pathPattern, in: text) {
+            let value = rawValue.trimmingCharacters(in: .whitespacesAndNewlines.union(
+                CharacterSet(charactersIn: "(")
+            ))
+            if isProtectedPath(value) {
+                result.insert(value)
+            }
+        }
         return result
+    }
+
+    private static func isProtectedPath(_ value: String) -> Bool {
+        let explicitPrefix = value.hasPrefix("/")
+            || value.hasPrefix("./")
+            || value.hasPrefix("../")
+            || value.hasPrefix("~/")
+        let normalized = value.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let segments = normalized.split(separator: "/", omittingEmptySubsequences: true)
+        guard segments.count >= 2 else { return false }
+
+        // Dates and fractions such as 2025/03/01, 3/4, and 3/5 are numeric
+        // values, not file paths. They remain covered by soft number telemetry.
+        if segments.allSatisfy({ $0.allSatisfy(\.isNumber) }) {
+            return false
+        }
+        if explicitPrefix { return true }
+        if segments.count >= 3 { return true }
+        return segments.contains { $0.contains(".") || $0.contains("_") }
+    }
+
+    private static func allowedOrdinalRepairNumbers(
+        input: String,
+        output: String
+    ) -> Set<String> {
+        let pattern = #"第\s*(\d+)\s*[:：]\s*00"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let fullRange = NSRange(input.startIndex..<input.endIndex, in: input)
+        var allowed = Set<String>()
+
+        for match in regex.matches(in: input, range: fullRange) {
+            guard match.numberOfRanges > 1,
+                  let ordinalRange = Range(match.range(at: 1), in: input),
+                  let matchRange = Range(match.range, in: input) else {
+                continue
+            }
+            let ordinal = String(input[ordinalRange])
+            let prefixRange = input.startIndex..<matchRange.lowerBound
+            let prefix = String(input[prefixRange])
+            guard hasEstablishedEnumeration(prefix) else { continue }
+
+            let escaped = NSRegularExpression.escapedPattern(for: ordinal)
+            let arabicListPattern = #"(?m)(?:^|\n)\s*"# + escaped + #"\s*[.、)]"#
+            let chineseOrdinal = Int(ordinal).flatMap(chineseNumeral)
+            let hasArabicOrdinal = output.range(
+                of: arabicListPattern,
+                options: .regularExpression
+            ) != nil
+            let hasChineseOrdinal = chineseOrdinal.map {
+                output.contains("第\($0)点")
+            } ?? false
+            if hasArabicOrdinal || hasChineseOrdinal {
+                allowed.insert(ordinal)
+                allowed.insert("00")
+            }
+        }
+        return allowed
+    }
+
+    private static func hasEstablishedEnumeration(_ prefix: String) -> Bool {
+        prefix.range(
+            of: #"(?:第一点|第[一二三四五六七八九十]+点|首先)"#,
+            options: .regularExpression
+        ) != nil
+    }
+
+    private static func chineseNumeral(_ value: Int) -> String? {
+        let digits = ["零", "一", "二", "三", "四", "五", "六", "七", "八", "九"]
+        switch value {
+        case 0...9:
+            return digits[value]
+        case 10:
+            return "十"
+        case 11...19:
+            return "十" + digits[value % 10]
+        case 20...99:
+            let tens = digits[value / 10] + "十"
+            return value % 10 == 0 ? tens : tens + digits[value % 10]
+        default:
+            return nil
+        }
     }
 
     private static func matches(_ pattern: String, in text: String) -> [String] {
