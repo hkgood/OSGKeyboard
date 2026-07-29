@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **macOS direct download**: bilingual README and GitHub Pages download areas now offer a signed, notarized macOS DMG alongside the iPhone / iPad App Store badge, with explicit platform labels. / **macOS 直接下载**：中英文 README 与 GitHub Pages 下载区在 iPhone / iPad App Store 徽章旁新增已签名、公证的 macOS DMG，并明确标注平台。
+- **macOS direct download**: bilingual README and GitHub Pages download areas now offer a signed, notarized macOS DMG alongside the iPhone / iPad App Store badge, using distinct badge designs. / **macOS 直接下载**：中英文 README 与 GitHub Pages 下载区在 iPhone / iPad App Store 徽章旁新增已签名、公证的 macOS DMG，并通过不同徽章样式区分平台。
 - **Beams hero**: radiant noise-warped beam array (React Bits–style, vanilla Three.js) with the shared demo preset (26 beams, 208° rotation) and OSG green light. / **Beams Hero**：放射状噪声光束阵列（React Bits 风格，原生 Three.js），采用分享的演示预设（26 束、208° 旋转）与 OSG 绿色灯光。
 - **App Store download badges**: official badges on bilingual READMEs (hero + Get sections) and the website, with China-store `/cn/` links for Chinese and regionless App Store links for English. / **App Store 下载徽章**：中英文 README（顶部与获取区）与官网挂载官方徽章；中文链 `/cn/`，英文用无地区链接。
 - **Website SEO & AI discovery**: richer meta/JSON-LD/FAQ, `llms.txt`, sitemap, and bilingual single-page landing. / **官网 SEO 与 AI 发现**：强化 meta/JSON-LD/FAQ、`llms.txt`、sitemap，以及双语单页落地站。
