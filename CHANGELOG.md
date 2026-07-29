@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mac Settings translation target**: polish-provider section includes “Polish then translate” with the same locale picker as Home / menu bar. / **Mac 设置翻译目标**：润色（LLM）分区新增「润色后翻译」，与首页 / 菜单栏同一套目标语言选择。
 
 ### Fixed
+- **macOS Option release freeze**: finishing a live snapshot stream no longer calls `AsyncStream.Continuation.finish()` while holding the recorder lock — the termination handler re-entered the same `NSLock` on the main thread and wedged the app when the hold-to-talk key was released. / **macOS 松开 Option 卡死**：结束实时 snapshot 流时不再在持有 recorder 锁的情况下调用 `AsyncStream.Continuation.finish()`；终止回调会在主线程重入同一把 `NSLock`，松开听写键时导致整个 App 无响应。
+- **macOS dictation HUD layout storm**: the floating pill no longer reassigns its hosting view and forces a synchronous relayout on every view-model tick (~20×/s from the level timer); it uses a fixed panel size and lets SwiftUI refresh through `@ObservedObject` instead. / **macOS 听写浮层布局风暴**：悬浮胶囊不再在每次 view-model 更新时重建 hosting 视图并强制同步重排（音量定时器约 20 次/秒）；改为固定面板尺寸，由 SwiftUI `@ObservedObject` 驱动刷新。
 - **Polish never answers the transcript**: fun styles (dating / flex / corp) could turn “你觉得这个包怎么样” into a reply such as “还行，挺顺眼的”. A top-priority “polish only, never answer” rule now sits in the global contract, every built-in style pack, the prompt safety boundary, and a router question guard that keeps question drafts as questions. / **润色不再代答转写内容**：趣味风格（直男癌/装逼指南/大厂黑话）曾把「你觉得这个包怎么样」润色成「还行，挺顺眼的」。现已在全局契约、全部内置风格包、提示词安全边界与路由问句守卫四层加入最高优先级的「只润色、不作答」规则，问句必须仍是问句。
 
 ### Changed

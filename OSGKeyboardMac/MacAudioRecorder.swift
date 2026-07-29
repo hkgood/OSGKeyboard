@@ -36,6 +36,12 @@ final class MacAudioRecorder: @unchecked Sendable {
     private let lock = NSLock()
     private var samples: [Float] = []
     private var snapshotContinuation: AsyncStream<AudioBufferSnapshot>.Continuation?
+    /// Identifies the live snapshot sink. `AsyncStream.Continuation` is not
+    /// equatable, so a termination handler compares generations to tell "my
+    /// stream ended" from "a newer stream already replaced me".
+    private var snapshotGeneration = 0
+    /// Guarded by `lock`: the audio tap runs on the render thread and must stop
+    /// appending the moment `stop()` begins tearing the engine down.
     private var isRunning = false
     /// Hard cap on accumulated audio: 10 minutes @16 kHz ≈ 38 MB of Float32.
     /// Recording is push-to-talk, but a stuck hotkey (or a latched Option
@@ -87,24 +93,65 @@ final class MacAudioRecorder: @unchecked Sendable {
     /// The stream is finished automatically in `stop()`.
     func makeSnapshotStream() -> AsyncStream<AudioBufferSnapshot> {
         AsyncStream { continuation in
-            lock.withLock {
-                snapshotContinuation?.finish()
-                snapshotContinuation = continuation
-            }
+            let generation = installSnapshotSink(continuation)
             continuation.onTermination = { [weak self] _ in
-                self?.lock.withLock {
-                    self?.snapshotContinuation = nil
-                }
+                self?.clearSnapshotSink(ifGeneration: generation)
             }
         }
     }
 
-    private func startEngine() throws {
+    /// Publishes `continuation` as the live sink and returns its generation.
+    ///
+    /// `finish()` invokes `onTermination` **synchronously on the calling
+    /// thread**, and that handler takes `lock`. Since `NSLock` is not
+    /// reentrant, any `finish()` made while holding `lock` deadlocks the
+    /// caller — on the main thread that freezes the whole app. So the outgoing
+    /// continuation is only handed over here and finished after the unlock.
+    private func installSnapshotSink(
+        _ continuation: AsyncStream<AudioBufferSnapshot>.Continuation
+    ) -> Int {
+        let (previous, generation) = lock.withLock {
+            let previous = snapshotContinuation
+            snapshotGeneration += 1
+            snapshotContinuation = continuation
+            return (previous, snapshotGeneration)
+        }
+        previous?.finish()
+        return generation
+    }
+
+    /// Detaches the sink only if it is still the one this generation installed,
+    /// so a late termination from a replaced stream cannot mute the live one.
+    private func clearSnapshotSink(ifGeneration generation: Int) {
         lock.withLock {
-            samples.removeAll(keepingCapacity: true)
-            snapshotContinuation?.finish()
+            guard snapshotGeneration == generation else { return }
             snapshotContinuation = nil
         }
+    }
+
+    #if DEBUG
+    /// Test seam: whether a live snapshot sink is currently attached. Lets the
+    /// regression tests assert that replacing a stream leaves the *new* sink in
+    /// place, which is otherwise invisible from outside.
+    var hasLiveSnapshotSink: Bool {
+        lock.withLock { snapshotContinuation != nil }
+    }
+    #endif
+
+    /// Hands the live sink out for finishing outside the lock. See
+    /// `installSnapshotSink` for why `finish()` must never run under `lock`.
+    private func detachSnapshotSink() -> AsyncStream<AudioBufferSnapshot>.Continuation? {
+        lock.withLock {
+            let detached = snapshotContinuation
+            snapshotContinuation = nil
+            return detached
+        }
+    }
+
+    private func startEngine() throws {
+        let stale = detachSnapshotSink()
+        lock.withLock { samples.removeAll(keepingCapacity: true) }
+        stale?.finish()
 
         let input = engine.inputNode
         let inputFormat = input.outputFormat(forBus: 0)
@@ -118,22 +165,33 @@ final class MacAudioRecorder: @unchecked Sendable {
         }
         engine.prepare()
         try engine.start()
-        isRunning = true
+        lock.withLock { isRunning = true }
     }
 
     /// Stops capture and returns the accumulated 16 kHz mono samples.
     func stop() -> [Float] {
-        guard isRunning else { return [] }
+        // Retire the tap first: `removeTap` / `engine.stop()` can still drain a
+        // buffer in flight, and a callback that appends into a torn-down engine
+        // is what logged `kAudioUnitErr_InvalidElement (-10877)`.
+        let wasRunning = lock.withLock {
+            guard isRunning else { return false }
+            isRunning = false
+            return true
+        }
+        guard wasRunning else { return [] }
+
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
-        isRunning = false
-        return lock.withLock {
-            snapshotContinuation?.finish()
-            snapshotContinuation = nil
+
+        let sink = detachSnapshotSink()
+        let out = lock.withLock {
             let out = samples
             samples.removeAll(keepingCapacity: false)
             return out
         }
+        // Outside the lock: `finish()` re-enters via `onTermination`.
+        sink?.finish()
+        return out
     }
 
     private func appendResampled(_ buffer: AVAudioPCMBuffer) {
@@ -166,16 +224,18 @@ final class MacAudioRecorder: @unchecked Sendable {
         let rms = (sumSquares / Float(frameCount)).squareRoot()
         let normalized = min(1, max(0, rms * 12))
 
-        lock.withLock {
+        let sink: AsyncStream<AudioBufferSnapshot>.Continuation? = lock.withLock {
+            guard isRunning else { return nil }
             samples.append(contentsOf: chunk)
             if samples.count > Self.maxSampleCount + Self.trimHysteresisSamples {
                 samples.removeFirst(samples.count - Self.maxSampleCount)
             }
             let factor: Float = normalized > smoothedLevel ? 0.5 : 0.15
             smoothedLevel += (normalized - smoothedLevel) * factor
-            snapshotContinuation?.yield(
-                AudioBufferSnapshot(samples: chunk, sampleRate: 16_000)
-            )
+            return snapshotContinuation
         }
+        // Yielded outside the lock so the render thread never holds it across a
+        // consumer hand-off, and never while the sink might terminate.
+        sink?.yield(AudioBufferSnapshot(samples: chunk, sampleRate: 16_000))
     }
 }
