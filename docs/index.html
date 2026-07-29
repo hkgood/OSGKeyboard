@@ -137,7 +137,11 @@
       --bg: #f7f7f5;
       --bg-elevated: #ffffff;
       --bg-soft: #efefec;
-      --hero-wash: #e7f3eb;
+      --hero-wash: #eef3f0;
+      --aurora-a: rgba(47, 154, 82, 0.42);
+      --aurora-b: rgba(56, 178, 172, 0.34);
+      --aurora-c: rgba(99, 102, 241, 0.22);
+      --aurora-d: rgba(34, 197, 94, 0.18);
       --text: #121214;
       --text-2: #5a5a62;
       --text-3: #8e8e96;
@@ -157,7 +161,11 @@
       --bg: #0a0a0b;
       --bg-elevated: #131316;
       --bg-soft: #18181b;
-      --hero-wash: #102018;
+      --hero-wash: #070b0a;
+      --aurora-a: rgba(52, 211, 153, 0.38);
+      --aurora-b: rgba(34, 211, 238, 0.28);
+      --aurora-c: rgba(129, 140, 248, 0.30);
+      --aurora-d: rgba(74, 222, 128, 0.22);
       --text: #f4f4f2;
       --text-2: #a8a8b0;
       --text-3: #6f6f78;
@@ -175,7 +183,11 @@
         --bg: #0a0a0b;
         --bg-elevated: #131316;
         --bg-soft: #18181b;
-        --hero-wash: #102018;
+        --hero-wash: #070b0a;
+        --aurora-a: rgba(52, 211, 153, 0.38);
+        --aurora-b: rgba(34, 211, 238, 0.28);
+        --aurora-c: rgba(129, 140, 248, 0.30);
+        --aurora-d: rgba(74, 222, 128, 0.22);
         --text: #f4f4f2;
         --text-2: #a8a8b0;
         --text-3: #6f6f78;
@@ -318,10 +330,93 @@
     /* —— Hero —— */
     .hero {
       position: relative;
-      /* Full-bleed solid wash (no side gaps from inset gradients). */
       background: var(--hero-wash);
       padding: 4.5rem 0 2.5rem;
       overflow: hidden;
+      isolation: isolate;
+    }
+    .hero-aurora {
+      position: absolute;
+      inset: -12% -8% -18%;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .hero-aurora::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, transparent 55%, var(--hero-wash) 96%),
+        radial-gradient(ellipse 70% 50% at 50% 0%, transparent 40%, var(--hero-wash) 100%);
+      opacity: 0.85;
+    }
+    .aurora-blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(72px);
+      will-change: transform, opacity;
+      mix-blend-mode: normal;
+      opacity: 0.9;
+    }
+    .aurora-blob-1 {
+      width: min(72vw, 720px);
+      height: min(52vw, 520px);
+      top: -8%;
+      left: -6%;
+      background: var(--aurora-a);
+      animation: aurora-drift-1 22s ease-in-out infinite alternate;
+    }
+    .aurora-blob-2 {
+      width: min(64vw, 640px);
+      height: min(48vw, 480px);
+      top: 8%;
+      right: -10%;
+      background: var(--aurora-b);
+      animation: aurora-drift-2 28s ease-in-out infinite alternate;
+    }
+    .aurora-blob-3 {
+      width: min(58vw, 560px);
+      height: min(42vw, 420px);
+      top: 28%;
+      left: 28%;
+      background: var(--aurora-c);
+      animation: aurora-drift-3 26s ease-in-out infinite alternate;
+    }
+    .aurora-blob-4 {
+      width: min(48vw, 440px);
+      height: min(36vw, 360px);
+      bottom: 6%;
+      left: 12%;
+      background: var(--aurora-d);
+      animation: aurora-drift-4 20s ease-in-out infinite alternate;
+      opacity: 0.7;
+    }
+    @keyframes aurora-drift-1 {
+      0%   { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
+      50%  { transform: translate3d(12%, 10%, 0) scale(1.12) rotate(8deg); }
+      100% { transform: translate3d(6%, 18%, 0) scale(1.05) rotate(-4deg); }
+    }
+    @keyframes aurora-drift-2 {
+      0%   { transform: translate3d(0, 0, 0) scale(1.05) rotate(0deg); }
+      50%  { transform: translate3d(-14%, 12%, 0) scale(1.18) rotate(-10deg); }
+      100% { transform: translate3d(-8%, 20%, 0) scale(0.96) rotate(6deg); }
+    }
+    @keyframes aurora-drift-3 {
+      0%   { transform: translate3d(0, 0, 0) scale(0.95); opacity: 0.75; }
+      50%  { transform: translate3d(-10%, -8%, 0) scale(1.2); opacity: 1; }
+      100% { transform: translate3d(10%, 6%, 0) scale(1.05); opacity: 0.8; }
+    }
+    @keyframes aurora-drift-4 {
+      0%   { transform: translate3d(0, 0, 0) scale(1); }
+      100% { transform: translate3d(18%, -12%, 0) scale(1.15); }
+    }
+    html[data-theme="dark"] .aurora-blob,
+    html[data-theme="system"] .aurora-blob {
+      mix-blend-mode: screen;
+    }
+    @media (prefers-color-scheme: light) {
+      html[data-theme="system"] .aurora-blob { mix-blend-mode: normal; }
     }
     .hero .wrap { position: relative; z-index: 1; }
     .hero-copy {
@@ -799,6 +894,20 @@
       }
       .reveal { opacity: 1; transform: none; }
       .hero-stage { opacity: 1; transform: none; }
+      .aurora-blob {
+        filter: blur(64px);
+        opacity: 0.55;
+        will-change: auto;
+      }
+      .aurora-blob-1 { transform: translate3d(4%, 6%, 0); }
+      .aurora-blob-2 { transform: translate3d(-6%, 8%, 0); }
+      .aurora-blob-3 { transform: translate3d(-2%, 0, 0); }
+      .aurora-blob-4 { transform: translate3d(8%, -4%, 0); }
+    }
+
+    @media (max-width: 720px) {
+      .aurora-blob { filter: blur(56px); }
+      .aurora-blob-4 { display: none; }
     }
   </style>
 </head>
@@ -838,6 +947,12 @@
   <main id="top">
     <!-- Hero -->
     <section class="hero">
+      <div class="hero-aurora" aria-hidden="true">
+        <span class="aurora-blob aurora-blob-1"></span>
+        <span class="aurora-blob aurora-blob-2"></span>
+        <span class="aurora-blob aurora-blob-3"></span>
+        <span class="aurora-blob aurora-blob-4"></span>
+      </div>
       <div class="wrap">
         <div class="hero-copy">
           <div class="eyebrow">
