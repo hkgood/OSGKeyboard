@@ -21,7 +21,11 @@ public enum UtteranceStreamChunker {
                 buffer.reserveCapacity(initialCapacity)
                 var chunkIndex = 0
 
-                func emit(upTo splitEnd: Int, isLast: Bool) {
+                func emit(
+                    upTo splitEnd: Int,
+                    isLast: Bool,
+                    trailingPauseSeconds: Double = 0
+                ) {
                     guard splitEnd > 0, splitEnd <= buffer.count else {
                         FlowTrace.warn(
                             "pipeline.chunk.emitSkipped",
@@ -37,7 +41,12 @@ public enum UtteranceStreamChunker {
                             + "rms=\(FlowTrace.rms(chunkSamples)) isLast=\(isLast ? 1 : 0)"
                     )
                     continuation.yield(
-                        UtteranceAudioChunk(index: chunkIndex, samples: chunkSamples, isLast: isLast)
+                        UtteranceAudioChunk(
+                            index: chunkIndex,
+                            samples: chunkSamples,
+                            isLast: isLast,
+                            trailingPauseSeconds: trailingPauseSeconds
+                        )
                     )
                     chunkIndex += 1
                     if splitEnd >= buffer.count {
@@ -58,12 +67,16 @@ public enum UtteranceStreamChunker {
                     buffer.append(contentsOf: snap.samples)
 
                     while buffer.count >= config.maxChunkSamples(forChunkIndex: chunkIndex) {
-                        let split = pauseAwareSplitIndex(
+                        let split = pauseAwareSplit(
                             in: buffer,
                             config: config,
                             chunkIndex: chunkIndex
                         )
-                        emit(upTo: split, isLast: false)
+                        emit(
+                            upTo: split.index,
+                            isLast: false,
+                            trailingPauseSeconds: Double(split.pauseSamples) / Double(config.sampleRate)
+                        )
                     }
                 }
 
@@ -108,25 +121,45 @@ public enum UtteranceStreamChunker {
         config: FlowUtteranceChunkConfig,
         chunkIndex: Int = 1
     ) -> Int {
+        pauseAwareSplit(in: buffer, config: config, chunkIndex: chunkIndex).index
+    }
+
+    static func pauseAwareSplit(
+        in buffer: [Float],
+        config: FlowUtteranceChunkConfig,
+        chunkIndex: Int = 1
+    ) -> (index: Int, pauseSamples: Int) {
         let minSplit = config.maxChunkSamples(forChunkIndex: chunkIndex)
-        guard buffer.count >= minSplit else { return buffer.count }
+        guard buffer.count >= minSplit else { return (buffer.count, 0) }
 
         let searchEnd = min(buffer.count, minSplit + config.pauseExtensionSamples)
         if searchEnd <= minSplit {
-            return minSplit
+            return (minSplit, 0)
         }
 
         let windowSize = max(config.sampleRate / 50, 160) // ~20 ms
-        var bestPause: Int?
+        let step = max(windowSize / 2, 1)
+        var bestPauseEnd: Int?
+        var bestPauseSamples = 0
+        var currentPauseStart: Int?
         var idx = minSplit
         while idx + windowSize <= searchEnd {
             if rms(of: buffer, start: idx, count: windowSize) < config.pauseRMSThreshold {
-                bestPause = idx + windowSize
+                if currentPauseStart == nil {
+                    currentPauseStart = idx
+                }
+                let pauseSamples = idx + windowSize - (currentPauseStart ?? idx)
+                if pauseSamples > bestPauseSamples {
+                    bestPauseSamples = pauseSamples
+                    bestPauseEnd = idx + windowSize
+                }
+            } else {
+                currentPauseStart = nil
             }
-            idx += windowSize / 2
+            idx += step
         }
 
-        return bestPause ?? minSplit
+        return (bestPauseEnd ?? minSplit, bestPauseSamples)
     }
 
     static func rms(of samples: [Float], start: Int, count: Int) -> Float {

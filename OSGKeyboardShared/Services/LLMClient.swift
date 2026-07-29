@@ -35,6 +35,21 @@ public enum LLMError: Error, LocalizedError, Sendable, Equatable {
     }
 }
 
+public struct LLMGenerationOptions: Sendable, Equatable {
+    public let temperature: Double?
+    public let topP: Double?
+    public let maxTokens: Int?
+
+    public init(temperature: Double? = 0.1, topP: Double? = 0.9, maxTokens: Int? = nil) {
+        self.temperature = temperature
+        self.topP = topP
+        self.maxTokens = maxTokens
+    }
+
+    public static let polishDefault = LLMGenerationOptions()
+    public static let deterministicRetry = LLMGenerationOptions(temperature: 0, topP: 1)
+}
+
 public protocol LLMClient: Sendable {
     /// Polish `text` with `systemPrompt`. `timeout` overrides the
     /// per-request HTTP timeout for this call; when `nil` the client's
@@ -42,6 +57,14 @@ public protocol LLMClient: Sendable {
     /// larger, length-scaled timeout so the HTTP request is not cut off
     /// mid-generation (see `PolishingService.effectiveTimeout`).
     func polish(_ text: String, systemPrompt: String, timeout: TimeInterval?) async throws -> String
+
+    /// Provider clients override this to support per-attempt generation controls.
+    func polish(
+        _ text: String,
+        systemPrompt: String,
+        timeout: TimeInterval?,
+        options: LLMGenerationOptions
+    ) async throws -> String
 
     /// Baseline upper bound for a single LLM HTTP round-trip when no
     /// per-request `timeout` is supplied.
@@ -52,6 +75,15 @@ public extension LLMClient {
     /// Convenience overload that uses the baseline `requestTimeout`.
     func polish(_ text: String, systemPrompt: String) async throws -> String {
         try await polish(text, systemPrompt: systemPrompt, timeout: nil)
+    }
+
+    func polish(
+        _ text: String,
+        systemPrompt: String,
+        timeout: TimeInterval?,
+        options: LLMGenerationOptions
+    ) async throws -> String {
+        try await polish(text, systemPrompt: systemPrompt, timeout: timeout)
     }
 }
 
@@ -88,6 +120,20 @@ public struct OpenAICompatibleClient: LLMClient {
     }
 
     public func polish(_ text: String, systemPrompt: String, timeout: TimeInterval?) async throws -> String {
+        try await polish(
+            text,
+            systemPrompt: systemPrompt,
+            timeout: timeout,
+            options: .polishDefault
+        )
+    }
+
+    public func polish(
+        _ text: String,
+        systemPrompt: String,
+        timeout: TimeInterval?,
+        options: LLMGenerationOptions
+    ) async throws -> String {
         guard !apiKey.isEmpty else { throw LLMError.noAPIKey }
 
         let urlString = baseURL.hasSuffix("/")
@@ -95,14 +141,21 @@ public struct OpenAICompatibleClient: LLMClient {
             : "\(baseURL)/chat/completions"
         guard let url = URL(string: urlString) else { throw LLMError.invalidURL }
 
+        let omitSampling = LLMThinkingControl.shouldOmitSamplingParameters(
+            providerId: providerId,
+            baseURL: baseURL,
+            model: model,
+            thinkingEnabled: thinkingEnabled
+        )
         let request = LLMRequest(
             model: model,
             messages: [
                 .system(systemPrompt),
                 .user(text)
             ],
-            temperature: 0.3,
-            maxTokens: nil
+            temperature: omitSampling ? nil : options.temperature,
+            maxTokens: options.maxTokens ?? LLMRequest.outputTokenLimit(for: text),
+            topP: omitSampling ? nil : options.topP
         )
 
         var req = URLRequest(url: url)
@@ -137,6 +190,11 @@ public struct OpenAICompatibleClient: LLMClient {
             }
             do {
                 let decoded = try JSONDecoder().decode(LLMResponse.self, from: data)
+                LLMCacheMetricsStore.record(
+                    providerId: providerId,
+                    promptTokens: decoded.usage?.promptTokens,
+                    cachedTokens: decoded.usage?.cachedTokens
+                )
                 return decoded.content.trimmingCharacters(in: .whitespacesAndNewlines)
             } catch {
                 throw LLMError.decoding(String(describing: error))
@@ -243,6 +301,16 @@ public enum LLMClientFactory {
 // CoT on and makes polish appear stuck.
 
 enum LLMThinkingControl {
+    static func shouldOmitSamplingParameters(
+        providerId: String,
+        baseURL: String,
+        model: String,
+        thinkingEnabled: Bool
+    ) -> Bool {
+        if thinkingEnabled { return true }
+        return control(providerId: providerId, baseURL: baseURL, model: model) == .openAIReasoning
+    }
+
     static func apply(
         to body: inout [String: Any],
         providerId: String,

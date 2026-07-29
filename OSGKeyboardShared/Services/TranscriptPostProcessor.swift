@@ -105,6 +105,21 @@ public enum TranscriptPostProcessor: Sendable {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Last-resort deterministic polish after repeated validation failure.
+    /// This intentionally does not invent punctuation or rewrite words.
+    public static func minimalPolish(_ text: String) -> String {
+        var result = stripPauseMarkers(from: text)
+        let fillerPattern =
+            #"(^|[\s，,。.!！？?；;：:])(?:嗯|呃|啊|那个|um|uh|er)(?=$|[\s，,。.!！？?；;：:])"#
+        result = result.replacingOccurrences(
+            of: fillerPattern,
+            with: "$1",
+            options: [.regularExpression, .caseInsensitive]
+        )
+        result = collapseHorizontalWhitespace(result)
+        return normalizeWhitespaceAndPunctuation(result)
+    }
+
     /// Conservative cleanup for raw ASR fallback delivery. This is used when
     /// polish/translation cannot run, so it must not rewrite meaning or invent
     /// punctuation; it only removes formatting artifacts that ASR/chunking can
@@ -151,6 +166,7 @@ public enum TranscriptPostProcessor: Sendable {
         }
 
         text = stripExplanatoryPrefix(from: text)
+        text = stripPauseMarkers(from: text)
         text = unwrapSurroundingQuotes(text)
         text = stripAddedEmojis(original: original, output: text)
         text = repairMidSentenceLineBreaks(text)
@@ -165,6 +181,14 @@ public enum TranscriptPostProcessor: Sendable {
         }
 
         return .accept(text)
+    }
+
+    public static func stripPauseMarkers(from text: String) -> String {
+        text.replacingOccurrences(
+            of: #"⟨[^⟩]{0,12}⟩"#,
+            with: "",
+            options: .regularExpression
+        )
     }
 
     // MARK: - Structure detection

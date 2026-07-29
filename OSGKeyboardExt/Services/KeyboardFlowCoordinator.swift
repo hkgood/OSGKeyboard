@@ -24,6 +24,7 @@ final class KeyboardFlowCoordinator {
     private let wakeLockView: () -> UIView?
     private let openHostApp: (String) -> Void
     private let detectAndStoreAppContext: () -> Void
+    private let fieldContextProvider: () -> FlowFieldContext?
     private let scheduleAutoClearError: () -> Void
     private let refreshConfigFromAppGroup: () -> Void
 
@@ -71,6 +72,7 @@ final class KeyboardFlowCoordinator {
         wakeLockView: @escaping () -> UIView?,
         openHostApp: @escaping (String) -> Void,
         detectAndStoreAppContext: @escaping () -> Void,
+        fieldContextProvider: @escaping () -> FlowFieldContext?,
         scheduleAutoClearError: @escaping () -> Void,
         refreshConfigFromAppGroup: @escaping () -> Void
     ) {
@@ -80,6 +82,7 @@ final class KeyboardFlowCoordinator {
         self.wakeLockView = wakeLockView
         self.openHostApp = openHostApp
         self.detectAndStoreAppContext = detectAndStoreAppContext
+        self.fieldContextProvider = fieldContextProvider
         self.scheduleAutoClearError = scheduleAutoClearError
         self.refreshConfigFromAppGroup = refreshConfigFromAppGroup
     }
@@ -552,12 +555,15 @@ final class KeyboardFlowCoordinator {
             utteranceId: currentUtteranceId,
             commandSeq: nextCommandSeq(),
             action: action,
-            localeId: state.localeId
+            localeId: state.localeId,
+            fieldContext: action == .stopRecording ? fieldContextProvider() : nil
         )
         FlowSessionBridge.writeCommand(command)
         debug(
             "command \(action.rawValue) seq=\(command.commandSeq) " +
-            "utterance=\(currentUtteranceId.uuidString)"
+            "utterance=\(currentUtteranceId.uuidString) contextChars=" +
+            "\(command.fieldContext?.precedingText?.count ?? 0)/" +
+            "\(command.fieldContext?.followingText?.count ?? 0)"
         )
         // Start of one traceable utterance: everything the host logs afterwards
         // belongs to this `utterance=` id until the matching keyboard.insert.

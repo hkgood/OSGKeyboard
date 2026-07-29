@@ -56,41 +56,21 @@ public enum PolishIntensity: String, Codable, Sendable, CaseIterable {
     /// heavy restructuring (chat/light/dating), heavy still improves clarity
     /// but must not override the style pack's length and format rules.
     public func promptGuideline(styleID: String?) -> String {
-        let base: String
-        switch styleID {
-        case "builtin.dating":
-            base = datingGuideline
-        case "builtin.flex":
-            base = flexGuideline
-        case "builtin.corp":
-            base = corpGuideline
-        case "builtin.diba":
-            base = dibaGuideline
-        case "builtin.xhs":
-            base = xhsGuideline
-        default:
-            base = defaultGuideline
+        let transformative = styleID.map(PolishStylePackCatalog.isFunPersonality(id:)) ?? false
+        switch (self, transformative) {
+        case (.light, false):
+            return "Light: remove only explicit fillers and stutters. Merge only unmistakable self-corrections. Do not reorder otherwise-clear wording."
+        case (.medium, false):
+            return "Medium: remove clear fillers and abandoned restarts, fix high-confidence ASR errors, and reorder only obviously broken syntax."
+        case (.heavy, false):
+            return "Heavy: handle implicit restarts and filler phrases more actively. You may reorder clauses for clarity while preserving every fact and the user's voice."
+        case (.light, true):
+            return "Light style strength: clean clear fillers and apply a recognizable but restrained version of the active personality."
+        case (.medium, true):
+            return "Medium style strength: merge clear restarts and apply the active personality with a visibly stronger full-sentence rewrite."
+        case (.heavy, true):
+            return "Heavy style strength: handle implicit restarts actively and use the strongest version of the active personality, while preserving facts and intent."
         }
-
-        guard self == .heavy,
-              let styleID,
-              PolishStylePackCatalog.limitsHeavyRestructuring(id: styleID)
-        else {
-            return base
-        }
-
-        if PolishStylePackCatalog.isFunPersonality(id: styleID) {
-            return base + """
-
-            Style override: keep short sendable form — no report paragraphs or numbered lists unless the transcript enumerates items. \
-            Full voice rewrite is allowed for style effect; stay within about 1–3 short bubbles, not an essay. This style's Light/Medium/Heavy rules remain authoritative.
-            """
-        }
-
-        return base + """
-
-        Style override: the active style pack limits heavy restructuring. Do not expand length, add paragraphs for polish only, or introduce numbered lists unless the transcript explicitly enumerates items. Keep the style pack's chat rhythm, tone, and format rules authoritative.
-        """
     }
 
     private var datingGuideline: String {

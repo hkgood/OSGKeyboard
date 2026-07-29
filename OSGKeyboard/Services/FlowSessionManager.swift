@@ -53,6 +53,8 @@ final class FlowSessionManager: ObservableObject {
     private var lastObservedRecordingState: FlowSessionKeys.RecordingState = .idle
     private var activeSessionId: UUID?
     private var currentUtteranceId: UUID?
+    /// Cursor context captured by the keyboard at the final insertion point.
+    private var pendingFieldContext: FlowFieldContext?
     private var currentCommandSeq: Int64 = 0
     private var lastHandledCommandSeq: Int64 = 0
     /// Published so Home / debug UI can show "recording" instead of a false "ready".
@@ -65,6 +67,7 @@ final class FlowSessionManager: ObservableObject {
     private var chunkedPipeline: ChunkedUtterancePipeline?
     private var currentPartial = ""
     private var lastFinal = ""
+    private var lastFinalWithPauseMarks = ""
     /// Partial stitched text captured when the user stops recording.
     private var bestPartialSnapshot = ""
     /// Full utterance PCM for batch ASR fallback after pipelined chunking.
@@ -387,6 +390,7 @@ final class FlowSessionManager: ObservableObject {
 
         activeSessionId = nil
         currentUtteranceId = nil
+        pendingFieldContext = nil
         currentCommandSeq = 0
         lastHandledCommandSeq = 0
         isUtteranceRecording = false
@@ -397,6 +401,7 @@ final class FlowSessionManager: ObservableObject {
         sessionWarning = nil
         currentPartial = ""
         lastFinal = ""
+        lastFinalWithPauseMarks = ""
         bestPartialSnapshot = ""
         utterancePCMSamples = []
         chunkWarnings = []
@@ -437,6 +442,7 @@ final class FlowSessionManager: ObservableObject {
         chunkedPipeline = nil
         activeSessionId = nil
         currentUtteranceId = nil
+        pendingFieldContext = nil
         currentCommandSeq = 0
         lastHandledCommandSeq = 0
         isUtteranceRecording = false
@@ -457,6 +463,7 @@ final class FlowSessionManager: ObservableObject {
         sessionWarning = nil
         currentPartial = ""
         lastFinal = ""
+        lastFinalWithPauseMarks = ""
     }
 
     func extendSession(duration: TimeInterval? = nil) {
@@ -1198,6 +1205,12 @@ final class FlowSessionManager: ObservableObject {
             }
         case .stopRecording:
             guard currentUtteranceId == command.utteranceId else { return }
+            pendingFieldContext = command.fieldContext
+            FlowDiagnostics.log(
+                "field context received before/after=" +
+                "\(command.fieldContext?.precedingText?.count ?? 0)/" +
+                "\(command.fieldContext?.followingText?.count ?? 0)"
+            )
             if isUtteranceRecording {
                 endUtterance()
             } else if !isUtteranceProcessing {
@@ -1373,6 +1386,7 @@ final class FlowSessionManager: ObservableObject {
         currentCommandSeq = commandSeq
         currentPartial = ""
         lastFinal = ""
+        lastFinalWithPauseMarks = ""
         bestPartialSnapshot = ""
         utterancePCMSamples = []
         chunkWarnings = []
@@ -1451,6 +1465,7 @@ final class FlowSessionManager: ObservableObject {
                             + "warnings=\(success.chunkWarnings.count)"
                     )
                     manager.lastFinal = success.text
+                    manager.lastFinalWithPauseMarks = success.textWithPauseMarks
                     manager.chunkWarnings = success.chunkWarnings
                     manager.currentPartial = ""
                 case .failure(let message):
@@ -1570,9 +1585,11 @@ final class FlowSessionManager: ObservableObject {
         releaseCaptureAfterPiPUtteranceIfNeeded()
         currentPartial = ""
         lastFinal = ""
+        lastFinalWithPauseMarks = ""
         bestPartialSnapshot = ""
         utterancePCMSamples = []
         chunkWarnings = []
+        pendingFieldContext = nil
         currentUtteranceId = nil
         currentCommandSeq = 0
         updateLiveActivityPhase(.idle)
@@ -1599,10 +1616,12 @@ final class FlowSessionManager: ObservableObject {
         releaseCaptureAfterPiPUtteranceIfNeeded()
         currentPartial = ""
         lastFinal = ""
+        lastFinalWithPauseMarks = ""
         bestPartialSnapshot = ""
         utterancePCMSamples = []
         chunkWarnings = []
         storeCurrentError(message, kind: kind)
+        pendingFieldContext = nil
         currentUtteranceId = nil
         currentCommandSeq = 0
         updateLiveActivityPhase(.idle)
@@ -1625,10 +1644,12 @@ final class FlowSessionManager: ObservableObject {
         releaseCaptureAfterPiPUtteranceIfNeeded()
         currentPartial = ""
         lastFinal = ""
+        lastFinalWithPauseMarks = ""
         bestPartialSnapshot = ""
         utterancePCMSamples = []
         chunkWarnings = []
         storeCurrentError(message, kind: kind)
+        pendingFieldContext = nil
         currentUtteranceId = nil
         currentCommandSeq = 0
         updateLiveActivityPhase(.idle)
@@ -1642,12 +1663,14 @@ final class FlowSessionManager: ObservableObject {
         commandSeq finalizeCommandSeq: Int64
     ) async {
         let pipelineStarted = Date()
+        let fieldContext = pendingFieldContext
         // ALWAYS clear the processing gate for this utterance. The previous
         // guard required currentUtteranceId to still match; a racing
         // fail/abort/cancel path could nil the id (or leave processing stuck)
         // and then skip refreshHostReady — keyboard stayed white forever
         // while host logs still said "utterance finalized".
         defer {
+            pendingFieldContext = nil
             completeFinalizeCleanup(
                 sessionId: finalizeSessionId,
                 utteranceId: finalizeUtteranceId
@@ -1708,6 +1731,9 @@ final class FlowSessionManager: ObservableObject {
         if wantsBatchFallback, !utterancePCMSamples.isEmpty {
             text = await runBatchASRFallback(currentText: text)
         }
+        let textForPolish = text == lastFinal && !lastFinalWithPauseMarks.isEmpty
+            ? lastFinalWithPauseMarks
+            : text
         utterancePCMSamples = []
         guard !text.isEmpty else {
             let key = (asrTask?.isCancelled == true || Task.isCancelled)
@@ -1741,6 +1767,15 @@ final class FlowSessionManager: ObservableObject {
         // Re-read App Group at finalize so chip-side translation changes
         // from the keyboard extension are visible before polish/translate.
         let pipelineStore = AppGroupStore()
+        let polishContext = PolishContext(
+            appContext: pipelineStore.detectedAppContext?.context ?? .unknown,
+            intensity: pipelineStore.polishIntensity,
+            precedingText: fieldContext?.precedingText,
+            followingText: fieldContext?.followingText,
+            fieldHints: fieldContext.map(FieldHints.init(from:)),
+            maxPrecedingChars: 600,
+            maxFollowingChars: 200
+        )
 
         var delivered = text
         let polishStarted = Date()
@@ -1751,7 +1786,7 @@ final class FlowSessionManager: ObservableObject {
         )
         FlowTrace.transcript(
             "polish.input",
-            text,
+            textForPolish,
             "mode=\(Self.polishModeLogLabel(polishMode)) engine=\(engineMode) "
                 + "provider=\(pipelineStore.polishProviderIdOverride ?? "default") "
                 + "recordedSeconds=\(String(format: "%.2f", recordingDuration))"
@@ -1763,12 +1798,14 @@ final class FlowSessionManager: ObservableObject {
             if Task.isCancelled {
                 throw CancellationError()
             }
-            let polished = try await Self.polishWithHostTimeout(
+            let outcome = try await Self.polishWithHostTimeout(
                 polisher: polisher,
-                text: text,
+                text: textForPolish,
                 mode: polishMode,
-                providerIdOverride: pipelineStore.polishProviderIdOverride
+                providerIdOverride: pipelineStore.polishProviderIdOverride,
+                context: polishContext
             )
+            let polished = outcome.text
             delivered = polished
             FlowTrace.transcript(
                 "polish.output",
@@ -1779,7 +1816,12 @@ final class FlowSessionManager: ObservableObject {
             )
             storeFinalizedResult(
                 polished,
-                warning: chunkNote,
+                warning: Self.combinedWarning(
+                    chunkNote,
+                    outcome.qualityDegraded
+                        ? AppL10n.string("flow.warning.polishDegradedQuality")
+                        : nil
+                ),
                 sessionId: finalizeSessionId,
                 utteranceId: finalizeUtteranceId,
                 commandSeq: finalizeCommandSeq
@@ -1833,6 +1875,7 @@ final class FlowSessionManager: ObservableObject {
 
         currentPartial = ""
         lastFinal = ""
+        lastFinalWithPauseMarks = ""
         bestPartialSnapshot = ""
         utterancePCMSamples = []
         chunkWarnings = []
@@ -1952,6 +1995,14 @@ final class FlowSessionManager: ObservableObject {
         return warnings.joined(separator: "\n")
     }
 
+    private static func combinedWarning(_ values: String?...) -> String? {
+        let present = values.compactMap { value -> String? in
+            guard let value, !value.isEmpty else { return nil }
+            return value
+        }
+        return present.isEmpty ? nil : present.joined(separator: "\n")
+    }
+
     private func consumeRecordingDuration() -> TimeInterval {
         defer { utteranceRecordingStartedAt = nil }
         guard let start = utteranceRecordingStartedAt else { return 0 }
@@ -2047,13 +2098,15 @@ final class FlowSessionManager: ObservableObject {
         polisher: PolishingService,
         text: String,
         mode: PolishingService.PolishMode,
-        providerIdOverride: String?
-    ) async throws -> String {
+        providerIdOverride: String?,
+        context: PolishContext?
+    ) async throws -> PolishingService.PolishOutcome {
         try await HardTimeout.run(seconds: FlowSessionKeys.maxPolishTimeout) {
-            try await polisher.polish(
+            try await polisher.polishWithOutcome(
                 text,
                 mode: mode,
-                providerIdOverride: providerIdOverride
+                providerIdOverride: providerIdOverride,
+                context: context
             )
         }
     }

@@ -25,6 +25,7 @@ public enum FlowDebugAppGroupSnapshot {
         let snapshot = FlowSessionBridge.readySnapshot(defaults: defaults)
         let staleness = FlowSessionBridge.heartbeatStaleness(defaults: defaults)
         let generation = FlowSessionBridge.currentHostGeneration(defaults: defaults)
+        let cacheMetrics = LLMCacheMetricsStore.latest(defaults: defaults)
         let shortGen: String = {
             guard let generation, generation.count >= 8 else { return generation ?? "nil" }
             return String(generation.prefix(8))
@@ -60,6 +61,7 @@ public enum FlowDebugAppGroupSnapshot {
             }()),
             FlowDebugRow("pendingHost", FlowSessionBridge.pendingHostBundleId(defaults: defaults) ?? "nil"),
             FlowDebugRow("recState", FlowSessionBridge.recordingState(defaults: defaults).rawValue),
+            FlowDebugRow("llmCache", cacheMetrics?.summary ?? "n/a"),
             FlowDebugRow("appGroup", AppGroup.isAvailable ? "1" : "0")
         ]
     }

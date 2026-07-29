@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Context-aware polish safeguards**: polish can use a redacted cursor-neighborhood snapshot for natural continuation, validates protected terms and identifiers, retries once, and falls back to a conservative local cleanup when needed. / **上下文润色护栏**：润色可使用经截断脱敏的光标附近文字自然衔接，并校验受保护词与标识符；失败时重试一次，仍不合格则降级为本地保守清理。
+- **Pause-aware chunk polish**: chunked ASR carries detected silence boundaries into the polish request while keeping previews and final output marker-free. / **分块停顿感知润色**：分块 ASR 将检测到的静音边界传入润色请求，实时预览与最终输出均不会显示内部标记。
 - **True streaming cloud ASR**: Bailian, Volcengine, and OpenAI Realtime use one utterance-level WebSocket with live partials; Volcengine enables official two-pass (`enable_nonstream`) so interim text stays on-screen while definite ASR feeds polish. / **真流式云端 ASR**：百炼、火山与 OpenAI Realtime 按整句长连接推流并实时上屏；火山开启官方二遍识别（`enable_nonstream`），interim 仅上屏，definite 再送润色。
 - **Streaming ASR badge**: settings ASR provider chip shows 【流式识别】 for Bailian, Volcengine, and OpenAI. / **流式识别标签**：设置里 ASR 供应商对百炼、火山、OpenAI 显示【流式识别】。
 - **Fun polish styles**: new subcategory with Flex Guide, Corp Speak, and DiBa Logic alongside Dating Coach. / **趣味润色风格**：新增小分类，含装逼指南、大厂黑话、帝吧大神，并与直男癌拯救器同组。
@@ -21,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Polish never answers the transcript**: fun styles (dating / flex / corp) could turn “你觉得这个包怎么样” into a reply such as “还行，挺顺眼的”. A top-priority “polish only, never answer” rule now sits in the global contract, every built-in style pack, the prompt safety boundary, and a router question guard that keeps question drafts as questions. / **润色不再代答转写内容**：趣味风格（直男癌/装逼指南/大厂黑话）曾把「你觉得这个包怎么样」润色成「还行，挺顺眼的」。现已在全局契约、全部内置风格包、提示词安全边界与路由问句守卫四层加入最高优先级的「只润色、不作答」规则，问句必须仍是问句。
 
 ### Changed
+- **Layered bilingual polish prompts**: transcripts are sent once as user data; stable Chinese/English core rules, style policies, dictionaries, and runtime context now have explicit responsibilities for better consistency and provider prefix caching. / **分层双语润色提示词**：转写仅作为用户消息发送一次；稳定的中英文核心规则、风格策略、词典和运行时上下文职责明确，提升一致性并支持服务商前缀缓存。
 - **Two-tier short polish skip**: ultra-short (≤4 CJK) still skips the LLM; 5–10 CJK now skips only low-value acks/closings (e.g. “好的我知道了”), while questions and contentful shorts still polish. / **两级短句跳过润色**：≤4 字仍跳过 LLM；5–10 字仅对低价值确认/收束语跳过（如「好的我知道了」），问句与有内容短句仍走润色。
 - **ABE polish routing**: fun styles and daily chat use a local information-density gate, prompt hard-brakes, and style-specific degrade (e.g. DiBa without an opponent quote falls back to chat cleanup) without a second LLM call. / **ABE 润色路由**：趣味风格与日常聊天增加本地信息密度闸、提示词硬刹车与风格专属降级（如帝吧无对方原话时降级日常清理），不增加第二次 LLM 调用。
 - **Practical polish prompts**: Light Clean / Structured / Formal / Daily Chat share a “transcript-only, not a chatbot” boundary; Structured gains active itemization, light semantic reorder, and paragraphing hard rules inspired by high-readability polish patterns. / **实用润色提示词**：轻度清理 / 清晰结构 / 正式表达 / 日常聊天统一「只整理转写、非聊天助手」边界；清晰结构加强积极分项、轻度语义重排与分段硬规则，提升长口述可读性。

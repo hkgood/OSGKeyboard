@@ -6,6 +6,35 @@
 
 import Foundation
 
+public struct FlowFieldContext: Codable, Equatable, Sendable {
+    public let precedingText: String?
+    public let followingText: String?
+    public let keyboardType: String?
+    public let returnKeyType: String?
+    public let isSecureEntry: Bool
+    /// Distinguishes a known-empty field from unavailable document context.
+    public let isEmptyField: Bool
+    public let isContextAvailable: Bool
+
+    public init(
+        precedingText: String? = nil,
+        followingText: String? = nil,
+        keyboardType: String? = nil,
+        returnKeyType: String? = nil,
+        isSecureEntry: Bool = false,
+        isEmptyField: Bool = false,
+        isContextAvailable: Bool = false
+    ) {
+        self.precedingText = isSecureEntry ? nil : precedingText
+        self.followingText = isSecureEntry ? nil : followingText
+        self.keyboardType = keyboardType
+        self.returnKeyType = returnKeyType
+        self.isSecureEntry = isSecureEntry
+        self.isEmptyField = isSecureEntry ? false : isEmptyField
+        self.isContextAvailable = isSecureEntry ? false : isContextAvailable
+    }
+}
+
 public struct FlowCommand: Codable, Equatable, Sendable {
     public enum Action: String, Codable, Sendable {
         case startRecording
@@ -20,6 +49,7 @@ public struct FlowCommand: Codable, Equatable, Sendable {
     public let action: Action
     public let localeId: String
     public let createdAt: TimeInterval
+    public let fieldContext: FlowFieldContext?
 
     public init(
         protocolVersion: Int = 1,
@@ -28,7 +58,8 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         commandSeq: Int64,
         action: Action,
         localeId: String,
-        createdAt: TimeInterval = Date().timeIntervalSince1970
+        createdAt: TimeInterval = Date().timeIntervalSince1970,
+        fieldContext: FlowFieldContext? = nil
     ) {
         self.protocolVersion = protocolVersion
         self.sessionId = sessionId
@@ -37,6 +68,7 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         self.action = action
         self.localeId = localeId
         self.createdAt = createdAt
+        self.fieldContext = fieldContext
     }
 }
 

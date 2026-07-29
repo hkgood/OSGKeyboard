@@ -341,6 +341,7 @@ final class MacDictationViewModel: ObservableObject {
                         }
                         result = try await MacDictationPipeline.polishCapturedASR(
                             raw: capture.raw,
+                            rawWithPauseMarks: capture.rawWithPauseMarks,
                             store: store,
                             localBias: capture.localBias,
                             chunkWarning: capture.chunkWarning

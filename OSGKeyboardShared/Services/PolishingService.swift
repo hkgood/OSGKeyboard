@@ -34,6 +34,21 @@ import Foundation
 
 public actor PolishingService {
 
+    public struct PolishOutcome: Sendable, Equatable {
+        public let text: String
+        public let qualityDegraded: Bool
+
+        public init(text: String, qualityDegraded: Bool = false) {
+            self.text = text
+            self.qualityDegraded = qualityDegraded
+        }
+    }
+
+    private struct RemotePolishResult: Sendable {
+        let text: String
+        let qualityDegraded: Bool
+    }
+
     public enum PolishError: Error, Equatable {
         case noTranscript
         case timeout
@@ -89,6 +104,40 @@ public actor PolishingService {
         providerIdOverride: String? = nil,
         context: PolishContext? = nil
     ) async throws -> String {
+        try await performPolish(
+            raw,
+            mode: mode,
+            systemPrompt: systemPrompt,
+            providerIdOverride: providerIdOverride,
+            context: context
+        ).text
+    }
+
+    /// Additive result API for host pipelines that need to surface a conservative
+    /// quality fallback without changing the established `polish` signature.
+    public func polishWithOutcome(
+        _ raw: String,
+        mode: PolishMode = .polish,
+        systemPrompt: String? = nil,
+        providerIdOverride: String? = nil,
+        context: PolishContext? = nil
+    ) async throws -> PolishOutcome {
+        try await performPolish(
+            raw,
+            mode: mode,
+            systemPrompt: systemPrompt,
+            providerIdOverride: providerIdOverride,
+            context: context
+        )
+    }
+
+    private func performPolish(
+        _ raw: String,
+        mode: PolishMode,
+        systemPrompt: String?,
+        providerIdOverride: String?,
+        context: PolishContext?
+    ) async throws -> PolishOutcome {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw PolishError.noTranscript }
 
@@ -99,7 +148,7 @@ public actor PolishingService {
         if mode == .polish,
            systemPrompt == nil || systemPrompt?.isEmpty == true,
            TranscriptPostProcessor.shouldSkipLLM(for: trimmed) {
-            return TranscriptPostProcessor.localClean(trimmed)
+            return PolishOutcome(text: TranscriptPostProcessor.localClean(trimmed))
         }
 
         if injectedClient == nil {
@@ -126,15 +175,18 @@ public actor PolishingService {
                 appContext: resolvedContext.appContext,
                 intensity: decision.effectiveIntensity,
                 precedingText: resolvedContext.precedingText,
+                followingText: resolvedContext.followingText,
+                fieldHints: resolvedContext.fieldHints,
                 dictionarySupplement: resolvedContext.dictionarySupplement,
-                maxPrecedingChars: resolvedContext.maxPrecedingChars
+                maxPrecedingChars: resolvedContext.maxPrecedingChars,
+                maxFollowingChars: resolvedContext.maxFollowingChars
             )
         } else {
             route = nil
             routedContext = resolvedContext
         }
 
-        let llmResult = try await polishRemote(
+        let remoteResult = try await polishRemote(
             trimmed,
             mode: mode,
             systemPrompt: systemPrompt,
@@ -145,16 +197,19 @@ public actor PolishingService {
 
         // Translation and custom prompts bypass the polish post-processor.
         if mode != .polish || (systemPrompt != nil && !(systemPrompt?.isEmpty ?? true)) {
-            return llmResult
+            return PolishOutcome(text: remoteResult.text)
         }
 
-        let processed = TranscriptPostProcessor.process(original: trimmed, llmOutput: llmResult)
+        let processed = TranscriptPostProcessor.process(original: trimmed, llmOutput: remoteResult.text)
         // Conservative / chat-fallback: clamp runaway expansion without a
         // second LLM call (local ratio gate).
         if let route, route.mode != .full {
-            return clampExpansionIfNeeded(original: trimmed, output: processed, maxRatio: 2.5)
+            return PolishOutcome(
+                text: clampExpansionIfNeeded(original: trimmed, output: processed, maxRatio: 2.5),
+                qualityDegraded: remoteResult.qualityDegraded
+            )
         }
-        return processed
+        return PolishOutcome(text: processed, qualityDegraded: remoteResult.qualityDegraded)
     }
 
     /// When ABE forced a conservative path, refuse outputs that still balloon.
@@ -186,7 +241,7 @@ public actor PolishingService {
         providerIdOverride: String? = nil,
         context: PolishContext,
         route: PolishRouteDecision? = nil
-    ) async throws -> String {
+    ) async throws -> RemotePolishResult {
         let effectiveProviderId = Self.resolvedProviderId(
             store: store,
             providerIdOverride: providerIdOverride
@@ -240,19 +295,103 @@ public actor PolishingService {
                 prompt = TranslationPrompt.make(
                     target: target,
                     providerId: effectiveProviderId,
-                    appContext: context.appContext
+                    appContext: context.appContext,
+                    sourceText: trimmed
                 )
             }
         }
         let budget = effectiveTimeout(for: trimmed)
-        // The HTTP request itself uses `budget`; the safety-net timer is
-        // given a small slack on top so a clean URL timeout surfaces its
-        // (more specific) transport error before the race fires.
-        let safetyNet = budget + 2
+        let started = Date()
+        let first = try await performLLMRequest(
+            client: client,
+            text: trimmed,
+            prompt: prompt,
+            timeout: budget,
+            options: .polishDefault
+        )
 
+        guard mode == .polish, systemPrompt == nil || systemPrompt?.isEmpty == true else {
+            return RemotePolishResult(text: first, qualityDegraded: false)
+        }
+
+        let styleID = route?.effectiveStyleID ?? store.activePolishStyleId
+        let style = PolishStylePackCatalog.resolve(
+            id: styleID,
+            userCatalog: store.polishStyleCatalog
+        )
+        let policy = PolishStylePolicyResolver.policy(for: style)
+        let firstCandidate = TranscriptPostProcessor.process(original: trimmed, llmOutput: first)
+        let firstViolations = PolishOutputValidator.validate(
+            input: trimmed,
+            output: firstCandidate,
+            dictionary: store.personalDictionary,
+            lengthRatio: policy.lengthRatio
+        )
+        logViolations(firstViolations, attempt: 1)
+        let hardViolations = firstViolations.filter(\.isHard)
+        guard !hardViolations.isEmpty else {
+            return RemotePolishResult(text: firstCandidate, qualityDegraded: false)
+        }
+
+        let remaining = budget - Date().timeIntervalSince(started)
+        guard remaining >= 2 else {
+            return RemotePolishResult(
+                text: TranscriptPostProcessor.minimalPolish(trimmed),
+                qualityDegraded: true
+            )
+        }
+
+        let useChinese = Self.shouldUseChineseGuidance(
+            inputText: trimmed,
+            providerId: effectiveProviderId
+        )
+        let retryInstruction = PolishOutputValidator.retryInstruction(
+            for: hardViolations,
+            useChinese: useChinese
+        )
+        let retryPrompt = prompt + "\n\n## "
+            + (useChinese ? "校验重试\n" : "Validation retry\n")
+            + retryInstruction
+        let retried = try await performLLMRequest(
+            client: client,
+            text: trimmed,
+            prompt: retryPrompt,
+            timeout: remaining,
+            options: .deterministicRetry
+        )
+        let retryCandidate = TranscriptPostProcessor.process(original: trimmed, llmOutput: retried)
+        let retryViolations = PolishOutputValidator.validate(
+            input: trimmed,
+            output: retryCandidate,
+            dictionary: store.personalDictionary,
+            lengthRatio: policy.lengthRatio
+        )
+        logViolations(retryViolations, attempt: 2)
+        guard retryViolations.filter(\.isHard).isEmpty else {
+            return RemotePolishResult(
+                text: TranscriptPostProcessor.minimalPolish(trimmed),
+                qualityDegraded: true
+            )
+        }
+        return RemotePolishResult(text: retryCandidate, qualityDegraded: false)
+    }
+
+    private func performLLMRequest(
+        client: any LLMClient,
+        text: String,
+        prompt: String,
+        timeout: TimeInterval,
+        options: LLMGenerationOptions
+    ) async throws -> String {
+        let safetyNet = timeout + 2
         return try await withThrowingTaskGroup(of: String.self) { group in
             group.addTask {
-                try await client.polish(trimmed, systemPrompt: prompt, timeout: budget)
+                try await client.polish(
+                    text,
+                    systemPrompt: prompt,
+                    timeout: timeout,
+                    options: options
+                )
             }
             group.addTask {
                 try await Task.sleep(nanoseconds: UInt64(safetyNet * 1_000_000_000))
@@ -262,6 +401,14 @@ public actor PolishingService {
             group.cancelAll()
             return result
         }
+    }
+
+    private func logViolations(_ violations: [PolishViolation], attempt: Int) {
+        guard !violations.isEmpty else { return }
+        FlowTrace.polish(
+            "validation",
+            "attempt=\(attempt) " + violations.map(\.logLabel).joined(separator: ",")
+        )
     }
 
     /// Shared output contract injected into every polish prompt.
@@ -329,7 +476,7 @@ public actor PolishingService {
             dictionary: store.personalDictionary,
             supplement: context.dictionarySupplement
         )
-        let useChinese = shouldUseChineseGuidance(providerId: providerId)
+        let useChinese = Self.shouldUseChineseGuidance(inputText: text, providerId: providerId)
         let styleID = route?.effectiveStyleID ?? store.activePolishStyleId
         let style = PolishStylePackCatalog.resolve(
             id: styleID,
@@ -341,8 +488,11 @@ public actor PolishingService {
                 appContext: context.appContext,
                 intensity: route.effectiveIntensity,
                 precedingText: context.precedingText,
+                followingText: context.followingText,
+                fieldHints: context.fieldHints,
                 dictionarySupplement: context.dictionarySupplement,
-                maxPrecedingChars: context.maxPrecedingChars
+                maxPrecedingChars: context.maxPrecedingChars,
+                maxFollowingChars: context.maxFollowingChars
             )
         } else {
             routedContext = context
@@ -370,13 +520,15 @@ public actor PolishingService {
         return base + "\n" + extra
     }
 
-    private func shouldUseChineseGuidance(providerId: String) -> Bool {
-        switch providerId {
-        case "zhipu", "moonshot", "qwen", "deepseek", "ark", "minimax", "siliconflow", "mimo":
-            return true
-        default:
-            return false
-        }
+    internal static let chineseNativeProviderIds: Set<String> = [
+        "zhipu", "moonshot", "qwen", "deepseek", "ark", "minimax", "siliconflow", "mimo",
+    ]
+
+    internal static func shouldUseChineseGuidance(inputText: String, providerId: String) -> Bool {
+        let ratio = TranscriptLanguageDetector.cjkRatio(inputText)
+        if ratio >= 0.15 { return true }
+        if ratio > 0 { return false }
+        return chineseNativeProviderIds.contains(providerId)
     }
 
     /// Per-request HTTP timeout, scaled with transcript length. This is

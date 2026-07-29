@@ -558,3 +558,4 @@
 "hostApp.bilibili" = "Bilibili";
 "hostApp.douyin" = "Douyin";
 "hostApp.tiktok" = "TikTok";
+"flow.warning.polishDegradedQuality" = "Polish output failed validation; inserted a conservative version.";

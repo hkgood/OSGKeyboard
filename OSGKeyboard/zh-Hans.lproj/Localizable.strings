@@ -557,3 +557,4 @@
 "hostApp.bilibili" = "哔哩哔哩";
 "hostApp.douyin" = "抖音";
 "hostApp.tiktok" = "TikTok";
+"flow.warning.polishDegradedQuality" = "本次润色结果未通过校验，已插入保守处理版本。";

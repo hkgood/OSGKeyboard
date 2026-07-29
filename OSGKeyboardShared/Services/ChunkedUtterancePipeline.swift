@@ -8,11 +8,18 @@ import Foundation
 
 public struct ChunkedUtteranceSuccess: Sendable, Equatable {
     public let text: String
+    /// Same transcript with internal pause markers, used only by polish.
+    public let textWithPauseMarks: String
     /// Non-fatal per-chunk ASR issues (delivered as soft warning when non-empty).
     public let chunkWarnings: [String]
 
-    public init(text: String, chunkWarnings: [String] = []) {
+    public init(
+        text: String,
+        textWithPauseMarks: String? = nil,
+        chunkWarnings: [String] = []
+    ) {
         self.text = text
+        self.textWithPauseMarks = textWithPauseMarks ?? text
         self.chunkWarnings = chunkWarnings
     }
 }
@@ -150,7 +157,11 @@ public actor ChunkedUtterancePipeline {
                         )
                     } else {
                         stitcher.removeLastSegment()
-                        stitcher.append(index: preMerge.stitchIndex, text: text)
+                        stitcher.append(
+                            index: preMerge.stitchIndex,
+                            text: text,
+                            trailingPauseSeconds: chunk.trailingPauseSeconds
+                        )
                         publishPartial(from: stitcher, onPartial: onPartial)
                     }
                 case .failure(let message):
@@ -196,14 +207,26 @@ public actor ChunkedUtterancePipeline {
                             if retry.stitchIndex < chunk.index {
                                 stitcher.removeLastSegment()
                             }
-                            stitcher.append(index: retry.stitchIndex, text: retryText)
+                            stitcher.append(
+                                index: retry.stitchIndex,
+                                text: retryText,
+                                trailingPauseSeconds: chunk.trailingPauseSeconds
+                            )
                             publishPartial(from: stitcher, onPartial: onPartial)
                         } else {
-                            stitcher.append(index: chunk.index, text: text)
+                            stitcher.append(
+                                index: chunk.index,
+                                text: text,
+                                trailingPauseSeconds: chunk.trailingPauseSeconds
+                            )
                             publishPartial(from: stitcher, onPartial: onPartial)
                         }
                     case .failure(let message):
-                        stitcher.append(index: chunk.index, text: text)
+                        stitcher.append(
+                            index: chunk.index,
+                            text: text,
+                            trailingPauseSeconds: chunk.trailingPauseSeconds
+                        )
                         publishPartial(from: stitcher, onPartial: onPartial)
                         failedChunks += 1
                         chunkWarnings.append(
@@ -218,7 +241,11 @@ public actor ChunkedUtterancePipeline {
                         return .cancelled
                     }
                 } else {
-                    stitcher.append(index: chunk.index, text: text)
+                    stitcher.append(
+                        index: chunk.index,
+                        text: text,
+                        trailingPauseSeconds: chunk.trailingPauseSeconds
+                    )
                     publishPartial(from: stitcher, onPartial: onPartial)
                 }
             case .failure(let message):
@@ -241,6 +268,8 @@ public actor ChunkedUtterancePipeline {
         _ = await feeder.value
 
         let finalText = stitcher.composedSafely().trimmingCharacters(in: .whitespacesAndNewlines)
+        let markedText = stitcher.composedWithPauseMarks()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         FlowPipelineDiagnostics.logChunkFinalize(
             chunkCount: processedChunks,
             lastChunkSamples: lastChunkSamples,
@@ -265,7 +294,13 @@ public actor ChunkedUtterancePipeline {
             finalText,
             "chunks=\(processedChunks) failedChunks=\(failedChunks) warnings=\(chunkWarnings.count)"
         )
-        return .success(ChunkedUtteranceSuccess(text: finalText, chunkWarnings: chunkWarnings))
+        return .success(
+            ChunkedUtteranceSuccess(
+                text: finalText,
+                textWithPauseMarks: markedText,
+                chunkWarnings: chunkWarnings
+            )
+        )
     }
 
     private func transcribeChunk(samples: [Float]) async -> ASRChunkResult {

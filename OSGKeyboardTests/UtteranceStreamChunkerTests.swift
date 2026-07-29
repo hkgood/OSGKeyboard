@@ -24,6 +24,14 @@ final class UtteranceStreamChunkerTests: XCTestCase {
         XCTAssertLessThanOrEqual(split, config.maxChunkSamples + config.pauseExtensionSamples)
     }
 
+    func testPauseAwareSplitReportsPauseDuration() {
+        var buffer = [Float](repeating: 0.2, count: config.maxChunkSamples)
+        buffer.append(contentsOf: [Float](repeating: 0.001, count: 200))
+        let result = UtteranceStreamChunker.pauseAwareSplit(in: buffer, config: config)
+        XCTAssertGreaterThan(result.pauseSamples, 0)
+        XCTAssertGreaterThan(result.index, config.maxChunkSamples)
+    }
+
     func testFirstChunkUsesShorterWindow() async {
         let config = FlowUtteranceChunkConfig(
             firstChunkDurationSeconds: 0.5,

@@ -25,10 +25,25 @@ enum MacDictationError: Error, LocalizedError {
 /// Outcome of ASR that ran while the microphone was still open.
 struct MacLiveASRCaptureResult: Sendable {
     let raw: String
+    let rawWithPauseMarks: String?
     let chunkWarning: String?
     let localBias: LocalASRBiasPayload?
     /// When true, callers should fall back to batch ASR on the recorded samples.
     let shouldFallbackToBatch: Bool
+
+    init(
+        raw: String,
+        rawWithPauseMarks: String? = nil,
+        chunkWarning: String?,
+        localBias: LocalASRBiasPayload?,
+        shouldFallbackToBatch: Bool
+    ) {
+        self.raw = raw
+        self.rawWithPauseMarks = rawWithPauseMarks
+        self.chunkWarning = chunkWarning
+        self.localBias = localBias
+        self.shouldFallbackToBatch = shouldFallbackToBatch
+    }
 }
 
 enum MacDictationPipeline {
@@ -159,6 +174,7 @@ enum MacDictationPipeline {
             case .success(let success):
                 return MacLiveASRCaptureResult(
                     raw: success.text,
+                    rawWithPauseMarks: success.textWithPauseMarks,
                     chunkWarning: success.chunkWarnings.first,
                     localBias: localBias,
                     shouldFallbackToBatch: false
@@ -191,6 +207,7 @@ enum MacDictationPipeline {
     /// Polish-only step after live or batch ASR has produced raw text.
     static func polishCapturedASR(
         raw: String,
+        rawWithPauseMarks: String? = nil,
         store: AppGroupStore,
         localBias: LocalASRBiasPayload?,
         chunkWarning: String?
@@ -199,10 +216,16 @@ enum MacDictationPipeline {
         guard !trimmed.isEmpty else { throw MacDictationError.emptyTranscript }
 
         let postASR: String
+        let polishInput: String
         if let localBias, !localBias.correctionPairs.isEmpty {
             postASR = LocalASRTranscriptCorrector.apply(trimmed, pairs: localBias.correctionPairs)
+            polishInput = LocalASRTranscriptCorrector.apply(
+                rawWithPauseMarks ?? trimmed,
+                pairs: localBias.correctionPairs
+            )
         } else {
             postASR = trimmed
+            polishInput = rawWithPauseMarks ?? trimmed
         }
 
         let polishContext: PolishContext?
@@ -218,17 +241,20 @@ enum MacDictationPipeline {
         }
 
         do {
-            let polished = try await PolishingService(store: store).polish(
-                postASR,
+            let outcome = try await PolishingService(store: store).polishWithOutcome(
+                polishInput,
                 mode: store.polishModeForPipeline,
                 context: polishContext
             )
+            let polished = outcome.text
             guard !polished.isEmpty else {
                 throw PolishingService.PolishError.noTranscript
             }
             return MacDictationResult(
                 text: polished,
-                polishWarning: nil,
+                polishWarning: outcome.qualityDegraded
+                    ? MacL10n.string("flow.warning.polishDegradedQuality")
+                    : nil,
                 chunkWarning: chunkWarning
             )
         } catch {

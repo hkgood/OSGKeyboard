@@ -8,6 +8,7 @@
 "flow.warning.cloudPolishMissingKey" = "Cloud polish needs an API key in Settings. Inserted raw ASR text.";
 "flow.warning.localPolishUnavailable" = "Built-in polish is unavailable. Inserted raw ASR text.";
 "flow.warning.polishDegraded" = "Weak network — inserted raw ASR text without polish.";
+"flow.warning.polishDegradedQuality" = "Polish output failed validation; inserted a conservative version.";
 
 /* LLM providers */
 "provider.openai" = "OpenAI";

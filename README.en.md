@@ -48,7 +48,7 @@ Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands 
 
 ## Privacy
 
-Speech is transcribed on-device by default. Polish sends **text only** — not raw audio. We never log ordinary keystrokes. See the [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/).
+Speech is transcribed on-device by default. Polish sends **text only** — the transcript and a small amount of nearby cursor text for continuity, never raw audio. Cursor context is not logged or saved to voice history, and secure fields are never captured. See the [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/).
 
 ---
 

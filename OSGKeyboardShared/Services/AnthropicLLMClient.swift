@@ -22,17 +22,37 @@ public struct AnthropicMessagesClient: LLMClient {
     }
 
     public func polish(_ text: String, systemPrompt: String, timeout: TimeInterval?) async throws -> String {
+        try await polish(
+            text,
+            systemPrompt: systemPrompt,
+            timeout: timeout,
+            options: .polishDefault
+        )
+    }
+
+    public func polish(
+        _ text: String,
+        systemPrompt: String,
+        timeout: TimeInterval?,
+        options: LLMGenerationOptions
+    ) async throws -> String {
         guard !apiKey.isEmpty else { throw LLMError.noAPIKey }
 
         let url = URL(string: "https://api.anthropic.com/v1/messages")!
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "model": model,
-            "max_tokens": 4_096,
+            "max_tokens": options.maxTokens ?? LLMRequest.outputTokenLimit(for: text),
             "system": systemPrompt,
             "messages": [
                 ["role": "user", "content": text],
             ],
         ]
+        if let temperature = options.temperature {
+            body["temperature"] = temperature
+        }
+        if let topP = options.topP {
+            body["top_p"] = topP
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -57,6 +77,12 @@ public struct AnthropicMessagesClient: LLMClient {
                   let textBlock = first["text"] as? String else {
                 throw LLMError.decoding("anthropic content")
             }
+            let usage = json["usage"] as? [String: Any]
+            LLMCacheMetricsStore.record(
+                providerId: "anthropic",
+                promptTokens: usage?["input_tokens"] as? Int,
+                cachedTokens: usage?["cache_read_input_tokens"] as? Int
+            )
             return textBlock.trimmingCharacters(in: .whitespacesAndNewlines)
         } catch let err as LLMError {
             throw err
