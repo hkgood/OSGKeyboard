@@ -70,6 +70,7 @@ public final class CloudASRService: ASRService, @unchecked Sendable {
             return .failure(CloudASRError.providerUnsupported.localizedDescription)
         }
 
+        let startedAt = Date()
         do {
             let text = try await client.transcribe(
                 samples: samples,
@@ -78,10 +79,23 @@ public final class CloudASRService: ASRService, @unchecked Sendable {
                 dictionary: store.personalDictionary
             )
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            FlowTrace.transcript(
+                "asr.cloud.chunk",
+                trimmed,
+                "engine=cloud provider=\(store.asrProviderId) samples=\(samples.count) "
+                    + "rms=\(FlowTrace.rms(samples)) elapsed=\(FlowTrace.seconds(since: startedAt))s"
+            )
             return trimmed.isEmpty ? .success("") : .success(trimmed)
         } catch is CancellationError {
+            FlowTrace.asr("cloud.chunk.cancelled", "samples=\(samples.count)")
             return .cancelled
         } catch {
+            FlowTrace.warn(
+                "asr.cloud.chunk.failed",
+                "provider=\(store.asrProviderId) samples=\(samples.count) "
+                    + "rms=\(FlowTrace.rms(samples)) elapsed=\(FlowTrace.seconds(since: startedAt))s "
+                    + "error=\(error.localizedDescription)"
+            )
             return .failure(error.localizedDescription)
         }
     }

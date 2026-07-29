@@ -21,6 +21,14 @@ private enum UtteranceGatePhase: Equatable {
     case idle
     case recording
     case draining
+
+    var label: String {
+        switch self {
+        case .idle: return "idle"
+        case .recording: return "recording"
+        case .draining: return "draining"
+        }
+    }
 }
 
 /// Thread-safe relay for utterance-scoped ASR snapshots.
@@ -149,6 +157,124 @@ private final class FlowAudioProofStore: @unchecked Sendable {
     }
 }
 
+/// Why a tap buffer never reached the recogniser.
+///
+/// Recorded as a plain integer on the realtime audio thread and rendered on the
+/// main actor — calling `Logger` inside the tap would allocate and risk
+/// priority inversion. Each of these was previously a bare `return`, which is
+/// what made "waveform moves but the transcript is empty" invisible: levels and
+/// the audio-proof timestamp are taken from the *raw* buffer, before
+/// conversion, so they keep looking healthy while ASR receives nothing.
+public enum FlowDownsampleFailure: Int, Sendable {
+    case none = 0
+    case invalidSourceFormat
+    case converterCreateFailed
+    case scratchOverflow
+    case converterError
+    case emptyOutput
+
+    public var label: String {
+        switch self {
+        case .none: return "none"
+        case .invalidSourceFormat: return "invalidSourceFormat"
+        case .converterCreateFailed: return "converterCreateFailed"
+        case .scratchOverflow: return "scratchOverflow"
+        case .converterError: return "converterError"
+        case .emptyOutput: return "emptyOutput"
+        }
+    }
+}
+
+/// Tap accounting for one utterance (`beginUtterance()` resets it).
+public struct FlowCaptureFrameReport: Sendable, Equatable {
+    public var framesReceived = 0
+    public var framesConverted = 0
+    public var framesDropped = 0
+    public var samplesToASR = 0
+    public var samplesToPreroll = 0
+    public var lastFailure = FlowDownsampleFailure.none
+    public var lastFailureSourceRate = 0
+    public var lastFailureInputFrames = 0
+    public var lastFailureWantedFrames = 0
+
+    public init() {}
+
+    /// The mic delivered frames but none survived conversion — i.e. the user
+    /// saw a live waveform while the recogniser was fed silence.
+    public var isFeedStarved: Bool {
+        framesReceived > 0 && samplesToASR == 0
+    }
+
+    public var summary: String {
+        var text = "frames=\(framesReceived) converted=\(framesConverted) "
+            + "dropped=\(framesDropped) asrSamples=\(samplesToASR) "
+            + "asrSeconds=\(FlowTrace.seconds(samples: samplesToASR)) "
+            + "prerollSamples=\(samplesToPreroll)"
+        if lastFailure != .none {
+            text += " lastFailure=\(lastFailure.label)"
+                + " failSourceRate=\(lastFailureSourceRate)"
+                + " failInFrames=\(lastFailureInputFrames)"
+                + " failWantFrames=\(lastFailureWantedFrames)"
+        }
+        return text
+    }
+}
+
+/// Realtime-safe counters behind an unfair lock (same discipline as the gate).
+private final class FlowCaptureFrameStats: @unchecked Sendable {
+    private let lock = OSAllocatedUnfairLock(initialState: FlowCaptureFrameReport())
+
+    func noteFrameReceived() {
+        lock.withLock { $0.framesReceived += 1 }
+    }
+
+    func noteConverted(samples: Int, reachedASR: Bool) {
+        lock.withLock {
+            $0.framesConverted += 1
+            if reachedASR {
+                $0.samplesToASR += samples
+            } else {
+                $0.samplesToPreroll += samples
+            }
+        }
+    }
+
+    func noteDropped(
+        failure: FlowDownsampleFailure,
+        sourceRate: Double,
+        inputFrames: Int,
+        wantedFrames: Int
+    ) {
+        lock.withLock {
+            $0.framesDropped += 1
+            $0.lastFailure = failure
+            $0.lastFailureSourceRate = Int(sourceRate)
+            $0.lastFailureInputFrames = inputFrames
+            $0.lastFailureWantedFrames = wantedFrames
+        }
+    }
+
+    func reset() {
+        lock.withLock { $0 = FlowCaptureFrameReport() }
+    }
+
+    func snapshot() -> FlowCaptureFrameReport {
+        lock.withLock { $0 }
+    }
+}
+
+/// Outcome of one realtime conversion attempt. Carries the reason (and the
+/// formats involved) so the drop can be explained after the fact.
+private enum FlowDownsampleOutcome {
+    case converted(AVAudioPCMBuffer)
+    case failed(
+        failure: FlowDownsampleFailure,
+        sourceRate: Double,
+        inputFrames: Int,
+        wantedFrames: Int
+    )
+}
+
 /// Route-adaptive downsampling converter, safe to call from the realtime tap.
 ///
 /// `AVAudioEngine.installTap(format:)` traps with an **uncatchable** NSException
@@ -195,10 +321,19 @@ private final class AdaptiveDownsampler: @unchecked Sendable {
     /// rebuilding the converter lazily when the hardware route (and thus the
     /// source format) changes. The returned buffer is only valid until the
     /// next call — copy its samples out synchronously.
-    func convertReusingScratch(_ buffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+    func convertReusingScratch(_ buffer: AVAudioPCMBuffer) -> FlowDownsampleOutcome {
         let sourceFormat = buffer.format
-        guard sourceFormat.sampleRate > 0 else { return nil }
-        return lock.withLockUnchecked { state -> AVAudioPCMBuffer? in
+        let sourceRate = sourceFormat.sampleRate
+        let inputFrames = Int(buffer.frameLength)
+        guard sourceRate > 0 else {
+            return .failed(
+                failure: .invalidSourceFormat,
+                sourceRate: sourceRate,
+                inputFrames: inputFrames,
+                wantedFrames: 0
+            )
+        }
+        return lock.withLockUnchecked { state -> FlowDownsampleOutcome in
             if state == nil || state!.source != sourceFormat {
                 guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat),
                       let scratch = AVAudioPCMBuffer(
@@ -206,16 +341,35 @@ private final class AdaptiveDownsampler: @unchecked Sendable {
                         frameCapacity: Self.scratchCapacity
                       ) else {
                     state = nil
-                    return nil
+                    return .failed(
+                        failure: .converterCreateFailed,
+                        sourceRate: sourceRate,
+                        inputFrames: inputFrames,
+                        wantedFrames: 0
+                    )
                 }
                 state = State(converter: converter, source: sourceFormat, scratch: scratch)
             }
-            guard let current = state else { return nil }
+            guard let current = state else {
+                return .failed(
+                    failure: .converterCreateFailed,
+                    sourceRate: sourceRate,
+                    inputFrames: inputFrames,
+                    wantedFrames: 0
+                )
+            }
 
             let wanted = AVAudioFrameCount(
-                Double(buffer.frameLength) * targetFormat.sampleRate / sourceFormat.sampleRate
+                Double(buffer.frameLength) * targetFormat.sampleRate / sourceRate
             )
-            guard wanted > 0, wanted <= current.scratch.frameCapacity else { return nil }
+            guard wanted > 0, wanted <= current.scratch.frameCapacity else {
+                return .failed(
+                    failure: .scratchOverflow,
+                    sourceRate: sourceRate,
+                    inputFrames: inputFrames,
+                    wantedFrames: Int(wanted)
+                )
+            }
             current.scratch.frameLength = 0
 
             // ONE-SHOT input: the converter keeps pulling until the output
@@ -235,8 +389,23 @@ private final class AdaptiveDownsampler: @unchecked Sendable {
                 outStatus.pointee = .haveData
                 return buffer
             }
-            guard status != .error, error == nil, current.scratch.frameLength > 0 else { return nil }
-            return current.scratch
+            guard status != .error, error == nil else {
+                return .failed(
+                    failure: .converterError,
+                    sourceRate: sourceRate,
+                    inputFrames: inputFrames,
+                    wantedFrames: Int(wanted)
+                )
+            }
+            guard current.scratch.frameLength > 0 else {
+                return .failed(
+                    failure: .emptyOutput,
+                    sourceRate: sourceRate,
+                    inputFrames: inputFrames,
+                    wantedFrames: Int(wanted)
+                )
+            }
+            return .converted(current.scratch)
         }
     }
 }
@@ -290,6 +459,7 @@ public final class FlowContinuousCapture {
     private let utterancePCMStore = FlowUtterancePCMStore(
         maxSampleCount: Int(FlowSessionKeys.maxUtteranceDuration) * 16_000
     )
+    private let frameStats = FlowCaptureFrameStats()
 
     private var downsampler: AdaptiveDownsampler?
     private var targetFormat: AVAudioFormat?
@@ -325,8 +495,18 @@ public final class FlowContinuousCapture {
 
     /// True only when the engine is live and the input tap has recently
     /// delivered an actual audio frame.
+    ///
+    /// NOTE: this is a *raw* mic signal (taken before downsampling), so it
+    /// proves the microphone works — not that the recogniser is being fed.
+    /// Use `frameReport()` for the latter.
     public func engineHasRecentAudio(maxAge: TimeInterval = 1) -> Bool {
         engineIsLive && audioProofStore.hasRecentFrame(maxAge: maxAge)
+    }
+
+    /// Tap accounting since the last `beginUtterance()`, i.e. how much audio
+    /// actually survived conversion and reached the recogniser.
+    public func frameReport() -> FlowCaptureFrameReport {
+        frameStats.snapshot()
     }
 
     /// Called on the main actor when `engineIsLive` may have changed.
@@ -354,16 +534,32 @@ public final class FlowContinuousCapture {
                 // produced its first frame yet (interleaved start attempts
                 // land here; rebuilding a 100 ms-old engine only multiplies
                 // audio-session churn in the fragile post-relaunch window).
+                FlowTrace.capture(
+                    "start.warmReuse",
+                    "engineLive=1 freshMs=\(Int(Date().timeIntervalSince(lastActivationAt) * 1000)) "
+                        + frameStats.snapshot().summary
+                )
                 return
             }
             log.info("start(): zombie engine detected (running but no live audio) — forcing rebuild")
+            FlowTrace.warn(
+                "capture.start.zombieRebuild",
+                "engineLive=\(engineIsLive ? 1 : 0) recentAudio=0 \(frameStats.snapshot().summary)"
+            )
             stop()
         }
         audioProofStore.reset()
-        try activateEngine()
+        FlowTrace.capture("start.begin", "coldEngine=1")
+        do {
+            try activateEngine()
+        } catch {
+            FlowTrace.warn("capture.start.failed", "error=\(error.localizedDescription)")
+            throw error
+        }
         isRunning = true
         installSessionObservers()
         notifyEngineLiveChanged()
+        FlowTrace.capture("start.done", "engineLive=\(engineIsLive ? 1 : 0)")
     }
 
     /// Bring up the audio session + engine for the *current* hardware route.
@@ -380,12 +576,26 @@ public final class FlowContinuousCapture {
             )
             try session.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
+            FlowTrace.warn(
+                "capture.audioSession.activateFailed",
+                "error=\(error.localizedDescription)"
+            )
             throw StartError.audioSessionFailed(error.localizedDescription)
         }
 
         let inputNode = audioEngine.inputNode
         let hardwareFormat = inputNode.outputFormat(forBus: 0)
+        FlowTrace.capture(
+            "audioSession.active",
+            "hwRate=\(Int(hardwareFormat.sampleRate)) hwChannels=\(hardwareFormat.channelCount) "
+                + "sessionRate=\(Int(session.sampleRate)) "
+                + "route=\(session.currentRoute.inputs.first?.portType.rawValue ?? "none")"
+        )
         guard hardwareFormat.sampleRate > 0, hardwareFormat.channelCount > 0 else {
+            FlowTrace.warn(
+                "capture.hardwareFormat.invalid",
+                "hwRate=\(hardwareFormat.sampleRate) hwChannels=\(hardwareFormat.channelCount)"
+            )
             throw StartError.invalidHardwareFormat(
                 sampleRate: hardwareFormat.sampleRate,
                 channels: Int(hardwareFormat.channelCount)
@@ -433,6 +643,7 @@ public final class FlowContinuousCapture {
             drainTracker: tracker,
             tailSampleCounter: tailCounter,
             utterancePCMStore: pcmStore,
+            frameStats: frameStats,
             drainPolicy: policy
         )
         // `format: nil` binds the tap to the input node's *live* format. Passing
@@ -440,18 +651,33 @@ public final class FlowContinuousCapture {
         // route change (48 kHz client vs 24 kHz hardware); nil can never mismatch.
         inputNode.installTap(onBus: 0, bufferSize: 4096, format: nil, block: tap)
         didInstallTap = true
+        FlowTrace.capture(
+            "tap.installed",
+            "hwRate=\(Int(hardwareFormat.sampleRate)) targetRate=\(Int(resolvedTargetFormat.sampleRate)) "
+                + "bufferSize=4096 format=live"
+        )
 
         audioEngine.prepare()
         do {
             try audioEngine.start()
         } catch {
+            FlowTrace.warn("capture.engine.startFailed", "error=\(error.localizedDescription)")
             throw StartError.engineStartFailed(error.localizedDescription)
         }
         lastActivationAt = Date()
+        FlowTrace.capture("engine.started", "running=\(audioEngine.isRunning ? 1 : 0)")
     }
 
     /// Tear down the engine and release the audio session.
     public func stop() {
+        // Logged before teardown: in PiP keep-alive every utterance ends with a
+        // stop(), which also discards the converter — so this line marks the
+        // point after which the next press must rebuild the whole audio path.
+        FlowTrace.capture(
+            "stop",
+            "wasRunning=\(isRunning ? 1 : 0) engineLive=\(engineIsLive ? 1 : 0) "
+                + frameStats.snapshot().summary
+        )
         removeSessionObservers()
         gate.withLock { $0 = .idle }
         drainTracker.reset()
@@ -503,8 +729,10 @@ public final class FlowContinuousCapture {
                 try audioEngine.start()
             }
             notifyEngineLiveChanged()
+            FlowTrace.capture("reassert.ok", "engineLive=\(engineIsLive ? 1 : 0)")
             return engineIsLive
         } catch {
+            FlowTrace.warn("capture.reassert.failed", "error=\(error.localizedDescription)")
             notifyEngineLiveChanged()
             return false
         }
@@ -586,6 +814,7 @@ public final class FlowContinuousCapture {
     private func handleMediaServicesReset() {
         guard isRunning else { return }
         log.info("Media services were reset — rebuilding engine and converter")
+        FlowTrace.warn("capture.mediaServicesReset", frameStats.snapshot().summary)
         rebuildEngine()
     }
 
@@ -596,9 +825,14 @@ public final class FlowContinuousCapture {
         switch reason {
         case .oldDeviceUnavailable, .newDeviceAvailable:
             log.info("Audio route changed (\(reasonRaw, privacy: .public)) — rebuilding engine")
+            FlowTrace.capture(
+                "routeChange.rebuild",
+                "reason=\(reasonRaw) gate=\(gate.withLock { $0 }.label) "
+                    + frameStats.snapshot().summary
+            )
             rebuildEngine()
         default:
-            break
+            FlowTrace.capture("routeChange.ignored", "reason=\(reasonRaw)")
         }
     }
 
@@ -608,6 +842,10 @@ public final class FlowContinuousCapture {
         switch type {
         case .began:
             log.info("Audio interruption began")
+            FlowTrace.warn(
+                "capture.interruption.began",
+                "gate=\(gate.withLock { $0 }.label) \(frameStats.snapshot().summary)"
+            )
             interrupted = true
             notifyEngineLiveChanged()
             onInterruptionBegan?()
@@ -620,6 +858,7 @@ public final class FlowContinuousCapture {
             } else {
                 shouldResume = true
             }
+            FlowTrace.capture("interruption.ended", "shouldResume=\(shouldResume ? 1 : 0)")
             if shouldResume {
                 log.info("Audio interruption ended — resuming capture")
                 rebuildEngine()
@@ -632,7 +871,13 @@ public final class FlowContinuousCapture {
     /// Stop and rebuild the engine against the current route, keeping
     /// `isRunning` intact so the session survives the swap transparently.
     private func rebuildEngine() {
-        guard isRunning, !isRebuilding else { return }
+        guard isRunning, !isRebuilding else {
+            FlowTrace.capture(
+                "rebuild.skipped",
+                "running=\(isRunning ? 1 : 0) alreadyRebuilding=\(isRebuilding ? 1 : 0)"
+            )
+            return
+        }
         isRebuilding = true
         defer { isRebuilding = false }
         if audioEngine.isRunning {
@@ -641,8 +886,10 @@ public final class FlowContinuousCapture {
         do {
             try activateEngine()
             notifyEngineLiveChanged()
+            FlowTrace.capture("rebuild.done", "engineLive=\(engineIsLive ? 1 : 0)")
         } catch {
             log.error("Engine rebuild failed: \(error.localizedDescription, privacy: .public)")
+            FlowTrace.warn("capture.rebuild.failed", "error=\(error.localizedDescription)")
             notifyEngineLiveChanged()
         }
     }
@@ -657,11 +904,25 @@ public final class FlowContinuousCapture {
         drainTracker.reset()
         tailSampleCounter.withLock { $0 = 0 }
         utterancePCMStore.reset()
+        // Counters are per-utterance: reset here so the report emitted at drain
+        // describes only this press.
+        let priorReport = frameStats.snapshot()
+        frameStats.reset()
         // Bind the consumer before opening the gate so early tap frames
         // are not dropped on the floor.
         streamRelay.bind(continuation)
-        streamRelay.replay(prerollStore.drain())
+        let preroll = prerollStore.drain()
+        streamRelay.replay(preroll)
         gate.withLock { $0 = .recording }
+        let prerollSamples = preroll.reduce(0) { $0 + $1.samples.count }
+        FlowTrace.capture(
+            "beginUtterance",
+            "engineLive=\(engineIsLive ? 1 : 0) recentRawAudio=\(engineHasRecentAudio(maxAge: 2) ? 1 : 0) "
+                + "prerollBuffers=\(preroll.count) prerollSamples=\(prerollSamples) "
+                + "prerollSeconds=\(FlowTrace.seconds(samples: prerollSamples)) "
+                + "sinceLastActivationMs=\(Int(Date().timeIntervalSince(lastActivationAt) * 1000)) "
+                + "priorIdle[\(priorReport.summary)]"
+        )
         return stream
     }
 
@@ -671,6 +932,10 @@ public final class FlowContinuousCapture {
     ) async -> FlowCaptureDrainReport {
         let currentPhase = gate.withLock { $0 }
         guard currentPhase == .recording else {
+            FlowTrace.warn(
+                "capture.endUtterance.skipped",
+                "gate=\(currentPhase.label) \(frameStats.snapshot().summary)"
+            )
             return .skipped
         }
 
@@ -706,6 +971,19 @@ public final class FlowContinuousCapture {
         drainTracker.reset()
         tailSampleCounter.withLock { $0 = 0 }
         FlowPipelineDiagnostics.logDrain(report)
+
+        // The decisive line for "waveform moved but no text": compare the raw
+        // frame count the waveform was drawn from against the samples that
+        // actually reached the recogniser.
+        let frames = frameStats.snapshot()
+        if frames.isFeedStarved {
+            FlowTrace.warn(
+                "capture.endUtterance.feedStarved",
+                "micDeliveredFrames=\(frames.framesReceived) butASRGotSamples=0 \(frames.summary)"
+            )
+        } else {
+            FlowTrace.capture("endUtterance.done", frames.summary)
+        }
         return report
     }
 
@@ -716,6 +994,10 @@ public final class FlowContinuousCapture {
 
     /// Immediate stop without tail drain (abort / session teardown).
     public func cancelUtterance() {
+        FlowTrace.capture(
+            "cancelUtterance",
+            "gate=\(gate.withLock { $0 }.label) \(frameStats.snapshot().summary)"
+        )
         gate.withLock { $0 = .idle }
         drainTracker.reset()
         tailSampleCounter.withLock { $0 = 0 }
@@ -739,10 +1021,16 @@ public final class FlowContinuousCapture {
         drainTracker: FlowCaptureDrainTracker,
         tailSampleCounter: OSAllocatedUnfairLock<Int>,
         utterancePCMStore: FlowUtterancePCMStore,
+        frameStats: FlowCaptureFrameStats,
         drainPolicy: FlowCaptureTailDrainPolicy
     ) -> @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void {
         return { buffer, _ in
+            // Levels and the audio-proof timestamp come from the RAW buffer,
+            // everything downstream from the converted one. `frameStats` bridges
+            // the two so a mismatch (waveform alive, ASR starved) is reportable
+            // instead of invisible — counters only, no logging on this thread.
             audioProofStore.markFrameReceived()
+            frameStats.noteFrameReceived()
             levelStore.update(from: buffer, barCount: FlowCaptureConstants.levelBarCount)
 
             // The downsampler derives its converter from the *live* buffer
@@ -750,14 +1038,34 @@ public final class FlowContinuousCapture {
             // returns a REUSED scratch buffer — no per-callback allocation
             // on the realtime thread. The snapshot below copies the samples
             // out before the next tap callback can overwrite the scratch.
-            guard let outBuffer = downsampler.convertReusingScratch(buffer) else { return }
+            let outcome = downsampler.convertReusingScratch(buffer)
+            guard case .converted(let outBuffer) = outcome else {
+                if case .failed(let failure, let sourceRate, let inFrames, let wanted) = outcome {
+                    frameStats.noteDropped(
+                        failure: failure,
+                        sourceRate: sourceRate,
+                        inputFrames: inFrames,
+                        wantedFrames: wanted
+                    )
+                }
+                return
+            }
 
             let snapshot = AudioBufferSnapshot(buffer: outBuffer)
-            guard !snapshot.samples.isEmpty else { return }
+            guard !snapshot.samples.isEmpty else {
+                frameStats.noteDropped(
+                    failure: .emptyOutput,
+                    sourceRate: buffer.format.sampleRate,
+                    inputFrames: Int(buffer.frameLength),
+                    wantedFrames: 0
+                )
+                return
+            }
 
             let phase = gate.withLock { $0 }
             switch phase {
             case .recording, .draining:
+                frameStats.noteConverted(samples: snapshot.samples.count, reachedASR: true)
                 utterancePCMStore.append(snapshot.samples)
                 streamRelay.yield(snapshot)
                 if phase == .draining {
@@ -765,6 +1073,7 @@ public final class FlowContinuousCapture {
                     tailSampleCounter.withLock { $0 += snapshot.samples.count }
                 }
             case .idle:
+                frameStats.noteConverted(samples: snapshot.samples.count, reachedASR: false)
                 prerollStore.append(snapshot)
             }
         }

@@ -1444,11 +1444,23 @@ final class FlowSessionManager: ObservableObject {
                 )
                 switch outcome {
                 case .success(let success):
+                    FlowTrace.transcript(
+                        "asr.outcome",
+                        success.text,
+                        "engine=\(manager.store.engineMode) streaming=\(useStreaming ? 1 : 0) "
+                            + "warnings=\(success.chunkWarnings.count)"
+                    )
                     manager.lastFinal = success.text
                     manager.chunkWarnings = success.chunkWarnings
                     manager.currentPartial = ""
                 case .failure(let message):
                     manager.debug("asr error: \(message)")
+                    FlowTrace.warn(
+                        "asr.outcome.failed",
+                        "engine=\(manager.store.engineMode) streaming=\(useStreaming ? 1 : 0) "
+                            + "partialLen=\(manager.currentPartial.count) "
+                            + "bestPartialLen=\(manager.bestPartialSnapshot.count) error=\(message)"
+                    )
                     // Prefer any non-empty partial over a hard no-speech failure.
                     // finishProcessing used to clear bestPartialSnapshot and race
                     // finalize into an empty transcript even when ASR had text.
@@ -1522,6 +1534,13 @@ final class FlowSessionManager: ObservableObject {
             let drainReport = await self.capture.endUtteranceAndDrain()
             FlowDiagnostics.logDrain(drainReport)
             self.utterancePCMSamples = self.capture.consumeUtteranceSamples()
+            FlowTrace.pipeline(
+                "utterance.pcmCollected",
+                "samples=\(self.utterancePCMSamples.count) "
+                    + "seconds=\(FlowTrace.seconds(samples: self.utterancePCMSamples.count)) "
+                    + "rms=\(FlowTrace.rms(self.utterancePCMSamples)) "
+                    + "capture[\(self.capture.frameReport().summary)]"
+            )
             if self.usesPiPKeepAlive {
                 self.capture.stop()
                 self.pipController.updateWaveformLevels([])
@@ -1659,6 +1678,13 @@ final class FlowSessionManager: ObservableObject {
 
         let asrElapsed = Date().timeIntervalSince(pipelineStarted)
         FlowDiagnostics.log("ASR phase done in \(String(format: "%.1f", asrElapsed))s finalLen=\(lastFinal.count)")
+        FlowTrace.transcript(
+            "asr.beforeGuard",
+            lastFinal,
+            "stage=stitchedFinal engine=\(store.engineMode) "
+                + "elapsed=\(String(format: "%.2f", asrElapsed))s"
+        )
+        FlowTrace.transcript("asr.bestPartial", bestPartialSnapshot, "stage=partialSnapshot")
 
         var text = UtteranceTranscriptGuard.resolve(
             stitchedFinal: lastFinal,
@@ -1668,10 +1694,18 @@ final class FlowSessionManager: ObservableObject {
             text = currentPartial.trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
-        if UtteranceBatchFallbackPolicy.shouldRunBatchFallback(
+        let wantsBatchFallback = UtteranceBatchFallbackPolicy.shouldRunBatchFallback(
             stitchedFinal: lastFinal,
             partialSnapshot: bestPartialSnapshot
-        ), !utterancePCMSamples.isEmpty {
+        )
+        FlowTrace.pipeline(
+            "batchFallback.decision",
+            "wanted=\(wantsBatchFallback ? 1 : 0) pcmSamples=\(utterancePCMSamples.count) "
+                + "pcmRms=\(FlowTrace.rms(utterancePCMSamples)) "
+                + "stitchedLen=\(lastFinal.count) partialLen=\(bestPartialSnapshot.count) "
+                + "resolvedLen=\(text.count)"
+        )
+        if wantsBatchFallback, !utterancePCMSamples.isEmpty {
             text = await runBatchASRFallback(currentText: text)
         }
         utterancePCMSamples = []
@@ -1683,6 +1717,12 @@ final class FlowSessionManager: ObservableObject {
                 (asrTask?.isCancelled == true || Task.isCancelled)
                 ? .recognitionInterrupted : .noSpeech
             FlowDiagnostics.log("finalize failed: empty transcript after \(String(format: "%.1f", asrElapsed))s")
+            FlowTrace.warn(
+                "finalize.emptyTranscript",
+                "engine=\(store.engineMode) elapsed=\(String(format: "%.2f", asrElapsed))s "
+                    + "kind=\(kind.rawValue) asrCancelled=\(asrTask?.isCancelled == true ? 1 : 0) "
+                    + "capture[\(capture.frameReport().summary)]"
+            )
             utteranceRecordingStartedAt = nil
             storeFinalizedError(
                 AppL10n.string(key),
@@ -1709,6 +1749,13 @@ final class FlowSessionManager: ObservableObject {
             "finalize LLM mode=\(Self.polishModeLogLabel(polishMode)) " +
             "translationTarget=\(pipelineStore.translationTargetLocaleId)"
         )
+        FlowTrace.transcript(
+            "polish.input",
+            text,
+            "mode=\(Self.polishModeLogLabel(polishMode)) engine=\(engineMode) "
+                + "provider=\(pipelineStore.polishProviderIdOverride ?? "default") "
+                + "recordedSeconds=\(String(format: "%.2f", recordingDuration))"
+        )
         do {
             // If the finalize task was cancelled (cold-start churn / abort),
             // skip the LLM round-trip and deliver the raw transcript so the
@@ -1723,6 +1770,13 @@ final class FlowSessionManager: ObservableObject {
                 providerIdOverride: pipelineStore.polishProviderIdOverride
             )
             delivered = polished
+            FlowTrace.transcript(
+                "polish.output",
+                polished,
+                "mode=\(Self.polishModeLogLabel(polishMode)) inputLen=\(text.count) "
+                    + "changed=\(polished == text ? 0 : 1) "
+                    + "elapsed=\(FlowTrace.seconds(since: polishStarted))s"
+            )
             storeFinalizedResult(
                 polished,
                 warning: chunkNote,
@@ -1747,6 +1801,18 @@ final class FlowSessionManager: ObservableObject {
             FlowDiagnostics.log(
                 "polish failed after \(String(format: "%.1f", Date().timeIntervalSince(polishStarted)))s: " +
                 "\(error.localizedDescription)"
+            )
+            FlowTrace.warn(
+                "polish.failed",
+                "mode=\(Self.polishModeLogLabel(polishMode)) engine=\(engineMode) "
+                    + "elapsed=\(FlowTrace.seconds(since: polishStarted))s "
+                    + "cancelled=\(error is CancellationError ? 1 : 0) "
+                    + "error=\(error.localizedDescription)"
+            )
+            FlowTrace.transcript(
+                "polish.fallback",
+                fallback.text,
+                "reason=polishFailed rawLen=\(text.count)"
             )
             delivered = fallback.text
             storeFinalizedResult(
@@ -1827,6 +1893,12 @@ final class FlowSessionManager: ObservableObject {
             return
         }
         guard let sessionId, let utteranceId else { return }
+        FlowTrace.transcript(
+            "host.delivered",
+            trimmed,
+            "utterance=\(utteranceId.uuidString.prefix(8)) commandSeq=\(commandSeq) "
+                + "warning=\(warning == nil ? 0 : 1)"
+        )
         FlowSessionBridge.writeResult(
             FlowResult(
                 sessionId: sessionId,
@@ -1848,6 +1920,12 @@ final class FlowSessionManager: ObservableObject {
         status: FlowResult.Status = .error
     ) {
         guard let sessionId, let utteranceId else { return }
+        FlowTrace.warn(
+            "host.deliveredError",
+            "kind=\(kind.rawValue) status=\(status.rawValue) "
+                + "utterance=\(utteranceId.uuidString.prefix(8)) commandSeq=\(commandSeq) "
+                + "message=\(message)"
+        )
         FlowSessionBridge.writeResult(
             FlowResult(
                 sessionId: sessionId,
@@ -1900,7 +1978,10 @@ final class FlowSessionManager: ObservableObject {
     /// Re-transcribe the full utterance PCM when pipelined chunking likely dropped tail text.
     private func runBatchASRFallback(currentText: String) async -> String {
         let samples = utterancePCMSamples
-        guard !samples.isEmpty else { return currentText }
+        guard !samples.isEmpty else {
+            FlowTrace.warn("pipeline.batchFallback.noPCM", "currentLen=\(currentText.count)")
+            return currentText
+        }
 
         let locale = SpeechLocaleResolver.resolve(store.localeId)
         let stitched = lastFinal.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1918,6 +1999,12 @@ final class FlowSessionManager: ObservableObject {
         switch result {
         case .success(let batchText):
             let trimmedBatch = batchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            FlowTrace.transcript(
+                "asr.batchFallback",
+                trimmedBatch,
+                "samples=\(samples.count) seconds=\(FlowTrace.seconds(samples: samples.count)) "
+                    + "rms=\(FlowTrace.rms(samples)) currentLen=\(currentText.count)"
+            )
             guard !trimmedBatch.isEmpty else { return currentText }
             let resolved = UtteranceBatchFallbackPolicy.preferredTranscript(
                 batch: trimmedBatch,
@@ -1934,8 +2021,13 @@ final class FlowSessionManager: ObservableObject {
             return resolved
         case .failure(let message):
             FlowDiagnostics.log("batch fallback failed: \(message)")
+            FlowTrace.warn(
+                "asr.batchFallback.failed",
+                "samples=\(samples.count) rms=\(FlowTrace.rms(samples)) error=\(message)"
+            )
             return currentText
         case .cancelled:
+            FlowTrace.asr("batchFallback.cancelled", "samples=\(samples.count)")
             return currentText
         }
     }

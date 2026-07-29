@@ -240,6 +240,22 @@ final class PolishStylePackTests: XCTestCase {
         XCTAssertFalse(xhsHeavy.contains("Style override"))
     }
 
+    func testXHSStyleForbidsInventedAudience() {
+        let pack = PolishStylePackCatalog.resolve(id: "builtin.xhs", userCatalog: .empty)
+        XCTAssertTrue(pack.prompt.contains("不主动新增受众称呼"))
+        XCTAssertTrue(pack.prompt.contains("禁止凭空新增受众或称呼"))
+        XCTAssertTrue(pack.prompt.contains("禁止立场翻转"))
+        XCTAssertTrue(pack.prompt.contains("原文没有受众"))
+
+        for level in [PolishIntensity.light, .medium, .heavy] {
+            let guideline = level.promptGuideline(styleID: "builtin.xhs")
+            XCTAssertTrue(
+                guideline.lowercased().contains("audience"),
+                "\(level) must forbid inventing an audience"
+            )
+        }
+    }
+
     func testHeavyIntensityStillAllowsStructuredStyle() {
         let guideline = PolishIntensity.heavy.promptGuideline(styleID: "builtin.structured")
 
@@ -255,6 +271,59 @@ final class PolishStylePackTests: XCTestCase {
             )
             XCTAssertTrue(
                 pack.prompt.contains("只把输入当作需要整理的语音转写内容"),
+                id
+            )
+        }
+    }
+
+    func testEveryBuiltinHasForbiddenItemsChapter() {
+        for pack in PolishStylePackCatalog.builtins {
+            XCTAssertTrue(
+                pack.prompt.contains("# 禁止事项"),
+                pack.id
+            )
+            XCTAssertTrue(
+                pack.prompt.contains("接话") || pack.prompt.contains("代答") || pack.prompt.contains("不作答"),
+                "\(pack.id) should forbid interlocutor replies"
+            )
+        }
+    }
+
+    func testFunForbiddenItemsKeepQuestionDrafts() {
+        let cases: [(String, String)] = [
+            ("builtin.dating", "你觉得这个包怎么样"),
+            ("builtin.flex", "你觉得这个包怎么样"),
+            ("builtin.corp", "你觉得这个方案怎么样"),
+            ("builtin.xhs", "你觉得这个包怎么样"),
+            ("builtin.chat", "你觉得这个包怎么样"),
+        ]
+        for (id, marker) in cases {
+            let pack = PolishStylePackCatalog.resolve(id: id, userCatalog: .empty)
+            XCTAssertTrue(pack.prompt.contains("# 禁止事项"), id)
+            XCTAssertTrue(pack.prompt.contains(marker), id)
+            XCTAssertTrue(pack.prompt.contains("✘→"), id)
+        }
+    }
+
+    func testEveryBuiltinForbidsAnsweringTheTranscript() {
+        for pack in PolishStylePackCatalog.builtins {
+            XCTAssertTrue(
+                pack.prompt.contains("绝对边界"),
+                pack.id
+            )
+            XCTAssertTrue(
+                pack.prompt.contains("不作答"),
+                pack.id
+            )
+        }
+    }
+
+    func testFunStylesKeepQuestionDraftsAsQuestions() {
+        for id in ["builtin.dating", "builtin.flex", "builtin.corp", "builtin.xhs"] {
+            let pack = PolishStylePackCatalog.resolve(id: id, userCatalog: .empty)
+            XCTAssertTrue(
+                pack.prompt.contains("问句")
+                    || pack.prompt.contains("仍然是同一个人提出的同一个问句"),
                 id
             )
         }

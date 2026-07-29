@@ -559,6 +559,14 @@ final class KeyboardFlowCoordinator {
             "command \(action.rawValue) seq=\(command.commandSeq) " +
             "utterance=\(currentUtteranceId.uuidString)"
         )
+        // Start of one traceable utterance: everything the host logs afterwards
+        // belongs to this `utterance=` id until the matching keyboard.insert.
+        FlowTrace.keyboard(
+            "command.\(action.rawValue)",
+            "seq=\(command.commandSeq) utterance=\(currentUtteranceId.uuidString.prefix(8)) "
+                + "locale=\(state.localeId) engine=\(state.engineMode) "
+                + "hostReady=\(FlowSessionBridge.isHostReady() ? 1 : 0)"
+        )
     }
 
     private func consumePendingFlowDeliveryIfNeeded() {
@@ -577,12 +585,25 @@ final class KeyboardFlowCoordinator {
                 lastConsumedUtteranceId = result.utteranceId
                 lastStoppedUtteranceId = nil
                 currentUtteranceId = nil
+                FlowTrace.transcript(
+                    "keyboard.insert",
+                    text,
+                    "utterance=\(result.utteranceId.uuidString.prefix(8)) "
+                        + "commandSeq=\(result.commandSeq) warning=\(result.warning == nil ? 0 : 1)"
+                )
                 textInserter.handleFlowTranscript(
                     TranscriptionDelivery(text: text, polishWarning: result.warning)
                 )
                 return
             }
             if let result = matchingResult(), isTerminalFailure(result) {
+                FlowTrace.warn(
+                    "keyboard.resultFailed",
+                    "status=\(result.status.rawValue) "
+                        + "kind=\(result.errorKind?.rawValue ?? "none") "
+                        + "utterance=\(result.utteranceId.uuidString.prefix(8)) "
+                        + "message=\(result.text ?? "nil")"
+                )
                 isAwaitingFlowResult = false
                 stopFlowWatchdog()
                 FlowSessionBridge.clearResult()
@@ -890,6 +911,13 @@ final class KeyboardFlowCoordinator {
                     self.lastStoppedUtteranceId = nil
                     self.currentUtteranceId = nil
                     self.debug("resultWatchdog consumed delivery len=\(text.count)")
+                    FlowTrace.transcript(
+                        "keyboard.insert",
+                        text,
+                        "via=resultWatchdog utterance=\(result.utteranceId.uuidString.prefix(8)) "
+                            + "commandSeq=\(result.commandSeq) "
+                            + "waitedSeconds=\(String(format: "%.2f", Date().timeIntervalSince1970 - startedAt))"
+                    )
                     self.textInserter.handleFlowTranscript(
                         TranscriptionDelivery(text: text, polishWarning: result.warning)
                     )
@@ -907,6 +935,13 @@ final class KeyboardFlowCoordinator {
                         kind: result.errorKind ?? .generic
                     )
                     self.debug("resultWatchdog consumed error kind=\(error.kind.rawValue)")
+                    FlowTrace.warn(
+                        "keyboard.resultFailed",
+                        "via=resultWatchdog status=\(result.status.rawValue) "
+                            + "kind=\(error.kind.rawValue) "
+                            + "utterance=\(result.utteranceId.uuidString.prefix(8)) "
+                            + "message=\(error.message)"
+                    )
                     self.state.phase = .error(
                         .fromFlowTranscription(error),
                         message: error.message

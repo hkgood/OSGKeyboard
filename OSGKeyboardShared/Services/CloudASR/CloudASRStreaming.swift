@@ -55,6 +55,11 @@ public actor StreamingUtterancePipeline {
         preopenedSession: (any CloudASRStreamingSession)? = nil
     ) async -> ChunkedUtterancePipelineOutcome {
         cancelled = false
+        let startedAt = Date()
+        // Counted so an empty cloud transcript can be told apart from "we never
+        // uploaded any audio" — the two look identical to the user.
+        var uploadedSamples = 0
+        var uploadedSnapshots = 0
         do {
             let session: any CloudASRStreamingSession
             if let preopenedSession {
@@ -67,15 +72,31 @@ public actor StreamingUtterancePipeline {
                 )
             }
             activeSession = session
+            FlowTrace.asr(
+                "cloud.stream.opened",
+                "locale=\(locale.identifier(.bcp47)) preopened=\(preopenedSession != nil ? 1 : 0)"
+            )
 
             for await snap in stream {
                 if cancelled || Task.isCancelled {
                     session.cancel()
+                    FlowTrace.asr(
+                        "cloud.stream.cancelledMidUpload",
+                        "uploadedSamples=\(uploadedSamples)"
+                    )
                     return .cancelled
                 }
                 guard !snap.samples.isEmpty else { continue }
+                uploadedSnapshots += 1
+                uploadedSamples += snap.samples.count
                 try await session.append(samples: snap.samples)
             }
+
+            FlowTrace.asr(
+                "cloud.stream.uploadDone",
+                "snapshots=\(uploadedSnapshots) samples=\(uploadedSamples) "
+                    + "seconds=\(FlowTrace.seconds(samples: uploadedSamples))"
+            )
 
             if cancelled || Task.isCancelled {
                 session.cancel()
@@ -86,17 +107,36 @@ public actor StreamingUtterancePipeline {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             activeSession = nil
             guard !finalText.isEmpty else {
+                FlowTrace.warn(
+                    "asr.cloud.stream.emptyFinal",
+                    "uploadedSamples=\(uploadedSamples) "
+                        + "seconds=\(FlowTrace.seconds(samples: uploadedSamples)) "
+                        + "elapsed=\(FlowTrace.seconds(since: startedAt))s"
+                )
                 return .failure(SharedL10n.string("error.asr.noSpeech"))
             }
+            FlowTrace.transcript(
+                "asr.cloud.final",
+                finalText,
+                "engine=cloud uploadedSamples=\(uploadedSamples) "
+                    + "elapsed=\(FlowTrace.seconds(since: startedAt))s"
+            )
             return .success(ChunkedUtteranceSuccess(text: finalText))
         } catch is CancellationError {
             activeSession?.cancel()
             activeSession = nil
+            FlowTrace.asr("cloud.stream.cancelled", "uploadedSamples=\(uploadedSamples)")
             return .cancelled
         } catch {
             activeSession?.cancel()
             activeSession = nil
             if cancelled || Task.isCancelled { return .cancelled }
+            FlowTrace.warn(
+                "asr.cloud.stream.failed",
+                "uploadedSamples=\(uploadedSamples) "
+                    + "elapsed=\(FlowTrace.seconds(since: startedAt))s "
+                    + "error=\(error.localizedDescription)"
+            )
             return .failure(error.localizedDescription)
         }
     }

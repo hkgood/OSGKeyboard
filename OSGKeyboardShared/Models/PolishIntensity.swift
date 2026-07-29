@@ -179,16 +179,20 @@ public enum PolishIntensity: String, Codable, Sendable, CaseIterable {
         case .light:
             """
             RED Note Light (轻安利): rewrite into sisterly Xiaohongshu note voice with light tone words and sparse emoji. \
-            Keep length close to the draft; do not invent product claims or "亲测" details. Must feel gently 集美, not ad-copy.
+            Keep length close to the draft; do not invent product claims or "亲测" details. \
+            Never add an audience the draft does not address (no 姐妹们/集美们/大家). Must feel gently 集美, not ad-copy.
             """
         case .medium:
             """
             RED Note Medium (种草感): fuller note body with a hook opening, short paragraphs, and lived-experience tone. \
-            Light lists are OK when the transcript has multiple points. Must read more post-ready than RED Note Light. Still no invented facts.
+            Light lists are OK when the transcript has multiple points. The hook describes the topic, never a crowd greeting. \
+            Must read more post-ready than RED Note Light. Still no invented facts or invented audience.
             """
         case .heavy:
             """
-            RED Note Heavy (爆款感): stronger emotional hook, optional contrast/避雷/steps, and a light comment CTA. \
+            RED Note Heavy (爆款感): stronger emotional hook, optional contrast/避雷/steps. \
+            A light comment CTA is allowed only when the draft already addresses an audience; otherwise no CTA and no crowd greeting. \
+            The hook must match the draft's stance — never open a positive draft with 避雷/踩坑 framing. \
             Paragraphs and scannable structure are allowed. Still no fabricated efficacy, numbers, or fake before/after. Must feel clearly more viral than Medium.
             """
         }

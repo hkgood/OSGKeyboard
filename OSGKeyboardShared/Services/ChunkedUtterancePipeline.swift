@@ -172,6 +172,7 @@ public actor ChunkedUtterancePipeline {
             }
 
             let result = await transcribeChunk(samples: chunk.samples)
+            logChunkOutcome(chunk: chunk, result: result)
             switch result {
             case .success(let text):
                 if chunk.isLast,
@@ -248,12 +249,22 @@ public actor ChunkedUtterancePipeline {
         )
 
         if finalText.isEmpty {
+            FlowTrace.warn(
+                "pipeline.stitch.empty",
+                "chunks=\(processedChunks) failedChunks=\(failedChunks) "
+                    + "lastChunkSamples=\(lastChunkSamples) warnings=\(chunkWarnings.count)"
+            )
             if failedChunks > 0, processedChunks == failedChunks {
                 return .failure(SharedL10n.string("error.asr.noSpeech"))
             }
             return .failure(SharedL10n.string("error.asr.noSpeech"))
         }
 
+        FlowTrace.transcript(
+            "asr.stitched",
+            finalText,
+            "chunks=\(processedChunks) failedChunks=\(failedChunks) warnings=\(chunkWarnings.count)"
+        )
         return .success(ChunkedUtteranceSuccess(text: finalText, chunkWarnings: chunkWarnings))
     }
 
@@ -263,6 +274,27 @@ public actor ChunkedUtterancePipeline {
         return await Task.detached(priority: .userInitiated) {
             await asr.transcribeChunk(samples: samples, locale: locale)
         }.value
+    }
+
+    /// Pairs each chunk's audio with the text it produced, so an empty
+    /// transcript can be attributed to either silent audio or a mute engine.
+    private func logChunkOutcome(chunk: UtteranceAudioChunk, result: ASRChunkResult) {
+        let audio = "chunk=\(chunk.index) samples=\(chunk.samples.count) "
+            + "seconds=\(FlowTrace.seconds(samples: chunk.samples.count, sampleRate: config.sampleRate)) "
+            + "rms=\(FlowTrace.rms(chunk.samples)) isLast=\(chunk.isLast ? 1 : 0)"
+        switch result {
+        case .success(let text):
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                FlowTrace.warn("pipeline.chunk.emptyText", audio)
+            } else {
+                FlowTrace.transcript("asr.chunk", trimmed, audio)
+            }
+        case .failure(let message):
+            FlowTrace.warn("pipeline.chunk.failed", "\(audio) error=\(message)")
+        case .cancelled:
+            FlowTrace.pipeline("chunk.cancelled", audio)
+        }
     }
 
     private func publishPartial(

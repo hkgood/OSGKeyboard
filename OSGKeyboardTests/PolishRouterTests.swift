@@ -126,6 +126,87 @@ final class PolishRouterTests: XCTestCase {
         XCTAssertTrue(prompt.contains("本次模式：保守清理"))
     }
 
+    func testQuestionDraftIsDetectedAcrossStyles() {
+        for id in ["builtin.xhs", "builtin.dating", "builtin.flex", "builtin.corp", "builtin.chat"] {
+            let decision = PolishRouter.decide(
+                text: "你觉得这个包怎么样",
+                styleID: id,
+                intensity: .heavy
+            )
+            XCTAssertTrue(decision.preservesQuestion, id)
+            XCTAssertTrue(decision.reasons.contains("Q:keep_question"), id)
+        }
+    }
+
+    /// DiBa quotes the other party, so the user's reply may answer that question.
+    func testDibaOpponentQuoteDoesNotTriggerQuestionGuard() {
+        let decision = PolishRouter.decide(
+            text: "回他别老说大家都觉得你点名是谁",
+            styleID: "builtin.diba",
+            intensity: .heavy
+        )
+        XCTAssertFalse(decision.preservesQuestion)
+    }
+
+    func testStatementDraftDoesNotTriggerQuestionGuard() {
+        let decision = PolishRouter.decide(
+            text: "这款防晒霜我用了不油夏天可以推荐",
+            styleID: "builtin.xhs",
+            intensity: .heavy
+        )
+        XCTAssertFalse(decision.preservesQuestion)
+    }
+
+    func testPromptBlockAlwaysCarriesNeverAnswerBoundary() {
+        for id in ["builtin.light", "builtin.structured", "builtin.formal",
+                   "builtin.chat", "builtin.dating", "builtin.flex",
+                   "builtin.corp", "builtin.diba", "builtin.xhs"] {
+            let block = PolishRouter.promptBlock(
+                mode: .full,
+                styleID: id,
+                useChineseGuidance: true
+            )
+            XCTAssertTrue(block.contains("绝对边界：只润色，不作答"), id)
+        }
+    }
+
+    func testPromptBlockAddsQuestionGuardWhenAsking() {
+        let guarded = PolishRouter.promptBlock(
+            mode: .full,
+            styleID: "builtin.dating",
+            useChineseGuidance: true,
+            preservesQuestion: true
+        )
+        XCTAssertTrue(guarded.contains("问句守卫"))
+        XCTAssertTrue(guarded.contains("同一个人提出的同一个问句"))
+
+        let unguarded = PolishRouter.promptBlock(
+            mode: .full,
+            styleID: "builtin.dating",
+            useChineseGuidance: true
+        )
+        XCTAssertFalse(unguarded.contains("问句守卫"))
+    }
+
+    func testComposerCarriesQuestionGuardIntoPrompt() {
+        let style = PolishStylePackCatalog.resolve(
+            id: "builtin.dating",
+            userCatalog: .empty
+        )
+        let prompt = PolishPromptComposer.compose(
+            text: "你觉得这个包怎么样",
+            style: style,
+            context: PolishContext(intensity: .heavy),
+            dictionaryBlock: "",
+            globalContract: "GLOBAL",
+            useChineseGuidance: true,
+            routingMode: .full,
+            preservesQuestion: true
+        )
+        XCTAssertTrue(prompt.contains("问句守卫"))
+        XCTAssertTrue(prompt.contains("绝对边界：只润色，不作答"))
+    }
+
     func testIsInformationSparseDetectsHollowShorts() {
         XCTAssertTrue(PolishRouter.isInformationSparse("香香的"))
         XCTAssertTrue(PolishRouter.isInformationSparse("这个还行吧"))
