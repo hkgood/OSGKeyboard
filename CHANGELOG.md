@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Hero aurora background**: soft animated green/teal/violet aurora wash on the marketing site hero, with reduced-motion static fallback. / **Hero 极光背景**：官网首屏加入缓慢漂移的绿/青/紫极光柔光，并在减少动态模式下退回静态。
+- **Liquid aurora hero**: WebGL2 domain-warped FBM shader — slow green/teal/violet fluid, dithering, pointer pull, offscreen pause, and reduced-motion static frame (CSS gradient fallback). / **液态极光 Hero**：WebGL2 domain-warped FBM 着色器——缓慢绿/青/紫流体、抖动去色带、轻微指针牵引、离屏暂停、减少动态模式下静态帧（CSS 渐变回退）。
 - **App Store download badges**: official badges on bilingual READMEs (hero + Get sections) and the website, with China-store `/cn/` links for Chinese and regionless App Store links for English. / **App Store 下载徽章**：中英文 README（顶部与获取区）与官网挂载官方徽章；中文链 `/cn/`，英文用无地区链接。
 - **Website SEO & AI discovery**: richer meta/JSON-LD/FAQ, `llms.txt`, expanded sitemap, English landing, plus install / compare / Mac-dictation content pages. / **官网 SEO 与 AI 发现**：强化 meta/JSON-LD/FAQ、`llms.txt`、sitemap，并新增英文落地页与安装 / 对比 / Mac 听写专题页。
 - **Context-aware polish safeguards**: polish can use a redacted cursor-neighborhood snapshot for natural continuation, validates protected terms and identifiers, retries once, and falls back to a conservative local cleanup when needed. / **上下文润色护栏**：润色可使用经截断脱敏的光标附近文字自然衔接，并校验受保护词与标识符；失败时重试一次，仍不合格则降级为本地保守清理。
@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Polish never answers the transcript**: fun styles (dating / flex / corp) could turn “你觉得这个包怎么样” into a reply such as “还行，挺顺眼的”. A top-priority “polish only, never answer” rule now sits in the global contract, every built-in style pack, the prompt safety boundary, and a router question guard that keeps question drafts as questions. / **润色不再代答转写内容**：趣味风格（直男癌/装逼指南/大厂黑话）曾把「你觉得这个包怎么样」润色成「还行，挺顺眼的」。现已在全局契约、全部内置风格包、提示词安全边界与路由问句守卫四层加入最高优先级的「只润色、不作答」规则，问句必须仍是问句。
 
 ### Changed
+- **Website download actions**: App Store and source buttons now share a compact rounded-rectangle shape and matching height instead of mixing badge and pill silhouettes. / **官网操作按钮**：App Store 与源码按钮统一为等高的紧凑圆角矩形，不再混用徽章与胶囊轮廓。
 - **Layered bilingual polish prompts**: transcripts are sent once as user data; stable Chinese/English core rules, style policies, dictionaries, and runtime context now have explicit responsibilities for better consistency and provider prefix caching. / **分层双语润色提示词**：转写仅作为用户消息发送一次；稳定的中英文核心规则、风格策略、词典和运行时上下文职责明确，提升一致性并支持服务商前缀缓存。
 - **Two-tier short polish skip**: ultra-short (≤4 CJK) still skips the LLM; 5–10 CJK now skips only low-value acks/closings (e.g. “好的我知道了”), while questions and contentful shorts still polish. / **两级短句跳过润色**：≤4 字仍跳过 LLM；5–10 字仅对低价值确认/收束语跳过（如「好的我知道了」），问句与有内容短句仍走润色。
 - **ABE polish routing**: fun styles and daily chat use a local information-density gate, prompt hard-brakes, and style-specific degrade (e.g. DiBa without an opponent quote falls back to chat cleanup) without a second LLM call. / **ABE 润色路由**：趣味风格与日常聊天增加本地信息密度闸、提示词硬刹车与风格专属降级（如帝吧无对方原话时降级日常清理），不增加第二次 LLM 调用。
