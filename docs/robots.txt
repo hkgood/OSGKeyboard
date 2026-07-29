@@ -1,4 +1,26 @@
 User-agent: *
 Allow: /
 
+# AI / answer-engine crawlers — allow indexing of product docs
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
 Sitemap: https://hkgood.github.io/OSGKeyboard/sitemap.xml

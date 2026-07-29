@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **App Store download badges**: official badges on bilingual READMEs (hero + Get sections) and the website, with China-store `/cn/` links for Chinese and regionless App Store links for English. / **App Store 下载徽章**：中英文 README（顶部与获取区）与官网挂载官方徽章；中文链 `/cn/`，英文用无地区链接。
+- **Website SEO & AI discovery**: richer meta/JSON-LD/FAQ, `llms.txt`, expanded sitemap, English landing, plus install / compare / Mac-dictation content pages. / **官网 SEO 与 AI 发现**：强化 meta/JSON-LD/FAQ、`llms.txt`、sitemap，并新增英文落地页与安装 / 对比 / Mac 听写专题页。
 - **Context-aware polish safeguards**: polish can use a redacted cursor-neighborhood snapshot for natural continuation, validates protected terms and identifiers, retries once, and falls back to a conservative local cleanup when needed. / **上下文润色护栏**：润色可使用经截断脱敏的光标附近文字自然衔接，并校验受保护词与标识符；失败时重试一次，仍不合格则降级为本地保守清理。
 - **Pause-aware chunk polish**: chunked ASR carries detected silence boundaries into the polish request while keeping previews and final output marker-free. / **分块停顿感知润色**：分块 ASR 将检测到的静音边界传入润色请求，实时预览与最终输出均不会显示内部标记。
 - **True streaming cloud ASR**: Bailian, Volcengine, and OpenAI Realtime use one utterance-level WebSocket with live partials; Volcengine enables official two-pass (`enable_nonstream`) so interim text stays on-screen while definite ASR feeds polish. / **真流式云端 ASR**：百炼、火山与 OpenAI Realtime 按整句长连接推流并实时上屏；火山开启官方二遍识别（`enable_nonstream`），interim 仅上屏，definite 再送润色。

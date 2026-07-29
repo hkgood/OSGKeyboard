@@ -12,6 +12,12 @@ Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands 
 
 [Website](https://hkgood.github.io/OSGKeyboard/) · [中文 README](./README.md) · [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/)
 
+<p align="center">
+  <a href="https://apps.apple.com/app/osgkeyboard/id6781553267">
+    <img src="docs/assets/badges/appstore-en.svg" alt="Download on the App Store" height="40">
+  </a>
+</p>
+
 ---
 
 ## Why OSGKeyboard
@@ -51,6 +57,14 @@ Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands 
 Speech is transcribed on-device by default. Polish sends **text only** — the transcript and a small amount of nearby cursor text for continuity, never raw audio. Cursor context is not logged or saved to voice history, and secure fields are never captured. See the [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/).
 
 ---
+
+## Get the app
+
+**App Store (recommended)**
+
+<a href="https://apps.apple.com/app/osgkeyboard/id6781553267">
+  <img src="docs/assets/badges/appstore-en.svg" alt="Download on the App Store" height="40">
+</a>
 
 ## Build from source
 

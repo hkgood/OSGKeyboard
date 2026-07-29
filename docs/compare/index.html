@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OSGKeyboard vs Typeless vs Superwhisper · 开源听写对比</title>
+  <meta name="description" content="对比 OSGKeyboard、Typeless、Superwhisper、Openless：开源、价格、本地识别、BYOK、iPhone/iPad/Mac 支持。寻找 Typeless 或 Superwhisper 平替？看这篇。">
+  <meta name="keywords" content="Typeless 替代, Superwhisper 替代, 开源听写, OSGKeyboard 对比, BYOK 语音输入, 免费语音键盘">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://hkgood.github.io/OSGKeyboard/compare/">
+  <link rel="icon" href="../assets/app-icon.png" type="image/png">
+  <meta property="og:title" content="OSGKeyboard vs Typeless vs Superwhisper">
+  <meta property="og:description" content="开源、本地免费、BYOK、跨 iPhone 与 Mac —— 和常见听写工具怎么比。">
+  <meta property="og:url" content="https://hkgood.github.io/OSGKeyboard/compare/">
+  <meta property="og:image" content="https://hkgood.github.io/OSGKeyboard/assets/app-icon.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "OSGKeyboard vs Typeless vs Superwhisper vs Openless",
+    "description": "Comparison of open-source status, pricing, on-device ASR, BYOK, and device coverage for popular dictation tools.",
+    "author": { "@type": "Organization", "name": "OSGKeyboard" },
+    "dateModified": "2026-07-29",
+    "mainEntityOfPage": "https://hkgood.github.io/OSGKeyboard/compare/"
+  }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/site-pages.css">
+  <style>
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { min-width: 640px; }
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="../">
+        <img src="../assets/app-icon.png" alt="" width="28" height="28">
+        OSGKeyboard
+      </a>
+      <nav class="nav-links" aria-label="主导航">
+        <a href="../">首页</a>
+        <a href="../install/">安装</a>
+        <a href="../en/">EN</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <p class="lang-switch"><a href="#zh">中文</a><a href="#en">English</a></p>
+
+      <section id="zh">
+        <p class="eyebrow">产品对比</p>
+        <h1>OSGKeyboard 和常见听写工具比什么？</h1>
+        <p class="lead">如果你在找 <strong>Typeless 替代</strong>、<strong>Superwhisper 平替</strong>，或想要「本地免费 + 自带 Key 润色」的开源方案，下面按维度对照。</p>
+
+        <a class="store-badge" href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267" rel="noopener">
+          <img src="../assets/badges/appstore-zh.svg" width="109" height="40" alt="在 App Store 下载">
+        </a>
+
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>维度</th>
+                <th>Typeless</th>
+                <th>Superwhisper</th>
+                <th>Openless</th>
+                <th>OSGKeyboard</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>开源</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
+              <tr><td>付费</td><td>免费额度有限；Pro 订阅不便宜</td><td>免费档有限；Pro / 买断</td><td>App 免费；按 Key 计费</td><td>本地完全免费；云端 Key 自付</td></tr>
+              <tr><td>可本地识别</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+              <tr><td>BYOK</td><td>—</td><td>部分（Pro）</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Mac</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+              <tr><td>iPhone / iPad</td><td>✓</td><td>✓</td><td>—</td><td>✓</td></tr>
+              <tr><td>Windows</td><td>✓</td><td>✓</td><td>✓</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">价格与功能据各产品公开说明整理，可能更新，以官方为准。</p>
+
+        <h2>什么时候选 OSGKeyboard</h2>
+        <ul>
+          <li>不想再开一份「听写订阅」，已有 DeepSeek / OpenAI 等额度</li>
+          <li>默认希望录音留在设备上，隐私路径可审计（开源）</li>
+          <li>同时需要 <strong>iPhone 键盘</strong> 与 <strong>Mac 全局听写</strong></li>
+          <li>接受源码可见许可（个人学习 / 非商用本地使用；商用需授权）</li>
+        </ul>
+
+        <h2>什么时候可能不适合</h2>
+        <ul>
+          <li>需要 Windows 客户端</li>
+          <li>希望完全托管、零配置云端识别（闭源 SaaS 更省心）</li>
+          <li>商用分发但未取得商业许可</li>
+        </ul>
+
+        <div class="cta-row">
+          <a class="btn btn-primary" href="../install/">查看安装步骤</a>
+          <a class="btn" href="../">返回官网</a>
+        </div>
+      </section>
+
+      <hr style="border:none;border-top:1px solid var(--line);margin:3rem 0">
+
+      <section id="en">
+        <p class="eyebrow">Compare</p>
+        <h1>OSGKeyboard vs Typeless, Superwhisper, Openless</h1>
+        <p class="lead">Looking for a <strong>Typeless alternative</strong> or <strong>Superwhisper alternative</strong> that is open, free locally, and BYOK-friendly? Here is a straight comparison.</p>
+
+        <a class="store-badge" href="https://apps.apple.com/app/osgkeyboard/id6781553267" rel="noopener">
+          <img src="../assets/badges/appstore-en.svg" width="120" height="40" alt="Download on the App Store">
+        </a>
+
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th>Typeless</th>
+                <th>Superwhisper</th>
+                <th>Openless</th>
+                <th>OSGKeyboard</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Open source</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Pricing</td><td>Limited free tier; Pro subscription</td><td>Limited free; Pro / lifetime</td><td>Free app; billed to your key</td><td>Local free; cloud on your key</td></tr>
+              <tr><td>On-device ASR</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+              <tr><td>BYOK</td><td>—</td><td>Partial (Pro)</td><td>✓</td><td>✓</td></tr>
+              <tr><td>Mac</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+              <tr><td>iPhone / iPad</td><td>✓</td><td>✓</td><td>—</td><td>✓</td></tr>
+              <tr><td>Windows</td><td>✓</td><td>✓</td><td>✓</td><td>—</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">Features and prices from public pages; verify with each vendor.</p>
+
+        <h2>Choose OSGKeyboard when you want</h2>
+        <ul>
+          <li>No second dictation subscription — reuse LLM credits you already buy</li>
+          <li>On-device audio by default and auditable source</li>
+          <li>Both an <strong>iOS keyboard</strong> and <strong>Mac global hotkey</strong></li>
+        </ul>
+
+        <h2>Maybe not if you need</h2>
+        <ul>
+          <li>Windows</li>
+          <li>Fully managed cloud ASR with zero setup</li>
+          <li>Commercial redistribution without a license</li>
+        </ul>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <span>© OSGKeyboard</span>
+      <span class="footer-links">
+        <a href="../install/">Install</a>
+        <a href="../privacy/">Privacy</a>
+        <a href="https://github.com/hkgood/OSGKeyboard" rel="noopener">GitHub</a>
+      </span>
+    </div>
+  </footer>
+</body>
+</html>

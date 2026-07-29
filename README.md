@@ -12,6 +12,12 @@
 
 [官网](https://hkgood.github.io/OSGKeyboard/) · [English](./README.en.md) · [隐私政策](https://hkgood.github.io/OSGKeyboard/privacy/)
 
+<p align="center">
+  <a href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267">
+    <img src="docs/assets/badges/appstore-zh.svg" alt="在 App Store 下载" height="40">
+  </a>
+</p>
+
 ---
 
 ## 为什么用它
@@ -58,6 +64,12 @@
 ---
 
 ## 获取
+
+**App Store（推荐）**
+
+<a href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267">
+  <img src="docs/assets/badges/appstore-zh.svg" alt="在 App Store 下载" height="40">
+</a>
 
 **从源码构建**（需 macOS + Xcode 26）：
 
