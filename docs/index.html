@@ -355,14 +355,14 @@
     .hero-aurora.is-ready .hero-aurora-canvas { opacity: 1; }
     .hero-aurora-fallback {
       position: absolute;
-      inset: -20% -10%;
+      inset: -10%;
       background:
-        radial-gradient(ellipse 55% 45% at 18% 28%, var(--aurora-a), transparent 70%),
-        radial-gradient(ellipse 50% 40% at 82% 22%, var(--aurora-b), transparent 68%),
-        radial-gradient(ellipse 48% 42% at 52% 62%, var(--aurora-c), transparent 72%),
-        radial-gradient(ellipse 40% 35% at 30% 78%, var(--aurora-d), transparent 70%);
-      filter: blur(40px);
-      opacity: 0.85;
+        linear-gradient(208deg, #000 0%, #04140c 35%, #0a1f14 55%, #000 100%),
+        repeating-linear-gradient(208deg,
+          transparent 0 18px,
+          rgba(124, 255, 178, 0.08) 18px 22px,
+          transparent 22px 40px);
+      opacity: 0.95;
     }
     .hero-aurora.is-ready .hero-aurora-fallback { opacity: 0; }
     .hero-aurora::after {
@@ -854,7 +854,8 @@
       .hero-aurora-canvas { transition: none; }
     }
   </style>
-  <script src="assets/js/wave-gradient.js" defer></script>
+  <script src="assets/js/three.min.js" defer></script>
+  <script src="assets/js/beams-hero.js" defer></script>
 </head>
 <body>
   <header class="nav">
@@ -1576,65 +1577,69 @@
       });
     }
 
-    // Stripe-style Wave Gradient (vendored MIT: sa3dany/wave-gradient)
-    const waveHero = (() => {
+    // React Bits–style Beams (vanilla Three.js), preset from shared demo URL
+    const beamsHero = (() => {
       const wrap = document.getElementById("heroAurora");
       const canvas = document.getElementById("heroAuroraCanvas");
       if (!wrap || !canvas) return { setPalette() {} };
 
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const isMobile = window.matchMedia("(max-width: 720px)").matches;
       const palettes = {
-        dark: ["#0b1c14", "#1f7a45", "#3ecf8e", "#2ec4b6", "#6e8cff"],
-        light: ["#e7f3eb", "#2f9a52", "#5ec4a8", "#4aa8d8", "#8b7cf0"]
+        dark: { light: "#7CFFB2", bg: "#000000" },
+        light: { light: "#2f9a52", bg: "#0a1210" }
       };
 
-      let gradient = null;
-      let visible = true;
-      let currentMode = "dark";
+      let instance = null;
+      let currentMode = "";
 
       function destroy() {
-        if (!gradient) return;
-        try { gradient.destroy(); } catch (_) {}
-        gradient = null;
+        if (!instance) return;
+        try { instance.destroy(); } catch (_) {}
+        instance = null;
       }
 
       function create(mode) {
-        if (typeof window.WaveGradient !== "function") return false;
+        if (typeof window.OSGBeamsHero?.create !== "function" || typeof window.THREE === "undefined") {
+          return false;
+        }
         currentMode = mode;
-        const colors = palettes[mode] || palettes.dark;
-        // Ensure layout size before WebGL reads clientWidth/Height
+        const palette = palettes[mode] || palettes.dark;
         canvas.style.width = "100%";
         canvas.style.height = "100%";
         try {
           destroy();
-          gradient = new window.WaveGradient(canvas, {
-            colors,
-            seed: mode === "light" ? 3 : 7,
-            speed: reduceMotion ? 0 : 0.55,
-            fps: reduceMotion ? 1 : 24,
-            amplitude: 280,
-            density: [0.06, 0.16],
-            time: reduceMotion ? 420000 : 0
+          instance = window.OSGBeamsHero.create(canvas, {
+            beamNumber: 26,
+            beamWidth: 4.5,
+            beamHeight: 6,
+            speed: 4.5,
+            noiseIntensity: 2.65,
+            scale: 0.62,
+            rotation: 208,
+            lightColor: palette.light,
+            background: palette.bg,
+            reduceMotion,
+            heightSegments: isMobile ? 64 : 100
           });
-          if (reduceMotion) {
-            // Freeze after first paints by destroying the loop's continuation
-            setTimeout(() => {
-              if (!gradient) return;
-              gradient.shouldRender = false;
-            }, 80);
-          }
           wrap.classList.add("is-ready");
           return true;
         } catch (err) {
-          console.warn("[wave-gradient]", err);
+          console.warn("[beams]", err);
           destroy();
           return false;
         }
       }
 
       function setPalette(mode) {
-        if (mode === currentMode && gradient) return;
-        create(mode === "light" ? "light" : "dark");
+        const next = mode === "light" ? "light" : "dark";
+        if (next === currentMode && instance) {
+          const palette = palettes[next];
+          instance.setLightColor(palette.light);
+          instance.setBackground(palette.bg);
+          return;
+        }
+        create(next);
       }
 
       function boot() {
@@ -1642,28 +1647,20 @@
         if (!ok) return;
 
         const io = new IntersectionObserver((entries) => {
-          visible = entries.some((e) => e.isIntersecting);
-          if (!gradient || reduceMotion) return;
-          gradient.shouldRender = visible && !document.hidden;
-          if (gradient.shouldRender && typeof requestAnimationFrame === "function") {
-            requestAnimationFrame((now) => gradient.render(now));
-          }
+          const visible = entries.some((e) => e.isIntersecting);
+          instance?.setVisible(visible);
+          instance?.setPlaying(visible && !document.hidden && !reduceMotion);
         }, { threshold: 0.01 });
         io.observe(wrap);
 
         document.addEventListener("visibilitychange", () => {
-          if (!gradient || reduceMotion) return;
-          gradient.shouldRender = visible && !document.hidden;
-          if (gradient.shouldRender) {
-            requestAnimationFrame((now) => gradient.render(now));
-          }
+          instance?.setPlaying(!document.hidden && !reduceMotion);
         });
       }
 
       if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", boot, { once: true });
+        document.addEventListener("DOMContentLoaded", () => setTimeout(boot, 0), { once: true });
       } else {
-        // wave-gradient.js is deferred; wait a tick for global
         setTimeout(boot, 0);
       }
 
@@ -1678,7 +1675,7 @@
       }
       try { localStorage.setItem("osg-theme", theme); } catch (_) {}
       applyShots();
-      waveHero.setPalette(resolvedTheme());
+      beamsHero.setPalette(resolvedTheme());
     }
 
     function cycleTheme() {
@@ -1751,7 +1748,7 @@
       window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
         if ((document.documentElement.getAttribute("data-theme") || "system") === "system") {
           applyShots();
-          waveHero.setPalette(resolvedTheme());
+          beamsHero.setPalette(resolvedTheme());
         }
       });
     } catch (_) {}
