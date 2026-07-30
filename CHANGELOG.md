@@ -8,9 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **macOS direct download**: bilingual README and GitHub Pages download areas now offer a signed, notarized macOS DMG alongside the iPhone / iPad App Store badge, using distinct badge designs. / **macOS 直接下载**：中英文 README 与 GitHub Pages 下载区在 iPhone / iPad App Store 徽章旁新增已签名、公证的 macOS DMG，并通过不同徽章样式区分平台。
+- **macOS direct download**: bilingual README and GitHub Pages download areas now offer a signed, notarized macOS DMG alongside the iPhone / iPad App Store badge, using matching two-line badge designs. / **macOS 直接下载**：中英文 README 与 GitHub Pages 下载区在 iPhone / iPad App Store 徽章旁新增已签名、公证的 macOS DMG，并统一采用双行徽章样式。
 - **Beams hero**: radiant noise-warped beam array (React Bits–style, vanilla Three.js) with the shared demo preset (26 beams, 208° rotation) and OSG green light. / **Beams Hero**：放射状噪声光束阵列（React Bits 风格，原生 Three.js），采用分享的演示预设（26 束、208° 旋转）与 OSG 绿色灯光。
-- **App Store download badges**: official badges on bilingual READMEs (hero + Get sections) and the website, with China-store `/cn/` links for Chinese and regionless App Store links for English. / **App Store 下载徽章**：中英文 README（顶部与获取区）与官网挂载官方徽章；中文链 `/cn/`，英文用无地区链接。
+- **Platform download badges**: matching App Store and macOS badges on bilingual READMEs and the website, with localized copy and platform-specific links. / **平台下载徽章**：中英文 README 与官网采用统一样式的 App Store、macOS 徽章，并提供本地化文案与平台专属链接。
 - **Website SEO & AI discovery**: richer meta/JSON-LD/FAQ, `llms.txt`, sitemap, and bilingual single-page landing. / **官网 SEO 与 AI 发现**：强化 meta/JSON-LD/FAQ、`llms.txt`、sitemap，以及双语单页落地站。
 - **Context-aware polish safeguards**: polish can use a redacted cursor-neighborhood snapshot for natural continuation, validates protected terms and identifiers, retries once, and falls back to a conservative local cleanup when needed. / **上下文润色护栏**：润色可使用经截断脱敏的光标附近文字自然衔接，并校验受保护词与标识符；失败时重试一次，仍不合格则降级为本地保守清理。
 - **Pause-aware chunk polish**: chunked ASR carries detected silence boundaries into the polish request while keeping previews and final output marker-free. / **分块停顿感知润色**：分块 ASR 将检测到的静音边界传入润色请求，实时预览与最终输出均不会显示内部标记。
