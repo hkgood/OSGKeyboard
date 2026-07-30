@@ -14,11 +14,11 @@
 
 <p align="center">
   <a href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267">
-    <img src="docs/assets/badges/appstore-zh.svg" alt="下载 iPhone / iPad 版" height="40">
+    <img src="docs/assets/badges/ios-zh.svg" alt="立即下载 App Store 版" height="40">
   </a>
   &nbsp;
   <a href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg">
-    <img src="docs/assets/badges/macos-zh.svg" alt="直接下载 macOS 版" height="40">
+    <img src="docs/assets/badges/macos-zh.svg" alt="立即下载 macOS 版本" height="40">
   </a>
 </p>
 
@@ -72,13 +72,13 @@
 **iPhone / iPad（App Store）**
 
 <a href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267">
-  <img src="docs/assets/badges/appstore-zh.svg" alt="下载 iPhone / iPad 版" height="40">
+  <img src="docs/assets/badges/ios-zh.svg" alt="立即下载 App Store 版" height="40">
 </a>
 
 **Mac（Developer ID 签名并公证）**
 
 <a href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg">
-  <img src="docs/assets/badges/macos-zh.svg" alt="直接下载 macOS 版" height="40">
+  <img src="docs/assets/badges/macos-zh.svg" alt="立即下载 macOS 版本" height="40">
 </a>
 
 **从源码构建**（需 macOS + Xcode 26）：
