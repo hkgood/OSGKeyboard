@@ -1,24 +1,23 @@
 // DictionaryAliasGenerator.swift
-// OSGKeyboard · Main App
+// OSGKeyboard · Shared
 //
 // After the user manually adds or edits a personal-dictionary term,
 // asks the built-in DeepSeek endpoint for common ASR misrecognitions.
-// Runs only in the main app (Settings) — the keyboard extension reads
-// the persisted aliases on the next polish / correction call.
+// Shared by the iOS and macOS dictionary editors; persisted aliases are
+// available to the keyboard extension on the next polish / correction call.
 
 import Foundation
-import OSGKeyboardShared
 
-struct DictionaryAliasGenerator: Sendable {
+public struct DictionaryAliasGenerator: Sendable {
     private let client: LLMClient?
     private let timeout: TimeInterval
 
-    init(client: LLMClient? = nil, timeout: TimeInterval = 12) {
+    public init(client: LLMClient? = nil, timeout: TimeInterval = 12) {
         self.client = client
         self.timeout = timeout
     }
 
-    func generateAliases(for term: String) async -> [String] {
+    public func generateAliases(for term: String) async -> [String] {
         let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
 
@@ -70,7 +69,7 @@ struct DictionaryAliasGenerator: Sendable {
         """
     }
 
-    static func parseAliases(from raw: String, excludingTerm term: String) -> [String] {
+    public static func parseAliases(from raw: String, excludingTerm term: String) -> [String] {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         let jsonSlice = extractJSONArray(from: trimmed) ?? trimmed
         guard let data = jsonSlice.data(using: .utf8),

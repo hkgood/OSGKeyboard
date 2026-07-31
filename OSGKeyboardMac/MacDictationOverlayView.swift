@@ -17,6 +17,22 @@ struct MacDictationOverlayView: View {
     var onResetPosition: (() -> Void)?
     @Environment(\.themePalette) private var palette
 
+    /// Pill body width. Wide enough for dot + live badge + a 320pt transcript
+    /// line + waveform + stop button at `Spacing.sm` gaps.
+    static let pillWidth: CGFloat = 500
+    /// Transparent margin around the pill, sized to contain the shadow's reach
+    /// (radius 14 + y 5). The panel is sized to pill + margin, and the shadow
+    /// would otherwise clip into hard translucent-black corners.
+    static let shadowMargin = EdgeInsets(top: 12, leading: 16, bottom: 20, trailing: 16)
+    /// Total panel size the hosting `NSPanel` should use.
+    static var panelSize: CGSize {
+        CGSize(
+            width: pillWidth + shadowMargin.leading + shadowMargin.trailing,
+            // 28pt content + 11pt vertical padding on each side.
+            height: 28 + 22 + shadowMargin.top + shadowMargin.bottom
+        )
+    }
+
     private var lang: AppUILanguage { viewModel.config.uiLanguage }
 
     private var isBusy: Bool {
@@ -46,19 +62,17 @@ struct MacDictationOverlayView: View {
         .frame(height: 28)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, 11)
-        .frame(minWidth: 300, idealWidth: 400, maxWidth: 520)
-        .fixedSize(horizontal: true, vertical: true)
+        // Fixed width, not intrinsic: the hosting panel is sized from this
+        // constant once, so a growing transcript never asks AppKit to resize
+        // the window mid-update. Long text truncates in `primaryLine` instead.
+        .frame(width: Self.pillWidth)
         .background(palette.surface, in: Capsule(style: .continuous))
         .overlay(
             Capsule(style: .continuous)
                 .stroke(palette.dividerStrong, lineWidth: 0.5)
         )
         .shadow(color: Color.black.opacity(0.22), radius: 14, y: 5)
-        // Transparent margin large enough to contain the shadow's reach
-        // (radius 14 + y 5). The panel is sized to `fittingSize`, which ignores
-        // shadow, so without this room the borderless window clips the shadow
-        // into hard translucent-black corners.
-        .padding(EdgeInsets(top: 12, leading: 16, bottom: 20, trailing: 16))
+        .padding(Self.shadowMargin)
         .contentShape(Capsule(style: .continuous))
         // Manual drag: `isMovableByWindowBackground` doesn't work on a
         // non-activating panel, so we move the panel ourselves. The controller

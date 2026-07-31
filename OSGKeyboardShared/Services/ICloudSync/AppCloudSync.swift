@@ -15,6 +15,7 @@ public final class AppCloudSync {
     private let makeStore: () -> AppGroupStore
     private let settingsSync: SettingsCloudSync
     private let dictionarySync: PersonalDictionaryCloudSync
+    private let polishStyleSync: PolishStyleCloudSync
     private let usageStatisticsSync: UsageStatisticsCloudSync
     private let speechHistorySync: SpeechHistoryCloudSync
     private var externalChangeObserver: NSObjectProtocol?
@@ -25,6 +26,7 @@ public final class AppCloudSync {
         historyDefaults: @escaping () -> UserDefaults = { .standard },
         settingsSync: SettingsCloudSync? = nil,
         dictionarySync: PersonalDictionaryCloudSync? = nil,
+        polishStyleSync: PolishStyleCloudSync? = nil,
         usageStatisticsSync: UsageStatisticsCloudSync? = nil,
         speechHistorySync: SpeechHistoryCloudSync? = nil
     ) {
@@ -33,6 +35,7 @@ public final class AppCloudSync {
         self.settingsSync = settingsSync
             ?? SettingsCloudSync(kvs: kvs, makeStore: makeStore, historyDefaults: historyDefaults)
         self.dictionarySync = dictionarySync ?? PersonalDictionaryCloudSync(kvs: kvs, makeStore: makeStore)
+        self.polishStyleSync = polishStyleSync ?? PolishStyleCloudSync(kvs: kvs, makeStore: makeStore)
         self.usageStatisticsSync = usageStatisticsSync
             ?? UsageStatisticsCloudSync(kvs: kvs, makeStore: makeStore)
         self.speechHistorySync = speechHistorySync
@@ -109,6 +112,7 @@ public final class AppCloudSync {
         await usageStatisticsSync.pullAndMergeIfEnabled()
         await speechHistorySync.pullAndMergeIfEnabled()
         await dictionarySync.pullAndMergeIfEnabled()
+        await polishStyleSync.pullAndMergeIfEnabled()
     }
 
     /// Low-risk manual sync: pull remote changes, merge, then push local state.
@@ -128,6 +132,7 @@ public final class AppCloudSync {
             await attempt { try await settingsSync.pushLocalIfEnabled() }
             await attempt { try await usageStatisticsSync.pushLocalIfEnabled() }
             await attempt { try await speechHistorySync.pushLocalIfEnabled() }
+            await attempt { try await polishStyleSync.pushLocalIfEnabled(store.polishStyleCatalog) }
         }
         if store.personalDictionaryICloudSyncEnabled {
             await attempt { try await dictionarySync.pushLocalIfEnabled(store.personalDictionary) }
@@ -137,6 +142,7 @@ public final class AppCloudSync {
 
     public var settingsSyncService: SettingsCloudSync { settingsSync }
     public var dictionarySyncService: PersonalDictionaryCloudSync { dictionarySync }
+    public var polishStyleSyncService: PolishStyleCloudSync { polishStyleSync }
     public var usageStatisticsSyncService: UsageStatisticsCloudSync { usageStatisticsSync }
     public var speechHistorySyncService: SpeechHistoryCloudSync { speechHistorySync }
 }

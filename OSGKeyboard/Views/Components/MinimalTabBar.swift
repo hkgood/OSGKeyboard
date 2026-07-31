@@ -1,7 +1,7 @@
 // MinimalTabBar.swift
 // OSGKeyboard · Main App
 //
-// Bottom tab bar — four icons, no labels.
+// Bottom tab bar — five icons, no labels.
 // Capsule uses iOS 26 Liquid Glass (.regular.interactive) so content
 // behind the dock refracts through on scroll.
 
@@ -12,21 +12,25 @@ enum AppTab: Int, CaseIterable {
     case keyboard
     case history
     case dictionary
+    case styles
     case settings
 
     var icon: MaterialIconName {
         switch self {
         case .keyboard: return .keyboard
-        case .history: return .menuBook
+        case .history: return .menuBook // unused — history uses SF Symbol
         case .dictionary: return .menuBook // unused — dictionary uses SF Symbol
+        case .styles: return .menuBook // unused — styles uses SF Symbol
         case .settings: return .settings
         }
     }
 
-    /// Filled SF Symbol override for the dictionary tab.
+    /// SF Symbol overrides shared with the Mac and iPad sidebars.
     var sfSymbol: String? {
         switch self {
-        case .dictionary: return "square.stack.3d.down.right.fill"
+        case .history: return "clock.arrow.circlepath"
+        case .dictionary: return "character.book.closed"
+        case .styles: return "text.badge.star"
         default: return nil
         }
     }
@@ -36,6 +40,7 @@ enum AppTab: Int, CaseIterable {
         case .keyboard: return "tab.keyboard"
         case .history: return "tab.history"
         case .dictionary: return "tab.dictionary"
+        case .styles: return "tab.styles"
         case .settings: return "tab.settings"
         }
     }
@@ -48,6 +53,7 @@ enum AppTab: Int, CaseIterable {
         case .keyboard: return "house"
         case .history: return "clock.arrow.circlepath"
         case .dictionary: return "character.book.closed"
+        case .styles: return "text.badge.star"
         case .settings: return "gearshape"
         }
     }

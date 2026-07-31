@@ -19,8 +19,15 @@ public enum TranscriptPostProcessor: Sendable {
     // MARK: - Short-circuit gate (skip LLM)
 
     /// Returns `true` when the transcript is short enough and lacks
-    /// structural signals so calling the LLM would add latency without
-    /// meaningful benefit (e.g. "好", "OK", "明天见").
+    /// structural / communicative signals so calling the LLM would add
+    /// latency without meaningful benefit.
+    ///
+    /// Two tiers:
+    /// - **Tier 1 (≤4 CJK / short English token):** always skip when
+    ///   structure-free (e.g. "好", "OK", "明天见").
+    /// - **Tier 2 (5–10 CJK):** skip only low-value acks / closings
+    ///   (e.g. "好的我知道了", "那就先这样吧"); keep questions, invites,
+    ///   and contentful short lines for polish / ASR repair.
     public static func shouldSkipLLM(for text: String) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
@@ -28,8 +35,15 @@ public enum TranscriptPostProcessor: Sendable {
 
         let cjkCount = trimmed.unicodeScalars.filter(isCJKScalar).count
         if cjkCount > 0 {
-            // e.g. 好, 嗯, 收到, 明天见
-            return trimmed.count <= 4 && cjkCount <= 4
+            // Tier 1 — ultra-short
+            if trimmed.count <= 4 && cjkCount <= 4 {
+                return true
+            }
+            // Tier 2 — short ack / closing only
+            if trimmed.count <= 10 && cjkCount <= 10 {
+                return isTier2SkipUtterance(trimmed)
+            }
+            return false
         }
 
         // e.g. OK, yes, thanks — single short token only
@@ -37,10 +51,73 @@ public enum TranscriptPostProcessor: Sendable {
         return words.count == 1 && trimmed.count <= 10
     }
 
+    /// Tier-2 skip: 5–10 character Chinese that is only a confirmation,
+    /// status, or closing — not a question, invite, or contentful line.
+    public static func isTier2SkipUtterance(_ text: String) -> Bool {
+        let stripped = stripLeadingFillers(text)
+        if stripped.isEmpty { return true }
+        let cjk = stripped.unicodeScalars.filter(isCJKScalar).count
+        if stripped.count <= 4 && cjk <= 4 { return true }
+
+        if PolishRouter.hasCommunicativeSignal(stripped) { return false }
+        if PolishRouter.hasOpponentQuote(stripped) { return false }
+        if PolishRouter.hasConcreteEntity(stripped) { return false }
+
+        for pattern in tier2SkipPatterns {
+            if stripped.range(of: pattern, options: .regularExpression) != nil {
+                return true
+            }
+        }
+        return false
+    }
+
+    private static let tier2SkipPatterns: [String] = [
+        #"^(好的?|行|可以|收到|谢谢|麻烦了|没事|不用了|知道了|明白了|没问题|辛苦了|对的?)(啦|了|啊|呢|哦|呀)?$"#,
+        #"^(好的?)?(我)?(知道|明白)了$"#,
+        #"^(好的我知道了|收到谢谢|麻烦你了)$"#,
+        #"^(那就)?先这样(吧|了|啦)?$"#,
+        #"^(晚点|待会|一会儿|呆会)(再)?(说|联系|聊|讲)(吧|了|啊)?$"#,
+        #"^(我)?(马上|立刻|这就)?(就)?到了$"#,
+        #"^(好的?|嗯)?(收到|谢谢)(你|啦|了|啊)?$"#,
+        #"^(没事)?(不用|别)(了|啦)?(谢谢)?$"#,
+        #"^(晚安|早安|早上好|拜拜|再见)(啦|了|啊)?$"#,
+        #"^(晚点再说|待会联系|先这样吧|马上到了)$"#,
+    ]
+
+    private static let leadingFillers = [
+        "怎么说呢", "就是说", "然后那个", "嗯那个", "那个", "嗯", "呃",
+    ]
+
+    private static func stripLeadingFillers(_ text: String) -> String {
+        var result = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        for filler in leadingFillers.sorted(by: { $0.count > $1.count }) {
+            if result.hasPrefix(filler) {
+                result = String(result.dropFirst(filler.count))
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        }
+        return result
+    }
+
     /// Local-only cleanup when the LLM is skipped. Keeps the speaker's
     /// words verbatim — no punctuation invention beyond trimming.
     public static func localClean(_ text: String) -> String {
         text.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Last-resort deterministic polish after repeated validation failure.
+    /// This intentionally does not invent punctuation or rewrite words.
+    public static func minimalPolish(_ text: String) -> String {
+        var result = stripPauseMarkers(from: text)
+        let fillerPattern =
+            #"(^|[\s，,。.!！？?；;：:])(?:嗯|呃|啊|那个|um|uh|er)(?=$|[\s，,。.!！？?；;：:])"#
+        result = result.replacingOccurrences(
+            of: fillerPattern,
+            with: "$1",
+            options: [.regularExpression, .caseInsensitive]
+        )
+        result = collapseHorizontalWhitespace(result)
+        return normalizeWhitespaceAndPunctuation(result)
     }
 
     /// Conservative cleanup for raw ASR fallback delivery. This is used when
@@ -89,6 +166,7 @@ public enum TranscriptPostProcessor: Sendable {
         }
 
         text = stripExplanatoryPrefix(from: text)
+        text = stripPauseMarkers(from: text)
         text = unwrapSurroundingQuotes(text)
         text = stripAddedEmojis(original: original, output: text)
         text = repairMidSentenceLineBreaks(text)
@@ -103,6 +181,14 @@ public enum TranscriptPostProcessor: Sendable {
         }
 
         return .accept(text)
+    }
+
+    public static func stripPauseMarkers(from text: String) -> String {
+        text.replacingOccurrences(
+            of: #"⟨[^⟩]{0,12}⟩"#,
+            with: "",
+            options: .regularExpression
+        )
     }
 
     // MARK: - Structure detection

@@ -156,6 +156,7 @@ public final class KeyboardViewController: UIInputViewController {
             wakeLockView: { [weak self] in self?.view },
             openHostApp: { [weak self] path in self?.openHostApp(path: path) },
             detectAndStoreAppContext: { [weak self] in self?.detectAndStoreAppContext() },
+            fieldContextProvider: { [weak self] in self?.captureFieldContext() },
             scheduleAutoClearError: { [weak self] in self?.scheduleAutoClearError() },
             refreshConfigFromAppGroup: { [weak self] in self?.configSync.refreshConfigFromAppGroup() }
         )
@@ -313,6 +314,60 @@ public final class KeyboardViewController: UIInputViewController {
             storedCache: store.detectedAppContext
         )
         store.setDetectedAppContext(context)
+    }
+
+    private func captureFieldContext() -> FlowFieldContext {
+        let isSecure = textDocumentProxy.isSecureTextEntry ?? false
+        let preceding = textDocumentProxy.documentContextBeforeInput
+        let following = textDocumentProxy.documentContextAfterInput
+        let isAvailable = preceding != nil || following != nil
+        let isEmpty = isAvailable && (preceding ?? "").isEmpty && (following ?? "").isEmpty
+
+        return FlowFieldContext(
+            precedingText: preceding.map { String($0.suffix(600)) },
+            followingText: following.map { String($0.prefix(200)) },
+            keyboardType: keyboardTypeName(textDocumentProxy.keyboardType ?? .default),
+            returnKeyType: returnKeyTypeName(textDocumentProxy.returnKeyType ?? .default),
+            isSecureEntry: isSecure,
+            isEmptyField: isEmpty,
+            isContextAvailable: isAvailable
+        )
+    }
+
+    private func keyboardTypeName(_ type: UIKeyboardType) -> String {
+        switch type {
+        case .asciiCapable: return "asciiCapable"
+        case .numbersAndPunctuation: return "numbersAndPunctuation"
+        case .URL: return "url"
+        case .numberPad: return "numberPad"
+        case .phonePad: return "phonePad"
+        case .namePhonePad: return "namePhonePad"
+        case .emailAddress: return "emailAddress"
+        case .decimalPad: return "decimalPad"
+        case .twitter: return "twitter"
+        case .webSearch: return "webSearch"
+        case .asciiCapableNumberPad: return "asciiCapableNumberPad"
+        case .default: return "default"
+        @unknown default: return "default"
+        }
+    }
+
+    private func returnKeyTypeName(_ type: UIReturnKeyType) -> String {
+        switch type {
+        case .go: return "go"
+        case .google: return "google"
+        case .join: return "join"
+        case .next: return "next"
+        case .route: return "route"
+        case .search: return "search"
+        case .send: return "send"
+        case .yahoo: return "yahoo"
+        case .done: return "done"
+        case .emergencyCall: return "emergencyCall"
+        case .continue: return "continue"
+        case .default: return "default"
+        @unknown default: return "default"
+        }
     }
 
     // MARK: - Open host app

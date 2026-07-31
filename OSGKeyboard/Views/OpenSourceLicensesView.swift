@@ -13,7 +13,7 @@ struct OpenSourceLicensesView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+            CardPageContent(spacing: SettingsListMetrics.sectionLabelSpacing) {
                 Text("settings.licenses.footer")
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textTertiary)
@@ -34,14 +34,8 @@ struct OpenSourceLicensesView: View {
                         }
                     }
                 }
-                .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                        .stroke(palette.divider, lineWidth: 0.5)
-                )
+                .surfaceCard()
             }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.vertical, Spacing.md)
         }
         .background(palette.background.ignoresSafeArea())
         .navigationTitle("settings.licenses.title")
@@ -78,7 +72,7 @@ private struct OpenSourceLicenseDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
+            CardPageContent(spacing: Spacing.sm) {
                 if let url = entry.url {
                     Link(destination: url) {
                         HStack(spacing: Spacing.xs) {
@@ -105,8 +99,6 @@ private struct OpenSourceLicenseDetailView: View {
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, Spacing.lg)
-            .padding(.vertical, Spacing.md)
         }
         .background(palette.background.ignoresSafeArea())
         .navigationTitle(entry.name)

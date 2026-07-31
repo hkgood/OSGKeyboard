@@ -2,12 +2,14 @@
 // OSGKeyboard · Shared
 //
 // Alibaba Cloud Bailian / DashScope realtime ASR over the classic inference
-// WebSocket (`/api-ws/v1/inference`). Matches OpenLess' `bailian.rs` wire
-// protocol: run-task → PCM binary frames → finish-task → result events.
+// WebSocket (`/api-ws/v1/inference`). Utterance-level duplex session with
+// interim `result-generated` partials; batch `transcribe(samples:)` remains
+// for connection probes and chunk fallback.
 
 import Foundation
+import os
 
-struct BailianRealtimeASRClient: CloudASRTranscribing {
+struct BailianRealtimeASRClient: CloudASRTranscribing, CloudASRStreamingCapable {
     let apiKey: String
     let endpoint: String
     let model: String
@@ -15,28 +17,22 @@ struct BailianRealtimeASRClient: CloudASRTranscribing {
     let session: URLSession
 
     /// 100 ms of 16 kHz / 16-bit / mono PCM.
-    private static let targetChunkBytes = 3_200
-    private static let startTimeout: TimeInterval = 8
-    private static let finalTimeout: TimeInterval = 12
+    static let targetChunkBytes = 3_200
+    static let startTimeout: TimeInterval = 8
+    static let finalTimeout: TimeInterval = 12
     private static let sessionTimeout: TimeInterval = startTimeout + finalTimeout + 4
 
     func prepare(dictionary: PersonalDictionary) async throws {}
 
-    func transcribe(
-        samples: [Float],
-        sampleRate: Int,
+    func openStreamingSession(
         locale: Locale,
-        dictionary: PersonalDictionary
-    ) async throws -> String {
+        dictionary: PersonalDictionary,
+        onPartial: @escaping @Sendable (String) -> Void
+    ) async throws -> any CloudASRStreamingSession {
+        _ = locale
+        _ = dictionary
         guard !apiKey.isEmpty else { throw CloudASRError.noAPIKey }
-        guard sampleRate == 16_000 else {
-            throw CloudASRError.transport("Bailian realtime expects 16 kHz audio")
-        }
-        guard !samples.isEmpty else { throw CloudASRError.emptyTranscript }
-
         let url = try resolvedEndpointURL()
-        let pcm = Self.pcm16Data(samples: samples)
-        let taskID = UUID().uuidString.replacingOccurrences(of: "-", with: "")
         let resolvedModel = model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? CloudASRModelCatalog.alibabaFunASRRealtime
             : model.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -50,44 +46,40 @@ struct BailianRealtimeASRClient: CloudASRTranscribing {
 
         let wsTask = session.webSocketTask(with: request)
         wsTask.resume()
+        let live = BailianStreamingSession(
+            wsTask: wsTask,
+            model: resolvedModel,
+            vocabularyID: vocabularyID,
+            onPartial: onPartial
+        )
+        try await live.start()
+        return live
+    }
 
-        return try await withThrowingTaskGroup(of: String.self) { group in
-            let events = BailianEventStream(task: wsTask)
-
-            group.addTask {
-                defer { events.cancel() }
-                return try await Self.runSession(
-                    taskID: taskID,
-                    model: resolvedModel,
-                    pcm: pcm,
-                    wsTask: wsTask,
-                    events: events
-                )
-            }
-
-            group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(Self.sessionTimeout * 1_000_000_000))
-                events.cancel()
-                wsTask.cancel(with: .goingAway, reason: nil)
-                throw CloudASRError.transport("session timed out")
-            }
-
-            guard let result = try await group.next() else {
-                throw CloudASRError.emptyTranscript
-            }
-            group.cancelAll()
-            return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    func transcribe(
+        samples: [Float],
+        sampleRate: Int,
+        locale: Locale,
+        dictionary: PersonalDictionary
+    ) async throws -> String {
+        guard sampleRate == 16_000 else {
+            throw CloudASRError.transport("Bailian realtime expects 16 kHz audio")
         }
+        guard !samples.isEmpty else { throw CloudASRError.emptyTranscript }
+
+        let session = try await openStreamingSession(
+            locale: locale,
+            dictionary: dictionary,
+            onPartial: { _ in }
+        )
+        try await session.append(samples: samples)
+        let text = try await session.finish()
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { throw CloudASRError.emptyTranscript }
+        return trimmed
     }
 
     /// Settings connection probe: handshake to `task-started` only.
-    ///
-    /// Reaching `task-started` proves endpoint + `Authorization` + model are
-    /// all valid — which is exactly what "validate connection" must check.
-    /// It deliberately sends NO audio: DashScope realtime rejects a short
-    /// silent probe with a `task-failed: emptyAudio`, which is a false
-    /// negative for a connectivity test. A real auth/quota/model failure
-    /// still arrives as `task-failed` before `task-started` and surfaces.
     func probeConnection() async throws {
         guard !apiKey.isEmpty else { throw CloudASRError.noAPIKey }
 
@@ -108,17 +100,23 @@ struct BailianRealtimeASRClient: CloudASRTranscribing {
         wsTask.resume()
 
         try await withThrowingTaskGroup(of: Void.self) { group in
-            let events = BailianEventStream(task: wsTask)
+            let events = BailianEventStream(task: wsTask, onPartial: nil)
 
             group.addTask {
                 defer { events.cancel() }
-                try await Self.sendText(
-                    Self.runTaskMessage(taskID: taskID, model: resolvedModel, vocabularyID: nil),
+                try await BailianRealtimeASRClient.sendText(
+                    BailianRealtimeASRClient.runTaskMessage(
+                        taskID: taskID,
+                        model: resolvedModel,
+                        vocabularyID: nil
+                    ),
                     task: wsTask
                 )
                 try await events.waitForStarted(timeout: Self.startTimeout)
-                // Politely end the task; the connection is already proven.
-                try? await Self.sendText(Self.finishTaskMessage(taskID: taskID), task: wsTask)
+                try? await BailianRealtimeASRClient.sendText(
+                    BailianRealtimeASRClient.finishTaskMessage(taskID: taskID),
+                    task: wsTask
+                )
             }
 
             group.addTask {
@@ -133,37 +131,6 @@ struct BailianRealtimeASRClient: CloudASRTranscribing {
         }
     }
 
-    private static func runSession(
-        taskID: String,
-        model: String,
-        pcm: Data,
-        wsTask: URLSessionWebSocketTask,
-        events: BailianEventStream
-    ) async throws -> String {
-        try await sendText(
-            runTaskMessage(taskID: taskID, model: model, vocabularyID: nil),
-            task: wsTask
-        )
-
-        try await events.waitForStarted(timeout: startTimeout)
-
-        var offset = 0
-        while offset < pcm.count {
-            let end = min(offset + targetChunkBytes, pcm.count)
-            try await sendBinary(pcm.subdata(in: offset..<end), task: wsTask)
-            offset = end
-        }
-
-        // Let the server register the final frames before ending the task.
-        // Sending `finish-task` in the same instant as the last binary frame
-        // races the server's audio buffering (root cause of `emptyAudio` on
-        // very short clips).
-        try? await Task.sleep(nanoseconds: 120_000_000)
-
-        try await sendText(finishTaskMessage(taskID: taskID), task: wsTask)
-        return try await events.waitForFinalText(timeout: finalTimeout)
-    }
-
     private func resolvedEndpointURL() throws -> URL {
         let raw = endpoint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? CloudASRModelCatalog.bailianDefaultEndpoint
@@ -172,7 +139,7 @@ struct BailianRealtimeASRClient: CloudASRTranscribing {
         return url
     }
 
-    private static func sendText(_ text: String, task: URLSessionWebSocketTask) async throws {
+    static func sendText(_ text: String, task: URLSessionWebSocketTask) async throws {
         do {
             try await task.send(.string(text))
         } catch {
@@ -180,24 +147,12 @@ struct BailianRealtimeASRClient: CloudASRTranscribing {
         }
     }
 
-    private static func sendBinary(_ data: Data, task: URLSessionWebSocketTask) async throws {
+    static func sendBinary(_ data: Data, task: URLSessionWebSocketTask) async throws {
         do {
             try await task.send(.data(data))
         } catch {
             throw CloudASRError.transport(error.localizedDescription)
         }
-    }
-
-    private static func pcm16Data(samples: [Float]) -> Data {
-        var data = Data()
-        data.reserveCapacity(samples.count * 2)
-        for sample in samples {
-            let scaled = sample * 32_767.0
-            let clipped = Swift.max(-32_768.0, Swift.min(32_767.0, scaled))
-            var littleEndian = Int16(clipped.rounded()).littleEndian
-            withUnsafeBytes(of: &littleEndian) { data.append(contentsOf: $0) }
-        }
-        return data
     }
 
     /// Overlap-aware join to avoid cumulative duplicate text from interim replays.
@@ -275,18 +230,104 @@ struct BailianRealtimeASRClient: CloudASRTranscribing {
     }
 }
 
+// MARK: - Utterance session
+
+private final class BailianStreamingSession: CloudASRStreamingSession, @unchecked Sendable {
+    private let wsTask: URLSessionWebSocketTask
+    private let model: String
+    private let vocabularyID: String?
+    private let onPartial: @Sendable (String) -> Void
+    private let events: BailianEventStream
+    private let taskID: String
+    private let lock = OSAllocatedUnfairLock()
+    private var started = false
+    private var pcmBuffer = Data()
+
+    init(
+        wsTask: URLSessionWebSocketTask,
+        model: String,
+        vocabularyID: String?,
+        onPartial: @escaping @Sendable (String) -> Void
+    ) {
+        self.wsTask = wsTask
+        self.model = model
+        self.vocabularyID = vocabularyID
+        self.onPartial = onPartial
+        self.taskID = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+        self.events = BailianEventStream(task: wsTask, onPartial: onPartial)
+    }
+
+    func start() async throws {
+        try await BailianRealtimeASRClient.sendText(
+            BailianRealtimeASRClient.runTaskMessage(
+                taskID: taskID,
+                model: model,
+                vocabularyID: vocabularyID
+            ),
+            task: wsTask
+        )
+        try await events.waitForStarted(timeout: BailianRealtimeASRClient.startTimeout)
+        lock.withLock { started = true }
+    }
+
+    func append(samples: [Float]) async throws {
+        guard lock.withLock({ started }) else {
+            throw CloudASRError.transport("Bailian session not started")
+        }
+        let pcm = CloudASRStreamingPCM.pcm16LE(samples: samples)
+        let frames: [Data] = lock.withLock {
+            pcmBuffer.append(pcm)
+            var frames: [Data] = []
+            while pcmBuffer.count >= BailianRealtimeASRClient.targetChunkBytes {
+                let frame = pcmBuffer.prefix(BailianRealtimeASRClient.targetChunkBytes)
+                frames.append(Data(frame))
+                pcmBuffer.removeFirst(BailianRealtimeASRClient.targetChunkBytes)
+            }
+            return frames
+        }
+        for frame in frames {
+            try await BailianRealtimeASRClient.sendBinary(frame, task: wsTask)
+        }
+    }
+
+    func finish() async throws -> String {
+        // Flush remaining PCM (pad short last frame as-is — server tolerates).
+        let trailing: Data = lock.withLock {
+            let data = pcmBuffer
+            pcmBuffer.removeAll(keepingCapacity: false)
+            return data
+        }
+        if !trailing.isEmpty {
+            try await BailianRealtimeASRClient.sendBinary(trailing, task: wsTask)
+        }
+        // Avoid emptyAudio race on very short clips.
+        try? await Task.sleep(nanoseconds: 120_000_000)
+        try await BailianRealtimeASRClient.sendText(
+            BailianRealtimeASRClient.finishTaskMessage(taskID: taskID),
+            task: wsTask
+        )
+        return try await events.waitForFinalText(timeout: BailianRealtimeASRClient.finalTimeout)
+    }
+
+    func cancel() {
+        events.cancel()
+    }
+}
+
 // MARK: - Concurrent read loop
 
 private final class BailianEventStream: @unchecked Sendable {
     private let task: URLSessionWebSocketTask
-    private let lock = NSLock()
+    private let onPartial: (@Sendable (String) -> Void)?
+    private let lock = OSAllocatedUnfairLock()
     private var started = false
     private var finalText: String?
     private var failure: Error?
     private var readTask: Task<Void, Never>?
 
-    init(task: URLSessionWebSocketTask) {
+    init(task: URLSessionWebSocketTask, onPartial: (@Sendable (String) -> Void)?) {
         self.task = task
+        self.onPartial = onPartial
         readTask = Task { [weak self] in
             await self?.readLoop()
         }
@@ -320,21 +361,15 @@ private final class BailianEventStream: @unchecked Sendable {
     }
 
     private func snapshotStarted() -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return started
+        lock.withLock { started }
     }
 
     private func snapshotFinalText() -> String? {
-        lock.lock()
-        defer { lock.unlock() }
-        return finalText
+        lock.withLock { finalText }
     }
 
     private func snapshotFailure() -> Error? {
-        lock.lock()
-        defer { lock.unlock() }
-        return failure
+        lock.withLock { failure }
     }
 
     private func readLoop() async {
@@ -395,6 +430,21 @@ private final class BailianEventStream: @unchecked Sendable {
                 } else {
                     partialSegments[sentenceID] = trimmed
                 }
+
+                var displayParts: [String] = []
+                let ids = Set(finalSegments.keys).union(partialSegments.keys).sorted()
+                for id in ids {
+                    if let committed = finalSegments[id] {
+                        displayParts.append(committed)
+                    } else if let live = partialSegments[id] {
+                        displayParts.append(live)
+                    }
+                }
+                let display = BailianRealtimeASRClient.mergeSegments(displayParts)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if !display.isEmpty {
+                    onPartial?(display)
+                }
             case "task-finished":
                 if finalSegments.isEmpty {
                     publishFinal(lastResultText)
@@ -414,21 +464,15 @@ private final class BailianEventStream: @unchecked Sendable {
     }
 
     private func publishStarted() {
-        lock.lock()
-        started = true
-        lock.unlock()
+        lock.withLock { started = true }
     }
 
     private func publishFinal(_ text: String) {
-        lock.lock()
-        finalText = text
-        lock.unlock()
+        lock.withLock { finalText = text }
     }
 
     private func publishFailure(_ error: Error) {
-        lock.lock()
-        failure = error
-        lock.unlock()
+        lock.withLock { failure = error }
         cancel()
     }
 }

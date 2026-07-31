@@ -18,6 +18,8 @@ struct MainTabContent: View {
             HistoryView()
         case .dictionary:
             PersonalDictionaryView()
+        case .styles:
+            PolishStylesView()
         case .settings:
             SettingsView(presentation: .tab)
         }

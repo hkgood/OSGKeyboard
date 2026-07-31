@@ -33,7 +33,20 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertEqual(config.polishIntensity, .default)
         XCTAssertTrue(config.personalDictionary.entries.isEmpty)
         XCTAssertTrue(config.flowSkipAppSwitch)
+        XCTAssertEqual(config.flowKeepAliveMode, .pictureInPicture)
         XCTAssertEqual(config.flowInactivityDuration, .fiveMinutes)
+    }
+
+    func testLoadPreservesStoredLiveActivityKeepAliveMode() {
+        let defaults = makeDefaults()
+        defaults.set(
+            FlowKeepAliveMode.liveActivity.rawValue,
+            forKey: AppGroupConfiguration.Keys.flowKeepAliveMode
+        )
+
+        let config = AppGroupConfiguration.load(fromAvailable: defaults)
+
+        XCTAssertEqual(config.flowKeepAliveMode, .liveActivity)
     }
 
     func testSaveAndLoadRoundTrip() {
@@ -58,6 +71,7 @@ final class AppGroupConfigurationTests: XCTestCase {
         config.cursorDragNavigationEnabled = false
         config.polishIntensity = .light
         config.flowSkipAppSwitch = false
+        config.flowKeepAliveMode = .pictureInPicture
         // Use a non-default value so the round-trip actually proves persistence.
         config.flowInactivityDuration = .threeHours
         config.save(to: defaults)
@@ -81,6 +95,7 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertFalse(loaded.cursorDragNavigationEnabled)
         XCTAssertEqual(loaded.polishIntensity, .light)
         XCTAssertFalse(loaded.flowSkipAppSwitch)
+        XCTAssertEqual(loaded.flowKeepAliveMode, .pictureInPicture)
         XCTAssertEqual(loaded.flowInactivityDuration, .threeHours)
     }
 

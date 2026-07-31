@@ -14,6 +14,8 @@ import SwiftUI
 
 /// Fixed metrics that keep every desktop surface on the same grid.
 enum MacMetrics {
+    /// Shared height for search fields and primary actions in page headers.
+    static let pageHeaderControlHeight: CGFloat = 28
     /// Shared height for credential inputs and icon buttons — matches the iOS
     /// settings controls (38).
     static let settingsControlHeight: CGFloat = 38
@@ -55,6 +57,10 @@ enum MacMetrics {
     /// window edge; only the content inside is inset.
     /// Doubled from `Spacing.lg` so title + cards breathe from the edges.
     static let pageHorizontalInset: CGFloat = Spacing.lg * 2
+    /// Minimum polish-style card width: at the default window the detail
+    /// pane (~540pt after sidebar + insets) fits three columns; narrowing
+    /// drops to two, widening adds a fourth+.
+    static let polishStyleCardMinWidth: CGFloat = 170
     /// Built-in horizontal inset macOS grouped `Form` adds around its section
     /// cards, on top of any padding we apply. Subtracted from
     /// `pageHorizontalInset` on the Settings Form so its card outer edge lands
@@ -442,6 +448,25 @@ struct MacSettingRow<Content: View>: View {
 }
 
 // MARK: - Page header
+
+/// Capsule-shaped primary action aligned with page-header search controls.
+struct MacHeaderActionButtonStyle: ButtonStyle {
+    @Environment(\.themePalette) private var palette
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, Spacing.md)
+            .frame(height: MacMetrics.pageHeaderControlHeight)
+            .foregroundStyle(.white)
+            .background(
+                palette.accent.opacity(configuration.isPressed ? 0.82 : 1),
+                in: Capsule()
+            )
+            .contentShape(Capsule())
+            .opacity(isEnabled ? 1 : 0.45)
+    }
+}
 
 /// Page title for History / Dictionary / Settings. Applies the shared
 /// `pageHorizontalInset` so its left edge matches inset card content below.

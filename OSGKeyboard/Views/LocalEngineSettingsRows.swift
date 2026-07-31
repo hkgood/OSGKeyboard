@@ -30,11 +30,7 @@ struct LocalModelsGroup: View {
             customLanguageModelDiagnosticRow
 #endif
         }
-        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                .stroke(palette.divider, lineWidth: 0.5)
-        )
+        .surfaceCard()
     }
 
     // MARK: Speech row

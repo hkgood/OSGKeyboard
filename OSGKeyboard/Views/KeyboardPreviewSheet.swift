@@ -143,7 +143,9 @@ struct KeyboardPreviewSheet: View {
         EngineServiceLabel.summary(
             engineMode: config.engineMode,
             providerId: config.providerId,
-            model: config.model
+            model: config.model,
+            asrProviderId: config.asrProviderId,
+            asrModel: config.asrModel
         )
     }
 

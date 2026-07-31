@@ -13,6 +13,8 @@ import OSGKeyboardShared
 struct FlowColdStartContext: Equatable {
     let hostEntry: HostAppEntry?
     var state: FlowColdStartState
+    /// Drives preparing / PiP-specific copy (Live Activity vs picture-in-picture).
+    var keepAliveMode: FlowKeepAliveMode
 }
 
 enum FlowColdStartState: Equatable {
@@ -24,6 +26,8 @@ enum FlowColdStartState: Equatable {
 enum FlowColdStartFailure: Equatable {
     case permission(message: String)
     case audio(message: String)
+    /// Picture-in-picture keep-alive could not be proven active.
+    case pip(message: String)
 }
 
 struct FlowColdStartOverlay: View {
@@ -119,7 +123,7 @@ struct FlowColdStartOverlay: View {
             ProgressView()
                 .tint(palette.accent)
                 .scaleEffect(1.1)
-                .accessibilityLabel(AppL10n.string("flow.coldStart.preparing"))
+                .accessibilityLabel(preparingTitle)
         case .ready:
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 26, weight: .semibold))
@@ -142,7 +146,7 @@ struct FlowColdStartOverlay: View {
             switch failure {
             case .permission:
                 linkButton(AppL10n.string("flow.coldStart.action.settings"), action: onOpenSettings)
-            case .audio:
+            case .audio, .pip:
                 linkButton(AppL10n.string("flow.coldStart.action.retry"), action: onRetry)
             }
         }
@@ -157,10 +161,19 @@ struct FlowColdStartOverlay: View {
         .buttonStyle(.plain)
     }
 
+    private var preparingTitle: String {
+        switch context.keepAliveMode {
+        case .pictureInPicture:
+            return AppL10n.string("flow.coldStart.preparing.pip")
+        case .liveActivity:
+            return AppL10n.string("flow.coldStart.preparing")
+        }
+    }
+
     private var title: String {
         switch context.state {
         case .preparing:
-            return AppL10n.string("flow.coldStart.preparing")
+            return preparingTitle
         case .ready:
             return AppL10n.string("flow.coldStart.title")
         case .failed(let failure):
@@ -169,6 +182,8 @@ struct FlowColdStartOverlay: View {
                 return AppL10n.string("flow.coldStart.permission.title")
             case .audio:
                 return AppL10n.string("flow.coldStart.audio.title")
+            case .pip:
+                return AppL10n.string("flow.coldStart.pip.title")
             }
         }
     }
@@ -176,14 +191,17 @@ struct FlowColdStartOverlay: View {
     private var message: String {
         switch context.state {
         case .preparing:
-            return AppL10n.string("flow.coldStart.preparingHint")
+            switch context.keepAliveMode {
+            case .pictureInPicture:
+                return AppL10n.string("flow.coldStart.preparingHint.pip")
+            case .liveActivity:
+                return AppL10n.string("flow.coldStart.preparingHint")
+            }
         case .ready:
             return AppL10n.string("flow.coldStart.swipeHint")
         case .failed(let failure):
             switch failure {
-            case .permission(let message):
-                return message
-            case .audio(let message):
+            case .permission(let message), .audio(let message), .pip(let message):
                 return message
             }
         }

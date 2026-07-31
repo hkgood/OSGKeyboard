@@ -101,11 +101,18 @@ public struct UtteranceAudioChunk: Sendable, Equatable {
     public let index: Int
     public let samples: [Float]
     public let isLast: Bool
+    public let trailingPauseSeconds: Double
 
-    public init(index: Int, samples: [Float], isLast: Bool) {
+    public init(
+        index: Int,
+        samples: [Float],
+        isLast: Bool,
+        trailingPauseSeconds: Double = 0
+    ) {
         self.index = index
         self.samples = samples
         self.isLast = isLast
+        self.trailingPauseSeconds = trailingPauseSeconds
     }
 
     public var durationSeconds: Double {

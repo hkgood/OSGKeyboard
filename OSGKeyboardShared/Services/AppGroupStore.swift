@@ -66,6 +66,11 @@ public struct AppGroupStore: @unchecked Sendable {
     public var handednessPreference: HandednessPreference { configuration.handednessPreference }
     public var cursorDragNavigationEnabled: Bool { configuration.cursorDragNavigationEnabled }
     public var polishIntensity: PolishIntensity { configuration.polishIntensity }
+    public var polishStyleCatalog: PolishStyleCatalog { configuration.polishStyleCatalog }
+    public var activePolishStyleId: String { configuration.activePolishStyleId }
+    public var activePolishStyle: PolishStylePack {
+        PolishStylePackCatalog.resolve(id: activePolishStyleId, userCatalog: polishStyleCatalog)
+    }
     public var llmThinkingEnabled: Bool { configuration.llmThinkingEnabled }
     public var isTranslationEffective: Bool { configuration.isTranslationEffective }
     public var isLocalEngine: Bool { configuration.isLocalEngine }
@@ -119,6 +124,33 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setPolishIntensity(_ intensity: PolishIntensity) {
         mutateConfiguration { $0.polishIntensity = intensity }
+    }
+
+    // MARK: - Polish styles
+
+    public func setPolishStyleCatalog(_ catalog: PolishStyleCatalog) {
+        mutateConfiguration { $0.polishStyleCatalog = catalog }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setActivePolishStyleId(_ id: String) {
+        mutateConfiguration { config in
+            config.activePolishStyleId = PolishStylePackCatalog.isValidActiveID(
+                id,
+                userCatalog: config.polishStyleCatalog
+            ) ? id : PolishStylePackCatalog.defaultID
+        }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func deletePolishStylePack(id: String, at date: Date = Date()) {
+        mutateConfiguration { config in
+            config.polishStyleCatalog.recordDeletion(of: id, at: date)
+            if config.activePolishStyleId == id {
+                config.activePolishStyleId = PolishStylePackCatalog.defaultID
+            }
+        }
+        AppGroupConfigDarwin.postConfigChanged()
     }
 
     public func setLLMThinkingEnabled(_ enabled: Bool) {

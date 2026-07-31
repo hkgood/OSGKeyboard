@@ -22,7 +22,9 @@ final class MacDictationOverlayController {
     private var wasBusy = false
 
     private let bottomMargin: CGFloat = 36
-    private let fallbackSize = NSSize(width: 400, height: 52)
+    /// The pill is a fixed size, so the panel never needs to resize while the
+    /// transcript grows — see `MacDictationOverlayView.panelSize`.
+    private let panelSize = MacDictationOverlayView.panelSize
 
     // MARK: - User-draggable position (persisted across launches)
 
@@ -33,8 +35,6 @@ final class MacDictationOverlayController {
     /// pill grows / shrinks with the live transcript (symmetric resize).
     private var customCenterX: CGFloat = 0
     private var customOriginY: CGFloat = 0
-    /// The origin we last set programmatically (kept for clamping / bookkeeping).
-    private var lastProgrammaticOrigin: NSPoint?
     /// Cursor + window origin captured at the start of a manual drag, so we can
     /// follow the absolute cursor and stay immune to the window moving under it.
     private var dragCursorStart: NSPoint?
@@ -72,15 +72,11 @@ final class MacDictationOverlayController {
         }
         .store(in: &cancellables)
 
-        // Keep waveform / app name / copy fresh while visible.
-        viewModel.objectWillChange
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                guard let self, self.panel?.isVisible == true else { return }
-                self.refreshContent(viewModel: viewModel)
-                self.resizeToFit()
-            }
-            .store(in: &cancellables)
+        // Waveform / app name / copy refresh through the view's own
+        // `@ObservedObject` binding. Re-driving them from `objectWillChange`
+        // used to reassign `rootView` and force a synchronous relayout ~20×/s
+        // (the level timer's cadence), which deadlocked AppKit layout during
+        // the state storm that fires when the hold-to-talk key is released.
 
         NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
             .receive(on: RunLoop.main)
@@ -121,8 +117,9 @@ final class MacDictationOverlayController {
 
     private func present(viewModel: MacDictationViewModel) {
         ensurePanel(viewModel: viewModel)
+        // Once per show, not per state change: picks up an appearance or UI
+        // language switch made since the pill was last visible.
         refreshContent(viewModel: viewModel)
-        resizeToFit()
         reposition()
 
         guard let panel else { return }
@@ -144,11 +141,11 @@ final class MacDictationOverlayController {
         if panel != nil { return }
 
         let host = NSHostingView(rootView: makeRoot(viewModel: viewModel))
-        host.frame = NSRect(origin: .zero, size: fallbackSize)
+        host.frame = NSRect(origin: .zero, size: panelSize)
         hosting = host
 
         let panel = NSPanel(
-            contentRect: NSRect(origin: .zero, size: fallbackSize),
+            contentRect: NSRect(origin: .zero, size: panelSize),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -188,40 +185,11 @@ final class MacDictationOverlayController {
         )
     }
 
-    private func resizeToFit() {
-        guard let panel, let hosting else { return }
-        hosting.layoutSubtreeIfNeeded()
-        let fitting = hosting.fittingSize
-        // Bounds include the 32pt horizontal transparent margin around the pill
-        // (16 per side) that gives the shadow room, so the pill body itself
-        // still spans ~300–520.
-        let width = fitting.width.isFinite && fitting.width > 1
-            ? min(max(fitting.width, 332), 552)
-            : fallbackSize.width
-        let height = fitting.height.isFinite && fitting.height > 1
-            ? max(fitting.height, fallbackSize.height)
-            : fallbackSize.height
-        var frame = panel.frame
-        // Grow / shrink around the anchor center so the pill stays put: the
-        // dragged center when custom, otherwise its current center.
-        let targetMidX = hasCustomPosition ? customCenterX : frame.midX
-        frame.size = NSSize(width: width, height: height)
-        if targetMidX.isFinite {
-            frame.origin.x = targetMidX - width / 2
-        }
-        if let visible = (NSScreen.main ?? NSScreen.screens.first)?.visibleFrame {
-            frame.origin = clampedOrigin(frame.origin, size: frame.size, in: visible)
-        }
-        lastProgrammaticOrigin = frame.origin
-        panel.setFrame(frame, display: true)
-        hosting.frame = NSRect(origin: .zero, size: frame.size)
-    }
-
     private func reposition() {
         guard let panel else { return }
         let screen = NSScreen.main ?? NSScreen.screens.first
         guard let visible = screen?.visibleFrame else { return }
-        let size = panel.frame.size
+        let size = panelSize
         // Respect the user's dragged spot; otherwise snap to bottom-center.
         let desired: NSPoint
         if hasCustomPosition {
@@ -232,9 +200,7 @@ final class MacDictationOverlayController {
                 y: visible.minY + bottomMargin
             )
         }
-        let origin = clampedOrigin(desired, size: size, in: visible)
-        lastProgrammaticOrigin = origin
-        panel.setFrameOrigin(origin)
+        panel.setFrameOrigin(clampedOrigin(desired, size: size, in: visible))
     }
 
     /// Keep the panel fully inside the screen's visible frame so a dragged /
@@ -266,9 +232,7 @@ final class MacDictationOverlayController {
         )
         let size = panel.frame.size
         let visible = (NSScreen.main ?? NSScreen.screens.first)?.visibleFrame
-        let origin = visible.map { clampedOrigin(target, size: size, in: $0) } ?? target
-        lastProgrammaticOrigin = origin
-        panel.setFrameOrigin(origin)
+        panel.setFrameOrigin(visible.map { clampedOrigin(target, size: size, in: $0) } ?? target)
     }
 
     /// Persist the dragged spot as center-X + bottom-left Y.
@@ -287,7 +251,6 @@ final class MacDictationOverlayController {
     private func resetPositionToDefault() {
         hasCustomPosition = false
         clearPersistedPosition()
-        resizeToFit()
         reposition()
     }
 

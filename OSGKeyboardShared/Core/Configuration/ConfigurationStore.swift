@@ -29,6 +29,8 @@ public protocol ConfigurationStore: Sendable {
     var polishIntensity: PolishIntensity { get }
     var llmThinkingEnabled: Bool { get }
     var personalDictionary: PersonalDictionary { get }
+    var polishStyleCatalog: PolishStyleCatalog { get }
+    var activePolishStyleId: String { get }
 
     /// Foreground-app context for polish prompts (keyboard extension publishes this).
     var detectedAppContext: (context: AppContext, observedAt: Date)? { get }

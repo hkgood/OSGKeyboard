@@ -16,22 +16,39 @@ public struct FlowCaptureTailDrainPolicy: Sendable, Equatable {
     public let silenceDurationSeconds: TimeInterval
     /// Hard cap so noisy environments cannot stall finalize forever.
     public let maxDrainSeconds: TimeInterval
+    /// Fixed post-roll after silence drain; independent of RMS (captures weak tails).
+    public let postRollSeconds: TimeInterval
 
     public init(
         silenceRMSThreshold: Float,
         silenceDurationSeconds: TimeInterval,
-        maxDrainSeconds: TimeInterval
+        maxDrainSeconds: TimeInterval,
+        postRollSeconds: TimeInterval = 0
     ) {
         self.silenceRMSThreshold = silenceRMSThreshold
         self.silenceDurationSeconds = silenceDurationSeconds
         self.maxDrainSeconds = maxDrainSeconds
+        self.postRollSeconds = postRollSeconds
     }
 
-    public static let flowDefault = FlowCaptureTailDrainPolicy(
+    /// iOS Flow host + keyboard utterance capture.
+    public static let iosFlow = FlowCaptureTailDrainPolicy(
         silenceRMSThreshold: 0.015,
-        silenceDurationSeconds: 0.25,
-        maxDrainSeconds: 1.5
+        silenceDurationSeconds: 0.35,
+        maxDrainSeconds: 1.5,
+        postRollSeconds: 0.15
     )
+
+    /// Mac MLX streaming live capture.
+    public static let macMLX = FlowCaptureTailDrainPolicy(
+        silenceRMSThreshold: 0.015,
+        silenceDurationSeconds: 0.35,
+        maxDrainSeconds: 0.75,
+        postRollSeconds: 0.15
+    )
+
+    /// Backward-compatible alias for iOS Flow defaults.
+    public static let flowDefault = iosFlow
 }
 
 /// Metrics emitted when tail drain completes (for diagnostics and tests).
@@ -39,21 +56,25 @@ public struct FlowCaptureDrainReport: Sendable, Equatable {
     public let drainDurationSeconds: Double
     public let endedBySilence: Bool
     public let tailSampleCount: Int
+    public let postRollDurationSeconds: Double
 
     public init(
         drainDurationSeconds: Double,
         endedBySilence: Bool,
-        tailSampleCount: Int
+        tailSampleCount: Int,
+        postRollDurationSeconds: Double = 0
     ) {
         self.drainDurationSeconds = drainDurationSeconds
         self.endedBySilence = endedBySilence
         self.tailSampleCount = tailSampleCount
+        self.postRollDurationSeconds = postRollDurationSeconds
     }
 
     public static let skipped = FlowCaptureDrainReport(
         drainDurationSeconds: 0,
         endedBySilence: false,
-        tailSampleCount: 0
+        tailSampleCount: 0,
+        postRollDurationSeconds: 0
     )
 }
 

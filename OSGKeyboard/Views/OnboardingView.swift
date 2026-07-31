@@ -176,13 +176,19 @@ struct OnboardingView: View {
 
     private func advancePage() {
         refreshPermissionStatuses()
-        withAnimation(Motion.soft) {
-            if isLastPage {
+        // Routing out of onboarding must NOT run inside an animation
+        // transaction. Animating OnboardingView → MainTabView (plus a nested
+        // onboardingPage reset and Flow activateOnForeground) can leave the
+        // last page frozen even when hasCompletedOnboarding is already true.
+        if isLastPage || nextVisiblePage(after: config.onboardingPage) == nil {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
                 config.hasCompletedOnboarding = true
-            } else if let next = nextVisiblePage(after: config.onboardingPage) {
+            }
+        } else if let next = nextVisiblePage(after: config.onboardingPage) {
+            withAnimation(Motion.soft) {
                 config.onboardingPage = next
-            } else {
-                config.hasCompletedOnboarding = true
             }
         }
     }
@@ -736,7 +742,7 @@ private struct APISetupPage: View {
                         Divider().background(palette.divider)
                         ASRSettingsCard(config: config, showsSurface: false)
                     }
-                    .modifier(SettingsSurfaceCardModifier(enabled: true))
+                    .surfaceCard()
                     .padding(.horizontal, Spacing.lg)
                 } else {
                     Text("onboarding.api.localModels.hint")
@@ -783,7 +789,7 @@ private struct PolishSetupPage: View {
                     Divider().background(palette.divider)
                     APISettingsCard(config: config, showsSurface: false)
                 }
-                .modifier(SettingsSurfaceCardModifier(enabled: true))
+                .surfaceCard()
                 .padding(.horizontal, Spacing.lg)
             }
             .padding(.bottom, Spacing.xxxl)

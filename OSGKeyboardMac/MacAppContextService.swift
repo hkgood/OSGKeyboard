@@ -68,7 +68,14 @@ enum MacAppContextService {
     }
 
     static func detectContext() -> AppContext {
-        guard let bundleId = frontmostBundleIdentifier() else { return .unknown }
+        detectContext(bundleIdentifier: frontmostBundleIdentifier())
+    }
+
+    /// Resolve polish context from the application captured for this dictation
+    /// session. This avoids reading OSGKeyboard itself after a popover steals
+    /// focus.
+    static func detectContext(bundleIdentifier bundleId: String?) -> AppContext {
+        guard let bundleId else { return .unknown }
         if let mapped = contextByBundleId[bundleId] { return mapped }
         if chatBundleIdsFromRegistry.contains(bundleId) { return .chat }
         if bundleId.hasPrefix("com.apple.Safari") || bundleId.contains("chrome") {
@@ -81,6 +88,14 @@ enum MacAppContextService {
     /// `PolishingService` reads the same signal as on iOS.
     static func captureAndPersist(to store: AppGroupStore) {
         let context = detectContext()
+        store.setDetectedAppContext(context)
+    }
+
+    static func captureAndPersist(
+        application: NSRunningApplication?,
+        to store: AppGroupStore
+    ) {
+        let context = detectContext(bundleIdentifier: application?.bundleIdentifier)
         store.setDetectedAppContext(context)
     }
 }

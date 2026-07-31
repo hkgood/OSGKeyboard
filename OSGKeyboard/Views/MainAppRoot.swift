@@ -11,15 +11,19 @@ import OSGKeyboardShared
 struct MainAppRoot: View {
     @Environment(\.scenePhase) private var scenePhase
 
-    @StateObject private var config = ProviderConfig.shared
+    // Singleton is owned by `ProviderConfig.shared`, not by this view —
+    // `@ObservedObject` keeps subscriptions correct across Settings replay.
+    @ObservedObject private var config = ProviderConfig.shared
     @StateObject private var flowManager = FlowSessionManager()
 
     var body: some View {
         Group {
             if config.hasCompletedOnboarding {
                 MainTabView()
+                    .id("main")
             } else {
                 OnboardingView(config: config)
+                    .id("onboarding")
             }
         }
         .environment(\.locale, config.uiLanguage.swiftUILocale)
@@ -37,6 +41,16 @@ struct MainAppRoot: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: flowManager.coldStartContext != nil)
+        .background {
+            FlowPiPHostView { view in
+                flowManager.attachPiPHostView(view)
+            }
+            // Keep a small but real layer in the window hierarchy for PiP.
+            .frame(width: 64, height: 36)
+            .opacity(0.02)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
         .onAppear {
             flowManager.setAppForeground(scenePhase == .active)
             // Register the URL handler BEFORE the foreground auto-start.

@@ -158,7 +158,7 @@ final class IntelligentPolishTests: XCTestCase {
         )
         XCTAssertTrue(captured.lastPrompt.contains("Kubernetes"),
                       "Prompt must include dictionary term. Got: \(captured.lastPrompt)")
-        XCTAssertTrue(captured.lastPrompt.contains("Code context"),
+        XCTAssertTrue(captured.lastPrompt.contains("代码或技术环境"),
                       "Prompt must include app-context guideline. Got: \(captured.lastPrompt)")
         XCTAssertTrue(
             captured.lastPrompt.contains("全局输出契约") || captured.lastPrompt.contains("Global output contract"),
@@ -172,6 +172,57 @@ final class IntelligentPolishTests: XCTestCase {
             captured.lastPrompt.localizedCaseInsensitiveContains("emoji-friendly"),
             "Chat context must not encourage emojis. Got: \(captured.lastPrompt)"
         )
+    }
+
+    func testSystemPromptDoesNotContainTranscript() async throws {
+        store.setEngineMode("local")
+        let captured = CapturingLLMClient()
+        let service = PolishingService(store: store, client: captured)
+        let input = "这是一段独一无二的测试转写文本ZZQQ"
+        _ = try await service.polish(input, context: PolishContext(intensity: .medium))
+        XCTAssertFalse(captured.lastPrompt.contains("ZZQQ"))
+        XCTAssertEqual(captured.lastText, input)
+    }
+
+    func testChineseInputUsesChineseGuidanceOnOpenAI() async throws {
+        let captured = CapturingLLMClient()
+        let service = PolishingService(store: store, client: captured)
+        _ = try await service.polish(
+            "今天讨论 roadmap 和发布时间",
+            providerIdOverride: "openai",
+            context: PolishContext(intensity: .medium)
+        )
+        XCTAssertTrue(captured.lastPrompt.contains("全局输出契约"))
+    }
+
+    func testPromptIncludesPrecedingFollowingAndFieldHints() async throws {
+        let captured = CapturingLLMClient()
+        let service = PolishingService(store: store, client: captured)
+        _ = try await service.polish(
+            "下午三点应该可以",
+            context: PolishContext(
+                appContext: .chat,
+                precedingText: "明天的会我看了下日程",
+                followingText: "确认后告诉我",
+                fieldHints: FieldHints(
+                    returnKeyType: "send",
+                    isEmptyField: false,
+                    isContextAvailable: true
+                )
+            )
+        )
+        XCTAssertTrue(captured.lastPrompt.contains("明天的会我看了下日程"))
+        XCTAssertTrue(captured.lastPrompt.contains("确认后告诉我"))
+        XCTAssertTrue(captured.lastPrompt.contains("衔接规则"))
+    }
+
+    func testCorePromptIsStableAcrossCalls() {
+        XCTAssertEqual(
+            PolishPromptComposer.chineseCorePrompt,
+            PolishPromptComposer.chineseCorePrompt
+        )
+        XCTAssertFalse(PolishPromptComposer.chineseCorePrompt.contains("{{"))
+        XCTAssertTrue(PolishPromptComposer.chineseCorePrompt.contains("T1 自我修正合并"))
     }
 
     func testPolishServicePromptIncludesStructureRulesAtLightIntensity() async throws {
@@ -248,12 +299,51 @@ final class IntelligentPolishTests: XCTestCase {
         XCTAssertEqual(result, "今天的部署已经全部完成")
     }
 
+    func testValidatorRetriesDeterministicallyAndRecovers() async throws {
+        let client = ValidationRetryLLMClient()
+        let service = PolishingService(store: store, client: client)
+        let outcome = try await service.polishWithOutcome(
+            "please keep user_id in this technical message",
+            context: PolishContext(appContext: .code)
+        )
+        XCTAssertEqual(outcome.text, "Please keep user_id in this technical message.")
+        XCTAssertFalse(outcome.qualityDegraded)
+        XCTAssertEqual(client.temperatures.compactMap { $0 }, [0.1, 0])
+    }
+
+    func testValidatorFallsBackToMinimalPolishAfterSecondHardFailure() async throws {
+        let service = PolishingService(
+            store: store,
+            client: FixedResponseLLMClient(response: "Please keep it.")
+        )
+        let outcome = try await service.polishWithOutcome(
+            "um please keep user_id",
+            context: PolishContext(appContext: .code)
+        )
+        XCTAssertEqual(outcome.text, "please keep user_id")
+        XCTAssertTrue(outcome.qualityDegraded)
+    }
+
     // MARK: - TranscriptPostProcessor
 
     func testShouldSkipLLMForUltraShortWithoutStructure() {
         XCTAssertTrue(TranscriptPostProcessor.shouldSkipLLM(for: "好"))
         XCTAssertTrue(TranscriptPostProcessor.shouldSkipLLM(for: "OK"))
         XCTAssertTrue(TranscriptPostProcessor.shouldSkipLLM(for: "明天见"))
+    }
+
+    func testShouldSkipLLMTier2ForAckClosings() {
+        XCTAssertTrue(TranscriptPostProcessor.shouldSkipLLM(for: "好的我知道了"))
+        XCTAssertTrue(TranscriptPostProcessor.shouldSkipLLM(for: "那就先这样吧"))
+        XCTAssertTrue(TranscriptPostProcessor.shouldSkipLLM(for: "晚点再说"))
+        XCTAssertTrue(TranscriptPostProcessor.shouldSkipLLM(for: "收到谢谢"))
+    }
+
+    func testShouldNotSkipLLMTier2ForQuestionsOrContent() {
+        XCTAssertFalse(TranscriptPostProcessor.shouldSkipLLM(for: "今晚有空吗"))
+        XCTAssertFalse(TranscriptPostProcessor.shouldSkipLLM(for: "这个还行吧"))
+        XCTAssertFalse(TranscriptPostProcessor.shouldSkipLLM(for: "周六一起吃饭"))
+        XCTAssertFalse(TranscriptPostProcessor.shouldSkipLLM(for: "防晒不由夏天"))
     }
 
     func testShouldNotSkipLLMWhenStructurePresent() {
@@ -266,6 +356,14 @@ final class IntelligentPolishTests: XCTestCase {
             output: "好的👍"
         )
         XCTAssertEqual(result, "好的")
+    }
+
+    func testQualityGateStripsResidualPauseMarkers() {
+        let result = TranscriptPostProcessor.process(
+            original: "第一段 ⟨0.8s⟩ 第二段",
+            llmOutput: "第一段 ⟨0.8s⟩ 第二段"
+        )
+        XCTAssertFalse(result.contains("⟨"))
     }
 
     func testNormalizeNumberedLists() {
@@ -457,10 +555,12 @@ final class IntelligentPolishTests: XCTestCase {
 
 private final class CapturingLLMClient: LLMClient, @unchecked Sendable {
     private(set) var lastPrompt: String = ""
+    private(set) var lastText: String = ""
     private(set) var lastTimeout: TimeInterval?
     let requestTimeout: TimeInterval = 15
 
     func polish(_ text: String, systemPrompt: String, timeout: TimeInterval?) async throws -> String {
+        lastText = text
         lastPrompt = systemPrompt
         lastTimeout = timeout
         return text
@@ -489,5 +589,27 @@ private final class FixedResponseLLMClient: LLMClient, @unchecked Sendable {
 
     func polish(_ text: String, systemPrompt: String, timeout: TimeInterval?) async throws -> String {
         response
+    }
+}
+
+private final class ValidationRetryLLMClient: LLMClient, @unchecked Sendable {
+    let requestTimeout: TimeInterval = 15
+    private(set) var temperatures: [Double?] = []
+
+    func polish(_ text: String, systemPrompt: String, timeout: TimeInterval?) async throws -> String {
+        "Please keep it."
+    }
+
+    func polish(
+        _ text: String,
+        systemPrompt: String,
+        timeout: TimeInterval?,
+        options: LLMGenerationOptions
+    ) async throws -> String {
+        temperatures.append(options.temperature)
+        if options.temperature == 0 {
+            return "Please keep user_id in this technical message."
+        }
+        return "Please keep it."
     }
 }

@@ -146,6 +146,18 @@ struct MacSettingsView: View {
                     validate: validateMacLLM,
                     language: lang
                 )
+                MacProviderSettingRow(title: MacL10n.string("mac.settings.translation", language: lang)) {
+                    MacInlinePicker(
+                        selection: translationTargetBinding,
+                        options: TranslationLanguageCatalog.all.map { language in
+                            MacInlinePickerOption(
+                                value: language.id,
+                                label: translationLabel(for: language)
+                            )
+                        },
+                        fillsWidth: true
+                    )
+                }
             }
         }
     }
@@ -495,6 +507,20 @@ struct MacSettingsView: View {
             get: { viewModel.autoPasteEnabled },
             set: { viewModel.setAutoPasteEnabled($0) }
         )
+    }
+
+    private var translationTargetBinding: Binding<String> {
+        Binding(
+            get: { viewModel.config.translationTargetLocaleId },
+            set: { viewModel.config.translationTargetLocaleId = $0 }
+        )
+    }
+
+    private func translationLabel(for language: TranslationLanguage) -> String {
+        if TranslationLanguageCatalog.isOff(language.id) {
+            return MacL10n.string("mac.settings.translationOff", language: lang)
+        }
+        return language.nativeName
     }
 
     // MARK: - AppKit actions (macOS only)

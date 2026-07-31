@@ -49,24 +49,154 @@ public enum PolishIntensity: String, Codable, Sendable, CaseIterable {
     /// service appends this verbatim so the LLM has an explicit,
     /// non-ambiguous constraint per call.
     public var promptGuideline: String {
+        promptGuideline(styleID: nil)
+    }
+
+    /// Intensity guideline for the LLM prompt. When the active style limits
+    /// heavy restructuring (chat/light/dating), heavy still improves clarity
+    /// but must not override the style pack's length and format rules.
+    public func promptGuideline(styleID: String?) -> String {
+        let transformative = styleID.map(PolishStylePackCatalog.isFunPersonality(id:)) ?? false
+        switch (self, transformative) {
+        case (.light, false):
+            return "Light: remove only explicit fillers and stutters. Merge only unmistakable self-corrections. Do not reorder otherwise-clear wording."
+        case (.medium, false):
+            return "Medium: remove clear fillers and abandoned restarts, fix high-confidence ASR errors, and reorder only obviously broken syntax."
+        case (.heavy, false):
+            return "Heavy: handle implicit restarts and filler phrases more actively. You may reorder clauses for clarity while preserving every fact and the user's voice."
+        case (.light, true):
+            return "Light style strength: clean clear fillers and apply a recognizable but restrained version of the active personality."
+        case (.medium, true):
+            return "Medium style strength: merge clear restarts and apply the active personality with a visibly stronger full-sentence rewrite."
+        case (.heavy, true):
+            return "Heavy style strength: handle implicit restarts actively and use the strongest version of the active personality, while preserving facts and intent."
+        }
+    }
+
+    private var datingGuideline: String {
         switch self {
         case .light:
-            return """
-            Light rewrite: remove isolated filler words (嗯, 呃, 那个, 就是, 然后, 对, ok, um, uh) and obvious duplicated fragments only. \
-            Do not rephrase otherwise-clear wording. \
-            Still restore punctuation, sentence breaks, and content-triggered structure (lists, paragraphs) per the global output contract.
+            """
+            Dating Light (加戏): fully rewrite while preserving intent. Remove interrogation, lecturing, and pressure. \
+            Add a bit of attitude or light humor so it is fun and easy to answer — spoken WeChat first, clever lines only as seasoning. \
+            Do not make it flirtatious yet. Blind-testable difference required; near-synonym polish is a failure.
             """
         case .medium:
-            return """
+            """
+            Dating Medium (会撩): fully rewrite while preserving intent. Keep Light's play, and add readable flirtation (preference, soft pull-closer, deniable wit). \
+            Stay conversational; do not invent shared history. Must be clearly more flirty than Dating Light.
+            """
+        case .heavy:
+            """
+            Dating Heavy (更挑逗): fully rewrite while preserving intent. Bolder teasing or clingy jokes than Medium; still not pornographic. \
+            Keep an exit ramp. On rejection/coldness, collapse to a clean respectful close. Must be clearly more teasing than Dating Medium.
+            """
+        }
+    }
+
+    private var flexGuideline: String {
+        switch self {
+        case .light:
+            """
+            Flex Light: rewrite into light 4A/study-abroad Chinglish — mostly Chinese with 1–2 English seasoning words (solid/low/vibe/feel). \
+            Do not invent luxury ownership. Must sound casually showy, not like an ad slogan dump.
+            """
+        case .medium:
+            """
+            Flex Medium: clearer pretentious mix; steadier code-switching and optionally one brand/taste cue. \
+            Still spoken, not a luxury campaign. Must be clearly showier than Flex Light.
+            """
+        case .heavy:
+            """
+            Flex Heavy: obvious flex energy with denser Chinglish and optional brand seasoning. \
+            Still short spoken messages — no full-English sentences or brand laundry lists. Must be clearly showier than Flex Medium.
+            """
+        }
+    }
+
+    private var corpGuideline: String {
+        switch self {
+        case .light:
+            """
+            Corp Light: light big-tech buzzword seasoning in spoken meeting tone (对齐/同步/postpone/owner). \
+            Keep the facts; pick report / quarrel / blame-shift voice from intent. Do not dump a buzzword dictionary into one sentence.
+            """
+        case .medium:
+            """
+            Corp Medium: clearer sync/report or soft pushback with buzzwords (拉通/颗粒度/交界面/闭环). \
+            Still sounds like someone talking in a meeting. Must be denser corp-speak than Corp Light.
+            """
+        case .heavy:
+            """
+            Corp Heavy: stronger quarrel or blame-shift flavor with denser buzzwords; still short spoken turns, not a PPT essay. \
+            No real firing/PIP threats or personal insults. Must be clearly heavier than Corp Medium.
+            """
+        }
+    }
+
+    private var dibaGuideline: String {
+        switch self {
+        case .light:
+            """
+            DiBa Light: rewrite as a short reply that catches the other person's claim and lightly cracks the premise. \
+            No swearing or personal attacks. Spoken takedown, not a debate essay.
+            """
+        case .medium:
+            """
+            DiBa Medium: clearer premise-breaking with cooler mockery; still 1–3 short lines. \
+            Must feel more crushing than DiBa Light without becoming an opinion brief.
+            """
+        case .heavy:
+            """
+            DiBa Heavy: colder high-irony takedown that makes the other side hard to answer; still no swearing, no group attacks, no "首先/综上所述" essays. \
+            Must be clearly sharper than DiBa Medium.
+            """
+        }
+    }
+
+    private var xhsGuideline: String {
+        switch self {
+        case .light:
+            """
+            RED Note Light (轻安利): rewrite into sisterly Xiaohongshu note voice with light tone words and sparse emoji. \
+            Keep length close to the draft; do not invent product claims or "亲测" details. \
+            Never add an audience the draft does not address (no 姐妹们/集美们/大家). Must feel gently 集美, not ad-copy.
+            """
+        case .medium:
+            """
+            RED Note Medium (种草感): fuller note body with a hook opening, short paragraphs, and lived-experience tone. \
+            Light lists are OK when the transcript has multiple points. The hook describes the topic, never a crowd greeting. \
+            Must read more post-ready than RED Note Light. Still no invented facts or invented audience.
+            """
+        case .heavy:
+            """
+            RED Note Heavy (爆款感): stronger emotional hook, optional contrast/避雷/steps. \
+            A light comment CTA is allowed only when the draft already addresses an audience; otherwise no CTA and no crowd greeting. \
+            The hook must match the draft's stance — never open a positive draft with 避雷/踩坑 framing. \
+            Paragraphs and scannable structure are allowed. Still no fabricated efficacy, numbers, or fake before/after. Must feel clearly more viral than Medium.
+            """
+        }
+    }
+
+    private var defaultGuideline: String {
+        switch self {
+        case .light:
+            """
+            Light rewrite: remove isolated filler words (嗯, 呃, 那个, 就是, 然后, 对, ok, um, uh) and obvious duplicated fragments only. \
+            Do not rephrase otherwise-clear wording. \
+            Still restore punctuation and sentence breaks per the global output contract and active style pack.
+            """
+        case .medium:
+            """
             Medium rewrite: fix obvious ASR errors (homophones, missing/extra characters), remove fillers and duplicated fragments, \
             adjust obviously-broken word order. Preserve the speaker's voice. \
-            Still restore punctuation, sentence breaks, and content-triggered structure per the global output contract. \
+            Still restore punctuation and breaks per the global output contract and active style pack. \
             Do not invent facts or change numbers/proper nouns.
             """
         case .heavy:
-            return """
-            Heavy rewrite: apply medium corrections, then you may reorganize paragraphs, split long sentences, and listify enumerated content. \
-            Punctuation and structure are mandatory at every intensity. \
+            """
+            Heavy rewrite: apply medium corrections, then you may reorganize paragraphs, split long sentences, and listify enumerated content when the active style pack allows it. \
+            Punctuation is mandatory at every intensity. \
             Preserve every fact, number, and proper noun. Do not add information.
             """
         }

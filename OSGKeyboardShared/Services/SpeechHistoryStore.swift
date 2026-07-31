@@ -52,6 +52,26 @@ public final class SpeechHistoryStore: ObservableObject {
         applyPayload(postCloudPush: true)
     }
 
+    /// Deletes every entry whose `createdAt` falls on the given calendar day (local).
+    public func deleteEntries(on day: Date) {
+        rebaseOnPersistedStateBeforeMutation()
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: day)
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return }
+
+        let matching = payload.entries.filter { $0.createdAt >= start && $0.createdAt < end }
+        guard !matching.isEmpty else { return }
+
+        let now = Date()
+        for entry in matching {
+            payload.deletedEntryIDs[entry.id] = now
+        }
+        payload.entries.removeAll { $0.createdAt >= start && $0.createdAt < end }
+        payload.updatedAt = now
+        payload.pruneTombstonesIfNeeded()
+        applyPayload(postCloudPush: true)
+    }
+
     public func clearAll() {
         rebaseOnPersistedStateBeforeMutation()
         payload.recordClearAll()

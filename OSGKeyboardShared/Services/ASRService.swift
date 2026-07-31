@@ -191,14 +191,20 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
     }
 
     func warmup(locale: Locale) async {
+        let warmupStartedAt = Date()
         guard let resolvedLocale = await DictationTranscriber.supportedLocale(equivalentTo: locale) else {
             Self.debug("warmup locale unsupported requested=\(locale.identifier(.bcp47))")
+            FlowTrace.warn(
+                "asr.local.warmup.localeUnsupported",
+                "requested=\(locale.identifier(.bcp47))"
+            )
             return
         }
         let localeID = resolvedLocale.identifier(.bcp47)
         let cachedLocaleID = lock.withLock { chunkPreparedLocaleID }
         if cachedLocaleID == localeID, lock.withLock({ chunkAnalyzerFormat != nil }) {
             Self.debug("warmup cache hit locale=\(localeID)")
+            FlowTrace.asr("local.warmup.cacheHit", "locale=\(localeID)")
             return
         }
 
@@ -209,6 +215,11 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
             "clmState=\(Self.describeCLMState(setup.clmState))"
         )
 
+        FlowTrace.asr(
+            "local.warmup.begin",
+            "locale=\(localeID) customLM=\(setup.usesCustomLanguageModel ? 1 : 0) "
+                + "clmState=\(Self.describeCLMState(setup.clmState))"
+        )
         do {
             try await Self.prepareAssetsIfNeeded(for: setup.transcriber, locale: resolvedLocale)
             guard let format = await SpeechAnalyzer.bestAvailableAudioFormat(
@@ -216,6 +227,7 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
                 considering: Self.captureFormat
             ) else {
                 Self.debug("warmup format unsupported locale=\(localeID)")
+                FlowTrace.warn("asr.local.warmup.formatUnsupported", "locale=\(localeID)")
                 return
             }
             lock.withLock {
@@ -223,8 +235,18 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
                 chunkAnalyzerFormat = format
             }
             Self.debug("warmup ready locale=\(localeID)")
+            FlowTrace.asr(
+                "local.warmup.ready",
+                "locale=\(localeID) analyzerRate=\(Int(format.sampleRate)) "
+                    + "elapsed=\(FlowTrace.seconds(since: warmupStartedAt))s"
+            )
         } catch {
             Self.debug("warmup failed: \(error.localizedDescription)")
+            FlowTrace.warn(
+                "asr.local.warmup.failed",
+                "locale=\(localeID) elapsed=\(FlowTrace.seconds(since: warmupStartedAt))s "
+                    + "error=\(error.localizedDescription)"
+            )
         }
     }
 
@@ -245,12 +267,24 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
                 "chunk success textLen=\(trimmed.count) elapsed=\(Self.elapsed(startedAt))s " +
                 "empty=\(trimmed.isEmpty)"
             )
+            FlowTrace.transcript(
+                "asr.local.chunk",
+                trimmed,
+                "engine=local samples=\(samples.count) rms=\(String(format: "%.4f", rms)) "
+                    + "elapsed=\(Self.elapsed(startedAt))s locale=\(locale.identifier(.bcp47))"
+            )
             return trimmed.isEmpty ? .success("") : .success(trimmed)
         } catch is CancellationError {
             Self.debug("chunk cancelled elapsed=\(Self.elapsed(startedAt))s")
+            FlowTrace.asr("local.chunk.cancelled", "samples=\(samples.count)")
             return .cancelled
         } catch {
             Self.debug("chunk failed elapsed=\(Self.elapsed(startedAt))s error=\(error.localizedDescription)")
+            FlowTrace.warn(
+                "asr.local.chunk.failed",
+                "samples=\(samples.count) rms=\(String(format: "%.4f", rms)) "
+                    + "error=\(error.localizedDescription)"
+            )
             return .failure(error.localizedDescription)
         }
     }
@@ -395,6 +429,11 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
                         try await Self.prepareAssetsIfNeeded(for: setup.transcriber, locale: resolvedLocale)
                     } catch {
                         Self.debug("asset prepare failed: \(error.localizedDescription)")
+                        FlowTrace.warn(
+                            "asr.local.stream.assetsNotReady",
+                            "locale=\(resolvedLocale.identifier(.bcp47)) "
+                                + "error=\(error.localizedDescription)"
+                        )
                         continuation.yield(.error(SharedL10n.string("error.asr.assetsNotReady")))
                         continuation.finish()
                         return
@@ -426,6 +465,7 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
                             guard let full = accumulator.ingest(range: result.range, text: text) else {
                                 continue
                             }
+                            FlowTrace.transcript("asr.local.partial", full, "engine=local")
                             continuation.yield(.partial(full))
                         }
                         return accumulator.finalize()
@@ -451,8 +491,13 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
 
                     let trimmed = lastText.trimmingCharacters(in: .whitespacesAndNewlines)
                     if trimmed.isEmpty {
+                        FlowTrace.warn(
+                            "asr.local.stream.emptyFinal",
+                            "locale=\(resolvedLocale.identifier(.bcp47))"
+                        )
                         continuation.yield(.error(SharedL10n.string("error.asr.noSpeech")))
                     } else {
+                        FlowTrace.transcript("asr.local.final", trimmed, "engine=local")
                         continuation.yield(.final(trimmed))
                     }
                     continuation.finish()

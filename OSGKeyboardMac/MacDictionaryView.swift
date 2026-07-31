@@ -11,6 +11,10 @@ struct MacDictionaryView: View {
     @Environment(\.themePalette) private var palette
     @State private var query = ""
     @State private var entryPendingDeletion: PersonalDictionary.Entry?
+    @State private var showEntryEditor = false
+    @State private var generatingAliasEntryIDs: Set<UUID> = []
+
+    private let aliasGenerator = DictionaryAliasGenerator()
 
     private var lang: AppUILanguage { viewModel.config.uiLanguage }
 
@@ -49,8 +53,19 @@ struct MacDictionaryView: View {
                 title: MacL10n.string("mac.section.dictionary", language: lang),
                 subtitle: MacL10n.string("mac.page.dictionary.subtitle", language: lang)
             ) {
-                if !entries.isEmpty {
-                    searchField
+                HStack(spacing: Spacing.sm) {
+                    if !entries.isEmpty {
+                        searchField
+                    }
+                    Button {
+                        showEntryEditor = true
+                    } label: {
+                        Label(
+                            MacL10n.string("mac.dict.add", language: lang),
+                            systemImage: "plus"
+                        )
+                    }
+                    .buttonStyle(MacHeaderActionButtonStyle())
                 }
             }
 
@@ -67,6 +82,11 @@ struct MacDictionaryView: View {
         }
         .background(palette.background)
         .animation(Motion.soft, value: entries.isEmpty)
+        .sheet(isPresented: $showEntryEditor) {
+            MacDictionaryEntryEditor(language: lang) { term in
+                saveManualEntry(term: term)
+            }
+        }
         .task {
             await MacICloudSyncBootstrap.dictionarySync.pullAndMergeIfEnabled()
             viewModel.refreshDictionaryFromCloud()
@@ -154,8 +174,7 @@ struct MacDictionaryView: View {
                 .font(TypeStyle.footnote)
         }
         .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, 6)
-        .frame(width: 220)
+        .frame(width: 220, height: MacMetrics.pageHeaderControlHeight)
         .background(palette.surface, in: Capsule())
         .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
     }
@@ -178,6 +197,8 @@ struct MacDictionaryView: View {
         }
         if !entry.aliases.isEmpty {
             parts.append(entry.aliases.joined(separator: " / "))
+        } else if generatingAliasEntryIDs.contains(entry.id) {
+            parts.append(MacL10n.string("mac.dict.aliasesGenerating", language: lang))
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
@@ -205,10 +226,96 @@ struct MacDictionaryView: View {
     private func delete(_ entry: PersonalDictionary.Entry) {
         let store = AppGroupStore(defaults: viewModel.defaults)
         store.deletePersonalDictionaryEntry(id: entry.id)
+        generatingAliasEntryIDs.remove(entry.id)
         viewModel.refreshDictionaryFromCloud()
         Task {
             try? await MacICloudSyncBootstrap.dictionarySync.pushLocalIfEnabled(store.personalDictionary)
         }
+    }
+
+    private func saveManualEntry(term: String) {
+        let store = AppGroupStore(defaults: viewModel.defaults)
+        var dictionary = store.personalDictionary
+        guard let saved = dictionary.upsertManual(term: term) else { return }
+        dictionary.version += 1
+        store.setPersonalDictionary(dictionary)
+        viewModel.refreshDictionaryFromCloud()
+        generatingAliasEntryIDs.insert(saved.id)
+
+        Task {
+            try? await MacICloudSyncBootstrap.dictionarySync.pushLocalIfEnabled(dictionary)
+            let aliases = await aliasGenerator.generateAliases(for: saved.term)
+
+            generatingAliasEntryIDs.remove(saved.id)
+            guard !aliases.isEmpty else { return }
+
+            var latest = store.personalDictionary
+            guard latest.entries.contains(where: {
+                $0.id == saved.id && $0.term == saved.term
+            }) else { return }
+            latest.updateAliases(for: saved.id, aliases: aliases)
+            latest.version += 1
+            store.setPersonalDictionary(latest)
+            viewModel.refreshDictionaryFromCloud()
+            try? await MacICloudSyncBootstrap.dictionarySync.pushLocalIfEnabled(latest)
+        }
+    }
+}
+
+private struct MacDictionaryEntryEditor: View {
+    let language: AppUILanguage
+    let onSave: (String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.themePalette) private var palette
+    @State private var term = ""
+    @FocusState private var termFocused: Bool
+
+    private var trimmedTerm: String {
+        term.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text(MacL10n.string("mac.dict.add", language: language))
+                .font(TypeStyle.title2)
+
+            TextField(
+                MacL10n.string("mac.dict.addField", language: language),
+                text: $term
+            )
+            .textFieldStyle(.roundedBorder)
+            .focused($termFocused)
+            .onSubmit(save)
+
+            Text(MacL10n.string("mac.dict.addFooter", language: language))
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack {
+                Spacer()
+                Button(MacL10n.string("mac.cancel", language: language)) {
+                    dismiss()
+                }
+                Button(MacL10n.string("mac.save", language: language), action: save)
+                    .buttonStyle(.borderedProminent)
+                    .tint(palette.accent)
+                    .disabled(trimmedTerm.isEmpty)
+            }
+        }
+        .padding(Spacing.xl)
+        .frame(width: 440)
+        .background(palette.background)
+        .onAppear {
+            termFocused = true
+        }
+    }
+
+    private func save() {
+        guard !trimmedTerm.isEmpty else { return }
+        onSave(trimmedTerm)
+        dismiss()
     }
 }
 

@@ -18,7 +18,7 @@ final class UtteranceTranscriptStitcherTests: XCTestCase {
         var stitcher = UtteranceTranscriptStitcher()
         stitcher.append(index: 1, text: "第二段")
         stitcher.append(index: 0, text: "第一段")
-        XCTAssertEqual(stitcher.composed(), "第一段 第二段")
+        XCTAssertEqual(stitcher.composed(), "第一段第二段")
     }
 
     func testComposedSafelyFallsBackWhenOverlapMergeShortensTooMuch() {
@@ -38,6 +38,30 @@ final class UtteranceTranscriptStitcherTests: XCTestCase {
         stitcher.append(index: 1, text: "第二段")
         stitcher.removeLastSegment()
         stitcher.append(index: 1, text: "第二段合并")
-        XCTAssertEqual(stitcher.composed(), "第一段 第二段合并")
+        XCTAssertEqual(stitcher.composed(), "第一段第二段合并")
+    }
+
+    func testComposedWithPauseMarksInsertsAboveThreshold() {
+        var stitcher = UtteranceTranscriptStitcher()
+        stitcher.append(index: 0, text: "第一段", trailingPauseSeconds: 0.8)
+        stitcher.append(index: 1, text: "第二段")
+        XCTAssertEqual(stitcher.composedWithPauseMarks(), "第一段 ⟨0.8s⟩ 第二段")
+    }
+
+    func testComposedSafelyRemainsMarkerFree() {
+        var stitcher = UtteranceTranscriptStitcher()
+        stitcher.append(index: 0, text: "第一段", trailingPauseSeconds: 0.8)
+        stitcher.append(index: 1, text: "第二段")
+        XCTAssertFalse(stitcher.composedSafely().contains("⟨"))
+    }
+
+    /// Documents the preMerge wipe hazard: append ignores empty text, so
+    /// removeLast + empty append leaves nothing. Pipeline must guard this.
+    func testEmptyAppendAfterRemoveLastWipesPriorSegment() {
+        var stitcher = UtteranceTranscriptStitcher()
+        stitcher.append(index: 0, text: "已识别内容")
+        stitcher.removeLastSegment()
+        stitcher.append(index: 0, text: "")
+        XCTAssertEqual(stitcher.composedSafely(), "")
     }
 }

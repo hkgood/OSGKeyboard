@@ -18,11 +18,15 @@ public enum TranslationPrompt {
     public static func make(
         target: TranslationLanguage,
         providerId: String,
-        appContext: AppContext = .unknown
+        appContext: AppContext = .unknown,
+        sourceText: String = ""
     ) -> String {
-        let isChineseNative = ["zhipu", "moonshot", "qwen", "deepseek"].contains(providerId)
+        let useChinese = PolishingService.shouldUseChineseGuidance(
+            inputText: sourceText,
+            providerId: providerId
+        )
         let contextGuideline = appContext.polishGuideline
-        return isChineseNative
+        return useChinese
             ? chinesePrompt(target: target, contextGuideline: contextGuideline)
             : englishPrompt(target: target, contextGuideline: contextGuideline)
     }

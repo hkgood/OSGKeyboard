@@ -12,6 +12,13 @@ public struct LLMRequest: Codable, Sendable {
     public let messages: [Message]
     public let temperature: Double?
     public let maxTokens: Int?
+    public let topP: Double?
+
+    private enum CodingKeys: String, CodingKey {
+        case model, messages, temperature
+        case maxTokens = "max_tokens"
+        case topP = "top_p"
+    }
 
     public enum Message: Codable, Sendable {
         case system(String)
@@ -52,19 +59,65 @@ public struct LLMRequest: Codable, Sendable {
     public init(
         model: String,
         messages: [Message],
-        temperature: Double? = 0.3,
-        maxTokens: Int? = nil
+        temperature: Double? = 0.1,
+        maxTokens: Int? = nil,
+        topP: Double? = 0.9
     ) {
         self.model = model
         self.messages = messages
         self.temperature = temperature
         self.maxTokens = maxTokens
+        self.topP = topP
+    }
+
+    /// Coarse estimate used only for a safe output ceiling.
+    public static func estimatedTokenCount(for text: String) -> Int {
+        var cjkCount = 0
+        var nonCJKCount = 0
+        for scalar in text.unicodeScalars {
+            switch scalar.value {
+            case 0x4E00...0x9FFF, 0x3400...0x4DBF, 0xF900...0xFAFF:
+                cjkCount += 1
+            default:
+                nonCJKCount += 1
+            }
+        }
+        return max(1, cjkCount + Int(ceil(Double(nonCJKCount) / 4.0)))
+    }
+
+    public static func outputTokenLimit(for text: String) -> Int {
+        min(4_096, max(256, estimatedTokenCount(for: text) * 2))
     }
 }
 
 public struct LLMResponse: Codable, Sendable {
     public let id: String?
     public let choices: [Choice]
+    public let usage: Usage?
+
+    public struct Usage: Codable, Sendable {
+        public let promptTokens: Int?
+        public let promptCacheHitTokens: Int?
+        public let promptTokensDetails: PromptTokensDetails?
+
+        public struct PromptTokensDetails: Codable, Sendable {
+            public let cachedTokens: Int?
+
+            private enum CodingKeys: String, CodingKey {
+                case cachedTokens = "cached_tokens"
+            }
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case promptTokens = "prompt_tokens"
+            case promptCacheHitTokens = "prompt_cache_hit_tokens"
+            case promptTokensDetails = "prompt_tokens_details"
+        }
+
+        public var cachedTokens: Int? {
+            promptCacheHitTokens ?? promptTokensDetails?.cachedTokens
+        }
+    }
 
     public struct Choice: Codable, Sendable {
         public let index: Int

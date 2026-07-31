@@ -8,6 +8,7 @@
 "flow.warning.cloudPolishMissingKey" = "云端润色需要先在设置中填写 API Key，本次已插入原始识别结果。";
 "flow.warning.localPolishUnavailable" = "内置润色暂不可用，本次已插入原始识别结果。";
 "flow.warning.polishDegraded" = "弱网识别，本次未润色，已插入原始识别结果。";
+"flow.warning.polishDegradedQuality" = "本次润色结果未通过校验，已插入保守处理版本。";
 
 /* LLM providers */
 "provider.openai" = "OpenAI";
@@ -60,7 +61,7 @@
 "error.cloudASR.emptyTranscript" = "云端识别返回了空文本。";
 "error.cloudASR.audioTooLong" = "音频片段超过该云端识别服务的时长限制。";
 "error.cloudASR.providerUnsupported" = "该服务商暂不支持云端语音识别。";
-"error.cloudASR.streamingNotImplemented" = "该服务商需要流式 ASR（WebSocket），当前版本尚未接入。可改用通义、智谱、Groq 或 OpenAI。";
+"error.cloudASR.streamingNotImplemented" = "该服务商流式 ASR 失败。请检查 API Key 与网络后重试。";
 
 /* 服务商工具 */
 "providerTools.error.invalidURL" = "模型接口地址无效。";
@@ -87,6 +88,15 @@
 "polishScenario.chip.document" = "文档";
 "polishScenario.chip.todo" = "TODO";
 "polishScenario.chip.custom" = "自定义";
+"polishStyle.light" = "轻度清理";
+"polishStyle.structured" = "清晰结构";
+"polishStyle.formal" = "正式表达";
+"polishStyle.dating" = "直男癌拯救器";
+"polishStyle.chat" = "日常聊天";
+"polishStyle.flex" = "装逼指南";
+"polishStyle.corp" = "大厂黑话";
+"polishStyle.diba" = "帝吧大神";
+"polishStyle.xhs" = "小红书集美";
 
 /* v0.3.0: 润色档位 */
 "polish.intensity.off" = "关闭";
@@ -129,6 +139,30 @@
 "mac.section.dashboard" = "首页";
 "mac.section.history" = "历史";
 "mac.section.dictionary" = "词库";
+"mac.section.styles" = "润色风格";
+"mac.styles.subtitle" = "为听写润色选择或创建完整写作人格。";
+"mac.styles.add" = "添加润色风格";
+"mac.styles.edit" = "编辑风格";
+"mac.styles.builtin" = "内置风格";
+"mac.styles.fun" = "趣味风格";
+"mac.styles.custom" = "我的风格";
+"mac.styles.copy" = "副本";
+"mac.styles.viewPrompt" = "查看提示词";
+"mac.styles.light" = "修正识别与标点，尽量少改原话。";
+"mac.styles.structured" = "将多个事项整理成清晰段落与列表。";
+"mac.styles.formal" = "适合邮件和工作的专业表达。";
+"mac.styles.dating" = "有态度、好接，偶尔带一点巧思的恋爱聊天。";
+"mac.styles.chat" = "简短自然的聊天消息，避免公文腔。";
+"mac.styles.flex" = "中英夹杂的 4A / 留学装逼腔，偶尔点缀品牌格调。";
+"mac.styles.corp" = "大厂开会黑话：汇报、吵架、甩锅都像那么回事。";
+"mac.styles.diba" = "不脏字的逻辑碾压回复，让对方接不住。";
+"mac.styles.xhs" = "姐妹向小红书笔记体：有钩子、可种草、可直接发帖。";
+"mac.styles.customDescription" = "自定义完整写作人格";
+"mac.styles.error" = "无法保存风格";
+"mac.styles.validation" = "请检查名称、提示词长度及 8 个风格的数量上限。";
+"mac.styles.name" = "风格名称";
+"mac.styles.prompt" = "完整提示词";
+"mac.styles.hint" = "使用 {{DICTIONARY}} 指定个人词典位置；系统规则会自动追加。";
 "mac.section.settings" = "设置";
 "mac.brand.subtitle" = "AI 听写";
 "mac.brand.tagline" = "开口即文字。";
@@ -181,13 +215,23 @@
 "mac.history.clearTitle" = "清空全部历史？";
 "mac.history.clearMessage" = "此操作无法撤销。";
 "mac.history.clearConfirm" = "全部清空";
+"mac.history.clearDayTitle" = "删除这一天的记录？";
+"mac.history.clearDayMessage" = "将删除该日全部语音记录，此操作无法撤销。";
+"mac.history.clearDayConfirm" = "删除当天";
+"mac.history.clearDayButton" = "删除当天历史";
 "mac.dict.health" = "词库健康度";
 "mac.dict.healthDesc" = "影响识别偏置且润色时不会被改写的自定义词条。";
+"mac.dict.add" = "添加个性词";
+"mac.dict.addField" = "词语或短语";
+"mac.dict.addFooter" = "保存后将自动生成常见的语音误识别别名。";
+"mac.dict.aliasesGenerating" = "正在生成别名…";
 "mac.dict.search" = "搜索词条";
 "mac.dict.empty" = "还没有词条";
-"mac.dict.emptyBody" = "在 iPhone 或 iPad 上添加词条以提升识别准确性，它们会通过 iCloud 同步到这里。";
+"mac.dict.emptyBody" = "添加个性词以提升识别准确性，它们会通过 iCloud 在设备间同步。";
 "mac.dict.noMatch" = "无匹配结果";
 "mac.cancel" = "取消";
+"mac.save" = "保存";
+"mac.done" = "完成";
 "mac.delete" = "删除";
 "mac.dict.deleteTitle" = "删除该词条？";
 "mac.dict.deleteMessage" = "此操作无法撤销。";
@@ -217,6 +261,8 @@
 "mac.settings.thinking" = "思考";
 "mac.settings.thinkingSubtitle" = "速度更慢、质量更高，建议关闭";
 "mac.settings.thinkingHint" = "默认关闭。仅在需要更慢、更深的推理时开启。";
+"mac.settings.translation" = "润色后翻译";
+"mac.settings.translationOff" = "不翻译";
 "mac.settings.volcengineAppId" = "APP ID";
 "mac.settings.volcengineAccessToken" = "Access Token";
 "mac.settings.volcengineResourceId" = "Resource ID";
@@ -350,7 +396,7 @@
 "mac.localASR.phase.finalizing" = "完成安装";
 "mac.localASR.phase.failed" = "失败";
 "mac.localASR.phase.completed" = "已完成";
-"mac.error.accessibilityRequired" = "请在系统设置中为 OSGKeyboard 启用辅助功能";
+"mac.error.accessibilityRequired" = "识别结果已复制到剪贴板，请按 ⌘V 粘贴，然后在系统设置中为 OSGKeyboard 启用辅助功能。";
 "mac.foregroundApp" = "前台应用：%@";
 "mac.sync.settingsTitle" = "跨设备iCloud 同步";
 "mac.sync.settingsSubtitle" = "通过 iCloud 跨设备同步设置、历史记录、API Key";

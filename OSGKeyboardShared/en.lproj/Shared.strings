@@ -8,6 +8,7 @@
 "flow.warning.cloudPolishMissingKey" = "Cloud polish needs an API key in Settings. Inserted raw ASR text.";
 "flow.warning.localPolishUnavailable" = "Built-in polish is unavailable. Inserted raw ASR text.";
 "flow.warning.polishDegraded" = "Weak network — inserted raw ASR text without polish.";
+"flow.warning.polishDegradedQuality" = "Polish output failed validation; inserted a conservative version.";
 
 /* LLM providers */
 "provider.openai" = "OpenAI";
@@ -60,7 +61,7 @@
 "error.cloudASR.emptyTranscript" = "Cloud ASR returned an empty transcript.";
 "error.cloudASR.audioTooLong" = "Audio segment is too long for this cloud ASR provider.";
 "error.cloudASR.providerUnsupported" = "This provider does not support cloud speech recognition yet.";
-"error.cloudASR.streamingNotImplemented" = "This provider requires streaming ASR (WebSocket), which is not available in this build yet. Try Qwen, Zhipu, Groq, or OpenAI.";
+"error.cloudASR.streamingNotImplemented" = "Streaming ASR failed for this provider. Check your API key and network, or try again.";
 
 /* Provider tools */
 "providerTools.error.invalidURL" = "Invalid model endpoint.";
@@ -87,6 +88,15 @@
 "polishScenario.chip.document" = "Doc";
 "polishScenario.chip.todo" = "TODO";
 "polishScenario.chip.custom" = "Custom";
+"polishStyle.light" = "Light Cleanup";
+"polishStyle.structured" = "Clear Structure";
+"polishStyle.formal" = "Formal Writing";
+"polishStyle.dating" = "Dating Coach";
+"polishStyle.chat" = "Daily Chat";
+"polishStyle.flex" = "Flex Guide";
+"polishStyle.corp" = "Corp Speak";
+"polishStyle.diba" = "DiBa Logic";
+"polishStyle.xhs" = "RED Sisters";
 
 /* v0.3.0: Polish intensity picker */
 "polish.intensity.off" = "Off";
@@ -129,6 +139,30 @@
 "mac.section.dashboard" = "Home";
 "mac.section.history" = "History";
 "mac.section.dictionary" = "Dictionary";
+"mac.section.styles" = "Polish Styles";
+"mac.styles.subtitle" = "Choose or create a complete writing personality for polished dictation.";
+"mac.styles.add" = "Add Polish Style";
+"mac.styles.edit" = "Edit Style";
+"mac.styles.builtin" = "Built-in";
+"mac.styles.fun" = "Fun styles";
+"mac.styles.custom" = "My Styles";
+"mac.styles.copy" = "Copy";
+"mac.styles.viewPrompt" = "View Prompt";
+"mac.styles.light" = "Minimal rewriting with recognition and punctuation fixes.";
+"mac.styles.structured" = "Clear paragraphs and lists for multiple points.";
+"mac.styles.formal" = "Professional writing for email and work.";
+"mac.styles.dating" = "Warm, playful messages with a light touch of wit.";
+"mac.styles.chat" = "Short, natural messages without a formal tone.";
+"mac.styles.flex" = "4A / study-abroad Chinglish with optional luxury seasoning.";
+"mac.styles.corp" = "Big-tech buzzwords for syncs, pushback, and blame-shifting.";
+"mac.styles.diba" = "Clean logical takedowns that leave the other side stuck.";
+"mac.styles.xhs" = "Sisterly Xiaohongshu note voice with hooks, ready to post.";
+"mac.styles.customDescription" = "Custom complete writing personality";
+"mac.styles.error" = "Couldn’t Save Style";
+"mac.styles.validation" = "Check the name, prompt length, and the 8-style limit.";
+"mac.styles.name" = "Style name";
+"mac.styles.prompt" = "Complete prompt";
+"mac.styles.hint" = "Use {{DICTIONARY}} to place the personal dictionary. System rules are appended automatically.";
 "mac.section.settings" = "Settings";
 "mac.brand.subtitle" = "AI DICTATION";
 "mac.brand.tagline" = "Speak it. It’s typed.";
@@ -181,13 +215,23 @@
 "mac.history.clearTitle" = "Clear all history?";
 "mac.history.clearMessage" = "This cannot be undone.";
 "mac.history.clearConfirm" = "Clear all";
+"mac.history.clearDayTitle" = "Delete this day's history?";
+"mac.history.clearDayMessage" = "All transcripts from this day will be removed. This cannot be undone.";
+"mac.history.clearDayConfirm" = "Delete day";
+"mac.history.clearDayButton" = "Delete this day's history";
 "mac.dict.health" = "Vocabulary Health";
 "mac.dict.healthDesc" = "Custom terms that bias recognition and are never rewritten.";
+"mac.dict.add" = "Add Personal Word";
+"mac.dict.addField" = "Word or phrase";
+"mac.dict.addFooter" = "Common recognition mistakes will be generated automatically after saving.";
+"mac.dict.aliasesGenerating" = "Generating aliases…";
 "mac.dict.search" = "Search words";
 "mac.dict.empty" = "No words yet";
-"mac.dict.emptyBody" = "Add words on your iPhone or iPad to improve recognition accuracy. They sync here via iCloud.";
+"mac.dict.emptyBody" = "Add personal words to improve recognition accuracy. They sync across your devices via iCloud.";
 "mac.dict.noMatch" = "No matches";
 "mac.cancel" = "Cancel";
+"mac.save" = "Save";
+"mac.done" = "Done";
 "mac.delete" = "Delete";
 "mac.dict.deleteTitle" = "Delete this word?";
 "mac.dict.deleteMessage" = "This cannot be undone.";
@@ -217,6 +261,8 @@
 "mac.settings.thinking" = "Thinking";
 "mac.settings.thinkingSubtitle" = "Slower, higher quality — recommended off";
 "mac.settings.thinkingHint" = "Off by default. Enable only for slower, deeper reasoning.";
+"mac.settings.translation" = "Polish then translate";
+"mac.settings.translationOff" = "Don't translate";
 "mac.settings.volcengineAppId" = "APP ID";
 "mac.settings.volcengineAccessToken" = "Access Token";
 "mac.settings.volcengineResourceId" = "Resource ID";
@@ -350,7 +396,7 @@
 "mac.localASR.phase.finalizing" = "Finalizing";
 "mac.localASR.phase.failed" = "Failed";
 "mac.localASR.phase.completed" = "Completed";
-"mac.error.accessibilityRequired" = "Enable Accessibility for OSGKeyboard in System Settings";
+"mac.error.accessibilityRequired" = "Dictation copied to the clipboard. Press ⌘V to paste, then enable Accessibility for OSGKeyboard in System Settings.";
 "mac.foregroundApp" = "Front app: %@";
 "mac.sync.settingsTitle" = "Cross-Device iCloud Sync";
 "mac.sync.settingsSubtitle" = "Sync settings, history, and API keys across devices via iCloud.";

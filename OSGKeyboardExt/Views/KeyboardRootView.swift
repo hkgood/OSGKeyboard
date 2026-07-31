@@ -418,9 +418,17 @@ private struct TranscriptLine: View {
             case .unavailable(.missingAPIKey):
                 Text(micDisabledHint)
             case .unavailable(.hostNotReady):
-                ExtL10n.text("keyboard.flow.sessionInactive")
+                if FlowSessionPolicy.keepAliveMode() == .pictureInPicture {
+                    ExtL10n.text("keyboard.flow.sessionInactive.pip")
+                } else {
+                    ExtL10n.text("keyboard.flow.sessionInactive")
+                }
             case .unavailable(.preparingSession):
-                ExtL10n.text("keyboard.flow.startingSession")
+                if FlowSessionPolicy.keepAliveMode() == .pictureInPicture {
+                    ExtL10n.text("keyboard.flow.startingSession.pip")
+                } else {
+                    ExtL10n.text("keyboard.flow.startingSession")
+                }
             case .unavailable(.noFullAccess):
                 ExtL10n.text("keyboard.error.fullAccessRequired")
             case .unavailable(.appGroupUnavailable):

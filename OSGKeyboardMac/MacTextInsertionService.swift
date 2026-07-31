@@ -12,6 +12,10 @@ import Carbon
 import Foundation
 
 enum MacTextInsertionService {
+    /// Paste has no completion callback. Keep the transcript available long
+    /// enough for slower apps to consume the event before restoring clipboard.
+    static let pasteboardRestoreDelayNanoseconds: UInt64 = 500_000_000
+
     enum InsertionError: Error, LocalizedError {
         case accessibilityNotGranted
 
@@ -72,6 +76,7 @@ enum MacTextInsertionService {
         let snapshot = snapshotItems(of: pasteboard)
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        let transcriptChangeCount = pasteboard.changeCount
 
         guard autoPaste else { return false }
         guard AXIsProcessTrusted() else { throw InsertionError.accessibilityNotGranted }
@@ -84,9 +89,23 @@ enum MacTextInsertionService {
 
         // Give the target app time to read the transcript off the
         // pasteboard, then restore whatever the user had on it.
-        try? await Task.sleep(nanoseconds: 300_000_000)
-        restoreItems(snapshot, to: pasteboard)
+        try? await Task.sleep(nanoseconds: pasteboardRestoreDelayNanoseconds)
+        if shouldRestorePasteboard(
+            transcriptChangeCount: transcriptChangeCount,
+            currentChangeCount: pasteboard.changeCount
+        ) {
+            restoreItems(snapshot, to: pasteboard)
+        }
         return true
+    }
+
+    /// Do not overwrite clipboard content written by the user, target app, or
+    /// a clipboard manager while the synthesized paste was in flight.
+    static func shouldRestorePasteboard(
+        transcriptChangeCount: Int,
+        currentChangeCount: Int
+    ) -> Bool {
+        transcriptChangeCount == currentChangeCount
     }
 
     /// Brings `app` forward and waits (up to ~1 s) until it is frontmost so
@@ -119,12 +138,12 @@ enum MacTextInsertionService {
         }
     }
 
-    private static func restoreItems(
+    static func restoreItems(
         _ items: [[NSPasteboard.PasteboardType: Data]],
         to pasteboard: NSPasteboard
     ) {
-        guard !items.isEmpty else { return }
         pasteboard.clearContents()
+        guard !items.isEmpty else { return }
         pasteboard.writeObjects(items.map { flavours in
             let item = NSPasteboardItem()
             for (type, data) in flavours { item.setData(data, forType: type) }

@@ -13,6 +13,7 @@ enum MacSection: String, CaseIterable, Identifiable {
     case dashboard
     case history
     case dictionary
+    case styles
     case settings
 
     var id: String { rawValue }
@@ -22,6 +23,7 @@ enum MacSection: String, CaseIterable, Identifiable {
         case .dashboard: return MacL10n.string("mac.section.dashboard", language: language)
         case .history: return MacL10n.string("mac.section.history", language: language)
         case .dictionary: return MacL10n.string("mac.section.dictionary", language: language)
+        case .styles: return MacL10n.string("mac.section.styles", language: language)
         case .settings: return MacL10n.string("mac.section.settings", language: language)
         }
     }
@@ -31,6 +33,7 @@ enum MacSection: String, CaseIterable, Identifiable {
         case .dashboard: return "house"
         case .history: return "clock.arrow.circlepath"
         case .dictionary: return "character.book.closed"
+        case .styles: return "text.badge.star"
         case .settings: return "gearshape"
         }
     }
@@ -63,6 +66,7 @@ final class MacDictationViewModel: ObservableObject {
     @Published var sessionSeconds: Int = 0
     @Published var foregroundAppName: String?
     @Published var dictionaryRevision = 0
+    @Published var polishStylesRevision = 0
 
     @Published var autoPasteEnabled: Bool
     @Published var hotkeyEnabled: Bool
@@ -71,14 +75,21 @@ final class MacDictationViewModel: ObservableObject {
     @Published var config: ProviderConfig
 
     let defaults: UserDefaults
-    private let recorder = MacAudioRecorder()
-    private let hotkeyService = MacHotkeyService()
+    private let recorder: any MacAudioRecording
+    private let hotkeyService: MacHotkeyService
     private var levelTimer: Timer?
     private var sessionTimer: Timer?
     private var cancellables = Set<AnyCancellable>()
     /// In-flight `beginRecording` started by the hotkey — cancelled if the
     /// key is released before the engine is ready (avoids a stuck session).
     private var hotkeyBeginTask: Task<Void, Never>?
+    /// Button-triggered preparation needs the same cancellation semantics as
+    /// the hotkey path when the user clicks Stop before the engine is ready.
+    private var buttonBeginTask: Task<Void, Never>?
+    /// Captured before the menu-bar popover activates OSGKeyboard.
+    private var preparedPopoverTargetApplication: NSRunningApplication?
+    /// Frozen for one take so app switches during ASR cannot redirect delivery.
+    private var sessionTargetApplication: NSRunningApplication?
     /// Live chunked / streaming ASR while recording (cloud or MLX local).
     /// Finished in `finishRecording` so partials can become the final draft.
     private var liveCaptureTask: Task<MacLiveASRCaptureResult, Never>?
@@ -93,8 +104,15 @@ final class MacDictationViewModel: ObservableObject {
         static let hotkeyTrigger = MacHotkeyTrigger.storageKey
     }
 
-    init(defaults: UserDefaults = .standard) {
+    init(
+        defaults: UserDefaults = .standard,
+        recorder: any MacAudioRecording = MacAudioRecorder(),
+        hotkeyService: MacHotkeyService = MacHotkeyService(),
+        startHotkeyService: Bool = true
+    ) {
         self.defaults = defaults
+        self.recorder = recorder
+        self.hotkeyService = hotkeyService
         self.config = ProviderConfig(defaults: defaults)
         self.usageStatistics = UsageStatisticsStore(defaults: defaults)
         self.autoPasteEnabled = defaults.object(forKey: StoredKeys.autoPaste) as? Bool ?? true
@@ -107,7 +125,9 @@ final class MacDictationViewModel: ObservableObject {
 
         MacICloudSyncBootstrap.configure(defaults: defaults)
         statusMessage = MacL10n.string("mac.status.ready", language: config.uiLanguage)
-        wireHotkeyService()
+        if startHotkeyService {
+            wireHotkeyService()
+        }
         forwardNestedObjectChanges()
     }
 
@@ -128,6 +148,17 @@ final class MacDictationViewModel: ObservableObject {
         refreshForegroundAppName()
     }
 
+    /// Called immediately before the menu-bar popover activates the app.
+    func prepareForPopoverPresentation() {
+        let target = MacTextInsertionService.captureTargetApplication()
+        preparedPopoverTargetApplication = target
+        foregroundAppName = target?.localizedName
+    }
+
+    func clearPreparedPopoverTarget() {
+        preparedPopoverTargetApplication = nil
+    }
+
     func reloadConfigFromCloud() {
         config.reloadFromPersistedStorage()
         statusMessage = MacL10n.string("mac.status.ready", language: config.uiLanguage)
@@ -135,6 +166,10 @@ final class MacDictationViewModel: ObservableObject {
 
     func refreshDictionaryFromCloud() {
         dictionaryRevision += 1
+    }
+
+    func refreshPolishStyles() {
+        polishStylesRevision += 1
     }
 
     // MARK: - Derived
@@ -248,7 +283,10 @@ final class MacDictationViewModel: ObservableObject {
         if isRecording || isPreparingToRecord {
             cancelOrFinishRecording()
         } else {
-            Task { await beginRecording() }
+            buttonBeginTask?.cancel()
+            buttonBeginTask = Task { [weak self] in
+                await self?.beginRecording()
+            }
         }
     }
 
@@ -256,8 +294,12 @@ final class MacDictationViewModel: ObservableObject {
         guard !isProcessing, !isRecording, !isPreparingToRecord else { return }
         isPreparingToRecord = true
         let store = AppGroupStore(defaults: defaults)
-        MacAppContextService.captureAndPersist(to: store)
-        refreshForegroundAppName()
+        let targetApplication = preparedPopoverTargetApplication
+            ?? MacTextInsertionService.captureTargetApplication()
+        preparedPopoverTargetApplication = nil
+        sessionTargetApplication = targetApplication
+        MacAppContextService.captureAndPersist(application: targetApplication, to: store)
+        foregroundAppName = targetApplication?.localizedName
 
         do {
             try await recorder.start()
@@ -266,14 +308,20 @@ final class MacDictationViewModel: ObservableObject {
             isPreparingToRecord = false
             if Task.isCancelled {
                 _ = recorder.stop()
+                sessionTargetApplication = nil
+                buttonBeginTask = nil
                 return
             }
+            buttonBeginTask = nil
             isRecording = true
             transcript = ""
             isStreamingPartial = false
             statusMessage = MacL10n.string("mac.status.listening", language: config.uiLanguage)
             startTimers()
-            startLiveCaptureIfSupported(store: store)
+            startLiveCaptureIfSupported(
+                store: store,
+                targetAppBundleIdentifier: targetApplication?.bundleIdentifier
+            )
             // Tiny race: Option released between the cancel check and
             // `isRecording = true`. Treat it as end-of-hold and finish.
             if Task.isCancelled {
@@ -281,6 +329,8 @@ final class MacDictationViewModel: ObservableObject {
             }
         } catch {
             isPreparingToRecord = false
+            sessionTargetApplication = nil
+            buttonBeginTask = nil
             if !Task.isCancelled {
                 statusMessage = error.localizedDescription
             }
@@ -299,6 +349,9 @@ final class MacDictationViewModel: ObservableObject {
         stopTimers()
         audioLevel = 0
         let store = AppGroupStore(defaults: defaults)
+        let targetApplication = sessionTargetApplication
+        let targetAppBundleIdentifier = targetApplication?.bundleIdentifier
+        sessionTargetApplication = nil
         let usesDeferredStop = MacDictationPipeline.supportsLivePartials(store: store)
             && store.engineMode == "local"
             && MacLocalASRService.usesMLXLiveStreaming()
@@ -333,6 +386,7 @@ final class MacDictationViewModel: ObservableObject {
                         }
                         result = try await MacDictationPipeline.polishCapturedASR(
                             raw: capture.raw,
+                            rawWithPauseMarks: capture.rawWithPauseMarks,
                             store: store,
                             localBias: capture.localBias,
                             chunkWarning: capture.chunkWarning
@@ -341,6 +395,7 @@ final class MacDictationViewModel: ObservableObject {
                         result = try await MacDictationPipeline.run(
                             samples: capturedSamples,
                             store: store,
+                            targetAppBundleIdentifier: targetAppBundleIdentifier,
                             onPartial: { [weak self] partial in
                                 Task { @MainActor in
                                     self?.transcript = partial
@@ -353,6 +408,7 @@ final class MacDictationViewModel: ObservableObject {
                     result = try await MacDictationPipeline.run(
                         samples: capturedSamples,
                         store: store,
+                        targetAppBundleIdentifier: targetAppBundleIdentifier,
                         onPartial: { [weak self] partial in
                             Task { @MainActor in
                                 self?.transcript = partial
@@ -361,7 +417,10 @@ final class MacDictationViewModel: ObservableObject {
                     )
                 }
                 self.transcript = result.text
-                let pasted = try await self.deliver(result.text)
+                let pasted = try await self.deliver(
+                    result.text,
+                    targetApplication: targetApplication
+                )
                 self.recordUsage(for: result.text)
                 self.speechHistory.append(text: result.text)
                 self.appendToOverview(result.text)
@@ -384,7 +443,10 @@ final class MacDictationViewModel: ObservableObject {
         }
     }
 
-    private func startLiveCaptureIfSupported(store: AppGroupStore) {
+    private func startLiveCaptureIfSupported(
+        store: AppGroupStore,
+        targetAppBundleIdentifier: String?
+    ) {
         guard MacDictationPipeline.supportsLivePartials(store: store) else { return }
         let stream = recorder.makeSnapshotStream()
         let (finishStream, finishContinuation) = AsyncStream<Void>.makeStream(
@@ -396,6 +458,7 @@ final class MacDictationViewModel: ObservableObject {
                 stream: stream,
                 finishSignal: finishStream,
                 store: store,
+                targetAppBundleIdentifier: targetAppBundleIdentifier,
                 onPartial: { [weak self] partial in
                     Task { @MainActor in
                         guard let self else { return }
@@ -440,22 +503,32 @@ final class MacDictationViewModel: ObservableObject {
     /// Stops an in-flight prepare, or finishes an active recording.
     private func cancelOrFinishRecording() {
         if isRecording {
+            buttonBeginTask = nil
             finishRecording()
             return
         }
         if isPreparingToRecord {
             hotkeyBeginTask?.cancel()
             hotkeyBeginTask = nil
-            // If the button-triggered prepare wasn't tracked by hotkeyBeginTask,
-            // still clear the preparing flag and stop any engine that raced in.
-            isPreparingToRecord = false
+            buttonBeginTask?.cancel()
+            buttonBeginTask = nil
+            // Keep the preparation gate closed until the cancelled start call
+            // actually returns; otherwise a rapid third click can start a
+            // second recorder task while the first one is still unwinding.
             cancelLiveCapture()
             _ = recorder.stop()
         }
     }
 
-    private func deliver(_ text: String) async throws -> Bool {
-        try await MacTextInsertionService.insert(text, autoPaste: autoPasteEnabled)
+    private func deliver(
+        _ text: String,
+        targetApplication: NSRunningApplication?
+    ) async throws -> Bool {
+        try await MacTextInsertionService.insert(
+            text,
+            autoPaste: autoPasteEnabled,
+            targetApp: targetApplication
+        )
     }
 
     private func statusAfterDelivery(

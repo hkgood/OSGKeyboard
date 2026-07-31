@@ -256,8 +256,6 @@ struct MacLocalASRModelSettingsView: View {
                 }
 
                 downloadSourceRow
-                    .frame(minHeight: MacMetrics.settingsRowMinHeight)
-                    .padding(.horizontal, MacMetrics.settingsCardInset)
 
                 HStack(spacing: 0) {
                     MacSettingsToolButton(title: MacL10n.string("mac.localASR.openStorage", language: lang)) {
@@ -271,24 +269,30 @@ struct MacLocalASRModelSettingsView: View {
     }
 
     private var downloadSourceRow: some View {
-        HStack(spacing: Spacing.sm) {
-            Text(MacL10n.string("mac.localASR.downloadSource", language: lang))
-                .foregroundStyle(palette.textSecondary)
-            Spacer(minLength: 0)
-            Picker("", selection: Binding(
-                get: { modelVM.downloadSource },
-                set: { modelVM.setDownloadSource($0) }
-            )) {
-                Text(MacL10n.string("mac.localASR.downloadSource.auto", language: lang))
-                    .tag(LocalASRDownloadSourcePreference.auto)
-                Text(MacL10n.string("mac.localASR.downloadSource.hfMirror", language: lang))
-                    .tag(LocalASRDownloadSourcePreference.hfMirror)
-                Text(MacL10n.string("mac.localASR.downloadSource.huggingface", language: lang))
-                    .tag(LocalASRDownloadSourcePreference.huggingface)
-            }
-            .labelsHidden()
-            .pickerStyle(.menu)
-            .fixedSize()
+        MacProviderSettingRow(
+            title: MacL10n.string("mac.localASR.downloadSource", language: lang)
+        ) {
+            MacInlinePicker(
+                selection: Binding(
+                    get: { modelVM.downloadSource },
+                    set: { modelVM.setDownloadSource($0) }
+                ),
+                options: [
+                    MacInlinePickerOption(
+                        value: LocalASRDownloadSourcePreference.auto,
+                        label: MacL10n.string("mac.localASR.downloadSource.auto", language: lang)
+                    ),
+                    MacInlinePickerOption(
+                        value: LocalASRDownloadSourcePreference.hfMirror,
+                        label: MacL10n.string("mac.localASR.downloadSource.hfMirror", language: lang)
+                    ),
+                    MacInlinePickerOption(
+                        value: LocalASRDownloadSourcePreference.huggingface,
+                        label: MacL10n.string("mac.localASR.downloadSource.huggingface", language: lang)
+                    ),
+                ],
+                fillsWidth: true
+            )
             .disabled(modelVM.isInstalling)
         }
     }

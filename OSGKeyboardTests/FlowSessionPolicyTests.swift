@@ -29,8 +29,31 @@ final class FlowSessionPolicyTests: XCTestCase {
         XCTAssertEqual(FlowInactivityDuration.tenMinutes.timeInterval, 10 * 60)
     }
 
+    func testKeepAliveModeDefaultsToPictureInPicture() {
+        let defaults = makeDefaults()
+        XCTAssertEqual(FlowSessionPolicy.keepAliveMode(defaults: defaults), .pictureInPicture)
+        XCTAssertFalse(FlowSessionPolicy.usesInactivityExpiry(defaults: defaults))
+    }
+
+    func testPiPSessionHasNoInactivityExpiry() {
+        let defaults = makeDefaults()
+        defaults.set(FlowKeepAliveMode.pictureInPicture.rawValue,
+                     forKey: AppGroupConfiguration.Keys.flowKeepAliveMode)
+        FlowSessionBridge.markSessionActive(sessionId: UUID(), defaults: defaults)
+
+        XCTAssertTrue(FlowSessionBridge.isSessionActive(defaults: defaults))
+        XCTAssertNil(FlowSessionBridge.sessionExpiresAt(defaults: defaults))
+
+        FlowSessionBridge.touchLastActivity(defaults: defaults)
+        XCTAssertNil(FlowSessionBridge.sessionExpiresAt(defaults: defaults))
+    }
+
     func testTouchLastActivityExtendsExpiry() {
         let defaults = makeDefaults()
+        defaults.set(
+            FlowKeepAliveMode.liveActivity.rawValue,
+            forKey: AppGroupConfiguration.Keys.flowKeepAliveMode
+        )
         defaults.set(FlowInactivityDuration.tenMinutes.rawValue, forKey: AppGroupConfiguration.Keys.flowInactivityDuration)
         FlowSessionBridge.markSessionActive(defaults: defaults)
 

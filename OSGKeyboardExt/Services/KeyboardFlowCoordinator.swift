@@ -24,6 +24,7 @@ final class KeyboardFlowCoordinator {
     private let wakeLockView: () -> UIView?
     private let openHostApp: (String) -> Void
     private let detectAndStoreAppContext: () -> Void
+    private let fieldContextProvider: () -> FlowFieldContext?
     private let scheduleAutoClearError: () -> Void
     private let refreshConfigFromAppGroup: () -> Void
 
@@ -71,6 +72,7 @@ final class KeyboardFlowCoordinator {
         wakeLockView: @escaping () -> UIView?,
         openHostApp: @escaping (String) -> Void,
         detectAndStoreAppContext: @escaping () -> Void,
+        fieldContextProvider: @escaping () -> FlowFieldContext?,
         scheduleAutoClearError: @escaping () -> Void,
         refreshConfigFromAppGroup: @escaping () -> Void
     ) {
@@ -80,6 +82,7 @@ final class KeyboardFlowCoordinator {
         self.wakeLockView = wakeLockView
         self.openHostApp = openHostApp
         self.detectAndStoreAppContext = detectAndStoreAppContext
+        self.fieldContextProvider = fieldContextProvider
         self.scheduleAutoClearError = scheduleAutoClearError
         self.refreshConfigFromAppGroup = refreshConfigFromAppGroup
     }
@@ -178,10 +181,18 @@ final class KeyboardFlowCoordinator {
         // host utt.rec=1 → ready=false → keyboard forever "正在启动…".
         let hostBusy = readySnapshot?.reason == .recording
             || readySnapshot?.reason == .processing
+        // PiP sessions publish `reason=.starting` while the small window is
+        // coming up — treat that as warming so the mic stays orange (wait)
+        // instead of jumping into another cold start.
         let hostWarming = !hostReady
             && !hostBusy
             && FlowSessionBridge.isSessionActive()
-            && (FlowSessionBridge.isHostReachable() || isPendingFlowStart || withinReadyGrace)
+            && (
+                FlowSessionBridge.isHostReachable()
+                    || isPendingFlowStart
+                    || withinReadyGrace
+                    || readySnapshot?.reason == .starting
+            )
         state.flowSessionActive = FlowSessionBridge.isSessionActive()
         state.debugPendingFlowStart = isPendingFlowStart
         state.debugFlowRecording = isFlowRecording
@@ -475,7 +486,11 @@ final class KeyboardFlowCoordinator {
         isPendingFlowStart = true
         isFlowRecording = false
         flowStartDeadline = Date().timeIntervalSince1970 + FlowWatchdog.startTimeout
-        state.lastTranscript = ExtL10n.string("keyboard.flow.startingSession")
+        state.lastTranscript = ExtL10n.string(
+            FlowSessionPolicy.keepAliveMode() == .pictureInPicture
+                ? "keyboard.flow.startingSession.pip"
+                : "keyboard.flow.startingSession"
+        )
         recomputeMicVoiceAvailability()
         openHostApp("startflow")
         startFlowStartWatchdog()
@@ -540,12 +555,23 @@ final class KeyboardFlowCoordinator {
             utteranceId: currentUtteranceId,
             commandSeq: nextCommandSeq(),
             action: action,
-            localeId: state.localeId
+            localeId: state.localeId,
+            fieldContext: action == .stopRecording ? fieldContextProvider() : nil
         )
         FlowSessionBridge.writeCommand(command)
         debug(
             "command \(action.rawValue) seq=\(command.commandSeq) " +
-            "utterance=\(currentUtteranceId.uuidString)"
+            "utterance=\(currentUtteranceId.uuidString) contextChars=" +
+            "\(command.fieldContext?.precedingText?.count ?? 0)/" +
+            "\(command.fieldContext?.followingText?.count ?? 0)"
+        )
+        // Start of one traceable utterance: everything the host logs afterwards
+        // belongs to this `utterance=` id until the matching keyboard.insert.
+        FlowTrace.keyboard(
+            "command.\(action.rawValue)",
+            "seq=\(command.commandSeq) utterance=\(currentUtteranceId.uuidString.prefix(8)) "
+                + "locale=\(state.localeId) engine=\(state.engineMode) "
+                + "hostReady=\(FlowSessionBridge.isHostReady() ? 1 : 0)"
         )
     }
 
@@ -565,12 +591,25 @@ final class KeyboardFlowCoordinator {
                 lastConsumedUtteranceId = result.utteranceId
                 lastStoppedUtteranceId = nil
                 currentUtteranceId = nil
+                FlowTrace.transcript(
+                    "keyboard.insert",
+                    text,
+                    "utterance=\(result.utteranceId.uuidString.prefix(8)) "
+                        + "commandSeq=\(result.commandSeq) warning=\(result.warning == nil ? 0 : 1)"
+                )
                 textInserter.handleFlowTranscript(
                     TranscriptionDelivery(text: text, polishWarning: result.warning)
                 )
                 return
             }
             if let result = matchingResult(), isTerminalFailure(result) {
+                FlowTrace.warn(
+                    "keyboard.resultFailed",
+                    "status=\(result.status.rawValue) "
+                        + "kind=\(result.errorKind?.rawValue ?? "none") "
+                        + "utterance=\(result.utteranceId.uuidString.prefix(8)) "
+                        + "message=\(result.text ?? "nil")"
+                )
                 isAwaitingFlowResult = false
                 stopFlowWatchdog()
                 FlowSessionBridge.clearResult()
@@ -878,6 +917,13 @@ final class KeyboardFlowCoordinator {
                     self.lastStoppedUtteranceId = nil
                     self.currentUtteranceId = nil
                     self.debug("resultWatchdog consumed delivery len=\(text.count)")
+                    FlowTrace.transcript(
+                        "keyboard.insert",
+                        text,
+                        "via=resultWatchdog utterance=\(result.utteranceId.uuidString.prefix(8)) "
+                            + "commandSeq=\(result.commandSeq) "
+                            + "waitedSeconds=\(String(format: "%.2f", Date().timeIntervalSince1970 - startedAt))"
+                    )
                     self.textInserter.handleFlowTranscript(
                         TranscriptionDelivery(text: text, polishWarning: result.warning)
                     )
@@ -895,6 +941,13 @@ final class KeyboardFlowCoordinator {
                         kind: result.errorKind ?? .generic
                     )
                     self.debug("resultWatchdog consumed error kind=\(error.kind.rawValue)")
+                    FlowTrace.warn(
+                        "keyboard.resultFailed",
+                        "via=resultWatchdog status=\(result.status.rawValue) "
+                            + "kind=\(error.kind.rawValue) "
+                            + "utterance=\(result.utteranceId.uuidString.prefix(8)) "
+                            + "message=\(error.message)"
+                    )
                     self.state.phase = .error(
                         .fromFlowTranscription(error),
                         message: error.message

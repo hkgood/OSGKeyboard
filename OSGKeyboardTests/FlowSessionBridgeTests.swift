@@ -203,6 +203,62 @@ final class FlowSessionBridgeTests: XCTestCase {
         XCTAssertEqual(FlowSessionBridge.latestCommand(defaults: defaults), command)
     }
 
+    func testFlowCommandRoundTripsFieldContext() {
+        let context = FlowFieldContext(
+            precedingText: "前文",
+            followingText: "后文",
+            keyboardType: "default",
+            returnKeyType: "send",
+            isEmptyField: false,
+            isContextAvailable: true
+        )
+        let command = FlowCommand(
+            sessionId: UUID(),
+            utteranceId: UUID(),
+            commandSeq: 43,
+            action: .stopRecording,
+            localeId: "zh-Hans",
+            fieldContext: context
+        )
+        let decoded = try? JSONDecoder().decode(
+            FlowCommand.self,
+            from: JSONEncoder().encode(command)
+        )
+        XCTAssertEqual(decoded?.fieldContext, context)
+    }
+
+    func testSecureFieldContextRedactsText() {
+        let context = FlowFieldContext(
+            precedingText: "secret",
+            followingText: "value",
+            isSecureEntry: true,
+            isEmptyField: true,
+            isContextAvailable: true
+        )
+        XCTAssertNil(context.precedingText)
+        XCTAssertNil(context.followingText)
+        XCTAssertFalse(context.isContextAvailable)
+        XCTAssertFalse(context.isEmptyField)
+    }
+
+    func testFlowCommandDecodesWithoutFieldContext() throws {
+        let command = FlowCommand(
+            sessionId: UUID(),
+            utteranceId: UUID(),
+            commandSeq: 44,
+            action: .startRecording,
+            localeId: "en-US"
+        )
+        let encoded = try JSONEncoder().encode(command)
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        object.removeValue(forKey: "fieldContext")
+        let legacyPayload = try JSONSerialization.data(withJSONObject: object)
+        let decoded = try JSONDecoder().decode(FlowCommand.self, from: legacyPayload)
+        XCTAssertNil(decoded.fieldContext)
+    }
+
     func testFlowResultRoundTripPreservesUtteranceIdentity() {
         let defaults = makeDefaults()
         let sessionId = UUID()

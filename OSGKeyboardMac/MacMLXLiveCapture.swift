@@ -7,21 +7,22 @@ import Foundation
 import os
 
 enum MacMLXLiveCapture {
-    private static let tailDrainPolicy = FlowCaptureTailDrainPolicy(
-        silenceRMSThreshold: 0.015,
-        silenceDurationSeconds: 0.35,
-        maxDrainSeconds: 0.75
-    )
+    private static let tailDrainPolicy = FlowCaptureTailDrainPolicy.macMLX
 
     /// Runs MLX streaming ASR until `finishSignal` fires, then tail-drains and finalizes.
     static func run(
         audioStream: AsyncStream<AudioBufferSnapshot>,
         finishSignal: AsyncStream<Void>,
         store: AppGroupStore,
+        targetAppBundleIdentifier: String?,
         onPartial: @escaping @Sendable (String) -> Void
     ) async -> MacLiveASRCaptureResult {
         let locale = Locale(identifier: store.localeId.isEmpty ? "zh-CN" : store.localeId)
-        let bias = resolveBias(store: store, locale: locale)
+        let bias = resolveBias(
+            store: store,
+            locale: locale,
+            targetAppBundleIdentifier: targetAppBundleIdentifier
+        )
 
         guard let model = MacLocalASRService.selectedModelDefinition(),
               model.backend == .mlx,
@@ -47,6 +48,7 @@ enum MacMLXLiveCapture {
 
             let drainTracker = FlowCaptureDrainTracker()
             let draining = OSAllocatedUnfairLock(initialState: false)
+            let drainComplete = OSAllocatedUnfairLock(initialState: false)
             let pendingFeed = OSAllocatedUnfairLock(initialState: [Float]())
             let feedIntervalSamples = 1_600 // 100 ms @ 16 kHz
 
@@ -60,6 +62,11 @@ enum MacMLXLiveCapture {
                     for await _ in finishSignal {
                         draining.withLock { $0 = true }
                         drainTracker.beginDrain()
+                        _ = await FlowUtteranceEndCoordinator.awaitTailCapture(
+                            tracker: drainTracker,
+                            policy: tailDrainPolicy
+                        )
+                        drainComplete.withLock { $0 = true }
                         break
                     }
                 }
@@ -67,10 +74,12 @@ enum MacMLXLiveCapture {
                 group.addTask {
                     for await snapshot in audioStream {
                         if Task.isCancelled { break }
+                        if drainComplete.withLock({ $0 }) { break }
                         if draining.withLock({ $0 }) {
-                            drainTracker.noteAudio(samples: snapshot.samples, policy: tailDrainPolicy)
-                            let decision = drainTracker.shouldFinish(policy: tailDrainPolicy)
-                            if decision.finished { break }
+                            drainTracker.noteAudio(
+                                samples: snapshot.samples,
+                                policy: tailDrainPolicy
+                            )
                         }
                         pendingFeed.withLock { buffer in
                             buffer.append(contentsOf: snapshot.samples)
@@ -129,14 +138,17 @@ enum MacMLXLiveCapture {
         }
     }
 
-    private static func resolveBias(store: AppGroupStore, locale: Locale) -> LocalASRBiasPayload? {
-        MacAppContextService.captureAndPersist(to: store)
+    private static func resolveBias(
+        store: AppGroupStore,
+        locale: Locale,
+        targetAppBundleIdentifier: String?
+    ) -> LocalASRBiasPayload? {
         let capabilities = MacLocalASRService.currentCapabilities()
         let bias = LocalASRBiasAdapter.adapt(
             LocalASRBiasRequest(
                 dictionary: store.personalDictionary,
                 locale: locale,
-                frontAppBundleId: MacAppContextService.frontmostBundleIdentifier(),
+                frontAppBundleId: targetAppBundleIdentifier,
                 capabilities: capabilities
             )
         )

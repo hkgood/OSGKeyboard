@@ -12,6 +12,8 @@ struct MacHistoryView: View {
     @Environment(\.themePalette) private var palette
 
     @State private var showClearConfirmation = false
+    @State private var showDeleteDayConfirmation = false
+    @State private var dayPendingDelete: Date?
 
     private var lang: AppUILanguage { viewModel.config.uiLanguage }
 
@@ -75,6 +77,23 @@ struct MacHistoryView: View {
         } message: {
             Text(MacL10n.string("mac.history.clearMessage", language: lang))
         }
+        .confirmationDialog(
+            MacL10n.string("mac.history.clearDayTitle", language: lang),
+            isPresented: $showDeleteDayConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(MacL10n.string("mac.history.clearDayConfirm", language: lang), role: .destructive) {
+                if let day = dayPendingDelete {
+                    withAnimation(Motion.soft) { historyStore.deleteEntries(on: day) }
+                }
+                dayPendingDelete = nil
+            }
+            Button(MacL10n.string("mac.cancel", language: lang), role: .cancel) {
+                dayPendingDelete = nil
+            }
+        } message: {
+            Text(MacL10n.string("mac.history.clearDayMessage", language: lang))
+        }
     }
 
     // MARK: - List
@@ -95,10 +114,25 @@ struct MacHistoryView: View {
 
     private func daySection(_ group: (day: Date, items: [SpeechHistoryEntry])) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(Self.dayFormatter.string(from: group.day))
-                .font(MacSettingsType.sectionTitle)
-                .foregroundStyle(palette.textSecondary)
-                .textCase(.uppercase)
+            HStack(alignment: .center, spacing: Spacing.sm) {
+                Text(Self.dayFormatter.string(from: group.day))
+                    .font(MacSettingsType.sectionTitle)
+                    .foregroundStyle(palette.textSecondary)
+                    .textCase(.uppercase)
+
+                Spacer(minLength: 0)
+
+                Button {
+                    dayPendingDelete = group.day
+                    showDeleteDayConfirmation = true
+                } label: {
+                    Text(MacL10n.string("mac.delete", language: lang))
+                        .font(MacSettingsType.sectionTitle)
+                        .foregroundStyle(palette.danger)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(MacL10n.string("mac.history.clearDayButton", language: lang))
+            }
 
             MacCard(padding: 0) {
                 VStack(spacing: 0) {

@@ -558,12 +558,10 @@ public final class LiveDictationController: ObservableObject {
         drainTracker.beginDrain()
 
         let policy = FlowCaptureTailDrainPolicy.flowDefault
-        while true {
-            let decision = drainTracker.shouldFinish(policy: policy)
-            if decision.finished { break }
-            if Task.isCancelled { break }
-            try? await Task.sleep(nanoseconds: 20_000_000)
-        }
+        _ = await FlowUtteranceEndCoordinator.awaitTailCapture(
+            tracker: drainTracker,
+            policy: policy
+        )
 
         // Trailing speech is preserved by the live `.draining` forwarding
         // loop above. We deliberately do NOT signal `.endOfStream` to the

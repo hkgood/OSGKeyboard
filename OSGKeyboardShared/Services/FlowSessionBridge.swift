@@ -6,6 +6,35 @@
 
 import Foundation
 
+public struct FlowFieldContext: Codable, Equatable, Sendable {
+    public let precedingText: String?
+    public let followingText: String?
+    public let keyboardType: String?
+    public let returnKeyType: String?
+    public let isSecureEntry: Bool
+    /// Distinguishes a known-empty field from unavailable document context.
+    public let isEmptyField: Bool
+    public let isContextAvailable: Bool
+
+    public init(
+        precedingText: String? = nil,
+        followingText: String? = nil,
+        keyboardType: String? = nil,
+        returnKeyType: String? = nil,
+        isSecureEntry: Bool = false,
+        isEmptyField: Bool = false,
+        isContextAvailable: Bool = false
+    ) {
+        self.precedingText = isSecureEntry ? nil : precedingText
+        self.followingText = isSecureEntry ? nil : followingText
+        self.keyboardType = keyboardType
+        self.returnKeyType = returnKeyType
+        self.isSecureEntry = isSecureEntry
+        self.isEmptyField = isSecureEntry ? false : isEmptyField
+        self.isContextAvailable = isSecureEntry ? false : isContextAvailable
+    }
+}
+
 public struct FlowCommand: Codable, Equatable, Sendable {
     public enum Action: String, Codable, Sendable {
         case startRecording
@@ -20,6 +49,7 @@ public struct FlowCommand: Codable, Equatable, Sendable {
     public let action: Action
     public let localeId: String
     public let createdAt: TimeInterval
+    public let fieldContext: FlowFieldContext?
 
     public init(
         protocolVersion: Int = 1,
@@ -28,7 +58,8 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         commandSeq: Int64,
         action: Action,
         localeId: String,
-        createdAt: TimeInterval = Date().timeIntervalSince1970
+        createdAt: TimeInterval = Date().timeIntervalSince1970,
+        fieldContext: FlowFieldContext? = nil
     ) {
         self.protocolVersion = protocolVersion
         self.sessionId = sessionId
@@ -37,6 +68,7 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         self.action = action
         self.localeId = localeId
         self.createdAt = createdAt
+        self.fieldContext = fieldContext
     }
 }
 
@@ -312,11 +344,22 @@ public enum FlowSessionBridge {
         defaults: UserDefaults? = nil
     ) {
         let store = resolvedDefaults(defaults)
-        let resolvedDuration = duration ?? FlowSessionPolicy.sessionDuration(defaults: store)
+        if FlowSessionPolicy.usesInactivityExpiry(defaults: store) {
+            markSessionActiveWithExpiry(duration: duration, sessionId: sessionId, defaults: store)
+        } else {
+            markSessionActivePersistent(sessionId: sessionId, defaults: store)
+        }
+    }
+
+    /// PiP keep-alive: session stays valid until explicit teardown (no idle expiry).
+    public static func markSessionActivePersistent(
+        sessionId: UUID? = nil,
+        defaults: UserDefaults? = nil
+    ) {
+        let store = resolvedDefaults(defaults)
         let now = Date().timeIntervalSince1970
-        let expires = now + resolvedDuration
         store.set(true, forKey: FlowSessionKeys.flowSessionActive)
-        store.set(expires, forKey: FlowSessionKeys.flowSessionExpires)
+        store.removeObject(forKey: FlowSessionKeys.flowSessionExpires)
         store.set(now, forKey: FlowSessionKeys.lastActivityAt)
         writeHeartbeat(defaults: store)
         clearTranscription(defaults: store)
@@ -331,7 +374,7 @@ public enum FlowSessionBridge {
                 heartbeatAt: now,
                 engineMode: AppGroupConfiguration.load(fromAvailable: store).engineMode,
                 localeId: AppGroupConfiguration.load(fromAvailable: store).localeId,
-                sessionExpiresAt: expires,
+                sessionExpiresAt: nil,
                 hostGeneration: store.string(forKey: FlowSessionKeys.hostGeneration)
             )
             if let data = encode(snapshot) {
@@ -341,6 +384,42 @@ public enum FlowSessionBridge {
             store.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
         }
         flush(store)
+    }
+
+    private static func markSessionActiveWithExpiry(
+        duration: TimeInterval? = nil,
+        sessionId: UUID? = nil,
+        defaults: UserDefaults
+    ) {
+        let resolvedDuration = duration ?? FlowSessionPolicy.sessionDuration(defaults: defaults)
+        let now = Date().timeIntervalSince1970
+        let expires = now + resolvedDuration
+        defaults.set(true, forKey: FlowSessionKeys.flowSessionActive)
+        defaults.set(expires, forKey: FlowSessionKeys.flowSessionExpires)
+        defaults.set(now, forKey: FlowSessionKeys.lastActivityAt)
+        writeHeartbeat(defaults: defaults)
+        clearTranscription(defaults: defaults)
+        defaults.removeObject(forKey: FlowSessionKeys.flowCommandPayload)
+        defaults.removeObject(forKey: FlowSessionKeys.flowResultPayload)
+        defaults.removeObject(forKey: FlowSessionKeys.flowAckPayload)
+        if let sessionId {
+            let snapshot = FlowReadySnapshot(
+                sessionId: sessionId,
+                ready: false,
+                reason: .starting,
+                heartbeatAt: now,
+                engineMode: AppGroupConfiguration.load(fromAvailable: defaults).engineMode,
+                localeId: AppGroupConfiguration.load(fromAvailable: defaults).localeId,
+                sessionExpiresAt: expires,
+                hostGeneration: defaults.string(forKey: FlowSessionKeys.hostGeneration)
+            )
+            if let data = encode(snapshot) {
+                defaults.set(data, forKey: FlowSessionKeys.flowReadyPayload)
+            }
+        } else {
+            defaults.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
+        }
+        flush(defaults)
     }
 
     public static func markSessionInactive(defaults: UserDefaults? = nil) {
@@ -372,6 +451,7 @@ public enum FlowSessionBridge {
         defaults: UserDefaults? = nil
     ) {
         let store = resolvedDefaults(defaults)
+        guard FlowSessionPolicy.usesInactivityExpiry(defaults: store) else { return }
         let resolvedDuration = duration ?? FlowSessionPolicy.sessionDuration(defaults: store)
         let expires = Date().timeIntervalSince1970 + resolvedDuration
         store.set(true, forKey: FlowSessionKeys.flowSessionActive)
@@ -382,6 +462,7 @@ public enum FlowSessionBridge {
     /// Resets the inactivity timer after utterance completion or explicit activity.
     public static func touchLastActivity(defaults: UserDefaults? = nil) {
         let store = resolvedDefaults(defaults)
+        guard FlowSessionPolicy.usesInactivityExpiry(defaults: store) else { return }
         let now = Date().timeIntervalSince1970
         let duration = FlowSessionPolicy.sessionDuration(defaults: store)
         store.set(now, forKey: FlowSessionKeys.lastActivityAt)
@@ -418,6 +499,10 @@ public enum FlowSessionBridge {
     public static func isSessionActive(defaults: UserDefaults? = nil) -> Bool {
         let store = resolvedDefaults(defaults)
         guard store.bool(forKey: FlowSessionKeys.flowSessionActive) else { return false }
+
+        if !FlowSessionPolicy.usesInactivityExpiry(defaults: store) {
+            return true
+        }
 
         let expires = store.double(forKey: FlowSessionKeys.flowSessionExpires)
         return expires > Date().timeIntervalSince1970

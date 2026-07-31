@@ -6,17 +6,22 @@
 import Foundation
 
 public struct UtteranceTranscriptStitcher: Sendable {
-    private var segments: [(index: Int, text: String)] = []
+    private var segments: [(index: Int, text: String, trailingPauseSeconds: Double)] = []
 
     public init() {}
 
-    public mutating func append(index: Int, text: String) {
+    public mutating func append(
+        index: Int,
+        text: String,
+        trailingPauseSeconds: Double = 0
+    ) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         if let existing = segments.firstIndex(where: { $0.index == index }) {
             segments[existing].text = trimmed
+            segments[existing].trailingPauseSeconds = trailingPauseSeconds
         } else {
-            segments.append((index, trimmed))
+            segments.append((index, trimmed, trailingPauseSeconds))
             segments.sort { $0.index < $1.index }
         }
     }
@@ -49,6 +54,34 @@ public struct UtteranceTranscriptStitcher: Sendable {
             return naive
         }
         return merged
+    }
+
+    /// Final text for LLM processing only. Partial preview continues to use
+    /// `composedSafely()` and therefore never exposes internal markers.
+    public func composedWithPauseMarks(threshold: Double = 0.45) -> String {
+        guard let first = segments.first else { return "" }
+        let safePlain = composedSafely()
+        let mergedPlain = composed()
+        if safePlain != mergedPlain {
+            return naiveWithPauseMarks(threshold: threshold)
+        }
+
+        var plain = first.text
+        var marked = first.text
+        var previous = first
+        for segment in segments.dropFirst() {
+            let nextPlain = Self.mergeWithOverlap(previous: plain, next: segment.text)
+            let suffix = String(nextPlain.dropFirst(min(plain.count, nextPlain.count)))
+            if previous.trailingPauseSeconds >= threshold, !suffix.isEmpty {
+                marked += " \(Self.pauseMarker(previous.trailingPauseSeconds)) "
+                marked += suffix.trimmingCharacters(in: .whitespacesAndNewlines)
+            } else {
+                marked += suffix
+            }
+            plain = nextPlain
+            previous = segment
+        }
+        return marked
     }
 
     /// Merge `next` onto `previous`, dropping duplicated suffix/prefix overlap.
@@ -126,5 +159,20 @@ public struct UtteranceTranscriptStitcher: Sendable {
             rawIndex = next.index(after: rawIndex)
         }
         return next.distance(from: next.startIndex, to: rawIndex)
+    }
+
+    private func naiveWithPauseMarks(threshold: Double) -> String {
+        var pieces: [String] = []
+        for (offset, segment) in segments.enumerated() {
+            pieces.append(segment.text)
+            if segment.trailingPauseSeconds >= threshold, offset < segments.count - 1 {
+                pieces.append(Self.pauseMarker(segment.trailingPauseSeconds))
+            }
+        }
+        return pieces.joined(separator: " ")
+    }
+
+    private static func pauseMarker(_ seconds: Double) -> String {
+        "⟨\(String(format: "%.1f", seconds))s⟩"
     }
 }

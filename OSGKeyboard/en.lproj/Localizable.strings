@@ -99,7 +99,7 @@
 "settings.reset.title" = "Reset all settings?";
 "settings.reset.message" = "API key, model, base URL, voice history, and cloud consent will be cleared.";
 "settings.reset.confirm" = "Reset all settings";
-"settings.engine.title" = "Speech transcription method";
+"settings.engine.title" = "Speech Transcription & Polish";
 "settings.engine.subtitle" = "Local: built-in system transcription. Cloud: ASR transcription with optional LLM polish.";
 "settings.engine.local.title" = "On-device transcription";
 "settings.engine.local.ios26" = "Always on-device, no network.";
@@ -109,6 +109,7 @@
 "settings.engine.cloud.badge" = "Cloud engine";
 "settings.provider.title" = "Provider";
 "settings.provider.personalDictionaryBadge" = "Personal dictionary";
+"settings.provider.streamingBadge" = "Streaming";
 "settings.provider.subtitle" = "Pick the LLM that polishes your dictation.";
 "settings.polishProvider.title" = "Text polish (LLM)";
 "settings.polishProvider.subtitle" = "Cleans up the transcript after recognition. Independent from the ASR provider.";
@@ -177,8 +178,17 @@
 "settings.systemPrompt.edit" = "Edit system prompt";
 "settings.systemPrompt.hint" = "Used by the cloud LLM when polishing your dictation. Local engine skips this step.";
 "settings.about.title" = "About";
+"settings.daily.title" = "Daily";
+"settings.config.title" = "Configuration";
+"settings.general.title" = "General";
+"settings.general.appearanceLanguage.title" = "Appearance & Language";
+"settings.general.keyboard.title" = "Keyboard & Gestures";
+"settings.general.sync.title" = "Sync";
+"settings.speechRecognition.title" = "Speech Recognition";
+"settings.textPolish.title" = "Text Polish";
 "settings.preferences.title" = "Preferences";
 "settings.dictionaryAndPolish.title" = "Dictionary & polish";
+"settings.polishPreferences.title" = "Polish preferences";
 "settings.handedness.title" = "Handedness";
 "settings.handedness.left" = "Left hand";
 "settings.handedness.right" = "Right hand";
@@ -357,7 +367,42 @@
 "tab.keyboard" = "Keyboard";
 "tab.history" = "History";
 "tab.dictionary" = "Dictionary";
+"tab.styles" = "Styles";
 "tab.settings" = "Settings";
+
+/* Polish style packs */
+"polishStyles.title" = "Polish styles";
+"polishStyles.add" = "Add style";
+"polishStyles.edit" = "Edit style";
+"polishStyles.viewPrompt" = "View full prompt";
+"polishStyles.duplicate" = "Duplicate";
+"polishStyles.builtin.section" = "Built-in";
+"polishStyles.fun.section" = "Fun styles";
+"polishStyles.custom.section" = "My styles";
+"polishStyles.intro.title" = "Choose a writing personality";
+"polishStyles.intro.body" = "The selected style shapes every polished dictation. Your custom styles sync through iCloud when settings sync is enabled.";
+"polishStyles.light.description" = "Fix recognition errors and punctuation with minimal rewriting.";
+"polishStyles.structured.description" = "Organize multiple points into clear paragraphs and lists.";
+"polishStyles.formal.description" = "Professional, restrained writing for email and work.";
+"polishStyles.dating.description" = "Warm, playful messages with a light touch of wit.";
+"polishStyles.chat.description" = "Short, natural messages without a formal tone.";
+"polishStyles.flex.description" = "4A / study-abroad Chinglish with optional luxury seasoning.";
+"polishStyles.corp.description" = "Big-tech buzzwords for syncs, pushback, and blame-shifting.";
+"polishStyles.diba.description" = "Clean logical takedowns that leave the other side stuck.";
+"polishStyles.xhs.description" = "Sisterly Xiaohongshu note voice with hooks, ready to post.";
+"polishStyles.custom.description" = "Custom complete writing personality";
+"polishStyles.copyName" = "%@ Copy";
+"polishStyles.editor.name" = "Name";
+"polishStyles.editor.namePlaceholder" = "Style name";
+"polishStyles.editor.prompt" = "Complete prompt";
+"polishStyles.editor.hint" = "Use {{DICTIONARY}} where the personal dictionary should be inserted. System safety, rewrite intensity, and output rules are appended automatically.";
+"polishStyles.error.title" = "Couldn’t save style";
+"polishStyles.error.emptyName" = "Enter a style name.";
+"polishStyles.error.emptyPrompt" = "The prompt cannot be empty.";
+"polishStyles.error.limit" = "You can save up to 8 custom styles.";
+"polishStyles.error.promptTooLong" = "The prompt can contain up to 6,000 characters.";
+"polishStyles.error.builtin" = "Built-in styles cannot be changed. Duplicate one to customize it.";
+"polishStyles.error.generic" = "Try again.";
 
 /* History */
 "history.title" = "History";
@@ -367,6 +412,10 @@
 "history.clear.message" = "This cannot be undone.";
 "history.clear.confirm" = "Clear all";
 "history.clear.button" = "Clear all history";
+"history.clearDay.title" = "Delete this day's history?";
+"history.clearDay.message" = "All transcripts from this day will be removed. This cannot be undone.";
+"history.clearDay.confirm" = "Delete day";
+"history.clearDay.button" = "Delete this day's history";
 "flow.error.speechRequired" = "Speech recognition access is required for voice sessions.";
 "flow.error.micRequired" = "Microphone access is required for background voice sessions.";
 "flow.error.micUnavailable" = "Microphone is unavailable on this device.";
@@ -418,6 +467,14 @@
 
 /* Flow session policy */
 "settings.flow.title" = "Voice session";
+"settings.flow.keepAlive.title" = "Keep-alive mode";
+"settings.flow.keepAlive.liveActivity" = "Dynamic Island";
+"settings.flow.keepAlive.liveActivity.subtitle" = "Continuous mic session with inactivity timeout.";
+"settings.flow.keepAlive.pictureInPicture" = "Picture in Picture";
+"settings.flow.keepAlive.pictureInPicture.subtitle" = "Waveform PiP keeps the app alive; mic is released between utterances.";
+"settings.flow.keepAlive.pictureInPicture.note" = "Picture in Picture stays active until you close it. Skip app switch is always on in this mode.";
+"settings.flow.keepAlive.activeSession.title" = "End the current session first";
+"settings.flow.keepAlive.activeSession.message" = "Stop the active voice session before changing keep-alive mode.";
 "settings.flow.skipAppSwitch.title" = "Skip app switch";
 "settings.flow.skipAppSwitch.subtitle" = "After a cold start, try to return to the app you came from.";
 "settings.flow.inactivity.title" = "End session after inactivity";
@@ -434,10 +491,19 @@
 /* Cold-start handoff (scheme B) */
 "flow.coldStart.title" = "Voice is ready";
 "flow.coldStart.preparing" = "Getting voice ready";
+"flow.coldStart.preparing.pip" = "Starting Picture in Picture";
 "flow.coldStart.preparingHint" = "Keep OSGKeyboard open for a moment while we start the microphone session.";
+"flow.coldStart.preparingHint.pip" = "Keep OSGKeyboard open while Picture in Picture starts. Then return to the keyboard to speak.";
 "flow.coldStart.permission.title" = "Permission required";
 "flow.coldStart.audio.title" = "Voice could not start";
+"flow.coldStart.pip.title" = "Picture in Picture could not start";
 "flow.coldStart.error.audioTimeout" = "The microphone did not become ready in time. It may be busy in another app. Please try again.";
+"flow.pip.error.unavailable" = "Picture in Picture could not start. Stay in the app and try again.";
+"flow.pip.error.unsupported" = "This device does not support Picture in Picture.";
+"flow.pip.error.hostNotReady" = "The Picture in Picture surface is not ready yet. Stay in the app and try again.";
+"flow.pip.error.notPossible" = "The system cannot start Picture in Picture right now. Keep the app in the foreground and try again.";
+"flow.pip.error.systemRejected" = "Picture in Picture was rejected by the system. Please try again shortly.";
+"flow.pip.error.timedOut" = "Picture in Picture did not appear in time. Stay in the app and try again.";
 "flow.coldStart.action.settings" = "Open Settings";
 "flow.coldStart.action.retry" = "Try Again";
 "flow.coldStart.swipeHint" = "Swipe right along the bottom bar\nto return to your previous app.";
@@ -492,3 +558,4 @@
 "hostApp.bilibili" = "Bilibili";
 "hostApp.douyin" = "Douyin";
 "hostApp.tiktok" = "TikTok";
+"flow.warning.polishDegradedQuality" = "Polish output failed validation; inserted a conservative version.";

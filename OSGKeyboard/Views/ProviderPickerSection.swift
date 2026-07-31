@@ -49,7 +49,7 @@ struct ProviderPickerSection: View {
             }
             .buttonStyle(.plain)
         }
-        .modifier(SettingsSurfaceCardModifier(enabled: showsSurface))
+        .surfaceCard(enabled: showsSurface)
     }
 
     private func select(_ provider: LLMProvider) {
@@ -74,6 +74,9 @@ struct ProviderPickerSection: View {
 
             if selectedProvider.supportsPersonalDictionaryCloudASR {
                 personalDictionaryBadge
+            }
+            if role == .asr, selectedProvider.supportsStreamingCloudASR {
+                streamingBadge
             }
 
             Spacer(minLength: Spacing.xs)
@@ -109,6 +112,16 @@ struct ProviderPickerSection: View {
     /// 通义千问 / 智谱 GLM 等支持云端 ASR 热词 API 的提供商。
     private var personalDictionaryBadge: some View {
         Text("settings.provider.personalDictionaryBadge")
+            .font(TypeStyle.caption2)
+            .foregroundStyle(palette.accent)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, 4)
+            .background(palette.accentMuted, in: Capsule())
+    }
+
+    /// Bailian / Volcengine / OpenAI Realtime — utterance-level true streaming.
+    private var streamingBadge: some View {
+        Text("settings.provider.streamingBadge")
             .font(TypeStyle.caption2)
             .foregroundStyle(palette.accent)
             .padding(.horizontal, Spacing.sm)

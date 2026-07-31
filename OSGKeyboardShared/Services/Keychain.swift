@@ -383,6 +383,27 @@ public enum Keychain: @unchecked Sendable {
 
     private static let onboardingService = "com.osgkeyboard.onboarding"
     private static let onboardingAccount = "hasCompletedOnboarding"
+    /// Survives reboots but is wiped with the app container (unlike Keychain).
+    private static let installIdentityKey = "osgkeyboard.installIdentity"
+
+    /// Call once at config init. Returns `true` when this is a brand-new app
+    /// container (first launch or reinstall after delete). Clears a stale
+    /// Keychain onboarding flag so deleted installs show the welcome flow again.
+    @discardableResult
+    public static func beginInstallIdentityIfNeeded() -> Bool {
+        let standard = UserDefaults.standard
+        if standard.string(forKey: installIdentityKey) != nil {
+            return false
+        }
+        standard.set(UUID().uuidString, forKey: installIdentityKey)
+        if hasCompletedOnboarding() {
+            setOnboardingCompleted(false)
+            OSGLog.config.info("[onboarding] fresh install: cleared stale Keychain onboarding flag")
+        } else {
+            OSGLog.config.info("[onboarding] fresh install: install identity created")
+        }
+        return true
+    }
 
     public static func hasCompletedOnboarding() -> Bool {
         var query: [String: Any] = [

@@ -99,7 +99,7 @@
 "settings.reset.title" = "重置所有设置?";
 "settings.reset.message" = "将清空 API Key、模型、接口地址、语音历史及云端确认状态。";
 "settings.reset.confirm" = "重置所有设置";
-"settings.engine.title" = "语音转写方式";
+"settings.engine.title" = "语音转写与润色";
 "settings.engine.subtitle" = "本地：系统内置转写；云端：ASR 转写，可用 LLM 润色。";
 "settings.engine.local.title" = "本地转写";
 "settings.engine.local.ios26" = "全程在手机本地，不用联网";
@@ -109,6 +109,7 @@
 "settings.engine.cloud.badge" = "云端引擎";
 "settings.provider.title" = "云端引擎";
 "settings.provider.personalDictionaryBadge" = "个性词库";
+"settings.provider.streamingBadge" = "流式识别";
 "settings.provider.subtitle" = "选择 LLM 提供商。";
 "settings.polishProvider.title" = "文本润色（LLM）";
 "settings.polishProvider.subtitle" = "识别完成后整理文字，可与 ASR 服务商不同。";
@@ -177,8 +178,17 @@
 "settings.systemPrompt.edit" = "编辑系统提示";
 "settings.systemPrompt.hint" = "云端润色时使用。本地识别模式不会用到此提示词。";
 "settings.about.title" = "关于";
+"settings.daily.title" = "日常";
+"settings.config.title" = "配置";
+"settings.general.title" = "通用";
+"settings.general.appearanceLanguage.title" = "外观与语言";
+"settings.general.keyboard.title" = "键盘与操作";
+"settings.general.sync.title" = "同步";
+"settings.speechRecognition.title" = "语音识别配置";
+"settings.textPolish.title" = "文本润色配置";
 "settings.preferences.title" = "偏好设置";
 "settings.dictionaryAndPolish.title" = "词库与润色";
+"settings.polishPreferences.title" = "润色偏好";
 "settings.handedness.title" = "握持偏好";
 "settings.handedness.left" = "左手";
 "settings.handedness.right" = "右手";
@@ -356,7 +366,42 @@
 "tab.keyboard" = "键盘";
 "tab.history" = "历史";
 "tab.dictionary" = "词库";
+"tab.styles" = "风格";
 "tab.settings" = "设置";
+
+/* 润色风格包 */
+"polishStyles.title" = "润色风格";
+"polishStyles.add" = "添加风格";
+"polishStyles.edit" = "编辑风格";
+"polishStyles.viewPrompt" = "查看完整提示词";
+"polishStyles.duplicate" = "创建副本";
+"polishStyles.builtin.section" = "内置风格";
+"polishStyles.fun.section" = "趣味风格";
+"polishStyles.custom.section" = "我的风格";
+"polishStyles.intro.title" = "选择完整写作人格";
+"polishStyles.intro.body" = "选中的风格会影响每次听写润色。开启设置同步后，自定义风格会通过 iCloud 保存。";
+"polishStyles.light.description" = "修正识别错误与标点，尽量少改原话。";
+"polishStyles.structured.description" = "将多个事项整理为清晰段落与列表。";
+"polishStyles.formal.description" = "适合邮件和工作的专业、克制表达。";
+"polishStyles.dating.description" = "有态度、好接，偶尔带一点巧思的恋爱聊天。";
+"polishStyles.chat.description" = "简短自然的聊天消息，避免公文腔。";
+"polishStyles.flex.description" = "中英夹杂的 4A / 留学装逼腔，偶尔点缀品牌格调。";
+"polishStyles.corp.description" = "大厂开会黑话：汇报、吵架、甩锅都像那么回事。";
+"polishStyles.diba.description" = "不脏字的逻辑碾压回复，让对方接不住。";
+"polishStyles.xhs.description" = "姐妹向小红书笔记体：有钩子、可种草、可直接发帖。";
+"polishStyles.custom.description" = "自定义完整写作人格";
+"polishStyles.copyName" = "%@副本";
+"polishStyles.editor.name" = "名称";
+"polishStyles.editor.namePlaceholder" = "风格名称";
+"polishStyles.editor.prompt" = "完整提示词";
+"polishStyles.editor.hint" = "使用 {{DICTIONARY}} 指定个人词典的插入位置。系统会自动追加安全边界、润色力度和输出契约。";
+"polishStyles.error.title" = "无法保存风格";
+"polishStyles.error.emptyName" = "请输入风格名称。";
+"polishStyles.error.emptyPrompt" = "提示词不能为空。";
+"polishStyles.error.limit" = "最多可保存 8 个自定义风格。";
+"polishStyles.error.promptTooLong" = "提示词最多可输入 6,000 个字符。";
+"polishStyles.error.builtin" = "内置风格不能直接修改，请创建副本后自定义。";
+"polishStyles.error.generic" = "请重试。";
 
 /* History */
 "history.title" = "历史";
@@ -366,6 +411,10 @@
 "history.clear.message" = "此操作无法撤销。";
 "history.clear.confirm" = "全部清空";
 "history.clear.button" = "清空全部历史";
+"history.clearDay.title" = "删除这一天的记录？";
+"history.clearDay.message" = "将删除该日全部语音记录，此操作无法撤销。";
+"history.clearDay.confirm" = "删除当天";
+"history.clearDay.button" = "删除当天历史";
 "flow.error.speechRequired" = "需要语音识别权限才能使用语音会话。";
 "flow.error.micRequired" = "需要麦克风权限才能维持后台语音会话。";
 "flow.error.micUnavailable" = "当前设备无法使用麦克风。";
@@ -417,6 +466,14 @@
 
 /* Flow 会话策略 */
 "settings.flow.title" = "语音会话";
+"settings.flow.keepAlive.title" = "保活方式";
+"settings.flow.keepAlive.liveActivity" = "灵动岛";
+"settings.flow.keepAlive.liveActivity.subtitle" = "麦克风常驻，可按无活动时长结束会话。";
+"settings.flow.keepAlive.pictureInPicture" = "画中画";
+"settings.flow.keepAlive.pictureInPicture.subtitle" = "波形画中画保活；句间释放麦克风。";
+"settings.flow.keepAlive.pictureInPicture.note" = "画中画将持续保活，直到你关闭小窗。此模式下始终跳过应用切换。";
+"settings.flow.keepAlive.activeSession.title" = "请先结束当前会话";
+"settings.flow.keepAlive.activeSession.message" = "更改保活方式前，请先结束正在进行的语音会话。";
 "settings.flow.skipAppSwitch.title" = "跳过应用切换";
 "settings.flow.skipAppSwitch.subtitle" = "冷启动完成后，尝试自动返回来源 App。";
 "settings.flow.inactivity.title" = "无活动后结束会话";
@@ -433,10 +490,19 @@
 /* 冷启动兜底（方案 B） */
 "flow.coldStart.title" = "语音已就绪";
 "flow.coldStart.preparing" = "正在就绪";
+"flow.coldStart.preparing.pip" = "正在启动画中画";
 "flow.coldStart.preparingHint" = "请先停留片刻，我们正在启动麦克风会话。";
+"flow.coldStart.preparingHint.pip" = "请先停留片刻，我们正在启动画中画保活。就绪后可返回键盘直接说话。";
 "flow.coldStart.permission.title" = "需要权限";
 "flow.coldStart.audio.title" = "语音暂时无法启动";
+"flow.coldStart.pip.title" = "画中画暂时无法启动";
 "flow.coldStart.error.audioTimeout" = "麦克风未能及时就绪，可能正被通话或其他 App 占用。请稍后重试。";
+"flow.pip.error.unavailable" = "无法启动画中画，请留在 App 内重试。";
+"flow.pip.error.unsupported" = "此设备不支持画中画。";
+"flow.pip.error.hostNotReady" = "画中画界面尚未就绪，请留在 App 内稍后重试。";
+"flow.pip.error.notPossible" = "系统暂时无法开启画中画，请保持 App 在前台后重试。";
+"flow.pip.error.systemRejected" = "画中画启动被系统拒绝，请稍后重试。";
+"flow.pip.error.timedOut" = "画中画未能及时出现，请留在 App 内重试。";
 "flow.coldStart.action.settings" = "前往设置";
 "flow.coldStart.action.retry" = "重试";
 "flow.coldStart.swipeHint" = "沿屏幕底部的横条，从左向右滑动\n返回上一个 App。";
@@ -491,3 +557,4 @@
 "hostApp.bilibili" = "哔哩哔哩";
 "hostApp.douyin" = "抖音";
 "hostApp.tiktok" = "TikTok";
+"flow.warning.polishDegradedQuality" = "本次润色结果未通过校验，已插入保守处理版本。";

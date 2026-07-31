@@ -48,8 +48,8 @@ settings:
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "26"
+    MARKETING_VERSION: "1.1"
+    CURRENT_PROJECT_VERSION: "32"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -391,6 +391,33 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
 
   # =========================================================
+  # macOS 单元测试
+  # =========================================================
+  # Hosted in the Mac app so `@testable import OSGKeyboard` reaches the
+  # macOS-only types (MacAudioRecorder, overlay sizing) that cannot compile
+  # against the iOS targets.
+  OSGKeyboardMacTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: OSGKeyboardMacTests
+    info:
+      path: OSGKeyboardMacTests/Info.plist
+    dependencies:
+      - target: OSGKeyboardMac
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.mac.tests
+        MACOSX_DEPLOYMENT_TARGET: "15.0"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: X329MZU23S
+        # The host target is named OSGKeyboardMac but ships as OSGKeyboard.app,
+        # so the path XcodeGen infers from the target name does not exist.
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/OSGKeyboard.app/Contents/MacOS/OSGKeyboard"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+  # =========================================================
   # macOS 菜单栏 App (Phase 1 · 云端 MVP)
   # =========================================================
   # Standalone menu-bar utility: record → cloud ASR → polish → clipboard.
@@ -523,5 +550,9 @@ schemes:
         OSGKeyboardMac: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - OSGKeyboardMacTests
     archive:
       config: Release

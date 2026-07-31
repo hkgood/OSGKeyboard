@@ -25,13 +25,7 @@ public struct SupportDeveloperSection: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
-            Text(SharedL10n.string("tip.title", language: language))
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textSecondary)
-                .textCase(.uppercase)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
+        CardSection(title: SharedL10n.string("tip.title", language: language)) {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 SupportDeveloperTipBody(language: language)
 
@@ -57,11 +51,7 @@ public struct SupportDeveloperSection: View {
             }
             .padding(Spacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
+            .surfaceCard()
         }
         .onChange(of: tipManager.purchaseState) { _, newValue in
             switch newValue {

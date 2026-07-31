@@ -134,10 +134,12 @@
 
 /* Flow session (keyboard) */
 "keyboard.flow.sessionInactive" = "语音会话未启动";
+"keyboard.flow.sessionInactive.pip" = "画中画未启动，点麦克风打开 OSGKeyboard";
 "keyboard.flow.start" = "启动";
 "keyboard.flow.startA11y" = "启动语音会话";
 "keyboard.flow.sessionExpired" = "语音会话已结束，请打开 OSGKeyboard 重新启动";
 "keyboard.flow.startingSession" = "正在启动语音会话…";
+"keyboard.flow.startingSession.pip" = "正在启动画中画…";
 "keyboard.flow.transcribing" = "识别中…";
 "keyboard.flow.resultTimeout" = "等待识别结果超时，请重试";
 "keyboard.flow.hostDisconnected" = "语音会话已断开，请打开 OSGKeyboard 重新启动";

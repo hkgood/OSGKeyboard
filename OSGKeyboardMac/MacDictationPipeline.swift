@@ -25,10 +25,25 @@ enum MacDictationError: Error, LocalizedError {
 /// Outcome of ASR that ran while the microphone was still open.
 struct MacLiveASRCaptureResult: Sendable {
     let raw: String
+    let rawWithPauseMarks: String?
     let chunkWarning: String?
     let localBias: LocalASRBiasPayload?
     /// When true, callers should fall back to batch ASR on the recorded samples.
     let shouldFallbackToBatch: Bool
+
+    init(
+        raw: String,
+        rawWithPauseMarks: String? = nil,
+        chunkWarning: String?,
+        localBias: LocalASRBiasPayload?,
+        shouldFallbackToBatch: Bool
+    ) {
+        self.raw = raw
+        self.rawWithPauseMarks = rawWithPauseMarks
+        self.chunkWarning = chunkWarning
+        self.localBias = localBias
+        self.shouldFallbackToBatch = shouldFallbackToBatch
+    }
 }
 
 enum MacDictationPipeline {
@@ -37,14 +52,15 @@ enum MacDictationPipeline {
         if store.engineMode == "local" {
             return MacLocalASRService.usesMLXLiveStreaming()
         }
-        let strategy = CloudASRModelCatalog.strategy(for: store.asrProviderId)
-        return strategy != .localFallback
+        return CloudASRModelCatalog.supportsTrueStreamingASR(for: store.asrProviderId)
+            || CloudASRModelCatalog.strategy(for: store.asrProviderId) != .localFallback
     }
 
     /// Runs ASR then polish. Polish failures return cleaned raw ASR plus a warning.
     static func run(
         samples: [Float],
         store: AppGroupStore,
+        targetAppBundleIdentifier: String? = nil,
         onPartial: (@Sendable (String) -> Void)? = nil
     ) async throws -> MacDictationResult {
         guard !samples.isEmpty else { throw MacDictationError.noAudio }
@@ -54,7 +70,11 @@ enum MacDictationPipeline {
         var localBias: LocalASRBiasPayload?
 
         if store.engineMode == "local" {
-            localBias = resolveLocalBias(store: store, locale: locale)
+            localBias = resolveLocalBias(
+                store: store,
+                locale: locale,
+                targetAppBundleIdentifier: targetAppBundleIdentifier
+            )
             raw = try await MacLocalASRService.transcribe(
                 samples: samples,
                 locale: locale,
@@ -88,6 +108,7 @@ enum MacDictationPipeline {
         stream: AsyncStream<AudioBufferSnapshot>,
         finishSignal: AsyncStream<Void>,
         store: AppGroupStore,
+        targetAppBundleIdentifier: String?,
         onPartial: @escaping @Sendable (String) -> Void
     ) async -> MacLiveASRCaptureResult {
         if store.engineMode == "local", MacLocalASRService.usesMLXLiveStreaming() {
@@ -95,6 +116,7 @@ enum MacDictationPipeline {
                 audioStream: stream,
                 finishSignal: finishSignal,
                 store: store,
+                targetAppBundleIdentifier: targetAppBundleIdentifier,
                 onPartial: onPartial
             )
         }
@@ -102,12 +124,51 @@ enum MacDictationPipeline {
         let locale = resolvedLocale(store: store)
         let localBias: LocalASRBiasPayload?
         if store.engineMode == "local" {
-            localBias = resolveLocalBias(store: store, locale: locale)
+            localBias = resolveLocalBias(
+                store: store,
+                locale: locale,
+                targetAppBundleIdentifier: targetAppBundleIdentifier
+            )
         } else {
             localBias = nil
         }
 
         do {
+            if store.engineMode == "cloud",
+               CloudASRModelCatalog.supportsTrueStreamingASR(for: store.asrProviderId),
+               let streamingClient = CloudASRClientFactory.make(store: store) as? CloudASRStreamingCapable {
+                try? await streamingClient.prepare(dictionary: store.personalDictionary)
+                let pipeline = StreamingUtterancePipeline(
+                    client: streamingClient,
+                    locale: locale,
+                    dictionary: store.personalDictionary
+                )
+                let outcome = await pipeline.transcribe(stream: stream, onPartial: onPartial)
+                switch outcome {
+                case .success(let success):
+                    return MacLiveASRCaptureResult(
+                        raw: success.text,
+                        chunkWarning: success.chunkWarnings.first,
+                        localBias: localBias,
+                        shouldFallbackToBatch: false
+                    )
+                case .failure:
+                    return MacLiveASRCaptureResult(
+                        raw: "",
+                        chunkWarning: nil,
+                        localBias: localBias,
+                        shouldFallbackToBatch: true
+                    )
+                case .cancelled:
+                    return MacLiveASRCaptureResult(
+                        raw: "",
+                        chunkWarning: nil,
+                        localBias: localBias,
+                        shouldFallbackToBatch: true
+                    )
+                }
+            }
+
             let adapter = try makeChunkASRAdapter(store: store)
             if let cloudAdapter = adapter as? MacCloudASRChunkAdapter {
                 try? await cloudAdapter.prepare()
@@ -124,6 +185,7 @@ enum MacDictationPipeline {
             case .success(let success):
                 return MacLiveASRCaptureResult(
                     raw: success.text,
+                    rawWithPauseMarks: success.textWithPauseMarks,
                     chunkWarning: success.chunkWarnings.first,
                     localBias: localBias,
                     shouldFallbackToBatch: false
@@ -156,6 +218,7 @@ enum MacDictationPipeline {
     /// Polish-only step after live or batch ASR has produced raw text.
     static func polishCapturedASR(
         raw: String,
+        rawWithPauseMarks: String? = nil,
         store: AppGroupStore,
         localBias: LocalASRBiasPayload?,
         chunkWarning: String?
@@ -164,10 +227,16 @@ enum MacDictationPipeline {
         guard !trimmed.isEmpty else { throw MacDictationError.emptyTranscript }
 
         let postASR: String
+        let polishInput: String
         if let localBias, !localBias.correctionPairs.isEmpty {
             postASR = LocalASRTranscriptCorrector.apply(trimmed, pairs: localBias.correctionPairs)
+            polishInput = LocalASRTranscriptCorrector.apply(
+                rawWithPauseMarks ?? trimmed,
+                pairs: localBias.correctionPairs
+            )
         } else {
             postASR = trimmed
+            polishInput = rawWithPauseMarks ?? trimmed
         }
 
         let polishContext: PolishContext?
@@ -183,17 +252,20 @@ enum MacDictationPipeline {
         }
 
         do {
-            let polished = try await PolishingService(store: store).polish(
-                postASR,
+            let outcome = try await PolishingService(store: store).polishWithOutcome(
+                polishInput,
                 mode: store.polishModeForPipeline,
                 context: polishContext
             )
+            let polished = outcome.text
             guard !polished.isEmpty else {
                 throw PolishingService.PolishError.noTranscript
             }
             return MacDictationResult(
                 text: polished,
-                polishWarning: nil,
+                polishWarning: outcome.qualityDegraded
+                    ? MacL10n.string("flow.warning.polishDegradedQuality")
+                    : nil,
                 chunkWarning: chunkWarning
             )
         } catch {
@@ -219,15 +291,15 @@ enum MacDictationPipeline {
 
     private static func resolveLocalBias(
         store: AppGroupStore,
-        locale: Locale
+        locale: Locale,
+        targetAppBundleIdentifier: String?
     ) -> LocalASRBiasPayload? {
-        MacAppContextService.captureAndPersist(to: store)
         let capabilities = MacLocalASRService.currentCapabilities()
         let bias = LocalASRBiasAdapter.adapt(
             LocalASRBiasRequest(
                 dictionary: store.personalDictionary,
                 locale: locale,
-                frontAppBundleId: MacAppContextService.frontmostBundleIdentifier(),
+                frontAppBundleId: targetAppBundleIdentifier,
                 capabilities: capabilities
             )
         )

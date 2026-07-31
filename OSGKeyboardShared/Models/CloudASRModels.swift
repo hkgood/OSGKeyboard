@@ -18,6 +18,8 @@ public enum CloudASRStrategy: String, Sendable, Equatable {
     case openRouterJson
     /// 火山引擎 SAUC 大模型流式 ASR（WebSocket + binary frame）。
     case volcengineStreaming
+    /// OpenAI Realtime transcription（WebSocket，真流式）。
+    case openaiRealtimeStreaming
     /// Moonshot 托管 API 暂无音频转写；云端引擎回退端侧 ASR。
     case localFallback
 }
@@ -81,6 +83,9 @@ public enum CloudASRModelCatalog {
     public static let zhipuGLMASR = "glm-asr-2512"
     public static let openAITranscribe = "gpt-4o-mini-transcribe"
     public static let openAIWhisper = "whisper-1"
+    /// OpenAI Realtime transcription model (utterance-level streaming).
+    public static let openAIRealtimeWhisper = "gpt-realtime-whisper"
+    public static let openAIRealtimeEndpoint = "wss://api.openai.com/v1/realtime?intent=transcription"
     public static let mimoASR = "mimo-v2.5-asr"
     public static let groqWhisper = "whisper-large-v3-turbo"
     public static let siliconflowASR = "FunAudioLLM/SenseVoiceSmall"
@@ -108,12 +113,24 @@ public enum CloudASRModelCatalog {
             return .localFallback
         case "volcengine":
             return .volcengineStreaming
+        case "openai":
+            return .openaiRealtimeStreaming
         case "openrouter":
             return .openRouterJson
-        case "openai", "whisper", "mimo", "groq", "siliconflow", "custom":
+        case "whisper", "mimo", "groq", "siliconflow", "custom":
             return .prompt
         default:
             return .localFallback
+        }
+    }
+
+    /// Providers whose Flow path uses utterance-level true streaming ASR.
+    public static func supportsTrueStreamingASR(for providerId: String) -> Bool {
+        switch strategy(for: providerId) {
+        case .bailianStreaming, .volcengineStreaming, .openaiRealtimeStreaming:
+            return true
+        case .zhipuHotwords, .prompt, .openRouterJson, .localFallback:
+            return false
         }
     }
 
@@ -135,7 +152,9 @@ public enum CloudASRModelCatalog {
             return openrouterWhisper
         case "volcengine":
             return volcengineDefaultResourceID
-        case "openai", "custom":
+        case "openai":
+            return openAIRealtimeWhisper
+        case "custom":
             return openAITranscribe
         default:
             return openAITranscribe
@@ -145,7 +164,7 @@ public enum CloudASRModelCatalog {
     /// Whether the ASR settings card should expose a custom endpoint field.
     public static func showsASREndpointField(for providerId: String) -> Bool {
         switch strategy(for: providerId) {
-        case .prompt, .openRouterJson, .bailianStreaming:
+        case .prompt, .openRouterJson, .bailianStreaming, .openaiRealtimeStreaming:
             return true
         case .zhipuHotwords, .volcengineStreaming, .localFallback:
             return false
@@ -167,8 +186,14 @@ extension LLMProvider {
         switch cloudASRStrategy {
         case .zhipuHotwords:
             return true
-        case .bailianStreaming, .prompt, .openRouterJson, .volcengineStreaming, .localFallback:
+        case .bailianStreaming, .prompt, .openRouterJson, .volcengineStreaming,
+                .openaiRealtimeStreaming, .localFallback:
             return false
         }
+    }
+
+    /// Product badge: true streaming ASR path is wired for this provider.
+    public var supportsStreamingCloudASR: Bool {
+        CloudASRModelCatalog.supportsTrueStreamingASR(for: id)
     }
 }

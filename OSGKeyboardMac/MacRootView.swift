@@ -95,6 +95,7 @@ struct MacRootView: View {
                 case .dashboard:  DashboardView(viewModel: viewModel)
                 case .history:    MacHistoryView(viewModel: viewModel)
                 case .dictionary: MacDictionaryView(viewModel: viewModel)
+                case .styles:     MacPolishStylesView(viewModel: viewModel)
                 case .settings:   MacSettingsView(viewModel: viewModel)
                 }
             }

@@ -60,8 +60,10 @@ final class SettingsCloudSyncTests: XCTestCase {
             handednessPreference: SyncedField(value: .left, updatedAt: stampA, deviceID: deviceA),
             cursorDragNavigationEnabled: SyncedField(value: true, updatedAt: stampA, deviceID: deviceA),
             polishIntensity: SyncedField(value: .medium, updatedAt: stampA, deviceID: deviceA),
+            activePolishStyleId: SyncedField(value: "builtin.light", updatedAt: stampA, deviceID: deviceA),
             llmThinkingEnabled: SyncedField(value: false, updatedAt: stampA, deviceID: deviceA),
             flowSkipAppSwitch: SyncedField(value: true, updatedAt: stampA, deviceID: deviceA),
+            flowKeepAliveMode: SyncedField(value: .liveActivity, updatedAt: stampA, deviceID: deviceA),
             flowInactivityDuration: SyncedField(value: .twelveHours, updatedAt: stampA, deviceID: deviceA)
         )
         let remote = SyncedAppSettingsV2(
@@ -80,8 +82,10 @@ final class SettingsCloudSyncTests: XCTestCase {
             handednessPreference: SyncedField(value: .right, updatedAt: stampB, deviceID: deviceB),
             cursorDragNavigationEnabled: SyncedField(value: false, updatedAt: stampB, deviceID: deviceB),
             polishIntensity: SyncedField(value: .light, updatedAt: stampB, deviceID: deviceB),
+            activePolishStyleId: SyncedField(value: "builtin.formal", updatedAt: stampB, deviceID: deviceB),
             llmThinkingEnabled: SyncedField(value: true, updatedAt: stampB, deviceID: deviceB),
             flowSkipAppSwitch: SyncedField(value: false, updatedAt: stampB, deviceID: deviceB),
+            flowKeepAliveMode: SyncedField(value: .pictureInPicture, updatedAt: stampB, deviceID: deviceB),
             flowInactivityDuration: SyncedField(value: .threeHours, updatedAt: stampB, deviceID: deviceB)
         )
 

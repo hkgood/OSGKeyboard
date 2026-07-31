@@ -40,6 +40,12 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let detectedAppContext = "config.detectedAppContext"
         public static let detectedAppContextAt = "config.detectedAppContextAt"
         public static let personalDictionary = "config.personalDictionary.v1"
+        public static let polishStyleCatalog = "config.polishStyles.v1"
+        public static let activePolishStyleId = "config.activePolishStyleId"
+        public static let polishStylesMigrated = "config.polishStyles.migrated"
+        /// Keys used by the removed pre-v0.3 manual scenario implementation.
+        public static let legacyPolishScenarioId = "config.polishScenarioId"
+        public static let legacySystemPrompt = "config.systemPrompt"
         /// When true, the main app mirrors the personal dictionary via iCloud KVS.
         public static let personalDictionaryICloudSyncEnabled = "config.personalDictionary.iCloudSyncEnabled"
         /// When true, the main app mirrors user settings via iCloud KVS.
@@ -50,6 +56,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let settingsCloudPayloadV2 = "config.settings.cloudPayload.v2"
         /// When true, the host app auto-returns to the source app after a cold-start handoff.
         public static let flowSkipAppSwitch = "config.flowSkipAppSwitch"
+        /// Raw `FlowKeepAliveMode` value; mutually exclusive PiP vs Live Activity path.
+        public static let flowKeepAliveMode = "config.flowKeepAliveMode"
         /// Raw `FlowInactivityDuration` value; session expires after this idle window.
         public static let flowInactivityDuration = "config.flowInactivityDuration"
         /// One-shot: remap previous product defaults (30m / 10m) → 5m.
@@ -82,12 +90,16 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     /// Enables provider-specific reasoning / thinking controls for polish LLM requests.
     public var llmThinkingEnabled: Bool
     public var personalDictionary: PersonalDictionary
+    public var polishStyleCatalog: PolishStyleCatalog
+    public var activePolishStyleId: String
     /// Opt-in iCloud KVS sync for the personal dictionary (main app only).
     public var personalDictionaryICloudSyncEnabled: Bool
     /// Opt-in iCloud KVS sync for user settings (main app only).
     public var settingsICloudSyncEnabled: Bool
     /// Auto-return to the host app after `startflow` cold start (default on).
     public var flowSkipAppSwitch: Bool
+    /// PiP vs Live Activity keep-alive strategy (mutually exclusive).
+    public var flowKeepAliveMode: FlowKeepAliveMode
     /// Idle timeout before the Flow session ends; resets on each utterance.
     public var flowInactivityDuration: FlowInactivityDuration
     /// Whether local `SpeechAnalyzer` should attach the prepared custom language model.
@@ -244,6 +256,9 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             polishIntensity: resolvePolishIntensity(from: defaults),
             llmThinkingEnabled: defaults.bool(forKey: Keys.llmThinkingEnabled),
             personalDictionary: decodePersonalDictionary(from: defaults),
+            polishStyleCatalog: decodePolishStyleCatalog(from: defaults),
+            activePolishStyleId: defaults.string(forKey: Keys.activePolishStyleId)
+                ?? PolishStylePackCatalog.defaultID,
             personalDictionaryICloudSyncEnabled: {
                 if defaults.object(forKey: Keys.personalDictionaryICloudSyncEnabled) == nil {
                     return true
@@ -262,6 +277,9 @@ public struct AppGroupConfiguration: Sendable, Equatable {
                 }
                 return defaults.bool(forKey: Keys.flowSkipAppSwitch)
             }(),
+            flowKeepAliveMode: FlowKeepAliveMode.fromStored(
+                defaults.string(forKey: Keys.flowKeepAliveMode)
+            ),
             flowInactivityDuration: FlowInactivityDuration.fromStored(
                 defaults.string(forKey: Keys.flowInactivityDuration)
             ),
@@ -347,6 +365,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             config.modeId = "polish"
             defaults.set("polish", forKey: Keys.modeId)
         }
+        migrateLegacyPolishStyleIfNeeded(configuration: &config, defaults: defaults)
         return config
     }
 
@@ -369,12 +388,15 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(cursorDragNavigationEnabled, forKey: Keys.cursorDragNavigationEnabled)
         defaults.set(polishIntensity.rawValue, forKey: Keys.polishIntensity)
         defaults.set(llmThinkingEnabled, forKey: Keys.llmThinkingEnabled)
+        defaults.set(activePolishStyleId, forKey: Keys.activePolishStyleId)
         defaults.set(flowSkipAppSwitch, forKey: Keys.flowSkipAppSwitch)
+        defaults.set(flowKeepAliveMode.rawValue, forKey: Keys.flowKeepAliveMode)
         defaults.set(flowInactivityDuration.rawValue, forKey: Keys.flowInactivityDuration)
         defaults.set(localASRCustomLanguageModelEnabled, forKey: Keys.localASRCustomLanguageModelEnabled)
         defaults.set(personalDictionaryICloudSyncEnabled, forKey: Keys.personalDictionaryICloudSyncEnabled)
         defaults.set(settingsICloudSyncEnabled, forKey: Keys.settingsICloudSyncEnabled)
         Self.encodePersonalDictionary(personalDictionary, to: defaults)
+        Self.encodePolishStyleCatalog(polishStyleCatalog, to: defaults)
     }
 
     // MARK: - Private helpers
@@ -418,6 +440,58 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             defaults.set(data, forKey: Keys.personalDictionary)
         } catch {
             OSGLog.config.warning("personalDictionary encode failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private static func decodePolishStyleCatalog(from defaults: UserDefaults) -> PolishStyleCatalog {
+        guard let data = defaults.data(forKey: Keys.polishStyleCatalog) else { return .empty }
+        do {
+            return try JSONDecoder().decode(PolishStyleCatalog.self, from: data)
+        } catch {
+            OSGLog.config.warning("polishStyleCatalog decode failed: \(error.localizedDescription, privacy: .public)")
+            return .empty
+        }
+    }
+
+    private static func encodePolishStyleCatalog(_ catalog: PolishStyleCatalog, to defaults: UserDefaults) {
+        do {
+            defaults.set(try JSONEncoder().encode(catalog), forKey: Keys.polishStyleCatalog)
+        } catch {
+            OSGLog.config.warning("polishStyleCatalog encode failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    private static func migrateLegacyPolishStyleIfNeeded(
+        configuration: inout AppGroupConfiguration,
+        defaults: UserDefaults
+    ) {
+        guard !defaults.bool(forKey: Keys.polishStylesMigrated) else { return }
+        defer { defaults.set(true, forKey: Keys.polishStylesMigrated) }
+
+        if let legacyPrompt = defaults.string(forKey: Keys.legacySystemPrompt)?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !legacyPrompt.isEmpty {
+            let boundedPrompt = String(legacyPrompt.prefix(PolishStyleLimits.maximumPromptCharacters))
+            let custom = PolishStylePack(name: "自定义", prompt: boundedPrompt)
+            if (try? configuration.polishStyleCatalog.upsert(custom)) != nil {
+                configuration.activePolishStyleId = custom.id
+                defaults.set(custom.id, forKey: Keys.activePolishStyleId)
+                encodePolishStyleCatalog(configuration.polishStyleCatalog, to: defaults)
+            }
+            return
+        }
+
+        let legacyMappings = [
+            "daily_chat": "builtin.chat",
+            "work": "builtin.formal",
+            "document": "builtin.structured",
+            "todo": "builtin.structured",
+            "social_lifestyle": "builtin.xhs",
+        ]
+        if let legacyID = defaults.string(forKey: Keys.legacyPolishScenarioId),
+           let mappedID = legacyMappings[legacyID] {
+            configuration.activePolishStyleId = mappedID
+            defaults.set(mappedID, forKey: Keys.activePolishStyleId)
         }
     }
 

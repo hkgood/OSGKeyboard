@@ -103,6 +103,54 @@ final class LLMClientTests: XCTestCase {
         XCTAssertTrue(req?.value(forHTTPHeaderField: "Authorization")?.hasPrefix("Bearer ") == true)
     }
 
+    func testPolishRequestUsesConservativeGenerationParameters() async throws {
+        let request = LLMRequest(
+            model: "test-model",
+            messages: [.system("brief"), .user("hello")],
+            temperature: 0.1,
+            maxTokens: LLMRequest.outputTokenLimit(for: "hello"),
+            topP: 0.9
+        )
+        let data = try JSONEncoder().encode(request)
+        let body = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: data) as? [String: Any]
+        )
+        XCTAssertEqual(body["temperature"] as? Double, 0.1)
+        XCTAssertEqual(body["top_p"] as? Double, 0.9)
+        XCTAssertEqual(body["max_tokens"] as? Int, 256)
+    }
+
+    func testLLMResponseDecodesCachedPromptUsage() throws {
+        let data = """
+        {
+          "choices": [{"index":0,"message":{"role":"assistant","content":"ok"}}],
+          "usage": {
+            "prompt_tokens": 1000,
+            "prompt_tokens_details": {"cached_tokens": 800}
+          }
+        }
+        """.data(using: .utf8)!
+        let response = try JSONDecoder().decode(LLMResponse.self, from: data)
+        XCTAssertEqual(response.usage?.promptTokens, 1_000)
+        XCTAssertEqual(response.usage?.cachedTokens, 800)
+    }
+
+    func testCacheMetricsRoundTrip() {
+        let suite = "group.com.osgkeyboard.shared.tests.cache.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        LLMCacheMetricsStore.record(
+            providerId: "openai",
+            promptTokens: 1_000,
+            cachedTokens: 800,
+            defaults: defaults
+        )
+        XCTAssertEqual(
+            LLMCacheMetricsStore.latest(defaults: defaults)?.summary,
+            "800/1000 80% (openai)"
+        )
+    }
+
     func testPolishThrowsOnHTTPError() async {
         StubURLProtocolStorage.config = (401, "Unauthorized".data(using: .utf8)!)
         defer { StubURLProtocolStorage.config = nil }
