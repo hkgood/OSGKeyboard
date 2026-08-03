@@ -237,6 +237,45 @@ extension PersonalDictionary {
         return merged
     }
 
+    /// Personal hotwords safe for the English typing keyboard.
+    /// Drops CJK terms; keeps Latin product names / acronyms (and English aliases).
+    public func englishTypingHotwords() -> [String] {
+        var seen = Set<String>()
+        var words: [String] = []
+        for entry in effectiveEntries {
+            for raw in ([entry.term] + entry.aliases) {
+                let term = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard Self.isEnglishTypingHotword(term) else { continue }
+                let key = term.lowercased()
+                guard seen.insert(key).inserted else { continue }
+                words.append(term)
+            }
+        }
+        return words
+    }
+
+    /// Latin-script hotword with no CJK ideographs (allows digits / hyphen / apostrophe).
+    public static func isEnglishTypingHotword(_ term: String) -> Bool {
+        guard !term.isEmpty else { return false }
+        var hasLatinLetter = false
+        for scalar in term.unicodeScalars {
+            if isCJKIdeograph(scalar) { return false }
+            if scalar.isASCII, CharacterSet.letters.contains(scalar) {
+                hasLatinLetter = true
+            }
+        }
+        return hasLatinLetter
+    }
+
+    private static func isCJKIdeograph(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF:
+            return true
+        default:
+            return false
+        }
+    }
+
     /// Case-insensitive lookup by canonical term.
     public func entry(matchingTerm term: String) -> Entry? {
         let key = term.lowercased()

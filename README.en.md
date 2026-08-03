@@ -28,6 +28,7 @@ Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands 
 
 - **Works everywhere** — Messages, Notes, Notion, Cursor, Mail, WeChat — wherever you type
 - **Speak, don't edit** — tap (iOS) or hold Option (Mac); AI adds punctuation and structure for you
+- **Type in Chinese and English** — iOS keyboard ships full/double pinyin candidates, plus English autocomplete, autocorrect, and next-word prediction
 - **On-device by default** — local recognition on iOS; optional local models on Mac. Cloud upload only when you opt in
 - **Bring your own LLM** — built-in polish out of the box, or plug in DeepSeek, OpenAI, Anthropic, OpenRouter, and more
 - **Mac global dictation** — menu-bar app, bottom overlay with live feedback, inserts into the frontmost app
@@ -47,11 +48,12 @@ Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands 
 | | iOS / iPadOS | macOS |
 |---|:---:|:---:|
 | Keyboard / global hotkey | ✅ | ✅ hold Option |
-| Full / Microsoft / Sogou double pinyin | ✅ optional fuzzy pairs | — |
+| Chinese typing (full / Microsoft / Sogou double pinyin) | ✅ optional fuzzy pairs | — |
+| English typing (autocomplete / autocorrect / next-word) | ✅ offline lexicon + personal-dictionary boosts | — |
 | Local speech recognition | ✅ SpeechAnalyzer | ✅ SenseVoice / Qwen3 |
 | AI polish | ✅ | ✅ |
 | Post-polish translation | ✅ | ✅ |
-| Personal dictionary | ✅ iCloud sync | ✅ |
+| Personal dictionary | ✅ iCloud sync; protects polish and boosts English suggestions | ✅ |
 | Dictation history | ✅ | ✅ |
 | Live UI | ✅ Dynamic Island | ✅ floating pill |
 
@@ -59,7 +61,7 @@ Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands 
 
 ## Privacy
 
-Speech is transcribed on-device by default. Polish sends **text only** — the transcript and a small amount of nearby cursor text for continuity, never raw audio. Chinese candidate learning stays in the on-device App Group and is not uploaded. Cursor context is not logged or saved to voice history, and secure fields are never captured. See the [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/).
+Speech is transcribed on-device by default. Polish sends **text only** — the transcript and a small amount of nearby cursor text for continuity, never raw audio. Chinese candidate learning and English suggestion/autocorrect learning stay in the on-device App Group and are not uploaded. Secure fields disable English suggestions and autocorrect. Cursor context is not logged or saved to voice history. See the [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/).
 
 ---
 
@@ -135,7 +137,7 @@ OSGKeyboard's voice and keyboard features build on these projects and platforms:
 - [mlx-audio-swift](https://github.com/Blaizzy/mlx-audio-swift) — local Qwen3 MLX streaming ASR on macOS
 - [Google Material Icons](https://github.com/google/material-design-icons) — icon font used by the iOS app
 
-See [Third-Party Notices](./NOTICE-TYPING.md) for exact versions and licenses, or open Settings → About → Third-Party Licenses in the app.
+See [Third-Party Notices](./NOTICE-TYPING.md) for exact versions and licenses (Chinese Rime stack plus the OSG-owned English lexicon notice), or open Settings → About → Third-Party Licenses in the app.
 
 ---
 

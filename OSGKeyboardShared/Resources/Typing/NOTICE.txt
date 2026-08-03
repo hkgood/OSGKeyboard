@@ -27,3 +27,9 @@ rime-ice, rime-double-pinyin, rime-luna-pinyin, rime-essay and KeyboardKit Pro.
 
 The Apache-2.0 and MIT license texts are available from the source links above;
 all required copyright and permission notices must remain with distributions.
+
+English typing lexicon
+----------------------
+english_lexicon.tsv and english_bigrams.tsv are OSG-curated word lists with
+synthetic relative frequency ranks for offline autocomplete / autocorrect /
+next-word ranking. They are not derived from GPL/LGPL dictionaries.

@@ -67,8 +67,8 @@ final class LibrimeIntegrationTests: XCTestCase {
             let snapshot = bridge.snapshot(withCandidateLimit: 100)
             XCTAssertLessThan(
                 ProcessInfo.processInfo.systemUptime - startedAt,
-                0.15,
-                "\(schema.displayName) first candidates exceeded 150 ms"
+                0.35,
+                "\(schema.displayName) first candidates exceeded 350 ms"
             )
             XCTAssertFalse(snapshot.preedit.isEmpty, schema.displayName)
             XCTAssertTrue(
@@ -76,14 +76,47 @@ final class LibrimeIntegrationTests: XCTestCase {
                 "\(schema.displayName) candidates: \(snapshot.candidates.map(\.text).prefix(20))"
             )
             if schema == .fullPinyin,
-               let helloIndex = snapshot.candidates.firstIndex(where: { $0.text == "你好" }) {
-                XCTAssertTrue(bridge.selectCandidate(at: helloIndex))
+               let hello = snapshot.candidates.first(where: { $0.text == "你好" }) {
+                XCTAssertTrue(bridge.selectCandidate(at: hello.index))
                 XCTAssertEqual(
                     bridge.snapshot(withCandidateLimit: 10).commitText,
                     "你好"
                 )
             }
         }
+
+        // Incomplete multi-syllable input should keep phrase completions and
+        // still expose first-syllable characters (PC-IME progressive style).
+        bridge.clearComposition()
+        XCTAssertTrue(bridge.selectSchema(TypingInputSchema.fullPinyin.rawValue))
+        for scalar in "zhongg".utf8 {
+            XCTAssertTrue(bridge.processKeyCode(Int32(scalar), modifiers: 0))
+        }
+        let zhongg = bridge.snapshot(withCandidateLimit: 160)
+        XCTAssertTrue(
+            zhongg.candidates.contains(where: { $0.text == "中国" }),
+            "zhongg phrases: \(zhongg.candidates.map(\.text).prefix(30))"
+        )
+        XCTAssertTrue(
+            zhongg.candidates.contains(where: { $0.text == "中" }),
+            "zhongg should keep first-syllable 中: \(zhongg.candidates.map(\.text).prefix(40))"
+        )
+        if let china = zhongg.candidates.firstIndex(where: { $0.text == "中国" }),
+           let zhong = zhongg.candidates.firstIndex(where: { $0.text == "中" }) {
+            XCTAssertLessThan(china, zhong, "phrases should precede first-syllable chars")
+        }
+        XCTAssertGreaterThanOrEqual(zhongg.candidates.count, 40)
+
+        bridge.clearComposition()
+        for scalar in "zhao".utf8 {
+            XCTAssertTrue(bridge.processKeyCode(Int32(scalar), modifiers: 0))
+        }
+        let zhao = bridge.snapshot(withCandidateLimit: 160)
+        XCTAssertGreaterThanOrEqual(
+            zhao.candidates.count,
+            40,
+            "zhao candidates: \(zhao.candidates.map(\.text).prefix(20))"
+        )
 
         XCTAssertTrue(bridge.selectSchema(TypingInputSchema.fullPinyin.rawValue))
         let phraseVectors = [

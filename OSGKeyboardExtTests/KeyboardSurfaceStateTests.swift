@@ -27,6 +27,7 @@ final class KeyboardSurfaceStateTests: XCTestCase {
         XCTAssertEqual(KeyboardChromeLayout.totalHeight, 281)
         XCTAssertEqual(KeyboardChromeLayout.actionKeyHeight, 50)
         XCTAssertEqual(KeyboardChromeLayout.actionKeyCornerRadius, 10)
+        XCTAssertEqual(KeyboardChromeLayout.sideActionKeyWidth, 86)
         XCTAssertEqual(KeyboardChromeLayout.horizontalInset, 8)
     }
 
@@ -34,10 +35,10 @@ final class KeyboardSurfaceStateTests: XCTestCase {
         let typing = TypingSessionController()
         XCTAssertEqual(typing.language, .chinese)
 
-        XCTAssertEqual(typing.setLanguage(.english), "")
+        XCTAssertEqual(typing.setLanguage(.english), .none)
         XCTAssertEqual(typing.language, .english)
 
-        XCTAssertEqual(typing.setLanguage(.chinese), "")
+        XCTAssertEqual(typing.setLanguage(.chinese), .none)
         XCTAssertEqual(typing.language, .chinese)
     }
 

@@ -26,11 +26,19 @@ public struct TypingCandidate: Identifiable, Equatable, Sendable {
     public let id: String
     public let text: String
     public let annotation: String?
+    /// Absolute engine index for Chinese selection (may differ from display order).
+    public let engineIndex: Int
 
-    public init(id: String = UUID().uuidString, text: String, annotation: String? = nil) {
+    public init(
+        id: String = UUID().uuidString,
+        text: String,
+        annotation: String? = nil,
+        engineIndex: Int = 0
+    ) {
         self.id = id
         self.text = text
         self.annotation = annotation
+        self.engineIndex = engineIndex
     }
 }
 

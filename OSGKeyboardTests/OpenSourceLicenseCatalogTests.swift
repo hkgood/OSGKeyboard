@@ -14,6 +14,7 @@ final class OpenSourceLicenseCatalogTests: XCTestCase {
         XCTAssertTrue(ids.contains("jieba"))
         XCTAssertTrue(ids.contains("phrase-pinyin-data"))
         XCTAssertTrue(ids.contains("pinyin-data"))
+        XCTAssertTrue(ids.contains("english-typing-lexicon"))
         XCTAssertFalse(ids.contains("mlx-audio-swift"))
     }
 

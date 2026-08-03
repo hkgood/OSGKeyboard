@@ -19,7 +19,9 @@ public enum RimeSchemaGenerator {
           caption: 输入方案
           hotkeys: []
         menu:
-          page_size: 9
+          # Large page so librime prepares enough candidates for the expand panel.
+          # The bridge also iterates beyond the current page via candidate_list_*.
+          page_size: 100
         ascii_composer:
           good_old_caps_lock: true
           switch_key:

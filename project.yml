@@ -349,6 +349,8 @@ targets:
       - path: OSGKeyboardShared/Resources/Typing/LIBRIME-COMBINED-NOTICES.txt
       - path: OSGKeyboardShared/Resources/Typing/Rime/osg_pinyin.dict.yaml
       - path: OSGKeyboardShared/Resources/Typing/Rime/manifest.json
+      - path: OSGKeyboardShared/Resources/Typing/English/english_lexicon.tsv
+      - path: OSGKeyboardShared/Resources/Typing/English/english_bigrams.tsv
     info:
       path: OSGKeyboardShared/Info.plist
     settings:

@@ -1,7 +1,7 @@
 // TypingRootView.swift
 // OSGKeyboard · Keyboard Extension
 //
-// Typing surface (Phase 1): candidate bar + QWERTY / 123 / symbols.
+// Typing surface: candidate bar + QWERTY / 123 / symbols.
 // Top-leading control returns to the voice surface.
 
 import SwiftUI
@@ -18,11 +18,17 @@ enum TypingLayoutMetrics {
     static let verticalKeySpacing: CGFloat = 8
     static let secondRowInset: CGFloat = 18
     static let keyCornerRadius: CGFloat = KeyboardChromeLayout.actionKeyCornerRadius
-    /// Extends the bottom corner keys to the same outer edges as Shift / Delete.
-    static let bottomLeadingKeyWidth: CGFloat = 70
-    static let bottomTrailingKeyWidth: CGFloat = 86
+    /// Match the voice surface: compact side keys and a flexible center key.
+    static let bottomSideKeyWidth: CGFloat = KeyboardChromeLayout.sideActionKeyWidth
     /// Shared top row + three 50 pt key rows + native spacing + bottom row.
     static let totalHeight: CGFloat = KeyboardChromeLayout.totalHeight
+    /// Collapsed candidate strip: keep this small so ScrollView doesn't fight ▼.
+    static let collapsedBarCandidateLimit = 10
+    /// Trailing ▼/▲ control (visual chip + hit pad); lives in an HStack, not over text.
+    static let expandChevronHitWidth: CGFloat = 44
+    static let expandChevronVisualSize: CGFloat = 34
+    static let expandGridColumns = 5
+    static let expandCellHeight: CGFloat = 42
 }
 
 struct TypingRootView: View {
@@ -33,6 +39,10 @@ struct TypingRootView: View {
     var onInsert: (String) -> Void
     var onDeleteBackward: () -> Void
 
+    /// After the first expand, keep the panel tree mounted and only toggle
+    /// opacity so subsequent ▼/▲ taps stay cheap.
+    @State private var candidatePanelMounted = false
+
     static let totalHeight: CGFloat = TypingLayoutMetrics.totalHeight
 
     private var palette: ThemePalette {
@@ -40,16 +50,37 @@ struct TypingRootView: View {
     }
 
     var body: some View {
+        let expanded = typing.isCandidatePanelExpanded
         VStack(spacing: 0) {
             topRegion
                 .frame(height: TypingLayoutMetrics.topRegionHeight)
 
-            keyGrid
-                .padding(.top, TypingLayoutMetrics.verticalKeySpacing)
+            // Keep the QWERTY tree mounted; only toggle visibility so ▼/▲
+            // does not destroy GeometryReader key rows every time.
+            ZStack(alignment: .top) {
+                VStack(spacing: 0) {
+                    keyGrid
+                        .padding(.top, TypingLayoutMetrics.verticalKeySpacing)
 
-            bottomRow
-                .frame(height: TypingLayoutMetrics.bottomRowHeight)
-                .padding(.top, TypingLayoutMetrics.keyRowSpacing)
+                    bottomRow
+                        .frame(height: TypingLayoutMetrics.bottomRowHeight)
+                        .padding(.top, TypingLayoutMetrics.keyRowSpacing)
+                }
+                .opacity(expanded ? 0 : 1)
+                .allowsHitTesting(!expanded)
+                .accessibilityHidden(expanded)
+
+                if expanded || candidatePanelMounted {
+                    expandedCandidatePanel
+                        .padding(.top, TypingLayoutMetrics.verticalKeySpacing)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .opacity(expanded ? 1 : 0)
+                        .allowsHitTesting(expanded)
+                        .accessibilityHidden(!expanded)
+                        .transition(.identity)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .padding(.top, TypingLayoutMetrics.outerPaddingTop)
         .padding(.bottom, TypingLayoutMetrics.outerPaddingBottom)
@@ -59,6 +90,12 @@ struct TypingRootView: View {
         .background(Color.clear)
         .environment(\.themePalette, palette)
         .onAppear { typing.enterTypingMode() }
+        .onChange(of: typing.isCandidatePanelExpanded) { _, isExpanded in
+            if isExpanded { candidatePanelMounted = true }
+        }
+        .onChange(of: hasCandidateContent) { _, hasContent in
+            if !hasContent { candidatePanelMounted = false }
+        }
     }
 
     // MARK: - Shared top region
@@ -102,35 +139,114 @@ struct TypingRootView: View {
     // MARK: - Candidates
 
     private var candidateBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.xs) {
-                if typing.composition.candidates.isEmpty {
-                    selectedCandidateLabel(text: typing.composition.preedit)
-                } else {
-                    ForEach(
-                        Array(typing.composition.candidates.enumerated()),
-                        id: \.element.id
-                    ) { index, candidate in
-                        Button {
-                            let text = typing.selectCandidate(at: index)
-                            if !text.isEmpty { onInsert(text) }
-                        } label: {
+        // HStack (not overlay / safeAreaInset): ▼ never paints over candidate text.
+        HStack(spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Spacing.xs) {
+                    if typing.composition.candidates.isEmpty {
+                        selectedCandidateLabel(text: typing.composition.preedit)
+                    } else if typing.isCandidatePanelExpanded {
+                        candidateChip(text: typing.composition.candidates[0].text) {
+                            apply(typing.selectCandidate(at: 0))
+                        }
+                    } else {
+                        ForEach(
+                            Array(
+                                typing.composition.candidates
+                                    .prefix(TypingLayoutMetrics.collapsedBarCandidateLimit)
+                                    .enumerated()
+                            ),
+                            id: \.element.id
+                        ) { index, candidate in
                             if index == 0 {
-                                selectedCandidateLabel(text: candidate.text)
+                                candidateChip(text: candidate.text) {
+                                    apply(typing.selectCandidate(at: index))
+                                }
                             } else {
                                 Text(candidate.text)
                                     .font(.system(size: 20, weight: .regular))
                                     .foregroundStyle(palette.textPrimary)
                                     .padding(.horizontal, 10)
                                     .frame(height: 40)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        apply(typing.selectCandidate(at: index))
+                                    }
+                                    .accessibilityAddTraits(.isButton)
+                                    .accessibilityLabel(candidate.text)
                             }
                         }
-                        .buttonStyle(.plain)
                     }
                 }
+                .padding(.leading, KeyboardTopBarMetrics.nestedHorizontalInset)
+                .padding(.trailing, Spacing.xs)
             }
-            .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
+            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+
+            if typing.canExpandCandidatePanel {
+                expandChevronButton
+            } else {
+                Color.clear.frame(width: KeyboardTopBarMetrics.nestedHorizontalInset)
+            }
         }
+    }
+
+    /// Opaque chip like the translation control so ▼ never shares pixels with text.
+    private var expandChevronButton: some View {
+        Button {
+            var transaction = Transaction()
+            transaction.disablesAnimations = true
+            withTransaction(transaction) {
+                typing.toggleCandidatePanelExpanded()
+            }
+        } label: {
+            Image(systemName: typing.isCandidatePanelExpanded ? "chevron.up" : "chevron.down")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(palette.textSecondary)
+                .frame(
+                    width: TypingLayoutMetrics.expandChevronVisualSize,
+                    height: TypingLayoutMetrics.expandChevronVisualSize
+                )
+                .background(expandChevronFill, in: Circle())
+                .overlay(Circle().stroke(palette.divider, lineWidth: 0.5))
+                .frame(
+                    width: TypingLayoutMetrics.expandChevronHitWidth,
+                    height: KeyboardTopBarMetrics.height
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.trailing, KeyboardTopBarMetrics.nestedHorizontalInset)
+        .accessibilityLabel(typing.isCandidatePanelExpanded ? "收起候选" : "更多候选")
+    }
+
+    private var expandChevronFill: Color {
+        colorScheme == .dark ? Color(white: 0.30) : .white
+    }
+
+    /// UIKit-recycled labels — no SwiftUI Button per candidate.
+    private var expandedCandidatePanel: some View {
+        CandidateExpandGridView(
+            candidates: typing.composition.candidates,
+            textColor: UIColor(keyTextColor),
+            dividerColor: UIColor(palette.dividerStrong),
+            onSelect: { index in
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    apply(typing.selectCandidate(at: index))
+                }
+            }
+        )
+        .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
+    }
+
+    private func candidateChip(text: String, action: @escaping () -> Void) -> some View {
+        selectedCandidateLabel(text: text)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: action)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel(text)
     }
 
     private func selectedCandidateLabel(text: String) -> some View {
@@ -138,10 +254,12 @@ struct TypingRootView: View {
             Text(text)
                 .font(.system(size: 19, weight: .medium))
                 .lineLimit(1)
-            Text(typing.composition.preedit)
-                .font(.system(size: 9, weight: .regular, design: .monospaced))
-                .foregroundStyle(palette.textSecondary)
-                .lineLimit(1)
+            if !typing.composition.preedit.isEmpty {
+                Text(typing.composition.preedit)
+                    .font(.system(size: 9, weight: .regular, design: .monospaced))
+                    .foregroundStyle(palette.textSecondary)
+                    .lineLimit(1)
+            }
         }
         .foregroundStyle(keyTextColor)
         .padding(.horizontal, 12)
@@ -180,20 +298,54 @@ struct TypingRootView: View {
         }
     }
 
+    @ViewBuilder
     private func keyButton(_ label: String) -> some View {
-        let isSpecial = ["⇧", "⌫", "123", "#+=", "ABC"].contains(label)
-        return Button {
-            let result = typing.handleKey(label)
-            if result == "\u{8}" {
-                onDeleteBackward()
-            } else if !result.isEmpty {
-                onInsert(result)
+        if label == "⌫" {
+            typingDeleteKey()
+        } else {
+            let isSpecial = ["⇧", "123", "#+=", "ABC"].contains(label)
+            Button {
+                apply(typing.handleKey(label))
+            } label: {
+                keyLabel(label, isSpecial: isSpecial)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-        } label: {
-            keyLabel(label, isSpecial: isSpecial)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .buttonStyle(nativeKeyStyle)
         }
-        .buttonStyle(nativeKeyStyle)
+    }
+
+    /// Shares ``RepeatingPressButton`` with the voice toolbar delete key.
+    private func typingDeleteKey() -> some View {
+        RepeatingPressButton {
+            apply(typing.handleKey("⌫"))
+        } label: { isPressed in
+            Image(systemName: "delete.left")
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(keyTextColor)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(
+                    RoundedRectangle(
+                        cornerRadius: TypingLayoutMetrics.keyCornerRadius,
+                        style: .continuous
+                    )
+                    .fill(isPressed ? keyPressedFill : keyFill)
+                )
+                .overlay(
+                    RoundedRectangle(
+                        cornerRadius: TypingLayoutMetrics.keyCornerRadius,
+                        style: .continuous
+                    )
+                    .stroke(palette.divider, lineWidth: 0.5)
+                )
+                .shadow(
+                    color: Color.black.opacity(isPressed ? 0.04 : 0.13),
+                    radius: isPressed ? 0.5 : 1,
+                    y: isPressed ? 0 : 1
+                )
+                .scaleEffect(isPressed ? 0.98 : 1)
+                .animation(.easeOut(duration: 0.08), value: isPressed)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder
@@ -202,10 +354,6 @@ struct TypingRootView: View {
         case "⇧":
             Image(systemName: typing.shiftActive || typing.capsLock ? "shift.fill" : "shift")
                 .font(.system(size: 19, weight: .medium))
-                .foregroundStyle(keyTextColor)
-        case "⌫":
-            Image(systemName: "delete.left")
-                .font(.system(size: 20, weight: .medium))
                 .foregroundStyle(keyTextColor)
         default:
             Text(label)
@@ -228,15 +376,14 @@ struct TypingRootView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(keyTextColor)
                     .frame(
-                        width: TypingLayoutMetrics.bottomLeadingKeyWidth,
+                        width: TypingLayoutMetrics.bottomSideKeyWidth,
                         height: TypingLayoutMetrics.bottomRowHeight
                     )
             }
             .buttonStyle(nativeKeyStyle)
 
             Button {
-                let text = typing.handleSpace()
-                if !text.isEmpty { onInsert(text) }
+                apply(typing.handleSpace())
             } label: {
                 Text(typing.language == .chinese ? "空格" : "space")
                     .font(.system(size: 17, weight: .regular))
@@ -247,13 +394,12 @@ struct TypingRootView: View {
             .buttonStyle(nativeKeyStyle)
 
             Button {
-                let text = typing.handleReturn()
-                if !text.isEmpty { onInsert(text) }
+                apply(typing.handleReturn())
             } label: {
                 returnKeyLabel
                     .foregroundStyle(returnKeyTextColor)
                     .frame(
-                        width: TypingLayoutMetrics.bottomTrailingKeyWidth,
+                        width: TypingLayoutMetrics.bottomSideKeyWidth,
                         height: TypingLayoutMetrics.bottomRowHeight
                     )
             }
@@ -271,6 +417,23 @@ struct TypingRootView: View {
             ExtL10n.text(state.returnKeyRole.titleKey)
                 .font(.system(size: 15, weight: .semibold))
         }
+    }
+
+    private func apply(_ output: TypingOutput) {
+        guard !output.isEmpty else {
+            typing.syncAutocapitalization()
+            return
+        }
+        if output.deleteCount > 0 {
+            for _ in 0..<output.deleteCount {
+                onDeleteBackward()
+            }
+        }
+        if !output.text.isEmpty {
+            onInsert(output.text)
+        }
+        // Proxy context is up to date after inserts/deletes — refresh Shift.
+        typing.syncAutocapitalization()
     }
 
     private func keyWeight(label: String, index: Int, rowIndex: Int) -> CGFloat {

@@ -72,39 +72,44 @@ private struct ToolbarKeySurface<Content: View>: View {
 
 // MARK: - Repeating delete
 
-/// Tap deletes once; hold repeats with tiered acceleration after 5 s.
-struct RepeatingDeleteButton: View {
-    @Environment(\.colorScheme) private var colorScheme
+/// Shared hold-to-repeat timing for delete keys (voice + typing).
+enum RepeatingDeleteTiming {
+    static let initialDelay: TimeInterval = 0.4
+    static let normalInterval: TimeInterval = 0.08
+    static let accelTier2: TimeInterval = 0.05
+    static let accelTier3: TimeInterval = 0.03
+    static let accelTier4: TimeInterval = 0.015
 
-    let disabled: Bool
+    static func interval(for elapsed: TimeInterval) -> TimeInterval {
+        if elapsed < 5 { return normalInterval }
+        if elapsed < 8 { return accelTier2 }
+        if elapsed < 12 { return accelTier3 }
+        return accelTier4
+    }
+}
+
+/// Tap fires once; hold repeats with tiered acceleration after 5 s.
+/// Voice and typing delete keys share this press engine.
+struct RepeatingPressButton<Label: View>: View {
+    var disabled: Bool = false
+    /// Plays the system delete click on each fire (matches stock keyboard).
+    var playsDeleteSound: Bool = true
     let action: () -> Void
+    @ViewBuilder let label: (_ isPressed: Bool) -> Label
 
     @State private var isPressing = false
     @State private var repeatTask: Task<Void, Never>?
     @State private var repeatStartedAt: Date?
 
-    private let initialDelay: TimeInterval = 0.4
-    private let normalInterval: TimeInterval = 0.08
-    private let accelTier2: TimeInterval = 0.05
-    private let accelTier3: TimeInterval = 0.03
-    private let accelTier4: TimeInterval = 0.015
-
     var body: some View {
-        ToolbarKeySurface(
-            isPressed: isPressing,
-            cornerRadius: ToolbarButtonMetrics.cornerRadius,
-            emphasis: .standard
-        ) {
-            Image(systemName: "delete.left")
-                .font(.system(size: ToolbarButtonMetrics.iconSize, weight: .semibold))
-                .foregroundStyle(NativeKeyboardKeyColors.text(for: colorScheme))
-        }
-        .contentShape(Rectangle())
-        .gesture(pressGesture)
-        .opacity(disabled ? 0.38 : 1)
-        .allowsHitTesting(!disabled)
-        .accessibilityLabel(Text("delete"))
-        .accessibilityAddTraits(.isButton)
+        label(isPressing)
+            .contentShape(Rectangle())
+            .gesture(pressGesture)
+            .opacity(disabled ? 0.38 : 1)
+            .allowsHitTesting(!disabled)
+            .accessibilityLabel(Text("delete"))
+            .accessibilityAddTraits(.isButton)
+            .onDisappear { stopRepeating() }
     }
 
     private var pressGesture: some Gesture {
@@ -113,8 +118,7 @@ struct RepeatingDeleteButton: View {
                 guard !disabled, !isPressing else { return }
                 isPressing = true
                 repeatStartedAt = Date()
-                KeyboardSoundFeedback.deleteClick()
-                action()
+                fireOnce()
                 startRepeating()
             }
             .onEnded { _ in
@@ -122,24 +126,25 @@ struct RepeatingDeleteButton: View {
             }
     }
 
-    private func interval(for elapsed: TimeInterval) -> TimeInterval {
-        if elapsed < 5 { return normalInterval }
-        if elapsed < 8 { return accelTier2 }
-        if elapsed < 12 { return accelTier3 }
-        return accelTier4
+    private func fireOnce() {
+        if playsDeleteSound {
+            KeyboardSoundFeedback.deleteClick()
+        }
+        action()
     }
 
     private func startRepeating() {
         repeatTask?.cancel()
         repeatTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: UInt64(initialDelay * 1_000_000_000))
+            try? await Task.sleep(
+                nanoseconds: UInt64(RepeatingDeleteTiming.initialDelay * 1_000_000_000)
+            )
             guard !Task.isCancelled, isPressing else { return }
             let anchor = repeatStartedAt ?? Date()
             while !Task.isCancelled, isPressing {
-                KeyboardSoundFeedback.deleteClick()
-                action()
+                fireOnce()
                 let elapsed = Date().timeIntervalSince(anchor)
-                let wait = interval(for: elapsed)
+                let wait = RepeatingDeleteTiming.interval(for: elapsed)
                 try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
             }
         }
@@ -150,6 +155,28 @@ struct RepeatingDeleteButton: View {
         repeatStartedAt = nil
         repeatTask?.cancel()
         repeatTask = nil
+    }
+}
+
+/// Voice-toolbar delete chrome around ``RepeatingPressButton``.
+struct RepeatingDeleteButton: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    let disabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        RepeatingPressButton(disabled: disabled, action: action) { isPressed in
+            ToolbarKeySurface(
+                isPressed: isPressed,
+                cornerRadius: ToolbarButtonMetrics.cornerRadius,
+                emphasis: .standard
+            ) {
+                Image(systemName: "delete.left")
+                    .font(.system(size: ToolbarButtonMetrics.iconSize, weight: .semibold))
+                    .foregroundStyle(NativeKeyboardKeyColors.text(for: colorScheme))
+            }
+        }
     }
 }
 

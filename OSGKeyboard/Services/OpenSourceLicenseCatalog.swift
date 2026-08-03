@@ -45,7 +45,7 @@ enum OpenSourceLicenseCatalog {
             id: "librime-static",
             name: "librime 1.17.0 + static dependencies",
             licenseName: "BSD-3-Clause and others",
-            purpose: "Chinese input runtime packaged by librime-xcframework 1.17.0-pack.1. Includes complete notices for Boost, OpenCC, LevelDB, yaml-cpp, glog, marisa-trie, RapidJSON, Darts and other statically linked components.",
+            purpose: "Chinese typing runtime packaged by librime-xcframework 1.17.0-pack.1 (full pinyin and double pinyin). Includes complete notices for Boost, OpenCC, LevelDB, yaml-cpp, glog, marisa-trie, RapidJSON, Darts and other statically linked components.",
             url: URL(string: "https://github.com/ghostflyby/librime-xcframework"),
             licenseText: resourceText(
                 named: "LIBRIME-COMBINED-NOTICES",
@@ -57,7 +57,7 @@ enum OpenSourceLicenseCatalog {
             id: "rime-pinyin-simp",
             name: "rime-pinyin-simp",
             licenseName: "Apache-2.0",
-            purpose: "Permissive Simplified-Chinese baseline dictionary used to generate OSGKeyboard's Rime lexicon.",
+            purpose: "Permissive Simplified-Chinese baseline dictionary used to generate OSGKeyboard's Rime Chinese typing lexicon.",
             url: URL(string: "https://github.com/rime/rime-pinyin-simp"),
             licenseText: resourceText(
                 named: "LICENSE-PINYIN-SIMP-APACHE",
@@ -69,7 +69,7 @@ enum OpenSourceLicenseCatalog {
             id: "jieba",
             name: "Jieba",
             licenseName: "MIT",
-            purpose: "Modern Simplified-Chinese words and frequency weights used by the generated typing dictionary.",
+            purpose: "Modern Simplified-Chinese words and frequency weights used by the generated Chinese typing dictionary.",
             url: URL(string: "https://github.com/fxsjy/jieba"),
             licenseText: resourceText(
                 named: "LICENSE-JIEBA-MIT",
@@ -81,7 +81,7 @@ enum OpenSourceLicenseCatalog {
             id: "phrase-pinyin-data",
             name: "phrase-pinyin-data",
             licenseName: "MIT",
-            purpose: "Phrase pronunciation data used to resolve polyphonic Chinese words.",
+            purpose: "Phrase pronunciation data used to resolve polyphonic Chinese words in the typing dictionary.",
             url: URL(string: "https://github.com/mozillazg/phrase-pinyin-data"),
             licenseText: resourceText(
                 named: "LICENSE-PHRASE-PINYIN-DATA-MIT",
@@ -93,12 +93,21 @@ enum OpenSourceLicenseCatalog {
             id: "pinyin-data",
             name: "pinyin-data",
             licenseName: "MIT",
-            purpose: "Per-character Mandarin pronunciation fallback for generated dictionary entries.",
+            purpose: "Per-character Mandarin pronunciation fallback for generated Chinese dictionary entries.",
             url: URL(string: "https://github.com/mozillazg/pinyin-data"),
             licenseText: resourceText(
                 named: "LICENSE-PINYIN-DATA-MIT",
                 fallback: mitText
             ),
+            platforms: [.iOS]
+        ),
+        .init(
+            id: "english-typing-lexicon",
+            name: "OSG English typing lexicon",
+            licenseName: "Project-owned notice",
+            purpose: "Offline English autocomplete, autocorrect, and next-word ranking lists curated by OSGKeyboard (english_lexicon.tsv / english_bigrams.tsv). Not derived from GPL/LGPL dictionaries; relative ranks are ordering weights only.",
+            url: URL(string: "https://github.com/hkgood/OSGKeyboard/blob/main/NOTICE-TYPING.md"),
+            licenseText: englishLexiconNoticeText,
             platforms: [.iOS]
         ),
         .init(
@@ -177,6 +186,21 @@ enum OpenSourceLicenseCatalog {
     Copyright (c) 2025 Prince Canuma
 
     \(mitText.components(separatedBy: "\n").dropFirst(2).joined(separator: "\n"))
+    """
+
+    static let englishLexiconNoticeText = """
+    OSG English typing lexicon (project-owned notice)
+
+    english_lexicon.tsv and english_bigrams.tsv are curated by OSGKeyboard for
+    offline English autocomplete, autocorrect, and next-word ranking inside the
+    iOS keyboard extension.
+
+    These lists are not derived from GPL or LGPL dictionaries. Relative
+    frequency values are synthetic ordering weights for ranking only, not
+    verbatim counts from a single third-party corpus.
+
+    See NOTICE-TYPING.md in the OSGKeyboard repository for the full typing
+    keyboard attribution map (Chinese Rime stack vs OSG-owned English data).
     """
 
     static let bsd3Text = """

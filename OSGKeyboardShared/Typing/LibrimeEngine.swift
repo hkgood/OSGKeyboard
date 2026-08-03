@@ -20,7 +20,7 @@ public final class LibrimeEngine: RimeEngineBridging {
 
     public init(
         schema: TypingInputSchema = .fullPinyin,
-        candidateLimit: Int = 50,
+        candidateLimit: Int = 160,
         configurationProvider: @escaping () -> TypingInputConfigurationSnapshot = {
             TypingInputConfiguration.shared.snapshot
         }
@@ -146,11 +146,12 @@ public final class LibrimeEngine: RimeEngineBridging {
         let preedit = snapshot.preedit
         composition = TypingComposition(
             preedit: preedit,
-            candidates: snapshot.candidates.enumerated().map { index, candidate in
+            candidates: snapshot.candidates.enumerated().map { displayIndex, candidate in
                 TypingCandidate(
-                    id: "\(preedit)|\(index)|\(candidate.text)",
+                    id: "\(preedit)|\(displayIndex)|\(candidate.index)|\(candidate.text)",
                     text: candidate.text,
-                    annotation: candidate.comment.isEmpty ? nil : candidate.comment
+                    annotation: candidate.comment.isEmpty ? nil : candidate.comment,
+                    engineIndex: Int(candidate.index)
                 )
             }
         )

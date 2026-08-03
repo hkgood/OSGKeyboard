@@ -55,7 +55,7 @@ public struct RimeResourcePaths: Sendable {
 
 public actor RimeResourceInstaller {
     public static let shared = RimeResourceInstaller()
-    public static let resourceVersion = "2.0.0"
+    public static let resourceVersion = "2.2.0"
 
     public init() {}
 

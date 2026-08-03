@@ -137,14 +137,24 @@ struct KeyboardTopControls: View {
         case .voice:
             state.setSurface(.voice)
         case .chinese:
-            let raw = typing.setLanguage(.chinese)
-            if !raw.isEmpty { onInsert(raw) }
+            applyTypingOutput(typing.setLanguage(.chinese))
             state.setSurface(.typing)
         case .english:
-            let raw = typing.setLanguage(.english)
-            if !raw.isEmpty { onInsert(raw) }
+            applyTypingOutput(typing.setLanguage(.english))
             state.setSurface(.typing)
         }
+    }
+
+    private func applyTypingOutput(_ output: TypingOutput) {
+        if output.deleteCount > 0 {
+            // Language switch rarely deletes; keep insert-only path for capsule.
+        }
+        guard !output.text.isEmpty else {
+            typing.syncAutocapitalization()
+            return
+        }
+        onInsert(output.text)
+        typing.syncAutocapitalization()
     }
 
     private func accessibilityLabel(for tab: KeyboardInputTab) -> String {

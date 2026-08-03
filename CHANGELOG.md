@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **English autocomplete & prediction**: English mode reuses the candidate bar for prefix completions, high-confidence autocorrect (with ⌫ / original-candidate undo), and next-word suggestions backed by an offline lexicon plus personal dictionary boosts. / **英文补全与预测**：英文模式复用候选栏，提供前缀补全、高置信自动纠错（⌫ / 原文候选可撤销）以及下一词建议；离线词表结合个人词典加权。
+- **Chinese more-candidates panel**: when composing Chinese with ≥2 candidates, a ▼ expands a same-height scrollable grid (~80 candidates) over the key area; selecting or ▲ collapses without growing the keyboard. / **中文更多候选面板**：中文组词且候选 ≥2 时，▼ 在同高度内展开可滚动候选网格（约 80 条）覆盖按键区；点选或 ▲ 收起，不增高键盘。
+
+### Changed
+- **Expanded candidate chrome**: drop per-cell fills for row hairlines, enlarge the ▼/▲ hit target, and disable layout animation on expand/collapse to reduce tap lag. / **展开候选样式**：去掉每格白底改行间细分割线，加大 ▼/▲ 热区，并关闭展开/收起布局动画以减轻点击卡顿。
+- **Expand/collapse responsiveness**: collapsed bar shows at most 10 candidates; ▼ sits in a `safeAreaInset` outside the horizontal ScrollView; QWERTY stays mounted under an opacity toggle so expand does not rebuild the key grid. / **展开/收起跟手**：收起顶栏最多 10 个候选；▼ 用 `safeAreaInset` 放在横滑外；QWERTY 以透明度显隐保留，避免展开时重建键区。
+- **Candidate expand UX**: ▼ uses a translation-style opaque white/dark chip in an HStack (no overlay on text); the expand panel is a recycled UIKit `UICollectionView` of plain labels instead of SwiftUI Buttons. / **候选展开体验**：▼ 改为翻译按钮式不透明白底圆片并放在 HStack 内（不再盖住文字）；展开面板改用可复用的 UIKit 纯文字网格，替代大量 SwiftUI Button。
+- **Product docs & licenses**: README, GitHub Pages, and in-app third-party licenses now describe Chinese/English typing capabilities and disclose the OSG-owned English lexicon notice. / **产品文档与许可**：README、GitHub Pages 与 App 内第三方许可现说明中英打字能力，并披露 OSG 自有英文词表说明。
+- **Typing delete hold-repeat**: Chinese/English ⌫ shares the voice toolbar’s repeating delete engine (tap once, hold to accelerate). / **打字删除连按**：中英文 ⌫ 与语音工具栏共用连删引擎（点按一次，长按加速连续删除）。
+- **English personal hotwords**: English suggestions only load Latin personal-dictionary terms (and English aliases), filtering out Chinese entries. / **英文个性热词**：英文建议仅加载拉丁文个人词条（及英文别名），自动过滤中文词。
+- **Unified bottom key widths**: Chinese, English, and voice surfaces now use matching compact side keys with a wider flexible center key. / **统一底栏键宽**：中文、英文与语音界面现统一为两侧窄键、中间宽键。
+- **Rime candidate page size**: menu `page_size` / snapshot limit raised to 80 so the expand panel can show a mobile-scale candidate pool (redeploy via resource version `2.1.0`). / **Rime 候选页大小**：`page_size` / 快照上限提升至 80，供展开面板展示移动端规模候选池（资源版本 `2.1.0` 触发重新部署）。
+- **Rime candidate depth & progressive chars**: bridge iterates the full candidate list (up to ~160 shown), and for incomplete multi-syllable input places phrase completions before first-syllable characters (e.g. 中国 then 中 for `zhongg`); resource version `2.2.0`. / **Rime 候选深度与渐进单字**：桥接遍历完整候选列表（展示约 160 条），未完成多音节输入时词组补全排在首音节单字前（如 `zhongg` 先中国后中）；资源版本 `2.2.0`。
+
+### Removed
+- **English long-press accents**: removed grey key-cap hints and the accent popup strip after poor feel in practice. / **英文长按扩展字符**：实测手感不佳，已移除键帽灰字提示与长按弹出条。
+- **English idle next-word bar**: candidate suggestions no longer appear until at least one letter of the current word is typed. / **英文空闲下一词栏**：未输入字母时不再显示候选；至少输入一个字母后才出现补全。
+
+### Fixed
+- **English autocapitalization**: Shift arms automatically at field start and after sentence terminators, respecting the host field’s autocapitalization type. / **英文自动大写**：在输入框开头与句末标点后自动点亮 Shift，并遵循宿主输入框的自动大写类型。
+
 ## [1.5.0] - 2026-08-03
 
 ### Added

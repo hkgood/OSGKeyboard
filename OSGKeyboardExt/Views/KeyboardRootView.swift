@@ -23,7 +23,7 @@ private enum KeyboardLayoutMetrics {
     static let micSize: CGFloat = 121
     static let micToButtonGap: CGFloat = 8
     static let bottomActionRowHeight: CGFloat = KeyboardChromeLayout.actionKeyHeight
-    static let bottomActionFixedWidth: CGFloat = 86
+    static let bottomActionFixedWidth: CGFloat = KeyboardChromeLayout.sideActionKeyWidth
     static let bottomActionSpacing: CGFloat = Spacing.xs
     /// Gap between the top control row and the transcript / hint line.
     /// Four points keeps the "点按说话" line visually attached to the controls.

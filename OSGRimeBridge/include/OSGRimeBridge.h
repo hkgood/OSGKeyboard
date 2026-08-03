@@ -6,7 +6,11 @@ NS_ASSUME_NONNULL_BEGIN
 @interface OSGRimeCandidate : NSObject
 @property(nonatomic, copy, readonly) NSString *text;
 @property(nonatomic, copy, readonly) NSString *comment;
-- (instancetype)initWithText:(NSString *)text comment:(NSString *)comment;
+/// Absolute librime candidate index for `select_candidate` (stable across UI reorder).
+@property(nonatomic, readonly) NSInteger index;
+- (instancetype)initWithText:(NSString *)text
+                     comment:(NSString *)comment
+                       index:(NSInteger)index;
 @end
 
 /// Immutable runtime snapshot consumed by SwiftUI.

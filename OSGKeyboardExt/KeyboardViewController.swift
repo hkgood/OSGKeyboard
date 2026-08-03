@@ -69,6 +69,7 @@ public final class KeyboardViewController: UIInputViewController {
         installKeyboardHeight()
         configureDictationBehavior()
         installServices()
+        installTypingContextProviders()
         installStateActions()
         installSurfaceObservers()
         installSwiftUI()
@@ -277,6 +278,37 @@ public final class KeyboardViewController: UIInputViewController {
 
     private func refreshReturnKeyRole() {
         state.returnKeyRole = returnKeyRole(for: textDocumentProxy.returnKeyType ?? .default)
+        // Secure fields must not run English autocomplete / autocorrect / learning.
+        typingSession.suggestionsEnabled = !(textDocumentProxy.isSecureTextEntry ?? false)
+        typingSession.syncAutocapitalization()
+    }
+
+    private func installTypingContextProviders() {
+        typingSession.precedingTextProvider = { [weak self] in
+            self?.textDocumentProxy.documentContextBeforeInput
+        }
+        typingSession.autocapitalizationModeProvider = { [weak self] in
+            Self.typingAutocapitalizationMode(
+                for: self?.textDocumentProxy.autocapitalizationType ?? .sentences
+            )
+        }
+    }
+
+    private static func typingAutocapitalizationMode(
+        for type: UITextAutocapitalizationType
+    ) -> TypingAutocapitalizationMode {
+        switch type {
+        case .none:
+            return .none
+        case .words:
+            return .words
+        case .sentences:
+            return .sentences
+        case .allCharacters:
+            return .allCharacters
+        @unknown default:
+            return .sentences
+        }
     }
 
     private func returnKeyRole(for returnKeyType: UIReturnKeyType) -> State.ReturnKeyRole {

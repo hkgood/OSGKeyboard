@@ -28,6 +28,7 @@
 
 - **真的随处可用** — 微信、备忘录、Notion、Cursor、邮件……光标在哪，文字就落在哪
 - **说完就能用** — 点按（iOS）或按住 Option（Mac）开口，AI 自动补标点、整理结构，不用自己改稿
+- **中英都能打** — iOS 键盘内建全拼 / 双拼中文候选，以及英文补全、纠错与下一词预测
 - **默认不上传录音** — iOS 本地识别、Mac 可选本地模型；只有你主动开启云端引擎时，音频才会离开设备
 - **模型随你选** — 内置润色开箱即用；也可接入 DeepSeek、OpenAI、Anthropic、OpenRouter 等任意兼容 API
 - **Mac 也能全局听写** — 菜单栏常驻，屏幕底部浮层实时反馈，说完自动插入当前 App
@@ -49,11 +50,12 @@
 | | iOS / iPadOS | macOS |
 |---|:---:|:---:|
 | 自定义键盘 / 全局热键 | ✅ | ✅ Option 按住说话 |
-| 全拼 / 微软双拼 / 搜狗双拼 | ✅ 可选模糊音 | — |
+| 中文输入（全拼 / 微软双拼 / 搜狗双拼） | ✅ 可选模糊音 | — |
+| 英文输入（补全 / 纠错 / 下一词） | ✅ 离线词表 + 个性词库加权 | — |
 | 本地语音识别 | ✅ Apple SpeechAnalyzer | ✅ SenseVoice / Qwen3 |
 | AI 文本润色 | ✅ | ✅ |
 | 润色后翻译 | ✅ | ✅ |
-| 个性词库 | ✅ iCloud 同步 | ✅ |
+| 个性词库 | ✅ iCloud 同步；保护润色并参与英文补全 | ✅ |
 | 听写历史 | ✅ | ✅ |
 | 灵动岛 / 听写浮层 | ✅ Live Activity | ✅ 底部胶囊浮层 |
 
@@ -63,7 +65,7 @@
 
 - **默认本地识别** — 录音在设备上转写，不经过我们的服务器
 - **润色只发文字** — 发给 LLM 的是转写文本，以及用于衔接的少量光标附近文字，不是原始音频
-- **不上传击键** — 中文候选仅在设备 App Group 中学习词频；普通击键和本地用户词库不会上传，密码框完全不采集
+- **不上传击键** — 中文候选学习与英文补全/纠错学习仅留在设备 App Group；密码框关闭英文建议与纠错，普通击键不会上传
 - 详见 [隐私政策](https://hkgood.github.io/OSGKeyboard/privacy/)
 
 ---
@@ -110,7 +112,7 @@ OSGKeyboard 的语音与键盘能力建立在这些优秀项目和平台之上�
 - [mlx-audio-swift](https://github.com/Blaizzy/mlx-audio-swift) — macOS 本地 Qwen3 MLX 流式识别
 - [Google Material Icons](https://github.com/google/material-design-icons) — iOS App 图标字体
 
-具体版本和许可证见 [第三方许可说明](./NOTICE-TYPING.md)，也可在 App 的「设置 → 关于 → 第三方许可」中查看。
+具体版本和许可证见 [第三方许可说明](./NOTICE-TYPING.md)（含中文 Rime 依赖与 OSG 自有英文词表说明），也可在 App 的「设置 → 关于 → 第三方许可」中查看。
 
 ---
 
