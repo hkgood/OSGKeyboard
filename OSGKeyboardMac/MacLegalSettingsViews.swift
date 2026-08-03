@@ -34,6 +34,8 @@ struct MacOpenSourceLicensesView: View {
     let uiLanguage: AppUILanguage
     @Environment(\.themePalette) private var palette
 
+    private let entries = OpenSourceLicenseCatalog.entries(for: .macOS)
+
     var body: some View {
         List {
             Section {
@@ -44,7 +46,7 @@ struct MacOpenSourceLicensesView: View {
             }
 
             Section {
-                ForEach(OpenSourceLicenseCatalog.entries) { entry in
+                ForEach(entries) { entry in
                     NavigationLink {
                         MacOpenSourceLicenseDetailView(entry: entry, uiLanguage: uiLanguage)
                     } label: {

@@ -184,6 +184,9 @@
 "settings.general.appearanceLanguage.title" = "外观与语言";
 "settings.general.keyboard.title" = "键盘与操作";
 "settings.general.sync.title" = "同步";
+"settings.typingInput.title" = "文本输入";
+"settings.typingInput.default.title" = "默认进行文字输入";
+"settings.typingInput.default.description" = "打开键盘时，默认使用文字输入键盘而非语音输入";
 "settings.speechRecognition.title" = "语音识别配置";
 "settings.textPolish.title" = "文本润色配置";
 "settings.preferences.title" = "偏好设置";

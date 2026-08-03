@@ -11,10 +11,13 @@ import OSGKeyboardShared
 private enum ToolbarButtonMetrics {
     static let iconSize: CGFloat = 14
     static let titleSize: CGFloat = 16
-    static let cornerRadius: CGFloat = 12
+    static let cornerRadius: CGFloat = KeyboardChromeLayout.actionKeyCornerRadius
     static let spaceBarCapsuleWidth: CGFloat = 31
-    static let pressScale: CGFloat = 0.94
-    static let pressOverlayOpacity: CGFloat = 0.18
+}
+
+private enum ToolbarKeyEmphasis {
+    case standard
+    case send
 }
 
 // MARK: - Press styling
@@ -25,31 +28,45 @@ private struct ToolbarKeySurface<Content: View>: View {
 
     let isPressed: Bool
     let cornerRadius: CGFloat
+    let emphasis: ToolbarKeyEmphasis
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        content()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(buttonFill, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(palette.dividerStrong, lineWidth: 0.5)
-            }
-            .overlay {
-                if isPressed {
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(Color.black.opacity(ToolbarButtonMetrics.pressOverlayOpacity))
-                }
-            }
-            .scaleEffect(isPressed ? ToolbarButtonMetrics.pressScale : 1)
-            .animation(.easeOut(duration: 0.1), value: isPressed)
+        NativeKeyboardKeySurface(
+            isPressed: isPressed,
+            fill: buttonFill,
+            pressedFill: buttonPressedFill,
+            border: buttonBorder,
+            cornerRadius: cornerRadius,
+            content: content
+        )
     }
 
     private var buttonFill: Color {
-        let base = colorScheme == .dark
-            ? Color(red: 0.20, green: 0.20, blue: 0.22)
-            : palette.surfaceElevated
-        return isPressed ? base.opacity(0.82) : base
+        switch emphasis {
+        case .standard:
+            return NativeKeyboardKeyColors.fill(for: colorScheme)
+        case .send:
+            return NativeKeyboardKeyColors.sendFill(for: colorScheme)
+        }
+    }
+
+    private var buttonPressedFill: Color {
+        switch emphasis {
+        case .standard:
+            return NativeKeyboardKeyColors.pressedFill(for: colorScheme)
+        case .send:
+            return NativeKeyboardKeyColors.sendPressedFill(for: colorScheme)
+        }
+    }
+
+    private var buttonBorder: Color {
+        switch emphasis {
+        case .standard:
+            return palette.divider
+        case .send:
+            return Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08)
+        }
     }
 }
 
@@ -57,7 +74,7 @@ private struct ToolbarKeySurface<Content: View>: View {
 
 /// Tap deletes once; hold repeats with tiered acceleration after 5 s.
 struct RepeatingDeleteButton: View {
-    @Environment(\.themePalette) private var palette
+    @Environment(\.colorScheme) private var colorScheme
 
     let disabled: Bool
     let action: () -> Void
@@ -73,10 +90,14 @@ struct RepeatingDeleteButton: View {
     private let accelTier4: TimeInterval = 0.015
 
     var body: some View {
-        ToolbarKeySurface(isPressed: isPressing, cornerRadius: ToolbarButtonMetrics.cornerRadius) {
+        ToolbarKeySurface(
+            isPressed: isPressing,
+            cornerRadius: ToolbarButtonMetrics.cornerRadius,
+            emphasis: .standard
+        ) {
             Image(systemName: "delete.left")
                 .font(.system(size: ToolbarButtonMetrics.iconSize, weight: .semibold))
-                .foregroundStyle(palette.textPrimary)
+                .foregroundStyle(NativeKeyboardKeyColors.text(for: colorScheme))
         }
         .contentShape(Rectangle())
         .gesture(pressGesture)
@@ -135,13 +156,14 @@ struct RepeatingDeleteButton: View {
 // MARK: - Rectangular toolbar button
 
 struct RectangularToolbarButton: View {
-    @Environment(\.themePalette) private var palette
+    @Environment(\.colorScheme) private var colorScheme
 
     let systemName: String?
     let spaceStyle: Bool
     let title: String?
     let label: String
     let disabled: Bool
+    let isSend: Bool
     let action: () -> Void
 
     init(systemName: String, label: String, disabled: Bool = false, action: @escaping () -> Void) {
@@ -150,14 +172,22 @@ struct RectangularToolbarButton: View {
         self.title = nil
         self.label = label
         self.disabled = disabled
+        self.isSend = false
         self.action = action
     }
 
-    init(title: String, label: String, disabled: Bool = false, action: @escaping () -> Void) {
+    init(
+        title: String,
+        label: String,
+        disabled: Bool = false,
+        isSend: Bool = false,
+        action: @escaping () -> Void
+    ) {
         self.systemName = nil
         self.spaceStyle = false
         self.label = label
         self.disabled = disabled
+        self.isSend = isSend
         self.action = action
         self.title = title
     }
@@ -168,25 +198,30 @@ struct RectangularToolbarButton: View {
         self.title = nil
         self.label = label
         self.disabled = disabled
+        self.isSend = false
         self.action = action
     }
 
     @State private var isPressing = false
 
     var body: some View {
-        ToolbarKeySurface(isPressed: isPressing, cornerRadius: ToolbarButtonMetrics.cornerRadius) {
+        ToolbarKeySurface(
+            isPressed: isPressing,
+            cornerRadius: ToolbarButtonMetrics.cornerRadius,
+            emphasis: isSend ? .send : .standard
+        ) {
             if spaceStyle {
                 Capsule()
-                    .fill(palette.textPrimary)
+                    .fill(buttonForeground)
                     .frame(width: ToolbarButtonMetrics.spaceBarCapsuleWidth, height: 3)
             } else if let systemName {
                 Image(systemName: systemName)
                     .font(.system(size: ToolbarButtonMetrics.iconSize, weight: .semibold))
-                    .foregroundStyle(palette.textPrimary)
+                    .foregroundStyle(buttonForeground)
             } else if let title {
                 Text(title)
                     .font(.system(size: ToolbarButtonMetrics.titleSize, weight: .semibold))
-                    .foregroundStyle(palette.textPrimary)
+                    .foregroundStyle(buttonForeground)
             }
         }
         .contentShape(Rectangle())
@@ -195,6 +230,10 @@ struct RectangularToolbarButton: View {
         .allowsHitTesting(!disabled)
         .accessibilityLabel(Text(label))
         .accessibilityAddTraits(.isButton)
+    }
+
+    private var buttonForeground: Color {
+        isSend ? .white : NativeKeyboardKeyColors.text(for: colorScheme)
     }
 
     // 按下即响、按下即执行，与系统键盘保持一致（Button 默认松手才触发）。

@@ -221,6 +221,7 @@ struct VoiceSessionSettingsRows: View {
 struct GeneralSettingsView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @ObservedObject var config: ProviderConfig
+    @ObservedObject private var typingConfiguration = TypingInputConfiguration.shared
 
     var body: some View {
         ScrollView {
@@ -241,6 +242,21 @@ struct GeneralSettingsView: View {
 
                 CardSection("settings.general.keyboard.title") {
                     VStack(spacing: 0) {
+                        DefaultTypingInputToggleRow(
+                            isOn: $typingConfiguration.defaultToTyping
+                        )
+
+                        Divider().background(palette.divider)
+
+                        NavigationLink {
+                            TypingInputSettingsView()
+                        } label: {
+                            SettingsNavigationRow(title: "settings.typingInput.title")
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().background(palette.divider)
+
                         HandednessPickerRow(
                             selection: Binding(
                                 get: { config.handednessPreference },

@@ -68,6 +68,12 @@ struct MainAppRoot: View {
             Task {
                 await AppCloudSync.shared.pullAllIfEnabled()
             }
+            Task {
+                let typingConfig = TypingInputConfiguration.shared.snapshot
+                try? await RimeResourceInstaller.shared.installIfNeeded(
+                    configuration: typingConfig
+                )
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .settingsDidSyncFromCloud)) { _ in
             config.reloadFromPersistedStorage()

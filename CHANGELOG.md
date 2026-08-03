@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-08-03
+
 ### Added
+- **Rime typing surface**: keyboard extension adds Chinese/English QWERTY with phrase candidates, full pinyin, Microsoft/Sogou double pinyin, user learning, and opt-in fuzzy pairs; the top-right tab switches back to the voice-first surface. / **Rime 打字表面**：键盘扩展新增中英 QWERTY、词组候选、全拼、微软/搜狗双拼、用户词频学习与可选模糊音；右上角按钮可切回语音主界面。
 - **macOS direct download**: bilingual README and GitHub Pages download areas now offer a signed, notarized macOS DMG alongside the iPhone / iPad App Store badge, using matching two-line badge designs. / **macOS 直接下载**：中英文 README 与 GitHub Pages 下载区在 iPhone / iPad App Store 徽章旁新增已签名、公证的 macOS DMG，并统一采用双行徽章样式。
 - **Beams hero**: radiant noise-warped beam array (React Bits–style, vanilla Three.js) with the shared demo preset (26 beams, 208° rotation) and OSG green light. / **Beams Hero**：放射状噪声光束阵列（React Bits 风格，原生 Three.js），采用分享的演示预设（26 束、208° 旋转）与 OSG 绿色灯光。
 - **Platform download badges**: matching App Store and macOS badges on bilingual READMEs and the website, with localized copy and platform-specific links. / **平台下载徽章**：中英文 README 与官网采用统一样式的 App Store、macOS 徽章，并提供本地化文案与平台专属链接。
@@ -22,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mac Settings translation target**: polish-provider section includes “Polish then translate” with the same locale picker as Home / menu bar. / **Mac 设置翻译目标**：润色（LLM）分区新增「润色后翻译」，与首页 / 菜单栏同一套目标语言选择。
 
 ### Changed
+- **Unified keyboard chrome**: voice, Chinese, and English now share a 281-point height, aligned native action keys, a tappable OSG wordmark that opens the host app, a compact translation menu, and an adaptive green Send key. / **统一键盘外观**：语音、中文与英文现统一为 281 点高度及对齐的原生操作键；OSG 横向标志可点击打开主 App，翻译入口改为紧凑菜单按钮，发送键使用自适应绿色。
+- **Native-style typing keyboard**: voice, Chinese, and English now share one top-right segmented control that yields to active candidates; keys are taller, rounder, adapt to light/dark mode, use filled Shift state and native press feedback, while only the first candidate is highlighted. / **原生风格打字键盘**：语音、中文与英文共用右上角分段切换，组词时让位给候选栏；键帽更高、更圆并适配深浅模式，Shift 选中改为实心并增加原生按压反馈，仅首候选高亮。
+- **Platform-aware third-party licenses**: About now lists the complete iOS Rime/dictionary stack with readable bundled dependency notices, while iOS and macOS hide components they do not ship. / **分平台第三方许可**：「关于」现在完整列出 iOS Rime 与词库依赖及可阅读的传递依赖许可，并在 iOS、macOS 分别隐藏未随该平台分发的组件。
 - **Landing page single surface**: remove separate install / compare / Mac / English content pages from navigation; keep one bilingual home page with in-page anchors, and leave thin redirects for old URLs. / **官网收成单页**：导航去掉独立的安装 / 对比 / Mac / 英文专题页，保留双语首页与页内锚点，旧 URL 仅保留轻量跳转。
 - **Hero stays dark**: the beams hero background, overlay, and light text stay on the dark stage in light mode too, matching night mode. / **Hero 固定暗色**：白天模式下 Beams Hero 底色、遮罩与浅色文字仍保持与黑夜一致的暗色舞台。
 - **Website download actions**: App Store and source buttons now share a compact rounded-rectangle shape and matching height instead of mixing badge and pill silhouettes. / **官网操作按钮**：App Store 与源码按钮统一为等高的紧凑圆角矩形，不再混用徽章与胶囊轮廓。
@@ -31,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Practical polish prompts**: Light Clean / Structured / Formal / Daily Chat share a “transcript-only, not a chatbot” boundary; Structured gains active itemization, light semantic reorder, and paragraphing hard rules inspired by high-readability polish patterns. / **实用润色提示词**：轻度清理 / 清晰结构 / 正式表达 / 日常聊天统一「只整理转写、非聊天助手」边界；清晰结构加强积极分项、轻度语义重排与分段硬规则，提升长口述可读性。
 - **RED Note keeps the draft's audience**: the Xiaohongshu style no longer opens with 姐妹们/集美们 or adds comment CTAs unless the draft already addresses a group, and a positive draft can no longer be rewritten with an 避雷-style hook. / **小红书不再擅自加受众**：除非原文本身在对一群人说话，否则不再添加「姐妹们/集美们」开场与评论区互动话术；正面体验也不会被写成「真诚避雷」式钩子。
 - **Style-specific forbidden-items chapters**: every built-in polish prompt now has a dedicated `# 禁止事项` section modeled on Daily Chat—no interlocutor replies, no answering question drafts—with per-style bans (e.g. dating must not turn asks into verdicts; flex/corp must not answer as the other party; XHS must not invent product claims). / **风格专属禁止事项**：全部内置润色提示词均新增「# 禁止事项」章节，结构对齐日常聊天（禁接话、禁代答问句），并按风格补充专属禁令（如直男癌不得把征求意见改成评价；装逼/黑话不得替对方作答；小红书不得编造功效细节）。
-- **Settings hierarchy**: voice-session options join Daily, while ASR and LLM configuration links sit directly below the transcription-mode choices; General and About remain secondary pages. / **设置层级**：语音会话选项并入「日常」，ASR 与 LLM 配置入口紧跟转写模式选择；通用与关于保留为二级页。
+- **Settings hierarchy**: General is now the first Daily entry; Text Input and its opt-in default-surface switch live under Keyboard & Gestures, while ASR and LLM configuration links remain below the transcription choices. / **设置层级**：「通用」现为「日常」首项；「文本输入」及默认进入文字键盘的开关移入「键盘与操作」，ASR 与 LLM 配置入口仍位于转写选项下方。
 - **Transcription option rows**: local and cloud choices now use the same text-first list-row style as the rest of Settings, without leading icons. / **转写选项行**：本地与云端选项移除前置图标，统一采用设置页的文字优先列表样式。
 - **Simplified style cards and summaries**: polish-style cards drop decorative badges, and speech-configuration summaries show only the active engine or provider/model without redundant status prefixes. / **简化风格卡与摘要**：润色风格卡移除装饰图标；语音配置摘要仅显示引擎或服务商/模型，不再附加冗余状态前缀。
 - **Mac polish style grid**: cards drop decorative icons and use a denser adaptive grid (about three columns at the default window; two when narrower, four+ when wider). / **Mac 润色风格网格**：卡片去掉装饰图标，并以更密的自适应网格排布（默认窗口约三列；变窄两列、变宽四列及以上）。

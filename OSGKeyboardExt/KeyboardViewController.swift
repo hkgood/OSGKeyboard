@@ -16,9 +16,10 @@
 
 import UIKit
 import SwiftUI
+import Combine
 import OSGKeyboardShared
 
-private final class KeyboardHostingController: UIHostingController<KeyboardRootView> {
+private final class KeyboardHostingController: UIHostingController<KeyboardSurfaceRoot> {
     override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge {
         [.left, .right]
     }
@@ -35,11 +36,13 @@ public final class KeyboardViewController: UIInputViewController {
     public typealias State = KeyboardState
 
     private let state = State()
+    private let typingSession = TypingSessionController()
     private let persistor = AppGroupPersistor()
 
-    private var hosting: UIHostingController<KeyboardRootView>?
+    private var hosting: UIHostingController<KeyboardSurfaceRoot>?
     private var keyboardHeightConstraint: NSLayoutConstraint?
     private var systemEncapsulatedHeight: CGFloat = 228
+    private var cancellables = Set<AnyCancellable>()
 
     private var textInserter: KeyboardTextInserter!
     private var flowCoordinator: KeyboardFlowCoordinator!
@@ -47,7 +50,7 @@ public final class KeyboardViewController: UIInputViewController {
     private var cursorDrag: CursorDragController!
 
     private var targetKeyboardHeight: CGFloat {
-        KeyboardRootView.totalHeight
+        KeyboardSurfaceRoot.height(for: state.surface)
     }
 
     // MARK: - Lifecycle
@@ -67,6 +70,7 @@ public final class KeyboardViewController: UIInputViewController {
         configureDictationBehavior()
         installServices()
         installStateActions()
+        installSurfaceObservers()
         installSwiftUI()
         _ = configSync.loadPersistedConfig()
         configSync.installDarwinObservers()
@@ -76,6 +80,9 @@ public final class KeyboardViewController: UIInputViewController {
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         flowCoordinator.stopSessionMonitor()
+        if state.surface == .typing {
+            typingSession.leaveTypingMode()
+        }
         if flowCoordinator.preservesLifecycleOnDisappear {
             return
         }
@@ -93,6 +100,10 @@ public final class KeyboardViewController: UIInputViewController {
         flowCoordinator.startSessionMonitor()
         configSync.syncOnboardingStateFromAppGroup()
         configSync.refreshConfigFromAppGroup()
+        applyPreferredSurfaceOnOpen()
+        if state.surface == .typing {
+            typingSession.enterTypingMode()
+        }
         configSync.autoAdvancePastKeyboardSetupStepIfNeeded()
     }
 
@@ -124,6 +135,12 @@ public final class KeyboardViewController: UIInputViewController {
     public override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         flowCoordinator.cancelPipelineUnlessAwaitingResult()
+        if state.surface == .typing {
+            typingSession.leaveTypingMode()
+            applySurface(.voice)
+        } else {
+            typingSession.leaveTypingMode()
+        }
     }
 
     public override func viewDidLayoutSubviews() {
@@ -200,6 +217,62 @@ public final class KeyboardViewController: UIInputViewController {
         state.setCursorDragActive = { [weak self] active in
             self?.cursorDrag.setCursorDragActive(active)
         }
+        state.setSurface = { [weak self] surface in
+            self?.applySurface(surface)
+        }
+    }
+
+    private func installSurfaceObservers() {
+        state.$phase
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                if self.state.locksTypingSurface, self.state.surface == .typing {
+                    self.applySurface(.voice)
+                }
+            }
+            .store(in: &cancellables)
+
+        state.$surface
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.refreshKeyboardHeight()
+            }
+            .store(in: &cancellables)
+    }
+
+    private func applySurface(_ surface: State.Surface) {
+        if surface == .typing, state.locksTypingSurface {
+            return
+        }
+        guard state.surface != surface else {
+            refreshKeyboardHeight()
+            return
+        }
+        state.surface = surface
+        if surface == .voice {
+            typingSession.leaveTypingMode()
+        }
+        refreshKeyboardHeight()
+    }
+
+    private func applyPreferredSurfaceOnOpen() {
+        let preferredSurface: State.Surface = TypingInputConfiguration.prefersTypingOnOpen()
+            ? .typing
+            : .voice
+        applySurface(preferredSurface)
+    }
+
+    private func refreshKeyboardHeight() {
+        // `applyPresentationHeightOffset()` is only a one-time presentation
+        // primer used before `viewDidAppear`. Reusing it after a surface
+        // switch subtracts the system's ~228 pt encapsulated height from the
+        // requested typing height and collapses the keyboard to a thin strip.
+        // Once presented, update our height constraint directly, matching the
+        // final assignment in `viewDidAppear`.
+        keyboardHeightConstraint?.constant = targetKeyboardHeight
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
     }
 
     private func refreshReturnKeyRole() {
@@ -283,7 +356,16 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     private func installSwiftUI() {
-        let root = KeyboardRootView(state: state)
+        let root = KeyboardSurfaceRoot(
+            state: state,
+            typing: typingSession,
+            onInsert: { [weak self] text in
+                self?.textDocumentProxy.insertText(text)
+            },
+            onDeleteBackward: { [weak self] in
+                self?.textDocumentProxy.deleteBackward()
+            }
+        )
         let host = KeyboardHostingController(rootView: root)
         host.view.backgroundColor = .clear
         host.view.translatesAutoresizingMaskIntoConstraints = false

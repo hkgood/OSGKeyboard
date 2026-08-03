@@ -8,7 +8,7 @@
 // in `applyPresentationHeightOffset()`.
 //
 //   ┌───────────────────────────────────────────┐
-//   │  [polish] [中]                      ⚙     │  ← header band (top)
+//   │  [OSG]                  语音 中文 EN 译     │  ← header band (top)
 //   │              (transcript preview)         │
 //   │              ┊                          │
 //   │              ◯ mic (centred)              │  ← action cluster:
@@ -22,17 +22,14 @@ import OSGKeyboardShared
 private enum KeyboardLayoutMetrics {
     static let micSize: CGFloat = 121
     static let micToButtonGap: CGFloat = 8
-    static let bottomActionRowHeight: CGFloat = 48
+    static let bottomActionRowHeight: CGFloat = KeyboardChromeLayout.actionKeyHeight
     static let bottomActionFixedWidth: CGFloat = 86
     static let bottomActionSpacing: CGFloat = Spacing.xs
-    /// Gap between the top chip row and the transcript / hint line.
-    /// Tightened (8 → 4) so the "点按说话" line hugs the chip row. The
-    /// space reclaimed here and from `actionClusterTopGap` is added back
-    /// into `actionClusterBottomGap`, keeping `totalHeight` constant while
-    /// nudging the mic up toward the vertical centre.
+    /// Gap between the top control row and the transcript / hint line.
+    /// Four points keeps the "点按说话" line visually attached to the controls.
     static let topBarToTranscriptSpacing: CGFloat = Spacing.xs / 2
-    /// Outer inset for the bottom action row from screen edges (8 pt → 24 pt, +200%).
-    static let sideActionHorizontalInset: CGFloat = Spacing.xs * 3
+    /// Match the typing key grid's outer edge.
+    static let sideActionHorizontalInset: CGFloat = KeyboardChromeLayout.horizontalInset
     /// iPad: cap the content column. A full-width (~1180 pt) keyboard would
     /// park delete/return at the far screen edges and turn each cursor-drag
     /// pad into a ~450 pt runway — capping keeps the reach ergonomics of the
@@ -40,41 +37,40 @@ private enum KeyboardLayoutMetrics {
     static let contentMaxWidth: CGFloat = 700
 
     // MARK: - Content-driven keyboard height (single source of truth)
-    static let outerPaddingTop: CGFloat = 2
-    static let outerPaddingBottom: CGFloat = 1
-    static let topBarHeight: CGFloat = 38
+    static let outerPaddingTop: CGFloat = 4
+    static let outerPaddingBottom: CGFloat = 4
+    static let topBarHeight: CGFloat = KeyboardTopBarMetrics.height
     static let transcriptLineHeight: CGFloat = 22
-    /// mic (121) + gap (8) + bottom row (48) = 177 pt
+    /// mic (121) + gap (8) + bottom row (50) = 179 pt
     static let actionClusterHeight: CGFloat = micSize + micToButtonGap + bottomActionRowHeight
-    /// Gap between transcript line and mic. Tightened (11.2 → 4) to pull
-    /// the mic up; the reclaimed space moves to `actionClusterBottomGap`.
-    static let actionClusterTopGap: CGFloat = Spacing.xs / 2
-    /// Gap below the bottom action row.
-    static let actionClusterBottomGap: CGFloat = 6
+    /// Moves the action cluster down so its keys share the typing row's baseline.
+    static let actionClusterTopGap: CGFloat = Spacing.xl
+    /// The shared 4 pt outer padding is the complete bottom inset.
+    static let actionClusterBottomGap: CGFloat = 0
 
     static var headerBandHeight: CGFloat {
         topBarHeight + topBarToTranscriptSpacing + transcriptLineHeight
     }
 
-    /// 2 + 64 + 4 + 177 + 15.2 + 1 = 263.2 pt (unchanged; the mic cluster
-    /// just sits higher now that the top gaps moved to the bottom gap).
-    static var totalHeight: CGFloat {
-        outerPaddingTop
-            + headerBandHeight
-            + actionClusterTopGap
-            + actionClusterHeight
-            + actionClusterBottomGap
-            + outerPaddingBottom
-    }
+    /// 4 + 70 + 24 + 179 + 0 + 4 = 281 pt, matching Chinese / English.
+    static let totalHeight: CGFloat = KeyboardChromeLayout.totalHeight
 }
 
 public struct KeyboardRootView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     @ObservedObject var state: State
+    @ObservedObject var typing: TypingSessionController
+    let onInsert: (String) -> Void
 
-    public init(state: KeyboardViewController.State) {
+    public init(
+        state: KeyboardViewController.State,
+        typing: TypingSessionController = TypingSessionController(),
+        onInsert: @escaping (String) -> Void = { _ in }
+    ) {
         self.state = state
+        self.typing = typing
+        self.onInsert = onInsert
     }
 
     /// Content-driven keyboard height; mirrored on `UIInputViewController.view`
@@ -136,7 +132,7 @@ public struct KeyboardRootView: View {
         .animation(.easeInOut(duration: 0.12), value: state.cursorDragActive)
     }
 
-    /// Top chip row + transcript / hint line.
+    /// Top brand / mode row + transcript / hint line.
     private var headerBand: some View {
         VStack(spacing: KeyboardLayoutMetrics.topBarToTranscriptSpacing) {
             topBar
@@ -158,35 +154,18 @@ public struct KeyboardRootView: View {
 
     private var topBar: some View {
         HStack(spacing: Spacing.xs) {
-            if state.isLocalEngine {
-                LocalEngineChip()
-            } else {
-                CloudEngineChip()
-            }
+            KeyboardBrandLogo(action: state.openSettings)
+            // Engine controls remain available in the host app.
             // App context is auto-detected on each mic press — no UI.
-            if state.isTranslationChipVisible {
-                TranslationChip(
-                    palette: palette,
-                    targetLocaleId: state.translationTargetLocaleId,
-                    onSelect: state.setTranslationTargetLocaleId
-                )
-                // Decouple the open picker from the keyboard's 1 Hz App
-                // Group poll so scrolling doesn't reset / dismiss it.
-                .equatable()
-            }
             Spacer(minLength: 0)
-            Button(action: state.openSettings) {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(palette.textSecondary)
-                    .frame(width: 34, height: 34)
-                    .background(palette.surface, in: Circle())
-                    .overlay(Circle().stroke(palette.divider, lineWidth: 0.5))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(ExtL10n.text("keyboard.openSettingsA11y"))
+            KeyboardTopControls(
+                state: state,
+                typing: typing,
+                palette: palette,
+                onInsert: onInsert
+            )
         }
-        .padding(.horizontal, Spacing.md)
+        .padding(.horizontal, KeyboardTopBarMetrics.horizontalInset)
     }
 
     // MARK: - Action cluster
@@ -273,7 +252,12 @@ public struct KeyboardRootView: View {
 
     private func bottomReturnButton(disabled: Bool) -> some View {
         let title = ExtL10n.string(state.returnKeyRole.titleKey)
-        return RectangularToolbarButton(title: title, label: title, disabled: disabled) {
+        return RectangularToolbarButton(
+            title: title,
+            label: title,
+            disabled: disabled,
+            isSend: state.returnKeyRole == .send
+        ) {
             state.insertNewline()
         }
         .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)

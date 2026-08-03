@@ -184,6 +184,9 @@
 "settings.general.appearanceLanguage.title" = "Appearance & Language";
 "settings.general.keyboard.title" = "Keyboard & Gestures";
 "settings.general.sync.title" = "Sync";
+"settings.typingInput.title" = "Text Input";
+"settings.typingInput.default.title" = "Default to Text Input";
+"settings.typingInput.default.description" = "Open the text input keyboard instead of voice input by default";
 "settings.speechRecognition.title" = "Speech Recognition";
 "settings.textPolish.title" = "Text Polish";
 "settings.preferences.title" = "Preferences";

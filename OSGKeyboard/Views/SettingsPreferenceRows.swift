@@ -151,6 +151,29 @@ struct PolishIntensityPickerRow: View {
     }
 }
 
+// MARK: - Default input surface toggle
+
+struct DefaultTypingInputToggleRow: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("settings.typingInput.default.title")
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
+                Text("settings.typingInput.default.description")
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .tint(palette.accent)
+        .settingsListRow()
+    }
+}
+
 // MARK: - Cursor drag navigation toggle
 
 struct CursorDragNavigationToggleRow: View {

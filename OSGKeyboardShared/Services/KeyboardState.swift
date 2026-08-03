@@ -68,7 +68,18 @@ public final class KeyboardState: ObservableObject {
         public var labelKey: String { "mode.polish" }
     }
 
+    /// Keyboard chrome surface. Voice is the default product mode; typing is
+    /// a secondary QWERTY / pinyin surface for quick corrections.
+    public enum Surface: String, CaseIterable, Identifiable, Sendable {
+        case voice
+        case typing
+
+        public var id: String { rawValue }
+    }
+
     @Published public var phase: Phase = .idle
+    /// Active chrome. Forced to `.voice` while recording / processing.
+    @Published public var surface: Surface = .voice
     @Published public var level: Double = 0
     @Published public var mode: InputMode = .polish
     @Published public var localeId: String = "auto"
@@ -232,6 +243,20 @@ public final class KeyboardState: ObservableObject {
     /// Cursor-drag pad press lifecycle — updates `cursorDragActive` and
     /// lets the view controller reset vertical-navigation stickiness.
     public var setCursorDragActive:  (Bool) -> Void = { _ in }
+    /// Switch voice ↔ typing. No-ops when voice pipeline is active.
+    public var setSurface: (Surface) -> Void = { _ in }
+
+    /// Recording / processing must stay on the voice surface.
+    public var locksTypingSurface: Bool {
+        switch phase {
+        case .requestingPermissions, .recording, .processing:
+            return true
+        default:
+            return false
+        }
+    }
+
+    public var canEnterTypingSurface: Bool { !locksTypingSurface }
 
     // MARK: - Preview helpers (DEBUG only)
 

@@ -49,6 +49,7 @@
 | | iOS / iPadOS | macOS |
 |---|:---:|:---:|
 | 自定义键盘 / 全局热键 | ✅ | ✅ Option 按住说话 |
+| 全拼 / 微软双拼 / 搜狗双拼 | ✅ 可选模糊音 | — |
 | 本地语音识别 | ✅ Apple SpeechAnalyzer | ✅ SenseVoice / Qwen3 |
 | AI 文本润色 | ✅ | ✅ |
 | 润色后翻译 | ✅ | ✅ |
@@ -62,7 +63,7 @@
 
 - **默认本地识别** — 录音在设备上转写，不经过我们的服务器
 - **润色只发文字** — 发给 LLM 的是转写文本，以及用于衔接的少量光标附近文字，不是原始音频
-- **不记录击键** — 光标上下文仅在润色时临时使用，不写入日志或语音历史；密码框完全不采集
+- **不上传击键** — 中文候选仅在设备 App Group 中学习词频；普通击键和本地用户词库不会上传，密码框完全不采集
 - 详见 [隐私政策](https://hkgood.github.io/OSGKeyboard/privacy/)
 
 ---
@@ -97,6 +98,22 @@ open OSGKeyboard.xcodeproj
 
 ---
 
+## 鸣谢
+
+OSGKeyboard 的语音与键盘能力建立在这些优秀项目和平台之上：
+
+- [Typeless](https://typeless.com) — voice-first 输入体验的产品灵感
+- [Apple SpeechAnalyzer](https://developer.apple.com/documentation/speech) — iOS 端侧语音识别
+- [librime](https://github.com/rime/librime) 与 [librime-xcframework](https://github.com/ghostflyby/librime-xcframework) — iOS 中文输入引擎及静态框架
+- [NanoMouse](https://github.com/xjwhnxjwhn/nanomouse) 与 [Hamster](https://github.com/imfuxiao/Hamster) — iOS Rime 生命周期和架构参考
+- [rime-pinyin-simp](https://github.com/rime/rime-pinyin-simp)、[Jieba](https://github.com/fxsjy/jieba)、[phrase-pinyin-data](https://github.com/mozillazg/phrase-pinyin-data) 与 [pinyin-data](https://github.com/mozillazg/pinyin-data) — 拼音、词语与词频数据
+- [mlx-audio-swift](https://github.com/Blaizzy/mlx-audio-swift) — macOS 本地 Qwen3 MLX 流式识别
+- [Google Material Icons](https://github.com/google/material-design-icons) — iOS App 图标字体
+
+具体版本和许可证见 [第三方许可说明](./NOTICE-TYPING.md)，也可在 App 的「设置 → 关于 → 第三方许可」中查看。
+
+---
+
 ## 许可
 
 [源码可见许可](./LICENSE) — 个人学习与非商用本地使用；商用请联系 [rocky.hk@gmail.com](mailto:rocky.hk@gmail.com)。
@@ -104,5 +121,5 @@ open OSGKeyboard.xcodeproj
 ---
 
 <p align="center">
-  灵感来自 <a href="https://typeless.com">Typeless</a> · 端侧识别基于 Apple SpeechAnalyzer · Mac 本地模型基于 Sherpa-ONNX
+  开口即文字 · Speak it. It's typed.
 </p>
