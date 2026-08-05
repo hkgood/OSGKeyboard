@@ -19,7 +19,6 @@ public struct SyncedAppSettings: Codable, Sendable, Equatable {
     public var translationTargetLocaleId: String
     public var handednessPreference: HandednessPreference
     public var cursorDragNavigationEnabled: Bool
-    public var polishIntensity: PolishIntensity
     public var flowSkipAppSwitch: Bool
     public var flowInactivityDuration: FlowInactivityDuration
     /// Deprecated — decoded for backward compatibility only; never applied.
@@ -38,7 +37,6 @@ public struct SyncedAppSettings: Codable, Sendable, Equatable {
         translationTargetLocaleId: String,
         handednessPreference: HandednessPreference,
         cursorDragNavigationEnabled: Bool,
-        polishIntensity: PolishIntensity,
         flowSkipAppSwitch: Bool,
         flowInactivityDuration: FlowInactivityDuration,
         providerAPIKeys: [String: String] = [:]
@@ -55,7 +53,6 @@ public struct SyncedAppSettings: Codable, Sendable, Equatable {
         self.translationTargetLocaleId = translationTargetLocaleId
         self.handednessPreference = handednessPreference
         self.cursorDragNavigationEnabled = cursorDragNavigationEnabled
-        self.polishIntensity = polishIntensity
         self.flowSkipAppSwitch = flowSkipAppSwitch
         self.flowInactivityDuration = flowInactivityDuration
         self.providerAPIKeys = providerAPIKeys
@@ -75,7 +72,6 @@ public struct SyncedAppSettings: Codable, Sendable, Equatable {
         translationTargetLocaleId = try container.decode(String.self, forKey: .translationTargetLocaleId)
         handednessPreference = try container.decode(HandednessPreference.self, forKey: .handednessPreference)
         cursorDragNavigationEnabled = try container.decode(Bool.self, forKey: .cursorDragNavigationEnabled)
-        polishIntensity = try container.decode(PolishIntensity.self, forKey: .polishIntensity)
         flowSkipAppSwitch = try container.decode(Bool.self, forKey: .flowSkipAppSwitch)
         flowInactivityDuration = try container.decode(FlowInactivityDuration.self, forKey: .flowInactivityDuration)
         providerAPIKeys = try container.decodeIfPresent([String: String].self, forKey: .providerAPIKeys) ?? [:]
@@ -94,7 +90,6 @@ public struct SyncedAppSettings: Codable, Sendable, Equatable {
         configuration.translationTargetLocaleId = translationTargetLocaleId
         configuration.handednessPreference = handednessPreference
         configuration.cursorDragNavigationEnabled = cursorDragNavigationEnabled
-        configuration.polishIntensity = polishIntensity
         configuration.flowSkipAppSwitch = flowSkipAppSwitch
         configuration.flowInactivityDuration = flowInactivityDuration
     }
@@ -117,7 +112,6 @@ public extension SyncedAppSettings {
             translationTargetLocaleId: configuration.translationTargetLocaleId,
             handednessPreference: configuration.handednessPreference,
             cursorDragNavigationEnabled: configuration.cursorDragNavigationEnabled,
-            polishIntensity: configuration.polishIntensity,
             flowSkipAppSwitch: configuration.flowSkipAppSwitch,
             flowInactivityDuration: configuration.flowInactivityDuration
         )

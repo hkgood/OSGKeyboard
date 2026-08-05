@@ -8,8 +8,10 @@ import Foundation
 
 public enum FlowSessionKeys {
     public static let flowCommandPayload = "flow.commandPayload.v1"
+    public static let flowCommandJournalPayload = "flow.commandJournalPayload.v2"
     public static let flowResultPayload = "flow.resultPayload.v1"
     public static let flowAckPayload = "flow.ackPayload.v1"
+    public static let pendingKeyboardUtteranceId = "flow.pendingKeyboardUtteranceId.v1"
     public static let flowReadyPayload = "flow.readyPayload.v1"
     public static let flowSessionActive = "flow.flowSessionActive"
     public static let flowSessionExpires = "flow.flowSessionExpires"
@@ -38,6 +40,9 @@ public enum FlowSessionKeys {
     /// previous process is dead, whether or not its `applicationWillTerminate`
     /// cleanup ever ran (it does NOT run when a suspended app is force-quit).
     public static let hostGeneration = "flow.hostGeneration.v1"
+    /// Host is mid heavy work (Rime/CLM/ASR). Extension should stay on voice
+    /// and skip typing engine prepare until this clears.
+    public static let hostHeavy = "flow.hostHeavy.v1"
 
     /// Heartbeat older than this → host is not actively reachable for recording.
     public static let heartbeatStaleInterval: TimeInterval = 3
@@ -61,17 +66,24 @@ public enum FlowSessionKeys {
     /// Host polls for pipelined ASR drain after mic stop. Pipelining usually
     /// finishes most chunks during recording; this is a soft deadline before
     /// blocking on `asrTask.value` (which waits until the pipeline exits).
-    public static let localASRWaitTimeout: TimeInterval = 120
-    public static let cloudASRWaitTimeout: TimeInterval = 120
+    public static let localASRWaitTimeout: TimeInterval = 8
+    public static let cloudASRWaitTimeout: TimeInterval = 12
+    public static let batchASRFallbackTimeout: TimeInterval = 8
 
     /// Hard cap on a single LLM polish request. `PolishingService`'s scaled
     /// per-request timeout clamps to this value, so it participates in the
     /// keyboard-watchdog budget below.
-    public static let maxPolishTimeout: TimeInterval = 120
+    public static let maxPolishTimeout: TimeInterval = 35
 
     /// Extra slack for result serialization, cross-process propagation, and
     /// the host's own polling cadence.
-    public static let resultDeliveryMargin: TimeInterval = 20
+    public static let resultDeliveryMargin: TimeInterval = 5
+
+    public static func polishTimeout(forCharacterCount count: Int) -> TimeInterval {
+        if count <= 150 { return 10 }
+        if count <= 500 { return 20 }
+        return maxPolishTimeout
+    }
 
     /// Keyboard watchdog after the user stops recording (not utterance max
     /// length). Derived from the host-side budget so it always outlasts the
@@ -80,7 +92,7 @@ public enum FlowSessionKeys {
     /// report a timeout for transcriptions that were still going to succeed.
     public static func keyboardResultTimeout(engineMode: String) -> TimeInterval {
         let asrWait = engineMode == "local" ? localASRWaitTimeout : cloudASRWaitTimeout
-        return asrWait + maxPolishTimeout + resultDeliveryMargin
+        return asrWait + batchASRFallbackTimeout + maxPolishTimeout + resultDeliveryMargin
     }
 
     public enum RecordingState: String, Sendable, Equatable {

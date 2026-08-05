@@ -178,12 +178,18 @@
 "settings.systemPrompt.edit" = "编辑系统提示";
 "settings.systemPrompt.hint" = "云端润色时使用。本地识别模式不会用到此提示词。";
 "settings.about.title" = "关于";
+"settings.version.title" = "版本";
 "settings.daily.title" = "日常";
 "settings.config.title" = "配置";
 "settings.general.title" = "通用";
 "settings.general.appearanceLanguage.title" = "外观与语言";
 "settings.general.keyboard.title" = "键盘与操作";
 "settings.general.sync.title" = "同步";
+"settings.typingInput.title" = "文本输入";
+"settings.typingInput.default.title" = "默认进行文字输入";
+"settings.typingInput.default.description" = "打开键盘时，默认使用文字输入键盘而非语音输入";
+"settings.typingInput.rememberLast.title" = "记住上次选择";
+"settings.typingInput.rememberLast.description" = "下次打开键盘时，保持你上次离开时的语音或文字输入界面";
 "settings.speechRecognition.title" = "语音识别配置";
 "settings.textPolish.title" = "文本润色配置";
 "settings.preferences.title" = "偏好设置";
@@ -192,6 +198,10 @@
 "settings.handedness.title" = "握持偏好";
 "settings.handedness.left" = "左手";
 "settings.handedness.right" = "右手";
+"settings.keyboardHaptic.title" = "震动";
+"settings.keyboardHaptic.off" = "关";
+"settings.keyboardHaptic.light" = "轻";
+"settings.keyboardHaptic.strong" = "强";
 "settings.cursorDragNavigation.title" = "麦克风旁拖动移动光标";
 "settings.systemPrompt.reset" = "重置";
 "settings.asrLocale" = "识别语言";
@@ -394,7 +404,7 @@
 "polishStyles.editor.name" = "名称";
 "polishStyles.editor.namePlaceholder" = "风格名称";
 "polishStyles.editor.prompt" = "完整提示词";
-"polishStyles.editor.hint" = "使用 {{DICTIONARY}} 指定个人词典的插入位置。系统会自动追加安全边界、润色力度和输出契约。";
+"polishStyles.editor.hint" = "只需描述角色、语气、风格边界和示例。系统会自动追加个人词典、安全边界和输出契约。";
 "polishStyles.error.title" = "无法保存风格";
 "polishStyles.error.emptyName" = "请输入风格名称。";
 "polishStyles.error.emptyPrompt" = "提示词不能为空。";
@@ -461,7 +471,8 @@
 "settings.appSettings.iCloudSync.synced" = "已同步";
 "settings.appSettings.iCloudSync.error.generic" = "无法与 iCloud 同步设置，请稍后重试。";
 
-/* v0.3.0: 润色强度 */
+
+/* 润色强度 */
 "settings.polishIntensity.title" = "润色强度";
 
 /* Flow 会话策略 */

@@ -59,7 +59,8 @@ final class SettingsCloudSyncTests: XCTestCase {
             ),
             handednessPreference: SyncedField(value: .left, updatedAt: stampA, deviceID: deviceA),
             cursorDragNavigationEnabled: SyncedField(value: true, updatedAt: stampA, deviceID: deviceA),
-            polishIntensity: SyncedField(value: .medium, updatedAt: stampA, deviceID: deviceA),
+            keyboardHapticIntensity: SyncedField(value: .light, updatedAt: stampA, deviceID: deviceA),
+            polishIntensity: SyncedField(value: .light, updatedAt: stampA, deviceID: deviceA),
             activePolishStyleId: SyncedField(value: "builtin.light", updatedAt: stampA, deviceID: deviceA),
             llmThinkingEnabled: SyncedField(value: false, updatedAt: stampA, deviceID: deviceA),
             flowSkipAppSwitch: SyncedField(value: true, updatedAt: stampA, deviceID: deviceA),
@@ -81,7 +82,8 @@ final class SettingsCloudSyncTests: XCTestCase {
             translationTargetLocaleId: SyncedField(value: "en", updatedAt: stampB, deviceID: deviceB),
             handednessPreference: SyncedField(value: .right, updatedAt: stampB, deviceID: deviceB),
             cursorDragNavigationEnabled: SyncedField(value: false, updatedAt: stampB, deviceID: deviceB),
-            polishIntensity: SyncedField(value: .light, updatedAt: stampB, deviceID: deviceB),
+            keyboardHapticIntensity: SyncedField(value: .strong, updatedAt: stampB, deviceID: deviceB),
+            polishIntensity: SyncedField(value: .heavy, updatedAt: stampB, deviceID: deviceB),
             activePolishStyleId: SyncedField(value: "builtin.formal", updatedAt: stampB, deviceID: deviceB),
             llmThinkingEnabled: SyncedField(value: true, updatedAt: stampB, deviceID: deviceB),
             flowSkipAppSwitch: SyncedField(value: false, updatedAt: stampB, deviceID: deviceB),
@@ -95,6 +97,7 @@ final class SettingsCloudSyncTests: XCTestCase {
         XCTAssertEqual(merged.asrProviderId.value, "qwen")
         XCTAssertEqual(merged.localeId.value, "ja")
         XCTAssertEqual(merged.engineMode.value, "local")
+        XCTAssertEqual(merged.polishIntensity.value, .heavy)
     }
 
     func testLegacyV1PullDoesNotClearKeychain() async throws {
@@ -114,7 +117,6 @@ final class SettingsCloudSyncTests: XCTestCase {
             translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId,
             handednessPreference: .left,
             cursorDragNavigationEnabled: true,
-            polishIntensity: .medium,
             flowSkipAppSwitch: true,
             flowInactivityDuration: .twelveHours
         )

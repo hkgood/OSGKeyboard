@@ -31,11 +31,12 @@
     <li><strong>Transcribed text</strong> — in Cloud polish mode, the final text (not audio) may be sent to the LLM provider you configure (e.g. OpenAI) for punctuation and formatting.</li>
     <li><strong>API credentials</strong> — stored in the iOS Keychain and shared between the main app and keyboard extension. When iCloud settings sync is enabled, keys replicate through iCloud Keychain (not iCloud KVS JSON).</li>
     <li><strong>App preferences</strong> — engine mode, language, and keyboard settings stored in App Group UserDefaults. Optional iCloud sync mirrors preferences, usage statistics, and voice history through your private iCloud account.</li>
+    <li><strong>On-device typing learning</strong> — the Chinese keyboard stores selected words and candidate frequencies in the App Group on your device. OSGKeyboard does not upload this user dictionary.</li>
   </ul>
 
   <h2>What we do not collect</h2>
   <ul>
-    <li>We do <strong>not</strong> log or upload ordinary keystrokes you type with the keyboard.</li>
+    <li>We do <strong>not</strong> log or upload ordinary keystrokes. Only the on-device Chinese candidate-learning data described above is retained locally.</li>
     <li>We do <strong>not</strong> operate analytics or advertising SDKs.</li>
     <li>We do <strong>not</strong> sell personal data.</li>
   </ul>

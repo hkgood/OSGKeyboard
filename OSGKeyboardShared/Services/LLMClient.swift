@@ -47,7 +47,10 @@ public struct LLMGenerationOptions: Sendable, Equatable {
     }
 
     public static let polishDefault = LLMGenerationOptions()
-    public static let deterministicRetry = LLMGenerationOptions(temperature: 0, topP: 1)
+    public static let funCreative = LLMGenerationOptions(
+        temperature: 0.65,
+        topP: 0.9
+    )
 }
 
 public protocol LLMClient: Sendable {

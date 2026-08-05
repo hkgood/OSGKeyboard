@@ -178,12 +178,18 @@
 "settings.systemPrompt.edit" = "Edit system prompt";
 "settings.systemPrompt.hint" = "Used by the cloud LLM when polishing your dictation. Local engine skips this step.";
 "settings.about.title" = "About";
+"settings.version.title" = "Version";
 "settings.daily.title" = "Daily";
 "settings.config.title" = "Configuration";
 "settings.general.title" = "General";
 "settings.general.appearanceLanguage.title" = "Appearance & Language";
 "settings.general.keyboard.title" = "Keyboard & Gestures";
 "settings.general.sync.title" = "Sync";
+"settings.typingInput.title" = "Text Input";
+"settings.typingInput.default.title" = "Default to Text Input";
+"settings.typingInput.default.description" = "Open the text input keyboard instead of voice input by default";
+"settings.typingInput.rememberLast.title" = "Remember Last Choice";
+"settings.typingInput.rememberLast.description" = "Reopen on the voice or text surface you left last time";
 "settings.speechRecognition.title" = "Speech Recognition";
 "settings.textPolish.title" = "Text Polish";
 "settings.preferences.title" = "Preferences";
@@ -192,6 +198,10 @@
 "settings.handedness.title" = "Handedness";
 "settings.handedness.left" = "Left hand";
 "settings.handedness.right" = "Right hand";
+"settings.keyboardHaptic.title" = "Haptics";
+"settings.keyboardHaptic.off" = "Off";
+"settings.keyboardHaptic.light" = "Light";
+"settings.keyboardHaptic.strong" = "Strong";
 "settings.cursorDragNavigation.title" = "Drag beside mic to move cursor";
 "settings.systemPrompt.reset" = "Reset";
 "settings.asrLocale" = "ASR locale";
@@ -395,7 +405,7 @@
 "polishStyles.editor.name" = "Name";
 "polishStyles.editor.namePlaceholder" = "Style name";
 "polishStyles.editor.prompt" = "Complete prompt";
-"polishStyles.editor.hint" = "Use {{DICTIONARY}} where the personal dictionary should be inserted. System safety, rewrite intensity, and output rules are appended automatically.";
+"polishStyles.editor.hint" = "Describe only the role, tone, style boundaries, and examples. The system appends the personal dictionary, safety contract, and output rules.";
 "polishStyles.error.title" = "Couldn’t save style";
 "polishStyles.error.emptyName" = "Enter a style name.";
 "polishStyles.error.emptyPrompt" = "The prompt cannot be empty.";
@@ -462,7 +472,8 @@
 "settings.appSettings.iCloudSync.synced" = "Synced";
 "settings.appSettings.iCloudSync.error.generic" = "Could not sync settings with iCloud. Try again later.";
 
-/* v0.3.0: Polish intensity */
+
+/* Polish intensity */
 "settings.polishIntensity.title" = "Polish intensity";
 
 /* Flow session policy */

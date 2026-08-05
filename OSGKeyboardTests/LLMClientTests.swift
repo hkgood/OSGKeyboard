@@ -14,9 +14,12 @@ final class LLMClientTests: XCTestCase {
         // one keychain DB), so an API key written by a previous test would
         // leak into the next one unless we wipe it here. We intentionally
         // swallow errors — `errSecItemNotFound` is fine.
+        Keychain.resetTestMemoryStore()
         try? Keychain.deleteAPIKey()
         try? Keychain.deleteLegacyAPIKey()
         try? Keychain.deleteAPIKey(for: "qwen")
+        try? Keychain.deleteAPIKey(for: "openai")
+        try? Keychain.deleteAPIKey(for: "deepseek")
         StubURLProtocolStorage.config = nil
         StubURLProtocolStorage.delaySeconds = 0
         StubURLProtocolStorage.lastRequest = nil
@@ -26,6 +29,9 @@ final class LLMClientTests: XCTestCase {
         try? Keychain.deleteAPIKey()
         try? Keychain.deleteLegacyAPIKey()
         try? Keychain.deleteAPIKey(for: "qwen")
+        try? Keychain.deleteAPIKey(for: "openai")
+        try? Keychain.deleteAPIKey(for: "deepseek")
+        Keychain.resetTestMemoryStore()
         StubURLProtocolStorage.config = nil
         StubURLProtocolStorage.delaySeconds = 0
         StubURLProtocolStorage.lastRequest = nil
@@ -34,9 +40,10 @@ final class LLMClientTests: XCTestCase {
     // MARK: - ProviderConfig persistence
 
     func testProviderConfigPersistsAcrossInstances() {
-        let suiteName = "group.com.osgkeyboard.shared.tests"
+        let suiteName = "group.com.osgkeyboard.shared.tests.persist.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let config1 = ProviderConfig(defaults: defaults)
         config1.baseURL = "https://example.com/v1"
@@ -56,18 +63,25 @@ final class LLMClientTests: XCTestCase {
     /// never needs a key. Regression: see commit `isConfigured` fix
     /// that exposed this gate.
     func testIsConfiguredTrueForLocalEngineWithoutAPIKey() {
-        let suiteName = "group.com.osgkeyboard.shared.tests"
+        let suiteName = "group.com.osgkeyboard.shared.tests.isconfigured.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let config = ProviderConfig(defaults: defaults)
-        // No apiKey, no baseURL, no model — cloud would fail.
+        // Fresh suites default to local; force cloud so ASR+polish keys are required.
+        config.engineMode = "cloud"
         XCTAssertFalse(config.isConfigured)
-        // Switch to local engine: should flip to true regardless of
-        // the missing cloud fields.
+        // Local ASR never needs a cloud ASR key; polish may use built-in DeepSeek.
         config.engineMode = "local"
-        XCTAssertTrue(config.isConfigured)
-        // And back to cloud: should flip to false again.
+        if PreconfiguredKeys.isDeepseekConfigured {
+            XCTAssertTrue(config.isConfigured)
+        } else {
+            XCTAssertFalse(
+                config.isConfigured,
+                "Without a user key or PreconfiguredKeys.deepseek, local polish is not configured"
+            )
+        }
         config.engineMode = "cloud"
         XCTAssertFalse(config.isConfigured)
     }
@@ -293,13 +307,14 @@ final class LLMClientTests: XCTestCase {
 
         // Writer side: ProviderConfig (main App) writes API key + legacy off mode.
         let config = ProviderConfig(defaults: defaults)
+        config.engineMode = "cloud"
         config.apiKey = "sk-test-1234"
         config.model = "gpt-4o-mini"
         config.baseURL = "https://example.com/v1"
         config.modeId = "off"
 
         // Reader side: AppGroupStore (keyboard extension) reads from the
-        // same suite.
+        // same suite. Cloud loads remaps legacy off → polish.
         let store = AppGroupStore(defaults: defaults)
         XCTAssertEqual(store.apiKey, "sk-test-1234", "API key did not survive the cross-process boundary")
         XCTAssertEqual(store.modeId, "polish", "legacy off mode migrates to polish")
@@ -312,13 +327,17 @@ final class LLMClientTests: XCTestCase {
         // (PolishingService itself lives in the keyboard extension target
         // and isn't @testable-importable from this test target, so we
         // exercise the same path one layer down.)
+        Keychain.resetTestMemoryStore()
         let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
+        // Avoid default deepseek + empty baseURL accidentally using a leftover
+        // Keychain entry; pin openai with an empty key on this suite.
+        defaults.set("openai", forKey: "config.providerId")
         let store = AppGroupStore(defaults: defaults)
-        // apiKey stays empty by default — we never wrote one to the suite.
+        XCTAssertTrue(store.apiKey.isEmpty)
         let client = store.makeClient()
 
         do {
@@ -570,6 +589,30 @@ final class LLMClientTests: XCTestCase {
         )
         XCTAssertTrue(prompt.localizedCaseInsensitiveContains("preserve English identifiers"))
     }
+
+    func testTranslationPromptIncludesStructureContract() {
+        let english = TranslationPrompt.make(
+            target: TranslationLanguageCatalog.resolve("en"),
+            providerId: "openai",
+            appContext: .document,
+            sourceText: "hello world"
+        )
+        XCTAssertTrue(english.localizedCaseInsensitiveContains("Hard structure rules"))
+        XCTAssertTrue(english.localizedCaseInsensitiveContains("CORRECT"))
+        XCTAssertTrue(english.localizedCaseInsensitiveContains("1. Fix the login crash"))
+        XCTAssertTrue(english.localizedCaseInsensitiveContains("numbered list"))
+
+        let chinese = TranslationPrompt.make(
+            target: TranslationLanguageCatalog.resolve("en"),
+            providerId: "deepseek",
+            appContext: .document,
+            sourceText: "你好世界这是一段中文口述"
+        )
+        XCTAssertTrue(chinese.contains("结构硬规则"))
+        XCTAssertTrue(chinese.contains("正确"))
+        XCTAssertTrue(chinese.contains("1. Fix the login crash"))
+        XCTAssertTrue(chinese.contains("编号列表"))
+    }
 }
 
 // MARK: - Test helpers
@@ -594,45 +637,4 @@ private struct CountingLLMClient: LLMClient {
         await counter.bump()
         return try await body(text, systemPrompt)
     }
-}
-
-// MARK: - URLProtocol stub
-
-/// Per-test stub config holder. Tests set these via `StubURLProtocol.config =`
-/// before invoking the code under test, then reset to nil in cleanup.
-private enum StubURLProtocolStorage {
-    nonisolated(unsafe) static var config: (statusCode: Int, body: Data)?
-    nonisolated(unsafe) static var delaySeconds: Double = 0
-    nonisolated(unsafe) static var lastRequest: URLRequest?
-}
-
-private final class StubURLProtocol: URLProtocol, @unchecked Sendable {
-    override class func canInit(with request: URLRequest) -> Bool { true }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        let cfg = StubURLProtocolStorage.config ?? (statusCode: 200, body: Data())
-        let delay = StubURLProtocolStorage.delaySeconds
-        StubURLProtocolStorage.lastRequest = request
-
-        // Simulate a slow transport. We honour URLProtocol.stopLoading() so
-        // cancellation doesn't leave the test hanging, and we yield to the
-        // run loop so `URLSession.data(for:)` actually observes the delay
-        // (a busy-wait would never let the cooperative scheduler time out).
-        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay) { [weak self] in
-            guard let self else { return }
-            guard self.client != nil else { return }
-            let response = HTTPURLResponse(
-                url: self.request.url!,
-                statusCode: cfg.statusCode,
-                httpVersion: "HTTP/1.1",
-                headerFields: ["Content-Type": "application/json"]
-            )!
-            self.client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            self.client?.urlProtocol(self, didLoad: cfg.body)
-            self.client?.urlProtocolDidFinishLoading(self)
-        }
-    }
-
-    override func stopLoading() {}
 }

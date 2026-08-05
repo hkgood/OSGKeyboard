@@ -6,6 +6,7 @@
 
 import SwiftUI
 import OSGKeyboardShared
+import OSGKeyboardHostSupport
 
 enum SettingsPresentation {
     case tab
@@ -50,7 +51,9 @@ struct SettingsView: View {
                         }
                         dailySection
                         transcriptionAndPolishSection
-                        moreEntriesSection
+                        if presentation == .tab {
+                            moreEntriesSection
+                        }
                     }
                     .modifier(SettingsScrollBottomPadding(presentation: presentation))
                 }
@@ -114,6 +117,10 @@ struct SettingsView: View {
     private var dailySection: some View {
         CardSection("settings.daily.title") {
             VStack(spacing: 0) {
+                settingsRouteButton(.general, title: "settings.general.title")
+
+                Divider().background(palette.divider)
+
                 LocalePickerRow(
                     locales: effectiveLocales,
                     selection: Binding(
@@ -160,16 +167,16 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - General / About
+    // MARK: - About
 
     private var moreEntriesSection: some View {
         VStack(spacing: 0) {
-            settingsRouteButton(.general, title: "settings.general.title")
+            settingsRouteButton(.about, title: "settings.about.title")
 
-            if presentation == .tab {
-                Divider().background(palette.divider)
-                settingsRouteButton(.about, title: "settings.about.title")
-            }
+            Divider().background(palette.divider)
+
+            // Read-only version row — not tappable.
+            SettingsVersionRow()
         }
         .surfaceCard()
     }

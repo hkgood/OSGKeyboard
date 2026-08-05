@@ -12,7 +12,8 @@ public enum MicVoiceAvailabilityResolver {
         hasFullAccess: Bool,
         appGroupAvailable: Bool,
         hostReady: Bool,
-        isPreparingSession: Bool
+        isPreparingSession: Bool,
+        hasCompletedOnboarding: Bool = true
     ) -> MicVoiceAvailability {
         switch phase {
         case .recording:
@@ -25,6 +26,10 @@ public enum MicVoiceAvailabilityResolver {
             break
         }
 
+        // Host owns setup; keyboard only gates voice until that finishes.
+        if !hasCompletedOnboarding {
+            return .unavailable(.onboardingIncomplete)
+        }
         if !appGroupAvailable {
             return .unavailable(.appGroupUnavailable)
         }

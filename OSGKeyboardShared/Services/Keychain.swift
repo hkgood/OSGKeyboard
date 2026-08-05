@@ -20,7 +20,64 @@ public enum Keychain: @unchecked Sendable {
 
     private static let service = "com.osgkeyboard.apikey"
     private static let legacyAccount = "current"
-    private static let defaultProviderId = "openai"
+    /// Must match `AppGroupConfiguration.defaultPolishProviderId` so bare
+    /// `apiKey()` / `setAPIKey(_:)` hit the same account the host/ext use.
+    private static let defaultProviderId = AppGroupConfiguration.defaultPolishProviderId
+
+    // MARK: - XCTest unsigned-host fallback
+    //
+    // `CODE_SIGNING_ALLOWED=NO` (historical test runner) omits entitlements, so
+    // SecItem returns `errSecMissingEntitlement` (-34018). That aborts Keychain
+    // tests and turns "missing key" into `keychainLocked`. While XCTest is
+    // loaded, fall back to a process-local map so the hermetic suite stays
+    // deterministic; production / signed hosts never take this path.
+
+    private static let memoryLock = NSLock()
+    /// Protected by `memoryLock`; marked unsafe for Swift 6 global mutability rules.
+    nonisolated(unsafe) private static var memoryStore: [String: String] = [:]
+
+    private static var isRunningUnderXCTest: Bool {
+        NSClassFromString("XCTestCase") != nil
+    }
+
+    private static func memorySlot(account: String, synchronizable: Bool) -> String {
+        "\(synchronizable ? "s" : "l")|\(service)|\(account)"
+    }
+
+    private static func memoryRead(account: String, synchronizable: Bool) -> String? {
+        memoryLock.lock()
+        defer { memoryLock.unlock() }
+        return memoryStore[memorySlot(account: account, synchronizable: synchronizable)]
+    }
+
+    private static func memoryWrite(_ value: String, account: String, synchronizable: Bool) {
+        memoryLock.lock()
+        defer { memoryLock.unlock() }
+        memoryStore[memorySlot(account: account, synchronizable: synchronizable)] = value
+    }
+
+    private static func memoryDelete(account: String, synchronizable: Bool) {
+        memoryLock.lock()
+        defer { memoryLock.unlock() }
+        memoryStore.removeValue(forKey: memorySlot(account: account, synchronizable: synchronizable))
+    }
+
+    /// Clears the XCTest in-memory Keychain map. Call from test `setUp` so
+    /// provider-scoped leftovers (sync + local) cannot leak across cases.
+    public static func resetTestMemoryStore() {
+        guard isRunningUnderXCTest else { return }
+        memoryLock.lock()
+        defer { memoryLock.unlock() }
+        memoryStore.removeAll()
+    }
+
+    private static func shouldUseMemoryFallback(for status: OSStatus) -> Bool {
+        #if DEBUG
+        isRunningUnderXCTest && status == errSecMissingEntitlement
+        #else
+        false
+        #endif
+    }
 
     private static func normalizedProviderId(_ providerId: String) -> String {
         let trimmed = providerId.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -132,6 +189,13 @@ public enum Keychain: @unchecked Sendable {
             // Pre-split installs stored one key under `provider.<id>` for both stages.
             return readKeyOutcome(providerId: providerId, synchronizable: synchronizable)
         default:
+            if shouldUseMemoryFallback(for: status) {
+                if let value = memoryRead(account: asrAccount(for: providerId), synchronizable: synchronizable) {
+                    return .found(value)
+                }
+                // Pre-split installs: fall through to polish-key account.
+                return readKeyOutcome(providerId: providerId, synchronizable: synchronizable)
+            }
             #if DEBUG
             print("⚠️ [OSGKeyboard] ASR Keychain read returned OSStatus \(status); reporting unavailable.")
             #endif
@@ -166,10 +230,17 @@ public enum Keychain: @unchecked Sendable {
                 ? kSecAttrAccessibleAfterFirstUnlock
                 : kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
             let addStatus = SecItemAdd(baseQuery as CFDictionary, nil)
-            if addStatus != errSecSuccess {
-                throw KeychainError.unexpectedStatus(addStatus)
+            if addStatus == errSecSuccess { return }
+            if shouldUseMemoryFallback(for: addStatus) {
+                memoryWrite(key, account: asrAccount(for: providerId), synchronizable: synchronizable)
+                return
             }
+            throw KeychainError.unexpectedStatus(addStatus)
         default:
+            if shouldUseMemoryFallback(for: updateStatus) {
+                memoryWrite(key, account: asrAccount(for: providerId), synchronizable: synchronizable)
+                return
+            }
             throw KeychainError.unexpectedStatus(updateStatus)
         }
     }
@@ -177,9 +248,12 @@ public enum Keychain: @unchecked Sendable {
     private static func deleteASRKey(providerId: String, synchronizable: Bool) throws {
         let query = baseASRQuery(providerId: providerId, synchronizable: synchronizable)
         let status = SecItemDelete(query as CFDictionary)
-        if status != errSecSuccess, status != errSecItemNotFound {
-            throw KeychainError.unexpectedStatus(status)
+        if status == errSecSuccess || status == errSecItemNotFound { return }
+        if shouldUseMemoryFallback(for: status) {
+            memoryDelete(account: asrAccount(for: providerId), synchronizable: synchronizable)
+            return
         }
+        throw KeychainError.unexpectedStatus(status)
     }
 
     // MARK: - LLM keys
@@ -253,6 +327,12 @@ public enum Keychain: @unchecked Sendable {
         case errSecItemNotFound:
             return .notFound
         default:
+            if shouldUseMemoryFallback(for: status) {
+                if let value = memoryRead(account: account(for: providerId), synchronizable: synchronizable) {
+                    return .found(value)
+                }
+                return .notFound
+            }
             #if DEBUG
             print("⚠️ [OSGKeyboard] Keychain read returned OSStatus \(status); reporting unavailable.")
             #endif
@@ -273,11 +353,15 @@ public enum Keychain: @unchecked Sendable {
         #endif
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess,
-              let data = result as? Data,
-              let str = String(data: data, encoding: .utf8)
-        else { return nil }
-        return str
+        if status == errSecSuccess,
+           let data = result as? Data,
+           let str = String(data: data, encoding: .utf8) {
+            return str
+        }
+        if shouldUseMemoryFallback(for: status) {
+            return memoryRead(account: legacyAccount, synchronizable: false)
+        }
+        return nil
     }
 
     // MARK: - Write
@@ -313,10 +397,17 @@ public enum Keychain: @unchecked Sendable {
                 ? kSecAttrAccessibleAfterFirstUnlock
                 : kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
             let addStatus = SecItemAdd(baseQuery as CFDictionary, nil)
-            if addStatus != errSecSuccess {
-                throw KeychainError.unexpectedStatus(addStatus)
+            if addStatus == errSecSuccess { return }
+            if shouldUseMemoryFallback(for: addStatus) {
+                memoryWrite(key, account: account(for: providerId), synchronizable: synchronizable)
+                return
             }
+            throw KeychainError.unexpectedStatus(addStatus)
         default:
+            if shouldUseMemoryFallback(for: updateStatus) {
+                memoryWrite(key, account: account(for: providerId), synchronizable: synchronizable)
+                return
+            }
             throw KeychainError.unexpectedStatus(updateStatus)
         }
     }
@@ -341,9 +432,12 @@ public enum Keychain: @unchecked Sendable {
     private static func deleteKey(providerId: String, synchronizable: Bool) throws {
         let query = baseQuery(providerId: providerId, synchronizable: synchronizable)
         let status = SecItemDelete(query as CFDictionary)
-        if status != errSecSuccess && status != errSecItemNotFound {
-            throw KeychainError.unexpectedStatus(status)
+        if status == errSecSuccess || status == errSecItemNotFound { return }
+        if shouldUseMemoryFallback(for: status) {
+            memoryDelete(account: account(for: providerId), synchronizable: synchronizable)
+            return
         }
+        throw KeychainError.unexpectedStatus(status)
     }
 
     public static func deleteLegacyAPIKey() throws {
@@ -356,9 +450,12 @@ public enum Keychain: @unchecked Sendable {
         query[kSecUseDataProtectionKeychain as String] = true
         #endif
         let status = SecItemDelete(query as CFDictionary)
-        if status != errSecSuccess && status != errSecItemNotFound {
-            throw KeychainError.unexpectedStatus(status)
+        if status == errSecSuccess || status == errSecItemNotFound { return }
+        if shouldUseMemoryFallback(for: status) {
+            memoryDelete(account: legacyAccount, synchronizable: false)
+            return
         }
+        throw KeychainError.unexpectedStatus(status)
     }
 
     /// Copy non-empty local keys into synchronizable Keychain items.

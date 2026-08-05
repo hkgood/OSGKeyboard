@@ -54,6 +54,8 @@ PreconfiguredKeys.local.swift
 
 # Local DerivedData (when using -derivedDataPath in repo)
 .derivedData/
+.derivedData-*/
+.spm-*/
 
 # Lexicon build cache (downloaded SogouPopularDict TSV)
 .cache/
@@ -78,6 +80,8 @@ ThirdParty/mlx-audio-swift/
 AudioIntentProbe/
 
 # Local crash-log pulls and one-off diff/working notes (not for the repo)
+.refs/
+
 .crash-pull/
 all-changes-vs-main.patch
 CHANGES.md

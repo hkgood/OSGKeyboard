@@ -2,8 +2,7 @@
 // OSGKeyboard · Shared
 //
 // Coarse classification of "where is the user typing right now?".
-// We use it to pick a tone / style guideline for the LLM polish
-// step (e.g. code stays technical, chat stays casual).
+// We use it to provide concise environment hints to polish and translation.
 //
 // The detection is best-effort and runs entirely in the keyboard
 // extension — iOS sandboxing blocks us from reading the foreground
@@ -36,21 +35,20 @@ public enum AppContext: String, Codable, Sendable, CaseIterable {
         }
     }
 
-    /// Tone / style constraint appended to the LLM prompt. Kept
-    /// intentionally short — the LLM does better with 1-2 sharp
-    /// instructions than a wall of rules.
-    public var polishGuideline: String {
+    /// Translation uses an English context hint; polish has an equivalent
+    /// localized hint in PolishPromptComposer.
+    public var translationGuideline: String {
         switch self {
         case .code:
             return "Code context: preserve English identifiers, variable names, file paths, and indentation-relevant whitespace exactly. Do not natural-language them. Keep code snippets unformatted; do not wrap in code fences."
         case .email:
-            return "Email context: you may add a polite greeting or sign-off if the user clearly forgot one. Reasonable paragraph breaks. Keep tone professional but not stiff."
+            return "Email context: preserve existing paragraph breaks and lists; if the transcript is a flat blob with multiple points, reconstruct clear paragraphs. Keep the tone professional but not stiff. Preserve greetings and sign-offs only when present; never invent them."
         case .chat:
-            return "Chat context: keep it short, conversational, and natural. Drop formalities. Preserve the speaker's casual voice. Do not add emojis."
+            return "Chat context: keep it short, conversational, and natural. Drop formalities. Preserve the speaker's casual voice. Still honor the structure contract for multi-point messages; do not add decorative paragraphs to a single short line. Do not add emojis."
         case .document:
-            return "Document context: add structure — split into paragraphs, use lists when the user enumerates. Keep tone written-formal. Do not invent headings the user did not say."
+            return "Document context: preserve existing paragraphs and lists; if the transcript lacks breaks, split into paragraphs and use lists when the user enumerates. Keep tone written-formal. Do not invent headings the user did not say."
         case .unknown:
-            return "Unknown context: pick a neutral, friendly tone. Err on the side of minimal changes."
+            return "Unknown context: pick a neutral, friendly tone. Prefer minimal wording changes, but still preserve or reconstruct paragraphs and lists per the structure contract."
         }
     }
 }

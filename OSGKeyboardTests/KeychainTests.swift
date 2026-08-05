@@ -11,15 +11,21 @@ import XCTest
 final class KeychainTests: XCTestCase {
 
     override func setUpWithError() throws {
+        Keychain.resetTestMemoryStore()
         try? Keychain.deleteAPIKey()
         try? Keychain.deleteLegacyAPIKey()
         try? Keychain.deleteAPIKey(for: "qwen")
+        try? Keychain.deleteAPIKey(for: "openai")
+        try? Keychain.deleteAPIKey(for: "deepseek")
     }
 
     override func tearDownWithError() throws {
         try? Keychain.deleteAPIKey()
         try? Keychain.deleteLegacyAPIKey()
         try? Keychain.deleteAPIKey(for: "qwen")
+        try? Keychain.deleteAPIKey(for: "openai")
+        try? Keychain.deleteAPIKey(for: "deepseek")
+        Keychain.resetTestMemoryStore()
     }
 
     // MARK: - Round-trip
@@ -105,8 +111,16 @@ final class KeychainTests: XCTestCase {
 
         XCTAssertEqual(config.apiKey, "sk-legacy-plaintext",
                        "Migrated key must surface through ProviderConfig")
-        XCTAssertEqual(Keychain.apiKey(), "sk-legacy-plaintext",
-                       "Legacy value must land in Keychain after migration")
+        // Migration follows `settingsICloudSyncEnabled` (default on) into the
+        // synchronizable Keychain slot — read with the same preference.
+        XCTAssertEqual(
+            Keychain.apiKey(
+                for: AppGroupConfiguration.defaultPolishProviderId,
+                preferICloudSync: true
+            ),
+            "sk-legacy-plaintext",
+            "Legacy value must land in Keychain after migration"
+        )
         XCTAssertNil(defaults.string(forKey: "config.apiKey"),
                      "Legacy UserDefaults entry must be cleared after migration")
 

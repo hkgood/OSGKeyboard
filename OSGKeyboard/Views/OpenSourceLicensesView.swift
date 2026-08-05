@@ -11,6 +11,8 @@ import OSGKeyboardShared
 struct OpenSourceLicensesView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
+    private let entries = OpenSourceLicenseCatalog.entries(for: .iOS)
+
     var body: some View {
         ScrollView {
             CardPageContent(spacing: SettingsListMetrics.sectionLabelSpacing) {
@@ -21,7 +23,7 @@ struct OpenSourceLicensesView: View {
                     .padding(.horizontal, Spacing.xs)
 
                 VStack(spacing: 0) {
-                    ForEach(Array(OpenSourceLicenseCatalog.entries.enumerated()), id: \.element.id) { index, entry in
+                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
                         NavigationLink {
                             OpenSourceLicenseDetailView(entry: entry)
                         } label: {
@@ -29,7 +31,7 @@ struct OpenSourceLicensesView: View {
                         }
                         .buttonStyle(.plain)
 
-                        if index < OpenSourceLicenseCatalog.entries.count - 1 {
+                        if index < entries.count - 1 {
                             Divider().background(palette.divider)
                         }
                     }

@@ -11,6 +11,25 @@ import Speech
 import OSGKeyboardShared
 import UIKit
 import SwiftUI
+import OSGKeyboardHostSupport
+
+struct FlowUtteranceStartToken: Equatable, Sendable {
+    let generation: UInt64
+    let utteranceId: UUID
+}
+
+enum FlowUtteranceLifecyclePolicy {
+    static func canContinueStart(
+        token: FlowUtteranceStartToken,
+        currentGeneration: UInt64,
+        currentUtteranceId: UUID?,
+        terminalUtteranceIds: Set<UUID>
+    ) -> Bool {
+        currentGeneration == token.generation
+            && currentUtteranceId == token.utteranceId
+            && !terminalUtteranceIds.contains(token.utteranceId)
+    }
+}
 
 @MainActor
 final class FlowSessionManager: ObservableObject {
@@ -53,8 +72,13 @@ final class FlowSessionManager: ObservableObject {
     private var lastObservedRecordingState: FlowSessionKeys.RecordingState = .idle
     private var activeSessionId: UUID?
     private var currentUtteranceId: UUID?
+    /// Monotonic token captured by every async worker for one utterance.
+    private var utteranceGeneration: UInt64 = 0
+    /// Terminal delivery is idempotent: only the first path may write a result.
+    private var terminalUtteranceIds: Set<UUID> = []
     /// Cursor context captured by the keyboard at the final insertion point.
     private var pendingFieldContext: FlowFieldContext?
+    private var pendingStopUtteranceId: UUID?
     private var currentCommandSeq: Int64 = 0
     private var lastHandledCommandSeq: Int64 = 0
     /// Published so Home / debug UI can show "recording" instead of a false "ready".
@@ -73,6 +97,8 @@ final class FlowSessionManager: ObservableObject {
     /// Full utterance PCM for batch ASR fallback after pipelined chunking.
     private var utterancePCMSamples: [Float] = []
     private var chunkWarnings: [String] = []
+    private var asrCompletedGeneration: UInt64?
+    private var asrFailureMessage: String?
     private var lastReadyTraceSignature = ""
     private var lastCommandFingerprint = ""
     private var lastIgnoredCommandSignature = ""
@@ -81,6 +107,7 @@ final class FlowSessionManager: ObservableObject {
     /// True while the host app scene is `.active` — drives foreground renewal.
     private var isAppForeground = false
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+    private var backgroundTaskExpiryTask: Task<Void, Never>?
     /// True while handling a keyboard-initiated `startflow` cold start.
     private var isColdStartHandoff = false
     private var coldStartRecoveryTask: Task<Void, Never>?
@@ -93,6 +120,10 @@ final class FlowSessionManager: ObservableObject {
 
     private var usesPiPKeepAlive: Bool {
         keepAliveMode == .pictureInPicture
+    }
+
+    var shouldDeferHostHeavyWork: Bool {
+        isUtteranceRecording || isUtteranceProcessing || hasUnacknowledgedTerminalResult()
     }
 
     func attachPiPHostView(_ view: UIView) {
@@ -146,8 +177,15 @@ final class FlowSessionManager: ObservableObject {
             }
         }
 
-        capture.onEngineLiveChanged = { [weak self] _ in
-            self?.refreshHostReady()
+        capture.onEngineLiveChanged = { [weak self] live in
+            guard let self else { return }
+            self.refreshHostReady()
+            if !live, self.isUtteranceRecording {
+                self.failUtterance(
+                    message: AppL10n.string("flow.error.audioUnavailable"),
+                    kind: .audioUnavailable
+                )
+            }
         }
         // A system interruption (call / Siri) stops audio frames mid-utterance;
         // fail fast so the user is not silently recording into a gap.
@@ -169,10 +207,19 @@ final class FlowSessionManager: ObservableObject {
     // MARK: - Public
 
     /// Starts a Flow session: permissions → continuous capture → App Group active.
-    func startSession(duration: TimeInterval? = nil, coldStart: Bool = false) {
+    func startSession(
+        duration: TimeInterval? = nil,
+        coldStart: Bool = false,
+        reason: String = "unspecified"
+    ) {
+        OSGDiag.log(
+            "startSession.request reason=\(reason) coldStart=\(coldStart) "
+                + "active=\(isActive) starting=\(isStarting) \(OSGDiag.memoryTag())",
+            category: "flow"
+        )
         traceState(
             "startSession.request",
-            extra: "coldStart=\(coldStart) duration=\(Int(duration ?? FlowSessionPolicy.sessionDuration()))"
+            extra: "coldStart=\(coldStart) reason=\(reason) duration=\(Int(duration ?? FlowSessionPolicy.sessionDuration()))"
         )
         guard AppGroup.isAvailable else {
             debug("cannot start flow session: App Group unavailable")
@@ -238,7 +285,12 @@ final class FlowSessionManager: ObservableObject {
     /// Clears App Group Flow state left behind when the host process was killed
     /// or the device rebooted while the session flag was still set.
     private func reconcilePersistedFlowStateBeforeStart() {
-        if FlowSessionBridge.isHostStale() {
+        switch FlowOrphanRecordingReconciler.decide(
+            isHostStale: FlowSessionBridge.isHostStale(),
+            isActive: isActive,
+            recordingState: FlowSessionBridge.recordingState()
+        ) {
+        case .clearZombieSession:
             if isActive {
                 endSession()
             } else {
@@ -246,28 +298,38 @@ final class FlowSessionManager: ObservableObject {
                 FlowLiveActivityController.endSession()
             }
             debug("reconciled zombie persisted Flow state")
-            return
-        }
-
-        guard !isActive else { return }
-
-        let orphaned = FlowSessionBridge.recordingState()
-        switch orphaned {
-        case .recording, .stopped, .processing:
+        case .clearOrphanedRecording(let orphaned):
             FlowSessionBridge.setRecordingState(.idle)
             FlowSessionBridge.clearPendingTranscription()
             debug("cleared orphaned keyboard recording state: \(orphaned.rawValue)")
-        case .idle, .aborted:
+        case .none:
             break
         }
     }
 
-    /// Auto-start (or renew) the Flow session on every app foreground when
-    /// permissions allow — the "always auto-open, no off switch" policy. Also
-    /// clears any orphaned Live Activity a previously force-quit process left
-    /// behind (its `endSession()` could not run at kill time).
-    func activateOnForeground() {
-        guard AppGroup.isAvailable else { return }
+    /// Foreground entry for Flow.
+    ///
+    /// Default is **light**: clear orphaned Live Activities / permission UI, but
+    /// do **not** start continuous capture. Auto-capture on every foreground was
+    /// holding the host at ~170–220 MB RSS and jetsamming the keyboard extension
+    /// before `KVC.init` could run.
+    ///
+    /// Pass `startCapture: true` for explicit user intent (Home “Start”, etc.).
+    /// Keyboard mic cold-start uses `osgkeyboard://startflow` → `startSession`.
+    func activateOnForeground(
+        reason: String = "unspecified",
+        startCapture: Bool = false
+    ) {
+        OSGDiag.log(
+            "activateOnForeground reason=\(reason) startCapture=\(startCapture) "
+                + "onboardingDone=\(ProviderConfig.shared.hasCompletedOnboarding) "
+                + "\(OSGDiag.memoryTag())",
+            category: "flow"
+        )
+        guard AppGroup.isAvailable else {
+            OSGDiag.log("activateOnForeground aborted reason=appGroupUnavailable", category: "flow")
+            return
+        }
         // Sweep any Live Activity a previous (force-quit) process left behind
         // *before* we try to (re)start a session. Doing it here — rather than
         // only inside `startSession()`'s success path — means a start that
@@ -277,6 +339,7 @@ final class FlowSessionManager: ObservableObject {
         FlowLiveActivityController.clearOrphanedActivities()
 
         guard AppPermissions.flowRequirementsMet else {
+            OSGDiag.log("activateOnForeground aborted reason=permissions", category: "flow")
             sessionWarning = permissionWarningMessage()
             FlowSessionBridge.setHostReady(false)
             if isColdStartHandoff {
@@ -285,7 +348,15 @@ final class FlowSessionManager: ObservableObject {
             FlowLiveActivityController.endSession()
             return
         }
-        startSession()
+
+        guard startCapture else {
+            OSGDiag.log(
+                "activateOnForeground light — skip capture (keyboard survival) \(OSGDiag.memoryTag())",
+                category: "flow"
+            )
+            return
+        }
+        startSession(reason: "activateOnForeground:\(reason)")
     }
 
     func dismissColdStartOverlay() {
@@ -326,7 +397,7 @@ final class FlowSessionManager: ObservableObject {
         sessionASR = nil
         sessionASREngineMode = nil
         sessionASRWarmedLocaleID = nil
-        startSession(coldStart: true)
+        startSession(coldStart: true, reason: "retryColdStartReadiness")
     }
 
     func openColdStartPermissionSettings() {
@@ -337,6 +408,14 @@ final class FlowSessionManager: ObservableObject {
     /// `FlowTerminationCoordinator` 同步 `end`。
     func prepareForProcessTermination() {
         debug("prepareForProcessTermination")
+        if isUtteranceRecording || isUtteranceProcessing,
+           claimTerminal(utteranceId: currentUtteranceId) {
+            storeCurrentError(
+                AppL10n.string("flow.error.recognitionInterrupted"),
+                kind: .recognitionInterrupted,
+                status: .aborted
+            )
+        }
 
         coldStartContext = nil
         isColdStartHandoff = false
@@ -411,6 +490,14 @@ final class FlowSessionManager: ObservableObject {
     func endSession() {
         guard isActive else { return }
         debug("Flow session ended")
+        if isUtteranceRecording || isUtteranceProcessing,
+           claimTerminal(utteranceId: currentUtteranceId) {
+            storeCurrentError(
+                AppL10n.string("flow.error.recognitionInterrupted"),
+                kind: .recognitionInterrupted,
+                status: .aborted
+            )
+        }
 
         coldStartContext = nil
         isColdStartHandoff = false
@@ -491,20 +578,42 @@ final class FlowSessionManager: ObservableObject {
         case .inactive:
             writeHeartbeatIfActive()
             if usesPiPKeepAlive, isActive {
-                pipController.prepareForBackgroundAutoStart()
+                Task { @MainActor [weak self] in
+                    await self?.pipController.prepareForBackgroundAutoStart()
+                }
             }
         case .background:
             setAppForeground(false)
             if usesPiPKeepAlive, isActive {
-                pipController.prepareForBackgroundAutoStart()
+                Task { @MainActor [weak self] in
+                    await self?.pipController.prepareForBackgroundAutoStart()
+                }
             }
             if coldStartContext != nil {
                 dismissColdStartOverlay()
             }
+            // Idle continuous capture in the background jetsams the keyboard
+            // (~200 MB host RSS). Keep the session contract only while speaking.
+            releaseIdleCaptureForKeyboardSurvival()
             beginBackgroundKeepAlive()
         @unknown default:
             break
         }
+    }
+
+    /// Stops idle AVAudioEngine capture so a backgrounded host does not crowd
+    /// the keyboard extension out of memory. Active recording/processing keep
+    /// the mic; the next mic press / foreground Start restarts capture.
+    private func releaseIdleCaptureForKeyboardSurvival() {
+        guard isActive, !usesPiPKeepAlive else { return }
+        guard !isUtteranceRecording, !isUtteranceProcessing else { return }
+        guard capture.running else { return }
+        OSGDiag.log(
+            "releaseIdleCapture (background) \(OSGDiag.memoryTag())",
+            category: "flow"
+        )
+        capture.stop()
+        refreshHostReady()
     }
 
     private func writeHeartbeatIfActive() {
@@ -515,9 +624,18 @@ final class FlowSessionManager: ObservableObject {
     private func beginBackgroundKeepAlive() {
         guard isActive else { return }
         FlowSessionBridge.writeHeartbeat()
+        // Active PiP already owns the background execution contract. Starting
+        // an additional UIApplication task here produced >30s watchdog warnings.
+        guard !usesPiPKeepAlive else { return }
 
         guard backgroundTaskID == .invalid else { return }
         backgroundTaskID = UIApplication.shared.beginBackgroundTask { [weak self] in
+            self?.endBackgroundKeepAlive()
+        }
+        backgroundTaskExpiryTask?.cancel()
+        backgroundTaskExpiryTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 10_000_000_000)
+            guard !Task.isCancelled else { return }
             self?.endBackgroundKeepAlive()
         }
         debug("background keep-alive started")
@@ -525,6 +643,8 @@ final class FlowSessionManager: ObservableObject {
 
     private func endBackgroundKeepAlive() {
         guard backgroundTaskID != .invalid else { return }
+        backgroundTaskExpiryTask?.cancel()
+        backgroundTaskExpiryTask = nil
         UIApplication.shared.endBackgroundTask(backgroundTaskID)
         backgroundTaskID = .invalid
         debug("background keep-alive ended")
@@ -544,7 +664,7 @@ final class FlowSessionManager: ObservableObject {
             // v0.2.0: iOS `SpeechAnalyzer` is bundled with the OS; no
             // on-device weights to reload after a background trip.
             self?.bindSessionASRIfNeeded()
-            self?.scheduleASRWarmup()
+            // ASR warmup stays on first mic press — never on foreground bounce.
         }
     }
 
@@ -569,11 +689,11 @@ final class FlowSessionManager: ObservableObject {
         // rebuild: tearing the engine down would remove the observers the
         // `.ended` rebuild relies on and churn the shared session mid-call.
         if capture.isInterrupted {
-            guard capture.reassertIfRunning(), !capture.isInterrupted else { return }
+            guard await capture.reassertIfRunning(), !capture.isInterrupted else { return }
         }
 
         if capture.running {
-            let reasserted = capture.reassertIfRunning()
+            let reasserted = await capture.reassertIfRunning()
             if reasserted, await capture.awaitAudioFlowing(timeout: 2) {
                 sessionWarning = nil
                 refreshHostReady()
@@ -599,7 +719,7 @@ final class FlowSessionManager: ObservableObject {
         }
 
         do {
-            try capture.start()
+            try await capture.start()
             sessionWarning = nil
             debug("capture restarted after foreground")
             refreshHostReady()
@@ -630,6 +750,7 @@ final class FlowSessionManager: ObservableObject {
 
         let pollingAlive = pollingTask != nil && pollingTask?.isCancelled != true
         let hasRecentAudio = capture.engineHasRecentAudio(maxAge: 2)
+        let hasPendingDelivery = hasUnacknowledgedTerminalResult()
         let canAcceptUtterance: Bool
         if usesPiPKeepAlive {
             canAcceptUtterance = pipController.isPictureInPictureActive
@@ -638,6 +759,7 @@ final class FlowSessionManager: ObservableObject {
                 && !isUtteranceProcessing
                 && sessionWarning == nil
                 && !capture.isInterrupted
+                && !hasPendingDelivery
         } else {
             canAcceptUtterance = capture.engineIsLive
                 && pollingAlive
@@ -645,6 +767,7 @@ final class FlowSessionManager: ObservableObject {
                 && !isUtteranceRecording
                 && !isUtteranceProcessing
                 && sessionWarning == nil
+                && !hasPendingDelivery
         }
 
         let reason: FlowReadySnapshot.Reason
@@ -656,6 +779,8 @@ final class FlowSessionManager: ObservableObject {
             reason = .recording
         } else if isUtteranceProcessing {
             reason = .processing
+        } else if hasPendingDelivery {
+            reason = .awaitingDelivery
         } else if usesPiPKeepAlive, !pipController.isPictureInPictureActive {
             reason = .starting
         } else if !usesPiPKeepAlive, !capture.engineIsLive {
@@ -677,7 +802,9 @@ final class FlowSessionManager: ObservableObject {
                 audioProofAt: hasRecentAudio ? now : nil,
                 engineMode: store.engineMode,
                 localeId: store.localeId,
-                busyUtteranceId: isUtteranceRecording || isUtteranceProcessing ? currentUtteranceId : nil,
+                busyUtteranceId: isUtteranceRecording || isUtteranceProcessing
+                    ? currentUtteranceId
+                    : (hasPendingDelivery ? FlowSessionBridge.latestResult()?.utteranceId : nil),
                 sessionExpiresAt: FlowSessionBridge.sessionExpiresAt(),
                 hostGeneration: FlowSessionBridge.currentHostGeneration()
             )
@@ -802,7 +929,7 @@ final class FlowSessionManager: ObservableObject {
         }
 
         do {
-            try capture.start()
+            try await capture.start()
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             sessionWarning = message
@@ -855,7 +982,7 @@ final class FlowSessionManager: ObservableObject {
         expiryTask = nil
 
         bindSessionASRIfNeeded()
-        scheduleASRWarmup()
+        // ASR warmup deferred to beginUtterance (first mic press).
         startLiveActivityIfNeeded()
 
         refreshHostReady()
@@ -880,7 +1007,8 @@ final class FlowSessionManager: ObservableObject {
         scheduleExpiry(after: resolvedDuration)
 
         bindSessionASRIfNeeded()
-        scheduleASRWarmup()
+        // ASR warmup deferred to beginUtterance (first mic press) so session
+        // start does not stack SpeechAnalyzer with Rime/CLM deploy.
         startLiveActivityIfNeeded()
 
         refreshHostReady()
@@ -1019,15 +1147,15 @@ final class FlowSessionManager: ObservableObject {
                 guard !Task.isCancelled, self.isColdStartHandoff else { return }
                 switch attempt {
                 case 1:
-                    _ = self.capture.reassertIfRunning()
+                    _ = await self.capture.reassertIfRunning()
                 case 2:
                     self.capture.stop()
-                    try? self.capture.start()
+                    try? await self.capture.start()
                 default:
                     self.capture.stop()
                     try? await Task.sleep(nanoseconds: 300_000_000)
                     guard !Task.isCancelled else { return }
-                    try? self.capture.start()
+                    try? await self.capture.start()
                 }
                 recovered = await self.capture.awaitAudioFlowing(
                     timeout: TimeInterval(attempt + 1)
@@ -1112,19 +1240,30 @@ final class FlowSessionManager: ObservableObject {
     }
 
     private func scheduleASRWarmup() {
+        let localeID = SpeechLocaleResolver.resolve(store.localeId).identifier(.bcp47)
+        guard sessionASRWarmedLocaleID != localeID else { return }
+        guard HostMemoryBudget.gate("asr.warmup", category: "asr") else { return }
+        OSGDiag.log("scheduleASRWarmup \(OSGDiag.memoryTag())", category: "asr")
+        FlowSessionBridge.setHostHeavy(true)
         Task { @MainActor [weak self] in
+            defer { FlowSessionBridge.setHostHeavy(false) }
             await self?.warmupASRIfNeeded()
         }
     }
 
     private func warmupASRIfNeeded() async {
+        OSGDiag.log("warmupASRIfNeeded.begin \(OSGDiag.memoryTag())", category: "asr")
         bindSessionASRIfNeeded()
         let locale = SpeechLocaleResolver.resolve(store.localeId)
         let localeID = locale.identifier(.bcp47)
-        guard sessionASRWarmedLocaleID != localeID else { return }
+        guard sessionASRWarmedLocaleID != localeID else {
+            OSGDiag.log("warmupASRIfNeeded.skip alreadyWarmed=\(localeID)", category: "asr")
+            return
+        }
         await asr.warmup(locale: locale)
         sessionASRWarmedLocaleID = localeID
         FlowDiagnostics.log("ASR warmup complete locale=\(localeID)")
+        OSGDiag.log("warmupASRIfNeeded.done locale=\(localeID) \(OSGDiag.memoryTag())", category: "asr")
     }
 
     private func permissionWarningMessage() -> String {
@@ -1160,32 +1299,77 @@ final class FlowSessionManager: ObservableObject {
     }
 
     private func handleKeyboardSignal() {
-        guard let command = FlowSessionBridge.latestCommand() else {
+        FlowSessionBridge.reloadFromDisk()
+        var commands = FlowSessionBridge.commands(after: lastHandledCommandSeq)
+        if commands.isEmpty, let latest = FlowSessionBridge.latestCommand(),
+           latest.commandSeq > lastHandledCommandSeq {
+            commands = [latest]
+        }
+        guard !commands.isEmpty else {
             lastCommandFingerprint = ""
+            consumeAckIfNeeded()
             return
         }
-        let fingerprint = "\(command.sessionId.uuidString)|\(command.utteranceId.uuidString)|\(command.action.rawValue)|\(command.commandSeq)"
-        guard fingerprint != lastCommandFingerprint else { return }
-        lastCommandFingerprint = fingerprint
-        handleFlowCommand(command)
+        for command in commands {
+            let fingerprint = "\(command.sessionId.uuidString)|\(command.utteranceId.uuidString)|\(command.action.rawValue)|\(command.commandSeq)"
+            guard fingerprint != lastCommandFingerprint else { continue }
+            lastCommandFingerprint = fingerprint
+            handleFlowCommand(command)
+        }
+        consumeAckIfNeeded()
+    }
+
+    private func consumeAckIfNeeded() {
+        guard let ack = FlowSessionBridge.latestAck(),
+              let result = FlowSessionBridge.latestResult(),
+              ack.sessionId == result.sessionId,
+              ack.utteranceId == result.utteranceId,
+              ack.commandSeq == result.commandSeq,
+              ack.revision == nil
+                || result.revision == nil
+                || ack.revision == result.revision else {
+            return
+        }
+        FlowSessionBridge.clearResult()
+    }
+
+    private func hasUnacknowledgedTerminalResult() -> Bool {
+        guard let result = FlowSessionBridge.latestResult(),
+              result.status == .final
+                || result.status == .error
+                || result.status == .aborted
+                || result.status == .timeout else {
+            return false
+        }
+        guard let ack = FlowSessionBridge.latestAck() else { return true }
+        return ack.sessionId != result.sessionId
+            || ack.utteranceId != result.utteranceId
+            || ack.commandSeq != result.commandSeq
     }
 
     private func handleFlowCommand(_ command: FlowCommand) {
-        guard let activeSessionId, command.sessionId == activeSessionId else {
+        switch FlowCommandGatekeeper.decide(
+            commandSessionId: command.sessionId,
+            commandSeq: command.commandSeq,
+            activeSessionId: activeSessionId,
+            lastHandledCommandSeq: lastHandledCommandSeq
+        ) {
+        case .rejectWrongSession:
             traceIgnoredCommand(
                 reason: "staleSession",
                 command: command,
                 detail: "commandSession=\(command.sessionId)"
             )
             return
-        }
-        guard command.commandSeq > lastHandledCommandSeq else {
+        case .rejectStaleSeq:
             traceIgnoredCommand(
                 reason: "seqNotIncreasing",
                 command: command,
                 detail: "last=\(lastHandledCommandSeq)"
             )
             return
+        case .accept:
+            break
         }
         lastHandledCommandSeq = command.commandSeq
         lastIgnoredCommandSignature = ""
@@ -1197,10 +1381,20 @@ final class FlowSessionManager: ObservableObject {
         switch command.action {
         case .startRecording:
             guard !isUtteranceRecording, !isUtteranceProcessing else { return }
+            guard prepareUtteranceIdentity(
+                utteranceId: command.utteranceId,
+                commandSeq: command.commandSeq
+            ) else { return }
+            guard let startUtteranceId = currentUtteranceId else { return }
+            let startToken = FlowUtteranceStartToken(
+                generation: utteranceGeneration,
+                utteranceId: startUtteranceId
+            )
             Task { @MainActor [weak self] in
                 await self?.handleStartRecordingCommand(
                     utteranceId: command.utteranceId,
-                    commandSeq: command.commandSeq
+                    commandSeq: command.commandSeq,
+                    startToken: startToken
                 )
             }
         case .stopRecording:
@@ -1214,11 +1408,10 @@ final class FlowSessionManager: ObservableObject {
             if isUtteranceRecording {
                 endUtterance()
             } else if !isUtteranceProcessing {
-                storeCurrentError(
-                    AppL10n.string("flow.error.recognitionInterrupted"),
-                    kind: .recognitionInterrupted
-                )
-                debug("stop command without active utterance — notified keyboard")
+                // A very short press can place start+stop in the journal before
+                // the async capture-start task gets a MainActor turn.
+                pendingStopUtteranceId = command.utteranceId
+                debug("stop command queued until capture start")
             }
         case .abort:
             guard currentUtteranceId == command.utteranceId else { return }
@@ -1226,8 +1419,16 @@ final class FlowSessionManager: ObservableObject {
         }
     }
 
-    private func storeCurrentPartial(_ text: String) {
-        guard let activeSessionId, let currentUtteranceId else { return }
+    private func storeCurrentPartial(
+        _ text: String,
+        generation: UInt64,
+        utteranceId: UUID?
+    ) {
+        guard utteranceGeneration == generation,
+              currentUtteranceId == utteranceId,
+              let activeSessionId,
+              let currentUtteranceId,
+              !terminalUtteranceIds.contains(currentUtteranceId) else { return }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         FlowSessionBridge.writeResult(
@@ -1236,7 +1437,10 @@ final class FlowSessionManager: ObservableObject {
                 utteranceId: currentUtteranceId,
                 commandSeq: currentCommandSeq,
                 status: .partial,
-                text: trimmed
+                text: trimmed,
+                rawText: trimmed,
+                hostGeneration: FlowSessionBridge.currentHostGeneration(),
+                revision: Self.resultRevision()
             )
         )
     }
@@ -1255,7 +1459,10 @@ final class FlowSessionManager: ObservableObject {
                 commandSeq: currentCommandSeq,
                 status: .final,
                 text: trimmed,
-                warning: warning
+                warning: warning,
+                rawText: trimmed,
+                hostGeneration: FlowSessionBridge.currentHostGeneration(),
+                revision: Self.resultRevision()
             )
         )
     }
@@ -1273,19 +1480,49 @@ final class FlowSessionManager: ObservableObject {
                 commandSeq: currentCommandSeq,
                 status: status,
                 text: message,
-                errorKind: kind
+                errorKind: kind,
+                hostGeneration: FlowSessionBridge.currentHostGeneration(),
+                revision: Self.resultRevision()
             )
         )
     }
 
-    private func handleStartRecordingCommand(utteranceId: UUID?, commandSeq: Int64) async {
+    private func handleStartRecordingCommand(
+        utteranceId: UUID?,
+        commandSeq: Int64,
+        startToken: FlowUtteranceStartToken
+    ) async {
+        guard !Task.isCancelled, canContinueStart(startToken) else { return }
         if usesPiPKeepAlive {
             refreshHostReady()
-            // Open the mic and utterance gate ASAP. Waiting for audio proof
-            // *before* beginUtterance left spin-up frames in a tiny preroll
-            // while the keyboard already showed "recording" — users spoke into
-            // a closed gate and got ~1s PCM for a multi-second press.
-            guard startCaptureForPiPUtteranceIfNeeded() else {
+            // Keep the utterance gate closed until the route is stable and the
+            // tap has produced a real frame. The rolling three-second preroll
+            // preserves speech spoken during this short readiness window.
+            guard await startCaptureForPiPUtteranceIfNeeded() else {
+                guard !Task.isCancelled, canContinueStart(startToken) else { return }
+                failUtterance(
+                    message: AppL10n.string("flow.coldStart.error.audioTimeout"),
+                    kind: .audioUnavailable
+                )
+                return
+            }
+            guard !Task.isCancelled, canContinueStart(startToken) else {
+                releaseOrphanedCaptureIfNeeded()
+                return
+            }
+            let micReady: Bool
+            if capture.engineHasRecentAudio(maxAge: 2) {
+                micReady = true
+            } else {
+                micReady = await capture.awaitAudioFlowing(
+                    timeout: Self.coldStartAudioProofTimeout
+                )
+            }
+            guard !Task.isCancelled, canContinueStart(startToken) else {
+                releaseOrphanedCaptureIfNeeded()
+                return
+            }
+            if !micReady {
                 failUtterance(
                     message: AppL10n.string("flow.coldStart.error.audioTimeout"),
                     kind: .audioUnavailable
@@ -1297,30 +1534,26 @@ final class FlowSessionManager: ObservableObject {
                 commandSeq: commandSeq,
                 requireRecentAudio: false
             )
-            if capture.engineHasRecentAudio(maxAge: 2) {
-                return
-            }
-            let micReady = await capture.awaitAudioFlowing(
-                timeout: Self.coldStartAudioProofTimeout
-            )
-            if !micReady {
-                failUtterance(
-                    message: AppL10n.string("flow.coldStart.error.audioTimeout"),
-                    kind: .audioUnavailable
-                )
+            if pendingStopUtteranceId == currentUtteranceId {
+                pendingStopUtteranceId = nil
+                endUtterance()
             }
             return
         }
         beginUtterance(utteranceId: utteranceId, commandSeq: commandSeq)
+        if pendingStopUtteranceId == currentUtteranceId {
+            pendingStopUtteranceId = nil
+            endUtterance()
+        }
     }
 
     /// Start capture for a PiP utterance without blocking on the first frame.
-    private func startCaptureForPiPUtteranceIfNeeded() -> Bool {
+    private func startCaptureForPiPUtteranceIfNeeded() async -> Bool {
         if capture.engineHasRecentAudio(maxAge: 2) {
             return true
         }
         do {
-            try capture.start()
+            try await capture.start()
             return true
         } catch {
             debug("PiP utterance capture start failed: \(error.localizedDescription)")
@@ -1331,11 +1564,30 @@ final class FlowSessionManager: ObservableObject {
     private func releaseCaptureAfterPiPUtteranceIfNeeded() {
         guard usesPiPKeepAlive, capture.running else { return }
         guard !isUtteranceRecording, !isUtteranceProcessing else { return }
-        capture.stop()
-        // Capture deactivates AVAudioSession; restore playback so PiP stays eligible.
-        _ = pipController.reassertKeepAliveAudioSession()
+        capture.stop(releaseSession: false)
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            _ = await self.pipController.reassertKeepAliveAudioSession()
+            self.refreshHostReady()
+        }
         pipController.updateWaveformLevels([])
-        refreshHostReady()
+    }
+
+    private func releaseOrphanedCaptureIfNeeded() {
+        guard currentUtteranceId == nil,
+              !isUtteranceRecording,
+              !isUtteranceProcessing else { return }
+        traceState("capture.start.discarded", extra: "reason=staleUtterance")
+        releaseCaptureAfterPiPUtteranceIfNeeded()
+    }
+
+    private func canContinueStart(_ token: FlowUtteranceStartToken) -> Bool {
+        FlowUtteranceLifecyclePolicy.canContinueStart(
+            token: token,
+            currentGeneration: utteranceGeneration,
+            currentUtteranceId: currentUtteranceId,
+            terminalUtteranceIds: terminalUtteranceIds
+        )
     }
 
     private func beginUtterance(
@@ -1343,6 +1595,13 @@ final class FlowSessionManager: ObservableObject {
         commandSeq: Int64 = 0,
         requireRecentAudio: Bool = true
     ) {
+        if let utteranceId, terminalUtteranceIds.contains(utteranceId) {
+            traceState(
+                "beginUtterance.ignored",
+                extra: "reason=terminalId utterance=\(utteranceId.uuidString.prefix(8))"
+            )
+            return
+        }
         if requireRecentAudio {
             guard capture.engineHasRecentAudio(maxAge: 2) else {
                 traceState("beginUtterance.blocked", extra: "reason=audioNotRecent")
@@ -1382,7 +1641,14 @@ final class FlowSessionManager: ObservableObject {
         // Usually already warm from session start; refresh without blocking the mic gate.
         scheduleASRWarmup()
 
-        currentUtteranceId = utteranceId ?? UUID()
+        if currentUtteranceId != utteranceId || currentUtteranceId == nil {
+            guard prepareUtteranceIdentity(
+                utteranceId: utteranceId,
+                commandSeq: commandSeq
+            ) else { return }
+        }
+        let generation = utteranceGeneration
+        let taskUtteranceId = currentUtteranceId
         currentCommandSeq = commandSeq
         currentPartial = ""
         lastFinal = ""
@@ -1390,11 +1656,12 @@ final class FlowSessionManager: ObservableObject {
         bestPartialSnapshot = ""
         utterancePCMSamples = []
         chunkWarnings = []
+        asrCompletedGeneration = nil
+        asrFailureMessage = nil
 
         let localeId = store.localeId
         FlowSessionBridge.setTranscriptionLanguage(localeId)
         FlowSessionBridge.clearPendingTranscription()
-        FlowSessionBridge.clearResult()
 
         let locale = SpeechLocaleResolver.resolve(localeId)
         let stream = capture.beginUtterance()
@@ -1431,16 +1698,28 @@ final class FlowSessionManager: ObservableObject {
                 outcome = await cloud.transcribeUtteranceStreaming(stream: stream, locale: locale) { partial in
                     Task { @MainActor in
                         guard let manager else { return }
+                        guard manager.utteranceGeneration == generation,
+                              manager.currentUtteranceId == taskUtteranceId else { return }
                         manager.currentPartial = partial
-                        manager.storeCurrentPartial(partial)
+                        manager.storeCurrentPartial(
+                            partial,
+                            generation: generation,
+                            utteranceId: taskUtteranceId
+                        )
                     }
                 }
             } else if let pipeline {
                 outcome = await pipeline.transcribe(stream: stream) { partial in
                     Task { @MainActor in
                         guard let manager else { return }
+                        guard manager.utteranceGeneration == generation,
+                              manager.currentUtteranceId == taskUtteranceId else { return }
                         manager.currentPartial = partial
-                        manager.storeCurrentPartial(partial)
+                        manager.storeCurrentPartial(
+                            partial,
+                            generation: generation,
+                            utteranceId: taskUtteranceId
+                        )
                     }
                 }
             } else {
@@ -1452,6 +1731,11 @@ final class FlowSessionManager: ObservableObject {
             // task-isolated reference escaping into a main-actor closure.
             await MainActor.run { [weak manager] in
                 guard let manager else { return }
+                guard manager.utteranceGeneration == generation,
+                      manager.currentUtteranceId == taskUtteranceId else {
+                    return
+                }
+                manager.asrCompletedGeneration = generation
                 FlowDiagnostics.log(
                     "asr finished streaming=\(useStreaming) partialLen=\(manager.currentPartial.count) " +
                     "finalPending=\(manager.lastFinal.isEmpty)"
@@ -1469,6 +1753,7 @@ final class FlowSessionManager: ObservableObject {
                     manager.chunkWarnings = success.chunkWarnings
                     manager.currentPartial = ""
                 case .failure(let message):
+                    manager.asrFailureMessage = message
                     manager.debug("asr error: \(message)")
                     FlowTrace.warn(
                         "asr.outcome.failed",
@@ -1490,8 +1775,6 @@ final class FlowSessionManager: ObservableObject {
                         manager.debug("asr error recovered via partial len=\(recovery.count)")
                     } else if manager.isUtteranceRecording {
                         manager.failUtterance(message: message, kind: .asrFailed)
-                    } else if manager.isUtteranceProcessing {
-                        manager.finishProcessing(withError: message, kind: .asrFailed)
                     }
                 case .cancelled:
                     break
@@ -1500,6 +1783,29 @@ final class FlowSessionManager: ObservableObject {
         }
 
         debug("utterance recording started")
+    }
+
+    @discardableResult
+    private func prepareUtteranceIdentity(
+        utteranceId: UUID?,
+        commandSeq: Int64
+    ) -> Bool {
+        let resolved = utteranceId ?? UUID()
+        guard !terminalUtteranceIds.contains(resolved) else {
+            traceState(
+                "utteranceIdentity.rejected",
+                extra: "reason=terminalId utterance=\(resolved.uuidString.prefix(8))"
+            )
+            return false
+        }
+        guard currentUtteranceId != resolved else {
+            currentCommandSeq = commandSeq
+            return true
+        }
+        utteranceGeneration &+= 1
+        currentUtteranceId = resolved
+        currentCommandSeq = commandSeq
+        return true
     }
 
     private func startUtteranceSafetyTimer() {
@@ -1543,6 +1849,7 @@ final class FlowSessionManager: ObservableObject {
         let drainingSessionId = activeSessionId
         let drainingUtteranceId = currentUtteranceId
         let drainingCommandSeq = currentCommandSeq
+        let drainingGeneration = utteranceGeneration
         finalizeTask?.cancel()
         finalizeTask = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -1557,19 +1864,29 @@ final class FlowSessionManager: ObservableObject {
                     + "capture[\(self.capture.frameReport().summary)]"
             )
             if self.usesPiPKeepAlive {
-                self.capture.stop()
+                self.capture.stop(releaseSession: false)
+                _ = await self.pipController.reassertKeepAliveAudioSession()
                 self.pipController.updateWaveformLevels([])
             }
             await self.finalizeUtterance(
                 sessionId: drainingSessionId,
                 utteranceId: drainingUtteranceId,
-                commandSeq: drainingCommandSeq
+                commandSeq: drainingCommandSeq,
+                generation: drainingGeneration
             )
         }
         debug("utterance stopped, draining tail")
     }
 
     private func abortUtterance() {
+        let utteranceId = currentUtteranceId
+        if claimTerminal(utteranceId: utteranceId) {
+            storeCurrentError(
+                AppL10n.string("flow.error.recognitionInterrupted"),
+                kind: .recognitionInterrupted,
+                status: .aborted
+            )
+        }
         isUtteranceRecording = false
         isUtteranceProcessing = false
         utteranceRecordingStartedAt = nil
@@ -1590,6 +1907,7 @@ final class FlowSessionManager: ObservableObject {
         utterancePCMSamples = []
         chunkWarnings = []
         pendingFieldContext = nil
+        utteranceGeneration &+= 1
         currentUtteranceId = nil
         currentCommandSeq = 0
         updateLiveActivityPhase(.idle)
@@ -1601,6 +1919,7 @@ final class FlowSessionManager: ObservableObject {
         message: String,
         kind: FlowSessionKeys.TranscriptionErrorKind = .asrFailed
     ) {
+        guard claimTerminal(utteranceId: currentUtteranceId) else { return }
         isUtteranceRecording = false
         isUtteranceProcessing = false
         utteranceRecordingStartedAt = nil
@@ -1622,6 +1941,7 @@ final class FlowSessionManager: ObservableObject {
         chunkWarnings = []
         storeCurrentError(message, kind: kind)
         pendingFieldContext = nil
+        utteranceGeneration &+= 1
         currentUtteranceId = nil
         currentCommandSeq = 0
         updateLiveActivityPhase(.idle)
@@ -1633,6 +1953,7 @@ final class FlowSessionManager: ObservableObject {
         withError message: String,
         kind: FlowSessionKeys.TranscriptionErrorKind = .asrFailed
     ) {
+        guard claimTerminal(utteranceId: currentUtteranceId) else { return }
         isUtteranceProcessing = false
         utteranceRecordingStartedAt = nil
         utteranceSafetyTask?.cancel()
@@ -1650,6 +1971,7 @@ final class FlowSessionManager: ObservableObject {
         chunkWarnings = []
         storeCurrentError(message, kind: kind)
         pendingFieldContext = nil
+        utteranceGeneration &+= 1
         currentUtteranceId = nil
         currentCommandSeq = 0
         updateLiveActivityPhase(.idle)
@@ -1657,10 +1979,19 @@ final class FlowSessionManager: ObservableObject {
         debug("utterance processing failed: \(message)")
     }
 
+    private func claimTerminal(utteranceId: UUID?) -> Bool {
+        guard let utteranceId, !terminalUtteranceIds.contains(utteranceId) else {
+            return false
+        }
+        terminalUtteranceIds.insert(utteranceId)
+        return true
+    }
+
     private func finalizeUtterance(
         sessionId finalizeSessionId: UUID?,
         utteranceId finalizeUtteranceId: UUID?,
-        commandSeq finalizeCommandSeq: Int64
+        commandSeq finalizeCommandSeq: Int64,
+        generation finalizeGeneration: UInt64
     ) async {
         let pipelineStarted = Date()
         let fieldContext = pendingFieldContext
@@ -1685,6 +2016,7 @@ final class FlowSessionManager: ObservableObject {
         let asrDeadline = Date().addingTimeInterval(asrWait)
         while Date() < asrDeadline {
             if !lastFinal.isEmpty { break }
+            if asrCompletedGeneration == finalizeGeneration { break }
             if asrTask?.isCancelled == true { break }
             // Honour cooperative cancel so a replaced finalize exits promptly,
             // but still run defer cleanup (unlike an early `return` mid-polish
@@ -1736,12 +2068,14 @@ final class FlowSessionManager: ObservableObject {
             : text
         utterancePCMSamples = []
         guard !text.isEmpty else {
-            let key = (asrTask?.isCancelled == true || Task.isCancelled)
+            let wasCancelled = (asrTask?.isCancelled == true || Task.isCancelled)
+            let key = wasCancelled
                 ? "flow.error.recognitionInterrupted"
                 : "flow.error.noSpeech"
             let kind: FlowSessionKeys.TranscriptionErrorKind =
-                (asrTask?.isCancelled == true || Task.isCancelled)
-                ? .recognitionInterrupted : .noSpeech
+                asrFailureMessage == nil
+                ? (wasCancelled ? .recognitionInterrupted : .noSpeech)
+                : .asrFailed
             FlowDiagnostics.log("finalize failed: empty transcript after \(String(format: "%.1f", asrElapsed))s")
             FlowTrace.warn(
                 "finalize.emptyTranscript",
@@ -1750,8 +2084,9 @@ final class FlowSessionManager: ObservableObject {
                     + "capture[\(capture.frameReport().summary)]"
             )
             utteranceRecordingStartedAt = nil
+            guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
             storeFinalizedError(
-                AppL10n.string(key),
+                asrFailureMessage ?? AppL10n.string(key),
                 kind: kind,
                 sessionId: finalizeSessionId,
                 utteranceId: finalizeUtteranceId,
@@ -1760,6 +2095,12 @@ final class FlowSessionManager: ObservableObject {
             return
         }
 
+        storeRawCandidate(
+            text,
+            sessionId: finalizeSessionId,
+            utteranceId: finalizeUtteranceId,
+            commandSeq: finalizeCommandSeq
+        )
         let recordingDuration = consumeRecordingDuration()
 
         let engineMode = store.engineMode
@@ -1769,7 +2110,6 @@ final class FlowSessionManager: ObservableObject {
         let pipelineStore = AppGroupStore()
         let polishContext = PolishContext(
             appContext: pipelineStore.detectedAppContext?.context ?? .unknown,
-            intensity: pipelineStore.polishIntensity,
             precedingText: fieldContext?.precedingText,
             followingText: fieldContext?.followingText,
             fieldHints: fieldContext.map(FieldHints.init(from:)),
@@ -1814,8 +2154,10 @@ final class FlowSessionManager: ObservableObject {
                     + "changed=\(polished == text ? 0 : 1) "
                     + "elapsed=\(FlowTrace.seconds(since: polishStarted))s"
             )
+            guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
             storeFinalizedResult(
                 polished,
+                rawText: text,
                 warning: Self.combinedWarning(
                     chunkNote,
                     outcome.qualityDegraded
@@ -1857,8 +2199,10 @@ final class FlowSessionManager: ObservableObject {
                 "reason=polishFailed rawLen=\(text.count)"
             )
             delivered = fallback.text
+            guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
             storeFinalizedResult(
                 fallback.text,
+                rawText: text,
                 warning: fallback.polishWarning,
                 sessionId: finalizeSessionId,
                 utteranceId: finalizeUtteranceId,
@@ -1919,6 +2263,7 @@ final class FlowSessionManager: ObservableObject {
 
     private func storeFinalizedResult(
         _ text: String,
+        rawText: String? = nil,
         warning: String?,
         sessionId: UUID?,
         utteranceId: UUID?,
@@ -1949,7 +2294,34 @@ final class FlowSessionManager: ObservableObject {
                 commandSeq: commandSeq,
                 status: .final,
                 text: trimmed,
-                warning: warning
+                warning: warning,
+                rawText: rawText,
+                hostGeneration: FlowSessionBridge.currentHostGeneration(),
+                revision: Self.resultRevision(),
+                fieldFingerprint: Self.fieldFingerprint(pendingFieldContext)
+            )
+        )
+    }
+
+    private func storeRawCandidate(
+        _ text: String,
+        sessionId: UUID?,
+        utteranceId: UUID?,
+        commandSeq: Int64
+    ) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let sessionId, let utteranceId else { return }
+        FlowSessionBridge.writeResult(
+            FlowResult(
+                sessionId: sessionId,
+                utteranceId: utteranceId,
+                commandSeq: commandSeq,
+                status: .rawReady,
+                text: trimmed,
+                rawText: trimmed,
+                hostGeneration: FlowSessionBridge.currentHostGeneration(),
+                revision: Self.resultRevision(),
+                fieldFingerprint: Self.fieldFingerprint(pendingFieldContext)
             )
         )
     }
@@ -1976,9 +2348,20 @@ final class FlowSessionManager: ObservableObject {
                 commandSeq: commandSeq,
                 status: status,
                 text: message,
-                errorKind: kind
+                errorKind: kind,
+                hostGeneration: FlowSessionBridge.currentHostGeneration(),
+                revision: Self.resultRevision(),
+                fieldFingerprint: Self.fieldFingerprint(pendingFieldContext)
             )
         )
+    }
+
+    private static func resultRevision() -> Int64 {
+        Int64(Date().timeIntervalSince1970 * 1_000)
+    }
+
+    private static func fieldFingerprint(_ context: FlowFieldContext?) -> String? {
+        context?.deliveryFingerprint
     }
 
     private static func polishModeLogLabel(_ mode: PolishingService.PolishMode) -> String {
@@ -2043,9 +2426,13 @@ final class FlowSessionManager: ObservableObject {
         )
 
         let asrService = asr
-        let result = await Task.detached(priority: .userInitiated) { [asrService] in
+        let result = await HardTimeout.value(
+            seconds: FlowSessionKeys.batchASRFallbackTimeout
+        ) { [asrService] in
             await asrService.transcribeChunk(samples: samples, locale: locale)
-        }.value
+        } onTimeout: {
+            .cancelled
+        }
 
         switch result {
         case .success(let batchText):
@@ -2101,7 +2488,8 @@ final class FlowSessionManager: ObservableObject {
         providerIdOverride: String?,
         context: PolishContext?
     ) async throws -> PolishingService.PolishOutcome {
-        try await HardTimeout.run(seconds: FlowSessionKeys.maxPolishTimeout) {
+        let timeout = FlowSessionKeys.polishTimeout(forCharacterCount: text.count)
+        return try await HardTimeout.run(seconds: timeout) {
             try await polisher.polishWithOutcome(
                 text,
                 mode: mode,

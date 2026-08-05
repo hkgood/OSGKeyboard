@@ -1,0 +1,210 @@
+{
+  "$schema_comment": "OSGKeyboard test suite: each test class belongs to exactly one atomic group. Presets only compose groups (no duplicated class lists).",
+  "version": 1,
+  "defaults": {
+    "ios_scheme": "OSGKeyboard",
+    "ios_project": "OSGKeyboard.xcodeproj",
+    "ios_destination": "platform=iOS Simulator,name=iPhone 17",
+    "mac_scheme": "OSGKeyboardMac",
+    "mac_destination": "platform=macOS"
+  },
+  "groups": {
+    "config": {
+      "description": "App Group configuration, onboarding flags, ConfigurationStore, Keychain",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardTests/AppGroupConfigurationTests",
+        "OSGKeyboardTests/AppGroupOnboardingStoreTests",
+        "OSGKeyboardTests/ConfigurationStoreTests",
+        "OSGKeyboardTests/KeychainTests"
+      ]
+    },
+    "sync": {
+      "description": "iCloud KVS merge/sync for settings, dictionary, speech history, usage stats",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardTests/SettingsCloudSyncTests",
+        "OSGKeyboardTests/PersonalDictionaryCloudSyncTests",
+        "OSGKeyboardTests/PersonalDictionaryMergeTests",
+        "OSGKeyboardTests/SpeechHistoryCloudSyncTests",
+        "OSGKeyboardTests/SpeechHistoryDayDeletionTests",
+        "OSGKeyboardTests/UsageStatisticsCloudSyncTests"
+      ]
+    },
+    "polish": {
+      "description": "Intelligent polish pipeline, prompt composer, validator, style packs, LLM HTTP client (stubbed)",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardTests/IntelligentPolishTests",
+        "OSGKeyboardTests/PolishPromptComposerQuestionTests",
+        "OSGKeyboardTests/PolishOutputValidatorTests",
+        "OSGKeyboardTests/PolishStylePackTests",
+        "OSGKeyboardTests/LLMClientTests",
+        "OSGKeyboardTests/TranscriptLanguageDetectorTests"
+      ]
+    },
+    "cloud_asr": {
+      "description": "Cloud ASR catalog/routing helpers, streaming fixtures/event parsers, HTTP clients, vocabulary sync (hermetic; live API is live_api)",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardTests/CloudASRTests",
+        "OSGKeyboardTests/CloudASRStreamingHelpersTests",
+        "OSGKeyboardTests/CloudASRStreamingEventParsingTests",
+        "OSGKeyboardTests/CloudASRHTTPClientTests",
+        "OSGKeyboardTests/AlibabaVocabularySyncTests",
+        "OSGKeyboardTests/CloudASRServiceTests"
+      ]
+    },
+    "local_asr": {
+      "description": "Local ASR catalog, bias adapter, download source order, PCM conversion, dictation controller stop contract",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardTests/LocalASRModelCatalogTests",
+        "OSGKeyboardTests/LocalASRBiasAdapterTests",
+        "OSGKeyboardTests/LocalASRDownloadSourceSorterTests",
+        "OSGKeyboardTests/ASRConversionTests",
+        "OSGKeyboardTests/PreviewASRControllerStateTests"
+      ]
+    },
+    "utterance": {
+      "description": "Chunked utterance pipeline, stitch/guard/fallback policies (Host pipeline vs Ext short-final recovery are different layers)",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardTests/ChunkedUtterancePipelineTests",
+        "OSGKeyboardTests/UtteranceStreamChunkerTests",
+        "OSGKeyboardTests/UtteranceTranscriptStitcherTests",
+        "OSGKeyboardTests/UtteranceTranscriptGuardTests",
+        "OSGKeyboardTests/UtteranceBatchFallbackPolicyTests",
+        "OSGKeyboardTests/ProgressiveDictationTranscriptAccumulatorTests",
+        "OSGKeyboardExtTests/FinalChunkRecoveryTests"
+      ]
+    },
+    "flow": {
+      "description": "Flow handoff policy, App Group session bridge, budgets, tail drain, mic availability, keyboard↔host decision helpers",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardTests/FlowHandoffPolicyTests",
+        "OSGKeyboardTests/FlowSessionBridgeTests",
+        "OSGKeyboardTests/FlowSessionPolicyTests",
+        "OSGKeyboardTests/FlowBudgetAndMergeTests",
+        "OSGKeyboardTests/FlowCaptureTailDrainTests",
+        "OSGKeyboardTests/FlowUtteranceEndCoordinatorTests",
+        "OSGKeyboardTests/FlowUtterancePCMStoreTests",
+        "OSGKeyboardTests/MicVoiceAvailabilityTests",
+        "OSGKeyboardTests/FlowKeyboardPoliciesTests",
+        "OSGKeyboardTests/FlowReliabilityTests"
+      ]
+    },
+    "keyboard": {
+      "description": "Typing surface, English lexicon, Rime schema/integration, candidate panel, cursor navigation, translation chip grace",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardExtTests/EnglishTypingTests",
+        "OSGKeyboardExtTests/CandidatePanelExpandTests",
+        "OSGKeyboardExtTests/KeyboardStateTests",
+        "OSGKeyboardExtTests/KeyboardSurfaceStateTests",
+        "OSGKeyboardExtTests/LibrimeIntegrationTests",
+        "OSGKeyboardExtTests/RimeSchemaGeneratorTests",
+        "OSGKeyboardExtTests/RimePersonalDictionaryExporterTests",
+        "OSGKeyboardTests/CursorNavigationTests",
+        "OSGKeyboardTests/KeyboardTranslationConfigProtectionTests"
+      ]
+    },
+    "host_misc": {
+      "description": "Host deep links, tips, open-source license catalog (not on the PR critical path)",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardTests/HostAppURLRegistryTests",
+        "OSGKeyboardTests/TipProductTests",
+        "OSGKeyboardTests/OpenSourceLicenseCatalogTests"
+      ]
+    },
+    "pipeline_perf": {
+      "description": "Hermetic voice→polish stage timings (synthetic PCM, stub ASR/LLM; no mic/live network)",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardTests/VoicePipelinePerformanceTests"
+      ]
+    },
+    "mac": {
+      "description": "macOS host recorder, dictation VM, text insertion",
+      "platform": "mac",
+      "tests": [
+        "OSGKeyboardMacTests/MacAudioRecorderSnapshotStreamTests",
+        "OSGKeyboardMacTests/MacDictationViewModelTests",
+        "OSGKeyboardMacTests/MacTextInsertionServiceTests"
+      ]
+    },
+    "live_api": {
+      "description": "Optional live network and physical-device smoke; excluded from all/pr by design",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardTests/FlowPhysicalAudioStressTests",
+        "OSGKeyboardTests/DatingPolishLiveEvalTests",
+        "OSGKeyboardTests/DatingPolish500LiveEvalTests"
+      ]
+    }
+  },
+  "presets": {
+    "all": {
+      "description": "Full iOS + Ext hermetic suite (includes host_misc + pipeline_perf; excludes mac and live_api)",
+      "groups": [
+        "config",
+        "sync",
+        "polish",
+        "cloud_asr",
+        "local_asr",
+        "utterance",
+        "flow",
+        "keyboard",
+        "host_misc",
+        "pipeline_perf"
+      ]
+    },
+    "pr": {
+      "description": "Default CI / PR gate: critical path without host_misc, pipeline_perf, or mac",
+      "groups": [
+        "config",
+        "sync",
+        "polish",
+        "cloud_asr",
+        "local_asr",
+        "utterance",
+        "flow",
+        "keyboard"
+      ]
+    },
+    "api": {
+      "description": "Online API contracts + polish/LLM stubs",
+      "groups": ["cloud_asr", "polish"]
+    },
+    "asr": {
+      "description": "Cloud + local ASR + utterance stitching",
+      "groups": ["cloud_asr", "local_asr", "utterance"]
+    },
+    "polish": {
+      "description": "Polish-only",
+      "groups": ["polish"]
+    },
+    "keyboard": {
+      "description": "Keyboard typing/Rime plus flow handoff/mic (keyboard-critical)",
+      "groups": ["keyboard", "flow"]
+    },
+    "flow": {
+      "description": "Flow session / handoff only",
+      "groups": ["flow"]
+    },
+    "sync": {
+      "description": "iCloud sync only",
+      "groups": ["sync"]
+    },
+    "perf": {
+      "description": "Hermetic voice→polish pipeline stage timings only",
+      "groups": ["pipeline_perf"]
+    },
+    "mac": {
+      "description": "macOS host tests only",
+      "groups": ["mac"]
+    }
+  }
+}

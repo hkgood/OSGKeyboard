@@ -30,7 +30,8 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertFalse(config.translationEnabled)
         XCTAssertEqual(config.handednessPreference, .left)
         XCTAssertTrue(config.cursorDragNavigationEnabled)
-        XCTAssertEqual(config.polishIntensity, .default)
+        XCTAssertEqual(config.keyboardHapticIntensity, .light)
+        XCTAssertEqual(config.polishIntensity, .light)
         XCTAssertTrue(config.personalDictionary.entries.isEmpty)
         XCTAssertTrue(config.flowSkipAppSwitch)
         XCTAssertEqual(config.flowKeepAliveMode, .pictureInPicture)
@@ -69,7 +70,8 @@ final class AppGroupConfigurationTests: XCTestCase {
         config.translationTargetLocaleId = "en"
         config.handednessPreference = .right
         config.cursorDragNavigationEnabled = false
-        config.polishIntensity = .light
+        config.keyboardHapticIntensity = .strong
+        config.polishIntensity = .heavy
         config.flowSkipAppSwitch = false
         config.flowKeepAliveMode = .pictureInPicture
         // Use a non-default value so the round-trip actually proves persistence.
@@ -93,10 +95,20 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertTrue(loaded.translationEnabled)
         XCTAssertEqual(loaded.handednessPreference, .right)
         XCTAssertFalse(loaded.cursorDragNavigationEnabled)
-        XCTAssertEqual(loaded.polishIntensity, .light)
+        XCTAssertEqual(loaded.keyboardHapticIntensity, .strong)
+        XCTAssertEqual(loaded.polishIntensity, .heavy)
         XCTAssertFalse(loaded.flowSkipAppSwitch)
         XCTAssertEqual(loaded.flowKeepAliveMode, .pictureInPicture)
         XCTAssertEqual(loaded.flowInactivityDuration, .threeHours)
+    }
+
+    func testRetiredMediumPolishIntensityMigratesToLight() {
+        let defaults = makeDefaults()
+        defaults.set("medium", forKey: AppGroupConfiguration.Keys.polishIntensity)
+
+        let config = AppGroupConfiguration.load(fromAvailable: defaults)
+
+        XCTAssertEqual(config.polishIntensity, .light)
     }
 
     /// Existing installs retain their legacy engine, but an unset inactivity
@@ -166,15 +178,6 @@ final class AppGroupConfigurationTests: XCTestCase {
         let config = AppGroupConfiguration.load(fromAvailable: defaults)
         XCTAssertEqual(config.providerId, "deepseek")
         XCTAssertEqual(defaults.string(forKey: AppGroupConfiguration.Keys.providerId), "deepseek")
-    }
-
-    func testPolishIntensityLegacyOffMigratesToMedium() {
-        let defaults = makeDefaults()
-        defaults.set(PolishIntensity.legacyOffRawValue, forKey: AppGroupConfiguration.Keys.polishIntensity)
-
-        let config = AppGroupConfiguration.load(fromAvailable: defaults)
-        XCTAssertEqual(config.polishIntensity, .medium)
-        XCTAssertEqual(defaults.string(forKey: AppGroupConfiguration.Keys.polishIntensity), PolishIntensity.medium.rawValue)
     }
 
     func testLoadFromNilUsesAppGroupWhenAvailable() {

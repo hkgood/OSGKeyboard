@@ -98,15 +98,11 @@
 "polishStyle.diba" = "帝吧大神";
 "polishStyle.xhs" = "小红书集美";
 
-/* v0.3.0: 润色档位 */
-"polish.intensity.off" = "关闭";
+/* 润色强度 */
 "polish.intensity.light" = "轻度";
-"polish.intensity.medium" = "中度";
-"polish.intensity.heavy" = "深度";
-"polish.intensity.off.desc" = "不润色；词库为空时直接插入识别原文，有词条时仅做 ASR 纠错。";
-"polish.intensity.light.desc" = "仅清除孤立语气词和重复口误；标点和结构化仍会生效。";
-"polish.intensity.medium.desc" = "纠正识别错误、清除语气词、润色语句；始终补标点与结构化。推荐默认。";
-"polish.intensity.heavy.desc" = "可重组段落、拆长句、自动编号。适合会议纪要与报告。";
+"polish.intensity.heavy" = "重度";
+"polish.intensity.light.desc" = "启用完整保真与问句守卫，降低失真风险。";
+"polish.intensity.heavy.desc" = "仅完成转写格式化，再执行所选趣味人格。";
 
 /* v0.3.0: 输入场景标签 */
 "appContext.code" = "代码";
@@ -275,6 +271,7 @@
 "mac.settings.localSpeechFallback" = "本地识别（Apple Speech）";
 "mac.settings.localSpeechFallbackDesc" = "未安装 Qwen3 模型时，使用 Apple 本地语音识别。";
 "mac.settings.about" = "关于";
+"mac.settings.version" = "版本";
 "mac.settings.privacyPolicy" = "隐私政策";
 "mac.settings.thirdPartyLicenses" = "第三方许可";
 "mac.settings.licenses.footer" = "以下为 OSGKeyboard 使用的开源组件。许可正文摘自上游仓库；模型权重在运行时下载并缓存在本机。OSGKeyboard 本身采用源码可见许可，商业授权请联系 rocky.hk@gmail.com。";

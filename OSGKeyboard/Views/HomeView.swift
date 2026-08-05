@@ -76,7 +76,17 @@ struct HomeView: View {
         }
         .onChange(of: previewFocused) { _, focused in
             guard focused else { return }
+            // Cold-start overlay owns the scene (swipe-back hint); don't let
+            // the preview field summon the keyboard underneath it.
+            if flowManager.coldStartContext != nil {
+                previewFocused = false
+                return
+            }
             Task { await flowManager.refreshForInlineKeyboardFocus() }
+        }
+        .onChange(of: flowManager.coldStartContext != nil) { _, showingOverlay in
+            guard showingOverlay else { return }
+            previewFocused = false
         }
     }
 
@@ -333,10 +343,13 @@ struct HomeView: View {
                 .buttonStyle(.plain)
                 .padding(.leading, Spacing.xs)
             } else if canManuallyStartSession {
-                // Sessions auto-start on foreground, but after a manual stop /
-                // expiry the user needs a reliable, no-jump way back in.
+                // Sessions no longer auto-start on foreground (keyboard survival).
+                // After a manual stop / expiry, Start is the explicit re-entry.
                 Button {
-                    flowManager.activateOnForeground()
+                    flowManager.activateOnForeground(
+                        reason: "HomeView.startButton",
+                        startCapture: true
+                    )
                 } label: {
                     Text("home.flow.startShort")
                         .font(TypeStyle.caption2)
@@ -481,7 +494,10 @@ struct HomeView: View {
                     .stroke(previewFocused ? palette.dividerStrong : palette.dividerStrong.opacity(0.75), lineWidth: 1)
             )
             .contentShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            .onTapGesture { previewFocused = true }
+            .onTapGesture {
+                guard flowManager.coldStartContext == nil else { return }
+                previewFocused = true
+            }
     }
 
     private var previewFieldContent: some View {

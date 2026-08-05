@@ -6,6 +6,7 @@
 
 import SwiftUI
 import OSGKeyboardShared
+import OSGKeyboardHostSupport
 
 struct HomeUsageStatsSection: View {
     let layout: UsageStatsCluster.Layout

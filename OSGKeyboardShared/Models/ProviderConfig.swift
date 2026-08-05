@@ -209,6 +209,27 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         }
     }
 
+    /// Typing-grid haptic strength (off / light / strong). Default is light.
+    @Published public var keyboardHapticIntensity: KeyboardHapticIntensity {
+        didSet {
+            guard !isApplyingConfiguration,
+                  keyboardHapticIntensity != configuration.keyboardHapticIntensity else { return }
+            configuration.keyboardHapticIntensity = keyboardHapticIntensity
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
+    /// Controls whether fun styles use the full safety envelope or the
+    /// formatting-only high-strength path.
+    @Published public var polishIntensity: PolishIntensity {
+        didSet {
+            guard !isApplyingConfiguration,
+                  polishIntensity != configuration.polishIntensity else { return }
+            configuration.polishIntensity = polishIntensity
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
     /// Whether the pipeline should run translate-and-polish (not just
     /// polish). Both engines honour the selected target locale.
     public var isTranslationEffective: Bool {
@@ -217,16 +238,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
 
     /// Translation picker visibility — available on both engines.
     public var isTranslationRowVisible: Bool { true }
-
-    /// v0.3.0: how aggressively the LLM should rewrite the ASR
-    /// transcript. Default is `medium` (Typeless-equivalent).
-    @Published public var polishIntensity: PolishIntensity {
-        didSet {
-            guard !isApplyingConfiguration, polishIntensity != configuration.polishIntensity else { return }
-            configuration.polishIntensity = polishIntensity
-            persistConfiguration()
-        }
-    }
 
     /// Enables provider-specific reasoning / thinking controls when the
     /// selected polish LLM supports them.
@@ -384,6 +395,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         translationTargetLocaleId = configuration.translationTargetLocaleId
         handednessPreference = configuration.handednessPreference
         cursorDragNavigationEnabled = configuration.cursorDragNavigationEnabled
+        keyboardHapticIntensity = configuration.keyboardHapticIntensity
         polishIntensity = configuration.polishIntensity
         llmThinkingEnabled = configuration.llmThinkingEnabled
         flowSkipAppSwitch = configuration.flowSkipAppSwitch
@@ -412,6 +424,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         asrModel = CloudASRModelCatalog.defaultModel(for: asrPreset.id)
         asrApiKey = ""
         handednessPreference = .left
+        keyboardHapticIntensity = .default
+        polishIntensity = .default
         localASRCustomLanguageModelEnabled = true
         llmThinkingEnabled = false
         hasAcknowledgedCloudSharing = false
@@ -422,6 +436,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         configuration.asrBaseURL = asrPreset.defaultBaseURL
         configuration.asrModel = CloudASRModelCatalog.defaultModel(for: asrPreset.id)
         configuration.handednessPreference = .left
+        configuration.keyboardHapticIntensity = .default
+        configuration.polishIntensity = .default
         configuration.localASRCustomLanguageModelEnabled = true
         configuration.llmThinkingEnabled = false
         configuration.hasAcknowledgedCloudSharing = false
@@ -471,6 +487,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         translationTargetLocaleId = fresh.translationTargetLocaleId
         handednessPreference = fresh.handednessPreference
         cursorDragNavigationEnabled = fresh.cursorDragNavigationEnabled
+        keyboardHapticIntensity = fresh.keyboardHapticIntensity
         polishIntensity = fresh.polishIntensity
         llmThinkingEnabled = fresh.llmThinkingEnabled
         flowSkipAppSwitch = fresh.flowSkipAppSwitch

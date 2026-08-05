@@ -66,6 +66,32 @@ final class MicVoiceAvailabilityTests: XCTestCase {
         XCTAssertEqual(availability, .recording)
     }
 
+    func testUnavailableWhenOnboardingIncomplete() {
+        let availability = MicVoiceAvailabilityResolver.resolve(
+            phase: .idle,
+            micDisabled: false,
+            hasFullAccess: true,
+            appGroupAvailable: true,
+            hostReady: true,
+            isPreparingSession: false,
+            hasCompletedOnboarding: false
+        )
+        XCTAssertEqual(availability, .unavailable(.onboardingIncomplete))
+    }
+
+    func testOnboardingIncompleteTakesPrecedenceOverMissingAPIKey() {
+        let availability = MicVoiceAvailabilityResolver.resolve(
+            phase: .idle,
+            micDisabled: true,
+            hasFullAccess: true,
+            appGroupAvailable: true,
+            hostReady: true,
+            isPreparingSession: false,
+            hasCompletedOnboarding: false
+        )
+        XCTAssertEqual(availability, .unavailable(.onboardingIncomplete))
+    }
+
     func testProcessingOverridesUnavailable() {
         let availability = MicVoiceAvailabilityResolver.resolve(
             phase: .processing,

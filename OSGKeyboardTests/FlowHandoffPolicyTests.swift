@@ -153,6 +153,17 @@ final class FlowHandoffPolicyTests: XCTestCase {
         XCTAssertEqual(action, .waitForHostReady(recordWhenReady: true))
     }
 
+    func testMicPressOnboardingIncompleteIgnores() {
+        let action = FlowHandoffPolicy.micPressAction(
+            availability: .unavailable(.onboardingIncomplete),
+            sessionActive: false,
+            hostReachable: false,
+            hostStale: false,
+            withinReadyGrace: false
+        )
+        XCTAssertEqual(action, .ignore)
+    }
+
     func testMicPressHostNotReadyWhenDeadOpensColdStart() {
         let action = FlowHandoffPolicy.micPressAction(
             availability: .unavailable(.hostNotReady),

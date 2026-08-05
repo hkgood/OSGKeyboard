@@ -13,7 +13,7 @@ Output:
   OSGKeyboard/Resources/CustomLanguageModel/v1/manifest.json
 
 The compiled .bin asset is exported separately to
-OSGKeyboardShared/Resources/CustomLanguageModel/v1/ via export_clm.swift.
+OSGKeyboard/Resources/CustomLanguageModel/v1/ via export_clm.swift.
 """
 
 from __future__ import annotations

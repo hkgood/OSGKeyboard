@@ -61,6 +61,11 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testSessionInactiveWhenExpired() {
         let defaults = makeDefaults()
+        // Expiry only applies on the Live Activity keep-alive path (PiP is persistent).
+        defaults.set(
+            FlowKeepAliveMode.liveActivity.rawValue,
+            forKey: AppGroupConfiguration.Keys.flowKeepAliveMode
+        )
         FlowSessionBridge.markSessionActive(duration: 1, defaults: defaults)
         let expired = Date().timeIntervalSince1970 - 5
         defaults.set(expired, forKey: FlowSessionKeys.flowSessionExpires)
@@ -110,6 +115,10 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testRemainingSessionDurationNilWhenExpired() {
         let defaults = makeDefaults()
+        defaults.set(
+            FlowKeepAliveMode.liveActivity.rawValue,
+            forKey: AppGroupConfiguration.Keys.flowKeepAliveMode
+        )
         FlowSessionBridge.markSessionActive(duration: 1, defaults: defaults)
         XCTAssertNotNil(FlowSessionBridge.remainingSessionDuration(defaults: defaults))
 
@@ -451,6 +460,44 @@ final class FlowSessionBridgeTests: XCTestCase {
 
         XCTAssertEqual(FlowSessionBridge.readySnapshot(defaults: defaults), snapshot)
         XCTAssertTrue(FlowSessionBridge.isHostReady(defaults: defaults))
+    }
+
+    func testHostReadyRejectedWhenReadyAtSkewsFromHeartbeat() {
+        let defaults = makeDefaults()
+        let sessionId = UUID()
+        let now = Date().timeIntervalSince1970
+        FlowSessionBridge.markSessionActive(duration: 60, sessionId: sessionId, defaults: defaults)
+        let skewed = FlowReadySnapshot(
+            sessionId: sessionId,
+            ready: true,
+            reason: .ready,
+            heartbeatAt: now,
+            readyAt: now - FlowSessionKeys.hostReadyMaxHeartbeatSkew - 1,
+            audioProofAt: now,
+            engineMode: "local",
+            localeId: "zh-Hans",
+            sessionExpiresAt: now + 60
+        )
+        FlowSessionBridge.writeReadySnapshot(skewed, defaults: defaults)
+        // Keep heartbeat fresh so reachability alone would pass.
+        defaults.set(now, forKey: FlowSessionKeys.flowHeartbeat)
+        XCTAssertFalse(FlowSessionBridge.isHostReady(defaults: defaults))
+    }
+
+    func testFlowAckRoundTripAndClearedByClearFlowState() {
+        let defaults = makeDefaults()
+        let sessionId = UUID()
+        let utteranceId = UUID()
+        let ack = FlowAck(
+            sessionId: sessionId,
+            utteranceId: utteranceId,
+            commandSeq: 3
+        )
+        FlowSessionBridge.writeAck(ack, defaults: defaults)
+        XCTAssertEqual(FlowSessionBridge.latestAck(defaults: defaults), ack)
+
+        FlowSessionBridge.clearFlowState(defaults: defaults)
+        XCTAssertNil(FlowSessionBridge.latestAck(defaults: defaults))
     }
 
     func testClearFlowStateRemovesProtocolPayloads() {

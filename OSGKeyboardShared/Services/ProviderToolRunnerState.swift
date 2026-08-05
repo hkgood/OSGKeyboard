@@ -90,23 +90,89 @@ public enum ProviderToolRunner {
     }
 }
 
+private final class HardTimeoutRace<T: Sendable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<T, Error>?
+    private var tasks: [Task<Void, Never>] = []
+    private var resolved = false
+    private var pendingResult: Result<T, Error>?
+
+    func install(
+        continuation: CheckedContinuation<T, Error>,
+        tasks: [Task<Void, Never>]
+    ) {
+        lock.lock()
+        if resolved {
+            let result = pendingResult
+            pendingResult = nil
+            lock.unlock()
+            tasks.forEach { $0.cancel() }
+            if let result {
+                continuation.resume(with: result)
+            }
+            return
+        }
+        self.continuation = continuation
+        self.tasks = tasks
+        lock.unlock()
+    }
+
+    func resolve(_ result: Result<T, Error>) {
+        lock.lock()
+        guard !resolved else {
+            lock.unlock()
+            return
+        }
+        resolved = true
+        let continuation = self.continuation
+        let tasks = self.tasks
+        if continuation == nil {
+            pendingResult = result
+        }
+        self.continuation = nil
+        self.tasks = []
+        lock.unlock()
+
+        tasks.forEach { $0.cancel() }
+        continuation?.resume(with: result)
+    }
+}
+
 public enum HardTimeout {
-    /// Returns the first completed result; the losing task is cancelled.
+    /// Returns at the deadline even when the losing operation ignores
+    /// cooperative cancellation. The detached loser is still cancelled, but
+    /// is no longer a structured child that can hold the caller open.
     public static func run<T: Sendable>(
         seconds: TimeInterval,
         operation: @escaping @Sendable () async throws -> T
     ) async throws -> T {
-        try await withThrowingTaskGroup(of: T.self) { group in
-            group.addTask { try await operation() }
-            group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                throw CancellationError()
+        let race = HardTimeoutRace<T>()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let operationTask = Task {
+                    do {
+                        race.resolve(.success(try await operation()))
+                    } catch {
+                        race.resolve(.failure(error))
+                    }
+                }
+                let timeoutTask = Task {
+                    do {
+                        try await Task.sleep(
+                            nanoseconds: UInt64(max(0, seconds) * 1_000_000_000)
+                        )
+                        race.resolve(.failure(CancellationError()))
+                    } catch {
+                        // The operation won and cancelled this timer.
+                    }
+                }
+                race.install(
+                    continuation: continuation,
+                    tasks: [operationTask, timeoutTask]
+                )
             }
-            guard let result = try await group.next() else {
-                throw CancellationError()
-            }
-            group.cancelAll()
-            return result
+        } onCancel: {
+            race.resolve(.failure(CancellationError()))
         }
     }
 
@@ -116,15 +182,12 @@ public enum HardTimeout {
         operation: @escaping @Sendable () async -> T,
         onTimeout: @escaping @Sendable () -> T
     ) async -> T {
-        await withTaskGroup(of: T.self) { group in
-            group.addTask { await operation() }
-            group.addTask {
-                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                return onTimeout()
+        do {
+            return try await run(seconds: seconds) {
+                await operation()
             }
-            let result = await group.next() ?? onTimeout()
-            group.cancelAll()
-            return result
+        } catch {
+            return onTimeout()
         }
     }
 }

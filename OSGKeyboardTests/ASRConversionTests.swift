@@ -10,6 +10,7 @@
 
 import XCTest
 @testable import OSGKeyboardShared
+@testable import OSGKeyboardHostSupport
 
 final class ASRConversionTests: XCTestCase {
 

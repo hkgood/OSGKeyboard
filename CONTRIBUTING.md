@@ -32,13 +32,11 @@ Open an issue using the **Feature request** template. Briefly describe:
    xcodegen generate          # or: ./Scripts/generate-xcodeproj.sh
    ```
 3. **Code style.** SwiftLint config lives in `.swiftlint.yml` — keep it green. We use Swift 6 strict concurrency, no `Sendable` shims where avoidable.
-4. **Tests.** Add XCTest coverage in `OSGKeyboardTests/` for any non-trivial logic.
+4. **Tests.** Add XCTest coverage under `OSGKeyboardTests/` (or Ext/Mac targets) for any non-trivial logic, and register the class in **exactly one** group in `Tests/suite-manifest.json`. See [`docs/TESTING.md`](docs/TESTING.md).
 5. **Build & test before pushing:**
    ```bash
-   xcodebuild -project OSGKeyboard.xcodeproj \
-     -scheme OSGKeyboard \
-     -destination 'platform=iOS Simulator,name=iPhone 17' \
-     test
+   ./Scripts/run-tests.sh validate
+   ./Scripts/run-tests.sh pr          # default CI gate; or: all / api / keyboard / …
    ```
 6. **Commit messages.** Short imperative summary (`fix: handle empty transcript`), longer body if needed.
 7. **Open the PR** against `main`. The CI pipeline (`.github/workflows/ci.yml`) will lint + build + test automatically.
@@ -49,7 +47,9 @@ Open an issue using the **Feature request** template. Briefly describe:
 OSGKeyboard/       Main iOS app target
 OSGKeyboardExt/    Custom Keyboard Extension target
 OSGKeyboardShared/ Framework shared by app + extension
-OSGKeyboardTests/  XCTest unit tests
+OSGKeyboardTests/  XCTest unit tests (host / shared)
+OSGKeyboardExtTests/ Keyboard / typing XCTest
+Tests/             Suite manifest (grouped presets — see docs/TESTING.md)
 project.yml        XcodeGen project definition (source of truth)
 .github/workflows/ CI
 ```

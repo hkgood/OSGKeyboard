@@ -1,0 +1,45 @@
+{
+  "formatVersion": 1,
+  "sources": {
+    "pinyin_simp": {
+      "license": "Apache-2.0",
+      "commit": "0c6861ef7420ee780270ca6d993d18d4101049d0",
+      "url": "https://raw.githubusercontent.com/rime/rime-pinyin-simp/0c6861ef7420ee780270ca6d993d18d4101049d0/pinyin_simp.dict.yaml",
+      "sha256": "e341598343a0f0f2035bb1aafc34a7f3bb7887deeecb3f60796262aaa2983e6b"
+    },
+    "jieba": {
+      "license": "MIT",
+      "commit": "67fa2e36e72f69d9134b8a1037b83fbb070b9775",
+      "url": "https://raw.githubusercontent.com/fxsjy/jieba/67fa2e36e72f69d9134b8a1037b83fbb070b9775/jieba/dict.txt",
+      "sha256": "7197c3211ddd98962b036cdf40324d1ea2bfaa12bd028e68faa70111a88e12a8"
+    },
+    "phrase_pinyin": {
+      "license": "MIT",
+      "commit": "cee0ed6e6e4898580cafd2bd5e3723e20b214aa0",
+      "url": "https://raw.githubusercontent.com/mozillazg/phrase-pinyin-data/cee0ed6e6e4898580cafd2bd5e3723e20b214aa0/pinyin.txt",
+      "sha256": "dcc769607c220b312fea3e71cb63421298b4b891b1f7356a95ab58f2c96fff81"
+    },
+    "character_pinyin": {
+      "license": "MIT",
+      "commit": "923b108dc5d45dee061324c011b478fb649f8b73",
+      "url": "https://raw.githubusercontent.com/mozillazg/pinyin-data/923b108dc5d45dee061324c011b478fb649f8b73/pinyin.txt",
+      "sha256": "621f8ca9eff8519f47e2b17b564fd318161e13bca07eea8c8e04993cd5d3b52e"
+    }
+  },
+  "statistics": {
+    "baselineEntries": 65125,
+    "jiebaWordsAccepted": 337338,
+    "jiebaWordsUsingCharacterFallback": 293794,
+    "outputEntries": 364926
+  },
+  "output": {
+    "file": "osg_pinyin.dict.yaml",
+    "sha256": "35b0664df8906712e4051392d83be35bf76587e4c9a7b068a71e0d6f7b989425"
+  },
+  "excluded": [
+    "rime-ice (GPL-3.0)",
+    "rime-double-pinyin (GPL-3.0)",
+    "rime-essay (LGPL-3.0)",
+    "rime-luna-pinyin (LGPL-3.0)"
+  ]
+}

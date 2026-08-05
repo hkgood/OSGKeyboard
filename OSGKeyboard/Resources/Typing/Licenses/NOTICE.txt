@@ -1,0 +1,35 @@
+Typing keyboard third-party notices
+===================================
+
+Runtime
+-------
+librime-xcframework 1.17.0-pack.1 and librime 1.17.0 (BSD-3-Clause).
+See LICENSE.txt, THIRD_PARTY_NOTICES.md and third-party-notices.zip bundled
+with this file for full binary dependency license texts.
+
+Dictionary data
+---------------
+- rime-pinyin-simp @ 0c6861ef7420ee780270ca6d993d18d4101049d0
+  Apache License 2.0
+- fxsjy/jieba @ 67fa2e36e72f69d9134b8a1037b83fbb070b9775
+  MIT License
+- mozillazg/phrase-pinyin-data @ cee0ed6e6e4898580cafd2bd5e3723e20b214aa0
+  MIT License
+- mozillazg/pinyin-data @ 923b108dc5d45dee061324c011b478fb649f8b73
+  MIT License
+
+The generated manifest.json records exact source URLs and SHA-256 values.
+OSGKeyboard's schema and transformation code is project-owned.
+
+Explicitly not distributed
+--------------------------
+rime-ice, rime-double-pinyin, rime-luna-pinyin, rime-essay and KeyboardKit Pro.
+
+The Apache-2.0 and MIT license texts are available from the source links above;
+all required copyright and permission notices must remain with distributions.
+
+English typing lexicon
+----------------------
+english_lexicon.tsv and english_bigrams.tsv are OSG-curated word lists with
+synthetic relative frequency ranks for offline autocomplete / autocorrect /
+next-word ranking. They are not derived from GPL/LGPL dictionaries.

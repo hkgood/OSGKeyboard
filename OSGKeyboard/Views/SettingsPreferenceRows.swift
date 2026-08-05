@@ -129,25 +129,96 @@ struct HandednessPickerRow: View {
     }
 }
 
+// MARK: - Keyboard haptic picker row
+
+struct KeyboardHapticPickerRow: View {
+    @Binding var selection: KeyboardHapticIntensity
+
+    private var options: [(id: String, label: String)] {
+        KeyboardHapticIntensity.allCases.map { intensity in
+            (intensity.rawValue, AppL10n.string(intensity.labelKey))
+        }
+    }
+
+    var body: some View {
+        SettingsMenuPickerRow(
+            title: AppL10n.string("settings.keyboardHaptic.title"),
+            options: options,
+            selection: Binding(
+                get: { selection.rawValue },
+                set: { newValue in
+                    selection = KeyboardHapticIntensity(rawValue: newValue) ?? .default
+                }
+            )
+        )
+    }
+}
+
 // MARK: - Polish intensity picker row
 
 struct PolishIntensityPickerRow: View {
     @ObservedObject var config: ProviderConfig
 
     var body: some View {
-        // 与「惯用手」一致的右侧下拉菜单行样式，保持偏好设置卡片内各行风格统一。
         SettingsMenuPickerRow(
             title: AppL10n.string("settings.polishIntensity.title"),
             options: PolishIntensity.allCases.map { intensity in
-                (intensity.rawValue, SharedL10n.string(intensity.labelKey, language: config.uiLanguage))
+                (
+                    intensity.rawValue,
+                    SharedL10n.string(intensity.labelKey, language: config.uiLanguage)
+                )
             },
             selection: Binding(
                 get: { config.polishIntensity.rawValue },
-                set: { newValue in
-                    config.polishIntensity = PolishIntensity(rawValue: newValue) ?? .medium
+                set: { rawValue in
+                    config.polishIntensity = PolishIntensity(rawValue: rawValue) ?? .default
                 }
             )
         )
+    }
+}
+
+// MARK: - Default input surface toggle
+
+struct DefaultTypingInputToggleRow: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("settings.typingInput.default.title")
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
+                Text("settings.typingInput.default.description")
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .tint(palette.accent)
+        .settingsListRow()
+    }
+}
+
+struct RememberLastSurfaceToggleRow: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Toggle(isOn: $isOn) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("settings.typingInput.rememberLast.title")
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
+                Text("settings.typingInput.rememberLast.description")
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .tint(palette.accent)
+        .settingsListRow()
     }
 }
 

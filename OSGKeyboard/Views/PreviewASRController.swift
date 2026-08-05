@@ -5,5 +5,6 @@
 // lives in `OSGKeyboardShared` as `LiveDictationController`.
 
 import OSGKeyboardShared
+import OSGKeyboardHostSupport
 
 typealias PreviewASRController = LiveDictationController

@@ -3,6 +3,7 @@
 
 import XCTest
 @testable import OSGKeyboardShared
+@testable import OSGKeyboardHostSupport
 
 final class CloudASRTests: XCTestCase {
 
@@ -172,9 +173,11 @@ final class CloudASRTests: XCTestCase {
             PersonalDictionary.Entry(term: "Cursor", category: .productName, source: .manual),
         ])
         let entries = dict.alibabaHotwordEntries()
-        XCTAssertEqual(entries.count, 1)
-        XCTAssertEqual(entries[0].text, "Cursor")
-        XCTAssertEqual(entries[0].weight, 4)
+        // Includes built-in system term "OSGKeyboard" via effectiveEntries.
+        XCTAssertEqual(entries.count, 2)
+        XCTAssertTrue(entries.contains(where: { $0.text == "Cursor" }))
+        XCTAssertTrue(entries.contains(where: { $0.text == "OSGKeyboard" }))
+        XCTAssertEqual(entries.first(where: { $0.text == "Cursor" })?.weight, 4)
     }
 
     func testPCMSampleWavEncoderProducesHeader() {
@@ -185,9 +188,10 @@ final class CloudASRTests: XCTestCase {
     }
 
     func testVocabularyFingerprintChangesWhenDictionaryChanges() {
-        var dict = PersonalDictionary.empty
-        let emptyFP = dict.vocabularySyncFingerprint()
-        _ = dict.upsertManual(term: "OSGKeyboard")
-        XCTAssertNotEqual(emptyFP, dict.vocabularySyncFingerprint())
+        let emptyFP = PersonalDictionary.empty.vocabularySyncFingerprint()
+        let withTerm = PersonalDictionary(entries: [
+            PersonalDictionary.Entry(term: "Kubernetes", category: .technical, source: .manual),
+        ])
+        XCTAssertNotEqual(emptyFP, withTerm.vocabularySyncFingerprint())
     }
 }

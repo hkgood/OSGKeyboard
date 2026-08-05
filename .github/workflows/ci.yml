@@ -84,14 +84,11 @@ jobs:
         run: brew install xcodegen
       - name: Generate project
         run: ./Scripts/generate-xcodeproj.sh
-      - name: Run tests
+      - name: Validate test suite manifest
+        run: ./Scripts/run-tests.sh validate
+      - name: Run tests (pr preset)
+        # pr = critical-path groups including OSGKeyboardExtTests.
+        # See Tests/suite-manifest.json and docs/TESTING.md.
         run: |
           set -o pipefail
-          xcodebuild test \
-            -project OSGKeyboard.xcodeproj \
-            -scheme OSGKeyboard \
-            -destination 'platform=iOS Simulator,name=iPhone 17' \
-            -configuration Debug \
-            -only-testing:OSGKeyboardTests \
-            CODE_SIGNING_ALLOWED=NO \
-            | xcpretty
+          SKIP_GENERATE=1 ./Scripts/run-tests.sh pr

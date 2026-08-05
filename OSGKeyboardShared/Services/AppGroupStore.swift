@@ -24,7 +24,17 @@ public struct AppGroupStore: @unchecked Sendable {
         // iOS app + keyboard extension MUST share the App Group suite; a
         // silent `.standard` fallback would desync them. Keep this a hard
         // failure so a provisioning mistake is impossible to miss.
+        //
+        // Exception: unsigned XCTest hosts (`CODE_SIGNING_ALLOWED=NO`) often
+        // lack the App Group container. `fatalError` here aborts the whole
+        // test process (SIGTRAP) and masks real assertion failures — use an
+        // isolated suite only while XCTest is loaded.
         #if DEBUG
+        if NSClassFromString("XCTestCase") != nil {
+            let suiteName = "\(AppGroup.identifier).xctest-fallback"
+            self.defaults = UserDefaults(suiteName: suiteName) ?? .standard
+            return
+        }
         fatalError("App Group unavailable — inject UserDefaults in tests or fix entitlements.")
         #else
         fatalError("App Group unavailable.")
@@ -65,6 +75,7 @@ public struct AppGroupStore: @unchecked Sendable {
     public var translationTargetLocaleId: String { configuration.translationTargetLocaleId }
     public var handednessPreference: HandednessPreference { configuration.handednessPreference }
     public var cursorDragNavigationEnabled: Bool { configuration.cursorDragNavigationEnabled }
+    public var keyboardHapticIntensity: KeyboardHapticIntensity { configuration.keyboardHapticIntensity }
     public var polishIntensity: PolishIntensity { configuration.polishIntensity }
     public var polishStyleCatalog: PolishStyleCatalog { configuration.polishStyleCatalog }
     public var activePolishStyleId: String { configuration.activePolishStyleId }
@@ -122,8 +133,14 @@ public struct AppGroupStore: @unchecked Sendable {
         AppGroupConfigDarwin.postConfigChanged()
     }
 
+    public func setKeyboardHapticIntensity(_ intensity: KeyboardHapticIntensity) {
+        mutateConfiguration { $0.keyboardHapticIntensity = intensity }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
     public func setPolishIntensity(_ intensity: PolishIntensity) {
         mutateConfiguration { $0.polishIntensity = intensity }
+        AppGroupConfigDarwin.postConfigChanged()
     }
 
     // MARK: - Polish styles
@@ -208,6 +225,10 @@ public struct AppGroupStore: @unchecked Sendable {
     public func setPersonalDictionary(_ dictionary: PersonalDictionary) {
         mutateConfiguration { $0.personalDictionary = dictionary }
         AppGroupConfigDarwin.postConfigChanged()
+        #if os(iOS)
+        // Host redeploys Rime sidecar; extension picks it up next typing open.
+        PersonalDictionaryRimeSync.scheduleAfterDictionaryChange()
+        #endif
     }
 
     public func deletePersonalDictionaryEntry(id: UUID, at date: Date = Date()) {
@@ -216,6 +237,9 @@ public struct AppGroupStore: @unchecked Sendable {
             config.personalDictionary.deletedEntryIDs[id] = date
         }
         AppGroupConfigDarwin.postConfigChanged()
+        #if os(iOS)
+        PersonalDictionaryRimeSync.scheduleAfterDictionaryChange()
+        #endif
     }
 
     public var personalDictionaryICloudSyncEnabled: Bool {

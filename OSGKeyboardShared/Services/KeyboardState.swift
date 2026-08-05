@@ -68,7 +68,18 @@ public final class KeyboardState: ObservableObject {
         public var labelKey: String { "mode.polish" }
     }
 
+    /// Keyboard chrome surface. Voice is the default product mode; typing is
+    /// a secondary QWERTY / pinyin surface for quick corrections.
+    public enum Surface: String, CaseIterable, Identifiable, Sendable {
+        case voice
+        case typing
+
+        public var id: String { rawValue }
+    }
+
     @Published public var phase: Phase = .idle
+    /// Active chrome. Forced to `.voice` while recording / processing.
+    @Published public var surface: Surface = .voice
     @Published public var level: Double = 0
     @Published public var mode: InputMode = .polish
     @Published public var localeId: String = "auto"
@@ -114,6 +125,8 @@ public final class KeyboardState: ObservableObject {
     @Published public var returnKeyRole: ReturnKeyRole = .newline
     /// Press-and-drag pads beside the mic for four-way caret movement.
     @Published public var cursorDragNavigationEnabled: Bool = true
+    /// Typing-grid haptic strength (off / light / strong).
+    @Published public var keyboardHapticIntensity: KeyboardHapticIntensity = .default
     /// `true` while a cursor-drag pad is being pressed — drives the hint
     /// shown above the mic.
     @Published public var cursorDragActive: Bool = false
@@ -128,31 +141,12 @@ public final class KeyboardState: ObservableObject {
     /// Convenience shorthand used by the pipeline and views.
     public var isLocalEngine: Bool { engineMode == "local" }
 
-    // MARK: - First-launch onboarding (mirrored from ProviderConfig)
+    // MARK: - Host-app onboarding gate
 
-    /// Drives the in-keyboard onboarding overlay. When `false`, the
-    /// keyboard shows a step-by-step overlay instead of the normal UI;
-    /// when `true`, normal UI renders. Mirrored from `ProviderConfig`
-    /// so the keyboard never has to instantiate the main-app config.
+    /// Mirrored from App Group / Keychain. Setup UI lives only in the host
+    /// app; the keyboard uses this flag to gate voice (mic / Flow cold-start)
+    /// and prompt a jump back to the app when incomplete.
     @Published public var hasCompletedOnboarding: Bool = false
-    /// Step the user is currently on (0-based). The overlay reads this
-    /// to render the right page; main-app `ProviderConfig` is the
-    /// source of truth and the keyboard mirrors it.
-    @Published public var onboardingPage: Int = 0
-    /// `true` when the user tapped something (mic, settings) right
-    /// before a forced jump to the host app. The keyboard reads this
-    /// on return and auto-resumes the action so the user does not have
-    /// to tap the same button twice.
-    @Published public var pendingResumeAction: ResumeAction = .none
-
-    /// Action the keyboard should auto-trigger after a host-app jump
-    /// completes. Set just before `openHostApp`, consumed (set back to
-    /// `.none`) after the action fires once.
-    public enum ResumeAction: Equatable {
-        case none
-        case startRecording
-        case openSettings
-    }
 
     public enum ReturnKeyRole: Equatable {
         case newline
@@ -189,6 +183,7 @@ public final class KeyboardState: ObservableObject {
                 case .noFullAccess: return "unavailable(noFullAccess)"
                 case .appGroupUnavailable: return "unavailable(appGroupUnavailable)"
                 case .missingAPIKey: return "unavailable(missingAPIKey)"
+                case .onboardingIncomplete: return "unavailable(onboardingIncomplete)"
                 }
             }
         }()
@@ -219,11 +214,6 @@ public final class KeyboardState: ObservableObject {
     /// is derived from the locale id, so there's no separate toggle to
     /// persist. Wired in `KeyboardViewController.installStateActions`.
     public var setTranslationTargetLocaleId: (String) -> Void = { _ in }
-    public var advanceOnboarding:   () -> Void = {}
-    public var completeOnboarding:   () -> Void = {}
-    public var requestMicPermission:   () -> Void = {}
-    public var requestSpeechPermission: () -> Void = {}
-    public var openSystemSettings:   () -> Void = {}
     public var insertNewline:       () -> Void = {}
     public var insertSpace:         () -> Void = {}
     public var deleteBackward:      () -> Void = {}
@@ -232,6 +222,20 @@ public final class KeyboardState: ObservableObject {
     /// Cursor-drag pad press lifecycle — updates `cursorDragActive` and
     /// lets the view controller reset vertical-navigation stickiness.
     public var setCursorDragActive:  (Bool) -> Void = { _ in }
+    /// Switch voice ↔ typing. No-ops when voice pipeline is active.
+    public var setSurface: (Surface) -> Void = { _ in }
+
+    /// Recording / processing must stay on the voice surface.
+    public var locksTypingSurface: Bool {
+        switch phase {
+        case .requestingPermissions, .recording, .processing:
+            return true
+        default:
+            return false
+        }
+    }
+
+    public var canEnterTypingSurface: Bool { !locksTypingSurface }
 
     // MARK: - Preview helpers (DEBUG only)
 

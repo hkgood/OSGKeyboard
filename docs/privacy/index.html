@@ -35,13 +35,14 @@
     <li><strong>API credentials</strong> — your cloud-engine LLM API key is stored in the iOS Keychain on your device and is read only when an LLM request is made. It is shared with the main app through a shared Keychain group, never through UserDefaults.</li>
     <li><strong>App preferences</strong> — engine mode, recognition language, polish intensity, translation target, handedness, cursor-navigation toggle, and keyboard settings are stored in App Group <code>UserDefaults</code> on your device so the main app and keyboard extension stay in sync.</li>
     <li><strong>Personal dictionary</strong> — terms and aliases you add in the Dictionary tab are stored locally on your device. They are included in LLM polish prompts so your vocabulary is preserved; dictionary data is not uploaded to a separate server.</li>
+    <li><strong>On-device typing learning</strong> — the Chinese keyboard stores selected words and candidate frequencies in the App Group on your device so future candidates improve. This user dictionary is not uploaded by OSGKeyboard.</li>
     <li><strong>Voice history</strong> — the host app may keep a list of recent successful transcripts in its History tab. History is capped at 300 entries. When iCloud settings sync is enabled, history may also sync through your private iCloud Key-Value Store.</li>
     <li><strong>Usage statistics</strong> — cumulative dictation time, dictation characters, translation characters, and dictionary entry count are computed and stored locally on the home screen stats card.</li>
   </ul>
 
   <h2>What we do not collect</h2>
   <ul>
-    <li>We do <strong>not</strong> log or upload ordinary keystrokes you type with the keyboard.</li>
+    <li>We do <strong>not</strong> log or upload ordinary keystrokes. Only the on-device Chinese candidate-learning data described above is retained locally.</li>
     <li>We do <strong>not</strong> operate analytics, crash reporting, or advertising SDKs.</li>
     <li>We do <strong>not</strong> upload raw audio anywhere on the default local engine. The only exception is the optional cloud ASR engine: if you explicitly enable it (a confirmation dialog is shown first), recordings go to the ASR provider <em>you</em> configure — never to servers of ours.</li>
     <li>We do <strong>not</strong> sell personal data.</li>

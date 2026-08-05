@@ -7,6 +7,7 @@
 
 import SwiftUI
 import OSGKeyboardShared
+import OSGKeyboardHostSupport
 
 struct MainAppRoot: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -15,6 +16,7 @@ struct MainAppRoot: View {
     // `@ObservedObject` keeps subscriptions correct across Settings replay.
     @ObservedObject private var config = ProviderConfig.shared
     @StateObject private var flowManager = FlowSessionManager()
+    @State private var postOnboardingWarmupTask: Task<Void, Never>?
 
     var body: some View {
         Group {
@@ -63,10 +65,25 @@ struct MainAppRoot: View {
             AppOpenURLRouter.shared.register { url in
                 handleIncomingURL(url)
             }
-            flowManager.activateOnForeground()
+            OSGDiag.log(
+                "MainAppRoot.onAppear scene=\(String(describing: scenePhase)) "
+                    + "onboarding=\(config.hasCompletedOnboarding) \(OSGDiag.memoryTag())",
+                category: "flow"
+            )
             AppCloudSync.shared.startObservingExternalChanges()
-            Task {
-                await AppCloudSync.shared.pullAllIfEnabled()
+
+            // Heavy work (Flow / CLM / Rime) only after onboarding. Doing it
+            // earlier jetsams the host (~150 MB+) and the keyboard dies with it.
+            if config.hasCompletedOnboarding {
+                // Light path only: never auto-start continuous capture here.
+                // Capture starts on Home Start / keyboard startflow / mic press.
+                flowManager.activateOnForeground(reason: "MainAppRoot.onAppear")
+                schedulePostOnboardingWarmup(reason: "MainAppRoot.onAppear")
+            } else {
+                OSGDiag.log(
+                    "MainAppRoot.onAppear skip Flow/CLM/Rime (onboarding incomplete)",
+                    category: "flow"
+                )
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .settingsDidSyncFromCloud)) { _ in
@@ -74,14 +91,22 @@ struct MainAppRoot: View {
         }
         .onChange(of: config.hasCompletedOnboarding) { _, done in
             if done {
-                flowManager.activateOnForeground()
+                flowManager.activateOnForeground(reason: "onboardingCompleted")
+                schedulePostOnboardingWarmup(reason: "onboardingCompleted")
             }
         }
         .onChange(of: scenePhase) { _, phase in
             flowManager.handleScenePhase(phase)
-            guard phase == .active else { return }
+            guard phase == .active else {
+                postOnboardingWarmupTask?.cancel()
+                postOnboardingWarmupTask = nil
+                FlowSessionBridge.setHostHeavy(false)
+                return
+            }
             if config.hasCompletedOnboarding {
-                flowManager.activateOnForeground()
+                flowManager.activateOnForeground(reason: "scenePhase.active")
+                // Retry deferred Rime/CLM after a jetsam-prone launch.
+                schedulePostOnboardingWarmup(reason: "scenePhase.active.retry")
             }
             Task {
                 await AppCloudSync.shared.pullAllIfEnabled()
@@ -89,11 +114,64 @@ struct MainAppRoot: View {
         }
     }
 
+    /// Serial host warmup: Rime deploy → CLM. Never parallel with ASR.
+    /// ASR warms on first mic press (`FlowSessionManager.beginUtterance`).
+    ///
+    /// Intentionally delayed: running Rime/CLM on `onAppear` kept the host at
+    /// ~175 MB while the user switched to the keyboard, and the extension died
+    /// before `KVC.init` (no dyld breadcrumb).
+    private func schedulePostOnboardingWarmup(reason: String) {
+        OSGDiag.log(
+            "postOnboardingWarmup scheduled reason=\(reason) delay=45s \(OSGDiag.memoryTag())",
+            category: "flow"
+        )
+        postOnboardingWarmupTask?.cancel()
+        postOnboardingWarmupTask = Task { @MainActor in
+            // Let the user leave the host / cold-start the keyboard first.
+            try? await Task.sleep(nanoseconds: 45_000_000_000)
+            guard !Task.isCancelled else { return }
+            guard scenePhase == .active else {
+                OSGDiag.log(
+                    "postOnboardingWarmup skip reason=notActive \(OSGDiag.memoryTag())",
+                    category: "flow"
+                )
+                return
+            }
+            guard !flowManager.shouldDeferHostHeavyWork else {
+                OSGDiag.log(
+                    "postOnboardingWarmup skip reason=flowBusy \(OSGDiag.memoryTag())",
+                    category: "flow"
+                )
+                return
+            }
+
+            await AppCloudSync.shared.pullAllIfEnabled()
+
+            // hostHeavy only while heavy work runs — never leave it stuck at 1
+            // just because RSS is above the soft gate (that blocked typing).
+            guard HostMemoryBudget.gate("rime.installIfNeeded") else { return }
+
+            FlowSessionBridge.setHostHeavy(true)
+            defer { FlowSessionBridge.setHostHeavy(false) }
+
+            let typingConfig = TypingInputConfiguration.shared.snapshot
+            OSGDiag.log("rime.installIfNeeded begin \(OSGDiag.memoryTag())", category: "flow")
+            try? await RimeResourceInstaller.shared.installIfNeeded(
+                configuration: typingConfig
+            )
+            OSGDiag.log("rime.installIfNeeded done \(OSGDiag.memoryTag())", category: "flow")
+
+            guard HostMemoryBudget.gate("clm.prepare", category: "asr") else { return }
+            CustomLanguageModelManager.shared.prepareInBackgroundIfNeeded()
+            OSGDiag.log("clm.prepare scheduled \(OSGDiag.memoryTag())", category: "asr")
+        }
+    }
+
     private func handleIncomingURL(_ url: URL) {
         guard url.scheme == "osgkeyboard" else { return }
         switch url.host {
         case "startflow":
-            flowManager.startSession(coldStart: true)
+            flowManager.startSession(coldStart: true, reason: "url.startflow")
         #if DEBUG
         case "seed-demo":
             DemoDataSeeder.seedRichPlaceholderData()

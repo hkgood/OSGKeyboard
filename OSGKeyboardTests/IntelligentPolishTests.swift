@@ -29,18 +29,6 @@ final class IntelligentPolishTests: XCTestCase {
         super.tearDown()
     }
 
-    // MARK: - Polish intensity migration
-
-    func testPolishIntensityMigratesLegacyOffToMedium() {
-        defaults.set(PolishIntensity.legacyOffRawValue, forKey: "config.polishIntensity")
-        XCTAssertEqual(store.polishIntensity, .medium)
-        XCTAssertEqual(defaults.string(forKey: "config.polishIntensity"), PolishIntensity.medium.rawValue)
-    }
-
-    func testPolishIntensityResolveLegacyOff() {
-        XCTAssertEqual(PolishIntensity.resolve(storedRawValue: "off"), .medium)
-    }
-
     // MARK: - PolishingService prompt construction
 
     func testPolishServiceUltraShortTextSkipsLLM() async throws {
@@ -49,7 +37,7 @@ final class IntelligentPolishTests: XCTestCase {
             store: store,
             client: ThrowingLLMClient()
         )
-        let result = try await service.polish("好", context: PolishContext(intensity: .heavy))
+        let result = try await service.polish("好", context: PolishContext())
         XCTAssertEqual(result, "好")
     }
 
@@ -59,9 +47,60 @@ final class IntelligentPolishTests: XCTestCase {
         let service = PolishingService(store: store, client: captured)
         _ = try await service.polish(
             "第一点测试第二点上线",
-            context: PolishContext(intensity: .medium)
+            context: PolishContext()
         )
         XCTAssertFalse(captured.lastPrompt.isEmpty)
+    }
+
+    func testHeavyFunStylesUseSingleCreativeRequestWithoutLegacyRoutes() async throws {
+        let cases = [
+            ("builtin.dating", "多喝热水", "心动公式"),
+            ("builtin.flex", "这个方案还行", "装腔公式"),
+            ("builtin.corp", "这期可能推迟", "黑话公式"),
+            ("builtin.diba", "这个结论我不同意", "拆招公式"),
+            ("builtin.xhs", "这家店味道一般", "集美公式"),
+        ]
+
+        for (id, input, marker) in cases {
+            store.setActivePolishStyleId(id)
+            store.setPolishIntensity(.heavy)
+            let captured = CapturingLLMClient()
+            let service = PolishingService(store: store, client: captured)
+
+            _ = try await service.polish(
+                input,
+                context: PolishContext()
+            )
+
+            XCTAssertEqual(captured.optionsHistory.count, 1, id)
+            XCTAssertEqual(captured.optionsHistory.first?.temperature, 0.65, id)
+            XCTAssertTrue(captured.lastPrompt.contains("趣味风格共享格式化"), id)
+            XCTAssertFalse(captured.lastPrompt.contains("全局输出契约"), id)
+            XCTAssertFalse(captured.lastPrompt.contains("问句守卫"), id)
+            XCTAssertFalse(captured.lastPrompt.contains("参考长度范围"), id)
+            XCTAssertTrue(captured.lastPrompt.contains(marker), id)
+            XCTAssertFalse(captured.lastPrompt.contains("专属降级"), id)
+            XCTAssertFalse(captured.lastPrompt.contains("本次方向"), id)
+        }
+    }
+
+    func testLightFunStyleUsesFullSafetyPromptAndConservativeSampling() async throws {
+        store.setActivePolishStyleId("builtin.dating")
+        store.setPolishIntensity(.light)
+        let captured = CapturingLLMClient()
+        let service = PolishingService(store: store, client: captured)
+
+        _ = try await service.polish(
+            "你吃饭了吗？",
+            context: PolishContext(appContext: .chat)
+        )
+
+        XCTAssertEqual(captured.optionsHistory.count, 1)
+        XCTAssertEqual(captured.optionsHistory.first?.temperature, 0.1)
+        XCTAssertTrue(captured.lastPrompt.contains("全局输出契约"))
+        XCTAssertTrue(captured.lastPrompt.contains("问句守卫"))
+        XCTAssertTrue(captured.lastPrompt.contains("# 输入环境"))
+        XCTAssertFalse(captured.lastPrompt.contains("趣味风格共享格式化"))
     }
 
     func testPersonalDictionaryUpsertManual() {
@@ -115,16 +154,24 @@ final class IntelligentPolishTests: XCTestCase {
         let service = PolishingService(store: store, client: captured)
         _ = try await service.polish(
             "今天我们部署 k8s 集群",
-            context: PolishContext(appContext: .code, intensity: .medium)
+            context: PolishContext(appContext: .code)
         )
         XCTAssertFalse(captured.lastPrompt.isEmpty)
     }
 
     func testPolishServiceMissingAPIKeyThrows() async {
         store.setEngineMode("cloud")
+        // Default polish provider is deepseek; a filled PreconfiguredKeys.local
+        // would satisfy hasPolishAPIKey. Use a unique provider account so a
+        // developer's simulator Keychain cannot make this test hit the network.
+        let missingProvider = "test-missing-\(UUID().uuidString)"
         let service = PolishingService(store: store)
         do {
-            _ = try await service.polish("hello world", context: PolishContext(intensity: .medium))
+            _ = try await service.polish(
+                "hello world",
+                providerIdOverride: missingProvider,
+                context: PolishContext()
+            )
             XCTFail("Expected missingAPIKey")
         } catch let error as PolishingService.PolishError {
             XCTAssertEqual(error, .missingAPIKey)
@@ -139,7 +186,7 @@ final class IntelligentPolishTests: XCTestCase {
             store: store,
             client: ThrowingLLMClient()
         )
-        let result = try await service.polish("明天见", context: PolishContext(intensity: .heavy))
+        let result = try await service.polish("明天见", context: PolishContext())
         XCTAssertEqual(result, "明天见")
     }
 
@@ -154,7 +201,7 @@ final class IntelligentPolishTests: XCTestCase {
         let service = PolishingService(store: store, client: captured)
         _ = try await service.polish(
             "今天我们部署 k8s 集群",
-            context: PolishContext(appContext: .code, intensity: .medium)
+            context: PolishContext(appContext: .code)
         )
         XCTAssertTrue(captured.lastPrompt.contains("Kubernetes"),
                       "Prompt must include dictionary term. Got: \(captured.lastPrompt)")
@@ -179,7 +226,7 @@ final class IntelligentPolishTests: XCTestCase {
         let captured = CapturingLLMClient()
         let service = PolishingService(store: store, client: captured)
         let input = "这是一段独一无二的测试转写文本ZZQQ"
-        _ = try await service.polish(input, context: PolishContext(intensity: .medium))
+        _ = try await service.polish(input, context: PolishContext())
         XCTAssertFalse(captured.lastPrompt.contains("ZZQQ"))
         XCTAssertEqual(captured.lastText, input)
     }
@@ -190,7 +237,7 @@ final class IntelligentPolishTests: XCTestCase {
         _ = try await service.polish(
             "今天讨论 roadmap 和发布时间",
             providerIdOverride: "openai",
-            context: PolishContext(intensity: .medium)
+            context: PolishContext()
         )
         XCTAssertTrue(captured.lastPrompt.contains("全局输出契约"))
     }
@@ -223,19 +270,24 @@ final class IntelligentPolishTests: XCTestCase {
         )
         XCTAssertFalse(PolishPromptComposer.chineseCorePrompt.contains("{{"))
         XCTAssertTrue(PolishPromptComposer.chineseCorePrompt.contains("T1 自我修正合并"))
+        XCTAssertTrue(PolishPromptComposer.chineseCorePrompt.contains("T3 同音/近音纠错"))
+        XCTAssertTrue(PolishPromptComposer.chineseCorePrompt.contains("先完成 T1–T3"))
+        XCTAssertTrue(PolishPromptComposer.chineseCorePrompt.contains("在见一面"))
+        XCTAssertTrue(PolishPromptComposer.englishCorePrompt.contains("Homophone / near-homophone repair"))
+        XCTAssertTrue(PolishPromptComposer.englishCorePrompt.contains("let's meat again"))
     }
 
-    func testPolishServicePromptIncludesStructureRulesAtLightIntensity() async throws {
+    func testPolishServicePromptIncludesStructureRules() async throws {
         store.setEngineMode("local")
         let captured = CapturingLLMClient()
         let service = PolishingService(store: store, client: captured)
         _ = try await service.polish(
             "今天有三个任务第一点修复登录第二点优化键盘",
-            context: PolishContext(intensity: .light)
+            context: PolishContext()
         )
         XCTAssertTrue(
             captured.lastPrompt.contains("第一点") || captured.lastPrompt.contains("numbered"),
-            "Light intensity must still include structure rules. Got: \(captured.lastPrompt.prefix(300))"
+            "Prompt must include structure rules. Got: \(captured.lastPrompt.prefix(300))"
         )
     }
 
@@ -244,7 +296,7 @@ final class IntelligentPolishTests: XCTestCase {
         let captured = CapturingLLMClient()
         let service = PolishingService(store: store, client: captured, timeout: 15)
         let longText = String(repeating: "这是一段比较长的语音识别测试文本，", count: 20)
-        _ = try await service.polish(longText, context: PolishContext(intensity: .medium))
+        _ = try await service.polish(longText, context: PolishContext())
         let passedTimeout = try XCTUnwrap(captured.lastTimeout)
         XCTAssertGreaterThan(
             passedTimeout, 15,
@@ -257,7 +309,7 @@ final class IntelligentPolishTests: XCTestCase {
         let captured = CapturingLLMClient()
         let service = PolishingService(store: store, client: captured, timeout: 15)
         let veryLong = String(repeating: "测试", count: 2000)
-        _ = try await service.polish(veryLong, context: PolishContext(intensity: .medium))
+        _ = try await service.polish(veryLong, context: PolishContext())
         let passedTimeout = try XCTUnwrap(captured.lastTimeout)
         XCTAssertLessThanOrEqual(passedTimeout, 120)
     }
@@ -268,7 +320,7 @@ final class IntelligentPolishTests: XCTestCase {
         let service = PolishingService(store: store, client: captured)
         _ = try await service.polish(
             "今天我们部署 k8s 集群",
-            context: PolishContext(intensity: .medium)
+            context: PolishContext()
         )
         XCTAssertTrue(
             captured.lastPrompt.contains("全局输出契约"),
@@ -282,7 +334,7 @@ final class IntelligentPolishTests: XCTestCase {
         let service = PolishingService(store: store, client: emojiClient)
         let result = try await service.polish(
             "今天的工作已经全部完成了",
-            context: PolishContext(intensity: .medium)
+            context: PolishContext()
         )
         XCTAssertFalse(result.contains("👍"))
         XCTAssertTrue(result.contains("完成"))
@@ -294,24 +346,24 @@ final class IntelligentPolishTests: XCTestCase {
         let service = PolishingService(store: store, client: emptyClient)
         let result = try await service.polish(
             "今天的部署已经全部完成",
-            context: PolishContext(intensity: .medium)
+            context: PolishContext()
         )
         XCTAssertEqual(result, "今天的部署已经全部完成")
     }
 
-    func testValidatorRetriesDeterministicallyAndRecovers() async throws {
-        let client = ValidationRetryLLMClient()
+    func testValidatorFallsBackAfterSingleHardFailure() async throws {
+        let client = ValidationFailureLLMClient()
         let service = PolishingService(store: store, client: client)
         let outcome = try await service.polishWithOutcome(
             "please keep user_id in this technical message",
             context: PolishContext(appContext: .code)
         )
-        XCTAssertEqual(outcome.text, "Please keep user_id in this technical message.")
-        XCTAssertFalse(outcome.qualityDegraded)
-        XCTAssertEqual(client.temperatures.compactMap { $0 }, [0.1, 0])
+        XCTAssertEqual(outcome.text, "please keep user_id in this technical message")
+        XCTAssertTrue(outcome.qualityDegraded)
+        XCTAssertEqual(client.temperatures.compactMap { $0 }, [0.1])
     }
 
-    func testValidatorFallsBackToMinimalPolishAfterSecondHardFailure() async throws {
+    func testValidatorFallsBackToMinimalPolishAfterHardFailure() async throws {
         let service = PolishingService(
             store: store,
             client: FixedResponseLLMClient(response: "Please keep it.")
@@ -524,8 +576,8 @@ final class IntelligentPolishTests: XCTestCase {
         XCTAssertEqual(result, .code)
     }
 
-    func testChatAppContextGuidelineDoesNotEncourageEmoji() {
-        let guideline = AppContext.chat.polishGuideline
+    func testChatTranslationGuidelineDoesNotEncourageEmoji() {
+        let guideline = AppContext.chat.translationGuideline
         XCTAssertFalse(guideline.localizedCaseInsensitiveContains("emoji-friendly"))
         XCTAssertTrue(guideline.localizedCaseInsensitiveContains("Do not add emojis"))
     }
@@ -557,6 +609,8 @@ private final class CapturingLLMClient: LLMClient, @unchecked Sendable {
     private(set) var lastPrompt: String = ""
     private(set) var lastText: String = ""
     private(set) var lastTimeout: TimeInterval?
+    private(set) var lastOptions: LLMGenerationOptions?
+    private(set) var optionsHistory: [LLMGenerationOptions] = []
     let requestTimeout: TimeInterval = 15
 
     func polish(_ text: String, systemPrompt: String, timeout: TimeInterval?) async throws -> String {
@@ -564,6 +618,21 @@ private final class CapturingLLMClient: LLMClient, @unchecked Sendable {
         lastPrompt = systemPrompt
         lastTimeout = timeout
         return text
+    }
+
+    func polish(
+        _ text: String,
+        systemPrompt: String,
+        timeout: TimeInterval?,
+        options: LLMGenerationOptions
+    ) async throws -> String {
+        lastOptions = options
+        optionsHistory.append(options)
+        return try await polish(
+            text,
+            systemPrompt: systemPrompt,
+            timeout: timeout
+        )
     }
 }
 
@@ -592,7 +661,7 @@ private final class FixedResponseLLMClient: LLMClient, @unchecked Sendable {
     }
 }
 
-private final class ValidationRetryLLMClient: LLMClient, @unchecked Sendable {
+private final class ValidationFailureLLMClient: LLMClient, @unchecked Sendable {
     let requestTimeout: TimeInterval = 15
     private(set) var temperatures: [Double?] = []
 
@@ -607,9 +676,6 @@ private final class ValidationRetryLLMClient: LLMClient, @unchecked Sendable {
         options: LLMGenerationOptions
     ) async throws -> String {
         temperatures.append(options.temperature)
-        if options.temperature == 0 {
-            return "Please keep user_id in this technical message."
-        }
         return "Please keep it."
     }
 }

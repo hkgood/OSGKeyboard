@@ -9,6 +9,7 @@ import AVFoundation
 import AVKit
 import CoreMedia
 import UIKit
+import OSGKeyboardHostSupport
 
 /// Why `startAndWait` could not prove an active PiP window.
 enum FlowPiPStartFailure: Equatable, Sendable {
@@ -95,7 +96,7 @@ final class FlowPictureInPictureController: NSObject {
     // MARK: - Lifecycle
 
     @discardableResult
-    func start() -> Bool {
+    func start() async -> Bool {
         lastSystemStartFailure = nil
         guard AVPictureInPictureController.isPictureInPictureSupported() else {
             return false
@@ -104,7 +105,7 @@ final class FlowPictureInPictureController: NSObject {
 
         // Required before constructing the controller; without an active
         // session, `isPictureInPicturePossible` stays false forever.
-        guard activateAudioSessionForPiP() else {
+        guard await activateAudioSessionForPiP() else {
             return false
         }
 
@@ -150,7 +151,7 @@ final class FlowPictureInPictureController: NSObject {
         }
 
         lastSystemStartFailure = nil
-        guard start() else {
+        guard await start() else {
             stopFramePump()
             if lastSystemStartFailure != nil {
                 return .failed(.systemRejected)
@@ -211,9 +212,9 @@ final class FlowPictureInPictureController: NSObject {
 
     /// Nudge the sample-buffer source right before resigning active so
     /// `canStartPictureInPictureAutomaticallyFromInline` can take over.
-    func prepareForBackgroundAutoStart() {
+    func prepareForBackgroundAutoStart() async {
         guard isPictureInPictureActive || pipController != nil else { return }
-        _ = activateAudioSessionForPiP()
+        _ = await activateAudioSessionForPiP()
         startFramePump()
         enqueueGuideFrame()
         pipController?.invalidatePlaybackState()
@@ -222,12 +223,12 @@ final class FlowPictureInPictureController: NSObject {
         }
     }
 
-    /// Re-activate the playback session after utterance capture releases the
-    /// mic (`setActive(false)`). Without this, PiP can lose eligibility between
-    /// utterances even though the floating window is still visible.
+    /// Keep the shared audio session eligible for PiP after capture stops its
+    /// engine. After the first utterance the coordinator intentionally retains
+    /// the stable playAndRecord category instead of flipping back to playback.
     @discardableResult
-    func reassertKeepAliveAudioSession() -> Bool {
-        activateAudioSessionForPiP()
+    func reassertKeepAliveAudioSession() async -> Bool {
+        await activateAudioSessionForPiP()
     }
 
     /// Kept for FlowSessionManager call sites; guide animation ignores live levels.
@@ -241,19 +242,15 @@ final class FlowPictureInPictureController: NSObject {
     private var didActivateAudioSessionBeforeController = false
 
     @discardableResult
-    private func activateAudioSessionForPiP() -> Bool {
-        do {
-            let session = AVAudioSession.sharedInstance()
-            // Playback (not record) keeps PiP eligible between utterances without
-            // holding the mic. Utterance capture later switches to playAndRecord.
-            try session.setCategory(.playback, mode: .moviePlayback, options: [.mixWithOthers])
-            try session.setActive(true)
-            FlowDiagnostics.log("PiP audio session active category=playback")
+    private func activateAudioSessionForPiP() async -> Bool {
+        // The first PiP start uses playback. After capture establishes a
+        // playAndRecord route, the coordinator keeps that category active and
+        // only stops the engine/tap between utterances.
+        if await FlowAudioSessionCoordinator.shared.activatePlayback() {
+            FlowDiagnostics.log("PiP audio session ready")
             return true
-        } catch {
-            FlowDiagnostics.log("PiP audio session failed: \(error.localizedDescription)")
-            return false
         }
+        return false
     }
 
     private func waitForHostInWindow(timeout: TimeInterval) async -> Bool {
