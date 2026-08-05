@@ -9,6 +9,7 @@
 
 import SwiftUI
 import OSGKeyboardShared
+import OSGKeyboardHostSupport
 
 // MARK: - Layout metrics
 

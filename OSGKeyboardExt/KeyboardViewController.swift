@@ -36,7 +36,15 @@ public final class KeyboardViewController: UIInputViewController {
     public typealias State = KeyboardState
 
     private let state = State()
-    private let typingSession = TypingSessionController()
+    /// Created on first typing use so the default voice surface never pays
+    /// for `TypingSessionController` / engine factories at KVC init.
+    private var typingSessionStorage: TypingSessionController?
+    private var typingSession: TypingSessionController {
+        if let typingSessionStorage { return typingSessionStorage }
+        let created = TypingSessionController()
+        typingSessionStorage = created
+        return created
+    }
     private let persistor = AppGroupPersistor()
 
     private var hosting: UIHostingController<KeyboardSurfaceRoot>?
@@ -47,10 +55,31 @@ public final class KeyboardViewController: UIInputViewController {
     private var textInserter: KeyboardTextInserter!
     private var flowCoordinator: KeyboardFlowCoordinator!
     private var configSync: KeyboardConfigSync!
-    private var cursorDrag: CursorDragController!
+    /// UIKit may synchronously lay out the view during `viewDidLoad`.
+    /// Keep this optional so an early layout pass is harmless.
+    private var cursorDrag: CursorDragController?
 
     private var targetKeyboardHeight: CGFloat {
         KeyboardSurfaceRoot.height(for: state.surface)
+    }
+
+    // MARK: - Init
+
+    public override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
+        OSGDiag.log("KVC.init(nib) begin \(OSGDiag.memoryTag())", category: "boot")
+        super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
+        OSGDiag.log("KVC.init(nib) done \(OSGDiag.memoryTag())", category: "boot")
+    }
+
+    public required init?(coder: NSCoder) {
+        OSGDiag.log("KVC.init(coder) begin \(OSGDiag.memoryTag())", category: "boot")
+        super.init(coder: coder)
+        OSGDiag.log("KVC.init(coder) done \(OSGDiag.memoryTag())", category: "boot")
+    }
+
+    deinit {
+        // Intentionally NSLog-only: deinit is nonisolated.
+        NSLog("%@", "[OSGDiag/boot] KVC.deinit")
     }
 
     // MARK: - Lifecycle
@@ -59,28 +88,56 @@ public final class KeyboardViewController: UIInputViewController {
         super.viewDidLoad()
         // Voice-first keyboard — hide the misleading "English" subtitle in Settings.
         primaryLanguage = "mis"
-        OSGLog.keyboardExt.info("viewDidLoad — extension booted")
+        let preferred = TypingInputConfiguration.preferredSurfaceOnOpen()
+        OSGDiag.log(
+            "KVC.viewDidLoad begin preferredSurface=\(preferred.rawValue) "
+                + "fullAccess=\(hasFullAccess) \(OSGDiag.memoryTag())",
+            category: "boot"
+        )
         // Deliberately NO CustomLanguageModelManager prewarm here: the
         // extension never runs ASR (the host app owns the microphone and
         // the SpeechAnalyzer pipeline), and compiling/caching an LM inside
         // the keyboard's ~60 MB jetsam budget risks the system killing the
         // keyboard outright. The host app prewarms it on session start.
         setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
+        // Establish layout dependencies before applying the preferred surface.
+        // `applySurface` updates height and UIKit may lay out synchronously.
         installKeyboardHeight()
         configureDictationBehavior()
         installServices()
+        OSGDiag.log("KVC.viewDidLoad after installServices \(OSGDiag.memoryTag())", category: "boot")
+        // Apply open preference before mounting SwiftUI so the first frame is
+        // already voice or typing — avoids a visible surface flash.
+        applyPreferredSurfaceOnOpen()
+        OSGDiag.log("KVC.viewDidLoad after preferredSurface surface=\(state.surface.rawValue)", category: "boot")
         installTypingContextProviders()
         installStateActions()
         installSurfaceObservers()
         installSwiftUI()
+        OSGDiag.log("KVC.viewDidLoad after installSwiftUI \(OSGDiag.memoryTag())", category: "boot")
         _ = configSync.loadPersistedConfig()
         configSync.installDarwinObservers()
         flowCoordinator.refreshSessionState()
+        OSGDiag.log(
+            "KVC.viewDidLoad done surface=\(state.surface.rawValue) "
+                + "sessionActive=\(FlowSessionBridge.isSessionActive()) "
+                + "hostReady=\(FlowSessionBridge.isHostReady()) \(OSGDiag.memoryTag())",
+            category: "boot"
+        )
     }
 
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        OSGDiag.log(
+            "KVC.viewWillDisappear surface=\(state.surface.rawValue) "
+                + "preserve=\(flowCoordinator.preservesLifecycleOnDisappear) \(OSGDiag.memoryTag())",
+            category: "boot"
+        )
         flowCoordinator.stopSessionMonitor()
+        // Remember what the user left on, then pre-position a reused
+        // extension instance for the next open policy (no first-frame jump).
+        TypingInputConfiguration.persistLastSurface(state.surface)
+        prepareSurfaceForNextPresentation()
         if state.surface == .typing {
             typingSession.leaveTypingMode()
         }
@@ -93,6 +150,11 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        OSGDiag.log(
+            "KVC.viewWillAppear begin surface=\(state.surface.rawValue) "
+                + "fullAccess=\(hasFullAccess) \(OSGDiag.memoryTag())",
+            category: "boot"
+        )
         setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
         configureDictationBehavior()
         KeyboardSetupBridge.markExtensionAppearance(hasFullAccess: hasFullAccess)
@@ -101,23 +163,41 @@ public final class KeyboardViewController: UIInputViewController {
         flowCoordinator.startSessionMonitor()
         configSync.syncOnboardingStateFromAppGroup()
         configSync.refreshConfigFromAppGroup()
+        // Settings may have changed while the extension stayed alive.
         applyPreferredSurfaceOnOpen()
         if state.surface == .typing {
+            OSGDiag.log("KVC.viewWillAppear enterTypingMode", category: "boot")
             typingSession.enterTypingMode()
         }
-        configSync.autoAdvancePastKeyboardSetupStepIfNeeded()
+        OSGDiag.log(
+            "KVC.viewWillAppear done surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
+            category: "boot"
+        )
     }
 
     public override func viewIsAppearing(_ animated: Bool) {
         super.viewIsAppearing(animated)
         applyPresentationHeightOffset()
+        OSGDiag.log(
+            "KVC.viewIsAppearing height=\(keyboardHeightConstraint?.constant ?? -1) "
+                + "\(OSGDiag.memoryTag())",
+            category: "boot"
+        )
     }
 
     public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        OSGDiag.log(
+            "KVC.viewDidAppear begin surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
+            category: "boot"
+        )
         disableSystemGestureDelays()
         keyboardHeightConstraint?.constant = targetKeyboardHeight
         refreshReturnKeyRole()
+        OSGDiag.log(
+            "KVC.viewDidAppear done height=\(targetKeyboardHeight) \(OSGDiag.memoryTag())",
+            category: "boot"
+        )
     }
 
     public override func textDidChange(_ textInput: UITextInput?) {
@@ -135,6 +215,10 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
+        OSGDiag.log(
+            "KVC.didReceiveMemoryWarning surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
+            category: "boot"
+        )
         flowCoordinator.cancelPipelineUnlessAwaitingResult()
         if state.surface == .typing {
             typingSession.leaveTypingMode()
@@ -146,7 +230,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        cursorDrag.layoutChrome()
+        cursorDrag?.layoutChrome()
     }
 
     // MARK: - Services
@@ -201,22 +285,17 @@ public final class KeyboardViewController: UIInputViewController {
         state.setTranslationTargetLocaleId = { [weak self] id in
             self?.configSync.persistTranslationTargetLocaleId(id)
         }
-        state.advanceOnboarding   = { [weak self] in self?.configSync.advanceOnboarding() }
-        state.completeOnboarding   = { [weak self] in self?.configSync.completeOnboarding() }
-        state.requestMicPermission   = { [weak self] in self?.requestMicPermissionFromExtension() }
-        state.requestSpeechPermission = { [weak self] in self?.requestSpeechPermissionFromExtension() }
-        state.openSystemSettings   = { [weak self] in self?.openSystemSettingsFromExtension() }
         state.insertNewline       = { [weak self] in self?.textDocumentProxy.insertText("\n") }
         state.insertSpace         = { [weak self] in self?.textDocumentProxy.insertText(" ") }
         state.deleteBackward      = { [weak self] in self?.textDocumentProxy.deleteBackward() }
         state.moveCursorHorizontal = { [weak self] steps in
-            self?.cursorDrag.moveCursorHorizontally(by: steps)
+            self?.cursorDrag?.moveCursorHorizontally(by: steps)
         }
         state.moveCursorVertical = { [weak self] steps in
-            self?.cursorDrag.moveCursorVertically(by: steps)
+            self?.cursorDrag?.moveCursorVertically(by: steps)
         }
         state.setCursorDragActive = { [weak self] active in
-            self?.cursorDrag.setCursorDragActive(active)
+            self?.cursorDrag?.setCursorDragActive(active)
         }
         state.setSurface = { [weak self] surface in
             self?.applySurface(surface)
@@ -244,24 +323,48 @@ public final class KeyboardViewController: UIInputViewController {
 
     private func applySurface(_ surface: State.Surface) {
         if surface == .typing, state.locksTypingSurface {
+            OSGDiag.log("applySurface blocked typing (locksTypingSurface)", category: "boot")
+            return
+        }
+        if surface == .typing, FlowSessionBridge.isHostHeavy() {
+            OSGDiag.log("applySurface stay voice hostHeavy=1", category: "boot")
             return
         }
         guard state.surface != surface else {
             refreshKeyboardHeight()
             return
         }
+        OSGDiag.log(
+            "applySurface \(state.surface.rawValue) → \(surface.rawValue) \(OSGDiag.memoryTag())",
+            category: "boot"
+        )
         state.surface = surface
         if surface == .voice {
             typingSession.leaveTypingMode()
+        } else {
+            typingSession.enterTypingMode()
         }
         refreshKeyboardHeight()
     }
 
     private func applyPreferredSurfaceOnOpen() {
-        let preferredSurface: State.Surface = TypingInputConfiguration.prefersTypingOnOpen()
-            ? .typing
-            : .voice
-        applySurface(preferredSurface)
+        let preferred = TypingInputConfiguration.preferredSurfaceOnOpen()
+        OSGDiag.log(
+            "applyPreferredSurfaceOnOpen preferred=\(preferred.rawValue) "
+                + "remember=\(TypingInputConfiguration.remembersLastSurface()) "
+                + "defaultTyping=\(TypingInputConfiguration.prefersTypingOnOpen())",
+            category: "boot"
+        )
+        applySurface(preferred)
+    }
+
+    /// When not remembering, snap to the static open preference while hidden
+    /// so a reused keyboard instance does not animate voice → typing on show.
+    private func prepareSurfaceForNextPresentation() {
+        guard !TypingInputConfiguration.remembersLastSurface() else { return }
+        let preferred = TypingInputConfiguration.preferredSurfaceOnOpen()
+        guard state.surface != preferred else { return }
+        state.surface = preferred
     }
 
     private func refreshKeyboardHeight() {
@@ -270,10 +373,11 @@ public final class KeyboardViewController: UIInputViewController {
         // switch subtracts the system's ~228 pt encapsulated height from the
         // requested typing height and collapses the keyboard to a thin strip.
         // Once presented, update our height constraint directly, matching the
-        // final assignment in `viewDidAppear`.
+        // final assignment in `viewDidAppear`. Avoid synchronous layout here:
+        // this is also called during `viewDidLoad`, where re-entrant layout can
+        // observe partially initialized controller dependencies.
         keyboardHeightConstraint?.constant = targetKeyboardHeight
         view.setNeedsLayout()
-        view.layoutIfNeeded()
     }
 
     private func refreshReturnKeyRole() {
@@ -328,19 +432,11 @@ public final class KeyboardViewController: UIInputViewController {
         hasDictationKey = true
     }
 
+    /// Only walk our own input-view subtree. Recursing into the host window /
+    /// root VC previously risked "System gesture gate timed out" and the
+    /// system killing the keyboard plugin.
     private func disableSystemGestureDelays() {
         disableGestureDelays(in: view)
-        var parent = view.superview
-        while let current = parent {
-            disableGestureDelays(in: current)
-            parent = current.superview
-        }
-        if let window = view.window {
-            disableGestureDelays(in: window)
-            if let rootView = window.rootViewController?.view {
-                disableGestureDelays(in: rootView)
-            }
-        }
     }
 
     private func disableGestureDelays(in targetView: UIView) {
@@ -353,17 +449,6 @@ public final class KeyboardViewController: UIInputViewController {
             }
         }
         targetView.subviews.forEach(disableGestureDelays)
-    }
-
-    // MARK: - Permission / settings stubs (v0.3.0)
-
-    private func requestMicPermissionFromExtension() {}
-
-    private func requestSpeechPermissionFromExtension() {}
-
-    private func openSystemSettingsFromExtension() {
-        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-        HostAppLauncher.open(url: url, from: self) { _ in }
     }
 
     // MARK: - Layout
@@ -414,7 +499,7 @@ public final class KeyboardViewController: UIInputViewController {
         ])
         host.didMove(toParent: self)
         hosting = host
-        cursorDrag.install(on: view)
+        cursorDrag?.install(on: view)
     }
 
     // MARK: - App context

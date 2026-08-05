@@ -13,6 +13,8 @@ public final class TypingSessionController: ObservableObject {
     @Published public private(set) var page: TypingKeyPage = .letters
     @Published public private(set) var shiftActive: Bool = false
     @Published public private(set) var capsLock: Bool = false
+    /// Finger is down on Shift (iOS: hold for continuous uppercase; release ends).
+    @Published public private(set) var shiftHeld: Bool = false
     @Published public private(set) var composition: TypingComposition = .empty
     @Published public private(set) var engineReady: Bool = false
     @Published public private(set) var schema: TypingInputSchema
@@ -34,32 +36,64 @@ public final class TypingSessionController: ObservableObject {
     public var autocapitalizationModeProvider: (() -> TypingAutocapitalizationMode)?
 
     public let layout: TypingLayoutProviding
-    private let engine: RimeEngineBridging
-    private let englishEngine: EnglishSuggestionEngine
+    private let engineFactory: @MainActor () -> RimeEngineBridging
+    private let englishFactory: @MainActor () -> EnglishSuggestionEngine
     private let learningStore: EnglishLearningStore
+    private var engineStorage: RimeEngineBridging?
+    private var englishStorage: EnglishSuggestionEngine?
     private var prepared = false
+    private var prepareTask: Task<Void, Never>?
+
+    private var engine: RimeEngineBridging {
+        if let engineStorage { return engineStorage }
+        let created = engineFactory()
+        engineStorage = created
+        schema = created.schema
+        return created
+    }
+
+    private var englishEngine: EnglishSuggestionEngine {
+        if let englishStorage { return englishStorage }
+        let created = englishFactory()
+        englishStorage = created
+        return created
+    }
 
     // English word-level state (characters are already in the document).
     private var englishCurrentWord: String = ""
     private var englishPreviousWord: String = ""
     private var pendingAutocorrection: EnglishCorrectionDecision?
     private var personalTermsCache: [String] = []
+    /// User tapped Shift for a one-shot capital; autocap must not overwrite this.
+    private var shiftPrimedByUser = false
+    /// True if any key was typed while the current Shift hold was active.
+    private var typedWhileShiftHeld = false
 
     public init(
-        engine: RimeEngineBridging = LibrimeEngine(),
+        engine: (@MainActor () -> RimeEngineBridging)? = nil,
         layout: TypingLayoutProviding = StandardTypingLayout(),
-        englishEngine: EnglishSuggestionEngine = EnglishSuggestionEngine(),
+        englishEngine: (@MainActor () -> EnglishSuggestionEngine)? = nil,
         learningStore: EnglishLearningStore = EnglishLearningStore()
     ) {
-        self.engine = engine
+        self.engineFactory = engine ?? { LibrimeEngine() }
         self.layout = layout
-        self.englishEngine = englishEngine
+        self.englishFactory = englishEngine ?? { EnglishSuggestionEngine() }
         self.learningStore = learningStore
-        schema = engine.schema
+        // Avoid constructing librime until the first Chinese keystroke / prepare.
+        schema = TypingInputConfiguration.shared.schema
+    }
+
+    /// Letter keys and Shift glyph follow any armed / held / Caps Lock state.
+    public var isShiftEnabled: Bool {
+        shiftActive || capsLock || shiftHeld
     }
 
     public var keyRows: [[String]] {
-        var rows = layout.rows(for: page, shiftActive: shiftActive || capsLock)
+        var rows = layout.rows(
+            for: page,
+            language: language,
+            shiftActive: isShiftEnabled
+        )
         if page == .letters,
            language == .chinese,
            schema != .fullPinyin,
@@ -73,23 +107,57 @@ public final class TypingSessionController: ObservableObject {
     }
 
     public func enterTypingMode() {
+        OSGDiag.log(
+            "typing.enter begin lang=\(language.rawValue) schema=\(schema.rawValue) "
+                + "hostHeavy=\(FlowSessionBridge.isHostHeavy() ? 1 : 0) \(OSGDiag.memoryTag())",
+            category: "boot"
+        )
         TypingInputConfiguration.shared.reload()
         refreshPersonalTerms()
+        // English lexicon is small; load when entering typing (not at KVC init).
         englishEngine.prepare()
+        OSGDiag.log("typing.enter after englishPrepare \(OSGDiag.memoryTag())", category: "boot")
         syncAutocapitalization()
-        Task { await prepareIfNeeded() }
+        if FlowSessionBridge.isHostHeavy() {
+            OSGDiag.log("typing.enter defer rime hostHeavy=1 — retry scheduled", category: "boot")
+            prepareTask?.cancel()
+            prepareTask = Task { [weak self] in
+                for _ in 0..<40 {
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    guard let self, !Task.isCancelled else { return }
+                    if !FlowSessionBridge.isHostHeavy() {
+                        await self.prepareIfNeeded()
+                        self.prepareTask = nil
+                        return
+                    }
+                }
+                self?.prepareTask = nil
+            }
+            return
+        }
+        if prepareTask == nil, !prepared {
+            prepareTask = Task { [weak self] in
+                await self?.prepareIfNeeded()
+                self?.prepareTask = nil
+            }
+        }
     }
 
     public func leaveTypingMode() {
-        engine.teardown()
+        OSGDiag.log("typing.leave \(OSGDiag.memoryTag())", category: "boot")
+        prepareTask?.cancel()
+        prepareTask = nil
+        engineStorage?.teardown()
         prepared = false
         engineReady = false
         composition = .empty
         isCandidatePanelExpanded = false
         page = .letters
-        shiftActive = false
-        capsLock = false
+        resetShiftState()
         clearEnglishWordState(keepPrevious: false)
+        // Drop English lexicon pages when leaving typing (jetsam recovery).
+        EnglishLexicon.shared.unload()
+        englishStorage = nil
     }
 
     public func toggleCandidatePanelExpanded() {
@@ -154,24 +222,40 @@ public final class TypingSessionController: ObservableObject {
 
     public func setPage(_ page: TypingKeyPage) {
         self.page = page
-        shiftActive = false
+        resetShiftState()
         if page == .letters {
             syncAutocapitalization()
         }
+    }
+
+    /// Touch-down on Shift: hold for continuous uppercase (release ends hold).
+    public func beginShiftHold() {
+        guard page == .letters else { return }
+        shiftHeld = true
+        typedWhileShiftHeld = false
+    }
+
+    /// Touch-up on Shift: end hold; if nothing was typed, treat as a tap.
+    public func endShiftHold() {
+        guard shiftHeld else { return }
+        let typed = typedWhileShiftHeld
+        shiftHeld = false
+        typedWhileShiftHeld = false
+        if typed {
+            if !capsLock && !shiftPrimedByUser {
+                syncAutocapitalization()
+            }
+            return
+        }
+        handleShiftTap()
     }
 
     /// Handle a visible key label.
     public func handleKey(_ label: String) -> TypingOutput {
         switch label {
         case "⇧":
-            if shiftActive {
-                capsLock = true
-                shiftActive = false
-            } else if capsLock {
-                capsLock = false
-            } else {
-                shiftActive = true
-            }
+            // Tests / non-gesture callers: same as a completed Shift tap.
+            handleShiftTap()
             return .none
         case "⌫":
             return handleBackspace()
@@ -190,7 +274,7 @@ public final class TypingSessionController: ObservableObject {
 
         if page != .letters {
             let out = commitEnglishWordIfNeededBeforeNonLetter()
-            if !capsLock { shiftActive = false }
+            clearOneShotShiftIfNeeded()
             if out.isEmpty {
                 return .insert(label)
             }
@@ -207,7 +291,7 @@ public final class TypingSessionController: ObservableObject {
         let committed = engine.processCharacter(ch) ?? ""
         composition = engine.composition
         syncCandidatePanelVisibility()
-        if !capsLock { shiftActive = false }
+        clearOneShotShiftIfNeeded()
         return committed.isEmpty ? .none : .insert(committed)
     }
 
@@ -252,14 +336,14 @@ public final class TypingSessionController: ObservableObject {
         pendingAutocorrection = nil
         if ch.isLetter {
             englishCurrentWord.append(ch)
-            if !capsLock { shiftActive = false }
+            clearOneShotShiftIfNeeded()
             refreshEnglishSuggestions()
             return .insert(String(ch))
         }
 
         // Punctuation / digit: commit current word first, then insert.
         var output = commitEnglishWord(suffix: "")
-        if !capsLock { shiftActive = false }
+        clearOneShotShiftIfNeeded()
         if output.isEmpty {
             return .insert(String(ch))
         }
@@ -302,7 +386,7 @@ public final class TypingSessionController: ObservableObject {
     private func commitEnglishWord(suffix: String) -> TypingOutput {
         let word = englishCurrentWord
         defer {
-            if !capsLock { shiftActive = false }
+            clearOneShotShiftIfNeeded()
         }
 
         guard suggestionsEnabled, !word.isEmpty else {
@@ -405,15 +489,53 @@ public final class TypingSessionController: ObservableObject {
     }
 
     /// Arms Shift for sentence / word starts using the host field traits.
+    /// Manual one-shot, hold, and Caps Lock always win over autocapitalization.
     public func syncAutocapitalization() {
         guard language == .english, page == .letters else { return }
-        guard !capsLock else { return }
+        guard !capsLock, !shiftHeld, !shiftPrimedByUser else { return }
         let mode = autocapitalizationModeProvider?() ?? .sentences
         let preceding = precedingTextProvider?()
         shiftActive = TypingAutocapitalization.shouldCapitalize(
             precedingText: preceding,
             mode: mode
         )
+    }
+
+    // MARK: - Shift
+
+    /// Tap cycle: off → one-shot → Caps Lock → off (iOS-style second tap).
+    private func handleShiftTap() {
+        if capsLock {
+            capsLock = false
+            shiftActive = false
+            shiftPrimedByUser = false
+        } else if shiftActive {
+            capsLock = true
+            shiftActive = false
+            shiftPrimedByUser = false
+        } else {
+            shiftActive = true
+            shiftPrimedByUser = true
+        }
+    }
+
+    /// After inserting a character: consume one-shot Shift, keep hold / Caps.
+    private func clearOneShotShiftIfNeeded() {
+        if shiftHeld {
+            typedWhileShiftHeld = true
+            return
+        }
+        guard !capsLock else { return }
+        shiftActive = false
+        shiftPrimedByUser = false
+    }
+
+    private func resetShiftState() {
+        shiftActive = false
+        capsLock = false
+        shiftHeld = false
+        shiftPrimedByUser = false
+        typedWhileShiftHeld = false
     }
 
     private func clearEnglishWordState(keepPrevious: Bool) {
@@ -436,6 +558,14 @@ public final class TypingSessionController: ObservableObject {
 
     private func prepareIfNeeded() async {
         guard !prepared else { return }
+        if FlowSessionBridge.isHostHeavy() {
+            OSGDiag.log("rime.prepare deferred hostHeavy=1 \(OSGDiag.memoryTag())", category: "boot")
+            return
+        }
+        OSGDiag.log(
+            "rime.prepare begin ready=\(RimeResourceInstaller.isReady) \(OSGDiag.memoryTag())",
+            category: "boot"
+        )
         do {
             try await engine.prepare()
             engine.setLanguage(language)
@@ -446,9 +576,17 @@ public final class TypingSessionController: ObservableObject {
             if language == .english {
                 refreshEnglishSuggestions()
             }
+            OSGDiag.log(
+                "rime.prepare done ready=\(engineReady) \(OSGDiag.memoryTag())",
+                category: "boot"
+            )
         } catch {
             lastError = error.localizedDescription
             engineReady = false
+            OSGDiag.log(
+                "rime.prepare failed error=\(error.localizedDescription) \(OSGDiag.memoryTag())",
+                category: "boot"
+            )
         }
     }
 }

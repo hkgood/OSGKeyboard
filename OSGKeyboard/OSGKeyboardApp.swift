@@ -3,6 +3,7 @@
 
 import SwiftUI
 import OSGKeyboardShared
+import OSGKeyboardHostSupport
 
 @main
 struct OSGKeyboardApp: App {
@@ -18,9 +19,11 @@ struct OSGKeyboardApp: App {
 
     init() {
         MaterialIconsFont.registerIfNeeded()
-        if AppGroup.isAvailable {
-            CustomLanguageModelManager.shared.prepareInBackgroundIfNeeded()
-        }
+        // Deliberately do NOT prepare Custom LM here. App launch already sits
+        // near ~150 MB RSS in Debug; compiling CLM during onboarding races the
+        // keyboard extension and gets the host jetsammed (signal 9). Warmup
+        // runs from MainAppRoot only after onboarding completes.
+        OSGDiag.log("OSGKeyboardApp.init \(OSGDiag.memoryTag())", category: "flow")
     }
 
     var body: some Scene {

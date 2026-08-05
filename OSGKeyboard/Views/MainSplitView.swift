@@ -224,7 +224,10 @@ private struct WideStatusFooter: View {
                 .buttonStyle(.plain)
             } else if canManuallyStartSession && !needsCloudSetup {
                 Button {
-                    flowManager.activateOnForeground()
+                    flowManager.activateOnForeground(
+                        reason: "MainSplitView.startButton",
+                        startCapture: true
+                    )
                 } label: {
                     Text("home.flow.startShort")
                         .foregroundStyle(palette.accent)

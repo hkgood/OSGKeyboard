@@ -23,8 +23,7 @@ private enum KeyboardLayoutMetrics {
     static let micSize: CGFloat = 121
     static let micToButtonGap: CGFloat = 8
     static let bottomActionRowHeight: CGFloat = KeyboardChromeLayout.actionKeyHeight
-    static let bottomActionFixedWidth: CGFloat = KeyboardChromeLayout.sideActionKeyWidth
-    static let bottomActionSpacing: CGFloat = Spacing.xs
+    static let bottomActionSpacing: CGFloat = KeyboardChromeLayout.actionKeySpacing
     /// Gap between the top control row and the transcript / hint line.
     /// Four points keeps the "点按说话" line visually attached to the controls.
     static let topBarToTranscriptSpacing: CGFloat = Spacing.xs / 2
@@ -34,7 +33,7 @@ private enum KeyboardLayoutMetrics {
     /// park delete/return at the far screen edges and turn each cursor-drag
     /// pad into a ~450 pt runway — capping keeps the reach ergonomics of the
     /// phone layout. iPhone widths are all below this, so it is a no-op there.
-    static let contentMaxWidth: CGFloat = 700
+    static let contentMaxWidth: CGFloat = KeyboardChromeLayout.contentMaxWidth
 
     // MARK: - Content-driven keyboard height (single source of truth)
     static let outerPaddingTop: CGFloat = 4
@@ -45,6 +44,8 @@ private enum KeyboardLayoutMetrics {
     static let actionClusterHeight: CGFloat = micSize + micToButtonGap + bottomActionRowHeight
     /// Moves the action cluster down so its keys share the typing row's baseline.
     static let actionClusterTopGap: CGFloat = Spacing.xl
+    /// Centres the mic between the transcript hint and bottom action row.
+    static let micUpwardAdjustment: CGFloat = (actionClusterTopGap - micToButtonGap) / 2
     /// The shared 4 pt outer padding is the complete bottom inset.
     static let actionClusterBottomGap: CGFloat = 0
 
@@ -65,7 +66,7 @@ public struct KeyboardRootView: View {
 
     public init(
         state: KeyboardViewController.State,
-        typing: TypingSessionController = TypingSessionController(),
+        typing: TypingSessionController,
         onInsert: @escaping (String) -> Void = { _ in }
     ) {
         self.state = state
@@ -85,6 +86,7 @@ public struct KeyboardRootView: View {
     static let micTopOffset: CGFloat = KeyboardLayoutMetrics.outerPaddingTop
         + KeyboardLayoutMetrics.headerBandHeight
         + KeyboardLayoutMetrics.actionClusterTopGap
+        - KeyboardLayoutMetrics.micUpwardAdjustment
     /// Horizontal inset the side pads should respect.
     static let sideInset: CGFloat = KeyboardLayoutMetrics.sideActionHorizontalInset
 
@@ -115,20 +117,7 @@ public struct KeyboardRootView: View {
             .frame(height: Self.totalHeight)
             // Feed the resolved palette to all nested chips/buttons.
             .environment(\.themePalette, palette)
-
-            // v0.3.0: in-keyboard first-launch onboarding. Mounted as
-            // an overlay so the normal keyboard chrome stays
-            // responsive underneath (mic button still works, chip
-            // taps register). Only rendered until
-            // `state.hasCompletedOnboarding` flips to true; from
-            // then on the overlay is unmounted and never re-rendered.
-            if !state.hasCompletedOnboarding {
-                KeyboardOnboardingOverlay(state: state)
-                    .environment(\.themePalette, palette)
-                    .transition(.opacity)
-            }
         }
-        .animation(.easeInOut(duration: 0.18), value: state.hasCompletedOnboarding)
         .animation(.easeInOut(duration: 0.12), value: state.cursorDragActive)
     }
 
@@ -196,23 +185,37 @@ public struct KeyboardRootView: View {
                     onToggle: state.tapMic
                 )
                 .frame(width: KeyboardLayoutMetrics.micSize, height: KeyboardLayoutMetrics.micSize)
+                .offset(y: -KeyboardLayoutMetrics.micUpwardAdjustment)
                 .opacity(dragging ? 0 : 1)
 
                 cursorDragPad(enabled: cursorPadsEnabled)
             }
             .frame(height: KeyboardLayoutMetrics.micSize)
 
-            HStack(spacing: KeyboardLayoutMetrics.bottomActionSpacing) {
-                if swapKeys {
-                    bottomSpaceButton(disabled: editingBlocked)
-                    bottomReturnButton(disabled: editingBlocked)
-                    bottomDeleteButton(disabled: editingBlocked)
-                } else {
-                    bottomDeleteButton(disabled: editingBlocked)
-                    bottomReturnButton(disabled: editingBlocked)
-                    bottomSpaceButton(disabled: editingBlocked)
+            GeometryReader { proxy in
+                let widths = KeyboardChromeLayout.actionKeyWidths(
+                    availableWidth: proxy.size.width
+                )
+
+                HStack(spacing: KeyboardLayoutMetrics.bottomActionSpacing) {
+                    if swapKeys {
+                        bottomSpaceButton(disabled: editingBlocked)
+                            .frame(width: widths.side)
+                        bottomReturnButton(disabled: editingBlocked)
+                            .frame(width: widths.center)
+                        bottomDeleteButton(disabled: editingBlocked)
+                            .frame(width: widths.side)
+                    } else {
+                        bottomDeleteButton(disabled: editingBlocked)
+                            .frame(width: widths.side)
+                        bottomReturnButton(disabled: editingBlocked)
+                            .frame(width: widths.center)
+                        bottomSpaceButton(disabled: editingBlocked)
+                            .frame(width: widths.side)
+                    }
                 }
             }
+            .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
             .opacity(dragging ? 0 : 1)
         }
         .padding(.horizontal, KeyboardLayoutMetrics.sideActionHorizontalInset)
@@ -234,20 +237,14 @@ public struct KeyboardRootView: View {
         RepeatingDeleteButton(disabled: disabled) {
             state.deleteBackward()
         }
-        .frame(
-            width: KeyboardLayoutMetrics.bottomActionFixedWidth,
-            height: KeyboardLayoutMetrics.bottomActionRowHeight
-        )
+        .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
     }
 
     private func bottomSpaceButton(disabled: Bool) -> some View {
         RectangularToolbarButton(spaceStyle: true, label: "space", disabled: disabled) {
             state.insertSpace()
         }
-        .frame(
-            width: KeyboardLayoutMetrics.bottomActionFixedWidth,
-            height: KeyboardLayoutMetrics.bottomActionRowHeight
-        )
+        .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
     }
 
     private func bottomReturnButton(disabled: Bool) -> some View {
@@ -299,19 +296,28 @@ extension KeyboardRootView {
 
 #if DEBUG
 #Preview("Keyboard · Idle") {
-    KeyboardRootView(state: KeyboardViewController.State.previewIdle)
+    KeyboardRootView(
+        state: KeyboardViewController.State.previewIdle,
+        typing: TypingSessionController()
+    )
         .frame(width: 390, height: KeyboardRootView.totalHeight)
         .preferredColorScheme(.dark)
 }
 
 #Preview("Keyboard · Recording") {
-    KeyboardRootView(state: KeyboardViewController.State.previewRecording)
+    KeyboardRootView(
+        state: KeyboardViewController.State.previewRecording,
+        typing: TypingSessionController()
+    )
         .frame(width: 390, height: KeyboardRootView.totalHeight)
         .preferredColorScheme(.dark)
 }
 
 #Preview("Keyboard · Processing") {
-    KeyboardRootView(state: KeyboardViewController.State.previewProcessing)
+    KeyboardRootView(
+        state: KeyboardViewController.State.previewProcessing,
+        typing: TypingSessionController()
+    )
         .frame(width: 390, height: KeyboardRootView.totalHeight)
         .preferredColorScheme(.dark)
 }
@@ -417,6 +423,8 @@ private struct TranscriptLine: View {
                 ExtL10n.text("keyboard.error.fullAccessRequired")
             case .unavailable(.appGroupUnavailable):
                 ExtL10n.text("keyboard.error.appGroupCommunication")
+            case .unavailable(.onboardingIncomplete):
+                ExtL10n.text("keyboard.hint.finishSetupInApp")
             case .recording, .processing:
                 EmptyView()
             }

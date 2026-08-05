@@ -4,8 +4,8 @@
 // Bag of inputs the LLM polish service needs. Caller assembles it
 // before calling `IntelligentPolishingService.polish(_:context:)`.
 // Splitting it out keeps the polish service's signature stable as
-// we add more signals (app context, intensity, personal dictionary,
-// preceding text, etc.) over time.
+// we add more signals (app context, personal dictionary, preceding text,
+// etc.) over time.
 
 import Foundation
 
@@ -42,10 +42,6 @@ public struct PolishContext: Sendable {
     /// LLM is told to pick a neutral tone on its own.
     public let appContext: AppContext
 
-    /// User-configured intensity. Drives how aggressively the LLM
-    /// is allowed to rewrite.
-    public let intensity: PolishIntensity
-
     /// Optional preceding text (e.g. a few hundred characters of
     /// what the user already typed before the recording). The LLM
     /// uses it to resolve "this / 那个 / 刚才" references and to
@@ -70,7 +66,6 @@ public struct PolishContext: Sendable {
 
     public init(
         appContext: AppContext = .unknown,
-        intensity: PolishIntensity = .default,
         precedingText: String? = nil,
         followingText: String? = nil,
         fieldHints: FieldHints? = nil,
@@ -79,7 +74,6 @@ public struct PolishContext: Sendable {
         maxFollowingChars: Int = 200
     ) {
         self.appContext = appContext
-        self.intensity = intensity
         self.precedingText = precedingText
         self.followingText = followingText
         self.fieldHints = fieldHints

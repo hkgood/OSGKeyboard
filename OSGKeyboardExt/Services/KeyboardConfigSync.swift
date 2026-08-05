@@ -1,7 +1,8 @@
 // KeyboardConfigSync.swift
 // OSGKeyboard · Keyboard Extension
 //
-// App Group config hydration, Darwin observers, and onboarding mirroring.
+// App Group config hydration, Darwin observers, and onboarding-complete
+// mirroring (mic gate only — full setup lives in the host app).
 
 import Foundation
 import OSGKeyboardShared
@@ -74,39 +75,17 @@ final class KeyboardConfigSync {
             into: state,
             protectTranslationUntil: translationConfigProtectedUntil
         )
+        // Host may complete (or reset) onboarding while the extension stays alive.
+        syncOnboardingStateFromAppGroup()
     }
 
+    /// Mirrors host-app onboarding completion for the mic gate only.
+    /// Does not sync `onboardingPage` — page flow is host-app exclusive.
     func syncOnboardingStateFromAppGroup() {
         let store = AppGroupStore()
-        // Fall back to the reboot-durable Keychain marker so a device restart
-        // does not resurrect the in-keyboard onboarding overlay when the App
-        // Group value transiently reads empty.
+        // Keychain fallback: a reboot must not resurrect the mic gate when
+        // App Group transiently reads empty.
         state.hasCompletedOnboarding = store.hasCompletedOnboarding || Keychain.hasCompletedOnboarding()
-        state.onboardingPage = store.onboardingPage
-    }
-
-    func autoAdvancePastKeyboardSetupStepIfNeeded() {
-        guard !state.hasCompletedOnboarding else { return }
-        guard state.onboardingPage == 3 else { return }
-        guard KeyboardSetupBridge.isReadyForOnboardingSkip else { return }
-        let store = AppGroupStore()
-        store.setOnboardingPage(4)
-        state.onboardingPage = 4
-    }
-
-    func advanceOnboarding() {
-        let store = AppGroupStore()
-        let nextPage = min(4, store.onboardingPage + 1)
-        store.setOnboardingPage(nextPage)
-        state.onboardingPage = nextPage
-    }
-
-    func completeOnboarding() {
-        let store = AppGroupStore()
-        store.setHasCompletedOnboarding(true)
-        store.setOnboardingPage(4)
-        state.hasCompletedOnboarding = true
-        state.onboardingPage = 4
     }
 
     func persistLocale(_ id: String) {
@@ -122,7 +101,7 @@ final class KeyboardConfigSync {
     func persistTranslationTargetLocaleId(_ id: String) {
         let resolved = TranslationLanguageCatalog.resolve(id).id
         state.translationTargetLocaleId = resolved
-        translationConfigProtectedUntil = Date().addingTimeInterval(2.5)
+        translationConfigProtectedUntil = KeyboardTranslationConfigProtection.protectionDeadline()
         persistor.persist(translationTargetLocaleId: resolved)
     }
 

@@ -5,6 +5,7 @@
 
 import SwiftUI
 import OSGKeyboardShared
+import OSGKeyboardHostSupport
 
 struct ASRSettingsCard: View {
     @Environment(\.themePalette) private var palette: ThemePalette

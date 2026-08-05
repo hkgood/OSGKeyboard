@@ -41,6 +41,7 @@ public struct AppGroupPersistor {
         state.translationTargetLocaleId = store.translationTargetLocaleId
         state.handednessPreference = store.handednessPreference
         state.cursorDragNavigationEnabled = store.cursorDragNavigationEnabled
+        state.keyboardHapticIntensity = store.keyboardHapticIntensity
         state.micDisabled = store.isCloudAPIKeyMissingForVoiceInput
         state.micDisabledHint = store.isCloudAPIKeyMissingForVoiceInput
             ? ExtL10n.string("keyboard.mic.disabled.missingApiKey")
@@ -85,12 +86,15 @@ public struct AppGroupPersistor {
         guard AppGroup.isAvailable else { return }
         let store = AppGroupStore()
         state.engineMode = store.engineMode
-        let shouldProtectTranslation = protectTranslationUntil.map { Date() < $0 } ?? false
+        let shouldProtectTranslation = KeyboardTranslationConfigProtection.shouldProtect(
+            until: protectTranslationUntil
+        )
         if !shouldProtectTranslation {
             state.translationTargetLocaleId = store.translationTargetLocaleId
         }
         state.handednessPreference = store.handednessPreference
         state.cursorDragNavigationEnabled = store.cursorDragNavigationEnabled
+        state.keyboardHapticIntensity = store.keyboardHapticIntensity
         state.micDisabled = store.isCloudAPIKeyMissingForVoiceInput
         state.micDisabledHint = store.isCloudAPIKeyMissingForVoiceInput
             ? ExtL10n.string("keyboard.mic.disabled.missingApiKey")

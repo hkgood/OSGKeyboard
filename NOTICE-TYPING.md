@@ -1,7 +1,7 @@
 # Third-party notices — Typing keyboard
 
 The generated Chinese source manifest is
-`OSGKeyboardShared/Resources/Typing/Rime/manifest.json`. Exact librime
+`OSGKeyboard/Resources/Typing/Rime/manifest.json`. Exact librime
 binary dependency licenses are bundled beside `NOTICE.txt`.
 
 ## Distributed components (Chinese IME)

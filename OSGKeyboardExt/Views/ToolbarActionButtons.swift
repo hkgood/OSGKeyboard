@@ -94,6 +94,8 @@ struct RepeatingPressButton<Label: View>: View {
     var disabled: Bool = false
     /// Plays the system delete click on each fire (matches stock keyboard).
     var playsDeleteSound: Bool = true
+    /// Typing-grid haptic strength; `.off` skips haptics (voice toolbar default).
+    var hapticIntensity: KeyboardHapticIntensity = .off
     let action: () -> Void
     @ViewBuilder let label: (_ isPressed: Bool) -> Label
 
@@ -130,6 +132,7 @@ struct RepeatingPressButton<Label: View>: View {
         if playsDeleteSound {
             KeyboardSoundFeedback.deleteClick()
         }
+        KeyboardHapticFeedback.play(role: .delete, intensity: hapticIntensity)
         action()
     }
 
@@ -177,6 +180,39 @@ struct RepeatingDeleteButton: View {
                     .foregroundStyle(NativeKeyboardKeyColors.text(for: colorScheme))
             }
         }
+    }
+}
+
+// MARK: - Press-down typing key
+
+/// Fires on touch-down (not release) so click sound / haptic match the stock
+/// keyboard and the voice toolbar’s RectangularToolbarButton.
+struct PressDownKeyButton<Label: View>: View {
+    var disabled: Bool = false
+    let action: () -> Void
+    @ViewBuilder let label: (_ isPressed: Bool) -> Label
+
+    @State private var isPressing = false
+
+    var body: some View {
+        label(isPressing)
+            .contentShape(Rectangle())
+            .gesture(pressGesture)
+            .opacity(disabled ? 0.38 : 1)
+            .allowsHitTesting(!disabled)
+            .accessibilityAddTraits(.isButton)
+    }
+
+    private var pressGesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { _ in
+                guard !disabled, !isPressing else { return }
+                isPressing = true
+                action()
+            }
+            .onEnded { _ in
+                isPressing = false
+            }
     }
 }
 

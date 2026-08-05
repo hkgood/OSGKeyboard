@@ -345,6 +345,15 @@ struct MacSettingsView: View {
                 .buttonStyle(.plain)
                 .frame(maxWidth: .infinity, minHeight: MacMetrics.settingsRowMinHeight, alignment: .leading)
                 .padding(.horizontal, MacMetrics.settingsCardInset)
+
+                // Read-only version row at the bottom of About.
+                MacInlineRow(title: MacL10n.string("mac.settings.version", language: lang)) {
+                    Text(AppVersionDisplay.detailedLabel)
+                        .font(MacSettingsType.rowLabel)
+                        .foregroundStyle(palette.textSecondary)
+                        .multilineTextAlignment(.trailing)
+                }
+                .accessibilityElement(children: .combine)
             }
         }
     }

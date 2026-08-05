@@ -28,10 +28,17 @@ public enum TranscriptPostProcessor: Sendable {
     /// - **Tier 2 (5–10 CJK):** skip only low-value acks / closings
     ///   (e.g. "好的我知道了", "那就先这样吧"); keep questions, invites,
     ///   and contentful short lines for polish / ASR repair.
-    public static func shouldSkipLLM(for text: String) -> Bool {
+    public static func shouldSkipLLM(
+        for text: String,
+        styleID: String? = nil
+    ) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return false }
         if hasStructureSignal(in: trimmed) { return false }
+        // Every fun personality handles short and long drafts in one prompt.
+        if let styleID, PolishStylePackCatalog.isFunPersonality(id: styleID) {
+            return false
+        }
 
         let cjkCount = trimmed.unicodeScalars.filter(isCJKScalar).count
         if cjkCount > 0 {
@@ -59,9 +66,9 @@ public enum TranscriptPostProcessor: Sendable {
         let cjk = stripped.unicodeScalars.filter(isCJKScalar).count
         if stripped.count <= 4 && cjk <= 4 { return true }
 
-        if PolishRouter.hasCommunicativeSignal(stripped) { return false }
-        if PolishRouter.hasOpponentQuote(stripped) { return false }
-        if PolishRouter.hasConcreteEntity(stripped) { return false }
+        if hasCommunicativeSignal(stripped) { return false }
+        if hasOpponentQuote(stripped) { return false }
+        if hasConcreteEntity(stripped) { return false }
 
         for pattern in tier2SkipPatterns {
             if stripped.range(of: pattern, options: .regularExpression) != nil {
@@ -83,6 +90,32 @@ public enum TranscriptPostProcessor: Sendable {
         #"^(晚安|早安|早上好|拜拜|再见)(啦|了|啊)?$"#,
         #"^(晚点再说|待会联系|先这样吧|马上到了)$"#,
     ]
+
+    private static func hasCommunicativeSignal(_ text: String) -> Bool {
+        if text.contains("？") || text.contains("?") { return true }
+        let patterns = [
+            #"吗|么|怎么|什么|哪|谁|为何|为什么|为啥"#,
+            #"能不能|可不可以|要不要|行不行"#,
+            #"回他|回她"#,
+            #"约|见面|吃饭|电影"#,
+        ]
+        return patterns.contains { text.range(of: $0, options: .regularExpression) != nil }
+    }
+
+    private static func hasOpponentQuote(_ text: String) -> Bool {
+        let markers = ["回他", "回她", "对方", "他说", "她说", "你说的", "你这叫", "大家都"]
+        return markers.contains { text.contains($0) }
+    }
+
+    private static func hasConcreteEntity(_ text: String) -> Bool {
+        let entities = [
+            "面膜", "防晒", "口红", "粉底", "洗发", "咖啡", "火锅", "酒店", "餐厅",
+            "方案", "接口", "测试", "Key", "老板", "电影", "地铁", "快递", "会议",
+            "周报", "加班", "机票", "医院", "课程", "健身", "外卖", "微信", "项目",
+            "发布", "文档", "密码", "充电器", "门卡",
+        ]
+        return entities.contains { text.contains($0) }
+    }
 
     private static let leadingFillers = [
         "怎么说呢", "就是说", "然后那个", "嗯那个", "那个", "嗯", "呃",

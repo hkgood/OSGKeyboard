@@ -9,7 +9,20 @@ public enum KeyboardChromeLayout {
     public static let totalHeight: CGFloat = 281
     public static let actionKeyHeight: CGFloat = 50
     public static let actionKeyCornerRadius: CGFloat = 10
-    /// Fixed width for the two side keys in every three-key bottom row.
-    public static let sideActionKeyWidth: CGFloat = 86
+    /// Shared geometry for every three-key bottom row.
+    public static let actionKeySpacing: CGFloat = 8
+    public static let sideActionKeyFraction: CGFloat = 0.2
+    public static let centerActionKeyFraction: CGFloat = 0.6
     public static let horizontalInset: CGFloat = 8
+    /// Keeps voice and typing controls equally reachable on iPad.
+    public static let contentMaxWidth: CGFloat = 700
+
+    /// Splits the width left after spacing into a 20 / 60 / 20 row.
+    public static func actionKeyWidths(availableWidth: CGFloat) -> (side: CGFloat, center: CGFloat) {
+        let keyWidth = max(0, availableWidth - actionKeySpacing * 2)
+        return (
+            side: keyWidth * sideActionKeyFraction,
+            center: keyWidth * centerActionKeyFraction
+        )
+    }
 }

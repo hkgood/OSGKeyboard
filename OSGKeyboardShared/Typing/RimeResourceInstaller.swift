@@ -101,10 +101,7 @@ public actor RimeResourceInstaller {
 
         for resource in ["osg_pinyin.dict", "manifest"] {
             let ext = resource == "manifest" ? "json" : "yaml"
-            guard let source = Bundle(for: RimeResourceBundleToken.self).url(
-                forResource: resource,
-                withExtension: ext
-            ) else {
+            guard let source = Self.bundledURL(forResource: resource, withExtension: ext) else {
                 throw RimeResourceError.bundledResourceMissing("\(resource).\(ext)")
             }
             try fileManager.copyItem(
@@ -140,7 +137,9 @@ public actor RimeResourceInstaller {
             distributionVersion: Self.resourceVersion
         )
         do {
-            try bridge.deploy(withFullCheck: true)
+            // Version bumps already rebuild SharedSupport from scratch; skip the
+            // heavier full integrity pass unless the caller forced a redeploy.
+            try bridge.deploy(withFullCheck: force)
         } catch {
             bridge.finalizeRuntime()
             throw error
@@ -163,6 +162,20 @@ public actor RimeResourceInstaller {
         // user dictionaries. `sync_user_data` is for external Rime sync
         // deployments and is intentionally not needed here.
         bridge.finalizeRuntime()
+    }
+}
+
+extension RimeResourceInstaller {
+    /// Host app owns the dictionary YAML; prefer `Bundle.main`, fall back to
+    /// the Shared token bundle for unit tests that inject fixtures.
+    fileprivate static func bundledURL(forResource name: String, withExtension ext: String) -> URL? {
+        if let url = Bundle.main.url(forResource: name, withExtension: ext) {
+            return url
+        }
+        return Bundle(for: RimeResourceBundleToken.self).url(
+            forResource: name,
+            withExtension: ext
+        )
     }
 }
 

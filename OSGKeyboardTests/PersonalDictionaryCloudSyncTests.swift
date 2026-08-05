@@ -113,6 +113,8 @@ final class PersonalDictionaryCloudSyncTests: XCTestCase {
     // MARK: - Backward-compatible decode
 
     func testEntryDecodesWithoutUpdatedAt() throws {
+        // Numeric unix seconds (no underscore — invalid in JSON) + explicit
+        // strategy so the fixture matches legacy payloads, not ISO-8601 KVS.
         let json = """
         {
           "id": "A0000000-0000-4000-8000-000000000099",
@@ -120,12 +122,14 @@ final class PersonalDictionaryCloudSyncTests: XCTestCase {
           "aliases": [],
           "category": "custom",
           "source": "manual",
-          "createdAt": 1_700_000_000,
+          "createdAt": 1700000000,
           "usageCount": 2
         }
         """.data(using: .utf8)!
 
-        let entry = try JSONDecoder().decode(PersonalDictionary.Entry.self, from: json)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        let entry = try decoder.decode(PersonalDictionary.Entry.self, from: json)
         XCTAssertEqual(entry.term, "Legacy")
         XCTAssertEqual(entry.updatedAt.timeIntervalSince1970, 1_700_000_000, accuracy: 1)
     }

@@ -36,7 +36,7 @@ struct KeyboardBrandLogo: View {
                 .accessibilityHidden(true)
         }
         .buttonStyle(BrandLogoPressStyle())
-        .accessibilityLabel(ExtL10n.text("keyboard.onboarding.api.openHostApp"))
+        .accessibilityLabel(ExtL10n.text("keyboard.openSettingsA11y"))
     }
 }
 

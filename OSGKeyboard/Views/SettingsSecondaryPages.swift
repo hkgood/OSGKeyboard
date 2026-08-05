@@ -39,6 +39,26 @@ struct SettingsNavigationRow: View {
     }
 }
 
+/// Read-only version / build row for Settings home (below About).
+struct SettingsVersionRow: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+
+    var body: some View {
+        HStack(spacing: Spacing.sm) {
+            Text("settings.version.title")
+                .font(TypeStyle.body)
+                .foregroundStyle(palette.textPrimary)
+            Spacer(minLength: Spacing.xs)
+            Text(AppVersionDisplay.detailedLabel)
+                .font(TypeStyle.body)
+                .foregroundStyle(palette.textSecondary)
+                .multilineTextAlignment(.trailing)
+        }
+        .settingsListRow()
+        .accessibilityElement(children: .combine)
+    }
+}
+
 // MARK: - Config entry summaries (shown on Settings home)
 
 enum SettingsConfigSummary {
@@ -248,6 +268,12 @@ struct GeneralSettingsView: View {
 
                         Divider().background(palette.divider)
 
+                        RememberLastSurfaceToggleRow(
+                            isOn: $typingConfiguration.rememberLastSurface
+                        )
+
+                        Divider().background(palette.divider)
+
                         NavigationLink {
                             TypingInputSettingsView()
                         } label: {
@@ -261,6 +287,13 @@ struct GeneralSettingsView: View {
                             selection: Binding(
                                 get: { config.handednessPreference },
                                 set: { config.handednessPreference = $0 }
+                            )
+                        )
+                        Divider().background(palette.divider)
+                        KeyboardHapticPickerRow(
+                            selection: Binding(
+                                get: { config.keyboardHapticIntensity },
+                                set: { config.keyboardHapticIntensity = $0 }
                             )
                         )
                         Divider().background(palette.divider)

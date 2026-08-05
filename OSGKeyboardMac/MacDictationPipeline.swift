@@ -244,7 +244,6 @@ enum MacDictationPipeline {
            !supplement.isEmpty {
             polishContext = PolishContext(
                 appContext: store.detectedAppContext?.context ?? .unknown,
-                intensity: store.polishIntensity,
                 dictionarySupplement: supplement
             )
         } else {

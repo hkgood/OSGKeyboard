@@ -35,6 +35,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let translationTargetLocaleId = "config.translationTargetLocaleId"
         public static let handednessPreference = "config.handednessPreference"
         public static let cursorDragNavigationEnabled = "config.cursorDragNavigationEnabled"
+        public static let keyboardHapticIntensity = "config.keyboardHapticIntensity"
         public static let polishIntensity = "config.polishIntensity"
         public static let llmThinkingEnabled = "config.llmThinkingEnabled"
         public static let detectedAppContext = "config.detectedAppContext"
@@ -86,6 +87,9 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var translationTargetLocaleId: String
     public var handednessPreference: HandednessPreference
     public var cursorDragNavigationEnabled: Bool
+    /// Typing-grid haptic strength (off / light / strong).
+    public var keyboardHapticIntensity: KeyboardHapticIntensity
+    /// Safety envelope for built-in fun polish styles (light by default).
     public var polishIntensity: PolishIntensity
     /// Enables provider-specific reasoning / thinking controls for polish LLM requests.
     public var llmThinkingEnabled: Bool
@@ -253,7 +257,12 @@ public struct AppGroupConfiguration: Sendable, Equatable {
                 }
                 return defaults.bool(forKey: Keys.cursorDragNavigationEnabled)
             }(),
-            polishIntensity: resolvePolishIntensity(from: defaults),
+            keyboardHapticIntensity: KeyboardHapticIntensity.fromStored(
+                defaults.string(forKey: Keys.keyboardHapticIntensity)
+            ),
+            polishIntensity: PolishIntensity.resolve(
+                storedRawValue: defaults.string(forKey: Keys.polishIntensity)
+            ),
             llmThinkingEnabled: defaults.bool(forKey: Keys.llmThinkingEnabled),
             personalDictionary: decodePersonalDictionary(from: defaults),
             polishStyleCatalog: decodePolishStyleCatalog(from: defaults),
@@ -386,6 +395,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(translationTargetLocaleId, forKey: Keys.translationTargetLocaleId)
         defaults.set(handednessPreference.rawValue, forKey: Keys.handednessPreference)
         defaults.set(cursorDragNavigationEnabled, forKey: Keys.cursorDragNavigationEnabled)
+        defaults.set(keyboardHapticIntensity.rawValue, forKey: Keys.keyboardHapticIntensity)
         defaults.set(polishIntensity.rawValue, forKey: Keys.polishIntensity)
         defaults.set(llmThinkingEnabled, forKey: Keys.llmThinkingEnabled)
         defaults.set(activePolishStyleId, forKey: Keys.activePolishStyleId)
@@ -400,17 +410,6 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     }
 
     // MARK: - Private helpers
-
-    private static func resolvePolishIntensity(from defaults: UserDefaults) -> PolishIntensity {
-        guard let raw = defaults.string(forKey: Keys.polishIntensity) else {
-            return .default
-        }
-        let resolved = PolishIntensity.resolve(storedRawValue: raw)
-        if raw == PolishIntensity.legacyOffRawValue {
-            defaults.set(resolved.rawValue, forKey: Keys.polishIntensity)
-        }
-        return resolved
-    }
 
     private static func decodePersonalDictionary(from defaults: UserDefaults) -> PersonalDictionary {
         guard let data = defaults.data(forKey: Keys.personalDictionary) else {

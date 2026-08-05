@@ -18,8 +18,8 @@ enum TypingLayoutMetrics {
     static let verticalKeySpacing: CGFloat = 8
     static let secondRowInset: CGFloat = 18
     static let keyCornerRadius: CGFloat = KeyboardChromeLayout.actionKeyCornerRadius
-    /// Match the voice surface: compact side keys and a flexible center key.
-    static let bottomSideKeyWidth: CGFloat = KeyboardChromeLayout.sideActionKeyWidth
+    /// Match the voice surface's shared 20 / 60 / 20 bottom-row geometry.
+    static let bottomActionSpacing: CGFloat = KeyboardChromeLayout.actionKeySpacing
     /// Shared top row + three 50 pt key rows + native spacing + bottom row.
     static let totalHeight: CGFloat = KeyboardChromeLayout.totalHeight
     /// Collapsed candidate strip: keep this small so ScrollView doesn't fight ▼.
@@ -85,16 +85,21 @@ struct TypingRootView: View {
         .padding(.top, TypingLayoutMetrics.outerPaddingTop)
         .padding(.bottom, TypingLayoutMetrics.outerPaddingBottom)
         .padding(.horizontal, KeyboardChromeLayout.horizontalInset)
+        .frame(maxWidth: KeyboardChromeLayout.contentMaxWidth)
         .frame(maxWidth: .infinity)
         .frame(height: Self.totalHeight)
         .background(Color.clear)
         .environment(\.themePalette, palette)
-        .onAppear { typing.enterTypingMode() }
+        // enterTypingMode is owned by KeyboardViewController.viewWillAppear
+        // when surface == .typing — avoid a duplicate prepare here.
         .onChange(of: typing.isCandidatePanelExpanded) { _, isExpanded in
             if isExpanded { candidatePanelMounted = true }
         }
         .onChange(of: hasCandidateContent) { _, hasContent in
             if !hasContent { candidatePanelMounted = false }
+        }
+        .onAppear {
+            KeyboardHapticFeedback.prepare()
         }
     }
 
@@ -302,21 +307,79 @@ struct TypingRootView: View {
     private func keyButton(_ label: String) -> some View {
         if label == "⌫" {
             typingDeleteKey()
+        } else if label == "⇧" {
+            typingShiftKey()
         } else {
-            let isSpecial = ["⇧", "123", "#+=", "ABC"].contains(label)
-            Button {
+            let isSpecial = ["123", "#+=", "ABC"].contains(label)
+            let role: KeyboardHapticKeyRole = isSpecial ? .modifier : .character
+            PressDownKeyButton {
+                TypingKeyFeedback.play(
+                    role: role,
+                    intensity: state.keyboardHapticIntensity
+                )
                 apply(typing.handleKey(label))
-            } label: {
-                keyLabel(label, isSpecial: isSpecial)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } label: { isPressed in
+                NativeKeyboardKeySurface(
+                    isPressed: isPressed,
+                    fill: keyFill,
+                    pressedFill: keyPressedFill,
+                    border: palette.divider,
+                    cornerRadius: TypingLayoutMetrics.keyCornerRadius
+                ) {
+                    keyLabel(label, isSpecial: isSpecial)
+                }
             }
-            .buttonStyle(nativeKeyStyle)
+            .accessibilityLabel(Text(label))
         }
+    }
+
+    /// Hold = continuous uppercase while pressed; tap = one-shot / Caps Lock cycle.
+    private func typingShiftKey() -> some View {
+        let lit = typing.isShiftEnabled
+        return keyLabel("⇧", isSpecial: true)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(
+                RoundedRectangle(
+                    cornerRadius: TypingLayoutMetrics.keyCornerRadius,
+                    style: .continuous
+                )
+                .fill(lit ? keyPressedFill : keyFill)
+            )
+            .overlay(
+                RoundedRectangle(
+                    cornerRadius: TypingLayoutMetrics.keyCornerRadius,
+                    style: .continuous
+                )
+                .stroke(palette.divider, lineWidth: 0.5)
+            )
+            .shadow(
+                color: Color.black.opacity(lit ? 0.04 : 0.13),
+                radius: lit ? 0.5 : 1,
+                y: lit ? 0 : 1
+            )
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in
+                        if !typing.shiftHeld {
+                            TypingKeyFeedback.play(
+                                role: .modifier,
+                                intensity: state.keyboardHapticIntensity
+                            )
+                            typing.beginShiftHold()
+                        }
+                    }
+                    .onEnded { _ in
+                        typing.endShiftHold()
+                    }
+            )
+            .accessibilityLabel(Text("shift"))
+            .accessibilityAddTraits(.isButton)
     }
 
     /// Shares ``RepeatingPressButton`` with the voice toolbar delete key.
     private func typingDeleteKey() -> some View {
-        RepeatingPressButton {
+        RepeatingPressButton(hapticIntensity: state.keyboardHapticIntensity) {
             apply(typing.handleKey("⌫"))
         } label: { isPressed in
             Image(systemName: "delete.left")
@@ -352,7 +415,7 @@ struct TypingRootView: View {
     private func keyLabel(_ label: String, isSpecial: Bool) -> some View {
         switch label {
         case "⇧":
-            Image(systemName: typing.shiftActive || typing.capsLock ? "shift.fill" : "shift")
+            Image(systemName: typing.isShiftEnabled ? "shift.fill" : "shift")
                 .font(.system(size: 19, weight: .medium))
                 .foregroundStyle(keyTextColor)
         default:
@@ -368,43 +431,88 @@ struct TypingRootView: View {
     }
 
     private var bottomRow: some View {
-        HStack(spacing: TypingLayoutMetrics.keyHorizontalSpacing) {
-            Button {
-                typing.setPage(typing.page == .letters ? .numbers : .letters)
-            } label: {
-                Text(typing.page == .letters ? "123" : "ABC")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(keyTextColor)
+        GeometryReader { proxy in
+            let widths = KeyboardChromeLayout.actionKeyWidths(
+                availableWidth: proxy.size.width
+            )
+
+            HStack(spacing: TypingLayoutMetrics.bottomActionSpacing) {
+                PressDownKeyButton {
+                    TypingKeyFeedback.play(
+                        role: .modifier,
+                        intensity: state.keyboardHapticIntensity
+                    )
+                    typing.setPage(typing.page == .letters ? .numbers : .letters)
+                } label: { isPressed in
+                    NativeKeyboardKeySurface(
+                        isPressed: isPressed,
+                        fill: keyFill,
+                        pressedFill: keyPressedFill,
+                        border: palette.divider,
+                        cornerRadius: TypingLayoutMetrics.keyCornerRadius
+                    ) {
+                        Text(typing.page == .letters ? "123" : "ABC")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(keyTextColor)
+                    }
                     .frame(
-                        width: TypingLayoutMetrics.bottomSideKeyWidth,
+                        width: widths.side,
                         height: TypingLayoutMetrics.bottomRowHeight
                     )
-            }
-            .buttonStyle(nativeKeyStyle)
+                }
+                .accessibilityLabel(Text(typing.page == .letters ? "123" : "ABC"))
 
-            Button {
-                apply(typing.handleSpace())
-            } label: {
-                Text(typing.language == .chinese ? "空格" : "space")
-                    .font(.system(size: 17, weight: .regular))
-                    .foregroundStyle(keyTextColor)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: TypingLayoutMetrics.bottomRowHeight)
-            }
-            .buttonStyle(nativeKeyStyle)
-
-            Button {
-                apply(typing.handleReturn())
-            } label: {
-                returnKeyLabel
-                    .foregroundStyle(returnKeyTextColor)
+                PressDownKeyButton {
+                    TypingKeyFeedback.play(
+                        role: .action,
+                        intensity: state.keyboardHapticIntensity
+                    )
+                    apply(typing.handleSpace())
+                } label: { isPressed in
+                    NativeKeyboardKeySurface(
+                        isPressed: isPressed,
+                        fill: keyFill,
+                        pressedFill: keyPressedFill,
+                        border: palette.divider,
+                        cornerRadius: TypingLayoutMetrics.keyCornerRadius
+                    ) {
+                        Text(typing.language == .chinese ? "空格" : "space")
+                            .font(.system(size: 17, weight: .regular))
+                            .foregroundStyle(keyTextColor)
+                    }
                     .frame(
-                        width: TypingLayoutMetrics.bottomSideKeyWidth,
+                        width: widths.center,
                         height: TypingLayoutMetrics.bottomRowHeight
                     )
+                }
+                .accessibilityLabel(Text(typing.language == .chinese ? "空格" : "space"))
+
+                PressDownKeyButton {
+                    TypingKeyFeedback.play(
+                        role: .action,
+                        intensity: state.keyboardHapticIntensity
+                    )
+                    apply(typing.handleReturn())
+                } label: { isPressed in
+                    NativeKeyboardKeySurface(
+                        isPressed: isPressed,
+                        fill: returnKeyFill,
+                        pressedFill: returnKeyPressedFill,
+                        border: returnKeyBorder,
+                        cornerRadius: TypingLayoutMetrics.keyCornerRadius
+                    ) {
+                        returnKeyLabel
+                            .foregroundStyle(returnKeyTextColor)
+                    }
+                    .frame(
+                        width: widths.side,
+                        height: TypingLayoutMetrics.bottomRowHeight
+                    )
+                }
+                .accessibilityLabel(Text(returnKeyAccessibilityLabel))
             }
-            .buttonStyle(returnKeyStyle)
         }
+        .frame(height: TypingLayoutMetrics.bottomRowHeight)
     }
 
     @ViewBuilder
@@ -437,7 +545,8 @@ struct TypingRootView: View {
     }
 
     private func keyWeight(label: String, index: Int, rowIndex: Int) -> CGFloat {
-        if label == "⌫" || label == "⇧" || label == "#+=" {
+        // Match system: page switchers + delete are wider than character keys.
+        if label == "⌫" || label == "⇧" || label == "#+=" || label == "123" {
             return 1.35
         }
         if rowIndex == 2 && index == 0 {
@@ -463,26 +572,33 @@ struct TypingRootView: View {
         colorScheme == .dark ? Color(white: 0.36) : .white
     }
 
-    private var nativeKeyStyle: NativeKeyboardKeyStyle {
-        NativeKeyboardKeyStyle(
-            fill: keyFill,
-            pressedFill: keyPressedFill,
-            border: palette.divider,
-            cornerRadius: TypingLayoutMetrics.keyCornerRadius
-        )
+    private var returnKeyFill: Color {
+        switch state.returnKeyRole {
+        case .newline: return keyFill
+        case .send: return sendKeyFill
+        }
     }
 
-    private var returnKeyStyle: NativeKeyboardKeyStyle {
+    private var returnKeyPressedFill: Color {
+        switch state.returnKeyRole {
+        case .newline: return keyPressedFill
+        case .send: return sendKeyPressedFill
+        }
+    }
+
+    private var returnKeyBorder: Color {
         switch state.returnKeyRole {
         case .newline:
-            return nativeKeyStyle
+            return palette.divider
         case .send:
-            return NativeKeyboardKeyStyle(
-                fill: sendKeyFill,
-                pressedFill: sendKeyPressedFill,
-                border: Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08),
-                cornerRadius: TypingLayoutMetrics.keyCornerRadius
-            )
+            return Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08)
+        }
+    }
+
+    private var returnKeyAccessibilityLabel: String {
+        switch state.returnKeyRole {
+        case .newline: return "return"
+        case .send: return ExtL10n.string(state.returnKeyRole.titleKey)
         }
     }
 

@@ -6,6 +6,7 @@
 
 import SwiftUI
 import OSGKeyboardShared
+import OSGKeyboardHostSupport
 
 enum SettingsPresentation {
     case tab
@@ -171,6 +172,11 @@ struct SettingsView: View {
     private var moreEntriesSection: some View {
         VStack(spacing: 0) {
             settingsRouteButton(.about, title: "settings.about.title")
+
+            Divider().background(palette.divider)
+
+            // Read-only version row — not tappable.
+            SettingsVersionRow()
         }
         .surfaceCard()
     }

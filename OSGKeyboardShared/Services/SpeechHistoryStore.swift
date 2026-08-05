@@ -121,7 +121,10 @@ public final class SpeechHistoryStore: ObservableObject {
     private func applyPayload(postCloudPush: Bool) {
         entries = payload.entries.sorted { $0.createdAt > $1.createdAt }
         SpeechHistoryStorage.save(payload, to: defaults)
-        guard postCloudPush else { return }
+        // Cloud push needs App Group settings (`settingsICloudSyncEnabled`).
+        // Skip when the suite is missing (unsigned test host) so we never
+        // schedule a Task that constructs `AppGroupStore()` and traps.
+        guard postCloudPush, AppGroup.isAvailable else { return }
         Task {
             try? await SpeechHistoryCloudSync.shared.pushLocalIfEnabled()
         }

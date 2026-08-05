@@ -99,8 +99,11 @@ public struct LocalASRCatalogDocument: Codable, Sendable, Equatable {
 public enum LocalASRModelCatalog {
 
     public static func loadBundled() throws -> LocalASRCatalogDocument {
-        let bundle = Bundle(for: LocalASRCatalogBundleToken.self)
-        guard let url = bundle.url(forResource: "local-asr-catalog", withExtension: "json") else {
+        let url =
+            Bundle.main.url(forResource: "local-asr-catalog", withExtension: "json")
+            ?? Bundle(for: LocalASRCatalogBundleToken.self)
+            .url(forResource: "local-asr-catalog", withExtension: "json")
+        guard let url else {
             throw LocalASRModelCatalogError.missingBundledCatalog
         }
         let data = try Data(contentsOf: url)

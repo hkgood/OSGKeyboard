@@ -30,6 +30,16 @@ public final class EnglishLexicon: @unchecked Sendable {
         loaded = true
     }
 
+    /// Release in-memory tables when leaving the typing surface (jetsam recovery).
+    public func unload() {
+        lock.lock()
+        defer { lock.unlock() }
+        frequencies.removeAll(keepingCapacity: false)
+        sortedWords.removeAll(keepingCapacity: false)
+        bigrams.removeAll(keepingCapacity: false)
+        loaded = false
+    }
+
     public var wordCount: Int {
         prepareIfNeeded()
         return sortedWords.count
@@ -72,21 +82,24 @@ public final class EnglishLexicon: @unchecked Sendable {
 
     /// Best edit-distance ≤ 2 correction, or nil when the typed word is fine.
     /// Uses Damerau–Levenshtein so adjacent swaps (teh → the) count as 1.
+    /// Scans only same-initial-letter candidates (not the full frequency table).
     public func bestCorrection(for typed: String) -> String? {
         prepareIfNeeded()
         let needle = typed.lowercased()
-        guard needle.count >= 2 else { return nil }
+        guard needle.count >= 2, let first = needle.first else { return nil }
         if frequencies[needle] != nil { return nil }
 
         var best: (word: String, distance: Int, freq: Int)?
-        let first = needle.first
-        for (word, freq) in frequencies {
+        var index = lowerBound(String(first))
+        while index < sortedWords.count {
+            let word = sortedWords[index]
+            guard word.first == first else { break }
+            defer { index += 1 }
             guard abs(word.count - needle.count) <= 2 else { continue }
-            if word.first != first, abs(word.count - needle.count) > 1 { continue }
+            let freq = frequencies[word] ?? 0
             let distance = damerauLevenshtein(needle, word, max: 2)
             guard distance > 0, distance <= 2 else { continue }
             if let current = best {
-                // Prefer closer edits; at equal distance prefer higher frequency.
                 if distance < current.distance
                     || (distance == current.distance && freq > current.freq) {
                     best = (word, distance, freq)

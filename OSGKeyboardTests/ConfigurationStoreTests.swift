@@ -6,6 +6,7 @@
 
 import XCTest
 @testable import OSGKeyboardShared
+@testable import OSGKeyboardHostSupport
 
 final class ConfigurationStoreTests: XCTestCase {
     private var suiteName: String!
@@ -34,6 +35,12 @@ final class ConfigurationStoreTests: XCTestCase {
             PolishingService.resolvedProviderId(store: configuration, providerIdOverride: nil),
             PolishingService.resolvedProviderId(store: store, providerIdOverride: nil)
         )
+    }
+
+    /// Unsigned test hosts may lack the App Group container. Bare
+    /// `AppGroupStore()` must not `fatalError` while XCTest is loaded.
+    func testBareAppGroupStoreDoesNotTrapUnderXCTest() {
+        _ = AppGroupStore()
     }
 
     func testASRFactoryAcceptsConfigurationStore() {

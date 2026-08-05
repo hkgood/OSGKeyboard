@@ -23,6 +23,8 @@ public enum MicVoiceAvailability: Equatable, Sendable {
         case appGroupUnavailable
         /// User tapped mic; host app jump in progress, awaiting ready contract.
         case preparingSession
+        /// Host-app first-run setup not finished — voice gated until complete.
+        case onboardingIncomplete
     }
 
     public var isReady: Bool {

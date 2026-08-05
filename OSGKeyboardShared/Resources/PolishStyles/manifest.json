@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "styles": [
+    "builtin.light",
+    "builtin.structured",
+    "builtin.formal",
+    "builtin.chat",
+    "builtin.dating",
+    "builtin.flex",
+    "builtin.corp",
+    "builtin.diba",
+    "builtin.xhs"
+  ]
+}

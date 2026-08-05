@@ -62,17 +62,17 @@
 | `4ab60ba` | 删除手动场景 UI/模型（~871 行），改依赖自动 `AppContext` |
 | 残留 | `polishScenario.*` 等本地化字符串仍在；`config.polishScenarioId` / `config.systemPrompt` 可能仍在升级用户设备上 |
 
-### 2.2 当前润色路径（问题）
+### 2.2 当前润色路径
 
 ```text
 ASR 文本
   → PolishingService.polish
-       → buildPrompt：
-            globalOutputContract
-            + Task1 纠错 + Task2 结构
-            + Task3：AppContext.polishGuideline + Intensity
-            + 词典 + 上文 + 原文
-  → TranscriptPostProcessor → 插入
+       → PolishPromptComposer：
+            Core + Dictionary + Personality + Policy
+            + AppContext + Intensity + QuestionGuard + RuntimeContext
+       → 单次 LLM
+       → 一次 TranscriptPostProcessor + 硬校验
+  → 插入
 ```
 
 | 缺口 | 说明 |
@@ -225,19 +225,17 @@ flowchart TB
 装配顺序：
 
 ```text
-1. [可选] AppContext 前提（短；unknown 可省略）
-2. StylePack.prompt
-     - 含 {{DICTIONARY}} → 替换为词典块
-     - 无占位符且词典非空 → 追加词典块（兼容用户删占位符）
-3. Intensity.promptGuideline（短）
-4. globalOutputContract（强制尾部，用户包不可关闭）
-5. precedingText（若有）
-6. 「原文」+ transcript
+1. Core 全局输出契约与 T1–T5
+2. Dictionary 独立词典块
+3. StylePack.prompt（仅人格）
+4. StylePolicy + Intensity
+5. AppContext + QuestionGuard + RuntimeContext
+6. 用户消息中的 transcript
 ```
 
 | 保留 | 由 Composer 接管 / 替换 |
 |------|-------------------------|
-| API key / 超时 / skipLLM | 旧 Task3「风格要求」行（`AppContext.polishGuideline` 作为人格） |
+| API key / 超时 / skipLLM | 旧 Task3「风格要求」行（场景提示改由 Composer 管理） |
 | `globalOutputContract` | 旧「角色 + Task1/2/3」整段骨架（人格改由 pack 提供） |
 | Intensity 追加 | 平行 `ScenarioPrompt` |
 | 词典注入 | `systemPrompt` 作为第三种风格旁路 |
@@ -246,11 +244,7 @@ flowchart TB
 
 **自定义 = 编辑 user pack 的 `prompt`**，不再单独暴露「系统提示」设置页。
 
-占位符常量：
-
-```swift
-public static let dictionaryPlaceholder = "{{DICTIONARY}}"
-```
+词典由 Composer 独立注入，Style Pack 不再携带占位符。
 
 ### 3.5 存储与云同步
 
@@ -263,7 +257,7 @@ public static let dictionaryPlaceholder = "{{DICTIONARY}}"
 
 规则：
 
-- `activePolishStyleId`：学 `polishIntensity` 进 V2（`decodeIfPresent`，**不 bump schemaVersion**）
+- `activePolishStyleId`：使用 `decodeIfPresent` 进入 V2（**不 bump schemaVersion**）
 - Catalog sync：镜像 `PersonalDictionaryCloudSync`（tombstone、clearedAt、payload 上限、跟随 `settingsICloudSyncEnabled`）
 - `AppCloudSync.pullAll` / `syncNow` **各加一行**
 - Extension：**只读**；主 App / Mac：**读写**

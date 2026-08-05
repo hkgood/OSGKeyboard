@@ -6,8 +6,14 @@
 // ready. Failure states reuse the same minimal layout and only change the
 // text — permission issues are handled with a single "open Settings" link,
 // never a second in-app permission flow.
+//
+// The overlay ignores the keyboard safe area (full-bleed over Home), so it
+// manually tracks keyboard overlap and lifts the gradient + copy together
+// to stay glued to the keyboard's top edge. MainTabView also ignores the
+// keyboard inset, so system safe-area push cannot be relied on here.
 
 import SwiftUI
+import UIKit
 import OSGKeyboardShared
 
 struct FlowColdStartContext: Equatable {
@@ -32,6 +38,7 @@ enum FlowColdStartFailure: Equatable {
 
 struct FlowColdStartOverlay: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @Environment(\.scenePhase) private var scenePhase
 
     let context: FlowColdStartContext
     let onReturnToHost: () -> Void
@@ -39,8 +46,11 @@ struct FlowColdStartOverlay: View {
     let onRetry: () -> Void
     let onOpenSettings: () -> Void
 
-    /// Fraction of the screen height the bottom gradient occupies.
+    /// Fraction of the *visible* height (above the keyboard) the gradient occupies.
     private let gradientHeightFraction: CGFloat = 0.50
+
+    /// Distance from the screen bottom to the keyboard's top edge.
+    @State private var keyboardOverlap: CGFloat = 0
 
     /// Ready and failure states dismiss on blank tap; preparing stays
     /// informational only (no accidental dismiss while proving audio).
@@ -55,7 +65,30 @@ struct FlowColdStartOverlay: View {
 
     var body: some View {
         GeometryReader { geo in
+            // Keep gradient proportions relative to the canvas above the keyboard
+            // so the near-opaque band stays behind the title when the keyboard is up.
+            let visibleHeight = max(geo.size.height - keyboardOverlap, 1)
+            let gradientHeight = visibleHeight * gradientHeightFraction
+            // Above the keyboard the home-indicator inset is already consumed by
+            // `keyboardOverlap`; only apply it when the keyboard is hidden.
+            let contentBottomPad = keyboardOverlap > 0
+                ? Spacing.sm
+                : max(geo.safeAreaInsets.bottom, Spacing.sm)
+
             ZStack(alignment: .bottom) {
+                // Full-screen hit sink: must expand explicitly — a bare Color.clear
+                // in a bottom-aligned ZStack can collapse and let taps reach Home
+                // (e.g. focusing the preview field while this overlay is visible).
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if allowsBlankTapDismiss {
+                            onDismiss()
+                        }
+                    }
+                    .allowsHitTesting(true)
+
                 // Full-width bottom gradient: transparent at the top of the
                 // band, nearly opaque at the bottom so hint text stays readable.
                 LinearGradient(
@@ -67,33 +100,159 @@ struct FlowColdStartOverlay: View {
                     startPoint: .top,
                     endPoint: .bottom
                 )
-                .frame(height: geo.size.height * gradientHeightFraction)
+                .frame(height: gradientHeight)
                 .frame(maxWidth: .infinity, alignment: .bottom)
                 .allowsHitTesting(false)
-
-                if allowsBlankTapDismiss {
-                    // Captures taps on empty overlay space (dismiss) and blocks
-                    // pass-through to the host shell underneath. Action buttons in
-                    // `content` sit above this layer and remain tappable.
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture(perform: onDismiss)
-                        .ignoresSafeArea()
-                }
 
                 VStack(spacing: Spacing.lg) {
                     content
                         .padding(.horizontal, Spacing.xl)
 
                     homeIndicator
-                        .padding(.bottom, max(geo.safeAreaInsets.bottom, Spacing.sm))
+                        .padding(.bottom, contentBottomPad)
                 }
             }
+            // Lift gradient + copy as one unit so the opaque band stays glued
+            // to the keyboard top edge (or the home indicator when idle).
+            .padding(.bottom, keyboardOverlap)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             .ignoresSafeArea()
         }
+        .onAppear {
+            // Cold-start copy asks the user to swipe back — dismiss any in-app
+            // keyboard first so Home's preview field cannot steal the scene.
+            Self.resignEditingFocus()
+            syncKeyboardOverlap(animated: false)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            syncKeyboardOverlap(animated: false)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
+            applyKeyboardOverlap(from: notification)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidChangeFrameNotification)) { notification in
+            // Catches frames missed between mount and the first WillChange
+            // (keyboard already visible when the overlay appears).
+            applyKeyboardOverlap(from: notification)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { notification in
+            applyKeyboardOverlap(0, from: notification)
+        }
         .animation(.easeInOut(duration: 0.2), value: context.state)
         .accessibilityElement(children: .contain)
+    }
+
+    /// Reads the keyboard end frame and animates `keyboardOverlap` with the
+    /// system keyboard curve so the gradient rides the same motion.
+    private func applyKeyboardOverlap(from notification: Notification) {
+        let overlap = Self.keyboardOverlap(from: notification)
+        applyKeyboardOverlap(overlap, from: notification)
+    }
+
+    private func applyKeyboardOverlap(_ overlap: CGFloat, from notification: Notification) {
+        let duration = (notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? NSNumber)?
+            .doubleValue ?? 0.25
+        withAnimation(.easeOut(duration: duration)) {
+            keyboardOverlap = overlap
+        }
+    }
+
+    private func syncKeyboardOverlap(animated: Bool) {
+        let overlap = Self.probedKeyboardOverlap()
+        if animated {
+            withAnimation(.easeOut(duration: 0.2)) {
+                keyboardOverlap = overlap
+            }
+        } else {
+            keyboardOverlap = overlap
+        }
+    }
+
+    /// Screen-bottom → keyboard-top distance in the key window.
+    private static func keyboardOverlap(from notification: Notification) -> CGFloat {
+        guard let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+            return 0
+        }
+        guard let window = keyWindow else {
+            let bounds = UIScreen.main.bounds
+            return max(0, bounds.maxY - frame.minY)
+        }
+        let frameInWindow = window.convert(frame, from: nil)
+        return max(0, window.bounds.maxY - frameInWindow.minY)
+    }
+
+    /// Best-effort read when we may have missed keyboard notifications
+    /// (overlay mounted while the keyboard was already up).
+    private static func probedKeyboardOverlap() -> CGFloat {
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive })
+            ?? UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first
+        else {
+            return 0
+        }
+
+        let reference = keyWindow ?? scene.windows.first
+        let bounds = reference?.bounds ?? scene.screen.bounds
+
+        // UITextEffectsWindow / UIRemoteKeyboardWindow host the keyboard chrome.
+        for window in scene.windows {
+            let name = String(describing: type(of: window))
+            guard name.contains("Keyboard") || name.contains("TextEffects") else { continue }
+            let overlap = max(0, bounds.maxY - window.frame.minY)
+            // Full-screen effects windows are not themselves the keyboard —
+            // walk for a bottom-docked subview that looks like the input host.
+            if overlap >= bounds.height - 1 {
+                if let docked = deepestBottomDockedSubview(in: window, referenceBounds: bounds) {
+                    return max(0, bounds.maxY - docked.minY)
+                }
+                continue
+            }
+            if overlap > 0 {
+                return overlap
+            }
+        }
+        return 0
+    }
+
+    private static func deepestBottomDockedSubview(
+        in window: UIWindow,
+        referenceBounds: CGRect
+    ) -> CGRect? {
+        var best: CGRect?
+        func visit(_ view: UIView) {
+            let frame = view.convert(view.bounds, to: nil)
+            let touchesBottom = abs(frame.maxY - referenceBounds.maxY) < 1.5
+            let tallEnough = frame.height > 120
+            let notFullScreen = frame.height < referenceBounds.height * 0.92
+            if touchesBottom, tallEnough, notFullScreen {
+                if best == nil || frame.minY < best!.minY {
+                    best = frame
+                }
+            }
+            for child in view.subviews {
+                visit(child)
+            }
+        }
+        visit(window)
+        return best
+    }
+
+    private static var keyWindow: UIWindow? {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)
+    }
+
+    private static func resignEditingFocus() {
+        UIApplication.shared.sendAction(
+            #selector(UIResponder.resignFirstResponder),
+            to: nil,
+            from: nil,
+            for: nil
+        )
     }
 
     @ViewBuilder

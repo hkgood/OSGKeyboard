@@ -29,10 +29,15 @@ public enum FlowHandoffPolicy {
     /// Opening the host must be driven by an explicit mic press (or a Live
     /// Activity tap when that keep-alive mode is selected). PiP sessions
     /// never auto-jump once `hostReady` is published.
+    ///
+    /// Ready-wait polls may observe a dead host, but must still gate
+    /// `startflow` on mic intent (`recordWhenHostReady`) — otherwise an idle
+    /// keyboard open relaunches ASR and jetsams the extension.
     public static let allowsProactiveHostAutoLaunch = false
 
     /// Samples of "host truly dead" required before a cold-start jump is allowed
-    /// from a non-press path. Mic press uses `shouldOpenHostColdStart` directly.
+    /// from a mic-driven ready-wait recovery. Idle opens must never cold-start.
+    /// Mic press uses `shouldOpenHostColdStart` directly.
     public static let coldStartDeadSampleThreshold = 2
 
     /// True when the session contract still implies a living (or recoverable)
@@ -82,8 +87,9 @@ public enum FlowHandoffPolicy {
             return .ignore
         case .unavailable(.missingAPIKey),
              .unavailable(.noFullAccess),
-             .unavailable(.appGroupUnavailable):
-            // Caller surfaces the specific error UI.
+             .unavailable(.appGroupUnavailable),
+             .unavailable(.onboardingIncomplete):
+            // Caller surfaces the specific error UI / host jump.
             return .ignore
         case .unavailable(.preparingSession):
             // Session is warming — never cold-start; wait then record.

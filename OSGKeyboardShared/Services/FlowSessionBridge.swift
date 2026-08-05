@@ -33,6 +33,16 @@ public struct FlowFieldContext: Codable, Equatable, Sendable {
         self.isEmptyField = isSecureEntry ? false : isEmptyField
         self.isContextAvailable = isSecureEntry ? false : isContextAvailable
     }
+
+    public var deliveryFingerprint: String? {
+        guard !isSecureEntry else { return nil }
+        return [
+            keyboardType ?? "",
+            returnKeyType ?? "",
+            precedingText.map { String($0.suffix(80)) } ?? "",
+            followingText.map { String($0.prefix(40)) } ?? "",
+        ].joined(separator: "|")
+    }
 }
 
 public struct FlowCommand: Codable, Equatable, Sendable {
@@ -75,6 +85,7 @@ public struct FlowCommand: Codable, Equatable, Sendable {
 public struct FlowResult: Codable, Equatable, Sendable {
     public enum Status: String, Codable, Sendable {
         case partial
+        case rawReady
         case final
         case error
         case aborted
@@ -89,6 +100,11 @@ public struct FlowResult: Codable, Equatable, Sendable {
     public let text: String?
     public let warning: String?
     public let errorKind: FlowSessionKeys.TranscriptionErrorKind?
+    /// Raw ASR survives polish/network failure and host process churn.
+    public let rawText: String?
+    public let hostGeneration: String?
+    public let revision: Int64?
+    public let fieldFingerprint: String?
     public let createdAt: TimeInterval
 
     public init(
@@ -100,6 +116,10 @@ public struct FlowResult: Codable, Equatable, Sendable {
         text: String? = nil,
         warning: String? = nil,
         errorKind: FlowSessionKeys.TranscriptionErrorKind? = nil,
+        rawText: String? = nil,
+        hostGeneration: String? = nil,
+        revision: Int64? = nil,
+        fieldFingerprint: String? = nil,
         createdAt: TimeInterval = Date().timeIntervalSince1970
     ) {
         self.protocolVersion = protocolVersion
@@ -110,6 +130,10 @@ public struct FlowResult: Codable, Equatable, Sendable {
         self.text = text
         self.warning = warning
         self.errorKind = errorKind
+        self.rawText = rawText
+        self.hostGeneration = hostGeneration
+        self.revision = revision
+        self.fieldFingerprint = fieldFingerprint
         self.createdAt = createdAt
     }
 }
@@ -119,6 +143,8 @@ public struct FlowAck: Codable, Equatable, Sendable {
     public let sessionId: UUID
     public let utteranceId: UUID
     public let commandSeq: Int64
+    public let hostGeneration: String?
+    public let revision: Int64?
     public let consumedAt: TimeInterval
 
     public init(
@@ -126,12 +152,16 @@ public struct FlowAck: Codable, Equatable, Sendable {
         sessionId: UUID,
         utteranceId: UUID,
         commandSeq: Int64,
+        hostGeneration: String? = nil,
+        revision: Int64? = nil,
         consumedAt: TimeInterval = Date().timeIntervalSince1970
     ) {
         self.protocolVersion = protocolVersion
         self.sessionId = sessionId
         self.utteranceId = utteranceId
         self.commandSeq = commandSeq
+        self.hostGeneration = hostGeneration
+        self.revision = revision
         self.consumedAt = consumedAt
     }
 }
@@ -145,6 +175,7 @@ public struct FlowReadySnapshot: Codable, Equatable, Sendable {
         case waitingForAudioProof
         case recording
         case processing
+        case awaitingDelivery
         case permissionMissing
         case appGroupUnavailable
         case hostLost
@@ -253,6 +284,18 @@ public enum FlowSessionBridge {
         if let data = encode(command) {
             store.set(data, forKey: FlowSessionKeys.flowCommandPayload)
         }
+        var journal = decode(
+            [FlowCommand].self,
+            from: store.data(forKey: FlowSessionKeys.flowCommandJournalPayload)
+        ) ?? []
+        if !journal.contains(where: { $0.commandSeq == command.commandSeq }) {
+            journal.append(command)
+            journal.sort { $0.commandSeq < $1.commandSeq }
+            journal = Array(journal.suffix(12))
+            if let data = encode(journal) {
+                store.set(data, forKey: FlowSessionKeys.flowCommandJournalPayload)
+            }
+        }
         flush(store)
         FlowSessionDarwin.postCommandChanged()
     }
@@ -262,8 +305,31 @@ public enum FlowSessionBridge {
         return decode(FlowCommand.self, from: store.data(forKey: FlowSessionKeys.flowCommandPayload))
     }
 
+    public static func commands(
+        after commandSeq: Int64,
+        defaults: UserDefaults? = nil
+    ) -> [FlowCommand] {
+        let store = resolvedDefaults(defaults)
+        let journal = decode(
+            [FlowCommand].self,
+            from: store.data(forKey: FlowSessionKeys.flowCommandJournalPayload)
+        ) ?? []
+        return journal
+            .filter { $0.commandSeq > commandSeq }
+            .sorted { $0.commandSeq < $1.commandSeq }
+    }
+
     public static func writeResult(_ result: FlowResult, defaults: UserDefaults? = nil) {
         let store = resolvedDefaults(defaults)
+        if let existing = decode(
+            FlowResult.self,
+            from: store.data(forKey: FlowSessionKeys.flowResultPayload)
+        ), existing.sessionId == result.sessionId,
+           existing.utteranceId == result.utteranceId,
+           isTerminal(existing.status),
+           !isTerminal(result.status) {
+            return
+        }
         if let data = encode(result) {
             store.set(data, forKey: FlowSessionKeys.flowResultPayload)
         }
@@ -288,11 +354,37 @@ public enum FlowSessionBridge {
             store.set(data, forKey: FlowSessionKeys.flowAckPayload)
         }
         flush(store)
+        FlowSessionDarwin.postTranscriptionChanged()
     }
 
     public static func latestAck(defaults: UserDefaults? = nil) -> FlowAck? {
         let store = resolvedDefaults(defaults)
         return decode(FlowAck.self, from: store.data(forKey: FlowSessionKeys.flowAckPayload))
+    }
+
+    public static func setPendingKeyboardUtteranceId(
+        _ id: UUID?,
+        defaults: UserDefaults? = nil
+    ) {
+        let store = resolvedDefaults(defaults)
+        if let id {
+            store.set(id.uuidString, forKey: FlowSessionKeys.pendingKeyboardUtteranceId)
+        } else {
+            store.removeObject(forKey: FlowSessionKeys.pendingKeyboardUtteranceId)
+        }
+        flush(store)
+    }
+
+    public static func pendingKeyboardUtteranceId(defaults: UserDefaults? = nil) -> UUID? {
+        let store = resolvedDefaults(defaults)
+        guard let raw = store.string(forKey: FlowSessionKeys.pendingKeyboardUtteranceId) else {
+            return nil
+        }
+        return UUID(uuidString: raw)
+    }
+
+    private static func isTerminal(_ status: FlowResult.Status) -> Bool {
+        status == .final || status == .error || status == .aborted || status == .timeout
     }
 
     public static func writeReadySnapshot(_ snapshot: FlowReadySnapshot, defaults: UserDefaults? = nil) {
@@ -364,8 +456,10 @@ public enum FlowSessionBridge {
         writeHeartbeat(defaults: store)
         clearTranscription(defaults: store)
         store.removeObject(forKey: FlowSessionKeys.flowCommandPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowCommandJournalPayload)
         store.removeObject(forKey: FlowSessionKeys.flowResultPayload)
         store.removeObject(forKey: FlowSessionKeys.flowAckPayload)
+        store.removeObject(forKey: FlowSessionKeys.pendingKeyboardUtteranceId)
         if let sessionId {
             let snapshot = FlowReadySnapshot(
                 sessionId: sessionId,
@@ -400,8 +494,10 @@ public enum FlowSessionBridge {
         writeHeartbeat(defaults: defaults)
         clearTranscription(defaults: defaults)
         defaults.removeObject(forKey: FlowSessionKeys.flowCommandPayload)
+        defaults.removeObject(forKey: FlowSessionKeys.flowCommandJournalPayload)
         defaults.removeObject(forKey: FlowSessionKeys.flowResultPayload)
         defaults.removeObject(forKey: FlowSessionKeys.flowAckPayload)
+        defaults.removeObject(forKey: FlowSessionKeys.pendingKeyboardUtteranceId)
         if let sessionId {
             let snapshot = FlowReadySnapshot(
                 sessionId: sessionId,
@@ -429,8 +525,10 @@ public enum FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.flowHeartbeat)
         clearTranscription(defaults: store)
         store.removeObject(forKey: FlowSessionKeys.flowCommandPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowCommandJournalPayload)
         store.removeObject(forKey: FlowSessionKeys.flowResultPayload)
         store.removeObject(forKey: FlowSessionKeys.flowAckPayload)
+        store.removeObject(forKey: FlowSessionKeys.pendingKeyboardUtteranceId)
         store.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
         clearHostReady(defaults: store, notify: false)
         flush(store)
@@ -564,8 +662,10 @@ public enum FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.flowHeartbeat)
         store.removeObject(forKey: FlowSessionKeys.keyboardRecordingState)
         store.removeObject(forKey: FlowSessionKeys.flowCommandPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowCommandJournalPayload)
         store.removeObject(forKey: FlowSessionKeys.flowResultPayload)
         store.removeObject(forKey: FlowSessionKeys.flowAckPayload)
+        store.removeObject(forKey: FlowSessionKeys.pendingKeyboardUtteranceId)
         store.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
         clearTranscription(defaults: store)
         store.removeObject(forKey: FlowSessionKeys.audioLevels)
@@ -595,6 +695,19 @@ public enum FlowSessionBridge {
         if notify {
             FlowSessionDarwin.postHostReadyChanged()
         }
+    }
+
+    /// Host is compiling CLM / deploying Rime / warming ASR — extension must
+    /// avoid stacking typing-engine RSS on top.
+    public static func setHostHeavy(_ heavy: Bool, defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        store.set(heavy, forKey: FlowSessionKeys.hostHeavy)
+        flush(store)
+        OSGDiag.log("hostHeavy=\(heavy ? 1 : 0) \(OSGDiag.memoryTag())", category: "flow")
+    }
+
+    public static func isHostHeavy(defaults: UserDefaults? = nil) -> Bool {
+        resolvedDefaults(defaults).bool(forKey: FlowSessionKeys.hostHeavy)
     }
 
     /// True when the host has published a fresh ready contract (stricter than heartbeat alone).
@@ -825,8 +938,10 @@ public enum FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.keyboardRecordingState)
         store.removeObject(forKey: FlowSessionKeys.transcriptionLanguage)
         store.removeObject(forKey: FlowSessionKeys.flowCommandPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowCommandJournalPayload)
         store.removeObject(forKey: FlowSessionKeys.flowResultPayload)
         store.removeObject(forKey: FlowSessionKeys.flowAckPayload)
+        store.removeObject(forKey: FlowSessionKeys.pendingKeyboardUtteranceId)
         store.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
         clearTranscription(defaults: store)
         store.removeObject(forKey: FlowSessionKeys.audioLevels)

@@ -51,6 +51,7 @@ final class RimeSchemaGeneratorTests: XCTestCase {
         XCTAssertEqual(configuration.schema, .fullPinyin)
         XCTAssertTrue(configuration.fuzzyPairs.isEmpty)
         XCTAssertFalse(configuration.defaultToTyping)
+        XCTAssertFalse(configuration.rememberLastSurface)
     }
 
     @MainActor
@@ -60,11 +61,58 @@ final class RimeSchemaGeneratorTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         XCTAssertFalse(TypingInputConfiguration.prefersTypingOnOpen(defaults: defaults))
+        XCTAssertEqual(
+            TypingInputConfiguration.preferredSurfaceOnOpen(defaults: defaults),
+            .voice
+        )
 
         let configuration = TypingInputConfiguration(defaults: defaults)
         configuration.defaultToTyping = true
 
         XCTAssertTrue(TypingInputConfiguration.prefersTypingOnOpen(defaults: defaults))
         XCTAssertTrue(TypingInputConfiguration(defaults: defaults).defaultToTyping)
+        XCTAssertEqual(
+            TypingInputConfiguration.preferredSurfaceOnOpen(defaults: defaults),
+            .typing
+        )
+    }
+
+    @MainActor
+    func testRememberLastSurfaceOverridesDefaultToTyping() {
+        let suiteName = "TypingInputConfigurationTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let configuration = TypingInputConfiguration(defaults: defaults)
+        configuration.defaultToTyping = true
+        configuration.rememberLastSurface = true
+        TypingInputConfiguration.persistLastSurface(.voice, defaults: defaults)
+
+        XCTAssertEqual(
+            TypingInputConfiguration.preferredSurfaceOnOpen(defaults: defaults),
+            .voice
+        )
+
+        TypingInputConfiguration.persistLastSurface(.typing, defaults: defaults)
+        XCTAssertEqual(
+            TypingInputConfiguration.preferredSurfaceOnOpen(defaults: defaults),
+            .typing
+        )
+    }
+
+    @MainActor
+    func testRememberLastSurfaceFallsBackWhenNothingPersisted() {
+        let suiteName = "TypingInputConfigurationTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let configuration = TypingInputConfiguration(defaults: defaults)
+        configuration.defaultToTyping = true
+        configuration.rememberLastSurface = true
+
+        XCTAssertEqual(
+            TypingInputConfiguration.preferredSurfaceOnOpen(defaults: defaults),
+            .typing
+        )
     }
 }

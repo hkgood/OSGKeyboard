@@ -75,6 +75,8 @@ public final class TypingInputConfiguration: ObservableObject {
         static let schema = "typing.input.schema"
         static let fuzzyPairs = "typing.input.fuzzyPairs"
         static let defaultToTyping = "typing.input.defaultToTyping"
+        static let rememberLastSurface = "typing.input.rememberLastSurface"
+        static let lastSurface = "typing.input.lastSurface"
         static let resourceVersion = "typing.rime.resourceVersion"
     }
 
@@ -90,7 +92,13 @@ public final class TypingInputConfiguration: ObservableObject {
     }
 
     /// Selects the text keyboard whenever the extension becomes visible.
+    /// Ignored when `rememberLastSurface` is on and a prior surface was saved.
     @Published public var defaultToTyping: Bool {
+        didSet { persistIfReady() }
+    }
+
+    /// When on, reopen on the voice/typing surface left at the last dismiss.
+    @Published public var rememberLastSurface: Bool {
         didSet { persistIfReady() }
     }
 
@@ -101,6 +109,7 @@ public final class TypingInputConfiguration: ObservableObject {
         let fuzzyIds = self.defaults.stringArray(forKey: Key.fuzzyPairs) ?? []
         fuzzyPairs = Set(fuzzyIds.compactMap(PinyinFuzzyPair.init(rawValue:)))
         defaultToTyping = self.defaults.bool(forKey: Key.defaultToTyping)
+        rememberLastSurface = self.defaults.bool(forKey: Key.rememberLastSurface)
         isHydrating = false
     }
 
@@ -123,13 +132,46 @@ public final class TypingInputConfiguration: ObservableObject {
         let fuzzyIds = defaults.stringArray(forKey: Key.fuzzyPairs) ?? []
         fuzzyPairs = Set(fuzzyIds.compactMap(PinyinFuzzyPair.init(rawValue:)))
         defaultToTyping = defaults.bool(forKey: Key.defaultToTyping)
+        rememberLastSurface = defaults.bool(forKey: Key.rememberLastSurface)
         isHydrating = false
     }
 
+    /// Legacy helper for the default-to-typing toggle only (not full open policy).
     nonisolated public static func prefersTypingOnOpen(
         defaults: UserDefaults? = nil
     ) -> Bool {
         (defaults ?? AppGroup.defaultsIfAvailable)?.bool(forKey: Key.defaultToTyping) ?? false
+    }
+
+    nonisolated public static func remembersLastSurface(
+        defaults: UserDefaults? = nil
+    ) -> Bool {
+        (defaults ?? AppGroup.defaultsIfAvailable)?.bool(forKey: Key.rememberLastSurface) ?? false
+    }
+
+    /// Surface to show on the first frame of a keyboard presentation.
+    /// Prefer last-left surface when remembering; otherwise default-to-typing.
+    nonisolated public static func preferredSurfaceOnOpen(
+        defaults: UserDefaults? = nil
+    ) -> KeyboardState.Surface {
+        let store = defaults ?? AppGroup.defaultsIfAvailable
+        guard let store else { return .voice }
+
+        if store.bool(forKey: Key.rememberLastSurface),
+           let raw = store.string(forKey: Key.lastSurface),
+           let surface = KeyboardState.Surface(rawValue: raw) {
+            return surface
+        }
+
+        return store.bool(forKey: Key.defaultToTyping) ? .typing : .voice
+    }
+
+    /// Persist the surface present when the keyboard leaves the screen.
+    nonisolated public static func persistLastSurface(
+        _ surface: KeyboardState.Surface,
+        defaults: UserDefaults? = nil
+    ) {
+        (defaults ?? AppGroup.defaultsIfAvailable)?.set(surface.rawValue, forKey: Key.lastSurface)
     }
 
     nonisolated public static func installedResourceVersion(
@@ -150,6 +192,7 @@ public final class TypingInputConfiguration: ObservableObject {
         defaults.set(schema.rawValue, forKey: Key.schema)
         defaults.set(fuzzyPairs.map(\.rawValue).sorted(), forKey: Key.fuzzyPairs)
         defaults.set(defaultToTyping, forKey: Key.defaultToTyping)
+        defaults.set(rememberLastSurface, forKey: Key.rememberLastSurface)
         AppGroupConfigDarwin.postConfigChanged()
     }
 }

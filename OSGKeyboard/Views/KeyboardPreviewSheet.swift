@@ -10,6 +10,7 @@
 
 import SwiftUI
 import OSGKeyboardShared
+import OSGKeyboardHostSupport
 
 struct KeyboardPreviewSheet: View {
     @Environment(\.themePalette) private var palette: ThemePalette

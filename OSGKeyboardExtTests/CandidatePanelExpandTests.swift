@@ -13,7 +13,7 @@ final class CandidatePanelExpandTests: XCTestCase {
 
     func testChevronRequiresChineseAndAtLeastTwoCandidates() {
         let engine = StubRimeEngine()
-        let typing = TypingSessionController(engine: engine)
+        let typing = TypingSessionController(engine: { engine })
 
         XCTAssertFalse(typing.canExpandCandidatePanel)
 
@@ -36,7 +36,7 @@ final class CandidatePanelExpandTests: XCTestCase {
 
     func testToggleExpandAndSelectCollapses() {
         let engine = StubRimeEngine()
-        let typing = TypingSessionController(engine: engine)
+        let typing = TypingSessionController(engine: { engine })
 
         _ = typing.handleKey("n")
         XCTAssertTrue(typing.canExpandCandidatePanel)
@@ -57,7 +57,7 @@ final class CandidatePanelExpandTests: XCTestCase {
 
     func testPanelCollapsesWhenCandidatesDropBelowTwo() {
         let engine = StubRimeEngine()
-        let typing = TypingSessionController(engine: engine)
+        let typing = TypingSessionController(engine: { engine })
 
         _ = typing.handleKey("n")
         typing.toggleCandidatePanelExpanded()
@@ -75,7 +75,7 @@ final class CandidatePanelExpandTests: XCTestCase {
 
     func testLeaveTypingModeCollapsesPanel() {
         let engine = StubRimeEngine()
-        let typing = TypingSessionController(engine: engine)
+        let typing = TypingSessionController(engine: { engine })
         _ = typing.handleKey("n")
         typing.toggleCandidatePanelExpanded()
         XCTAssertTrue(typing.isCandidatePanelExpanded)

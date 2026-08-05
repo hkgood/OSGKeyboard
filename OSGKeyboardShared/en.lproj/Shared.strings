@@ -98,15 +98,12 @@
 "polishStyle.diba" = "DiBa Logic";
 "polishStyle.xhs" = "RED Sisters";
 
-/* v0.3.0: Polish intensity picker */
-"polish.intensity.off" = "Off";
+/* Polish intensity */
 "polish.intensity.light" = "Light";
-"polish.intensity.medium" = "Medium";
 "polish.intensity.heavy" = "Heavy";
-"polish.intensity.off.desc" = "No polish; inserts raw ASR unless your personal dictionary has entries, then runs ASR correction only.";
-"polish.intensity.light.desc" = "Drop only isolated filler words and obvious duplications. Punctuation and structure still apply.";
-"polish.intensity.medium.desc" = "Correct recognition errors, remove fillers, polish phrasing. Punctuation and structure always apply. Default.";
-"polish.intensity.heavy.desc" = "Restructure into lists and paragraphs when needed. Best for meeting notes and reports.";
+"polish.intensity.light.desc" = "Uses full fidelity and question safeguards to reduce distortion.";
+"polish.intensity.heavy.desc" = "Uses only transcript formatting before the selected fun personality.";
+
 
 /* v0.3.0: Detected app context labels */
 "appContext.code" = "Code";
@@ -275,6 +272,7 @@
 "mac.settings.localSpeechFallback" = "Local Recognition (Apple Speech)";
 "mac.settings.localSpeechFallbackDesc" = "On-device Apple Speech when the Qwen3 model is not installed.";
 "mac.settings.about" = "About";
+"mac.settings.version" = "Version";
 "mac.settings.privacyPolicy" = "Privacy Policy";
 "mac.settings.thirdPartyLicenses" = "Third-Party Licenses";
 "mac.settings.licenses.footer" = "Open-source components used by OSGKeyboard. License texts are reproduced from upstream repositories; model weights are downloaded at runtime and cached on device. OSGKeyboard itself is source-available — commercial licensing: rocky.hk@gmail.com.";

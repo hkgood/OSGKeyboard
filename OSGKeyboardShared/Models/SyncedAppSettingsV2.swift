@@ -26,6 +26,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
     public var translationTargetLocaleId: SyncedField<String>
     public var handednessPreference: SyncedField<HandednessPreference>
     public var cursorDragNavigationEnabled: SyncedField<Bool>
+    public var keyboardHapticIntensity: SyncedField<KeyboardHapticIntensity>
     public var polishIntensity: SyncedField<PolishIntensity>
     public var activePolishStyleId: SyncedField<String>
     public var llmThinkingEnabled: SyncedField<Bool>
@@ -49,7 +50,8 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         translationTargetLocaleId: SyncedField<String>,
         handednessPreference: SyncedField<HandednessPreference>,
         cursorDragNavigationEnabled: SyncedField<Bool>,
-        polishIntensity: SyncedField<PolishIntensity>,
+        keyboardHapticIntensity: SyncedField<KeyboardHapticIntensity>,
+        polishIntensity: SyncedField<PolishIntensity>? = nil,
         activePolishStyleId: SyncedField<String>,
         llmThinkingEnabled: SyncedField<Bool>,
         flowSkipAppSwitch: SyncedField<Bool>,
@@ -71,7 +73,12 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         self.translationTargetLocaleId = translationTargetLocaleId
         self.handednessPreference = handednessPreference
         self.cursorDragNavigationEnabled = cursorDragNavigationEnabled
-        self.polishIntensity = polishIntensity
+        self.keyboardHapticIntensity = keyboardHapticIntensity
+        self.polishIntensity = polishIntensity ?? SyncedField(
+            value: .default,
+            updatedAt: keyboardHapticIntensity.updatedAt,
+            deviceID: keyboardHapticIntensity.deviceID
+        )
         self.activePolishStyleId = activePolishStyleId
         self.llmThinkingEnabled = llmThinkingEnabled
         self.flowSkipAppSwitch = flowSkipAppSwitch
@@ -95,6 +102,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         case translationTargetLocaleId
         case handednessPreference
         case cursorDragNavigationEnabled
+        case keyboardHapticIntensity
         case polishIntensity
         case activePolishStyleId
         case llmThinkingEnabled
@@ -126,19 +134,38 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             SyncedField<Bool>.self,
             forKey: .cursorDragNavigationEnabled
         )
-        polishIntensity = try container.decode(SyncedField<PolishIntensity>.self, forKey: .polishIntensity)
+        keyboardHapticIntensity = try container.decodeIfPresent(
+            SyncedField<KeyboardHapticIntensity>.self,
+            forKey: .keyboardHapticIntensity
+        ) ?? SyncedField(
+            value: .default,
+            updatedAt: cursorDragNavigationEnabled.updatedAt,
+            deviceID: cursorDragNavigationEnabled.deviceID
+        )
+        polishIntensity = try container.decodeIfPresent(
+            SyncedField<PolishIntensity>.self,
+            forKey: .polishIntensity
+        ) ?? SyncedField(
+            value: .default,
+            updatedAt: keyboardHapticIntensity.updatedAt,
+            deviceID: keyboardHapticIntensity.deviceID
+        )
         activePolishStyleId = try container.decodeIfPresent(
             SyncedField<String>.self,
             forKey: .activePolishStyleId
         ) ?? SyncedField(
             value: PolishStylePackCatalog.defaultID,
-            updatedAt: polishIntensity.updatedAt,
-            deviceID: polishIntensity.deviceID
+            updatedAt: keyboardHapticIntensity.updatedAt,
+            deviceID: keyboardHapticIntensity.deviceID
         )
         llmThinkingEnabled = try container.decodeIfPresent(
             SyncedField<Bool>.self,
             forKey: .llmThinkingEnabled
-        ) ?? SyncedField(value: false, updatedAt: polishIntensity.updatedAt, deviceID: polishIntensity.deviceID)
+        ) ?? SyncedField(
+            value: false,
+            updatedAt: keyboardHapticIntensity.updatedAt,
+            deviceID: keyboardHapticIntensity.deviceID
+        )
         flowSkipAppSwitch = try container.decode(SyncedField<Bool>.self, forKey: .flowSkipAppSwitch)
         flowKeepAliveMode = try container.decodeIfPresent(
             SyncedField<FlowKeepAliveMode>.self,
@@ -192,6 +219,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             translationTargetLocaleId.updatedAt,
             handednessPreference.updatedAt,
             cursorDragNavigationEnabled.updatedAt,
+            keyboardHapticIntensity.updatedAt,
             polishIntensity.updatedAt,
             activePolishStyleId.updatedAt,
             llmThinkingEnabled.updatedAt,
@@ -231,6 +259,7 @@ public extension SyncedAppSettingsV2 {
             translationTargetLocaleId: field(configuration.translationTargetLocaleId),
             handednessPreference: field(configuration.handednessPreference),
             cursorDragNavigationEnabled: field(configuration.cursorDragNavigationEnabled),
+            keyboardHapticIntensity: field(configuration.keyboardHapticIntensity),
             polishIntensity: field(configuration.polishIntensity),
             activePolishStyleId: field(configuration.activePolishStyleId),
             llmThinkingEnabled: field(configuration.llmThinkingEnabled),
@@ -262,7 +291,8 @@ public extension SyncedAppSettingsV2 {
             translationTargetLocaleId: field(legacy.translationTargetLocaleId),
             handednessPreference: field(legacy.handednessPreference),
             cursorDragNavigationEnabled: field(legacy.cursorDragNavigationEnabled),
-            polishIntensity: field(legacy.polishIntensity),
+            keyboardHapticIntensity: field(KeyboardHapticIntensity.default),
+            polishIntensity: field(PolishIntensity.default),
             activePolishStyleId: field(PolishStylePackCatalog.defaultID),
             llmThinkingEnabled: field(false),
             flowSkipAppSwitch: field(legacy.flowSkipAppSwitch),
@@ -296,7 +326,14 @@ public extension SyncedAppSettingsV2 {
                 local: local.cursorDragNavigationEnabled,
                 remote: remote.cursorDragNavigationEnabled
             ),
-            polishIntensity: .merge(local: local.polishIntensity, remote: remote.polishIntensity),
+            keyboardHapticIntensity: .merge(
+                local: local.keyboardHapticIntensity,
+                remote: remote.keyboardHapticIntensity
+            ),
+            polishIntensity: .merge(
+                local: local.polishIntensity,
+                remote: remote.polishIntensity
+            ),
             activePolishStyleId: .merge(
                 local: local.activePolishStyleId,
                 remote: remote.activePolishStyleId
@@ -326,6 +363,7 @@ public extension SyncedAppSettingsV2 {
         configuration.translationTargetLocaleId = translationTargetLocaleId.value
         configuration.handednessPreference = handednessPreference.value
         configuration.cursorDragNavigationEnabled = cursorDragNavigationEnabled.value
+        configuration.keyboardHapticIntensity = keyboardHapticIntensity.value
         configuration.polishIntensity = polishIntensity.value
         configuration.activePolishStyleId = activePolishStyleId.value
         configuration.llmThinkingEnabled = llmThinkingEnabled.value
@@ -355,6 +393,7 @@ public extension SyncedAppSettingsV2 {
         patch(&copy.translationTargetLocaleId, value: configuration.translationTargetLocaleId)
         patch(&copy.handednessPreference, value: configuration.handednessPreference)
         patch(&copy.cursorDragNavigationEnabled, value: configuration.cursorDragNavigationEnabled)
+        patch(&copy.keyboardHapticIntensity, value: configuration.keyboardHapticIntensity)
         patch(&copy.polishIntensity, value: configuration.polishIntensity)
         patch(&copy.activePolishStyleId, value: configuration.activePolishStyleId)
         patch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
@@ -387,6 +426,7 @@ public extension SyncedAppSettingsV2 {
         touch(&copy.translationTargetLocaleId, value: configuration.translationTargetLocaleId)
         touch(&copy.handednessPreference, value: configuration.handednessPreference)
         touch(&copy.cursorDragNavigationEnabled, value: configuration.cursorDragNavigationEnabled)
+        touch(&copy.keyboardHapticIntensity, value: configuration.keyboardHapticIntensity)
         touch(&copy.polishIntensity, value: configuration.polishIntensity)
         touch(&copy.activePolishStyleId, value: configuration.activePolishStyleId)
         touch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)

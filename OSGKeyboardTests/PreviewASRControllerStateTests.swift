@@ -30,6 +30,7 @@
 
 import XCTest
 @testable import OSGKeyboardShared
+@testable import OSGKeyboardHostSupport
 
 @MainActor
 final class PreviewASRControllerStateTests: XCTestCase {

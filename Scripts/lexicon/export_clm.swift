@@ -36,7 +36,7 @@ struct CLIOptions {
             "OSGKeyboard/Resources/CustomLanguageModel/ai-tech-brands/v1/phrases.tsv"
         )
         var output = repoRoot.appendingPathComponent(
-            "OSGKeyboardShared/Resources/CustomLanguageModel/v1/OSGKeyboardCLM.bin"
+            "OSGKeyboard/Resources/CustomLanguageModel/v1/OSGKeyboardCLM.bin"
         )
         var localeID = "zh_CN"
         var modelID = "com.osgkeyboard.custom-lm.v1"

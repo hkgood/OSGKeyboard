@@ -15,7 +15,7 @@ final class LibrimeIntegrationTests: XCTestCase {
         try fileManager.createDirectory(at: shared, withIntermediateDirectories: true)
         try fileManager.createDirectory(at: user, withIntermediateDirectories: true)
 
-        let bundle = try XCTUnwrap(Bundle(identifier: "com.osgkeyboard.ios.shared"))
+        let bundle = Bundle(for: LibrimeIntegrationTests.self)
         let dictionary = try XCTUnwrap(
             bundle.url(forResource: "osg_pinyin.dict", withExtension: "yaml")
         )
