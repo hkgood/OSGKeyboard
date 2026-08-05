@@ -1,8 +1,9 @@
 # 打字键盘输入准确率提升计划
 
-> **文档状态**：产品与工程规划（已讨论对齐，待进入实现）
+> **文档状态**：产品与工程规划（**实现中**：Phase 1～4 已落地，待真机试打）
 > **适用范围**：iOS 键盘扩展打字面（`OSGKeyboardExt` 打字键网格）+ 共享布局度量（`OSGKeyboardShared`）
 > **关联基线**：`docs/TYPING_KEYBOARD_BASELINE.md`
+> **实现分支**：`feat/keyboard-touch-accuracy`
 > **创建日期**：2026-08-03
 > **目标版本**：待 Phase 0 基线试打后确定发布节奏
 
@@ -345,3 +346,5 @@ Week 3～4    Phase 5   气泡等加分项（可选）
 | 日期 | 说明 |
 |------|------|
 | 2026-08-03 | 初稿：基于系统键盘分层分析与产品讨论冻结 Phase 0～5 |
+| 2026-08-05 | 开分支 `feat/keyboard-touch-accuracy`；落地 Phase 1（无死区）+ Phase 2（网格 Down/Move/Up）+ Phase 3（触点上偏）；纯逻辑见 `KeyHitTesting` / `TypingKeyLayout`，触控见 `TypingKeyTouchPad` |
+| 2026-08-05 | Phase 4：全拼合法下一键偏心（`PinyinNextKeyResolver` + `rawInput`）；双拼/英文保持中性；歧义最近键加权，单键明确命中不受偏置 |

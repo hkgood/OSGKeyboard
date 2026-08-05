@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-08-05
+
 ### Added
 - **Personal dictionary → Chinese Pinyin**: adding or deleting terms redeploys an `osg_personal` Rime sidecar (local pinyin from the bundled dict; same-code pin-to-top; Latin names also surface in Chinese mode); English typing and ASR keep using the same dictionary automatically. Takes effect the next time the keyboard opens. / **个性词库 → 中文拼音**：增删词条会重部署 `osg_personal` Rime 旁路词表（复用打包词典本地注音；同码置顶；拉丁专名在中文键盘也可出候选）；英文打字与 ASR 继续自动共用同一词库。下次打开键盘生效。
 - **Typing key sound & haptics**: letter / modifier / space / return / delete keys play system click sounds on press-down; Settings → General → Haptics offers Off / Light (default) / Strong role-based feedback. / **打字按键音效与震动**：字母 / 修饰 / 空格 / 回车 / 删除键按下即播系统咔嗒音；设置 → 通用 → 震动提供关 / 轻（默认） / 强 的角色分层触感。
+- **Typing touch accuracy (Phase 1–3)**: gap-filling hit regions (no dead seams), grid-level down → move → up tracking with slide-to-reselect, release-to-commit for letters/space/return, press-and-repeat delete, and a light upward touch intent offset. / **打字触控准确率（Phase 1–3）**：热区填缝（无死区）、网格级按下→滑动改选→松手确认、字母/空格/回车松手提交、删除按下连删，以及轻微向上的触点意图偏移。
+- **Pinyin next-key bias (Phase 4)**: during full-pinyin composition, ambiguous seam hits prefer legal next letters (capped boost/shrink); clear on-key hits and English / double-pinyin stay unbiased. / **拼音下一键偏心（Phase 4）**：全拼组词中，缝隙歧义命中优先合法后续字母（有上下限）；明确落在键上的点击以及英文/双拼不受偏置。
 
 ### Changed
 - **Rime personal-dict import**: SharedSupport now imports `osg_personal` into `osg_pinyin` (resource version `2.3.0`). / **Rime 个性词导入**：SharedSupport 将 `osg_personal` 导入 `osg_pinyin`（资源版本 `2.3.0`）。
