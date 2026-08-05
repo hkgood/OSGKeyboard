@@ -55,7 +55,8 @@ public struct RimeResourcePaths: Sendable {
 
 public actor RimeResourceInstaller {
     public static let shared = RimeResourceInstaller()
-    public static let resourceVersion = "2.2.0"
+    /// Bump when SharedSupport layout / schema / import_tables contract changes.
+    public static let resourceVersion = "2.3.0"
 
     public init() {}
 
@@ -71,11 +72,21 @@ public actor RimeResourceInstaller {
 
     /// Installs source data and asks librime to prebuild schemas. Call only
     /// from the host app, never from the keyboard extension.
+    ///
+    /// Redeploys when `force` is set, the resource version is stale, or the
+    /// PersonalDictionary sidecar fingerprint changed.
     public func installIfNeeded(
         configuration: TypingInputConfigurationSnapshot,
+        personalDictionary: PersonalDictionary? = nil,
         force: Bool = false
     ) throws {
-        if !force, Self.isReady { return }
+        let dictionary = personalDictionary ?? AppGroupStore().personalDictionary
+        let personalYAML = try Self.makePersonalDictionaryYAML(from: dictionary)
+        let personalFingerprint = RimePersonalDictionaryExporter.fingerprint(of: personalYAML)
+        let personalChanged =
+            TypingInputConfiguration.installedPersonalDictionaryFingerprint() != personalFingerprint
+
+        if !force, Self.isReady, !personalChanged { return }
 
         let paths = try RimeResourcePaths.resolve()
         let fileManager = FileManager.default
@@ -99,16 +110,32 @@ public actor RimeResourceInstaller {
         defer { try? fileManager.removeItem(at: staging) }
         try fileManager.createDirectory(at: staging, withIntermediateDirectories: true)
 
-        for resource in ["osg_pinyin.dict", "manifest"] {
-            let ext = resource == "manifest" ? "json" : "yaml"
-            guard let source = Self.bundledURL(forResource: resource, withExtension: ext) else {
-                throw RimeResourceError.bundledResourceMissing("\(resource).\(ext)")
-            }
-            try fileManager.copyItem(
-                at: source,
-                to: staging.appendingPathComponent("\(resource).\(ext)")
-            )
+        guard let pinyinSource = Self.bundledURL(forResource: "osg_pinyin.dict", withExtension: "yaml") else {
+            throw RimeResourceError.bundledResourceMissing("osg_pinyin.dict.yaml")
         }
+        let baseline = try String(contentsOf: pinyinSource, encoding: .utf8)
+        let patched = RimePersonalDictionaryExporter.injectingImportTables(into: baseline)
+        try patched.write(
+            to: staging.appendingPathComponent("osg_pinyin.dict.yaml"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        guard let manifestSource = Self.bundledURL(forResource: "manifest", withExtension: "json") else {
+            throw RimeResourceError.bundledResourceMissing("manifest.json")
+        }
+        try fileManager.copyItem(
+            at: manifestSource,
+            to: staging.appendingPathComponent("manifest.json")
+        )
+
+        try personalYAML.write(
+            to: staging.appendingPathComponent(
+                "\(RimePersonalDictionaryExporter.dictionaryName).dict.yaml"
+            ),
+            atomically: true,
+            encoding: .utf8
+        )
 
         try RimeSchemaGenerator.defaultConfiguration().write(
             to: staging.appendingPathComponent("default.yaml"),
@@ -147,7 +174,18 @@ public actor RimeResourceInstaller {
         bridge.finalizeRuntime()
 
         TypingInputConfiguration.setInstalledResourceVersion(Self.resourceVersion)
+        TypingInputConfiguration.setInstalledPersonalDictionaryFingerprint(personalFingerprint)
         AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    private static func makePersonalDictionaryYAML(
+        from dictionary: PersonalDictionary
+    ) throws -> String {
+        guard let pinyinSource = bundledURL(forResource: "osg_pinyin.dict", withExtension: "yaml") else {
+            throw RimeResourceError.bundledResourceMissing("osg_pinyin.dict.yaml")
+        }
+        let annotator = try RimePinyinAnnotator.load(from: pinyinSource)
+        return RimePersonalDictionaryExporter.yaml(from: dictionary, annotator: annotator)
     }
 
     public func syncUserData() throws {

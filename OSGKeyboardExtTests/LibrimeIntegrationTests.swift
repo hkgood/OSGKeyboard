@@ -175,4 +175,93 @@ final class LibrimeIntegrationTests: XCTestCase {
         )
         fuzzyBridge.finalizeRuntime()
     }
+
+    func testPersonalDictionarySidecarPinsSameCodeCandidates() throws {
+        let fileManager = FileManager.default
+        let root = fileManager.temporaryDirectory
+            .appendingPathComponent("OSGRimePersonal-\(UUID().uuidString)", isDirectory: true)
+        let shared = root.appendingPathComponent("SharedSupport", isDirectory: true)
+        let user = root.appendingPathComponent("UserData", isDirectory: true)
+        defer { try? fileManager.removeItem(at: root) }
+        try fileManager.createDirectory(at: shared, withIntermediateDirectories: true)
+        try fileManager.createDirectory(at: user, withIntermediateDirectories: true)
+
+        let bundle = Bundle(for: LibrimeIntegrationTests.self)
+        let dictionaryURL = try XCTUnwrap(
+            bundle.url(forResource: "osg_pinyin.dict", withExtension: "yaml")
+        )
+        let baseline = try String(contentsOf: dictionaryURL, encoding: .utf8)
+        let patched = RimePersonalDictionaryExporter.injectingImportTables(into: baseline)
+        try patched.write(
+            to: shared.appendingPathComponent("osg_pinyin.dict.yaml"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        // Unique personal phrase on a common code — must outrank baseline “你好”.
+        let personalYAML = RimePersonalDictionaryExporter.yaml(
+            entries: [
+                .init(text: "尼好专名", code: "ni hao"),
+                .init(text: "ChatGPT", code: "chatgpt")
+            ]
+        )
+        try personalYAML.write(
+            to: shared.appendingPathComponent("osg_personal.dict.yaml"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        try RimeSchemaGenerator.defaultConfiguration().write(
+            to: shared.appendingPathComponent("default.yaml"),
+            atomically: true,
+            encoding: .utf8
+        )
+        for schema in TypingInputSchema.allCases {
+            try RimeSchemaGenerator.schema(for: schema, fuzzyPairs: []).write(
+                to: shared.appendingPathComponent("\(schema.rawValue).schema.yaml"),
+                atomically: true,
+                encoding: .utf8
+            )
+        }
+
+        let deployer = OSGRimeBridge(
+            sharedDataDirectory: shared.path,
+            userDataDirectory: user.path,
+            distributionVersion: "tests-personal"
+        )
+        try deployer.deploy(withFullCheck: true)
+        deployer.finalizeRuntime()
+
+        let bridge = OSGRimeBridge(
+            sharedDataDirectory: shared.path,
+            userDataDirectory: user.path,
+            distributionVersion: "tests-personal"
+        )
+        try bridge.start()
+        XCTAssertTrue(bridge.selectSchema(TypingInputSchema.fullPinyin.rawValue))
+
+        for scalar in "nihao".utf8 {
+            XCTAssertTrue(bridge.processKeyCode(Int32(scalar), modifiers: 0))
+        }
+        let chinese = bridge.snapshot(withCandidateLimit: 40)
+        XCTAssertTrue(
+            chinese.candidates.contains(where: { $0.text == "尼好专名" }),
+            "personal Chinese missing: \(chinese.candidates.map(\.text).prefix(20))"
+        )
+        if let personal = chinese.candidates.firstIndex(where: { $0.text == "尼好专名" }),
+           let baselineHello = chinese.candidates.firstIndex(where: { $0.text == "你好" }) {
+            XCTAssertLessThan(personal, baselineHello, "personal same-code should pin above baseline")
+        }
+
+        bridge.clearComposition()
+        for scalar in "chatgpt".utf8 {
+            XCTAssertTrue(bridge.processKeyCode(Int32(scalar), modifiers: 0))
+        }
+        let english = bridge.snapshot(withCandidateLimit: 40)
+        XCTAssertTrue(
+            english.candidates.contains(where: { $0.text == "ChatGPT" }),
+            "personal English missing: \(english.candidates.map(\.text).prefix(20))"
+        )
+        bridge.finalizeRuntime()
+    }
 }

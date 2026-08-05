@@ -1,9 +1,10 @@
 // PersonalDictionary.swift
 // OSGKeyboard · Shared
 //
-// User-curated list of terms the LLM must never rewrite. Persisted
-// in the App Group (JSON-encoded) so both the main app's Settings
-// UI and the keyboard extension's LLM call read the same data.
+// User-curated list of terms shared across polish, ASR bias, English
+// typing hotwords, and (via host Rime redeploy) Chinese Pinyin candidates.
+// Persisted in the App Group (JSON-encoded) so the main app, keyboard
+// extension, and host deploy pipeline read the same data.
 //
 // Sources (mutually exclusive per entry):
 //   - `.manual`     user typed it in by hand

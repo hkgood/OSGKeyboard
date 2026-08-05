@@ -8,9 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Personal dictionary → Chinese Pinyin**: adding or deleting terms redeploys an `osg_personal` Rime sidecar (local pinyin from the bundled dict; same-code pin-to-top; Latin names also surface in Chinese mode); English typing and ASR keep using the same dictionary automatically. Takes effect the next time the keyboard opens. / **个性词库 → 中文拼音**：增删词条会重部署 `osg_personal` Rime 旁路词表（复用打包词典本地注音；同码置顶；拉丁专名在中文键盘也可出候选）；英文打字与 ASR 继续自动共用同一词库。下次打开键盘生效。
 - **Typing key sound & haptics**: letter / modifier / space / return / delete keys play system click sounds on press-down; Settings → General → Haptics offers Off / Light (default) / Strong role-based feedback. / **打字按键音效与震动**：字母 / 修饰 / 空格 / 回车 / 删除键按下即播系统咔嗒音；设置 → 通用 → 震动提供关 / 轻（默认） / 强 的角色分层触感。
 
 ### Changed
+- **Rime personal-dict import**: SharedSupport now imports `osg_personal` into `osg_pinyin` (resource version `2.3.0`). / **Rime 个性词导入**：SharedSupport 将 `osg_personal` 导入 `osg_pinyin`（资源版本 `2.3.0`）。
 - **Two-level polish intensity**: Light is the default and restores full fidelity, question, and insertion-context safeguards for fun styles; Heavy keeps the formatting-only creative path for Dating, Flex, Corp, Diba, and XHS. / **两档润色强度**：默认轻度，为趣味风格启用完整保真、问句与落点上下文守卫；重度保持直男癌、装逼、大厂、帝吧和小红书仅格式化后执行人格的创意链路。
 - **Built-in polish style JSON**: ship each built-in personality as `Resources/PolishStyles/*.json` plus a manifest; the loader strips the retired fun-foundation placeholder while the composer owns the single shared formatting layer. / **内置润色风格 JSON**：每个内置人格改为 `Resources/PolishStyles/*.json` + manifest；加载器移除已退役的趣味共享占位符，唯一共享格式化层由 Composer 负责。
 - **Dating V6 alignment**: restore heartbeat goals, action definitions, chat paragraphing, and the “吃饭了吗” example in `builtin.dating.json`; practical safeguards no longer override those Dating instructions. / **直男癌对齐 V6**：在 `builtin.dating.json` 恢复终极目标、心动动作定义、聊天分段与「吃饭了吗」示例；实用润色守卫不再覆盖 Dating 指令。

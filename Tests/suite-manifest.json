@@ -105,6 +105,7 @@
         "OSGKeyboardExtTests/KeyboardSurfaceStateTests",
         "OSGKeyboardExtTests/LibrimeIntegrationTests",
         "OSGKeyboardExtTests/RimeSchemaGeneratorTests",
+        "OSGKeyboardExtTests/RimePersonalDictionaryExporterTests",
         "OSGKeyboardTests/CursorNavigationTests",
         "OSGKeyboardTests/KeyboardTranslationConfigProtectionTests"
       ]

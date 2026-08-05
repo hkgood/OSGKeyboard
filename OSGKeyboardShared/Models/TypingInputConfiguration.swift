@@ -78,6 +78,7 @@ public final class TypingInputConfiguration: ObservableObject {
         static let rememberLastSurface = "typing.input.rememberLastSurface"
         static let lastSurface = "typing.input.lastSurface"
         static let resourceVersion = "typing.rime.resourceVersion"
+        static let personalDictionaryFingerprint = "typing.rime.personalDictionaryFingerprint"
     }
 
     private let defaults: UserDefaults
@@ -185,6 +186,21 @@ public final class TypingInputConfiguration: ObservableObject {
         defaults: UserDefaults? = nil
     ) {
         (defaults ?? AppGroup.defaultsIfAvailable)?.set(value, forKey: Key.resourceVersion)
+    }
+
+    nonisolated public static func installedPersonalDictionaryFingerprint(
+        defaults: UserDefaults? = nil
+    ) -> String? {
+        (defaults ?? AppGroup.defaultsIfAvailable)?
+            .string(forKey: Key.personalDictionaryFingerprint)
+    }
+
+    nonisolated public static func setInstalledPersonalDictionaryFingerprint(
+        _ value: String,
+        defaults: UserDefaults? = nil
+    ) {
+        (defaults ?? AppGroup.defaultsIfAvailable)?
+            .set(value, forKey: Key.personalDictionaryFingerprint)
     }
 
     private func persistIfReady() {

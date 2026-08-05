@@ -225,6 +225,10 @@ public struct AppGroupStore: @unchecked Sendable {
     public func setPersonalDictionary(_ dictionary: PersonalDictionary) {
         mutateConfiguration { $0.personalDictionary = dictionary }
         AppGroupConfigDarwin.postConfigChanged()
+        #if os(iOS)
+        // Host redeploys Rime sidecar; extension picks it up next typing open.
+        PersonalDictionaryRimeSync.scheduleAfterDictionaryChange()
+        #endif
     }
 
     public func deletePersonalDictionaryEntry(id: UUID, at date: Date = Date()) {
@@ -233,6 +237,9 @@ public struct AppGroupStore: @unchecked Sendable {
             config.personalDictionary.deletedEntryIDs[id] = date
         }
         AppGroupConfigDarwin.postConfigChanged()
+        #if os(iOS)
+        PersonalDictionaryRimeSync.scheduleAfterDictionaryChange()
+        #endif
     }
 
     public var personalDictionaryICloudSyncEnabled: Bool {
