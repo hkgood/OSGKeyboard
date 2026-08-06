@@ -206,6 +206,90 @@ final class PolishStylePackTests: XCTestCase {
         XCTAssertTrue(prompt.contains("词典命中优先于同音猜测"))
         XCTAssertTrue(prompt.contains("风格接入（纠错之后）"))
         XCTAssertFalse(prompt.contains("原始内容"))
+        XCTAssertFalse(prompt.contains("Emoji 覆盖"))
+    }
+
+    func testComposerInjectsEmojiOverrideWhenStyleAllows() {
+        let style = PolishStylePack(
+            id: "user.emoji",
+            name: "Emoji",
+            prompt: "ROLE",
+            allowsAddedEmoji: true
+        )
+        let prompt = PolishPromptComposer.compose(
+            text: "今天太开心了",
+            style: style,
+            context: PolishContext(),
+            dictionaryBlock: "",
+            useChineseGuidance: true
+        )
+        XCTAssertTrue(prompt.contains("Emoji 覆盖（本风格开启 · 最终优先级）"))
+        XCTAssertTrue(prompt.contains("优先级高于全局 R5"))
+        // Override must appear after core R5 so it wins.
+        let r5 = prompt.range(of: "R5 不新增 emoji")
+        let override = prompt.range(of: "Emoji 覆盖（本风格开启 · 最终优先级）")
+        XCTAssertNotNil(r5)
+        XCTAssertNotNil(override)
+        XCTAssertLessThan(r5!.lowerBound, override!.lowerBound)
+    }
+
+    func testPromptOptInEnablesEmojiWithoutToggle() async throws {
+        let style = PolishStylePack(
+            id: "user.paste",
+            name: "Paste",
+            prompt: """
+            # 最高优先级覆盖
+            本风格允许新增 emoji。当与全局「不新增 emoji」规则冲突时，以本风格为准。
+            """,
+            allowsAddedEmoji: false
+        )
+        XCTAssertTrue(style.effectiveAllowsAddedEmoji)
+
+        let composed = PolishPromptComposer.compose(
+            text: "今天太开心了",
+            style: style,
+            context: PolishContext(),
+            dictionaryBlock: "",
+            useChineseGuidance: true
+        )
+        XCTAssertTrue(composed.contains("Emoji 覆盖（本风格开启 · 最终优先级）"))
+    }
+
+    func testLegacyPackDecodeDefaultsAllowsAddedEmojiToFalse() throws {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        // Encode without the new key by decoding a minimal legacy payload.
+        let legacyJSON = """
+        {
+          "id": "user.legacy",
+          "name": "Legacy",
+          "prompt": "ROLE",
+          "kind": "user",
+          "createdAt": 0,
+          "updatedAt": 0
+        }
+        """
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        let pack = try decoder.decode(PolishStylePack.self, from: Data(legacyJSON.utf8))
+        XCTAssertFalse(pack.allowsAddedEmoji)
+    }
+
+    func testUpsertPreservesAllowsAddedEmoji() throws {
+        var catalog = PolishStyleCatalog()
+        let pack = PolishStylePack(
+            name: "Emoji",
+            prompt: "ROLE",
+            allowsAddedEmoji: true
+        )
+        try catalog.upsert(pack)
+        XCTAssertEqual(catalog.entries.first?.allowsAddedEmoji, true)
+
+        var updated = pack
+        updated.prompt = "ROLE 2"
+        try catalog.upsert(updated)
+        XCTAssertEqual(catalog.entries.first?.allowsAddedEmoji, true)
+        XCTAssertEqual(catalog.entries.first?.prompt, "ROLE 2")
     }
 
     func testComposerKeepsHomophoneRepairWhenDictionaryPresent() {

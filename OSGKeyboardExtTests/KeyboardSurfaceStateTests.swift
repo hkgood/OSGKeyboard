@@ -154,4 +154,120 @@ final class KeyboardSurfaceStateTests: XCTestCase {
         XCTAssertFalse(typing.shiftHeld)
         XCTAssertFalse(typing.capsLock)
     }
+
+    func testChineseShiftInsertsUppercaseLatinBypassingRime() {
+        let engine = TrackingStubRimeEngine()
+        let typing = TypingSessionController(engine: { engine })
+
+        _ = typing.handleKey("⇧")
+        XCTAssertTrue(typing.shiftActive)
+
+        let output = typing.handleKey("N")
+        XCTAssertEqual(output, .insert("N"))
+        XCTAssertEqual(engine.processCharacterCallCount, 0)
+        XCTAssertFalse(typing.shiftActive, "one-shot Shift clears after Latin insert")
+        XCTAssertTrue(typing.composition.preedit.isEmpty)
+    }
+
+    func testChineseShiftPreservesExistingComposition() {
+        let engine = TrackingStubRimeEngine()
+        let typing = TypingSessionController(engine: { engine })
+        // Seed session composition via a lowercase letter (goes to Rime).
+        _ = typing.handleKey("n")
+        XCTAssertEqual(typing.composition.preedit, "n")
+
+        _ = typing.handleKey("⇧")
+        let output = typing.handleKey("A")
+        XCTAssertEqual(output, .insert("A"))
+        XCTAssertEqual(engine.processCharacterCallCount, 1, "only the unshifted letter hits Rime")
+        XCTAssertEqual(typing.composition.preedit, "n", "Shift Latin must not clear preedit")
+    }
+
+    func testChineseCapsLockKeepsInsertingUppercaseLatin() {
+        let engine = TrackingStubRimeEngine()
+        let typing = TypingSessionController(engine: { engine })
+
+        _ = typing.handleKey("⇧")
+        _ = typing.handleKey("⇧") // second tap → Caps Lock
+        XCTAssertTrue(typing.capsLock)
+
+        XCTAssertEqual(typing.handleKey("O"), .insert("O"))
+        XCTAssertEqual(typing.handleKey("S"), .insert("S"))
+        XCTAssertEqual(engine.processCharacterCallCount, 0)
+        XCTAssertTrue(typing.capsLock)
+    }
+
+    func testChineseUnshiftedLetterStillComposes() {
+        let engine = TrackingStubRimeEngine()
+        let typing = TypingSessionController(engine: { engine })
+
+        let output = typing.handleKey("n")
+        XCTAssertEqual(output, .none)
+        XCTAssertEqual(engine.processCharacterCallCount, 1)
+        XCTAssertEqual(engine.lastProcessedCharacter, "n")
+        XCTAssertEqual(typing.composition.preedit, "n")
+    }
+}
+
+/// Stub that records `processCharacter` calls for Chinese Shift bypass tests.
+@MainActor
+private final class TrackingStubRimeEngine: RimeEngineBridging {
+    var composition: TypingComposition = .empty
+    var isReady: Bool = true
+    var schema: TypingInputSchema = .fullPinyin
+    private(set) var processCharacterCallCount = 0
+    private(set) var lastProcessedCharacter: Character?
+
+    func prepare() async throws {}
+    func teardown() { composition = .empty }
+
+    func setLanguage(_ language: TypingInputLanguage) {
+        if language == .english { composition = .empty }
+    }
+
+    @discardableResult
+    func setSchema(_ schema: TypingInputSchema) -> Bool {
+        self.schema = schema
+        return true
+    }
+
+    func processCharacter(_ character: Character) -> String? {
+        processCharacterCallCount += 1
+        lastProcessedCharacter = character
+        composition = TypingComposition(
+            preedit: String(character).lowercased(),
+            candidates: [TypingCandidate(text: "你")]
+        )
+        return nil
+    }
+
+    func processBackspace() -> String? {
+        composition = .empty
+        return nil
+    }
+
+    func processSpace() -> String? {
+        composition = .empty
+        return " "
+    }
+
+    func processReturn() -> String? {
+        composition = .empty
+        return "\n"
+    }
+
+    func selectCandidate(at index: Int) -> String {
+        composition = .empty
+        return ""
+    }
+
+    func flushPreedit() -> String {
+        let raw = composition.preedit
+        composition = .empty
+        return raw
+    }
+
+    func clearComposition() {
+        composition = .empty
+    }
 }

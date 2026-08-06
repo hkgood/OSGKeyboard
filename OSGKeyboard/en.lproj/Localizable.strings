@@ -137,8 +137,11 @@
 "settings.provider.note" = "Note";
 "settings.asr.volcengine.appId" = "APP ID";
 "settings.asr.volcengine.accessToken" = "Access Token";
-"settings.asr.volcengine.resourceId" = "Resource ID";
-"settings.asr.volcengine.note" = "Secret Key is not required. Resource ID defaults to volc.seedasr.sauc.duration.";
+"settings.asr.volcengine.apiKey" = "API Key";
+"settings.asr.volcengine.apiKeyMode.title" = "Use new API Key auth";
+"settings.asr.volcengine.apiKeyMode.subtitle" = "Turn on for the new Volcengine console. Keep off if you already use APP ID + Access Token.";
+"settings.asr.volcengine.note.appToken" = "Legacy console: enter APP ID and Access Token. Secret Key is not required. Resource is fixed to Doubao streaming 2.0 (volc.seedasr.sauc.duration).";
+"settings.asr.volcengine.note.apiKey" = "New console: enter only the API Key. Resource is fixed to Doubao streaming 2.0 (volc.seedasr.sauc.duration).";
 "provider.openai" = "OpenAI";
 "provider.deepseek" = "DeepSeek";
 "provider.qwen" = "Qwen (DashScope)";
@@ -404,6 +407,8 @@
 "polishStyles.copyName" = "%@ Copy";
 "polishStyles.editor.name" = "Name";
 "polishStyles.editor.namePlaceholder" = "Style name";
+"polishStyles.editor.allowsAddedEmoji" = "Allow mood emojis";
+"polishStyles.editor.allowsAddedEmoji.hint" = "When on, polish may add a few emojis that match the draft’s emotion, and keeps them on screen. Off by default.";
 "polishStyles.editor.prompt" = "Complete prompt";
 "polishStyles.editor.hint" = "Describe only the role, tone, style boundaries, and examples. The system appends the personal dictionary, safety contract, and output rules.";
 "polishStyles.error.title" = "Couldn’t save style";

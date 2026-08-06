@@ -8,8 +8,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Volcengine ASR API Key auth**: settings can switch to the new-console single `X-Api-Key` mode while keeping legacy APP ID + Access Token as the default; SAUC resource is fixed to Doubao streaming 2.0 (`volc.seedasr.sauc.duration`). / **火山 ASR API Key 鉴权**：设置可切换到新控制台单字段 `X-Api-Key`，默认仍为旧版 APP ID + Access Token；SAUC 资源固定为豆包流式 2.0（`volc.seedasr.sauc.duration`）。
+- **Custom style mood emoji**: custom polish styles can opt in (default off) to allow emotion-matched emoji; the prompt overrides R5 and post-processing keeps them on screen. Paste-only prompts that declare emoji opt-in are detected automatically. / **自定义风格情绪 emoji**：自定义润色风格可单独开启（默认关）按情绪点缀 emoji；提示词覆盖 R5，后处理保留上屏。仅粘贴声明允许 emoji 的 prompt 也会自动识别。
+
+### Fixed
+- **PiP post-utterance yellow flash**: after a voice turn, the mic no longer briefly shows yellow「正在启动画中画」— hold ready once the session proved live, refresh host ready on ack, and avoid labeling an already-active PiP as `.starting`. / **PiP 句末黄色闪烁**：语音说完后麦克风不再短暂变黄并提示「正在启动画中画」——会话曾就绪后保持绿灯、ack 后立即刷新 host ready，且已激活的 PiP 不再标成 `.starting`。
+- **English Shift after Return**: sentence autocapitalization treats newline as a new-line boundary (system keyboard behavior), so Notes-style multi-line Return arms Shift again. / **回车后英文 Shift**：句首自动大写将换行视为新行边界（对齐系统键盘），备忘录等多行回车后会重新点亮 Shift。
+- **English Shift with stale proxy**: after our own insert/delete, autocap merges a local caret-prefix shadow when `documentContextBeforeInput` lags (e.g. period / Return in Notes). / **滞后前文下的英文 Shift**：自身插删后若 `documentContextBeforeInput` 滞后，自动大写会合并本地光标前文影子（如备忘录中的句号/回车）。
+
+## [1.6.2] - 2026-08-06
+
+### Changed
+- **ASR capture voice processing**: iOS App Flow / preview capture switches from `.measurement` to `.voiceChat`, enables `AVAudioEngine` Voice Processing, and prefers a near-talk built-in mic pattern so competing talkers in the same room are suppressed more strongly (Control Center Voice Isolation remains available once VP is on). / **ASR 采音人声处理**：iOS App 的 Flow / 预览采音从 `.measurement` 改为 `.voiceChat`，打开 `AVAudioEngine` Voice Processing，并优先近讲内置麦指向，以更好压制同房间旁人说话（开启 VP 后控制中心仍可选人声隔离）。
+
+### Fixed
+- **Voice toolbar haptics**: delete / space / return on the voice keyboard follow Settings → General → Haptics (mic unchanged). / **语音底栏震动**：语音键盘的删除 / 空格 / 回车跟随设置 → 通用 → 震动（麦克风大圆钮不变）。
+- **Haptics after app switch**: re-prepare Taptic when the keyboard appears so feedback does not go cold after switching host apps. / **切 App 后震动消失**：键盘每次出现时重新预热触觉引擎，避免从 A 切到 B 后触感变冷。
+- **Typing switch after cold start**: a sticky App Group `hostHeavy` flag no longer silently blocks 中文/EN when the host died mid-warmup; the flag now expires and is cleared on Flow state reset / host relaunch. / **冷启动后无法切拼音/英文**：宿主中途被杀留下的 `hostHeavy` 不再静默挡住中文/EN；该标志会过期，并在 Flow 状态清理与宿主重启时清除。
+- **Chinese Shift uppercase**: with Shift / Caps Lock / Shift-hold on in Pinyin mode, letter keys insert Latin uppercase directly (system-keyboard style) instead of sending uppercase keycodes to Rime, which rejects them. / **拼音 Shift 大写**：拼音模式下开启 Shift / Caps Lock / 按住 Shift 时，字母键直接插入大写拉丁字母（对齐系统键盘），不再把大写键码送给会拒绝的 Rime。
+
+## [1.6.1] - 2026-08-05
+
+### Added
 - **Personal dictionary → Chinese Pinyin**: adding or deleting terms redeploys an `osg_personal` Rime sidecar (local pinyin from the bundled dict; same-code pin-to-top; Latin names also surface in Chinese mode); English typing and ASR keep using the same dictionary automatically. Takes effect the next time the keyboard opens. / **个性词库 → 中文拼音**：增删词条会重部署 `osg_personal` Rime 旁路词表（复用打包词典本地注音；同码置顶；拉丁专名在中文键盘也可出候选）；英文打字与 ASR 继续自动共用同一词库。下次打开键盘生效。
 - **Typing key sound & haptics**: letter / modifier / space / return / delete keys play system click sounds on press-down; Settings → General → Haptics offers Off / Light (default) / Strong role-based feedback. / **打字按键音效与震动**：字母 / 修饰 / 空格 / 回车 / 删除键按下即播系统咔嗒音；设置 → 通用 → 震动提供关 / 轻（默认） / 强 的角色分层触感。
+- **Typing touch accuracy (Phase 1–3)**: gap-filling hit regions (no dead seams), grid-level down → move → up tracking with slide-to-reselect, release-to-commit for letters/space/return, press-and-repeat delete, and a light upward touch intent offset. / **打字触控准确率（Phase 1–3）**：热区填缝（无死区）、网格级按下→滑动改选→松手确认、字母/空格/回车松手提交、删除按下连删，以及轻微向上的触点意图偏移。
+- **Pinyin next-key bias (Phase 4)**: during full-pinyin composition, ambiguous seam hits prefer legal next letters (capped boost/shrink); clear on-key hits and English / double-pinyin stay unbiased. / **拼音下一键偏心（Phase 4）**：全拼组词中，缝隙歧义命中优先合法后续字母（有上下限）；明确落在键上的点击以及英文/双拼不受偏置。
 
 ### Changed
 - **Rime personal-dict import**: SharedSupport now imports `osg_personal` into `osg_pinyin` (resource version `2.3.0`). / **Rime 个性词导入**：SharedSupport 将 `osg_personal` 导入 `osg_pinyin`（资源版本 `2.3.0`）。

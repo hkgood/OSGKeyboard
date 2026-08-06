@@ -15,6 +15,9 @@ public struct PolishStylePack: Codable, Equatable, Identifiable, Sendable {
     public let id: String
     public var name: String
     public var prompt: String
+    /// When true, polish may keep model-added emoji and the prompt overrides R5.
+    /// Defaults off so existing / builtin styles stay emoji-strict.
+    public var allowsAddedEmoji: Bool
     public let kind: Kind
     public let createdAt: Date
     public var updatedAt: Date
@@ -23,6 +26,7 @@ public struct PolishStylePack: Codable, Equatable, Identifiable, Sendable {
         id: String = "user.\(UUID().uuidString.lowercased())",
         name: String,
         prompt: String,
+        allowsAddedEmoji: Bool = false,
         kind: Kind = .user,
         createdAt: Date = Date(),
         updatedAt: Date? = nil
@@ -30,6 +34,7 @@ public struct PolishStylePack: Codable, Equatable, Identifiable, Sendable {
         self.id = id
         self.name = name
         self.prompt = prompt
+        self.allowsAddedEmoji = allowsAddedEmoji
         self.kind = kind
         self.createdAt = createdAt
         self.updatedAt = updatedAt ?? createdAt
@@ -38,6 +43,46 @@ public struct PolishStylePack: Codable, Equatable, Identifiable, Sendable {
     public func displayName(language: AppUILanguage? = nil) -> String {
         guard kind == .builtin else { return name }
         return SharedL10n.string("polishStyle.\(id.dropFirst("builtin.".count))", language: language)
+    }
+
+    /// Effective emoji policy for polish: explicit toggle, or a custom prompt that
+    /// clearly opts in (so paste-only custom styles still keep model-added emoji).
+    public var effectiveAllowsAddedEmoji: Bool {
+        if allowsAddedEmoji { return true }
+        guard kind == .user else { return false }
+        return Self.promptDeclaresAddedEmojiOptIn(prompt)
+    }
+
+    /// Heuristic for custom prompts that declare “add mood emoji” themselves.
+    public static func promptDeclaresAddedEmojiOptIn(_ prompt: String) -> Bool {
+        let markers = [
+            "允许新增 emoji",
+            "允许新增emoji",
+            "按情绪点缀",
+            "按原文情绪",
+            "Emoji 覆盖",
+            "outranks global R5",
+            "may add emojis",
+            "allow mood emoji",
+            "allowsAddedEmoji",
+        ]
+        return markers.contains { prompt.localizedCaseInsensitiveContains($0) }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, prompt, allowsAddedEmoji, kind, createdAt, updatedAt
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        prompt = try container.decode(String.self, forKey: .prompt)
+        // Older synced packs omit the key — stay emoji-strict.
+        allowsAddedEmoji = try container.decodeIfPresent(Bool.self, forKey: .allowsAddedEmoji) ?? false
+        kind = try container.decode(Kind.self, forKey: .kind)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
     }
 }
 
@@ -92,6 +137,7 @@ public struct PolishStyleCatalog: Codable, Equatable, Sendable {
             var updated = pack
             updated.name = name
             updated.prompt = prompt
+            updated.allowsAddedEmoji = pack.allowsAddedEmoji
             updated.updatedAt = date
             entries[index] = updated
         } else {
@@ -101,6 +147,7 @@ public struct PolishStyleCatalog: Codable, Equatable, Sendable {
             var created = pack
             created.name = name
             created.prompt = prompt
+            created.allowsAddedEmoji = pack.allowsAddedEmoji
             created.updatedAt = date
             entries.append(created)
         }

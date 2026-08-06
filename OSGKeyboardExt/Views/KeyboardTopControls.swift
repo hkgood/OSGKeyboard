@@ -154,7 +154,10 @@ struct KeyboardTopControls: View {
             return
         }
         onInsert(output.text)
-        typing.syncAutocapitalization()
+        typing.syncAutocapitalization(
+            accountingForInsert: output.text,
+            deleteCount: output.deleteCount
+        )
     }
 
     private func accessibilityLabel(for tab: KeyboardInputTab) -> String {

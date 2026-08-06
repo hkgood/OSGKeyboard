@@ -220,4 +220,14 @@ final class FlowReliabilityTests: XCTestCase {
             )
         )
     }
+
+    func testCaptureVoiceProcessingUsesSpeechOrientedSessionMode() {
+        XCTAssertEqual(FlowCaptureVoiceProcessing.captureMode, .voiceChat)
+        XCTAssertTrue(
+            FlowCaptureVoiceProcessing.captureOptions.contains(.allowBluetoothHFP)
+        )
+        XCTAssertTrue(
+            FlowCaptureVoiceProcessing.captureOptions.contains(.defaultToSpeaker)
+        )
+    }
 }

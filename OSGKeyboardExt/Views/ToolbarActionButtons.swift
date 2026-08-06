@@ -94,7 +94,7 @@ struct RepeatingPressButton<Label: View>: View {
     var disabled: Bool = false
     /// Plays the system delete click on each fire (matches stock keyboard).
     var playsDeleteSound: Bool = true
-    /// Typing-grid haptic strength; `.off` skips haptics (voice toolbar default).
+    /// Settings → General → Haptics; `.off` skips impact feedback.
     var hapticIntensity: KeyboardHapticIntensity = .off
     let action: () -> Void
     @ViewBuilder let label: (_ isPressed: Bool) -> Label
@@ -166,10 +166,16 @@ struct RepeatingDeleteButton: View {
     @Environment(\.colorScheme) private var colorScheme
 
     let disabled: Bool
+    /// Mirrors Settings → General → Haptics (same as typing delete).
+    var hapticIntensity: KeyboardHapticIntensity = .off
     let action: () -> Void
 
     var body: some View {
-        RepeatingPressButton(disabled: disabled, action: action) { isPressed in
+        RepeatingPressButton(
+            disabled: disabled,
+            hapticIntensity: hapticIntensity,
+            action: action
+        ) { isPressed in
             ToolbarKeySurface(
                 isPressed: isPressed,
                 cornerRadius: ToolbarButtonMetrics.cornerRadius,
@@ -227,15 +233,24 @@ struct RectangularToolbarButton: View {
     let label: String
     let disabled: Bool
     let isSend: Bool
+    /// Settings → General → Haptics; space / return use `.action` role.
+    var hapticIntensity: KeyboardHapticIntensity = .off
     let action: () -> Void
 
-    init(systemName: String, label: String, disabled: Bool = false, action: @escaping () -> Void) {
+    init(
+        systemName: String,
+        label: String,
+        disabled: Bool = false,
+        hapticIntensity: KeyboardHapticIntensity = .off,
+        action: @escaping () -> Void
+    ) {
         self.systemName = systemName
         self.spaceStyle = false
         self.title = nil
         self.label = label
         self.disabled = disabled
         self.isSend = false
+        self.hapticIntensity = hapticIntensity
         self.action = action
     }
 
@@ -244,6 +259,7 @@ struct RectangularToolbarButton: View {
         label: String,
         disabled: Bool = false,
         isSend: Bool = false,
+        hapticIntensity: KeyboardHapticIntensity = .off,
         action: @escaping () -> Void
     ) {
         self.systemName = nil
@@ -251,17 +267,25 @@ struct RectangularToolbarButton: View {
         self.label = label
         self.disabled = disabled
         self.isSend = isSend
+        self.hapticIntensity = hapticIntensity
         self.action = action
         self.title = title
     }
 
-    init(spaceStyle: Bool, label: String, disabled: Bool = false, action: @escaping () -> Void) {
+    init(
+        spaceStyle: Bool,
+        label: String,
+        disabled: Bool = false,
+        hapticIntensity: KeyboardHapticIntensity = .off,
+        action: @escaping () -> Void
+    ) {
         self.systemName = nil
         self.spaceStyle = spaceStyle
         self.title = nil
         self.label = label
         self.disabled = disabled
         self.isSend = false
+        self.hapticIntensity = hapticIntensity
         self.action = action
     }
 
@@ -299,13 +323,14 @@ struct RectangularToolbarButton: View {
         isSend ? .white : NativeKeyboardKeyColors.text(for: colorScheme)
     }
 
-    // 按下即响、按下即执行，与系统键盘保持一致（Button 默认松手才触发）。
+    // 按下即响、即震、即执行，与系统键盘 / 打字面保持一致（Button 默认松手才触发）。
     private var pressGesture: some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { _ in
                 guard !disabled, !isPressing else { return }
                 isPressing = true
                 KeyboardSoundFeedback.keyClick()
+                KeyboardHapticFeedback.play(role: .action, intensity: hapticIntensity)
                 action()
             }
             .onEnded { _ in

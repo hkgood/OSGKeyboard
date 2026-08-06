@@ -13,7 +13,10 @@ wiring; jetsam behavior is device-only.
 - **Do not** stack CLM + Rime + ASR in the same second after onboarding.
 - ASR warmup runs on **first mic press** (`beginUtterance`), gated by
   `HostMemoryBudget` (~260 MB RSS). `hostHeavy` is set only while heavy work
-  actually runs, then cleared.
+  actually runs, then cleared. A sticky `hostHeavy` (host died mid-work)
+  expires after `hostHeavyMaxAge` (~120 s) and is cleared on
+  `clearFlowState` / host-launch reconciliation so typing 中文/EN is not
+  permanently blocked.
 
 ## Console checklist
 

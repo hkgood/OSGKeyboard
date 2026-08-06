@@ -146,7 +146,8 @@ struct MacPolishStylesView: View {
             duplicate: {
                 editingPack = PolishStylePack(
                     name: "\(pack.displayName(language: lang)) \(MacL10n.string("mac.styles.copy", language: lang))",
-                    prompt: pack.prompt
+                    prompt: pack.prompt,
+                    allowsAddedEmoji: pack.allowsAddedEmoji
                 )
                 showEditor = true
             },
@@ -347,6 +348,7 @@ private struct MacPolishStyleEditor: View {
     @Environment(\.themePalette) private var palette
     @State private var name: String
     @State private var prompt: String
+    @State private var allowsAddedEmoji: Bool
 
     init(
         pack: PolishStylePack?,
@@ -358,6 +360,7 @@ private struct MacPolishStyleEditor: View {
         self.onSave = onSave
         _name = State(initialValue: pack?.name ?? "")
         _prompt = State(initialValue: pack?.prompt ?? PolishStylePackCatalog.newUserPromptTemplate)
+        _allowsAddedEmoji = State(initialValue: pack?.allowsAddedEmoji ?? false)
     }
 
     var body: some View {
@@ -366,6 +369,13 @@ private struct MacPolishStyleEditor: View {
                 .font(TypeStyle.title2)
             TextField(MacL10n.string("mac.styles.name", language: language), text: $name)
                 .textFieldStyle(.roundedBorder)
+            Toggle(
+                MacL10n.string("mac.styles.allowsAddedEmoji", language: language),
+                isOn: $allowsAddedEmoji
+            )
+            Text(MacL10n.string("mac.styles.allowsAddedEmoji.hint", language: language))
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textTertiary)
             HStack {
                 Text(MacL10n.string("mac.styles.prompt", language: language))
                     .font(MacSettingsType.sectionTitle)
@@ -380,13 +390,19 @@ private struct MacPolishStyleEditor: View {
             }
             TextEditor(text: $prompt)
                 .font(.body.monospaced())
-                .frame(minHeight: 360)
+                .frame(minHeight: 320)
                 .padding(4)
                 .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.medium))
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.medium)
                         .stroke(palette.divider, lineWidth: 1)
                 )
+                .onChange(of: prompt) { _, newValue in
+                    if !allowsAddedEmoji,
+                       PolishStylePack.promptDeclaresAddedEmojiOptIn(newValue) {
+                        allowsAddedEmoji = true
+                    }
+                }
             Text(MacL10n.string("mac.styles.hint", language: language))
                 .font(TypeStyle.caption2)
                 .foregroundStyle(palette.textTertiary)
@@ -399,6 +415,8 @@ private struct MacPolishStyleEditor: View {
                             id: pack?.id ?? "user.\(UUID().uuidString.lowercased())",
                             name: name,
                             prompt: prompt,
+                            allowsAddedEmoji: allowsAddedEmoji
+                                || PolishStylePack.promptDeclaresAddedEmojiOptIn(prompt),
                             kind: .user,
                             createdAt: pack?.createdAt ?? Date()
                         )
@@ -414,7 +432,7 @@ private struct MacPolishStyleEditor: View {
             }
         }
         .padding(Spacing.xl)
-        .frame(width: 680, height: 590)
+        .frame(width: 680, height: 640)
         .background(palette.background)
     }
 }

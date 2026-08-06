@@ -45,10 +45,18 @@ public struct TypingCandidate: Identifiable, Equatable, Sendable {
 /// Snapshot the UI observes while composing.
 public struct TypingComposition: Equatable, Sendable {
     public var preedit: String
+    /// Raw key sequence from the engine (ASCII). Prefer this over `preedit`
+    /// for spelling / next-key logic — preedit may include separators.
+    public var rawInput: String
     public var candidates: [TypingCandidate]
 
-    public init(preedit: String = "", candidates: [TypingCandidate] = []) {
+    public init(
+        preedit: String = "",
+        rawInput: String = "",
+        candidates: [TypingCandidate] = []
+    ) {
         self.preedit = preedit
+        self.rawInput = rawInput
         self.candidates = candidates
     }
 

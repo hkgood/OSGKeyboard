@@ -211,6 +211,10 @@ public enum PolishPromptComposer {
             dictionaryBlock,
             useChineseGuidance: useChineseGuidance
         )
+        let emojiOverride = emojiOverrideSection(
+            allowsAddedEmoji: style.effectiveAllowsAddedEmoji,
+            useChineseGuidance: useChineseGuidance
+        )
         if usesHeavyFunPipeline {
             let formatting = useChineseGuidance
                 ? chineseFunFormattingPrompt
@@ -226,6 +230,7 @@ public enum PolishPromptComposer {
             \(personality)
 
             \(outputInstruction)
+            \(emojiOverride)
             """
         }
 
@@ -262,6 +267,7 @@ public enum PolishPromptComposer {
                 fieldHints: context.fieldHints,
                 useChineseGuidance: true
             ))用户消息即为待处理的转写文本。只输出处理后的文本。
+            \(emojiOverride)
             """
         }
 
@@ -284,6 +290,7 @@ public enum PolishPromptComposer {
             fieldHints: context.fieldHints,
             useChineseGuidance: false
         ))The user message is the transcript to process. Output the processed text only.
+        \(emojiOverride)
         """
     }
 
@@ -346,6 +353,8 @@ public enum PolishPromptComposer {
         useChineseGuidance: Bool
     ) -> String {
         let body = PolishStylePackCatalog.runtimePersonality(for: style)
+        // Emoji override is appended at the end of compose(), not here —
+        // it must outrank core R5 and later context premises.
         if style.kind == .user {
             return useChineseGuidance
                 ? """
@@ -367,6 +376,30 @@ public enum PolishPromptComposer {
             : """
             # Active style personality
             \(body)
+            """
+    }
+
+    /// When a style opts in, override global R5 so the model may add emoji.
+    /// Placed last in the composed prompt so it wins over core R5.
+    private static func emojiOverrideSection(
+        allowsAddedEmoji: Bool,
+        useChineseGuidance: Bool
+    ) -> String {
+        guard allowsAddedEmoji else { return "" }
+        return useChineseGuidance
+            ? """
+
+            # Emoji 覆盖（本风格开启 · 最终优先级）
+            本风格允许新增 emoji，优先级高于全局 R5「不新增 emoji」以及上文任何「不要加 emoji」表述。
+            仅按原文已表达的情绪点缀 0–2 个贴合语气的 emoji；中性安排、正式通知与极短确认词不加。
+            原文已有 emoji 时只整理文字，不替换、不堆叠。禁止无关装饰与 emoji 墙。
+            """
+            : """
+
+            # Emoji override (enabled for this style · final priority)
+            This style may add emojis and outranks global R5 (“add no emojis”) and any earlier “do not add emojis” guidance.
+            Add 0–2 tone-matching emojis only when the draft already expresses emotion; skip neutral schedules, formal notices, and ultra-short acks.
+            If the draft already has emojis, keep them and do not replace or stack. No decorative spam or emoji walls.
             """
     }
 

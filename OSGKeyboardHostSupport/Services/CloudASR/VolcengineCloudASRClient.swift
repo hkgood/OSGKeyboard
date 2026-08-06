@@ -29,19 +29,15 @@ struct VolcengineCloudASRClient: CloudASRTranscribing, CloudASRStreamingCapable 
         onPartial: @escaping @Sendable (String) -> Void
     ) async throws -> any CloudASRStreamingSession {
         _ = locale
-        let credentials = try VolcengineCredentials.parse(
-            apiKey: apiKey,
-            fallbackResourceID: resolvedResourceID
-        )
+        _ = resourceID // Product is locked to Doubao streaming 2.0 duration.
+        let credentials = VolcengineASRFields.parse(apiKey: apiKey)
+        guard credentials.hasUsableCredentials else { throw CloudASRError.noAPIKey }
         let url = try resolvedEndpointURL()
         let connectID = UUID().uuidString
 
         var request = URLRequest(url: url)
         request.timeoutInterval = 8
-        request.setValue(credentials.appID, forHTTPHeaderField: "X-Api-App-Key")
-        request.setValue(credentials.accessToken, forHTTPHeaderField: "X-Api-Access-Key")
-        request.setValue(credentials.resourceID, forHTTPHeaderField: "X-Api-Resource-Id")
-        request.setValue(connectID, forHTTPHeaderField: "X-Api-Connect-Id")
+        credentials.applyWebSocketAuthHeaders(to: &request, connectID: connectID)
 
         let task = session.webSocketTask(with: request)
         task.resume()
@@ -88,12 +84,6 @@ struct VolcengineCloudASRClient: CloudASRTranscribing, CloudASRStreamingCapable 
             onPartial: { _ in }
         )
         live.cancel()
-    }
-
-    private var resolvedResourceID: String {
-        resourceID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ? CloudASRModelCatalog.volcengineDefaultResourceID
-            : resourceID.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func resolvedEndpointURL() throws -> URL {
@@ -421,46 +411,6 @@ private final class VolcengineStreamingSession: CloudASRStreamingSession, @unche
     private func publishFailure(_ error: Error) {
         lock.withLock { failure = error }
         cancel()
-    }
-}
-
-private struct VolcengineCredentials {
-    let appID: String
-    let accessToken: String
-    let resourceID: String
-
-    static func parse(apiKey: String, fallbackResourceID: String) throws -> VolcengineCredentials {
-        let trimmed = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw CloudASRError.noAPIKey }
-
-        if let data = trimmed.data(using: .utf8),
-           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            let appID = string(json, keys: ["app_id", "appId", "appid"])
-            let token = string(json, keys: ["access_token", "accessToken", "token"])
-            let resourceID = string(json, keys: ["resource_id", "resourceId", "resource"])
-                ?? fallbackResourceID
-            guard let appID, let token, !resourceID.isEmpty else { throw CloudASRError.noAPIKey }
-            return VolcengineCredentials(appID: appID, accessToken: token, resourceID: resourceID)
-        }
-
-        let separators = CharacterSet(charactersIn: ":\n,")
-        let parts = trimmed
-            .components(separatedBy: separators)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-        guard parts.count >= 2 else { throw CloudASRError.noAPIKey }
-        let resourceID = parts.count >= 3 ? parts[2] : fallbackResourceID
-        return VolcengineCredentials(appID: parts[0], accessToken: parts[1], resourceID: resourceID)
-    }
-
-    private static func string(_ json: [String: Any], keys: [String]) -> String? {
-        for key in keys {
-            if let value = json[key] as? String {
-                let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty { return trimmed }
-            }
-        }
-        return nil
     }
 }
 

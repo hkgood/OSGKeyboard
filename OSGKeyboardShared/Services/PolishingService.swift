@@ -285,7 +285,15 @@ public actor PolishingService {
 
         // One prompt, one model request. Deterministic validation may reject a
         // result locally, but it never starts a second polish request.
-        let firstCandidate = TranscriptPostProcessor.process(original: trimmed, llmOutput: first)
+        let activeStyle = PolishStylePackCatalog.resolve(
+            id: store.activePolishStyleId,
+            userCatalog: store.polishStyleCatalog
+        )
+        let firstCandidate = TranscriptPostProcessor.process(
+            original: trimmed,
+            llmOutput: first,
+            allowsAddedEmoji: activeStyle.effectiveAllowsAddedEmoji
+        )
         let firstViolations = PolishOutputValidator.validate(
             input: trimmed,
             output: firstCandidate,

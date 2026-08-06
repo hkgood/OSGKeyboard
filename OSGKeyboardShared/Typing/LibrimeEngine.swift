@@ -144,8 +144,10 @@ public final class LibrimeEngine: RimeEngineBridging {
             return nil
         }
         let preedit = snapshot.preedit
+        let raw = bridge?.rawInput() ?? ""
         composition = TypingComposition(
             preedit: preedit,
+            rawInput: raw,
             candidates: snapshot.candidates.enumerated().map { displayIndex, candidate in
                 TypingCandidate(
                     id: "\(preedit)|\(displayIndex)|\(candidate.index)|\(candidate.text)",

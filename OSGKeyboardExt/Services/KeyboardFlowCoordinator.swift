@@ -41,6 +41,9 @@ final class KeyboardFlowCoordinator {
     /// stale sample never flashes the mic orange while the session is healthy.
     private var lastHostReadyAt: TimeInterval = 0
     private static let hostReadyGrace: TimeInterval = 4
+    /// Once the host has published ready for this session, hold green through
+    /// brief inter-utterance ready flaps instead of flashing preparingSession.
+    private var sessionProvenReady = false
     private var flowSessionMonitorTask: Task<Void, Never>?
     private var isAwaitingFlowResult = false
     private var activeSessionId: UUID?
@@ -168,9 +171,17 @@ final class KeyboardFlowCoordinator {
         // show red/white instead of a fake orange "starting" state.
         adoptHostBusyStateIfNeeded(snapshot: readySnapshot)
 
-        let hostReady = readySnapshot?.ready == true && FlowSessionBridge.isHostReady()
+        let hostReadyRaw = readySnapshot?.ready == true && FlowSessionBridge.isHostReady()
+        let sessionActive = FlowSessionBridge.isSessionActive()
         let now = Date().timeIntervalSince1970
-        if hostReady { lastHostReadyAt = now }
+        if hostReadyRaw {
+            lastHostReadyAt = now
+            sessionProvenReady = true
+        }
+        if !sessionActive {
+            sessionProvenReady = false
+            lastHostReadyAt = 0
+        }
         // Grace window: the host was ready very recently, so treat a momentary
         // stale heartbeat read as "still warming" rather than an outright
         // failure. `isSessionActive` is heartbeat-independent, so it stays true
@@ -181,19 +192,30 @@ final class KeyboardFlowCoordinator {
         // it as preparingSession was the orange-stuck bug after cold start:
         // host utt.rec=1 → ready=false → keyboard forever "正在启动…".
         let hostBusy = FlowKeyboardHostWarming.isHostBusy(reason: readySnapshot?.reason)
+        // Hold green after the session already proved ready — PiP mic release /
+        // ack lag must not flash yellow「正在启动画中画».
+        let holdReady = FlowKeyboardHostWarming.shouldHoldReady(
+            hostReady: hostReadyRaw,
+            hostBusy: hostBusy,
+            sessionActive: sessionActive,
+            sessionProvenReady: sessionProvenReady,
+            isPendingFlowStart: isPendingFlowStart,
+            snapshotReason: readySnapshot?.reason
+        )
+        let hostReady = hostReadyRaw || holdReady
         // PiP sessions publish `reason=.starting` while the small window is
         // coming up — treat that as warming so the mic stays orange (wait)
         // instead of jumping into another cold start.
         let hostWarming = FlowKeyboardHostWarming.isHostWarming(
             hostReady: hostReady,
             hostBusy: hostBusy,
-            sessionActive: FlowSessionBridge.isSessionActive(),
+            sessionActive: sessionActive,
             hostReachable: FlowSessionBridge.isHostReachable(),
             isPendingFlowStart: isPendingFlowStart,
             withinReadyGrace: withinReadyGrace,
             snapshotReason: readySnapshot?.reason
         )
-        state.flowSessionActive = FlowSessionBridge.isSessionActive()
+        state.flowSessionActive = sessionActive
         state.debugPendingFlowStart = isPendingFlowStart
         state.debugFlowRecording = isFlowRecording
         state.debugAwaitingFlowResult = isAwaitingFlowResult
@@ -626,6 +648,7 @@ final class KeyboardFlowCoordinator {
                     "utterance=\(result.utteranceId.uuidString.prefix(8)) "
                         + "commandSeq=\(result.commandSeq) warning=\(result.warning == nil ? 0 : 1)"
                 )
+                recomputeMicVoiceAvailability()
                 return
             }
             if let result = matchingResult(), isTerminalFailure(result) {

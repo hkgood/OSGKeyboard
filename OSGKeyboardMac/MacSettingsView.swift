@@ -188,34 +188,52 @@ struct MacSettingsView: View {
 
     @ViewBuilder
     private var volcengineAsrRows: some View {
-        MacCredentialField(
-            title: MacL10n.string("mac.settings.volcengineAppId", language: lang),
-            placeholder: "APP ID",
-            text: Binding(
-                get: { macVolcengineFields.appID },
-                set: { updateMacVolcengine(appID: $0) }
-            ),
-            isSecret: true
+        MacProviderThinkingRow(
+            title: MacL10n.string("mac.settings.volcengineApiKeyMode", language: lang),
+            subtitle: MacL10n.string("mac.settings.volcengineApiKeyModeSubtitle", language: lang),
+            isOn: Binding(
+                get: { macVolcengineFields.usesAPIKeyAuth },
+                set: { updateMacVolcengine(authMode: $0 ? .apiKey : .appToken) }
+            )
         )
-        MacCredentialField(
-            title: MacL10n.string("mac.settings.volcengineAccessToken", language: lang),
-            placeholder: "Access Token",
-            text: Binding(
-                get: { macVolcengineFields.accessToken },
-                set: { updateMacVolcengine(accessToken: $0) }
-            ),
-            isSecret: true
+        if macVolcengineFields.usesAPIKeyAuth {
+            MacCredentialField(
+                title: MacL10n.string("mac.settings.volcengineApiKey", language: lang),
+                placeholder: "API Key",
+                text: Binding(
+                    get: { macVolcengineFields.apiKeyCredential },
+                    set: { updateMacVolcengine(apiKeyCredential: $0) }
+                ),
+                isSecret: true
+            )
+        } else {
+            MacCredentialField(
+                title: MacL10n.string("mac.settings.volcengineAppId", language: lang),
+                placeholder: "APP ID",
+                text: Binding(
+                    get: { macVolcengineFields.appID },
+                    set: { updateMacVolcengine(appID: $0) }
+                ),
+                isSecret: true
+            )
+            MacCredentialField(
+                title: MacL10n.string("mac.settings.volcengineAccessToken", language: lang),
+                placeholder: "Access Token",
+                text: Binding(
+                    get: { macVolcengineFields.accessToken },
+                    set: { updateMacVolcengine(accessToken: $0) }
+                ),
+                isSecret: true
+            )
+        }
+        MacProviderNoteRow(
+            text: MacL10n.string(
+                macVolcengineFields.usesAPIKeyAuth
+                    ? "mac.settings.volcengineNoteApiKey"
+                    : "mac.settings.volcengineNoteAppToken",
+                language: lang
+            )
         )
-        MacCredentialField(
-            title: MacL10n.string("mac.settings.volcengineResourceId", language: lang),
-            placeholder: CloudASRModelCatalog.defaultModel(for: "volcengine"),
-            text: Binding(
-                get: { macVolcengineFields.resourceID },
-                set: { updateMacVolcengine(resourceID: $0) }
-            ),
-            defaultValue: CloudASRModelCatalog.defaultModel(for: "volcengine")
-        )
-        MacProviderNoteRow(text: MacL10n.string("mac.settings.volcengineNote", language: lang))
     }
 
     @ViewBuilder
@@ -407,22 +425,21 @@ struct MacSettingsView: View {
     }
 
     private var macVolcengineFields: VolcengineASRFields {
-        VolcengineASRFields.parse(
-            apiKey: viewModel.config.asrApiKey,
-            resourceFallback: viewModel.config.asrModel.isEmpty
-                ? CloudASRModelCatalog.defaultModel(for: "volcengine")
-                : viewModel.config.asrModel
-        )
+        VolcengineASRFields.parse(apiKey: viewModel.config.asrApiKey)
     }
 
-    private func updateMacVolcengine(appID: String? = nil, accessToken: String? = nil, resourceID: String? = nil) {
+    private func updateMacVolcengine(
+        authMode: VolcengineASRAuthMode? = nil,
+        appID: String? = nil,
+        accessToken: String? = nil,
+        apiKeyCredential: String? = nil
+    ) {
         var fields = macVolcengineFields
+        if let authMode { fields.authMode = authMode }
         if let appID { fields.appID = appID }
         if let accessToken { fields.accessToken = accessToken }
-        if let resourceID {
-            fields.resourceID = resourceID
-            viewModel.config.asrModel = resourceID
-        }
+        if let apiKeyCredential { fields.apiKeyCredential = apiKeyCredential }
+        viewModel.config.asrModel = VolcengineASRFields.fixedResourceID
         viewModel.config.asrApiKey = fields.encodedAPIKey
     }
 

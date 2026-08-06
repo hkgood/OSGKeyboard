@@ -313,7 +313,14 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
 
     public var isASRConfigured: Bool {
         guard !isLocalEngine else { return true }
-        return !asrApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let key = asrApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasKey: Bool = {
+            if asrProviderId == "volcengine" {
+                return VolcengineASRFields.parse(apiKey: key).hasUsableCredentials
+            }
+            return !key.isEmpty
+        }()
+        return hasKey
             && (!asrBaseURL.isEmpty || CloudASRModelCatalog.strategy(for: asrProviderId) != .prompt)
     }
 

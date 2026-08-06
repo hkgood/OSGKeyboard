@@ -604,13 +604,25 @@ public final class FlowContinuousCapture {
             FlowAudioEngineHandle(audioEngine)
         )
 
+        // Voice Processing must be enabled while the engine is stopped, and
+        // it can change the RemoteIO format — enable first, then sync rates.
         var candidateEngine = AVAudioEngine()
+        var voiceProcessingOn = FlowCaptureVoiceProcessing.enableVoiceProcessing(
+            on: candidateEngine
+        )
         var inputNode = candidateEngine.inputNode
         var hardwareFormat = inputNode.inputFormat(forBus: 0)
         var outputFormat = inputNode.outputFormat(forBus: 0)
-        for _ in 0..<3 where abs(hardwareFormat.sampleRate - sessionSnapshot.sampleRate) >= 1 {
+        var resolvedSession = sessionSnapshot
+        for _ in 0..<3 where abs(hardwareFormat.sampleRate - resolvedSession.sampleRate) >= 1 {
             try? await Task.sleep(nanoseconds: 50_000_000)
+            // Re-enter capture so the session rate tracks VP / route shifts.
+            resolvedSession = (try? await FlowAudioSessionCoordinator.shared.activateCapture())
+                ?? resolvedSession
             candidateEngine = AVAudioEngine()
+            voiceProcessingOn = FlowCaptureVoiceProcessing.enableVoiceProcessing(
+                on: candidateEngine
+            )
             inputNode = candidateEngine.inputNode
             hardwareFormat = inputNode.inputFormat(forBus: 0)
             outputFormat = inputNode.outputFormat(forBus: 0)
@@ -619,8 +631,9 @@ public final class FlowContinuousCapture {
             "audioSession.active",
             "hwRate=\(Int(hardwareFormat.sampleRate)) hwChannels=\(hardwareFormat.channelCount) "
                 + "outputRate=\(Int(outputFormat.sampleRate)) "
-                + "sessionRate=\(Int(sessionSnapshot.sampleRate)) "
-                + "route=\(sessionSnapshot.inputPortType)"
+                + "sessionRate=\(Int(resolvedSession.sampleRate)) "
+                + "route=\(resolvedSession.inputPortType) "
+                + "voiceProcessing=\(voiceProcessingOn ? 1 : 0)"
         )
         guard hardwareFormat.sampleRate > 0, hardwareFormat.channelCount > 0 else {
             FlowTrace.warn(
@@ -632,8 +645,8 @@ public final class FlowContinuousCapture {
                 channels: Int(hardwareFormat.channelCount)
             )
         }
-        guard sessionSnapshot.sampleRate <= 0
-                || abs(hardwareFormat.sampleRate - sessionSnapshot.sampleRate) < 1 else {
+        guard resolvedSession.sampleRate <= 0
+                || abs(hardwareFormat.sampleRate - resolvedSession.sampleRate) < 1 else {
             throw StartError.invalidHardwareFormat(
                 sampleRate: hardwareFormat.sampleRate,
                 channels: Int(hardwareFormat.channelCount)
@@ -703,7 +716,7 @@ public final class FlowContinuousCapture {
             throw StartError.engineStartFailed(error.localizedDescription)
         }
         audioEngine = candidateEngine
-        activeRouteSnapshot = sessionSnapshot
+        activeRouteSnapshot = resolvedSession
         engineActivationCount += 1
         lastActivationAt = Date()
         FlowTrace.capture("engine.started", "running=\(audioEngine.isRunning ? 1 : 0)")

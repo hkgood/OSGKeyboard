@@ -58,41 +58,62 @@ struct ASRSettingsCard: View {
 
     private var volcengineRows: some View {
         Group {
-            SettingsCredentialRow(
-                title: AppL10n.string("settings.asr.volcengine.appId"),
-                placeholder: "APP ID",
-                text: Binding(
-                    get: { volcengineFields.appID },
-                    set: { updateVolcengine(appID: $0) }
-                ),
-                isSecret: true,
-                isMonospaced: true
-            )
+            Toggle(isOn: volcengineAPIKeyModeBinding) {
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text("settings.asr.volcengine.apiKeyMode.title")
+                        .font(TypeStyle.body)
+                        .foregroundStyle(palette.textPrimary)
+                    Text("settings.asr.volcengine.apiKeyMode.subtitle")
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(palette.accent)
+            .settingsListRow()
+
             rowDivider
-            SettingsCredentialRow(
-                title: AppL10n.string("settings.asr.volcengine.accessToken"),
-                placeholder: "Access Token",
-                text: Binding(
-                    get: { volcengineFields.accessToken },
-                    set: { updateVolcengine(accessToken: $0) }
-                ),
-                isSecret: true,
-                isMonospaced: true
-            )
-            rowDivider
-            SettingsCredentialRow(
-                title: AppL10n.string("settings.asr.volcengine.resourceId"),
-                placeholder: CloudASRModelCatalog.defaultModel(for: "volcengine"),
-                text: Binding(
-                    get: { volcengineFields.resourceID },
-                    set: { updateVolcengine(resourceID: $0) }
-                ),
-                isMonospaced: true,
-                defaultValue: CloudASRModelCatalog.defaultModel(for: "volcengine")
-            )
+
+            if volcengineFields.usesAPIKeyAuth {
+                SettingsCredentialRow(
+                    title: AppL10n.string("settings.asr.volcengine.apiKey"),
+                    placeholder: "API Key",
+                    text: Binding(
+                        get: { volcengineFields.apiKeyCredential },
+                        set: { updateVolcengine(apiKeyCredential: $0) }
+                    ),
+                    isSecret: true,
+                    isMonospaced: true
+                )
+            } else {
+                SettingsCredentialRow(
+                    title: AppL10n.string("settings.asr.volcengine.appId"),
+                    placeholder: "APP ID",
+                    text: Binding(
+                        get: { volcengineFields.appID },
+                        set: { updateVolcengine(appID: $0) }
+                    ),
+                    isSecret: true,
+                    isMonospaced: true
+                )
+                rowDivider
+                SettingsCredentialRow(
+                    title: AppL10n.string("settings.asr.volcengine.accessToken"),
+                    placeholder: "Access Token",
+                    text: Binding(
+                        get: { volcengineFields.accessToken },
+                        set: { updateVolcengine(accessToken: $0) }
+                    ),
+                    isSecret: true,
+                    isMonospaced: true
+                )
+            }
+
             rowDivider
             SettingsProviderRow(title: AppL10n.string("settings.provider.note")) {
-                Text("settings.asr.volcengine.note")
+                Text(volcengineFields.usesAPIKeyAuth
+                     ? "settings.asr.volcengine.note.apiKey"
+                     : "settings.asr.volcengine.note.appToken")
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -105,22 +126,29 @@ struct ASRSettingsCard: View {
     }
 
     private var volcengineFields: VolcengineASRFields {
-        VolcengineASRFields.parse(
-            apiKey: config.asrApiKey,
-            resourceFallback: config.asrModel.isEmpty
-                ? CloudASRModelCatalog.defaultModel(for: "volcengine")
-                : config.asrModel
+        VolcengineASRFields.parse(apiKey: config.asrApiKey)
+    }
+
+    private var volcengineAPIKeyModeBinding: Binding<Bool> {
+        Binding(
+            get: { volcengineFields.usesAPIKeyAuth },
+            set: { updateVolcengine(authMode: $0 ? .apiKey : .appToken) }
         )
     }
 
-    private func updateVolcengine(appID: String? = nil, accessToken: String? = nil, resourceID: String? = nil) {
+    private func updateVolcengine(
+        authMode: VolcengineASRAuthMode? = nil,
+        appID: String? = nil,
+        accessToken: String? = nil,
+        apiKeyCredential: String? = nil
+    ) {
         var fields = volcengineFields
+        if let authMode { fields.authMode = authMode }
         if let appID { fields.appID = appID }
         if let accessToken { fields.accessToken = accessToken }
-        if let resourceID {
-            fields.resourceID = resourceID
-            config.asrModel = resourceID
-        }
+        if let apiKeyCredential { fields.apiKeyCredential = apiKeyCredential }
+        // Keep store model aligned with the locked SAUC 2.0 resource.
+        config.asrModel = VolcengineASRFields.fixedResourceID
         config.asrApiKey = fields.encodedAPIKey
     }
 
