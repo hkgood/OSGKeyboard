@@ -52,7 +52,7 @@ settings:
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
     MARKETING_VERSION: "1.6.2"
-    CURRENT_PROJECT_VERSION: "47"
+    CURRENT_PROJECT_VERSION: "50"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -350,9 +350,14 @@ targets:
           - "zh-Hans.lproj"
           - "**/*.swift.example"
           - "Resources/**"
+          - "PrivacyInfo.xcprivacy"
       - path: OSGKeyboardShared/en.lproj/Shared.strings
         buildPhase: resources
       - path: OSGKeyboardShared/zh-Hans.lproj/Shared.strings
+        buildPhase: resources
+      # Privacy manifest required for LevelDB statically linked via librime
+      # (ITMS-91061). Must live in this framework bundle, not only the app/ext.
+      - path: OSGKeyboardShared/PrivacyInfo.xcprivacy
         buildPhase: resources
       # Prefer sources+buildPhase over target-level `resources:` — the latter
       # was not emitting Copy Bundle Resources entries for this framework.
