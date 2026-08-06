@@ -309,10 +309,10 @@ final class FlowSessionManager: ObservableObject {
 
     /// Foreground entry for Flow.
     ///
-    /// Default is **light**: clear orphaned Live Activities / permission UI, but
-    /// do **not** start continuous capture. Auto-capture on every foreground was
-    /// holding the host at ~170–220 MB RSS and jetsamming the keyboard extension
-    /// before `KVC.init` could run.
+    /// Default is **light** for audio work: clear orphaned Live Activities /
+    /// permission UI and automatically arm the low-profile PiP, but do not
+    /// start capture or ASR. The transparent PiP is intentionally cheap; the
+    /// 170–220 MB capture/model path still starts only on explicit speech.
     ///
     /// Pass `startCapture: true` for explicit user intent (Home “Start”, etc.).
     /// Keyboard mic cold-start uses `osgkeyboard://startflow` → `startSession`.
@@ -349,14 +349,19 @@ final class FlowSessionManager: ObservableObject {
             return
         }
 
-        guard startCapture else {
+        let shouldAutoArmPiP = keepAliveMode == .pictureInPicture
+        guard startCapture || shouldAutoArmPiP else {
             OSGDiag.log(
                 "activateOnForeground light — skip capture (keyboard survival) \(OSGDiag.memoryTag())",
                 category: "flow"
             )
             return
         }
-        startSession(reason: "activateOnForeground:\(reason)")
+        startSession(
+            reason: shouldAutoArmPiP && !startCapture
+                ? "activateOnForeground.autoPiP:\(reason)"
+                : "activateOnForeground:\(reason)"
+        )
     }
 
     func dismissColdStartOverlay() {
@@ -976,7 +981,9 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.markSessionActive(duration: duration, sessionId: sessionId)
         FlowSessionDarwin.postSessionChanged()
         isActive = true
-        ScreenWakeLock.acquire()
+        // Low-profile PiP is a system-owned keep-alive surface. Keeping the
+        // display awake wastes far more power than the static PiP itself.
+        ScreenWakeLock.release()
         sessionExpiresAt = nil
 
         startHeartbeat()
@@ -1097,11 +1104,9 @@ final class FlowSessionManager: ObservableObject {
 
     private func presentColdStartReadyOverlay() {
         let hostEntry = HostReturnService.pendingHostEntry()
-        coldStartContext = FlowColdStartContext(
-            hostEntry: hostEntry,
-            state: .ready,
-            keepAliveMode: keepAliveMode
-        )
+        // Handoff remains fully automatic; no preparing/ready overlay is
+        // mounted in the host UI.
+        coldStartContext = nil
         scheduleAutoReturnToHostIfNeeded(hostEntry: hostEntry)
     }
 
@@ -1110,7 +1115,8 @@ final class FlowSessionManager: ObservableObject {
         guard skipSwitch, hostEntry != nil else { return }
         Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 450_000_000)
-            guard let self, self.coldStartContext?.state == .ready else { return }
+            guard let self, self.isColdStartHandoff, self.isActive,
+                  FlowSessionBridge.isHostReady() else { return }
             if HostReturnService.openPendingHostIfPossible() {
                 self.dismissColdStartOverlay()
             }
@@ -1197,38 +1203,24 @@ final class FlowSessionManager: ObservableObject {
     }
 
     private func showColdStartPreparing() {
-        coldStartContext = FlowColdStartContext(
-            hostEntry: HostReturnService.pendingHostEntry(),
-            state: .preparing,
-            keepAliveMode: keepAliveMode
-        )
+        coldStartContext = nil
     }
 
     private func showColdStartPermissionFailure() {
         FlowSessionBridge.setHostReady(false)
-        coldStartContext = FlowColdStartContext(
-            hostEntry: HostReturnService.pendingHostEntry(),
-            state: .failed(.permission(message: permissionWarningMessage())),
-            keepAliveMode: keepAliveMode
-        )
+        coldStartContext = nil
     }
 
     private func showColdStartAudioFailure(message: String) {
         FlowSessionBridge.setHostReady(false)
-        coldStartContext = FlowColdStartContext(
-            hostEntry: HostReturnService.pendingHostEntry(),
-            state: .failed(.audio(message: message)),
-            keepAliveMode: keepAliveMode
-        )
+        _ = message
+        coldStartContext = nil
     }
 
     private func showColdStartPipFailure(message: String) {
         FlowSessionBridge.setHostReady(false)
-        coldStartContext = FlowColdStartContext(
-            hostEntry: HostReturnService.pendingHostEntry(),
-            state: .failed(.pip(message: message)),
-            keepAliveMode: .pictureInPicture
-        )
+        _ = message
+        coldStartContext = nil
     }
 
     private func bindSessionASRIfNeeded(force: Bool = false) {
@@ -2515,6 +2507,10 @@ final class FlowSessionManager: ObservableObject {
         levelTask = Task { @MainActor [weak self] in
             while !Task.isCancelled {
                 guard let self, self.isActive else { break }
+                guard self.isUtteranceRecording || self.capture.engineIsLive else {
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    continue
+                }
                 let levels = self.capture.currentAudioLevels()
                 if self.usesPiPKeepAlive {
                     self.pipController.updateWaveformLevels(levels)

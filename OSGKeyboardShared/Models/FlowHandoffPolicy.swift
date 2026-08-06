@@ -25,15 +25,10 @@ public enum FlowColdStartOverlayDecision: Equatable, Sendable {
 }
 
 public enum FlowHandoffPolicy {
-    /// Proactive keyboard auto-launch of the host is intentionally disabled.
-    /// Opening the host must be driven by an explicit mic press (or a Live
-    /// Activity tap when that keep-alive mode is selected). PiP sessions
-    /// never auto-jump once `hostReady` is published.
-    ///
-    /// Ready-wait polls may observe a dead host, but must still gate
-    /// `startflow` on mic intent (`recordWhenHostReady`) — otherwise an idle
-    /// keyboard open relaunches ASR and jetsams the extension.
-    public static let allowsProactiveHostAutoLaunch = false
+    /// Low-profile PiP is armed proactively whenever the keyboard appears.
+    /// This opens the lightweight host only when its ready contract is absent;
+    /// capture, ASR and model warm-up remain lazy until an actual mic press.
+    public static let allowsProactiveHostAutoLaunch = true
 
     /// Samples of "host truly dead" required before a cold-start jump is allowed
     /// from a mic-driven ready-wait recovery. Idle opens must never cold-start.

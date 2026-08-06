@@ -1,9 +1,10 @@
 // FlowPictureInPictureController.swift
 // OSGKeyboard · Main App
 //
-// PiP keep-alive for Flow sessions: enqueues a looping “tuck to edge”
-// teaching animation (OSG logo card) so the host stays eligible for
-// multitasking while the mic is off between utterances.
+// Low-profile PiP keep-alive for Flow sessions. Production uses a transparent,
+// static AVPictureInPictureVideoCallViewController with a 0.1 pt content
+// height, no frame pump, and no idle audio session. The legacy sample-buffer
+// teaching animation remains as a code-level fallback.
 
 import AVFoundation
 import AVKit
@@ -47,6 +48,8 @@ final class FlowPictureInPictureController: NSObject {
     let displayLayer = AVSampleBufferDisplayLayer()
 
     private var pipController: AVPictureInPictureController?
+    private var videoCallContentController: AVPictureInPictureVideoCallViewController?
+    private var transparentContentView: UIView?
     private var displayLink: CADisplayLink?
     private weak var hostView: UIView?
     private var isStoppingProgrammatically = false
@@ -55,6 +58,17 @@ final class FlowPictureInPictureController: NSObject {
     private var cachedLogo: CGImage?
     /// Last system failure reported by the PiP delegate (cleared on each start).
     private var lastSystemStartFailure: Error?
+
+    /// Production route: a static, transparent VideoCall PiP. Unlike the
+    /// sample-buffer teaching animation, this needs no video frame pump and can
+    /// release AVAudioSession after PiP becomes active.
+    private let usesLowPowerVideoCallPiP = true
+
+    /// Community implementations confirm that VideoCall PiP accepts an extreme
+    /// aspect ratio. The system may clamp its final width, but a 0.1 pt content
+    /// height makes the surface visually negligible without private positioning
+    /// APIs.
+    private static let lowProfileContentSize = CGSize(width: 300, height: 0.1)
 
     private enum Canvas {
         static let width = 480
@@ -69,6 +83,10 @@ final class FlowPictureInPictureController: NSObject {
     func attachHostView(_ view: UIView) {
         hostView = view
         hasHostView = true
+        if usesLowPowerVideoCallPiP {
+            displayLayer.removeFromSuperlayer()
+            return
+        }
         let bounds = view.bounds
         displayLayer.frame = (bounds.width >= 1 && bounds.height >= 1)
             ? bounds
@@ -114,20 +132,25 @@ final class FlowPictureInPictureController: NSObject {
             pipController = nil
         }
         configureControllerIfNeeded()
-        warmLogoCacheIfNeeded()
-        animationStartedAt = CACurrentMediaTime()
-        startFramePump()
+        if !usesLowPowerVideoCallPiP {
+            warmLogoCacheIfNeeded()
+            animationStartedAt = CACurrentMediaTime()
+            startFramePump()
+        }
         guard pipController != nil else { return false }
 
         if pipController?.isPictureInPictureActive == true {
             isPictureInPictureActive = true
+            releaseAudioSessionForLowPowerPiP()
             return true
         }
 
-        // Prime a few frames before asking the system to start PiP.
-        enqueueGuideFrame()
-        enqueueGuideFrame()
-        pipController?.invalidatePlaybackState()
+        if !usesLowPowerVideoCallPiP {
+            // Prime a few frames before asking the system to start PiP.
+            enqueueGuideFrame()
+            enqueueGuideFrame()
+            pipController?.invalidatePlaybackState()
+        }
         pipController?.startPictureInPicture()
         return true
     }
@@ -200,10 +223,12 @@ final class FlowPictureInPictureController: NSObject {
         isStoppingProgrammatically = true
         stopFramePump()
         pipController?.stopPictureInPicture()
-        displayLayer.sampleBufferRenderer.flush(
-            removingDisplayedImage: true,
-            completionHandler: nil
-        )
+        if !usesLowPowerVideoCallPiP {
+            displayLayer.sampleBufferRenderer.flush(
+                removingDisplayedImage: true,
+                completionHandler: nil
+            )
+        }
         isPictureInPictureActive = false
         animationStartedAt = nil
         lastSystemStartFailure = nil
@@ -214,13 +239,20 @@ final class FlowPictureInPictureController: NSObject {
     /// `canStartPictureInPictureAutomaticallyFromInline` can take over.
     func prepareForBackgroundAutoStart() async {
         guard isPictureInPictureActive || pipController != nil else { return }
-        _ = await activateAudioSessionForPiP()
-        startFramePump()
-        enqueueGuideFrame()
-        pipController?.invalidatePlaybackState()
-        if !isPictureInPictureActive {
-            pipController?.startPictureInPicture()
+        if isPictureInPictureActive {
+            releaseAudioSessionForLowPowerPiP()
+            return
         }
+        _ = await activateAudioSessionForPiP()
+        if !usesLowPowerVideoCallPiP {
+            startFramePump()
+            enqueueGuideFrame()
+            pipController?.invalidatePlaybackState()
+        }
+        // `canStartPictureInPictureAutomaticallyFromInline` is the primary
+        // transition when the app backgrounds. This explicit request is a
+        // foreground/inactive fallback and remains idempotent.
+        pipController?.startPictureInPicture()
     }
 
     /// Keep the shared audio session eligible for PiP after capture stops its
@@ -228,7 +260,11 @@ final class FlowPictureInPictureController: NSObject {
     /// the stable playAndRecord category instead of flipping back to playback.
     @discardableResult
     func reassertKeepAliveAudioSession() async -> Bool {
-        await activateAudioSessionForPiP()
+        if usesLowPowerVideoCallPiP, isPictureInPictureActive {
+            releaseAudioSessionForLowPowerPiP()
+            return true
+        }
+        return await activateAudioSessionForPiP()
     }
 
     /// Kept for FlowSessionManager call sites; guide animation ignores live levels.
@@ -267,16 +303,52 @@ final class FlowPictureInPictureController: NSObject {
         guard pipController == nil else { return }
         guard AVPictureInPictureController.isPictureInPictureSupported() else { return }
 
-        let contentSource = AVPictureInPictureController.ContentSource(
-            sampleBufferDisplayLayer: displayLayer,
-            playbackDelegate: self
-        )
+        let contentSource: AVPictureInPictureController.ContentSource
+        if usesLowPowerVideoCallPiP, #available(iOS 15.0, *),
+           let hostView {
+            let contentController = AVPictureInPictureVideoCallViewController()
+            contentController.preferredContentSize = Self.lowProfileContentSize
+            contentController.view.backgroundColor = .clear
+            contentController.view.isOpaque = false
+            contentController.view.layer.backgroundColor = UIColor.clear.cgColor
+            contentController.view.layer.isOpaque = false
+            contentController.view.clipsToBounds = true
+
+            let transparentView = UIView(frame: contentController.view.bounds)
+            transparentView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            transparentView.backgroundColor = .clear
+            transparentView.isOpaque = false
+            transparentView.isUserInteractionEnabled = false
+            transparentView.layer.backgroundColor = UIColor.clear.cgColor
+            transparentView.layer.isOpaque = false
+            transparentView.layer.opacity = 0
+            contentController.view.addSubview(transparentView)
+
+            videoCallContentController = contentController
+            transparentContentView = transparentView
+            contentSource = AVPictureInPictureController.ContentSource(
+                activeVideoCallSourceView: hostView,
+                contentViewController: contentController
+            )
+        } else {
+            contentSource = AVPictureInPictureController.ContentSource(
+                sampleBufferDisplayLayer: displayLayer,
+                playbackDelegate: self
+            )
+        }
         let controller = AVPictureInPictureController(contentSource: contentSource)
         controller.delegate = self
         controller.canStartPictureInPictureAutomaticallyFromInline = true
         controller.requiresLinearPlayback = true
         pipController = controller
         didActivateAudioSessionBeforeController = true
+    }
+
+    private func releaseAudioSessionForLowPowerPiP() {
+        guard usesLowPowerVideoCallPiP, isPictureInPictureActive else { return }
+        stopFramePump()
+        FlowAudioSessionCoordinator.shared.deactivate()
+        FlowDiagnostics.log("low-profile PiP active — released audio session and frame pump")
     }
 
     private func startFramePump() {
@@ -572,6 +644,7 @@ extension FlowPictureInPictureController: @preconcurrency AVPictureInPictureCont
     ) {
         isPictureInPictureActive = true
         lastSystemStartFailure = nil
+        releaseAudioSessionForLowPowerPiP()
     }
 
     func pictureInPictureControllerDidStopPictureInPicture(
@@ -587,8 +660,8 @@ extension FlowPictureInPictureController: @preconcurrency AVPictureInPictureCont
         _ pictureInPictureController: AVPictureInPictureController,
         failedToStartPictureInPictureWithError error: Error
     ) {
-        // First attempts often fail while the sample-buffer source is still
-        // warming; keep retrying via the display link / auto-inline path.
+        // Sample-buffer fallback may need warm-up retries. VideoCall PiP uses
+        // the automatic-inline path plus the bounded startAndWait fallback.
         lastSystemStartFailure = error
         FlowDiagnostics.log("PiP start attempt failed (will retry): \(error.localizedDescription)")
     }
