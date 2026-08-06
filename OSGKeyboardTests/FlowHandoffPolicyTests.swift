@@ -259,8 +259,8 @@ final class FlowHandoffPolicyTests: XCTestCase {
 
     // MARK: - debouncer + proactive launch flag
 
-    func testProactiveAutoLaunchDisabled() {
-        XCTAssertFalse(FlowHandoffPolicy.allowsProactiveHostAutoLaunch)
+    func testProactiveAutoLaunchEnabledForLowProfilePiP() {
+        XCTAssertTrue(FlowHandoffPolicy.allowsProactiveHostAutoLaunch)
     }
 
     func testDebouncerIgnoresSingleDeadSample() {

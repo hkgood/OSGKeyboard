@@ -280,17 +280,15 @@ public struct KeyboardRootView: View {
     }
 
     private var buttonPhase: RecordButton.Phase {
-        if case .error = state.phase { return .error }
-        if case .denied = state.phase { return .error }
         switch state.micVoiceAvailability {
-        case .ready:
-            return .idleReady
-        case .unavailable:
-            return .idleUnavailable
         case .recording:
             return .recording
         case .processing:
             return .processing
+        case .ready, .unavailable:
+            // Host/PiP readiness is handled by an automatic app handoff. Keep
+            // the idle mic visually green instead of exposing startup state.
+            return .idleReady
         }
     }
 }
@@ -409,7 +407,16 @@ private struct TranscriptLine: View {
 
     @ViewBuilder
     private var idleHint: some View {
-        let isWarning = micVoiceAvailability.isUnavailable
+        let isWarning: Bool = {
+            switch micVoiceAvailability {
+            case .unavailable(.hostNotReady), .unavailable(.preparingSession):
+                return false
+            case .unavailable:
+                return true
+            case .ready, .recording, .processing:
+                return false
+            }
+        }()
         Group {
             switch micVoiceAvailability {
             case .ready:
@@ -417,17 +424,9 @@ private struct TranscriptLine: View {
             case .unavailable(.missingAPIKey):
                 Text(micDisabledHint)
             case .unavailable(.hostNotReady):
-                if FlowSessionPolicy.keepAliveMode() == .pictureInPicture {
-                    ExtL10n.text("keyboard.flow.sessionInactive.pip")
-                } else {
-                    ExtL10n.text("keyboard.flow.sessionInactive")
-                }
+                ExtL10n.text("keyboard.placeholder.idle")
             case .unavailable(.preparingSession):
-                if FlowSessionPolicy.keepAliveMode() == .pictureInPicture {
-                    ExtL10n.text("keyboard.flow.startingSession.pip")
-                } else {
-                    ExtL10n.text("keyboard.flow.startingSession")
-                }
+                ExtL10n.text("keyboard.placeholder.idle")
             case .unavailable(.noFullAccess):
                 ExtL10n.text("keyboard.error.fullAccessRequired")
             case .unavailable(.appGroupUnavailable):

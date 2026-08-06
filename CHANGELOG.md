@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.5] - 2026-08-06
+
 ### Added
 - **Volcengine ASR API Key auth**: settings can switch to the new-console single `X-Api-Key` mode while keeping legacy APP ID + Access Token as the default; SAUC resource is fixed to Doubao streaming 2.0 (`volc.seedasr.sauc.duration`). / **火山 ASR API Key 鉴权**：设置可切换到新控制台单字段 `X-Api-Key`，默认仍为旧版 APP ID + Access Token；SAUC 资源固定为豆包流式 2.0（`volc.seedasr.sauc.duration`）。
 - **Custom style mood emoji**: custom polish styles can opt in (default off) to allow emotion-matched emoji; the prompt overrides R5 and post-processing keeps them on screen. Paste-only prompts that declare emoji opt-in are detected automatically. / **自定义风格情绪 emoji**：自定义润色风格可单独开启（默认关）按情绪点缀 emoji；提示词覆盖 R5，后处理保留上屏。仅粘贴声明允许 emoji 的 prompt 也会自动识别。
+
+### Changed
+- **Automatic low-profile PiP**: replace the 18 FPS sample-buffer teaching video with a transparent 0.1 pt VideoCall PiP; every host-app open now arms it automatically, keyboard appearance performs one silent handoff when it is absent (including Pinyin/English typing mode), and idle mic UI stays green without PiP startup copy or host overlays. Once active, PiP stops frame rendering, releases the idle audio session, allows screen sleep, and refreshes audio levels only while recording. / **自动低感知 PiP**：用透明且高度仅 0.1pt 的 VideoCall PiP 替换 18 FPS SampleBuffer 教学视频；每次打开主 App 都自动武装，键盘出现且 PiP 缺失时静默跳转一次（包括默认拼音/英文输入模式），空闲麦克风始终保持绿色，不再显示 PiP 启动文案或主 App 浮层。PiP 激活后停止帧渲染、释放空闲音频会话、允许屏幕休眠，并仅在录音时刷新音量。
 
 ### Fixed
 - **Shared LevelDB privacy manifest**: ship `PrivacyInfo.xcprivacy` inside `OSGKeyboardShared.framework` so App Store Connect no longer rejects uploads for ITMS-91061 (leveldb via librime). / **Shared LevelDB 隐私清单**：在 `OSGKeyboardShared.framework` 内打包 `PrivacyInfo.xcprivacy`，避免 App Store Connect 因 ITMS-91061（librime 内嵌 leveldb）拒收。

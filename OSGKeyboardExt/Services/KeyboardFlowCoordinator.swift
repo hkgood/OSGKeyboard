@@ -116,6 +116,33 @@ final class KeyboardFlowCoordinator {
         stopHostReadyWait()
     }
 
+    /// Ensure the containing app has armed its low-profile PiP even when the
+    /// keyboard opens directly into Pinyin/English typing mode. The mic stays
+    /// visually ready; if the host contract is missing, one automatic handoff
+    /// prepares PiP so the next press does not need another app switch.
+    func ensurePiPReadyOnKeyboardOpen() {
+        guard FlowHandoffPolicy.allowsProactiveHostAutoLaunch,
+              FlowSessionPolicy.keepAliveMode() == .pictureInPicture,
+              state.hasCompletedOnboarding,
+              hasFullAccess(),
+              AppGroup.isAvailable,
+              !isPendingFlowStart,
+              !isFlowRecording,
+              !isAwaitingFlowResult else { return }
+
+        FlowSessionBridge.reloadFromDisk()
+        if FlowSessionBridge.isHostReady() { return }
+
+        if let reason = FlowSessionBridge.readySnapshot()?.reason,
+           reason == .recording || reason == .processing || reason == .awaitingDelivery {
+            return
+        }
+
+        detectAndStoreAppContext()
+        beginFlowStart(recordAfterHandoff: false)
+        traceState("keyboardOpen.autoArmPiP")
+    }
+
     func refreshSessionState() {
         FlowSessionBridge.reloadFromDisk()
         refreshConfigFromAppGroup()
@@ -527,11 +554,7 @@ final class KeyboardFlowCoordinator {
         isPendingFlowStart = true
         isFlowRecording = false
         flowStartDeadline = Date().timeIntervalSince1970 + FlowWatchdog.startTimeout
-        state.lastTranscript = ExtL10n.string(
-            FlowSessionPolicy.keepAliveMode() == .pictureInPicture
-                ? "keyboard.flow.startingSession.pip"
-                : "keyboard.flow.startingSession"
-        )
+        state.lastTranscript = ""
         recomputeMicVoiceAvailability()
         OSGDiag.log(
             "beginFlowStart → openHostApp(startflow) recordAfterHandoff=\(recordAfterHandoff) "

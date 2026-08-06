@@ -197,6 +197,11 @@ public final class KeyboardViewController: UIInputViewController {
         disableSystemGestureDelays()
         keyboardHeightConstraint?.constant = targetKeyboardHeight
         refreshReturnKeyRole()
+        // Run after the extension is fully presented so UIKit accepts the
+        // containing-app handoff even when typing mode is the default surface.
+        DispatchQueue.main.async { [weak self] in
+            self?.flowCoordinator.ensurePiPReadyOnKeyboardOpen()
+        }
         OSGDiag.log(
             "KVC.viewDidAppear done height=\(targetKeyboardHeight) \(OSGDiag.memoryTag())",
             category: "boot"

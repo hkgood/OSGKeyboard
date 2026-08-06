@@ -30,19 +30,6 @@ struct MainAppRoot: View {
         }
         .environment(\.locale, config.uiLanguage.swiftUILocale)
         .environmentObject(flowManager)
-        .overlay {
-            if let context = flowManager.coldStartContext {
-                FlowColdStartOverlay(
-                    context: context,
-                    onReturnToHost: { flowManager.returnToPendingHostFromColdStart() },
-                    onDismiss: { flowManager.dismissColdStartOverlay() },
-                    onRetry: { flowManager.retryColdStartReadiness() },
-                    onOpenSettings: { flowManager.openColdStartPermissionSettings() }
-                )
-                .transition(.opacity)
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: flowManager.coldStartContext != nil)
         .background {
             FlowPiPHostView { view in
                 flowManager.attachPiPHostView(view)
@@ -75,8 +62,8 @@ struct MainAppRoot: View {
             // Heavy work (Flow / CLM / Rime) only after onboarding. Doing it
             // earlier jetsams the host (~150 MB+) and the keyboard dies with it.
             if config.hasCompletedOnboarding {
-                // Light path only: never auto-start continuous capture here.
-                // Capture starts on Home Start / keyboard startflow / mic press.
+                // Automatically arm the low-profile PiP on every host open.
+                // Capture/ASR remain lazy and start only on an actual mic press.
                 flowManager.activateOnForeground(reason: "MainAppRoot.onAppear")
                 schedulePostOnboardingWarmup(reason: "MainAppRoot.onAppear")
             } else {
