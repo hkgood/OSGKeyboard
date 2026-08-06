@@ -68,6 +68,10 @@ public final class TypingSessionController: ObservableObject {
     private var shiftPrimedByUser = false
     /// True if any key was typed while the current Shift hold was active.
     private var typedWhileShiftHeld = false
+    /// Local caret-prefix mirror so autocap survives stale `documentContextBeforeInput`
+    /// (common in Notes). Capped; reseeds from the proxy when it looks fresh.
+    private var precedingShadow = ""
+    private static let precedingShadowLimit = 400
 
     public init(
         engine: (@MainActor () -> RimeEngineBridging)? = nil,
@@ -287,6 +291,14 @@ public final class TypingSessionController: ObservableObject {
             return handleEnglishCharacter(ch)
         }
 
+        // Chinese + Shift: insert Latin directly (iOS-style mix-in), leave Rime
+        // composition untouched. Rime's alphabet is lowercase-only, so uppercase
+        // keycodes would otherwise be rejected with no output.
+        if isShiftEnabled, ch.isLetter {
+            clearOneShotShiftIfNeeded()
+            return .insert(String(ch))
+        }
+
         // Chinese letters → compose
         let committed = engine.processCharacter(ch) ?? ""
         composition = engine.composition
@@ -490,15 +502,92 @@ public final class TypingSessionController: ObservableObject {
 
     /// Arms Shift for sentence / word starts using the host field traits.
     /// Manual one-shot, hold, and Caps Lock always win over autocapitalization.
-    public func syncAutocapitalization() {
+    /// - Parameters:
+    ///   - insert: Text just written through the document proxy (may not be
+    ///     reflected in `documentContextBeforeInput` yet).
+    ///   - deleteCount: Characters just deleted before `insert` (replace path).
+    public func syncAutocapitalization(
+        accountingForInsert insert: String = "",
+        deleteCount: Int = 0
+    ) {
         guard language == .english, page == .letters else { return }
         guard !capsLock, !shiftHeld, !shiftPrimedByUser else { return }
         let mode = autocapitalizationModeProvider?() ?? .sentences
-        let preceding = precedingTextProvider?()
+        let preceding = resolvedPrecedingText(
+            accountingForInsert: insert,
+            deleteCount: deleteCount
+        )
         shiftActive = TypingAutocapitalization.shouldCapitalize(
             precedingText: preceding,
             mode: mode
         )
+    }
+
+    /// Prefer a fresh proxy; when the host lags (Notes), merge our just-applied edit.
+    private func resolvedPrecedingText(
+        accountingForInsert insert: String,
+        deleteCount: Int
+    ) -> String? {
+        // Host-driven refresh (appear / textDidChange): reseed from proxy.
+        if deleteCount == 0, insert.isEmpty {
+            if let proxy = precedingTextProvider?() {
+                return storePrecedingShadow(proxy)
+            }
+            return precedingShadow.isEmpty ? nil : precedingShadow
+        }
+
+        let proxy = precedingTextProvider?()
+
+        if deleteCount > 0, !insert.isEmpty {
+            if let proxy {
+                if proxy.hasSuffix(insert) {
+                    return storePrecedingShadow(proxy)
+                }
+                if proxy.count >= deleteCount {
+                    return storePrecedingShadow(String(proxy.dropLast(deleteCount)) + insert)
+                }
+            }
+            trimPrecedingShadow(by: deleteCount)
+            return storePrecedingShadow(precedingShadow + insert)
+        }
+
+        if deleteCount > 0 {
+            if let proxy, proxy.count + deleteCount == precedingShadow.count
+                || (precedingShadow.count >= deleteCount
+                    && String(precedingShadow.dropLast(deleteCount)) == proxy) {
+                return storePrecedingShadow(proxy)
+            }
+            if precedingShadow.count >= deleteCount {
+                return storePrecedingShadow(String(precedingShadow.dropLast(deleteCount)))
+            }
+            if let proxy { return storePrecedingShadow(proxy) }
+            precedingShadow = ""
+            return ""
+        }
+
+        // insert only
+        if let proxy {
+            if proxy.hasSuffix(insert) {
+                return storePrecedingShadow(proxy)
+            }
+            return storePrecedingShadow(proxy + insert)
+        }
+        return storePrecedingShadow(precedingShadow + insert)
+    }
+
+    @discardableResult
+    private func storePrecedingShadow(_ value: String) -> String {
+        precedingShadow = String(value.suffix(Self.precedingShadowLimit))
+        return precedingShadow
+    }
+
+    private func trimPrecedingShadow(by count: Int) {
+        guard count > 0 else { return }
+        if precedingShadow.count >= count {
+            precedingShadow.removeLast(count)
+        } else {
+            precedingShadow = ""
+        }
     }
 
     // MARK: - Shift
@@ -536,6 +625,7 @@ public final class TypingSessionController: ObservableObject {
         shiftHeld = false
         shiftPrimedByUser = false
         typedWhileShiftHeld = false
+        precedingShadow = ""
     }
 
     private func clearEnglishWordState(keepPrevious: Bool) {

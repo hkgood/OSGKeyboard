@@ -158,6 +158,8 @@
 "mac.styles.error" = "Couldn’t Save Style";
 "mac.styles.validation" = "Check the name, prompt length, and the 8-style limit.";
 "mac.styles.name" = "Style name";
+"mac.styles.allowsAddedEmoji" = "Allow mood emojis";
+"mac.styles.allowsAddedEmoji.hint" = "When on, polish may add a few emojis that match the draft’s emotion, and keeps them on screen. Off by default.";
 "mac.styles.prompt" = "Complete prompt";
 "mac.styles.hint" = "Use {{DICTIONARY}} to place the personal dictionary. System rules are appended automatically.";
 "mac.section.settings" = "Settings";
@@ -262,8 +264,11 @@
 "mac.settings.translationOff" = "Don't translate";
 "mac.settings.volcengineAppId" = "APP ID";
 "mac.settings.volcengineAccessToken" = "Access Token";
-"mac.settings.volcengineResourceId" = "Resource ID";
-"mac.settings.volcengineNote" = "Secret Key is not required. Resource ID defaults to volc.seedasr.sauc.duration.";
+"mac.settings.volcengineApiKey" = "API Key";
+"mac.settings.volcengineApiKeyMode" = "New API Key auth";
+"mac.settings.volcengineApiKeyModeSubtitle" = "On for the new console; off keeps APP ID + Access Token.";
+"mac.settings.volcengineNoteAppToken" = "Legacy console: APP ID + Access Token. Secret Key not required. Resource fixed to Doubao streaming 2.0 (volc.seedasr.sauc.duration).";
+"mac.settings.volcengineNoteApiKey" = "New console: API Key only. Resource fixed to Doubao streaming 2.0 (volc.seedasr.sauc.duration).";
 "mac.settings.recognition" = "RECOGNITION METHOD";
 "mac.settings.cloudEngine" = "Cloud Engine & AI Refinement";
 "mac.settings.cloudEngineDesc" = "Premium transcription via your provider's API, plus AI grammar and style polishing.";

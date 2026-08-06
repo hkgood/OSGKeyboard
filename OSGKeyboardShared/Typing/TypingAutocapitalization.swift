@@ -42,20 +42,22 @@ public enum TypingAutocapitalization: Sendable {
     private static func needsSentenceCapitalization(_ preceding: String?) -> Bool {
         guard let preceding, !preceding.isEmpty else { return true }
 
-        // Walk backward past trailing whitespace / newlines; capitalize when
-        // the field is empty or the previous visible character ends a sentence.
+        // Walk backward from the caret. Trailing spaces are ignored; a newline
+        // itself starts a new line (system .sentences behavior, e.g. Notes
+        // after Return). Otherwise capitalize only after a sentence terminator.
         var index = preceding.endIndex
-        var sawContent = false
         while index > preceding.startIndex {
             index = preceding.index(before: index)
             let character = preceding[index]
-            if character.isWhitespace || character.isNewline {
+            if character.isNewline {
+                return true
+            }
+            if character.isWhitespace {
                 continue
             }
-            sawContent = true
             return isSentenceTerminator(character)
         }
-        return !sawContent
+        return true
     }
 
     private static func isSentenceTerminator(_ character: Character) -> Bool {

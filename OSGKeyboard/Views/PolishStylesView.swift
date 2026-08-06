@@ -239,7 +239,8 @@ struct PolishStylesView: View {
                 format: AppL10n.string("polishStyles.copyName"),
                 pack.displayName(language: config.uiLanguage)
             ),
-            prompt: pack.prompt
+            prompt: pack.prompt,
+            allowsAddedEmoji: pack.allowsAddedEmoji
         )
         showEditor = true
     }
@@ -310,12 +311,14 @@ private struct PolishStyleEditorSheet: View {
     @Environment(\.themePalette) private var palette
     @State private var name: String
     @State private var prompt: String
+    @State private var allowsAddedEmoji: Bool
 
     init(pack: PolishStylePack?, onSave: @escaping (PolishStylePack) -> Void) {
         self.pack = pack
         self.onSave = onSave
         _name = State(initialValue: pack?.name ?? "")
         _prompt = State(initialValue: pack?.prompt ?? PolishStylePackCatalog.newUserPromptTemplate)
+        _allowsAddedEmoji = State(initialValue: pack?.allowsAddedEmoji ?? false)
     }
 
     var body: some View {
@@ -325,9 +328,22 @@ private struct PolishStyleEditorSheet: View {
                     TextField("polishStyles.editor.namePlaceholder", text: $name)
                 }
                 Section {
+                    Toggle("polishStyles.editor.allowsAddedEmoji", isOn: $allowsAddedEmoji)
+                } footer: {
+                    Text("polishStyles.editor.allowsAddedEmoji.hint")
+                }
+                Section {
                     TextEditor(text: $prompt)
                         .font(.body.monospaced())
                         .frame(minHeight: 320)
+                        .onChange(of: prompt) { _, newValue in
+                            // Paste-only custom prompts that declare emoji opt-in
+                            // should flip the toggle so post-processing keeps them.
+                            if !allowsAddedEmoji,
+                               PolishStylePack.promptDeclaresAddedEmojiOptIn(newValue) {
+                                allowsAddedEmoji = true
+                            }
+                        }
                 } header: {
                     HStack {
                         Text("polishStyles.editor.prompt")
@@ -355,6 +371,8 @@ private struct PolishStyleEditorSheet: View {
                             id: pack?.id ?? "user.\(UUID().uuidString.lowercased())",
                             name: name,
                             prompt: prompt,
+                            allowsAddedEmoji: allowsAddedEmoji
+                                || PolishStylePack.promptDeclaresAddedEmojiOptIn(prompt),
                             kind: .user,
                             createdAt: pack?.createdAt ?? Date()
                         )

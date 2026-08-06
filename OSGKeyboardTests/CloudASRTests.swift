@@ -130,7 +130,10 @@ final class CloudASRTests: XCTestCase {
         let fields = VolcengineASRFields.parse(apiKey: json, resourceFallback: "")
         XCTAssertEqual(fields.appID, "app-1")
         XCTAssertEqual(fields.accessToken, "tok-2")
-        XCTAssertEqual(fields.resourceID, "res-3")
+        XCTAssertEqual(fields.authMode, .appToken)
+        // Custom resource IDs are ignored; product is locked to SAUC 2.0 duration.
+        XCTAssertEqual(fields.resourceID, VolcengineASRFields.fixedResourceID)
+        XCTAssertTrue(fields.hasUsableCredentials)
     }
 
     func testVolcengineASRFieldsColonParsing() {
@@ -140,8 +143,70 @@ final class CloudASRTests: XCTestCase {
         )
         XCTAssertEqual(fields.appID, "app-1")
         XCTAssertEqual(fields.accessToken, "tok-2")
-        XCTAssertEqual(fields.resourceID, "res-3")
+        XCTAssertEqual(fields.authMode, .appToken)
+        XCTAssertEqual(fields.resourceID, VolcengineASRFields.fixedResourceID)
         XCTAssertTrue(fields.encodedAPIKey.contains("app-1"))
+        XCTAssertTrue(fields.encodedAPIKey.contains("auth_mode"))
+    }
+
+    func testVolcengineASRFieldsAPIKeyModeParsing() {
+        let json = #"{"auth_mode":"api_key","api_key":"vk-new-console"}"#
+        let fields = VolcengineASRFields.parse(apiKey: json)
+        XCTAssertEqual(fields.authMode, .apiKey)
+        XCTAssertEqual(fields.apiKeyCredential, "vk-new-console")
+        XCTAssertTrue(fields.hasUsableCredentials)
+        XCTAssertEqual(fields.resourceID, VolcengineASRFields.fixedResourceID)
+
+        var request = URLRequest(url: URL(string: "wss://example.invalid")!)
+        fields.applyWebSocketAuthHeaders(to: &request, connectID: "conn-1")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-Api-Key"), "vk-new-console")
+        XCTAssertNil(request.value(forHTTPHeaderField: "X-Api-App-Key"))
+        XCTAssertNil(request.value(forHTTPHeaderField: "X-Api-Access-Key"))
+        XCTAssertEqual(
+            request.value(forHTTPHeaderField: "X-Api-Resource-Id"),
+            VolcengineASRFields.fixedResourceID
+        )
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-Api-Connect-Id"), "conn-1")
+    }
+
+    func testVolcengineASRFieldsAppTokenHeaders() {
+        let fields = VolcengineASRFields(
+            authMode: .appToken,
+            appID: "app-1",
+            accessToken: "tok-2"
+        )
+        var request = URLRequest(url: URL(string: "wss://example.invalid")!)
+        fields.applyWebSocketAuthHeaders(to: &request, connectID: "conn-2")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-Api-App-Key"), "app-1")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "X-Api-Access-Key"), "tok-2")
+        XCTAssertNil(request.value(forHTTPHeaderField: "X-Api-Key"))
+        XCTAssertEqual(
+            request.value(forHTTPHeaderField: "X-Api-Resource-Id"),
+            VolcengineASRFields.fixedResourceID
+        )
+    }
+
+    func testVolcengineASRFieldsTogglePreservesBothCredentialSets() {
+        var fields = VolcengineASRFields(
+            authMode: .appToken,
+            appID: "app-1",
+            accessToken: "tok-2",
+            apiKeyCredential: "vk-keep"
+        )
+        fields.authMode = .apiKey
+        let encoded = fields.encodedAPIKey
+        let parsed = VolcengineASRFields.parse(apiKey: encoded)
+        XCTAssertEqual(parsed.authMode, .apiKey)
+        XCTAssertEqual(parsed.apiKeyCredential, "vk-keep")
+        XCTAssertEqual(parsed.appID, "app-1")
+        XCTAssertEqual(parsed.accessToken, "tok-2")
+    }
+
+    func testVolcengineASRFieldsEmptyAPIKeyModeIsNotUsable() {
+        let json = #"{"auth_mode":"api_key"}"#
+        let fields = VolcengineASRFields.parse(apiKey: json)
+        XCTAssertEqual(fields.authMode, .apiKey)
+        XCTAssertFalse(fields.hasUsableCredentials)
     }
 
     func testPersonalDictionaryASRHotwordsDedupesTerms() {

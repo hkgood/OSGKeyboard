@@ -95,6 +95,8 @@ struct TypingRootView: View {
             if !hasContent { candidatePanelMounted = false }
         }
         .onAppear {
+            // Primary warm-up lives in KVC.viewWillAppear (covers app switch).
+            // Keep this for first mount / surface flip into typing.
             KeyboardHapticFeedback.prepare()
         }
     }
@@ -489,8 +491,12 @@ struct TypingRootView: View {
         if !output.text.isEmpty {
             onInsert(output.text)
         }
-        // Proxy context is up to date after inserts/deletes — refresh Shift.
-        typing.syncAutocapitalization()
+        // Notes / some hosts lag `documentContextBeforeInput` — pass the edit we
+        // just applied so sentence Shift can arm after Return / "." immediately.
+        typing.syncAutocapitalization(
+            accountingForInsert: output.text,
+            deleteCount: output.deleteCount
+        )
     }
 
     private func keyWeight(label: String, index: Int, rowIndex: Int) -> CGFloat {

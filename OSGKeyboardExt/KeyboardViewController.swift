@@ -165,6 +165,9 @@ public final class KeyboardViewController: UIInputViewController {
         configSync.refreshConfigFromAppGroup()
         // Settings may have changed while the extension stayed alive.
         applyPreferredSurfaceOnOpen()
+        // Re-warm Taptic after host app switches: SwiftUI `onAppear` often
+        // skips when the extension process is reused, leaving generators cold.
+        KeyboardHapticFeedback.prepare()
         if state.surface == .typing {
             OSGDiag.log("KVC.viewWillAppear enterTypingMode", category: "boot")
             typingSession.enterTypingMode()

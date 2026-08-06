@@ -140,7 +140,13 @@ public struct AppGroupConfiguration: Sendable, Equatable {
 
     public var isCloudASRKeyMissing: Bool {
         guard engineMode == "cloud" else { return false }
-        return asrApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let key = asrApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !key.isEmpty else { return true }
+        // Volcengine may store auth_mode JSON before credentials are filled.
+        if asrProviderId == "volcengine" {
+            return !VolcengineASRFields.parse(apiKey: key).hasUsableCredentials
+        }
+        return false
     }
 
     public var isPolishKeyMissing: Bool {

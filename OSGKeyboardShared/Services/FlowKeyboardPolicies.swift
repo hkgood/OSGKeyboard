@@ -14,8 +14,39 @@ public enum FlowKeyboardHostWarming {
         reason == .recording || reason == .processing || reason == .awaitingDelivery
     }
 
+    /// Keep the mic green after the session has already proven ready.
+    ///
+    /// Inter-utterance PiP flaps (mic release, ack lag, brief `reason=.starting`)
+    /// used to flash yellow「正在启动画中画」even though Picture in Picture was
+    /// already running. Hold ready through those windows; real cold starts still
+    /// go through `isHostWarming` while `sessionProvenReady` is false.
+    public static func shouldHoldReady(
+        hostReady: Bool,
+        hostBusy: Bool,
+        sessionActive: Bool,
+        sessionProvenReady: Bool,
+        isPendingFlowStart: Bool,
+        snapshotReason: FlowReadySnapshot.Reason?
+    ) -> Bool {
+        guard !hostReady,
+              sessionProvenReady,
+              sessionActive,
+              !isPendingFlowStart else {
+            return false
+        }
+        // After insert the host may still publish awaitingDelivery until it
+        // consumes the ack — that is not a PiP restart.
+        if hostBusy {
+            return snapshotReason == .awaitingDelivery
+        }
+        return true
+    }
+
     /// Session lives but ready contract is not fresh — keep mic orange (wait)
     /// instead of launching another cold start.
+    ///
+    /// `withinReadyGrace` is intentionally unused for warming: a recent ready
+    /// must hold green via `shouldHoldReady`, not flash preparingSession.
     public static func isHostWarming(
         hostReady: Bool,
         hostBusy: Bool,
@@ -25,13 +56,13 @@ public enum FlowKeyboardHostWarming {
         withinReadyGrace: Bool,
         snapshotReason: FlowReadySnapshot.Reason?
     ) -> Bool {
-        !hostReady
+        _ = withinReadyGrace
+        return !hostReady
             && !hostBusy
             && sessionActive
             && (
                 hostReachable
                     || isPendingFlowStart
-                    || withinReadyGrace
                     || snapshotReason == .starting
             )
     }

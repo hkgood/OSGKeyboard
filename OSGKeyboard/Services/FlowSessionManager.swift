@@ -787,6 +787,11 @@ final class FlowSessionManager: ObservableObject {
             reason = .audioEngineNotLive
         } else if !usesPiPKeepAlive, !hasRecentAudio {
             reason = .waitingForAudioProof
+        } else if usesPiPKeepAlive, pipController.isPictureInPictureActive {
+            // PiP is already up — transient gates (!polling / interruption)
+            // are not a cold start. Prefer awaitingDelivery-adjacent idle over
+            // `.starting` so the keyboard never flashes「正在启动画中画」.
+            reason = .awaitingDelivery
         } else {
             reason = .starting
         }
@@ -1331,6 +1336,10 @@ final class FlowSessionManager: ObservableObject {
             return
         }
         FlowSessionBridge.clearResult()
+        // Ack clears the terminal result; republish ready immediately so the
+        // keyboard does not linger on awaitingDelivery / starting between the
+        // 500 ms poll and the next heartbeat.
+        refreshHostReady()
     }
 
     private func hasUnacknowledgedTerminalResult() -> Bool {

@@ -61,6 +61,15 @@ final class EnglishTypingTests: XCTestCase {
         XCTAssertTrue(
             TypingAutocapitalization.shouldCapitalize(precedingText: "Hello!\n", mode: .sentences)
         )
+        // System keyboard (.sentences): Return starts a new line → capitalize.
+        // Notes-style document context after Return is typically "…\n".
+        XCTAssertTrue(
+            TypingAutocapitalization.shouldCapitalize(precedingText: "Hello\n", mode: .sentences),
+            "Return/newline must arm Shift (Notes multi-line)"
+        )
+        XCTAssertTrue(
+            TypingAutocapitalization.shouldCapitalize(precedingText: "Hello\n\n", mode: .sentences)
+        )
         XCTAssertFalse(
             TypingAutocapitalization.shouldCapitalize(precedingText: "Hello ", mode: .sentences)
         )
@@ -70,6 +79,55 @@ final class EnglishTypingTests: XCTestCase {
         XCTAssertFalse(
             TypingAutocapitalization.shouldCapitalize(precedingText: nil, mode: .none)
         )
+    }
+
+    @MainActor
+    func testEnglishShiftArmsAfterReturnLikeNotes() {
+        // Simulates Notes: proxy preceding text gains a trailing newline after Return.
+        var preceding = "Hello"
+        let typing = TypingSessionController()
+        typing.precedingTextProvider = { preceding }
+        typing.autocapitalizationModeProvider = { .sentences }
+        _ = typing.setLanguage(.english)
+        XCTAssertFalse(typing.shiftActive, "mid-word should not arm Shift")
+
+        _ = typing.handleReturn()
+        preceding = "Hello\n" // host document after inserting newline
+        typing.syncAutocapitalization(accountingForInsert: "\n")
+        XCTAssertTrue(
+            typing.shiftActive,
+            "after Return, Shift must light for next line (system sentences behavior)"
+        )
+        XCTAssertEqual(typing.keyRows.first?.first, "Q")
+    }
+
+    @MainActor
+    func testEnglishShiftArmsWhenProxyLagsAfterReturn() {
+        // Notes often still reports pre-Return context right after insertText("\n").
+        var preceding = "Hello"
+        let typing = TypingSessionController()
+        typing.precedingTextProvider = { preceding }
+        typing.autocapitalizationModeProvider = { .sentences }
+        _ = typing.setLanguage(.english)
+
+        _ = typing.handleReturn()
+        // Proxy intentionally stale — still "Hello" without "\n".
+        typing.syncAutocapitalization(accountingForInsert: "\n")
+        XCTAssertTrue(typing.shiftActive)
+        XCTAssertEqual(typing.keyRows.first?.first, "Q")
+    }
+
+    @MainActor
+    func testEnglishShiftArmsWhenProxyLagsAfterPeriod() {
+        var preceding = "Hello"
+        let typing = TypingSessionController()
+        typing.precedingTextProvider = { preceding }
+        typing.autocapitalizationModeProvider = { .sentences }
+        _ = typing.setLanguage(.english)
+
+        _ = typing.handleKey(".")
+        typing.syncAutocapitalization(accountingForInsert: ".")
+        XCTAssertTrue(typing.shiftActive)
     }
 
     @MainActor

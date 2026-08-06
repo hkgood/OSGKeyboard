@@ -671,6 +671,8 @@ public enum FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.audioLevels)
         store.removeObject(forKey: FlowSessionKeys.lastActivityAt)
         clearHostReady(defaults: store, notify: false)
+        // Previous generation may have died mid Rime/CLM/ASR with hostHeavy=1.
+        clearHostHeavy(defaults: store)
         flush(store)
     }
 
@@ -701,13 +703,47 @@ public enum FlowSessionBridge {
     /// avoid stacking typing-engine RSS on top.
     public static func setHostHeavy(_ heavy: Bool, defaults: UserDefaults? = nil) {
         let store = resolvedDefaults(defaults)
-        store.set(heavy, forKey: FlowSessionKeys.hostHeavy)
+        if heavy {
+            store.set(true, forKey: FlowSessionKeys.hostHeavy)
+            store.set(Date().timeIntervalSince1970, forKey: FlowSessionKeys.hostHeavyAt)
+        } else {
+            clearHostHeavy(defaults: store)
+        }
         flush(store)
         OSGDiag.log("hostHeavy=\(heavy ? 1 : 0) \(OSGDiag.memoryTag())", category: "flow")
     }
 
+    /// True only while the host recently marked itself busy. A sticky `true`
+    /// left by a dead host (no `setHostHeavy(false)`) expires after
+    /// `hostHeavyMaxAge` so typing 中文/EN is not silently blocked forever.
     public static func isHostHeavy(defaults: UserDefaults? = nil) -> Bool {
-        resolvedDefaults(defaults).bool(forKey: FlowSessionKeys.hostHeavy)
+        let store = resolvedDefaults(defaults)
+        guard store.bool(forKey: FlowSessionKeys.hostHeavy) else { return false }
+        let markedAt = store.double(forKey: FlowSessionKeys.hostHeavyAt)
+        // Legacy writes had the bool but no timestamp — treat as stale so a
+        // pre-fix sticky flag cannot brick typing after upgrade.
+        guard markedAt > 0 else {
+            clearHostHeavy(defaults: store)
+            flush(store)
+            OSGDiag.log("hostHeavy stale missingAt — cleared \(OSGDiag.memoryTag())", category: "flow")
+            return false
+        }
+        let age = Date().timeIntervalSince1970 - markedAt
+        guard age >= 0, age <= FlowSessionKeys.hostHeavyMaxAge else {
+            clearHostHeavy(defaults: store)
+            flush(store)
+            OSGDiag.log(
+                "hostHeavy stale age=\(Int(age))s — cleared \(OSGDiag.memoryTag())",
+                category: "flow"
+            )
+            return false
+        }
+        return true
+    }
+
+    private static func clearHostHeavy(defaults: UserDefaults) {
+        defaults.set(false, forKey: FlowSessionKeys.hostHeavy)
+        defaults.removeObject(forKey: FlowSessionKeys.hostHeavyAt)
     }
 
     /// True when the host has published a fresh ready contract (stricter than heartbeat alone).
@@ -948,6 +984,7 @@ public enum FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.pendingHostBundleId)
         store.removeObject(forKey: FlowSessionKeys.lastActivityAt)
         clearHostReady(defaults: store, notify: false)
+        clearHostHeavy(defaults: store)
         flush(store)
     }
 

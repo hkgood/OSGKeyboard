@@ -177,30 +177,27 @@ public final class LiveDictationController: ObservableObject {
 
         // 3. Audio session — only configure once per process.
         //
-        // Category is `.record` (not `.playAndRecord`) because the
-        // preview never plays back audio — it just records from the
-        // mic and hands the buffers to `SpeechAnalyzer`. On the
-        // iOS Simulator, `.playAndRecord` requires the
-        // `AURemoteIO` Audio Unit's *output* side to also be
-        // enabled, but the simulator's "speaker" reports a 0 Hz
-        // hardware format, so `AURemoteIO::enable` fails with
-        // `kAudioUnitErr_FormatNotSupported` (-10851) and any
-        // subsequent `installTap` traps with "Failed to create tap
-        // due to format mismatch". `.record` skips the output
-        // side entirely, so the simulator can record.
-        //
-        // The real keyboard extension (`OSGKeyboardExt`) keeps
-        // `.playAndRecord` because it runs on a real device where
-        // the output side has a real hardware format, and may want
-        // to play click sounds / haptic feedback. Only the preview
-        // needs the simulator-friendly category.
+        // On device we use `.playAndRecord` + `.voiceChat` so Apple Voice
+        // Processing can suppress competing talkers. The iOS Simulator's
+        // speaker reports a 0 Hz output format, so `.playAndRecord` fails
+        // with `kAudioUnitErr_FormatNotSupported` (-10851); keep `.record`
+        // there so preview still works under CoreSimulator.
         if !didConfigureAudioSession {
             do {
                 let session = AVAudioSession.sharedInstance()
-                try session.setCategory(.record,
-                                        mode: .measurement,
-                                        options: [])
+                #if targetEnvironment(simulator)
+                try session.setCategory(.record, mode: .default, options: [])
+                #else
+                try session.setCategory(
+                    .playAndRecord,
+                    mode: FlowCaptureVoiceProcessing.captureMode,
+                    options: FlowCaptureVoiceProcessing.captureOptions
+                )
+                #endif
                 try session.setActive(true, options: .notifyOthersOnDeactivation)
+                #if !targetEnvironment(simulator)
+                FlowCaptureVoiceProcessing.preferNearTalkBuiltInMic(on: session)
+                #endif
                 didConfigureAudioSession = true
             } catch {
                 debug("audio session failed: \(error.localizedDescription)")
@@ -214,6 +211,8 @@ public final class LiveDictationController: ObservableObject {
         // The route may have changed while the preview was closed. A fresh
         // engine created after session activation avoids a stale input node.
         audioEngine = AVAudioEngine()
+        // Enable VP before reading hardware format — RemoteIO rate can shift.
+        _ = FlowCaptureVoiceProcessing.enableVoiceProcessing(on: audioEngine)
 
         // 4. Spin up the engine + ASR.
         phase = .recording

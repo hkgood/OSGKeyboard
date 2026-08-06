@@ -340,6 +340,54 @@ final class IntelligentPolishTests: XCTestCase {
         XCTAssertTrue(result.contains("完成"))
     }
 
+    func testPolishServiceKeepsAddedEmojiWhenStyleAllows() async throws {
+        store.setEngineMode("local")
+        var catalog = PolishStyleCatalog()
+        let pack = PolishStylePack(
+            id: "user.emoji",
+            name: "Emoji",
+            prompt: "保持口语，可按情绪加 emoji。",
+            allowsAddedEmoji: true
+        )
+        try catalog.upsert(pack)
+        store.setPolishStyleCatalog(catalog)
+        store.setActivePolishStyleId(pack.id)
+
+        let emojiClient = FixedResponseLLMClient(response: "今天太开心了，终于搞定了😆")
+        let service = PolishingService(store: store, client: emojiClient)
+        let result = try await service.polish(
+            "今天太开心了终于搞定了",
+            context: PolishContext()
+        )
+        XCTAssertTrue(result.contains("😆"), "Allowed-emoji styles must keep model-added emoji. Got: \(result)")
+        XCTAssertTrue(result.contains("开心"))
+    }
+
+    func testPolishServiceKeepsAddedEmojiWhenPromptOptsInWithoutToggle() async throws {
+        store.setEngineMode("local")
+        var catalog = PolishStyleCatalog()
+        let pack = PolishStylePack(
+            id: "user.paste-emoji",
+            name: "PasteEmoji",
+            prompt: "本风格允许新增 emoji。按情绪点缀合适表情。",
+            allowsAddedEmoji: false
+        )
+        try catalog.upsert(pack)
+        store.setPolishStyleCatalog(catalog)
+        store.setActivePolishStyleId(pack.id)
+
+        let emojiClient = FixedResponseLLMClient(response: "辛苦你了，真的谢谢🙏")
+        let service = PolishingService(store: store, client: emojiClient)
+        let result = try await service.polish(
+            "辛苦你了真的谢谢",
+            context: PolishContext()
+        )
+        XCTAssertTrue(
+            result.contains("🙏"),
+            "Prompt opt-in must keep emoji even when toggle is off. Got: \(result)"
+        )
+    }
+
     func testPolishServiceFallsBackWhenOutputEmpty() async throws {
         store.setEngineMode("local")
         let emptyClient = FixedResponseLLMClient(response: "   ")
@@ -408,6 +456,30 @@ final class IntelligentPolishTests: XCTestCase {
             output: "好的👍"
         )
         XCTAssertEqual(result, "好的")
+    }
+
+    func testQualityGateKeepsAddedEmojiWhenAllowed() {
+        let decision = TranscriptPostProcessor.qualityGate(
+            original: "今天太开心了",
+            candidate: "今天太开心了😆",
+            allowsAddedEmoji: true
+        )
+        guard case .accept(let text) = decision else {
+            return XCTFail("Expected accept")
+        }
+        XCTAssertTrue(text.contains("😆"))
+    }
+
+    func testQualityGateStripsAddedEmojiByDefault() {
+        let decision = TranscriptPostProcessor.qualityGate(
+            original: "今天太开心了",
+            candidate: "今天太开心了😆",
+            allowsAddedEmoji: false
+        )
+        guard case .accept(let text) = decision else {
+            return XCTFail("Expected accept")
+        }
+        XCTAssertFalse(text.contains("😆"))
     }
 
     func testQualityGateStripsResidualPauseMarkers() {

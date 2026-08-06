@@ -428,6 +428,41 @@ final class FlowSessionBridgeTests: XCTestCase {
         )
     }
 
+    func testHostHeavyClearsOnFlowStateReset() {
+        let defaults = makeDefaults()
+        FlowSessionBridge.setHostHeavy(true, defaults: defaults)
+        XCTAssertTrue(FlowSessionBridge.isHostHeavy(defaults: defaults))
+
+        FlowSessionBridge.clearFlowState(defaults: defaults)
+        XCTAssertFalse(FlowSessionBridge.isHostHeavy(defaults: defaults))
+
+        FlowSessionBridge.setHostHeavy(true, defaults: defaults)
+        FlowSessionBridge.setPendingHostBundleId("com.example.host", defaults: defaults)
+        FlowSessionBridge.clearFlowStateOnHostLaunch(defaults: defaults)
+        XCTAssertFalse(FlowSessionBridge.isHostHeavy(defaults: defaults))
+        XCTAssertEqual(
+            FlowSessionBridge.pendingHostBundleId(defaults: defaults),
+            "com.example.host"
+        )
+    }
+
+    func testStaleHostHeavyDoesNotBlockTyping() {
+        let defaults = makeDefaults()
+        // Legacy sticky bool with no timestamp — must not brick 中文/EN.
+        defaults.set(true, forKey: FlowSessionKeys.hostHeavy)
+        XCTAssertFalse(FlowSessionBridge.isHostHeavy(defaults: defaults))
+        XCTAssertFalse(defaults.bool(forKey: FlowSessionKeys.hostHeavy))
+
+        FlowSessionBridge.setHostHeavy(true, defaults: defaults)
+        XCTAssertTrue(FlowSessionBridge.isHostHeavy(defaults: defaults))
+
+        // Expired timestamp → treat as clear so cold keyboard can switch.
+        let expired = Date().timeIntervalSince1970 - FlowSessionKeys.hostHeavyMaxAge - 1
+        defaults.set(expired, forKey: FlowSessionKeys.hostHeavyAt)
+        XCTAssertFalse(FlowSessionBridge.isHostHeavy(defaults: defaults))
+        XCTAssertFalse(defaults.bool(forKey: FlowSessionKeys.hostHeavy))
+    }
+
     func testRotateHostGenerationReturnsPreviousToken() {
         let defaults = makeDefaults()
         XCTAssertNil(FlowSessionBridge.rotateHostGeneration(defaults: defaults))

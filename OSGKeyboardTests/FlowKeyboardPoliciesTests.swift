@@ -42,6 +42,90 @@ final class FlowKeyboardPoliciesTests: XCTestCase {
         XCTAssertTrue(warming)
     }
 
+    func testRecentReadyGraceDoesNotForcePreparingSession() {
+        // withinReadyGrace used to OR into warming and flash yellow after each
+        // utterance; sticky ready must hold green instead.
+        let warming = FlowKeyboardHostWarming.isHostWarming(
+            hostReady: false,
+            hostBusy: false,
+            sessionActive: true,
+            hostReachable: false,
+            isPendingFlowStart: false,
+            withinReadyGrace: true,
+            snapshotReason: .starting
+        )
+        // Still warming via reason=.starting when not yet proven ready on the
+        // keyboard side; grace alone must not be the trigger.
+        XCTAssertTrue(warming)
+
+        XCTAssertTrue(
+            FlowKeyboardHostWarming.shouldHoldReady(
+                hostReady: false,
+                hostBusy: false,
+                sessionActive: true,
+                sessionProvenReady: true,
+                isPendingFlowStart: false,
+                snapshotReason: .starting
+            ),
+            "proven-ready session must hold green through starting flaps"
+        )
+        XCTAssertTrue(
+            FlowKeyboardHostWarming.shouldHoldReady(
+                hostReady: false,
+                hostBusy: true,
+                sessionActive: true,
+                sessionProvenReady: true,
+                isPendingFlowStart: false,
+                snapshotReason: .awaitingDelivery
+            ),
+            "ack lag awaitingDelivery must not drop to preparingSession"
+        )
+        XCTAssertFalse(
+            FlowKeyboardHostWarming.shouldHoldReady(
+                hostReady: false,
+                hostBusy: true,
+                sessionActive: true,
+                sessionProvenReady: true,
+                isPendingFlowStart: false,
+                snapshotReason: .recording
+            ),
+            "live recording must not be masked as sticky ready"
+        )
+        XCTAssertFalse(
+            FlowKeyboardHostWarming.shouldHoldReady(
+                hostReady: false,
+                hostBusy: false,
+                sessionActive: true,
+                sessionProvenReady: false,
+                isPendingFlowStart: true,
+                snapshotReason: .starting
+            ),
+            "cold start pending must still show preparing"
+        )
+    }
+
+    func testHeldReadySuppressesWarming() {
+        let hold = FlowKeyboardHostWarming.shouldHoldReady(
+            hostReady: false,
+            hostBusy: false,
+            sessionActive: true,
+            sessionProvenReady: true,
+            isPendingFlowStart: false,
+            snapshotReason: .starting
+        )
+        XCTAssertTrue(hold)
+        let warming = FlowKeyboardHostWarming.isHostWarming(
+            hostReady: true, // effective ready after hold
+            hostBusy: false,
+            sessionActive: true,
+            hostReachable: true,
+            isPendingFlowStart: false,
+            withinReadyGrace: true,
+            snapshotReason: .starting
+        )
+        XCTAssertFalse(warming)
+    }
+
     // MARK: - Adopt busy
 
     func testReAdoptsRecordingAfterExtensionProcessLoss() {

@@ -191,7 +191,7 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async",
             defaultModel: "volc.seedasr.sauc.duration",
             apiKeyURL: URL(string: "https://console.volcengine.com/speech"),
-            blurb: "流式大模型 ASR · API Key 填 appId:accessToken[:resourceId]",
+            blurb: "流式大模型 ASR · 旧版 AppID+Token / 新版 API Key",
             isUserSelectable: false
         ),
         .init(

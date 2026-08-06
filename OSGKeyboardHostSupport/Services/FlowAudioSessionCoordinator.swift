@@ -68,10 +68,13 @@ public final class FlowAudioSessionCoordinator: @unchecked Sendable {
     public func activateCapture() async throws -> FlowAudioSessionSnapshot {
         let activation: CaptureActivation = try await perform {
             if self.mode != .capture {
+                // `.voiceChat` turns on system speech DSP (noise suppression /
+                // AGC). `.measurement` feeds near-raw PCM and is weak against
+                // a competing talker in the same room.
                 try self.session.setCategory(
                     .playAndRecord,
-                    mode: .measurement,
-                    options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
+                    mode: FlowCaptureVoiceProcessing.captureMode,
+                    options: FlowCaptureVoiceProcessing.captureOptions
                 )
             }
             if !self.active {
@@ -95,6 +98,9 @@ public final class FlowAudioSessionCoordinator: @unchecked Sendable {
                         category: "flow"
                     )
                 }
+            } else {
+                // Built-in near-talk preference (cardioid when available).
+                FlowCaptureVoiceProcessing.preferNearTalkBuiltInMic(on: self.session)
             }
             self.mode = .capture
             return CaptureActivation(

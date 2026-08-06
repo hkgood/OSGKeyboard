@@ -137,8 +137,11 @@
 "settings.provider.note" = "提示";
 "settings.asr.volcengine.appId" = "APP ID";
 "settings.asr.volcengine.accessToken" = "Access Token";
-"settings.asr.volcengine.resourceId" = "Resource ID";
-"settings.asr.volcengine.note" = "Secret Key 当前无需填写。Resource ID 默认使用 volc.seedasr.sauc.duration。";
+"settings.asr.volcengine.apiKey" = "API Key";
+"settings.asr.volcengine.apiKeyMode.title" = "使用新版 API Key 鉴权";
+"settings.asr.volcengine.apiKeyMode.subtitle" = "新控制台请打开此开关；已有 AppID + Token 可保持关闭。";
+"settings.asr.volcengine.note.appToken" = "旧版控制台：填写 APP ID 与 Access Token。Secret Key 无需填写。识别资源固定为豆包流式 2.0（volc.seedasr.sauc.duration）。";
+"settings.asr.volcengine.note.apiKey" = "新版控制台：只需填写 API Key。识别资源固定为豆包流式 2.0（volc.seedasr.sauc.duration）。";
 "provider.openai" = "OpenAI";
 "provider.deepseek" = "DeepSeek";
 "provider.qwen" = "通义千问";
@@ -403,6 +406,8 @@
 "polishStyles.copyName" = "%@副本";
 "polishStyles.editor.name" = "名称";
 "polishStyles.editor.namePlaceholder" = "风格名称";
+"polishStyles.editor.allowsAddedEmoji" = "允许按情绪添加 emoji";
+"polishStyles.editor.allowsAddedEmoji.hint" = "开启后，润色可按原文情绪点缀少量 emoji，并保留上屏。默认关闭。";
 "polishStyles.editor.prompt" = "完整提示词";
 "polishStyles.editor.hint" = "只需描述角色、语气、风格边界和示例。系统会自动追加个人词典、安全边界和输出契约。";
 "polishStyles.error.title" = "无法保存风格";

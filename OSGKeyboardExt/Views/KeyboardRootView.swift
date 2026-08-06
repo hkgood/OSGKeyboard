@@ -234,14 +234,22 @@ public struct KeyboardRootView: View {
     }
 
     private func bottomDeleteButton(disabled: Bool) -> some View {
-        RepeatingDeleteButton(disabled: disabled) {
+        RepeatingDeleteButton(
+            disabled: disabled,
+            hapticIntensity: state.keyboardHapticIntensity
+        ) {
             state.deleteBackward()
         }
         .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
     }
 
     private func bottomSpaceButton(disabled: Bool) -> some View {
-        RectangularToolbarButton(spaceStyle: true, label: "space", disabled: disabled) {
+        RectangularToolbarButton(
+            spaceStyle: true,
+            label: "space",
+            disabled: disabled,
+            hapticIntensity: state.keyboardHapticIntensity
+        ) {
             state.insertSpace()
         }
         .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
@@ -253,7 +261,8 @@ public struct KeyboardRootView: View {
             title: title,
             label: title,
             disabled: disabled,
-            isSend: state.returnKeyRole == .send
+            isSend: state.returnKeyRole == .send,
+            hapticIntensity: state.keyboardHapticIntensity
         ) {
             state.insertNewline()
         }

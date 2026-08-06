@@ -169,9 +169,17 @@ public enum TranscriptPostProcessor: Sendable {
     // MARK: - Post-LLM pipeline
 
     /// Apply deterministic cleanup and quality gate to LLM output.
-    public static func process(original: String, llmOutput: String) -> String {
+    public static func process(
+        original: String,
+        llmOutput: String,
+        allowsAddedEmoji: Bool = false
+    ) -> String {
         let trimmedOriginal = original.trimmingCharacters(in: .whitespacesAndNewlines)
-        let decision = qualityGate(original: trimmedOriginal, candidate: llmOutput)
+        let decision = qualityGate(
+            original: trimmedOriginal,
+            candidate: llmOutput,
+            allowsAddedEmoji: allowsAddedEmoji
+        )
         switch decision {
         case .accept(let text):
             return text
@@ -191,7 +199,11 @@ public enum TranscriptPostProcessor: Sendable {
     /// back when the model returned genuinely unusable output (empty, or
     /// pure explanation), and even then we prefer a cleaned candidate
     /// over the raw transcript.
-    public static func qualityGate(original: String, candidate: String) -> GateDecision {
+    public static func qualityGate(
+        original: String,
+        candidate: String,
+        allowsAddedEmoji: Bool = false
+    ) -> GateDecision {
         var text = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if text.isEmpty {
@@ -201,7 +213,9 @@ public enum TranscriptPostProcessor: Sendable {
         text = stripExplanatoryPrefix(from: text)
         text = stripPauseMarkers(from: text)
         text = unwrapSurroundingQuotes(text)
-        text = stripAddedEmojis(original: original, output: text)
+        if !allowsAddedEmoji {
+            text = stripAddedEmojis(original: original, output: text)
+        }
         text = repairMidSentenceLineBreaks(text)
         text = normalizeWhitespaceAndPunctuation(text)
         text = normalizeNumberedLists(text)

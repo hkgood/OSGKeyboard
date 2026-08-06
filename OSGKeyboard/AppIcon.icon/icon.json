@@ -8,11 +8,8 @@
       "hidden" : false,
       "layers" : [
         {
-          "fill" : "none",
-          "hidden" : false,
-          "image-name" : "App Icon Template.svg",
-          "name" : "App Icon Template",
-          "opacity" : 1
+          "image-name" : "Group 29.svg",
+          "name" : "Group 29"
         }
       ],
       "lighting" : "individual",

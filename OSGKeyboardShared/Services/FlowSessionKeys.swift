@@ -43,6 +43,15 @@ public enum FlowSessionKeys {
     /// Host is mid heavy work (Rime/CLM/ASR). Extension should stay on voice
     /// and skip typing engine prepare until this clears.
     public static let hostHeavy = "flow.hostHeavy.v1"
+    /// Wall-clock timestamp paired with `hostHeavy` (seconds since 1970).
+    /// Lets the keyboard ignore a sticky flag left behind when the host died
+    /// mid-warmup without ever clearing App Group state.
+    public static let hostHeavyAt = "flow.hostHeavyAt.v1"
+
+    /// `hostHeavy` older than this is treated as stale (host likely jetsammed
+    /// or force-quit before `setHostHeavy(false)`). Rime/CLM/ASR bursts are
+    /// expected well under this window.
+    public static let hostHeavyMaxAge: TimeInterval = 120
 
     /// Heartbeat older than this → host is not actively reachable for recording.
     public static let heartbeatStaleInterval: TimeInterval = 3
