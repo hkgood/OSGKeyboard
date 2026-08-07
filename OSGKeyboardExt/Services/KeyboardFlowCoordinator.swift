@@ -122,7 +122,6 @@ final class KeyboardFlowCoordinator {
     /// prepares PiP so the next press does not need another app switch.
     func ensurePiPReadyOnKeyboardOpen() {
         guard FlowHandoffPolicy.allowsProactiveHostAutoLaunch,
-              FlowSessionPolicy.keepAliveMode() == .pictureInPicture,
               state.hasCompletedOnboarding,
               hasFullAccess(),
               AppGroup.isAvailable,
@@ -220,7 +219,7 @@ final class KeyboardFlowCoordinator {
         // host utt.rec=1 → ready=false → keyboard forever "正在启动…".
         let hostBusy = FlowKeyboardHostWarming.isHostBusy(reason: readySnapshot?.reason)
         // Hold green after the session already proved ready — PiP mic release /
-        // ack lag must not flash yellow「正在启动画中画».
+        // ack lag must not flash yellow「正在启动…」.
         let holdReady = FlowKeyboardHostWarming.shouldHoldReady(
             hostReady: hostReadyRaw,
             hostBusy: hostBusy,

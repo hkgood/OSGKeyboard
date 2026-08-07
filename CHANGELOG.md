@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **Keep-alive settings & Live Activity**: remove Settings keep-alive mode picker and its note; delete the Dynamic Island Live Activity extension and all ActivityKit session code. Voice sessions stay on silent low-profile PiP only, with user-facing copy that never names Picture in Picture. / **保活设置与灵动岛**：移除设置中的保活方式选项及说明；删除灵动岛 Live Activity 扩展与全部 ActivityKit 会话代码。语音会话仅保留静默低感知 PiP，用户可见文案不再出现「画中画」。
+
+### Fixed
+- **Custom polish style editor**: open create/edit with `sheet(item:)` so the form always loads the selected pack instead of a blank default template. / **自定义润色风格编辑**：新建/编辑改为 `sheet(item:)` 呈现，表单始终加载所选风格，而不再偶发显示空白默认模板。
+
 ## [1.6.5] - 2026-08-06
 
 ### Added

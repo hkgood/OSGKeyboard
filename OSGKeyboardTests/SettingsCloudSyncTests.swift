@@ -64,7 +64,6 @@ final class SettingsCloudSyncTests: XCTestCase {
             activePolishStyleId: SyncedField(value: "builtin.light", updatedAt: stampA, deviceID: deviceA),
             llmThinkingEnabled: SyncedField(value: false, updatedAt: stampA, deviceID: deviceA),
             flowSkipAppSwitch: SyncedField(value: true, updatedAt: stampA, deviceID: deviceA),
-            flowKeepAliveMode: SyncedField(value: .liveActivity, updatedAt: stampA, deviceID: deviceA),
             flowInactivityDuration: SyncedField(value: .twelveHours, updatedAt: stampA, deviceID: deviceA)
         )
         let remote = SyncedAppSettingsV2(
@@ -87,7 +86,6 @@ final class SettingsCloudSyncTests: XCTestCase {
             activePolishStyleId: SyncedField(value: "builtin.formal", updatedAt: stampB, deviceID: deviceB),
             llmThinkingEnabled: SyncedField(value: true, updatedAt: stampB, deviceID: deviceB),
             flowSkipAppSwitch: SyncedField(value: false, updatedAt: stampB, deviceID: deviceB),
-            flowKeepAliveMode: SyncedField(value: .pictureInPicture, updatedAt: stampB, deviceID: deviceB),
             flowInactivityDuration: SyncedField(value: .threeHours, updatedAt: stampB, deviceID: deviceB)
         )
 
@@ -98,6 +96,31 @@ final class SettingsCloudSyncTests: XCTestCase {
         XCTAssertEqual(merged.localeId.value, "ja")
         XCTAssertEqual(merged.engineMode.value, "local")
         XCTAssertEqual(merged.polishIntensity.value, .heavy)
+    }
+
+    func testLegacyKeepAliveFieldDecodesButIsNotReencoded() throws {
+        let payload = SyncedAppSettingsV2.seeded(
+            from: AppGroupConfiguration.load(fromAvailable: defaults),
+            deviceID: deviceA,
+            updatedAt: Date(timeIntervalSince1970: 100)
+        )
+        let encoder = JSONEncoder()
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoder.encode(payload)) as? [String: Any]
+        )
+        object["flowKeepAliveMode"] = [
+            "value": "liveActivity",
+            "updatedAt": 0,
+            "deviceID": "legacy-device",
+        ]
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(SyncedAppSettingsV2.self, from: legacyData)
+        let reencodedObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoder.encode(decoded)) as? [String: Any]
+        )
+
+        XCTAssertNil(reencodedObject["flowKeepAliveMode"])
     }
 
     func testLegacyV1PullDoesNotClearKeychain() async throws {

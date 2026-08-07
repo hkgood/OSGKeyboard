@@ -36,15 +36,8 @@ public enum FlowDebugAppGroupSnapshot {
             }
             return String(g.prefix(8))
         }()
-        let expires: String = {
-            guard let ts = FlowSessionBridge.sessionExpiresAt(defaults: defaults) else { return "nil" }
-            let remaining = ts - Date().timeIntervalSince1970
-            return String(format: "%.0fs", remaining)
-        }()
-
         return [
             FlowDebugRow("sessionActive", FlowSessionBridge.isSessionActive(defaults: defaults) ? "1" : "0"),
-            FlowDebugRow("expiresIn", expires),
             FlowDebugRow("hostReachable", FlowSessionBridge.isHostReachable(defaults: defaults) ? "1" : "0"),
             FlowDebugRow("hostReady", FlowSessionBridge.isHostReady(defaults: defaults) ? "1" : "0"),
             FlowDebugRow("hostStale", FlowSessionBridge.isHostStale(defaults: defaults) ? "1" : "0"),

@@ -294,7 +294,7 @@ final class FlowHandoffPolicyTests: XCTestCase {
         defaults.removePersistentDomain(forName: suite)
 
         let sessionId = UUID()
-        FlowSessionBridge.markSessionActive(duration: 1_800, sessionId: sessionId, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(sessionId: sessionId, defaults: defaults)
         FlowSessionBridge.writeReadySnapshot(
             FlowReadySnapshot(
                 sessionId: sessionId,
@@ -303,7 +303,7 @@ final class FlowHandoffPolicyTests: XCTestCase {
                 engineMode: "local",
                 localeId: "zh-Hans",
                 busyUtteranceId: UUID(),
-                sessionExpiresAt: FlowSessionBridge.sessionExpiresAt(defaults: defaults),
+                sessionExpiresAt: nil,
                 hostGeneration: FlowSessionBridge.currentHostGeneration(defaults: defaults)
             ),
             defaults: defaults

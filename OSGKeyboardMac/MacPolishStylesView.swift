@@ -12,7 +12,6 @@ struct MacPolishStylesView: View {
 
     @State private var editingPack: PolishStylePack?
     @State private var viewingPack: PolishStylePack?
-    @State private var showEditor = false
     @State private var errorMessage: String?
 
     private var lang: AppUILanguage { viewModel.config.uiLanguage }
@@ -44,8 +43,10 @@ struct MacPolishStylesView: View {
                 subtitle: MacL10n.string("mac.styles.subtitle", language: lang)
             ) {
                 Button {
-                    editingPack = nil
-                    showEditor = true
+                    editingPack = PolishStylePack(
+                        name: "",
+                        prompt: PolishStylePackCatalog.newUserPromptTemplate
+                    )
                 } label: {
                     Label(
                         MacL10n.string("mac.styles.add", language: lang),
@@ -78,9 +79,13 @@ struct MacPolishStylesView: View {
             }
         }
         .background(palette.background)
-        .sheet(isPresented: $showEditor) {
-            MacPolishStyleEditor(pack: editingPack, language: lang) { pack in
-                save(pack)
+        .sheet(item: $editingPack) { pack in
+            MacPolishStyleEditor(
+                pack: pack,
+                isNew: !catalog.entries.contains(where: { $0.id == pack.id }),
+                language: lang
+            ) { saved in
+                save(saved)
             }
         }
         .sheet(item: $viewingPack) { pack in
@@ -140,7 +145,6 @@ struct MacPolishStylesView: View {
                     viewingPack = pack
                 } else {
                     editingPack = pack
-                    showEditor = true
                 }
             },
             duplicate: {
@@ -149,7 +153,6 @@ struct MacPolishStylesView: View {
                     prompt: pack.prompt,
                     allowsAddedEmoji: pack.allowsAddedEmoji
                 )
-                showEditor = true
             },
             delete: {
                 delete(pack)
@@ -340,7 +343,8 @@ private struct MacPolishStylePromptDetailSheet: View {
 }
 
 private struct MacPolishStyleEditor: View {
-    let pack: PolishStylePack?
+    let pack: PolishStylePack
+    let isNew: Bool
     let language: AppUILanguage
     let onSave: (PolishStylePack) -> Void
 
@@ -351,21 +355,23 @@ private struct MacPolishStyleEditor: View {
     @State private var allowsAddedEmoji: Bool
 
     init(
-        pack: PolishStylePack?,
+        pack: PolishStylePack,
+        isNew: Bool,
         language: AppUILanguage,
         onSave: @escaping (PolishStylePack) -> Void
     ) {
         self.pack = pack
+        self.isNew = isNew
         self.language = language
         self.onSave = onSave
-        _name = State(initialValue: pack?.name ?? "")
-        _prompt = State(initialValue: pack?.prompt ?? PolishStylePackCatalog.newUserPromptTemplate)
-        _allowsAddedEmoji = State(initialValue: pack?.allowsAddedEmoji ?? false)
+        _name = State(initialValue: pack.name)
+        _prompt = State(initialValue: pack.prompt)
+        _allowsAddedEmoji = State(initialValue: pack.allowsAddedEmoji)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            Text(MacL10n.string(pack == nil ? "mac.styles.add" : "mac.styles.edit", language: language))
+            Text(MacL10n.string(isNew ? "mac.styles.add" : "mac.styles.edit", language: language))
                 .font(TypeStyle.title2)
             TextField(MacL10n.string("mac.styles.name", language: language), text: $name)
                 .textFieldStyle(.roundedBorder)
@@ -412,13 +418,13 @@ private struct MacPolishStyleEditor: View {
                 Button(MacL10n.string("mac.save", language: language)) {
                     onSave(
                         PolishStylePack(
-                            id: pack?.id ?? "user.\(UUID().uuidString.lowercased())",
+                            id: pack.id,
                             name: name,
                             prompt: prompt,
                             allowsAddedEmoji: allowsAddedEmoji
                                 || PolishStylePack.promptDeclaresAddedEmojiOptIn(prompt),
                             kind: .user,
-                            createdAt: pack?.createdAt ?? Date()
+                            createdAt: pack.createdAt
                         )
                     )
                     dismiss()

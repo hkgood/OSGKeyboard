@@ -57,8 +57,6 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let settingsCloudPayloadV2 = "config.settings.cloudPayload.v2"
         /// When true, the host app auto-returns to the source app after a cold-start handoff.
         public static let flowSkipAppSwitch = "config.flowSkipAppSwitch"
-        /// Raw `FlowKeepAliveMode` value; mutually exclusive PiP vs Live Activity path.
-        public static let flowKeepAliveMode = "config.flowKeepAliveMode"
         /// Raw `FlowInactivityDuration` value; session expires after this idle window.
         public static let flowInactivityDuration = "config.flowInactivityDuration"
         /// One-shot: remap previous product defaults (30m / 10m) → 5m.
@@ -102,8 +100,6 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var settingsICloudSyncEnabled: Bool
     /// Auto-return to the host app after `startflow` cold start (default on).
     public var flowSkipAppSwitch: Bool
-    /// PiP vs Live Activity keep-alive strategy (mutually exclusive).
-    public var flowKeepAliveMode: FlowKeepAliveMode
     /// Idle timeout before the Flow session ends; resets on each utterance.
     public var flowInactivityDuration: FlowInactivityDuration
     /// Whether local `SpeechAnalyzer` should attach the prepared custom language model.
@@ -292,9 +288,6 @@ public struct AppGroupConfiguration: Sendable, Equatable {
                 }
                 return defaults.bool(forKey: Keys.flowSkipAppSwitch)
             }(),
-            flowKeepAliveMode: FlowKeepAliveMode.fromStored(
-                defaults.string(forKey: Keys.flowKeepAliveMode)
-            ),
             flowInactivityDuration: FlowInactivityDuration.fromStored(
                 defaults.string(forKey: Keys.flowInactivityDuration)
             ),
@@ -406,7 +399,6 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(llmThinkingEnabled, forKey: Keys.llmThinkingEnabled)
         defaults.set(activePolishStyleId, forKey: Keys.activePolishStyleId)
         defaults.set(flowSkipAppSwitch, forKey: Keys.flowSkipAppSwitch)
-        defaults.set(flowKeepAliveMode.rawValue, forKey: Keys.flowKeepAliveMode)
         defaults.set(flowInactivityDuration.rawValue, forKey: Keys.flowInactivityDuration)
         defaults.set(localASRCustomLanguageModelEnabled, forKey: Keys.localASRCustomLanguageModelEnabled)
         defaults.set(personalDictionaryICloudSyncEnabled, forKey: Keys.personalDictionaryICloudSyncEnabled)
