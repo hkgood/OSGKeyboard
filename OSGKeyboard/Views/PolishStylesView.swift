@@ -14,9 +14,10 @@ struct PolishStylesView: View {
 
     @State private var catalog = AppGroupStore().polishStyleCatalog
     @State private var activeID = AppGroupStore().activePolishStyleId
+    /// Drives the editor sheet via `sheet(item:)` so create/edit always
+    /// receives a concrete pack (avoids `isPresented` + nil race showing defaults).
     @State private var editingPack: PolishStylePack?
     @State private var viewingPack: PolishStylePack?
-    @State private var showEditor = false
     @State private var errorMessage: String?
 
     private let store = AppGroupStore()
@@ -53,8 +54,7 @@ struct PolishStylesView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        editingPack = nil
-                        showEditor = true
+                        editingPack = Self.makeDraftPack()
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -63,9 +63,12 @@ struct PolishStylesView: View {
                 }
             }
         }
-        .sheet(isPresented: $showEditor) {
-            PolishStyleEditorSheet(pack: editingPack) { pack in
-                save(pack)
+        .sheet(item: $editingPack) { pack in
+            PolishStyleEditorSheet(
+                pack: pack,
+                isNew: !catalog.entries.contains(where: { $0.id == pack.id })
+            ) { saved in
+                save(saved)
             }
         }
         .sheet(item: $viewingPack) { pack in
@@ -137,7 +140,6 @@ struct PolishStylesView: View {
                     viewingPack = pack
                 } else {
                     editingPack = pack
-                    showEditor = true
                 }
             } label: {
                 Image(systemName: pack.kind == .builtin ? "eye" : "pencil")
@@ -242,7 +244,13 @@ struct PolishStylesView: View {
             prompt: pack.prompt,
             allowsAddedEmoji: pack.allowsAddedEmoji
         )
-        showEditor = true
+    }
+
+    private static func makeDraftPack() -> PolishStylePack {
+        PolishStylePack(
+            name: "",
+            prompt: PolishStylePackCatalog.newUserPromptTemplate
+        )
     }
 
     private func delete(_ pack: PolishStylePack) {
@@ -304,7 +312,8 @@ private struct PolishStylePromptDetailSheet: View {
 }
 
 private struct PolishStyleEditorSheet: View {
-    let pack: PolishStylePack?
+    let pack: PolishStylePack
+    let isNew: Bool
     let onSave: (PolishStylePack) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -313,12 +322,17 @@ private struct PolishStyleEditorSheet: View {
     @State private var prompt: String
     @State private var allowsAddedEmoji: Bool
 
-    init(pack: PolishStylePack?, onSave: @escaping (PolishStylePack) -> Void) {
+    init(
+        pack: PolishStylePack,
+        isNew: Bool,
+        onSave: @escaping (PolishStylePack) -> Void
+    ) {
         self.pack = pack
+        self.isNew = isNew
         self.onSave = onSave
-        _name = State(initialValue: pack?.name ?? "")
-        _prompt = State(initialValue: pack?.prompt ?? PolishStylePackCatalog.newUserPromptTemplate)
-        _allowsAddedEmoji = State(initialValue: pack?.allowsAddedEmoji ?? false)
+        _name = State(initialValue: pack.name)
+        _prompt = State(initialValue: pack.prompt)
+        _allowsAddedEmoji = State(initialValue: pack.allowsAddedEmoji)
     }
 
     var body: some View {
@@ -359,7 +373,7 @@ private struct PolishStyleEditorSheet: View {
                     Text("polishStyles.editor.hint")
                 }
             }
-            .navigationTitle(pack == nil ? "polishStyles.add" : "polishStyles.edit")
+            .navigationTitle(isNew ? "polishStyles.add" : "polishStyles.edit")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -368,13 +382,13 @@ private struct PolishStyleEditorSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("common.save") {
                         let result = PolishStylePack(
-                            id: pack?.id ?? "user.\(UUID().uuidString.lowercased())",
+                            id: pack.id,
                             name: name,
                             prompt: prompt,
                             allowsAddedEmoji: allowsAddedEmoji
                                 || PolishStylePack.promptDeclaresAddedEmojiOptIn(prompt),
                             kind: .user,
-                            createdAt: pack?.createdAt ?? Date()
+                            createdAt: pack.createdAt
                         )
                         onSave(result)
                         dismiss()

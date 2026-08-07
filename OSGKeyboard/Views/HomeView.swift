@@ -76,17 +76,7 @@ struct HomeView: View {
         }
         .onChange(of: previewFocused) { _, focused in
             guard focused else { return }
-            // Cold-start overlay owns the scene (swipe-back hint); don't let
-            // the preview field summon the keyboard underneath it.
-            if flowManager.coldStartContext != nil {
-                previewFocused = false
-                return
-            }
             Task { await flowManager.refreshForInlineKeyboardFocus() }
-        }
-        .onChange(of: flowManager.coldStartContext != nil) { _, showingOverlay in
-            guard showingOverlay else { return }
-            previewFocused = false
         }
     }
 
@@ -495,7 +485,6 @@ struct HomeView: View {
             )
             .contentShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             .onTapGesture {
-                guard flowManager.coldStartContext == nil else { return }
                 previewFocused = true
             }
     }

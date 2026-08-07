@@ -480,52 +480,17 @@
 /* 润色强度 */
 "settings.polishIntensity.title" = "润色强度";
 
-/* Flow 会话策略 */
-"settings.flow.title" = "语音会话";
-"settings.flow.keepAlive.title" = "保活方式";
-"settings.flow.keepAlive.liveActivity" = "灵动岛";
-"settings.flow.keepAlive.liveActivity.subtitle" = "麦克风常驻，可按无活动时长结束会话。";
-"settings.flow.keepAlive.pictureInPicture" = "画中画";
-"settings.flow.keepAlive.pictureInPicture.subtitle" = "波形画中画保活；句间释放麦克风。";
-"settings.flow.keepAlive.pictureInPicture.note" = "画中画将持续保活，直到你关闭小窗。此模式下始终跳过应用切换。";
-"settings.flow.keepAlive.activeSession.title" = "请先结束当前会话";
-"settings.flow.keepAlive.activeSession.message" = "更改保活方式前，请先结束正在进行的语音会话。";
-"settings.flow.skipAppSwitch.title" = "跳过应用切换";
-"settings.flow.skipAppSwitch.subtitle" = "冷启动完成后，尝试自动返回来源 App。";
-"settings.flow.inactivity.title" = "无活动后结束会话";
-"settings.flow.inactivity.1m" = "1 分钟";
-"settings.flow.inactivity.5m" = "5 分钟";
-"settings.flow.inactivity.10m" = "10 分钟";
-"settings.flow.inactivity.30m" = "30 分钟";
-"settings.flow.inactivity.3h" = "3 小时";
-"settings.flow.inactivity.12h" = "12 小时";
-"settings.flow.inactivity.24h" = "24 小时";
+/* Flow 会话（内部策略字段仍可能同步；设置页已不再展示保活选项） */
 "settings.localModels.customLM.title" = "使用自定义语言模型";
 "settings.localModels.customLM.subtitle" = "诊断开关。本地识别卡住或提示未识别时，可关闭它测试纯 Apple 端侧识别。";
 
-/* 冷启动兜底（方案 B） */
-"flow.coldStart.title" = "语音已就绪";
-"flow.coldStart.preparing" = "正在就绪";
-"flow.coldStart.preparing.pip" = "正在启动画中画";
-"flow.coldStart.preparingHint" = "请先停留片刻，我们正在启动麦克风会话。";
-"flow.coldStart.preparingHint.pip" = "请先停留片刻，我们正在启动画中画保活。就绪后可返回键盘直接说话。";
-"flow.coldStart.permission.title" = "需要权限";
-"flow.coldStart.audio.title" = "语音暂时无法启动";
-"flow.coldStart.pip.title" = "画中画暂时无法启动";
+/* 冷启动 / 会话错误（用户可见文案不出现「画中画」） */
 "flow.coldStart.error.audioTimeout" = "麦克风未能及时就绪，可能正被通话或其他 App 占用。请稍后重试。";
-"flow.pip.error.unavailable" = "无法启动画中画，请留在 App 内重试。";
-"flow.pip.error.unsupported" = "此设备不支持画中画。";
-"flow.pip.error.hostNotReady" = "画中画界面尚未就绪，请留在 App 内稍后重试。";
-"flow.pip.error.notPossible" = "系统暂时无法开启画中画，请保持 App 在前台后重试。";
-"flow.pip.error.systemRejected" = "画中画启动被系统拒绝，请稍后重试。";
-"flow.pip.error.timedOut" = "画中画未能及时出现，请留在 App 内重试。";
-"flow.coldStart.action.settings" = "前往设置";
-"flow.coldStart.action.retry" = "重试";
-"flow.coldStart.swipeHint" = "沿屏幕底部的横条，从左向右滑动\n返回上一个 App。";
-"flow.coldStart.swipeAccessibility" = "沿底部横条从左向右滑动返回";
-"flow.coldStart.tapToDismiss" = "点按屏幕关闭";
-"flow.coldStart.return.named" = "返回%@";
-"flow.coldStart.return.generic" = "返回 App";
+"flow.session.error.unsupported" = "此设备无法维持语音会话。";
+"flow.session.error.hostNotReady" = "语音会话尚未就绪，请留在 App 内稍后重试。";
+"flow.session.error.notPossible" = "系统暂时无法启动语音会话，请保持 App 在前台后重试。";
+"flow.session.error.systemRejected" = "语音会话启动被系统拒绝，请稍后重试。";
+"flow.session.error.timedOut" = "语音会话未能及时启动，请留在 App 内重试。";
 
 /* 宿主 App 显示名（方案 C 白名单） */
 "hostApp.wechat" = "微信";

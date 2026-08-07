@@ -31,7 +31,6 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
     public var activePolishStyleId: SyncedField<String>
     public var llmThinkingEnabled: SyncedField<Bool>
     public var flowSkipAppSwitch: SyncedField<Bool>
-    public var flowKeepAliveMode: SyncedField<FlowKeepAliveMode>
     public var flowInactivityDuration: SyncedField<FlowInactivityDuration>
 
     public init(
@@ -55,7 +54,6 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         activePolishStyleId: SyncedField<String>,
         llmThinkingEnabled: SyncedField<Bool>,
         flowSkipAppSwitch: SyncedField<Bool>,
-        flowKeepAliveMode: SyncedField<FlowKeepAliveMode>,
         flowInactivityDuration: SyncedField<FlowInactivityDuration>
     ) {
         self.schemaVersion = schemaVersion
@@ -82,7 +80,6 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         self.activePolishStyleId = activePolishStyleId
         self.llmThinkingEnabled = llmThinkingEnabled
         self.flowSkipAppSwitch = flowSkipAppSwitch
-        self.flowKeepAliveMode = flowKeepAliveMode
         self.flowInactivityDuration = flowInactivityDuration
     }
 
@@ -107,8 +104,11 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         case activePolishStyleId
         case llmThinkingEnabled
         case flowSkipAppSwitch
-        case flowKeepAliveMode
         case flowInactivityDuration
+    }
+
+    private enum LegacyCodingKeys: String, CodingKey {
+        case flowKeepAliveMode
     }
 
     public init(from decoder: Decoder) throws {
@@ -167,17 +167,14 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             deviceID: keyboardHapticIntensity.deviceID
         )
         flowSkipAppSwitch = try container.decode(SyncedField<Bool>.self, forKey: .flowSkipAppSwitch)
-        flowKeepAliveMode = try container.decodeIfPresent(
-            SyncedField<FlowKeepAliveMode>.self,
-            forKey: .flowKeepAliveMode
-        ) ?? SyncedField(
-            value: .liveActivity,
-            updatedAt: flowSkipAppSwitch.updatedAt,
-            deviceID: flowSkipAppSwitch.deviceID
-        )
         flowInactivityDuration = try container.decode(
             SyncedField<FlowInactivityDuration>.self,
             forKey: .flowInactivityDuration
+        )
+        let legacyContainer = try decoder.container(keyedBy: LegacyCodingKeys.self)
+        _ = try legacyContainer.decodeIfPresent(
+            SyncedField<String>.self,
+            forKey: .flowKeepAliveMode
         )
 
         if let asrProvider = try container.decodeIfPresent(SyncedField<String>.self, forKey: .asrProviderId) {
@@ -224,7 +221,6 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             activePolishStyleId.updatedAt,
             llmThinkingEnabled.updatedAt,
             flowSkipAppSwitch.updatedAt,
-            flowKeepAliveMode.updatedAt,
             flowInactivityDuration.updatedAt,
         ].max() ?? .distantPast
     }
@@ -264,7 +260,6 @@ public extension SyncedAppSettingsV2 {
             activePolishStyleId: field(configuration.activePolishStyleId),
             llmThinkingEnabled: field(configuration.llmThinkingEnabled),
             flowSkipAppSwitch: field(configuration.flowSkipAppSwitch),
-            flowKeepAliveMode: field(configuration.flowKeepAliveMode),
             flowInactivityDuration: field(configuration.flowInactivityDuration)
         )
     }
@@ -296,7 +291,6 @@ public extension SyncedAppSettingsV2 {
             activePolishStyleId: field(PolishStylePackCatalog.defaultID),
             llmThinkingEnabled: field(false),
             flowSkipAppSwitch: field(legacy.flowSkipAppSwitch),
-            flowKeepAliveMode: field(.liveActivity),
             flowInactivityDuration: field(legacy.flowInactivityDuration)
         )
     }
@@ -340,7 +334,6 @@ public extension SyncedAppSettingsV2 {
             ),
             llmThinkingEnabled: .merge(local: local.llmThinkingEnabled, remote: remote.llmThinkingEnabled),
             flowSkipAppSwitch: .merge(local: local.flowSkipAppSwitch, remote: remote.flowSkipAppSwitch),
-            flowKeepAliveMode: .merge(local: local.flowKeepAliveMode, remote: remote.flowKeepAliveMode),
             flowInactivityDuration: .merge(
                 local: local.flowInactivityDuration,
                 remote: remote.flowInactivityDuration
@@ -368,7 +361,6 @@ public extension SyncedAppSettingsV2 {
         configuration.activePolishStyleId = activePolishStyleId.value
         configuration.llmThinkingEnabled = llmThinkingEnabled.value
         configuration.flowSkipAppSwitch = flowSkipAppSwitch.value
-        configuration.flowKeepAliveMode = flowKeepAliveMode.value
         configuration.flowInactivityDuration = flowInactivityDuration.value
     }
 
@@ -398,7 +390,6 @@ public extension SyncedAppSettingsV2 {
         patch(&copy.activePolishStyleId, value: configuration.activePolishStyleId)
         patch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
         patch(&copy.flowSkipAppSwitch, value: configuration.flowSkipAppSwitch)
-        patch(&copy.flowKeepAliveMode, value: configuration.flowKeepAliveMode)
         patch(&copy.flowInactivityDuration, value: configuration.flowInactivityDuration)
         return copy
     }
@@ -431,7 +422,6 @@ public extension SyncedAppSettingsV2 {
         touch(&copy.activePolishStyleId, value: configuration.activePolishStyleId)
         touch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
         touch(&copy.flowSkipAppSwitch, value: configuration.flowSkipAppSwitch)
-        touch(&copy.flowKeepAliveMode, value: configuration.flowKeepAliveMode)
         touch(&copy.flowInactivityDuration, value: configuration.flowInactivityDuration)
         return copy
     }

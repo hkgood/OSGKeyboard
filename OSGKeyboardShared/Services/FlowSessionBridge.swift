@@ -405,9 +405,8 @@ public enum FlowSessionBridge {
             // a permanent orange `preparingSession` state.
             clearHostReady(defaults: store, notify: false)
         }
-        if let expires = snapshot.sessionExpiresAt {
-            store.set(expires, forKey: FlowSessionKeys.flowSessionExpires)
-        }
+        // PiP sessions are persistent; clear expiry left by older Live Activity builds.
+        store.removeObject(forKey: FlowSessionKeys.flowSessionExpires)
         // Only a genuinely live host — ready, or actively serving an
         // utterance — may refresh the heartbeat here. A host stuck in a
         // failed cold start would otherwise keep "reviving" itself on every
@@ -430,20 +429,7 @@ public enum FlowSessionBridge {
 
     // MARK: - Session lifecycle (host app)
 
-    public static func markSessionActive(
-        duration: TimeInterval? = nil,
-        sessionId: UUID? = nil,
-        defaults: UserDefaults? = nil
-    ) {
-        let store = resolvedDefaults(defaults)
-        if FlowSessionPolicy.usesInactivityExpiry(defaults: store) {
-            markSessionActiveWithExpiry(duration: duration, sessionId: sessionId, defaults: store)
-        } else {
-            markSessionActivePersistent(sessionId: sessionId, defaults: store)
-        }
-    }
-
-    /// PiP keep-alive: session stays valid until explicit teardown (no idle expiry).
+    /// PiP keep-alive: session stays valid until explicit teardown.
     public static func markSessionActivePersistent(
         sessionId: UUID? = nil,
         defaults: UserDefaults? = nil
@@ -480,44 +466,6 @@ public enum FlowSessionBridge {
         flush(store)
     }
 
-    private static func markSessionActiveWithExpiry(
-        duration: TimeInterval? = nil,
-        sessionId: UUID? = nil,
-        defaults: UserDefaults
-    ) {
-        let resolvedDuration = duration ?? FlowSessionPolicy.sessionDuration(defaults: defaults)
-        let now = Date().timeIntervalSince1970
-        let expires = now + resolvedDuration
-        defaults.set(true, forKey: FlowSessionKeys.flowSessionActive)
-        defaults.set(expires, forKey: FlowSessionKeys.flowSessionExpires)
-        defaults.set(now, forKey: FlowSessionKeys.lastActivityAt)
-        writeHeartbeat(defaults: defaults)
-        clearTranscription(defaults: defaults)
-        defaults.removeObject(forKey: FlowSessionKeys.flowCommandPayload)
-        defaults.removeObject(forKey: FlowSessionKeys.flowCommandJournalPayload)
-        defaults.removeObject(forKey: FlowSessionKeys.flowResultPayload)
-        defaults.removeObject(forKey: FlowSessionKeys.flowAckPayload)
-        defaults.removeObject(forKey: FlowSessionKeys.pendingKeyboardUtteranceId)
-        if let sessionId {
-            let snapshot = FlowReadySnapshot(
-                sessionId: sessionId,
-                ready: false,
-                reason: .starting,
-                heartbeatAt: now,
-                engineMode: AppGroupConfiguration.load(fromAvailable: defaults).engineMode,
-                localeId: AppGroupConfiguration.load(fromAvailable: defaults).localeId,
-                sessionExpiresAt: expires,
-                hostGeneration: defaults.string(forKey: FlowSessionKeys.hostGeneration)
-            )
-            if let data = encode(snapshot) {
-                defaults.set(data, forKey: FlowSessionKeys.flowReadyPayload)
-            }
-        } else {
-            defaults.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
-        }
-        flush(defaults)
-    }
-
     public static func markSessionInactive(defaults: UserDefaults? = nil) {
         let store = resolvedDefaults(defaults)
         store.set(false, forKey: FlowSessionKeys.flowSessionActive)
@@ -544,31 +492,6 @@ public enum FlowSessionBridge {
         flush(store)
     }
 
-    public static func extendSession(
-        by duration: TimeInterval? = nil,
-        defaults: UserDefaults? = nil
-    ) {
-        let store = resolvedDefaults(defaults)
-        guard FlowSessionPolicy.usesInactivityExpiry(defaults: store) else { return }
-        let resolvedDuration = duration ?? FlowSessionPolicy.sessionDuration(defaults: store)
-        let expires = Date().timeIntervalSince1970 + resolvedDuration
-        store.set(true, forKey: FlowSessionKeys.flowSessionActive)
-        store.set(expires, forKey: FlowSessionKeys.flowSessionExpires)
-        flush(store)
-    }
-
-    /// Resets the inactivity timer after utterance completion or explicit activity.
-    public static func touchLastActivity(defaults: UserDefaults? = nil) {
-        let store = resolvedDefaults(defaults)
-        guard FlowSessionPolicy.usesInactivityExpiry(defaults: store) else { return }
-        let now = Date().timeIntervalSince1970
-        let duration = FlowSessionPolicy.sessionDuration(defaults: store)
-        store.set(now, forKey: FlowSessionKeys.lastActivityAt)
-        store.set(now + duration, forKey: FlowSessionKeys.flowSessionExpires)
-        store.set(true, forKey: FlowSessionKeys.flowSessionActive)
-        flush(store)
-    }
-
     // MARK: - Host return (scheme D)
 
     public static func setPendingHostBundleId(_ bundleId: String?, defaults: UserDefaults? = nil) {
@@ -592,18 +515,11 @@ public enum FlowSessionBridge {
 
     // MARK: - Session validity (keyboard)
 
-    /// True when the App Group session contract is still valid (not expired).
+    /// True while the persistent PiP session contract is active.
     /// Does **not** mean the host can accept utterances — use `isHostReady()`.
     public static func isSessionActive(defaults: UserDefaults? = nil) -> Bool {
         let store = resolvedDefaults(defaults)
-        guard store.bool(forKey: FlowSessionKeys.flowSessionActive) else { return false }
-
-        if !FlowSessionPolicy.usesInactivityExpiry(defaults: store) {
-            return true
-        }
-
-        let expires = store.double(forKey: FlowSessionKeys.flowSessionExpires)
-        return expires > Date().timeIntervalSince1970
+        return store.bool(forKey: FlowSessionKeys.flowSessionActive)
     }
 
     /// Seconds since the host last wrote `flowHeartbeat`; nil when never written.
@@ -798,19 +714,6 @@ public enum FlowSessionBridge {
         guard isHostStale(staleAfter: staleAfter, defaults: defaults) else { return false }
         clearFlowState(defaults: defaults)
         return true
-    }
-
-    public static func sessionExpiresAt(defaults: UserDefaults? = nil) -> TimeInterval? {
-        let store = resolvedDefaults(defaults)
-        let expires = store.double(forKey: FlowSessionKeys.flowSessionExpires)
-        return expires > 0 ? expires : nil
-    }
-
-    /// Seconds until session expiry; nil when expired or never started.
-    public static func remainingSessionDuration(defaults: UserDefaults? = nil) -> TimeInterval? {
-        guard let expires = sessionExpiresAt(defaults: defaults) else { return nil }
-        let remaining = expires - Date().timeIntervalSince1970
-        return remaining > 0 ? remaining : nil
     }
 
     // MARK: - Recording signals (keyboard → host)

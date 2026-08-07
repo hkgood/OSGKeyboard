@@ -22,11 +22,11 @@ enum FlowPiPStartFailure: Equatable, Sendable {
 
     var localizationKey: String {
         switch self {
-        case .unsupported: return "flow.pip.error.unsupported"
-        case .hostNotReady: return "flow.pip.error.hostNotReady"
-        case .notPossible: return "flow.pip.error.notPossible"
-        case .systemRejected: return "flow.pip.error.systemRejected"
-        case .timedOut: return "flow.pip.error.timedOut"
+        case .unsupported: return "flow.session.error.unsupported"
+        case .hostNotReady: return "flow.session.error.hostNotReady"
+        case .notPossible: return "flow.session.error.notPossible"
+        case .systemRejected: return "flow.session.error.systemRejected"
+        case .timedOut: return "flow.session.error.timedOut"
         }
     }
 }

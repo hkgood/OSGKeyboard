@@ -55,7 +55,7 @@ Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands 
 | Post-polish translation | ✅ | ✅ |
 | Personal dictionary | ✅ iCloud sync; protects polish and boosts English suggestions | ✅ |
 | Dictation history | ✅ | ✅ |
-| Live UI | ✅ Dynamic Island | ✅ floating pill |
+| Live UI | — (silent background keep-alive) | ✅ floating pill |
 
 ---
 

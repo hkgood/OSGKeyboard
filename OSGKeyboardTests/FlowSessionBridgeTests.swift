@@ -15,7 +15,7 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testSessionActiveSurvivesStaleHeartbeatWhileNotExpired() {
         let defaults = makeDefaults()
-        FlowSessionBridge.markSessionActive(duration: 60, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
         XCTAssertTrue(FlowSessionBridge.isSessionActive(defaults: defaults))
         XCTAssertTrue(FlowSessionBridge.isHostReachable(defaults: defaults))
 
@@ -28,7 +28,7 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testHostStaleWhenHeartbeatVeryOld() {
         let defaults = makeDefaults()
-        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
         let zombieHeartbeat = Date().timeIntervalSince1970 - 120
         defaults.set(zombieHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
 
@@ -39,7 +39,7 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testClearIfHostStaleRemovesZombieSession() {
         let defaults = makeDefaults()
-        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
         FlowSessionBridge.setRecordingState(.stopped, defaults: defaults)
         let zombieHeartbeat = Date().timeIntervalSince1970 - 120
         defaults.set(zombieHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
@@ -59,18 +59,13 @@ final class FlowSessionBridgeTests: XCTestCase {
         XCTAssertFalse(FlowSessionBridge.isSessionActive(defaults: defaults))
     }
 
-    func testSessionInactiveWhenExpired() {
+    func testPersistentSessionIgnoresLegacyExpiry() {
         let defaults = makeDefaults()
-        // Expiry only applies on the Live Activity keep-alive path (PiP is persistent).
-        defaults.set(
-            FlowKeepAliveMode.liveActivity.rawValue,
-            forKey: AppGroupConfiguration.Keys.flowKeepAliveMode
-        )
-        FlowSessionBridge.markSessionActive(duration: 1, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
         let expired = Date().timeIntervalSince1970 - 5
         defaults.set(expired, forKey: FlowSessionKeys.flowSessionExpires)
-        XCTAssertFalse(FlowSessionBridge.isSessionActive(defaults: defaults))
-        XCTAssertFalse(FlowSessionBridge.isHostReachable(defaults: defaults))
+        XCTAssertTrue(FlowSessionBridge.isSessionActive(defaults: defaults))
+        XCTAssertTrue(FlowSessionBridge.isHostReachable(defaults: defaults))
     }
 
     func testRecordingStateRoundTrip() {
@@ -104,7 +99,7 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testClearFlowStateRemovesSessionKeys() {
         let defaults = makeDefaults()
-        FlowSessionBridge.markSessionActive(defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
         FlowSessionBridge.storeTranscriptionResult("x", defaults: defaults)
         FlowSessionBridge.clearFlowState(defaults: defaults)
 
@@ -113,18 +108,11 @@ final class FlowSessionBridgeTests: XCTestCase {
         XCTAssertEqual(FlowSessionBridge.recordingState(defaults: defaults), .idle)
     }
 
-    func testRemainingSessionDurationNilWhenExpired() {
+    func testPersistentActivationClearsLegacyExpiry() {
         let defaults = makeDefaults()
-        defaults.set(
-            FlowKeepAliveMode.liveActivity.rawValue,
-            forKey: AppGroupConfiguration.Keys.flowKeepAliveMode
-        )
-        FlowSessionBridge.markSessionActive(duration: 1, defaults: defaults)
-        XCTAssertNotNil(FlowSessionBridge.remainingSessionDuration(defaults: defaults))
-
-        let expired = Date().timeIntervalSince1970 - 5
-        defaults.set(expired, forKey: FlowSessionKeys.flowSessionExpires)
-        XCTAssertNil(FlowSessionBridge.remainingSessionDuration(defaults: defaults))
+        defaults.set(Date().timeIntervalSince1970 + 60, forKey: FlowSessionKeys.flowSessionExpires)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
+        XCTAssertNil(defaults.object(forKey: FlowSessionKeys.flowSessionExpires))
     }
 
     func testConsumeTranscriptionErrorIncludesKind() {
@@ -156,7 +144,7 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testHostReadyRequiresExplicitContract() {
         let defaults = makeDefaults()
-        FlowSessionBridge.markSessionActive(duration: 60, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
         XCTAssertTrue(FlowSessionBridge.isHostReachable(defaults: defaults))
         XCTAssertFalse(FlowSessionBridge.isHostReady(defaults: defaults))
 
@@ -166,7 +154,7 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testHostReadyFalseWhenHeartbeatStale() {
         let defaults = makeDefaults()
-        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
         FlowSessionBridge.setHostReady(true, defaults: defaults)
         XCTAssertTrue(FlowSessionBridge.isHostReady(defaults: defaults))
 
@@ -177,7 +165,7 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testHeartbeatRefreshKeepsHostReadyPublished() {
         let defaults = makeDefaults()
-        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
         FlowSessionBridge.setHostReady(true, defaults: defaults)
 
         FlowSessionBridge.writeHeartbeat(defaults: defaults)
@@ -187,7 +175,7 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testClearFlowStateClearsHostReady() {
         let defaults = makeDefaults()
-        FlowSessionBridge.markSessionActive(defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
         FlowSessionBridge.setHostReady(true, defaults: defaults)
         FlowSessionBridge.clearFlowState(defaults: defaults)
         XCTAssertFalse(defaults.bool(forKey: FlowSessionKeys.flowHostReady))
@@ -305,7 +293,7 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testNotReadySnapshotDoesNotRefreshHeartbeat() {
         let defaults = makeDefaults()
-        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
         let zombieHeartbeat = Date().timeIntervalSince1970 - 120
         defaults.set(zombieHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
 
@@ -328,7 +316,7 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testBusySnapshotStillRefreshesHeartbeat() {
         let defaults = makeDefaults()
-        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
         let staleHeartbeat = Date().timeIntervalSince1970 - 10
         defaults.set(staleHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
 
@@ -359,7 +347,7 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testNotReadyStartingSnapshotIsRetainedWithoutRevivingHeartbeat() {
         let defaults = makeDefaults()
-        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
         let zombieHeartbeat = Date().timeIntervalSince1970 - 120
         defaults.set(zombieHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
 
@@ -387,7 +375,7 @@ final class FlowSessionBridgeTests: XCTestCase {
         let now = Date().timeIntervalSince1970
         FlowSessionBridge.rotateHostGeneration(defaults: defaults)
         let liveGeneration = FlowSessionBridge.currentHostGeneration(defaults: defaults)
-        FlowSessionBridge.markSessionActive(duration: 60, sessionId: sessionId, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(sessionId: sessionId, defaults: defaults)
         FlowSessionBridge.writeReadySnapshot(
             FlowReadySnapshot(
                 sessionId: sessionId,
@@ -412,7 +400,7 @@ final class FlowSessionBridgeTests: XCTestCase {
 
     func testClearFlowStateOnHostLaunchPreservesPendingHost() {
         let defaults = makeDefaults()
-        FlowSessionBridge.markSessionActive(duration: 3_600, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
         FlowSessionBridge.setHostReady(true, defaults: defaults)
         FlowSessionBridge.setPendingHostBundleId("com.example.host", defaults: defaults)
 
@@ -478,7 +466,7 @@ final class FlowSessionBridgeTests: XCTestCase {
         let defaults = makeDefaults()
         let sessionId = UUID()
         let now = Date().timeIntervalSince1970
-        FlowSessionBridge.markSessionActive(duration: 60, sessionId: sessionId, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(sessionId: sessionId, defaults: defaults)
         let snapshot = FlowReadySnapshot(
             sessionId: sessionId,
             ready: true,
@@ -501,7 +489,7 @@ final class FlowSessionBridgeTests: XCTestCase {
         let defaults = makeDefaults()
         let sessionId = UUID()
         let now = Date().timeIntervalSince1970
-        FlowSessionBridge.markSessionActive(duration: 60, sessionId: sessionId, defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(sessionId: sessionId, defaults: defaults)
         let skewed = FlowReadySnapshot(
             sessionId: sessionId,
             ready: true,

@@ -38,8 +38,6 @@ final class FlowSessionManager: ObservableObject {
     @Published private(set) var sessionExpiresAt: Date?
     /// Non-nil when continuous capture failed or permissions are missing.
     @Published private(set) var sessionWarning: String?
-    /// Cold-start handoff overlay state (scheme B).
-    @Published var coldStartContext: FlowColdStartContext?
 
     private let capture = FlowContinuousCapture()
     private let pipController = FlowPictureInPictureController()
@@ -64,7 +62,6 @@ final class FlowSessionManager: ObservableObject {
 
     private var pollingTask: Task<Void, Never>?
     private var heartbeatTask: Task<Void, Never>?
-    private var expiryTask: Task<Void, Never>?
     private var levelTask: Task<Void, Never>?
     private var startTask: Task<Void, Never>?
     private var commandObserver: FlowSessionDarwinObserver?
@@ -106,21 +103,11 @@ final class FlowSessionManager: ObservableObject {
     private var utteranceRecordingStartedAt: Date?
     /// True while the host app scene is `.active` — drives foreground renewal.
     private var isAppForeground = false
-    private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
-    private var backgroundTaskExpiryTask: Task<Void, Never>?
     /// True while handling a keyboard-initiated `startflow` cold start.
     private var isColdStartHandoff = false
     private var coldStartRecoveryTask: Task<Void, Never>?
     /// Initial proof window — cold mic sessions often need >2.5s after app switch.
     private static let coldStartAudioProofTimeout: TimeInterval = 6
-
-    private var keepAliveMode: FlowKeepAliveMode {
-        FlowSessionPolicy.keepAliveMode()
-    }
-
-    private var usesPiPKeepAlive: Bool {
-        keepAliveMode == .pictureInPicture
-    }
 
     var shouldDeferHostHeavyWork: Bool {
         isUtteranceRecording || isUtteranceProcessing || hasUnacknowledgedTerminalResult()
@@ -128,21 +115,6 @@ final class FlowSessionManager: ObservableObject {
 
     func attachPiPHostView(_ view: UIView) {
         pipController.attachHostView(view)
-    }
-
-    /// Live Activity is mutually exclusive with PiP keep-alive.
-    private func updateLiveActivityPhase(_ phase: FlowActivityAttributes.ContentState.Phase) {
-        guard !usesPiPKeepAlive else { return }
-        FlowLiveActivityController.update(phase: phase)
-    }
-
-    private func startLiveActivityIfNeeded() {
-        guard !usesPiPKeepAlive else {
-            // Sweep any orphan island left from a previous Live Activity session.
-            FlowLiveActivityController.clearOrphanedActivities()
-            return
-        }
-        FlowLiveActivityController.startSession()
     }
 
     /// Guards the once-per-process launch reconciliation (scene reconnects
@@ -153,7 +125,7 @@ final class FlowSessionManager: ObservableObject {
         // Sessions are (re)started explicitly on app foreground via
         // `activateOnForeground()`. We deliberately do NOT silently reattach a
         // stored session here — after a force-quit that would resurrect capture
-        // (and keep a stale Live Activity alive) without the user re-opening.
+        // without the user re-opening.
         //
         // Launch reconciliation: a brand-new process can never own an
         // in-flight session, so whatever the previous generation persisted
@@ -171,7 +143,6 @@ final class FlowSessionManager: ObservableObject {
             let previous = FlowSessionBridge.rotateHostGeneration()
             if previous != nil || FlowSessionBridge.isSessionActive() {
                 FlowSessionBridge.clearFlowStateOnHostLaunch()
-                FlowLiveActivityController.clearOrphanedActivities()
                 FlowSessionDarwin.postSessionChanged()
                 debug("launch reconciliation: voided previous-generation Flow state")
             }
@@ -219,7 +190,7 @@ final class FlowSessionManager: ObservableObject {
         )
         traceState(
             "startSession.request",
-            extra: "coldStart=\(coldStart) reason=\(reason) duration=\(Int(duration ?? FlowSessionPolicy.sessionDuration()))"
+            extra: "coldStart=\(coldStart) reason=\(reason)"
         )
         guard AppGroup.isAvailable else {
             debug("cannot start flow session: App Group unavailable")
@@ -247,7 +218,6 @@ final class FlowSessionManager: ObservableObject {
                 return
             case .present:
                 isColdStartHandoff = true
-                showColdStartPreparing()
                 Task { @MainActor [weak self] in
                     await self?.prepareExistingSessionForColdStartReturn()
                 }
@@ -257,7 +227,6 @@ final class FlowSessionManager: ObservableObject {
 
         if coldStart {
             isColdStartHandoff = true
-            showColdStartPreparing()
         }
 
         if isActive {
@@ -295,7 +264,6 @@ final class FlowSessionManager: ObservableObject {
                 endSession()
             } else {
                 FlowSessionBridge.clearFlowState()
-                FlowLiveActivityController.endSession()
             }
             debug("reconciled zombie persisted Flow state")
         case .clearOrphanedRecording(let orphaned):
@@ -309,8 +277,8 @@ final class FlowSessionManager: ObservableObject {
 
     /// Foreground entry for Flow.
     ///
-    /// Default is **light** for audio work: clear orphaned Live Activities /
-    /// permission UI and automatically arm the low-profile PiP, but do not
+    /// Default is **light** for audio work: automatically arm the low-profile
+    /// PiP, but do not
     /// start capture or ASR. The transparent PiP is intentionally cheap; the
     /// 170–220 MB capture/model path still starts only on explicit speech.
     ///
@@ -330,87 +298,30 @@ final class FlowSessionManager: ObservableObject {
             OSGDiag.log("activateOnForeground aborted reason=appGroupUnavailable", category: "flow")
             return
         }
-        // Sweep any Live Activity a previous (force-quit) process left behind
-        // *before* we try to (re)start a session. Doing it here — rather than
-        // only inside `startSession()`'s success path — means a start that
-        // later fails (e.g. mic proof timeout) still clears the stale island
-        // instead of leaving a zombie on the lock screen / Dynamic Island.
-        // No-op when this process already owns a healthy Live Activity.
-        FlowLiveActivityController.clearOrphanedActivities()
-
         guard AppPermissions.flowRequirementsMet else {
             OSGDiag.log("activateOnForeground aborted reason=permissions", category: "flow")
             sessionWarning = permissionWarningMessage()
             FlowSessionBridge.setHostReady(false)
-            if isColdStartHandoff {
-                showColdStartPermissionFailure()
-            }
-            FlowLiveActivityController.endSession()
             return
         }
 
-        let shouldAutoArmPiP = keepAliveMode == .pictureInPicture
-        guard startCapture || shouldAutoArmPiP else {
-            OSGDiag.log(
-                "activateOnForeground light — skip capture (keyboard survival) \(OSGDiag.memoryTag())",
-                category: "flow"
-            )
-            return
-        }
         startSession(
-            reason: shouldAutoArmPiP && !startCapture
+            reason: !startCapture
                 ? "activateOnForeground.autoPiP:\(reason)"
                 : "activateOnForeground:\(reason)"
         )
     }
 
-    func dismissColdStartOverlay() {
+    private func completeColdStartHandoff() {
         coldStartRecoveryTask?.cancel()
         coldStartRecoveryTask = nil
-        // Clear handoff flags BEFORE any refreshHostReady call. Otherwise
-        // refresh → reconcileColdStartOverlayIfRecovered → dismiss → refresh
-        // recurses until the main-thread stack overflows (EXC_BAD_ACCESS,
-        // "Thread stack size exceeded due to excessive recursion").
-        coldStartContext = nil
         isColdStartHandoff = false
         if isActive {
             refreshHostReady()
         }
     }
 
-    func returnToPendingHostFromColdStart() {
-        _ = HostReturnService.openPendingHostIfPossible()
-        dismissColdStartOverlay()
-    }
-
-    func retryColdStartReadiness() {
-        guard AppGroup.isAvailable else { return }
-        // A failed cold start leaves capture in a running-but-dead state on
-        // purpose (the recovery loop keeps probing it). A user-initiated
-        // retry must instead begin from a clean pipeline: tear down capture
-        // and the cached ASR instance so `startSession` rebuilds both —
-        // otherwise the retry reuses the zombie engine and is guaranteed to
-        // hit the same audio-proof timeout.
-        coldStartRecoveryTask?.cancel()
-        coldStartRecoveryTask = nil
-        if usesPiPKeepAlive {
-            pipController.stop()
-        } else if capture.running {
-            capture.stop()
-        }
-        sessionASR?.cancel()
-        sessionASR = nil
-        sessionASREngineMode = nil
-        sessionASRWarmedLocaleID = nil
-        startSession(coldStart: true, reason: "retryColdStartReadiness")
-    }
-
-    func openColdStartPermissionSettings() {
-        AppPermissions.openSystemSettings()
-    }
-
-    /// 强杀专用同步 teardown：不等待 ASR/LLM；Live Activity 由
-    /// `FlowTerminationCoordinator` 同步 `end`。
+    /// 强杀专用同步 teardown：不等待 ASR/LLM。
     func prepareForProcessTermination() {
         debug("prepareForProcessTermination")
         if isUtteranceRecording || isUtteranceProcessing,
@@ -422,7 +333,6 @@ final class FlowSessionManager: ObservableObject {
             )
         }
 
-        coldStartContext = nil
         isColdStartHandoff = false
         coldStartRecoveryTask?.cancel()
         coldStartRecoveryTask = nil
@@ -433,8 +343,6 @@ final class FlowSessionManager: ObservableObject {
         pollingTask = nil
         heartbeatTask?.cancel()
         heartbeatTask = nil
-        expiryTask?.cancel()
-        expiryTask = nil
         levelTask?.cancel()
         levelTask = nil
         finalizeTask?.cancel()
@@ -459,7 +367,6 @@ final class FlowSessionManager: ObservableObject {
         }
         pipController.stop()
 
-        endBackgroundKeepAlive()
         ScreenWakeLock.release()
 
         sessionASR?.cancel()
@@ -504,7 +411,6 @@ final class FlowSessionManager: ObservableObject {
             )
         }
 
-        coldStartContext = nil
         isColdStartHandoff = false
         coldStartRecoveryTask?.cancel()
         coldStartRecoveryTask = nil
@@ -515,8 +421,6 @@ final class FlowSessionManager: ObservableObject {
         pollingTask = nil
         heartbeatTask?.cancel()
         heartbeatTask = nil
-        expiryTask?.cancel()
-        expiryTask = nil
         levelTask?.cancel()
         levelTask = nil
         finalizeTask?.cancel()
@@ -542,14 +446,12 @@ final class FlowSessionManager: ObservableObject {
 
         capture.stop()
         pipController.stop()
-        endBackgroundKeepAlive()
         ScreenWakeLock.release()
         sessionASR = nil
         sessionASREngineMode = nil
         sessionASRWarmedLocaleID = nil
         FlowSessionBridge.markSessionInactive()
         FlowSessionDarwin.postSessionChanged()
-        FlowLiveActivityController.endSession()
         isActive = false
         sessionExpiresAt = nil
         sessionWarning = nil
@@ -559,14 +461,8 @@ final class FlowSessionManager: ObservableObject {
     }
 
     func extendSession(duration: TimeInterval? = nil) {
-        guard !usesPiPKeepAlive else {
-            refreshHostReady()
-            return
-        }
-        let resolved = duration ?? FlowSessionPolicy.sessionDuration()
-        FlowSessionBridge.extendSession(by: resolved)
-        sessionExpiresAt = Date().addingTimeInterval(resolved)
-        scheduleExpiry(after: resolved)
+        _ = duration
+        refreshHostReady()
     }
 
     /// Called from `OSGKeyboardApp` when `scenePhase` changes.
@@ -582,43 +478,25 @@ final class FlowSessionManager: ObservableObject {
             resumeAfterForeground()
         case .inactive:
             writeHeartbeatIfActive()
-            if usesPiPKeepAlive, isActive {
+            if isActive {
                 Task { @MainActor [weak self] in
                     await self?.pipController.prepareForBackgroundAutoStart()
                 }
             }
         case .background:
             setAppForeground(false)
-            if usesPiPKeepAlive, isActive {
+            if isActive {
                 Task { @MainActor [weak self] in
                     await self?.pipController.prepareForBackgroundAutoStart()
                 }
             }
-            if coldStartContext != nil {
-                dismissColdStartOverlay()
+            if isColdStartHandoff {
+                completeColdStartHandoff()
             }
-            // Idle continuous capture in the background jetsams the keyboard
-            // (~200 MB host RSS). Keep the session contract only while speaking.
-            releaseIdleCaptureForKeyboardSurvival()
             beginBackgroundKeepAlive()
         @unknown default:
             break
         }
-    }
-
-    /// Stops idle AVAudioEngine capture so a backgrounded host does not crowd
-    /// the keyboard extension out of memory. Active recording/processing keep
-    /// the mic; the next mic press / foreground Start restarts capture.
-    private func releaseIdleCaptureForKeyboardSurvival() {
-        guard isActive, !usesPiPKeepAlive else { return }
-        guard !isUtteranceRecording, !isUtteranceProcessing else { return }
-        guard capture.running else { return }
-        OSGDiag.log(
-            "releaseIdleCapture (background) \(OSGDiag.memoryTag())",
-            category: "flow"
-        )
-        capture.stop()
-        refreshHostReady()
     }
 
     private func writeHeartbeatIfActive() {
@@ -629,40 +507,14 @@ final class FlowSessionManager: ObservableObject {
     private func beginBackgroundKeepAlive() {
         guard isActive else { return }
         FlowSessionBridge.writeHeartbeat()
-        // Active PiP already owns the background execution contract. Starting
-        // an additional UIApplication task here produced >30s watchdog warnings.
-        guard !usesPiPKeepAlive else { return }
-
-        guard backgroundTaskID == .invalid else { return }
-        backgroundTaskID = UIApplication.shared.beginBackgroundTask { [weak self] in
-            self?.endBackgroundKeepAlive()
-        }
-        backgroundTaskExpiryTask?.cancel()
-        backgroundTaskExpiryTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 10_000_000_000)
-            guard !Task.isCancelled else { return }
-            self?.endBackgroundKeepAlive()
-        }
-        debug("background keep-alive started")
-    }
-
-    private func endBackgroundKeepAlive() {
-        guard backgroundTaskID != .invalid else { return }
-        backgroundTaskExpiryTask?.cancel()
-        backgroundTaskExpiryTask = nil
-        UIApplication.shared.endBackgroundTask(backgroundTaskID)
-        backgroundTaskID = .invalid
-        debug("background keep-alive ended")
     }
 
     private func resumeAfterForeground() {
         guard isActive else {
-            endBackgroundKeepAlive()
             return
         }
 
         FlowSessionBridge.writeHeartbeat()
-        endBackgroundKeepAlive()
 
         Task { @MainActor [weak self] in
             await self?.reactivateCaptureIfNeeded()
@@ -679,11 +531,9 @@ final class FlowSessionManager: ObservableObject {
         // processing). Only reassert when an utterance is actively recording
         // with capture already running — otherwise a foreground bounce was
         // cold-starting the mic mid-finalize (`!pri` / session churn).
-        if usesPiPKeepAlive {
-            guard isUtteranceRecording, capture.running else {
-                refreshHostReady()
-                return
-            }
+        guard isUtteranceRecording, capture.running else {
+            refreshHostReady()
+            return
         }
         // A system interruption (call / Siri) may be in progress. Probe it:
         // `setActive(true)` inside `reassertIfRunning` fails while the
@@ -746,7 +596,6 @@ final class FlowSessionManager: ObservableObject {
                     reason: .noSession,
                     engineMode: store.engineMode,
                     localeId: store.localeId,
-                    sessionExpiresAt: FlowSessionBridge.sessionExpiresAt(),
                     hostGeneration: FlowSessionBridge.currentHostGeneration()
                 )
             )
@@ -756,24 +605,13 @@ final class FlowSessionManager: ObservableObject {
         let pollingAlive = pollingTask != nil && pollingTask?.isCancelled != true
         let hasRecentAudio = capture.engineHasRecentAudio(maxAge: 2)
         let hasPendingDelivery = hasUnacknowledgedTerminalResult()
-        let canAcceptUtterance: Bool
-        if usesPiPKeepAlive {
-            canAcceptUtterance = pipController.isPictureInPictureActive
-                && pollingAlive
-                && !isUtteranceRecording
-                && !isUtteranceProcessing
-                && sessionWarning == nil
-                && !capture.isInterrupted
-                && !hasPendingDelivery
-        } else {
-            canAcceptUtterance = capture.engineIsLive
-                && pollingAlive
-                && hasRecentAudio
-                && !isUtteranceRecording
-                && !isUtteranceProcessing
-                && sessionWarning == nil
-                && !hasPendingDelivery
-        }
+        let canAcceptUtterance = pipController.isPictureInPictureActive
+            && pollingAlive
+            && !isUtteranceRecording
+            && !isUtteranceProcessing
+            && sessionWarning == nil
+            && !capture.isInterrupted
+            && !hasPendingDelivery
 
         let reason: FlowReadySnapshot.Reason
         if canAcceptUtterance {
@@ -786,16 +624,12 @@ final class FlowSessionManager: ObservableObject {
             reason = .processing
         } else if hasPendingDelivery {
             reason = .awaitingDelivery
-        } else if usesPiPKeepAlive, !pipController.isPictureInPictureActive {
+        } else if !pipController.isPictureInPictureActive {
             reason = .starting
-        } else if !usesPiPKeepAlive, !capture.engineIsLive {
-            reason = .audioEngineNotLive
-        } else if !usesPiPKeepAlive, !hasRecentAudio {
-            reason = .waitingForAudioProof
-        } else if usesPiPKeepAlive, pipController.isPictureInPictureActive {
+        } else if pipController.isPictureInPictureActive {
             // PiP is already up — transient gates (!polling / interruption)
             // are not a cold start. Prefer awaitingDelivery-adjacent idle over
-            // `.starting` so the keyboard never flashes「正在启动画中画」.
+            // `.starting` so the keyboard never flashes a false “starting” state.
             reason = .awaitingDelivery
         } else {
             reason = .starting
@@ -815,7 +649,6 @@ final class FlowSessionManager: ObservableObject {
                 busyUtteranceId: isUtteranceRecording || isUtteranceProcessing
                     ? currentUtteranceId
                     : (hasPendingDelivery ? FlowSessionBridge.latestResult()?.utteranceId : nil),
-                sessionExpiresAt: FlowSessionBridge.sessionExpiresAt(),
                 hostGeneration: FlowSessionBridge.currentHostGeneration()
             )
         )
@@ -832,37 +665,6 @@ final class FlowSessionManager: ObservableObject {
             lastReadyTraceSignature = signature
             traceState("hostReady.update", extra: signature)
         }
-        reconcileColdStartOverlayIfRecovered()
-    }
-
-    /// When the host contract turns green while the cold-start overlay still
-    /// shows a stale preparing/failed snapshot, heal automatically.
-    private func reconcileColdStartOverlayIfRecovered() {
-        guard isColdStartHandoff, isActive else { return }
-        guard let context = coldStartContext else { return }
-
-        // Mid-utterance is not "ready" — dismiss the ready overlay so Home
-        // does not keep advertising "语音已就绪" while utt.rec=1.
-        if isUtteranceRecording || isUtteranceProcessing {
-            if case .ready = context.state {
-                dismissColdStartOverlay()
-            }
-            return
-        }
-
-        guard FlowSessionBridge.isHostReady() else { return }
-
-        switch context.state {
-        case .preparing:
-            presentColdStartReadyOverlay()
-        case .failed:
-            sessionWarning = nil
-            coldStartRecoveryTask?.cancel()
-            coldStartRecoveryTask = nil
-            dismissColdStartOverlay()
-        case .ready:
-            break
-        }
     }
 
     /// Home preview field gained focus while this app is the Flow host.
@@ -870,32 +672,8 @@ final class FlowSessionManager: ObservableObject {
     /// custom keyboard extension sees green immediately.
     func refreshForInlineKeyboardFocus() async {
         guard isActive else { return }
-        if usesPiPKeepAlive {
-            refreshHostReady()
-            FlowSessionBridge.writeHeartbeat()
-            return
-        }
-        await reactivateCaptureIfNeeded()
         refreshHostReady()
-        if !FlowSessionBridge.isHostReady() {
-            try? await Task.sleep(nanoseconds: 150_000_000)
-            await reactivateCaptureIfNeeded()
-            refreshHostReady()
-        }
         FlowSessionBridge.writeHeartbeat()
-    }
-
-    /// Extend expiry after utterance completion based on the inactivity policy.
-    private func touchSessionActivity() {
-        guard isActive, !usesPiPKeepAlive else { return }
-        FlowSessionBridge.touchLastActivity()
-        if let expires = FlowSessionBridge.sessionExpiresAt() {
-            sessionExpiresAt = Date(timeIntervalSince1970: expires)
-            let remaining = expires - Date().timeIntervalSince1970
-            if remaining > 0 {
-                scheduleExpiry(after: remaining)
-            }
-        }
     }
 
     // MARK: - Session start
@@ -911,74 +689,32 @@ final class FlowSessionManager: ObservableObject {
             sessionWarning = permissionWarningMessage()
             traceState("startSessionAsync.blocked", extra: "reason=permissions")
             FlowSessionBridge.setHostReady(false)
-            if isColdStartHandoff {
-                showColdStartPermissionFailure()
-            }
             isColdStartHandoff = false
             return
         }
 
-        if usesPiPKeepAlive {
-            switch await pipController.startAndWait() {
-            case .started:
-                activateFlowSessionAfterPiPProof(duration: duration)
-                traceState("startSessionAsync.ready")
-                debug("Flow session started (PiP keep-alive), mic released between utterances")
-            case .failed(let failure):
-                let message = AppL10n.string(failure.localizationKey)
-                sessionWarning = message
-                traceState("startSessionAsync.failed", extra: "reason=pipUnavailable failure=\(failure)")
-                FlowSessionBridge.setHostReady(false)
-                if isColdStartHandoff {
-                    showColdStartPipFailure(message: message)
-                    scheduleColdStartRecovery(duration: duration)
-                }
-                debug("PiP keep-alive failed to start: \(failure)")
-            }
-            return
-        }
-
-        do {
-            try await capture.start()
-        } catch {
-            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        switch await pipController.startAndWait() {
+        case .started:
+            activateFlowSessionAfterPiPProof(duration: duration)
+            traceState("startSessionAsync.ready")
+            debug("Flow session started (PiP keep-alive), mic released between utterances")
+        case .failed(let failure):
+            let message = AppL10n.string(failure.localizationKey)
             sessionWarning = message
-            traceState("startSessionAsync.failed", extra: "reason=captureStart error=\(message)")
+            traceState("startSessionAsync.failed", extra: "reason=pipUnavailable failure=\(failure)")
             FlowSessionBridge.setHostReady(false)
             if isColdStartHandoff {
-                showColdStartAudioFailure(message: message)
-            }
-            debug("continuous capture failed: \(message)")
-            return
-        }
-
-        let audioProved = await waitForAudioProof()
-        guard !Task.isCancelled else { return }
-        guard audioProved else {
-            let message = AppL10n.string("flow.coldStart.error.audioTimeout")
-            sessionWarning = message
-            traceState("startSessionAsync.failed", extra: "reason=audioProofTimeout")
-            FlowSessionBridge.setHostReady(false)
-            if isColdStartHandoff {
-                showColdStartAudioFailure(message: message)
                 scheduleColdStartRecovery(duration: duration)
-            } else {
-                capture.stop()
             }
-            debug("continuous capture did not produce audio frames before timeout")
-            return
+            debug("PiP keep-alive failed to start: \(failure)")
         }
-
-        activateFlowSessionAfterAudioProof(duration: duration)
-        traceState("startSessionAsync.ready")
-        debug("Flow session started (\(Int(duration ?? FlowSessionPolicy.sessionDuration()))s inactivity window), continuous capture running")
     }
 
     private func activateFlowSessionAfterPiPProof(duration: TimeInterval?) {
         let sessionId = activeSessionId ?? UUID()
         activeSessionId = sessionId
         lastHandledCommandSeq = 0
-        FlowSessionBridge.markSessionActive(duration: duration, sessionId: sessionId)
+        FlowSessionBridge.markSessionActivePersistent(sessionId: sessionId)
         FlowSessionDarwin.postSessionChanged()
         isActive = true
         // Low-profile PiP is a system-owned keep-alive surface. Keeping the
@@ -990,82 +726,32 @@ final class FlowSessionManager: ObservableObject {
         startCommandObserver()
         startPolling()
         startLevelPublishing()
-        expiryTask?.cancel()
-        expiryTask = nil
 
         bindSessionASRIfNeeded()
         // ASR warmup deferred to beginUtterance (first mic press).
-        startLiveActivityIfNeeded()
 
         refreshHostReady()
         traceState("activateFlowSessionAfterPiPProof.done")
     }
 
-    private func activateFlowSessionAfterAudioProof(duration: TimeInterval?) {
-        let resolvedDuration = duration ?? FlowSessionPolicy.sessionDuration()
-        let sessionId = activeSessionId ?? UUID()
-        activeSessionId = sessionId
-        lastHandledCommandSeq = 0
-        FlowSessionBridge.markSessionActive(duration: resolvedDuration, sessionId: sessionId)
-        FlowSessionDarwin.postSessionChanged()
-        isActive = true
-        ScreenWakeLock.acquire()
-        sessionExpiresAt = Date().addingTimeInterval(resolvedDuration)
-
-        startHeartbeat()
-        startCommandObserver()
-        startPolling()
-        startLevelPublishing()
-        scheduleExpiry(after: resolvedDuration)
-
-        bindSessionASRIfNeeded()
-        // ASR warmup deferred to beginUtterance (first mic press) so session
-        // start does not stack SpeechAnalyzer with Rime/CLM deploy.
-        startLiveActivityIfNeeded()
-
-        refreshHostReady()
-        traceState("activateFlowSessionAfterAudioProof.done")
-    }
-
     private func prepareExistingSessionForColdStartReturn() async {
         guard isColdStartHandoff, isActive else { return }
-        if usesPiPKeepAlive {
-            sessionWarning = nil
-            if !pipController.isPictureInPictureActive {
-                switch await pipController.startAndWait() {
-                case .started:
-                    break
-                case .failed(let failure):
-                    let message = AppL10n.string(failure.localizationKey)
-                    sessionWarning = message
-                    FlowSessionBridge.setHostReady(false)
-                    showColdStartPipFailure(message: message)
-                    scheduleColdStartRecovery(duration: nil)
-                    debug("existing PiP session failed cold-start restart: \(failure)")
-                    return
-                }
-            }
-            refreshHostReady()
-            handleColdStartAfterSessionReady()
-            return
-        }
-        await reactivateCaptureIfNeeded()
-        guard await waitForAudioProof() else {
-            let message = AppL10n.string("flow.coldStart.error.audioTimeout")
-            sessionWarning = message
-            FlowSessionBridge.setHostReady(false)
-            showColdStartAudioFailure(message: message)
-            scheduleColdStartRecovery(duration: nil)
-            debug("existing session failed cold-start audio proof")
-            return
-        }
         sessionWarning = nil
+        if !pipController.isPictureInPictureActive {
+            switch await pipController.startAndWait() {
+            case .started:
+                break
+            case .failed(let failure):
+                let message = AppL10n.string(failure.localizationKey)
+                sessionWarning = message
+                FlowSessionBridge.setHostReady(false)
+                scheduleColdStartRecovery(duration: nil)
+                debug("existing PiP session failed cold-start restart: \(failure)")
+                return
+            }
+        }
         refreshHostReady()
         handleColdStartAfterSessionReady()
-    }
-
-    private func waitForAudioProof() async -> Bool {
-        await capture.awaitAudioFlowing(timeout: Self.coldStartAudioProofTimeout)
     }
 
     @MainActor
@@ -1074,51 +760,39 @@ final class FlowSessionManager: ObservableObject {
 
         refreshHostReady()
         guard FlowSessionBridge.isHostReady() else {
-            // Busy ≠ broken: a startflow arriving mid-utterance (e.g. tapping
-            // the Live Activity while dictating) finds a healthy session that
-            // is simply recording/processing. Showing the audio-failure
-            // overlay here would be a lie — and its recovery loop could even
-            // stop capture and kill the live utterance.
+            // Busy ≠ broken: a startflow arriving mid-utterance finds a healthy
+            // session that is simply recording/processing. Treating it as a
+            // PiP failure could restart capture and kill the live utterance.
             if isUtteranceRecording || isUtteranceProcessing {
-                dismissColdStartOverlay()
+                completeColdStartHandoff()
                 debug("cold-start handoff ignored: session busy with an utterance")
                 return
             }
-            let message: String
-            if usesPiPKeepAlive {
-                message = AppL10n.string("flow.pip.error.notPossible")
-                sessionWarning = message
-                showColdStartPipFailure(message: message)
-            } else {
-                message = AppL10n.string("flow.coldStart.error.audioTimeout")
-                sessionWarning = message
-                showColdStartAudioFailure(message: message)
-            }
+            let message = AppL10n.string("flow.session.error.notPossible")
+            sessionWarning = message
+            FlowSessionBridge.setHostReady(false)
             scheduleColdStartRecovery(duration: nil)
             debug("cold-start blocked: host ready contract not published")
             return
         }
 
-        presentColdStartReadyOverlay()
-    }
-
-    private func presentColdStartReadyOverlay() {
         let hostEntry = HostReturnService.pendingHostEntry()
-        // Handoff remains fully automatic; no preparing/ready overlay is
-        // mounted in the host UI.
-        coldStartContext = nil
+        guard hostEntry != nil else {
+            completeColdStartHandoff()
+            return
+        }
         scheduleAutoReturnToHostIfNeeded(hostEntry: hostEntry)
     }
 
     private func scheduleAutoReturnToHostIfNeeded(hostEntry: HostAppEntry?) {
-        let skipSwitch = usesPiPKeepAlive || FlowSessionPolicy.skipAppSwitch()
+        let skipSwitch = true
         guard skipSwitch, hostEntry != nil else { return }
         Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 450_000_000)
             guard let self, self.isColdStartHandoff, self.isActive,
                   FlowSessionBridge.isHostReady() else { return }
             if HostReturnService.openPendingHostIfPossible() {
-                self.dismissColdStartOverlay()
+                self.completeColdStartHandoff()
             }
         }
     }
@@ -1132,95 +806,23 @@ final class FlowSessionManager: ObservableObject {
         coldStartRecoveryTask?.cancel()
         coldStartRecoveryTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            if self.usesPiPKeepAlive {
-                let outcome = await self.pipController.startAndWait()
-                self.traceState("coldStartRecovery.pip", extra: "outcome=\(outcome)")
-                guard !Task.isCancelled, self.isColdStartHandoff else { return }
-                switch outcome {
-                case .started:
-                    if self.isActive {
-                        self.sessionWarning = nil
-                        self.refreshHostReady()
-                        self.handleColdStartAfterSessionReady()
-                    } else {
-                        self.activateFlowSessionAfterPiPProof(duration: duration)
-                        self.handleColdStartAfterSessionReady()
-                    }
-                case .failed(let failure):
-                    let message = AppL10n.string(failure.localizationKey)
-                    self.sessionWarning = message
-                    self.showColdStartPipFailure(message: message)
+            let outcome = await self.pipController.startAndWait()
+            self.traceState("coldStartRecovery.pip", extra: "outcome=\(outcome)")
+            guard !Task.isCancelled, self.isColdStartHandoff else { return }
+            switch outcome {
+            case .started:
+                if self.isActive {
+                    self.sessionWarning = nil
+                    self.refreshHostReady()
+                    self.handleColdStartAfterSessionReady()
+                } else {
+                    self.activateFlowSessionAfterPiPProof(duration: duration)
+                    self.handleColdStartAfterSessionReady()
                 }
-                return
+            case .failed(let failure):
+                self.sessionWarning = AppL10n.string(failure.localizationKey)
             }
-            var recovered = false
-            for attempt in 1...3 {
-                guard !Task.isCancelled, self.isColdStartHandoff else { return }
-                switch attempt {
-                case 1:
-                    _ = await self.capture.reassertIfRunning()
-                case 2:
-                    self.capture.stop()
-                    try? await self.capture.start()
-                default:
-                    self.capture.stop()
-                    try? await Task.sleep(nanoseconds: 300_000_000)
-                    guard !Task.isCancelled else { return }
-                    try? await self.capture.start()
-                }
-                recovered = await self.capture.awaitAudioFlowing(
-                    timeout: TimeInterval(attempt + 1)
-                )
-                self.traceState(
-                    "coldStartRecovery.attempt",
-                    extra: "attempt=\(attempt) recovered=\(recovered)"
-                )
-                if recovered { break }
-            }
-            guard !Task.isCancelled else { return }
-            guard self.isColdStartHandoff else { return }
-            guard recovered else {
-                // Out of attempts — leave the failure overlay up; its retry
-                // button now performs a full teardown so the user always has
-                // a working escape hatch (no more force-quit loops). Only
-                // tear capture down when no session owns it: for an active
-                // session the 1 Hz heartbeat keeps self-healing, and a stop
-                // here would just fight it.
-                if !self.isActive {
-                    self.capture.stop()
-                }
-                self.traceState("coldStartRecovery.exhausted")
-                return
-            }
-
-            self.sessionWarning = nil
-            self.traceState("coldStartRecovery.recovered")
-            if !self.isActive {
-                self.activateFlowSessionAfterAudioProof(duration: duration)
-            }
-            self.refreshHostReady()
         }
-    }
-
-    private func showColdStartPreparing() {
-        coldStartContext = nil
-    }
-
-    private func showColdStartPermissionFailure() {
-        FlowSessionBridge.setHostReady(false)
-        coldStartContext = nil
-    }
-
-    private func showColdStartAudioFailure(message: String) {
-        FlowSessionBridge.setHostReady(false)
-        _ = message
-        coldStartContext = nil
-    }
-
-    private func showColdStartPipFailure(message: String) {
-        FlowSessionBridge.setHostReady(false)
-        _ = message
-        coldStartContext = nil
     }
 
     private func bindSessionASRIfNeeded(force: Bool = false) {
@@ -1494,54 +1096,46 @@ final class FlowSessionManager: ObservableObject {
         startToken: FlowUtteranceStartToken
     ) async {
         guard !Task.isCancelled, canContinueStart(startToken) else { return }
-        if usesPiPKeepAlive {
-            refreshHostReady()
-            // Keep the utterance gate closed until the route is stable and the
-            // tap has produced a real frame. The rolling three-second preroll
-            // preserves speech spoken during this short readiness window.
-            guard await startCaptureForPiPUtteranceIfNeeded() else {
-                guard !Task.isCancelled, canContinueStart(startToken) else { return }
-                failUtterance(
-                    message: AppL10n.string("flow.coldStart.error.audioTimeout"),
-                    kind: .audioUnavailable
-                )
-                return
-            }
-            guard !Task.isCancelled, canContinueStart(startToken) else {
-                releaseOrphanedCaptureIfNeeded()
-                return
-            }
-            let micReady: Bool
-            if capture.engineHasRecentAudio(maxAge: 2) {
-                micReady = true
-            } else {
-                micReady = await capture.awaitAudioFlowing(
-                    timeout: Self.coldStartAudioProofTimeout
-                )
-            }
-            guard !Task.isCancelled, canContinueStart(startToken) else {
-                releaseOrphanedCaptureIfNeeded()
-                return
-            }
-            if !micReady {
-                failUtterance(
-                    message: AppL10n.string("flow.coldStart.error.audioTimeout"),
-                    kind: .audioUnavailable
-                )
-                return
-            }
-            beginUtterance(
-                utteranceId: utteranceId,
-                commandSeq: commandSeq,
-                requireRecentAudio: false
+        refreshHostReady()
+        // Keep the utterance gate closed until the route is stable and the
+        // tap has produced a real frame. The rolling three-second preroll
+        // preserves speech spoken during this short readiness window.
+        guard await startCaptureForPiPUtteranceIfNeeded() else {
+            guard !Task.isCancelled, canContinueStart(startToken) else { return }
+            failUtterance(
+                message: AppL10n.string("flow.coldStart.error.audioTimeout"),
+                kind: .audioUnavailable
             )
-            if pendingStopUtteranceId == currentUtteranceId {
-                pendingStopUtteranceId = nil
-                endUtterance()
-            }
             return
         }
-        beginUtterance(utteranceId: utteranceId, commandSeq: commandSeq)
+        guard !Task.isCancelled, canContinueStart(startToken) else {
+            releaseOrphanedCaptureIfNeeded()
+            return
+        }
+        let micReady: Bool
+        if capture.engineHasRecentAudio(maxAge: 2) {
+            micReady = true
+        } else {
+            micReady = await capture.awaitAudioFlowing(
+                timeout: Self.coldStartAudioProofTimeout
+            )
+        }
+        guard !Task.isCancelled, canContinueStart(startToken) else {
+            releaseOrphanedCaptureIfNeeded()
+            return
+        }
+        if !micReady {
+            failUtterance(
+                message: AppL10n.string("flow.coldStart.error.audioTimeout"),
+                kind: .audioUnavailable
+            )
+            return
+        }
+        beginUtterance(
+            utteranceId: utteranceId,
+            commandSeq: commandSeq,
+            requireRecentAudio: false
+        )
         if pendingStopUtteranceId == currentUtteranceId {
             pendingStopUtteranceId = nil
             endUtterance()
@@ -1563,7 +1157,7 @@ final class FlowSessionManager: ObservableObject {
     }
 
     private func releaseCaptureAfterPiPUtteranceIfNeeded() {
-        guard usesPiPKeepAlive, capture.running else { return }
+        guard capture.running else { return }
         guard !isUtteranceRecording, !isUtteranceProcessing else { return }
         capture.stop(releaseSession: false)
         Task { @MainActor [weak self] in
@@ -1683,7 +1277,6 @@ final class FlowSessionManager: ObservableObject {
         utteranceRecordingStartedAt = Date()
         startUtteranceSafetyTimer()
         refreshHostReady()
-        updateLiveActivityPhase(.recording)
         FlowDiagnostics.log(
             "beginUtterance engine=\(store.engineMode) " +
             "asrType=\(type(of: asr)) streaming=\(useStreaming) " +
@@ -1837,7 +1430,6 @@ final class FlowSessionManager: ObservableObject {
         utteranceSafetyTask?.cancel()
         utteranceSafetyTask = nil
         refreshHostReady()
-        updateLiveActivityPhase(.processing)
 
         // Snapshot pipelined partial before drain — fallback if the final chunk ASR drops tail text.
         bestPartialSnapshot = currentPartial.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1864,11 +1456,9 @@ final class FlowSessionManager: ObservableObject {
                     + "rms=\(FlowTrace.rms(self.utterancePCMSamples)) "
                     + "capture[\(self.capture.frameReport().summary)]"
             )
-            if self.usesPiPKeepAlive {
-                self.capture.stop(releaseSession: false)
-                _ = await self.pipController.reassertKeepAliveAudioSession()
-                self.pipController.updateWaveformLevels([])
-            }
+            self.capture.stop(releaseSession: false)
+            _ = await self.pipController.reassertKeepAliveAudioSession()
+            self.pipController.updateWaveformLevels([])
             await self.finalizeUtterance(
                 sessionId: drainingSessionId,
                 utteranceId: drainingUtteranceId,
@@ -1911,7 +1501,6 @@ final class FlowSessionManager: ObservableObject {
         utteranceGeneration &+= 1
         currentUtteranceId = nil
         currentCommandSeq = 0
-        updateLiveActivityPhase(.idle)
         refreshHostReady()
         debug("utterance aborted")
     }
@@ -1945,7 +1534,6 @@ final class FlowSessionManager: ObservableObject {
         utteranceGeneration &+= 1
         currentUtteranceId = nil
         currentCommandSeq = 0
-        updateLiveActivityPhase(.idle)
         refreshHostReady()
         debug("utterance failed: \(message)")
     }
@@ -1975,7 +1563,6 @@ final class FlowSessionManager: ObservableObject {
         utteranceGeneration &+= 1
         currentUtteranceId = nil
         currentCommandSeq = 0
-        updateLiveActivityPhase(.idle)
         refreshHostReady()
         debug("utterance processing failed: \(message)")
     }
@@ -2246,10 +1833,6 @@ final class FlowSessionManager: ObservableObject {
 
         let wasProcessing = isUtteranceProcessing
         isUtteranceProcessing = false
-        updateLiveActivityPhase(.idle)
-        if isActive {
-            touchSessionActivity()
-        }
         if currentUtteranceId == utteranceId || currentUtteranceId == nil {
             currentUtteranceId = nil
             currentCommandSeq = 0
@@ -2512,9 +2095,7 @@ final class FlowSessionManager: ObservableObject {
                     continue
                 }
                 let levels = self.capture.currentAudioLevels()
-                if self.usesPiPKeepAlive {
-                    self.pipController.updateWaveformLevels(levels)
-                }
+                self.pipController.updateWaveformLevels(levels)
                 if levels.contains(where: { $0 > 0 }) {
                     FlowSessionBridge.storeAudioLevels(levels)
                 }
@@ -2529,41 +2110,18 @@ final class FlowSessionManager: ObservableObject {
         heartbeatTask?.cancel()
         FlowSessionBridge.writeHeartbeat()
         heartbeatTask = Task { @MainActor [weak self] in
-            // Refresh the Live Activity `staleDate` every N heartbeat ticks
-            // (1 Hz) — well inside `FlowLiveActivityController.staleWindow` so a
-            // live session never looks stale, while a force-quit stops these
-            // refreshes and lets the island go stale within ~30 s.
-            let liveActivityKeepAliveEveryTicks = 10
-            var tick = 0
             while !Task.isCancelled {
                 guard let self else { break }
-                if self.isActive, !self.capture.engineIsLive {
-                    let shouldReassert = !self.usesPiPKeepAlive
-                        || self.isUtteranceRecording
-                        || self.isUtteranceProcessing
-                    if shouldReassert {
-                        await self.reactivateCaptureIfNeeded()
-                    }
+                if self.isActive,
+                   !self.capture.engineIsLive,
+                   (self.isUtteranceRecording || self.isUtteranceProcessing) {
+                    await self.reactivateCaptureIfNeeded()
                 }
                 FlowSessionBridge.writeHeartbeat()
                 self.refreshHostReady()
-                tick += 1
-                if !self.usesPiPKeepAlive, tick % liveActivityKeepAliveEveryTicks == 0 {
-                    FlowLiveActivityController.keepAlive()
-                }
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 guard self.isActive else { break }
             }
-        }
-    }
-
-    private func scheduleExpiry(after duration: TimeInterval) {
-        guard !usesPiPKeepAlive else { return }
-        expiryTask?.cancel()
-        expiryTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
-            guard !Task.isCancelled else { return }
-            self?.endSession()
         }
     }
 
@@ -2588,7 +2146,6 @@ final class FlowSessionManager: ObservableObject {
             FlowDebugRow("utt.proc", isUtteranceProcessing ? "1" : "0"),
             FlowDebugRow("sessionId", activeSessionId.map { String($0.uuidString.prefix(8)) } ?? "nil"),
             FlowDebugRow("warning", sessionWarning == nil ? "0" : "1"),
-            FlowDebugRow("overlay", coldStartContext.map { String(describing: $0.state) } ?? "nil"),
             FlowDebugRow("bridgeReady", FlowSessionBridge.isHostReady() ? "1" : "0")
         ]
         // Prefer App Group snap.reason near the top of the shared block.

@@ -136,10 +136,6 @@ struct SettingsView: View {
                 Divider().background(palette.divider)
 
                 TranslationPickerRow(config: config, isVisible: config.isTranslationRowVisible)
-
-                Divider().background(palette.divider)
-
-                VoiceSessionSettingsRows(config: config)
             }
             .surfaceCard()
         }

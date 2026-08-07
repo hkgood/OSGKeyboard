@@ -52,7 +52,7 @@ settings:
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
     MARKETING_VERSION: "1.6.5"
-    CURRENT_PROJECT_VERSION: "51"
+    CURRENT_PROJECT_VERSION: "52"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -79,8 +79,6 @@ targets:
           # crashes when both are passed. iOS 26 uses Icon Composer only.
           - "Assets.xcassets/AppIcon.appiconset"
           - "Resources/CustomLanguageModel/**"
-      # Shared with the Live Activity widget so the host app can request sessions.
-      - path: OSGKeyboardLiveActivity/FlowActivityAttributes.swift
     entitlements:
       path: OSGKeyboard/OSGKeyboard.entitlements
       properties:
@@ -153,7 +151,6 @@ targets:
         NSSpeechRecognitionUsageDescription: "OSGKeyboard uses speech recognition to transcribe your voice. Audio is processed on-device by default, or sent to your configured speech provider only when you enable cloud recognition."
         UIBackgroundModes:
           - audio
-        NSSupportsLiveActivities: true
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
         ITSAppUsesNonExemptEncryption: false
@@ -235,11 +232,7 @@ targets:
         # Keyboard Extension is a plugin of the main App; embed it.
         embed: true
         buildPhase: embedAppExtensions
-      - target: OSGKeyboardLiveActivity
-        embed: true
-        buildPhase: embedAppExtensions
       - sdk: Speech.framework
-      - sdk: ActivityKit.framework
       - sdk: StoreKit.framework
 
   # =========================================================
@@ -306,37 +299,6 @@ targets:
     dependencies:
       - target: OSGKeyboardShared
         embed: false
-
-  # =========================================================
-  # Live Activity Widget Extension (Dynamic Island)
-  # =========================================================
-  OSGKeyboardLiveActivity:
-    type: app-extension
-    platform: iOS
-    sources:
-      - path: OSGKeyboardLiveActivity
-    info:
-      path: OSGKeyboardLiveActivity/Info.plist
-      properties:
-        CFBundleDisplayName: OSGKeyboardLiveActivity
-        CFBundleShortVersionString: "$(MARKETING_VERSION)"
-        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
-        NSSupportsLiveActivities: true
-        NSExtension:
-          NSExtensionPointIdentifier: com.apple.widgetkit-extension
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.liveactivity
-        TARGETED_DEVICE_FAMILY: "1,2"
-        SUPPORTS_MACCATALYST: NO
-        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
-        SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD: NO
-        CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: X329MZU23S
-    dependencies:
-      - sdk: WidgetKit.framework
-      - sdk: SwiftUI.framework
-      - sdk: ActivityKit.framework
 
   # Shared Framework (主 App 与扩展共用)
   # =========================================================
@@ -630,7 +592,6 @@ schemes:
       targets:
         OSGKeyboard: all
         OSGKeyboardExt: all
-        OSGKeyboardLiveActivity: all
     run:
       config: Debug
       storeKitConfiguration: OSGKeyboard.storekit

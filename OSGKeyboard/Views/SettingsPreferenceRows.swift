@@ -54,56 +54,6 @@ struct AppearancePickerRow: View {
     }
 }
 
-// MARK: - Flow keep-alive mode picker row
-
-struct FlowKeepAliveModePickerRow: View {
-    @Binding var selection: FlowKeepAliveMode
-
-    private var options: [(id: String, label: String)] {
-        FlowKeepAliveMode.allCases.map { mode in
-            (mode.rawValue, AppL10n.string(mode.labelKey))
-        }
-    }
-
-    var body: some View {
-        SettingsMenuPickerRow(
-            title: AppL10n.string("settings.flow.keepAlive.title"),
-            options: options,
-            selection: Binding(
-                get: { selection.rawValue },
-                set: { newValue in
-                    selection = FlowKeepAliveMode(rawValue: newValue) ?? .default
-                }
-            )
-        )
-    }
-}
-
-// MARK: - Flow inactivity picker row
-
-struct FlowInactivityPickerRow: View {
-    @Binding var selection: FlowInactivityDuration
-
-    private var options: [(id: String, label: String)] {
-        FlowInactivityDuration.allCases.map { duration in
-            (duration.rawValue, AppL10n.string(duration.labelKey))
-        }
-    }
-
-    var body: some View {
-        SettingsMenuPickerRow(
-            title: AppL10n.string("settings.flow.inactivity.title"),
-            options: options,
-            selection: Binding(
-                get: { selection.rawValue },
-                set: { newValue in
-                    selection = FlowInactivityDuration(rawValue: newValue) ?? .default
-                }
-            )
-        )
-    }
-}
-
 // MARK: - Handedness picker row
 
 struct HandednessPickerRow: View {

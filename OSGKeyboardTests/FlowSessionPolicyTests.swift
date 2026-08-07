@@ -29,40 +29,20 @@ final class FlowSessionPolicyTests: XCTestCase {
         XCTAssertEqual(FlowInactivityDuration.tenMinutes.timeInterval, 10 * 60)
     }
 
-    func testKeepAliveModeDefaultsToPictureInPicture() {
-        let defaults = makeDefaults()
-        XCTAssertEqual(FlowSessionPolicy.keepAliveMode(defaults: defaults), .pictureInPicture)
-        XCTAssertFalse(FlowSessionPolicy.usesInactivityExpiry(defaults: defaults))
-    }
-
     func testPiPSessionHasNoInactivityExpiry() {
         let defaults = makeDefaults()
-        defaults.set(FlowKeepAliveMode.pictureInPicture.rawValue,
-                     forKey: AppGroupConfiguration.Keys.flowKeepAliveMode)
-        FlowSessionBridge.markSessionActive(sessionId: UUID(), defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(sessionId: UUID(), defaults: defaults)
 
         XCTAssertTrue(FlowSessionBridge.isSessionActive(defaults: defaults))
-        XCTAssertNil(FlowSessionBridge.sessionExpiresAt(defaults: defaults))
-
-        FlowSessionBridge.touchLastActivity(defaults: defaults)
-        XCTAssertNil(FlowSessionBridge.sessionExpiresAt(defaults: defaults))
+        XCTAssertNil(defaults.object(forKey: FlowSessionKeys.flowSessionExpires))
     }
 
-    func testTouchLastActivityExtendsExpiry() {
+    func testLegacyExpiryDoesNotInvalidatePersistentSession() {
         let defaults = makeDefaults()
-        defaults.set(
-            FlowKeepAliveMode.liveActivity.rawValue,
-            forKey: AppGroupConfiguration.Keys.flowKeepAliveMode
-        )
-        defaults.set(FlowInactivityDuration.tenMinutes.rawValue, forKey: AppGroupConfiguration.Keys.flowInactivityDuration)
-        FlowSessionBridge.markSessionActive(defaults: defaults)
+        FlowSessionBridge.markSessionActivePersistent(defaults: defaults)
+        defaults.set(Date().timeIntervalSince1970 - 30, forKey: FlowSessionKeys.flowSessionExpires)
 
-        let staleExpiry = Date().timeIntervalSince1970 + 30
-        defaults.set(staleExpiry, forKey: FlowSessionKeys.flowSessionExpires)
-        FlowSessionBridge.touchLastActivity(defaults: defaults)
-
-        let refreshed = FlowSessionBridge.sessionExpiresAt(defaults: defaults) ?? 0
-        XCTAssertGreaterThan(refreshed, staleExpiry)
+        XCTAssertTrue(FlowSessionBridge.isSessionActive(defaults: defaults))
     }
 
     func testPendingHostBundleIdRoundTrip() {

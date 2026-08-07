@@ -17,7 +17,7 @@ public enum FlowKeyboardHostWarming {
     /// Keep the mic green after the session has already proven ready.
     ///
     /// Inter-utterance PiP flaps (mic release, ack lag, brief `reason=.starting`)
-    /// used to flash yellow「正在启动画中画」even though Picture in Picture was
+    /// used to flash yellow「正在启动…」even though the keep-alive surface was
     /// already running. Hold ready through those windows; real cold starts still
     /// go through `isHostWarming` while `sessionProvenReady` is false.
     public static func shouldHoldReady(

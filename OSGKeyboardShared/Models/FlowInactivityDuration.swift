@@ -32,18 +32,6 @@ public enum FlowInactivityDuration: String, CaseIterable, Identifiable, Sendable
         }
     }
 
-    public var labelKey: String {
-        switch self {
-        case .oneMinute: return "settings.flow.inactivity.1m"
-        case .fiveMinutes: return "settings.flow.inactivity.5m"
-        case .tenMinutes: return "settings.flow.inactivity.10m"
-        case .thirtyMinutes: return "settings.flow.inactivity.30m"
-        case .threeHours: return "settings.flow.inactivity.3h"
-        case .twelveHours: return "settings.flow.inactivity.12h"
-        case .twentyFourHours: return "settings.flow.inactivity.24h"
-        }
-    }
-
     public static func fromStored(_ raw: String?) -> FlowInactivityDuration {
         guard let raw, let value = FlowInactivityDuration(rawValue: raw) else {
             return .default

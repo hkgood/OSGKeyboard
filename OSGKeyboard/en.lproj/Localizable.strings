@@ -481,52 +481,17 @@
 /* Polish intensity */
 "settings.polishIntensity.title" = "Polish intensity";
 
-/* Flow session policy */
-"settings.flow.title" = "Voice session";
-"settings.flow.keepAlive.title" = "Keep-alive mode";
-"settings.flow.keepAlive.liveActivity" = "Dynamic Island";
-"settings.flow.keepAlive.liveActivity.subtitle" = "Continuous mic session with inactivity timeout.";
-"settings.flow.keepAlive.pictureInPicture" = "Picture in Picture";
-"settings.flow.keepAlive.pictureInPicture.subtitle" = "Waveform PiP keeps the app alive; mic is released between utterances.";
-"settings.flow.keepAlive.pictureInPicture.note" = "Picture in Picture stays active until you close it. Skip app switch is always on in this mode.";
-"settings.flow.keepAlive.activeSession.title" = "End the current session first";
-"settings.flow.keepAlive.activeSession.message" = "Stop the active voice session before changing keep-alive mode.";
-"settings.flow.skipAppSwitch.title" = "Skip app switch";
-"settings.flow.skipAppSwitch.subtitle" = "After a cold start, try to return to the app you came from.";
-"settings.flow.inactivity.title" = "End session after inactivity";
-"settings.flow.inactivity.1m" = "1 minute";
-"settings.flow.inactivity.5m" = "5 minutes";
-"settings.flow.inactivity.10m" = "10 minutes";
-"settings.flow.inactivity.30m" = "30 minutes";
-"settings.flow.inactivity.3h" = "3 hours";
-"settings.flow.inactivity.12h" = "12 hours";
-"settings.flow.inactivity.24h" = "24 hours";
+/* Flow session (policy fields may still sync; keep-alive is no longer shown in Settings) */
 "settings.localModels.customLM.title" = "Use custom language model";
 "settings.localModels.customLM.subtitle" = "Diagnostic switch. Turn off to test pure Apple on-device recognition if local ASR gets stuck or returns no speech.";
 
-/* Cold-start handoff (scheme B) */
-"flow.coldStart.title" = "Voice is ready";
-"flow.coldStart.preparing" = "Getting voice ready";
-"flow.coldStart.preparing.pip" = "Starting Picture in Picture";
-"flow.coldStart.preparingHint" = "Keep OSGKeyboard open for a moment while we start the microphone session.";
-"flow.coldStart.preparingHint.pip" = "Keep OSGKeyboard open while Picture in Picture starts. Then return to the keyboard to speak.";
-"flow.coldStart.permission.title" = "Permission required";
-"flow.coldStart.audio.title" = "Voice could not start";
-"flow.coldStart.pip.title" = "Picture in Picture could not start";
+/* Cold-start / session errors (never say Picture in Picture to the user) */
 "flow.coldStart.error.audioTimeout" = "The microphone did not become ready in time. It may be busy in another app. Please try again.";
-"flow.pip.error.unavailable" = "Picture in Picture could not start. Stay in the app and try again.";
-"flow.pip.error.unsupported" = "This device does not support Picture in Picture.";
-"flow.pip.error.hostNotReady" = "The Picture in Picture surface is not ready yet. Stay in the app and try again.";
-"flow.pip.error.notPossible" = "The system cannot start Picture in Picture right now. Keep the app in the foreground and try again.";
-"flow.pip.error.systemRejected" = "Picture in Picture was rejected by the system. Please try again shortly.";
-"flow.pip.error.timedOut" = "Picture in Picture did not appear in time. Stay in the app and try again.";
-"flow.coldStart.action.settings" = "Open Settings";
-"flow.coldStart.action.retry" = "Try Again";
-"flow.coldStart.swipeHint" = "Swipe right along the bottom bar\nto return to your previous app.";
-"flow.coldStart.swipeAccessibility" = "Swipe right along the bottom bar to return";
-"flow.coldStart.tapToDismiss" = "Tap anywhere to close";
-"flow.coldStart.return.named" = "Return to %@";
-"flow.coldStart.return.generic" = "Return to app";
+"flow.session.error.unsupported" = "This device cannot keep a voice session alive.";
+"flow.session.error.hostNotReady" = "The voice session is not ready yet. Stay in the app and try again.";
+"flow.session.error.notPossible" = "The system cannot start the voice session right now. Keep the app in the foreground and try again.";
+"flow.session.error.systemRejected" = "The voice session was rejected by the system. Please try again shortly.";
+"flow.session.error.timedOut" = "The voice session did not start in time. Stay in the app and try again.";
 
 /* Host app display names (scheme C whitelist) */
 "hostApp.wechat" = "WeChat";
