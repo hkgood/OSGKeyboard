@@ -130,10 +130,15 @@ public final class KeyboardState: ObservableObject {
     /// `true` while a cursor-drag pad is being pressed — drives the hint
     /// shown above the mic.
     @Published public var cursorDragActive: Bool = false
-    /// Opportunity-read: clipboard text is eligible for long-press command mode.
+    /// Idle affordance: pasteboard reports `hasStrings` (metadata only).
     @Published public var clipboardCommandEligible: Bool = false
-    /// Active clipboard-command task (continuous rewrite window).
-    @Published public var clipboardCommandSessionActive: Bool = false
+    /// True while a clipboard-command utterance is in flight (preparing or recording).
+    @Published public var clipboardCommandUtteranceActive: Bool = false
+    /// True only while a clipboard-command utterance is in `.recording`
+    /// (after host confirm) — drives blue mic chrome + side hints.
+    @Published public var clipboardCommandRecording: Bool = false
+    /// Transient tip after a failed clipboard long-press (auto-clears).
+    @Published public var clipboardFailureHint: String? = nil
     /// Whether translate-and-polish is armed for the current engine.
     public var isTranslationEffective: Bool {
         translationEnabled
@@ -210,7 +215,6 @@ public final class KeyboardState: ObservableObject {
     public var endRecording:        () -> Void = {}
     public var tapMic:              () -> Void = {}
     public var beginClipboardCommand: () -> Void = {}
-    public var endClipboardCommand:   () -> Void = {}
     public var refreshClipboardEligibility: () -> Void = {}
     public var openSettings:        () -> Void = {}
     public var startFlowSession:    () -> Void = {}

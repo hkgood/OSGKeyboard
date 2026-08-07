@@ -1141,9 +1141,19 @@ final class FlowSessionManager: ObservableObject {
         if capture.engineHasRecentAudio(maxAge: 2) {
             micReady = true
         } else {
-            micReady = await capture.awaitAudioFlowing(
+            var flowing = await capture.awaitAudioFlowing(
                 timeout: Self.coldStartAudioProofTimeout
             )
+            if !flowing {
+                // First cold capture after PiP arm often proves audio late — one rebuild.
+                debug("PiP audio proof timeout — one capture rebuild before failing")
+                capture.stop(releaseSession: false)
+                _ = await startCaptureForPiPUtteranceIfNeeded()
+                flowing = await capture.awaitAudioFlowing(
+                    timeout: Self.coldStartAudioProofTimeout
+                )
+            }
+            micReady = flowing
         }
         guard !Task.isCancelled, canContinueStart(startToken) else {
             releaseOrphanedCaptureIfNeeded()
@@ -1168,16 +1178,33 @@ final class FlowSessionManager: ObservableObject {
     }
 
     /// Start capture for a PiP utterance without blocking on the first frame.
+    /// Cold first start after relaunch often needs one rebuild (VPIO / -66635).
     private func startCaptureForPiPUtteranceIfNeeded() async -> Bool {
         if capture.engineHasRecentAudio(maxAge: 2) {
             return true
         }
         do {
             try await capture.start()
-            return true
+            if capture.engineIsLive || capture.engineHasRecentAudio(maxAge: 2) {
+                return true
+            }
+            debug("PiP utterance capture soft-dead after start — one rebuild retry")
+            capture.stop(releaseSession: false)
+            try? await Task.sleep(nanoseconds: 120_000_000)
+            try await capture.start()
+            // Do not accept `running && !engineLive` — that is the silent-mic failure mode.
+            return capture.engineIsLive || capture.engineHasRecentAudio(maxAge: 2)
         } catch {
-            debug("PiP utterance capture start failed: \(error.localizedDescription)")
-            return false
+            debug("PiP utterance capture start failed: \(error.localizedDescription) — retry once")
+            capture.stop(releaseSession: false)
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            do {
+                try await capture.start()
+                return capture.engineIsLive || capture.engineHasRecentAudio(maxAge: 2)
+            } catch {
+                debug("PiP utterance capture retry failed: \(error.localizedDescription)")
+                return false
+            }
         }
     }
 

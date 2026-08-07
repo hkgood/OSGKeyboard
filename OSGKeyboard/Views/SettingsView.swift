@@ -171,7 +171,7 @@ struct SettingsView: View {
 
             Divider().background(palette.divider)
 
-            // Read-only version row — not tappable.
+            // Opens the remote release-notes sheet (same as post-upgrade prompt).
             SettingsVersionRow()
         }
         .surfaceCard()

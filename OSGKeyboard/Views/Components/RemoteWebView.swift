@@ -19,15 +19,26 @@ struct RemoteWebView: UIViewRepresentable {
         webView.isOpaque = false
         webView.backgroundColor = .clear
         webView.scrollView.backgroundColor = .clear
+        // Sheet / NavigationStack already lays out inside the safe area.
+        // Automatic adjustment would add a second bottom inset and leave a dead band.
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        webView.scrollView.contentInset = .zero
+        webView.scrollView.scrollIndicatorInsets = .zero
         webView.navigationDelegate = context.coordinator
+        context.coordinator.loadedURL = url
         webView.load(URLRequest(url: url))
         return webView
     }
 
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        guard context.coordinator.loadedURL != url else { return }
+        context.coordinator.loadedURL = url
+        uiView.load(URLRequest(url: url))
+    }
 
     final class Coordinator: NSObject, WKNavigationDelegate {
         @Binding var isLoading: Bool
+        var loadedURL: URL?
 
         init(isLoading: Binding<Bool>) {
             _isLoading = isLoading

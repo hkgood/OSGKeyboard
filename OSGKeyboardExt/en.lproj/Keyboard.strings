@@ -116,8 +116,21 @@
 /* Keyboard (ext) */
 "keyboard.placeholder.idle" = "Tap to talk";
 "keyboard.placeholder.idleClipboard" = "Tap to talk, long-press for clipboard";
+"keyboard.clipboard.recordingLeft" = "Recording command";
+"keyboard.clipboard.recordingRight" = "Tap to finish";
 "keyboard.placeholder.preparing" = "Preparing";
 "keyboard.placeholder.preparingRecording" = "Preparing mic…";
+"keyboard.clipboard.reject.pasteDenied" = "Allow Paste to process the clipboard";
+"keyboard.clipboard.reject.empty" = "No text on the clipboard to process";
+"keyboard.clipboard.reject.phoneOrNumeric" = "Looks like a phone number — not started";
+"keyboard.clipboard.reject.emojiOrSymbolOnly" = "No usable text on the clipboard";
+"keyboard.clipboard.reject.verificationCode" = "Looks like a code — not started";
+"keyboard.clipboard.reject.tooShort" = "Clipboard text is too short";
+"keyboard.clipboard.reject.repetitiveSpam" = "Clipboard text isn’t usable";
+"keyboard.clipboard.reject.secureField" = "Clipboard commands aren’t available in password fields";
+"keyboard.clipboard.reject.noFullAccess" = "Full Access is required for clipboard commands";
+"keyboard.clipboard.reject.prepareFailed" = "Mic wasn’t ready in time — try again";
+"keyboard.clipboard.hint.hostStarting" = "Starting… return and long-press the mic again";
 "keyboard.placeholder.processing" = "Processing";
 "keyboard.placeholder.error" = "Polishing failed";
 "keyboard.placeholder.localBadge" = "On-device";

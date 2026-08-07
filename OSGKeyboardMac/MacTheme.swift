@@ -53,7 +53,8 @@ enum MacSystemPalette {
                 ? Color.white.opacity(0.12)
                 : Color.black.opacity(0.10),
 
-            recordRed:       resolved(.systemRed, dark: dark)
+            recordRed:       resolved(.systemRed, dark: dark),
+            recordBlue:      resolved(.systemBlue, dark: dark)
         )
     }
 

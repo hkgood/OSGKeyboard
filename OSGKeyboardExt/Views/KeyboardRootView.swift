@@ -132,7 +132,8 @@ public struct KeyboardRootView: View {
                 transcript: state.lastTranscript,
                 micVoiceAvailability: state.micVoiceAvailability,
                 micDisabledHint: state.micDisabledHint,
-                clipboardCommandEligible: state.clipboardCommandEligible || state.clipboardCommandSessionActive,
+                clipboardCommandEligible: state.clipboardCommandEligible,
+                clipboardFailureHint: state.clipboardFailureHint,
                 cursorDragHintActive: state.cursorDragActive,
                 openSettings: state.openSettings
             )
@@ -177,18 +178,24 @@ public struct KeyboardRootView: View {
         return VStack(spacing: KeyboardLayoutMetrics.micToButtonGap) {
             HStack(spacing: 0) {
                 cursorDragPad(enabled: cursorPadsEnabled)
+                    .overlay {
+                        clipboardSideHint(
+                            ExtL10n.text("keyboard.clipboard.recordingLeft"),
+                            visible: state.clipboardCommandRecording && !dragging
+                        )
+                    }
 
                 RecordButton(
                     phase: buttonPhase,
                     level: state.level,
                     remainingSeconds: state.phase == .recording ? state.utteranceRemainingSeconds : nil,
-                    isEnabled: !state.micDisabled,
+                    isEnabled: micButtonEnabled,
+                    isClipboardCommandRecording: state.clipboardCommandRecording,
                     onToggle: state.tapMic,
-                    onClipboardLongPressBegan: (state.clipboardCommandEligible || state.clipboardCommandSessionActive)
+                    onClipboardLongPressBegan: (state.clipboardCommandEligible
+                        || state.clipboardCommandUtteranceActive)
+                        && micButtonEnabled
                         ? state.beginClipboardCommand
-                        : nil,
-                    onClipboardLongPressEnded: (state.clipboardCommandEligible || state.clipboardCommandSessionActive)
-                        ? state.endClipboardCommand
                         : nil
                 )
                 .frame(width: KeyboardLayoutMetrics.micSize, height: KeyboardLayoutMetrics.micSize)
@@ -196,8 +203,15 @@ public struct KeyboardRootView: View {
                 .opacity(dragging ? 0 : 1)
 
                 cursorDragPad(enabled: cursorPadsEnabled)
+                    .overlay {
+                        clipboardSideHint(
+                            ExtL10n.text("keyboard.clipboard.recordingRight"),
+                            visible: state.clipboardCommandRecording && !dragging
+                        )
+                    }
             }
             .frame(height: KeyboardLayoutMetrics.micSize)
+            .animation(.easeInOut(duration: 0.25), value: state.clipboardCommandRecording)
 
             GeometryReader { proxy in
                 let widths = KeyboardChromeLayout.actionKeyWidths(
@@ -238,6 +252,23 @@ public struct KeyboardRootView: View {
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
+    }
+
+    /// Side caption beside the mic during clipboard-command recording.
+    /// Vertically matches the mic disc (same upward offset); does not steal touches.
+    private func clipboardSideHint(_ text: Text, visible: Bool) -> some View {
+        text
+            // 22pt → ~18pt (−20%); softer than body so it doesn't compete with the mic.
+            .font(.system(size: 17.6, weight: .medium))
+            .foregroundStyle(palette.textSecondary.opacity(0.42))
+            .multilineTextAlignment(.center)
+            .lineLimit(3)
+            .minimumScaleFactor(0.7)
+            .padding(.horizontal, 2)
+            .offset(y: -KeyboardLayoutMetrics.micUpwardAdjustment)
+            .opacity(visible ? 1 : 0)
+            .allowsHitTesting(false)
+            .accessibilityHidden(!visible)
     }
 
     private func bottomDeleteButton(disabled: Bool) -> some View {
@@ -287,6 +318,14 @@ public struct KeyboardRootView: View {
     }
 
     private var buttonPhase: RecordButton.Phase {
+        switch clipboardMicChrome {
+        case .preparingDisabled:
+            return .processing
+        case .recordingBlue:
+            return .recording
+        case .none:
+            break
+        }
         switch state.micVoiceAvailability {
         case .recording:
             return .recording
@@ -297,6 +336,32 @@ public struct KeyboardRootView: View {
             // the idle mic visually green instead of exposing startup state.
             return .idleReady
         }
+    }
+
+    /// Preparing clipboard capture: grey spinner, not tappable.
+    private var micButtonEnabled: Bool {
+        if state.micDisabled { return false }
+        if clipboardMicChrome == .preparingDisabled { return false }
+        return true
+    }
+
+    private var clipboardMicChrome: ClipboardMicChrome {
+        let phase: ClipboardPreparingPhase = {
+            switch state.phase {
+            case .idle: return .idle
+            case .denied: return .denied
+            case .error: return .error
+            case .requestingPermissions: return .requestingPermissions
+            case .recording: return .recording
+            case .processing: return .processing
+            }
+        }()
+        return ClipboardPreparingPolicy.micChrome(
+            isClipboardUtterance: state.clipboardCommandUtteranceActive,
+            phase: phase,
+            awaitingHostConfirm: state.phase == .requestingPermissions
+                || (state.phase == .recording && !state.clipboardCommandRecording)
+        )
     }
 }
 
@@ -347,6 +412,7 @@ private struct TranscriptLine: View {
     let micVoiceAvailability: MicVoiceAvailability
     let micDisabledHint: String
     let clipboardCommandEligible: Bool
+    let clipboardFailureHint: String?
     let cursorDragHintActive: Bool
     let openSettings: () -> Void
 
@@ -419,52 +485,60 @@ private struct TranscriptLine: View {
 
     @ViewBuilder
     private var idleHint: some View {
-        let isWarning: Bool = {
-            switch micVoiceAvailability {
-            case .unavailable(.hostNotReady), .unavailable(.preparingSession):
-                return false
-            case .unavailable:
-                return true
-            case .ready, .recording, .processing:
-                return false
+        if let clipboardFailureHint, !clipboardFailureHint.isEmpty {
+            Text(clipboardFailureHint)
+                .font(TypeStyle.caption)
+                .foregroundStyle(palette.warning)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        } else {
+            let isWarning: Bool = {
+                switch micVoiceAvailability {
+                case .unavailable(.hostNotReady), .unavailable(.preparingSession):
+                    return false
+                case .unavailable:
+                    return true
+                case .ready, .recording, .processing:
+                    return false
+                }
+            }()
+            Group {
+                switch micVoiceAvailability {
+                case .ready:
+                    if clipboardCommandEligible {
+                        ExtL10n.text("keyboard.placeholder.idleClipboard")
+                    } else {
+                        ExtL10n.text("keyboard.placeholder.idle")
+                    }
+                case .unavailable(.missingAPIKey):
+                    Text(micDisabledHint)
+                case .unavailable(.hostNotReady):
+                    if clipboardCommandEligible {
+                        ExtL10n.text("keyboard.placeholder.idleClipboard")
+                    } else {
+                        ExtL10n.text("keyboard.placeholder.idle")
+                    }
+                case .unavailable(.preparingSession):
+                    if clipboardCommandEligible {
+                        ExtL10n.text("keyboard.placeholder.idleClipboard")
+                    } else {
+                        ExtL10n.text("keyboard.placeholder.idle")
+                    }
+                case .unavailable(.noFullAccess):
+                    ExtL10n.text("keyboard.error.fullAccessRequired")
+                case .unavailable(.appGroupUnavailable):
+                    ExtL10n.text("keyboard.error.appGroupCommunication")
+                case .unavailable(.onboardingIncomplete):
+                    ExtL10n.text("keyboard.hint.finishSetupInApp")
+                case .recording, .processing:
+                    EmptyView()
+                }
             }
-        }()
-        Group {
-            switch micVoiceAvailability {
-            case .ready:
-                if clipboardCommandEligible {
-                    ExtL10n.text("keyboard.placeholder.idleClipboard")
-                } else {
-                    ExtL10n.text("keyboard.placeholder.idle")
-                }
-            case .unavailable(.missingAPIKey):
-                Text(micDisabledHint)
-            case .unavailable(.hostNotReady):
-                if clipboardCommandEligible {
-                    ExtL10n.text("keyboard.placeholder.idleClipboard")
-                } else {
-                    ExtL10n.text("keyboard.placeholder.idle")
-                }
-            case .unavailable(.preparingSession):
-                if clipboardCommandEligible {
-                    ExtL10n.text("keyboard.placeholder.idleClipboard")
-                } else {
-                    ExtL10n.text("keyboard.placeholder.idle")
-                }
-            case .unavailable(.noFullAccess):
-                ExtL10n.text("keyboard.error.fullAccessRequired")
-            case .unavailable(.appGroupUnavailable):
-                ExtL10n.text("keyboard.error.appGroupCommunication")
-            case .unavailable(.onboardingIncomplete):
-                ExtL10n.text("keyboard.hint.finishSetupInApp")
-            case .recording, .processing:
-                EmptyView()
-            }
+            .font(TypeStyle.caption)
+            .foregroundStyle(isWarning ? palette.warning : palette.textTertiary)
+            .lineLimit(1)
+            .truncationMode(.tail)
         }
-        .font(TypeStyle.caption)
-        .foregroundStyle(isWarning ? palette.warning : palette.textTertiary)
-        .lineLimit(1)
-        .truncationMode(.tail)
     }
 
     private func deniedMessage(for reason: KeyboardViewController.State.Phase.Reason) -> String {

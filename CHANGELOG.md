@@ -8,13 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Clipboard voice command**: long-press the mic after copying eligible text to treat speech as an instruction over the clipboard snapshot and insert the generated result; short press stays dictation. / **剪贴板语音指令**：复制合格文本后长按麦克风，将语音视为对剪贴板材料的指令并插入生成结果；短按仍为听写。
-- **Clipboard record confirm**: show recording UI only after the host confirms capture; enforce a short minimum record window; light-prewarm ASR when clipboard becomes eligible (no idle mic hold). / **剪贴板开录确认**：宿主确认采音后再显示录音态；确认后再保证最短有效录音；剪贴板刚合格时轻预热 ASR（空闲不占麦）。
+- **In-app release notes**: after onboarding, show a What's New sheet when the marketing version changes; Settings version row opens the same remote page (`download.osglab.com`) with current version, language, and theme. / **应用内更新说明**：完成引导后，在 marketing 版本变化时弹出更新说明；设置页版本行打开同一远程页（`download.osglab.com`），并传入当前版本、语言与深浅色。
+- **Typing input settings l10n**: localize schema / fuzzy / resource strings on the Text Input settings page (and related General toggles) via in-app language. / **文本输入设置双语**：文本输入设置页的方案 / 模糊音 / 资源文案（及通用里相关开关）跟随应用内语言。
+- **Clipboard voice command**: long-press the mic when the clipboard has text to treat speech as an instruction over a one-shot clipboard snapshot and insert the result; short press stays dictation; tap again to stop (not release-to-stop). / **剪贴板语音指令**：剪贴板有文字时长按麦克风，将语音视为对该次冻结快照的指令并插入结果；短按仍为听写；再点一下结束录音（非松手结束）。
+- **Clipboard record confirm**: show recording UI only after the host confirms capture; enforce a short minimum record window after confirm. / **剪贴板开录确认**：宿主确认采音后再显示录音态；确认后再保证最短有效录音。
+- **Clipboard recording chrome**: after host-confirmed clipboard recording, the mic disc animates red→blue and shows side captions (“指令录制中” / “点按结束处理”); dictation stays red. / **剪贴板录音视觉**：宿主确认剪贴板录音后，麦克风圆盘红→蓝过渡，两侧显示「指令录制中」「点按结束处理」；普通听写仍为红色。
+- **Clipboard failure tips**: when long-press cannot start (paste denied, empty/short/code-like material, secure field, no Full Access), show a brief reason above the mic. / **剪贴板失败提示**：长按无法开始时（拒贴、空/过短/验证码类、密码框、无完全访问）在麦克风上方短暂显示原因。
 
 ### Removed
 - **Keep-alive settings & Live Activity**: remove Settings keep-alive mode picker and its note; delete the Dynamic Island Live Activity extension and all ActivityKit session code. Voice sessions stay on silent low-profile PiP only, with user-facing copy that never names Picture in Picture. / **保活设置与灵动岛**：移除设置中的保活方式选项及说明；删除灵动岛 Live Activity 扩展与全部 ActivityKit 会话代码。语音会话仅保留静默低感知 PiP，用户可见文案不再出现「画中画」。
+- **Clipboard 30s window & continuous rewrite**: drop the copy-time eligibility clock and multi-turn rewrite session; each long-press is an independent round. / **剪贴板 30 秒窗与连续改写**：去掉复制后资格计时与多轮改写会话；每次长按为独立一轮。
 
 ### Fixed
+- **Clipboard prepare stuck**: after the first Allow Paste, do not double-`startRecording`; recover or cancel when host never confirms capture so UI cannot remain on「准备录音…」. / **剪贴板卡在准备录音**：首次「允许粘贴」后不再重复 `startRecording`；宿主未确认采音时及时恢复或取消，避免 UI 一直停在「准备录音…」。
+- **Clipboard prepare decision tests**: unit-cover restore/dedupe/adopt/abort matrices (including a 20-round stress case) so paste-alert reopen cannot regress into a second start. / **剪贴板准备态决策单测**：覆盖恢复/去重/领养/中止矩阵（含 20 轮加压），防止粘贴弹窗重开再次双发 start。
+- **Clipboard cold-start handoff**: when the host app is not alive, long-press stores a sticky voice+snapshot and opens `startflow` without entering fake「准备录音…」; after return (including default typing → forced voice), the user long-presses again to start blue clipboard recording. / **剪贴板冷启动交接**：宿主未活时长按只保留语音+快照粘性并走 `startflow`，不进入假「准备录音…」；返回后（含默认打字→强制语音）再长按才进入蓝色剪贴板录音。
+- **PiP arm re-jump**: keyboard open / Voice-tab appear no longer reopens `startflow` while a session is alive, warming, or within the arm cooldown; force-quit zombies can still arm after an 8s unreachable grace. / **PiP 反复跳转**：会话已存活/预热中或仍在拉起冷却窗内时不再重复 `startflow`；强杀后残留 session 在心跳失联超过 8s 仍可拉起一次。
+- **Clipboard prepare chrome**: while waiting for host capture confirm, the mic stays grey and disabled (not blue); blue + side captions appear only after confirmed recording. / **剪贴板准备态视觉**：等待宿主确认采音时麦克风保持灰色不可点（非蓝色）；确认录音后才显示蓝色与两侧文案。
+- **Cold capture first-press**: host retries a soft-dead / failed engine start once and rejects `running && !engineLive` as success. / **冷启动首次采音**：宿主对软死/失败引擎自动重建一次，且不把 `running 但无 live` 当作成功。
+- **Clipboard paste prompt spam**: idle affordance peeks `hasStrings` only; pasteboard *contents* are read only on long-press, so opening the keyboard no longer repeatedly requests paste permission. / **剪贴板粘贴授权刷屏**：空闲仅探测 `hasStrings`；正文只在长按时读取，打开键盘不再反复申请粘贴权限。
+- **Clipboard paste-alert continuity**: survive the system Allow Paste alert without snapping to the typing grid, keep blue clipboard chrome from prepare onward, and ignore the finger-up that follows long-press so stop stays tap-to-finish. / **剪贴板粘贴弹窗连续性**：系统「允许粘贴」弹窗期间不跳回打字键盘；准备阶段即显示蓝色剪贴板态；忽略长按后的抬手，仍需再点结束。
+- **Clipboard paste-alert voice sticky**: persist a short App Group prefer-voice + snapshot flag (with `synchronize`) across paste-alert dismiss/recreate so reopen stays on the voice keyboard with blue clipboard chrome instead of the default typing grid / red dictation mic. / **剪贴板粘贴弹窗语音粘性**：用 App Group 短时标记（并 `synchronize`）跨弹窗销毁/重建，重开仍进语音键盘并恢复蓝色剪贴板态，而不是默认打字键盘 / 红色听写麦。
 - **Custom polish style editor**: open create/edit with `sheet(item:)` so the form always loads the selected pack instead of a blank default template. / **自定义润色风格编辑**：新建/编辑改为 `sheet(item:)` 呈现，表单始终加载所选风格，而不再偶发显示空白默认模板。
 
 ## [1.6.5] - 2026-08-06

@@ -23,10 +23,11 @@ public struct RecordButton: View {
     public let level: Double
     public let remainingSeconds: Int?
     public let isEnabled: Bool
+    /// When true (and `phase == .recording`), use blue clipboard-command chrome.
+    public let isClipboardCommandRecording: Bool
     public let onToggle: () -> Void
-    /// When non-nil, a 0.45s hold starts clipboard-command recording instead of toggle.
+    /// When non-nil, a 0.45s hold starts clipboard-command recording (tap again to stop).
     public let onClipboardLongPressBegan: (() -> Void)?
-    public let onClipboardLongPressEnded: (() -> Void)?
 
     @State private var breath = false
     @State private var longPressArmed = false
@@ -36,22 +37,33 @@ public struct RecordButton: View {
         level: Double,
         remainingSeconds: Int? = nil,
         isEnabled: Bool = true,
+        isClipboardCommandRecording: Bool = false,
         onToggle: @escaping () -> Void,
-        onClipboardLongPressBegan: (() -> Void)? = nil,
-        onClipboardLongPressEnded: (() -> Void)? = nil
+        onClipboardLongPressBegan: (() -> Void)? = nil
     ) {
         self.phase = phase
         self.level = level
         self.remainingSeconds = remainingSeconds
         self.isEnabled = isEnabled
+        self.isClipboardCommandRecording = isClipboardCommandRecording
         self.onToggle = onToggle
         self.onClipboardLongPressBegan = onClipboardLongPressBegan
-        self.onClipboardLongPressEnded = onClipboardLongPressEnded
     }
 
     private var isUrgent: Bool {
         guard phase == .recording, let remainingSeconds else { return false }
         return remainingSeconds <= 10
+    }
+
+    /// Active recording tint: blue for clipboard-command, red for dictation.
+    private var recordingTint: Color {
+        isClipboardCommandRecording ? palette.recordBlue : palette.recordRed
+    }
+
+    private var waveformColor: Color {
+        isClipboardCommandRecording
+            ? Color(red: 0.78, green: 0.88, blue: 1.0)
+            : Color(red: 1.0, green: 0.78, blue: 0.78)
     }
 
     private enum Layout {
@@ -64,16 +76,17 @@ public struct RecordButton: View {
     public var body: some View {
         ZStack {
             Circle()
-                .stroke(palette.recordRed.opacity(isUrgent ? 0.55 : 0.35), lineWidth: isUrgent ? 3 : 2)
+                .stroke(recordingTint.opacity(isUrgent ? 0.55 : 0.35), lineWidth: isUrgent ? 3 : 2)
                 .frame(width: Layout.breathRing, height: Layout.breathRing)
                 .scaleEffect(breath ? 1.18 : 0.95)
                 .opacity(phase == .recording ? 1 : 0)
                 .animation(Motion.breath, value: breath)
+                .animation(colorTransition, value: isClipboardCommandRecording)
 
             Circle()
                 .fill(
                     RadialGradient(
-                        colors: [palette.recordRed.opacity(0.55), .clear],
+                        colors: [recordingTint.opacity(0.55), .clear],
                         center: .center,
                         startRadius: 46,
                         endRadius: 92
@@ -84,6 +97,7 @@ public struct RecordButton: View {
                 .blur(radius: 18)
                 .animation(Motion.soft, value: phase)
                 .animation(Motion.soft, value: level)
+                .animation(colorTransition, value: isClipboardCommandRecording)
 
             Circle()
                 .stroke(Color.white.opacity(isIdle ? 0.08 : 0.12), lineWidth: 0.5)
@@ -114,7 +128,7 @@ public struct RecordButton: View {
                             }
                             WaveformView(
                                 level: level,
-                                color: Color(red: 1.0, green: 0.78, blue: 0.78),
+                                color: waveformColor,
                                 active: true
                             )
                             .frame(width: 73, height: 32)
@@ -137,6 +151,7 @@ public struct RecordButton: View {
             .frame(width: Layout.disc, height: Layout.disc)
             .animation(Motion.soft, value: phase)
             .animation(Motion.soft, value: remainingSeconds)
+            .animation(colorTransition, value: isClipboardCommandRecording)
         }
         .contentShape(Circle())
         .modifier(
@@ -146,8 +161,7 @@ public struct RecordButton: View {
                 supportsClipboardLongPress: onClipboardLongPressBegan != nil,
                 longPressArmed: $longPressArmed,
                 onToggle: onToggle,
-                onClipboardLongPressBegan: onClipboardLongPressBegan,
-                onClipboardLongPressEnded: onClipboardLongPressEnded
+                onClipboardLongPressBegan: onClipboardLongPressBegan
             )
         )
         .onAppear { breath = (phase == .recording) }
@@ -158,6 +172,11 @@ public struct RecordButton: View {
             }
         }
         .accessibilityLabel(Text(SharedL10n.string("keyboard.tapToTalkA11y")))
+    }
+
+    /// Red ↔ blue mode switch (~0.25s).
+    private var colorTransition: Animation {
+        .easeInOut(duration: 0.25)
     }
 
     private var isIdle: Bool {
@@ -179,8 +198,8 @@ public struct RecordButton: View {
         switch phase {
         case .recording:
             let colors: [Color] = isUrgent
-                ? [palette.recordRed, palette.recordRed.opacity(0.85)]
-                : [palette.recordRed.opacity(0.95), palette.recordRed.opacity(0.75)]
+                ? [recordingTint, recordingTint.opacity(0.85)]
+                : [recordingTint.opacity(0.95), recordingTint.opacity(0.75)]
             return LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
         case .processing:
             return LinearGradient(
@@ -213,44 +232,48 @@ private struct RecordButtonPressModifier: ViewModifier {
     @Binding var longPressArmed: Bool
     let onToggle: () -> Void
     let onClipboardLongPressBegan: (() -> Void)?
-    let onClipboardLongPressEnded: (() -> Void)?
 
     func body(content: Content) -> some View {
-        if supportsClipboardLongPress {
-            content.onLongPressGesture(
-                minimumDuration: ClipboardMaterialFilter.longPressDuration,
-                maximumDistance: 120,
-                pressing: { pressing in
-                    if pressing {
-                        longPressArmed = false
-                        return
-                    }
-                    // Released.
-                    if longPressArmed {
-                        onClipboardLongPressEnded?()
-                        longPressArmed = false
-                    } else if phase != .processing, isEnabled || phase == .idleUnavailable {
-                        // Short press → existing tap-toggle dictation.
-                        guard phase != .recording else {
-                            // If somehow recording without arming, end via toggle.
-                            onToggle()
-                            return
-                        }
-                        onToggle()
-                    }
-                },
-                perform: {
-                    guard phase != .processing else { return }
-                    guard isEnabled || phase == .idleUnavailable else { return }
-                    longPressArmed = true
-                    onClipboardLongPressBegan?()
-                }
-            )
-        } else {
+        // While recording/processing, only tap-to-toggle — never treat finger-up
+        // from the starting long-press as stop (clipboard is explicitly tap-to-stop).
+        switch phase {
+        case .recording, .processing:
             content.onTapGesture {
                 guard phase != .processing else { return }
                 guard isEnabled || phase == .idleUnavailable else { return }
                 onToggle()
+            }
+        case .idleReady, .idleUnavailable, .error:
+            if supportsClipboardLongPress {
+                content.onLongPressGesture(
+                    minimumDuration: ClipboardMaterialFilter.longPressDuration,
+                    maximumDistance: 120,
+                    pressing: { pressing in
+                        if pressing {
+                            longPressArmed = false
+                            return
+                        }
+                        // Released before / without arming → short press = dictation toggle.
+                        // Armed release is ignored here; stop happens on a later tap
+                        // once phase becomes `.recording`.
+                        if longPressArmed {
+                            longPressArmed = false
+                            return
+                        }
+                        guard isEnabled || phase == .idleUnavailable else { return }
+                        onToggle()
+                    },
+                    perform: {
+                        guard isEnabled || phase == .idleUnavailable else { return }
+                        longPressArmed = true
+                        onClipboardLongPressBegan?()
+                    }
+                )
+            } else {
+                content.onTapGesture {
+                    guard isEnabled || phase == .idleUnavailable else { return }
+                    onToggle()
+                }
             }
         }
     }

@@ -13,15 +13,35 @@ import OSGKeyboardShared
 struct SettingsNavigationRow: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
-    let title: LocalizedStringKey
+    private let localizedTitle: LocalizedStringKey?
+    private let resolvedTitle: String?
     var subtitle: String?
+
+    init(title: LocalizedStringKey, subtitle: String? = nil) {
+        self.localizedTitle = title
+        self.resolvedTitle = nil
+        self.subtitle = subtitle
+    }
+
+    /// Prefers in-app language via an already-resolved string (`AppL10n`).
+    init(titleText: String, subtitle: String? = nil) {
+        self.localizedTitle = nil
+        self.resolvedTitle = titleText
+        self.subtitle = subtitle
+    }
 
     var body: some View {
         HStack(spacing: Spacing.sm) {
             VStack(alignment: .leading, spacing: Spacing.xxs) {
-                Text(title)
-                    .font(TypeStyle.body)
-                    .foregroundStyle(palette.textPrimary)
+                if let resolvedTitle {
+                    Text(resolvedTitle)
+                        .font(TypeStyle.body)
+                        .foregroundStyle(palette.textPrimary)
+                } else if let localizedTitle {
+                    Text(localizedTitle)
+                        .font(TypeStyle.body)
+                        .foregroundStyle(palette.textPrimary)
+                }
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
                         .font(TypeStyle.caption2)
@@ -39,23 +59,33 @@ struct SettingsNavigationRow: View {
     }
 }
 
-/// Read-only version / build row for Settings home (below About).
+/// Version / build row for Settings home (below About). Opens release notes.
 struct SettingsVersionRow: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @ObservedObject private var config = ProviderConfig.shared
 
     var body: some View {
-        HStack(spacing: Spacing.sm) {
-            Text("settings.version.title")
-                .font(TypeStyle.body)
-                .foregroundStyle(palette.textPrimary)
-            Spacer(minLength: Spacing.xs)
-            Text(AppVersionDisplay.detailedLabel)
-                .font(TypeStyle.body)
-                .foregroundStyle(palette.textSecondary)
-                .multilineTextAlignment(.trailing)
+        Button {
+            ReleaseNotesController.shared.presentManually()
+        } label: {
+            HStack(spacing: Spacing.sm) {
+                Text(AppL10n.string("settings.version.title", language: config.uiLanguage))
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
+                Spacer(minLength: Spacing.xs)
+                Text(AppVersionDisplay.detailedLabel)
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textSecondary)
+                    .multilineTextAlignment(.trailing)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(palette.textTertiary)
+            }
+            .settingsListRow()
+            .contentShape(Rectangle())
         }
-        .settingsListRow()
-        .accessibilityElement(children: .combine)
+        .buttonStyle(.plain)
+        .accessibilityHint(AppL10n.string("releaseNotes.openHint", language: config.uiLanguage))
     }
 }
 
@@ -205,7 +235,12 @@ struct GeneralSettingsView: View {
                         NavigationLink {
                             TypingInputSettingsView()
                         } label: {
-                            SettingsNavigationRow(title: "settings.typingInput.title")
+                            SettingsNavigationRow(
+                                titleText: AppL10n.string(
+                                    "settings.typingInput.title",
+                                    language: config.uiLanguage
+                                )
+                            )
                         }
                         .buttonStyle(.plain)
 

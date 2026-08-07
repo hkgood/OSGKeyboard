@@ -547,6 +547,20 @@ public enum FlowSessionBridge {
         setPendingHostBundleId(nil, defaults: defaults)
     }
 
+    /// True when a recent keyboard `startflow` arm should not be repeated.
+    public static func isPiPArmInCooldown(defaults: UserDefaults? = nil) -> Bool {
+        let store = resolvedDefaults(defaults)
+        let last = store.double(forKey: FlowSessionKeys.lastPiPArmAttemptAt)
+        guard last > 0 else { return false }
+        return Date().timeIntervalSince1970 - last < FlowSessionKeys.pipArmCooldown
+    }
+
+    public static func markPiPArmAttempt(defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        store.set(Date().timeIntervalSince1970, forKey: FlowSessionKeys.lastPiPArmAttemptAt)
+        flush(store)
+    }
+
     // MARK: - Session validity (keyboard)
 
     /// True while the persistent PiP session contract is active.

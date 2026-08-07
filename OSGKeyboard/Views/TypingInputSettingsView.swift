@@ -9,6 +9,7 @@ import OSGKeyboardShared
 
 struct TypingInputSettingsView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @ObservedObject private var config = ProviderConfig.shared
     @ObservedObject private var configuration = TypingInputConfiguration.shared
 
     @State private var isDeploying = false
@@ -16,10 +17,14 @@ struct TypingInputSettingsView: View {
 
     var body: some View {
         List {
-            Section("输入方案") {
-                Picker("拼音方案", selection: $configuration.schema) {
+            Section(AppL10n.string("settings.typingInput.schema.section", language: config.uiLanguage)) {
+                Picker(
+                    AppL10n.string("settings.typingInput.schema.picker", language: config.uiLanguage),
+                    selection: $configuration.schema
+                ) {
                     ForEach(TypingInputSchema.allCases) { schema in
-                        Text(schema.displayName).tag(schema)
+                        Text(AppL10n.string(schema.labelKey, language: config.uiLanguage))
+                            .tag(schema)
                     }
                 }
                 .pickerStyle(.inline)
@@ -39,14 +44,14 @@ struct TypingInputSettingsView: View {
                     )
                 }
             } header: {
-                Text("模糊音")
+                Text(AppL10n.string("settings.typingInput.fuzzy.section", language: config.uiLanguage))
             } footer: {
-                Text("默认全部关闭。只开启你需要的组合，避免候选噪音。")
+                Text(AppL10n.string("settings.typingInput.fuzzy.footer", language: config.uiLanguage))
             }
 
-            Section("输入法资源") {
+            Section(AppL10n.string("settings.typingInput.resources.section", language: config.uiLanguage)) {
                 HStack {
-                    Text("状态")
+                    Text(AppL10n.string("settings.typingInput.resources.status", language: config.uiLanguage))
                     Spacer()
                     if isDeploying {
                         ProgressView()
@@ -59,7 +64,7 @@ struct TypingInputSettingsView: View {
                     }
                 }
 
-                Button("重新部署输入法资源") {
+                Button(AppL10n.string("settings.typingInput.resources.redeploy", language: config.uiLanguage)) {
                     deployUpdatedSchemas()
                 }
                 .disabled(isDeploying)
@@ -67,13 +72,18 @@ struct TypingInputSettingsView: View {
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
-        .navigationTitle("settings.typingInput.title")
+        .navigationTitle(AppL10n.string("settings.typingInput.title", language: config.uiLanguage))
         .navigationBarTitleDisplayMode(.inline)
     }
 
     private var statusText: String {
         if let deploymentError { return deploymentError }
-        return RimeResourceInstaller.isReady ? "已就绪" : "待初始化"
+        return AppL10n.string(
+            RimeResourceInstaller.isReady
+                ? "settings.typingInput.resources.ready"
+                : "settings.typingInput.resources.pending",
+            language: config.uiLanguage
+        )
     }
 
     private func deployUpdatedSchemas() {

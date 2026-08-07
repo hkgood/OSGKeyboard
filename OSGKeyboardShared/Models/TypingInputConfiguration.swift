@@ -22,11 +22,21 @@ public enum TypingInputSchema: String, CaseIterable, Identifiable, Codable, Send
         }
     }
 
+    /// Stable Rime schema `name:` (not UI copy). Keep Chinese so redeploy fingerprints stay stable.
     public var displayName: String {
         switch self {
         case .fullPinyin: return "全拼"
         case .microsoftDoublePinyin: return "微软双拼"
         case .sogouDoublePinyin: return "搜狗双拼"
+        }
+    }
+
+    /// Localizable UI label key (`AppL10n` / `SharedL10n`).
+    public var labelKey: String {
+        switch self {
+        case .fullPinyin: return "typing.schema.fullPinyin"
+        case .microsoftDoublePinyin: return "typing.schema.microsoftDoublePinyin"
+        case .sogouDoublePinyin: return "typing.schema.sogouDoublePinyin"
         }
     }
 }

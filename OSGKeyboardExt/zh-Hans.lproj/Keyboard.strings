@@ -116,8 +116,21 @@
 /* Keyboard (ext) */
 "keyboard.placeholder.idle" = "点按说话";
 "keyboard.placeholder.idleClipboard" = "点击说话，长按处理剪贴板";
+"keyboard.clipboard.recordingLeft" = "指令录制中";
+"keyboard.clipboard.recordingRight" = "点按结束处理";
 "keyboard.placeholder.preparing" = "准备中…";
 "keyboard.placeholder.preparingRecording" = "准备录音…";
+"keyboard.clipboard.reject.pasteDenied" = "需要允许粘贴才能处理剪贴板";
+"keyboard.clipboard.reject.empty" = "剪贴板里没有可处理的文字";
+"keyboard.clipboard.reject.phoneOrNumeric" = "看起来像号码，未开始处理";
+"keyboard.clipboard.reject.emojiOrSymbolOnly" = "没有可处理的文字内容";
+"keyboard.clipboard.reject.verificationCode" = "看起来像验证码，未开始处理";
+"keyboard.clipboard.reject.tooShort" = "内容太短，请复制更完整的文字";
+"keyboard.clipboard.reject.repetitiveSpam" = "内容无效，未开始处理";
+"keyboard.clipboard.reject.secureField" = "密码框中不能使用剪贴板指令";
+"keyboard.clipboard.reject.noFullAccess" = "需要开启完全访问才能处理剪贴板";
+"keyboard.clipboard.reject.prepareFailed" = "麦克风未能及时就绪，请再试一次";
+"keyboard.clipboard.hint.hostStarting" = "正在启动，返回后请再长按处理剪贴板";
 "keyboard.placeholder.processing" = "处理中…";
 "keyboard.placeholder.error" = "润色失败";
 "keyboard.placeholder.localBadge" = "本地";

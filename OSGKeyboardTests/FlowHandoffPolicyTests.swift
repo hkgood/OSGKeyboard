@@ -330,4 +330,113 @@ final class FlowHandoffPolicyTests: XCTestCase {
             .silence
         )
     }
+
+    // MARK: - Proactive PiP arm (no re-jump)
+
+    func testProactivePiPArmSkippedWhenHostReady() {
+        XCTAssertFalse(
+            FlowHandoffPolicy.shouldProactivePiPArm(
+                hostReady: true,
+                snapshotReason: .ready,
+                sessionActive: true,
+                hostReachable: true,
+                hostStale: false,
+                withinReadyGrace: false,
+                inCooldown: false
+            )
+        )
+    }
+
+    func testProactivePiPArmSkippedWhileStartingOrCooldown() {
+        XCTAssertFalse(
+            FlowHandoffPolicy.shouldProactivePiPArm(
+                hostReady: false,
+                snapshotReason: .starting,
+                sessionActive: true,
+                hostReachable: true,
+                hostStale: false,
+                withinReadyGrace: false,
+                inCooldown: false
+            ),
+            "Warming session must not re-open startflow on Voice tab"
+        )
+        XCTAssertFalse(
+            FlowHandoffPolicy.shouldProactivePiPArm(
+                hostReady: false,
+                snapshotReason: nil,
+                sessionActive: false,
+                hostReachable: false,
+                hostStale: false,
+                withinReadyGrace: false,
+                inCooldown: true
+            ),
+            "Cooldown after a recent arm must block re-jump"
+        )
+    }
+
+    func testProactivePiPArmAllowsForceQuitZombieSessionAfterHeartbeatGrace() {
+        // sessionActive still true, but heartbeat gone > 8s → allow one arm.
+        XCTAssertTrue(
+            FlowHandoffPolicy.shouldProactivePiPArm(
+                hostReady: false,
+                snapshotReason: .ready,
+                sessionActive: true,
+                hostReachable: false,
+                hostStale: false,
+                withinReadyGrace: false,
+                inCooldown: false,
+                heartbeatStaleness: FlowHandoffPolicy.proactiveUnreachableArmGrace
+            )
+        )
+        // Brief switcher flap (< grace) must NOT re-jump.
+        XCTAssertFalse(
+            FlowHandoffPolicy.shouldProactivePiPArm(
+                hostReady: false,
+                snapshotReason: .ready,
+                sessionActive: true,
+                hostReachable: false,
+                hostStale: false,
+                withinReadyGrace: false,
+                inCooldown: false,
+                heartbeatStaleness: 3
+            )
+        )
+        // Cooldown still wins after a recent arm.
+        XCTAssertFalse(
+            FlowHandoffPolicy.shouldProactivePiPArm(
+                hostReady: false,
+                snapshotReason: .ready,
+                sessionActive: true,
+                hostReachable: false,
+                hostStale: false,
+                withinReadyGrace: false,
+                inCooldown: true,
+                heartbeatStaleness: 30
+            )
+        )
+    }
+
+    func testProactivePiPArmAllowedWhenHostTrulyDead() {
+        XCTAssertTrue(
+            FlowHandoffPolicy.shouldProactivePiPArm(
+                hostReady: false,
+                snapshotReason: .noSession,
+                sessionActive: false,
+                hostReachable: false,
+                hostStale: false,
+                withinReadyGrace: false,
+                inCooldown: false
+            )
+        )
+    }
+
+    func testPiPArmCooldownRoundTrip() {
+        let suite = "PiPArmCooldown.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        XCTAssertFalse(FlowSessionBridge.isPiPArmInCooldown(defaults: defaults))
+        FlowSessionBridge.markPiPArmAttempt(defaults: defaults)
+        XCTAssertTrue(FlowSessionBridge.isPiPArmInCooldown(defaults: defaults))
+    }
 }

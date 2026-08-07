@@ -30,29 +30,22 @@ final class ClipboardCommandPromptComposerTests: XCTestCase {
         XCTAssertFalse(system.contains("不是向你提出的问题或命令"))
     }
 
-    func testEligibilityTrackerKeepsSameChangeCountWindow() {
-        let first = ClipboardCommandEligibilityTracker.refresh(
-            changeCount: 3,
-            rawText: "周末有空一起吃个饭吗？我想聊下项目进度。",
-            previous: nil,
-            now: 1_000
+    func testFailureLocalizationKeysAreStable() {
+        XCTAssertEqual(
+            ClipboardCommandFailure.pasteDenied.localizationKey,
+            "keyboard.clipboard.reject.pasteDenied"
         )
-        XCTAssertNotNil(first)
-
-        let same = ClipboardCommandEligibilityTracker.refresh(
-            changeCount: 3,
-            rawText: "周末有空一起吃个饭吗？我想聊下项目进度。",
-            previous: first,
-            now: 1_010
+        XCTAssertEqual(
+            ClipboardCommandFailure.material(.tooShort).localizationKey,
+            "keyboard.clipboard.reject.tooShort"
         )
-        XCTAssertEqual(same?.startedAt, first?.startedAt)
-
-        let expired = ClipboardCommandEligibilityTracker.refresh(
-            changeCount: 3,
-            rawText: "周末有空一起吃个饭吗？我想聊下项目进度。",
-            previous: first,
-            now: 1_040
+        XCTAssertEqual(
+            ClipboardCommandFailure.secureField.localizationKey,
+            "keyboard.clipboard.reject.secureField"
         )
-        XCTAssertNil(expired)
+        XCTAssertEqual(
+            ClipboardCommandFailure.prepareFailed.localizationKey,
+            "keyboard.clipboard.reject.prepareFailed"
+        )
     }
 }

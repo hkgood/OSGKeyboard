@@ -50,6 +50,16 @@ public final class KeyboardViewController: UIInputViewController {
     private var hosting: UIHostingController<KeyboardSurfaceRoot>?
     private var keyboardHeightConstraint: NSLayoutConstraint?
     private var systemEncapsulatedHeight: CGFloat = 228
+    /// Presentation height priming is only valid during the slide-in. After
+    /// `viewDidAppear` we must keep the constraint at `target` — re-applying
+    /// the offset (or letting a paste alert interrupt the appear sequence)
+    /// makes the slot land at `target + encapsulated` and floats the chrome.
+    private enum HeightPresentationPhase {
+        case idle
+        case priming
+        case presented
+    }
+    private var heightPhase: HeightPresentationPhase = .idle
     private var cancellables = Set<AnyCancellable>()
 
     private var textInserter: KeyboardTextInserter!
@@ -118,6 +128,7 @@ public final class KeyboardViewController: UIInputViewController {
         _ = configSync.loadPersistedConfig()
         configSync.installDarwinObservers()
         flowCoordinator.refreshSessionState()
+        flowCoordinator.restoreClipboardCommandIfNeeded()
         OSGDiag.log(
             "KVC.viewDidLoad done surface=\(state.surface.rawValue) "
                 + "sessionActive=\(FlowSessionBridge.isSessionActive()) "
@@ -133,15 +144,27 @@ public final class KeyboardViewController: UIInputViewController {
                 + "preserve=\(flowCoordinator.preservesLifecycleOnDisappear) \(OSGDiag.memoryTag())",
             category: "boot"
         )
+        heightPhase = .idle
+        // Block pasteboard content reads until the next viewDidAppear height lock.
+        flowCoordinator.setClipboardContentReadsEnabled(false)
         flowCoordinator.stopSessionMonitor()
         // Remember what the user left on, then pre-position a reused
         // extension instance for the next open policy (no first-frame jump).
-        TypingInputConfiguration.persistLastSurface(state.surface)
-        prepareSurfaceForNextPresentation()
+        // Skip snap-to-typing while clipboard paste alert / utterance owns the mic —
+        // otherwise Allow Paste reopens on the typing grid (visible jump).
+        let preserve = flowCoordinator.preservesLifecycleOnDisappear
+            || flowCoordinator.isClipboardCommandActive
+            || ClipboardCommandResume.shouldPreferVoice()
+        TypingInputConfiguration.persistLastSurface(
+            preserve || ClipboardCommandResume.shouldPreferVoice() ? .voice : state.surface
+        )
+        if !preserve {
+            prepareSurfaceForNextPresentation()
+        }
         if state.surface == .typing {
             typingSession.leaveTypingMode()
         }
-        if flowCoordinator.preservesLifecycleOnDisappear {
+        if preserve {
             return
         }
         ExtensionScreenWakeLock.releaseAll()
@@ -159,13 +182,16 @@ public final class KeyboardViewController: UIInputViewController {
         configureDictationBehavior()
         KeyboardSetupBridge.markExtensionAppearance(hasFullAccess: hasFullAccess)
         state.debugHasFullAccess = hasFullAccess
+        // Do NOT read pasteboard contents here — `refreshSessionState` may peek
+        // changeCount only while content reads stay disabled until height locks.
         flowCoordinator.refreshSessionState()
-        flowCoordinator.refreshClipboardEligibility()
         flowCoordinator.startSessionMonitor()
         configSync.syncOnboardingStateFromAppGroup()
         configSync.refreshConfigFromAppGroup()
         // Settings may have changed while the extension stayed alive.
         applyPreferredSurfaceOnOpen()
+        // After paste-alert reopen: restore clipboard chrome if sticky + host busy.
+        flowCoordinator.restoreClipboardCommandIfNeeded()
         // Re-warm Taptic after host app switches: SwiftUI `onAppear` often
         // skips when the extension process is reused, leaving generators cold.
         KeyboardHapticFeedback.prepare()
@@ -181,9 +207,17 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewIsAppearing(_ animated: Bool) {
         super.viewIsAppearing(animated)
-        applyPresentationHeightOffset()
+        if heightPhase == .presented {
+            // Spurious re-appear while already on screen (e.g. system alert
+            // lifecycle noise) — never re-run the offset trick.
+            lockPresentedKeyboardHeight()
+        } else {
+            heightPhase = .priming
+            applyPresentationHeightOffset()
+        }
         OSGDiag.log(
-            "KVC.viewIsAppearing height=\(keyboardHeightConstraint?.constant ?? -1) "
+            "KVC.viewIsAppearing phase=\(heightPhaseLog) "
+                + "height=\(keyboardHeightConstraint?.constant ?? -1) "
                 + "\(OSGDiag.memoryTag())",
             category: "boot"
         )
@@ -196,12 +230,15 @@ public final class KeyboardViewController: UIInputViewController {
             category: "boot"
         )
         disableSystemGestureDelays()
-        keyboardHeightConstraint?.constant = targetKeyboardHeight
+        heightPhase = .presented
+        lockPresentedKeyboardHeight()
         refreshReturnKeyRole()
-        // Run after the extension is fully presented so UIKit accepts the
-        // containing-app handoff even when typing mode is the default surface.
+        // After height is locked: (1) allow pasteboard content reads so the
+        // paste alert cannot interrupt presentation math; (2) arm PiP handoff.
         DispatchQueue.main.async { [weak self] in
-            self?.flowCoordinator.ensurePiPReadyOnKeyboardOpen()
+            guard let self, self.heightPhase == .presented else { return }
+            self.flowCoordinator.setClipboardContentReadsEnabled(true)
+            self.flowCoordinator.ensurePiPReadyOnKeyboardOpen()
         }
         OSGDiag.log(
             "KVC.viewDidAppear done height=\(targetKeyboardHeight) \(OSGDiag.memoryTag())",
@@ -240,6 +277,7 @@ public final class KeyboardViewController: UIInputViewController {
     public override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         cursorDrag?.layoutChrome()
+        enforcePresentedKeyboardHeightIfNeeded()
     }
 
     // MARK: - Services
@@ -289,9 +327,6 @@ public final class KeyboardViewController: UIInputViewController {
         state.tapMic              = { [weak self] in self?.flowCoordinator.toggleRecording() }
         state.beginClipboardCommand = { [weak self] in
             self?.flowCoordinator.clipboardCommandPressBegan()
-        }
-        state.endClipboardCommand = { [weak self] in
-            self?.flowCoordinator.clipboardCommandPressEnded()
         }
         state.refreshClipboardEligibility = { [weak self] in
             self?.flowCoordinator.refreshClipboardEligibility()
@@ -368,13 +403,21 @@ public final class KeyboardViewController: UIInputViewController {
 
     private func applyPreferredSurfaceOnOpen() {
         let preferred = TypingInputConfiguration.preferredSurfaceOnOpen()
+        let sticky = ClipboardCommandResume.shouldPreferVoice()
+        let resolved = KeyboardOpenSurfacePolicy.resolve(
+            locksTypingSurface: state.locksTypingSurface,
+            clipboardCommandActive: flowCoordinator.isClipboardCommandActive,
+            stickyPreferVoice: sticky,
+            preferred: preferred
+        )
         OSGDiag.log(
             "applyPreferredSurfaceOnOpen preferred=\(preferred.rawValue) "
-                + "remember=\(TypingInputConfiguration.remembersLastSurface()) "
-                + "defaultTyping=\(TypingInputConfiguration.prefersTypingOnOpen())",
+                + "resolved=\(resolved.rawValue) stickyVoice=\(sticky ? 1 : 0) "
+                + "clipboardActive=\(flowCoordinator.isClipboardCommandActive ? 1 : 0) "
+                + "locksTyping=\(state.locksTypingSurface ? 1 : 0)",
             category: "boot"
         )
-        applySurface(preferred)
+        applySurface(resolved)
     }
 
     /// When not remembering, snap to the static open preference while hidden
@@ -395,8 +438,40 @@ public final class KeyboardViewController: UIInputViewController {
         // final assignment in `viewDidAppear`. Avoid synchronous layout here:
         // this is also called during `viewDidLoad`, where re-entrant layout can
         // observe partially initialized controller dependencies.
+        if heightPhase == .presented {
+            lockPresentedKeyboardHeight()
+        } else {
+            keyboardHeightConstraint?.constant = targetKeyboardHeight
+            view.setNeedsLayout()
+        }
+    }
+
+    private var heightPhaseLog: String {
+        switch heightPhase {
+        case .idle: return "idle"
+        case .priming: return "priming"
+        case .presented: return "presented"
+        }
+    }
+
+    private func lockPresentedKeyboardHeight() {
         keyboardHeightConstraint?.constant = targetKeyboardHeight
         view.setNeedsLayout()
+    }
+
+    /// After presentation, the constraint must stay at `target`. Spurious
+    /// lifecycle noise must not leave us primed at `target − encapsulated`.
+    private func enforcePresentedKeyboardHeightIfNeeded() {
+        guard heightPhase == .presented else { return }
+        let target = targetKeyboardHeight
+        guard let constraint = keyboardHeightConstraint else { return }
+        let was = constraint.constant
+        guard abs(was - target) > 0.5 else { return }
+        constraint.constant = target
+        OSGDiag.log(
+            "KVC.heightEnforce constraint \(Int(was))→\(Int(target))",
+            category: "boot"
+        )
     }
 
     private func refreshReturnKeyRole() {
@@ -480,6 +555,8 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     private func applyPresentationHeightOffset() {
+        // Only valid while priming the slide-in. Callers must not invoke this
+        // after `heightPhase == .presented`.
         if let encapsulated = view.constraints.first(where: { constraint in
             constraint.firstItem as? UIView === view
                 && constraint.firstAttribute == .height
