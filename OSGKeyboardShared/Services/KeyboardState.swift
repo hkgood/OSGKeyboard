@@ -130,6 +130,10 @@ public final class KeyboardState: ObservableObject {
     /// `true` while a cursor-drag pad is being pressed — drives the hint
     /// shown above the mic.
     @Published public var cursorDragActive: Bool = false
+    /// Opportunity-read: clipboard text is eligible for long-press command mode.
+    @Published public var clipboardCommandEligible: Bool = false
+    /// Active clipboard-command task (continuous rewrite window).
+    @Published public var clipboardCommandSessionActive: Bool = false
     /// Whether translate-and-polish is armed for the current engine.
     public var isTranslationEffective: Bool {
         translationEnabled
@@ -205,6 +209,9 @@ public final class KeyboardState: ObservableObject {
     public var beginRecording:      () -> Void = {}
     public var endRecording:        () -> Void = {}
     public var tapMic:              () -> Void = {}
+    public var beginClipboardCommand: () -> Void = {}
+    public var endClipboardCommand:   () -> Void = {}
+    public var refreshClipboardEligibility: () -> Void = {}
     public var openSettings:        () -> Void = {}
     public var startFlowSession:    () -> Void = {}
     public var setMode:             (InputMode) -> Void = { _ in }

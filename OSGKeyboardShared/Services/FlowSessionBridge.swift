@@ -50,7 +50,12 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         case startRecording
         case stopRecording
         case abort
+        /// Light warm-up: ASR locale/assets only — no mic capture.
+        case prewarm
     }
+
+    /// Wire version that includes clipboard-command fields.
+    public static let currentProtocolVersion = 2
 
     public let protocolVersion: Int
     public let sessionId: UUID
@@ -60,16 +65,25 @@ public struct FlowCommand: Codable, Equatable, Sendable {
     public let localeId: String
     public let createdAt: TimeInterval
     public let fieldContext: FlowFieldContext?
+    /// Dictation (default) vs clipboard instruction mode. Absent on legacy v1 → dictation.
+    public let utteranceMode: FlowUtteranceMode?
+    /// Frozen clipboard material; present on clipboard-command `startRecording`.
+    public let clipboardSnapshot: String?
+    /// Prior successful command output for continuous rewrite rounds.
+    public let previousOutput: String?
 
     public init(
-        protocolVersion: Int = 1,
+        protocolVersion: Int = FlowCommand.currentProtocolVersion,
         sessionId: UUID,
         utteranceId: UUID,
         commandSeq: Int64,
         action: Action,
         localeId: String,
         createdAt: TimeInterval = Date().timeIntervalSince1970,
-        fieldContext: FlowFieldContext? = nil
+        fieldContext: FlowFieldContext? = nil,
+        utteranceMode: FlowUtteranceMode? = nil,
+        clipboardSnapshot: String? = nil,
+        previousOutput: String? = nil
     ) {
         self.protocolVersion = protocolVersion
         self.sessionId = sessionId
@@ -79,6 +93,13 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         self.localeId = localeId
         self.createdAt = createdAt
         self.fieldContext = fieldContext
+        self.utteranceMode = utteranceMode
+        self.clipboardSnapshot = clipboardSnapshot
+        self.previousOutput = previousOutput
+    }
+
+    public var resolvedUtteranceMode: FlowUtteranceMode {
+        utteranceMode ?? .dictation
     }
 }
 
@@ -106,9 +127,11 @@ public struct FlowResult: Codable, Equatable, Sendable {
     public let revision: Int64?
     public let fieldFingerprint: String?
     public let createdAt: TimeInterval
+    /// Echo of the command mode so the extension can skip raw fallback.
+    public let utteranceMode: FlowUtteranceMode?
 
     public init(
-        protocolVersion: Int = 1,
+        protocolVersion: Int = FlowCommand.currentProtocolVersion,
         sessionId: UUID,
         utteranceId: UUID,
         commandSeq: Int64,
@@ -120,7 +143,8 @@ public struct FlowResult: Codable, Equatable, Sendable {
         hostGeneration: String? = nil,
         revision: Int64? = nil,
         fieldFingerprint: String? = nil,
-        createdAt: TimeInterval = Date().timeIntervalSince1970
+        createdAt: TimeInterval = Date().timeIntervalSince1970,
+        utteranceMode: FlowUtteranceMode? = nil
     ) {
         self.protocolVersion = protocolVersion
         self.sessionId = sessionId
@@ -135,6 +159,16 @@ public struct FlowResult: Codable, Equatable, Sendable {
         self.revision = revision
         self.fieldFingerprint = fieldFingerprint
         self.createdAt = createdAt
+        self.utteranceMode = utteranceMode
+    }
+
+    public var resolvedUtteranceMode: FlowUtteranceMode {
+        utteranceMode ?? .dictation
+    }
+
+    /// Clipboard-command deliveries must never insert raw ASR into the field.
+    public var allowsRawFallback: Bool {
+        resolvedUtteranceMode != .clipboardCommand
     }
 }
 

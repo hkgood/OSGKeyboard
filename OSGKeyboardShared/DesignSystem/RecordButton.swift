@@ -24,21 +24,29 @@ public struct RecordButton: View {
     public let remainingSeconds: Int?
     public let isEnabled: Bool
     public let onToggle: () -> Void
+    /// When non-nil, a 0.45s hold starts clipboard-command recording instead of toggle.
+    public let onClipboardLongPressBegan: (() -> Void)?
+    public let onClipboardLongPressEnded: (() -> Void)?
 
     @State private var breath = false
+    @State private var longPressArmed = false
 
     public init(
         phase: Phase,
         level: Double,
         remainingSeconds: Int? = nil,
         isEnabled: Bool = true,
-        onToggle: @escaping () -> Void
+        onToggle: @escaping () -> Void,
+        onClipboardLongPressBegan: (() -> Void)? = nil,
+        onClipboardLongPressEnded: (() -> Void)? = nil
     ) {
         self.phase = phase
         self.level = level
         self.remainingSeconds = remainingSeconds
         self.isEnabled = isEnabled
         self.onToggle = onToggle
+        self.onClipboardLongPressBegan = onClipboardLongPressBegan
+        self.onClipboardLongPressEnded = onClipboardLongPressEnded
     }
 
     private var isUrgent: Bool {
@@ -131,14 +139,23 @@ public struct RecordButton: View {
             .animation(Motion.soft, value: remainingSeconds)
         }
         .contentShape(Circle())
-        .onTapGesture {
-            guard phase != .processing else { return }
-            guard isEnabled || phase == .idleUnavailable else { return }
-            onToggle()
-        }
+        .modifier(
+            RecordButtonPressModifier(
+                phase: phase,
+                isEnabled: isEnabled,
+                supportsClipboardLongPress: onClipboardLongPressBegan != nil,
+                longPressArmed: $longPressArmed,
+                onToggle: onToggle,
+                onClipboardLongPressBegan: onClipboardLongPressBegan,
+                onClipboardLongPressEnded: onClipboardLongPressEnded
+            )
+        )
         .onAppear { breath = (phase == .recording) }
         .onChange(of: phase) { _, new in
             breath = (new == .recording)
+            if new != .recording {
+                longPressArmed = false
+            }
         }
         .accessibilityLabel(Text(SharedL10n.string("keyboard.tapToTalkA11y")))
     }
@@ -183,6 +200,58 @@ public struct RecordButton: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
+        }
+    }
+}
+
+// MARK: - Press / long-press routing
+
+private struct RecordButtonPressModifier: ViewModifier {
+    let phase: RecordButton.Phase
+    let isEnabled: Bool
+    let supportsClipboardLongPress: Bool
+    @Binding var longPressArmed: Bool
+    let onToggle: () -> Void
+    let onClipboardLongPressBegan: (() -> Void)?
+    let onClipboardLongPressEnded: (() -> Void)?
+
+    func body(content: Content) -> some View {
+        if supportsClipboardLongPress {
+            content.onLongPressGesture(
+                minimumDuration: ClipboardMaterialFilter.longPressDuration,
+                maximumDistance: 120,
+                pressing: { pressing in
+                    if pressing {
+                        longPressArmed = false
+                        return
+                    }
+                    // Released.
+                    if longPressArmed {
+                        onClipboardLongPressEnded?()
+                        longPressArmed = false
+                    } else if phase != .processing, isEnabled || phase == .idleUnavailable {
+                        // Short press → existing tap-toggle dictation.
+                        guard phase != .recording else {
+                            // If somehow recording without arming, end via toggle.
+                            onToggle()
+                            return
+                        }
+                        onToggle()
+                    }
+                },
+                perform: {
+                    guard phase != .processing else { return }
+                    guard isEnabled || phase == .idleUnavailable else { return }
+                    longPressArmed = true
+                    onClipboardLongPressBegan?()
+                }
+            )
+        } else {
+            content.onTapGesture {
+                guard phase != .processing else { return }
+                guard isEnabled || phase == .idleUnavailable else { return }
+                onToggle()
+            }
         }
     }
 }

@@ -10,28 +10,44 @@ import OSGKeyboardShared
 final class KeyboardTextInserter {
     private let state: KeyboardState
     private let insertText: (String) -> Void
+    private let deleteBackward: () -> Void
     private let contextBeforeInput: () -> String?
     private let scheduleAutoClearError: () -> Void
 
     init(
         state: KeyboardState,
         insertText: @escaping (String) -> Void,
+        deleteBackward: @escaping () -> Void,
         contextBeforeInput: @escaping () -> String?,
         scheduleAutoClearError: @escaping () -> Void
     ) {
         self.state = state
         self.insertText = insertText
+        self.deleteBackward = deleteBackward
         self.contextBeforeInput = contextBeforeInput
         self.scheduleAutoClearError = scheduleAutoClearError
     }
 
-    func handleFlowTranscript(_ delivery: TranscriptionDelivery) {
+    func handleFlowTranscript(
+        _ delivery: TranscriptionDelivery,
+        replacePrevious: String? = nil
+    ) {
         let trimmed = delivery.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             state.phase = .idle
             state.level = 0
             return
         }
+
+        if let previous = replacePrevious?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !previous.isEmpty,
+           let preceding = contextBeforeInput(),
+           preceding.hasSuffix(previous) {
+            for _ in 0..<previous.count {
+                deleteBackward()
+            }
+        }
+
         // Host app already polished when configured; keyboard only inserts.
         // Word-boundary hygiene: dictating "world" with the cursor right
         // after "Hello" must yield "Hello world", not "Helloworld".

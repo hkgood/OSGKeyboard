@@ -335,6 +335,7 @@
 
 /* Flow session */
 "flow.error.noSpeech" = "未检测到语音，请重试。";
+"flow.error.clipboardCommandFailed" = "剪贴板处理失败，请重试。";
 "flow.error.recognitionInterrupted" = "识别未完成，请再试一次。";
 "keyboard.denied.mic" = "麦克风权限被拒绝";
 "keyboard.denied.speech" = "语音识别权限被拒绝";

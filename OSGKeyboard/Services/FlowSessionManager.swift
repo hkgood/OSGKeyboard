@@ -75,6 +75,10 @@ final class FlowSessionManager: ObservableObject {
     private var terminalUtteranceIds: Set<UUID> = []
     /// Cursor context captured by the keyboard at the final insertion point.
     private var pendingFieldContext: FlowFieldContext?
+    /// Dictation vs clipboard-command for the live utterance (set on start).
+    private var currentUtteranceMode: FlowUtteranceMode = .dictation
+    private var pendingClipboardSnapshot: String?
+    private var pendingPreviousOutput: String?
     private var pendingStopUtteranceId: UUID?
     private var currentCommandSeq: Int64 = 0
     private var lastHandledCommandSeq: Int64 = 0
@@ -988,6 +992,20 @@ final class FlowSessionManager: ObservableObject {
                 utteranceId: command.utteranceId,
                 commandSeq: command.commandSeq
             ) else { return }
+            currentUtteranceMode = command.resolvedUtteranceMode
+            if currentUtteranceMode == .clipboardCommand {
+                pendingClipboardSnapshot = command.clipboardSnapshot.map {
+                    ClipboardMaterialFilter.truncateSnapshot($0)
+                }
+                pendingPreviousOutput = command.previousOutput?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if pendingPreviousOutput?.isEmpty == true {
+                    pendingPreviousOutput = nil
+                }
+            } else {
+                pendingClipboardSnapshot = nil
+                pendingPreviousOutput = nil
+            }
             guard let startUtteranceId = currentUtteranceId else { return }
             let startToken = FlowUtteranceStartToken(
                 generation: utteranceGeneration,
@@ -1019,6 +1037,10 @@ final class FlowSessionManager: ObservableObject {
         case .abort:
             guard currentUtteranceId == command.utteranceId else { return }
             abortUtterance()
+        case .prewarm:
+            // No utterance identity — warm SpeechAnalyzer / cloud prep only.
+            scheduleASRWarmup()
+            FlowDiagnostics.log("prewarm ASR requested seq=\(command.commandSeq)")
         }
     }
 
@@ -1043,7 +1065,8 @@ final class FlowSessionManager: ObservableObject {
                 text: trimmed,
                 rawText: trimmed,
                 hostGeneration: FlowSessionBridge.currentHostGeneration(),
-                revision: Self.resultRevision()
+                revision: Self.resultRevision(),
+                utteranceMode: currentUtteranceMode
             )
         )
     }
@@ -1065,7 +1088,8 @@ final class FlowSessionManager: ObservableObject {
                 warning: warning,
                 rawText: trimmed,
                 hostGeneration: FlowSessionBridge.currentHostGeneration(),
-                revision: Self.resultRevision()
+                revision: Self.resultRevision(),
+                utteranceMode: currentUtteranceMode
             )
         )
     }
@@ -1085,7 +1109,8 @@ final class FlowSessionManager: ObservableObject {
                 text: message,
                 errorKind: kind,
                 hostGeneration: FlowSessionBridge.currentHostGeneration(),
-                revision: Self.resultRevision()
+                revision: Self.resultRevision(),
+                utteranceMode: currentUtteranceMode
             )
         )
     }
@@ -1583,6 +1608,9 @@ final class FlowSessionManager: ObservableObject {
     ) async {
         let pipelineStarted = Date()
         let fieldContext = pendingFieldContext
+        let utteranceMode = currentUtteranceMode
+        let clipboardSnapshot = pendingClipboardSnapshot
+        let previousOutput = pendingPreviousOutput
         // ALWAYS clear the processing gate for this utterance. The previous
         // guard required currentUtteranceId to still match; a racing
         // fail/abort/cancel path could nil the id (or leave processing stuck)
@@ -1590,6 +1618,11 @@ final class FlowSessionManager: ObservableObject {
         // while host logs still said "utterance finalized".
         defer {
             pendingFieldContext = nil
+            pendingClipboardSnapshot = nil
+            pendingPreviousOutput = nil
+            if currentUtteranceMode == utteranceMode {
+                currentUtteranceMode = .dictation
+            }
             completeFinalizeCleanup(
                 sessionId: finalizeSessionId,
                 utteranceId: finalizeUtteranceId
@@ -1707,15 +1740,51 @@ final class FlowSessionManager: ObservableObject {
 
         var delivered = text
         let polishStarted = Date()
-        let polishMode = pipelineStore.polishModeForPipeline
+        let isClipboardCommand = utteranceMode == .clipboardCommand
+        let polishMode: PolishingService.PolishMode = isClipboardCommand
+            ? .polish
+            : pipelineStore.polishModeForPipeline
+        let clipboardPrompt: (system: String, user: String)? = {
+            guard isClipboardCommand,
+                  let snapshot = clipboardSnapshot,
+                  !snapshot.isEmpty else { return nil }
+            let bias = ClipboardCommandPromptComposer.styleBias(
+                styleID: pipelineStore.activePolishStyleId,
+                catalog: pipelineStore.polishStyleCatalog
+            )
+            let input = ClipboardCommandPromptComposer.Input(
+                snapshot: snapshot,
+                instruction: textForPolish,
+                previousOutput: previousOutput,
+                styleBias: bias
+            )
+            return (
+                ClipboardCommandPromptComposer.compose(input),
+                ClipboardCommandPromptComposer.userMessage(input)
+            )
+        }()
+
+        if isClipboardCommand, clipboardPrompt == nil {
+            FlowDiagnostics.log("clipboard command missing snapshot — failing closed")
+            guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
+            storeFinalizedError(
+                AppL10n.string("flow.error.clipboardCommandFailed"),
+                kind: .generic,
+                sessionId: finalizeSessionId,
+                utteranceId: finalizeUtteranceId,
+                commandSeq: finalizeCommandSeq
+            )
+            return
+        }
+
         FlowDiagnostics.log(
-            "finalize LLM mode=\(Self.polishModeLogLabel(polishMode)) " +
+            "finalize LLM mode=\(isClipboardCommand ? "clipboardCommand" : Self.polishModeLogLabel(polishMode)) " +
             "translationTarget=\(pipelineStore.translationTargetLocaleId)"
         )
         FlowTrace.transcript(
             "polish.input",
             textForPolish,
-            "mode=\(Self.polishModeLogLabel(polishMode)) engine=\(engineMode) "
+            "mode=\(isClipboardCommand ? "clipboardCommand" : Self.polishModeLogLabel(polishMode)) engine=\(engineMode) "
                 + "provider=\(pipelineStore.polishProviderIdOverride ?? "default") "
                 + "recordedSeconds=\(String(format: "%.2f", recordingDuration))"
         )
@@ -1723,29 +1792,31 @@ final class FlowSessionManager: ObservableObject {
             // If the finalize task was cancelled (cold-start churn / abort),
             // skip the LLM round-trip and deliver the raw transcript so the
             // keyboard is not left waiting on a result that never arrives.
+            // Clipboard-command mode must never insert the instruction ASR.
             if Task.isCancelled {
                 throw CancellationError()
             }
             let outcome = try await Self.polishWithHostTimeout(
                 polisher: polisher,
-                text: textForPolish,
+                text: clipboardPrompt?.user ?? textForPolish,
                 mode: polishMode,
+                systemPrompt: clipboardPrompt?.system,
                 providerIdOverride: pipelineStore.polishProviderIdOverride,
-                context: polishContext
+                context: isClipboardCommand ? nil : polishContext
             )
             let polished = outcome.text
             delivered = polished
             FlowTrace.transcript(
                 "polish.output",
                 polished,
-                "mode=\(Self.polishModeLogLabel(polishMode)) inputLen=\(text.count) "
+                "mode=\(isClipboardCommand ? "clipboardCommand" : Self.polishModeLogLabel(polishMode)) inputLen=\(text.count) "
                     + "changed=\(polished == text ? 0 : 1) "
                     + "elapsed=\(FlowTrace.seconds(since: polishStarted))s"
             )
             guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
             storeFinalizedResult(
                 polished,
-                rawText: text,
+                rawText: isClipboardCommand ? nil : text,
                 warning: Self.combinedWarning(
                     chunkNote,
                     outcome.qualityDegraded
@@ -1760,50 +1831,76 @@ final class FlowSessionManager: ObservableObject {
                 "polish done in \(String(format: "%.1f", Date().timeIntervalSince(polishStarted)))s " +
                 "total=\(String(format: "%.1f", Date().timeIntervalSince(pipelineStarted)))s"
             )
-        } catch {
-            // CancellationError is common when the user jumps back via
-            // startflow mid-polish; still deliver raw text. Other errors
-            // keep the existing polish-warning fallback.
-            let fallback = Self.makeFallbackDelivery(
-                rawText: text,
-                error: error,
+            SpeechHistoryStore.shared.recordUtterance(
+                text: delivered,
                 engineMode: engineMode,
-                chunkWarning: chunkNote
+                duration: recordingDuration,
+                wasTranslation: isClipboardCommand ? false : pipelineStore.isTranslationEffective
             )
-            FlowDiagnostics.log(
-                "polish failed after \(String(format: "%.1f", Date().timeIntervalSince(polishStarted)))s: " +
-                "\(error.localizedDescription)"
-            )
-            FlowTrace.warn(
-                "polish.failed",
-                "mode=\(Self.polishModeLogLabel(polishMode)) engine=\(engineMode) "
-                    + "elapsed=\(FlowTrace.seconds(since: polishStarted))s "
-                    + "cancelled=\(error is CancellationError ? 1 : 0) "
-                    + "error=\(error.localizedDescription)"
-            )
-            FlowTrace.transcript(
-                "polish.fallback",
-                fallback.text,
-                "reason=polishFailed rawLen=\(text.count)"
-            )
-            delivered = fallback.text
-            guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
-            storeFinalizedResult(
-                fallback.text,
-                rawText: text,
-                warning: fallback.polishWarning,
-                sessionId: finalizeSessionId,
-                utteranceId: finalizeUtteranceId,
-                commandSeq: finalizeCommandSeq
-            )
+        } catch {
+            if isClipboardCommand {
+                FlowDiagnostics.log(
+                    "clipboard command failed after \(String(format: "%.1f", Date().timeIntervalSince(polishStarted)))s: " +
+                    "\(error.localizedDescription)"
+                )
+                FlowTrace.warn(
+                    "clipboardCommand.failed",
+                    "elapsed=\(FlowTrace.seconds(since: polishStarted))s "
+                        + "cancelled=\(error is CancellationError ? 1 : 0) "
+                        + "error=\(error.localizedDescription)"
+                )
+                guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
+                storeFinalizedError(
+                    AppL10n.string("flow.error.clipboardCommandFailed"),
+                    kind: .generic,
+                    sessionId: finalizeSessionId,
+                    utteranceId: finalizeUtteranceId,
+                    commandSeq: finalizeCommandSeq
+                )
+            } else {
+                // CancellationError is common when the user jumps back via
+                // startflow mid-polish; still deliver raw text. Other errors
+                // keep the existing polish-warning fallback.
+                let fallback = Self.makeFallbackDelivery(
+                    rawText: text,
+                    error: error,
+                    engineMode: engineMode,
+                    chunkWarning: chunkNote
+                )
+                FlowDiagnostics.log(
+                    "polish failed after \(String(format: "%.1f", Date().timeIntervalSince(polishStarted)))s: " +
+                    "\(error.localizedDescription)"
+                )
+                FlowTrace.warn(
+                    "polish.failed",
+                    "mode=\(Self.polishModeLogLabel(polishMode)) engine=\(engineMode) "
+                        + "elapsed=\(FlowTrace.seconds(since: polishStarted))s "
+                        + "cancelled=\(error is CancellationError ? 1 : 0) "
+                        + "error=\(error.localizedDescription)"
+                )
+                FlowTrace.transcript(
+                    "polish.fallback",
+                    fallback.text,
+                    "reason=polishFailed rawLen=\(text.count)"
+                )
+                delivered = fallback.text
+                guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
+                storeFinalizedResult(
+                    fallback.text,
+                    rawText: text,
+                    warning: fallback.polishWarning,
+                    sessionId: finalizeSessionId,
+                    utteranceId: finalizeUtteranceId,
+                    commandSeq: finalizeCommandSeq
+                )
+                SpeechHistoryStore.shared.recordUtterance(
+                    text: delivered,
+                    engineMode: engineMode,
+                    duration: recordingDuration,
+                    wasTranslation: pipelineStore.isTranslationEffective
+                )
+            }
         }
-
-        SpeechHistoryStore.shared.recordUtterance(
-            text: delivered,
-            engineMode: engineMode,
-            duration: recordingDuration,
-            wasTranslation: pipelineStore.isTranslationEffective
-        )
 
         currentPartial = ""
         lastFinal = ""
@@ -1882,7 +1979,8 @@ final class FlowSessionManager: ObservableObject {
                 rawText: rawText,
                 hostGeneration: FlowSessionBridge.currentHostGeneration(),
                 revision: Self.resultRevision(),
-                fieldFingerprint: Self.fieldFingerprint(pendingFieldContext)
+                fieldFingerprint: Self.fieldFingerprint(pendingFieldContext),
+                utteranceMode: currentUtteranceMode
             )
         )
     }
@@ -1905,7 +2003,8 @@ final class FlowSessionManager: ObservableObject {
                 rawText: trimmed,
                 hostGeneration: FlowSessionBridge.currentHostGeneration(),
                 revision: Self.resultRevision(),
-                fieldFingerprint: Self.fieldFingerprint(pendingFieldContext)
+                fieldFingerprint: Self.fieldFingerprint(pendingFieldContext),
+                utteranceMode: currentUtteranceMode
             )
         )
     }
@@ -1935,7 +2034,8 @@ final class FlowSessionManager: ObservableObject {
                 errorKind: kind,
                 hostGeneration: FlowSessionBridge.currentHostGeneration(),
                 revision: Self.resultRevision(),
-                fieldFingerprint: Self.fieldFingerprint(pendingFieldContext)
+                fieldFingerprint: Self.fieldFingerprint(pendingFieldContext),
+                utteranceMode: currentUtteranceMode
             )
         )
     }
@@ -2069,6 +2169,7 @@ final class FlowSessionManager: ObservableObject {
         polisher: PolishingService,
         text: String,
         mode: PolishingService.PolishMode,
+        systemPrompt: String? = nil,
         providerIdOverride: String?,
         context: PolishContext?
     ) async throws -> PolishingService.PolishOutcome {
@@ -2077,6 +2178,7 @@ final class FlowSessionManager: ObservableObject {
             try await polisher.polishWithOutcome(
                 text,
                 mode: mode,
+                systemPrompt: systemPrompt,
                 providerIdOverride: providerIdOverride,
                 context: context
             )
