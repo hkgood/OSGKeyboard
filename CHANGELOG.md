@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Clipboard voice command**: long-press the mic after copying eligible text to treat speech as an instruction over the clipboard snapshot and insert the generated result; short press stays dictation. / **剪贴板语音指令**：复制合格文本后长按麦克风，将语音视为对剪贴板材料的指令并插入生成结果；短按仍为听写。
+- **Clipboard record confirm**: show recording UI only after the host confirms capture; enforce a short minimum record window; light-prewarm ASR when clipboard becomes eligible (no idle mic hold). / **剪贴板开录确认**：宿主确认采音后再显示录音态；确认后再保证最短有效录音；剪贴板刚合格时轻预热 ASR（空闲不占麦）。
+
 ### Removed
 - **Keep-alive settings & Live Activity**: remove Settings keep-alive mode picker and its note; delete the Dynamic Island Live Activity extension and all ActivityKit session code. Voice sessions stay on silent low-profile PiP only, with user-facing copy that never names Picture in Picture. / **保活设置与灵动岛**：移除设置中的保活方式选项及说明；删除灵动岛 Live Activity 扩展与全部 ActivityKit 会话代码。语音会话仅保留静默低感知 PiP，用户可见文案不再出现「画中画」。
 

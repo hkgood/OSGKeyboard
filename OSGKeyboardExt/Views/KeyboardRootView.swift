@@ -132,6 +132,7 @@ public struct KeyboardRootView: View {
                 transcript: state.lastTranscript,
                 micVoiceAvailability: state.micVoiceAvailability,
                 micDisabledHint: state.micDisabledHint,
+                clipboardCommandEligible: state.clipboardCommandEligible || state.clipboardCommandSessionActive,
                 cursorDragHintActive: state.cursorDragActive,
                 openSettings: state.openSettings
             )
@@ -182,7 +183,13 @@ public struct KeyboardRootView: View {
                     level: state.level,
                     remainingSeconds: state.phase == .recording ? state.utteranceRemainingSeconds : nil,
                     isEnabled: !state.micDisabled,
-                    onToggle: state.tapMic
+                    onToggle: state.tapMic,
+                    onClipboardLongPressBegan: (state.clipboardCommandEligible || state.clipboardCommandSessionActive)
+                        ? state.beginClipboardCommand
+                        : nil,
+                    onClipboardLongPressEnded: (state.clipboardCommandEligible || state.clipboardCommandSessionActive)
+                        ? state.endClipboardCommand
+                        : nil
                 )
                 .frame(width: KeyboardLayoutMetrics.micSize, height: KeyboardLayoutMetrics.micSize)
                 .offset(y: -KeyboardLayoutMetrics.micUpwardAdjustment)
@@ -339,6 +346,7 @@ private struct TranscriptLine: View {
     let transcript: String
     let micVoiceAvailability: MicVoiceAvailability
     let micDisabledHint: String
+    let clipboardCommandEligible: Bool
     let cursorDragHintActive: Bool
     let openSettings: () -> Void
 
@@ -363,7 +371,11 @@ private struct TranscriptLine: View {
         case .requestingPermissions:
             HStack(spacing: 6) {
                 ProgressView().controlSize(.mini).tint(palette.textSecondary)
-                ExtL10n.text("keyboard.placeholder.preparing")
+                Text(
+                    transcript.isEmpty
+                        ? ExtL10n.string("keyboard.placeholder.preparing")
+                        : transcript
+                )
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
             }
@@ -420,13 +432,25 @@ private struct TranscriptLine: View {
         Group {
             switch micVoiceAvailability {
             case .ready:
-                ExtL10n.text("keyboard.placeholder.idle")
+                if clipboardCommandEligible {
+                    ExtL10n.text("keyboard.placeholder.idleClipboard")
+                } else {
+                    ExtL10n.text("keyboard.placeholder.idle")
+                }
             case .unavailable(.missingAPIKey):
                 Text(micDisabledHint)
             case .unavailable(.hostNotReady):
-                ExtL10n.text("keyboard.placeholder.idle")
+                if clipboardCommandEligible {
+                    ExtL10n.text("keyboard.placeholder.idleClipboard")
+                } else {
+                    ExtL10n.text("keyboard.placeholder.idle")
+                }
             case .unavailable(.preparingSession):
-                ExtL10n.text("keyboard.placeholder.idle")
+                if clipboardCommandEligible {
+                    ExtL10n.text("keyboard.placeholder.idleClipboard")
+                } else {
+                    ExtL10n.text("keyboard.placeholder.idle")
+                }
             case .unavailable(.noFullAccess):
                 ExtL10n.text("keyboard.error.fullAccessRequired")
             case .unavailable(.appGroupUnavailable):

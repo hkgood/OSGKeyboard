@@ -115,7 +115,9 @@
 
 /* Keyboard (ext) */
 "keyboard.placeholder.idle" = "Tap to talk";
+"keyboard.placeholder.idleClipboard" = "Tap to talk, long-press for clipboard";
 "keyboard.placeholder.preparing" = "Preparing";
+"keyboard.placeholder.preparingRecording" = "Preparing mic…";
 "keyboard.placeholder.processing" = "Processing";
 "keyboard.placeholder.error" = "Polishing failed";
 "keyboard.placeholder.localBadge" = "On-device";

@@ -160,6 +160,7 @@ public final class KeyboardViewController: UIInputViewController {
         KeyboardSetupBridge.markExtensionAppearance(hasFullAccess: hasFullAccess)
         state.debugHasFullAccess = hasFullAccess
         flowCoordinator.refreshSessionState()
+        flowCoordinator.refreshClipboardEligibility()
         flowCoordinator.startSessionMonitor()
         configSync.syncOnboardingStateFromAppGroup()
         configSync.refreshConfigFromAppGroup()
@@ -247,6 +248,7 @@ public final class KeyboardViewController: UIInputViewController {
         textInserter = KeyboardTextInserter(
             state: state,
             insertText: { [weak self] text in self?.textDocumentProxy.insertText(text) },
+            deleteBackward: { [weak self] in self?.textDocumentProxy.deleteBackward() },
             contextBeforeInput: { [weak self] in self?.textDocumentProxy.documentContextBeforeInput },
             scheduleAutoClearError: { [weak self] in self?.scheduleAutoClearError() }
         )
@@ -285,6 +287,15 @@ public final class KeyboardViewController: UIInputViewController {
         state.beginRecording      = { [weak self] in self?.flowCoordinator.pressBegan() }
         state.endRecording        = { [weak self] in self?.flowCoordinator.pressEnded() }
         state.tapMic              = { [weak self] in self?.flowCoordinator.toggleRecording() }
+        state.beginClipboardCommand = { [weak self] in
+            self?.flowCoordinator.clipboardCommandPressBegan()
+        }
+        state.endClipboardCommand = { [weak self] in
+            self?.flowCoordinator.clipboardCommandPressEnded()
+        }
+        state.refreshClipboardEligibility = { [weak self] in
+            self?.flowCoordinator.refreshClipboardEligibility()
+        }
         state.openSettings        = { [weak self] in self?.openHostApp() }
         state.startFlowSession    = { [weak self] in self?.flowCoordinator.beginFlowStart() }
         state.setMode             = { [weak self] m in self?.configSync.persistMode(m) }

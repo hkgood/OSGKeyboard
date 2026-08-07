@@ -115,7 +115,9 @@
 
 /* Keyboard (ext) */
 "keyboard.placeholder.idle" = "点按说话";
+"keyboard.placeholder.idleClipboard" = "点击说话，长按处理剪贴板";
 "keyboard.placeholder.preparing" = "准备中…";
+"keyboard.placeholder.preparingRecording" = "准备录音…";
 "keyboard.placeholder.processing" = "处理中…";
 "keyboard.placeholder.error" = "润色失败";
 "keyboard.placeholder.localBadge" = "本地";
