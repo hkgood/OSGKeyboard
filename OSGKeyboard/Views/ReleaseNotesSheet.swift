@@ -36,7 +36,16 @@ struct ReleaseNotesSheet: View {
                     colorScheme: resolvedColorScheme
                 ) {
                     ZStack {
-                        RemoteWebView(url: url, isLoading: $isLoading)
+                        // Fill the sheet body edge-to-edge (including home-indicator
+                        // band). WKWebView otherwise sits above a blank safe-area strip.
+                        RemoteWebView(
+                            url: url,
+                            isLoading: $isLoading,
+                            neutralizeSafeAreaPadding: true
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .ignoresSafeArea(edges: .bottom)
+
                         if isLoading {
                             ProgressView()
                                 .tint(palette.accent)
@@ -52,6 +61,7 @@ struct ReleaseNotesSheet: View {
                     )
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(palette.background.ignoresSafeArea())
             .navigationTitle(AppL10n.string("releaseNotes.title", language: language))
             .navigationBarTitleDisplayMode(.inline)
@@ -63,6 +73,9 @@ struct ReleaseNotesSheet: View {
                 }
             }
         }
+        // Force full-height sheet so the web view isn't clipped under a mid detent.
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
         // Sheet can drop WindowGroup environment; re-assert language + appearance.
         .environment(\.locale, language.swiftUILocale)
         .preferredColorScheme(appearance.colorScheme)
