@@ -15,4 +15,10 @@ enum LegalLinks {
     static var supportURL: URL? {
         URL(string: "https://github.com/hkgood/OSGKeyboard/issues")
     }
+
+    /// In-app release notes (hosted on download.osglab.com). Prefer
+    /// `ReleaseNotesStore.pageURL(language:colorScheme:)` so v/lang/theme are set.
+    static var releaseNotesURL: URL? {
+        URL(string: ReleaseNotesStore.pageURLString)
+    }
 }

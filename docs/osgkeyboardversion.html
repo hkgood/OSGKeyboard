@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-Hans" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>OSGKeyboard — What's New / 更新说明</title>
+  <meta name="robots" content="noindex">
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root {
+      --bg: #f7f7f5;
+      --text: #1a1a1a;
+      --text-secondary: #5c5c5c;
+      --text-tertiary: #8a8a8a;
+      --card: #ffffff;
+      --border: rgba(0, 0, 0, 0.08);
+      --accent: #2f6fed;
+      --chip-bg: rgba(47, 111, 237, 0.1);
+    }
+
+    html[data-theme="dark"] {
+      --bg: #0a0a0b;
+      --text: #f2f2f2;
+      --text-secondary: #b0b0b0;
+      --text-tertiary: #7a7a7a;
+      --card: #161618;
+      --border: rgba(255, 255, 255, 0.1);
+      --accent: #6b9fff;
+      --chip-bg: rgba(107, 159, 255, 0.16);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+        "Hiragino Sans GB", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      -webkit-text-size-adjust: 100%;
+      line-height: 1.5;
+    }
+
+    body {
+      /* Fixed bottom padding only — App WKWebView already lays out above the home indicator. */
+      padding: 20px 16px 28px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .page-header {
+      margin-bottom: 20px;
+    }
+
+    .page-header h1 {
+      margin: 0 0 6px;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .page-header .subtitle {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    .empty {
+      display: none;
+      margin-top: 40px;
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+
+    .empty.visible { display: block; }
+
+    .version-block {
+      display: none;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 16px 8px;
+      margin-bottom: 16px;
+    }
+
+    .version-block.visible { display: block; }
+
+    .version-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--chip-bg);
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 650;
+      letter-spacing: 0.01em;
+      margin-bottom: 14px;
+    }
+
+    .section { margin-bottom: 16px; }
+
+    .section h2 {
+      margin: 0 0 8px;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .group { margin-bottom: 12px; }
+
+    .group-title {
+      margin: 0 0 6px;
+      font-size: 0.95rem;
+      font-weight: 650;
+      color: var(--text);
+    }
+
+    ul {
+      margin: 0;
+      padding: 0 0 0 1.15em;
+    }
+
+    li {
+      margin: 0 0 6px;
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+    }
+
+    li strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .lang-block { display: none; }
+    .lang-block.visible { display: block; }
+
+    /* Inline demo media directly under a group title. */
+    .wn-media {
+      margin: 2px 0 12px;
+      text-align: center;
+    }
+
+    .wn-media video,
+    .wn-media img {
+      display: block;
+      width: 100%;
+      max-width: 260px;
+      height: auto;
+      margin: 0 auto;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: #000;
+    }
+
+    /* Landscape-ish clip (near-square) can sit a bit wider. */
+    .wn-media.wide video,
+    .wn-media.wide img {
+      max-width: 340px;
+    }
+  </style>
+</head>
+<body>
+  <header class="page-header">
+    <div class="lang-block" data-lang="zh">
+      <h1>更新说明</h1>
+      <p class="subtitle">本页展示当前版本及更早版本的更新内容</p>
+    </div>
+    <div class="lang-block" data-lang="en">
+      <h1>What's New</h1>
+      <p class="subtitle">Notes for this version and earlier releases</p>
+    </div>
+  </header>
+
+  <p class="empty" id="empty-zh">暂无与当前版本匹配的更新说明。</p>
+  <p class="empty" id="empty-en">No release notes match this app version.</p>
+
+  <!-- ========== 1.6.6 ========== -->
+  <article class="version-block" data-version="1.6.6">
+    <div class="version-chip">1.6.6</div>
+
+    <div class="lang-block" data-lang="zh">
+      <section class="section">
+        <h2>新功能</h2>
+
+        <div class="group">
+          <p class="group-title">全新保活流程</p>
+          <ul>
+            <li>键盘保活流程全新升级，大幅提升后台保活逻辑，大幅降低耗电量并提升稳定性</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <p class="group-title">新增键盘输入功能</p>
+          <div class="wn-media wide">
+            <video src="assets/whats-new/keyboard-typing.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          </div>
+          <ul>
+            <li>新增<strong>拼音</strong>与<strong>英文</strong>键盘：支持全拼、微软/搜狗双拼、词组候选、可选模糊音；拼音与英文均支持自定义词库</li>
+            <li>键盘布局整体升级，语音 / 中文 / 英文外观统一；左侧 Logo 可跳转主 App，右侧改为输入方式切换与翻译入口</li>
+            <li>新增<strong>中文候选词面板</strong>，候选池更大，长词和更多备选更容易找到；多字输入时可分词选择</li>
+            <li>新增英文联想补全、自动纠错与候选撤销，输入更快更准</li>
+            <li>新增键盘防误触和误输入纠正，整体体验更接近系统键盘</li>
+            <li>新增<strong>按键音效与震动</strong>，以及轻 / 强震动设置</li>
+            <li>新增长按删除加速，改长文更高效</li>
+            <li>新增英文键盘智能大写：连续大写、句首自动大写</li>
+            <li>新增<strong>撤销上次输入</strong>按钮：麦克风旁可一键撤回最近一次听写或剪贴板指令结果</li>
+            <li>新增<strong>键盘偏好</strong>设置，支持记住上次使用的语音或文字界面，再次打开无需反复切换</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <p class="group-title">新增剪贴板润色模式</p>
+          <div class="wn-media">
+            <video src="assets/whats-new/clipboard-polish.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          </div>
+          <ul>
+            <li>新增<strong>剪贴板处理模式</strong>：复制文本后<strong>长按</strong>麦克风进入文本处理模式</li>
+            <li>在剪贴板处理模式下，可通过语音指令对剪贴板内容进行翻译、精简、回复等多种操作</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <p class="group-title">剪贴板语音指令</p>
+          <ul>
+            <li>剪贴板里有文字时<strong>长按</strong>麦克风，说出你的处理意图，结果直接写入当前输入框；<strong>短按</strong>仍是普通听写</li>
+            <li>长按录音改为<strong>再点一下结束</strong>，不必一直按住；确认开始采音后麦克风变蓝并显示「指令录制中」</li>
+            <li>无法进入指令模式时（拒绝粘贴、内容过短、验证码类、密码框、未开启完全访问），会在麦克风上方给出简短原因</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <p class="group-title">润色模式整体升级</p>
+          <div class="wn-media">
+            <img src="assets/whats-new/polish-styles-zh.png" alt="润色风格列表" loading="lazy">
+          </div>
+          <ul>
+            <li>大幅升级<strong>趣味润色</strong>（含直男癌等），风格更鲜明，同时减少事实失真</li>
+            <li>润色强度简化为轻度 / 重度：轻度优先保真，重度释放五种趣味风格的完整创意</li>
+            <li>新增<strong>同音 / 近音纠错</strong>，语音识别后的错字修复更准</li>
+            <li>长文本润色与翻译分段更清晰，列表结构更易读，翻译后保留段落格式</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <p class="group-title">应用内更新说明</p>
+          <ul>
+            <li>版本更新后自动展示更新说明；设置页版本行也可随时查看，跟随应用内语言与深浅色</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <p class="group-title">设置优化</p>
+          <ul>
+            <li>设置页层级与卡片布局更清晰，转写与润色入口更好找</li>
+            <li>简化首次设置：未完成语音配置时仍可正常打字</li>
+            <li>文本输入设置页的方案、模糊音与资源文案跟随应用内语言</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>问题修复</h2>
+        <ul>
+          <li>修复<strong>复合指令</strong>失效：说「回复剪贴板内容，并翻译成英文」时，不再只把剪贴板译成英文，而是先写回复、再翻译回复</li>
+          <li>修复回复视角错误：剪贴板内容一律视为对方发来的消息，回复以你的身份写出，不再把对方的话换个说法发回去</li>
+          <li>指令中指定的词汇、数字替换与编号、分段格式，在随后的润色或翻译中不再丢失</li>
+          <li>修复长按后卡在「准备录音…」，以及系统「允许粘贴」弹窗后跳回打字键盘的问题</li>
+          <li>打开键盘不再反复申请剪贴板权限；正文只在长按时读取</li>
+          <li>修复自定义润色风格编辑偶发显示空白模板</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>稳定性与可靠性</h2>
+        <ul>
+          <li>重构蓝牙与音频路由处理：切换蓝牙设备（耳机）后，录音恢复更可靠</li>
+          <li>修复录音启动 / 取消竞态，减少识别完成后卡在润色阶段的问题</li>
+          <li>Apple 本地识别改用降噪接口：同房间旁人说话时，更倾向听清你的近讲声音</li>
+          <li>为识别与润色增加明确超时与原文兜底，网络不稳时不再无限等待</li>
+          <li>加强主 App 与键盘的结果确认与恢复，降低结果丢失或无法上屏的概率</li>
+          <li>修复火山 ASR 连接问题；修复云端 ASR 配置验证误报</li>
+          <li>重构键盘启动流程、降低内存峰值，减少闪退与被系统终止</li>
+          <li>输入引擎按需加载，语音与文字切换更快、更省内存</li>
+          <li>未使用麦克风时，不主动拉起主 App 占用内存</li>
+          <li>移除冗余多步引导；优化会话未完成时的体验</li>
+          <li>自定义词 / 本地识别相关能力打包更完整</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="lang-block" data-lang="en">
+      <section class="section">
+        <h2>New Features</h2>
+
+        <div class="group">
+          <p class="group-title">Redesigned keep-alive flow</p>
+          <ul>
+            <li>Keyboard keep-alive is rebuilt for more reliable background continuity, lower power use, and better stability</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <p class="group-title">Typing keyboards</p>
+          <div class="wn-media wide">
+            <video src="assets/whats-new/keyboard-typing.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          </div>
+          <ul>
+            <li>New <strong>Pinyin</strong> and <strong>English</strong> keyboards: full Pinyin, Microsoft/Sogou double Pinyin, phrase candidates, optional fuzzy Pinyin; both support custom dictionaries</li>
+            <li>Unified keyboard chrome across Voice / Chinese / English; left logo opens the main app; right side switches input mode and opens translation</li>
+            <li>New <strong>Chinese candidate panel</strong> with a larger pool for long phrases and alternatives; multi-character input supports segmented selection</li>
+            <li>English autocomplete, autocorrect, and candidate undo for faster, more accurate typing</li>
+            <li>Anti-mis-tap and mistype correction for a closer-to-system keyboard feel</li>
+            <li>New <strong>key sounds and haptics</strong>, with light / strong haptic options</li>
+            <li>Accelerating long-press delete for faster long-text edits</li>
+            <li>Smarter English capitalization: caps lock and sentence-start autocapitalization</li>
+            <li>New <strong>undo last input</strong> button beside the mic to roll back the latest dictation or clipboard-command insertion</li>
+            <li>New <strong>Keyboard Preferences</strong>: remember the last Voice or Typing surface so you don’t keep switching</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <p class="group-title">Clipboard polish mode</p>
+          <div class="wn-media">
+            <video src="assets/whats-new/clipboard-polish.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          </div>
+          <ul>
+            <li>New <strong>clipboard processing mode</strong>: after copying text, <strong>long-press</strong> the mic to process that clipboard snapshot</li>
+            <li>In clipboard mode, speak instructions to translate, shorten, reply, and more</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <p class="group-title">Clipboard voice commands</p>
+          <ul>
+            <li><strong>Long-press</strong> the mic when the clipboard has text, speak what you want done, and the result goes straight into the current field; a <strong>short press</strong> is still plain dictation</li>
+            <li>Clipboard recording is <strong>tap-to-finish</strong> instead of hold-to-talk; once capture is confirmed the mic turns blue and shows a recording caption</li>
+            <li>When the mode can't start (paste denied, material too short, verification-code-like text, secure field, no Full Access), a short reason appears above the mic</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <p class="group-title">Polish upgrades</p>
+          <div class="wn-media">
+            <img src="assets/whats-new/polish-styles-en.png" alt="Polish styles list" loading="lazy">
+          </div>
+          <ul>
+            <li>Stronger <strong>fun polish</strong> styles (including Straight-Talk Rescue / 直男癌), with clearer voice and less factual drift</li>
+            <li>Intensity simplified to Light / Heavy: Light prioritizes fidelity; Heavy unlocks the full creativity of the five fun styles</li>
+            <li>New <strong>homophone / near-homophone correction</strong> after speech recognition</li>
+            <li>Clearer segmentation for long polish and translation; lists read better; translations keep paragraph structure</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <p class="group-title">In-app release notes</p>
+          <ul>
+            <li>Release notes appear automatically after an update, and the Settings version row opens them any time, following your in-app language and theme</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <p class="group-title">Settings</p>
+          <ul>
+            <li>Clearer Settings hierarchy and cards; transcription and polish are easier to find</li>
+            <li>Simpler first-run setup: you can type even before voice setup is finished</li>
+            <li>Schema, fuzzy-Pinyin, and resource strings on the Text Input settings page follow the in-app language</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Bug Fixes</h2>
+        <ul>
+          <li>Fixed <strong>multi-step commands</strong>: "reply to the clipboard and translate it into English" now writes a reply and translates that reply, instead of just translating the clipboard</li>
+          <li>Fixed reply perspective: clipboard text is always treated as a message from the other party, and the reply is written as you — no more paraphrasing their message back at them</li>
+          <li>Word and number replacements, numbering, and section structure requested in a command now survive later polishing or translation</li>
+          <li>Fixed getting stuck on "Preparing…" after a long press, and snapping back to the typing keyboard after the system Allow Paste alert</li>
+          <li>Opening the keyboard no longer repeatedly asks for clipboard permission; contents are read only on long-press</li>
+          <li>Fixed the custom polish style editor occasionally opening a blank template</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Stability &amp; Reliability</h2>
+        <ul>
+          <li>Rebuilt Bluetooth / audio-route handling so recording recovers more reliably after switching headsets</li>
+          <li>Fixed start / cancel races that could leave the UI stuck in polish after recognition finished</li>
+          <li>Apple on-device recognition uses voice-processing / noise reduction so your near-talk mic is preferred over other speakers in the room</li>
+          <li>Explicit timeouts and original-text fallback for recognition and polish — no endless waits on flaky networks</li>
+          <li>Stronger host ↔ keyboard result confirmation and recovery to reduce lost or uninsertable text</li>
+          <li>Fixed Volcengine ASR connection issues and false cloud ASR config-validation failures</li>
+          <li>Rebuilt keyboard launch path with lower peak memory to reduce crashes and jetsams</li>
+          <li>Input engines load on demand — faster Voice ↔ Typing switches and lower memory use</li>
+          <li>Does not wake the host app just to hold memory when the mic isn’t used</li>
+          <li>Removed redundant multi-step prompts; smoother experience when a session isn’t finished</li>
+          <li>More complete packaging for custom words and on-device recognition assets</li>
+        </ul>
+      </section>
+    </div>
+  </article>
+
+  <!-- ========== 1.1.0 ========== -->
+  <article class="version-block" data-version="1.1.0">
+    <div class="version-chip">1.1.0</div>
+
+    <div class="lang-block" data-lang="zh">
+      <section class="section">
+        <h2>新功能</h2>
+        <ul>
+          <li>新增「润色风格包」：内置轻度清理、清晰结构、正式表达、日常聊天，并支持 iCloud 同步</li>
+          <li>新增「趣味润色风格」：直男癌拯救器、装逼指南、大厂黑话、帝吧大神、小红书集美五种润色风格</li>
+          <li>新增自定义润色风格功能</li>
+          <li>新增「画中画」保活，并作为默认风格，支持在设置中切换回灵动岛；关掉画中画即可结束会话</li>
+          <li>云端识别支持真流式（百炼 / 火山 / OpenAI），说话时文字会实时上屏</li>
+          <li>新增历史记录可按天删除（只清当天）</li>
+          <li>设置里对流式 ASR 供应商显示「流式识别」标签；OpenAI 云端识别默认走流式</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>体验改进</h2>
+        <ul>
+          <li>设置页重新设计，结构更清晰</li>
+          <li>灵动岛保活默认改为 5 分钟（更省隐私与电量），支持多种时长设置</li>
+          <li>更新 iPhone 历史、词库 Tab 图标，与 Mac / iPad 统一</li>
+          <li>润色风格卡片与设置摘要更简洁，少装饰、少冗余状态字</li>
+          <li>设置、风格等相关页面统一卡片留白与圆角</li>
+          <li>更新权限与隐私说明</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>问题修复</h2>
+        <ul>
+          <li>完成新手引导后不再卡在最后一页</li>
+          <li>删除重装后会重新出现欢迎引导</li>
+          <li>松手后尾音更不容易丢字；识别过短时会整句再识别一次兜底</li>
+          <li>按下录音时麦克风预热阶段的开头语音更不易被丢掉</li>
+          <li>末段识别为空时，不再把前面已经识别好的字抹掉</li>
+          <li>修复趣味润色在短句时的失真问题</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="lang-block" data-lang="en">
+      <section class="section">
+        <h2>New Features</h2>
+        <ul>
+          <li>Polish style packs: Light Cleanup, Clear Structure, Formal, and Casual Chat, with iCloud sync</li>
+          <li>Fun polish styles: Straight-Talk Rescue, Flex Guide, Big-Tech Buzzwords, Tieba Legend, and Xiaohongshu Vibes</li>
+          <li>Custom polish styles</li>
+          <li>Picture-in-Picture keep-alive as the default, with Dynamic Island as an option in Settings; ending PiP ends the session</li>
+          <li>True streaming cloud ASR (Bailian / Volcengine / OpenAI) with live on-screen text while you speak</li>
+          <li>Delete history by day (clear only that day)</li>
+          <li>Settings shows a “Streaming ASR” badge for streaming providers; OpenAI cloud ASR defaults to streaming</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Improvements</h2>
+        <ul>
+          <li>Redesigned Settings with a clearer structure</li>
+          <li>Dynamic Island keep-alive defaults to 5 minutes (more privacy- and battery-friendly), with multiple duration options</li>
+          <li>Updated iPhone History and Dictionary tab icons to match Mac / iPad</li>
+          <li>Simpler polish-style cards and Settings summaries — less decoration and fewer status words</li>
+          <li>Consistent card padding and corner radius across Settings and style pages</li>
+          <li>Updated permission and privacy copy</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Fixes</h2>
+        <ul>
+          <li>Onboarding no longer sticks on the last page after completion</li>
+          <li>Welcome onboarding shows again after delete-and-reinstall</li>
+          <li>Less end-of-utterance truncation on release; very short captures retry the whole phrase</li>
+          <li>Speech at the start of mic warm-up is less likely to be dropped</li>
+          <li>An empty final segment no longer wipes earlier recognized text</li>
+          <li>Fixed fun-polish distortion on short sentences</li>
+        </ul>
+      </section>
+    </div>
+  </article>
+
+  <script>
+    (function () {
+      function parseVersion(raw) {
+        if (!raw) return null;
+        var parts = String(raw).trim().split(".").map(function (p) {
+          var n = parseInt(p, 10);
+          return Number.isFinite(n) ? n : 0;
+        });
+        while (parts.length < 3) parts.push(0);
+        return parts.slice(0, 3);
+      }
+
+      function compareVersions(a, b) {
+        for (var i = 0; i < 3; i++) {
+          if (a[i] !== b[i]) return a[i] - b[i];
+        }
+        return 0;
+      }
+
+      function readParams() {
+        var params = new URLSearchParams(window.location.search);
+        var lang = (params.get("lang") || "").toLowerCase();
+        if (lang.indexOf("zh") === 0) lang = "zh";
+        else if (lang.indexOf("en") === 0) lang = "en";
+        else lang = (navigator.language || "").toLowerCase().indexOf("zh") === 0 ? "zh" : "en";
+
+        var theme = (params.get("theme") || "").toLowerCase();
+        if (theme !== "light" && theme !== "dark") {
+          theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+
+        var version = params.get("v") || params.get("version") || "";
+        return { lang: lang, theme: theme, version: version };
+      }
+
+      var cfg = readParams();
+      document.documentElement.lang = cfg.lang === "zh" ? "zh-Hans" : "en";
+      document.documentElement.setAttribute("data-theme", cfg.theme);
+
+      document.querySelectorAll(".lang-block").forEach(function (el) {
+        el.classList.toggle("visible", el.getAttribute("data-lang") === cfg.lang);
+      });
+
+      var current = parseVersion(cfg.version);
+      var blocks = Array.prototype.slice.call(document.querySelectorAll(".version-block"));
+      var visibleCount = 0;
+
+      blocks
+        .map(function (el) {
+          return { el: el, version: parseVersion(el.getAttribute("data-version")) };
+        })
+        .filter(function (item) {
+          if (!item.version) return false;
+          // No v= → show all; otherwise only versions <= current app version.
+          if (!current) return true;
+          return compareVersions(item.version, current) <= 0;
+        })
+        .sort(function (a, b) {
+          return compareVersions(b.version, a.version);
+        })
+        .forEach(function (item) {
+          item.el.classList.add("visible");
+          // Re-append in newest → oldest order.
+          item.el.parentNode.appendChild(item.el);
+          visibleCount += 1;
+        });
+
+      var empty = document.getElementById(cfg.lang === "zh" ? "empty-zh" : "empty-en");
+      if (empty) empty.classList.toggle("visible", visibleCount === 0);
+    })();
+  </script>
+</body>
+</html>

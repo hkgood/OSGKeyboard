@@ -1,96 +1,46 @@
 // ClipboardCommandEligibility.swift
 // OSGKeyboard · Shared
 //
-// Tracks clipboard open-window eligibility (30s from first sighting of a
-// pasteboard change) for opportunity-read UI. Pure timing logic — no UIKit.
+// User-visible failure reasons when long-press clipboard command cannot start.
+// (30s eligibility window and continuous-rewrite sessions were removed.)
 
 import Foundation
 
-public struct ClipboardCommandEligibility: Equatable, Sendable {
-    public var changeCount: Int
-    public var snapshot: String
-    public var startedAt: TimeInterval
+/// Why a clipboard-command long-press did not start recording.
+public enum ClipboardCommandFailure: Equatable, Sendable {
+    case pasteDenied
+    case secureField
+    case noFullAccess
+    /// Host never confirmed capture (double-start / mic not ready / timeout).
+    case prepareFailed
+    case material(ClipboardMaterialFilter.Rejection)
 
-    public init(changeCount: Int, snapshot: String, startedAt: TimeInterval = Date().timeIntervalSince1970) {
-        self.changeCount = changeCount
-        self.snapshot = snapshot
-        self.startedAt = startedAt
-    }
-
-    public func isOpen(at now: TimeInterval = Date().timeIntervalSince1970) -> Bool {
-        now - startedAt <= ClipboardMaterialFilter.eligibilityDuration
-    }
-
-    public func remaining(at now: TimeInterval = Date().timeIntervalSince1970) -> TimeInterval {
-        max(0, ClipboardMaterialFilter.eligibilityDuration - (now - startedAt))
-    }
-}
-
-public enum ClipboardCommandEligibilityTracker: Sendable {
-    /// Update eligibility from an opportunity-read sample.
-    /// - Parameters:
-    ///   - changeCount: `UIPasteboard.general.changeCount`
-    ///   - rawText: pasteboard string (may be nil)
-    ///   - previous: last known eligibility
-    ///   - now: clock
-    public static func refresh(
-        changeCount: Int,
-        rawText: String?,
-        previous: ClipboardCommandEligibility?,
-        now: TimeInterval = Date().timeIntervalSince1970
-    ) -> ClipboardCommandEligibility? {
-        guard let rawText else { return nil }
-
-        if let previous, previous.changeCount == changeCount {
-            return previous.isOpen(at: now) ? previous : nil
+    /// Localization key under the keyboard extension `Keyboard.strings` table.
+    public var localizationKey: String {
+        switch self {
+        case .pasteDenied:
+            return "keyboard.clipboard.reject.pasteDenied"
+        case .secureField:
+            return "keyboard.clipboard.reject.secureField"
+        case .noFullAccess:
+            return "keyboard.clipboard.reject.noFullAccess"
+        case .prepareFailed:
+            return "keyboard.clipboard.reject.prepareFailed"
+        case .material(let rejection):
+            switch rejection {
+            case .empty:
+                return "keyboard.clipboard.reject.empty"
+            case .phoneOrNumeric:
+                return "keyboard.clipboard.reject.phoneOrNumeric"
+            case .emojiOrSymbolOnly:
+                return "keyboard.clipboard.reject.emojiOrSymbolOnly"
+            case .verificationCode:
+                return "keyboard.clipboard.reject.verificationCode"
+            case .tooShort:
+                return "keyboard.clipboard.reject.tooShort"
+            case .repetitiveSpam:
+                return "keyboard.clipboard.reject.repetitiveSpam"
+            }
         }
-
-        switch ClipboardMaterialFilter.evaluate(rawText) {
-        case .eligible(let snapshot):
-            return ClipboardCommandEligibility(
-                changeCount: changeCount,
-                snapshot: snapshot,
-                startedAt: now
-            )
-        case .rejected:
-            return nil
-        }
-    }
-}
-
-/// In-memory clipboard-command task session (plan §8 layer B). Owned by the keyboard.
-public struct ClipboardCommandTaskSession: Equatable, Sendable {
-    public var snapshot: String
-    public var previousOutput: String?
-    public var lastInsertedText: String?
-    public var expiresAt: TimeInterval
-    public var fieldFingerprint: String?
-
-    public init(
-        snapshot: String,
-        previousOutput: String? = nil,
-        lastInsertedText: String? = nil,
-        expiresAt: TimeInterval,
-        fieldFingerprint: String? = nil
-    ) {
-        self.snapshot = snapshot
-        self.previousOutput = previousOutput
-        self.lastInsertedText = lastInsertedText
-        self.expiresAt = expiresAt
-        self.fieldFingerprint = fieldFingerprint
-    }
-
-    public func isActive(at now: TimeInterval = Date().timeIntervalSince1970) -> Bool {
-        now <= expiresAt
-    }
-
-    public mutating func refreshExpiry(at now: TimeInterval = Date().timeIntervalSince1970) {
-        expiresAt = now + ClipboardMaterialFilter.sessionDuration
-    }
-
-    public mutating func noteSuccessfulInsert(_ text: String, at now: TimeInterval = Date().timeIntervalSince1970) {
-        lastInsertedText = text
-        previousOutput = text
-        refreshExpiry(at: now)
     }
 }

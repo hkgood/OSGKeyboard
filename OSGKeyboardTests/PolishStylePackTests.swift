@@ -459,7 +459,9 @@ final class PolishStylePackTests: XCTestCase {
             )
             XCTAssertTrue(prompt.contains("趣味风格共享格式化"), id)
             XCTAssertFalse(prompt.contains("全局输出契约"), id)
-            XCTAssertFalse(prompt.contains("问句守卫"), id)
+            // The speech act is not part of the relaxed envelope.
+            XCTAssertTrue(prompt.contains("不可协商边界"), id)
+            XCTAssertTrue(prompt.contains("输入身份与抑制契约"), id)
             XCTAssertFalse(prompt.contains("当前风格策略"), id)
             XCTAssertFalse(prompt.contains("参考长度范围"), id)
             XCTAssertFalse(prompt.contains("# 输入环境"), id)
@@ -488,7 +490,7 @@ final class PolishStylePackTests: XCTestCase {
                 useChineseGuidance: true
             )
             XCTAssertTrue(prompt.contains("全局输出契约"), id)
-            XCTAssertTrue(prompt.contains("问句守卫"), id)
+            XCTAssertTrue(prompt.contains("输入身份与抑制契约"), id)
             XCTAssertTrue(prompt.contains("# 输入环境"), id)
             XCTAssertTrue(prompt.contains("## 落点信息"), id)
             XCTAssertFalse(prompt.contains("趣味风格共享格式化"), id)

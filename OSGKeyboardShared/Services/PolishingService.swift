@@ -152,6 +152,11 @@ public actor PolishingService {
                for: trimmed,
                styleID: activeStyleID
            ) {
+            FlowTrace.polish(
+                "skippedLLM",
+                "style=\(activeStyleID) intensity=\(store.polishIntensity.rawValue) "
+                    + "inputLen=\(trimmed.count)"
+            )
             return PolishOutcome(text: TranscriptPostProcessor.localClean(trimmed))
         }
 
@@ -271,9 +276,24 @@ public actor PolishingService {
         let firstOptions: LLMGenerationOptions = usesHeavyFunPersonality
             ? .funCreative
             : .polishDefault
+        logPolishConfiguration(
+            prompt: prompt,
+            mode: mode,
+            systemPromptOverride: systemPrompt,
+            usesHeavyFunPersonality: usesHeavyFunPersonality,
+            options: firstOptions,
+            context: context,
+            inputLength: trimmed.count
+        )
+        let userPayload: String
+        if mode == .polish, systemPrompt == nil || systemPrompt?.isEmpty == true {
+            userPayload = PolishPromptComposer.dictationUserPayload(trimmed)
+        } else {
+            userPayload = trimmed
+        }
         let first = try await performLLMRequest(
             client: client,
-            text: trimmed,
+            text: userPayload,
             prompt: prompt,
             timeout: budget,
             options: firstOptions
@@ -332,6 +352,38 @@ public actor PolishingService {
             }
         } catch is CancellationError {
             throw PolishError.timeout
+        }
+    }
+
+    /// Records which style, intensity, sampling profile and safeguard layers
+    /// this request actually used. Without it, an unexpected reply can only be
+    /// attributed to a style/intensity combination by guesswork.
+    private func logPolishConfiguration(
+        prompt: String,
+        mode: PolishMode,
+        systemPromptOverride: String?,
+        usesHeavyFunPersonality: Bool,
+        options: LLMGenerationOptions,
+        context: PolishContext,
+        inputLength: Int
+    ) {
+        let hasOverride = !(systemPromptOverride ?? "").isEmpty
+        let fingerprint = PolishPromptComposer.fingerprint(of: prompt)
+        let temperature = options.temperature.map { String(format: "%.2f", $0) } ?? "nil"
+        FlowTrace.polish(
+            "config",
+            "style=\(store.activePolishStyleId) intensity=\(store.polishIntensity.rawValue) "
+                + "mode=\(Self.polishModeLabel(mode)) heavyFun=\(usesHeavyFunPersonality ? 1 : 0) "
+                + "override=\(hasOverride ? 1 : 0) temp=\(temperature) "
+                + "inputLen=\(inputLength) beforeLen=\(context.precedingForPrompt?.count ?? 0) "
+                + fingerprint.logLabel
+        )
+    }
+
+    private static func polishModeLabel(_ mode: PolishMode) -> String {
+        switch mode {
+        case .polish: return "polish"
+        case .translate: return "translate"
         }
     }
 

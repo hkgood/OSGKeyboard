@@ -2,6 +2,7 @@ import XCTest
 @testable import OSGKeyboardShared
 
 final class PolishOutputValidatorTests: XCTestCase {
+
     func testMissingDictionaryCanonicalTermIsViolation() {
         let dictionary = PersonalDictionary(entries: [
             .init(

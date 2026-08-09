@@ -98,7 +98,7 @@ final class IntelligentPolishTests: XCTestCase {
         XCTAssertEqual(captured.optionsHistory.count, 1)
         XCTAssertEqual(captured.optionsHistory.first?.temperature, 0.1)
         XCTAssertTrue(captured.lastPrompt.contains("全局输出契约"))
-        XCTAssertTrue(captured.lastPrompt.contains("问句守卫"))
+        XCTAssertTrue(captured.lastPrompt.contains("输入身份与抑制契约"))
         XCTAssertTrue(captured.lastPrompt.contains("# 输入环境"))
         XCTAssertFalse(captured.lastPrompt.contains("趣味风格共享格式化"))
     }
@@ -221,14 +221,15 @@ final class IntelligentPolishTests: XCTestCase {
         )
     }
 
-    func testSystemPromptDoesNotContainTranscript() async throws {
+    func testSystemPromptDoesNotContainTranscriptAndUserPayloadIsEscaped() async throws {
         store.setEngineMode("local")
         let captured = CapturingLLMClient()
         let service = PolishingService(store: store, client: captured)
         let input = "这是一段独一无二的测试转写文本ZZQQ"
         _ = try await service.polish(input, context: PolishContext())
         XCTAssertFalse(captured.lastPrompt.contains("ZZQQ"))
-        XCTAssertEqual(captured.lastText, input)
+        XCTAssertTrue(captured.lastText.contains("<dictation_request protocol=\"polish-v1\">"))
+        XCTAssertTrue(captured.lastText.contains(input))
     }
 
     func testChineseInputUsesChineseGuidanceOnOpenAI() async throws {

@@ -11,8 +11,8 @@
 //   │  [OSG]                  语音 中文 EN 译     │  ← header band (top)
 //   │              (transcript preview)         │
 //   │              ┊                          │
-//   │              ◯ mic (centred)              │  ← action cluster:
-//   │   [delete]  [ return ]  [space]           │     mic + bottom row
+//   │  ⟲           ◯ mic (centred)              │  ← action cluster:
+//   │   [delete]  [ return ]  [space]           │     mic + undo + bottom row
 //   │              ┊                          │
 //   └───────────────────────────────────────────┘
 
@@ -22,6 +22,8 @@ import OSGKeyboardShared
 private enum KeyboardLayoutMetrics {
     static let micSize: CGFloat = 121
     static let micToButtonGap: CGFloat = 8
+    /// Square undo key beside the mic (outer edge, aligned with delete).
+    static let undoButtonSize: CGFloat = 44
     static let bottomActionRowHeight: CGFloat = KeyboardChromeLayout.actionKeyHeight
     static let bottomActionSpacing: CGFloat = KeyboardChromeLayout.actionKeySpacing
     /// Gap between the top control row and the transcript / hint line.
@@ -48,6 +50,27 @@ private enum KeyboardLayoutMetrics {
     static let micUpwardAdjustment: CGFloat = (actionClusterTopGap - micToButtonGap) / 2
     /// The shared 4 pt outer padding is the complete bottom inset.
     static let actionClusterBottomGap: CGFloat = 0
+
+    /// `RecordButton` draws its outer ring at 106 pt inside the 121 pt touch
+    /// frame, so the disc's *visible* top edge sits below the frame's top.
+    static let micRingInset: CGFloat = (micSize - 106) / 2
+    /// 语音/中文/EN capsule: 30 pt buttons + 2 pt padding, centred in the top bar.
+    static let topBarTabCapsuleHeight: CGFloat = 34
+    /// Pushes the transcript / hint line down to the vertical centre of the gap
+    /// between the tab capsule's bottom edge and the mic's visible top edge.
+    /// Applied as an offset so the band heights — and therefore `totalHeight`
+    /// and `micUpwardAdjustment` — stay untouched.
+    static var transcriptLineDownwardAdjustment: CGFloat {
+        let capsuleBottom = (topBarHeight + topBarTabCapsuleHeight) / 2
+        let micVisibleTop = topBarHeight
+            + topBarToTranscriptSpacing
+            + transcriptLineHeight
+            + actionClusterTopGap
+            - micUpwardAdjustment
+            + micRingInset
+        let currentCentre = topBarHeight + topBarToTranscriptSpacing + transcriptLineHeight / 2
+        return (capsuleBottom + micVisibleTop) / 2 - currentCentre
+    }
 
     static var headerBandHeight: CGFloat {
         topBarHeight + topBarToTranscriptSpacing + transcriptLineHeight
@@ -132,11 +155,13 @@ public struct KeyboardRootView: View {
                 transcript: state.lastTranscript,
                 micVoiceAvailability: state.micVoiceAvailability,
                 micDisabledHint: state.micDisabledHint,
-                clipboardCommandEligible: state.clipboardCommandEligible || state.clipboardCommandSessionActive,
+                clipboardCommandEligible: state.clipboardCommandEligible,
+                clipboardFailureHint: state.clipboardFailureHint,
                 cursorDragHintActive: state.cursorDragActive,
                 openSettings: state.openSettings
             )
             .frame(height: KeyboardLayoutMetrics.transcriptLineHeight)
+            .offset(y: KeyboardLayoutMetrics.transcriptLineDownwardAdjustment)
         }
     }
 
@@ -163,7 +188,8 @@ public struct KeyboardRootView: View {
     /// Mic centred above a bottom row: delete · smart return · space (or swapped).
     /// The side cursor-drag pads are SwiftUI layout wrappers around UIKit
     /// pan recognizers, avoiding SwiftUI gesture delivery issues in
-    /// keyboard extensions.
+    /// keyboard extensions. A square undo key sits on the outer pad,
+    /// vertically centred with the mic and mirrored with handedness.
     private var micActionRow: some View {
         let editingBlocked = voiceInputBlocksEditing
         let swapKeys = state.handednessPreference.swapsActionKeys
@@ -173,22 +199,40 @@ public struct KeyboardRootView: View {
         // opacity so the pads' hit area never shifts mid-gesture) and lets
         // the cursor-drag chrome take over.
         let dragging = state.cursorDragActive
+        let clipboardRecording = state.clipboardCommandRecording
+        // Undo hides during drag (like mic) and during clipboard side captions.
+        let undoVisible = !dragging && !clipboardRecording
 
         return VStack(spacing: KeyboardLayoutMetrics.micToButtonGap) {
             HStack(spacing: 0) {
                 cursorDragPad(enabled: cursorPadsEnabled)
+                    .overlay {
+                        clipboardSideHint(
+                            ExtL10n.text("keyboard.clipboard.recordingLeft"),
+                            visible: clipboardRecording && !dragging
+                        )
+                    }
+                    .overlay(alignment: .leading) {
+                        // Left-handed: undo shares the outer edge with delete.
+                        if !swapKeys {
+                            undoButton(
+                                disabled: editingBlocked || !state.undoAvailable,
+                                visible: undoVisible
+                            )
+                        }
+                    }
 
                 RecordButton(
                     phase: buttonPhase,
                     level: state.level,
                     remainingSeconds: state.phase == .recording ? state.utteranceRemainingSeconds : nil,
-                    isEnabled: !state.micDisabled,
+                    isEnabled: micButtonEnabled,
+                    isClipboardCommandRecording: state.clipboardCommandRecording,
                     onToggle: state.tapMic,
-                    onClipboardLongPressBegan: (state.clipboardCommandEligible || state.clipboardCommandSessionActive)
+                    onClipboardLongPressBegan: (state.clipboardCommandEligible
+                        || state.clipboardCommandUtteranceActive)
+                        && micButtonEnabled
                         ? state.beginClipboardCommand
-                        : nil,
-                    onClipboardLongPressEnded: (state.clipboardCommandEligible || state.clipboardCommandSessionActive)
-                        ? state.endClipboardCommand
                         : nil
                 )
                 .frame(width: KeyboardLayoutMetrics.micSize, height: KeyboardLayoutMetrics.micSize)
@@ -196,8 +240,24 @@ public struct KeyboardRootView: View {
                 .opacity(dragging ? 0 : 1)
 
                 cursorDragPad(enabled: cursorPadsEnabled)
+                    .overlay {
+                        clipboardSideHint(
+                            ExtL10n.text("keyboard.clipboard.recordingRight"),
+                            visible: clipboardRecording && !dragging
+                        )
+                    }
+                    .overlay(alignment: .trailing) {
+                        // Right-handed: undo mirrors to the outer (delete) side.
+                        if swapKeys {
+                            undoButton(
+                                disabled: editingBlocked || !state.undoAvailable,
+                                visible: undoVisible
+                            )
+                        }
+                    }
             }
             .frame(height: KeyboardLayoutMetrics.micSize)
+            .animation(.easeInOut(duration: 0.25), value: state.clipboardCommandRecording)
 
             GeometryReader { proxy in
                 let widths = KeyboardChromeLayout.actionKeyWidths(
@@ -240,6 +300,23 @@ public struct KeyboardRootView: View {
         .contentShape(Rectangle())
     }
 
+    /// Side caption beside the mic during clipboard-command recording.
+    /// Vertically matches the mic disc (same upward offset); does not steal touches.
+    private func clipboardSideHint(_ text: Text, visible: Bool) -> some View {
+        text
+            // 22pt → ~18pt (−20%); softer than body so it doesn't compete with the mic.
+            .font(.system(size: 17.6, weight: .medium))
+            .foregroundStyle(palette.textSecondary.opacity(0.42))
+            .multilineTextAlignment(.center)
+            .lineLimit(3)
+            .minimumScaleFactor(0.7)
+            .padding(.horizontal, 2)
+            .offset(y: -KeyboardLayoutMetrics.micUpwardAdjustment)
+            .opacity(visible ? 1 : 0)
+            .allowsHitTesting(false)
+            .accessibilityHidden(!visible)
+    }
+
     private func bottomDeleteButton(disabled: Bool) -> some View {
         RepeatingDeleteButton(
             disabled: disabled,
@@ -248,6 +325,27 @@ public struct KeyboardRootView: View {
             state.deleteBackward()
         }
         .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
+    }
+
+    /// Square undo key on the outer drag pad — same chrome / haptic / click
+    /// as space & return. Vertically matches the mic disc.
+    private func undoButton(disabled: Bool, visible: Bool) -> some View {
+        RectangularToolbarButton(
+            systemName: "arrow.uturn.backward",
+            label: ExtL10n.string("keyboard.undoA11y"),
+            disabled: disabled,
+            hapticIntensity: state.keyboardHapticIntensity
+        ) {
+            state.undoLastInsertion()
+        }
+        .frame(
+            width: KeyboardLayoutMetrics.undoButtonSize,
+            height: KeyboardLayoutMetrics.undoButtonSize
+        )
+        .offset(y: -KeyboardLayoutMetrics.micUpwardAdjustment)
+        .opacity(visible ? 1 : 0)
+        .allowsHitTesting(visible && !disabled)
+        .accessibilityHidden(!visible)
     }
 
     private func bottomSpaceButton(disabled: Bool) -> some View {
@@ -287,6 +385,14 @@ public struct KeyboardRootView: View {
     }
 
     private var buttonPhase: RecordButton.Phase {
+        switch clipboardMicChrome {
+        case .preparingCancelable:
+            return .preparing
+        case .recordingBlue:
+            return .recording
+        case .none:
+            break
+        }
         switch state.micVoiceAvailability {
         case .recording:
             return .recording
@@ -297,6 +403,31 @@ public struct KeyboardRootView: View {
             // the idle mic visually green instead of exposing startup state.
             return .idleReady
         }
+    }
+
+    /// Preparing clipboard capture: grey spinner, tap to cancel.
+    private var micButtonEnabled: Bool {
+        if state.micDisabled { return false }
+        return true
+    }
+
+    private var clipboardMicChrome: ClipboardMicChrome {
+        let phase: ClipboardPreparingPhase = {
+            switch state.phase {
+            case .idle: return .idle
+            case .denied: return .denied
+            case .error: return .error
+            case .requestingPermissions: return .requestingPermissions
+            case .recording: return .recording
+            case .processing: return .processing
+            }
+        }()
+        return ClipboardPreparingPolicy.micChrome(
+            isClipboardUtterance: state.clipboardCommandUtteranceActive,
+            phase: phase,
+            awaitingHostConfirm: state.phase == .requestingPermissions
+                || (state.phase == .recording && !state.clipboardCommandRecording)
+        )
     }
 }
 
@@ -347,6 +478,7 @@ private struct TranscriptLine: View {
     let micVoiceAvailability: MicVoiceAvailability
     let micDisabledHint: String
     let clipboardCommandEligible: Bool
+    let clipboardFailureHint: String?
     let cursorDragHintActive: Bool
     let openSettings: () -> Void
 
@@ -419,52 +551,60 @@ private struct TranscriptLine: View {
 
     @ViewBuilder
     private var idleHint: some View {
-        let isWarning: Bool = {
-            switch micVoiceAvailability {
-            case .unavailable(.hostNotReady), .unavailable(.preparingSession):
-                return false
-            case .unavailable:
-                return true
-            case .ready, .recording, .processing:
-                return false
+        if let clipboardFailureHint, !clipboardFailureHint.isEmpty {
+            Text(clipboardFailureHint)
+                .font(TypeStyle.caption)
+                .foregroundStyle(palette.warning)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        } else {
+            let isWarning: Bool = {
+                switch micVoiceAvailability {
+                case .unavailable(.hostNotReady), .unavailable(.preparingSession):
+                    return false
+                case .unavailable:
+                    return true
+                case .ready, .recording, .processing:
+                    return false
+                }
+            }()
+            Group {
+                switch micVoiceAvailability {
+                case .ready:
+                    if clipboardCommandEligible {
+                        ExtL10n.text("keyboard.placeholder.idleClipboard")
+                    } else {
+                        ExtL10n.text("keyboard.placeholder.idle")
+                    }
+                case .unavailable(.missingAPIKey):
+                    Text(micDisabledHint)
+                case .unavailable(.hostNotReady):
+                    if clipboardCommandEligible {
+                        ExtL10n.text("keyboard.placeholder.idleClipboard")
+                    } else {
+                        ExtL10n.text("keyboard.placeholder.idle")
+                    }
+                case .unavailable(.preparingSession):
+                    if clipboardCommandEligible {
+                        ExtL10n.text("keyboard.placeholder.idleClipboard")
+                    } else {
+                        ExtL10n.text("keyboard.placeholder.idle")
+                    }
+                case .unavailable(.noFullAccess):
+                    ExtL10n.text("keyboard.error.fullAccessRequired")
+                case .unavailable(.appGroupUnavailable):
+                    ExtL10n.text("keyboard.error.appGroupCommunication")
+                case .unavailable(.onboardingIncomplete):
+                    ExtL10n.text("keyboard.hint.finishSetupInApp")
+                case .recording, .processing:
+                    EmptyView()
+                }
             }
-        }()
-        Group {
-            switch micVoiceAvailability {
-            case .ready:
-                if clipboardCommandEligible {
-                    ExtL10n.text("keyboard.placeholder.idleClipboard")
-                } else {
-                    ExtL10n.text("keyboard.placeholder.idle")
-                }
-            case .unavailable(.missingAPIKey):
-                Text(micDisabledHint)
-            case .unavailable(.hostNotReady):
-                if clipboardCommandEligible {
-                    ExtL10n.text("keyboard.placeholder.idleClipboard")
-                } else {
-                    ExtL10n.text("keyboard.placeholder.idle")
-                }
-            case .unavailable(.preparingSession):
-                if clipboardCommandEligible {
-                    ExtL10n.text("keyboard.placeholder.idleClipboard")
-                } else {
-                    ExtL10n.text("keyboard.placeholder.idle")
-                }
-            case .unavailable(.noFullAccess):
-                ExtL10n.text("keyboard.error.fullAccessRequired")
-            case .unavailable(.appGroupUnavailable):
-                ExtL10n.text("keyboard.error.appGroupCommunication")
-            case .unavailable(.onboardingIncomplete):
-                ExtL10n.text("keyboard.hint.finishSetupInApp")
-            case .recording, .processing:
-                EmptyView()
-            }
+            .font(TypeStyle.caption)
+            .foregroundStyle(isWarning ? palette.warning : palette.textTertiary)
+            .lineLimit(1)
+            .truncationMode(.tail)
         }
-        .font(TypeStyle.caption)
-        .foregroundStyle(isWarning ? palette.warning : palette.textTertiary)
-        .lineLimit(1)
-        .truncationMode(.tail)
     }
 
     private func deniedMessage(for reason: KeyboardViewController.State.Phase.Reason) -> String {

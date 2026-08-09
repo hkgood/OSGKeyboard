@@ -33,6 +33,10 @@ public enum FlowSessionKeys {
     public static let audioLevels = "flow.audioLevels"
     /// Bundle id of the app that opened `osgkeyboard://startflow` (scheme D).
     public static let pendingHostBundleId = "flow.pendingHostBundleId"
+    /// Wall-clock of the last keyboard→`startflow` PiP arm attempt (debounce re-jumps).
+    public static let lastPiPArmAttemptAt = "flow.lastPiPArmAttemptAt.v1"
+    /// Minimum gap between proactive / clipboard startflow jumps.
+    public static let pipArmCooldown: TimeInterval = 45
     /// Wall-clock timestamp of the last utterance completion or session start.
     public static let lastActivityAt = "flow.lastActivityAt"
     /// One-shot token rotated by every host-process launch. State written by

@@ -67,6 +67,53 @@ public enum FlowHandoffPolicy {
         )
     }
 
+    /// Proactive keyboard-open PiP arm. Returns false when the host is already
+    /// ready, warming, busy, or a recent startflow is still in cooldown —
+    /// so Voice-tab / appear noise cannot re-jump to the app.
+    ///
+    /// `heartbeatStaleness`: seconds since last host heartbeat (`nil` = never).
+    /// A lingering `sessionActive` after force-quit must still allow arm once the
+    /// heartbeat is clearly gone — without treating brief switcher flaps as death.
+    public static let proactiveUnreachableArmGrace: TimeInterval = 8
+
+    public static func shouldProactivePiPArm(
+        hostReady: Bool,
+        snapshotReason: FlowReadySnapshot.Reason?,
+        sessionActive: Bool,
+        hostReachable: Bool,
+        hostStale: Bool,
+        withinReadyGrace: Bool,
+        inCooldown: Bool,
+        heartbeatStaleness: TimeInterval? = nil
+    ) -> Bool {
+        guard !hostReady, !inCooldown else { return false }
+        if let snapshotReason {
+            switch snapshotReason {
+            case .recording, .processing, .awaitingDelivery, .starting,
+                 .waitingForAudioProof, .audioEngineNotLive:
+                return false
+            case .ready, .noSession, .permissionMissing, .appGroupUnavailable,
+                 .hostLost, .error:
+                break
+            }
+        }
+        // Force-quit leaves sessionActive=true until the 60s zombie window.
+        // If heartbeat has been gone long enough, arm once (cooldown still applies).
+        if sessionActive,
+           !hostReachable,
+           !hostStale,
+           let staleness = heartbeatStaleness,
+           staleness >= proactiveUnreachableArmGrace {
+            return true
+        }
+        return shouldOpenHostColdStart(
+            sessionActive: sessionActive,
+            hostReachable: hostReachable,
+            hostStale: hostStale,
+            withinReadyGrace: withinReadyGrace
+        )
+    }
+
     /// Mic-press routing shared by the keyboard coordinator and unit tests.
     public static func micPressAction(
         availability: MicVoiceAvailability,

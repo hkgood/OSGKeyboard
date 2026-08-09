@@ -69,7 +69,6 @@ final class ClipboardMaterialFilterTests: XCTestCase {
         XCTAssertEqual(ClipboardMaterialFilter.maxSnapshotLength, 3_000)
         XCTAssertEqual(ClipboardMaterialFilter.longPressDuration, 0.45, accuracy: 0.001)
         XCTAssertEqual(ClipboardMaterialFilter.minimumRecordingAfterHostConfirm, 0.70, accuracy: 0.001)
-        XCTAssertEqual(ClipboardMaterialFilter.eligibilityDuration, 30, accuracy: 0.001)
-        XCTAssertEqual(ClipboardMaterialFilter.sessionDuration, 30, accuracy: 0.001)
+        XCTAssertEqual(ClipboardMaterialFilter.failureHintDuration, 2.5, accuracy: 0.001)
     }
 }

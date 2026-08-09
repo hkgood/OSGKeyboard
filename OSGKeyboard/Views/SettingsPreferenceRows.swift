@@ -132,15 +132,16 @@ struct PolishIntensityPickerRow: View {
 
 struct DefaultTypingInputToggleRow: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @ObservedObject private var config = ProviderConfig.shared
     @Binding var isOn: Bool
 
     var body: some View {
         Toggle(isOn: $isOn) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("settings.typingInput.default.title")
+                Text(AppL10n.string("settings.typingInput.default.title", language: config.uiLanguage))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
-                Text("settings.typingInput.default.description")
+                Text(AppL10n.string("settings.typingInput.default.description", language: config.uiLanguage))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -153,15 +154,16 @@ struct DefaultTypingInputToggleRow: View {
 
 struct RememberLastSurfaceToggleRow: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @ObservedObject private var config = ProviderConfig.shared
     @Binding var isOn: Bool
 
     var body: some View {
         Toggle(isOn: $isOn) {
             VStack(alignment: .leading, spacing: 3) {
-                Text("settings.typingInput.rememberLast.title")
+                Text(AppL10n.string("settings.typingInput.rememberLast.title", language: config.uiLanguage))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
-                Text("settings.typingInput.rememberLast.description")
+                Text(AppL10n.string("settings.typingInput.rememberLast.description", language: config.uiLanguage))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

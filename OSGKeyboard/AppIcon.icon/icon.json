@@ -8,6 +8,30 @@
       "hidden" : false,
       "layers" : [
         {
+          "image-name" : "OSGKeyboard Icon2.png",
+          "name" : "OSGKeyboard Icon2",
+          "position" : {
+            "scale" : 0.505,
+            "translation-in-points" : [
+              8,
+              6
+            ]
+          }
+        },
+        {
+          "hidden" : true,
+          "image-name" : "Group 29 3.png",
+          "name" : "Group 29 3",
+          "position" : {
+            "scale" : 0.67,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "hidden" : true,
           "image-name" : "Group 29.svg",
           "name" : "Group 29"
         }

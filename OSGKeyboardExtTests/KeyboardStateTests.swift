@@ -34,6 +34,7 @@ final class KeyboardStateTests: XCTestCase {
         XCTAssertEqual(s.lastTranscript, "")
         XCTAssertEqual(s.level, 0)
         XCTAssertFalse(s.onDeviceSupported)
+        XCTAssertFalse(s.undoAvailable)
     }
 
     func testPhaseTransitionsIdleToRequestingPermissionsAndBack() {

@@ -10,12 +10,12 @@ public enum ClipboardMaterialFilter: Sendable {
 
     public static let minimumLength = 15
     public static let maxSnapshotLength = 3_000
-    public static let eligibilityDuration: TimeInterval = 30
-    public static let sessionDuration: TimeInterval = 30
     public static let longPressDuration: TimeInterval = 0.45
     /// After the host confirms real capture, keep recording at least this long
-    /// before honoring finger-up (avoids near-silent cold-start tails).
+    /// before honoring an explicit stop tap (avoids near-silent cold-start tails).
     public static let minimumRecordingAfterHostConfirm: TimeInterval = 0.70
+    /// How long a clipboard-command failure tip stays above the mic.
+    public static let failureHintDuration: TimeInterval = 2.5
 
     public enum Rejection: String, Equatable, Sendable {
         case empty

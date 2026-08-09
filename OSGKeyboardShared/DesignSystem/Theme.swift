@@ -39,6 +39,8 @@ public struct ThemePalette: Sendable, Equatable {
     public let dividerStrong: Color
 
     public let recordRed: Color
+    /// Clipboard-command hold-to-talk recording (distinct from dictation red).
+    public let recordBlue: Color
 }
 
 public enum Palette {
@@ -70,6 +72,7 @@ public enum Palette {
 
     // Recording state
     public static let recordRed       = Color(red: 1.000, green: 0.231, blue: 0.188)  // #FF3B30
+    public static let recordBlue      = Color(red: 0.000, green: 0.478, blue: 1.000)  // #007AFF
 
     /// Canonical dark palette — preserves every legacy literal above so
     /// existing call sites that read `Palette.background` directly keep
@@ -92,7 +95,8 @@ public enum Palette {
         textOnAccent:    textOnAccent,
         divider:         divider,
         dividerStrong:   dividerStrong,
-        recordRed:       recordRed
+        recordRed:       recordRed,
+        recordBlue:      recordBlue
     )
 
     /// Light palette — warm gray backgrounds for daytime use.
@@ -113,7 +117,8 @@ public enum Palette {
         textOnAccent:    Color.white,
         divider:         Color.black.opacity(0.06),
         dividerStrong:   Color.black.opacity(0.10),
-        recordRed:       Color(red: 1.000, green: 0.231, blue: 0.188)   // #FF3B30
+        recordRed:       Color(red: 1.000, green: 0.231, blue: 0.188),  // #FF3B30
+        recordBlue:      Color(red: 0.000, green: 0.478, blue: 1.000)   // #007AFF
     )
 }
 

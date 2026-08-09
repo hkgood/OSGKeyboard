@@ -15,6 +15,7 @@ struct MainAppRoot: View {
     // Singleton is owned by `ProviderConfig.shared`, not by this view —
     // `@ObservedObject` keeps subscriptions correct across Settings replay.
     @ObservedObject private var config = ProviderConfig.shared
+    @ObservedObject private var releaseNotes = ReleaseNotesController.shared
     @StateObject private var flowManager = FlowSessionManager()
     @State private var postOnboardingWarmupTask: Task<Void, Never>?
 
@@ -39,6 +40,14 @@ struct MainAppRoot: View {
             .opacity(0.02)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
+        }
+        .sheet(isPresented: $releaseNotes.isPresented, onDismiss: {
+            // Auto-present and Settings entry both count as acknowledged.
+            ReleaseNotesStore.markCurrentVersionSeen()
+        }) {
+            // Pass language explicitly; sheet chrome uses AppL10n (in-app override).
+            ReleaseNotesSheet(language: config.uiLanguage)
+                .environment(\.locale, config.uiLanguage.swiftUILocale)
         }
         .onAppear {
             flowManager.setAppForeground(scenePhase == .active)
@@ -66,6 +75,7 @@ struct MainAppRoot: View {
                 // Capture/ASR remain lazy and start only on an actual mic press.
                 flowManager.activateOnForeground(reason: "MainAppRoot.onAppear")
                 schedulePostOnboardingWarmup(reason: "MainAppRoot.onAppear")
+                releaseNotes.presentIfNeeded(onboardingCompleted: true)
             } else {
                 OSGDiag.log(
                     "MainAppRoot.onAppear skip Flow/CLM/Rime (onboarding incomplete)",
@@ -80,6 +90,7 @@ struct MainAppRoot: View {
             if done {
                 flowManager.activateOnForeground(reason: "onboardingCompleted")
                 schedulePostOnboardingWarmup(reason: "onboardingCompleted")
+                releaseNotes.presentIfNeeded(onboardingCompleted: true)
             }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -94,6 +105,7 @@ struct MainAppRoot: View {
                 flowManager.activateOnForeground(reason: "scenePhase.active")
                 // Retry deferred Rime/CLM after a jetsam-prone launch.
                 schedulePostOnboardingWarmup(reason: "scenePhase.active.retry")
+                releaseNotes.presentIfNeeded(onboardingCompleted: true)
             }
             Task {
                 await AppCloudSync.shared.pullAllIfEnabled()
