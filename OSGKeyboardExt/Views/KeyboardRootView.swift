@@ -11,8 +11,8 @@
 //   │  [OSG]                  语音 中文 EN 译     │  ← header band (top)
 //   │              (transcript preview)         │
 //   │              ┊                          │
-//   │              ◯ mic (centred)              │  ← action cluster:
-//   │   [delete]  [ return ]  [space]           │     mic + bottom row
+//   │  ⟲           ◯ mic (centred)              │  ← action cluster:
+//   │   [delete]  [ return ]  [space]           │     mic + undo + bottom row
 //   │              ┊                          │
 //   └───────────────────────────────────────────┘
 
@@ -22,6 +22,8 @@ import OSGKeyboardShared
 private enum KeyboardLayoutMetrics {
     static let micSize: CGFloat = 121
     static let micToButtonGap: CGFloat = 8
+    /// Square undo key beside the mic (outer edge, aligned with delete).
+    static let undoButtonSize: CGFloat = 44
     static let bottomActionRowHeight: CGFloat = KeyboardChromeLayout.actionKeyHeight
     static let bottomActionSpacing: CGFloat = KeyboardChromeLayout.actionKeySpacing
     /// Gap between the top control row and the transcript / hint line.
@@ -48,6 +50,27 @@ private enum KeyboardLayoutMetrics {
     static let micUpwardAdjustment: CGFloat = (actionClusterTopGap - micToButtonGap) / 2
     /// The shared 4 pt outer padding is the complete bottom inset.
     static let actionClusterBottomGap: CGFloat = 0
+
+    /// `RecordButton` draws its outer ring at 106 pt inside the 121 pt touch
+    /// frame, so the disc's *visible* top edge sits below the frame's top.
+    static let micRingInset: CGFloat = (micSize - 106) / 2
+    /// 语音/中文/EN capsule: 30 pt buttons + 2 pt padding, centred in the top bar.
+    static let topBarTabCapsuleHeight: CGFloat = 34
+    /// Pushes the transcript / hint line down to the vertical centre of the gap
+    /// between the tab capsule's bottom edge and the mic's visible top edge.
+    /// Applied as an offset so the band heights — and therefore `totalHeight`
+    /// and `micUpwardAdjustment` — stay untouched.
+    static var transcriptLineDownwardAdjustment: CGFloat {
+        let capsuleBottom = (topBarHeight + topBarTabCapsuleHeight) / 2
+        let micVisibleTop = topBarHeight
+            + topBarToTranscriptSpacing
+            + transcriptLineHeight
+            + actionClusterTopGap
+            - micUpwardAdjustment
+            + micRingInset
+        let currentCentre = topBarHeight + topBarToTranscriptSpacing + transcriptLineHeight / 2
+        return (capsuleBottom + micVisibleTop) / 2 - currentCentre
+    }
 
     static var headerBandHeight: CGFloat {
         topBarHeight + topBarToTranscriptSpacing + transcriptLineHeight
@@ -138,6 +161,7 @@ public struct KeyboardRootView: View {
                 openSettings: state.openSettings
             )
             .frame(height: KeyboardLayoutMetrics.transcriptLineHeight)
+            .offset(y: KeyboardLayoutMetrics.transcriptLineDownwardAdjustment)
         }
     }
 
@@ -164,7 +188,8 @@ public struct KeyboardRootView: View {
     /// Mic centred above a bottom row: delete · smart return · space (or swapped).
     /// The side cursor-drag pads are SwiftUI layout wrappers around UIKit
     /// pan recognizers, avoiding SwiftUI gesture delivery issues in
-    /// keyboard extensions.
+    /// keyboard extensions. A square undo key sits on the outer pad,
+    /// vertically centred with the mic and mirrored with handedness.
     private var micActionRow: some View {
         let editingBlocked = voiceInputBlocksEditing
         let swapKeys = state.handednessPreference.swapsActionKeys
@@ -174,6 +199,9 @@ public struct KeyboardRootView: View {
         // opacity so the pads' hit area never shifts mid-gesture) and lets
         // the cursor-drag chrome take over.
         let dragging = state.cursorDragActive
+        let clipboardRecording = state.clipboardCommandRecording
+        // Undo hides during drag (like mic) and during clipboard side captions.
+        let undoVisible = !dragging && !clipboardRecording
 
         return VStack(spacing: KeyboardLayoutMetrics.micToButtonGap) {
             HStack(spacing: 0) {
@@ -181,8 +209,17 @@ public struct KeyboardRootView: View {
                     .overlay {
                         clipboardSideHint(
                             ExtL10n.text("keyboard.clipboard.recordingLeft"),
-                            visible: state.clipboardCommandRecording && !dragging
+                            visible: clipboardRecording && !dragging
                         )
+                    }
+                    .overlay(alignment: .leading) {
+                        // Left-handed: undo shares the outer edge with delete.
+                        if !swapKeys {
+                            undoButton(
+                                disabled: editingBlocked || !state.undoAvailable,
+                                visible: undoVisible
+                            )
+                        }
                     }
 
                 RecordButton(
@@ -206,8 +243,17 @@ public struct KeyboardRootView: View {
                     .overlay {
                         clipboardSideHint(
                             ExtL10n.text("keyboard.clipboard.recordingRight"),
-                            visible: state.clipboardCommandRecording && !dragging
+                            visible: clipboardRecording && !dragging
                         )
+                    }
+                    .overlay(alignment: .trailing) {
+                        // Right-handed: undo mirrors to the outer (delete) side.
+                        if swapKeys {
+                            undoButton(
+                                disabled: editingBlocked || !state.undoAvailable,
+                                visible: undoVisible
+                            )
+                        }
                     }
             }
             .frame(height: KeyboardLayoutMetrics.micSize)
@@ -281,6 +327,27 @@ public struct KeyboardRootView: View {
         .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
     }
 
+    /// Square undo key on the outer drag pad — same chrome / haptic / click
+    /// as space & return. Vertically matches the mic disc.
+    private func undoButton(disabled: Bool, visible: Bool) -> some View {
+        RectangularToolbarButton(
+            systemName: "arrow.uturn.backward",
+            label: ExtL10n.string("keyboard.undoA11y"),
+            disabled: disabled,
+            hapticIntensity: state.keyboardHapticIntensity
+        ) {
+            state.undoLastInsertion()
+        }
+        .frame(
+            width: KeyboardLayoutMetrics.undoButtonSize,
+            height: KeyboardLayoutMetrics.undoButtonSize
+        )
+        .offset(y: -KeyboardLayoutMetrics.micUpwardAdjustment)
+        .opacity(visible ? 1 : 0)
+        .allowsHitTesting(visible && !disabled)
+        .accessibilityHidden(!visible)
+    }
+
     private func bottomSpaceButton(disabled: Bool) -> some View {
         RectangularToolbarButton(
             spaceStyle: true,
@@ -319,8 +386,8 @@ public struct KeyboardRootView: View {
 
     private var buttonPhase: RecordButton.Phase {
         switch clipboardMicChrome {
-        case .preparingDisabled:
-            return .processing
+        case .preparingCancelable:
+            return .preparing
         case .recordingBlue:
             return .recording
         case .none:
@@ -338,10 +405,9 @@ public struct KeyboardRootView: View {
         }
     }
 
-    /// Preparing clipboard capture: grey spinner, not tappable.
+    /// Preparing clipboard capture: grey spinner, tap to cancel.
     private var micButtonEnabled: Bool {
         if state.micDisabled { return false }
-        if clipboardMicChrome == .preparingDisabled { return false }
         return true
     }
 

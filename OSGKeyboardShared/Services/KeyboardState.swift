@@ -130,6 +130,9 @@ public final class KeyboardState: ObservableObject {
     /// `true` while a cursor-drag pad is being pressed — drives the hint
     /// shown above the mic.
     @Published public var cursorDragActive: Bool = false
+    /// `true` when the last voice insertion is still at the caret and can
+    /// be undone (suffix-checked against `documentContextBeforeInput`).
+    @Published public var undoAvailable: Bool = false
     /// Idle affordance: pasteboard reports `hasStrings` (metadata only).
     @Published public var clipboardCommandEligible: Bool = false
     /// True while a clipboard-command utterance is in flight (preparing or recording).
@@ -228,6 +231,8 @@ public final class KeyboardState: ObservableObject {
     public var insertNewline:       () -> Void = {}
     public var insertSpace:         () -> Void = {}
     public var deleteBackward:      () -> Void = {}
+    /// Undo the last voice insertion when `undoAvailable` is true.
+    public var undoLastInsertion:   () -> Void = {}
     public var moveCursorHorizontal: (Int) -> Void = { _ in }
     public var moveCursorVertical:   (Int) -> Void = { _ in }
     /// Cursor-drag pad press lifecycle — updates `cursorDragActive` and

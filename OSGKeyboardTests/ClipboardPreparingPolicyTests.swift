@@ -27,14 +27,14 @@ final class ClipboardPreparingPolicyTests: XCTestCase {
         )
     }
 
-    func testRestorePreferVoiceOnlyWhenNoClaim() {
+    func testRestoreResumesIntentWhenNoStartHasBeenIssued() {
         XCTAssertEqual(
             ClipboardPreparingPolicy.restoreAction(
                 hasStartIssued: false,
                 phase: .idle
             ),
-            .preferVoiceOnly,
-            "Cold-start return must not auto-start recording"
+            .resumeIntent,
+            "Cold-start return must resume the same intent automatically"
         )
     }
 
@@ -58,11 +58,11 @@ final class ClipboardPreparingPolicyTests: XCTestCase {
             hasStartIssued: true,
             phase: .idle
         )
-        XCTAssertNotEqual(action, .preferVoiceOnly)
+        XCTAssertNotEqual(action, .resumeIntent)
         XCTAssertEqual(action, .awaitExistingStart)
     }
 
-    func testHostGateNeverAutoRecordsAfterWarmup() {
+    func testHostGateAllowsAutoRecordAfterWarmup() {
         XCTAssertEqual(
             ClipboardPreparingPolicy.hostGateAction(micPressAction: .startRecording),
             .startRecordingNow
@@ -76,7 +76,7 @@ final class ClipboardPreparingPolicyTests: XCTestCase {
                 micPressAction: .waitForHostReady(recordWhenReady: true)
             ),
             .waitForHost,
-            "Clipboard must ignore recordWhenReady and require a second long-press"
+            "Clipboard intent must wait and auto-resume without a second long-press"
         )
         XCTAssertEqual(
             ClipboardPreparingPolicy.hostGateAction(micPressAction: .ignore),
@@ -91,7 +91,7 @@ final class ClipboardPreparingPolicyTests: XCTestCase {
                 phase: .requestingPermissions,
                 awaitingHostConfirm: true
             ),
-            .preparingDisabled
+            .preparingCancelable
         )
         XCTAssertEqual(
             ClipboardPreparingPolicy.micChrome(
@@ -108,6 +108,15 @@ final class ClipboardPreparingPolicyTests: XCTestCase {
                 awaitingHostConfirm: false
             ),
             .none
+        )
+        XCTAssertEqual(
+            ClipboardPreparingPolicy.micChrome(
+                isClipboardUtterance: true,
+                phase: .processing,
+                awaitingHostConfirm: false
+            ),
+            .preparingCancelable,
+            "Post-record processing must still offer a cancel exit"
         )
         // Paste-acquire (idle + active flag) must not go blue.
         XCTAssertEqual(
@@ -274,7 +283,7 @@ final class ClipboardPreparingPolicyTests: XCTestCase {
 
             // Restore after Allow Paste / cold-start:
             // - with claim → awaitExistingStart
-            // - without claim → preferVoiceOnly (no auto-record)
+            // - without claim → resume the same intent automatically
             let restoreClaimed = ClipboardPreparingPolicy.restoreAction(
                 hasStartIssued: true,
                 phase: .idle
@@ -284,7 +293,7 @@ final class ClipboardPreparingPolicyTests: XCTestCase {
                 hasStartIssued: false,
                 phase: .idle
             )
-            XCTAssertEqual(restoreWarm, .preferVoiceOnly, "round \(round)")
+            XCTAssertEqual(restoreWarm, .resumeIntent, "round \(round)")
 
             XCTAssertEqual(
                 ClipboardPreparingPolicy.hostGateAction(micPressAction: .openHostColdStart),

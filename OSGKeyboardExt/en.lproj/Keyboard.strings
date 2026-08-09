@@ -130,7 +130,7 @@
 "keyboard.clipboard.reject.secureField" = "Clipboard commands aren’t available in password fields";
 "keyboard.clipboard.reject.noFullAccess" = "Full Access is required for clipboard commands";
 "keyboard.clipboard.reject.prepareFailed" = "Mic wasn’t ready in time — try again";
-"keyboard.clipboard.hint.hostStarting" = "Starting… return and long-press the mic again";
+"keyboard.clipboard.hint.hostStarting" = "Starting… recording will begin automatically; tap to cancel";
 "keyboard.placeholder.processing" = "Processing";
 "keyboard.placeholder.error" = "Polishing failed";
 "keyboard.placeholder.localBadge" = "On-device";
@@ -144,6 +144,7 @@
 "keyboard.openSettingsA11y" = "Open OSGKeyboard settings";
 "keyboard.deniedHint" = "Opens the OSGKeyboard settings page where you can grant microphone or speech recognition access.";
 "keyboard.tapToTalkA11y" = "Tap to talk";
+"keyboard.undoA11y" = "Undo last dictation";
 "keyboard.cursorDrag.hint" = "Hold and drag to move the cursor";
 "keyboard.cursorDrag.centerHint" = "Drag to move the cursor";
 

@@ -11,13 +11,13 @@ import Foundation
 public enum ClipboardRestoreAction: Equatable, Sendable {
     /// Mid-flight claim exists — reattach preparing/recording, never pressBegan again.
     case awaitExistingStart
-    /// Sticky voice + snapshot only (e.g. after cold-start). Force voice; do **not** auto-record.
-    case preferVoiceOnly
+    /// Intent exists but start is not issued — resume acquisition / host warm-up automatically.
+    case resumeIntent
     /// Already in a live clipboard phase — only refresh UI / recover.
     case refreshOnly
 }
 
-/// Whether a clipboard long-press may claim + start, or must warm the host first.
+/// Whether a clipboard intent may start now or must warm the host first.
 public enum ClipboardHostGateAction: Equatable, Sendable {
     case startRecordingNow
     case openHostColdStart
@@ -27,8 +27,8 @@ public enum ClipboardHostGateAction: Equatable, Sendable {
 
 /// Mic chrome while a clipboard round is live.
 public enum ClipboardMicChrome: Equatable, Sendable {
-    /// Grey / spinner / not tappable — waiting for host capture confirm.
-    case preparingDisabled
+    /// Grey / spinner / tappable to cancel — acquiring paste or waiting for host.
+    case preparingCancelable
     /// Blue recording chrome + side captions.
     case recordingBlue
     /// Not a clipboard recording chrome state.
@@ -43,14 +43,13 @@ public enum ClipboardPreparingPolicy: Sendable {
     ) -> ClipboardRestoreAction {
         switch phase {
         case .idle, .denied, .error:
-            // Cold-start return has snapshot/preferVoice but no startIssued → voice only.
-            return hasStartIssued ? .awaitExistingStart : .preferVoiceOnly
+            return hasStartIssued ? .awaitExistingStart : .resumeIntent
         case .requestingPermissions, .recording, .processing:
             return .refreshOnly
         }
     }
 
-    /// Map the shared mic handoff decision onto clipboard (never auto-record after warm-up).
+    /// Map the shared mic handoff decision onto the auto-resuming clipboard intent.
     public static func hostGateAction(
         micPressAction: FlowMicPressAction
     ) -> ClipboardHostGateAction {
@@ -60,7 +59,7 @@ public enum ClipboardPreparingPolicy: Sendable {
         case .openHostColdStart:
             return .openHostColdStart
         case .waitForHostReady:
-            // Clipboard does not set recordWhenHostReady — user long-presses again.
+            // The coordinator keeps the same intent and auto-records once ready.
             return .waitForHost
         case .ignore:
             return .ignore
@@ -75,10 +74,12 @@ public enum ClipboardPreparingPolicy: Sendable {
         guard isClipboardUtterance else { return .none }
         switch phase {
         case .requestingPermissions:
-            return .preparingDisabled
+            return .preparingCancelable
         case .recording:
-            return awaitingHostConfirm ? .preparingDisabled : .recordingBlue
-        case .idle, .denied, .error, .processing:
+            return awaitingHostConfirm ? .preparingCancelable : .recordingBlue
+        case .processing:
+            return .preparingCancelable
+        case .idle, .denied, .error:
             return .none
         }
     }

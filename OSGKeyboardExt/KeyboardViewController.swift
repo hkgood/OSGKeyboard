@@ -249,6 +249,12 @@ public final class KeyboardViewController: UIInputViewController {
     public override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
         refreshReturnKeyRole()
+        textInserter?.refreshUndoAvailability()
+    }
+
+    public override func selectionDidChange(_ textInput: UITextInput?) {
+        super.selectionDidChange(textInput)
+        textInserter?.refreshUndoAvailability()
     }
 
     public override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge {
@@ -342,6 +348,7 @@ public final class KeyboardViewController: UIInputViewController {
         state.insertNewline       = { [weak self] in self?.textDocumentProxy.insertText("\n") }
         state.insertSpace         = { [weak self] in self?.textDocumentProxy.insertText(" ") }
         state.deleteBackward      = { [weak self] in self?.textDocumentProxy.deleteBackward() }
+        state.undoLastInsertion   = { [weak self] in self?.textInserter.undoLastInsertion() }
         state.moveCursorHorizontal = { [weak self] steps in
             self?.cursorDrag?.moveCursorHorizontally(by: steps)
         }

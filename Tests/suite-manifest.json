@@ -43,6 +43,17 @@
         "OSGKeyboardTests/TranscriptLanguageDetectorTests"
       ]
     },
+    "clipboard_command": {
+      "description": "Clipboard-command material eligibility, prompt contract, intent recovery, and preparation policy",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardTests/ClipboardCommandPromptComposerTests",
+        "OSGKeyboardTests/ClipboardMaterialFilterTests",
+        "OSGKeyboardTests/ClipboardCommandResumeTests",
+        "OSGKeyboardTests/ClipboardPreparingPolicyTests",
+        "OSGKeyboardTests/RecordButtonGesturePolicyTests"
+      ]
+    },
     "cloud_asr": {
       "description": "Cloud ASR catalog/routing helpers, streaming fixtures/event parsers, HTTP clients, vocabulary sync (hermetic; live API is live_api)",
       "platform": "ios",
@@ -103,7 +114,9 @@
         "OSGKeyboardExtTests/CandidatePanelExpandTests",
         "OSGKeyboardExtTests/KeyboardStateTests",
         "OSGKeyboardExtTests/KeyboardSurfaceStateTests",
+        "OSGKeyboardExtTests/KeyHitTestingTests",
         "OSGKeyboardExtTests/LibrimeIntegrationTests",
+        "OSGKeyboardExtTests/PinyinNextKeyResolverTests",
         "OSGKeyboardExtTests/RimeSchemaGeneratorTests",
         "OSGKeyboardExtTests/RimePersonalDictionaryExporterTests",
         "OSGKeyboardTests/CursorNavigationTests",
@@ -139,9 +152,7 @@
       "description": "Optional live network and physical-device smoke; excluded from all/pr by design",
       "platform": "ios",
       "tests": [
-        "OSGKeyboardTests/FlowPhysicalAudioStressTests",
-        "OSGKeyboardTests/DatingPolishLiveEvalTests",
-        "OSGKeyboardTests/DatingPolish500LiveEvalTests"
+        "OSGKeyboardTests/FlowPhysicalAudioStressTests"
       ]
     }
   },
@@ -152,6 +163,7 @@
         "config",
         "sync",
         "polish",
+        "clipboard_command",
         "cloud_asr",
         "local_asr",
         "utterance",
@@ -167,6 +179,7 @@
         "config",
         "sync",
         "polish",
+        "clipboard_command",
         "cloud_asr",
         "local_asr",
         "utterance",
@@ -185,6 +198,10 @@
     "polish": {
       "description": "Polish-only",
       "groups": ["polish"]
+    },
+    "clipboard": {
+      "description": "Clipboard command lifecycle and prompt contract only",
+      "groups": ["clipboard_command"]
     },
     "keyboard": {
       "description": "Keyboard typing/Rime plus flow handoff/mic (keyboard-critical)",

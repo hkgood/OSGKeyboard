@@ -1,21 +1,44 @@
 // ClipboardCommandResume.swift
 // OSGKeyboard · Shared
 //
-// Sticky App Group flags so the system「允许粘贴」alert can dismiss / recreate
-// the keyboard extension without losing "stay on voice + clipboard chrome".
+// One persisted intent so the system「允许粘贴」alert can dismiss / recreate
+// the keyboard extension without losing acquisition / warm-up / recording state.
 
 import Foundation
 
+public struct ClipboardCommandIntent: Codable, Equatable, Sendable {
+    public enum Stage: String, Codable, Sendable {
+        case acquiringPaste
+        case waitingForHost
+        case startIssued
+    }
+
+    public let id: UUID
+    public var stage: Stage
+    public var snapshot: String?
+    public var updatedAt: TimeInterval
+
+    public init(
+        id: UUID = UUID(),
+        stage: Stage = .acquiringPaste,
+        snapshot: String? = nil,
+        updatedAt: TimeInterval = Date().timeIntervalSince1970
+    ) {
+        self.id = id
+        self.stage = stage
+        self.snapshot = snapshot
+        self.updatedAt = updatedAt
+    }
+}
+
 public enum ClipboardCommandResume: Sendable {
     private enum Key {
-        /// Prefer voice surface on the next keyboard presentation.
-        static let preferVoice = "clipboardCommand.preferVoice.v1"
-        /// Frozen snapshot captured before / during paste alert (optional).
-        static let snapshot = "clipboardCommand.pendingSnapshot.v1"
-        /// Wall time when prefer-voice was marked (drop stale flags).
-        static let markedAt = "clipboardCommand.preferVoiceAt.v1"
-        /// Utterance id already sent as startRecording — blocks duplicate starts.
-        static let startIssuedUtterance = "clipboardCommand.startIssuedUtterance.v1"
+        static let intent = "clipboardCommand.intent.v2"
+        // Removed v1 keys. Keep names only so an upgrade clears stale partial state.
+        static let legacyPreferVoice = "clipboardCommand.preferVoice.v1"
+        static let legacySnapshot = "clipboardCommand.pendingSnapshot.v1"
+        static let legacyMarkedAt = "clipboardCommand.preferVoiceAt.v1"
+        static let legacyStartIssuedUtterance = "clipboardCommand.startIssuedUtterance.v1"
     }
 
     /// How long a sticky prefer-voice / snapshot remains valid.
@@ -23,38 +46,47 @@ public enum ClipboardCommandResume: Sendable {
     /// Max time to wait in「准备录音…」for host confirm before failing closed.
     public static let preparingTimeout: TimeInterval = 6
 
+    @discardableResult
+    public static func beginIntent(defaults: UserDefaults? = nil) -> ClipboardCommandIntent? {
+        guard let store = defaults ?? AppGroup.defaultsIfAvailable else { return nil }
+        let intent = ClipboardCommandIntent()
+        write(intent, store: store)
+        return intent
+    }
+
+    /// Compatibility entry point for surface-selection callers and older tests.
     public static func markPreferVoice(defaults: UserDefaults? = nil) {
-        guard let store = defaults ?? AppGroup.defaultsIfAvailable else { return }
-        store.set(true, forKey: Key.preferVoice)
-        store.set(Date().timeIntervalSince1970, forKey: Key.markedAt)
-        // Paste alert often jetsams the extension — flush before we block on
-        // UIPasteboard.string so a recreated process still sees prefer-voice.
-        store.synchronize()
+        guard currentIntent(defaults: defaults) == nil else { return }
+        _ = beginIntent(defaults: defaults)
     }
 
     public static func storeSnapshot(_ text: String, defaults: UserDefaults? = nil) {
         guard let store = defaults ?? AppGroup.defaultsIfAvailable else { return }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        store.set(trimmed, forKey: Key.snapshot)
-        store.set(true, forKey: Key.preferVoice)
-        store.set(Date().timeIntervalSince1970, forKey: Key.markedAt)
-        store.synchronize()
+        var intent = currentIntent(defaults: store) ?? ClipboardCommandIntent()
+        intent.snapshot = trimmed
+        intent.stage = .waitingForHost
+        intent.updatedAt = Date().timeIntervalSince1970
+        write(intent, store: store)
     }
 
     public static func markStartIssued(_ utteranceId: UUID, defaults: UserDefaults? = nil) {
         guard let store = defaults ?? AppGroup.defaultsIfAvailable else { return }
-        store.set(utteranceId.uuidString, forKey: Key.startIssuedUtterance)
-        store.set(true, forKey: Key.preferVoice)
-        store.set(Date().timeIntervalSince1970, forKey: Key.markedAt)
-        store.synchronize()
+        let existing = currentIntent(defaults: store)
+        var intent = ClipboardCommandIntent(
+            id: utteranceId,
+            stage: .startIssued,
+            snapshot: existing?.snapshot
+        )
+        intent.updatedAt = Date().timeIntervalSince1970
+        write(intent, store: store)
     }
 
     public static func startIssuedUtteranceId(defaults: UserDefaults? = nil) -> UUID? {
-        guard let store = defaults ?? AppGroup.defaultsIfAvailable else { return nil }
-        pruneIfStale(store: store)
-        guard let raw = store.string(forKey: Key.startIssuedUtterance) else { return nil }
-        return UUID(uuidString: raw)
+        guard let intent = currentIntent(defaults: defaults),
+              intent.stage == .startIssued else { return nil }
+        return intent.id
     }
 
     public static func hasStartIssued(defaults: UserDefaults? = nil) -> Bool {
@@ -63,44 +95,52 @@ public enum ClipboardCommandResume: Sendable {
 
     public static func clear(defaults: UserDefaults? = nil) {
         guard let store = defaults ?? AppGroup.defaultsIfAvailable else { return }
-        store.removeObject(forKey: Key.preferVoice)
-        store.removeObject(forKey: Key.snapshot)
-        store.removeObject(forKey: Key.markedAt)
-        store.removeObject(forKey: Key.startIssuedUtterance)
+        store.removeObject(forKey: Key.intent)
+        clearLegacy(store: store)
         store.synchronize()
     }
 
     public static func shouldPreferVoice(defaults: UserDefaults? = nil) -> Bool {
-        guard let store = defaults ?? AppGroup.defaultsIfAvailable else { return false }
-        pruneIfStale(store: store)
-        return store.bool(forKey: Key.preferVoice)
+        currentIntent(defaults: defaults) != nil
     }
 
     public static func pendingSnapshot(defaults: UserDefaults? = nil) -> String? {
-        guard let store = defaults ?? AppGroup.defaultsIfAvailable else { return nil }
-        pruneIfStale(store: store)
-        guard store.bool(forKey: Key.preferVoice) else { return nil }
-        return store.string(forKey: Key.snapshot)
+        currentIntent(defaults: defaults)?.snapshot
     }
 
-    private static func pruneIfStale(store: UserDefaults) {
-        let markedAt = store.double(forKey: Key.markedAt)
-        guard markedAt > 0 else {
-            // Legacy / incomplete write — drop.
-            if store.object(forKey: Key.preferVoice) != nil
-                || store.object(forKey: Key.startIssuedUtterance) != nil {
-                store.removeObject(forKey: Key.preferVoice)
-                store.removeObject(forKey: Key.snapshot)
-                store.removeObject(forKey: Key.startIssuedUtterance)
-                store.synchronize()
-            }
-            return
+    public static func currentIntent(
+        defaults: UserDefaults? = nil
+    ) -> ClipboardCommandIntent? {
+        guard let store = defaults ?? AppGroup.defaultsIfAvailable else { return nil }
+        guard let data = store.data(forKey: Key.intent),
+              let intent = try? JSONDecoder().decode(ClipboardCommandIntent.self, from: data) else {
+            clearLegacy(store: store)
+            return nil
         }
-        if Date().timeIntervalSince1970 - markedAt > stickyTTL {
-            store.removeObject(forKey: Key.preferVoice)
-            store.removeObject(forKey: Key.snapshot)
-            store.removeObject(forKey: Key.markedAt)
-            store.removeObject(forKey: Key.startIssuedUtterance)
+        if Date().timeIntervalSince1970 - intent.updatedAt > stickyTTL {
+            clear(defaults: store)
+            return nil
+        }
+        return intent
+    }
+
+    private static func write(_ intent: ClipboardCommandIntent, store: UserDefaults) {
+        guard let data = try? JSONEncoder().encode(intent) else { return }
+        store.set(data, forKey: Key.intent)
+        clearLegacy(store: store)
+        // Paste alerts may suspend or jetsam the extension immediately.
+        store.synchronize()
+    }
+
+    private static func clearLegacy(store: UserDefaults) {
+        let keys = [
+            Key.legacyPreferVoice,
+            Key.legacySnapshot,
+            Key.legacyMarkedAt,
+            Key.legacyStartIssuedUtterance
+        ]
+        if keys.contains(where: { store.object(forKey: $0) != nil }) {
+            keys.forEach { store.removeObject(forKey: $0) }
             store.synchronize()
         }
     }

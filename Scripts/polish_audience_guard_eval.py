@@ -88,7 +88,8 @@ def main() -> None:
             prompt = base.build_prompt("builtin.xhs", level, draft)
             for _ in range(args.samples):
                 try:
-                    output = base.call(api_key, prompt)
+                    temperature = 0.65 if level == "heavy" else 0.1
+                    output = base.call(api_key, prompt, draft, temperature=temperature)
                 except Exception as error:  # noqa: BLE001 - eval script
                     print(f"  request failed: {error}")
                     continue

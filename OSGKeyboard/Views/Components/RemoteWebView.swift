@@ -25,7 +25,7 @@ struct RemoteWebView: UIViewRepresentable {
         Self.applyScrollInsets(webView)
         webView.navigationDelegate = context.coordinator
         context.coordinator.loadedURL = url
-        webView.load(URLRequest(url: url))
+        webView.load(Self.request(for: url))
         return webView
     }
 
@@ -34,7 +34,14 @@ struct RemoteWebView: UIViewRepresentable {
         Self.applyScrollInsets(uiView)
         guard context.coordinator.loadedURL != url else { return }
         context.coordinator.loadedURL = url
-        uiView.load(URLRequest(url: url))
+        uiView.load(Self.request(for: url))
+    }
+
+    /// The pages we host send no `Cache-Control`, so the default policy lets
+    /// WebKit serve a heuristically-fresh copy without contacting the server —
+    /// edited release notes could stay stale for hours. Always revalidate.
+    static func request(for url: URL) -> URLRequest {
+        URLRequest(url: url, cachePolicy: .reloadRevalidatingCacheData)
     }
 
     /// Kill automatic safe-area insets that leave a dead band under the page.

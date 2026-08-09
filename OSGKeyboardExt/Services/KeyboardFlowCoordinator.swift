@@ -74,8 +74,7 @@ final class KeyboardFlowCoordinator {
     /// True while blocked inside `UIPasteboard.string` (system paste alert).
     /// Must preserve extension lifecycle / voice surface across that alert.
     private var isAcquiringClipboardPaste = false
-    /// Ignore the finger-up that follows long-press start (tap-to-stop, not release-to-stop).
-    private var suppressNextMicToggle = false
+    private var clipboardAcquisitionTask: Task<Void, Never>?
     /// Clipboard start sent; waiting for host `reason=recording` before confirmed capture UI.
     private var clipboardAwaitingHostRecordConfirm = false
     /// Wall time when host confirmed real capture for this clipboard utterance.
@@ -510,15 +509,10 @@ final class KeyboardFlowCoordinator {
     }
 
     func toggleRecording() {
-        // Finger-up after long-press start must not stop / start dictation.
-        if suppressNextMicToggle {
-            suppressNextMicToggle = false
-            if isClipboardCommandUtterance
-                || state.phase == .recording
-                || state.phase == .requestingPermissions {
-                traceState("clipboard.toggle.suppressed", extra: "reason=postLongPressRelease")
-                return
-            }
+        // Every non-recording clipboard stage is explicitly cancellable.
+        if isClipboardCommandActive, state.phase != .recording {
+            cancelClipboardIntent(reason: "userCancel")
+            return
         }
         switch state.phase {
         case .recording:
@@ -533,16 +527,13 @@ final class KeyboardFlowCoordinator {
                 requestClipboardStop()
             }
         case .idle, .denied, .error:
-            isClipboardCommandUtterance = false
-            clipboardFrozenSnapshot = nil
-            publishClipboardUIState()
             pressBegan()
         case .processing:
             break
         }
     }
 
-    /// Long-press reached 0.45s — resolve material, gate on host, then record or cold-start.
+    /// Long-press creates one persisted intent; acquisition and host warm-up resume automatically.
     func clipboardCommandPressBegan() {
         switch state.phase {
         case .idle, .denied, .error:
@@ -550,6 +541,12 @@ final class KeyboardFlowCoordinator {
         case .processing:
             return
         default:
+            return
+        }
+
+        // Never overwrite an older recoverable intent with a second UUID.
+        if ClipboardCommandResume.currentIntent() != nil {
+            restoreClipboardCommandIfNeeded()
             return
         }
 
@@ -564,24 +561,89 @@ final class KeyboardFlowCoordinator {
             return
         }
 
-        // Prefer voice early so cold-start / paste-alert reopen lands on voice,
-        // even when default open surface is typing.
-        ClipboardCommandResume.markPreferVoice()
+        guard let intent = ClipboardCommandResume.beginIntent() else {
+            showClipboardFailure(.noFullAccess)
+            return
+        }
         if state.surface != .voice {
             state.setSurface(.voice)
         }
-        // Finger-up from this long-press must not toggle dictation.
-        suppressNextMicToggle = true
+        currentUtteranceId = intent.id
+        isClipboardCommandUtterance = true
+        isAcquiringClipboardPaste = true
+        state.phase = .requestingPermissions
+        state.lastTranscript = ExtL10n.string("keyboard.placeholder.preparingRecording")
+        publishClipboardUIState()
+        scheduleClipboardAcquisition(intentId: intent.id)
+        traceState("clipboard.intent.created", extra: "intent=\(intent.id.uuidString.prefix(8))")
+    }
 
-        guard let snapshot = resolveClipboardSnapshotForCommand() else { return }
+    private func scheduleClipboardAcquisition(intentId: UUID) {
+        clipboardAcquisitionTask?.cancel()
+        clipboardAcquisitionTask = Task { @MainActor [weak self] in
+            // Commit the intent and render cancellable chrome before UIKit may
+            // present the system paste-consent sheet.
+            await Task.yield()
+            guard let self, !Task.isCancelled else { return }
+            self.acquireClipboardMaterial(intentId: intentId)
+        }
+    }
 
+    /// UIKit owns paste consent and may suspend the extension. The persisted
+    /// intent makes that interruption resumable even though the content read itself
+    /// must stay on the main actor.
+    private func acquireClipboardMaterial(intentId: UUID) {
+        guard let intent = ClipboardCommandResume.currentIntent(), intent.id == intentId else { return }
+        if let snapshot = intent.snapshot, !snapshot.isEmpty {
+            clipboardFrozenSnapshot = snapshot
+            isAcquiringClipboardPaste = false
+            continueClipboardIntent(intentId: intentId)
+            return
+        }
+
+        isAcquiringClipboardPaste = true
+        publishClipboardUIState()
+        let sample = ClipboardPasteboardReader.sample()
+
+        // The user may have cancelled while UIKit was returning from consent.
+        guard ClipboardCommandResume.currentIntent()?.id == intentId else { return }
+        isAcquiringClipboardPaste = false
+
+        guard let raw = sample.text else {
+            resetClipboardUtteranceState()
+            showClipboardFailure(
+                ClipboardPasteboardReader.hasStrings() ? .pasteDenied : .material(.empty)
+            )
+            refreshClipboardEligibility()
+            return
+        }
+
+        switch ClipboardMaterialFilter.evaluate(raw) {
+        case .rejected(let reason):
+            resetClipboardUtteranceState()
+            showClipboardFailure(.material(reason))
+        case .eligible(let snapshot):
+            clipboardFrozenSnapshot = snapshot
+            ClipboardCommandResume.storeSnapshot(snapshot)
+            continueClipboardIntent(intentId: intentId)
+        }
+    }
+
+    /// Advance the same intent through host warm-up to one idempotent start.
+    private func continueClipboardIntent(intentId: UUID) {
+        guard let intent = ClipboardCommandResume.currentIntent(),
+              intent.id == intentId,
+              let snapshot = intent.snapshot,
+              !snapshot.isEmpty else { return }
         clipboardFrozenSnapshot = snapshot
-        ClipboardCommandResume.storeSnapshot(snapshot)
+        currentUtteranceId = intentId
+        isClipboardCommandUtterance = true
+        isAcquiringClipboardPaste = false
+        clipboardAwaitingHostRecordConfirm = true
+        state.phase = .requestingPermissions
+        state.lastTranscript = ExtL10n.string("keyboard.placeholder.preparingRecording")
         publishClipboardUIState()
 
-        // Host gate *before* claim /「准备录音…」— never fake-record when host is dead.
-        // Use the *raw* ready contract (not holdReady grace) so the first press after
-        // cold-start does not claim while audio is still stale.
         recomputeMicVoiceAvailability()
         let hostReadyRaw = FlowSessionBridge.isHostReady()
         let withinReadyGrace = lastHostReadyAt > 0
@@ -606,97 +668,39 @@ final class KeyboardFlowCoordinator {
         }
         switch ClipboardPreparingPolicy.hostGateAction(micPressAction: micAction) {
         case .startRecordingNow:
-            beginClipboardRecordingRound()
+            startFlowRecording()
         case .openHostColdStart:
-            deferClipboardUntilHostWarm(reason: "coldStart")
             detectAndStoreAppContext()
             if !isPendingFlowStart, !FlowSessionBridge.isPiPArmInCooldown() {
-                beginFlowStart(recordAfterHandoff: false)
+                beginFlowStart(recordAfterHandoff: true)
             }
             showClipboardHostWarmupHint()
         case .waitForHost:
-            deferClipboardUntilHostWarm(reason: "waitHost")
-            // Do not set recordWhenHostReady — auto-record after warm-up is opt-out.
+            recordWhenHostReady = true
+            coldStartDebouncer.reset()
+            startHostReadyWaitIfNeeded()
             showClipboardHostWarmupHint()
         case .ignore:
-            // Specific hard gates (API key / full access) already handled above;
-            // leftover ignore → treat as host not ready.
-            deferClipboardUntilHostWarm(reason: "gateIgnore")
+            recordWhenHostReady = true
+            startHostReadyWaitIfNeeded()
             showClipboardHostWarmupHint()
         }
+        traceState("clipboard.intent.advancing", extra: "intent=\(intentId.uuidString.prefix(8))")
     }
 
-    /// Sticky snapshot (post cold-start) wins; otherwise one pasteboard content read.
-    private func resolveClipboardSnapshotForCommand() -> String? {
-        if let existing = clipboardFrozenSnapshot ?? ClipboardCommandResume.pendingSnapshot(),
-           !existing.isEmpty {
-            isAcquiringClipboardPaste = false
-            publishClipboardUIState()
-            return existing
-        }
-
-        isAcquiringClipboardPaste = true
-        publishClipboardUIState()
-        let sample = ClipboardPasteboardReader.sample()
-        isAcquiringClipboardPaste = false
-
-        guard let raw = sample.text else {
-            ClipboardCommandResume.clear()
-            publishClipboardUIState()
-            showClipboardFailure(
-                ClipboardPasteboardReader.hasStrings() ? .pasteDenied : .material(.empty)
-            )
-            refreshClipboardEligibility()
-            return nil
-        }
-
-        switch ClipboardMaterialFilter.evaluate(raw) {
-        case .rejected(let reason):
-            ClipboardCommandResume.clear()
-            publishClipboardUIState()
-            showClipboardFailure(.material(reason))
-            return nil
-        case .eligible(let snapshot):
-            return snapshot
-        }
-    }
-
-    /// Host is ready — claim the round and start (grey preparing → blue after confirm).
-    private func beginClipboardRecordingRound() {
-        isClipboardCommandUtterance = true
-        let claimId = UUID()
-        currentUtteranceId = claimId
-        ClipboardCommandResume.markStartIssued(claimId)
-        publishClipboardUIState()
-        if state.surface != .voice {
-            state.setSurface(.voice)
-        }
-        pressBegan()
-        traceState("clipboard.round.begin", extra: "utterance=\(claimId.uuidString.prefix(8))")
-    }
-
-    /// Keep sticky voice + snapshot; do not claim start or show「准备录音…」.
+    /// Keep the intent live and let the existing host-ready loop auto-start it.
     private func deferClipboardUntilHostWarm(reason: String) {
-        isClipboardCommandUtterance = false
-        clipboardAwaitingHostRecordConfirm = false
-        clipboardPreparingWatchdogTask?.cancel()
-        clipboardPreparingWatchdogTask = nil
-        // Drop any stale mid-flight claim so restore cannot auto-write startRecording.
-        if ClipboardCommandResume.hasStartIssued() {
-            // Re-store snapshot/preferVoice without startIssued.
-            if let snap = clipboardFrozenSnapshot ?? ClipboardCommandResume.pendingSnapshot() {
-                ClipboardCommandResume.clear()
-                ClipboardCommandResume.storeSnapshot(snap)
-            } else {
-                ClipboardCommandResume.clear()
-                ClipboardCommandResume.markPreferVoice()
-            }
-        }
+        isClipboardCommandUtterance = true
+        clipboardAwaitingHostRecordConfirm = true
+        recordWhenHostReady = true
+        state.phase = .requestingPermissions
+        state.lastTranscript = ExtL10n.string("keyboard.placeholder.preparingRecording")
         publishClipboardUIState()
-        traceState("clipboard.round.deferred", extra: reason)
+        startHostReadyWaitIfNeeded()
+        traceState("clipboard.intent.waitingHost", extra: reason)
     }
 
-    /// Soft tip that does **not** clear sticky snapshot / prefer-voice.
+    /// Soft progress hint; the mic remains tappable to cancel the intent.
     private func showClipboardHostWarmupHint() {
         state.clipboardFailureHint = ExtL10n.string("keyboard.clipboard.hint.hostStarting")
         clipboardFailureHintTask?.cancel()
@@ -708,9 +712,9 @@ final class KeyboardFlowCoordinator {
         }
     }
 
-    /// After paste-alert / cold-start keyboard reopen: force voice; resume mid-flight only.
+    /// After paste-alert / cold-start recreation, resume the same persisted intent.
     func restoreClipboardCommandIfNeeded() {
-        guard ClipboardCommandResume.shouldPreferVoice() else { return }
+        guard let intent = ClipboardCommandResume.currentIntent() else { return }
         if state.surface != .voice {
             state.setSurface(.voice)
         }
@@ -724,10 +728,8 @@ final class KeyboardFlowCoordinator {
         if hasIssued,
            !isClipboardCommandUtterance,
            let issued = ClipboardCommandResume.startIssuedUtteranceId() {
-            // Mid-flight paste-alert recreate — reattach the live clipboard round.
             isClipboardCommandUtterance = true
             currentUtteranceId = issued
-            suppressNextMicToggle = true
             traceState(
                 "clipboard.resume.rehydratedLive",
                 extra: "utterance=\(issued.uuidString.prefix(8))"
@@ -767,16 +769,20 @@ final class KeyboardFlowCoordinator {
             ensureClipboardStartCommandWritten()
             recoverClipboardPreparingIfHostMovedOn()
             traceState("clipboard.resume.awaitExistingStart")
-        case .preferVoiceOnly:
-            // Cold-start / deferred host: stay on voice with sticky snapshot; user long-presses again.
-            isClipboardCommandUtterance = false
-            clipboardAwaitingHostRecordConfirm = false
+        case .resumeIntent:
+            currentUtteranceId = intent.id
+            isClipboardCommandUtterance = true
+            clipboardAwaitingHostRecordConfirm = true
+            state.phase = .requestingPermissions
+            state.lastTranscript = ExtL10n.string("keyboard.placeholder.preparingRecording")
             publishClipboardUIState()
-            refreshClipboardEligibility()
-            traceState(
-                "clipboard.resume.preferVoiceOnly",
-                extra: "snapshot=\(clipboardFrozenSnapshot == nil ? 0 : 1)"
-            )
+            if intent.snapshot?.isEmpty == false {
+                continueClipboardIntent(intentId: intent.id)
+            } else {
+                isAcquiringClipboardPaste = true
+                scheduleClipboardAcquisition(intentId: intent.id)
+            }
+            traceState("clipboard.resume.intent", extra: "intent=\(intent.id.uuidString.prefix(8))")
         case .refreshOnly:
             publishClipboardUIState()
             if clipboardAwaitingHostRecordConfirm {
@@ -814,6 +820,32 @@ final class KeyboardFlowCoordinator {
         pressEnded()
     }
 
+    /// Cancel any non-recording clipboard stage and delete the persisted intent.
+    private func cancelClipboardIntent(reason: String) {
+        clipboardAcquisitionTask?.cancel()
+        clipboardAcquisitionTask = nil
+        if isFlowRecording || isAwaitingFlowResult {
+            writeCommand(.abort)
+            isFlowRecording = false
+            isAwaitingFlowResult = false
+            stopUtteranceCountdown()
+            ExtensionScreenWakeLock.release()
+        }
+        isPendingFlowStart = false
+        recordAfterHandoff = false
+        recordWhenHostReady = false
+        flowStartDeadline = 0
+        stopFlowWatchdog()
+        stopHostReadyWait()
+        FlowSessionBridge.setPendingKeyboardUtteranceId(nil)
+        currentUtteranceId = nil
+        resetClipboardUtteranceState()
+        state.phase = .idle
+        state.lastTranscript = ""
+        recomputeMicVoiceAvailability()
+        traceState("clipboard.intent.cancelled", extra: reason)
+    }
+
     /// Idle affordance only: metadata `hasStrings`. Never reads pasteboard contents.
     func setClipboardContentReadsEnabled(_ enabled: Bool) {
         // Height-lock gate retained as a refresh hook after presentation; content
@@ -840,6 +872,8 @@ final class KeyboardFlowCoordinator {
     }
 
     private func resetClipboardUtteranceState() {
+        clipboardAcquisitionTask?.cancel()
+        clipboardAcquisitionTask = nil
         clipboardDeferredStopTask?.cancel()
         clipboardDeferredStopTask = nil
         clipboardPreparingWatchdogTask?.cancel()
@@ -848,7 +882,6 @@ final class KeyboardFlowCoordinator {
         clipboardFrozenSnapshot = nil
         isClipboardCommandUtterance = false
         isAcquiringClipboardPaste = false
-        suppressNextMicToggle = false
         clipboardAwaitingHostRecordConfirm = false
         clipboardHostRecordConfirmedAt = nil
         clipboardStopRequested = false
@@ -867,7 +900,9 @@ final class KeyboardFlowCoordinator {
     }
 
     private func showClipboardFailure(_ failure: ClipboardCommandFailure) {
+        ClipboardCommandResume.clear()
         isClipboardCommandUtterance = false
+        isAcquiringClipboardPaste = false
         clipboardFrozenSnapshot = nil
         publishClipboardUIState()
         state.clipboardFailureHint = ExtL10n.string(failure.localizationKey)
@@ -1074,7 +1109,9 @@ final class KeyboardFlowCoordinator {
     /// After restore / claim: write at most one startRecording for the issued utterance.
     private func ensureClipboardStartCommandWritten() {
         guard isClipboardCommandUtterance else { return }
-        let issued = ClipboardCommandResume.startIssuedUtteranceId()
+        // The persisted intent id is the one and only utterance id. `startIssued`
+        // is committed only immediately before the wire command is written.
+        let issued = ClipboardCommandResume.currentIntent()?.id
         let snapshot = FlowSessionBridge.readySnapshot()
         let hostReason: ClipboardHostBusyReason? = {
             switch snapshot?.reason {
@@ -1121,6 +1158,7 @@ final class KeyboardFlowCoordinator {
             currentUtteranceId = utteranceId
             FlowSessionBridge.setPendingKeyboardUtteranceId(utteranceId)
             lastStoppedUtteranceId = nil
+            ClipboardCommandResume.markStartIssued(utteranceId)
             writeCommand(.startRecording)
             isFlowRecording = true
             clipboardAwaitingHostRecordConfirm = true
@@ -1194,10 +1232,11 @@ final class KeyboardFlowCoordinator {
         case .waitForHostReady(let recordWhenReady):
             detectAndStoreAppContext()
             if isClipboardCommandUtterance {
-                // Clipboard never auto-records after warm-up (stable handoff).
                 deferClipboardUntilHostWarm(reason: "pressBegan.waitHost")
+                recordWhenHostReady = true
+                startHostReadyWaitIfNeeded()
                 showClipboardHostWarmupHint()
-                traceState("pressBegan.clipboardDeferred", extra: "waitHost")
+                traceState("pressBegan.clipboardAutoResume", extra: "waitHost")
                 break
             }
             recordWhenHostReady = recordWhenReady
@@ -1212,10 +1251,10 @@ final class KeyboardFlowCoordinator {
             if isClipboardCommandUtterance {
                 deferClipboardUntilHostWarm(reason: "pressBegan.coldStart")
                 if !isPendingFlowStart {
-                    beginFlowStart(recordAfterHandoff: false)
+                    beginFlowStart(recordAfterHandoff: true)
                 }
                 showClipboardHostWarmupHint()
-                traceState("pressBegan.clipboardDeferred", extra: "coldStart")
+                traceState("pressBegan.clipboardAutoResume", extra: "coldStart")
                 break
             }
             beginFlowStart(recordAfterHandoff: true)
@@ -1302,6 +1341,9 @@ final class KeyboardFlowCoordinator {
 
     func cancelPipelineUnlessAwaitingResult() {
         guard !isAwaitingFlowResult else { return }
+        // A clipboard intent is explicitly persisted to survive pressure,
+        // paste-consent suspension, and extension recreation.
+        guard !isClipboardCommandActive else { return }
         if isFlowRecording || isPendingFlowStart {
             if isFlowRecording {
                 writeCommand(.abort)
@@ -1657,7 +1699,7 @@ final class KeyboardFlowCoordinator {
                 if isClipboardCommandUtterance {
                     deferClipboardUntilHostWarm(reason: "startFlowRecording.coldStart")
                     if !isPendingFlowStart {
-                        beginFlowStart(recordAfterHandoff: false)
+                        beginFlowStart(recordAfterHandoff: true)
                     }
                     showClipboardHostWarmupHint()
                     return
@@ -1684,7 +1726,7 @@ final class KeyboardFlowCoordinator {
                 if isClipboardCommandUtterance {
                     deferClipboardUntilHostWarm(reason: "startFlowRecording.missingSession.coldStart")
                     if !isPendingFlowStart {
-                        beginFlowStart(recordAfterHandoff: false)
+                        beginFlowStart(recordAfterHandoff: true)
                     }
                     showClipboardHostWarmupHint()
                 } else {
@@ -1786,7 +1828,12 @@ final class KeyboardFlowCoordinator {
                     self.recordAfterHandoff = false
                     self.flowStartDeadline = 0
                     self.traceState("startWatchdog.timeout")
-                    self.showManualOpenHint(path: "startflow")
+                    if self.isClipboardCommandActive {
+                        self.cancelClipboardIntent(reason: "hostWarmTimeout")
+                        self.showClipboardFailure(.prepareFailed)
+                    } else {
+                        self.showManualOpenHint(path: "startflow")
+                    }
                     return
                 }
                 try? await Task.sleep(nanoseconds: FlowWatchdog.pollIntervalNs)

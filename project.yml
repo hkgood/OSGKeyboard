@@ -51,8 +51,8 @@ settings:
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "1.6.5"
-    CURRENT_PROJECT_VERSION: "55"
+    MARKETING_VERSION: "1.6.6"
+    CURRENT_PROJECT_VERSION: "59"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -427,6 +427,27 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
 
   # =========================================================
+  # 实机 UI 测试 — 剪贴板长按复现脚手架
+  # =========================================================
+  # XCUITest 是 Apple 唯一开放的物理设备触摸注入通道，模拟器无法复现
+  # PiP 语音会话（isPictureInPictureSupported 恒为 false）。
+  OSGKeyboardUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: OSGKeyboardUITests
+    info:
+      path: OSGKeyboardUITests/Info.plist
+    dependencies:
+      - target: OSGKeyboard
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.osgkeyboard.ios.uitests
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: X329MZU23S
+
+  # =========================================================
   # macOS 单元测试
   # =========================================================
   # Hosted in the Mac app so `@testable import OSGKeyboard` reaches the
@@ -602,6 +623,19 @@ schemes:
         - OSGKeyboardExtTests
     archive:
       config: Release
+
+  # Device-only reproduction harness; kept out of the main scheme so CI and
+  # Scripts/run-tests.sh keep running unit tests without a physical device.
+  OSGKeyboardUITests:
+    build:
+      targets:
+        OSGKeyboard: all
+        OSGKeyboardExt: all
+        OSGKeyboardUITests: [test]
+    test:
+      config: Debug
+      targets:
+        - OSGKeyboardUITests
 
   OSGKeyboardMac:
     build:

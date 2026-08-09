@@ -14,6 +14,8 @@ public struct RecordButton: View {
         case idleReady
         /// Orange — voice input unavailable (missing key, session not ready, etc.).
         case idleUnavailable
+        /// Clipboard intent is acquiring material or warming the host; tap cancels.
+        case preparing
         case recording
         case processing
         case error
@@ -30,6 +32,9 @@ public struct RecordButton: View {
     public let onClipboardLongPressBegan: (() -> Void)?
 
     @State private var breath = false
+    /// Set once a press has been consumed as a hold, so its release is not
+    /// replayed as a tap. Must survive phase changes: the phase flips to
+    /// `.preparing` / `.recording` while the initiating finger is still down.
     @State private var longPressArmed = false
 
     public init(
@@ -136,7 +141,7 @@ public struct RecordButton: View {
                             .scaleEffect(0.96)
                         }
                         .transition(.opacity)
-                    case .processing:
+                    case .preparing, .processing:
                         ProgressView()
                             .progressViewStyle(.circular)
                             .tint(palette.textPrimary)
@@ -167,9 +172,6 @@ public struct RecordButton: View {
         .onAppear { breath = (phase == .recording) }
         .onChange(of: phase) { _, new in
             breath = (new == .recording)
-            if new != .recording {
-                longPressArmed = false
-            }
         }
         .accessibilityLabel(Text(SharedL10n.string("keyboard.tapToTalkA11y")))
     }
@@ -183,7 +185,7 @@ public struct RecordButton: View {
         switch phase {
         case .idleReady, .idleUnavailable:
             return true
-        case .recording, .processing, .error:
+        case .preparing, .recording, .processing, .error:
             return false
         }
     }
@@ -201,7 +203,7 @@ public struct RecordButton: View {
                 ? [recordingTint, recordingTint.opacity(0.85)]
                 : [recordingTint.opacity(0.95), recordingTint.opacity(0.75)]
             return LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
-        case .processing:
+        case .preparing, .processing:
             return LinearGradient(
                 colors: [palette.surfaceElevated, palette.surface],
                 startPoint: .top,
@@ -233,48 +235,53 @@ private struct RecordButtonPressModifier: ViewModifier {
     let onToggle: () -> Void
     let onClipboardLongPressBegan: (() -> Void)?
 
+    /// A single recognizer serves every phase. Branching on `phase` here would
+    /// rebuild the gesture mid-press — clipboard long-press flips the phase while
+    /// the finger is still down — and SwiftUI hands that in-flight touch to the
+    /// fresh recognizer, letting one press both open and close a round.
     func body(content: Content) -> some View {
-        // While recording/processing, only tap-to-toggle — never treat finger-up
-        // from the starting long-press as stop (clipboard is explicitly tap-to-stop).
-        switch phase {
-        case .recording, .processing:
-            content.onTapGesture {
-                guard phase != .processing else { return }
-                guard isEnabled || phase == .idleUnavailable else { return }
-                onToggle()
-            }
-        case .idleReady, .idleUnavailable, .error:
-            if supportsClipboardLongPress {
-                content.onLongPressGesture(
-                    minimumDuration: ClipboardMaterialFilter.longPressDuration,
-                    maximumDistance: 120,
-                    pressing: { pressing in
-                        if pressing {
-                            longPressArmed = false
-                            return
-                        }
-                        // Released before / without arming → short press = dictation toggle.
-                        // Armed release is ignored here; stop happens on a later tap
-                        // once phase becomes `.recording`.
-                        if longPressArmed {
-                            longPressArmed = false
-                            return
-                        }
-                        guard isEnabled || phase == .idleUnavailable else { return }
-                        onToggle()
-                    },
-                    perform: {
-                        guard isEnabled || phase == .idleUnavailable else { return }
-                        longPressArmed = true
-                        onClipboardLongPressBegan?()
-                    }
-                )
-            } else {
-                content.onTapGesture {
-                    guard isEnabled || phase == .idleUnavailable else { return }
-                    onToggle()
+        content.onLongPressGesture(
+            minimumDuration: ClipboardMaterialFilter.longPressDuration,
+            maximumDistance: 120,
+            pressing: { pressing in
+                if pressing {
+                    longPressArmed = false
+                    return
                 }
-            }
+                // A press already consumed as a hold must not replay as a tap.
+                if longPressArmed {
+                    longPressArmed = false
+                    return
+                }
+                handleTap()
+            },
+            perform: { longPressArmed = handleHold() }
+        )
+    }
+
+    private func handleTap() {
+        dispatch(RecordButtonGesturePolicy.tapAction(phase: phase, isEnabled: isEnabled))
+    }
+
+    /// Returns whether the hold consumed the press.
+    private func handleHold() -> Bool {
+        let action = RecordButtonGesturePolicy.holdAction(
+            phase: phase,
+            isEnabled: isEnabled,
+            supportsClipboardLongPress: supportsClipboardLongPress
+        )
+        dispatch(action)
+        return RecordButtonGesturePolicy.consumesPress(action)
+    }
+
+    private func dispatch(_ action: RecordButtonGestureAction) {
+        switch action {
+        case .none:
+            break
+        case .toggle:
+            onToggle()
+        case .beginClipboardCommand:
+            onClipboardLongPressBegan?()
         }
     }
 }

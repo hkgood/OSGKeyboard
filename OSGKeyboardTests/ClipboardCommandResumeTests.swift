@@ -40,6 +40,40 @@ final class ClipboardCommandResumeTests: XCTestCase {
         )
     }
 
+    func testOnePersistedIntentAdvancesWithoutChangingIdentity() {
+        let created = ClipboardCommandResume.beginIntent(defaults: defaults)
+        XCTAssertNotNil(created)
+        XCTAssertEqual(created?.stage, .acquiringPaste)
+
+        ClipboardCommandResume.storeSnapshot("需要处理的剪贴板内容", defaults: defaults)
+        let warmed = ClipboardCommandResume.currentIntent(defaults: defaults)
+        XCTAssertEqual(warmed?.id, created?.id)
+        XCTAssertEqual(warmed?.stage, .waitingForHost)
+        XCTAssertEqual(warmed?.snapshot, "需要处理的剪贴板内容")
+
+        guard let id = created?.id else { return }
+        ClipboardCommandResume.markStartIssued(id, defaults: defaults)
+        let issued = ClipboardCommandResume.currentIntent(defaults: defaults)
+        XCTAssertEqual(issued?.id, id)
+        XCTAssertEqual(issued?.stage, .startIssued)
+        XCTAssertEqual(issued?.snapshot, "需要处理的剪贴板内容")
+    }
+
+    func testCancelDeletesEntireIntentAndSnapshot() {
+        let intent = ClipboardCommandResume.beginIntent(defaults: defaults)
+        ClipboardCommandResume.storeSnapshot("取消后不应保留", defaults: defaults)
+        if let id = intent?.id {
+            ClipboardCommandResume.markStartIssued(id, defaults: defaults)
+        }
+
+        ClipboardCommandResume.clear(defaults: defaults)
+
+        XCTAssertNil(ClipboardCommandResume.currentIntent(defaults: defaults))
+        XCTAssertNil(ClipboardCommandResume.pendingSnapshot(defaults: defaults))
+        XCTAssertFalse(ClipboardCommandResume.hasStartIssued(defaults: defaults))
+        XCTAssertFalse(ClipboardCommandResume.shouldPreferVoice(defaults: defaults))
+    }
+
     /// Simulates extension jetsam: writer process flushes, reader process is new.
     func testStickySurvivesNewUserDefaultsInstanceAfterSynchronize() {
         let text = "是AI语音输入法,更是好输入法。It is an AI voice input method."
@@ -191,7 +225,7 @@ final class ClipboardCommandResumeTests: XCTestCase {
         XCTAssertLessThanOrEqual(ClipboardCommandResume.preparingTimeout, 15)
     }
 
-    func testColdStartStickyRestoreIsPreferVoiceOnlyWithoutClaim() {
+    func testColdStartStickyRestoreResumesIntentWithoutClaim() {
         ClipboardCommandResume.storeSnapshot("冻结材料", defaults: defaults)
         XCTAssertFalse(ClipboardCommandResume.hasStartIssued(defaults: defaults))
         XCTAssertEqual(
@@ -199,7 +233,7 @@ final class ClipboardCommandResumeTests: XCTestCase {
                 hasStartIssued: false,
                 phase: .idle
             ),
-            .preferVoiceOnly
+            .resumeIntent
         )
         XCTAssertEqual(
             KeyboardOpenSurfacePolicy.resolve(
