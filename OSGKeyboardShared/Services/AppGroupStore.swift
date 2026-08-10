@@ -84,6 +84,8 @@ public struct AppGroupStore: @unchecked Sendable {
         PolishStylePackCatalog.resolve(id: activePolishStyleId, userCatalog: polishStyleCatalog)
     }
     public var llmThinkingEnabled: Bool { configuration.llmThinkingEnabled }
+    public var clipboardHistoryEnabled: Bool { configuration.clipboardHistoryEnabled }
+    public var clipboardCandidateBarEnabled: Bool { configuration.clipboardCandidateBarEnabled }
     public var isPolishKeyMissing: Bool { configuration.isPolishKeyMissing }
     public var isTranslationEffective: Bool { configuration.isTranslationEffective }
     public var isLocalEngine: Bool { configuration.isLocalEngine }
@@ -179,6 +181,16 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setLLMThinkingEnabled(_ enabled: Bool) {
         mutateConfiguration { $0.llmThinkingEnabled = enabled }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setClipboardHistoryEnabled(_ enabled: Bool) {
+        mutateConfiguration { $0.clipboardHistoryEnabled = enabled }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setClipboardCandidateBarEnabled(_ enabled: Bool) {
+        mutateConfiguration { $0.clipboardCandidateBarEnabled = enabled }
         AppGroupConfigDarwin.postConfigChanged()
     }
 

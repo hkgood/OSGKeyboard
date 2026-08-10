@@ -8,13 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Clipboard history**: optional keyboard clipboard history (latest 15 plain-text items, App Group local), top-bar clipboard entry, history panel with whitespace token chips, and a suggestion strip across voice / typing / AI when enabled. / **剪贴板历史**：可选的键盘剪贴板历史（最近 15 条纯文本、App Group 本地），顶栏剪贴板入口、带空白分词芯片的历史面板，以及开启后在语音 / 打字 / AI 面显示的建议条。
+- **Clipboard settings**: Settings home adds a Clipboard page under AI Agent with History and Suggestion-strip toggles (both default off); keyboard deep-links open that page. / **剪贴板设置**：设置首页在 AI Agent 下方新增「剪贴板」页，含历史记录与候选栏展示开关（均默认关闭）；键盘可深链打开该页。
+- **Paste permission guidance**: the Clipboard settings page explains iOS's durable “Paste from Other Apps” permission and opens iOS Settings directly, so users can set it to Allow once and stop the per-copy paste prompt. / **粘贴授权引导**：剪贴板设置页说明 iOS 的「从其他 App 粘贴」持久授权并可直接跳转系统设置，用户设为「允许」一次即不再每次复制都弹窗。
+- **Clipboard settings copy**: shorten history, suggestion-strip, and paste-permission wording to brief user-facing lines. / **剪贴板设置文案**：精简历史、建议条与粘贴授权说明，改为简短面向用户的表述。
+- **Settings summary placement**: navigation-row summaries (AI Agent, Clipboard, etc.) sit trailing before the chevron, matching the Version row. / **设置摘要位置**：导航行摘要（AI Agent、剪贴板等）移到右侧 chevron 前，与「版本」行一致。
 - **AI answer streaming**: AI mode streams visible answer text into the keyboard as the model writes (all AI-mode transports), with throttled App Group updates, search-fallback draft restart, and a “thinking” status before the first token; dictation polish stays non-streaming. / **AI 回答流式输出**：AI 模式在模型开始写正文后将可见答案增量推送到键盘（覆盖全部 AI 传输路径），经 App Group 节流更新；搜索失败回退会清空半截草稿；首 token 前显示「思考中」；听写润色仍为整段返回。
 - **AI Agent settings**: Settings home adds an AI Agent row under General, with a Response length preference (Short / Medium / Detailed, default Medium). AI mode injects soft length guidance into the system prompt and syncs the choice via iCloud settings. / **AI Agent 设置**：设置首页在「通用」下方新增 AI Agent 入口，支持「回复篇幅」（简短 / 中等 / 详细，默认中等）。AI 模式将篇幅作为软约束写入 system prompt，并纳入 iCloud 设置同步。
 
 ### Changed
+- **Clipboard history row opacity**: history panel entry cards use 50% surface opacity so the keyboard chrome shows through. / **剪贴板历史条目透明度**：历史面板每条记录背景改为 50% 透明度，键盘底色可透出。
+- **Translation button chrome**: voice mic-row translation control matches the adjacent undo key (44×44 rounded rectangle) instead of a circular chip. / **翻译按钮样式**：语音麦克风行的翻译控件改为与相邻撤销键一致的 44×44 圆角矩形，不再使用圆形芯片。
+- **Undo covers clipboard pastes**: the undo key now rolls back text inserted from the clipboard suggestion strip or history panel, in one step regardless of length. Pasted text stays out of dictation history and is never offered for last-input editing. / **撤销支持剪贴板粘贴**：撤销键现在可回滚从剪贴板建议条或历史面板插入的文字，无论长度都一次撤销到底。粘贴内容不进入听写历史，也不会成为「编辑上次输入」的对象。
+- **Undo key label**: rename the accessibility label from “Undo last dictation” to “Undo last input” now that it covers dictation, AI answers, edits and pastes. / **撤销键文案**：无障碍标签由「撤销上次听写」改为「撤销上次输入」，因其现已覆盖听写、AI 答案、编辑与粘贴。
+- **Translation chip placement**: move the top-bar translation control onto the voice mic row, mirrored with Undo; the top-bar slot becomes the clipboard button. / **翻译入口位置**：顶栏翻译控件移到语音麦克风行并与撤销对称；原顶栏位置改为剪贴板按钮。
 - **AI empty-state tip**: center “Tap the microphone to ask AI” in the answer area (horizontal + vertical). / **AI 空状态指引**：「点击麦克风向 AI 提问」在答案区域水平与垂直居中。
 
 ### Fixed
+- **Undo of long insertions**: caret verification now compares the tail of the inserted text's last line instead of the whole string, so long or multi-line insertions no longer lose undo the moment the host returns a truncated context. / **长文本撤销**：光标校验改为比对插入文本最后一行的尾部而非整段，长文本或多行插入不再因宿主返回截断上下文而立刻失去撤销能力。
+- **Undo after editing last input**: a newer insertion now clears the pending edit transaction, so undo rolls back that insertion instead of deleting it and restoring the older edit's original text. / **编辑上次输入后的撤销**：新的插入会清除待撤销的编辑事务，撤销将回滚该次插入，而不再是删除它并还原上一次编辑前的旧文本。
 - **AI waiting spinner duplicate**: remove the mini ProgressView beside the AI status caption; the mic button spinner remains the sole loading indicator while recognizing or generating. / **AI 等待转圈重复**：去掉 AI 状态文案旁的迷你 ProgressView；识别/生成中仅保留麦克风按钮上的 loading。
 - **AI stream UTF-8 mojibake**: SSE framing now accumulates raw bytes and decodes each line as UTF-8, so Chinese AI answers (e.g. weather) no longer appear as Latin-1 garbage like `ä»å¤©…`. / **AI 流式 UTF-8 乱码**：SSE 行缓冲改为累积原始字节并以 UTF-8 解码，中文 AI 回答（如天气）不再显示为 `ä»å¤©…` 一类 Latin-1 乱码。
 - **Local ASR dictionary correction**: apply deterministic personal-dictionary alias correction before iOS Flow branches into dictation polish or AI question handling, so AI mode keeps local transcript optimization while still skipping cloud LLM polish. / **本地 ASR 词库纠错**：在 iOS Flow 分流到听写润色或 AI 问答前统一应用个人词库别名确定性纠错，使 AI 模式保留本地转写优化，同时继续跳过云端 LLM 润色。

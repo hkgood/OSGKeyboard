@@ -26,6 +26,9 @@ struct MainTabView: View {
         }
         .background(palette.background)
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        .onReceive(NotificationCenter.default.publisher(for: .osgOpenSettingsDeepLink)) { _ in
+            tab = .settings
+        }
     }
 
     // MARK: - Phone layout

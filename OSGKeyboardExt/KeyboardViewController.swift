@@ -66,6 +66,7 @@ public final class KeyboardViewController: UIInputViewController {
     private var flowCoordinator: KeyboardFlowCoordinator!
     private var lastInputEditCoordinator: LastInputEditCoordinator!
     private var aiKeyboardCoordinator: AIKeyboardCoordinator!
+    private var clipboardCapture: ClipboardCaptureCoordinator!
     private var configSync: KeyboardConfigSync!
     /// UIKit may synchronously lay out the view during `viewDidLoad`.
     /// Keep this optional so an early layout pass is harmless.
@@ -166,6 +167,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        clipboardCapture?.keyboardWillDisappear()
         OSGDiag.log(
             "KVC.viewWillDisappear surface=\(state.surface.rawValue) "
                 + "preserve=\(flowCoordinator.preservesLifecycleOnDisappear) \(OSGDiag.memoryTag())",
@@ -214,6 +216,7 @@ public final class KeyboardViewController: UIInputViewController {
         flowCoordinator.startSessionMonitor()
         configSync.syncOnboardingStateFromAppGroup()
         configSync.refreshConfigFromAppGroup()
+        clipboardCapture.refreshFlagsFromStore()
         // Settings may have changed while the extension stayed alive.
         applyPreferredSurfaceOnOpen()
         // Re-warm Taptic after host app switches: SwiftUI `onAppear` often
@@ -223,6 +226,7 @@ public final class KeyboardViewController: UIInputViewController {
             OSGDiag.log("KVC.viewWillAppear enterTypingMode", category: "boot")
             typingSession.enterTypingMode()
         }
+        clipboardCapture.keyboardDidAppear()
         OSGDiag.log(
             "KVC.viewWillAppear done surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
             category: "boot"
@@ -392,6 +396,15 @@ public final class KeyboardViewController: UIInputViewController {
                 self?.textDocumentProxy.insertText("\n")
             }
         )
+        clipboardCapture = ClipboardCaptureCoordinator(state: state)
+        clipboardCapture.configure(
+            isSecure: { [weak self] in
+                self?.textDocumentProxy.isSecureTextEntry ?? false
+            },
+            hasFullAccess: { [weak self] in
+                self?.hasFullAccess ?? false
+            }
+        )
         flowCoordinator.onAIUtterancePrepared = { [weak self] utteranceID in
             self?.aiKeyboardCoordinator.utterancePrepared(utteranceID)
         }
@@ -465,6 +478,35 @@ public final class KeyboardViewController: UIInputViewController {
         }
         state.openSettings        = { [weak self] in self?.openHostApp() }
         state.openInputMethodSetup = { [weak self] in self?.openHostApp(path: "deployrime") }
+        state.openClipboardSettings = { [weak self] in
+            SettingsDeepLink.setPending(.clipboard)
+            self?.openHostApp(path: "settings/clipboard")
+        }
+        state.openClipboardPanel = { [weak self] in
+            self?.clipboardCapture.openPanelFromTopButton()
+        }
+        state.dismissClipboardOverlay = { [weak self] in
+            self?.clipboardCapture.dismissOverlay()
+        }
+        state.insertClipboardText = { [weak self] text in
+            guard let self else { return }
+            self.clipboardCapture.insertText(text) { insertText in
+                // Via the inserter so the undo key can roll a paste back.
+                self.textInserter.insertPasteboardText(insertText)
+            }
+        }
+        state.dismissClipboardSuggestion = { [weak self] in
+            self?.clipboardCapture.dismissSuggestion()
+        }
+        state.clearClipboardHistory = { [weak self] in
+            self?.clipboardCapture.clearHistory()
+        }
+        state.deleteClipboardHistoryEntry = { [weak self] id in
+            self?.clipboardCapture.deleteEntry(id: id)
+        }
+        state.noteUserDidInputText = { [weak self] in
+            self?.clipboardCapture.noteUserDidInputText()
+        }
         // The globe UIButton registers this controller's standard
         // `handleInputModeList(from:with:)` action for all touch events.
         state.inputModeController = self
@@ -644,8 +686,10 @@ public final class KeyboardViewController: UIInputViewController {
 
     private func refreshReturnKeyRole() {
         state.returnKeyRole = returnKeyRole(for: textDocumentProxy.returnKeyType ?? .default)
+        let isSecure = textDocumentProxy.isSecureTextEntry ?? false
+        state.isSecureTextEntry = isSecure
         // Secure fields must not run English autocomplete / autocorrect / learning.
-        typingSession.suggestionsEnabled = !(textDocumentProxy.isSecureTextEntry ?? false)
+        typingSession.suggestionsEnabled = !isSecure
         typingSession.syncAutocapitalization()
     }
 

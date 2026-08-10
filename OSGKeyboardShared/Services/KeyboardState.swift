@@ -16,6 +16,13 @@ import UIKit
 public final class KeyboardState: ObservableObject {
     public init() {}
 
+    /// Full-height clipboard UI layered over the active keyboard surface.
+    public enum ClipboardKeyboardOverlay: Equatable {
+        case none
+        case enableGuide
+        case historyPanel
+    }
+
     /// Pipeline phase. Errors are structured so the UI layer can choose
     /// the right icon / copy for each failure mode without
     /// reverse-parsing a free-form string.
@@ -129,6 +136,18 @@ public final class KeyboardState: ObservableObject {
     @Published public var returnKeyRole: ReturnKeyRole = .newline
     /// Press-and-drag pads beside the mic for four-way caret movement.
     @Published public var cursorDragNavigationEnabled: Bool = true
+    /// Opt-in clipboard history capture (mirrored from App Group).
+    @Published public var clipboardHistoryEnabled: Bool = false
+    /// Opt-in clipboard suggestion strip (requires history enabled).
+    @Published public var clipboardCandidateBarEnabled: Bool = false
+    /// Host field is a password / secure entry — never read pasteboard.
+    @Published public var isSecureTextEntry: Bool = false
+    /// Full-keyboard clipboard overlay (enable guide or history list).
+    @Published public var clipboardOverlay: ClipboardKeyboardOverlay = .none
+    /// Suggestion strip above keys (newest clipboard item).
+    @Published public var clipboardSuggestionText: String?
+    /// Pasteboard changeCount associated with the current suggestion (for dismiss).
+    @Published public var clipboardSuggestionChangeCount: Int?
     /// Typing-grid haptic strength (off / light / strong).
     @Published public var keyboardHapticIntensity: KeyboardHapticIntensity = .default
     /// Single source of truth for selecting iPad-scale keyboard metrics.
@@ -253,6 +272,17 @@ public final class KeyboardState: ObservableObject {
     /// Opens the host app straight to input-resource deployment. Used by the
     /// typing surface when Rime resources have not been deployed yet.
     public var openInputMethodSetup: () -> Void = {}
+    /// Opens the host app Settings → Clipboard page (enable history toggle).
+    public var openClipboardSettings: () -> Void = {}
+    /// Top-bar clipboard button: guide when history off, else history panel.
+    public var openClipboardPanel: () -> Void = {}
+    public var dismissClipboardOverlay: () -> Void = {}
+    public var insertClipboardText: (String) -> Void = { _ in }
+    public var dismissClipboardSuggestion: () -> Void = {}
+    public var clearClipboardHistory: () -> Void = {}
+    public var deleteClipboardHistoryEntry: (UUID) -> Void = { _ in }
+    /// Notify that the user inserted text (hides suggestion strip).
+    public var noteUserDidInputText: () -> Void = {}
     /// System globe (🌐) key target. Kept weak to avoid a state → controller
     /// ownership cycle; UIKit's standard all-touch-events action provides both
     /// tap-to-advance and long-press input-mode selection.

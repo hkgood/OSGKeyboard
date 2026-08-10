@@ -130,7 +130,7 @@
 "keyboard.openSettingsA11y" = "Open OSGKeyboard settings";
 "keyboard.deniedHint" = "Opens the OSGKeyboard settings page where you can grant microphone or speech recognition access.";
 "keyboard.tapToTalkA11y" = "Tap to talk";
-"keyboard.undoA11y" = "Undo last dictation";
+"keyboard.undoA11y" = "Undo last input";
 "keyboard.redoA11y" = "Redo";
 "keyboard.copyA11y" = "Copy";
 "keyboard.cutA11y" = "Cut";
@@ -199,6 +199,17 @@
 "keyboard.translation.disable" = "Disable translation";
 "keyboard.translation.a11y" = "Translation";
 "keyboard.translation.a11yHint" = "Toggle translation or change the target language.";
+"keyboard.clipboard.a11y" = "Clipboard";
+"keyboard.clipboard.a11yHint" = "Open clipboard history or enable clipboard capture.";
+"keyboard.clipboard.guide.body" = "Turn on clipboard history in Settings first.";
+"keyboard.clipboard.guide.cta" = "Open Settings";
+"keyboard.clipboard.panel.title" = "Clipboard";
+"keyboard.clipboard.panel.empty" = "No history yet";
+"keyboard.clipboard.panel.delete" = "Delete";
+"keyboard.clipboard.panel.close" = "Close clipboard";
+"keyboard.clipboard.panel.closeHint" = "Return to the keyboard.";
+"keyboard.clipboard.suggestion.dismissA11y" = "Dismiss clipboard suggestion";
+"keyboard.clipboard.suggestion.dismissHint" = "Hide this clipboard suggestion strip.";
 "keyboard.voice.cancel" = "Cancel voice input";
 "keyboard.voice.cancelHint" = "Discard the current recording, recognition, and polish result.";
 "keyboard.scenario.a11y" = "Polish scenario";

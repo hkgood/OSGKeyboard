@@ -260,6 +260,26 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         }
     }
 
+    /// When enabled, the keyboard records clipboard text into a local history list.
+    @Published public var clipboardHistoryEnabled: Bool {
+        didSet {
+            guard !isApplyingConfiguration,
+                  clipboardHistoryEnabled != configuration.clipboardHistoryEnabled else { return }
+            configuration.clipboardHistoryEnabled = clipboardHistoryEnabled
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
+    /// When enabled (and history is on), show the newest clipboard item as a suggestion strip.
+    @Published public var clipboardCandidateBarEnabled: Bool {
+        didSet {
+            guard !isApplyingConfiguration,
+                  clipboardCandidateBarEnabled != configuration.clipboardCandidateBarEnabled else { return }
+            configuration.clipboardCandidateBarEnabled = clipboardCandidateBarEnabled
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
     /// When enabled, the host app tries to return to the source app after a cold-start handoff.
     @Published public var flowSkipAppSwitch: Bool {
         didSet {
@@ -401,6 +421,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         polishIntensity = configuration.polishIntensity
         aiResponseLength = configuration.aiResponseLength
         llmThinkingEnabled = configuration.llmThinkingEnabled
+        clipboardHistoryEnabled = configuration.clipboardHistoryEnabled
+        clipboardCandidateBarEnabled = configuration.clipboardCandidateBarEnabled
         flowSkipAppSwitch = configuration.flowSkipAppSwitch
         flowInactivityDuration = configuration.flowInactivityDuration
         localASRCustomLanguageModelEnabled = configuration.localASRCustomLanguageModelEnabled
@@ -431,6 +453,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         aiResponseLength = .default
         localASRCustomLanguageModelEnabled = true
         llmThinkingEnabled = false
+        clipboardHistoryEnabled = false
+        clipboardCandidateBarEnabled = false
         hasAcknowledgedCloudSharing = false
         configuration.providerId = polishPreset.id
         configuration.baseURL = polishPreset.defaultBaseURL
@@ -444,6 +468,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         configuration.aiResponseLength = .default
         configuration.localASRCustomLanguageModelEnabled = true
         configuration.llmThinkingEnabled = false
+        configuration.clipboardHistoryEnabled = false
+        configuration.clipboardCandidateBarEnabled = false
         configuration.hasAcknowledgedCloudSharing = false
         isApplyingConfiguration = false
         persistConfiguration()
@@ -495,6 +521,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         polishIntensity = fresh.polishIntensity
         aiResponseLength = fresh.aiResponseLength
         llmThinkingEnabled = fresh.llmThinkingEnabled
+        clipboardHistoryEnabled = fresh.clipboardHistoryEnabled
+        clipboardCandidateBarEnabled = fresh.clipboardCandidateBarEnabled
         flowSkipAppSwitch = fresh.flowSkipAppSwitch
         flowInactivityDuration = fresh.flowInactivityDuration
         localASRCustomLanguageModelEnabled = fresh.localASRCustomLanguageModelEnabled

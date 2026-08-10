@@ -215,26 +215,41 @@ public struct KeyboardRootView: View {
     // MARK: - Top bar
 
     private var topBar: some View {
-        HStack(spacing: Spacing.xs) {
-            KeyboardBrandLogo(action: state.openSettings)
-            // Globe key now lives at the bottom-left of the keyboard (matching
-            // iOS system layout); see micActionRow's bottom HStack.
-            // Engine controls remain available in the host app.
-            // App context is auto-detected on each mic press — no UI.
-            Spacer(minLength: 0)
+        Group {
             if state.canCancelVoiceInput {
-                KeyboardCancelButton(
-                    action: state.cancelVoiceInput,
-                    accessibilityLabel: ExtL10n.text("keyboard.voice.cancel"),
-                    accessibilityHint: ExtL10n.text("keyboard.voice.cancelHint")
+                HStack(spacing: Spacing.xs) {
+                    KeyboardBrandLogo(action: state.openSettings)
+                    Spacer(minLength: 0)
+                    KeyboardCancelButton(
+                        action: state.cancelVoiceInput,
+                        accessibilityLabel: ExtL10n.text("keyboard.voice.cancel"),
+                        accessibilityHint: ExtL10n.text("keyboard.voice.cancelHint")
+                    )
+                }
+            } else if shouldShowClipboardSuggestion {
+                // Occupies the logo + capsule-tab slot until dismissed.
+                ClipboardSuggestionBar(
+                    text: state.clipboardSuggestionText ?? "",
+                    onInsert: {
+                        if let text = state.clipboardSuggestionText {
+                            state.insertClipboardText(text)
+                        }
+                    },
+                    onDismiss: state.dismissClipboardSuggestion
                 )
             } else {
-                KeyboardTopControls(
-                    state: state,
-                    typing: typing,
-                    palette: palette,
-                    onInsert: onInsert
-                )
+                HStack(spacing: Spacing.xs) {
+                    KeyboardBrandLogo(action: state.openSettings)
+                    // Globe key now lives at the bottom-left of the keyboard (matching
+                    // iOS system layout); see micActionRow's bottom HStack.
+                    Spacer(minLength: 0)
+                    KeyboardTopControls(
+                        state: state,
+                        typing: typing,
+                        palette: palette,
+                        onInsert: onInsert
+                    )
+                }
             }
         }
         .padding(.horizontal, KeyboardTopBarMetrics.horizontalInset)
@@ -269,6 +284,10 @@ public struct KeyboardRootView: View {
                                 disabled: editingBlocked || !state.undoAvailable,
                                 visible: undoVisible
                             )
+                        } else {
+                            // Right-handed undo is on the trailing pad; put
+                            // translation on the leading (mic-left) side.
+                            translationButton(visible: undoVisible)
                         }
                     }
 
@@ -297,6 +316,10 @@ public struct KeyboardRootView: View {
                                 disabled: editingBlocked || !state.undoAvailable,
                                 visible: undoVisible
                             )
+                        } else {
+                            // Default: translation sits on the mic's right,
+                            // symmetric with undo on the left.
+                            translationButton(visible: undoVisible)
                         }
                     }
             }
@@ -414,6 +437,29 @@ public struct KeyboardRootView: View {
         .opacity(visible ? 1 : 0)
         .allowsHitTesting(visible && !disabled)
         .accessibilityHidden(!visible)
+    }
+
+    /// Translation chip relocated from the top bar — mirrors undo across the mic.
+    private func translationButton(visible: Bool) -> some View {
+        KeyboardTranslationMenuButton(
+            palette: palette,
+            targetLocaleId: state.translationTargetLocaleId,
+            onSelect: state.setTranslationTargetLocaleId
+        )
+        .equatable()
+        .frame(
+            width: KeyboardLayoutMetrics.undoButtonSize,
+            height: KeyboardLayoutMetrics.undoButtonSize
+        )
+        .offset(y: -KeyboardLayoutMetrics.micUpwardAdjustment)
+        .opacity(visible ? 1 : 0)
+        .allowsHitTesting(visible)
+        .accessibilityHidden(!visible)
+    }
+
+    private var shouldShowClipboardSuggestion: Bool {
+        guard let text = state.clipboardSuggestionText, !text.isEmpty else { return false }
+        return true
     }
 
     private func bottomSpaceButton(disabled: Bool) -> some View {

@@ -31,6 +31,8 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
     public var aiResponseLength: SyncedField<AIResponseLength>
     public var activePolishStyleId: SyncedField<String>
     public var llmThinkingEnabled: SyncedField<Bool>
+    public var clipboardHistoryEnabled: SyncedField<Bool>
+    public var clipboardCandidateBarEnabled: SyncedField<Bool>
     public var flowSkipAppSwitch: SyncedField<Bool>
     public var flowInactivityDuration: SyncedField<FlowInactivityDuration>
 
@@ -55,6 +57,8 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         aiResponseLength: SyncedField<AIResponseLength>? = nil,
         activePolishStyleId: SyncedField<String>,
         llmThinkingEnabled: SyncedField<Bool>,
+        clipboardHistoryEnabled: SyncedField<Bool>? = nil,
+        clipboardCandidateBarEnabled: SyncedField<Bool>? = nil,
         flowSkipAppSwitch: SyncedField<Bool>,
         flowInactivityDuration: SyncedField<FlowInactivityDuration>
     ) {
@@ -86,6 +90,16 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         )
         self.activePolishStyleId = activePolishStyleId
         self.llmThinkingEnabled = llmThinkingEnabled
+        self.clipboardHistoryEnabled = clipboardHistoryEnabled ?? SyncedField(
+            value: false,
+            updatedAt: llmThinkingEnabled.updatedAt,
+            deviceID: llmThinkingEnabled.deviceID
+        )
+        self.clipboardCandidateBarEnabled = clipboardCandidateBarEnabled ?? SyncedField(
+            value: false,
+            updatedAt: llmThinkingEnabled.updatedAt,
+            deviceID: llmThinkingEnabled.deviceID
+        )
         self.flowSkipAppSwitch = flowSkipAppSwitch
         self.flowInactivityDuration = flowInactivityDuration
     }
@@ -111,6 +125,8 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         case aiResponseLength
         case activePolishStyleId
         case llmThinkingEnabled
+        case clipboardHistoryEnabled
+        case clipboardCandidateBarEnabled
         case flowSkipAppSwitch
         case flowInactivityDuration
     }
@@ -182,6 +198,22 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             updatedAt: keyboardHapticIntensity.updatedAt,
             deviceID: keyboardHapticIntensity.deviceID
         )
+        clipboardHistoryEnabled = try container.decodeIfPresent(
+            SyncedField<Bool>.self,
+            forKey: .clipboardHistoryEnabled
+        ) ?? SyncedField(
+            value: false,
+            updatedAt: keyboardHapticIntensity.updatedAt,
+            deviceID: keyboardHapticIntensity.deviceID
+        )
+        clipboardCandidateBarEnabled = try container.decodeIfPresent(
+            SyncedField<Bool>.self,
+            forKey: .clipboardCandidateBarEnabled
+        ) ?? SyncedField(
+            value: false,
+            updatedAt: keyboardHapticIntensity.updatedAt,
+            deviceID: keyboardHapticIntensity.deviceID
+        )
         flowSkipAppSwitch = try container.decode(SyncedField<Bool>.self, forKey: .flowSkipAppSwitch)
         flowInactivityDuration = try container.decode(
             SyncedField<FlowInactivityDuration>.self,
@@ -237,6 +269,8 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             aiResponseLength.updatedAt,
             activePolishStyleId.updatedAt,
             llmThinkingEnabled.updatedAt,
+            clipboardHistoryEnabled.updatedAt,
+            clipboardCandidateBarEnabled.updatedAt,
             flowSkipAppSwitch.updatedAt,
             flowInactivityDuration.updatedAt,
         ].max() ?? .distantPast
@@ -277,6 +311,8 @@ public extension SyncedAppSettingsV2 {
             aiResponseLength: field(configuration.aiResponseLength),
             activePolishStyleId: field(configuration.activePolishStyleId),
             llmThinkingEnabled: field(configuration.llmThinkingEnabled),
+            clipboardHistoryEnabled: field(configuration.clipboardHistoryEnabled),
+            clipboardCandidateBarEnabled: field(configuration.clipboardCandidateBarEnabled),
             flowSkipAppSwitch: field(configuration.flowSkipAppSwitch),
             flowInactivityDuration: field(configuration.flowInactivityDuration)
         )
@@ -309,6 +345,8 @@ public extension SyncedAppSettingsV2 {
             aiResponseLength: field(AIResponseLength.default),
             activePolishStyleId: field(PolishStylePackCatalog.defaultID),
             llmThinkingEnabled: field(false),
+            clipboardHistoryEnabled: field(false),
+            clipboardCandidateBarEnabled: field(false),
             flowSkipAppSwitch: field(legacy.flowSkipAppSwitch),
             flowInactivityDuration: field(legacy.flowInactivityDuration)
         )
@@ -356,6 +394,14 @@ public extension SyncedAppSettingsV2 {
                 remote: remote.activePolishStyleId
             ),
             llmThinkingEnabled: .merge(local: local.llmThinkingEnabled, remote: remote.llmThinkingEnabled),
+            clipboardHistoryEnabled: .merge(
+                local: local.clipboardHistoryEnabled,
+                remote: remote.clipboardHistoryEnabled
+            ),
+            clipboardCandidateBarEnabled: .merge(
+                local: local.clipboardCandidateBarEnabled,
+                remote: remote.clipboardCandidateBarEnabled
+            ),
             flowSkipAppSwitch: .merge(local: local.flowSkipAppSwitch, remote: remote.flowSkipAppSwitch),
             flowInactivityDuration: .merge(
                 local: local.flowInactivityDuration,
@@ -384,6 +430,8 @@ public extension SyncedAppSettingsV2 {
         configuration.aiResponseLength = aiResponseLength.value
         configuration.activePolishStyleId = activePolishStyleId.value
         configuration.llmThinkingEnabled = llmThinkingEnabled.value
+        configuration.clipboardHistoryEnabled = clipboardHistoryEnabled.value
+        configuration.clipboardCandidateBarEnabled = clipboardCandidateBarEnabled.value
         configuration.flowSkipAppSwitch = flowSkipAppSwitch.value
         configuration.flowInactivityDuration = flowInactivityDuration.value
     }
@@ -414,6 +462,8 @@ public extension SyncedAppSettingsV2 {
         patch(&copy.aiResponseLength, value: configuration.aiResponseLength)
         patch(&copy.activePolishStyleId, value: configuration.activePolishStyleId)
         patch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
+        patch(&copy.clipboardHistoryEnabled, value: configuration.clipboardHistoryEnabled)
+        patch(&copy.clipboardCandidateBarEnabled, value: configuration.clipboardCandidateBarEnabled)
         patch(&copy.flowSkipAppSwitch, value: configuration.flowSkipAppSwitch)
         patch(&copy.flowInactivityDuration, value: configuration.flowInactivityDuration)
         return copy
@@ -447,6 +497,8 @@ public extension SyncedAppSettingsV2 {
         touch(&copy.aiResponseLength, value: configuration.aiResponseLength)
         touch(&copy.activePolishStyleId, value: configuration.activePolishStyleId)
         touch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
+        touch(&copy.clipboardHistoryEnabled, value: configuration.clipboardHistoryEnabled)
+        touch(&copy.clipboardCandidateBarEnabled, value: configuration.clipboardCandidateBarEnabled)
         touch(&copy.flowSkipAppSwitch, value: configuration.flowSkipAppSwitch)
         touch(&copy.flowInactivityDuration, value: configuration.flowInactivityDuration)
         return copy

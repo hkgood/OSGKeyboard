@@ -130,7 +130,7 @@
 "keyboard.openSettingsA11y" = "打开 OSGKeyboard 设置";
 "keyboard.deniedHint" = "打开 OSGKeyboard 设置,可授予麦克风 / 语音识别权限。";
 "keyboard.tapToTalkA11y" = "点按说话";
-"keyboard.undoA11y" = "撤销上次听写";
+"keyboard.undoA11y" = "撤销上次输入";
 "keyboard.redoA11y" = "重做";
 "keyboard.copyA11y" = "拷贝";
 "keyboard.cutA11y" = "剪切";
@@ -199,6 +199,17 @@
 "keyboard.translation.disable" = "关闭翻译";
 "keyboard.translation.a11y" = "翻译";
 "keyboard.translation.a11yHint" = "切换翻译开关或修改目标语言。";
+"keyboard.clipboard.a11y" = "剪贴板";
+"keyboard.clipboard.a11yHint" = "查看剪贴板历史或开启剪贴板功能。";
+"keyboard.clipboard.guide.body" = "请先在设置中开启剪贴板历史。";
+"keyboard.clipboard.guide.cta" = "去设置开启";
+"keyboard.clipboard.panel.title" = "剪贴板";
+"keyboard.clipboard.panel.empty" = "暂无历史记录";
+"keyboard.clipboard.panel.delete" = "删除";
+"keyboard.clipboard.panel.close" = "关闭剪贴板";
+"keyboard.clipboard.panel.closeHint" = "返回键盘输入界面。";
+"keyboard.clipboard.suggestion.dismissA11y" = "关闭剪贴板建议";
+"keyboard.clipboard.suggestion.dismissHint" = "隐藏本次剪贴板建议条。";
 "keyboard.voice.cancel" = "取消本次语音输入";
 "keyboard.voice.cancelHint" = "放弃当前录音、识别和润色结果。";
 "keyboard.scenario.a11y" = "润色场景";

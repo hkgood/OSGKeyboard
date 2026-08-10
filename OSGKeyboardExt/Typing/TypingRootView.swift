@@ -120,7 +120,16 @@ struct TypingRootView: View {
     @ViewBuilder
     private var topRegion: some View {
         if hasCandidateContent {
+            // Composing Chinese/English candidates hide the clipboard strip.
             candidateBar
+        } else if let suggestion = state.clipboardSuggestionText, !suggestion.isEmpty {
+            // Same slot as logo + capsule tabs — hide chrome until dismissed.
+            ClipboardSuggestionBar(
+                text: suggestion,
+                onInsert: { state.insertClipboardText(suggestion) },
+                onDismiss: state.dismissClipboardSuggestion
+            )
+            .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
         } else {
             idleTopBar
         }

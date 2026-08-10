@@ -14,6 +14,9 @@ enum KeyboardTopBarMetrics {
     static let nestedHorizontalInset: CGFloat = horizontalInset - KeyboardChromeLayout.horizontalInset
     static let logoHeight: CGFloat = 22
     static let logoWidth: CGFloat = logoHeight * 952 / 291
+    /// Shared footprint for top-trailing chips (clipboard, cancel/X, translation).
+    static let trailingChipSize: CGFloat = 34
+    static let trailingChipIconSize: CGFloat = 15
 }
 
 struct KeyboardBrandLogo: View {
@@ -49,17 +52,17 @@ struct KeyboardCancelButton: View {
     let accessibilityHint: Text
 
     var body: some View {
+        // Same 34×34 chip as KeyboardClipboardMenuButton / translation.
         Button(action: action) {
             Image(systemName: "xmark")
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: KeyboardTopBarMetrics.trailingChipIconSize, weight: .medium))
                 .foregroundStyle(palette.textSecondary)
-                .frame(width: 34, height: 34)
-                .background(buttonFill, in: Circle())
-                .overlay(
-                    Circle()
-                        .stroke(palette.divider, lineWidth: 0.5)
+                .frame(
+                    width: KeyboardTopBarMetrics.trailingChipSize,
+                    height: KeyboardTopBarMetrics.trailingChipSize
                 )
-                .frame(width: 44, height: 44)
+                .background(buttonFill, in: Circle())
+                .overlay(Circle().stroke(palette.divider, lineWidth: 0.5))
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -135,13 +138,10 @@ struct KeyboardTopControls: View {
             .padding(2)
             .background(trackFill, in: Capsule())
 
-            KeyboardTranslationMenuButton(
+            KeyboardClipboardMenuButton(
                 palette: palette,
-                targetLocaleId: state.translationTargetLocaleId,
-                onSelect: state.setTranslationTargetLocaleId
+                action: state.openClipboardPanel
             )
-            // Decouple the open picker from the keyboard's 1 Hz App Group
-            // poll so scrolling does not reset or dismiss the menu.
             .equatable()
         }
     }
@@ -219,7 +219,7 @@ struct KeyboardTopControls: View {
     }
 }
 
-private struct KeyboardTranslationMenuButton: View, Equatable {
+struct KeyboardTranslationMenuButton: View, Equatable {
     @Environment(\.colorScheme) private var colorScheme
 
     let palette: ThemePalette
@@ -251,27 +251,26 @@ private struct KeyboardTranslationMenuButton: View, Equatable {
                 }
             }
         } label: {
-            Image(systemName: isEnabled ? "character.bubble.fill" : "character.bubble")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(isEnabled ? palette.accent : palette.textSecondary)
-                .frame(width: 34, height: 34)
-                .background(buttonFill, in: Circle())
-                .overlay(Circle().stroke(buttonStroke, lineWidth: 0.5))
+            // Match the adjacent undo key: 44×44 rounded-rect chrome, not a circle chip.
+            NativeKeyboardKeySurface(
+                isPressed: false,
+                fill: NativeKeyboardKeyColors.fill(for: colorScheme),
+                pressedFill: NativeKeyboardKeyColors.pressedFill(for: colorScheme),
+                border: palette.divider,
+                cornerRadius: KeyboardChromeLayout.actionKeyCornerRadius
+            ) {
+                Image(systemName: isEnabled ? "character.bubble.fill" : "character.bubble")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(
+                        isEnabled
+                            ? palette.accent
+                            : NativeKeyboardKeyColors.text(for: colorScheme)
+                    )
+            }
         }
         .menuStyle(.button)
         .accessibilityLabel(Text(SharedL10n.string("keyboard.translation.a11y")))
         .accessibilityHint(Text(SharedL10n.string("keyboard.translation.a11yHint")))
-    }
-
-    private var buttonFill: Color {
-        if isEnabled {
-            return palette.accent.opacity(colorScheme == .dark ? 0.28 : 0.16)
-        }
-        return colorScheme == .dark ? Color(white: 0.30) : .white
-    }
-
-    private var buttonStroke: Color {
-        isEnabled ? palette.accent.opacity(0.35) : palette.divider
     }
 
     private func displayLabel(for language: TranslationLanguage) -> String {

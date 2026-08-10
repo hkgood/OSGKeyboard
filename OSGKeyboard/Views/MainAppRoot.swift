@@ -176,6 +176,12 @@ struct MainAppRoot: View {
             // The keyboard sends the user here precisely because typing
             // resources are missing — deploy without waiting for warmup.
             RimeDeploymentController.shared.deployNow(reason: "url.deployrime")
+        case "settings":
+            // Path may be `settings/clipboard` (host = settings, path = /clipboard).
+            if url.path.contains("clipboard") {
+                SettingsDeepLink.setPending(.clipboard)
+            }
+            NotificationCenter.default.post(name: .osgOpenSettingsDeepLink, object: nil)
         #if DEBUG
         case "seed-demo":
             DemoDataSeeder.seedRichPlaceholderData()

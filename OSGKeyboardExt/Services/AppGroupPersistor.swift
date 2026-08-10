@@ -41,6 +41,8 @@ public struct AppGroupPersistor {
         state.translationTargetLocaleId = store.translationTargetLocaleId
         state.handednessPreference = store.handednessPreference
         state.cursorDragNavigationEnabled = store.cursorDragNavigationEnabled
+        state.clipboardHistoryEnabled = store.clipboardHistoryEnabled
+        state.clipboardCandidateBarEnabled = store.clipboardCandidateBarEnabled
         state.keyboardHapticIntensity = store.keyboardHapticIntensity
         applyAPIKeyAvailability(store: store, into: state)
 
@@ -91,6 +93,8 @@ public struct AppGroupPersistor {
         }
         state.handednessPreference = store.handednessPreference
         state.cursorDragNavigationEnabled = store.cursorDragNavigationEnabled
+        state.clipboardHistoryEnabled = store.clipboardHistoryEnabled
+        state.clipboardCandidateBarEnabled = store.clipboardCandidateBarEnabled
         state.keyboardHapticIntensity = store.keyboardHapticIntensity
         applyAPIKeyAvailability(store: store, into: state)
     }

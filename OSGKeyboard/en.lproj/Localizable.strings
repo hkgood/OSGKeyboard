@@ -200,6 +200,17 @@
 "settings.aiAgent.title" = "AI Agent";
 "settings.aiAgent.responseLength.section" = "Answers";
 "settings.aiAgent.responseLength.title" = "Response length";
+"settings.clipboard.title" = "Clipboard";
+"settings.clipboard.section" = "Features";
+"settings.clipboard.subtitle.on" = "On";
+"settings.clipboard.subtitle.off" = "Off";
+"settings.clipboard.history.title" = "History";
+"settings.clipboard.history.footer" = "Keeps the latest 15 plain-text copies on this device.";
+"settings.clipboard.candidate.title" = "Suggestion strip";
+"settings.clipboard.candidate.footer" = "Shows the newest copy above the keys for one-tap insert.";
+"settings.clipboard.paste.section" = "System access";
+"settings.clipboard.paste.body" = "Set Paste from Other Apps to Allow to stop paste prompts. If the option is missing, copy text and tap the keyboard suggestion once first.";
+"settings.clipboard.paste.open" = "Open iOS Settings";
 "settings.typingInput.title" = "Text Input";
 "settings.typingInput.default.title" = "Default to Text Input";
 "settings.typingInput.default.description" = "Open the text input keyboard instead of voice input by default";

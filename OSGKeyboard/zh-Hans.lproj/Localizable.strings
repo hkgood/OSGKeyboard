@@ -200,6 +200,17 @@
 "settings.aiAgent.title" = "AI Agent";
 "settings.aiAgent.responseLength.section" = "回答";
 "settings.aiAgent.responseLength.title" = "回复篇幅";
+"settings.clipboard.title" = "剪贴板";
+"settings.clipboard.section" = "功能";
+"settings.clipboard.subtitle.on" = "已开启";
+"settings.clipboard.subtitle.off" = "已关闭";
+"settings.clipboard.history.title" = "历史记录";
+"settings.clipboard.history.footer" = "本机保存最近 15 条纯文本。";
+"settings.clipboard.candidate.title" = "建议条";
+"settings.clipboard.candidate.footer" = "最新复制显示在键盘上方，点一下即可插入。";
+"settings.clipboard.paste.section" = "系统授权";
+"settings.clipboard.paste.body" = "将「从其他 App 粘贴」设为「允许」，即可不再弹窗。若没有此项，先复制文字并点一次键盘建议条。";
+"settings.clipboard.paste.open" = "打开系统设置";
 "settings.typingInput.title" = "文本输入";
 "settings.typingInput.default.title" = "默认进行文字输入";
 "settings.typingInput.default.description" = "打开键盘时，默认使用文字输入键盘而非语音输入";

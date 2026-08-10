@@ -56,17 +56,31 @@ struct AIKeyboardView: View {
         )
     }
 
+    @ViewBuilder
     private var topBar: some View {
-        HStack(spacing: Spacing.xs) {
-            KeyboardBrandLogo(action: state.openSettings)
-            Spacer(minLength: 0)
-            if state.canCancelAIInput {
+        if state.canCancelAIInput {
+            HStack(spacing: Spacing.xs) {
+                KeyboardBrandLogo(action: state.openSettings)
+                Spacer(minLength: 0)
                 KeyboardCancelButton(
                     action: state.cancelAIInput,
                     accessibilityLabel: ExtL10n.text("keyboard.ai.cancel"),
                     accessibilityHint: ExtL10n.text("keyboard.ai.cancelHint")
                 )
-            } else {
+            }
+            .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
+        } else if let suggestion = state.clipboardSuggestionText, !suggestion.isEmpty {
+            // Replaces logo + capsule tabs until dismissed.
+            ClipboardSuggestionBar(
+                text: suggestion,
+                onInsert: { state.insertClipboardText(suggestion) },
+                onDismiss: state.dismissClipboardSuggestion
+            )
+            .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
+        } else {
+            HStack(spacing: Spacing.xs) {
+                KeyboardBrandLogo(action: state.openSettings)
+                Spacer(minLength: 0)
                 KeyboardTopControls(
                     state: state,
                     typing: typing,
@@ -74,8 +88,8 @@ struct AIKeyboardView: View {
                     onInsert: onInsert
                 )
             }
+            .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
         }
-        .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
     }
 
     private var answerArea: some View {

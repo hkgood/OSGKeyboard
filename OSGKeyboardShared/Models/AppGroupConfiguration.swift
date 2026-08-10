@@ -39,6 +39,10 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let polishIntensity = "config.polishIntensity"
         public static let aiResponseLength = "config.aiResponseLength"
         public static let llmThinkingEnabled = "config.llmThinkingEnabled"
+        /// When true, the keyboard records system clipboard text into local history.
+        public static let clipboardHistoryEnabled = "config.clipboardHistoryEnabled"
+        /// When true (and history is on), show the newest clipboard item as a suggestion strip.
+        public static let clipboardCandidateBarEnabled = "config.clipboardCandidateBarEnabled"
         public static let detectedAppContext = "config.detectedAppContext"
         public static let detectedAppContextAt = "config.detectedAppContextAt"
         public static let personalDictionary = "config.personalDictionary.v1"
@@ -94,6 +98,10 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var aiResponseLength: AIResponseLength
     /// Enables provider-specific reasoning / thinking controls for polish LLM requests.
     public var llmThinkingEnabled: Bool
+    /// Opt-in clipboard history capture in the keyboard extension.
+    public var clipboardHistoryEnabled: Bool
+    /// Opt-in clipboard suggestion strip above the key surfaces.
+    public var clipboardCandidateBarEnabled: Bool
     public var personalDictionary: PersonalDictionary
     public var polishStyleCatalog: PolishStyleCatalog
     public var activePolishStyleId: String
@@ -269,6 +277,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
                 storedRawValue: defaults.string(forKey: Keys.aiResponseLength)
             ),
             llmThinkingEnabled: defaults.bool(forKey: Keys.llmThinkingEnabled),
+            clipboardHistoryEnabled: defaults.bool(forKey: Keys.clipboardHistoryEnabled),
+            clipboardCandidateBarEnabled: defaults.bool(forKey: Keys.clipboardCandidateBarEnabled),
             personalDictionary: decodePersonalDictionary(from: defaults),
             polishStyleCatalog: decodePolishStyleCatalog(from: defaults),
             activePolishStyleId: defaults.string(forKey: Keys.activePolishStyleId)
@@ -401,6 +411,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(polishIntensity.rawValue, forKey: Keys.polishIntensity)
         defaults.set(aiResponseLength.rawValue, forKey: Keys.aiResponseLength)
         defaults.set(llmThinkingEnabled, forKey: Keys.llmThinkingEnabled)
+        defaults.set(clipboardHistoryEnabled, forKey: Keys.clipboardHistoryEnabled)
+        defaults.set(clipboardCandidateBarEnabled, forKey: Keys.clipboardCandidateBarEnabled)
         defaults.set(activePolishStyleId, forKey: Keys.activePolishStyleId)
         defaults.set(flowSkipAppSwitch, forKey: Keys.flowSkipAppSwitch)
         defaults.set(flowInactivityDuration.rawValue, forKey: Keys.flowInactivityDuration)

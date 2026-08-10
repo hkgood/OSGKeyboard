@@ -8,7 +8,7 @@
 import SwiftUI
 import OSGKeyboardShared
 
-// MARK: - Navigation row (title + optional summary subtitle)
+// MARK: - Navigation row (title + optional trailing summary before chevron)
 
 struct SettingsNavigationRow: View {
     @Environment(\.themePalette) private var palette: ThemePalette
@@ -32,24 +32,24 @@ struct SettingsNavigationRow: View {
 
     var body: some View {
         HStack(spacing: Spacing.sm) {
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
-                if let resolvedTitle {
-                    Text(resolvedTitle)
-                        .font(TypeStyle.body)
-                        .foregroundStyle(palette.textPrimary)
-                } else if let localizedTitle {
-                    Text(localizedTitle)
-                        .font(TypeStyle.body)
-                        .foregroundStyle(palette.textPrimary)
-                }
-                if let subtitle, !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(TypeStyle.caption2)
-                        .foregroundStyle(palette.textTertiary)
-                        .lineLimit(1)
-                }
+            if let resolvedTitle {
+                Text(resolvedTitle)
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
+            } else if let localizedTitle {
+                Text(localizedTitle)
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
             }
             Spacer(minLength: Spacing.xs)
+            // Trailing summary — same slot as SettingsVersionRow's value.
+            if let subtitle, !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textSecondary)
+                    .multilineTextAlignment(.trailing)
+                    .lineLimit(1)
+            }
             Image(systemName: "chevron.right")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(palette.textTertiary)
@@ -303,6 +303,98 @@ struct AIAgentSettingsView: View {
         .navigationTitle(AppL10n.string("settings.aiAgent.title", language: config.uiLanguage))
         .navigationBarTitleDisplayMode(.inline)
         .hidesTabBarWhenPushed()
+    }
+}
+
+// MARK: - Clipboard
+
+struct ClipboardSettingsView: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+    @ObservedObject var config: ProviderConfig
+
+    var body: some View {
+        ScrollView {
+            CardPageContent {
+                CardSection("settings.clipboard.section") {
+                    VStack(spacing: 0) {
+                        Toggle(isOn: $config.clipboardHistoryEnabled) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("settings.clipboard.history.title")
+                                    .foregroundStyle(palette.textPrimary)
+                                Text("settings.clipboard.history.footer")
+                                    .font(.footnote)
+                                    .foregroundStyle(palette.textSecondary)
+                            }
+                        }
+                        .tint(palette.accent)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+
+                        Divider().background(palette.divider)
+
+                        Toggle(isOn: clipboardCandidateBinding) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("settings.clipboard.candidate.title")
+                                    .foregroundStyle(palette.textPrimary)
+                                Text("settings.clipboard.candidate.footer")
+                                    .font(.footnote)
+                                    .foregroundStyle(palette.textSecondary)
+                            }
+                        }
+                        .tint(palette.accent)
+                        .disabled(!config.clipboardHistoryEnabled)
+                        .opacity(config.clipboardHistoryEnabled ? 1 : 0.45)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                    }
+                    .surfaceCard()
+                }
+
+                // iOS asks per read unless the user flips the durable
+                // "Paste from Other Apps" permission to Allow.
+                CardSection("settings.clipboard.paste.section") {
+                    VStack(spacing: 0) {
+                        Text("settings.clipboard.paste.body")
+                            .font(.footnote)
+                            .foregroundStyle(palette.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+
+                        Divider().background(palette.divider)
+
+                        Button {
+                            AppPermissions.openSystemSettings()
+                        } label: {
+                            SettingsNavigationRow(
+                                titleText: AppL10n.string(
+                                    "settings.clipboard.paste.open",
+                                    language: config.uiLanguage
+                                )
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .surfaceCard()
+                }
+            }
+        }
+        .background(palette.background.ignoresSafeArea())
+        .navigationTitle(AppL10n.string("settings.clipboard.title", language: config.uiLanguage))
+        .navigationBarTitleDisplayMode(.inline)
+        .hidesTabBarWhenPushed()
+        .onChange(of: config.clipboardHistoryEnabled) { _, enabled in
+            if !enabled {
+                config.clipboardCandidateBarEnabled = false
+            }
+        }
+    }
+
+    private var clipboardCandidateBinding: Binding<Bool> {
+        Binding(
+            get: { config.clipboardHistoryEnabled && config.clipboardCandidateBarEnabled },
+            set: { config.clipboardCandidateBarEnabled = $0 }
+        )
     }
 }
 
