@@ -85,3 +85,8 @@ AudioIntentProbe/
 .crash-pull/
 all-changes-vs-main.patch
 CHANGES.md
+
+# Local scratch: DerivedData clones, stress logs, QA frames, AI notes, audits
+.tmp/
+.workbuddy-ai/
+reports/
