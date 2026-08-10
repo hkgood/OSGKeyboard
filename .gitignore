@@ -45,7 +45,6 @@ fastlane/test_output
 # Local config (API keys, signing, etc.)
 *.local
 Signing.local.xcconfig
-PreconfiguredKeys.local.swift
 .env
 .env.*
 

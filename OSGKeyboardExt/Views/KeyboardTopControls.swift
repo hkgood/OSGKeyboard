@@ -73,12 +73,14 @@ struct KeyboardCancelButton: View {
 }
 
 private enum KeyboardInputTab: CaseIterable {
+    case ai
     case voice
     case chinese
     case english
 
     var title: String {
         switch self {
+        case .ai: return "AI"
         case .voice: return "语音"
         case .chinese: return "中文"
         case .english: return "EN"
@@ -107,7 +109,10 @@ struct KeyboardTopControls: View {
                             .foregroundStyle(
                                 isSelected(tab) ? palette.textPrimary : palette.textSecondary
                             )
-                            .frame(width: tab == .english ? 34 : 42, height: 30)
+                            .frame(
+                                width: tab == .english || tab == .ai ? 34 : 42,
+                                height: 30
+                            )
                             .background {
                                 if isSelected(tab) {
                                     Capsule()
@@ -163,6 +168,8 @@ struct KeyboardTopControls: View {
 
     private func isSelected(_ tab: KeyboardInputTab) -> Bool {
         switch tab {
+        case .ai:
+            return state.surface == .ai
         case .voice:
             return state.surface == .voice
         case .chinese:
@@ -174,6 +181,8 @@ struct KeyboardTopControls: View {
 
     private func select(_ tab: KeyboardInputTab) {
         switch tab {
+        case .ai:
+            state.setSurface(.ai)
         case .voice:
             state.setSurface(.voice)
         case .chinese:
@@ -202,6 +211,7 @@ struct KeyboardTopControls: View {
 
     private func accessibilityLabel(for tab: KeyboardInputTab) -> String {
         switch tab {
+        case .ai: return "切换到 AI 问答"
         case .voice: return "切换到语音输入"
         case .chinese: return "切换到中文输入"
         case .english: return "切换到英文输入"

@@ -13,6 +13,10 @@ public struct HistoryMutation: Codable, Equatable, Sendable, Identifiable {
         case append
     }
 
+    public enum UsageCategory: String, Codable, Sendable {
+        case ai
+    }
+
     public let id: UUID
     public let sequence: Int64
     public let action: Action
@@ -20,6 +24,8 @@ public struct HistoryMutation: Codable, Equatable, Sendable, Identifiable {
     public let expectedRevision: Int64?
     public let text: String?
     public let engineMode: String?
+    public let source: SpeechHistoryEntry.Source?
+    public let usageCategory: UsageCategory?
     public let createdAt: TimeInterval
 
     public init(
@@ -30,6 +36,8 @@ public struct HistoryMutation: Codable, Equatable, Sendable, Identifiable {
         expectedRevision: Int64? = nil,
         text: String? = nil,
         engineMode: String? = nil,
+        source: SpeechHistoryEntry.Source? = nil,
+        usageCategory: UsageCategory? = nil,
         createdAt: TimeInterval = Date().timeIntervalSince1970
     ) {
         self.id = id
@@ -39,6 +47,8 @@ public struct HistoryMutation: Codable, Equatable, Sendable, Identifiable {
         self.expectedRevision = expectedRevision
         self.text = text
         self.engineMode = engineMode
+        self.source = source
+        self.usageCategory = usageCategory
         self.createdAt = createdAt
     }
 }

@@ -27,6 +27,7 @@ public protocol ConfigurationStore: Sendable {
 
     var engineMode: String { get }
     var polishIntensity: PolishIntensity { get }
+    var aiResponseLength: AIResponseLength { get }
     var llmThinkingEnabled: Bool { get }
     var personalDictionary: PersonalDictionary { get }
     var polishStyleCatalog: PolishStyleCatalog { get }

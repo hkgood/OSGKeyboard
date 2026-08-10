@@ -34,13 +34,19 @@ public final class SpeechHistoryStore: ObservableObject {
     public func append(
         id: UUID = UUID(),
         text: String,
-        engineMode: String? = nil
+        engineMode: String? = nil,
+        source: SpeechHistoryEntry.Source = .dictation
     ) -> SpeechHistoryEntry? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
         rebaseOnPersistedStateBeforeMutation()
-        let entry = SpeechHistoryEntry(id: id, text: trimmed, engineMode: engineMode)
+        let entry = SpeechHistoryEntry(
+            id: id,
+            text: trimmed,
+            engineMode: engineMode,
+            source: source
+        )
         payload.entries.insert(entry, at: 0)
         payload.trimEntries()
         payload.updatedAt = Date()
@@ -68,7 +74,8 @@ public final class SpeechHistoryStore: ObservableObject {
             let entry = SpeechHistoryEntry(
                 id: mutation.entryID,
                 text: text,
-                engineMode: mutation.engineMode
+                engineMode: mutation.engineMode,
+                source: mutation.source ?? .dictation
             )
             payload.entries.insert(entry, at: 0)
             finishMutation(mutationID: mutation.id)
@@ -82,7 +89,11 @@ public final class SpeechHistoryStore: ObservableObject {
             guard let index = payload.entries.firstIndex(where: { $0.id == mutation.entryID })
             else {
                 // The original row may have been deleted or trimmed remotely.
-                let fallback = SpeechHistoryEntry(text: text, engineMode: mutation.engineMode)
+                let fallback = SpeechHistoryEntry(
+                    text: text,
+                    engineMode: mutation.engineMode,
+                    source: mutation.source ?? .dictation
+                )
                 payload.entries.insert(fallback, at: 0)
                 finishMutation(mutationID: mutation.id)
                 return fallback
@@ -91,7 +102,11 @@ public final class SpeechHistoryStore: ObservableObject {
             if let expected = mutation.expectedRevision, existing.revision != expected {
                 // Never overwrite a newer cloud edit. Preserve this local result
                 // as a new row instead.
-                let conflictCopy = SpeechHistoryEntry(text: text, engineMode: mutation.engineMode)
+                let conflictCopy = SpeechHistoryEntry(
+                    text: text,
+                    engineMode: mutation.engineMode,
+                    source: mutation.source ?? existing.source
+                )
                 payload.entries.insert(conflictCopy, at: 0)
                 finishMutation(mutationID: mutation.id)
                 return conflictCopy
@@ -102,7 +117,8 @@ public final class SpeechHistoryStore: ObservableObject {
                 createdAt: existing.createdAt,
                 modifiedAt: Date(),
                 revision: existing.revision + 1,
-                engineMode: mutation.engineMode ?? existing.engineMode
+                engineMode: mutation.engineMode ?? existing.engineMode,
+                source: mutation.source ?? existing.source
             )
             payload.entries[index] = updated
             finishMutation(mutationID: mutation.id)

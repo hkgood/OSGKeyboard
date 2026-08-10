@@ -282,6 +282,30 @@ struct GeneralSettingsView: View {
     }
 }
 
+// MARK: - AI Agent
+
+struct AIAgentSettingsView: View {
+    @Environment(\.themePalette) private var palette: ThemePalette
+    @ObservedObject var config: ProviderConfig
+
+    var body: some View {
+        ScrollView {
+            CardPageContent {
+                CardSection("settings.aiAgent.responseLength.section") {
+                    VStack(spacing: 0) {
+                        AIResponseLengthPickerRow(config: config)
+                    }
+                    .surfaceCard()
+                }
+            }
+        }
+        .background(palette.background.ignoresSafeArea())
+        .navigationTitle(AppL10n.string("settings.aiAgent.title", language: config.uiLanguage))
+        .navigationBarTitleDisplayMode(.inline)
+        .hidesTabBarWhenPushed()
+    }
+}
+
 // MARK: - About
 
 struct AboutSettingsView: View {

@@ -32,10 +32,10 @@
 "onboarding.enable.resources.failed" = "中文输入资源准备失败";
 "onboarding.enable.resources.retry" = "重试";
 "onboarding.api.title" = "选择语音转文字 AI 引擎";
-"onboarding.api.localModels.hint" = "本地引擎使用内置语音识别，无需填写 API Key。";
+"onboarding.api.localModels.hint" = "本地引擎使用系统语音识别。填写下方 API Key 即可开启 AI 润色。";
 "onboarding.polish.title" = "文本润色（LLM）";
 "onboarding.polish.subtitle" = "识别完成后整理文字，可与 ASR 服务商不同。";
-"onboarding.polish.localHint" = "已包含内置润色。在此填入 API Key 可替换为自定义模型。";
+"onboarding.polish.localHint" = "填写 API Key 才能开启 AI 润色；未填写时将直接插入原始识别结果。";
 "settings.onboarding.replay" = "重新开始权限引导";
 
 /* Common navigation */
@@ -169,7 +169,8 @@
 "settings.localModels.polishRole" = "润色";
 "settings.localModels.builtIn" = "内置";
 "settings.localModels.speechEngine" = "Apple iOS Speech";
-"settings.localModels.polishEngine" = "OSGKeyboard 内置";
+"settings.localModels.polishEngine" = "设置中的模型";
+"settings.localModels.polishNeedsKey" = "请填写 API Key";
 "settings.localModels.allReady" = "已就绪";
 "settings.localModels.readiness %lld %lld" = "%lld/%lld 已就绪";
 "settings.localModels.cloudPolish.title" = "识别后云端润色";
@@ -196,6 +197,9 @@
 "settings.general.appearanceLanguage.title" = "外观与语言";
 "settings.general.keyboard.title" = "键盘与操作";
 "settings.general.sync.title" = "同步";
+"settings.aiAgent.title" = "AI Agent";
+"settings.aiAgent.responseLength.section" = "回答";
+"settings.aiAgent.responseLength.title" = "回复篇幅";
 "settings.typingInput.title" = "文本输入";
 "settings.typingInput.default.title" = "默认进行文字输入";
 "settings.typingInput.default.description" = "打开键盘时，默认使用文字输入键盘而非语音输入";
@@ -372,6 +376,7 @@
 "home.setup.permission.both" = "麦克风和语音识别还没授权，语音输入用不了。";
 "home.setup.permission.request" = "下一步";
 "home.setup.cloudIncomplete" = "选了云端引擎，先去「设置」填 API Key。";
+"home.setup.polishKeyMissing" = "请先在「设置」填写 API Key 才能润色；未填写时会直接插入原始识别结果。";
 "home.setup.keyboardHint" = "列表里没有？去系统设置里添加键盘。";
 "home.setup.keyboardHint.dismiss" = "知道了";
 "home.flow.starting" = "正在启动语音会话…";
@@ -560,3 +565,4 @@
 "hostApp.tiktok" = "TikTok";
 "flow.warning.polishDegradedQuality" = "本次润色结果未通过校验，已插入保守处理版本。";
 "flow.error.editLastInputFailed" = "未能完成编辑，请重试。";
+"flow.error.aiQuestionFailed" = "AI 回答失败，请重试。";

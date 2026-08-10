@@ -20,7 +20,7 @@ public struct LLMRequest: Codable, Sendable {
         case topP = "top_p"
     }
 
-    public enum Message: Codable, Sendable {
+    public enum Message: Codable, Equatable, Sendable {
         case system(String)
         case user(String)
         case assistant(String)
@@ -52,6 +52,21 @@ public struct LLMRequest: Codable, Sendable {
             default:
                 throw DecodingError.dataCorruptedError(forKey: .role, in: c,
                     debugDescription: "Unknown role \(role)")
+            }
+        }
+
+        public var role: String {
+            switch self {
+            case .system: return "system"
+            case .user: return "user"
+            case .assistant: return "assistant"
+            }
+        }
+
+        public var content: String {
+            switch self {
+            case .system(let value), .user(let value), .assistant(let value):
+                return value
             }
         }
     }

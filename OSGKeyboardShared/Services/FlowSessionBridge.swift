@@ -56,10 +56,12 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         case primeAudio
         /// Touch ended without an utterance adopting the primed capture.
         case cancelPrimeAudio
+        /// Remove one temporary AI conversation from host memory.
+        case endAIConversation
     }
 
-    /// Wire version that includes edit-source and absolute deadline fields.
-    public static let currentProtocolVersion = 3
+    /// Wire version that includes temporary AI conversation identifiers.
+    public static let currentProtocolVersion = 4
 
     public let protocolVersion: Int
     public let sessionId: UUID
@@ -75,6 +77,8 @@ public struct FlowCommand: Codable, Equatable, Sendable {
     public let editSourceText: String?
     public let sourceHistoryEntryID: UUID?
     public let sourceHistoryEntryRevision: Int64?
+    /// Host-memory conversation used only by `.aiQuestion`.
+    public let aiConversationID: UUID?
     /// Absolute wall-clock deadlines survive extension reconstruction.
     public let startDeadlineAt: TimeInterval?
     public let processingDeadlineAt: TimeInterval?
@@ -92,6 +96,7 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         editSourceText: String? = nil,
         sourceHistoryEntryID: UUID? = nil,
         sourceHistoryEntryRevision: Int64? = nil,
+        aiConversationID: UUID? = nil,
         startDeadlineAt: TimeInterval? = nil,
         processingDeadlineAt: TimeInterval? = nil
     ) {
@@ -107,6 +112,7 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         self.editSourceText = editSourceText
         self.sourceHistoryEntryID = sourceHistoryEntryID
         self.sourceHistoryEntryRevision = sourceHistoryEntryRevision
+        self.aiConversationID = aiConversationID
         self.startDeadlineAt = startDeadlineAt
         self.processingDeadlineAt = processingDeadlineAt
     }
@@ -120,6 +126,8 @@ public struct FlowResult: Codable, Equatable, Sendable {
     public enum Status: String, Codable, Sendable {
         case partial
         case rawReady
+        /// AI-mode LLM answer draft (not ASR). Non-terminal.
+        case streaming
         case final
         case error
         case aborted
@@ -145,6 +153,8 @@ public struct FlowResult: Codable, Equatable, Sendable {
     /// History row created by normal dictation, or edited by edit mode.
     public let historyEntryID: UUID?
     public let historyEntryRevision: Int64?
+    /// Echoed for AI result validation; absent for dictation and edit.
+    public let aiConversationID: UUID?
 
     public init(
         protocolVersion: Int = FlowCommand.currentProtocolVersion,
@@ -162,7 +172,8 @@ public struct FlowResult: Codable, Equatable, Sendable {
         createdAt: TimeInterval = Date().timeIntervalSince1970,
         utteranceMode: FlowUtteranceMode? = nil,
         historyEntryID: UUID? = nil,
-        historyEntryRevision: Int64? = nil
+        historyEntryRevision: Int64? = nil,
+        aiConversationID: UUID? = nil
     ) {
         self.protocolVersion = protocolVersion
         self.sessionId = sessionId
@@ -180,6 +191,7 @@ public struct FlowResult: Codable, Equatable, Sendable {
         self.utteranceMode = utteranceMode
         self.historyEntryID = historyEntryID
         self.historyEntryRevision = historyEntryRevision
+        self.aiConversationID = aiConversationID
     }
 
     public var resolvedUtteranceMode: FlowUtteranceMode {

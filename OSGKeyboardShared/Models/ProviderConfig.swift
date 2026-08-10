@@ -105,7 +105,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
             persistConfiguration()
         }
     }
-    /// "local" → on-device ASR + user's LLM polish (or built-in DeepSeek).
+    /// "local" → on-device ASR + user's LLM polish (requires user API key).
     /// "cloud" → user's cloud ASR + user's cloud LLM polish (independent picks).
     @Published public var engineMode: String {
         didSet {
@@ -230,6 +230,16 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         }
     }
 
+    /// Soft AI-mode answer length preference (short / medium / detailed).
+    @Published public var aiResponseLength: AIResponseLength {
+        didSet {
+            guard !isApplyingConfiguration,
+                  aiResponseLength != configuration.aiResponseLength else { return }
+            configuration.aiResponseLength = aiResponseLength
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
     /// Whether the pipeline should run translate-and-polish (not just
     /// polish). Both engines honour the selected target locale.
     public var isTranslationEffective: Bool {
@@ -290,10 +300,10 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     }
 
     public var isPolishConfigured: Bool {
-        if !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return !baseURL.isEmpty && !model.isEmpty
+        guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return false
         }
-        return PreconfiguredKeys.isDeepseekConfigured
+        return !baseURL.isEmpty && !model.isEmpty
     }
 
     public var isASRConfigured: Bool {
@@ -312,9 +322,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     /// On-device ASR only; no cloud API required.
     public var isLocalEngine: Bool { configuration.isLocalEngine }
 
-    /// Built-in DeepSeek path when the user has not supplied their own LLM key.
+    /// Polish provider used by the local engine (same Settings selection as cloud polish).
     public var localModeProviderId: String {
-        apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "deepseek" : providerId
+        providerId
     }
 
     private let defaults: UserDefaults
@@ -389,6 +399,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         cursorDragNavigationEnabled = configuration.cursorDragNavigationEnabled
         keyboardHapticIntensity = configuration.keyboardHapticIntensity
         polishIntensity = configuration.polishIntensity
+        aiResponseLength = configuration.aiResponseLength
         llmThinkingEnabled = configuration.llmThinkingEnabled
         flowSkipAppSwitch = configuration.flowSkipAppSwitch
         flowInactivityDuration = configuration.flowInactivityDuration
@@ -417,6 +428,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         handednessPreference = .left
         keyboardHapticIntensity = .default
         polishIntensity = .default
+        aiResponseLength = .default
         localASRCustomLanguageModelEnabled = true
         llmThinkingEnabled = false
         hasAcknowledgedCloudSharing = false
@@ -429,6 +441,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         configuration.handednessPreference = .left
         configuration.keyboardHapticIntensity = .default
         configuration.polishIntensity = .default
+        configuration.aiResponseLength = .default
         configuration.localASRCustomLanguageModelEnabled = true
         configuration.llmThinkingEnabled = false
         configuration.hasAcknowledgedCloudSharing = false
@@ -480,6 +493,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         cursorDragNavigationEnabled = fresh.cursorDragNavigationEnabled
         keyboardHapticIntensity = fresh.keyboardHapticIntensity
         polishIntensity = fresh.polishIntensity
+        aiResponseLength = fresh.aiResponseLength
         llmThinkingEnabled = fresh.llmThinkingEnabled
         flowSkipAppSwitch = fresh.flowSkipAppSwitch
         flowInactivityDuration = fresh.flowInactivityDuration

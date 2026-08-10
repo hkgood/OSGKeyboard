@@ -11,20 +11,27 @@ public struct UsageStatistics: Codable, Equatable, Sendable {
     public var dictationDurationSeconds: TimeInterval
     public var dictationCharacterCount: Int
     public var translationCharacterCount: Int
+    public var aiCharacterCount: Int
 
     public init(
         updatedAt: Date = Date(),
         dictationDurationSeconds: TimeInterval = 0,
         dictationCharacterCount: Int = 0,
-        translationCharacterCount: Int = 0
+        translationCharacterCount: Int = 0,
+        aiCharacterCount: Int = 0
     ) {
         self.updatedAt = updatedAt
         self.dictationDurationSeconds = dictationDurationSeconds
         self.dictationCharacterCount = dictationCharacterCount
         self.translationCharacterCount = translationCharacterCount
+        self.aiCharacterCount = aiCharacterCount
     }
 
     public static let zero = UsageStatistics(updatedAt: .distantPast)
+
+    public var totalInputCharacterCount: Int {
+        dictationCharacterCount + translationCharacterCount + aiCharacterCount
+    }
 
     /// Combine lifetime totals from two devices. After merge, each device
     /// continues accumulating locally so `max` converges to the union.
@@ -33,8 +40,38 @@ public struct UsageStatistics: Codable, Equatable, Sendable {
             updatedAt: max(local.updatedAt, remote.updatedAt),
             dictationDurationSeconds: max(local.dictationDurationSeconds, remote.dictationDurationSeconds),
             dictationCharacterCount: max(local.dictationCharacterCount, remote.dictationCharacterCount),
-            translationCharacterCount: max(local.translationCharacterCount, remote.translationCharacterCount)
+            translationCharacterCount: max(local.translationCharacterCount, remote.translationCharacterCount),
+            aiCharacterCount: max(local.aiCharacterCount, remote.aiCharacterCount)
         )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case updatedAt
+        case dictationDurationSeconds
+        case dictationCharacterCount
+        case translationCharacterCount
+        case aiCharacterCount
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        dictationDurationSeconds = try container.decodeIfPresent(
+            TimeInterval.self,
+            forKey: .dictationDurationSeconds
+        ) ?? 0
+        dictationCharacterCount = try container.decodeIfPresent(
+            Int.self,
+            forKey: .dictationCharacterCount
+        ) ?? 0
+        translationCharacterCount = try container.decodeIfPresent(
+            Int.self,
+            forKey: .translationCharacterCount
+        ) ?? 0
+        aiCharacterCount = try container.decodeIfPresent(
+            Int.self,
+            forKey: .aiCharacterCount
+        ) ?? 0
     }
 }
 

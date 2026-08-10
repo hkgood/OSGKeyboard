@@ -65,6 +65,7 @@ public final class KeyboardViewController: UIInputViewController {
     private var textInserter: KeyboardTextInserter!
     private var flowCoordinator: KeyboardFlowCoordinator!
     private var lastInputEditCoordinator: LastInputEditCoordinator!
+    private var aiKeyboardCoordinator: AIKeyboardCoordinator!
     private var configSync: KeyboardConfigSync!
     /// UIKit may synchronously lay out the view during `viewDidLoad`.
     /// Keep this optional so an early layout pass is harmless.
@@ -178,6 +179,12 @@ public final class KeyboardViewController: UIInputViewController {
         TypingInputConfiguration.persistLastSurface(
             preserve ? .voice : state.surface
         )
+        if state.surface == .ai {
+            // AI context never survives a keyboard presentation, but the
+            // selected surface itself is restored on the next open.
+            TypingInputConfiguration.persistLastSurface(.ai)
+            aiKeyboardCoordinator.leave()
+        }
         if !preserve {
             prepareSurfaceForNextPresentation()
         }
@@ -375,6 +382,44 @@ public final class KeyboardViewController: UIInputViewController {
         flowCoordinator.onEditFailure = { [weak self] message in
             self?.lastInputEditCoordinator.fail(message)
         }
+        aiKeyboardCoordinator = AIKeyboardCoordinator(
+            state: state,
+            flow: flowCoordinator,
+            insertAnswer: { [weak self] answer in
+                self?.textInserter.insertAIAnswer(answer) ?? false
+            },
+            performReturn: { [weak self] in
+                self?.textDocumentProxy.insertText("\n")
+            }
+        )
+        flowCoordinator.onAIUtterancePrepared = { [weak self] utteranceID in
+            self?.aiKeyboardCoordinator.utterancePrepared(utteranceID)
+        }
+        flowCoordinator.onAIRecordingStarted = { [weak self] utteranceID in
+            self?.aiKeyboardCoordinator.recordingStarted(utteranceID)
+        }
+        flowCoordinator.onAIRecognitionStarted = { [weak self] utteranceID in
+            self?.aiKeyboardCoordinator.recognitionStarted(utteranceID)
+        }
+        flowCoordinator.onAITranscript = { [weak self] transcript, utteranceID, status in
+            self?.aiKeyboardCoordinator.receiveTranscript(
+                transcript,
+                utteranceID: utteranceID,
+                status: status
+            )
+        }
+        flowCoordinator.onAIStreamingAnswer = { [weak self] draft, utteranceID in
+            self?.aiKeyboardCoordinator.receivePartialAnswer(
+                draft,
+                utteranceID: utteranceID
+            )
+        }
+        flowCoordinator.onAIResult = { [weak self] result in
+            self?.aiKeyboardCoordinator.receive(result: result)
+        }
+        flowCoordinator.onAIFailure = { [weak self] message, utteranceID in
+            self?.aiKeyboardCoordinator.fail(message, utteranceID: utteranceID)
+        }
         _ = textInserter.recoverPendingEditTransactionIfNeeded()
 
         cursorDrag = CursorDragController(
@@ -408,6 +453,15 @@ public final class KeyboardViewController: UIInputViewController {
         }
         state.closeEditMode = { [weak self] in
             self?.lastInputEditCoordinator.close()
+        }
+        state.tapAIMic = { [weak self] in
+            self?.aiKeyboardCoordinator.toggleMicrophone()
+        }
+        state.cancelAIInput = { [weak self] in
+            self?.aiKeyboardCoordinator.cancel()
+        }
+        state.sendAIAnswer = { [weak self] in
+            self?.aiKeyboardCoordinator.sendLatestAnswer()
         }
         state.openSettings        = { [weak self] in self?.openHostApp() }
         state.openInputMethodSetup = { [weak self] in self?.openHostApp(path: "deployrime") }
@@ -471,6 +525,9 @@ public final class KeyboardViewController: UIInputViewController {
             return
         }
         guard state.surface != surface else {
+            if surface == .ai {
+                aiKeyboardCoordinator.enterIfNeeded()
+            }
             refreshKeyboardHeight()
             return
         }
@@ -478,11 +535,18 @@ public final class KeyboardViewController: UIInputViewController {
             "applySurface \(state.surface.rawValue) → \(surface.rawValue) \(OSGDiag.memoryTag())",
             category: "boot"
         )
+        let previousSurface = state.surface
+        if previousSurface == .ai, surface != .ai {
+            aiKeyboardCoordinator.leave()
+        }
         state.surface = surface
-        if surface == .voice {
-            typingSession.leaveTypingMode()
-        } else {
+        if surface == .typing {
             typingSession.enterTypingMode()
+        } else {
+            typingSession.leaveTypingMode()
+        }
+        if surface == .ai {
+            aiKeyboardCoordinator.enterIfNeeded()
         }
         refreshKeyboardHeight()
     }
@@ -500,6 +564,9 @@ public final class KeyboardViewController: UIInputViewController {
             category: "boot"
         )
         applySurface(resolved)
+        if resolved == .ai {
+            aiKeyboardCoordinator.beginNewPresentation()
+        }
     }
 
     /// When not remembering, snap to the static open preference while hidden

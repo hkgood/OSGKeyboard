@@ -260,7 +260,8 @@ struct OnboardingView: View {
     }
 
     private var onboardingCompleteReady: Bool {
-        // Local engine: built-in polish satisfies `isPolishConfigured`.
+        // Local ASR needs no cloud key; polish key is guided on Home / keyboard
+        // rather than blocking onboarding completion.
         // Cloud engine: ASR (step 5) + polish LLM (step 6) must both be ready.
         if config.isLocalEngine { return true }
         return config.isConfigured

@@ -54,9 +54,17 @@ final class KeyboardFlowCoordinator {
     private var editHostConfirmed = false
     private var cancelledEditUtteranceIDs: Set<UUID> = []
     private var cancelledDictationUtteranceIDs: Set<UUID> = []
+    private var cancelledAIUtteranceIDs: Set<UUID> = []
     var onEditHostRecordingConfirmed: () -> Void = {}
     var onEditResult: (FlowResult) -> Void = { _ in }
     var onEditFailure: (String) -> Void = { _ in }
+    var onAIUtterancePrepared: (UUID) -> Void = { _ in }
+    var onAIRecordingStarted: (UUID) -> Void = { _ in }
+    var onAIRecognitionStarted: (UUID) -> Void = { _ in }
+    var onAITranscript: (String, UUID, FlowResult.Status) -> Void = { _, _, _ in }
+    var onAIStreamingAnswer: (String, UUID) -> Void = { _, _ in }
+    var onAIResult: (FlowResult) -> Void = { _ in }
+    var onAIFailure: (String, UUID?) -> Void = { _, _ in }
     /// Utterance whose final result we already inserted (or failed). Prevents
     /// `adoptHostBusyStateIfNeeded` from re-entering `.processing` after a
     /// stale App Group snapshot still says `reason=processing`.
@@ -178,6 +186,7 @@ final class KeyboardFlowCoordinator {
         adoptPendingResultIfNeeded()
         consumePendingFlowDeliveryIfNeeded()
         consumeEditStartFailureIfNeeded()
+        consumeAIStartFailureIfNeeded()
 
         recoverFromDeadHostIfNeeded()
 
@@ -241,6 +250,15 @@ final class KeyboardFlowCoordinator {
             result.text ?? ExtL10n.string("keyboard.edit.error.startTimeout")
         )
         completeEditResult(result, outcome: .rejected)
+    }
+
+    private func consumeAIStartFailureIfNeeded() {
+        guard currentUtteranceRequest?.isAIQuestion == true,
+              let result = matchingResult(),
+              isTerminalFailure(result) else {
+            return
+        }
+        completeAIFailure(result)
     }
 
     private func recomputeMicVoiceAvailability() {
@@ -617,13 +635,76 @@ final class KeyboardFlowCoordinator {
         startUtterance(.editLastInput(reference))
     }
 
+    func beginAIRecording(
+        conversationID: UUID
+    ) -> FlowUtteranceStartDisposition {
+        startUtterance(.aiQuestion(conversationID: conversationID))
+    }
+
+    func stopAIRecording() {
+        guard currentUtteranceRequest?.isAIQuestion == true else { return }
+        pressEnded()
+    }
+
+    func cancelAIRecording() {
+        guard currentUtteranceRequest?.isAIQuestion == true else { return }
+        recordWhenHostReady = false
+        recordAfterHandoff = false
+        isPendingFlowStart = false
+        flowStartDeadline = 0
+        coldStartDebouncer.reset()
+        stopHostReadyWait()
+        stopFlowWatchdog()
+        stopUtteranceCountdown()
+        ExtensionScreenWakeLock.release()
+        state.level = 0
+        state.phase = .idle
+        state.lastTranscript = ""
+
+        guard let utteranceID = currentUtteranceId,
+              isFlowRecording || isAwaitingFlowResult else {
+            clearUnissuedUtterance()
+            isFlowRecording = false
+            isAwaitingFlowResult = false
+            recomputeMicVoiceAvailability()
+            return
+        }
+
+        cancelledAIUtteranceIDs.insert(utteranceID)
+        writeCommand(.abort)
+        isFlowRecording = false
+        isAwaitingFlowResult = true
+        startFlowResultWatchdog()
+        recomputeMicVoiceAvailability()
+    }
+
+    func endAIConversation(_ conversationID: UUID) {
+        guard let sessionID = FlowSessionBridge.readySnapshot()?.sessionId
+            ?? activeSessionId else {
+            return
+        }
+        FlowSessionBridge.writeCommand(
+            FlowCommand(
+                sessionId: sessionID,
+                utteranceId: UUID(),
+                commandSeq: nextCommandSeq(),
+                action: .endAIConversation,
+                localeId: state.localeId,
+                aiConversationID: conversationID
+            )
+        )
+    }
+
     func stopEditRecording() {
         guard currentUtteranceRequest?.isEdit == true else { return }
         pressEnded()
     }
 
     func cancelCurrentDictation() {
-        guard currentUtteranceRequest?.isEdit != true else { return }
+        guard currentUtteranceRequest?.isEdit != true,
+              currentUtteranceRequest?.isAIQuestion != true else {
+            return
+        }
 
         recordWhenHostReady = false
         recordAfterHandoff = false
@@ -733,6 +814,50 @@ final class KeyboardFlowCoordinator {
         resetEditTransportState()
     }
 
+    private func completeAIResult(_ result: FlowResult) {
+        onAIResult(result)
+        FlowSessionBridge.writeAck(
+            FlowAck(
+                sessionId: result.sessionId,
+                utteranceId: result.utteranceId,
+                commandSeq: result.commandSeq,
+                hostGeneration: result.hostGeneration,
+                revision: result.revision
+            )
+        )
+        FlowSessionBridge.setPendingKeyboardUtteranceId(nil)
+        lastConsumedUtteranceId = result.utteranceId
+        lastStoppedUtteranceId = nil
+        resetEditTransportState()
+        state.phase = .idle
+        state.lastTranscript = ""
+        recomputeMicVoiceAvailability()
+    }
+
+    private func completeAIFailure(_ result: FlowResult) {
+        onAIFailure(
+            result.text ?? ExtL10n.string("keyboard.ai.error.requestFailed"),
+            result.utteranceId
+        )
+        FlowSessionBridge.writeAck(
+            FlowAck(
+                sessionId: result.sessionId,
+                utteranceId: result.utteranceId,
+                commandSeq: result.commandSeq,
+                hostGeneration: result.hostGeneration,
+                revision: result.revision,
+                deliveryOutcome: .rejected
+            )
+        )
+        FlowSessionBridge.setPendingKeyboardUtteranceId(nil)
+        lastConsumedUtteranceId = result.utteranceId
+        lastStoppedUtteranceId = nil
+        resetEditTransportState()
+        state.phase = .idle
+        state.lastTranscript = ""
+        recomputeMicVoiceAvailability()
+    }
+
     func pressBegan() {
         _ = startUtterance(.dictation)
     }
@@ -762,6 +887,9 @@ final class KeyboardFlowCoordinator {
         currentUtteranceId = utteranceID
         currentUtteranceRequest = request
         editHostConfirmed = false
+        if request.isAIQuestion {
+            onAIUtterancePrepared(utteranceID)
+        }
         currentStartDeadlineAt = Date().timeIntervalSince1970
             + FlowSessionKeys.utteranceStartBudget
 
@@ -863,7 +991,10 @@ final class KeyboardFlowCoordinator {
         writeCommand(.stopRecording)
         debug("pressEnded wrote stop command")
         state.phase = .processing
-        if currentUtteranceRequest?.isEdit != true {
+        if currentUtteranceRequest?.isAIQuestion == true,
+           let currentUtteranceId {
+            onAIRecognitionStarted(currentUtteranceId)
+        } else if currentUtteranceRequest?.isEdit != true {
             state.lastTranscript = ExtL10n.string("keyboard.flow.transcribing")
         }
         startFlowResultWatchdog()
@@ -923,6 +1054,16 @@ final class KeyboardFlowCoordinator {
                 state.lastTranscript = ""
                 return
             }
+            if currentUtteranceRequest?.isAIQuestion == true {
+                onAIFailure(
+                    ExtL10n.string("keyboard.error.manualOpenForFlow"),
+                    currentUtteranceId
+                )
+                resetEditTransportState()
+                state.phase = .idle
+                state.lastTranscript = ""
+                return
+            }
             showManualOpenHint(path: "startflow")
             recomputeMicVoiceAvailability()
             return
@@ -972,13 +1113,16 @@ final class KeyboardFlowCoordinator {
             commandSeq: nextCommandSeq(),
             action: action,
             localeId: state.localeId,
-            fieldContext: action == .stopRecording ? fieldContextProvider() : nil,
+            fieldContext: action == .stopRecording && !request.isAIQuestion
+                ? fieldContextProvider()
+                : nil,
             utteranceMode: mode,
             editSourceText: action == .startRecording
                 ? request.editSourceText
                 : nil,
             sourceHistoryEntryID: request.sourceHistoryEntryID,
             sourceHistoryEntryRevision: request.sourceHistoryEntryRevision,
+            aiConversationID: request.aiConversationID,
             startDeadlineAt: action == .startRecording ? currentStartDeadlineAt : nil,
             processingDeadlineAt: action == .stopRecording && request.isEdit
                 ? Date().timeIntervalSince1970
@@ -1027,12 +1171,20 @@ final class KeyboardFlowCoordinator {
                consumeCancelledEditResultIfNeeded(result) {
                 return
             }
+            if let result = matchingResult(),
+               consumeCancelledAIResultIfNeeded(result) {
+                return
+            }
             if let result = matchingResult(), result.status == .final, let text = result.text, !text.isEmpty {
                 isAwaitingFlowResult = false
                 stopFlowWatchdog()
                 if result.resolvedUtteranceMode == .editLastInput {
                     state.phase = .processing
                     onEditResult(result)
+                    return
+                }
+                if result.resolvedUtteranceMode == .aiQuestion {
+                    completeAIResult(result)
                     return
                 }
                 textInserter.handleFlowTranscript(
@@ -1081,6 +1233,10 @@ final class KeyboardFlowCoordinator {
                     )
                     completeEditResult(result, outcome: .rejected)
                     state.phase = .idle
+                    return
+                }
+                if result.resolvedUtteranceMode == .aiQuestion {
+                    completeAIFailure(result)
                     return
                 }
                 FlowSessionBridge.writeAck(
@@ -1164,6 +1320,30 @@ final class KeyboardFlowCoordinator {
             )
         )
         cancelledEditUtteranceIDs.remove(result.utteranceId)
+        lastConsumedUtteranceId = result.utteranceId
+        resetEditTransportState()
+        state.phase = .idle
+        state.lastTranscript = ""
+        recomputeMicVoiceAvailability()
+        return true
+    }
+
+    private func consumeCancelledAIResultIfNeeded(_ result: FlowResult) -> Bool {
+        guard cancelledAIUtteranceIDs.contains(result.utteranceId),
+              result.status == .final || isTerminalFailure(result) else {
+            return false
+        }
+        FlowSessionBridge.writeAck(
+            FlowAck(
+                sessionId: result.sessionId,
+                utteranceId: result.utteranceId,
+                commandSeq: result.commandSeq,
+                hostGeneration: result.hostGeneration,
+                revision: result.revision,
+                deliveryOutcome: .rejected
+            )
+        )
+        cancelledAIUtteranceIDs.remove(result.utteranceId)
         lastConsumedUtteranceId = result.utteranceId
         resetEditTransportState()
         state.phase = .idle
@@ -1343,6 +1523,18 @@ final class KeyboardFlowCoordinator {
             )
             return
         }
+        if let id = currentUtteranceId,
+           cancelledAIUtteranceIDs.remove(id) != nil {
+            stopUtteranceCountdown()
+            stopFlowWatchdog()
+            ExtensionScreenWakeLock.release()
+            resetEditTransportState()
+            state.level = 0
+            state.phase = .idle
+            state.lastTranscript = ""
+            recomputeMicVoiceAvailability()
+            return
+        }
         if deliverRawFallbackIfAvailable(reason: "hostDisconnected") {
             return
         }
@@ -1361,6 +1553,14 @@ final class KeyboardFlowCoordinator {
         let message = ExtL10n.string("keyboard.flow.hostDisconnected")
         if currentUtteranceRequest?.isEdit == true {
             onEditFailure(message)
+            resetEditTransportState()
+            state.phase = .idle
+            state.lastTranscript = ""
+            recomputeMicVoiceAvailability()
+            return
+        }
+        if currentUtteranceRequest?.isAIQuestion == true {
+            onAIFailure(message, currentUtteranceId)
             resetEditTransportState()
             state.phase = .idle
             state.lastTranscript = ""
@@ -1469,6 +1669,12 @@ final class KeyboardFlowCoordinator {
             if currentUtteranceRequest?.isEdit == true {
                 onEditFailure(ExtL10n.string("keyboard.edit.error.startTimeout"))
                 abortEditRecording()
+            } else if currentUtteranceRequest?.isAIQuestion == true {
+                onAIFailure(
+                    ExtL10n.string("keyboard.ai.error.startTimeout"),
+                    currentUtteranceId
+                )
+                cancelAIRecording()
             } else {
                 state.phase = .error(
                     .hostAudioUnavailable,
@@ -1538,6 +1744,10 @@ final class KeyboardFlowCoordinator {
         state.phase = currentUtteranceRequest?.isEdit == true
             ? .requestingPermissions
             : .recording
+        if currentUtteranceRequest?.isAIQuestion == true,
+           let currentUtteranceId {
+            onAIRecordingStarted(currentUtteranceId)
+        }
         recomputeMicVoiceAvailability()
         if let view = wakeLockView() {
             ExtensionScreenWakeLock.acquire(from: view)
@@ -1658,11 +1868,19 @@ final class KeyboardFlowCoordinator {
         guard isFlowRecording || isAwaitingFlowResult else { return }
         switch state.phase {
         case .recording, .processing:
-            if let result = matchingResult(),
-               result.status == .partial || result.status == .rawReady,
+            guard let result = matchingResult() else { return }
+            if result.status == .streaming,
+               result.resolvedUtteranceMode == .aiQuestion {
+                onAIStreamingAnswer(result.text ?? "", result.utteranceId)
+                return
+            }
+            if (result.status == .partial || result.status == .rawReady),
                let partial = result.text,
                !partial.isEmpty {
                 state.lastTranscript = partial
+                if result.resolvedUtteranceMode == .aiQuestion {
+                    onAITranscript(partial, result.utteranceId, result.status)
+                }
             }
         default:
             break
@@ -1679,11 +1897,21 @@ final class KeyboardFlowCoordinator {
         let isCancelledDictation = currentUtteranceId.map {
             cancelledDictationUtteranceIDs.contains($0)
         } ?? false
-        let resultTimeout = isCancelledEdit || isCancelledDictation
-            ? FlowSessionKeys.utteranceStartBudget
-            : (currentUtteranceRequest?.isEdit != true
-                ? FlowWatchdog.resultTimeout(engineMode: state.engineMode)
-                : FlowSessionKeys.editLastInputProcessingBudget)
+        let isCancelledAI = currentUtteranceId.map {
+            cancelledAIUtteranceIDs.contains($0)
+        } ?? false
+        let resultTimeout: TimeInterval
+        if isCancelledEdit || isCancelledDictation || isCancelledAI {
+            resultTimeout = FlowSessionKeys.utteranceStartBudget
+        } else if currentUtteranceRequest?.isAIQuestion == true {
+            resultTimeout = FlowSessionKeys.keyboardAIResultTimeout(
+                engineMode: state.engineMode
+            )
+        } else if currentUtteranceRequest?.isEdit == true {
+            resultTimeout = FlowSessionKeys.editLastInputProcessingBudget
+        } else {
+            resultTimeout = FlowWatchdog.resultTimeout(engineMode: state.engineMode)
+        }
         debug("resultWatchdog started timeout=\(Int(resultTimeout))s engine=\(state.engineMode)")
         flowWatchdogTask = Task { @MainActor [weak self] in
             while let self, !Task.isCancelled {
@@ -1700,11 +1928,19 @@ final class KeyboardFlowCoordinator {
                    self.consumeCancelledEditResultIfNeeded(result) {
                     return
                 }
+                if let result = self.matchingResult(),
+                   self.consumeCancelledAIResultIfNeeded(result) {
+                    return
+                }
                 if let result = self.matchingResult(), result.status == .final, let text = result.text, !text.isEmpty {
                     self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
                     if result.resolvedUtteranceMode == .editLastInput {
                         self.onEditResult(result)
+                        return
+                    }
+                    if result.resolvedUtteranceMode == .aiQuestion {
+                        self.completeAIResult(result)
                         return
                     }
                     self.textInserter.handleFlowTranscript(
@@ -1747,6 +1983,10 @@ final class KeyboardFlowCoordinator {
                         )
                         self.completeEditResult(result, outcome: .rejected)
                         self.state.phase = .idle
+                        return
+                    }
+                    if result.resolvedUtteranceMode == .aiQuestion {
+                        self.completeAIFailure(result)
                         return
                     }
                     FlowSessionBridge.writeAck(
@@ -1823,6 +2063,14 @@ final class KeyboardFlowCoordinator {
                         self.recomputeMicVoiceAvailability()
                         return
                     }
+                    if let id = self.currentUtteranceId,
+                       self.cancelledAIUtteranceIDs.remove(id) != nil {
+                        self.resetEditTransportState()
+                        self.state.phase = .idle
+                        self.state.lastTranscript = ""
+                        self.recomputeMicVoiceAvailability()
+                        return
+                    }
                     if self.currentUtteranceRequest?.isEdit == true {
                         self.isAwaitingFlowResult = false
                         self.stopFlowWatchdog()
@@ -1835,6 +2083,21 @@ final class KeyboardFlowCoordinator {
                         self.currentUtteranceRequest = nil
                         self.editHostConfirmed = false
                         self.state.phase = .idle
+                        return
+                    }
+                    if self.currentUtteranceRequest?.isAIQuestion == true {
+                        let utteranceID = self.currentUtteranceId
+                        self.isAwaitingFlowResult = false
+                        self.stopFlowWatchdog()
+                        self.writeCommand(.abort)
+                        self.onAIFailure(
+                            ExtL10n.string("keyboard.ai.error.requestTimeout"),
+                            utteranceID
+                        )
+                        self.resetEditTransportState()
+                        self.state.phase = .idle
+                        self.state.lastTranscript = ""
+                        self.recomputeMicVoiceAvailability()
                         return
                     }
                     if self.deliverRawFallbackIfAvailable(reason: "resultTimeout") {

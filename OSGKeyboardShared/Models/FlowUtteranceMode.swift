@@ -11,6 +11,8 @@ public enum FlowUtteranceMode: String, Codable, Equatable, Sendable {
     case dictation
     /// ASR is an explicit instruction over the last verified OSG insertion.
     case editLastInput
+    /// ASR is a direct question for the temporary AI conversation.
+    case aiQuestion
     /// Decoded only from retired or unknown wire modes. Production code must
     /// reject this value and must never treat it as dictation.
     case unsupportedLegacy
@@ -22,6 +24,8 @@ public enum FlowUtteranceMode: String, Codable, Equatable, Sendable {
             self = .dictation
         case Self.editLastInput.rawValue:
             self = .editLastInput
+        case Self.aiQuestion.rawValue:
+            self = .aiQuestion
         case "clipboardCommand", Self.unsupportedLegacy.rawValue:
             self = .unsupportedLegacy
         default:

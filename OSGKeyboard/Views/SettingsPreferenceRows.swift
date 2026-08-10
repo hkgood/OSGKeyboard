@@ -128,6 +128,30 @@ struct PolishIntensityPickerRow: View {
     }
 }
 
+// MARK: - AI response length picker row
+
+struct AIResponseLengthPickerRow: View {
+    @ObservedObject var config: ProviderConfig
+
+    var body: some View {
+        SettingsMenuPickerRow(
+            title: AppL10n.string("settings.aiAgent.responseLength.title", language: config.uiLanguage),
+            options: AIResponseLength.allCases.map { length in
+                (
+                    length.rawValue,
+                    SharedL10n.string(length.labelKey, language: config.uiLanguage)
+                )
+            },
+            selection: Binding(
+                get: { config.aiResponseLength.rawValue },
+                set: { rawValue in
+                    config.aiResponseLength = AIResponseLength.resolve(storedRawValue: rawValue)
+                }
+            )
+        )
+    }
+}
+
 // MARK: - Default input surface toggle
 
 struct DefaultTypingInputToggleRow: View {

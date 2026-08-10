@@ -28,6 +28,9 @@ public struct UsageStatisticsDeviceSlice: Codable, Equatable, Sendable {
     public var dictationDurationSeconds: TimeInterval
     public var dictationCharacterCount: Int
     public var translationCharacterCount: Int
+    public var aiCharacterCount: Int
+    /// Bounded idempotency window for AI insert commits from the extension.
+    public var appliedAICommitIDs: [UUID]
     /// Grow-only per-day dictation character counts, keyed by local `yyyy-MM-dd`.
     /// Powers the home page's 7-day chart; merged per-key with `max` (each device
     /// only ever grows its own days) and summed across devices when aggregated.
@@ -38,12 +41,16 @@ public struct UsageStatisticsDeviceSlice: Codable, Equatable, Sendable {
         dictationDurationSeconds: TimeInterval = 0,
         dictationCharacterCount: Int = 0,
         translationCharacterCount: Int = 0,
+        aiCharacterCount: Int = 0,
+        appliedAICommitIDs: [UUID] = [],
         dailyDictationCharacters: [String: Int] = [:]
     ) {
         self.updatedAt = updatedAt
         self.dictationDurationSeconds = dictationDurationSeconds
         self.dictationCharacterCount = dictationCharacterCount
         self.translationCharacterCount = translationCharacterCount
+        self.aiCharacterCount = aiCharacterCount
+        self.appliedAICommitIDs = appliedAICommitIDs
         self.dailyDictationCharacters = dailyDictationCharacters
     }
 
@@ -52,6 +59,8 @@ public struct UsageStatisticsDeviceSlice: Codable, Equatable, Sendable {
         case dictationDurationSeconds
         case dictationCharacterCount
         case translationCharacterCount
+        case aiCharacterCount
+        case appliedAICommitIDs
         case dailyDictationCharacters
     }
 
@@ -63,6 +72,11 @@ public struct UsageStatisticsDeviceSlice: Codable, Equatable, Sendable {
         dictationDurationSeconds = try container.decode(TimeInterval.self, forKey: .dictationDurationSeconds)
         dictationCharacterCount = try container.decode(Int.self, forKey: .dictationCharacterCount)
         translationCharacterCount = try container.decode(Int.self, forKey: .translationCharacterCount)
+        aiCharacterCount = try container.decodeIfPresent(Int.self, forKey: .aiCharacterCount) ?? 0
+        appliedAICommitIDs = try container.decodeIfPresent(
+            [UUID].self,
+            forKey: .appliedAICommitIDs
+        ) ?? []
         dailyDictationCharacters = try container.decodeIfPresent([String: Int].self, forKey: .dailyDictationCharacters) ?? [:]
     }
 
@@ -71,11 +85,22 @@ public struct UsageStatisticsDeviceSlice: Codable, Equatable, Sendable {
         for (day, value) in remote.dailyDictationCharacters {
             mergedDaily[day] = max(mergedDaily[day] ?? 0, value)
         }
+        let mergedCommitIDs = Array(
+            (local.appliedAICommitIDs + remote.appliedAICommitIDs)
+                .reduce(into: [UUID]()) { result, id in
+                    if !result.contains(id) {
+                        result.append(id)
+                    }
+                }
+                .suffix(128)
+        )
         return UsageStatisticsDeviceSlice(
             updatedAt: max(local.updatedAt, remote.updatedAt),
             dictationDurationSeconds: max(local.dictationDurationSeconds, remote.dictationDurationSeconds),
             dictationCharacterCount: max(local.dictationCharacterCount, remote.dictationCharacterCount),
             translationCharacterCount: max(local.translationCharacterCount, remote.translationCharacterCount),
+            aiCharacterCount: max(local.aiCharacterCount, remote.aiCharacterCount),
+            appliedAICommitIDs: mergedCommitIDs,
             dailyDictationCharacters: mergedDaily
         )
     }
@@ -85,13 +110,14 @@ public struct UsageStatisticsDeviceSlice: Codable, Equatable, Sendable {
             updatedAt: updatedAt,
             dictationDurationSeconds: dictationDurationSeconds,
             dictationCharacterCount: dictationCharacterCount,
-            translationCharacterCount: translationCharacterCount
+            translationCharacterCount: translationCharacterCount,
+            aiCharacterCount: aiCharacterCount
         )
     }
 }
 
 public struct SyncedUsageStatisticsV2: Codable, Equatable, Sendable {
-    public static let schemaVersion = 2
+    public static let schemaVersion = 3
     public static let kvsKey = "usageStatistics.v2"
 
     public var schemaVersion: Int
@@ -108,18 +134,21 @@ public struct SyncedUsageStatisticsV2: Codable, Equatable, Sendable {
         var duration: TimeInterval = 0
         var dictation = 0
         var translation = 0
+        var ai = 0
         var latest = Date.distantPast
         for slice in devices.values {
             duration += slice.dictationDurationSeconds
             dictation += slice.dictationCharacterCount
             translation += slice.translationCharacterCount
+            ai += slice.aiCharacterCount
             latest = max(latest, slice.updatedAt)
         }
         return UsageStatistics(
             updatedAt: latest,
             dictationDurationSeconds: duration,
             dictationCharacterCount: dictation,
-            translationCharacterCount: translation
+            translationCharacterCount: translation,
+            aiCharacterCount: ai
         )
     }
 
@@ -153,7 +182,8 @@ public struct SyncedUsageStatisticsV2: Codable, Equatable, Sendable {
                 updatedAt: legacy.updatedAt,
                 dictationDurationSeconds: legacy.dictationDurationSeconds,
                 dictationCharacterCount: legacy.dictationCharacterCount,
-                translationCharacterCount: legacy.translationCharacterCount
+                translationCharacterCount: legacy.translationCharacterCount,
+                aiCharacterCount: legacy.aiCharacterCount
             ),
         ])
     }

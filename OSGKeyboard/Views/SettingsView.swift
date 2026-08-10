@@ -21,6 +21,7 @@ private enum SettingsRoute: Hashable {
     case speechRecognition
     case textPolish
     case general
+    case aiAgent
     case about
 }
 
@@ -107,6 +108,8 @@ struct SettingsView: View {
             TextPolishSettingsView(config: config)
         case .general:
             GeneralSettingsView(config: config)
+        case .aiAgent:
+            AIAgentSettingsView(config: config)
         case .about:
             AboutSettingsView(config: config)
         }
@@ -118,6 +121,17 @@ struct SettingsView: View {
         CardSection("settings.daily.title") {
             VStack(spacing: 0) {
                 settingsRouteButton(.general, title: "settings.general.title")
+
+                Divider().background(palette.divider)
+
+                settingsRouteButton(
+                    .aiAgent,
+                    title: "settings.aiAgent.title",
+                    subtitle: SharedL10n.string(
+                        config.aiResponseLength.labelKey,
+                        language: config.uiLanguage
+                    )
+                )
 
                 Divider().background(palette.divider)
 

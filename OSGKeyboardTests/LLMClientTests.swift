@@ -57,31 +57,19 @@ final class LLMClientTests: XCTestCase {
         XCTAssertTrue(config2.isConfigured)
     }
 
-    /// Local engine path: with `engineMode = "local"`, `isConfigured`
-    /// must return `true` even when the API key is empty — onboarding
-    /// gates the "Next" button on this property, and the local path
-    /// never needs a key. Regression: see commit `isConfigured` fix
-    /// that exposed this gate.
-    func testIsConfiguredTrueForLocalEngineWithoutAPIKey() {
+    /// Local ASR needs no cloud ASR key, but polish still requires a user API key.
+    func testLocalEngineWithoutAPIKeyIsNotPolishConfigured() {
         let suiteName = "group.com.osgkeyboard.shared.tests.isconfigured.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let config = ProviderConfig(defaults: defaults)
-        // Fresh suites default to local; force cloud so ASR+polish keys are required.
         config.engineMode = "cloud"
         XCTAssertFalse(config.isConfigured)
-        // Local ASR never needs a cloud ASR key; polish may use built-in DeepSeek.
         config.engineMode = "local"
-        if PreconfiguredKeys.isDeepseekConfigured {
-            XCTAssertTrue(config.isConfigured)
-        } else {
-            XCTAssertFalse(
-                config.isConfigured,
-                "Without a user key or PreconfiguredKeys.deepseek, local polish is not configured"
-            )
-        }
+        XCTAssertFalse(config.isPolishConfigured)
+        XCTAssertFalse(config.isConfigured)
         config.engineMode = "cloud"
         XCTAssertFalse(config.isConfigured)
     }
@@ -384,7 +372,7 @@ final class LLMClientTests: XCTestCase {
         XCTAssertEqual(calls, 1, "cloud engine must polish even with legacy modeId=off")
     }
 
-    /// Local engine always runs the built-in DeepSeek polish step.
+    /// Local engine still runs the polish LLM step when a client is injected.
     func testPolisherInvokesLLMWhenEngineLocal() async throws {
         let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

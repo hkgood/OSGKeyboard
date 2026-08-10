@@ -33,8 +33,12 @@ struct HomeView: View {
         flowManager.isActive || flowManager.isStarting
     }
 
-    private var needsCloudSetup: Bool {
-        !config.isLocalEngine && !config.isConfigured
+    /// Cloud: ASR + polish keys. Local: polish LLM key (ASR is on-device).
+    private var needsAPIKeySetup: Bool {
+        if config.isLocalEngine {
+            return !config.isPolishConfigured
+        }
+        return !config.isConfigured
     }
 
     private var needsPermissionSetup: Bool {
@@ -53,7 +57,7 @@ struct HomeView: View {
             && !KeyboardSetupBridge.isReadyForOnboardingSkip
             && !needsPermissionSetup
             && flowManager.sessionWarning == nil
-            && !needsCloudSetup
+            && !needsAPIKeySetup
     }
 
     var body: some View {
@@ -249,7 +253,7 @@ struct HomeView: View {
 
     private var headerGradientColors: [Color] {
         // 云端引擎未配置（缺 API Key）时不算就绪，保持中性灰渐变。
-        if sessionIsLive, !needsCloudSetup {
+        if sessionIsLive, !needsAPIKeySetup {
             return [
                 palette.accent.opacity(0.28),
                 palette.accent.opacity(0.10),
@@ -287,7 +291,7 @@ struct HomeView: View {
                 .fill(flowStatusColor)
                 .frame(width: 6, height: 6)
 
-            if needsCloudSetup {
+            if needsAPIKeySetup {
                 // 云端引擎缺 API Key：不显示就绪 / 计时 / 结束按钮。
                 Text("home.flow.notReady")
                     .font(TypeStyle.caption2)
@@ -325,7 +329,7 @@ struct HomeView: View {
                     .minimumScaleFactor(0.85)
             }
 
-            if needsCloudSetup {
+            if needsAPIKeySetup {
                 // 无按钮：引导卡片已提示去设置填 API Key。
                 EmptyView()
             } else if flowManager.isActive {
@@ -364,7 +368,7 @@ struct HomeView: View {
     private var showsFlowSessionExtras: Bool {
         needsPermissionSetup
             || flowManager.sessionWarning != nil
-            || needsCloudSetup
+            || needsAPIKeySetup
             || shouldShowKeyboardHint
             || !flowManager.isActive
     }
@@ -395,9 +399,11 @@ struct HomeView: View {
                     .foregroundStyle(palette.warning)
                     .fixedSize(horizontal: false, vertical: true)
             }
-        } else if needsCloudSetup {
+        } else if needsAPIKeySetup {
             setupGuidanceCard {
-                Text("home.setup.cloudIncomplete")
+                Text(config.isLocalEngine
+                    ? "home.setup.polishKeyMissing"
+                    : "home.setup.cloudIncomplete")
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.warning)
                     .fixedSize(horizontal: false, vertical: true)
@@ -442,7 +448,7 @@ struct HomeView: View {
     }
 
     private var flowStatusColor: Color {
-        if needsCloudSetup { return palette.warning }
+        if needsAPIKeySetup { return palette.warning }
         if flowManager.isUtteranceRecording { return palette.accent }
         if flowManager.isUtteranceProcessing { return palette.accent }
         if flowManager.isActive, FlowSessionBridge.isHostReady() { return palette.accent }

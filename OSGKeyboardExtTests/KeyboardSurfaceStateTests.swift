@@ -6,6 +6,17 @@ import XCTest
 
 @MainActor
 final class KeyboardSurfaceStateTests: XCTestCase {
+    @MainActor
+    func testBusyAISessionLocksOtherSurfacesAndShowsCancel() {
+        let state = KeyboardState()
+        state.surface = .ai
+        state.aiSession.enter()
+        state.aiSession.beginPreparing(utteranceID: UUID())
+
+        XCTAssertTrue(state.locksTypingSurface)
+        XCTAssertTrue(state.canCancelAIInput)
+    }
+
     func testRecordingLocksTyping() {
         let state = KeyboardState()
         state.phase = .idle

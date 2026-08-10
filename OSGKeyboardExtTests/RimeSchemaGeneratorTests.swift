@@ -115,4 +115,18 @@ final class RimeSchemaGeneratorTests: XCTestCase {
             .typing
         )
     }
+
+    @MainActor
+    func testAISurfaceRestoresAsEmptyModeWithoutGeneralRememberSetting() {
+        let suiteName = "TypingInputConfigurationTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        TypingInputConfiguration.persistLastSurface(.ai, defaults: defaults)
+
+        XCTAssertEqual(
+            TypingInputConfiguration.preferredSurfaceOnOpen(defaults: defaults),
+            .ai
+        )
+    }
 }

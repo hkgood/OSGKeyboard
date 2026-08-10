@@ -11,9 +11,9 @@
 "onboarding.enable.step4" = "允许完全访问是麦克风和网络调用的前提。";
 "onboarding.enable.openSettings" = "打开 iOS 设置";
 "onboarding.api.title" = "选择引擎";
-"onboarding.api.subtitle" = "Local 不需要 API Key;Cloud 用 LLM 润色文字。";
-"onboarding.api.localReady.title" = "无需配置 API Key";
-"onboarding.api.localReady.body" = "本地识别直接可用,按 Done 即可开始使用。";
+"onboarding.api.subtitle" = "本地识别无需 Key；填写 API Key 后可开启 AI 润色。";
+"onboarding.api.localReady.title" = "本地识别已就绪";
+"onboarding.api.localReady.body" = "识别在端侧完成。请在设置中填写 API Key 以开启 AI 润色。";
 
 /* Common navigation */
 "common.back" = "返回";
@@ -168,7 +168,8 @@
 "keyboard.error.manualOpenDictate" = "系统拒绝了跳转，请手动打开 OSGKeyboard 录音";
 "keyboard.error.llm.noApiKey" = "未配置 API Key · 请在主 App 设置中填写";
 "keyboard.mic.disabled.missingApiKey" = "请先在设置中填写 API Key";
-"keyboard.error.llm.localPolishUnavailable" = "内置润色不可用 · 已插入原始文本";
+"keyboard.mic.hint.missingPolishApiKey" = "请先在设置中填写 API Key，才能润色";
+"keyboard.error.llm.localPolishUnavailable" = "未填写 API Key · 已插入原始文本";
 "keyboard.error.llm.unauthorized" = "API Key 无效 (401) · 请检查主 App 设置";
 "keyboard.error.llm.rateLimited" = "API 限流 (429) · 请稍后再试";
 
@@ -261,3 +262,25 @@
 "keyboard.edit.apply" = "应用编辑";
 "keyboard.edit.append" = "插入当前位置";
 "keyboard.edit.stop" = "完成编辑指令";
+
+/* AI 问答模式 */
+"keyboard.ai.placeholder" = "点击麦克风向 AI 提问";
+"keyboard.ai.hint" = "先插入 AI 回答，再按发送";
+"keyboard.ai.listening" = "正在聆听…";
+"keyboard.ai.recognizing" = "正在识别问题…";
+"keyboard.ai.generating" = "AI 正在回答…";
+"keyboard.ai.thinking" = "AI 正在思考…";
+"keyboard.ai.send" = "发送";
+"keyboard.ai.insert" = "插入";
+"keyboard.ai.inserted" = "已插入";
+"keyboard.ai.sent" = "已发送";
+"keyboard.ai.cancel" = "取消 AI 问答";
+"keyboard.ai.cancelHint" = "取消当前录音、识别或 AI 请求。";
+"keyboard.ai.sendA11y" = "首次点击插入 AI 回答；在支持发送的输入框中再次点击发送";
+"keyboard.ai.startA11y" = "开始向 AI 提问";
+"keyboard.ai.stopA11y" = "结束提问并发送给 AI";
+"keyboard.ai.error.missingAPIKey" = "请先在主 App 配置可用的 AI 服务";
+"keyboard.ai.error.pipelineBusy" = "语音服务正忙，请稍后重试";
+"keyboard.ai.error.startTimeout" = "麦克风启动超时，请重试";
+"keyboard.ai.error.requestTimeout" = "AI 回答超时，请重试";
+"keyboard.ai.error.requestFailed" = "AI 回答失败，请重试";

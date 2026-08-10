@@ -41,11 +41,17 @@ struct KeyboardSurfaceRoot: View {
                     onInsert: onInsert,
                     onDeleteBackward: onDeleteBackward
                 )
+            case .ai:
+                AIKeyboardView(
+                    state: state,
+                    typing: typing,
+                    onInsert: onInsert
+                )
             }
         }
         .animation(.easeInOut(duration: 0.15), value: state.surface)
         .onChange(of: state.surface) { _, newSurface in
-            if newSurface == .voice {
+            if newSurface != .typing {
                 typing.leaveTypingMode()
             }
         }

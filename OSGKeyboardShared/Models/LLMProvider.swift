@@ -44,9 +44,9 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             id: "openai",
             name: "OpenAI",
             defaultBaseURL: "https://api.openai.com/v1",
-            defaultModel: "gpt-4o-mini",
+            defaultModel: "gpt-5.4-mini",
             apiKeyURL: URL(string: "https://platform.openai.com/api-keys"),
-            blurb: "GPT-4o mini · 多语言 · Multilingual"
+            blurb: "gpt-5.4-mini · Responses web_search · AI 模式可联网"
         ),
         .init(
             id: "ark",
@@ -54,7 +54,7 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "https://ark.cn-beijing.volces.com/api/v3",
             defaultModel: "deepseek-v3-2-251201",
             apiKeyURL: URL(string: "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey"),
-            blurb: "豆包 / DeepSeek · OpenAI 兼容 · OpenAI-compatible"
+            blurb: "豆包 / DeepSeek · 接入点 ID 需在控制台确认"
         ),
         .init(
             id: "deepseek",
@@ -62,39 +62,39 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "https://api.deepseek.com/v1",
             defaultModel: "deepseek-v4-flash",
             apiKeyURL: URL(string: "https://platform.deepseek.com/api_keys"),
-            blurb: "deepseek-v4-flash · 本地引擎可内置 · Local engine optional built-in"
+            blurb: "deepseek-v4-flash · Responses 联网 · 润色/AI 共用"
         ),
         .init(
             id: "qwen",
             name: "Qwen (DashScope)",
             defaultBaseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-            defaultModel: "qwen-plus",
+            defaultModel: "qwen-plus-latest",
             apiKeyURL: URL(string: "https://dashscope.console.aliyun.com/apiKey"),
-            blurb: "通义千问 · OpenAI 兼容 · OpenAI-compatible"
+            blurb: "qwen-plus-latest · enable_search · 滚动最新 Plus"
         ),
         .init(
             id: "zhipu",
             name: "智谱 GLM · Zhipu",
             defaultBaseURL: "https://open.bigmodel.cn/api/paas/v4",
-            defaultModel: "glm-4-flash",
+            defaultModel: "glm-4.7-flash",
             apiKeyURL: URL(string: "https://bigmodel.cn/usercenter/apikeys"),
-            blurb: "GLM-4-Flash · 中文优化 · Chinese-optimized"
+            blurb: "GLM-4.7-Flash · 快 · 可 web_search"
         ),
         .init(
             id: "moonshot",
             name: "月之暗面 Moonshot",
             defaultBaseURL: "https://api.moonshot.cn/v1",
-            defaultModel: "moonshot-v1-8k",
+            defaultModel: "kimi-k2.5",
             apiKeyURL: URL(string: "https://platform.moonshot.cn/console/api-keys"),
-            blurb: "Kimi · 长上下文 · Long context"
+            blurb: "kimi-k2.5 · 长上下文 · AI 可尝试联网"
         ),
         .init(
             id: "siliconflow",
             name: "硅基流动 SiliconFlow",
             defaultBaseURL: "https://api.siliconflow.cn/v1",
-            defaultModel: "Qwen/Qwen2.5-7B-Instruct",
+            defaultModel: "Qwen/Qwen3-8B-Instruct",
             apiKeyURL: URL(string: "https://cloud.siliconflow.cn/account/ak"),
-            blurb: "多模型聚合 · OpenAI 兼容 · OpenAI-compatible"
+            blurb: "Qwen3-8B · 多模型聚合 · OpenAI 兼容"
         ),
         .init(
             id: "groq",
@@ -102,15 +102,15 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "https://api.groq.com/openai/v1",
             defaultModel: "llama-3.3-70b-versatile",
             apiKeyURL: URL(string: "https://console.groq.com/keys"),
-            blurb: "超低延迟 LPU · Ultra-low latency"
+            blurb: "Llama 3.3 70B · 超低延迟 LPU"
         ),
         .init(
             id: "minimax",
             name: "MiniMax",
             defaultBaseURL: "https://api.minimaxi.com/v1",
-            defaultModel: "MiniMax-M2.5",
+            defaultModel: "MiniMax-M2.7",
             apiKeyURL: URL(string: "https://platform.minimaxi.com/user-center/basic-information"),
-            blurb: "MiniMax-M2.5 · 中文优化 · Chinese-optimized"
+            blurb: "MiniMax-M2.7 · 中文优化"
         ),
         .init(
             id: "mimo",
@@ -118,23 +118,23 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "https://api.xiaomimimo.com/v1",
             defaultModel: "mimo-v2.5",
             apiKeyURL: URL(string: "https://platform.xiaomimimo.com"),
-            blurb: "mimo-v2.5 · 中文优化 · Chinese-optimized"
+            blurb: "mimo-v2.5 · 中文优化"
         ),
         .init(
             id: "openrouter",
             name: "OpenRouter",
             defaultBaseURL: "https://openrouter.ai/api/v1",
-            defaultModel: "qwen/qwen3-coder:free",
+            defaultModel: "qwen/qwen3-8b:free",
             apiKeyURL: URL(string: "https://openrouter.ai/keys"),
-            blurb: "多模型路由 · Model routing · OpenAI-compatible"
+            blurb: "qwen3-8b:free · 通用润色/问答（非 coder）"
         ),
         .init(
             id: "gemini",
             name: "Google Gemini",
             defaultBaseURL: "https://generativelanguage.googleapis.com/v1beta/openai",
-            defaultModel: "gemini-2.5-flash",
+            defaultModel: "gemini-3.1-flash-lite",
             apiKeyURL: URL(string: "https://aistudio.google.com/apikey"),
-            blurb: "Gemini 2.5 Flash · OpenAI 兼容端点"
+            blurb: "gemini-3.1-flash-lite · 低延迟 · OpenAI 兼容端点"
         ),
         .init(
             id: "anthropic",
@@ -142,15 +142,15 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "https://api.anthropic.com/v1",
             defaultModel: "claude-sonnet-4-6",
             apiKeyURL: URL(string: "https://console.anthropic.com/settings/keys"),
-            blurb: "Claude Sonnet · Messages API"
+            blurb: "Claude Sonnet 4.6 · Messages · AI 可联网"
         ),
         .init(
             id: "xai",
             name: "xAI Grok",
             defaultBaseURL: "https://api.x.ai/v1",
-            defaultModel: "grok-3-mini",
+            defaultModel: "grok-4-fast-reasoning",
             apiKeyURL: URL(string: "https://console.x.ai"),
-            blurb: "Grok · OpenAI 兼容 · OpenAI-compatible"
+            blurb: "grok-4-fast-reasoning · Responses web_search"
         ),
         .init(
             id: "mistral",
@@ -158,15 +158,15 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "https://api.mistral.ai/v1",
             defaultModel: "mistral-small-latest",
             apiKeyURL: URL(string: "https://console.mistral.ai/api-keys"),
-            blurb: "Mistral Small · 欧洲托管 · EU-hosted"
+            blurb: "Mistral Small · 欧洲托管 · -latest 滚动"
         ),
         .init(
             id: "cometapi",
             name: "CometAPI",
             defaultBaseURL: "https://api.cometapi.com/v1",
-            defaultModel: "gpt-4o",
+            defaultModel: "gpt-5.4-mini",
             apiKeyURL: URL(string: "https://api.cometapi.com"),
-            blurb: "多模型聚合 · OpenAI 兼容"
+            blurb: "gpt-5.4-mini · 多模型聚合"
         ),
         .init(
             id: "alibabaCoding",
@@ -174,15 +174,15 @@ public struct LLMProvider: Identifiable, Codable, Hashable, Sendable {
             defaultBaseURL: "https://coding-intl.dashscope.aliyuncs.com/v1",
             defaultModel: "qwen3-coder-plus",
             apiKeyURL: URL(string: "https://dashscope.console.aliyun.com/apiKey"),
-            blurb: "通义 Coder · 代码润色 · Coding polish"
+            blurb: "通义 Coder · 代码润色"
         ),
         .init(
             id: "codingPlanX",
             name: "CodingPlanX",
             defaultBaseURL: "https://api.codingplanx.ai/v1",
-            defaultModel: "gpt-5-mini",
+            defaultModel: "gpt-5.4-mini",
             apiKeyURL: URL(string: "https://codingplanx.ai"),
-            blurb: "CodingPlanX · OpenAI 兼容"
+            blurb: "gpt-5.4-mini · OpenAI 兼容"
         ),
         // MARK: - ASR-only presets (hidden from polish picker)
         .init(

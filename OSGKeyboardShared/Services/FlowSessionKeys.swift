@@ -94,6 +94,7 @@ public enum FlowSessionKeys {
     /// per-request timeout clamps to this value, so it participates in the
     /// keyboard-watchdog budget below.
     public static let maxPolishTimeout: TimeInterval = 35
+    public static let aiQuestionRequestTimeout: TimeInterval = 60
 
     /// Extra slack for result serialization, cross-process propagation, and
     /// the host's own polling cadence.
@@ -113,6 +114,14 @@ public enum FlowSessionKeys {
     public static func keyboardResultTimeout(engineMode: String) -> TimeInterval {
         let asrWait = engineMode == "local" ? localASRWaitTimeout : cloudASRWaitTimeout
         return asrWait + batchASRFallbackTimeout + maxPolishTimeout + resultDeliveryMargin
+    }
+
+    public static func keyboardAIResultTimeout(engineMode: String) -> TimeInterval {
+        let asrWait = engineMode == "local" ? localASRWaitTimeout : cloudASRWaitTimeout
+        return asrWait
+            + batchASRFallbackTimeout
+            + aiQuestionRequestTimeout
+            + resultDeliveryMargin
     }
 
     public enum RecordingState: String, Sendable, Equatable {

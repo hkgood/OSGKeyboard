@@ -11,9 +11,9 @@
 "onboarding.enable.step4" = "Allow Full Access is required for the microphone and LLM calls.";
 "onboarding.enable.openSettings" = "Open iOS Settings";
 "onboarding.api.title" = "Choose engine";
-"onboarding.api.subtitle" = "Local needs no API key; Cloud polishes your text via LLM.";
-"onboarding.api.localReady.title" = "No API key needed";
-"onboarding.api.localReady.body" = "Local recognition is ready to use. Tap Done to start.";
+"onboarding.api.subtitle" = "Local ASR needs no key; add an API key to enable AI polish.";
+"onboarding.api.localReady.title" = "Local ASR is ready";
+"onboarding.api.localReady.body" = "Recognition works on-device. Add an API key in Settings for AI polish.";
 
 /* Common navigation */
 "common.back" = "Back";
@@ -168,7 +168,8 @@
 "keyboard.error.manualOpenDictate" = "System blocked the jump. Open OSGKeyboard to record, then return.";
 "keyboard.error.llm.noApiKey" = "API key missing · configure it in the main app";
 "keyboard.mic.disabled.missingApiKey" = "Fill in API key in Settings first";
-"keyboard.error.llm.localPolishUnavailable" = "Built-in polish unavailable · inserted raw text";
+"keyboard.mic.hint.missingPolishApiKey" = "Add an API key in Settings to enable polish";
+"keyboard.error.llm.localPolishUnavailable" = "API key missing · inserted raw text";
 "keyboard.error.llm.unauthorized" = "Invalid API key (401) · check main app settings";
 "keyboard.error.llm.rateLimited" = "Rate limited (429) · try again later";
 
@@ -261,3 +262,25 @@
 "keyboard.edit.apply" = "Apply edit";
 "keyboard.edit.append" = "Insert at cursor";
 "keyboard.edit.stop" = "Finish editing instruction";
+
+/* AI question mode */
+"keyboard.ai.placeholder" = "Tap the microphone to ask AI";
+"keyboard.ai.hint" = "Insert the AI answer, then tap Send";
+"keyboard.ai.listening" = "Listening…";
+"keyboard.ai.recognizing" = "Recognizing your question…";
+"keyboard.ai.generating" = "AI is answering…";
+"keyboard.ai.thinking" = "AI is thinking…";
+"keyboard.ai.send" = "Send";
+"keyboard.ai.insert" = "Insert";
+"keyboard.ai.inserted" = "Inserted";
+"keyboard.ai.sent" = "Sent";
+"keyboard.ai.cancel" = "Cancel AI question";
+"keyboard.ai.cancelHint" = "Cancel the current recording, recognition, or AI request.";
+"keyboard.ai.sendA11y" = "Tap once to insert the AI answer, then tap again to send in supported fields";
+"keyboard.ai.startA11y" = "Start asking AI";
+"keyboard.ai.stopA11y" = "Finish the question and send it to AI";
+"keyboard.ai.error.missingAPIKey" = "Configure an AI service in the main app first";
+"keyboard.ai.error.pipelineBusy" = "Voice input is busy. Try again shortly";
+"keyboard.ai.error.startTimeout" = "Microphone startup timed out. Try again";
+"keyboard.ai.error.requestTimeout" = "AI response timed out. Try again";
+"keyboard.ai.error.requestFailed" = "AI response failed. Try again";

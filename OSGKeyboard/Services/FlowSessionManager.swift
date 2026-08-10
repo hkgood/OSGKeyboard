@@ -42,8 +42,10 @@ final class FlowSessionManager: ObservableObject {
     private let capture = FlowContinuousCapture()
     private let pipController = FlowPictureInPictureController()
     private let store = AppGroupStore()
-    /// Cloud-engine polish; local engine runs through built-in DeepSeek polish.
+    /// Cloud / local polish via the user-configured LLM provider.
     private let polisher = PolishingService()
+    /// AI-mode turns are intentionally process-local and never persisted.
+    private let aiConversations = AIConversationStore()
     /// Cached ASR instance. v0.2.0: the only on-device backend is iOS
     /// `SpeechAnalyzer`, which has no warm-up step — we can hand the
     /// factory-built service straight back without going through the
@@ -88,10 +90,13 @@ final class FlowSessionManager: ObservableObject {
     private var pendingEditSourceText: String?
     private var pendingSourceHistoryEntryID: UUID?
     private var pendingSourceHistoryEntryRevision: Int64?
+    private var pendingAIConversationID: UUID?
     private var pendingProcessingDeadlineAt: TimeInterval?
     private var pendingStopUtteranceId: UUID?
     private var currentCommandSeq: Int64 = 0
     private var lastHandledCommandSeq: Int64 = 0
+    /// Throttles AI-mode LLM draft writes into App Group.
+    private var aiAnswerStreamThrottle = AIAnswerStreamThrottle()
     /// Published so Home / debug UI can show "recording" instead of a false "ready".
     @Published private(set) var isUtteranceRecording = false
     /// True from `stopped` until the result/error is written back to App Group.
@@ -476,6 +481,7 @@ final class FlowSessionManager: ObservableObject {
         sessionASR = nil
         sessionASREngineMode = nil
         sessionASRWarmedLocaleID = nil
+        Task { await aiConversations.removeAll() }
         FlowSessionBridge.markSessionInactive()
         FlowSessionDarwin.postSessionChanged()
         isActive = false
@@ -1032,6 +1038,12 @@ final class FlowSessionManager: ObservableObject {
     private func consumeHistoryMutationOutbox() {
         for mutation in HistoryMutationOutbox.pending() {
             let entry = SpeechHistoryStore.shared.applyHistoryMutation(mutation)
+            if mutation.usageCategory == .ai, let text = mutation.text {
+                UsageStatisticsStore.shared.recordAIInsertion(
+                    text: text,
+                    commitID: mutation.id
+                )
+            }
             HistoryMutationReceiptStore.save(
                 HistoryMutationReceipt(
                     mutationID: mutation.id,
@@ -1103,7 +1115,8 @@ final class FlowSessionManager: ObservableObject {
                 errorKind: .audioUnavailable,
                 hostGeneration: FlowSessionBridge.currentHostGeneration(),
                 revision: Self.resultRevision(),
-                utteranceMode: command.utteranceMode
+                utteranceMode: command.utteranceMode,
+                aiConversationID: command.aiConversationID
             )
         )
         traceState(
@@ -1207,6 +1220,9 @@ final class FlowSessionManager: ObservableObject {
                 )
             )
             currentUtteranceMode = command.resolvedUtteranceMode
+            pendingAIConversationID = currentUtteranceMode == .aiQuestion
+                ? command.aiConversationID
+                : nil
             if currentUtteranceMode == .editLastInput {
                 let source = command.editSourceText?
                     .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1263,6 +1279,10 @@ final class FlowSessionManager: ObservableObject {
             beginAudioPrime(command)
         case .cancelPrimeAudio:
             cancelAudioPrime(command)
+        case .endAIConversation:
+            if let conversationID = command.aiConversationID {
+                Task { await aiConversations.removeConversation(conversationID) }
+            }
         }
     }
 
@@ -1372,7 +1392,8 @@ final class FlowSessionManager: ObservableObject {
                 rawText: trimmed,
                 hostGeneration: FlowSessionBridge.currentHostGeneration(),
                 revision: Self.resultRevision(),
-                utteranceMode: currentUtteranceMode
+                utteranceMode: currentUtteranceMode,
+                aiConversationID: pendingAIConversationID
             )
         )
     }
@@ -1395,7 +1416,8 @@ final class FlowSessionManager: ObservableObject {
                 rawText: trimmed,
                 hostGeneration: FlowSessionBridge.currentHostGeneration(),
                 revision: Self.resultRevision(),
-                utteranceMode: currentUtteranceMode
+                utteranceMode: currentUtteranceMode,
+                aiConversationID: pendingAIConversationID
             )
         )
     }
@@ -1416,7 +1438,8 @@ final class FlowSessionManager: ObservableObject {
                 errorKind: kind,
                 hostGeneration: FlowSessionBridge.currentHostGeneration(),
                 revision: Self.resultRevision(),
-                utteranceMode: currentUtteranceMode
+                utteranceMode: currentUtteranceMode,
+                aiConversationID: pendingAIConversationID
             )
         )
     }
@@ -1998,6 +2021,7 @@ final class FlowSessionManager: ObservableObject {
         pendingEditSourceText = nil
         pendingSourceHistoryEntryID = nil
         pendingSourceHistoryEntryRevision = nil
+        pendingAIConversationID = nil
         pendingProcessingDeadlineAt = nil
         currentUtteranceMode = .dictation
     }
@@ -2014,7 +2038,9 @@ final class FlowSessionManager: ObservableObject {
         let editSourceText = pendingEditSourceText
         let sourceHistoryEntryID = pendingSourceHistoryEntryID
         let sourceHistoryEntryRevision = pendingSourceHistoryEntryRevision
+        let aiConversationID = pendingAIConversationID
         let processingDeadlineAt = pendingProcessingDeadlineAt
+        let asrEngineMode = sessionASREngineMode ?? store.engineMode
         // ALWAYS clear the processing gate for this utterance. The previous
         // guard required currentUtteranceId to still match; a racing
         // fail/abort/cancel path could nil the id (or leave processing stuck)
@@ -2025,6 +2051,7 @@ final class FlowSessionManager: ObservableObject {
             pendingEditSourceText = nil
             pendingSourceHistoryEntryID = nil
             pendingSourceHistoryEntryRevision = nil
+            pendingAIConversationID = nil
             pendingProcessingDeadlineAt = nil
             if currentUtteranceMode == utteranceMode {
                 currentUtteranceMode = .dictation
@@ -2063,13 +2090,24 @@ final class FlowSessionManager: ObservableObject {
 
         let asrElapsed = Date().timeIntervalSince(pipelineStarted)
         FlowDiagnostics.log("ASR phase done in \(String(format: "%.1f", asrElapsed))s finalLen=\(lastFinal.count)")
-        FlowTrace.transcript(
-            "asr.beforeGuard",
-            lastFinal,
-            "stage=stitchedFinal engine=\(store.engineMode) "
-                + "elapsed=\(String(format: "%.2f", asrElapsed))s"
-        )
-        FlowTrace.transcript("asr.bestPartial", bestPartialSnapshot, "stage=partialSnapshot")
+        if utteranceMode == .aiQuestion {
+            FlowTrace.pipeline(
+                "aiQuestion.asrReady",
+                "finalLen=\(lastFinal.count) partialLen=\(bestPartialSnapshot.count)"
+            )
+        } else {
+            FlowTrace.transcript(
+                "asr.beforeGuard",
+                lastFinal,
+                "stage=stitchedFinal engine=\(store.engineMode) "
+                    + "elapsed=\(String(format: "%.2f", asrElapsed))s"
+            )
+            FlowTrace.transcript(
+                "asr.bestPartial",
+                bestPartialSnapshot,
+                "stage=partialSnapshot"
+            )
+        }
 
         var text = UtteranceTranscriptGuard.resolve(
             stitchedFinal: lastFinal,
@@ -2098,7 +2136,7 @@ final class FlowSessionManager: ObservableObject {
            !utterancePCMSamples.isEmpty {
             text = await runBatchASRFallback(currentText: text)
         }
-        let textForPolish = text == lastFinal && !lastFinalWithPauseMarks.isEmpty
+        let rawTextForPolish = text == lastFinal && !lastFinalWithPauseMarks.isEmpty
             ? lastFinalWithPauseMarks
             : text
         utterancePCMSamples = []
@@ -2130,6 +2168,19 @@ final class FlowSessionManager: ObservableObject {
             return
         }
 
+        // Re-read App Group at finalize so dictionary and translation changes
+        // from the keyboard extension are visible before local correction,
+        // polish, or translation.
+        let pipelineStore = AppGroupStore()
+        let postASR = FlowASRPostProcessor.process(
+            text: text,
+            textForPolish: rawTextForPolish,
+            engineMode: asrEngineMode,
+            dictionary: pipelineStore.personalDictionary
+        )
+        text = postASR.text
+        let textForPolish = postASR.textForPolish
+
         storeRawCandidate(
             text,
             sessionId: finalizeSessionId,
@@ -2141,11 +2192,84 @@ final class FlowSessionManager: ObservableObject {
             EditUsageMetricsStore.recordInstructionDuration(recordingDuration)
         }
 
-        let engineMode = store.engineMode
+        let engineMode = asrEngineMode
         let chunkNote = Self.chunkWarningMessage(chunkWarnings)
-        // Re-read App Group at finalize so chip-side translation changes
-        // from the keyboard extension are visible before polish/translate.
-        let pipelineStore = AppGroupStore()
+        if utteranceMode == .aiQuestion {
+            guard let aiConversationID else {
+                guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
+                storeFinalizedError(
+                    AppL10n.string("flow.error.aiQuestionFailed"),
+                    kind: .generic,
+                    sessionId: finalizeSessionId,
+                    utteranceId: finalizeUtteranceId,
+                    commandSeq: finalizeCommandSeq
+                )
+                return
+            }
+
+            do {
+                let service = try AIQuestionService.configured(
+                    store: pipelineStore,
+                    conversations: aiConversations
+                )
+                aiAnswerStreamThrottle = AIAnswerStreamThrottle()
+                let publishUtteranceId = finalizeUtteranceId
+                let publishSessionId = finalizeSessionId
+                let publishCommandSeq = finalizeCommandSeq
+                let publishConversationID = aiConversationID
+                let answer = try await service.answer(
+                    question: text,
+                    conversationID: aiConversationID,
+                    targetLocaleID: pipelineStore.translationTargetLocaleId
+                ) { [weak self] partial in
+                    Task { @MainActor in
+                        self?.publishStreamingAIAnswerIfNeeded(
+                            partial,
+                            sessionId: publishSessionId,
+                            utteranceId: publishUtteranceId,
+                            commandSeq: publishCommandSeq,
+                            aiConversationID: publishConversationID,
+                            force: partial.isEmpty
+                        )
+                    }
+                }
+                // Flush the final draft when throttle skipped the last characters.
+                publishStreamingAIAnswerIfNeeded(
+                    answer,
+                    sessionId: finalizeSessionId,
+                    utteranceId: finalizeUtteranceId,
+                    commandSeq: finalizeCommandSeq,
+                    aiConversationID: aiConversationID,
+                    force: true
+                )
+                guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
+                await service.commitSuccessfulTurn(
+                    question: text,
+                    answer: answer,
+                    conversationID: aiConversationID
+                )
+                storeFinalizedResult(
+                    answer,
+                    warning: chunkNote,
+                    sessionId: finalizeSessionId,
+                    utteranceId: finalizeUtteranceId,
+                    commandSeq: finalizeCommandSeq,
+                    aiConversationID: aiConversationID
+                )
+            } catch {
+                guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
+                storeFinalizedError(
+                    AppL10n.string("flow.error.aiQuestionFailed"),
+                    kind: .generic,
+                    sessionId: finalizeSessionId,
+                    utteranceId: finalizeUtteranceId,
+                    commandSeq: finalizeCommandSeq,
+                    aiConversationID: aiConversationID
+                )
+            }
+            return
+        }
+
         let polishContext = PolishContext(
             appContext: pipelineStore.detectedAppContext?.context ?? .unknown,
             precedingText: fieldContext?.precedingText,
@@ -2383,6 +2507,53 @@ final class FlowSessionManager: ObservableObject {
         )
     }
 
+    private func publishStreamingAIAnswerIfNeeded(
+        _ text: String,
+        sessionId: UUID?,
+        utteranceId: UUID?,
+        commandSeq: Int64,
+        aiConversationID: UUID?,
+        force: Bool
+    ) {
+        guard aiAnswerStreamThrottle.shouldPublish(
+            accumulatedCount: text.count,
+            force: force
+        ) else { return }
+        storeStreamingAIAnswer(
+            text,
+            sessionId: sessionId,
+            utteranceId: utteranceId,
+            commandSeq: commandSeq,
+            aiConversationID: aiConversationID
+        )
+    }
+
+    private func storeStreamingAIAnswer(
+        _ text: String,
+        sessionId: UUID?,
+        utteranceId: UUID?,
+        commandSeq: Int64,
+        aiConversationID: UUID?
+    ) {
+        guard let sessionId, let utteranceId else { return }
+        guard currentUtteranceId == utteranceId,
+              !terminalUtteranceIds.contains(utteranceId) else { return }
+        FlowSessionBridge.writeResult(
+            FlowResult(
+                sessionId: sessionId,
+                utteranceId: utteranceId,
+                commandSeq: commandSeq,
+                status: .streaming,
+                text: text,
+                hostGeneration: FlowSessionBridge.currentHostGeneration(),
+                revision: Self.resultRevision(),
+                fieldFingerprint: Self.fieldFingerprint(pendingFieldContext),
+                utteranceMode: .aiQuestion,
+                aiConversationID: aiConversationID
+            )
+        )
+    }
+
     private func storeFinalizedResult(
         _ text: String,
         rawText: String? = nil,
@@ -2391,7 +2562,8 @@ final class FlowSessionManager: ObservableObject {
         utteranceId: UUID?,
         commandSeq: Int64,
         historyEntryID: UUID? = nil,
-        historyEntryRevision: Int64? = nil
+        historyEntryRevision: Int64? = nil,
+        aiConversationID: UUID? = nil
     ) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -2405,12 +2577,21 @@ final class FlowSessionManager: ObservableObject {
             return
         }
         guard let sessionId, let utteranceId else { return }
-        FlowTrace.transcript(
-            "host.delivered",
-            trimmed,
-            "utterance=\(utteranceId.uuidString.prefix(8)) commandSeq=\(commandSeq) "
-                + "warning=\(warning == nil ? 0 : 1)"
-        )
+        if currentUtteranceMode == .aiQuestion {
+            FlowTrace.pipeline(
+                "aiQuestion.delivered",
+                "answerLen=\(trimmed.count) "
+                    + "utterance=\(utteranceId.uuidString.prefix(8)) "
+                    + "commandSeq=\(commandSeq)"
+            )
+        } else {
+            FlowTrace.transcript(
+                "host.delivered",
+                trimmed,
+                "utterance=\(utteranceId.uuidString.prefix(8)) commandSeq=\(commandSeq) "
+                    + "warning=\(warning == nil ? 0 : 1)"
+            )
+        }
         FlowSessionBridge.writeResult(
             FlowResult(
                 sessionId: sessionId,
@@ -2425,7 +2606,8 @@ final class FlowSessionManager: ObservableObject {
                 fieldFingerprint: Self.fieldFingerprint(pendingFieldContext),
                 utteranceMode: currentUtteranceMode,
                 historyEntryID: historyEntryID,
-                historyEntryRevision: historyEntryRevision
+                historyEntryRevision: historyEntryRevision,
+                aiConversationID: aiConversationID
             )
         )
     }
@@ -2449,7 +2631,8 @@ final class FlowSessionManager: ObservableObject {
                 hostGeneration: FlowSessionBridge.currentHostGeneration(),
                 revision: Self.resultRevision(),
                 fieldFingerprint: Self.fieldFingerprint(pendingFieldContext),
-                utteranceMode: currentUtteranceMode
+                utteranceMode: currentUtteranceMode,
+                aiConversationID: pendingAIConversationID
             )
         )
     }
@@ -2460,7 +2643,8 @@ final class FlowSessionManager: ObservableObject {
         sessionId: UUID?,
         utteranceId: UUID?,
         commandSeq: Int64,
-        status: FlowResult.Status = .error
+        status: FlowResult.Status = .error,
+        aiConversationID: UUID? = nil
     ) {
         guard let sessionId, let utteranceId else { return }
         FlowTrace.warn(
@@ -2480,7 +2664,8 @@ final class FlowSessionManager: ObservableObject {
                 hostGeneration: FlowSessionBridge.currentHostGeneration(),
                 revision: Self.resultRevision(),
                 fieldFingerprint: Self.fieldFingerprint(pendingFieldContext),
-                utteranceMode: currentUtteranceMode
+                utteranceMode: currentUtteranceMode,
+                aiConversationID: aiConversationID ?? pendingAIConversationID
             )
         )
     }
@@ -2525,8 +2710,7 @@ final class FlowSessionManager: ObservableObject {
         return max(0, Date().timeIntervalSince(start))
     }
 
-    /// v0.2.0: surface the local-mode cloud-polish error path with a
-    /// localised hint ("please fill in your DeepSeek key in Settings")
+    /// Surface polish failures with a localised hint (e.g. missing API key)
     /// rather than letting the keyboard show a generic network error.
     static func makeFallbackDelivery(
         rawText: String,

@@ -3,12 +3,9 @@
 //
 // "Local engine" block for the settings card.
 //
-// v0.2.0:
 // - On-device ASR is fixed at iOS 26 `SpeechAnalyzer` +
 //   `DictationTranscriber` (nothing to download).
-// - Post-ASR polish is always on via the built-in DeepSeek path
-//   (`PreconfiguredKeys.local.swift`, gitignored). The user never
-//   pastes a key for local mode.
+// - Post-ASR polish uses the LLM provider / API key configured in Settings.
 
 import SwiftUI
 import OSGKeyboardShared
@@ -48,15 +45,22 @@ struct LocalModelsGroup: View {
 
     // MARK: Polish row
 
-    /// Built-in post-ASR polish for the local engine. No API key UI —
-    /// the vendor key is supplied at build time only.
+    /// Local ASR still works without a key; polish requires the Settings LLM key.
     private var polishRow: some View {
         HStack(spacing: Spacing.xs) {
             Text("settings.localModels.polishRole")
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textPrimary)
             Spacer(minLength: Spacing.xs)
-            engineBadge("settings.localModels.polishEngine")
+            if config.isPolishConfigured {
+                engineBadge(
+                    Text(LLMProvider.provider(id: config.providerId).name)
+                )
+            } else {
+                Text("settings.localModels.polishNeedsKey")
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.warning)
+            }
         }
         .settingsListRow()
     }
@@ -83,12 +87,16 @@ struct LocalModelsGroup: View {
     // MARK: Helpers
 
     /// Accent badge naming the engine that backs each local-mode row
-    /// (e.g. "Apple iOS Speech" for ASR, "OSGKeyboard 内置" for polish).
+    /// (e.g. "Apple iOS Speech" for ASR).
     private func engineBadge(_ labelKey: LocalizedStringKey) -> some View {
+        engineBadge(Text(labelKey))
+    }
+
+    private func engineBadge(_ label: Text) -> some View {
         HStack(spacing: 4) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 12, weight: .semibold))
-            Text(labelKey)
+            label
                 .font(TypeStyle.caption)
         }
         .foregroundStyle(palette.accent)

@@ -1,36 +1,39 @@
-// AnthropicLLMClient.swift
+// ResponsesAPILLMClient.swift
 // OSGKeyboard · Shared
 //
-// Anthropic Messages API client for polish / translation / AI-mode prompts.
+// OpenAI-style Responses API client used by AI keyboard mode for
+// DeepSeek / OpenAI / xAI server-side `web_search`.
 
 import Foundation
 
-public struct AnthropicMessagesClient: LLMClient {
+public struct ResponsesAPILLMClient: LLMClient {
+    public let baseURL: String
     public let apiKey: String
     public let model: String
+    public let providerId: String
+    public let reasoningEffort: String
     public let session: URLSession
-    public let webSearchEnabled: Bool
-    public let thinkingEnabled: Bool
     public let requestTimeout: TimeInterval = 15
 
     public init(
+        baseURL: String,
         apiKey: String,
         model: String,
-        session: URLSession = .shared,
-        webSearchEnabled: Bool = false,
-        thinkingEnabled: Bool = false
+        providerId: String,
+        reasoningEffort: String = "medium",
+        session: URLSession = .shared
     ) {
+        self.baseURL = baseURL
         self.apiKey = apiKey
         self.model = model
+        self.providerId = providerId
+        self.reasoningEffort = reasoningEffort
         self.session = session
-        self.webSearchEnabled = webSearchEnabled
-        self.thinkingEnabled = thinkingEnabled
     }
 
     public func polish(_ text: String, systemPrompt: String, timeout: TimeInterval?) async throws -> String {
-        try await polish(
-            text,
-            systemPrompt: systemPrompt,
+        try await complete(
+            messages: [.system(systemPrompt), .user(text)],
             timeout: timeout,
             options: .polishDefault
         )
@@ -43,10 +46,7 @@ public struct AnthropicMessagesClient: LLMClient {
         options: LLMGenerationOptions
     ) async throws -> String {
         try await complete(
-            messages: [
-                .system(systemPrompt),
-                .user(text),
-            ],
+            messages: [.system(systemPrompt), .user(text)],
             timeout: timeout,
             options: options
         )
@@ -57,7 +57,7 @@ public struct AnthropicMessagesClient: LLMClient {
         timeout: TimeInterval?,
         options: LLMGenerationOptions
     ) async throws -> String {
-        let request = try makeMessagesRequest(
+        let request = try makeResponsesRequest(
             messages: messages,
             timeout: timeout,
             options: options,
@@ -70,31 +70,19 @@ public struct AnthropicMessagesClient: LLMClient {
                 throw LLMError.transport("non-HTTP response")
             }
             if !(200..<300).contains(http.statusCode) {
+                #if DEBUG
+                let bodyText = String(data: data, encoding: .utf8) ?? ""
+                print("⚠️ Responses API HTTP \(http.statusCode): \(bodyText.prefix(500))")
+                #endif
                 if http.statusCode == 429 { throw LLMError.rateLimited }
                 throw LLMError.http(status: http.statusCode)
             }
-            guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let content = json["content"] as? [[String: Any]] else {
-                throw LLMError.decoding("anthropic content")
+            let text = try Self.parseOutputText(from: data)
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else {
+                throw LLMError.decoding("empty responses output_text")
             }
-            let textBlocks = content.compactMap { block -> String? in
-                guard (block["type"] as? String) == "text",
-                      let text = block["text"] as? String else {
-                    return nil
-                }
-                return text
-            }
-            let joined = textBlocks.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !joined.isEmpty else {
-                throw LLMError.decoding("anthropic text")
-            }
-            let usage = json["usage"] as? [String: Any]
-            LLMCacheMetricsStore.record(
-                providerId: "anthropic",
-                promptTokens: usage?["input_tokens"] as? Int,
-                cachedTokens: usage?["cache_read_input_tokens"] as? Int
-            )
-            return joined
+            return trimmed
         } catch let err as LLMError {
             throw err
         } catch is CancellationError {
@@ -114,7 +102,7 @@ public struct AnthropicMessagesClient: LLMClient {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let request = try makeMessagesRequest(
+                    let request = try makeResponsesRequest(
                         messages: messages,
                         timeout: timeout,
                         options: options,
@@ -123,7 +111,7 @@ public struct AnthropicMessagesClient: LLMClient {
                     for try await event in LLMStreamingSession.mapSSE(
                         session: session,
                         request: request,
-                        parse: LLMStreamDeltaParser.anthropicTextDelta(from:)
+                        parse: LLMStreamDeltaParser.responsesOutputTextDelta(from:)
                     ) {
                         continuation.yield(event)
                     }
@@ -140,53 +128,34 @@ public struct AnthropicMessagesClient: LLMClient {
         }
     }
 
-    private func makeMessagesRequest(
+    private func makeResponsesRequest(
         messages: [LLMRequest.Message],
         timeout: TimeInterval?,
         options: LLMGenerationOptions,
         stream: Bool
     ) throws -> URLRequest {
         guard !apiKey.isEmpty else { throw LLMError.noAPIKey }
+        guard let url = Self.responsesURL(from: baseURL) else { throw LLMError.invalidURL }
 
-        let url = URL(string: "https://api.anthropic.com/v1/messages")!
-        let systemPrompt = messages.first(where: { $0.role == "system" })?.content ?? ""
-        let conversation = messages
+        let system = messages.first(where: { $0.role == "system" })?.content
+        let input: [[String: Any]] = messages
             .filter { $0.role != "system" }
             .map { ["role": $0.role, "content": $0.content] }
-        let combinedText = messages.map(\.content).joined(separator: "\n")
-        let answerTokens = options.maxTokens ?? LLMRequest.outputTokenLimit(for: combinedText)
-        let thinkingBudget = 4_000
+
         var body: [String: Any] = [
             "model": model,
-            // Anthropic requires max_tokens > thinking.budget_tokens.
-            "max_tokens": thinkingEnabled ? answerTokens + thinkingBudget : answerTokens,
-            "system": systemPrompt,
-            "messages": conversation,
+            "input": input,
+            "tools": [["type": "web_search"]],
+            "tool_choice": "auto",
+            "max_output_tokens": options.maxTokens ?? LLMRequest.outputTokenLimit(
+                for: messages.map(\.content).joined(separator: "\n")
+            ),
         ]
-        if thinkingEnabled {
-            // Extended thinking; sampling knobs are ignored while thinking runs.
-            body["thinking"] = [
-                "type": "enabled",
-                "budget_tokens": thinkingBudget,
-            ]
-        } else {
-            if let temperature = options.temperature {
-                body["temperature"] = temperature
-            }
-            if let topP = options.topP {
-                body["top_p"] = topP
-            }
+        if let system, !system.isEmpty {
+            body["instructions"] = system
         }
-        if webSearchEnabled {
-            // Basic server-side search; newer tool revisions also work when the account allows.
-            body["tools"] = [
-                [
-                    "type": "web_search_20250305",
-                    "name": "web_search",
-                    "max_uses": 3,
-                ],
-            ]
-        }
+        // Responses reasoning control (OpenAI / DeepSeek Responses).
+        body["reasoning"] = ["effort": reasoningEffort]
         if stream {
             body["stream"] = true
         }
@@ -194,10 +163,48 @@ public struct AnthropicMessagesClient: LLMClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.timeoutInterval = timeout ?? requestTimeout
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         return request
+    }
+
+    /// `https://api.openai.com/v1` → `…/v1/responses`; strip trailing slash.
+    static func responsesURL(from baseURL: String) -> URL? {
+        let trimmed = baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        guard !trimmed.isEmpty else { return nil }
+        return URL(string: "\(trimmed)/responses")
+    }
+
+    static func parseOutputText(from data: Data) throws -> String {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw LLMError.decoding("responses json")
+        }
+        if let outputText = json["output_text"] as? String, !outputText.isEmpty {
+            return outputText
+        }
+        // Aggregate message content parts when `output_text` is absent.
+        guard let output = json["output"] as? [[String: Any]] else {
+            throw LLMError.decoding("responses output")
+        }
+        var chunks: [String] = []
+        for item in output {
+            guard (item["type"] as? String) == "message",
+                  let content = item["content"] as? [[String: Any]] else {
+                continue
+            }
+            for part in content {
+                let type = part["type"] as? String
+                if type == "output_text" || type == "text",
+                   let text = part["text"] as? String {
+                    chunks.append(text)
+                }
+            }
+        }
+        let joined = chunks.joined()
+        guard !joined.isEmpty else {
+            throw LLMError.decoding("responses message text")
+        }
+        return joined
     }
 }

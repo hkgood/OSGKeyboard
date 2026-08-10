@@ -10,6 +10,7 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
     public let editSourceText: String?
     public let sourceHistoryEntryID: UUID?
     public let sourceHistoryEntryRevision: Int64?
+    public let aiConversationID: UUID?
 
     public static let dictation = FlowUtteranceRequest(mode: .dictation)
 
@@ -17,12 +18,14 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
         mode: FlowUtteranceMode,
         editSourceText: String? = nil,
         sourceHistoryEntryID: UUID? = nil,
-        sourceHistoryEntryRevision: Int64? = nil
+        sourceHistoryEntryRevision: Int64? = nil,
+        aiConversationID: UUID? = nil
     ) {
         self.mode = mode
         self.editSourceText = editSourceText
         self.sourceHistoryEntryID = sourceHistoryEntryID
         self.sourceHistoryEntryRevision = sourceHistoryEntryRevision
+        self.aiConversationID = aiConversationID
     }
 
     public static func editLastInput(
@@ -37,6 +40,14 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
     }
 
     public var isEdit: Bool { mode == .editLastInput }
+    public var isAIQuestion: Bool { mode == .aiQuestion }
+
+    public static func aiQuestion(conversationID: UUID) -> FlowUtteranceRequest {
+        FlowUtteranceRequest(
+            mode: .aiQuestion,
+            aiConversationID: conversationID
+        )
+    }
 }
 
 public enum FlowUtteranceStartRejection: Equatable, Sendable {

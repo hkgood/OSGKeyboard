@@ -158,10 +158,20 @@ struct HistoryView: View {
 
     private func historyRow(_ entry: SpeechHistoryEntry) -> some View {
         VStack(alignment: .leading, spacing: Spacing.xxs) {
-            Text(Self.timeFormatter.string(from: entry.createdAt))
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textTertiary)
-                .monospacedDigit()
+            HStack(spacing: Spacing.xs) {
+                Text(Self.timeFormatter.string(from: entry.createdAt))
+                    .monospacedDigit()
+                if entry.source == .ai {
+                    Text("AI")
+                        .fontWeight(.semibold)
+                        .foregroundStyle(palette.accent)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(palette.accent.opacity(0.12), in: Capsule())
+                }
+            }
+            .font(TypeStyle.caption2)
+            .foregroundStyle(palette.textTertiary)
             Text(entry.text)
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textPrimary)

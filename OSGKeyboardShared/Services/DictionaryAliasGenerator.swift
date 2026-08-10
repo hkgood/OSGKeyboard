@@ -2,7 +2,7 @@
 // OSGKeyboard · Shared
 //
 // After the user manually adds or edits a personal-dictionary term,
-// asks the built-in DeepSeek endpoint for common ASR misrecognitions.
+// asks the configured polish LLM for common ASR misrecognitions.
 // Shared by the iOS and macOS dictionary editors; persisted aliases are
 // available to the keyboard extension on the next polish / correction call.
 
@@ -49,14 +49,21 @@ public struct DictionaryAliasGenerator: Sendable {
         if let client {
             return client
         }
-        guard PreconfiguredKeys.isDeepseekConfigured else {
+        let store = AppGroupStore()
+        let providerId = store.providerId
+        let apiKey = store.apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !apiKey.isEmpty else {
             throw LLMError.noAPIKey
         }
-        let preset = LLMProvider.provider(id: "deepseek")
-        return OpenAICompatibleClient(
-            baseURL: preset.defaultBaseURL,
-            apiKey: PreconfiguredKeys.deepseek,
-            model: preset.defaultModel
+        let preset = LLMProvider.provider(id: providerId)
+        let baseURL = store.baseURL.isEmpty ? preset.defaultBaseURL : store.baseURL
+        let model = store.model.isEmpty ? preset.defaultModel : store.model
+        return LLMClientFactory.make(
+            providerId: providerId,
+            baseURL: baseURL,
+            apiKey: apiKey,
+            model: model,
+            thinkingEnabled: store.llmThinkingEnabled
         )
     }
 
@@ -78,24 +85,25 @@ public struct DictionaryAliasGenerator: Sendable {
 
         let termLower = term.lowercased()
         var seen = Set<String>()
-        var result: [String] = []
-        for alias in decoded {
-            let cleaned = alias.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !cleaned.isEmpty else { continue }
-            let key = cleaned.lowercased()
+        var aliases: [String] = []
+        for item in decoded {
+            let value = item.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !value.isEmpty else { continue }
+            let key = value.lowercased()
             guard key != termLower, !seen.contains(key) else { continue }
             seen.insert(key)
-            result.append(cleaned)
-            if result.count >= 6 { break }
+            aliases.append(value)
+            if aliases.count >= 6 { break }
         }
-        return result
+        return aliases
     }
 
     private static func extractJSONArray(from text: String) -> String? {
         guard let start = text.firstIndex(of: "["),
               let end = text.lastIndex(of: "]"),
-              start < end
-        else { return nil }
+              start < end else {
+            return nil
+        }
         return String(text[start...end])
     }
 }

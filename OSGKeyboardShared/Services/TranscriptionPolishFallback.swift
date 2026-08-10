@@ -25,10 +25,7 @@ public enum TranscriptionPolishFallback: Sendable {
         if let polishError = error as? PolishingService.PolishError {
             switch polishError {
             case .missingAPIKey:
-                if engineMode == "local" {
-                    return SharedL10n.string("flow.warning.localPolishUnavailable")
-                }
-                return SharedL10n.string("flow.warning.cloudPolishMissingKey")
+                return SharedL10n.string("flow.warning.polishMissingAPIKey")
             case .timeout, .keychainLocked:
                 return degradedWarning()
             case .noTranscript:

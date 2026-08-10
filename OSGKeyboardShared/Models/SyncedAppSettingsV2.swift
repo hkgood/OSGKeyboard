@@ -28,6 +28,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
     public var cursorDragNavigationEnabled: SyncedField<Bool>
     public var keyboardHapticIntensity: SyncedField<KeyboardHapticIntensity>
     public var polishIntensity: SyncedField<PolishIntensity>
+    public var aiResponseLength: SyncedField<AIResponseLength>
     public var activePolishStyleId: SyncedField<String>
     public var llmThinkingEnabled: SyncedField<Bool>
     public var flowSkipAppSwitch: SyncedField<Bool>
@@ -51,6 +52,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         cursorDragNavigationEnabled: SyncedField<Bool>,
         keyboardHapticIntensity: SyncedField<KeyboardHapticIntensity>,
         polishIntensity: SyncedField<PolishIntensity>? = nil,
+        aiResponseLength: SyncedField<AIResponseLength>? = nil,
         activePolishStyleId: SyncedField<String>,
         llmThinkingEnabled: SyncedField<Bool>,
         flowSkipAppSwitch: SyncedField<Bool>,
@@ -73,6 +75,11 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         self.cursorDragNavigationEnabled = cursorDragNavigationEnabled
         self.keyboardHapticIntensity = keyboardHapticIntensity
         self.polishIntensity = polishIntensity ?? SyncedField(
+            value: .default,
+            updatedAt: keyboardHapticIntensity.updatedAt,
+            deviceID: keyboardHapticIntensity.deviceID
+        )
+        self.aiResponseLength = aiResponseLength ?? SyncedField(
             value: .default,
             updatedAt: keyboardHapticIntensity.updatedAt,
             deviceID: keyboardHapticIntensity.deviceID
@@ -101,6 +108,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         case cursorDragNavigationEnabled
         case keyboardHapticIntensity
         case polishIntensity
+        case aiResponseLength
         case activePolishStyleId
         case llmThinkingEnabled
         case flowSkipAppSwitch
@@ -145,6 +153,14 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         polishIntensity = try container.decodeIfPresent(
             SyncedField<PolishIntensity>.self,
             forKey: .polishIntensity
+        ) ?? SyncedField(
+            value: .default,
+            updatedAt: keyboardHapticIntensity.updatedAt,
+            deviceID: keyboardHapticIntensity.deviceID
+        )
+        aiResponseLength = try container.decodeIfPresent(
+            SyncedField<AIResponseLength>.self,
+            forKey: .aiResponseLength
         ) ?? SyncedField(
             value: .default,
             updatedAt: keyboardHapticIntensity.updatedAt,
@@ -218,6 +234,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             cursorDragNavigationEnabled.updatedAt,
             keyboardHapticIntensity.updatedAt,
             polishIntensity.updatedAt,
+            aiResponseLength.updatedAt,
             activePolishStyleId.updatedAt,
             llmThinkingEnabled.updatedAt,
             flowSkipAppSwitch.updatedAt,
@@ -257,6 +274,7 @@ public extension SyncedAppSettingsV2 {
             cursorDragNavigationEnabled: field(configuration.cursorDragNavigationEnabled),
             keyboardHapticIntensity: field(configuration.keyboardHapticIntensity),
             polishIntensity: field(configuration.polishIntensity),
+            aiResponseLength: field(configuration.aiResponseLength),
             activePolishStyleId: field(configuration.activePolishStyleId),
             llmThinkingEnabled: field(configuration.llmThinkingEnabled),
             flowSkipAppSwitch: field(configuration.flowSkipAppSwitch),
@@ -288,6 +306,7 @@ public extension SyncedAppSettingsV2 {
             cursorDragNavigationEnabled: field(legacy.cursorDragNavigationEnabled),
             keyboardHapticIntensity: field(KeyboardHapticIntensity.default),
             polishIntensity: field(PolishIntensity.default),
+            aiResponseLength: field(AIResponseLength.default),
             activePolishStyleId: field(PolishStylePackCatalog.defaultID),
             llmThinkingEnabled: field(false),
             flowSkipAppSwitch: field(legacy.flowSkipAppSwitch),
@@ -328,6 +347,10 @@ public extension SyncedAppSettingsV2 {
                 local: local.polishIntensity,
                 remote: remote.polishIntensity
             ),
+            aiResponseLength: .merge(
+                local: local.aiResponseLength,
+                remote: remote.aiResponseLength
+            ),
             activePolishStyleId: .merge(
                 local: local.activePolishStyleId,
                 remote: remote.activePolishStyleId
@@ -358,6 +381,7 @@ public extension SyncedAppSettingsV2 {
         configuration.cursorDragNavigationEnabled = cursorDragNavigationEnabled.value
         configuration.keyboardHapticIntensity = keyboardHapticIntensity.value
         configuration.polishIntensity = polishIntensity.value
+        configuration.aiResponseLength = aiResponseLength.value
         configuration.activePolishStyleId = activePolishStyleId.value
         configuration.llmThinkingEnabled = llmThinkingEnabled.value
         configuration.flowSkipAppSwitch = flowSkipAppSwitch.value
@@ -387,6 +411,7 @@ public extension SyncedAppSettingsV2 {
         patch(&copy.cursorDragNavigationEnabled, value: configuration.cursorDragNavigationEnabled)
         patch(&copy.keyboardHapticIntensity, value: configuration.keyboardHapticIntensity)
         patch(&copy.polishIntensity, value: configuration.polishIntensity)
+        patch(&copy.aiResponseLength, value: configuration.aiResponseLength)
         patch(&copy.activePolishStyleId, value: configuration.activePolishStyleId)
         patch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
         patch(&copy.flowSkipAppSwitch, value: configuration.flowSkipAppSwitch)
@@ -419,6 +444,7 @@ public extension SyncedAppSettingsV2 {
         touch(&copy.cursorDragNavigationEnabled, value: configuration.cursorDragNavigationEnabled)
         touch(&copy.keyboardHapticIntensity, value: configuration.keyboardHapticIntensity)
         touch(&copy.polishIntensity, value: configuration.polishIntensity)
+        touch(&copy.aiResponseLength, value: configuration.aiResponseLength)
         touch(&copy.activePolishStyleId, value: configuration.activePolishStyleId)
         touch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
         touch(&copy.flowSkipAppSwitch, value: configuration.flowSkipAppSwitch)

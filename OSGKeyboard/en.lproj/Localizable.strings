@@ -32,10 +32,10 @@
 "onboarding.enable.resources.failed" = "Could not prepare Chinese input resources";
 "onboarding.enable.resources.retry" = "Retry";
 "onboarding.api.title" = "Choose Engine";
-"onboarding.api.localModels.hint" = "Local engine uses built-in on-device speech recognition — no API key needed.";
+"onboarding.api.localModels.hint" = "Local engine uses on-device speech recognition. Add an API key below to enable AI polish.";
 "onboarding.polish.title" = "Text polish (LLM)";
 "onboarding.polish.subtitle" = "Cleans up the transcript after recognition. Can differ from the ASR provider.";
-"onboarding.polish.localHint" = "Built-in polish is included. Add your own API key here to override.";
+"onboarding.polish.localHint" = "Fill in an API key to enable AI polish. Without a key, raw ASR text is inserted.";
 "settings.onboarding.replay" = "Restart permission setup";
 
 /* Common navigation */
@@ -169,7 +169,8 @@
 "settings.localModels.polishRole" = "Polish";
 "settings.localModels.builtIn" = "Built-in";
 "settings.localModels.speechEngine" = "Apple iOS Speech";
-"settings.localModels.polishEngine" = "OSGKeyboard Built-in";
+"settings.localModels.polishEngine" = "Settings LLM";
+"settings.localModels.polishNeedsKey" = "Add API key";
 "settings.localModels.allReady" = "Ready";
 "settings.localModels.readiness %lld %lld" = "%lld/%lld ready";
 "settings.localModels.cloudPolish.title" = "Cloud polish after ASR";
@@ -196,6 +197,9 @@
 "settings.general.appearanceLanguage.title" = "Appearance & Language";
 "settings.general.keyboard.title" = "Keyboard & Gestures";
 "settings.general.sync.title" = "Sync";
+"settings.aiAgent.title" = "AI Agent";
+"settings.aiAgent.responseLength.section" = "Answers";
+"settings.aiAgent.responseLength.title" = "Response length";
 "settings.typingInput.title" = "Text Input";
 "settings.typingInput.default.title" = "Default to Text Input";
 "settings.typingInput.default.description" = "Open the text input keyboard instead of voice input by default";
@@ -373,6 +377,7 @@
 "home.setup.permission.both" = "Microphone and speech recognition are off — voice input won't work.";
 "home.setup.permission.request" = "Next";
 "home.setup.cloudIncomplete" = "Cloud engine needs an API key. Open the Settings tab.";
+"home.setup.polishKeyMissing" = "Add an API key in Settings to enable AI polish. Without it, raw ASR text is inserted.";
 "home.setup.keyboardHint" = "Don't see OSGKeyboard? Add it in iOS Settings.";
 "home.setup.keyboardHint.dismiss" = "Got it";
 "home.flow.starting" = "Starting voice session…";
@@ -561,3 +566,4 @@
 "hostApp.tiktok" = "TikTok";
 "flow.warning.polishDegradedQuality" = "Polish output failed validation; inserted a conservative version.";
 "flow.error.editLastInputFailed" = "Could not complete the edit. Please try again.";
+"flow.error.aiQuestionFailed" = "AI response failed. Please try again.";

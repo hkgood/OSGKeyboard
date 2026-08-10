@@ -167,8 +167,11 @@ private struct WideStatusFooter: View {
     @State private var micStatus = AppPermissions.micStatus
     @State private var speechStatus = AppPermissions.speechStatus
 
-    private var needsCloudSetup: Bool {
-        !config.isLocalEngine && !config.isConfigured
+    private var needsAPIKeySetup: Bool {
+        if config.isLocalEngine {
+            return !config.isPolishConfigured
+        }
+        return !config.isConfigured
     }
 
     private var needsPermissionSetup: Bool {
@@ -223,7 +226,7 @@ private struct WideStatusFooter: View {
                 .fill(flowStatusColor)
                 .frame(width: 6, height: 6)
 
-            if needsCloudSetup {
+            if needsAPIKeySetup {
                 Text("home.flow.notReady")
                     .foregroundStyle(palette.warning)
             } else if flowManager.isUtteranceRecording {
@@ -249,7 +252,7 @@ private struct WideStatusFooter: View {
                         .foregroundStyle(palette.accent)
                 }
                 .buttonStyle(.plain)
-            } else if canManuallyStartSession && !needsCloudSetup {
+            } else if canManuallyStartSession && !needsAPIKeySetup {
                 Button {
                     flowManager.activateOnForeground(
                         reason: "MainSplitView.startButton",
@@ -278,7 +281,7 @@ private struct WideStatusFooter: View {
     }
 
     private var flowStatusColor: Color {
-        if !config.isLocalEngine && !config.isConfigured { return palette.warning }
+        if needsAPIKeySetup { return palette.warning }
         if flowManager.isUtteranceRecording || flowManager.isUtteranceProcessing {
             return palette.accent
         }
@@ -289,7 +292,7 @@ private struct WideStatusFooter: View {
     }
 
     private var flowStatusLabel: LocalizedStringKey {
-        if !config.isLocalEngine && !config.isConfigured {
+        if needsAPIKeySetup {
             return "home.flow.notReady"
         }
         if flowManager.isStarting {

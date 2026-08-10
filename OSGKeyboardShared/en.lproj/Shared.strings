@@ -5,8 +5,9 @@
 "engine.asr.appleSpeech" = "Apple SpeechAnalyzer";
 
 /* v0.2.0: flow-level warnings surfaced alongside the final transcript. */
-"flow.warning.cloudPolishMissingKey" = "Cloud polish needs an API key in Settings. Inserted raw ASR text.";
-"flow.warning.localPolishUnavailable" = "Built-in polish is unavailable. Inserted raw ASR text.";
+"flow.warning.polishMissingAPIKey" = "Add an API key in Settings to enable polish. Inserted raw ASR text.";
+"flow.warning.cloudPolishMissingKey" = "Add an API key in Settings to enable polish. Inserted raw ASR text.";
+"flow.warning.localPolishUnavailable" = "Add an API key in Settings to enable polish. Inserted raw ASR text.";
 "flow.warning.polishDegraded" = "Weak network — inserted raw ASR text without polish.";
 "flow.warning.polishDegradedQuality" = "Polish output failed validation; inserted a conservative version.";
 
@@ -103,6 +104,11 @@
 "polish.intensity.heavy" = "Heavy";
 "polish.intensity.light.desc" = "Uses full fidelity and question safeguards to reduce distortion.";
 "polish.intensity.heavy.desc" = "Uses only transcript formatting before the selected fun personality.";
+
+/* AI response length */
+"ai.responseLength.short" = "Short";
+"ai.responseLength.medium" = "Medium";
+"ai.responseLength.detailed" = "Detailed";
 
 
 /* v0.3.0: Detected app context labels */

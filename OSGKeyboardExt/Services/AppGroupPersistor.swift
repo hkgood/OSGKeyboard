@@ -42,10 +42,7 @@ public struct AppGroupPersistor {
         state.handednessPreference = store.handednessPreference
         state.cursorDragNavigationEnabled = store.cursorDragNavigationEnabled
         state.keyboardHapticIntensity = store.keyboardHapticIntensity
-        state.micDisabled = store.isCloudAPIKeyMissingForVoiceInput
-        state.micDisabledHint = store.isCloudAPIKeyMissingForVoiceInput
-            ? ExtL10n.string("keyboard.mic.disabled.missingApiKey")
-            : ""
+        applyAPIKeyAvailability(store: store, into: state)
 
         #if DEBUG
         // Print a masked view of the live App Group config so we can see
@@ -95,10 +92,26 @@ public struct AppGroupPersistor {
         state.handednessPreference = store.handednessPreference
         state.cursorDragNavigationEnabled = store.cursorDragNavigationEnabled
         state.keyboardHapticIntensity = store.keyboardHapticIntensity
-        state.micDisabled = store.isCloudAPIKeyMissingForVoiceInput
-        state.micDisabledHint = store.isCloudAPIKeyMissingForVoiceInput
-            ? ExtL10n.string("keyboard.mic.disabled.missingApiKey")
-            : ""
+        applyAPIKeyAvailability(store: store, into: state)
+    }
+
+    /// Cloud without ASR/LLM keys blocks the mic. Local ASR still works when
+    /// the polish key is missing — show a soft tip above the mic instead.
+    private func applyAPIKeyAvailability(
+        store: AppGroupStore,
+        into state: KeyboardViewController.State
+    ) {
+        state.aiServiceAvailable = !store.isPolishKeyMissing
+        if store.isCloudAPIKeyMissingForVoiceInput {
+            state.micDisabled = true
+            state.micDisabledHint = ExtL10n.string("keyboard.mic.disabled.missingApiKey")
+        } else if store.isPolishKeyMissing {
+            state.micDisabled = false
+            state.micDisabledHint = ExtL10n.string("keyboard.mic.hint.missingPolishApiKey")
+        } else {
+            state.micDisabled = false
+            state.micDisabledHint = ""
+        }
     }
 
     /// Persist `mode` to the App Group store.

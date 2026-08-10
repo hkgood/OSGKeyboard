@@ -69,6 +69,23 @@ public protocol LLMClient: Sendable {
         options: LLMGenerationOptions
     ) async throws -> String
 
+    /// Complete an explicit chat transcript. AI question mode uses this path;
+    /// dictation polish keeps the narrower `polish` API above.
+    func complete(
+        messages: [LLMRequest.Message],
+        timeout: TimeInterval?,
+        options: LLMGenerationOptions
+    ) async throws -> String
+
+    /// Stream visible answer deltas for AI keyboard mode. Default falls back to
+    /// a single delta from `complete`. Reasoning / tool scaffolding must not be
+    /// yielded as answer text.
+    func completeStreaming(
+        messages: [LLMRequest.Message],
+        timeout: TimeInterval?,
+        options: LLMGenerationOptions
+    ) -> AsyncThrowingStream<LLMStreamEvent, Error>
+
     /// Baseline upper bound for a single LLM HTTP round-trip when no
     /// per-request `timeout` is supplied.
     var requestTimeout: TimeInterval { get }
@@ -87,6 +104,54 @@ public extension LLMClient {
         options: LLMGenerationOptions
     ) async throws -> String {
         try await polish(text, systemPrompt: systemPrompt, timeout: timeout)
+    }
+
+    /// Compatibility fallback for injected polish-only clients. Production
+    /// provider clients override this method to preserve all conversation turns.
+    func complete(
+        messages: [LLMRequest.Message],
+        timeout: TimeInterval?,
+        options: LLMGenerationOptions
+    ) async throws -> String {
+        let systemPrompt = messages.first(where: { $0.role == "system" })?.content ?? ""
+        let userText = messages.last(where: { $0.role == "user" })?.content ?? ""
+        return try await polish(
+            userText,
+            systemPrompt: systemPrompt,
+            timeout: timeout,
+            options: options
+        )
+    }
+
+    /// Non-streaming fallback used by test doubles and polish-only clients.
+    func completeStreaming(
+        messages: [LLMRequest.Message],
+        timeout: TimeInterval?,
+        options: LLMGenerationOptions
+    ) -> AsyncThrowingStream<LLMStreamEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    let text = try await complete(
+                        messages: messages,
+                        timeout: timeout,
+                        options: options
+                    )
+                    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        continuation.yield(.delta(trimmed))
+                    }
+                    continuation.finish()
+                } catch is CancellationError {
+                    continuation.finish(throwing: LLMError.cancelled)
+                } catch let error as LLMError {
+                    continuation.finish(throwing: error)
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
     }
 }
 
@@ -137,44 +202,26 @@ public struct OpenAICompatibleClient: LLMClient {
         timeout: TimeInterval?,
         options: LLMGenerationOptions
     ) async throws -> String {
-        guard !apiKey.isEmpty else { throw LLMError.noAPIKey }
-
-        let urlString = baseURL.hasSuffix("/")
-            ? "\(baseURL)chat/completions"
-            : "\(baseURL)/chat/completions"
-        guard let url = URL(string: urlString) else { throw LLMError.invalidURL }
-
-        let omitSampling = LLMThinkingControl.shouldOmitSamplingParameters(
-            providerId: providerId,
-            baseURL: baseURL,
-            model: model,
-            thinkingEnabled: thinkingEnabled
-        )
-        let request = LLMRequest(
-            model: model,
+        try await complete(
             messages: [
                 .system(systemPrompt),
-                .user(text)
+                .user(text),
             ],
-            temperature: omitSampling ? nil : options.temperature,
-            maxTokens: options.maxTokens ?? LLMRequest.outputTokenLimit(for: text),
-            topP: omitSampling ? nil : options.topP
+            timeout: timeout,
+            options: options
         )
+    }
 
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        // Per-request timeout scales with transcript length; fall back to
-        // the baseline when the caller does not supply one.
-        req.timeoutInterval = timeout ?? requestTimeout
-
-        req.httpBody = try Self.encodedBody(
-            request,
-            providerId: providerId,
-            baseURL: baseURL,
-            model: model,
-            thinkingEnabled: thinkingEnabled
+    public func complete(
+        messages: [LLMRequest.Message],
+        timeout: TimeInterval?,
+        options: LLMGenerationOptions
+    ) async throws -> String {
+        let req = try makeChatRequest(
+            messages: messages,
+            timeout: timeout,
+            options: options,
+            stream: false
         )
 
         do {
@@ -213,12 +260,99 @@ public struct OpenAICompatibleClient: LLMClient {
         }
     }
 
+    public func completeStreaming(
+        messages: [LLMRequest.Message],
+        timeout: TimeInterval?,
+        options: LLMGenerationOptions
+    ) -> AsyncThrowingStream<LLMStreamEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    let req = try makeChatRequest(
+                        messages: messages,
+                        timeout: timeout,
+                        options: options,
+                        stream: true
+                    )
+                    for try await event in LLMStreamingSession.mapSSE(
+                        session: session,
+                        request: req,
+                        parse: LLMStreamDeltaParser.chatCompletionsDelta(from:)
+                    ) {
+                        continuation.yield(event)
+                    }
+                    continuation.finish()
+                } catch is CancellationError {
+                    continuation.finish(throwing: LLMError.cancelled)
+                } catch let error as LLMError {
+                    continuation.finish(throwing: error)
+                } catch {
+                    continuation.finish(throwing: LLMError.transport(String(describing: error)))
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    private func makeChatRequest(
+        messages: [LLMRequest.Message],
+        timeout: TimeInterval?,
+        options: LLMGenerationOptions,
+        stream: Bool
+    ) throws -> URLRequest {
+        guard !apiKey.isEmpty else { throw LLMError.noAPIKey }
+
+        let urlString = baseURL.hasSuffix("/")
+            ? "\(baseURL)chat/completions"
+            : "\(baseURL)/chat/completions"
+        guard let url = URL(string: urlString) else { throw LLMError.invalidURL }
+
+        let omitSampling = LLMThinkingControl.shouldOmitSamplingParameters(
+            providerId: providerId,
+            baseURL: baseURL,
+            model: model,
+            thinkingEnabled: thinkingEnabled
+        )
+        let request = LLMRequest(
+            model: model,
+            messages: messages,
+            temperature: omitSampling ? nil : options.temperature,
+            maxTokens: options.maxTokens ?? Self.outputTokenLimit(for: messages),
+            topP: omitSampling ? nil : options.topP
+        )
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        // Per-request timeout scales with transcript length; fall back to
+        // the baseline when the caller does not supply one.
+        req.timeoutInterval = timeout ?? requestTimeout
+        req.httpBody = try Self.encodedBody(
+            request,
+            providerId: providerId,
+            baseURL: baseURL,
+            model: model,
+            thinkingEnabled: thinkingEnabled,
+            stream: stream
+        )
+        return req
+    }
+
+    private static func outputTokenLimit(
+        for messages: [LLMRequest.Message]
+    ) -> Int {
+        let combined = messages.map(\.content).joined(separator: "\n")
+        return LLMRequest.outputTokenLimit(for: combined)
+    }
+
     private static func encodedBody(
         _ request: LLMRequest,
         providerId: String,
         baseURL: String,
         model: String,
-        thinkingEnabled: Bool
+        thinkingEnabled: Bool,
+        stream: Bool = false
     ) throws -> Data {
         let encoded = try JSONEncoder().encode(request)
         guard var body = try JSONSerialization.jsonObject(with: encoded) as? [String: Any] else {
@@ -231,6 +365,9 @@ public struct OpenAICompatibleClient: LLMClient {
             model: model,
             enabled: thinkingEnabled
         )
+        if stream {
+            body["stream"] = true
+        }
         return try JSONSerialization.data(withJSONObject: body)
     }
 }

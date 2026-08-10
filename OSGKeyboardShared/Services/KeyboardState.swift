@@ -74,6 +74,7 @@ public final class KeyboardState: ObservableObject {
     public enum Surface: String, CaseIterable, Identifiable, Sendable {
         case voice
         case typing
+        case ai
 
         public var id: String { rawValue }
     }
@@ -101,6 +102,8 @@ public final class KeyboardState: ObservableObject {
     /// When true, the mic is intentionally disabled (e.g. cloud engine
     /// selected but the provider-specific API key is missing).
     @Published public var micDisabled: Bool = false
+    /// AI mode always needs an LLM even when local ASR keeps voice dictation usable.
+    @Published public var aiServiceAvailable: Bool = true
     /// One-line helper shown above the mic while `micDisabled == true`.
     @Published public var micDisabledHint: String = ""
     /// "local" → on-device ASR only. "cloud" → cloud ASR + LLM polish.
@@ -153,6 +156,8 @@ public final class KeyboardState: ObservableObject {
     @Published public var cutAvailable: Bool = false
     /// Closed state machine for long-press editing of the last insertion.
     @Published public var editSession: EditSessionState = .inactive
+    /// Temporary AI conversation UI state. The host owns the actual messages.
+    @Published public var aiSession: AISessionState = .inactive
     @Published public var editCanReplaceOriginal: Bool = false
     /// Short idle feedback (availability, expiry, missing LLM).
     @Published public var editHint: String?
@@ -241,6 +246,9 @@ public final class KeyboardState: ObservableObject {
     public var stopEditListening: () -> Void = {}
     public var confirmEditResult: () -> Void = {}
     public var closeEditMode: () -> Void = {}
+    public var tapAIMic: () -> Void = {}
+    public var cancelAIInput: () -> Void = {}
+    public var sendAIAnswer: () -> Void = {}
     public var openSettings:        () -> Void = {}
     /// Opens the host app straight to input-resource deployment. Used by the
     /// typing surface when Rime resources have not been deployed yet.
@@ -279,6 +287,7 @@ public final class KeyboardState: ObservableObject {
     /// Recording / processing must stay on the voice surface.
     public var locksTypingSurface: Bool {
         if editSession.isActive { return true }
+        if aiSession.isBusy { return true }
         switch phase {
         case .requestingPermissions, .recording, .processing:
             return true
@@ -288,6 +297,10 @@ public final class KeyboardState: ObservableObject {
     }
 
     public var canEnterTypingSurface: Bool { !locksTypingSurface }
+
+    public var canCancelAIInput: Bool {
+        surface == .ai && aiSession.isBusy
+    }
 
     /// Normal dictation can be discarded from initial microphone startup
     /// through ASR / polish processing. Edit mode owns its separate close flow.

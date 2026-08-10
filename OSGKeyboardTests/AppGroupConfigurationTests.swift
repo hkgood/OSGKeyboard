@@ -32,6 +32,7 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertTrue(config.cursorDragNavigationEnabled)
         XCTAssertEqual(config.keyboardHapticIntensity, .light)
         XCTAssertEqual(config.polishIntensity, .light)
+        XCTAssertEqual(config.aiResponseLength, .medium)
         XCTAssertTrue(config.personalDictionary.entries.isEmpty)
         XCTAssertTrue(config.flowSkipAppSwitch)
         XCTAssertEqual(config.flowInactivityDuration, .fiveMinutes)
@@ -59,6 +60,7 @@ final class AppGroupConfigurationTests: XCTestCase {
         config.cursorDragNavigationEnabled = false
         config.keyboardHapticIntensity = .strong
         config.polishIntensity = .heavy
+        config.aiResponseLength = .short
         config.flowSkipAppSwitch = false
         // Use a non-default value so the round-trip actually proves persistence.
         config.flowInactivityDuration = .threeHours
@@ -83,6 +85,7 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertFalse(loaded.cursorDragNavigationEnabled)
         XCTAssertEqual(loaded.keyboardHapticIntensity, .strong)
         XCTAssertEqual(loaded.polishIntensity, .heavy)
+        XCTAssertEqual(loaded.aiResponseLength, .short)
         XCTAssertFalse(loaded.flowSkipAppSwitch)
         XCTAssertEqual(loaded.flowInactivityDuration, .threeHours)
     }

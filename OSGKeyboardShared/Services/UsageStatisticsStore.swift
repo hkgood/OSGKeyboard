@@ -14,6 +14,10 @@ public final class UsageStatisticsStore: ObservableObject {
     @Published public private(set) var dictationDurationSeconds: TimeInterval = 0
     @Published public private(set) var dictationCharacterCount: Int = 0
     @Published public private(set) var translationCharacterCount: Int = 0
+    @Published public private(set) var aiCharacterCount: Int = 0
+    public var totalInputCharacterCount: Int {
+        dictationCharacterCount + translationCharacterCount + aiCharacterCount
+    }
     /// Cross-device dictation characters per local day (`yyyy-MM-dd`), used by
     /// the home page's 7-day chart.
     @Published public private(set) var dailyDictationCharacters: [String: Int] = [:]
@@ -75,6 +79,35 @@ public final class UsageStatisticsStore: ObservableObject {
         }
     }
 
+    /// Record an explicitly inserted AI answer exactly once. The commit id and
+    /// counter update share one device-slice write, so outbox retries are safe.
+    public func recordAIInsertion(text: String, commitID: UUID) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        let deviceID = SyncDeviceID.current(defaults: defaults)
+        var slice = SyncedUsageStatisticsStorage.currentDeviceSlice(
+            from: defaults,
+            deviceID: deviceID
+        )
+        guard !slice.appliedAICommitIDs.contains(commitID) else { return }
+
+        slice.aiCharacterCount += Self.characterCount(for: trimmed)
+        slice.appliedAICommitIDs.append(commitID)
+        slice.appliedAICommitIDs = Array(slice.appliedAICommitIDs.suffix(128))
+        slice.updatedAt = Date()
+        SyncedUsageStatisticsStorage.upsertCurrentDeviceSlice(
+            slice,
+            defaults: defaults,
+            deviceID: deviceID
+        )
+
+        reloadFromDisk()
+        Task {
+            try? await UsageStatisticsCloudSync.shared.pushLocalIfEnabled()
+        }
+    }
+
     /// Refreshes the published totals from disk. Display-only: it reads the
     /// aggregated cross-device sum and NEVER writes it back (writing would
     /// corrupt the per-device slices — see `recordUtterance`).
@@ -84,6 +117,7 @@ public final class UsageStatisticsStore: ObservableObject {
         dictationDurationSeconds = aggregated.dictationDurationSeconds
         dictationCharacterCount = aggregated.dictationCharacterCount
         translationCharacterCount = aggregated.translationCharacterCount
+        aiCharacterCount = aggregated.aiCharacterCount
         dailyDictationCharacters = payload.aggregatedDailyDictationCharacters
     }
 

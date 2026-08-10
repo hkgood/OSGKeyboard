@@ -168,6 +168,12 @@ public final class TypingInputConfiguration: ObservableObject {
         let store = defaults ?? AppGroup.defaultsIfAvailable
         guard let store else { return .voice }
 
+        // AI is an explicit product surface. Restore it as an empty temporary
+        // conversation even when the general "remember surface" toggle is off.
+        if store.string(forKey: Key.lastSurface) == KeyboardState.Surface.ai.rawValue {
+            return .ai
+        }
+
         if store.bool(forKey: Key.rememberLastSurface),
            let raw = store.string(forKey: Key.lastSurface),
            let surface = KeyboardState.Surface(rawValue: raw) {

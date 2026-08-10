@@ -17,6 +17,7 @@ public struct LiveConfigurationSnapshot {
     public let asrModel: String
     public let engineMode: String
     public let polishIntensity: PolishIntensity
+    public let aiResponseLength: AIResponseLength
     public let llmThinkingEnabled: Bool
     public let personalDictionary: PersonalDictionary
     public let polishStyleCatalog: PolishStyleCatalog
@@ -35,6 +36,7 @@ public struct LiveConfigurationSnapshot {
         asrModel: String,
         engineMode: String,
         polishIntensity: PolishIntensity,
+        aiResponseLength: AIResponseLength = .default,
         llmThinkingEnabled: Bool,
         personalDictionary: PersonalDictionary,
         polishStyleCatalog: PolishStyleCatalog,
@@ -52,6 +54,7 @@ public struct LiveConfigurationSnapshot {
         self.asrModel = asrModel
         self.engineMode = engineMode
         self.polishIntensity = polishIntensity
+        self.aiResponseLength = aiResponseLength
         self.llmThinkingEnabled = llmThinkingEnabled
         self.personalDictionary = personalDictionary
         self.polishStyleCatalog = polishStyleCatalog
@@ -73,6 +76,7 @@ public struct LiveConfigurationSnapshot {
             asrModel: config.asrModel,
             engineMode: config.engineMode,
             polishIntensity: config.polishIntensity,
+            aiResponseLength: config.aiResponseLength,
             llmThinkingEnabled: config.llmThinkingEnabled,
             personalDictionary: fallback.personalDictionary,
             polishStyleCatalog: fallback.polishStyleCatalog,
@@ -105,6 +109,7 @@ public struct LiveConfigurationStore: ConfigurationStore, @unchecked Sendable {
     public var asrModel: String { snapshot.asrModel }
     public var engineMode: String { snapshot.engineMode }
     public var polishIntensity: PolishIntensity { snapshot.polishIntensity }
+    public var aiResponseLength: AIResponseLength { snapshot.aiResponseLength }
     public var llmThinkingEnabled: Bool { snapshot.llmThinkingEnabled }
     public var personalDictionary: PersonalDictionary { snapshot.personalDictionary }
     public var polishStyleCatalog: PolishStyleCatalog { snapshot.polishStyleCatalog }

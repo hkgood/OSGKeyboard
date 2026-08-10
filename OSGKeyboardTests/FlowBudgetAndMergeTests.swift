@@ -32,6 +32,20 @@ final class FlowBudgetAndMergeTests: XCTestCase {
         }
     }
 
+    func testAIKeyboardTimeoutOutlastsASRAndAnswerGeneration() {
+        for engineMode in ["local", "cloud"] {
+            let hostWorstCase = (engineMode == "local"
+                ? FlowSessionKeys.localASRWaitTimeout
+                : FlowSessionKeys.cloudASRWaitTimeout)
+                + FlowSessionKeys.batchASRFallbackTimeout
+                + FlowSessionKeys.aiQuestionRequestTimeout
+            XCTAssertGreaterThan(
+                FlowSessionKeys.keyboardAIResultTimeout(engineMode: engineMode),
+                hostWorstCase
+            )
+        }
+    }
+
     // MARK: - SyncedField future-clock clamping
 
     func testMergePrefersGenuinelyNewerRemote() {

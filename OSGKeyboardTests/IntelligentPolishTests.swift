@@ -161,9 +161,8 @@ final class IntelligentPolishTests: XCTestCase {
 
     func testPolishServiceMissingAPIKeyThrows() async {
         store.setEngineMode("cloud")
-        // Default polish provider is deepseek; a filled PreconfiguredKeys.local
-        // would satisfy hasPolishAPIKey. Use a unique provider account so a
-        // developer's simulator Keychain cannot make this test hit the network.
+        // Use a unique provider account so a developer's simulator Keychain
+        // cannot make this test hit the network.
         let missingProvider = "test-missing-\(UUID().uuidString)"
         let service = PolishingService(store: store)
         do {
@@ -585,7 +584,21 @@ final class IntelligentPolishTests: XCTestCase {
         XCTAssertEqual(delivery.text, "测试文本")
         XCTAssertEqual(
             delivery.polishWarning,
-            SharedL10n.string("flow.warning.localPolishUnavailable")
+            SharedL10n.string("flow.warning.polishMissingAPIKey")
+        )
+    }
+
+    func testTranscriptionPolishFallbackCloudMissingKeyWarning() {
+        let delivery = TranscriptionPolishFallback.makeDelivery(
+            rawText: "hello world",
+            error: PolishingService.PolishError.missingAPIKey,
+            engineMode: "cloud",
+            chunkWarning: nil
+        )
+        XCTAssertEqual(delivery.text, "hello world")
+        XCTAssertEqual(
+            delivery.polishWarning,
+            SharedL10n.string("flow.warning.polishMissingAPIKey")
         )
     }
 

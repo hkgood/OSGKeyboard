@@ -6,6 +6,11 @@
 import Foundation
 
 public struct SpeechHistoryEntry: Codable, Identifiable, Equatable, Sendable {
+    public enum Source: String, Codable, Equatable, Sendable {
+        case dictation
+        case ai
+    }
+
     public let id: UUID
     public let text: String
     public let createdAt: Date
@@ -15,6 +20,8 @@ public struct SpeechHistoryEntry: Codable, Identifiable, Equatable, Sendable {
     public let revision: Int64
     /// iOS Flow engine mode; nil on macOS captures.
     public let engineMode: String?
+    /// Origin of the inserted text. Legacy rows decode as normal dictation.
+    public let source: Source
 
     public init(
         id: UUID = UUID(),
@@ -22,7 +29,8 @@ public struct SpeechHistoryEntry: Codable, Identifiable, Equatable, Sendable {
         createdAt: Date = Date(),
         modifiedAt: Date? = nil,
         revision: Int64 = 0,
-        engineMode: String? = nil
+        engineMode: String? = nil,
+        source: Source = .dictation
     ) {
         self.id = id
         self.text = text
@@ -30,6 +38,7 @@ public struct SpeechHistoryEntry: Codable, Identifiable, Equatable, Sendable {
         self.modifiedAt = modifiedAt ?? createdAt
         self.revision = revision
         self.engineMode = engineMode
+        self.source = source
     }
 
     public init(from decoder: Decoder) throws {
@@ -40,6 +49,7 @@ public struct SpeechHistoryEntry: Codable, Identifiable, Equatable, Sendable {
         modifiedAt = try container.decodeIfPresent(Date.self, forKey: .modifiedAt) ?? createdAt
         revision = try container.decodeIfPresent(Int64.self, forKey: .revision) ?? 0
         engineMode = try container.decodeIfPresent(String.self, forKey: .engineMode)
+        source = try container.decodeIfPresent(Source.self, forKey: .source) ?? .dictation
     }
 
     /// First-line preview for compact list rows (macOS history sidebar).

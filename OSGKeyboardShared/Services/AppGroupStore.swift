@@ -77,12 +77,14 @@ public struct AppGroupStore: @unchecked Sendable {
     public var cursorDragNavigationEnabled: Bool { configuration.cursorDragNavigationEnabled }
     public var keyboardHapticIntensity: KeyboardHapticIntensity { configuration.keyboardHapticIntensity }
     public var polishIntensity: PolishIntensity { configuration.polishIntensity }
+    public var aiResponseLength: AIResponseLength { configuration.aiResponseLength }
     public var polishStyleCatalog: PolishStyleCatalog { configuration.polishStyleCatalog }
     public var activePolishStyleId: String { configuration.activePolishStyleId }
     public var activePolishStyle: PolishStylePack {
         PolishStylePackCatalog.resolve(id: activePolishStyleId, userCatalog: polishStyleCatalog)
     }
     public var llmThinkingEnabled: Bool { configuration.llmThinkingEnabled }
+    public var isPolishKeyMissing: Bool { configuration.isPolishKeyMissing }
     public var isTranslationEffective: Bool { configuration.isTranslationEffective }
     public var isLocalEngine: Bool { configuration.isLocalEngine }
     public var polishModeForPipeline: PolishingService.PolishMode { configuration.polishModeForPipeline }
@@ -140,6 +142,11 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setPolishIntensity(_ intensity: PolishIntensity) {
         mutateConfiguration { $0.polishIntensity = intensity }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setAIResponseLength(_ length: AIResponseLength) {
+        mutateConfiguration { $0.aiResponseLength = length }
         AppGroupConfigDarwin.postConfigChanged()
     }
 

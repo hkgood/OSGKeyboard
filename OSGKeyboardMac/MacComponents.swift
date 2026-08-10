@@ -687,7 +687,7 @@ struct MacStatusFooter: View {
     }
 
     /// LLM: cloud uses the configured provider; local routes through
-    /// `localModeProviderId` (built-in DeepSeek unless the user supplied a key).
+    /// `localModeProviderId` (user-supplied polish key required).
     private var llmModel: (name: String, tooltip: String) {
         let config = viewModel.config
         let providerId = viewModel.isCloudMode ? config.providerId : config.localModeProviderId

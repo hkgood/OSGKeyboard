@@ -37,6 +37,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let cursorDragNavigationEnabled = "config.cursorDragNavigationEnabled"
         public static let keyboardHapticIntensity = "config.keyboardHapticIntensity"
         public static let polishIntensity = "config.polishIntensity"
+        public static let aiResponseLength = "config.aiResponseLength"
         public static let llmThinkingEnabled = "config.llmThinkingEnabled"
         public static let detectedAppContext = "config.detectedAppContext"
         public static let detectedAppContextAt = "config.detectedAppContextAt"
@@ -89,6 +90,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var keyboardHapticIntensity: KeyboardHapticIntensity
     /// Safety envelope for built-in fun polish styles (light by default).
     public var polishIntensity: PolishIntensity
+    /// Soft AI-mode answer length preference (medium by default).
+    public var aiResponseLength: AIResponseLength
     /// Enables provider-specific reasoning / thinking controls for polish LLM requests.
     public var llmThinkingEnabled: Bool
     public var personalDictionary: PersonalDictionary
@@ -146,10 +149,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     }
 
     public var isPolishKeyMissing: Bool {
-        if !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return false
-        }
-        return !PreconfiguredKeys.isDeepseekConfigured
+        apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     public var isCloudAPIKeyMissingForVoiceInput: Bool {
@@ -264,6 +264,9 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             ),
             polishIntensity: PolishIntensity.resolve(
                 storedRawValue: defaults.string(forKey: Keys.polishIntensity)
+            ),
+            aiResponseLength: AIResponseLength.resolve(
+                storedRawValue: defaults.string(forKey: Keys.aiResponseLength)
             ),
             llmThinkingEnabled: defaults.bool(forKey: Keys.llmThinkingEnabled),
             personalDictionary: decodePersonalDictionary(from: defaults),
@@ -396,6 +399,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(cursorDragNavigationEnabled, forKey: Keys.cursorDragNavigationEnabled)
         defaults.set(keyboardHapticIntensity.rawValue, forKey: Keys.keyboardHapticIntensity)
         defaults.set(polishIntensity.rawValue, forKey: Keys.polishIntensity)
+        defaults.set(aiResponseLength.rawValue, forKey: Keys.aiResponseLength)
         defaults.set(llmThinkingEnabled, forKey: Keys.llmThinkingEnabled)
         defaults.set(activePolishStyleId, forKey: Keys.activePolishStyleId)
         defaults.set(flowSkipAppSwitch, forKey: Keys.flowSkipAppSwitch)

@@ -613,9 +613,16 @@ private struct TranscriptLine: View {
             Group {
                 switch micVoiceAvailability {
                 case .ready:
-                    ExtL10n.text("keyboard.placeholder.idle")
+                    // Soft tip when polish key is missing but local ASR can still run.
+                    if !micDisabledHint.isEmpty {
+                        Text(micDisabledHint)
+                    } else {
+                        ExtL10n.text("keyboard.placeholder.idle")
+                    }
                 case .unavailable(.missingAPIKey):
-                    Text(micDisabledHint)
+                    Text(micDisabledHint.isEmpty
+                        ? ExtL10n.string("keyboard.mic.disabled.missingApiKey")
+                        : micDisabledHint)
                 case .unavailable(.hostNotReady):
                     ExtL10n.text("keyboard.placeholder.idle")
                 case .unavailable(.preparingSession):
@@ -631,7 +638,11 @@ private struct TranscriptLine: View {
                 }
             }
             .font(TypeStyle.caption)
-            .foregroundStyle(isWarning ? palette.warning : palette.textTertiary)
+            .foregroundStyle(
+                (isWarning || (micVoiceAvailability.isReady && !micDisabledHint.isEmpty))
+                    ? palette.warning
+                    : palette.textTertiary
+            )
             .lineLimit(1)
             .truncationMode(.tail)
         }

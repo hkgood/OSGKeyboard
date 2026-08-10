@@ -285,6 +285,42 @@ final class FlowSessionBridgeTests: XCTestCase {
         XCTAssertNil(reencoded["previousOutput"])
     }
 
+    func testAIQuestionCommandRoundTripPreservesConversationIdentity() throws {
+        let conversationID = UUID()
+        let command = FlowCommand(
+            sessionId: UUID(),
+            utteranceId: UUID(),
+            commandSeq: 46,
+            action: .startRecording,
+            localeId: "zh-Hans",
+            utteranceMode: .aiQuestion,
+            aiConversationID: conversationID
+        )
+
+        let decoded = try JSONDecoder().decode(
+            FlowCommand.self,
+            from: JSONEncoder().encode(command)
+        )
+
+        XCTAssertEqual(decoded.resolvedUtteranceMode, .aiQuestion)
+        XCTAssertEqual(decoded.aiConversationID, conversationID)
+    }
+
+    func testAIQuestionResultNeverAllowsRawASRFallback() {
+        let result = FlowResult(
+            sessionId: UUID(),
+            utteranceId: UUID(),
+            commandSeq: 47,
+            status: .rawReady,
+            text: "原始问题",
+            rawText: "原始问题",
+            utteranceMode: .aiQuestion,
+            aiConversationID: UUID()
+        )
+
+        XCTAssertFalse(result.allowsRawFallback)
+    }
+
     func testFlowResultRoundTripPreservesUtteranceIdentity() {
         let defaults = makeDefaults()
         let sessionId = UUID()

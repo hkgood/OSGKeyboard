@@ -16,7 +16,9 @@ Usage:
 import argparse
 import concurrent.futures
 import json
+import os
 import re
+import sys
 import time
 import urllib.request
 from collections import Counter, defaultdict
@@ -26,7 +28,6 @@ ROOT = Path(__file__).resolve().parents[1]
 SHARED = ROOT / "OSGKeyboardShared"
 STYLE_DIR = SHARED / "Resources" / "PolishStyles"
 COMPOSER = SHARED / "Services" / "PolishPromptComposer.swift"
-KEYFILE = SHARED / "Services" / "PreconfiguredKeys.local.swift"
 
 ENDPOINT = "https://api.deepseek.com/chat/completions"
 MODEL = "deepseek-v4-flash"
@@ -351,7 +352,10 @@ def main() -> None:
     parser.add_argument("--output", default=".tmp/polish-question-stress.json")
     args = parser.parse_args()
 
-    api_key = re.search(r'deepseek = "([^"]+)"', KEYFILE.read_text()).group(1)
+    api_key = os.environ.get("DEEPSEEK_API_KEY", "").strip()
+    if not api_key:
+        print("Set DEEPSEEK_API_KEY to run this live eval.", file=sys.stderr)
+        raise SystemExit(2)
     styles = STYLES if args.styles == "all" else [
         item.strip() for item in args.styles.split(",") if item.strip()
     ]

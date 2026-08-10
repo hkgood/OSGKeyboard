@@ -98,6 +98,42 @@ final class KeyboardTextInserter {
         OSGLog.keyboardExt.info("flow insert length=\(trimmed.count, privacy: .public)")
     }
 
+    /// Insert one explicitly confirmed AI answer and enqueue history/statistics
+    /// only after the field mutation has been issued.
+    @discardableResult
+    func insertAIAnswer(_ answer: AIAnswer) -> Bool {
+        let trimmed = answer.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+
+        let separator = DictationTextComposer.insertionSeparator(
+            previousContext: contextBeforeInput(),
+            insertion: trimmed
+        )
+        let inserted = separator + trimmed
+        insertText(inserted)
+
+        let mutation = HistoryMutation(
+            action: .append,
+            entryID: answer.id,
+            text: trimmed,
+            engineMode: state.engineMode,
+            source: .ai,
+            usageCategory: .ai
+        )
+        HistoryMutationOutbox.enqueue(mutation)
+        recordLastInsertion(
+            inserted,
+            displayText: trimmed,
+            historyEntryID: answer.id,
+            historyEntryRevision: 0,
+            pendingHistoryMutationID: mutation.id
+        )
+        state.lastTranscript = ""
+        state.level = 0
+        OSGLog.keyboardExt.info("AI answer insert length=\(trimmed.count, privacy: .public)")
+        return true
+    }
+
     /// Roll back the last voice insertion when it is still at the caret.
     func undoLastInsertion() {
         if undoLastEditIfPossible() {
