@@ -35,7 +35,8 @@ private enum KeyboardLayoutMetrics {
     /// park delete/return at the far screen edges and turn each cursor-drag
     /// pad into a ~450 pt runway — capping keeps the reach ergonomics of the
     /// phone layout. iPhone widths are all below this, so it is a no-op there.
-    static let contentMaxWidth: CGFloat = KeyboardChromeLayout.contentMaxWidth
+    /// The typing surface deliberately does not share this cap.
+    static let contentMaxWidth: CGFloat = KeyboardChromeLayout.voiceContentMaxWidth
 
     // MARK: - Content-driven keyboard height (single source of truth)
     static let outerPaddingTop: CGFloat = 4
@@ -59,13 +60,16 @@ private enum KeyboardLayoutMetrics {
     /// Pushes the transcript / hint line down to the vertical centre of the gap
     /// between the tab capsule's bottom edge and the mic's visible top edge.
     /// Applied as an offset so the band heights — and therefore `totalHeight`
-    /// and `micUpwardAdjustment` — stay untouched.
-    static var transcriptLineDownwardAdjustment: CGFloat {
+    /// and `micUpwardAdjustment` — stay untouched. `extraSpace` is the slack a
+    /// taller iPad keyboard adds above the action cluster, which moves the mic
+    /// down and so must move this line with it.
+    static func transcriptLineDownwardAdjustment(extraSpace: CGFloat) -> CGFloat {
         let capsuleBottom = (topBarHeight + topBarTabCapsuleHeight) / 2
         let micVisibleTop = topBarHeight
             + topBarToTranscriptSpacing
             + transcriptLineHeight
             + actionClusterTopGap
+            + extraSpace
             - micUpwardAdjustment
             + micRingInset
         let currentCentre = topBarHeight + topBarToTranscriptSpacing + transcriptLineHeight / 2
@@ -76,8 +80,21 @@ private enum KeyboardLayoutMetrics {
         topBarHeight + topBarToTranscriptSpacing + transcriptLineHeight
     }
 
-    /// 4 + 70 + 24 + 179 + 0 + 4 = 281 pt, matching Chinese / English.
+    /// 4 + 70 + 24 + 179 + 0 + 4 = 281 pt on phones.
     static let totalHeight: CGFloat = KeyboardChromeLayout.totalHeight
+
+    /// Voice and typing must resolve to the same height or switching surfaces
+    /// visibly resizes the keyboard — 113 pt on an iPad in landscape. The
+    /// typing surface is content-driven, so voice adopts its height and parks
+    /// the surplus above the action cluster (keeping the bottom row on the
+    /// same baseline as the typing bottom row).
+    static func totalHeight(isIPad: Bool, width: CGFloat) -> CGFloat {
+        TypingSurfaceMetrics.contentHeight(isIPad: isIPad, width: width)
+    }
+
+    static func extraVerticalSpace(isIPad: Bool, width: CGFloat) -> CGFloat {
+        max(0, totalHeight(isIPad: isIPad, width: width) - totalHeight)
+    }
 }
 
 public struct KeyboardRootView: View {
@@ -101,11 +118,18 @@ public struct KeyboardRootView: View {
     /// in `KeyboardViewController` (see `KeyboardLayoutMetrics.totalHeight`).
     static let totalHeight: CGFloat = KeyboardLayoutMetrics.totalHeight
 
+    /// Matches the typing surface so switching surfaces never resizes the
+    /// keyboard. Surplus height is parked above the action cluster.
+    static func totalHeight(isIPad: Bool, width: CGFloat) -> CGFloat {
+        KeyboardLayoutMetrics.totalHeight(isIPad: isIPad, width: width)
+    }
+
     // MARK: - Cursor-drag pad geometry
 
     /// Mic disc side length.
     static let micSize: CGFloat = KeyboardLayoutMetrics.micSize
-    /// Vertical offset from the keyboard's top edge to the mic disc.
+    /// Vertical offset from the keyboard's top edge to the mic disc. iPad adds
+    /// `KeyboardLayoutMetrics.extraVerticalSpace` on top of this.
     static let micTopOffset: CGFloat = KeyboardLayoutMetrics.outerPaddingTop
         + KeyboardLayoutMetrics.headerBandHeight
         + KeyboardLayoutMetrics.actionClusterTopGap
@@ -118,30 +142,48 @@ public struct KeyboardRootView: View {
     }
 
     public var body: some View {
-        ZStack {
-            VStack(spacing: 0) {
-                headerBand
+        Group {
+            if state.editSession.isActive {
+                LastInputEditView(state: state)
+            } else {
+                ZStack {
+                    VStack(spacing: 0) {
+                        headerBand
 
-                Color.clear
-                    .frame(height: KeyboardLayoutMetrics.actionClusterTopGap)
+                        Color.clear
+                            .frame(height: KeyboardLayoutMetrics.actionClusterTopGap)
 
-                micActionRow
-                    .frame(height: KeyboardLayoutMetrics.actionClusterHeight)
+                        // Absorbs the surplus of a taller iPad keyboard here so
+                        // the action cluster stays pinned to the bottom and its
+                        // keys share the typing surface's bottom-row baseline.
+                        Spacer(minLength: 0)
 
-                Color.clear
-                    .frame(height: KeyboardLayoutMetrics.actionClusterBottomGap)
+                        micActionRow
+                            .frame(height: KeyboardLayoutMetrics.actionClusterHeight)
+
+                        Color.clear
+                            .frame(height: KeyboardLayoutMetrics.actionClusterBottomGap)
+                    }
+                    .padding(.top, KeyboardLayoutMetrics.outerPaddingTop)
+                    .padding(.bottom, KeyboardLayoutMetrics.outerPaddingBottom)
+                    // 透明背景：让系统键盘 chrome 透出，不自行铺色（深浅模式一致）。
+                    .background(Color.clear)
+                    // No content-width cap: the surface fills the host width so
+                    // switching between voice and typing never changes width.
+                    .frame(maxWidth: .infinity)
+                    .frame(
+                        height: Self.totalHeight(
+                            isIPad: state.usesIPadLayoutMetrics,
+                            width: state.layoutWidth
+                        )
+                    )
+                    // Feed the resolved palette to all nested chips/buttons.
+                    .environment(\.themePalette, palette)
+                }
             }
-            .padding(.top, KeyboardLayoutMetrics.outerPaddingTop)
-            .padding(.bottom, KeyboardLayoutMetrics.outerPaddingBottom)
-            // 透明背景：让系统键盘 chrome 透出，不自行铺色（深浅模式一致）。
-            .background(Color.clear)
-            .frame(maxWidth: KeyboardLayoutMetrics.contentMaxWidth)
-            .frame(maxWidth: .infinity)
-            .frame(height: Self.totalHeight)
-            // Feed the resolved palette to all nested chips/buttons.
-            .environment(\.themePalette, palette)
         }
         .animation(.easeInOut(duration: 0.12), value: state.cursorDragActive)
+        .animation(.easeInOut(duration: 0.12), value: state.editSession.isActive)
     }
 
     /// Top brand / mode row + transcript / hint line.
@@ -155,13 +197,18 @@ public struct KeyboardRootView: View {
                 transcript: state.lastTranscript,
                 micVoiceAvailability: state.micVoiceAvailability,
                 micDisabledHint: state.micDisabledHint,
-                clipboardCommandEligible: state.clipboardCommandEligible,
-                clipboardFailureHint: state.clipboardFailureHint,
+                editHint: state.editHint,
+                editHintIsPositive: state.editHintIsPositive,
                 cursorDragHintActive: state.cursorDragActive,
                 openSettings: state.openSettings
             )
             .frame(height: KeyboardLayoutMetrics.transcriptLineHeight)
-            .offset(y: KeyboardLayoutMetrics.transcriptLineDownwardAdjustment)
+            .offset(y: KeyboardLayoutMetrics.transcriptLineDownwardAdjustment(
+                extraSpace: KeyboardLayoutMetrics.extraVerticalSpace(
+                    isIPad: state.usesIPadLayoutMetrics,
+                    width: state.layoutWidth
+                )
+            ))
         }
     }
 
@@ -170,15 +217,25 @@ public struct KeyboardRootView: View {
     private var topBar: some View {
         HStack(spacing: Spacing.xs) {
             KeyboardBrandLogo(action: state.openSettings)
+            // Globe key now lives at the bottom-left of the keyboard (matching
+            // iOS system layout); see micActionRow's bottom HStack.
             // Engine controls remain available in the host app.
             // App context is auto-detected on each mic press — no UI.
             Spacer(minLength: 0)
-            KeyboardTopControls(
-                state: state,
-                typing: typing,
-                palette: palette,
-                onInsert: onInsert
-            )
+            if state.canCancelVoiceInput {
+                KeyboardCancelButton(
+                    action: state.cancelVoiceInput,
+                    accessibilityLabel: ExtL10n.text("keyboard.voice.cancel"),
+                    accessibilityHint: ExtL10n.text("keyboard.voice.cancelHint")
+                )
+            } else {
+                KeyboardTopControls(
+                    state: state,
+                    typing: typing,
+                    palette: palette,
+                    onInsert: onInsert
+                )
+            }
         }
         .padding(.horizontal, KeyboardTopBarMetrics.horizontalInset)
     }
@@ -199,19 +256,12 @@ public struct KeyboardRootView: View {
         // opacity so the pads' hit area never shifts mid-gesture) and lets
         // the cursor-drag chrome take over.
         let dragging = state.cursorDragActive
-        let clipboardRecording = state.clipboardCommandRecording
-        // Undo hides during drag (like mic) and during clipboard side captions.
-        let undoVisible = !dragging && !clipboardRecording
+        let recording = state.phase == .recording
+        let undoVisible = !dragging && !recording
 
         return VStack(spacing: KeyboardLayoutMetrics.micToButtonGap) {
             HStack(spacing: 0) {
                 cursorDragPad(enabled: cursorPadsEnabled)
-                    .overlay {
-                        clipboardSideHint(
-                            ExtL10n.text("keyboard.clipboard.recordingLeft"),
-                            visible: clipboardRecording && !dragging
-                        )
-                    }
                     .overlay(alignment: .leading) {
                         // Left-handed: undo shares the outer edge with delete.
                         if !swapKeys {
@@ -227,12 +277,12 @@ public struct KeyboardRootView: View {
                     level: state.level,
                     remainingSeconds: state.phase == .recording ? state.utteranceRemainingSeconds : nil,
                     isEnabled: micButtonEnabled,
-                    isClipboardCommandRecording: state.clipboardCommandRecording,
                     onToggle: state.tapMic,
-                    onClipboardLongPressBegan: (state.clipboardCommandEligible
-                        || state.clipboardCommandUtteranceActive)
-                        && micButtonEnabled
-                        ? state.beginClipboardCommand
+                    onPressingChanged: micButtonEnabled
+                        ? state.setMicTouchActive
+                        : { _ in },
+                    onEditLongPressBegan: micButtonEnabled
+                        ? state.beginEditLastInput
                         : nil
                 )
                 .frame(width: KeyboardLayoutMetrics.micSize, height: KeyboardLayoutMetrics.micSize)
@@ -240,12 +290,6 @@ public struct KeyboardRootView: View {
                 .opacity(dragging ? 0 : 1)
 
                 cursorDragPad(enabled: cursorPadsEnabled)
-                    .overlay {
-                        clipboardSideHint(
-                            ExtL10n.text("keyboard.clipboard.recordingRight"),
-                            visible: clipboardRecording && !dragging
-                        )
-                    }
                     .overlay(alignment: .trailing) {
                         // Right-handed: undo mirrors to the outer (delete) side.
                         if swapKeys {
@@ -257,33 +301,74 @@ public struct KeyboardRootView: View {
                     }
             }
             .frame(height: KeyboardLayoutMetrics.micSize)
-            .animation(.easeInOut(duration: 0.25), value: state.clipboardCommandRecording)
 
             GeometryReader { proxy in
-                let widths = KeyboardChromeLayout.actionKeyWidths(
-                    availableWidth: proxy.size.width
-                )
+                if state.showsSystemGlobeKey {
+                    // iPad uses a flatter split: at full width the phone's 50%
+                    // centre fraction would hand return ~577 pt.
+                    let widths = state.usesIPadLayoutMetrics
+                        ? KeyboardChromeLayout.iPadVoiceActionKeyWidths(
+                            availableWidth: proxy.size.width
+                        )
+                        : KeyboardChromeLayout.actionKeyWidths(
+                            availableWidth: proxy.size.width
+                        )
 
-                HStack(spacing: KeyboardLayoutMetrics.bottomActionSpacing) {
-                    if swapKeys {
-                        bottomSpaceButton(disabled: editingBlocked)
-                            .frame(width: widths.side)
-                        bottomReturnButton(disabled: editingBlocked)
-                            .frame(width: widths.center)
-                        bottomDeleteButton(disabled: editingBlocked)
-                            .frame(width: widths.side)
-                    } else {
-                        bottomDeleteButton(disabled: editingBlocked)
-                            .frame(width: widths.side)
-                        bottomReturnButton(disabled: editingBlocked)
-                            .frame(width: widths.center)
-                        bottomSpaceButton(disabled: editingBlocked)
-                            .frame(width: widths.side)
+                    HStack(spacing: KeyboardLayoutMetrics.bottomActionSpacing) {
+                        // Globe key pins to the far-left of the iPad action row.
+                        // Tap advances; long-press presents the system list.
+                        SystemGlobeKey(
+                            state: state,
+                            width: widths.globe,
+                            height: KeyboardLayoutMetrics.bottomActionRowHeight
+                        )
+                        .frame(
+                            width: widths.globe,
+                            height: KeyboardLayoutMetrics.bottomActionRowHeight
+                        )
+                        if swapKeys {
+                            bottomSpaceButton(disabled: editingBlocked)
+                                .frame(width: widths.side)
+                            bottomReturnButton(disabled: editingBlocked)
+                                .frame(width: widths.center)
+                            bottomDeleteButton(disabled: editingBlocked)
+                                .frame(width: widths.side2)
+                        } else {
+                            bottomDeleteButton(disabled: editingBlocked)
+                                .frame(width: widths.side)
+                            bottomReturnButton(disabled: editingBlocked)
+                                .frame(width: widths.center)
+                            bottomSpaceButton(disabled: editingBlocked)
+                                .frame(width: widths.side2)
+                        }
+                    }
+                } else {
+                    let widths = KeyboardChromeLayout.actionKeyWidthsWithoutGlobe(
+                        availableWidth: proxy.size.width
+                    )
+
+                    HStack(spacing: KeyboardLayoutMetrics.bottomActionSpacing) {
+                        if swapKeys {
+                            bottomSpaceButton(disabled: editingBlocked)
+                                .frame(width: widths.side)
+                            bottomReturnButton(disabled: editingBlocked)
+                                .frame(width: widths.center)
+                            bottomDeleteButton(disabled: editingBlocked)
+                                .frame(width: widths.side2)
+                        } else {
+                            bottomDeleteButton(disabled: editingBlocked)
+                                .frame(width: widths.side)
+                            bottomReturnButton(disabled: editingBlocked)
+                                .frame(width: widths.center)
+                            bottomSpaceButton(disabled: editingBlocked)
+                                .frame(width: widths.side2)
+                        }
                     }
                 }
             }
             .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
-            .opacity(dragging ? 0 : 1)
+            .opacity(dragging || recording ? 0 : 1)
+            .allowsHitTesting(!dragging && !recording)
         }
         .padding(.horizontal, KeyboardLayoutMetrics.sideActionHorizontalInset)
         .frame(maxWidth: .infinity)
@@ -298,23 +383,6 @@ public struct KeyboardRootView: View {
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(Rectangle())
-    }
-
-    /// Side caption beside the mic during clipboard-command recording.
-    /// Vertically matches the mic disc (same upward offset); does not steal touches.
-    private func clipboardSideHint(_ text: Text, visible: Bool) -> some View {
-        text
-            // 22pt → ~18pt (−20%); softer than body so it doesn't compete with the mic.
-            .font(.system(size: 17.6, weight: .medium))
-            .foregroundStyle(palette.textSecondary.opacity(0.42))
-            .multilineTextAlignment(.center)
-            .lineLimit(3)
-            .minimumScaleFactor(0.7)
-            .padding(.horizontal, 2)
-            .offset(y: -KeyboardLayoutMetrics.micUpwardAdjustment)
-            .opacity(visible ? 1 : 0)
-            .allowsHitTesting(false)
-            .accessibilityHidden(!visible)
     }
 
     private func bottomDeleteButton(disabled: Bool) -> some View {
@@ -385,14 +453,6 @@ public struct KeyboardRootView: View {
     }
 
     private var buttonPhase: RecordButton.Phase {
-        switch clipboardMicChrome {
-        case .preparingCancelable:
-            return .preparing
-        case .recordingBlue:
-            return .recording
-        case .none:
-            break
-        }
         switch state.micVoiceAvailability {
         case .recording:
             return .recording
@@ -405,30 +465,12 @@ public struct KeyboardRootView: View {
         }
     }
 
-    /// Preparing clipboard capture: grey spinner, tap to cancel.
+    /// Disabled only when the shared voice prerequisites are unavailable.
     private var micButtonEnabled: Bool {
         if state.micDisabled { return false }
         return true
     }
 
-    private var clipboardMicChrome: ClipboardMicChrome {
-        let phase: ClipboardPreparingPhase = {
-            switch state.phase {
-            case .idle: return .idle
-            case .denied: return .denied
-            case .error: return .error
-            case .requestingPermissions: return .requestingPermissions
-            case .recording: return .recording
-            case .processing: return .processing
-            }
-        }()
-        return ClipboardPreparingPolicy.micChrome(
-            isClipboardUtterance: state.clipboardCommandUtteranceActive,
-            phase: phase,
-            awaitingHostConfirm: state.phase == .requestingPermissions
-                || (state.phase == .recording && !state.clipboardCommandRecording)
-        )
-    }
 }
 
 // MARK: - State alias
@@ -477,8 +519,8 @@ private struct TranscriptLine: View {
     let transcript: String
     let micVoiceAvailability: MicVoiceAvailability
     let micDisabledHint: String
-    let clipboardCommandEligible: Bool
-    let clipboardFailureHint: String?
+    let editHint: String?
+    let editHintIsPositive: Bool
     let cursorDragHintActive: Bool
     let openSettings: () -> Void
 
@@ -551,10 +593,10 @@ private struct TranscriptLine: View {
 
     @ViewBuilder
     private var idleHint: some View {
-        if let clipboardFailureHint, !clipboardFailureHint.isEmpty {
-            Text(clipboardFailureHint)
+        if let editHint, !editHint.isEmpty {
+            Text(editHint)
                 .font(TypeStyle.caption)
-                .foregroundStyle(palette.warning)
+                .foregroundStyle(editHintIsPositive ? palette.accent : palette.warning)
                 .lineLimit(1)
                 .truncationMode(.tail)
         } else {
@@ -571,25 +613,13 @@ private struct TranscriptLine: View {
             Group {
                 switch micVoiceAvailability {
                 case .ready:
-                    if clipboardCommandEligible {
-                        ExtL10n.text("keyboard.placeholder.idleClipboard")
-                    } else {
-                        ExtL10n.text("keyboard.placeholder.idle")
-                    }
+                    ExtL10n.text("keyboard.placeholder.idle")
                 case .unavailable(.missingAPIKey):
                     Text(micDisabledHint)
                 case .unavailable(.hostNotReady):
-                    if clipboardCommandEligible {
-                        ExtL10n.text("keyboard.placeholder.idleClipboard")
-                    } else {
-                        ExtL10n.text("keyboard.placeholder.idle")
-                    }
+                    ExtL10n.text("keyboard.placeholder.idle")
                 case .unavailable(.preparingSession):
-                    if clipboardCommandEligible {
-                        ExtL10n.text("keyboard.placeholder.idleClipboard")
-                    } else {
-                        ExtL10n.text("keyboard.placeholder.idle")
-                    }
+                    ExtL10n.text("keyboard.placeholder.idle")
                 case .unavailable(.noFullAccess):
                     ExtL10n.text("keyboard.error.fullAccessRequired")
                 case .unavailable(.appGroupUnavailable):

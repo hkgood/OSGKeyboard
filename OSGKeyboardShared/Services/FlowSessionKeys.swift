@@ -11,6 +11,7 @@ public enum FlowSessionKeys {
     public static let flowCommandJournalPayload = "flow.commandJournalPayload.v2"
     public static let flowResultPayload = "flow.resultPayload.v1"
     public static let flowAckPayload = "flow.ackPayload.v1"
+    public static let flowStartTransactionPayload = "flow.startTransaction.v1"
     public static let pendingKeyboardUtteranceId = "flow.pendingKeyboardUtteranceId.v1"
     public static let flowReadyPayload = "flow.readyPayload.v1"
     public static let flowSessionActive = "flow.flowSessionActive"
@@ -35,7 +36,7 @@ public enum FlowSessionKeys {
     public static let pendingHostBundleId = "flow.pendingHostBundleId"
     /// Wall-clock of the last keyboard→`startflow` PiP arm attempt (debounce re-jumps).
     public static let lastPiPArmAttemptAt = "flow.lastPiPArmAttemptAt.v1"
-    /// Minimum gap between proactive / clipboard startflow jumps.
+    /// Minimum gap between repeated proactive `startflow` jumps.
     public static let pipArmCooldown: TimeInterval = 45
     /// Wall-clock timestamp of the last utterance completion or session start.
     public static let lastActivityAt = "flow.lastActivityAt"
@@ -75,6 +76,12 @@ public enum FlowSessionKeys {
 
     /// Maximum duration for a single keyboard utterance (3.5 minutes).
     public static let maxUtteranceDuration: TimeInterval = 210
+    /// User action → proven audio. Shared by normal dictation and edit mode.
+    public static let utteranceStartBudget: TimeInterval = 8
+    /// Edit stop → reviewed result delivered to the keyboard.
+    public static let editLastInputProcessingBudget: TimeInterval = 45
+    /// Host work budget leaves five seconds for serialization and delivery.
+    public static let editLastInputHostProcessingBudget: TimeInterval = 40
 
     /// Host polls for pipelined ASR drain after mic stop. Pipelining usually
     /// finishes most chunks during recording; this is a soft deadline before

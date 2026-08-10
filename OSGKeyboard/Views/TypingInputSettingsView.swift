@@ -11,9 +11,9 @@ struct TypingInputSettingsView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @ObservedObject private var config = ProviderConfig.shared
     @ObservedObject private var configuration = TypingInputConfiguration.shared
+    @ObservedObject private var deployment = RimeDeploymentController.shared
 
-    @State private var isDeploying = false
-    @State private var deploymentError: String?
+    private var isDeploying: Bool { deployment.isDeploying }
 
     var body: some View {
         List {
@@ -59,7 +59,7 @@ struct TypingInputSettingsView: View {
                     } else {
                         Text(statusText)
                             .foregroundStyle(
-                                deploymentError == nil ? palette.textSecondary : palette.danger
+                                hasDeploymentError ? palette.danger : palette.textSecondary
                             )
                     }
                 }
@@ -76,8 +76,13 @@ struct TypingInputSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
+    private var hasDeploymentError: Bool {
+        if case .failed = deployment.status { return true }
+        return false
+    }
+
     private var statusText: String {
-        if let deploymentError { return deploymentError }
+        if case .failed(let message) = deployment.status { return message }
         return AppL10n.string(
             RimeResourceInstaller.isReady
                 ? "settings.typingInput.resources.ready"
@@ -87,20 +92,6 @@ struct TypingInputSettingsView: View {
     }
 
     private func deployUpdatedSchemas() {
-        guard !isDeploying else { return }
-        let snapshot = configuration.snapshot
-        isDeploying = true
-        deploymentError = nil
-        Task {
-            do {
-                try await RimeResourceInstaller.shared.installIfNeeded(
-                    configuration: snapshot,
-                    force: true
-                )
-            } catch {
-                deploymentError = error.localizedDescription
-            }
-            isDeploying = false
-        }
+        deployment.deployNow(force: true, reason: "settings.typingInput")
     }
 }

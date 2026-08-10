@@ -39,7 +39,7 @@ public struct ThemePalette: Sendable, Equatable {
     public let dividerStrong: Color
 
     public let recordRed: Color
-    /// Clipboard-command hold-to-talk recording (distinct from dictation red).
+    /// Alternate recording accent available to platform-specific surfaces.
     public let recordBlue: Color
 }
 

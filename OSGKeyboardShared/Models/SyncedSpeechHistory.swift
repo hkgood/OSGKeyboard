@@ -7,7 +7,7 @@
 import Foundation
 
 public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
-    public static let schemaVersion = 2
+    public static let schemaVersion = 3
     public static let kvsKey = "speechHistory.v2"
     public static let legacyKVSKey = "speechHistory.v1"
     public static let maxEntries = 300
@@ -28,6 +28,8 @@ public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
     public var entries: [SpeechHistoryEntry]
     /// Entry IDs deleted on any device, with deletion timestamps.
     public var deletedEntryIDs: [UUID: Date]
+    /// Recent idempotency keys for keyboard-originated history mutations.
+    public var appliedMutationIDs: [UUID]
     /// When set, entries created at or before this instant are excluded.
     public var clearedAt: Date?
 
@@ -36,12 +38,14 @@ public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
         updatedAt: Date = Date(),
         entries: [SpeechHistoryEntry] = [],
         deletedEntryIDs: [UUID: Date] = [:],
+        appliedMutationIDs: [UUID] = [],
         clearedAt: Date? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.updatedAt = updatedAt
         self.entries = entries
         self.deletedEntryIDs = deletedEntryIDs
+        self.appliedMutationIDs = appliedMutationIDs
         self.clearedAt = clearedAt
     }
 
@@ -58,12 +62,16 @@ public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
         } else {
             deletedEntryIDs = [:]
         }
+        appliedMutationIDs = try container.decodeIfPresent(
+            [UUID].self,
+            forKey: .appliedMutationIDs
+        ) ?? []
         clearedAt = try container.decodeIfPresent(Date.self, forKey: .clearedAt)
     }
 
     public static let empty = SyncedSpeechHistory(updatedAt: .distantPast)
 
-    /// Union entries by id (newer `createdAt` wins), apply tombstones and clear.
+    /// Union entries by id. Higher revision wins; timestamps break legacy ties.
     public static func merge(local: SyncedSpeechHistory, remote: SyncedSpeechHistory) -> SyncedSpeechHistory {
         let clearedAt = later(of: local.clearedAt, and: remote.clearedAt)
         var deletedIDs = local.deletedEntryIDs
@@ -75,13 +83,18 @@ public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
             }
         }
         deletedIDs = pruneTombstones(deletedIDs, clearedAt: clearedAt)
+        let appliedMutationIDs = Array(
+            Set(local.appliedMutationIDs + remote.appliedMutationIDs)
+                .sorted { $0.uuidString < $1.uuidString }
+                .prefix(256)
+        )
 
         var byID: [UUID: SpeechHistoryEntry] = [:]
         for entry in local.entries + remote.entries {
             if deletedIDs[entry.id] != nil { continue }
             if let clearedAt, entry.createdAt <= clearedAt { continue }
             if let existing = byID[entry.id] {
-                byID[entry.id] = entry.createdAt >= existing.createdAt ? entry : existing
+                byID[entry.id] = preferred(entry, over: existing)
             } else {
                 byID[entry.id] = entry
             }
@@ -96,6 +109,7 @@ public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
             updatedAt: max(local.updatedAt, remote.updatedAt),
             entries: entries,
             deletedEntryIDs: deletedIDs,
+            appliedMutationIDs: appliedMutationIDs,
             clearedAt: clearedAt
         )
     }
@@ -142,6 +156,19 @@ public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
         case (nil, nil):
             return nil
         }
+    }
+
+    private static func preferred(
+        _ candidate: SpeechHistoryEntry,
+        over existing: SpeechHistoryEntry
+    ) -> SpeechHistoryEntry {
+        if candidate.revision != existing.revision {
+            return candidate.revision > existing.revision ? candidate : existing
+        }
+        if candidate.modifiedAt != existing.modifiedAt {
+            return candidate.modifiedAt > existing.modifiedAt ? candidate : existing
+        }
+        return candidate.createdAt >= existing.createdAt ? candidate : existing
     }
 }
 

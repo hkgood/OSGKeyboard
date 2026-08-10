@@ -12,6 +12,10 @@ final class KeyboardConfigSync {
     private let state: KeyboardState
     private let persistor: AppGroupPersistor
     private let onFlowSessionChanged: () -> Void
+    /// Fired on every App Group config change — the host posts one after a
+    /// successful Rime deployment, which is the keyboard's only signal that
+    /// typing resources just became available.
+    private let onConfigChanged: () -> Void
 
     /// Grace period after a chip-side translation write during which the
     /// 1 Hz App Group poll must not overwrite `translationTargetLocaleId`.
@@ -25,11 +29,13 @@ final class KeyboardConfigSync {
     init(
         state: KeyboardState,
         persistor: AppGroupPersistor,
-        onFlowSessionChanged: @escaping () -> Void
+        onFlowSessionChanged: @escaping () -> Void,
+        onConfigChanged: @escaping () -> Void = {}
     ) {
         self.state = state
         self.persistor = persistor
         self.onFlowSessionChanged = onFlowSessionChanged
+        self.onConfigChanged = onConfigChanged
     }
 
     func installDarwinObservers() {
@@ -49,7 +55,9 @@ final class KeyboardConfigSync {
         configDarwinObserver = FlowSessionDarwinObserver(
             notificationName: AppGroupConfigDarwin.notificationName
         ) { [weak self] in
-            self?.refreshConfigFromAppGroup()
+            guard let self else { return }
+            self.refreshConfigFromAppGroup()
+            self.onConfigChanged()
         }
     }
 

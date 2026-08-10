@@ -21,6 +21,9 @@ public final class TypingSessionController: ObservableObject {
     /// Chinese-only: key grid replaced by a same-height candidate grid.
     @Published public private(set) var isCandidatePanelExpanded: Bool = false
     @Published public var lastError: String?
+    /// `true` when `lastError` can only be cleared by deploying resources in
+    /// the host app — drives the keyboard's tappable setup affordance.
+    @Published public private(set) var lastErrorNeedsHostDeployment: Bool = false
 
     /// When true, English suggestions / autocorrect stay off (secure fields).
     @Published public var suggestionsEnabled: Bool = true
@@ -663,6 +666,7 @@ public final class TypingSessionController: ObservableObject {
             engineReady = engine.isReady
             schema = engine.schema
             lastError = nil
+            lastErrorNeedsHostDeployment = false
             if language == .english {
                 refreshEnglishSuggestions()
             }
@@ -672,11 +676,28 @@ public final class TypingSessionController: ObservableObject {
             )
         } catch {
             lastError = error.localizedDescription
+            lastErrorNeedsHostDeployment =
+                (error as? RimeResourceError)?.isResolvedByHostDeployment ?? false
             engineReady = false
             OSGDiag.log(
                 "rime.prepare failed error=\(error.localizedDescription) \(OSGDiag.memoryTag())",
                 category: "boot"
             )
+        }
+    }
+
+    /// Retries a previously failed prepare once host-side resources land.
+    /// Driven by the App Group config Darwin notification the host posts after
+    /// a successful deployment, so a keyboard already showing the setup error
+    /// recovers without the user switching surfaces.
+    public func retryPrepareAfterResourceDeployment() {
+        guard !prepared, lastError != nil else { return }
+        guard prepareTask == nil else { return }
+        guard RimeResourceInstaller.isReady else { return }
+        OSGDiag.log("rime.prepare retry after deployment", category: "boot")
+        prepareTask = Task { [weak self] in
+            await self?.prepareIfNeeded()
+            self?.prepareTask = nil
         }
     }
 }

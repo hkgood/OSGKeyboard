@@ -23,17 +23,22 @@ public struct TypingKeyHitTarget: Equatable, Identifiable, Sendable {
     public let label: String
     public let visualFrame: CGRect
     public let behavior: TypingKeyTouchBehavior
+    /// Optional small number rendered above a letter key (iPad top row,
+    /// mirroring the iOS system keyboard's number overlay). `nil` elsewhere.
+    public let displayNumber: String?
 
     public init(
         id: String,
         label: String,
         visualFrame: CGRect,
-        behavior: TypingKeyTouchBehavior
+        behavior: TypingKeyTouchBehavior,
+        displayNumber: String? = nil
     ) {
         self.id = id
         self.label = label
         self.visualFrame = visualFrame
         self.behavior = behavior
+        self.displayNumber = displayNumber
     }
 
     public var center: CGPoint {

@@ -14,6 +14,7 @@ public enum RimeResourceError: LocalizedError {
     case lockUnavailable
     case deploymentFailed
     case resourcesNotInstalled
+    case hostAppRequired
 
     public var errorDescription: String? {
         switch self {
@@ -27,6 +28,21 @@ public enum RimeResourceError: LocalizedError {
             return "输入法资源部署失败"
         case .resourcesNotInstalled:
             return "请先打开 OSGKeyboard 完成输入法初始化"
+        case .hostAppRequired:
+            return "输入法资源只能由 OSGKeyboard 主应用部署"
+        }
+    }
+
+    /// Whether opening the host app can actually resolve this failure. Only
+    /// host-side deployment fixes missing or broken resources; App Group and
+    /// lock failures resolve on their own.
+    public var isResolvedByHostDeployment: Bool {
+        switch self {
+        case .resourcesNotInstalled, .deploymentFailed, .bundledResourceMissing,
+             .hostAppRequired:
+            return true
+        case .appGroupUnavailable, .lockUnavailable:
+            return false
         }
     }
 }
@@ -70,6 +86,17 @@ public actor RimeResourceInstaller {
         )
     }
 
+    /// Full deployment is forbidden inside an app-extension process. Keeping
+    /// this check beside the heavy operation makes the host-only contract
+    /// enforceable even though the readiness API lives in the shared framework.
+    public static var canDeployInCurrentProcess: Bool {
+        canDeploy(bundleURL: Bundle.main.bundleURL)
+    }
+
+    static func canDeploy(bundleURL: URL) -> Bool {
+        bundleURL.pathExtension.lowercased() != "appex"
+    }
+
     /// Installs source data and asks librime to prebuild schemas. Call only
     /// from the host app, never from the keyboard extension.
     ///
@@ -80,6 +107,10 @@ public actor RimeResourceInstaller {
         personalDictionary: PersonalDictionary? = nil,
         force: Bool = false
     ) throws {
+        guard Self.canDeployInCurrentProcess else {
+            throw RimeResourceError.hostAppRequired
+        }
+
         let dictionary = personalDictionary ?? AppGroupStore().personalDictionary
         let personalYAML = try Self.makePersonalDictionaryYAML(from: dictionary)
         let personalFingerprint = RimePersonalDictionaryExporter.fingerprint(of: personalYAML)
@@ -175,7 +206,6 @@ public actor RimeResourceInstaller {
 
         TypingInputConfiguration.setInstalledResourceVersion(Self.resourceVersion)
         TypingInputConfiguration.setInstalledPersonalDictionaryFingerprint(personalFingerprint)
-        AppGroupConfigDarwin.postConfigChanged()
     }
 
     private static func makePersonalDictionaryYAML(

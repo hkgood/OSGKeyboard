@@ -631,6 +631,7 @@ private struct PermissionPageLayout: View {
 
 private struct EnableKeyboardPage: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @ObservedObject private var deployment = RimeDeploymentController.shared
 
     var body: some View {
         ScrollView {
@@ -671,8 +672,53 @@ private struct EnableKeyboardPage: View {
                 .padding(.horizontal, Spacing.lg)
                 .padding(.top, Spacing.xxxl)
 
+                resourceStatusRow
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.md)
+
                 Spacer(minLength: Spacing.lg)
             }
+        }
+        // Deploy while the user reads these steps and visits system settings.
+        // The keyboard is not in use yet, so this is the one moment where the
+        // host can afford the memory without risking the extension.
+        .onAppear {
+            deployment.deployNow(reason: "onboarding.enableKeyboard")
+        }
+    }
+
+    @ViewBuilder
+    private var resourceStatusRow: some View {
+        switch deployment.status {
+        case .deploying:
+            HStack(spacing: Spacing.xs) {
+                ProgressView().controlSize(.small)
+                Text(LocalizedStringKey("onboarding.enable.resources.preparing"))
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+            }
+        case .ready:
+            HStack(spacing: Spacing.xs) {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(palette.accent)
+                Text(LocalizedStringKey("onboarding.enable.resources.ready"))
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+            }
+        case .failed:
+            HStack(spacing: Spacing.xs) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(palette.warning)
+                Text(LocalizedStringKey("onboarding.enable.resources.failed"))
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+                Button(LocalizedStringKey("onboarding.enable.resources.retry")) {
+                    deployment.deployNow(force: true, reason: "onboarding.retry")
+                }
+                .font(TypeStyle.caption)
+            }
+        case .idle:
+            EmptyView()
         }
     }
 

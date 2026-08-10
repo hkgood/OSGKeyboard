@@ -27,6 +27,10 @@
 "onboarding.enable.step3.prefix" = "Hold ";
 "onboarding.enable.step3.suffix" = "and select OSGKeyboard";
 "onboarding.enable.openSettings" = "Open Settings";
+"onboarding.enable.resources.preparing" = "Preparing Chinese input resources…";
+"onboarding.enable.resources.ready" = "Chinese input resources ready";
+"onboarding.enable.resources.failed" = "Could not prepare Chinese input resources";
+"onboarding.enable.resources.retry" = "Retry";
 "onboarding.api.title" = "Choose Engine";
 "onboarding.api.localModels.hint" = "Local engine uses built-in on-device speech recognition — no API key needed.";
 "onboarding.polish.title" = "Text polish (LLM)";
@@ -352,7 +356,6 @@
 
 /* Flow session */
 "flow.error.noSpeech" = "No speech detected. Please try again.";
-"flow.error.clipboardCommandFailed" = "Couldn't process the clipboard. Please try again.";
 "flow.error.recognitionInterrupted" = "Recognition did not finish. Please try again.";
 "keyboard.denied.mic" = "Microphone access denied";
 "keyboard.denied.speech" = "Speech recognition denied";
@@ -557,3 +560,4 @@
 "hostApp.douyin" = "Douyin";
 "hostApp.tiktok" = "TikTok";
 "flow.warning.polishDegradedQuality" = "Polish output failed validation; inserted a conservative version.";
+"flow.error.editLastInputFailed" = "Could not complete the edit. Please try again.";

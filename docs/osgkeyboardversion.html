@@ -205,28 +205,21 @@
             <li>新增<strong>按键音效与震动</strong>，以及轻 / 强震动设置</li>
             <li>新增长按删除加速，改长文更高效</li>
             <li>新增英文键盘智能大写：连续大写、句首自动大写</li>
-            <li>新增<strong>撤销上次输入</strong>按钮：麦克风旁可一键撤回最近一次听写或剪贴板指令结果</li>
+            <li>新增<strong>撤销上次输入</strong>按钮：麦克风旁可一键撤回最近一次听写或编辑结果</li>
             <li>新增<strong>键盘偏好</strong>设置，支持记住上次使用的语音或文字界面，再次打开无需反复切换</li>
           </ul>
         </div>
 
         <div class="group">
-          <p class="group-title">新增剪贴板润色模式</p>
-          <div class="wn-media">
-            <video src="assets/whats-new/clipboard-polish.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          <p class="group-title">编辑上次输入</p>
+          <div class="wn-media wide">
+            <video src="assets/whats-new/edit-last-input.mp4" autoplay muted loop playsinline preload="metadata"></video>
           </div>
           <ul>
-            <li>新增<strong>剪贴板处理模式</strong>：复制文本后<strong>长按</strong>麦克风进入文本处理模式</li>
-            <li>在剪贴板处理模式下，可通过语音指令对剪贴板内容进行翻译、精简、回复等多种操作</li>
-          </ul>
-        </div>
-
-        <div class="group">
-          <p class="group-title">剪贴板语音指令</p>
-          <ul>
-            <li>剪贴板里有文字时<strong>长按</strong>麦克风，说出你的处理意图，结果直接写入当前输入框；<strong>短按</strong>仍是普通听写</li>
-            <li>长按录音改为<strong>再点一下结束</strong>，不必一直按住；确认开始采音后麦克风变蓝并显示「指令录制中」</li>
-            <li>无法进入指令模式时（拒绝粘贴、内容过短、验证码类、密码框、未开启完全访问），会在麦克风上方给出简短原因</li>
+            <li>刚用 OSGKeyboard 输入过内容时，麦克风上方会提示<strong>「长按可编辑上一条」</strong></li>
+            <li><strong>长按</strong>麦克风进入编辑，说出想怎么改（如「改得更正式些」「结尾加一句问候」）；<strong>短按</strong>仍是普通听写</li>
+            <li>说完<strong>再点一下</strong>结束录音，稍候即可左右滑动对比<strong>原文 / 编辑后</strong></li>
+            <li>确认后点<strong>应用编辑</strong>替换原文，或选择<strong>插入当前位置</strong>；右上角关闭可放弃本次编辑</li>
           </ul>
         </div>
 
@@ -263,11 +256,7 @@
       <section class="section">
         <h2>问题修复</h2>
         <ul>
-          <li>修复<strong>复合指令</strong>失效：说「回复剪贴板内容，并翻译成英文」时，不再只把剪贴板译成英文，而是先写回复、再翻译回复</li>
-          <li>修复回复视角错误：剪贴板内容一律视为对方发来的消息，回复以你的身份写出，不再把对方的话换个说法发回去</li>
-          <li>指令中指定的词汇、数字替换与编号、分段格式，在随后的润色或翻译中不再丢失</li>
-          <li>修复长按后卡在「准备录音…」，以及系统「允许粘贴」弹窗后跳回打字键盘的问题</li>
-          <li>打开键盘不再反复申请剪贴板权限；正文只在长按时读取</li>
+          <li>修复润色代答问句：口述问句（如「你能听到我说话吗？」）时不再被改写成一句回答，全部风格与强度都会保留问句本身</li>
           <li>修复自定义润色风格编辑偶发显示空白模板</li>
         </ul>
       </section>
@@ -315,28 +304,21 @@
             <li>New <strong>key sounds and haptics</strong>, with light / strong haptic options</li>
             <li>Accelerating long-press delete for faster long-text edits</li>
             <li>Smarter English capitalization: caps lock and sentence-start autocapitalization</li>
-            <li>New <strong>undo last input</strong> button beside the mic to roll back the latest dictation or clipboard-command insertion</li>
+            <li>New <strong>undo last input</strong> button beside the mic to roll back the latest dictation or edit result</li>
             <li>New <strong>Keyboard Preferences</strong>: remember the last Voice or Typing surface so you don’t keep switching</li>
           </ul>
         </div>
 
         <div class="group">
-          <p class="group-title">Clipboard polish mode</p>
-          <div class="wn-media">
-            <video src="assets/whats-new/clipboard-polish.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          <p class="group-title">Edit last input</p>
+          <div class="wn-media wide">
+            <video src="assets/whats-new/edit-last-input.mp4" autoplay muted loop playsinline preload="metadata"></video>
           </div>
           <ul>
-            <li>New <strong>clipboard processing mode</strong>: after copying text, <strong>long-press</strong> the mic to process that clipboard snapshot</li>
-            <li>In clipboard mode, speak instructions to translate, shorten, reply, and more</li>
-          </ul>
-        </div>
-
-        <div class="group">
-          <p class="group-title">Clipboard voice commands</p>
-          <ul>
-            <li><strong>Long-press</strong> the mic when the clipboard has text, speak what you want done, and the result goes straight into the current field; a <strong>short press</strong> is still plain dictation</li>
-            <li>Clipboard recording is <strong>tap-to-finish</strong> instead of hold-to-talk; once capture is confirmed the mic turns blue and shows a recording caption</li>
-            <li>When the mode can't start (paste denied, material too short, verification-code-like text, secure field, no Full Access), a short reason appears above the mic</li>
+            <li>Right after you insert text with OSGKeyboard, the mic shows <strong>“Hold to edit your last input”</strong></li>
+            <li><strong>Long-press</strong> the mic to start editing and say how to change it (e.g. “make it more formal”, “add a greeting at the end”); a <strong>short press</strong> is still plain dictation</li>
+            <li><strong>Tap once more</strong> to finish, then swipe to compare <strong>Original / Edited</strong></li>
+            <li>Confirm to <strong>apply the edit</strong> (replace), or choose <strong>insert at cursor</strong>; close from the top-right to discard</li>
           </ul>
         </div>
 
@@ -373,11 +355,7 @@
       <section class="section">
         <h2>Bug Fixes</h2>
         <ul>
-          <li>Fixed <strong>multi-step commands</strong>: "reply to the clipboard and translate it into English" now writes a reply and translates that reply, instead of just translating the clipboard</li>
-          <li>Fixed reply perspective: clipboard text is always treated as a message from the other party, and the reply is written as you — no more paraphrasing their message back at them</li>
-          <li>Word and number replacements, numbering, and section structure requested in a command now survive later polishing or translation</li>
-          <li>Fixed getting stuck on "Preparing…" after a long press, and snapping back to the typing keyboard after the system Allow Paste alert</li>
-          <li>Opening the keyboard no longer repeatedly asks for clipboard permission; contents are read only on long-press</li>
+          <li>Fixed polish answering a question: dictating a question (e.g. “Can you hear me?”) is no longer rewritten into an answer — the question is preserved across every style and intensity</li>
           <li>Fixed the custom polish style editor occasionally opening a blank template</li>
         </ul>
       </section>

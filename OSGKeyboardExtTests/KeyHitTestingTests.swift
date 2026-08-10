@@ -158,7 +158,8 @@ final class KeyHitTestingTests: XCTestCase {
             returnLabel: "return",
             keyWeight: { _, _, _ in 1 }
         )
-        XCTAssertEqual(layout.keys.count, 12) // 9 letters + 3 bottom
+        // 9 letters + 4 bottom (globe · pageSwitch · space · return)
+        XCTAssertEqual(layout.keys.count, 13)
 
         // Mid-gap between Q and W on first row should hit something.
         let q = layout.keys.first { $0.label == "Q" }!

@@ -43,14 +43,15 @@
         "OSGKeyboardTests/TranscriptLanguageDetectorTests"
       ]
     },
-    "clipboard_command": {
-      "description": "Clipboard-command material eligibility, prompt contract, intent recovery, and preparation policy",
+    "edit_last_input": {
+      "description": "Long-press edit prompt, target validation, gestures, and Flow start transactions",
       "platform": "ios",
       "tests": [
-        "OSGKeyboardTests/ClipboardCommandPromptComposerTests",
-        "OSGKeyboardTests/ClipboardMaterialFilterTests",
-        "OSGKeyboardTests/ClipboardCommandResumeTests",
-        "OSGKeyboardTests/ClipboardPreparingPolicyTests",
+        "OSGKeyboardTests/EditLastInputPromptTests",
+        "OSGKeyboardTests/EditableInputReferenceTests",
+        "OSGKeyboardTests/FlowStartTransactionPolicyTests",
+        "OSGKeyboardTests/SpeechHistoryRevisionTests",
+        "OSGKeyboardTests/EditTransactionStoreTests",
         "OSGKeyboardTests/RecordButtonGesturePolicyTests"
       ]
     },
@@ -163,7 +164,7 @@
         "config",
         "sync",
         "polish",
-        "clipboard_command",
+        "edit_last_input",
         "cloud_asr",
         "local_asr",
         "utterance",
@@ -179,7 +180,7 @@
         "config",
         "sync",
         "polish",
-        "clipboard_command",
+        "edit_last_input",
         "cloud_asr",
         "local_asr",
         "utterance",
@@ -199,9 +200,9 @@
       "description": "Polish-only",
       "groups": ["polish"]
     },
-    "clipboard": {
-      "description": "Clipboard command lifecycle and prompt contract only",
-      "groups": ["clipboard_command"]
+    "edit": {
+      "description": "Long-press editing lifecycle and prompt contract only",
+      "groups": ["edit_last_input"]
     },
     "keyboard": {
       "description": "Keyboard typing/Rime plus flow handoff/mic (keyboard-critical)",

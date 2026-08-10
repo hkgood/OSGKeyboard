@@ -10,6 +10,7 @@
 import Foundation
 import Combine
 import SwiftUI
+import UIKit
 
 @MainActor
 public final class KeyboardState: ObservableObject {
@@ -127,21 +128,36 @@ public final class KeyboardState: ObservableObject {
     @Published public var cursorDragNavigationEnabled: Bool = true
     /// Typing-grid haptic strength (off / light / strong).
     @Published public var keyboardHapticIntensity: KeyboardHapticIntensity = .default
+    /// Single source of truth for selecting iPad-scale keyboard metrics.
+    /// The view controller resolves this from device idiom + horizontal size
+    /// class so SwiftUI and the UIKit height constraint cannot disagree.
+    @Published public var usesIPadLayoutMetrics: Bool = false
+    /// The custom system-keyboard switch is iPad-only. iPhone relies on the
+    /// system-provided switch below the keyboard instead of showing a duplicate.
+    @Published public var showsSystemGlobeKey: Bool = false
+    /// Width the controller sized the keyboard to. Both the UIKit height
+    /// constraint and the SwiftUI key grid pick their metrics from this one
+    /// value so they can never disagree and clip the bottom row.
+    @Published public var layoutWidth: CGFloat = 0
     /// `true` while a cursor-drag pad is being pressed — drives the hint
     /// shown above the mic.
     @Published public var cursorDragActive: Bool = false
     /// `true` when the last voice insertion is still at the caret and can
     /// be undone (suffix-checked against `documentContextBeforeInput`).
     @Published public var undoAvailable: Bool = false
-    /// Idle affordance: pasteboard reports `hasStrings` (metadata only).
-    @Published public var clipboardCommandEligible: Bool = false
-    /// True while a clipboard-command utterance is in flight (preparing or recording).
-    @Published public var clipboardCommandUtteranceActive: Bool = false
-    /// True only while a clipboard-command utterance is in `.recording`
-    /// (after host confirm) — drives blue mic chrome + side hints.
-    @Published public var clipboardCommandRecording: Bool = false
-    /// Transient tip after a failed clipboard long-press (auto-clears).
-    @Published public var clipboardFailureHint: String? = nil
+    /// `true` while an undone voice insertion can be re-applied (redo buffer).
+    @Published public var redoAvailable: Bool = false
+    /// `true` when the host field has a non-empty selection (copy enabled).
+    @Published public var copyAvailable: Bool = false
+    /// `true` when the host field has a non-empty selection (cut enabled).
+    @Published public var cutAvailable: Bool = false
+    /// Closed state machine for long-press editing of the last insertion.
+    @Published public var editSession: EditSessionState = .inactive
+    @Published public var editCanReplaceOriginal: Bool = false
+    /// Short idle feedback (availability, expiry, missing LLM).
+    @Published public var editHint: String?
+    /// Availability hints use the green accent; failures keep warning styling.
+    @Published public var editHintIsPositive: Bool = false
     /// Whether translate-and-polish is armed for the current engine.
     public var isTranslationEffective: Bool {
         translationEnabled
@@ -217,9 +233,22 @@ public final class KeyboardState: ObservableObject {
     public var beginRecording:      () -> Void = {}
     public var endRecording:        () -> Void = {}
     public var tapMic:              () -> Void = {}
-    public var beginClipboardCommand: () -> Void = {}
-    public var refreshClipboardEligibility: () -> Void = {}
+    /// Starts/cancels a bounded host-audio prime from the user's mic touch.
+    public var setMicTouchActive:   (Bool) -> Void = { _ in }
+    /// Discards the complete normal-dictation round, including late ASR/LLM output.
+    public var cancelVoiceInput:    () -> Void = {}
+    public var beginEditLastInput: () -> Void = {}
+    public var stopEditListening: () -> Void = {}
+    public var confirmEditResult: () -> Void = {}
+    public var closeEditMode: () -> Void = {}
     public var openSettings:        () -> Void = {}
+    /// Opens the host app straight to input-resource deployment. Used by the
+    /// typing surface when Rime resources have not been deployed yet.
+    public var openInputMethodSetup: () -> Void = {}
+    /// System globe (🌐) key target. Kept weak to avoid a state → controller
+    /// ownership cycle; UIKit's standard all-touch-events action provides both
+    /// tap-to-advance and long-press input-mode selection.
+    public weak var inputModeController: UIInputViewController?
     public var startFlowSession:    () -> Void = {}
     public var setMode:             (InputMode) -> Void = { _ in }
     public var setLocale:           (String) -> Void = { _ in }
@@ -233,6 +262,12 @@ public final class KeyboardState: ObservableObject {
     public var deleteBackward:      () -> Void = {}
     /// Undo the last voice insertion when `undoAvailable` is true.
     public var undoLastInsertion:   () -> Void = {}
+    /// Redo the last undone voice insertion when `redoAvailable` is true.
+    public var redoLastInsertion:   () -> Void = {}
+    /// Copy the current text selection to the pasteboard.
+    public var copySelection:       () -> Void = {}
+    /// Cut the current text selection (copy + delete).
+    public var cutSelection:        () -> Void = {}
     public var moveCursorHorizontal: (Int) -> Void = { _ in }
     public var moveCursorVertical:   (Int) -> Void = { _ in }
     /// Cursor-drag pad press lifecycle — updates `cursorDragActive` and
@@ -243,6 +278,7 @@ public final class KeyboardState: ObservableObject {
 
     /// Recording / processing must stay on the voice surface.
     public var locksTypingSurface: Bool {
+        if editSession.isActive { return true }
         switch phase {
         case .requestingPermissions, .recording, .processing:
             return true
@@ -252,6 +288,18 @@ public final class KeyboardState: ObservableObject {
     }
 
     public var canEnterTypingSurface: Bool { !locksTypingSurface }
+
+    /// Normal dictation can be discarded from initial microphone startup
+    /// through ASR / polish processing. Edit mode owns its separate close flow.
+    public var canCancelVoiceInput: Bool {
+        guard !editSession.isActive else { return false }
+        switch phase {
+        case .requestingPermissions, .recording, .processing:
+            return true
+        case .idle, .error, .denied:
+            return false
+        }
+    }
 
     // MARK: - Preview helpers (DEBUG only)
 

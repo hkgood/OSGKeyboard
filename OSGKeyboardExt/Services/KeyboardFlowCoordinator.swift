@@ -10,8 +10,7 @@ import OSGKeyboardShared
 final class KeyboardFlowCoordinator {
     private enum FlowWatchdog {
         static let pollIntervalNs: UInt64 = 200_000_000
-        /// Give the user time to manually open the host app when auto-jump fails.
-        static let startTimeout: TimeInterval = 30
+        static let startTimeout: TimeInterval = FlowSessionKeys.utteranceStartBudget
 
         static func resultTimeout(engineMode: String) -> TimeInterval {
             FlowSessionKeys.keyboardResultTimeout(engineMode: engineMode)
@@ -48,6 +47,16 @@ final class KeyboardFlowCoordinator {
     private var isAwaitingFlowResult = false
     private var activeSessionId: UUID?
     private var currentUtteranceId: UUID?
+    private var currentStartDeadlineAt: TimeInterval?
+    private var currentUtteranceRequest: FlowUtteranceRequest?
+    private var audioPrimeID: UUID?
+    private var audioPrimeCancelTask: Task<Void, Never>?
+    private var editHostConfirmed = false
+    private var cancelledEditUtteranceIDs: Set<UUID> = []
+    private var cancelledDictationUtteranceIDs: Set<UUID> = []
+    var onEditHostRecordingConfirmed: () -> Void = {}
+    var onEditResult: (FlowResult) -> Void = { _ in }
+    var onEditFailure: (String) -> Void = { _ in }
     /// Utterance whose final result we already inserted (or failed). Prevents
     /// `adoptHostBusyStateIfNeeded` from re-entering `.processing` after a
     /// stale App Group snapshot still says `reason=processing`.
@@ -67,26 +76,6 @@ final class KeyboardFlowCoordinator {
     /// Ignores single-frame "host dead" samples before allowing a cold-start jump
     /// from non-press recovery paths.
     private var coldStartDebouncer = FlowColdStartDebouncer()
-    /// Frozen clipboard material for the in-flight clipboard-command utterance.
-    private var clipboardFrozenSnapshot: String?
-    /// True while the live utterance is a clipboard-command round.
-    private var isClipboardCommandUtterance = false
-    /// True while blocked inside `UIPasteboard.string` (system paste alert).
-    /// Must preserve extension lifecycle / voice surface across that alert.
-    private var isAcquiringClipboardPaste = false
-    private var clipboardAcquisitionTask: Task<Void, Never>?
-    /// Clipboard start sent; waiting for host `reason=recording` before confirmed capture UI.
-    private var clipboardAwaitingHostRecordConfirm = false
-    /// Wall time when host confirmed real capture for this clipboard utterance.
-    private var clipboardHostRecordConfirmedAt: TimeInterval?
-    /// User tapped stop — honor after confirm + minimum recording window.
-    private var clipboardStopRequested = false
-    private var clipboardDeferredStopTask: Task<Void, Never>?
-    private var clipboardFailureHintTask: Task<Void, Never>?
-    private var clipboardPreparingWatchdogTask: Task<Void, Never>?
-    /// Wall time when we entered clipboard「准备录音…」awaiting host confirm.
-    private var clipboardPreparingStartedAt: TimeInterval = 0
-
     init(
         state: KeyboardState,
         textInserter: KeyboardTextInserter,
@@ -113,17 +102,10 @@ final class KeyboardFlowCoordinator {
         isPendingFlowStart
             || isFlowRecording
             || isAwaitingFlowResult
-            || isClipboardCommandUtterance
-            || isAcquiringClipboardPaste
-            || ClipboardCommandResume.shouldPreferVoice()
+            || currentUtteranceRequest != nil
     }
 
-    /// True while a clipboard-command round owns the mic (incl. paste-alert acquire).
-    var isClipboardCommandActive: Bool {
-        isClipboardCommandUtterance
-            || isAcquiringClipboardPaste
-            || ClipboardCommandResume.shouldPreferVoice()
-    }
+    var isEditSessionActive: Bool { currentUtteranceRequest?.isEdit == true }
 
     /// Session/transcription changes are pushed in real time by Darwin
     /// notifications (see `KeyboardConfigSync.installDarwinObservers`), so this
@@ -192,8 +174,10 @@ final class KeyboardFlowCoordinator {
         FlowSessionBridge.reloadFromDisk()
         refreshConfigFromAppGroup()
         refreshFlowPartialIfNeeded()
+        discardPendingUnsupportedLegacyDeliveryIfNeeded()
         adoptPendingResultIfNeeded()
         consumePendingFlowDeliveryIfNeeded()
+        consumeEditStartFailureIfNeeded()
 
         recoverFromDeadHostIfNeeded()
 
@@ -211,9 +195,7 @@ final class KeyboardFlowCoordinator {
         }
 
         recomputeMicVoiceAvailability()
-        refreshClipboardEligibility()
-        promoteClipboardRecordingFromSnapshotIfNeeded()
-        recoverClipboardPreparingIfHostMovedOn()
+        promoteEditRecordingFromSnapshotIfNeeded()
         startHostReadyWaitIfNeeded()
         // Proactive host auto-launch is disabled (FlowHandoffPolicy): a single
         // stale ready snapshot after finalize must never open startflow.
@@ -234,6 +216,31 @@ final class KeyboardFlowCoordinator {
             }
         }
         wasSessionActive = sessionActive
+    }
+
+    private func promoteEditRecordingFromSnapshotIfNeeded() {
+        guard currentUtteranceRequest?.isEdit == true, !editHostConfirmed else { return }
+        guard let snapshot = FlowSessionBridge.readySnapshot(),
+              snapshot.reason == .recording,
+              snapshot.busyUtteranceId == currentUtteranceId else {
+            return
+        }
+        editHostConfirmed = true
+        state.phase = .recording
+        startUtteranceCountdown()
+        onEditHostRecordingConfirmed()
+    }
+
+    private func consumeEditStartFailureIfNeeded() {
+        guard currentUtteranceRequest?.isEdit == true,
+              let result = matchingResult(),
+              isTerminalFailure(result) else {
+            return
+        }
+        onEditFailure(
+            result.text ?? ExtL10n.string("keyboard.edit.error.startTimeout")
+        )
+        completeEditResult(result, outcome: .rejected)
     }
 
     private func recomputeMicVoiceAvailability() {
@@ -322,6 +329,37 @@ final class KeyboardFlowCoordinator {
 
     /// Re-attach to a host utterance this keyboard process no longer owns.
     private func adoptHostBusyStateIfNeeded(snapshot: FlowReadySnapshot?) {
+        if currentUtteranceRequest?.isEdit != true,
+           let snapshot,
+           let busyID = snapshot.busyUtteranceId,
+           !cancelledEditUtteranceIDs.contains(busyID),
+           let command = FlowSessionBridge.latestCommand(),
+           command.utteranceId == busyID,
+           command.resolvedUtteranceMode == .editLastInput {
+            let orphanAction = FlowKeyboardAdoptBusyPolicy.decide(
+                snapshot: snapshot,
+                currentHostGeneration: FlowSessionBridge.currentHostGeneration(),
+                isFlowRecording: isFlowRecording,
+                isAwaitingFlowResult: isAwaitingFlowResult,
+                lastConsumedUtteranceId: lastConsumedUtteranceId,
+                lastStoppedUtteranceId: lastStoppedUtteranceId
+            )
+            guard case .adoptRecording(let sessionID, _) = orphanAction else {
+                return
+            }
+            activeSessionId = sessionID
+            currentUtteranceId = busyID
+            cancelledEditUtteranceIDs.insert(busyID)
+            writeCommand(.abort)
+            isFlowRecording = false
+            isAwaitingFlowResult = true
+            startFlowResultWatchdog()
+            traceState(
+                "orphanedEdit.failClosed",
+                extra: "utterance=\(busyID.uuidString.prefix(8))"
+            )
+            return
+        }
         let action = FlowKeyboardAdoptBusyPolicy.decide(
             snapshot: snapshot,
             currentHostGeneration: FlowSessionBridge.currentHostGeneration(),
@@ -344,24 +382,10 @@ final class KeyboardFlowCoordinator {
             flowStartDeadline = 0
             stopHostReadyWait()
             isFlowRecording = true
-            // Paste-alert may have destroyed in-memory clipboard flags; sticky
-            // snapshot means this busy utterance is still a clipboard round.
-            if !isClipboardCommandUtterance,
-               ClipboardCommandResume.shouldPreferVoice() {
-                if let snap = ClipboardCommandResume.pendingSnapshot(), !snap.isEmpty {
-                    clipboardFrozenSnapshot = snap
-                }
-                isClipboardCommandUtterance = true
+            state.phase = .recording
+            if state.lastTranscript.isEmpty {
+                state.lastTranscript = ""
             }
-            if isClipboardCommandUtterance {
-                noteClipboardHostRecordingConfirmed()
-            } else {
-                state.phase = .recording
-                if state.lastTranscript.isEmpty {
-                    state.lastTranscript = ""
-                }
-            }
-            publishClipboardUIState()
             if let view = wakeLockView() {
                 ExtensionScreenWakeLock.acquire(from: view)
             }
@@ -389,6 +413,10 @@ final class KeyboardFlowCoordinator {
     /// back to white loading. When the host is no longer busy, force idle.
     private func clearStickyProcessingIfNeeded(hostReady: Bool) {
         guard !isAwaitingFlowResult, !isFlowRecording else { return }
+        // Edit review intentionally keeps the terminal result unacknowledged
+        // until the user confirms or closes. Clearing its identity here makes
+        // the same result get re-adopted and re-haptic on every refresh.
+        guard !state.editSession.isActive else { return }
         guard case .processing = state.phase else { return }
         state.phase = .idle
         state.lastTranscript = ""
@@ -509,709 +537,265 @@ final class KeyboardFlowCoordinator {
     }
 
     func toggleRecording() {
-        // Every non-recording clipboard stage is explicitly cancellable.
-        if isClipboardCommandActive, state.phase != .recording {
-            cancelClipboardIntent(reason: "userCancel")
-            return
-        }
         switch state.phase {
         case .recording:
-            if isClipboardCommandUtterance {
-                requestClipboardStop()
-            } else {
-                pressEnded()
-            }
+            pressEnded()
         case .requestingPermissions:
-            // Clipboard preparing: tap cancels/stops once host confirms (+ min window).
-            if isClipboardCommandUtterance {
-                requestClipboardStop()
-            }
+            break
         case .idle, .denied, .error:
-            pressBegan()
+            _ = startUtterance(.dictation)
         case .processing:
             break
         }
     }
 
-    /// Long-press creates one persisted intent; acquisition and host warm-up resume automatically.
-    func clipboardCommandPressBegan() {
-        switch state.phase {
-        case .idle, .denied, .error:
-            break
-        case .processing:
-            return
-        default:
-            return
+    func setMicTouchActive(_ active: Bool) {
+        if active {
+            beginAudioPrimeIfPossible()
+        } else if currentUtteranceRequest != nil {
+            audioPrimeCancelTask?.cancel()
+            audioPrimeCancelTask = nil
+            audioPrimeID = nil
         }
-
-        // Never overwrite an older recoverable intent with a second UUID.
-        if ClipboardCommandResume.currentIntent() != nil {
-            restoreClipboardCommandIfNeeded()
-            return
-        }
-
-        clearClipboardFailureHint()
-
-        guard hasFullAccess() else {
-            showClipboardFailure(.noFullAccess)
-            return
-        }
-        if fieldContextProvider()?.isSecureEntry == true {
-            showClipboardFailure(.secureField)
-            return
-        }
-
-        guard let intent = ClipboardCommandResume.beginIntent() else {
-            showClipboardFailure(.noFullAccess)
-            return
-        }
-        if state.surface != .voice {
-            state.setSurface(.voice)
-        }
-        currentUtteranceId = intent.id
-        isClipboardCommandUtterance = true
-        isAcquiringClipboardPaste = true
-        state.phase = .requestingPermissions
-        state.lastTranscript = ExtL10n.string("keyboard.placeholder.preparingRecording")
-        publishClipboardUIState()
-        scheduleClipboardAcquisition(intentId: intent.id)
-        traceState("clipboard.intent.created", extra: "intent=\(intent.id.uuidString.prefix(8))")
+        // Do not synchronously cancel on finger-up. SwiftUI may resolve the
+        // tap/hold action after this callback; the bounded timer handles a
+        // touch that is never adopted by an utterance.
     }
 
-    private func scheduleClipboardAcquisition(intentId: UUID) {
-        clipboardAcquisitionTask?.cancel()
-        clipboardAcquisitionTask = Task { @MainActor [weak self] in
-            // Commit the intent and render cancellable chrome before UIKit may
-            // present the system paste-consent sheet.
-            await Task.yield()
-            guard let self, !Task.isCancelled else { return }
-            self.acquireClipboardMaterial(intentId: intentId)
+    private func beginAudioPrimeIfPossible() {
+        guard currentUtteranceRequest == nil,
+              currentUtteranceId == nil,
+              !isPendingFlowStart,
+              !isAwaitingFlowResult,
+              state.phase == .idle,
+              FlowSessionBridge.isHostReady(),
+              let sessionID = FlowSessionBridge.readySnapshot()?.sessionId,
+              audioPrimeID == nil else {
+            return
+        }
+        let primeID = UUID()
+        audioPrimeID = primeID
+        let command = FlowCommand(
+            sessionId: sessionID,
+            utteranceId: primeID,
+            commandSeq: nextCommandSeq(),
+            action: .primeAudio,
+            localeId: state.localeId
+        )
+        FlowSessionBridge.writeCommand(command)
+        audioPrimeCancelTask?.cancel()
+        audioPrimeCancelTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            guard !Task.isCancelled else { return }
+            self?.cancelAudioPrimeIfNeeded()
         }
     }
 
-    /// UIKit owns paste consent and may suspend the extension. The persisted
-    /// intent makes that interruption resumable even though the content read itself
-    /// must stay on the main actor.
-    private func acquireClipboardMaterial(intentId: UUID) {
-        guard let intent = ClipboardCommandResume.currentIntent(), intent.id == intentId else { return }
-        if let snapshot = intent.snapshot, !snapshot.isEmpty {
-            clipboardFrozenSnapshot = snapshot
-            isAcquiringClipboardPaste = false
-            continueClipboardIntent(intentId: intentId)
+    private func cancelAudioPrimeIfNeeded() {
+        audioPrimeCancelTask?.cancel()
+        audioPrimeCancelTask = nil
+        guard let primeID = audioPrimeID,
+              let sessionID = FlowSessionBridge.readySnapshot()?.sessionId else {
+            audioPrimeID = nil
             return
         }
-
-        isAcquiringClipboardPaste = true
-        publishClipboardUIState()
-        let sample = ClipboardPasteboardReader.sample()
-
-        // The user may have cancelled while UIKit was returning from consent.
-        guard ClipboardCommandResume.currentIntent()?.id == intentId else { return }
-        isAcquiringClipboardPaste = false
-
-        guard let raw = sample.text else {
-            resetClipboardUtteranceState()
-            showClipboardFailure(
-                ClipboardPasteboardReader.hasStrings() ? .pasteDenied : .material(.empty)
+        audioPrimeID = nil
+        FlowSessionBridge.writeCommand(
+            FlowCommand(
+                sessionId: sessionID,
+                utteranceId: primeID,
+                commandSeq: nextCommandSeq(),
+                action: .cancelPrimeAudio,
+                localeId: state.localeId
             )
-            refreshClipboardEligibility()
-            return
-        }
-
-        switch ClipboardMaterialFilter.evaluate(raw) {
-        case .rejected(let reason):
-            resetClipboardUtteranceState()
-            showClipboardFailure(.material(reason))
-        case .eligible(let snapshot):
-            clipboardFrozenSnapshot = snapshot
-            ClipboardCommandResume.storeSnapshot(snapshot)
-            continueClipboardIntent(intentId: intentId)
-        }
+        )
     }
 
-    /// Advance the same intent through host warm-up to one idempotent start.
-    private func continueClipboardIntent(intentId: UUID) {
-        guard let intent = ClipboardCommandResume.currentIntent(),
-              intent.id == intentId,
-              let snapshot = intent.snapshot,
-              !snapshot.isEmpty else { return }
-        clipboardFrozenSnapshot = snapshot
-        currentUtteranceId = intentId
-        isClipboardCommandUtterance = true
-        isAcquiringClipboardPaste = false
-        clipboardAwaitingHostRecordConfirm = true
-        state.phase = .requestingPermissions
-        state.lastTranscript = ExtL10n.string("keyboard.placeholder.preparingRecording")
-        publishClipboardUIState()
-
-        recomputeMicVoiceAvailability()
-        let hostReadyRaw = FlowSessionBridge.isHostReady()
-        let withinReadyGrace = lastHostReadyAt > 0
-            && (Date().timeIntervalSince1970 - lastHostReadyAt) <= Self.hostReadyGrace
-        // Force-quit leaves sessionActive=true; treat unreachable heartbeat as dead
-        // so clipboard can still open startflow (same grace as proactive PiP arm).
-        let heartbeatStale = FlowSessionBridge.heartbeatStaleness() ?? .infinity
-        let sessionEffectivelyDead = !FlowSessionBridge.isHostReachable()
-            && heartbeatStale >= FlowHandoffPolicy.proactiveUnreachableArmGrace
-        let sessionActiveForGate = FlowSessionBridge.isSessionActive() && !sessionEffectivelyDead
-        let micAction: FlowMicPressAction
-        if hostReadyRaw, state.micVoiceAvailability.isReady {
-            micAction = .startRecording
-        } else {
-            micAction = FlowHandoffPolicy.micPressAction(
-                availability: hostReadyRaw ? state.micVoiceAvailability : .unavailable(.hostNotReady),
-                sessionActive: sessionActiveForGate,
-                hostReachable: FlowSessionBridge.isHostReachable(),
-                hostStale: FlowSessionBridge.isHostStale() || sessionEffectivelyDead,
-                withinReadyGrace: withinReadyGrace
-            )
-        }
-        switch ClipboardPreparingPolicy.hostGateAction(micPressAction: micAction) {
-        case .startRecordingNow:
-            startFlowRecording()
-        case .openHostColdStart:
-            detectAndStoreAppContext()
-            if !isPendingFlowStart, !FlowSessionBridge.isPiPArmInCooldown() {
-                beginFlowStart(recordAfterHandoff: true)
-            }
-            showClipboardHostWarmupHint()
-        case .waitForHost:
-            recordWhenHostReady = true
-            coldStartDebouncer.reset()
-            startHostReadyWaitIfNeeded()
-            showClipboardHostWarmupHint()
-        case .ignore:
-            recordWhenHostReady = true
-            startHostReadyWaitIfNeeded()
-            showClipboardHostWarmupHint()
-        }
-        traceState("clipboard.intent.advancing", extra: "intent=\(intentId.uuidString.prefix(8))")
+    func beginEditRecording(
+        reference: EditableInputReference
+    ) -> FlowUtteranceStartDisposition {
+        startUtterance(.editLastInput(reference))
     }
 
-    /// Keep the intent live and let the existing host-ready loop auto-start it.
-    private func deferClipboardUntilHostWarm(reason: String) {
-        isClipboardCommandUtterance = true
-        clipboardAwaitingHostRecordConfirm = true
-        recordWhenHostReady = true
-        state.phase = .requestingPermissions
-        state.lastTranscript = ExtL10n.string("keyboard.placeholder.preparingRecording")
-        publishClipboardUIState()
-        startHostReadyWaitIfNeeded()
-        traceState("clipboard.intent.waitingHost", extra: reason)
-    }
-
-    /// Soft progress hint; the mic remains tappable to cancel the intent.
-    private func showClipboardHostWarmupHint() {
-        state.clipboardFailureHint = ExtL10n.string("keyboard.clipboard.hint.hostStarting")
-        clipboardFailureHintTask?.cancel()
-        let duration = ClipboardMaterialFilter.failureHintDuration
-        clipboardFailureHintTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
-            guard let self, !Task.isCancelled else { return }
-            self.clearClipboardFailureHint()
-        }
-    }
-
-    /// After paste-alert / cold-start recreation, resume the same persisted intent.
-    func restoreClipboardCommandIfNeeded() {
-        guard let intent = ClipboardCommandResume.currentIntent() else { return }
-        if state.surface != .voice {
-            state.setSurface(.voice)
-        }
-
-        // Snapshot for the next long-press (cold-start return) — not a live round yet.
-        if let snapshot = ClipboardCommandResume.pendingSnapshot(), !snapshot.isEmpty {
-            clipboardFrozenSnapshot = snapshot
-        }
-
-        let hasIssued = ClipboardCommandResume.hasStartIssued()
-        if hasIssued,
-           !isClipboardCommandUtterance,
-           let issued = ClipboardCommandResume.startIssuedUtteranceId() {
-            isClipboardCommandUtterance = true
-            currentUtteranceId = issued
-            traceState(
-                "clipboard.resume.rehydratedLive",
-                extra: "utterance=\(issued.uuidString.prefix(8))"
-            )
-        }
-
-        // Prefer adopting an in-flight host utterance (keeps one wire start).
-        FlowSessionBridge.reloadFromDisk()
-        if let ready = FlowSessionBridge.readySnapshot(),
-           ready.reason == .recording || ready.reason == .processing {
-            adoptHostBusyStateIfNeeded(snapshot: ready)
-        }
-
-        let preparingPhase: ClipboardPreparingPhase = {
-            switch state.phase {
-            case .idle: return .idle
-            case .denied: return .denied
-            case .error: return .error
-            case .requestingPermissions: return .requestingPermissions
-            case .recording: return .recording
-            case .processing: return .processing
-            }
-        }()
-
-        switch ClipboardPreparingPolicy.restoreAction(
-            hasStartIssued: hasIssued,
-            phase: preparingPhase
-        ) {
-        case .awaitExistingStart:
-            isClipboardCommandUtterance = true
-            clipboardAwaitingHostRecordConfirm = true
-            clipboardPreparingStartedAt = Date().timeIntervalSince1970
-            state.phase = .requestingPermissions
-            state.lastTranscript = ExtL10n.string("keyboard.placeholder.preparingRecording")
-            publishClipboardUIState()
-            scheduleClipboardPreparingWatchdog()
-            ensureClipboardStartCommandWritten()
-            recoverClipboardPreparingIfHostMovedOn()
-            traceState("clipboard.resume.awaitExistingStart")
-        case .resumeIntent:
-            currentUtteranceId = intent.id
-            isClipboardCommandUtterance = true
-            clipboardAwaitingHostRecordConfirm = true
-            state.phase = .requestingPermissions
-            state.lastTranscript = ExtL10n.string("keyboard.placeholder.preparingRecording")
-            publishClipboardUIState()
-            if intent.snapshot?.isEmpty == false {
-                continueClipboardIntent(intentId: intent.id)
-            } else {
-                isAcquiringClipboardPaste = true
-                scheduleClipboardAcquisition(intentId: intent.id)
-            }
-            traceState("clipboard.resume.intent", extra: "intent=\(intent.id.uuidString.prefix(8))")
-        case .refreshOnly:
-            publishClipboardUIState()
-            if clipboardAwaitingHostRecordConfirm {
-                ensureClipboardStartCommandWritten()
-            }
-            recoverClipboardPreparingIfHostMovedOn()
-        }
-    }
-
-    /// Explicit tap-to-stop for an in-flight clipboard-command utterance.
-    func requestClipboardStop() {
-        guard isClipboardCommandUtterance else { return }
-        switch ClipboardPreparingPolicy.stopWhilePreparing(
-            awaitingHostConfirm: clipboardAwaitingHostRecordConfirm
-        ) {
-        case .abortPreparing:
-            abortClipboardPreparing(reason: "userCancel", message: nil)
-            return
-        case .requestStop:
-            break
-        }
-        clipboardStopRequested = true
-        if let confirmedAt = clipboardHostRecordConfirmedAt {
-            let elapsed = Date().timeIntervalSince1970 - confirmedAt
-            let minimum = ClipboardMaterialFilter.minimumRecordingAfterHostConfirm
-            if elapsed < minimum {
-                scheduleClipboardDeferredStop(after: minimum - elapsed)
-                traceState(
-                    "clipboard.stop.deferred",
-                    extra: "reason=minRecording remaining=\(String(format: "%.2f", minimum - elapsed))"
-                )
-                return
-            }
-        }
+    func stopEditRecording() {
+        guard currentUtteranceRequest?.isEdit == true else { return }
         pressEnded()
     }
 
-    /// Cancel any non-recording clipboard stage and delete the persisted intent.
-    private func cancelClipboardIntent(reason: String) {
-        clipboardAcquisitionTask?.cancel()
-        clipboardAcquisitionTask = nil
-        if isFlowRecording || isAwaitingFlowResult {
-            writeCommand(.abort)
+    func cancelCurrentDictation() {
+        guard currentUtteranceRequest?.isEdit != true else { return }
+
+        recordWhenHostReady = false
+        recordAfterHandoff = false
+        isPendingFlowStart = false
+        flowStartDeadline = 0
+        coldStartDebouncer.reset()
+        stopHostReadyWait()
+        stopFlowWatchdog()
+        stopUtteranceCountdown()
+        ExtensionScreenWakeLock.release()
+        state.level = 0
+        state.phase = .idle
+        state.lastTranscript = ""
+
+        guard let utteranceID = currentUtteranceId,
+              isFlowRecording || isAwaitingFlowResult else {
+            clearUnissuedUtterance()
             isFlowRecording = false
             isAwaitingFlowResult = false
+            recomputeMicVoiceAvailability()
+            traceState("dictation.cancelled", extra: "transport=localOnly")
+            return
+        }
+
+        cancelledDictationUtteranceIDs.insert(utteranceID)
+        writeCommand(.abort)
+        isFlowRecording = false
+        isAwaitingFlowResult = true
+        startFlowResultWatchdog()
+        recomputeMicVoiceAvailability()
+        traceState(
+            "dictation.cancelled",
+            extra: "utterance=\(utteranceID.uuidString.prefix(8))"
+        )
+    }
+
+    func abortEditRecording() {
+        guard currentUtteranceRequest?.isEdit == true else { return }
+        recordWhenHostReady = false
+        recordAfterHandoff = false
+        isPendingFlowStart = false
+        flowStartDeadline = 0
+        coldStartDebouncer.reset()
+        stopHostReadyWait()
+        stopFlowWatchdog()
+        if let currentUtteranceId {
+            cancelledEditUtteranceIDs.insert(currentUtteranceId)
+            writeCommand(.abort)
+            isAwaitingFlowResult = true
+            isFlowRecording = false
+            currentUtteranceRequest = nil
+            editHostConfirmed = false
             stopUtteranceCountdown()
             ExtensionScreenWakeLock.release()
+            state.phase = .idle
+            state.lastTranscript = ""
+            startFlowResultWatchdog()
+            return
         }
-        isPendingFlowStart = false
-        recordAfterHandoff = false
-        recordWhenHostReady = false
-        flowStartDeadline = 0
-        stopFlowWatchdog()
-        stopHostReadyWait()
-        FlowSessionBridge.setPendingKeyboardUtteranceId(nil)
-        currentUtteranceId = nil
-        resetClipboardUtteranceState()
+        resetEditTransportState()
+        state.phase = .idle
+        state.lastTranscript = ""
+    }
+
+    func acknowledgeEditResult(_ outcome: FlowAck.DeliveryOutcome) {
+        FlowSessionBridge.reloadFromDisk()
+        guard let result = matchingResult(),
+              result.resolvedUtteranceMode == .editLastInput else {
+            // Review can only exist after a terminal edit result was received.
+            // If App Group cleanup won the race, finish locally instead of
+            // aborting an already-completed utterance and blocking the next edit.
+            if let currentUtteranceId {
+                lastConsumedUtteranceId = currentUtteranceId
+                cancelledEditUtteranceIDs.remove(currentUtteranceId)
+            }
+            lastStoppedUtteranceId = nil
+            resetEditTransportState()
+            state.phase = .idle
+            state.lastTranscript = ""
+            recomputeMicVoiceAvailability()
+            return
+        }
+        completeEditResult(result, outcome: outcome)
         state.phase = .idle
         state.lastTranscript = ""
         recomputeMicVoiceAvailability()
-        traceState("clipboard.intent.cancelled", extra: reason)
     }
 
-    /// Idle affordance only: metadata `hasStrings`. Never reads pasteboard contents.
-    func setClipboardContentReadsEnabled(_ enabled: Bool) {
-        // Height-lock gate retained as a refresh hook after presentation; content
-        // reads are no longer tied to this flag.
-        if enabled {
-            refreshClipboardEligibility()
-        }
-    }
-
-    func refreshClipboardEligibility() {
-        let secure = fieldContextProvider()?.isSecureEntry == true
-        guard hasFullAccess(), !secure else {
-            state.clipboardCommandEligible = false
-            publishClipboardUIState()
-            return
-        }
-        // Sticky snapshot (after cold-start) keeps long-press affordance even if
-        // the pasteboard was cleared while the user was in the host app.
-        let hasStickyMaterial = !(ClipboardCommandResume.pendingSnapshot() ?? "").isEmpty
-            || !(clipboardFrozenSnapshot ?? "").isEmpty
-        state.clipboardCommandEligible =
-            ClipboardPasteboardReader.hasStrings() || hasStickyMaterial
-        publishClipboardUIState()
-    }
-
-    private func resetClipboardUtteranceState() {
-        clipboardAcquisitionTask?.cancel()
-        clipboardAcquisitionTask = nil
-        clipboardDeferredStopTask?.cancel()
-        clipboardDeferredStopTask = nil
-        clipboardPreparingWatchdogTask?.cancel()
-        clipboardPreparingWatchdogTask = nil
-        clipboardPreparingStartedAt = 0
-        clipboardFrozenSnapshot = nil
-        isClipboardCommandUtterance = false
-        isAcquiringClipboardPaste = false
-        clipboardAwaitingHostRecordConfirm = false
-        clipboardHostRecordConfirmedAt = nil
-        clipboardStopRequested = false
-        ClipboardCommandResume.clear()
-        publishClipboardUIState()
-    }
-
-    private func publishClipboardUIState() {
-        state.clipboardCommandUtteranceActive =
-            isClipboardCommandUtterance || isAcquiringClipboardPaste
-        // Blue chrome only after host-confirmed capture — preparing stays grey.
-        state.clipboardCommandRecording =
-            isClipboardCommandUtterance
-            && state.phase == .recording
-            && !clipboardAwaitingHostRecordConfirm
-    }
-
-    private func showClipboardFailure(_ failure: ClipboardCommandFailure) {
-        ClipboardCommandResume.clear()
-        isClipboardCommandUtterance = false
-        isAcquiringClipboardPaste = false
-        clipboardFrozenSnapshot = nil
-        publishClipboardUIState()
-        state.clipboardFailureHint = ExtL10n.string(failure.localizationKey)
-        traceState("clipboard.rejected", extra: failure.localizationKey)
-        clipboardFailureHintTask?.cancel()
-        let duration = ClipboardMaterialFilter.failureHintDuration
-        clipboardFailureHintTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
-            guard let self, !Task.isCancelled else { return }
-            self.clearClipboardFailureHint()
-        }
-    }
-
-    private func clearClipboardFailureHint() {
-        clipboardFailureHintTask?.cancel()
-        clipboardFailureHintTask = nil
-        if state.clipboardFailureHint != nil {
-            state.clipboardFailureHint = nil
-        }
-    }
-
-    /// Promote preparing → recording when host publishes real capture; honor deferred stop.
-    private func noteClipboardHostRecordingConfirmed() {
-        let now = Date().timeIntervalSince1970
-        if clipboardAwaitingHostRecordConfirm || clipboardHostRecordConfirmedAt == nil {
-            clipboardAwaitingHostRecordConfirm = false
-            clipboardPreparingWatchdogTask?.cancel()
-            clipboardPreparingWatchdogTask = nil
-            clipboardPreparingStartedAt = 0
-            if clipboardHostRecordConfirmedAt == nil {
-                clipboardHostRecordConfirmedAt = now
-            }
-            state.phase = .recording
-            if state.lastTranscript == ExtL10n.string("keyboard.placeholder.preparingRecording")
-                || state.lastTranscript == ExtL10n.string("keyboard.placeholder.preparing") {
-                state.lastTranscript = ""
-            }
-            publishClipboardUIState()
-            KeyboardHapticFeedback.play(role: .action, intensity: state.keyboardHapticIntensity)
-            traceState("clipboard.hostRecording.confirmed")
-        }
-        if clipboardStopRequested {
-            let confirmedAt = clipboardHostRecordConfirmedAt ?? now
-            let elapsed = now - confirmedAt
-            let minimum = ClipboardMaterialFilter.minimumRecordingAfterHostConfirm
-            if elapsed >= minimum {
-                pressEnded()
-            } else {
-                scheduleClipboardDeferredStop(after: minimum - elapsed)
-            }
-        }
-    }
-
-    private func scheduleClipboardDeferredStop(after delay: TimeInterval) {
-        clipboardDeferredStopTask?.cancel()
-        let seconds = max(0.05, delay)
-        clipboardDeferredStopTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            guard let self, !Task.isCancelled else { return }
-            guard self.isClipboardCommandUtterance, self.clipboardStopRequested else { return }
-            guard self.isFlowRecording else { return }
-            self.pressEnded()
-        }
-    }
-
-    private func scheduleClipboardPreparingWatchdog() {
-        clipboardPreparingWatchdogTask?.cancel()
-        let timeout = ClipboardCommandResume.preparingTimeout
-        clipboardPreparingWatchdogTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-            guard let self, !Task.isCancelled else { return }
-            guard self.isClipboardCommandUtterance, self.clipboardAwaitingHostRecordConfirm else { return }
-            self.abortClipboardPreparing(
-                reason: "watchdog",
-                message: ExtL10n.string(ClipboardCommandFailure.prepareFailed.localizationKey)
+    private func completeEditResult(
+        _ result: FlowResult,
+        outcome: FlowAck.DeliveryOutcome
+    ) {
+        FlowSessionBridge.writeAck(
+            FlowAck(
+                sessionId: result.sessionId,
+                utteranceId: result.utteranceId,
+                commandSeq: result.commandSeq,
+                hostGeneration: result.hostGeneration,
+                revision: result.revision,
+                deliveryOutcome: outcome
             )
-        }
-    }
-
-    /// Leave「准备录音…」without waiting for a host confirm that never arrives.
-    private func abortClipboardPreparing(reason: String, message: String?) {
-        guard isClipboardCommandUtterance, clipboardAwaitingHostRecordConfirm else { return }
-        clipboardPreparingWatchdogTask?.cancel()
-        clipboardPreparingWatchdogTask = nil
-        clipboardPreparingStartedAt = 0
-        clipboardAwaitingHostRecordConfirm = false
-        clipboardStopRequested = false
-        clipboardDeferredStopTask?.cancel()
-        clipboardDeferredStopTask = nil
-
-        if isFlowRecording {
-            writeCommand(.abort)
-            isFlowRecording = false
-            stopUtteranceCountdown()
-            ExtensionScreenWakeLock.release()
-        }
-        stopFlowWatchdog()
+        )
         FlowSessionBridge.setPendingKeyboardUtteranceId(nil)
-        lastStoppedUtteranceId = currentUtteranceId
-        currentUtteranceId = nil
-
-        resetClipboardUtteranceState()
-        if let message, !message.isEmpty {
-            state.clipboardFailureHint = message
-            clipboardFailureHintTask?.cancel()
-            let duration = ClipboardMaterialFilter.failureHintDuration
-            clipboardFailureHintTask = Task { @MainActor [weak self] in
-                try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
-                guard let self, !Task.isCancelled else { return }
-                self.clearClipboardFailureHint()
-            }
-            state.phase = .idle
-            state.lastTranscript = ""
-        } else {
-            state.phase = .idle
-            state.lastTranscript = ""
-        }
-        recomputeMicVoiceAvailability()
-        traceState("clipboard.preparing.aborted", extra: reason)
-    }
-
-    /// If we already sent start and host is recording our utterance, confirm UI.
-    private func promoteClipboardRecordingFromSnapshotIfNeeded() {
-        guard isClipboardCommandUtterance, clipboardAwaitingHostRecordConfirm else { return }
-        guard let snapshot = FlowSessionBridge.readySnapshot(),
-              snapshot.reason == .recording,
-              let busyId = snapshot.busyUtteranceId,
-              busyId == currentUtteranceId else { return }
-        noteClipboardHostRecordingConfirmed()
-    }
-
-    /// Host finished/failed/took another utterance while UI still shows「准备录音…」.
-    private func recoverClipboardPreparingIfHostMovedOn() {
-        let hostReason: ClipboardHostBusyReason? = {
-            switch FlowSessionBridge.readySnapshot()?.reason {
-            case .recording: return .recording
-            case .processing: return .processing
-            default: return nil
-            }
-        }()
-        let action = ClipboardPreparingPolicy.recoverWhilePreparing(
-            awaitingHostConfirm: clipboardAwaitingHostRecordConfirm,
-            currentUtteranceId: currentUtteranceId,
-            hostBusyUtteranceId: FlowSessionBridge.readySnapshot()?.busyUtteranceId,
-            hostReason: hostReason,
-            hasTerminalFailureForCurrent: {
-                guard let result = matchingResult() else { return false }
-                return isTerminalFailure(result)
-            }()
-        )
-
-        switch action {
-        case .none, .wait:
-            return
-        case .abortForHostFailure:
-            if let result = matchingResult(), isTerminalFailure(result) {
-                FlowSessionBridge.writeAck(
-                    FlowAck(
-                        sessionId: result.sessionId,
-                        utteranceId: result.utteranceId,
-                        commandSeq: result.commandSeq,
-                        hostGeneration: result.hostGeneration,
-                        revision: result.revision
-                    )
-                )
-                lastConsumedUtteranceId = result.utteranceId
-                abortClipboardPreparing(
-                    reason: "hostTerminalFailure",
-                    message: result.text
-                        ?? ExtL10n.string(ClipboardCommandFailure.prepareFailed.localizationKey)
-                )
-            } else {
-                abortClipboardPreparing(
-                    reason: "hostTerminalFailure",
-                    message: ExtL10n.string(ClipboardCommandFailure.prepareFailed.localizationKey)
-                )
-            }
-        case .confirmRecording:
-            noteClipboardHostRecordingConfirmed()
-        case .adoptSibling(let busyId):
-            currentUtteranceId = busyId
-            FlowSessionBridge.setPendingKeyboardUtteranceId(busyId)
-            ClipboardCommandResume.markStartIssued(busyId)
-            let snapshot = FlowSessionBridge.readySnapshot()
-            isFlowRecording = snapshot?.reason == .recording
-            if snapshot?.reason == .recording {
-                noteClipboardHostRecordingConfirmed()
-            } else {
-                clipboardAwaitingHostRecordConfirm = false
-                clipboardPreparingWatchdogTask?.cancel()
-                clipboardPreparingWatchdogTask = nil
-                state.phase = .processing
-                state.lastTranscript = ExtL10n.string("keyboard.flow.transcribing")
-                publishClipboardUIState()
-                startFlowResultWatchdog()
-            }
-            traceState(
-                "clipboard.preparing.adoptSibling",
-                extra: "busy=\(busyId.uuidString.prefix(8)) reason=\(snapshot?.reason.rawValue ?? "nil")"
-            )
-        }
-    }
-
-    /// After restore / claim: write at most one startRecording for the issued utterance.
-    private func ensureClipboardStartCommandWritten() {
-        guard isClipboardCommandUtterance else { return }
-        // The persisted intent id is the one and only utterance id. `startIssued`
-        // is committed only immediately before the wire command is written.
-        let issued = ClipboardCommandResume.currentIntent()?.id
-        let snapshot = FlowSessionBridge.readySnapshot()
-        let hostReason: ClipboardHostBusyReason? = {
-            switch snapshot?.reason {
-            case .recording: return .recording
-            case .processing: return .processing
-            default: return nil
-            }
-        }()
-        let action = ClipboardPreparingPolicy.ensureStartAction(
-            issuedUtteranceId: issued,
-            isFlowRecording: isFlowRecording,
-            currentUtteranceId: currentUtteranceId,
-            hostBusyUtteranceId: snapshot?.busyUtteranceId,
-            hostReason: hostReason,
-            hostReadyWithSession: snapshot?.sessionId != nil && FlowSessionBridge.isHostReady()
-        )
-
-        switch action {
-        case .none:
-            return
-        case .alreadyInFlight:
-            return
-        case .adoptBusy(let busyId, let reason):
-            currentUtteranceId = busyId
-            FlowSessionBridge.setPendingKeyboardUtteranceId(busyId)
-            ClipboardCommandResume.markStartIssued(busyId)
-            if reason == .recording {
-                isFlowRecording = true
-                noteClipboardHostRecordingConfirmed()
-            }
-            return
-        case .waitForHost:
-            recordWhenHostReady = true
-            startHostReadyWaitIfNeeded()
-            traceState("clipboard.ensureStart.waitHost")
-            return
-        case .writeStart(let utteranceId):
-            guard let sessionId = snapshot?.sessionId else {
-                recordWhenHostReady = true
-                startHostReadyWaitIfNeeded()
-                return
-            }
-            activeSessionId = sessionId
-            currentUtteranceId = utteranceId
-            FlowSessionBridge.setPendingKeyboardUtteranceId(utteranceId)
-            lastStoppedUtteranceId = nil
-            ClipboardCommandResume.markStartIssued(utteranceId)
-            writeCommand(.startRecording)
-            isFlowRecording = true
-            clipboardAwaitingHostRecordConfirm = true
-            if clipboardPreparingStartedAt <= 0 {
-                clipboardPreparingStartedAt = Date().timeIntervalSince1970
-            }
-            clipboardHostRecordConfirmedAt = nil
-            state.phase = .requestingPermissions
-            state.lastTranscript = ExtL10n.string("keyboard.placeholder.preparingRecording")
-            publishClipboardUIState()
-            scheduleClipboardPreparingWatchdog()
-            if let view = wakeLockView() {
-                ExtensionScreenWakeLock.acquire(from: view)
-            }
-            startUtteranceCountdown()
-            startFlowLevelWatchdog()
-            recomputeMicVoiceAvailability()
-            traceState(
-                "clipboard.ensureStart.written",
-                extra: "utterance=\(utteranceId.uuidString.prefix(8))"
-            )
-        }
+        lastConsumedUtteranceId = result.utteranceId
+        lastStoppedUtteranceId = nil
+        cancelledEditUtteranceIDs.remove(result.utteranceId)
+        resetEditTransportState()
     }
 
     func pressBegan() {
+        _ = startUtterance(.dictation)
+    }
+
+    @discardableResult
+    private func startUtterance(
+        _ request: FlowUtteranceRequest
+    ) -> FlowUtteranceStartDisposition {
         switch state.phase {
         case .idle, .denied, .error:
             break
         default:
-            return
+            return .rejected(.pipelineBusy)
         }
-        guard !isPendingFlowStart else { return }
+        if let currentUtteranceId, currentUtteranceRequest != nil {
+            return .alreadyInFlight(currentUtteranceId)
+        }
+        guard cancelledEditUtteranceIDs.isEmpty, !isAwaitingFlowResult else {
+            return .rejected(.pipelineBusy)
+        }
+        let utteranceID = UUID()
+        // The common utterance transaction adopts any capture primed by this
+        // same touch; host-side capture startup is single-flight.
+        audioPrimeCancelTask?.cancel()
+        audioPrimeCancelTask = nil
+        audioPrimeID = nil
+        currentUtteranceId = utteranceID
+        currentUtteranceRequest = request
+        editHostConfirmed = false
+        currentStartDeadlineAt = Date().timeIntervalSince1970
+            + FlowSessionKeys.utteranceStartBudget
+
+        // A warm-only PiP handoff may already be in progress. Upgrade that
+        // same shared transaction instead of creating an edit-only wait path.
+        if isPendingFlowStart {
+            recordAfterHandoff = true
+            return .waitingForHost(utteranceID)
+        }
 
         recomputeMicVoiceAvailability()
 
         switch state.micVoiceAvailability {
         case .unavailable(.onboardingIncomplete):
             promptFinishSetupInApp()
-            return
+            clearUnissuedUtterance()
+            return .rejected(.onboardingIncomplete)
         case .unavailable(.missingAPIKey):
-            return
+            clearUnissuedUtterance()
+            return .rejected(.missingAPIKey)
         case .unavailable(.noFullAccess):
             let msg = ExtL10n.string("keyboard.error.fullAccessRequired")
             state.phase = .error(.fullAccessRequired, message: msg)
             scheduleAutoClearError()
             recomputeMicVoiceAvailability()
-            return
+            clearUnissuedUtterance()
+            return .rejected(.noFullAccess)
         case .unavailable(.appGroupUnavailable):
             let msg = ExtL10n.string("keyboard.error.appGroupCommunication")
             state.phase = .error(.appGroupUnavailable, message: msg)
             scheduleAutoClearError()
             recomputeMicVoiceAvailability()
-            return
+            clearUnissuedUtterance()
+            return .rejected(.appGroupUnavailable)
         default:
             break
         }
@@ -1229,16 +813,16 @@ final class KeyboardFlowCoordinator {
         case .startRecording:
             detectAndStoreAppContext()
             startFlowRecording()
+            if FlowSessionBridge.latestCommand()?.utteranceId == utteranceID {
+                return .issued(utteranceID)
+            }
+            if isPendingFlowStart || recordWhenHostReady {
+                return .waitingForHost(utteranceID)
+            }
+            clearUnissuedUtterance()
+            return .rejected(.hostUnavailable)
         case .waitForHostReady(let recordWhenReady):
             detectAndStoreAppContext()
-            if isClipboardCommandUtterance {
-                deferClipboardUntilHostWarm(reason: "pressBegan.waitHost")
-                recordWhenHostReady = true
-                startHostReadyWaitIfNeeded()
-                showClipboardHostWarmupHint()
-                traceState("pressBegan.clipboardAutoResume", extra: "waitHost")
-                break
-            }
             recordWhenHostReady = recordWhenReady
             coldStartDebouncer.reset()
             startHostReadyWaitIfNeeded()
@@ -1246,21 +830,23 @@ final class KeyboardFlowCoordinator {
                 "pressBegan.waitForHostReady",
                 extra: recordWhenReady ? "recordWhenReady=1" : "recordWhenReady=0"
             )
+            return .waitingForHost(utteranceID)
         case .openHostColdStart:
             detectAndStoreAppContext()
-            if isClipboardCommandUtterance {
-                deferClipboardUntilHostWarm(reason: "pressBegan.coldStart")
-                if !isPendingFlowStart {
-                    beginFlowStart(recordAfterHandoff: true)
-                }
-                showClipboardHostWarmupHint()
-                traceState("pressBegan.clipboardAutoResume", extra: "coldStart")
-                break
-            }
             beginFlowStart(recordAfterHandoff: true)
+            return .waitingForHost(utteranceID)
         case .ignore:
-            return
+            clearUnissuedUtterance()
+            return .rejected(.pipelineBusy)
         }
+    }
+
+    private func clearUnissuedUtterance() {
+        currentUtteranceId = nil
+        currentUtteranceRequest = nil
+        currentStartDeadlineAt = nil
+        recordAfterHandoff = false
+        recordWhenHostReady = false
     }
 
     func pressEnded() {
@@ -1270,10 +856,6 @@ final class KeyboardFlowCoordinator {
         }
         guard isFlowRecording else { return }
 
-        clipboardDeferredStopTask?.cancel()
-        clipboardDeferredStopTask = nil
-        clipboardAwaitingHostRecordConfirm = false
-        clipboardStopRequested = false
         isFlowRecording = false
         stopUtteranceCountdown()
         ExtensionScreenWakeLock.release()
@@ -1281,10 +863,11 @@ final class KeyboardFlowCoordinator {
         writeCommand(.stopRecording)
         debug("pressEnded wrote stop command")
         state.phase = .processing
-        state.lastTranscript = ExtL10n.string("keyboard.flow.transcribing")
+        if currentUtteranceRequest?.isEdit != true {
+            state.lastTranscript = ExtL10n.string("keyboard.flow.transcribing")
+        }
         startFlowResultWatchdog()
         recomputeMicVoiceAvailability()
-        publishClipboardUIState()
     }
 
     func beginFlowStart(recordAfterHandoff: Bool = false) {
@@ -1301,7 +884,9 @@ final class KeyboardFlowCoordinator {
         coldStartDebouncer.reset()
         isPendingFlowStart = true
         isFlowRecording = false
-        flowStartDeadline = Date().timeIntervalSince1970 + FlowWatchdog.startTimeout
+        let now = Date().timeIntervalSince1970
+        flowStartDeadline = currentStartDeadlineAt ?? (now + FlowWatchdog.startTimeout)
+        currentStartDeadlineAt = flowStartDeadline
         state.lastTranscript = ""
         recomputeMicVoiceAvailability()
         FlowSessionBridge.markPiPArmAttempt()
@@ -1323,7 +908,7 @@ final class KeyboardFlowCoordinator {
         guard !success else { return }
 
         // The open genuinely failed (iOS blocked it / no Full Access). Don't
-        // let the 30s watchdog spin — cancel the pending start immediately and
+        // let the start watchdog spin — cancel the pending start immediately and
         // guide the user to open OSGKeyboard manually.
         if path == "startflow", isPendingFlowStart {
             isPendingFlowStart = false
@@ -1331,6 +916,13 @@ final class KeyboardFlowCoordinator {
             flowStartDeadline = 0
             stopFlowWatchdog()
             traceState("openHostApp.failed", extra: "path=startflow cancelPending=1")
+            if currentUtteranceRequest?.isEdit == true {
+                onEditFailure(ExtL10n.string("keyboard.error.manualOpenForFlow"))
+                resetEditTransportState()
+                state.phase = .idle
+                state.lastTranscript = ""
+                return
+            }
             showManualOpenHint(path: "startflow")
             recomputeMicVoiceAvailability()
             return
@@ -1341,9 +933,6 @@ final class KeyboardFlowCoordinator {
 
     func cancelPipelineUnlessAwaitingResult() {
         guard !isAwaitingFlowResult else { return }
-        // A clipboard intent is explicitly persisted to survive pressure,
-        // paste-consent suspension, and extension recreation.
-        guard !isClipboardCommandActive else { return }
         if isFlowRecording || isPendingFlowStart {
             if isFlowRecording {
                 writeCommand(.abort)
@@ -1359,7 +948,8 @@ final class KeyboardFlowCoordinator {
             state.level = 0
             recomputeMicVoiceAvailability()
         }
-        resetClipboardUtteranceState()
+        currentUtteranceRequest = nil
+        editHostConfirmed = false
     }
 
     // MARK: - Private
@@ -1372,11 +962,10 @@ final class KeyboardFlowCoordinator {
 
     private func writeCommand(_ action: FlowCommand.Action) {
         guard let activeSessionId, let currentUtteranceId else { return }
-        let mode: FlowUtteranceMode? = isClipboardCommandUtterance ? .clipboardCommand : nil
-        let snapshot: String? = {
-            guard isClipboardCommandUtterance, action == .startRecording else { return nil }
-            return clipboardFrozenSnapshot
-        }()
+        let request = currentUtteranceRequest ?? .dictation
+        let mode: FlowUtteranceMode? = request.mode == .dictation
+            ? nil
+            : request.mode
         let command = FlowCommand(
             sessionId: activeSessionId,
             utteranceId: currentUtteranceId,
@@ -1385,10 +974,28 @@ final class KeyboardFlowCoordinator {
             localeId: state.localeId,
             fieldContext: action == .stopRecording ? fieldContextProvider() : nil,
             utteranceMode: mode,
-            clipboardSnapshot: snapshot,
-            previousOutput: nil
+            editSourceText: action == .startRecording
+                ? request.editSourceText
+                : nil,
+            sourceHistoryEntryID: request.sourceHistoryEntryID,
+            sourceHistoryEntryRevision: request.sourceHistoryEntryRevision,
+            startDeadlineAt: action == .startRecording ? currentStartDeadlineAt : nil,
+            processingDeadlineAt: action == .stopRecording && request.isEdit
+                ? Date().timeIntervalSince1970
+                    + FlowSessionKeys.editLastInputHostProcessingBudget
+                : nil
         )
         FlowSessionBridge.writeCommand(command)
+        if action == .startRecording, let currentStartDeadlineAt {
+            FlowSessionBridge.writeStartTransaction(
+                FlowStartTransaction(
+                    sessionID: activeSessionId,
+                    utteranceID: currentUtteranceId,
+                    deadlineAt: currentStartDeadlineAt,
+                    phase: .issued
+                )
+            )
+        }
         debug(
             "command \(action.rawValue) seq=\(command.commandSeq) " +
             "utterance=\(currentUtteranceId.uuidString) mode=\(mode?.rawValue ?? "dictation") contextChars=" +
@@ -1408,16 +1015,34 @@ final class KeyboardFlowCoordinator {
 
     private func consumePendingFlowDeliveryIfNeeded() {
         if isAwaitingFlowResult {
+            if let result = matchingResult(),
+               discardUnsupportedLegacyResultIfNeeded(result) {
+                return
+            }
+            if let result = matchingResult(),
+               consumeCancelledDictationResultIfNeeded(result) {
+                return
+            }
+            if let result = matchingResult(),
+               consumeCancelledEditResultIfNeeded(result) {
+                return
+            }
             if let result = matchingResult(), result.status == .final, let text = result.text, !text.isEmpty {
                 isAwaitingFlowResult = false
                 stopFlowWatchdog()
-                let wasClipboard = result.resolvedUtteranceMode == .clipboardCommand
-                    || isClipboardCommandUtterance
-                // Each clipboard round is independent — always append/insert, never replace.
+                if result.resolvedUtteranceMode == .editLastInput {
+                    state.phase = .processing
+                    onEditResult(result)
+                    return
+                }
                 textInserter.handleFlowTranscript(
-                    TranscriptionDelivery(text: text, polishWarning: result.warning)
+                    TranscriptionDelivery(
+                        text: text,
+                        polishWarning: result.warning,
+                        historyEntryID: result.historyEntryID,
+                        historyEntryRevision: result.historyEntryRevision
+                    )
                 )
-                resetClipboardUtteranceState()
                 FlowSessionBridge.writeAck(
                     FlowAck(
                         sessionId: result.sessionId,
@@ -1435,8 +1060,7 @@ final class KeyboardFlowCoordinator {
                     "keyboard.insert",
                     text,
                     "utterance=\(result.utteranceId.uuidString.prefix(8)) "
-                        + "commandSeq=\(result.commandSeq) warning=\(result.warning == nil ? 0 : 1) "
-                        + "clipboard=\(wasClipboard ? 1 : 0)"
+                        + "commandSeq=\(result.commandSeq) warning=\(result.warning == nil ? 0 : 1)"
                 )
                 recomputeMicVoiceAvailability()
                 return
@@ -1451,7 +1075,14 @@ final class KeyboardFlowCoordinator {
                 )
                 isAwaitingFlowResult = false
                 stopFlowWatchdog()
-                resetClipboardUtteranceState()
+                if result.resolvedUtteranceMode == .editLastInput {
+                    onEditFailure(
+                        result.text ?? ExtL10n.string("keyboard.edit.error.processing")
+                    )
+                    completeEditResult(result, outcome: .rejected)
+                    state.phase = .idle
+                    return
+                }
                 FlowSessionBridge.writeAck(
                     FlowAck(
                         sessionId: result.sessionId,
@@ -1484,12 +1115,89 @@ final class KeyboardFlowCoordinator {
         }
     }
 
+    private func consumeCancelledDictationResultIfNeeded(_ result: FlowResult) -> Bool {
+        guard cancelledDictationUtteranceIDs.contains(result.utteranceId),
+              result.status == .final || isTerminalFailure(result) else {
+            return false
+        }
+        FlowSessionBridge.writeAck(
+            FlowAck(
+                sessionId: result.sessionId,
+                utteranceId: result.utteranceId,
+                commandSeq: result.commandSeq,
+                hostGeneration: result.hostGeneration,
+                revision: result.revision,
+                deliveryOutcome: .rejected
+            )
+        )
+        cancelledDictationUtteranceIDs.remove(result.utteranceId)
+        lastConsumedUtteranceId = result.utteranceId
+        lastStoppedUtteranceId = nil
+        stopUtteranceCountdown()
+        stopFlowWatchdog()
+        ExtensionScreenWakeLock.release()
+        resetEditTransportState()
+        state.level = 0
+        state.phase = .idle
+        state.lastTranscript = ""
+        recomputeMicVoiceAvailability()
+        traceState(
+            "dictation.cancelledResultDiscarded",
+            extra: "utterance=\(result.utteranceId.uuidString.prefix(8))"
+        )
+        return true
+    }
+
+    private func consumeCancelledEditResultIfNeeded(_ result: FlowResult) -> Bool {
+        guard cancelledEditUtteranceIDs.contains(result.utteranceId),
+              result.status == .final || isTerminalFailure(result) else {
+            return false
+        }
+        FlowSessionBridge.writeAck(
+            FlowAck(
+                sessionId: result.sessionId,
+                utteranceId: result.utteranceId,
+                commandSeq: result.commandSeq,
+                hostGeneration: result.hostGeneration,
+                revision: result.revision,
+                deliveryOutcome: .rejected
+            )
+        )
+        cancelledEditUtteranceIDs.remove(result.utteranceId)
+        lastConsumedUtteranceId = result.utteranceId
+        resetEditTransportState()
+        state.phase = .idle
+        state.lastTranscript = ""
+        recomputeMicVoiceAvailability()
+        return true
+    }
+
     private func adoptPendingResultIfNeeded() {
         guard !isAwaitingFlowResult, currentUtteranceId == nil,
               let pendingId = FlowSessionBridge.pendingKeyboardUtteranceId(),
               let result = FlowSessionBridge.latestResult(),
               result.utteranceId == pendingId,
               result.status == .final || isTerminalFailure(result) else {
+            return
+        }
+        if result.resolvedUtteranceMode == .editLastInput,
+           currentUtteranceRequest?.isEdit != true {
+            FlowSessionBridge.writeAck(
+                FlowAck(
+                    sessionId: result.sessionId,
+                    utteranceId: result.utteranceId,
+                    commandSeq: result.commandSeq,
+                    hostGeneration: result.hostGeneration,
+                    revision: result.revision,
+                    deliveryOutcome: .rejected
+                )
+            )
+            FlowSessionBridge.setPendingKeyboardUtteranceId(nil)
+            lastConsumedUtteranceId = result.utteranceId
+            traceState(
+                "pendingEditResult.discarded",
+                extra: "reason=extensionRecreated"
+            )
             return
         }
         let currentField = fieldContextProvider()
@@ -1544,12 +1252,59 @@ final class KeyboardFlowCoordinator {
         FlowKeyboardResultMatcher.isTerminalFailure(result)
     }
 
+    /// Clipboard-command results from older builds are terminally discarded.
+    /// Acknowledging them prevents the host from keeping a stale delivery alive.
+    private func discardPendingUnsupportedLegacyDeliveryIfNeeded() {
+        guard let result = FlowSessionBridge.latestResult(),
+              result.resolvedUtteranceMode == .unsupportedLegacy,
+              result.status == .final || isTerminalFailure(result) else {
+            return
+        }
+        discardUnsupportedLegacyResultIfNeeded(result)
+    }
+
+    @discardableResult
+    private func discardUnsupportedLegacyResultIfNeeded(_ result: FlowResult) -> Bool {
+        guard result.resolvedUtteranceMode == .unsupportedLegacy else { return false }
+        isAwaitingFlowResult = false
+        isFlowRecording = false
+        stopUtteranceCountdown()
+        stopFlowWatchdog()
+        ExtensionScreenWakeLock.release()
+        FlowSessionBridge.writeAck(
+            FlowAck(
+                sessionId: result.sessionId,
+                utteranceId: result.utteranceId,
+                commandSeq: result.commandSeq,
+                hostGeneration: result.hostGeneration,
+                revision: result.revision,
+                deliveryOutcome: .rejected
+            )
+        )
+        FlowSessionBridge.setPendingKeyboardUtteranceId(nil)
+        lastConsumedUtteranceId = result.utteranceId
+        lastStoppedUtteranceId = nil
+        currentUtteranceId = nil
+        currentStartDeadlineAt = nil
+        currentUtteranceRequest = nil
+        editHostConfirmed = false
+        state.level = 0
+        state.phase = .idle
+        state.lastTranscript = ""
+        recomputeMicVoiceAvailability()
+        traceState("legacyMode.discarded")
+        return true
+    }
+
     /// When the host process died mid-utterance, abort local recording / waiting
     /// so the user is not stuck until the long result watchdog fires.
     private func recoverFromDeadHostIfNeeded() {
         guard FlowSessionBridge.isHostStale() else { return }
 
         if isFlowRecording {
+            if currentUtteranceRequest?.isEdit == true {
+                onEditFailure(ExtL10n.string("keyboard.flow.hostDisconnected"))
+            }
             isFlowRecording = false
             stopUtteranceCountdown()
             ExtensionScreenWakeLock.release()
@@ -1560,6 +1315,7 @@ final class KeyboardFlowCoordinator {
             state.level = 0
             state.phase = .idle
             state.lastTranscript = ""
+            resetEditTransportState()
             recomputeMicVoiceAvailability()
             debug("aborted recording — host heartbeat zombie")
             return
@@ -1571,6 +1327,22 @@ final class KeyboardFlowCoordinator {
     }
 
     private func failHostDisconnected() {
+        if let id = currentUtteranceId,
+           cancelledDictationUtteranceIDs.remove(id) != nil {
+            stopUtteranceCountdown()
+            stopFlowWatchdog()
+            ExtensionScreenWakeLock.release()
+            resetEditTransportState()
+            state.level = 0
+            state.phase = .idle
+            state.lastTranscript = ""
+            recomputeMicVoiceAvailability()
+            traceState(
+                "dictation.cancelledHostDisconnected",
+                extra: "utterance=\(id.uuidString.prefix(8))"
+            )
+            return
+        }
         if deliverRawFallbackIfAvailable(reason: "hostDisconnected") {
             return
         }
@@ -1587,10 +1359,31 @@ final class KeyboardFlowCoordinator {
         stopFlowWatchdog()
         state.level = 0
         let message = ExtL10n.string("keyboard.flow.hostDisconnected")
+        if currentUtteranceRequest?.isEdit == true {
+            onEditFailure(message)
+            resetEditTransportState()
+            state.phase = .idle
+            state.lastTranscript = ""
+            recomputeMicVoiceAvailability()
+            return
+        }
         state.phase = .error(.flowSessionExpired, message: message)
         scheduleAutoClearError()
         recomputeMicVoiceAvailability()
         debug("host disconnected while awaiting Flow result")
+    }
+
+    private func resetEditTransportState() {
+        isAwaitingFlowResult = false
+        isFlowRecording = false
+        isPendingFlowStart = false
+        recordAfterHandoff = false
+        currentUtteranceId = nil
+        currentStartDeadlineAt = nil
+        currentUtteranceRequest = nil
+        editHostConfirmed = false
+        FlowSessionBridge.setPendingKeyboardUtteranceId(nil)
+        FlowSessionBridge.clearStartTransaction()
     }
 
     @discardableResult
@@ -1615,7 +1408,7 @@ final class KeyboardFlowCoordinator {
                 utteranceId: result.utteranceId,
                 commandSeq: result.commandSeq,
                 hostGeneration: result.hostGeneration,
-                revision: nil
+                revision: result.revision
             )
         )
         FlowSessionBridge.setPendingKeyboardUtteranceId(nil)
@@ -1671,6 +1464,21 @@ final class KeyboardFlowCoordinator {
     }
 
     private func startFlowRecording() {
+        if let deadline = currentStartDeadlineAt,
+           Date().timeIntervalSince1970 >= deadline {
+            if currentUtteranceRequest?.isEdit == true {
+                onEditFailure(ExtL10n.string("keyboard.edit.error.startTimeout"))
+                abortEditRecording()
+            } else {
+                state.phase = .error(
+                    .hostAudioUnavailable,
+                    message: ExtL10n.string("keyboard.flow.resultTimeout")
+                )
+                scheduleAutoClearError()
+                currentStartDeadlineAt = nil
+            }
+            return
+        }
         recomputeMicVoiceAvailability()
         let withinReadyGrace = lastHostReadyAt > 0
             && (Date().timeIntervalSince1970 - lastHostReadyAt) <= Self.hostReadyGrace
@@ -1688,22 +1496,9 @@ final class KeyboardFlowCoordinator {
             )
             switch action {
             case .waitForHostReady(let recordWhenReady):
-                if isClipboardCommandUtterance {
-                    deferClipboardUntilHostWarm(reason: "startFlowRecording.waitHost")
-                    showClipboardHostWarmupHint()
-                    return
-                }
                 recordWhenHostReady = recordWhenReady
                 startHostReadyWaitIfNeeded()
             case .openHostColdStart:
-                if isClipboardCommandUtterance {
-                    deferClipboardUntilHostWarm(reason: "startFlowRecording.coldStart")
-                    if !isPendingFlowStart {
-                        beginFlowStart(recordAfterHandoff: true)
-                    }
-                    showClipboardHostWarmupHint()
-                    return
-                }
                 beginFlowStart(recordAfterHandoff: true)
             case .startRecording, .ignore:
                 break
@@ -1723,56 +1518,35 @@ final class KeyboardFlowCoordinator {
                 hostStale: FlowSessionBridge.isHostStale(),
                 withinReadyGrace: withinReadyGrace
             ) {
-                if isClipboardCommandUtterance {
-                    deferClipboardUntilHostWarm(reason: "startFlowRecording.missingSession.coldStart")
-                    if !isPendingFlowStart {
-                        beginFlowStart(recordAfterHandoff: true)
-                    }
-                    showClipboardHostWarmupHint()
-                } else {
-                    beginFlowStart(recordAfterHandoff: true)
-                }
-            } else if isClipboardCommandUtterance {
-                deferClipboardUntilHostWarm(reason: "startFlowRecording.missingSession.wait")
-                showClipboardHostWarmupHint()
+                beginFlowStart(recordAfterHandoff: true)
             } else {
                 recordWhenHostReady = true
                 startHostReadyWaitIfNeeded()
             }
             return
         }
-        // Clipboard: never send a second startRecording for the same round
-        // (paste-alert restore used to call pressBegan again → stuck「准备录音…」).
-        if isClipboardCommandUtterance {
-            if isFlowRecording {
-                scheduleClipboardPreparingWatchdog()
-                recoverClipboardPreparingIfHostMovedOn()
-                recomputeMicVoiceAvailability()
-                traceState("startFlowRecording.deduped", extra: "reason=alreadyInFlight")
-                return
-            }
-            ensureClipboardStartCommandWritten()
-            return
-        }
 
         activeSessionId = sessionId
-        currentUtteranceId = UUID()
+        if currentUtteranceId == nil {
+            currentUtteranceId = UUID()
+        }
         FlowSessionBridge.setPendingKeyboardUtteranceId(currentUtteranceId)
         lastStoppedUtteranceId = nil
         writeCommand(.startRecording)
         isFlowRecording = true
-        clipboardAwaitingHostRecordConfirm = false
-        clipboardHostRecordConfirmedAt = nil
-        clipboardStopRequested = false
         state.lastTranscript = ""
-        state.phase = .recording
+        state.phase = currentUtteranceRequest?.isEdit == true
+            ? .requestingPermissions
+            : .recording
         recomputeMicVoiceAvailability()
         if let view = wakeLockView() {
             ExtensionScreenWakeLock.acquire(from: view)
         }
-        startUtteranceCountdown()
+        if currentUtteranceRequest?.isEdit != true {
+            startUtteranceCountdown()
+        }
         startFlowLevelWatchdog()
-        traceState("startFlowRecording.started", extra: "clipboardPreparing=0")
+        traceState("startFlowRecording.started")
     }
 
     private func startUtteranceCountdown() {
@@ -1828,9 +1602,11 @@ final class KeyboardFlowCoordinator {
                     self.recordAfterHandoff = false
                     self.flowStartDeadline = 0
                     self.traceState("startWatchdog.timeout")
-                    if self.isClipboardCommandActive {
-                        self.cancelClipboardIntent(reason: "hostWarmTimeout")
-                        self.showClipboardFailure(.prepareFailed)
+                    if self.currentUtteranceRequest?.isEdit == true {
+                        self.onEditFailure(
+                            ExtL10n.string("keyboard.edit.error.startTimeout")
+                        )
+                        self.abortEditRecording()
                     } else {
                         self.showManualOpenHint(path: "startflow")
                     }
@@ -1897,16 +1673,47 @@ final class KeyboardFlowCoordinator {
         stopFlowWatchdog()
         isAwaitingFlowResult = true
         let startedAt = Date().timeIntervalSince1970
-        let resultTimeout = FlowWatchdog.resultTimeout(engineMode: state.engineMode)
+        let isCancelledEdit = currentUtteranceId.map {
+            cancelledEditUtteranceIDs.contains($0)
+        } ?? false
+        let isCancelledDictation = currentUtteranceId.map {
+            cancelledDictationUtteranceIDs.contains($0)
+        } ?? false
+        let resultTimeout = isCancelledEdit || isCancelledDictation
+            ? FlowSessionKeys.utteranceStartBudget
+            : (currentUtteranceRequest?.isEdit != true
+                ? FlowWatchdog.resultTimeout(engineMode: state.engineMode)
+                : FlowSessionKeys.editLastInputProcessingBudget)
         debug("resultWatchdog started timeout=\(Int(resultTimeout))s engine=\(state.engineMode)")
         flowWatchdogTask = Task { @MainActor [weak self] in
             while let self, !Task.isCancelled {
                 FlowSessionBridge.reloadFromDisk()
+                if let result = self.matchingResult(),
+                   self.discardUnsupportedLegacyResultIfNeeded(result) {
+                    return
+                }
+                if let result = self.matchingResult(),
+                   self.consumeCancelledDictationResultIfNeeded(result) {
+                    return
+                }
+                if let result = self.matchingResult(),
+                   self.consumeCancelledEditResultIfNeeded(result) {
+                    return
+                }
                 if let result = self.matchingResult(), result.status == .final, let text = result.text, !text.isEmpty {
                     self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
+                    if result.resolvedUtteranceMode == .editLastInput {
+                        self.onEditResult(result)
+                        return
+                    }
                     self.textInserter.handleFlowTranscript(
-                        TranscriptionDelivery(text: text, polishWarning: result.warning)
+                        TranscriptionDelivery(
+                            text: text,
+                            polishWarning: result.warning,
+                            historyEntryID: result.historyEntryID,
+                            historyEntryRevision: result.historyEntryRevision
+                        )
                     )
                     FlowSessionBridge.writeAck(
                         FlowAck(
@@ -1934,6 +1741,14 @@ final class KeyboardFlowCoordinator {
                 if let result = self.matchingResult(), self.isTerminalFailure(result) {
                     self.isAwaitingFlowResult = false
                     self.stopFlowWatchdog()
+                    if result.resolvedUtteranceMode == .editLastInput {
+                        self.onEditFailure(
+                            result.text ?? ExtL10n.string("keyboard.edit.error.processing")
+                        )
+                        self.completeEditResult(result, outcome: .rejected)
+                        self.state.phase = .idle
+                        return
+                    }
                     FlowSessionBridge.writeAck(
                         FlowAck(
                             sessionId: result.sessionId,
@@ -1987,6 +1802,41 @@ final class KeyboardFlowCoordinator {
                     return
                 }
                 if now - startedAt > resultTimeout {
+                    if let id = self.currentUtteranceId,
+                       self.cancelledDictationUtteranceIDs.remove(id) != nil {
+                        self.resetEditTransportState()
+                        self.state.level = 0
+                        self.state.phase = .idle
+                        self.state.lastTranscript = ""
+                        self.recomputeMicVoiceAvailability()
+                        self.traceState(
+                            "dictation.cancelledResultTimeout",
+                            extra: "utterance=\(id.uuidString.prefix(8))"
+                        )
+                        return
+                    }
+                    if let id = self.currentUtteranceId,
+                       self.cancelledEditUtteranceIDs.remove(id) != nil {
+                        self.resetEditTransportState()
+                        self.state.phase = .idle
+                        self.state.lastTranscript = ""
+                        self.recomputeMicVoiceAvailability()
+                        return
+                    }
+                    if self.currentUtteranceRequest?.isEdit == true {
+                        self.isAwaitingFlowResult = false
+                        self.stopFlowWatchdog()
+                        self.writeCommand(.abort)
+                        self.onEditFailure(
+                            ExtL10n.string("keyboard.edit.error.processingTimeout")
+                        )
+                        self.currentUtteranceId = nil
+                        self.currentStartDeadlineAt = nil
+                        self.currentUtteranceRequest = nil
+                        self.editHostConfirmed = false
+                        self.state.phase = .idle
+                        return
+                    }
                     if self.deliverRawFallbackIfAvailable(reason: "resultTimeout") {
                         return
                     }

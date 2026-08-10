@@ -40,6 +40,38 @@ struct KeyboardBrandLogo: View {
     }
 }
 
+struct KeyboardCancelButton: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.themePalette) private var palette
+
+    let action: () -> Void
+    let accessibilityLabel: Text
+    let accessibilityHint: Text
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(palette.textSecondary)
+                .frame(width: 34, height: 34)
+                .background(buttonFill, in: Circle())
+                .overlay(
+                    Circle()
+                        .stroke(palette.divider, lineWidth: 0.5)
+                )
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(accessibilityHint)
+    }
+
+    private var buttonFill: Color {
+        colorScheme == .dark ? Color(white: 0.30) : .white
+    }
+}
+
 private enum KeyboardInputTab: CaseIterable {
     case voice
     case chinese
@@ -90,7 +122,7 @@ struct KeyboardTopControls: View {
                     }
                     .buttonStyle(TopControlPressStyle(pressedFill: pressedFill))
                     .disabled(tab != .voice && !state.canEnterTypingSurface)
-                    .opacity(tab != .voice && !state.canEnterTypingSurface ? 0.42 : 1)
+                    .opacity(tabOpacity(tab))
                     .accessibilityLabel(accessibilityLabel(for: tab))
                     .accessibilityAddTraits(isSelected(tab) ? .isSelected : [])
                 }
@@ -111,6 +143,14 @@ struct KeyboardTopControls: View {
 
     private var selectedFill: Color {
         colorScheme == .dark ? Color(white: 0.38) : .white
+    }
+
+    private func tabOpacity(_ tab: KeyboardInputTab) -> Double {
+        guard tab != .voice, !state.canEnterTypingSurface else { return 1 }
+        if case .recording = state.phase {
+            return 0
+        }
+        return 0.42
     }
 
     private var trackFill: Color {

@@ -30,16 +30,93 @@ public final class SpeechHistoryStore: ObservableObject {
         }
     }
 
-    public func append(text: String, engineMode: String? = nil) {
+    @discardableResult
+    public func append(
+        id: UUID = UUID(),
+        text: String,
+        engineMode: String? = nil
+    ) -> SpeechHistoryEntry? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
+        guard !trimmed.isEmpty else { return nil }
 
         rebaseOnPersistedStateBeforeMutation()
-        let entry = SpeechHistoryEntry(text: trimmed, engineMode: engineMode)
+        let entry = SpeechHistoryEntry(id: id, text: trimmed, engineMode: engineMode)
         payload.entries.insert(entry, at: 0)
         payload.trimEntries()
         payload.updatedAt = Date()
         applyPayload(postCloudPush: true)
+        return entry
+    }
+
+    /// Apply one idempotent mutation emitted by the keyboard extension.
+    @discardableResult
+    public func applyHistoryMutation(_ mutation: HistoryMutation) -> SpeechHistoryEntry? {
+        rebaseOnPersistedStateBeforeMutation()
+        if payload.appliedMutationIDs.contains(mutation.id) {
+            return payload.entries.first { $0.id == mutation.entryID }
+        }
+
+        switch mutation.action {
+        case .append:
+            if let existing = payload.entries.first(where: { $0.id == mutation.entryID }) {
+                return existing
+            }
+            guard let text = mutation.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !text.isEmpty else {
+                return nil
+            }
+            let entry = SpeechHistoryEntry(
+                id: mutation.entryID,
+                text: text,
+                engineMode: mutation.engineMode
+            )
+            payload.entries.insert(entry, at: 0)
+            finishMutation(mutationID: mutation.id)
+            return entry
+
+        case .update, .restore:
+            guard let text = mutation.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !text.isEmpty else {
+                return nil
+            }
+            guard let index = payload.entries.firstIndex(where: { $0.id == mutation.entryID })
+            else {
+                // The original row may have been deleted or trimmed remotely.
+                let fallback = SpeechHistoryEntry(text: text, engineMode: mutation.engineMode)
+                payload.entries.insert(fallback, at: 0)
+                finishMutation(mutationID: mutation.id)
+                return fallback
+            }
+            let existing = payload.entries[index]
+            if let expected = mutation.expectedRevision, existing.revision != expected {
+                // Never overwrite a newer cloud edit. Preserve this local result
+                // as a new row instead.
+                let conflictCopy = SpeechHistoryEntry(text: text, engineMode: mutation.engineMode)
+                payload.entries.insert(conflictCopy, at: 0)
+                finishMutation(mutationID: mutation.id)
+                return conflictCopy
+            }
+            let updated = SpeechHistoryEntry(
+                id: existing.id,
+                text: text,
+                createdAt: existing.createdAt,
+                modifiedAt: Date(),
+                revision: existing.revision + 1,
+                engineMode: mutation.engineMode ?? existing.engineMode
+            )
+            payload.entries[index] = updated
+            finishMutation(mutationID: mutation.id)
+            return updated
+
+        case .delete:
+            guard payload.entries.contains(where: { $0.id == mutation.entryID }) else {
+                return nil
+            }
+            payload.deletedEntryIDs[mutation.entryID] = Date()
+            payload.entries.removeAll { $0.id == mutation.entryID }
+            finishMutation(mutationID: mutation.id)
+            return nil
+        }
     }
 
     public func delete(id: UUID) {
@@ -89,6 +166,15 @@ public final class SpeechHistoryStore: ObservableObject {
         let disk = SpeechHistoryStorage.load(from: defaults)
         guard disk != payload else { return }
         payload = SyncedSpeechHistory.merge(local: payload, remote: disk)
+    }
+
+    private func finishMutation(mutationID: UUID) {
+        payload.appliedMutationIDs.append(mutationID)
+        payload.appliedMutationIDs = Array(payload.appliedMutationIDs.suffix(256))
+        payload.trimEntries()
+        payload.updatedAt = Date()
+        payload.pruneTombstonesIfNeeded()
+        applyPayload(postCloudPush: true)
     }
 
     public func snapshot() -> SyncedSpeechHistory {

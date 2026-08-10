@@ -13,14 +13,16 @@ struct KeyboardSurfaceRoot: View {
     var onInsert: (String) -> Void
     var onDeleteBackward: () -> Void
 
-    static var voiceHeight: CGFloat { KeyboardRootView.totalHeight }
-    static var typingHeight: CGFloat { TypingRootView.totalHeight }
-
-    static func height(for surface: KeyboardState.Surface) -> CGFloat {
-        switch surface {
-        case .voice: return voiceHeight
-        case .typing: return typingHeight
-        }
+    /// Height is deliberately independent of the surface: the voice surface
+    /// adopts the typing surface's content-driven height and parks the surplus
+    /// above its action cluster, so switching surfaces never resizes the
+    /// keyboard. Keeping this a single expression is what guarantees it.
+    static func height(
+        for surface: KeyboardState.Surface,
+        isIPad: Bool = false,
+        width: CGFloat = 0
+    ) -> CGFloat {
+        TypingSurfaceMetrics.contentHeight(isIPad: isIPad, width: width)
     }
 
     var body: some View {

@@ -256,6 +256,35 @@ final class FlowSessionBridgeTests: XCTestCase {
         XCTAssertNil(decoded.fieldContext)
     }
 
+    func testLegacyClipboardCommandDecodesAsUnsupportedAndDropsRetiredPayload() throws {
+        let command = FlowCommand(
+            sessionId: UUID(),
+            utteranceId: UUID(),
+            commandSeq: 45,
+            action: .startRecording,
+            localeId: "en-US"
+        )
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(command))
+                as? [String: Any]
+        )
+        object["utteranceMode"] = "clipboardCommand"
+        object["clipboardSnapshot"] = "retired material"
+        object["previousOutput"] = "retired output"
+
+        let legacyPayload = try JSONSerialization.data(withJSONObject: object)
+        let decoded = try JSONDecoder().decode(FlowCommand.self, from: legacyPayload)
+
+        XCTAssertEqual(decoded.resolvedUtteranceMode, .unsupportedLegacy)
+        let reencoded = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(decoded))
+                as? [String: Any]
+        )
+        XCTAssertEqual(reencoded["utteranceMode"] as? String, "unsupportedLegacy")
+        XCTAssertNil(reencoded["clipboardSnapshot"])
+        XCTAssertNil(reencoded["previousOutput"])
+    }
+
     func testFlowResultRoundTripPreservesUtteranceIdentity() {
         let defaults = makeDefaults()
         let sessionId = UUID()
@@ -553,5 +582,77 @@ final class FlowSessionBridgeTests: XCTestCase {
         XCTAssertNil(FlowSessionBridge.latestCommand(defaults: defaults))
         XCTAssertNil(FlowSessionBridge.latestResult(defaults: defaults))
         XCTAssertNil(FlowSessionBridge.readySnapshot(defaults: defaults))
+    }
+
+    func testEditCommandRoundTripIncludesDeadlinesAndSource() {
+        let defaults = makeDefaults()
+        let historyID = UUID()
+        let command = FlowCommand(
+            sessionId: UUID(),
+            utteranceId: UUID(),
+            commandSeq: 4,
+            action: .startRecording,
+            localeId: "zh-Hans",
+            utteranceMode: .editLastInput,
+            editSourceText: "原文",
+            sourceHistoryEntryID: historyID,
+            startDeadlineAt: 108,
+            processingDeadlineAt: 145
+        )
+        FlowSessionBridge.writeCommand(command, defaults: defaults)
+        XCTAssertEqual(FlowSessionBridge.latestCommand(defaults: defaults), command)
+        XCTAssertFalse(
+            FlowResult(
+                sessionId: command.sessionId,
+                utteranceId: command.utteranceId,
+                commandSeq: command.commandSeq,
+                status: .final,
+                text: "结果",
+                utteranceMode: .editLastInput
+            ).allowsRawFallback
+        )
+    }
+
+    func testStartTransactionRoundTripAndClear() {
+        let defaults = makeDefaults()
+        let transaction = FlowStartTransaction(
+            sessionID: UUID(),
+            utteranceID: UUID(),
+            deadlineAt: 108,
+            phase: .starting
+        )
+        FlowSessionBridge.writeStartTransaction(transaction, defaults: defaults)
+        XCTAssertEqual(
+            FlowSessionBridge.startTransaction(defaults: defaults),
+            transaction
+        )
+        FlowSessionBridge.clearFlowState(defaults: defaults)
+        XCTAssertNil(FlowSessionBridge.startTransaction(defaults: defaults))
+    }
+
+    func testAudioPrimeActionsRoundTripOnSharedCommandWire() {
+        let defaults = makeDefaults()
+        let sessionID = UUID()
+        let primeID = UUID()
+        let prime = FlowCommand(
+            sessionId: sessionID,
+            utteranceId: primeID,
+            commandSeq: 10,
+            action: .primeAudio,
+            localeId: "auto"
+        )
+        let cancel = FlowCommand(
+            sessionId: sessionID,
+            utteranceId: primeID,
+            commandSeq: 11,
+            action: .cancelPrimeAudio,
+            localeId: "auto"
+        )
+        FlowSessionBridge.writeCommand(prime, defaults: defaults)
+        FlowSessionBridge.writeCommand(cancel, defaults: defaults)
+        XCTAssertEqual(
+            FlowSessionBridge.commands(after: 9, defaults: defaults),
+            [prime, cancel]
+        )
     }
 }

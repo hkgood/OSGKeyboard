@@ -90,6 +90,11 @@ public final class SpeechHistoryCloudSync {
         guard merged != local else { return }
 
         apply(merged, to: defaults, postNotification: true)
+        // KVS is last-writer-wins. Push the union back so another device's
+        // entries are not stranded only on this device after a concurrent push.
+        if merged != remote {
+            try? push(merged)
+        }
     }
 
     public func push(_ history: SyncedSpeechHistory) throws {

@@ -162,11 +162,17 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 wideHeroHeader
 
-                HomeUsageStatsSection(layout: .split)
-
+                // On iPad / regular width the keyboard-setup hint (and any
+                // other flow-session extras) used to render below
+                // `HomeUsageStatsSection`, burying the most actionable guidance
+                // beneath the stats cards. Match the phone layout's ordering:
+                // hero header → hint → stats → preview, so the hint sits at
+                // the top of the page and is the first thing a user notices.
                 if showsFlowSessionExtras {
                     flowSessionExtras
                 }
+
+                HomeUsageStatsSection(layout: .split)
 
                 widePreviewStage
             }

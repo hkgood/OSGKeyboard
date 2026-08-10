@@ -27,6 +27,10 @@
 "onboarding.enable.step3.prefix" = "长按";
 "onboarding.enable.step3.suffix" = "，选中 OSGKeyboard";
 "onboarding.enable.openSettings" = "去设置";
+"onboarding.enable.resources.preparing" = "正在准备中文输入资源…";
+"onboarding.enable.resources.ready" = "中文输入资源已就绪";
+"onboarding.enable.resources.failed" = "中文输入资源准备失败";
+"onboarding.enable.resources.retry" = "重试";
 "onboarding.api.title" = "选择语音转文字 AI 引擎";
 "onboarding.api.localModels.hint" = "本地引擎使用内置语音识别，无需填写 API Key。";
 "onboarding.polish.title" = "文本润色（LLM）";
@@ -351,7 +355,6 @@
 
 /* Flow session */
 "flow.error.noSpeech" = "未检测到语音，请重试。";
-"flow.error.clipboardCommandFailed" = "剪贴板处理失败，请重试。";
 "flow.error.recognitionInterrupted" = "识别未完成，请再试一次。";
 "keyboard.denied.mic" = "麦克风权限被拒绝";
 "keyboard.denied.speech" = "语音识别权限被拒绝";
@@ -556,3 +559,4 @@
 "hostApp.douyin" = "抖音";
 "hostApp.tiktok" = "TikTok";
 "flow.warning.polishDegradedQuality" = "本次润色结果未通过校验，已插入保守处理版本。";
+"flow.error.editLastInputFailed" = "未能完成编辑，请重试。";

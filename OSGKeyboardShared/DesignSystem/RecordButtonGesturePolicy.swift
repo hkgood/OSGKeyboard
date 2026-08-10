@@ -3,17 +3,17 @@
 //
 // Pure tap / hold routing for the mic button. Kept out of the view so the
 // "one press produces at most one action" invariant is unit-testable: the
-// clipboard long-press flips the phase while the finger is still down, and
+// edit long-press flips the phase while the finger is still down, and
 // regressions there let a single press both open and close a round.
 
 import Foundation
 
 public enum RecordButtonGestureAction: Equatable, Sendable {
     case none
-    /// Start dictation, cancel a preparing clipboard intent, or stop recording —
+    /// Start dictation, cancel a preparing edit, or stop recording —
     /// all of which the coordinator resolves from its own phase.
     case toggle
-    case beginClipboardCommand
+    case beginEditLastInput
 }
 
 public enum RecordButtonGesturePolicy {
@@ -38,13 +38,13 @@ public enum RecordButtonGesturePolicy {
     public static func holdAction(
         phase: RecordButton.Phase,
         isEnabled: Bool,
-        supportsClipboardLongPress: Bool
+        supportsEditLongPress: Bool
     ) -> RecordButtonGestureAction {
         switch phase {
         case .idleReady, .idleUnavailable, .error:
-            guard supportsClipboardLongPress else { return .none }
+            guard supportsEditLongPress else { return .none }
             guard isEnabled || phase == .idleUnavailable else { return .none }
-            return .beginClipboardCommand
+            return .beginEditLastInput
         case .recording:
             return isEnabled ? .toggle : .none
         case .preparing, .processing:

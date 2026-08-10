@@ -64,13 +64,38 @@ public final class KeyboardViewController: UIInputViewController {
 
     private var textInserter: KeyboardTextInserter!
     private var flowCoordinator: KeyboardFlowCoordinator!
+    private var lastInputEditCoordinator: LastInputEditCoordinator!
     private var configSync: KeyboardConfigSync!
     /// UIKit may synchronously lay out the view during `viewDidLoad`.
     /// Keep this optional so an early layout pass is harmless.
     private var cursorDrag: CursorDragController?
 
+    /// iPad-scale keys require both an iPad host and regular horizontal space.
+    /// This keeps compact iPad multitasking on phone metrics and prevents wide
+    /// iPhones from being mistaken for iPads.
+    private var isIPadLayout: Bool {
+        KeyboardChromeLayout.usesIPadMetrics(
+            isPad: UIDevice.current.userInterfaceIdiom == .pad,
+            hasRegularWidth: traitCollection.horizontalSizeClass == .regular
+        )
+    }
+
+    /// Width the layout should be sized against. `view.bounds` is empty before
+    /// the first layout pass, so fall back to the screen the keyboard is on.
+    private var currentLayoutWidth: CGFloat {
+        let width = view.bounds.width
+        guard width > 0 else {
+            return (view.window?.windowScene?.screen ?? UIScreen.main).bounds.width
+        }
+        return width
+    }
+
     private var targetKeyboardHeight: CGFloat {
-        KeyboardSurfaceRoot.height(for: state.surface)
+        KeyboardSurfaceRoot.height(
+            for: state.surface,
+            isIPad: state.usesIPadLayoutMetrics,
+            width: state.layoutWidth
+        )
     }
 
     // MARK: - Init
@@ -96,6 +121,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewDidLoad() {
         super.viewDidLoad()
+        state.showsSystemGlobeKey = UIDevice.current.userInterfaceIdiom == .pad
         // Voice-first keyboard — hide the misleading "English" subtitle in Settings.
         primaryLanguage = "mis"
         let preferred = TypingInputConfiguration.preferredSurfaceOnOpen()
@@ -112,6 +138,7 @@ public final class KeyboardViewController: UIInputViewController {
         setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
         // Establish layout dependencies before applying the preferred surface.
         // `applySurface` updates height and UIKit may lay out synchronously.
+        refreshLayoutMode()
         installKeyboardHeight()
         configureDictationBehavior()
         installServices()
@@ -128,7 +155,6 @@ public final class KeyboardViewController: UIInputViewController {
         _ = configSync.loadPersistedConfig()
         configSync.installDarwinObservers()
         flowCoordinator.refreshSessionState()
-        flowCoordinator.restoreClipboardCommandIfNeeded()
         OSGDiag.log(
             "KVC.viewDidLoad done surface=\(state.surface.rawValue) "
                 + "sessionActive=\(FlowSessionBridge.isSessionActive()) "
@@ -145,18 +171,12 @@ public final class KeyboardViewController: UIInputViewController {
             category: "boot"
         )
         heightPhase = .idle
-        // Block pasteboard content reads until the next viewDidAppear height lock.
-        flowCoordinator.setClipboardContentReadsEnabled(false)
         flowCoordinator.stopSessionMonitor()
         // Remember what the user left on, then pre-position a reused
         // extension instance for the next open policy (no first-frame jump).
-        // Skip snap-to-typing while clipboard paste alert / utterance owns the mic —
-        // otherwise Allow Paste reopens on the typing grid (visible jump).
         let preserve = flowCoordinator.preservesLifecycleOnDisappear
-            || flowCoordinator.isClipboardCommandActive
-            || ClipboardCommandResume.shouldPreferVoice()
         TypingInputConfiguration.persistLastSurface(
-            preserve || ClipboardCommandResume.shouldPreferVoice() ? .voice : state.surface
+            preserve ? .voice : state.surface
         )
         if !preserve {
             prepareSurfaceForNextPresentation()
@@ -182,16 +202,13 @@ public final class KeyboardViewController: UIInputViewController {
         configureDictationBehavior()
         KeyboardSetupBridge.markExtensionAppearance(hasFullAccess: hasFullAccess)
         state.debugHasFullAccess = hasFullAccess
-        // Do NOT read pasteboard contents here — `refreshSessionState` may peek
-        // changeCount only while content reads stay disabled until height locks.
+        // Refresh only Flow/config state; edit targets come from verified OSG insertions.
         flowCoordinator.refreshSessionState()
         flowCoordinator.startSessionMonitor()
         configSync.syncOnboardingStateFromAppGroup()
         configSync.refreshConfigFromAppGroup()
         // Settings may have changed while the extension stayed alive.
         applyPreferredSurfaceOnOpen()
-        // After paste-alert reopen: restore clipboard chrome if sticky + host busy.
-        flowCoordinator.restoreClipboardCommandIfNeeded()
         // Re-warm Taptic after host app switches: SwiftUI `onAppear` often
         // skips when the extension process is reused, leaving generators cold.
         KeyboardHapticFeedback.prepare()
@@ -233,11 +250,9 @@ public final class KeyboardViewController: UIInputViewController {
         heightPhase = .presented
         lockPresentedKeyboardHeight()
         refreshReturnKeyRole()
-        // After height is locked: (1) allow pasteboard content reads so the
-        // paste alert cannot interrupt presentation math; (2) arm PiP handoff.
+        // Presentation math is locked before arming the PiP handoff.
         DispatchQueue.main.async { [weak self] in
             guard let self, self.heightPhase == .presented else { return }
-            self.flowCoordinator.setClipboardContentReadsEnabled(true)
             self.flowCoordinator.ensurePiPReadyOnKeyboardOpen()
         }
         OSGDiag.log(
@@ -249,12 +264,22 @@ public final class KeyboardViewController: UIInputViewController {
     public override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
         refreshReturnKeyRole()
-        textInserter?.refreshUndoAvailability()
+        textInserter?.refreshEditingAvailability()
+        lastInputEditCoordinator?.refreshContext()
     }
 
     public override func selectionDidChange(_ textInput: UITextInput?) {
         super.selectionDidChange(textInput)
-        textInserter?.refreshUndoAvailability()
+        textInserter?.refreshEditingAvailability()
+        lastInputEditCoordinator?.refreshContext()
+    }
+
+    public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        guard previousTraitCollection?.horizontalSizeClass != traitCollection.horizontalSizeClass else {
+            return
+        }
+        refreshLayoutMode()
     }
 
     public override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge {
@@ -282,6 +307,11 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        // Rotation does not change `horizontalSizeClass` on iPad (both
+        // orientations are regular), so this is the only callback that sees a
+        // portrait→landscape resize. `refreshLayoutMode` no-ops unless the
+        // layout bucket actually changed, so this cannot loop.
+        refreshLayoutMode()
         cursorDrag?.layoutChrome()
         enforcePresentedKeyboardHeightIfNeeded()
     }
@@ -294,6 +324,8 @@ public final class KeyboardViewController: UIInputViewController {
             insertText: { [weak self] text in self?.textDocumentProxy.insertText(text) },
             deleteBackward: { [weak self] in self?.textDocumentProxy.deleteBackward() },
             contextBeforeInput: { [weak self] in self?.textDocumentProxy.documentContextBeforeInput },
+            fieldContextProvider: { [weak self] in self?.captureFieldContext() },
+            selectedText: { [weak self] in self?.textDocumentProxy.selectedText },
             scheduleAutoClearError: { [weak self] in self?.scheduleAutoClearError() }
         )
 
@@ -302,6 +334,11 @@ public final class KeyboardViewController: UIInputViewController {
             persistor: persistor,
             onFlowSessionChanged: { [weak self] in
                 self?.flowCoordinator.refreshSessionState()
+            },
+            onConfigChanged: { [weak self] in
+                // Only an already-live typing session can be showing the setup
+                // error; never force-create one just to retry.
+                self?.typingSessionStorage?.retryPrepareAfterResourceDeployment()
             }
         )
 
@@ -316,6 +353,29 @@ public final class KeyboardViewController: UIInputViewController {
             scheduleAutoClearError: { [weak self] in self?.scheduleAutoClearError() },
             refreshConfigFromAppGroup: { [weak self] in self?.configSync.refreshConfigFromAppGroup() }
         )
+        lastInputEditCoordinator = LastInputEditCoordinator(
+            state: state,
+            textInserter: textInserter,
+            beginFlow: { [weak self] reference in
+                self?.flowCoordinator.beginEditRecording(reference: reference)
+                    ?? .rejected(.hostUnavailable)
+            },
+            stopFlow: { [weak self] in self?.flowCoordinator.stopEditRecording() },
+            abortFlow: { [weak self] in self?.flowCoordinator.abortEditRecording() },
+            acknowledge: { [weak self] outcome in
+                self?.flowCoordinator.acknowledgeEditResult(outcome)
+            }
+        )
+        flowCoordinator.onEditHostRecordingConfirmed = { [weak self] in
+            self?.lastInputEditCoordinator.hostRecordingConfirmed()
+        }
+        flowCoordinator.onEditResult = { [weak self] result in
+            self?.lastInputEditCoordinator.receive(result: result)
+        }
+        flowCoordinator.onEditFailure = { [weak self] message in
+            self?.lastInputEditCoordinator.fail(message)
+        }
+        _ = textInserter.recoverPendingEditTransactionIfNeeded()
 
         cursorDrag = CursorDragController(
             state: state,
@@ -331,13 +391,29 @@ public final class KeyboardViewController: UIInputViewController {
         state.beginRecording      = { [weak self] in self?.flowCoordinator.pressBegan() }
         state.endRecording        = { [weak self] in self?.flowCoordinator.pressEnded() }
         state.tapMic              = { [weak self] in self?.flowCoordinator.toggleRecording() }
-        state.beginClipboardCommand = { [weak self] in
-            self?.flowCoordinator.clipboardCommandPressBegan()
+        state.setMicTouchActive   = { [weak self] active in
+            self?.flowCoordinator.setMicTouchActive(active)
         }
-        state.refreshClipboardEligibility = { [weak self] in
-            self?.flowCoordinator.refreshClipboardEligibility()
+        state.cancelVoiceInput = { [weak self] in
+            self?.flowCoordinator.cancelCurrentDictation()
+        }
+        state.beginEditLastInput = { [weak self] in
+            self?.lastInputEditCoordinator.begin()
+        }
+        state.stopEditListening = { [weak self] in
+            self?.lastInputEditCoordinator.stopListening()
+        }
+        state.confirmEditResult = { [weak self] in
+            self?.lastInputEditCoordinator.confirm()
+        }
+        state.closeEditMode = { [weak self] in
+            self?.lastInputEditCoordinator.close()
         }
         state.openSettings        = { [weak self] in self?.openHostApp() }
+        state.openInputMethodSetup = { [weak self] in self?.openHostApp(path: "deployrime") }
+        // The globe UIButton registers this controller's standard
+        // `handleInputModeList(from:with:)` action for all touch events.
+        state.inputModeController = self
         state.startFlowSession    = { [weak self] in self?.flowCoordinator.beginFlowStart() }
         state.setMode             = { [weak self] m in self?.configSync.persistMode(m) }
         state.setLocale           = { [weak self] l in self?.configSync.persistLocale(l) }
@@ -349,6 +425,9 @@ public final class KeyboardViewController: UIInputViewController {
         state.insertSpace         = { [weak self] in self?.textDocumentProxy.insertText(" ") }
         state.deleteBackward      = { [weak self] in self?.textDocumentProxy.deleteBackward() }
         state.undoLastInsertion   = { [weak self] in self?.textInserter.undoLastInsertion() }
+        state.redoLastInsertion   = { [weak self] in self?.textInserter.redoLastInsertion() }
+        state.copySelection       = { [weak self] in self?.textInserter.copySelection() }
+        state.cutSelection        = { [weak self] in self?.textInserter.cutSelection() }
         state.moveCursorHorizontal = { [weak self] steps in
             self?.cursorDrag?.moveCursorHorizontally(by: steps)
         }
@@ -410,17 +489,13 @@ public final class KeyboardViewController: UIInputViewController {
 
     private func applyPreferredSurfaceOnOpen() {
         let preferred = TypingInputConfiguration.preferredSurfaceOnOpen()
-        let sticky = ClipboardCommandResume.shouldPreferVoice()
         let resolved = KeyboardOpenSurfacePolicy.resolve(
             locksTypingSurface: state.locksTypingSurface,
-            clipboardCommandActive: flowCoordinator.isClipboardCommandActive,
-            stickyPreferVoice: sticky,
             preferred: preferred
         )
         OSGDiag.log(
             "applyPreferredSurfaceOnOpen preferred=\(preferred.rawValue) "
-                + "resolved=\(resolved.rawValue) stickyVoice=\(sticky ? 1 : 0) "
-                + "clipboardActive=\(flowCoordinator.isClipboardCommandActive ? 1 : 0) "
+                + "resolved=\(resolved.rawValue) "
                 + "locksTyping=\(state.locksTypingSurface ? 1 : 0)",
             category: "boot"
         )
@@ -451,6 +526,25 @@ public final class KeyboardViewController: UIInputViewController {
             keyboardHeightConstraint?.constant = targetKeyboardHeight
             view.setNeedsLayout()
         }
+    }
+
+    private func refreshLayoutMode() {
+        let usesIPadMetrics = isIPadLayout
+        let width = currentLayoutWidth
+        // `state.layoutWidth` tracks the width that last changed the layout
+        // bucket, not every intermediate width: republishing on each frame of
+        // a Stage Manager drag would rebuild the SwiftUI grid continuously.
+        let bucketChanged = KeyboardChromeLayout.usesWideIPadMetrics(
+            isIPad: usesIPadMetrics,
+            width: width
+        ) != KeyboardChromeLayout.usesWideIPadMetrics(
+            isIPad: state.usesIPadLayoutMetrics,
+            width: state.layoutWidth
+        )
+        guard state.usesIPadLayoutMetrics != usesIPadMetrics || bucketChanged else { return }
+        state.usesIPadLayoutMetrics = usesIPadMetrics
+        state.layoutWidth = width
+        refreshKeyboardHeight()
     }
 
     private var heightPhaseLog: String {

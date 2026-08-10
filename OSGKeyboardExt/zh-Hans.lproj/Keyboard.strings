@@ -115,22 +115,8 @@
 
 /* Keyboard (ext) */
 "keyboard.placeholder.idle" = "点按说话";
-"keyboard.placeholder.idleClipboard" = "点击说话，长按处理剪贴板";
-"keyboard.clipboard.recordingLeft" = "指令录制中";
-"keyboard.clipboard.recordingRight" = "点按结束处理";
 "keyboard.placeholder.preparing" = "准备中…";
 "keyboard.placeholder.preparingRecording" = "准备录音…";
-"keyboard.clipboard.reject.pasteDenied" = "需要允许粘贴才能处理剪贴板";
-"keyboard.clipboard.reject.empty" = "剪贴板里没有可处理的文字";
-"keyboard.clipboard.reject.phoneOrNumeric" = "看起来像号码，未开始处理";
-"keyboard.clipboard.reject.emojiOrSymbolOnly" = "没有可处理的文字内容";
-"keyboard.clipboard.reject.verificationCode" = "看起来像验证码，未开始处理";
-"keyboard.clipboard.reject.tooShort" = "内容太短，请复制更完整的文字";
-"keyboard.clipboard.reject.repetitiveSpam" = "内容无效，未开始处理";
-"keyboard.clipboard.reject.secureField" = "密码框中不能使用剪贴板指令";
-"keyboard.clipboard.reject.noFullAccess" = "需要开启完全访问才能处理剪贴板";
-"keyboard.clipboard.reject.prepareFailed" = "麦克风未能及时就绪，请再试一次";
-"keyboard.clipboard.hint.hostStarting" = "正在启动，准备好后将自动录音；点按可取消";
 "keyboard.placeholder.processing" = "处理中…";
 "keyboard.placeholder.error" = "润色失败";
 "keyboard.placeholder.localBadge" = "本地";
@@ -145,8 +131,14 @@
 "keyboard.deniedHint" = "打开 OSGKeyboard 设置,可授予麦克风 / 语音识别权限。";
 "keyboard.tapToTalkA11y" = "点按说话";
 "keyboard.undoA11y" = "撤销上次听写";
+"keyboard.redoA11y" = "重做";
+"keyboard.copyA11y" = "拷贝";
+"keyboard.cutA11y" = "剪切";
 "keyboard.cursorDrag.hint" = "按住并拖动以移动光标";
 "keyboard.cursorDrag.centerHint" = "拖动移动光标";
+"keyboard.nextKeyboardA11y" = "切换键盘";
+"keyboard.nextKeyboardA11yHint" = "轻点切换到下一个键盘；长按查看全部键盘。";
+"keyboard.typing.setupA11yHint" = "打开 OSGKeyboard 完成输入法初始化。";
 
 /* Flow session (keyboard) */
 "keyboard.flow.sessionInactive" = "语音会话未启动";
@@ -206,6 +198,8 @@
 "keyboard.translation.disable" = "关闭翻译";
 "keyboard.translation.a11y" = "翻译";
 "keyboard.translation.a11yHint" = "切换翻译开关或修改目标语言。";
+"keyboard.voice.cancel" = "取消本次语音输入";
+"keyboard.voice.cancelHint" = "放弃当前录音、识别和润色结果。";
 "keyboard.scenario.a11y" = "润色场景";
 "keyboard.scenario.a11yHint" = "选择润色风格或使用场景。";
 
@@ -241,3 +235,29 @@
 "keyboard.appContext.menu.chat"     = "聊天 — 简短随意、保留口语";
 "keyboard.appContext.menu.document" = "文档 — 长文、结构化";
 "keyboard.appContext.menu.unknown"  = "通用 — 中性口吻";
+
+/* 长按编辑上一条输入 */
+"keyboard.edit.hint.available" = "长按编辑上一条";
+"keyboard.edit.error.noTarget" = "没有可编辑的上一条输入";
+"keyboard.edit.error.llmUnavailable" = "请先在主 App 配置可用的 AI 服务";
+"keyboard.edit.error.startTimeout" = "麦克风启动超时，点击重试";
+"keyboard.edit.error.processing" = "编辑失败，请重试";
+"keyboard.edit.error.processingTimeout" = "编辑超时，请重试";
+"keyboard.edit.error.unchanged" = "内容没有变化，请换一种说法";
+"keyboard.edit.status.preparing" = "正在启动麦克风…";
+"keyboard.edit.status.listening" = "正在聆听编辑指令";
+"keyboard.edit.status.processing" = "正在编辑…";
+"keyboard.edit.status.review" = "左右滑动对比原文和结果";
+"keyboard.edit.status.applying" = "正在应用编辑…";
+"keyboard.edit.page.original" = "原文";
+"keyboard.edit.page.edited" = "编辑后";
+"keyboard.edit.helper.speak" = "说话编辑文字";
+"keyboard.edit.helper.finish" = "点击完成编辑";
+"keyboard.edit.helper.compare" = "左右滑动对比";
+"keyboard.edit.helper.apply" = "点击应用编辑";
+"keyboard.edit.helper.append" = "插入当前位置";
+"keyboard.edit.close" = "关闭编辑模式";
+"keyboard.edit.closeHint" = "放弃本次编辑并返回语音输入。";
+"keyboard.edit.apply" = "应用编辑";
+"keyboard.edit.append" = "插入当前位置";
+"keyboard.edit.stop" = "完成编辑指令";

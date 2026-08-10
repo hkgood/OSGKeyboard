@@ -8,18 +8,13 @@ import SwiftUI
 import OSGKeyboardShared
 
 enum TypingLayoutMetrics {
-    static let outerPaddingTop: CGFloat = 4
-    static let outerPaddingBottom: CGFloat = 4
-    static let topRegionHeight: CGFloat = KeyboardTopBarMetrics.height
-    static let keyRowHeight: CGFloat = 50
-    static let keyRowSpacing: CGFloat = 7
-    static let keyHorizontalSpacing: CGFloat = 6
-    static let bottomRowHeight: CGFloat = KeyboardChromeLayout.actionKeyHeight
-    static let verticalKeySpacing: CGFloat = 8
-    static let secondRowInset: CGFloat = 18
+    // Size decisions live in `TypingSurfaceMetrics` (Shared) so the UIKit
+    // height constraint and this SwiftUI grid cannot disagree.
+    static let outerPaddingTop: CGFloat = TypingSurfaceMetrics.outerPaddingTop
+    static let outerPaddingBottom: CGFloat = TypingSurfaceMetrics.outerPaddingBottom
+    static let topRegionHeight: CGFloat = TypingSurfaceMetrics.topRegionHeight
+    static let verticalKeySpacing: CGFloat = TypingSurfaceMetrics.verticalKeySpacing
     static let keyCornerRadius: CGFloat = KeyboardChromeLayout.actionKeyCornerRadius
-    /// Match the voice surface's shared 20 / 60 / 20 bottom-row geometry.
-    static let bottomActionSpacing: CGFloat = KeyboardChromeLayout.actionKeySpacing
     /// Shared top row + three 50 pt key rows + native spacing + bottom row.
     static let totalHeight: CGFloat = KeyboardChromeLayout.totalHeight
     /// Collapsed candidate strip: keep this small so ScrollView doesn't fight ▼.
@@ -29,6 +24,16 @@ enum TypingLayoutMetrics {
     static let expandChevronVisualSize: CGFloat = 34
     static let expandGridColumns = 5
     static let expandCellHeight: CGFloat = 42
+
+    // MARK: - iPad (regular size class) metrics
+
+    static func metrics(isIPad: Bool, width: CGFloat) -> TypingKeyLayoutBuilder.Metrics {
+        TypingSurfaceMetrics.metrics(isIPad: isIPad, width: width)
+    }
+
+    static func contentHeight(isIPad: Bool, width: CGFloat) -> CGFloat {
+        TypingSurfaceMetrics.contentHeight(isIPad: isIPad, width: width)
+    }
 }
 
 struct TypingRootView: View {
@@ -45,7 +50,9 @@ struct TypingRootView: View {
     /// Key currently under the finger (grid-level touch pad).
     @State private var highlightedKeyID: String?
 
-    static let totalHeight: CGFloat = TypingLayoutMetrics.totalHeight
+    static func totalHeight(isIPad: Bool = false, width: CGFloat = 0) -> CGFloat {
+        TypingLayoutMetrics.contentHeight(isIPad: isIPad, width: width)
+    }
 
     private var palette: ThemePalette {
         colorScheme == .dark ? Palette.dark : Palette.light
@@ -81,9 +88,16 @@ struct TypingRootView: View {
         .padding(.top, TypingLayoutMetrics.outerPaddingTop)
         .padding(.bottom, TypingLayoutMetrics.outerPaddingBottom)
         .padding(.horizontal, KeyboardChromeLayout.horizontalInset)
-        .frame(maxWidth: KeyboardChromeLayout.contentMaxWidth)
+        // No content-width cap: a key grid has to span the host width or the
+        // user's muscle memory for the system keyboard's absolute key
+        // positions is wrong on every key.
         .frame(maxWidth: .infinity)
-        .frame(height: Self.totalHeight)
+        .frame(
+            height: Self.totalHeight(
+                isIPad: state.usesIPadLayoutMetrics,
+                width: state.layoutWidth
+            )
+        )
         .background(Color.clear)
         .environment(\.themePalette, palette)
         // enterTypingMode is owned by KeyboardViewController.viewWillAppear
@@ -119,12 +133,17 @@ struct TypingRootView: View {
     private var idleTopBar: some View {
         HStack(spacing: Spacing.xs) {
             KeyboardBrandLogo(action: state.openSettings)
+            // Globe key now lives at the bottom-left of the keyboard (matching
+            // iOS system layout); see the typingKeySurface ForEach.
 
             if let err = typing.lastError {
-                Text(err)
-                    .font(.system(size: 11))
-                    .foregroundStyle(palette.danger)
-                    .lineLimit(1)
+                typingErrorLabel(err)
+            }
+
+            // iOS-style editing cluster (undo / redo / copy / cut) — iPad only,
+            // where the top bar has room to mirror the system shortcut row.
+            if state.usesIPadLayoutMetrics {
+                editingToolbar
             }
 
             Spacer(minLength: 0)
@@ -139,11 +158,43 @@ struct TypingRootView: View {
         .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
     }
 
+    /// Rime failures that only host-side deployment can fix become a tappable
+    /// jump into the app; everything else stays a plain read-only notice.
+    @ViewBuilder
+    private func typingErrorLabel(_ message: String) -> some View {
+        if typing.lastErrorNeedsHostDeployment {
+            Button(action: state.openInputMethodSetup) {
+                HStack(spacing: 2) {
+                    Text(message)
+                        .font(.system(size: 11))
+                        .lineLimit(1)
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 9, weight: .semibold))
+                }
+                .foregroundStyle(palette.danger)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(ExtL10n.text("keyboard.typing.setupA11yHint"))
+        } else {
+            Text(message)
+                .font(.system(size: 11))
+                .foregroundStyle(palette.danger)
+                .lineLimit(1)
+        }
+    }
+
     // MARK: - Candidates
 
     private var candidateBar: some View {
         // HStack (not overlay / safeAreaInset): ▼ never paints over candidate text.
+        // Globe key now lives at the bottom-left of the keyboard (matching
+        // iOS system layout); see the typingKeySurface ForEach.
         HStack(spacing: 0) {
+            if state.usesIPadLayoutMetrics {
+                editingToolbar
+                    .padding(.leading, KeyboardTopBarMetrics.nestedHorizontalInset)
+            }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Spacing.xs) {
                     if typing.composition.candidates.isEmpty {
@@ -227,6 +278,58 @@ struct TypingRootView: View {
         colorScheme == .dark ? Color(white: 0.30) : .white
     }
 
+    // MARK: - Editing toolbar (iPad)
+
+    /// iOS-style editing cluster: undo / redo / copy / cut. Mirrors the system
+    /// keyboard's shortcut row; surfaced only on iPad where the top bar fits.
+    @ViewBuilder
+    private var editingToolbar: some View {
+        HStack(spacing: 2) {
+            editingToolbarButton(
+                systemName: "arrow.uturn.backward",
+                label: ExtL10n.string("keyboard.undoA11y"),
+                enabled: state.undoAvailable
+            ) { state.undoLastInsertion() }
+            editingToolbarButton(
+                systemName: "arrow.uturn.forward",
+                label: ExtL10n.string("keyboard.redoA11y"),
+                enabled: state.redoAvailable
+            ) { state.redoLastInsertion() }
+            editingToolbarButton(
+                systemName: "doc.on.doc",
+                label: ExtL10n.string("keyboard.copyA11y"),
+                enabled: state.copyAvailable
+            ) { state.copySelection() }
+            editingToolbarButton(
+                systemName: "scissors",
+                label: ExtL10n.string("keyboard.cutA11y"),
+                enabled: state.cutAvailable
+            ) { state.cutSelection() }
+        }
+    }
+
+    private func editingToolbarButton(
+        systemName: String,
+        label: String,
+        enabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(enabled ? palette.textSecondary : palette.textTertiary)
+                .frame(width: 34, height: 34)
+                .background(enabled ? editingToolbarButtonFill : .clear, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityLabel(Text(label))
+    }
+
+    private var editingToolbarButtonFill: Color {
+        colorScheme == .dark ? Color(white: 0.30) : .white
+    }
+
     /// UIKit-recycled labels — no SwiftUI Button per candidate.
     private var expandedCandidatePanel: some View {
         CandidateExpandGridView(
@@ -292,20 +395,45 @@ struct TypingRootView: View {
                 )
 
                 ForEach(layout.keys) { key in
-                    visualTypingKey(key)
+                    if key.id == TypingKeyLayoutBuilder.BottomKeyID.globe.rawValue {
+                        // Globe key: SystemGlobeKey's UIButton handles its own
+                        // tap (advance) / long-press (system input-mode list),
+                        // so leave hit testing enabled here. The touch pad sits
+                        // underneath but the UIButton intercepts touches in
+                        // this frame, so hit testing against `layout.keys`
+                        // never fires for the globe slot.
+                        SystemGlobeKey(
+                            state: state,
+                            width: key.visualFrame.width,
+                            height: key.visualFrame.height
+                        )
                         .frame(width: key.visualFrame.width, height: key.visualFrame.height)
                         .position(
                             x: key.visualFrame.midX,
                             y: key.visualFrame.midY
                         )
-                        // Touches go to the UIKit pad; visuals stay for VoiceOver.
-                        .allowsHitTesting(false)
+                    } else {
+                        visualTypingKey(key)
+                            .frame(width: key.visualFrame.width, height: key.visualFrame.height)
+                            .position(
+                                x: key.visualFrame.midX,
+                                y: key.visualFrame.midY
+                            )
+                            // Touches go to the UIKit pad; visuals stay for VoiceOver.
+                            .allowsHitTesting(false)
+                    }
                 }
             }
         }
     }
 
     private func makeTypingKeyLayout(size: CGSize) -> TypingKeyLayout {
+        let isIPad = state.usesIPadLayoutMetrics
+        // Select metrics from the same width the controller used to size the
+        // keyboard. Using `size` here would compare the grid's own width to
+        // its height (always landscape) and could pick a different bucket than
+        // the height constraint, clipping the bottom row.
+        let metrics = TypingLayoutMetrics.metrics(isIPad: isIPad, width: state.layoutWidth)
         let pageLabel = typing.page == .letters ? "123" : "ABC"
         let spaceLabel = typing.language == .chinese ? "空格" : "space"
         let returnLabel: String = {
@@ -315,21 +443,26 @@ struct TypingRootView: View {
             }
         }()
 
+        // iPad spends its extra width on comma / period like the system
+        // keyboard, instead of stretching the space bar across it.
+        let punctuationKeys: TypingKeyLayoutBuilder.PunctuationKeys? = isIPad
+            ? (typing.language == .chinese
+                ? .init(comma: "，", period: "。")
+                : .init(comma: ",", period: "."))
+            : nil
+
         let layout = TypingKeyLayoutBuilder.build(
             size: size,
             letterRows: typing.keyRows,
             pageSwitchLabel: pageLabel,
             spaceLabel: spaceLabel,
             returnLabel: returnLabel,
-            metrics: TypingKeyLayoutBuilder.Metrics(
-                keyRowHeight: TypingLayoutMetrics.keyRowHeight,
-                keyRowSpacing: TypingLayoutMetrics.keyRowSpacing,
-                keyHorizontalSpacing: TypingLayoutMetrics.keyHorizontalSpacing,
-                secondRowInset: TypingLayoutMetrics.secondRowInset,
-                bottomRowHeight: TypingLayoutMetrics.bottomRowHeight,
-                bottomActionSpacing: TypingLayoutMetrics.bottomActionSpacing,
-                gridToBottomSpacing: TypingLayoutMetrics.keyRowSpacing
-            ),
+            metrics: metrics,
+            includeGlobeKey: state.showsSystemGlobeKey,
+            punctuationKeys: punctuationKeys,
+            // iPad top letter row carries the small number overlay (1–0),
+            // mirroring the iOS system keyboard. iPhone keeps the clean row.
+            showTopRowNumbers: isIPad,
             keyWeight: { label, index, rowIndex in
                 keyWeight(label: label, index: index, rowIndex: rowIndex)
             }
@@ -376,15 +509,26 @@ struct TypingRootView: View {
                     )
                     .foregroundStyle(keyTextColor)
             } else {
-                let isSpecial = ["123", "#+=", "ABC"].contains(key.label)
-                Text(key.label)
-                    .font(
-                        .system(
-                            size: isSpecial ? 15 : 22,
-                            weight: isSpecial ? .semibold : .regular
+                // Letter / character key. On iPad the top row carries a small
+                // grey number overlay (1–0), mirroring the iOS system keyboard;
+                // `displayNumber` is nil everywhere else, so the layout is a
+                // single centred letter there.
+                VStack(spacing: 1) {
+                    if let number = key.displayNumber {
+                        Text(number)
+                            .font(.system(size: 11, weight: .regular))
+                            .foregroundStyle(palette.textSecondary.opacity(0.7))
+                    }
+                    let isSpecial = ["123", "#+=", "ABC"].contains(key.label)
+                    Text(key.label)
+                        .font(
+                            .system(
+                                size: isSpecial ? 15 : 22,
+                                weight: isSpecial ? .semibold : .regular
+                            )
                         )
-                    )
-                    .foregroundStyle(keyTextColor)
+                        .foregroundStyle(keyTextColor)
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -452,6 +596,11 @@ struct TypingRootView: View {
             apply(typing.handleSpace())
         case TypingKeyLayoutBuilder.BottomKeyID.return.rawValue:
             apply(typing.handleReturn())
+        case TypingKeyLayoutBuilder.BottomKeyID.comma.rawValue,
+             TypingKeyLayoutBuilder.BottomKeyID.period.rawValue:
+            // Route through the engine so a pending composition commits first,
+            // exactly as punctuation typed from the symbols page does.
+            apply(typing.handleKey(key.label))
         default:
             switch key.behavior {
             case .commitOnRelease:

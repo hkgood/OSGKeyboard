@@ -52,10 +52,14 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         case abort
         /// Light warm-up: ASR locale/assets only — no mic capture.
         case prewarm
+        /// User has touched the mic; prime capture before tap/hold resolves.
+        case primeAudio
+        /// Touch ended without an utterance adopting the primed capture.
+        case cancelPrimeAudio
     }
 
-    /// Wire version that includes clipboard-command fields.
-    public static let currentProtocolVersion = 2
+    /// Wire version that includes edit-source and absolute deadline fields.
+    public static let currentProtocolVersion = 3
 
     public let protocolVersion: Int
     public let sessionId: UUID
@@ -65,12 +69,15 @@ public struct FlowCommand: Codable, Equatable, Sendable {
     public let localeId: String
     public let createdAt: TimeInterval
     public let fieldContext: FlowFieldContext?
-    /// Dictation (default) vs clipboard instruction mode. Absent on legacy v1 → dictation.
+    /// Dictation (default) vs explicit edit mode. Absent on legacy v1 → dictation.
     public let utteranceMode: FlowUtteranceMode?
-    /// Frozen clipboard material; present on clipboard-command `startRecording`.
-    public let clipboardSnapshot: String?
-    /// Prior successful command output for continuous rewrite rounds.
-    public let previousOutput: String?
+    /// Verified source for explicit last-input editing.
+    public let editSourceText: String?
+    public let sourceHistoryEntryID: UUID?
+    public let sourceHistoryEntryRevision: Int64?
+    /// Absolute wall-clock deadlines survive extension reconstruction.
+    public let startDeadlineAt: TimeInterval?
+    public let processingDeadlineAt: TimeInterval?
 
     public init(
         protocolVersion: Int = FlowCommand.currentProtocolVersion,
@@ -82,8 +89,11 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         createdAt: TimeInterval = Date().timeIntervalSince1970,
         fieldContext: FlowFieldContext? = nil,
         utteranceMode: FlowUtteranceMode? = nil,
-        clipboardSnapshot: String? = nil,
-        previousOutput: String? = nil
+        editSourceText: String? = nil,
+        sourceHistoryEntryID: UUID? = nil,
+        sourceHistoryEntryRevision: Int64? = nil,
+        startDeadlineAt: TimeInterval? = nil,
+        processingDeadlineAt: TimeInterval? = nil
     ) {
         self.protocolVersion = protocolVersion
         self.sessionId = sessionId
@@ -94,8 +104,11 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         self.createdAt = createdAt
         self.fieldContext = fieldContext
         self.utteranceMode = utteranceMode
-        self.clipboardSnapshot = clipboardSnapshot
-        self.previousOutput = previousOutput
+        self.editSourceText = editSourceText
+        self.sourceHistoryEntryID = sourceHistoryEntryID
+        self.sourceHistoryEntryRevision = sourceHistoryEntryRevision
+        self.startDeadlineAt = startDeadlineAt
+        self.processingDeadlineAt = processingDeadlineAt
     }
 
     public var resolvedUtteranceMode: FlowUtteranceMode {
@@ -129,6 +142,9 @@ public struct FlowResult: Codable, Equatable, Sendable {
     public let createdAt: TimeInterval
     /// Echo of the command mode so the extension can skip raw fallback.
     public let utteranceMode: FlowUtteranceMode?
+    /// History row created by normal dictation, or edited by edit mode.
+    public let historyEntryID: UUID?
+    public let historyEntryRevision: Int64?
 
     public init(
         protocolVersion: Int = FlowCommand.currentProtocolVersion,
@@ -144,7 +160,9 @@ public struct FlowResult: Codable, Equatable, Sendable {
         revision: Int64? = nil,
         fieldFingerprint: String? = nil,
         createdAt: TimeInterval = Date().timeIntervalSince1970,
-        utteranceMode: FlowUtteranceMode? = nil
+        utteranceMode: FlowUtteranceMode? = nil,
+        historyEntryID: UUID? = nil,
+        historyEntryRevision: Int64? = nil
     ) {
         self.protocolVersion = protocolVersion
         self.sessionId = sessionId
@@ -160,25 +178,34 @@ public struct FlowResult: Codable, Equatable, Sendable {
         self.fieldFingerprint = fieldFingerprint
         self.createdAt = createdAt
         self.utteranceMode = utteranceMode
+        self.historyEntryID = historyEntryID
+        self.historyEntryRevision = historyEntryRevision
     }
 
     public var resolvedUtteranceMode: FlowUtteranceMode {
         utteranceMode ?? .dictation
     }
 
-    /// Clipboard-command deliveries must never insert raw ASR into the field.
+    /// Instruction deliveries must never insert raw ASR into the field.
     public var allowsRawFallback: Bool {
-        resolvedUtteranceMode != .clipboardCommand
+        resolvedUtteranceMode == .dictation
     }
 }
 
 public struct FlowAck: Codable, Equatable, Sendable {
+    public enum DeliveryOutcome: String, Codable, Sendable {
+        case replaced
+        case appended
+        case rejected
+    }
+
     public let protocolVersion: Int
     public let sessionId: UUID
     public let utteranceId: UUID
     public let commandSeq: Int64
     public let hostGeneration: String?
     public let revision: Int64?
+    public let deliveryOutcome: DeliveryOutcome?
     public let consumedAt: TimeInterval
 
     public init(
@@ -188,6 +215,7 @@ public struct FlowAck: Codable, Equatable, Sendable {
         commandSeq: Int64,
         hostGeneration: String? = nil,
         revision: Int64? = nil,
+        deliveryOutcome: DeliveryOutcome? = nil,
         consumedAt: TimeInterval = Date().timeIntervalSince1970
     ) {
         self.protocolVersion = protocolVersion
@@ -196,7 +224,37 @@ public struct FlowAck: Codable, Equatable, Sendable {
         self.commandSeq = commandSeq
         self.hostGeneration = hostGeneration
         self.revision = revision
+        self.deliveryOutcome = deliveryOutcome
         self.consumedAt = consumedAt
+    }
+}
+
+public struct FlowStartTransaction: Codable, Equatable, Sendable {
+    public enum Phase: String, Codable, Sendable {
+        case issued
+        case starting
+        case recording
+        case terminal
+    }
+
+    public let sessionID: UUID
+    public let utteranceID: UUID
+    public let deadlineAt: TimeInterval
+    public let phase: Phase
+    public let updatedAt: TimeInterval
+
+    public init(
+        sessionID: UUID,
+        utteranceID: UUID,
+        deadlineAt: TimeInterval,
+        phase: Phase,
+        updatedAt: TimeInterval = Date().timeIntervalSince1970
+    ) {
+        self.sessionID = sessionID
+        self.utteranceID = utteranceID
+        self.deadlineAt = deadlineAt
+        self.phase = phase
+        self.updatedAt = updatedAt
     }
 }
 
@@ -353,6 +411,33 @@ public enum FlowSessionBridge {
             .sorted { $0.commandSeq < $1.commandSeq }
     }
 
+    public static func writeStartTransaction(
+        _ transaction: FlowStartTransaction,
+        defaults: UserDefaults? = nil
+    ) {
+        let store = resolvedDefaults(defaults)
+        if let data = encode(transaction) {
+            store.set(data, forKey: FlowSessionKeys.flowStartTransactionPayload)
+        }
+        flush(store)
+    }
+
+    public static func startTransaction(
+        defaults: UserDefaults? = nil
+    ) -> FlowStartTransaction? {
+        let store = resolvedDefaults(defaults)
+        return decode(
+            FlowStartTransaction.self,
+            from: store.data(forKey: FlowSessionKeys.flowStartTransactionPayload)
+        )
+    }
+
+    public static func clearStartTransaction(defaults: UserDefaults? = nil) {
+        let store = resolvedDefaults(defaults)
+        store.removeObject(forKey: FlowSessionKeys.flowStartTransactionPayload)
+        flush(store)
+    }
+
     public static func writeResult(_ result: FlowResult, defaults: UserDefaults? = nil) {
         let store = resolvedDefaults(defaults)
         if let existing = decode(
@@ -362,6 +447,16 @@ public enum FlowSessionBridge {
            existing.utteranceId == result.utteranceId,
            isTerminal(existing.status),
            !isTerminal(result.status) {
+            return
+        }
+        if let existing = decode(
+            FlowResult.self,
+            from: store.data(forKey: FlowSessionKeys.flowResultPayload)
+        ), existing.sessionId == result.sessionId,
+           existing.utteranceId == result.utteranceId,
+           let existingRevision = existing.revision,
+           let incomingRevision = result.revision,
+           incomingRevision <= existingRevision {
             return
         }
         if let data = encode(result) {
@@ -479,6 +574,7 @@ public enum FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.flowCommandJournalPayload)
         store.removeObject(forKey: FlowSessionKeys.flowResultPayload)
         store.removeObject(forKey: FlowSessionKeys.flowAckPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowStartTransactionPayload)
         store.removeObject(forKey: FlowSessionKeys.pendingKeyboardUtteranceId)
         if let sessionId {
             let snapshot = FlowReadySnapshot(
@@ -510,6 +606,7 @@ public enum FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.flowCommandJournalPayload)
         store.removeObject(forKey: FlowSessionKeys.flowResultPayload)
         store.removeObject(forKey: FlowSessionKeys.flowAckPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowStartTransactionPayload)
         store.removeObject(forKey: FlowSessionKeys.pendingKeyboardUtteranceId)
         store.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
         clearHostReady(defaults: store, notify: false)
@@ -629,6 +726,7 @@ public enum FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.flowCommandJournalPayload)
         store.removeObject(forKey: FlowSessionKeys.flowResultPayload)
         store.removeObject(forKey: FlowSessionKeys.flowAckPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowStartTransactionPayload)
         store.removeObject(forKey: FlowSessionKeys.pendingKeyboardUtteranceId)
         store.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
         clearTranscription(defaults: store)
@@ -928,6 +1026,7 @@ public enum FlowSessionBridge {
         store.removeObject(forKey: FlowSessionKeys.flowCommandJournalPayload)
         store.removeObject(forKey: FlowSessionKeys.flowResultPayload)
         store.removeObject(forKey: FlowSessionKeys.flowAckPayload)
+        store.removeObject(forKey: FlowSessionKeys.flowStartTransactionPayload)
         store.removeObject(forKey: FlowSessionKeys.pendingKeyboardUtteranceId)
         store.removeObject(forKey: FlowSessionKeys.flowReadyPayload)
         clearTranscription(defaults: store)

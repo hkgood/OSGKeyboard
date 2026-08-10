@@ -7,21 +7,21 @@ import XCTest
 final class RecordButtonGesturePolicyTests: XCTestCase {
     // MARK: - Hold
 
-    func testHoldOnIdleStartsClipboardCommandAndOwnsThePress() {
+    func testHoldOnIdleStartsEditAndOwnsThePress() {
         let action = RecordButtonGesturePolicy.holdAction(
             phase: .idleReady,
             isEnabled: true,
-            supportsClipboardLongPress: true
+            supportsEditLongPress: true
         )
-        XCTAssertEqual(action, .beginClipboardCommand)
+        XCTAssertEqual(action, .beginEditLastInput)
         XCTAssertTrue(RecordButtonGesturePolicy.consumesPress(action))
     }
 
-    func testHoldWithoutClipboardMaterialLeavesThePressToTheTap() {
+    func testHoldWithoutEditActionLeavesThePressToTheTap() {
         let action = RecordButtonGesturePolicy.holdAction(
             phase: .idleReady,
             isEnabled: true,
-            supportsClipboardLongPress: false
+            supportsEditLongPress: false
         )
         XCTAssertEqual(action, .none)
         XCTAssertFalse(RecordButtonGesturePolicy.consumesPress(action))
@@ -36,19 +36,19 @@ final class RecordButtonGesturePolicyTests: XCTestCase {
         let action = RecordButtonGesturePolicy.holdAction(
             phase: .recording,
             isEnabled: true,
-            supportsClipboardLongPress: true
+            supportsEditLongPress: true
         )
         XCTAssertEqual(action, .toggle)
         XCTAssertTrue(RecordButtonGesturePolicy.consumesPress(action))
     }
 
-    /// The press that opened a clipboard round is still down when the phase
+    /// The press that opened an edit round is still down when the phase
     /// reaches `.preparing`; a hold there must not end the round it started.
     func testHoldWhilePreparingNeverActsOnItsOwn() {
         let action = RecordButtonGesturePolicy.holdAction(
             phase: .preparing,
             isEnabled: true,
-            supportsClipboardLongPress: true
+            supportsEditLongPress: true
         )
         XCTAssertEqual(action, .none)
         XCTAssertFalse(RecordButtonGesturePolicy.consumesPress(action))
@@ -59,7 +59,7 @@ final class RecordButtonGesturePolicyTests: XCTestCase {
             RecordButtonGesturePolicy.holdAction(
                 phase: .processing,
                 isEnabled: true,
-                supportsClipboardLongPress: true
+                supportsEditLongPress: true
             ),
             .none
         )
@@ -91,15 +91,15 @@ final class RecordButtonGesturePolicyTests: XCTestCase {
 
     // MARK: - One press, one action
 
-    /// Full clipboard round: hold arms, phase advances under the finger, and the
+    /// Full edit round: hold arms, phase advances under the finger, and the
     /// release must stay swallowed no matter which phase it lands in.
     func testSinglePressProducesExactlyOneActionAcrossPhaseFlips() {
         let hold = RecordButtonGesturePolicy.holdAction(
             phase: .idleReady,
             isEnabled: true,
-            supportsClipboardLongPress: true
+            supportsEditLongPress: true
         )
-        XCTAssertEqual(hold, .beginClipboardCommand)
+        XCTAssertEqual(hold, .beginEditLastInput)
 
         var armed = RecordButtonGesturePolicy.consumesPress(hold)
         XCTAssertTrue(armed)

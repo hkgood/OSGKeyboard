@@ -28,6 +28,26 @@ struct OSGKeyboardApp: App {
 
     var body: some Scene {
         WindowGroup {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--edit-demo") {
+                EditDemoView()
+            } else if ProcessInfo.processInfo.arguments.contains("--edit-pager-ui-test") {
+                ThemedRoot {
+                    EditPagerUITestHarness()
+                }
+                .preferredColorScheme(appearance.colorScheme)
+            } else if AppGroup.isAvailable {
+                ThemedRoot {
+                    MainAppRoot()
+                }
+                .preferredColorScheme(appearance.colorScheme)
+            } else {
+                ThemedRoot {
+                    AppGroupErrorView()
+                }
+                .preferredColorScheme(appearance.colorScheme)
+            }
+            #else
             if AppGroup.isAvailable {
                 ThemedRoot {
                     MainAppRoot()
@@ -39,6 +59,7 @@ struct OSGKeyboardApp: App {
                 }
                 .preferredColorScheme(appearance.colorScheme)
             }
+            #endif
         }
     }
 }

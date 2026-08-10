@@ -70,7 +70,10 @@ struct MainSplitView: View {
         .padding(.leading, WideLayoutMetrics.sidebarContentInset)
         .padding(.trailing, WideLayoutMetrics.sidebarInset)
         .padding(.top, Spacing.lg)
-        .padding(.bottom, Spacing.md)
+        // Roughly double the gap between the brand header and the first
+        // sidebar row on iPad so the logo gets visual breathing room above
+        // the menu list (was `Spacing.md`, now `Spacing.xxxl`).
+        .padding(.bottom, Spacing.xxxl)
     }
 
     private var devicesFooter: some View {
@@ -108,14 +111,19 @@ private struct WideSidebarRow: View {
     var body: some View {
         Button(action: action) {
             Label(tab.sidebarTitle, systemImage: tab.sidebarSystemImage)
-                .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
+                .labelStyle(SidebarIconColumnLabelStyle())
+                // Slightly larger label + taller vertical padding so each
+                // sidebar row hits the Apple HIG 44pt touch target on iPad
+                // (was size 13 / vertical 7 → ~32pt row; now size 15 /
+                // vertical 12 → ~44pt row).
+                .font(.system(size: 15, weight: isSelected ? .semibold : .regular))
                 .foregroundStyle(isSelected ? palette.accent : palette.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, 7)
+                .padding(.vertical, 12)
                 .background(
                     rowBackground,
-                    in: RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
                 )
                 .contentShape(Rectangle())
         }
@@ -126,6 +134,25 @@ private struct WideSidebarRow: View {
 
     private var rowBackground: Color {
         isSelected ? palette.accentMuted : .clear
+    }
+}
+
+/// Reserves a uniform icon column so every sidebar title starts at the same x.
+///
+/// `DefaultLabelStyle` sizes the icon to each SF Symbol's intrinsic width, and
+/// this sidebar's symbols range from ~13pt (`character.book.closed`) to ~17.5pt
+/// (`house`) — enough to push titles apart by ~5pt. `List` reserves that column
+/// automatically; this hand-rolled `VStack` sidebar has to do it itself.
+private struct SidebarIconColumnLabelStyle: LabelStyle {
+    /// Wider than the widest symbol in `AppTab.sidebarSystemImage`.
+    private static let iconColumnWidth: CGFloat = 22
+
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: Spacing.xs) {
+            configuration.icon
+                .frame(width: Self.iconColumnWidth)
+            configuration.title
+        }
     }
 }
 

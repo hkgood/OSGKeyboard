@@ -15,6 +15,28 @@ final class KeyboardSurfaceStateTests: XCTestCase {
         XCTAssertFalse(state.canEnterTypingSurface)
     }
 
+    func testNormalVoicePipelineCanBeCancelledUntilItReturnsIdle() {
+        let state = KeyboardState()
+        state.phase = .requestingPermissions
+        XCTAssertTrue(state.canCancelVoiceInput)
+        state.phase = .recording
+        XCTAssertTrue(state.canCancelVoiceInput)
+        state.phase = .processing
+        XCTAssertTrue(state.canCancelVoiceInput)
+        state.phase = .idle
+        XCTAssertFalse(state.canCancelVoiceInput)
+
+        let reference = EditableInputReference(
+            displayText: "原文",
+            insertedText: "原文",
+            postInsertionFingerprint: nil,
+            extensionInstanceID: UUID()
+        )
+        state.editSession = .listening(EditSessionSource(reference: reference))
+        state.phase = .recording
+        XCTAssertFalse(state.canCancelVoiceInput)
+    }
+
     func testStandardLayoutHasQwertyTopRow() {
         let layout = StandardTypingLayout()
         let rows = layout.rows(for: .letters, language: .english, shiftActive: false)
@@ -78,14 +100,230 @@ final class KeyboardSurfaceStateTests: XCTestCase {
         XCTAssertEqual(KeyboardChromeLayout.actionKeyHeight, 50)
         XCTAssertEqual(KeyboardChromeLayout.actionKeyCornerRadius, 10)
         XCTAssertEqual(KeyboardChromeLayout.actionKeySpacing, 8)
-        XCTAssertEqual(KeyboardChromeLayout.sideActionKeyFraction, 0.2)
-        XCTAssertEqual(KeyboardChromeLayout.centerActionKeyFraction, 0.6)
+        // Globe key now sits at the far-left of every bottom action row, so the
+        // four-slot layout splits 12 / 18 / 50 / 20 of the residual width.
+        XCTAssertEqual(KeyboardChromeLayout.globeActionKeyFraction, 0.12)
+        XCTAssertEqual(KeyboardChromeLayout.sideActionKeyFraction, 0.18)
+        XCTAssertEqual(KeyboardChromeLayout.centerActionKeyFraction, 0.50)
+        XCTAssertEqual(KeyboardChromeLayout.side2ActionKeyFraction, 0.20)
         XCTAssertEqual(KeyboardChromeLayout.horizontalInset, 8)
-        XCTAssertEqual(KeyboardChromeLayout.contentMaxWidth, 700)
+        // Voice-surface only. The typing grid is uncapped so it can match the
+        // system keyboard's absolute key positions on iPad.
+        XCTAssertEqual(KeyboardChromeLayout.voiceContentMaxWidth, 700)
 
         let widths = KeyboardChromeLayout.actionKeyWidths(availableWidth: 374)
-        XCTAssertEqual(widths.side, 71.6, accuracy: 0.001)
-        XCTAssertEqual(widths.center, 214.8, accuracy: 0.001)
+        // availableWidth 374 − 3 × spacing 8 = 350 of key width
+        XCTAssertEqual(widths.globe, 42, accuracy: 0.001)
+        XCTAssertEqual(widths.side, 63, accuracy: 0.001)
+        XCTAssertEqual(widths.center, 175, accuracy: 0.001)
+        XCTAssertEqual(widths.side2, 70, accuracy: 0.001)
+
+        let phoneWidths = KeyboardChromeLayout.actionKeyWidthsWithoutGlobe(
+            availableWidth: 374
+        )
+        // 374 − 2 × spacing 8 = 358pt, redistributed across the three
+        // remaining slots without changing their relative proportions.
+        XCTAssertEqual(phoneWidths.side, 73.227, accuracy: 0.001)
+        XCTAssertEqual(phoneWidths.center, 203.409, accuracy: 0.001)
+        XCTAssertEqual(phoneWidths.side2, 81.364, accuracy: 0.001)
+
+        let iPadWidths = KeyboardChromeLayout.iPadVoiceActionKeyWidths(
+            availableWidth: 1024
+        )
+        // 1024 − 3 × 8 = 1000pt: keep the globe compact and give return 40%.
+        XCTAssertEqual(iPadWidths.globe, 100, accuracy: 0.001)
+        XCTAssertEqual(iPadWidths.side, 240, accuracy: 0.001)
+        XCTAssertEqual(iPadWidths.center, 400, accuracy: 0.001)
+        XCTAssertEqual(iPadWidths.side2, 260, accuracy: 0.001)
+    }
+
+    func testIPhoneTypingBottomRowOmitsCustomGlobeAndFillsWidth() {
+        let layout = TypingKeyLayoutBuilder.build(
+            size: CGSize(width: 374, height: 281),
+            letterRows: [
+                ["q", "w"],
+                ["a", "s"],
+                ["z", "x"]
+            ],
+            pageSwitchLabel: "123",
+            spaceLabel: "空格",
+            returnLabel: "return",
+            includeGlobeKey: false,
+            keyWeight: { _, _, _ in 1 }
+        )
+
+        XCTAssertNil(layout.key(id: TypingKeyLayoutBuilder.BottomKeyID.globe.rawValue))
+        let slots = [
+            TypingKeyLayoutBuilder.BottomKeyID.pageSwitch.rawValue,
+            TypingKeyLayoutBuilder.BottomKeyID.space.rawValue,
+            TypingKeyLayoutBuilder.BottomKeyID.return.rawValue
+        ]
+        let used = slots.compactMap { layout.key(id: $0)?.visualFrame.width }.reduce(0, +)
+        XCTAssertEqual(
+            used + KeyboardChromeLayout.actionKeySpacing * 2,
+            374,
+            accuracy: 0.001
+        )
+    }
+
+    func testIPadMetricsRequirePadAndRegularWidth() {
+        XCTAssertTrue(
+            KeyboardChromeLayout.usesIPadMetrics(
+                isPad: true,
+                hasRegularWidth: true
+            )
+        )
+        XCTAssertFalse(
+            KeyboardChromeLayout.usesIPadMetrics(
+                isPad: true,
+                hasRegularWidth: false
+            ),
+            "Compact iPad multitasking must use the compact layout"
+        )
+        XCTAssertFalse(
+            KeyboardChromeLayout.usesIPadMetrics(
+                isPad: false,
+                hasRegularWidth: true
+            ),
+            "Wide iPhones must never opt into iPad metrics"
+        )
+    }
+
+    func testRimeDeploymentRejectsAppExtensionProcess() {
+        XCTAssertFalse(
+            RimeResourceInstaller.canDeploy(
+                bundleURL: URL(fileURLWithPath: "/tmp/OSGKeyboardExt.appex")
+            )
+        )
+        XCTAssertTrue(
+            RimeResourceInstaller.canDeploy(
+                bundleURL: URL(fileURLWithPath: "/tmp/OSGKeyboard.app")
+            )
+        )
+    }
+
+    func testWideIPadMetricsTrackWidthNotOrientation() {
+        // iPad portrait widths (744 mini … 1024 on 13") stay narrow.
+        XCTAssertFalse(KeyboardChromeLayout.usesWideIPadMetrics(isIPad: true, width: 834))
+        XCTAssertFalse(KeyboardChromeLayout.usesWideIPadMetrics(isIPad: true, width: 1024))
+        // iPad landscape widths (1133 mini … 1366 on 13") go wide.
+        XCTAssertTrue(KeyboardChromeLayout.usesWideIPadMetrics(isIPad: true, width: 1133))
+        XCTAssertTrue(KeyboardChromeLayout.usesWideIPadMetrics(isIPad: true, width: 1366))
+        // A wide iPhone must never reach iPad metrics, however wide it gets.
+        XCTAssertFalse(KeyboardChromeLayout.usesWideIPadMetrics(isIPad: false, width: 1366))
+    }
+
+    func testTypingHeightGrowsWithAvailableWidth() {
+        let phone = TypingSurfaceMetrics.contentHeight(isIPad: false, width: 393)
+        let portrait = TypingSurfaceMetrics.contentHeight(isIPad: true, width: 834)
+        let landscape = TypingSurfaceMetrics.contentHeight(isIPad: true, width: 1194)
+
+        XCTAssertEqual(phone, KeyboardChromeLayout.totalHeight)
+        XCTAssertGreaterThan(portrait, phone)
+        XCTAssertGreaterThan(
+            landscape,
+            portrait,
+            "A full-width landscape grid needs taller rows or keys turn flat"
+        )
+    }
+
+    func testSecondRowInsetKeepsKeysAsWideAsTheFirstRow() {
+        // 10 keys on row 0, 9 on row 1, all weight 1 — the classic QWERTY/ASDF
+        // relationship. Row 1 should be inset by exactly half a key pitch.
+        let layout = TypingKeyLayoutBuilder.build(
+            size: CGSize(width: 1194, height: 400),
+            letterRows: [
+                ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+                ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+                ["Z", "X", "C", "V", "B", "N", "M"]
+            ],
+            pageSwitchLabel: "123",
+            spaceLabel: "space",
+            returnLabel: "return",
+            metrics: TypingKeyLayoutBuilder.Metrics(derivesSecondRowInsetFromKeyWidth: true),
+            keyWeight: { _, _, _ in 1 }
+        )
+
+        let q = layout.key(id: "grid.0.0")!
+        let a = layout.key(id: "grid.1.0")!
+        XCTAssertEqual(
+            a.visualFrame.width,
+            q.visualFrame.width,
+            accuracy: 0.001,
+            "Second-row keys must match first-row key width at any total width"
+        )
+        // Row 1 is centred: its inset equals half of one key plus one gap.
+        let expectedInset = (q.visualFrame.width + layout.horizontalGap) / 2
+        XCTAssertEqual(a.visualFrame.minX, expectedInset, accuracy: 0.001)
+    }
+
+    func testIPadBottomRowAddsPunctuationAndKeepsSpaceUsable() {
+        let rows = [
+            ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+            ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+            ["⇧", "Z", "X", "C", "V", "B", "N", "M", "⌫"]
+        ]
+        func bottomRow(punctuation: TypingKeyLayoutBuilder.PunctuationKeys?) -> TypingKeyLayout {
+            TypingKeyLayoutBuilder.build(
+                size: CGSize(width: 1178, height: 400),
+                letterRows: rows,
+                pageSwitchLabel: "123",
+                spaceLabel: "space",
+                returnLabel: "return",
+                metrics: TypingKeyLayoutBuilder.Metrics(derivesSecondRowInsetFromKeyWidth: true),
+                punctuationKeys: punctuation,
+                keyWeight: { _, _, _ in 1 }
+            )
+        }
+
+        let phoneStyle = bottomRow(punctuation: nil)
+        let iPadStyle = bottomRow(punctuation: .init(comma: "，", period: "。"))
+
+        // Without punctuation the 50% centre fraction is a runway.
+        let wideSpace = phoneStyle.key(id: "bottom.space")!.visualFrame.width
+        XCTAssertGreaterThan(wideSpace, 550)
+
+        let space = iPadStyle.key(id: "bottom.space")!.visualFrame.width
+        XCTAssertLessThan(space, wideSpace)
+        XCTAssertEqual(space, 432, accuracy: 1, "Space should land near the system's ~430 pt")
+
+        XCTAssertEqual(iPadStyle.key(id: "bottom.comma")?.label, "，")
+        XCTAssertEqual(iPadStyle.key(id: "bottom.period")?.label, "。")
+        XCTAssertNil(phoneStyle.key(id: "bottom.comma"))
+
+        // The row must still consume exactly the available width.
+        let slots = ["bottom.globe", "bottom.page", "bottom.comma",
+                     "bottom.space", "bottom.period", "bottom.return"]
+        let used = slots.compactMap { iPadStyle.key(id: $0)?.visualFrame.width }.reduce(0, +)
+        let gaps = KeyboardChromeLayout.actionKeySpacing * 5
+        XCTAssertEqual(used + gaps, 1178, accuracy: 0.5)
+    }
+
+    func testOnlyHostDeployableRimeErrorsOfferTheSetupJump() {
+        // These are fixed by deploying resources in the host app, so the
+        // keyboard should surface a tappable jump.
+        XCTAssertTrue(RimeResourceError.resourcesNotInstalled.isResolvedByHostDeployment)
+        XCTAssertTrue(RimeResourceError.deploymentFailed.isResolvedByHostDeployment)
+        XCTAssertTrue(
+            RimeResourceError.bundledResourceMissing("osg_pinyin.dict.yaml")
+                .isResolvedByHostDeployment
+        )
+        // These resolve on their own; sending the user to the app does nothing.
+        XCTAssertFalse(RimeResourceError.appGroupUnavailable.isResolvedByHostDeployment)
+        XCTAssertFalse(RimeResourceError.lockUnavailable.isResolvedByHostDeployment)
+    }
+
+    func testResourceRetryIsSkippedWhenNoErrorIsPending() {
+        let typing = TypingSessionController()
+        XCTAssertNil(typing.lastError)
+        XCTAssertFalse(typing.lastErrorNeedsHostDeployment)
+
+        // No prior failure — a config-change notification must not kick off a
+        // prepare, otherwise every host settings write would wake the engine.
+        typing.retryPrepareAfterResourceDeployment()
+
+        XCTAssertNil(typing.lastError)
+        XCTAssertFalse(typing.engineReady)
     }
 
     func testSharedCapsuleCanSelectSpecificTypingLanguage() {

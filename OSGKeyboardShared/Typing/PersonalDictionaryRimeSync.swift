@@ -17,11 +17,16 @@ public enum PersonalDictionaryRimeSync {
     /// Safe from any executor — work is hoppped onto the main actor.
     public nonisolated static func scheduleAfterDictionaryChange() {
         Task { @MainActor in
+            // `AppGroupStore` is shared with the keyboard extension, so iOS
+            // compilation alone cannot identify the host. Never schedule
+            // librime deployment from an `.appex` process.
+            guard RimeResourceInstaller.canDeployInCurrentProcess else { return }
             scheduleOnMainActor()
         }
     }
 
     public static func deployNow() async {
+        guard RimeResourceInstaller.canDeployInCurrentProcess else { return }
         pending?.cancel()
         pending = nil
         await deploy(retryOnMemoryPressure: false)
@@ -51,7 +56,6 @@ public enum PersonalDictionaryRimeSync {
         }
 
         FlowSessionBridge.setHostHeavy(true)
-        defer { FlowSessionBridge.setHostHeavy(false) }
 
         let typingConfig = TypingInputConfiguration.shared.snapshot
         let dictionary = AppGroupStore().personalDictionary
@@ -61,8 +65,14 @@ public enum PersonalDictionaryRimeSync {
                 personalDictionary: dictionary,
                 force: false
             )
+            // Notify only after releasing the host-heavy gate. Otherwise the
+            // keyboard receives the notification, retries immediately, sees
+            // the host as busy, and has no later event to trigger recovery.
+            FlowSessionBridge.setHostHeavy(false)
+            AppGroupConfigDarwin.postConfigChanged()
             OSGDiag.log("rime.personalDictionary deploy done", category: "boot")
         } catch {
+            FlowSessionBridge.setHostHeavy(false)
             OSGDiag.log(
                 "rime.personalDictionary deploy failed error=\(error.localizedDescription)",
                 category: "boot"

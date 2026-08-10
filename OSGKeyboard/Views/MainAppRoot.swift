@@ -17,17 +17,11 @@ struct MainAppRoot: View {
     @ObservedObject private var config = ProviderConfig.shared
     @ObservedObject private var releaseNotes = ReleaseNotesController.shared
     @StateObject private var flowManager = FlowSessionManager()
-    @State private var postOnboardingWarmupTask: Task<Void, Never>?
+    @State private var clmWarmupTask: Task<Void, Never>?
 
     var body: some View {
         Group {
-            if config.hasCompletedOnboarding {
-                MainTabView()
-                    .id("main")
-            } else {
-                OnboardingView(config: config)
-                    .id("onboarding")
-            }
+            mainContent
         }
         .environment(\.locale, config.uiLanguage.swiftUILocale)
         .environmentObject(flowManager)
@@ -71,10 +65,14 @@ struct MainAppRoot: View {
             // Heavy work (Flow / CLM / Rime) only after onboarding. Doing it
             // earlier jetsams the host (~150 MB+) and the keyboard dies with it.
             if config.hasCompletedOnboarding {
+                // Rime deployment is host-only and idempotent. Run it
+                // immediately when missing so returning users never have to
+                // wait for an opportunistic background warmup.
+                RimeDeploymentController.shared.deployNow(reason: "MainAppRoot.onAppear")
                 // Automatically arm the low-profile PiP on every host open.
                 // Capture/ASR remain lazy and start only on an actual mic press.
                 flowManager.activateOnForeground(reason: "MainAppRoot.onAppear")
-                schedulePostOnboardingWarmup(reason: "MainAppRoot.onAppear")
+                scheduleCLMWarmup(reason: "MainAppRoot.onAppear")
                 releaseNotes.presentIfNeeded(onboardingCompleted: true)
             } else {
                 OSGDiag.log(
@@ -89,22 +87,28 @@ struct MainAppRoot: View {
         .onChange(of: config.hasCompletedOnboarding) { _, done in
             if done {
                 flowManager.activateOnForeground(reason: "onboardingCompleted")
-                schedulePostOnboardingWarmup(reason: "onboardingCompleted")
+                // Deploy now rather than via warmup: the user just finished
+                // setup, is still in the app, and has not started using the
+                // keyboard yet — so there is nothing to race for memory. This
+                // also covers users who skipped the keyboard page entirely.
+                RimeDeploymentController.shared.deployNow(reason: "onboardingCompleted")
+                scheduleCLMWarmup(reason: "onboardingCompleted")
                 releaseNotes.presentIfNeeded(onboardingCompleted: true)
             }
         }
         .onChange(of: scenePhase) { _, phase in
             flowManager.handleScenePhase(phase)
             guard phase == .active else {
-                postOnboardingWarmupTask?.cancel()
-                postOnboardingWarmupTask = nil
+                clmWarmupTask?.cancel()
+                clmWarmupTask = nil
                 FlowSessionBridge.setHostHeavy(false)
                 return
             }
             if config.hasCompletedOnboarding {
+                RimeDeploymentController.shared.deployNow(reason: "scenePhase.active")
                 flowManager.activateOnForeground(reason: "scenePhase.active")
-                // Retry deferred Rime/CLM after a jetsam-prone launch.
-                schedulePostOnboardingWarmup(reason: "scenePhase.active.retry")
+                // Retry deferred CLM after a jetsam-prone launch.
+                scheduleCLMWarmup(reason: "scenePhase.active.retry")
                 releaseNotes.presentIfNeeded(onboardingCompleted: true)
             }
             Task {
@@ -113,52 +117,49 @@ struct MainAppRoot: View {
         }
     }
 
-    /// Serial host warmup: Rime deploy → CLM. Never parallel with ASR.
+    @ViewBuilder
+    private var mainContent: some View {
+        if config.hasCompletedOnboarding {
+            MainTabView()
+                .id("main")
+        } else {
+            OnboardingView(config: config)
+                .id("onboarding")
+        }
+    }
+
+    /// Delayed host CLM warmup. Never parallel with ASR.
     /// ASR warms on first mic press (`FlowSessionManager.beginUtterance`).
     ///
-    /// Intentionally delayed: running Rime/CLM on `onAppear` kept the host at
-    /// ~175 MB while the user switched to the keyboard, and the extension died
-    /// before `KVC.init` (no dyld breadcrumb).
-    private func schedulePostOnboardingWarmup(reason: String) {
+    /// Intentionally delayed: warming CLM on `onAppear` kept the host at
+    /// ~175 MB while the user switched to the keyboard. Rime is excluded from
+    /// this opportunistic path because missing typing resources block users.
+    private func scheduleCLMWarmup(reason: String) {
         OSGDiag.log(
-            "postOnboardingWarmup scheduled reason=\(reason) delay=45s \(OSGDiag.memoryTag())",
+            "clmWarmup scheduled reason=\(reason) delay=45s \(OSGDiag.memoryTag())",
             category: "flow"
         )
-        postOnboardingWarmupTask?.cancel()
-        postOnboardingWarmupTask = Task { @MainActor in
+        clmWarmupTask?.cancel()
+        clmWarmupTask = Task { @MainActor in
             // Let the user leave the host / cold-start the keyboard first.
             try? await Task.sleep(nanoseconds: 45_000_000_000)
             guard !Task.isCancelled else { return }
             guard scenePhase == .active else {
                 OSGDiag.log(
-                    "postOnboardingWarmup skip reason=notActive \(OSGDiag.memoryTag())",
+                    "clmWarmup skip reason=notActive \(OSGDiag.memoryTag())",
                     category: "flow"
                 )
                 return
             }
             guard !flowManager.shouldDeferHostHeavyWork else {
                 OSGDiag.log(
-                    "postOnboardingWarmup skip reason=flowBusy \(OSGDiag.memoryTag())",
+                    "clmWarmup skip reason=flowBusy \(OSGDiag.memoryTag())",
                     category: "flow"
                 )
                 return
             }
 
             await AppCloudSync.shared.pullAllIfEnabled()
-
-            // hostHeavy only while heavy work runs — never leave it stuck at 1
-            // just because RSS is above the soft gate (that blocked typing).
-            guard HostMemoryBudget.gate("rime.installIfNeeded") else { return }
-
-            FlowSessionBridge.setHostHeavy(true)
-            defer { FlowSessionBridge.setHostHeavy(false) }
-
-            let typingConfig = TypingInputConfiguration.shared.snapshot
-            OSGDiag.log("rime.installIfNeeded begin \(OSGDiag.memoryTag())", category: "flow")
-            try? await RimeResourceInstaller.shared.installIfNeeded(
-                configuration: typingConfig
-            )
-            OSGDiag.log("rime.installIfNeeded done \(OSGDiag.memoryTag())", category: "flow")
 
             guard HostMemoryBudget.gate("clm.prepare", category: "asr") else { return }
             CustomLanguageModelManager.shared.prepareInBackgroundIfNeeded()
@@ -171,6 +172,10 @@ struct MainAppRoot: View {
         switch url.host {
         case "startflow":
             flowManager.startSession(coldStart: true, reason: "url.startflow")
+        case "deployrime":
+            // The keyboard sends the user here precisely because typing
+            // resources are missing — deploy without waiting for warmup.
+            RimeDeploymentController.shared.deployNow(reason: "url.deployrime")
         #if DEBUG
         case "seed-demo":
             DemoDataSeeder.seedRichPlaceholderData()
@@ -181,3 +186,36 @@ struct MainAppRoot: View {
         }
     }
 }
+
+#if DEBUG
+struct EditPagerUITestHarness: View {
+    @State private var selectedPage: Int? = 0
+
+    var body: some View {
+        VStack(spacing: 20) {
+            ZStack(alignment: .bottom) {
+                EditTextPager(
+                    originalTitle: "Original",
+                    originalText: "ORIGINAL_PAGE_TOKEN",
+                    editedTitle: "Edited",
+                    editedText: "EDITED_PAGE_TOKEN",
+                    contentBottomInset: 30,
+                    selectedPage: $selectedPage
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                Color.clear
+                    .frame(height: 30)
+                    .allowsHitTesting(false)
+            }
+            .frame(height: 220)
+            .accessibilityIdentifier("edit.pager.swipeArea")
+
+            Text(selectedPage == 1 ? "EDITED_ACTIVE" : "ORIGINAL_ACTIVE")
+                .accessibilityIdentifier("edit.pager.activePage")
+        }
+        .padding()
+        .environment(\.themePalette, Palette.light)
+    }
+}
+#endif

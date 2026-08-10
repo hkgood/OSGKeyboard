@@ -115,22 +115,8 @@
 
 /* Keyboard (ext) */
 "keyboard.placeholder.idle" = "Tap to talk";
-"keyboard.placeholder.idleClipboard" = "Tap to talk, long-press for clipboard";
-"keyboard.clipboard.recordingLeft" = "Recording command";
-"keyboard.clipboard.recordingRight" = "Tap to finish";
 "keyboard.placeholder.preparing" = "Preparing";
 "keyboard.placeholder.preparingRecording" = "Preparing mic…";
-"keyboard.clipboard.reject.pasteDenied" = "Allow Paste to process the clipboard";
-"keyboard.clipboard.reject.empty" = "No text on the clipboard to process";
-"keyboard.clipboard.reject.phoneOrNumeric" = "Looks like a phone number — not started";
-"keyboard.clipboard.reject.emojiOrSymbolOnly" = "No usable text on the clipboard";
-"keyboard.clipboard.reject.verificationCode" = "Looks like a code — not started";
-"keyboard.clipboard.reject.tooShort" = "Clipboard text is too short";
-"keyboard.clipboard.reject.repetitiveSpam" = "Clipboard text isn’t usable";
-"keyboard.clipboard.reject.secureField" = "Clipboard commands aren’t available in password fields";
-"keyboard.clipboard.reject.noFullAccess" = "Full Access is required for clipboard commands";
-"keyboard.clipboard.reject.prepareFailed" = "Mic wasn’t ready in time — try again";
-"keyboard.clipboard.hint.hostStarting" = "Starting… recording will begin automatically; tap to cancel";
 "keyboard.placeholder.processing" = "Processing";
 "keyboard.placeholder.error" = "Polishing failed";
 "keyboard.placeholder.localBadge" = "On-device";
@@ -145,8 +131,14 @@
 "keyboard.deniedHint" = "Opens the OSGKeyboard settings page where you can grant microphone or speech recognition access.";
 "keyboard.tapToTalkA11y" = "Tap to talk";
 "keyboard.undoA11y" = "Undo last dictation";
+"keyboard.redoA11y" = "Redo";
+"keyboard.copyA11y" = "Copy";
+"keyboard.cutA11y" = "Cut";
 "keyboard.cursorDrag.hint" = "Hold and drag to move the cursor";
 "keyboard.cursorDrag.centerHint" = "Drag to move the cursor";
+"keyboard.nextKeyboardA11y" = "Next keyboard";
+"keyboard.nextKeyboardA11yHint" = "Tap to switch to the next keyboard. Touch and hold to see all keyboards.";
+"keyboard.typing.setupA11yHint" = "Open OSGKeyboard to finish input method setup.";
 
 /* Flow session (keyboard) */
 "keyboard.flow.sessionInactive" = "Voice session off";
@@ -206,6 +198,8 @@
 "keyboard.translation.disable" = "Disable translation";
 "keyboard.translation.a11y" = "Translation";
 "keyboard.translation.a11yHint" = "Toggle translation or change the target language.";
+"keyboard.voice.cancel" = "Cancel voice input";
+"keyboard.voice.cancelHint" = "Discard the current recording, recognition, and polish result.";
 "keyboard.scenario.a11y" = "Polish scenario";
 "keyboard.scenario.a11yHint" = "Choose how dictation is polished.";
 
@@ -241,3 +235,29 @@
 "keyboard.appContext.menu.chat"     = "Chat — short, casual, natural tone";
 "keyboard.appContext.menu.document" = "Document — long-form, structured";
 "keyboard.appContext.menu.unknown"  = "General — neutral tone";
+
+/* Long-press editing of the last insertion */
+"keyboard.edit.hint.available" = "Hold to edit your last input";
+"keyboard.edit.error.noTarget" = "No recent input is available to edit";
+"keyboard.edit.error.llmUnavailable" = "Configure an AI service in the main app first";
+"keyboard.edit.error.startTimeout" = "Microphone startup timed out. Tap to retry";
+"keyboard.edit.error.processing" = "Editing failed. Try again";
+"keyboard.edit.error.processingTimeout" = "Editing timed out. Try again";
+"keyboard.edit.error.unchanged" = "Nothing changed. Try a different instruction";
+"keyboard.edit.status.preparing" = "Starting microphone…";
+"keyboard.edit.status.listening" = "Listening for your editing instruction";
+"keyboard.edit.status.processing" = "Editing…";
+"keyboard.edit.status.review" = "Swipe to compare the original and edited text";
+"keyboard.edit.status.applying" = "Applying edit…";
+"keyboard.edit.page.original" = "Original";
+"keyboard.edit.page.edited" = "Edited";
+"keyboard.edit.helper.speak" = "Speak to edit";
+"keyboard.edit.helper.finish" = "Tap to finish";
+"keyboard.edit.helper.compare" = "Swipe to compare";
+"keyboard.edit.helper.apply" = "Tap to apply";
+"keyboard.edit.helper.append" = "Insert at cursor";
+"keyboard.edit.close" = "Close edit mode";
+"keyboard.edit.closeHint" = "Discard this edit and return to voice input.";
+"keyboard.edit.apply" = "Apply edit";
+"keyboard.edit.append" = "Insert at cursor";
+"keyboard.edit.stop" = "Finish editing instruction";

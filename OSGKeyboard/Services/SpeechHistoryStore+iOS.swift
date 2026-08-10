@@ -8,17 +8,19 @@ import OSGKeyboardShared
 
 extension SpeechHistoryStore {
     /// Append history and update cumulative home-screen usage stats.
+    @discardableResult
     func recordUtterance(
         text: String,
         engineMode: String,
         duration: TimeInterval,
         wasTranslation: Bool
-    ) {
-        append(text: text, engineMode: engineMode)
+    ) -> SpeechHistoryEntry? {
+        let entry = append(text: text, engineMode: engineMode)
         UsageStatisticsStore.shared.recordUtterance(
             text: text,
             duration: duration,
             wasTranslation: wasTranslation
         )
+        return entry
     }
 }

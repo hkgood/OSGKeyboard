@@ -7,11 +7,8 @@ This is deliberately separate from XCTest:
   the configured LLM, then records objective contract checks plus every output
   for human quality review.
 
-It covers two protocols that must never be conflated:
-1. Dictation polish: the user message is the user's outbound draft. Questions
-   must stay questions and never be answered.
-2. Clipboard command: the user message contains material and an ASR command.
-   A reply command must produce a reply; a summary/review/translation must not.
+It covers dictation polish: the user message is the user's outbound draft.
+Questions must stay questions and never be answered.
 
 Usage:
   python3 Scripts/llm_full_prompt_quality_eval.py --profile smoke
@@ -30,8 +27,6 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SHARED = ROOT / "OSGKeyboardShared"
-COMPOSER = SHARED / "Services" / "ClipboardCommandPromptComposer.swift"
 FIXTURES = ROOT / "Scripts" / "fixtures" / "llm_quality_matrix.json"
 QUESTION_EVAL = ROOT / "Scripts" / "polish_question_guard_eval.py"
 
@@ -46,71 +41,6 @@ def load_question_eval():
 
 
 Q = load_question_eval()
-
-
-def swift_string(name: str) -> str:
-    source = COMPOSER.read_text()
-    match = re.search(
-        rf'private static let {re.escape(name)} = """(.*?)"""',
-        source,
-        re.DOTALL,
-    )
-    if not match:
-        raise SystemExit(f"Could not extract {name} from {COMPOSER}")
-    return match.group(1).strip()
-
-
-def sanitize_bias(bias: str) -> str:
-    """Mirror ClipboardCommandPromptComposer.sanitizeBias line by line."""
-    markers = (
-        "草稿", "不是对方", "不回答", "不作答", "代答", "接话",
-        "draft", "do not answer", "never answer", "not a message from",
-    )
-    kept: list[str] = []
-    for line in bias.splitlines():
-        text = line.strip()
-        if not text:
-            if kept and kept[-1]:
-                kept.append("")
-            continue
-        if not any(marker in text.lower() for marker in markers):
-            kept.append(line)
-    return "\n".join(kept).strip()
-
-
-def contains_reply_intent(instruction: str) -> bool:
-    """Mirror current production markers; this is reported, not asserted."""
-    markers = (
-        "回复", "回信", "回应", "答复", "帮我回", "回他", "回她",
-        "回个", "回条", "回一下", "回下", "reply", "respond",
-        "write back", "answer them", "answer him", "answer her",
-    )
-    lower = instruction.lower()
-    return any(marker in lower for marker in markers)
-
-
-def clipboard_system(instruction: str, style_id: str) -> str:
-    parts = [swift_string("chineseCore")]
-    if contains_reply_intent(instruction):
-        parts.append(swift_string("chineseReplyGuard"))
-    bias = sanitize_bias(Q.style_prompt(style_id))
-    if bias:
-        parts += ["# 语气底色（弱偏置；口述指令优先）", bias[:800]]
-    return "\n\n".join(parts)
-
-
-def resolved_material(case: dict) -> str:
-    suffix = case.get("generated_suffix")
-    if suffix:
-        return case["material"] + suffix * int(case["generated_suffix_repeat"])
-    return case["material"]
-
-
-def clipboard_user(case: dict) -> str:
-    # Production ClipboardMaterialFilter.truncateSnapshot uses a hard 3000-char
-    # prefix. The current implementation does not append a truncation marker.
-    material = resolved_material(case)[:3000]
-    return f"【材料】\n{material}\n\n【指令】\n{case['instruction'].strip()}"
 
 
 def is_english(text: str) -> bool:
@@ -156,12 +86,6 @@ def objective_checks(case: dict, output: str, protocol: str) -> list[str]:
             failures.append("expected_english_output")
         if case.get("target_language_only") and re.search(r"[\u3400-\u9fff]", normalized):
             failures.append("intermediate_non_english_output")
-    if protocol == "clipboard" and case["operation"] == "reply":
-        # Replies need new user-side language, not a restatement of material.
-        # This heuristic is intentionally advisory; the raw output is reviewed.
-        material = resolved_material(case)[:3000].strip()
-        if normalized == material:
-            failures.append("reply_equals_material")
     return failures
 
 
@@ -212,34 +136,6 @@ def normal_job(case: dict, style_id: str, intensity: str) -> dict:
     }
 
 
-def clipboard_job(case: dict, style_id: str) -> dict:
-    system = clipboard_system(case["instruction"], style_id)
-    user = clipboard_user(case)
-    started = time.monotonic()
-    try:
-        output = Q.call(Q.api_key, system, user, temperature=0.1)
-        error = None
-    except Exception as exc:  # noqa: BLE001
-        output = ""
-        error = str(exc)
-    return {
-        "protocol": "clipboard_command",
-        "case_id": case["id"],
-        "style": style_id,
-        "operation": case["operation"],
-        "material": resolved_material(case),
-        "instruction": case["instruction"],
-        "system_prompt": system,
-        "user_payload": user,
-        "output": output,
-        "source": "llm",
-        "checks": objective_checks(case, output, "clipboard"),
-        "error": error,
-        "elapsed_seconds": round(time.monotonic() - started, 3),
-        "prompt_fingerprint": prompt_fingerprint(system, user),
-    }
-
-
 def print_summary(results: list[dict]) -> None:
     by_protocol: defaultdict[str, Counter] = defaultdict(Counter)
     by_case: defaultdict[str, Counter] = defaultdict(Counter)
@@ -282,14 +178,10 @@ def main() -> None:
 
     if args.profile == "smoke":
         normal_styles = ("builtin.chat", "builtin.dating", "user.emoji-chat")
-        clipboard_styles = normal_styles
         normal_cases = fixtures["normal_polish"][:8]
-        clipboard_cases = fixtures["clipboard_commands"][:12]
     else:
         normal_styles = tuple(Q.STYLES)
-        clipboard_styles = ("builtin.light", "builtin.dating", "user.emoji-chat")
         normal_cases = fixtures["normal_polish"]
-        clipboard_cases = fixtures["clipboard_commands"]
 
     jobs = []
     for _ in range(args.samples):
@@ -297,9 +189,6 @@ def main() -> None:
             for style_id in normal_styles:
                 for intensity in ("light", "heavy"):
                     jobs.append(("normal", case, style_id, intensity))
-        for case in clipboard_cases:
-            for style_id in clipboard_styles:
-                jobs.append(("clipboard", case, style_id, None))
 
     print(
         f"Running {len(jobs)} requests: profile={args.profile}, samples={args.samples}; "
@@ -309,10 +198,7 @@ def main() -> None:
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as pool:
         futures = []
         for protocol, case, style_id, intensity in jobs:
-            if protocol == "normal":
-                futures.append(pool.submit(normal_job, case, style_id, intensity))
-            else:
-                futures.append(pool.submit(clipboard_job, case, style_id))
+            futures.append(pool.submit(normal_job, case, style_id, intensity))
         for future in concurrent.futures.as_completed(futures):
             result = future.result()
             results.append(result)
