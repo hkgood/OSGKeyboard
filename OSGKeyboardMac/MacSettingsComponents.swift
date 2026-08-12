@@ -272,8 +272,10 @@ struct MacProviderModelRow: View {
     let title: String
     let placeholder: String
     @Binding var model: String
+    let providerIdentity: String
+    let endpointIdentity: String
     let apiKey: String
-    let fetchModels: () async throws -> [String]
+    let makeFetchModelsRequest: @MainActor () -> ProviderToolRequest<[String]>
     let language: AppUILanguage
 
     @State private var models: [String] = []
@@ -282,6 +284,7 @@ struct MacProviderModelRow: View {
     @State private var failed = false
     @State private var isDropdownOpen = false
     @State private var fieldWidth: CGFloat = 0
+    @State private var requestCoordinator = ProviderToolRequestCoordinator()
 
     private let chevronWidth: CGFloat = 28
     private let dropdownMaxHeight: CGFloat = 240
@@ -313,7 +316,7 @@ struct MacProviderModelRow: View {
                         disabled: isRunning || trimmedAPIKey.isEmpty
                     ) {
                         isDropdownOpen = false
-                        Task { await runFetchModels() }
+                        runFetchModels()
                     }
 
                     if isRunning {
@@ -325,6 +328,11 @@ struct MacProviderModelRow: View {
                 statusMessage
             }
         }
+        .onChange(of: providerIdentity) { _, _ in invalidateRequest() }
+        .onChange(of: endpointIdentity) { _, _ in invalidateRequest() }
+        .onChange(of: apiKey) { _, _ in invalidateRequest() }
+        .onChange(of: model) { _, _ in invalidateRequestIfRunning() }
+        .onDisappear { invalidateRequest() }
     }
 
     /// Editable model id + trailing chevron. Model list is a true popover so the
@@ -332,7 +340,7 @@ struct MacProviderModelRow: View {
     private var comboField: some View {
         let shape = RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
         return ZStack(alignment: .trailing) {
-            TextField(text: $model, prompt: Text(verbatim: placeholder)) {
+            TextField(text: editableModelBinding, prompt: Text(verbatim: placeholder)) {
                 Text(title)
             }
             .labelsHidden()
@@ -400,6 +408,7 @@ struct MacProviderModelRow: View {
     private func dropdownRow(_ modelId: String) -> some View {
         let isSelected = modelId == model
         return Button {
+            invalidateRequest()
             model = modelId
             message = MacL10n.format(
                 "mac.settings.modelSelected",
@@ -445,31 +454,77 @@ struct MacProviderModelRow: View {
         }
     }
 
+    private var editableModelBinding: Binding<String> {
+        Binding(
+            get: { model },
+            set: { newValue in
+                invalidateRequest()
+                model = newValue
+            }
+        )
+    }
+
     @MainActor
-    private func runFetchModels() async {
+    private func runFetchModels() {
         guard !trimmedAPIKey.isEmpty else {
             failed = true
             message = SharedL10n.string("providerTools.error.missingAPIKey", language: language)
             return
         }
 
+        let request = makeFetchModelsRequest()
+        let currentModel = model
+        let currentLanguage = language
+        let runningMessage = MacL10n.string("mac.settings.loadingModels", language: currentLanguage)
+        let emptyMessage = SharedL10n.string("providerTools.error.empty", language: currentLanguage)
+
         isRunning = true
         failed = false
-        defer { isRunning = false }
+        message = runningMessage
 
-        let outcome = await ProviderToolRunner.runFetchModels(
-            runningMessage: MacL10n.string("mac.settings.loadingModels", language: language),
-            loadedMessage: { MacL10n.format("mac.settings.modelsLoaded", language: language, $0) },
-            emptyMessage: SharedL10n.string("providerTools.error.empty", language: language),
-            currentModel: model,
-            fetchModels: fetchModels
+        requestCoordinator.start(
+            providerIdentity: request.providerIdentity,
+            operation: {
+                await ProviderToolRunner.runFetchModels(
+                    runningMessage: runningMessage,
+                    loadedMessage: {
+                        MacL10n.format("mac.settings.modelsLoaded", language: currentLanguage, $0)
+                    },
+                    emptyMessage: emptyMessage,
+                    currentModel: currentModel,
+                    fetchModels: request.operation
+                )
+            },
+            commit: { outcome in
+                isRunning = false
+                switch outcome {
+                case .cancelled:
+                    message = nil
+                    failed = false
+                case .completed(let state, let selectedModel):
+                    models = state.models
+                    message = state.message
+                    failed = state.failed
+                    if let selectedModel {
+                        model = selectedModel
+                    }
+                }
+            }
         )
-        models = outcome.state.models
-        message = outcome.state.message
-        failed = outcome.state.failed
-        if let selected = outcome.selectedModel {
-            model = selected
-        }
+    }
+
+    @MainActor
+    private func invalidateRequest() {
+        requestCoordinator.invalidate()
+        isRunning = false
+        message = nil
+        failed = false
+    }
+
+    @MainActor
+    private func invalidateRequestIfRunning() {
+        guard requestCoordinator.isRunning else { return }
+        invalidateRequest()
     }
 }
 
@@ -479,12 +534,17 @@ struct MacProviderToolsRow: View {
     @Environment(\.themePalette) private var palette
 
     let title: String
-    let validate: () async throws -> Void
+    let providerIdentity: String
+    let endpointIdentity: String
+    let credentialIdentity: String
+    let modelIdentity: String
+    let makeValidateRequest: @MainActor () -> ProviderToolRequest<Void>
     let language: AppUILanguage
 
     @State private var isRunning = false
     @State private var message: String?
     @State private var failed = false
+    @State private var requestCoordinator = ProviderToolRequestCoordinator()
 
     var body: some View {
         MacProviderSettingRow(title: title) {
@@ -493,7 +553,7 @@ struct MacProviderToolsRow: View {
                     title: MacL10n.string("mac.settings.validate", language: language),
                     disabled: isRunning
                 ) {
-                    Task { await runValidate() }
+                    runValidate()
                 }
 
                 if isRunning {
@@ -508,21 +568,53 @@ struct MacProviderToolsRow: View {
                 }
             }
         }
+        .onChange(of: providerIdentity) { _, _ in invalidateRequest() }
+        .onChange(of: endpointIdentity) { _, _ in invalidateRequest() }
+        .onChange(of: credentialIdentity) { _, _ in invalidateRequest() }
+        .onChange(of: modelIdentity) { _, _ in invalidateRequest() }
+        .onDisappear { invalidateRequest() }
     }
 
     @MainActor
-    private func runValidate() async {
+    private func runValidate() {
+        let request = makeValidateRequest()
+        let currentLanguage = language
+        let runningMessage = MacL10n.string("mac.settings.validating", language: currentLanguage)
+        let successMessage = MacL10n.string("mac.settings.validateSuccess", language: currentLanguage)
+
         isRunning = true
         failed = false
-        defer { isRunning = false }
+        message = runningMessage
 
-        let outcome = await ProviderToolRunner.runValidate(
-            runningMessage: MacL10n.string("mac.settings.validating", language: language),
-            successMessage: MacL10n.string("mac.settings.validateSuccess", language: language),
-            validate: validate
+        requestCoordinator.start(
+            providerIdentity: request.providerIdentity,
+            operation: {
+                await ProviderToolRunner.runValidate(
+                    runningMessage: runningMessage,
+                    successMessage: successMessage,
+                    validate: request.operation
+                )
+            },
+            commit: { outcome in
+                isRunning = false
+                switch outcome {
+                case .cancelled:
+                    message = nil
+                    failed = false
+                case .completed(let state):
+                    message = state.message
+                    failed = state.failed
+                }
+            }
         )
-        message = outcome.message
-        failed = outcome.failed
+    }
+
+    @MainActor
+    private func invalidateRequest() {
+        requestCoordinator.invalidate()
+        isRunning = false
+        message = nil
+        failed = false
     }
 }
 

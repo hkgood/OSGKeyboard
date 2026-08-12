@@ -19,7 +19,7 @@ public enum TranscriptLanguageDetector: Sendable {
                 continue
             }
             meaningfulCount += 1
-            if isHan(scalar) {
+            if HanScript.isIdeograph(scalar) {
                 hanCount += 1
             }
         }
@@ -31,14 +31,5 @@ public enum TranscriptLanguageDetector: Sendable {
     /// Mixed Chinese/English transcripts should still receive Chinese guidance.
     public static func prefersChineseGuidance(_ text: String) -> Bool {
         cjkRatio(text) >= 0.15
-    }
-
-    private static func isHan(_ scalar: Unicode.Scalar) -> Bool {
-        switch scalar.value {
-        case 0x4E00...0x9FFF, 0x3400...0x4DBF, 0xF900...0xFAFF:
-            return true
-        default:
-            return false
-        }
     }
 }

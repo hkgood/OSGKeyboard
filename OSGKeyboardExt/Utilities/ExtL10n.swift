@@ -11,7 +11,10 @@ import OSGKeyboardShared
 
 enum ExtL10n {
     private static let table = "Keyboard"
-    private static let container = Bundle(for: KeyboardViewController.self)
+    /// Anchor in whichever target compiles this file (extension or main-app
+    /// DEBUG what's-new host). Avoids coupling to `KeyboardViewController`.
+    private final class BundleAnchor {}
+    private static let container = Bundle(for: BundleAnchor.self)
 
     private static var bundle: Bundle {
         AppUILanguage.localizedBundle(

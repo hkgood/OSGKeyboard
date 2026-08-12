@@ -47,14 +47,10 @@ struct NativeKeyboardKeySurface<Content: View>: View {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(isPressed ? pressedFill : fill)
             )
+            // 无投影：键面层次交给填充 + 0.5pt 描边，避免外扩阴影被键盘边界裁切。
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(border, lineWidth: 0.5)
-            )
-            .shadow(
-                color: Color.black.opacity(isPressed ? 0.04 : 0.13),
-                radius: isPressed ? 0.5 : 1,
-                y: isPressed ? 0 : 1
             )
             .scaleEffect(isPressed ? 0.98 : 1)
             .animation(.easeOut(duration: 0.08), value: isPressed)

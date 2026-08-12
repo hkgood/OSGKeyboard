@@ -1,5 +1,5 @@
 // ChunkedUtterancePipeline.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // Pipelined Flow utterance ASR: split PCM while recording, transcribe chunks
 // serially on a background queue, stitch partials for display and delivery.
@@ -336,7 +336,8 @@ public actor ChunkedUtterancePipeline {
 
         FlowTrace.warn(
             "pipeline.chunk.retry",
-            "chunk=\(chunkIndex) samples=\(samples.count) error=\(message)"
+            "chunk=\(chunkIndex) samples=\(samples.count) "
+                + "errorCategory=asrFailure errorBytes=\(message.utf8.count)"
         )
         do {
             try await Task.sleep(nanoseconds: 150_000_000)
@@ -362,7 +363,10 @@ public actor ChunkedUtterancePipeline {
                 FlowTrace.transcript("asr.chunk", trimmed, audio)
             }
         case .failure(let message):
-            FlowTrace.warn("pipeline.chunk.failed", "\(audio) error=\(message)")
+            FlowTrace.warn(
+                "pipeline.chunk.failed",
+                "\(audio) errorCategory=asrFailure errorBytes=\(message.utf8.count)"
+            )
         case .cancelled:
             FlowTrace.pipeline("chunk.cancelled", audio)
         }

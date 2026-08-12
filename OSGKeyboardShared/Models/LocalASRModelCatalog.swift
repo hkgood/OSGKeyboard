@@ -1,7 +1,9 @@
 // LocalASRModelCatalog.swift
 // OSGKeyboard · Shared
 //
-// Bundled catalog of downloadable / manual local ASR models and Sherpa runtimes.
+// Bundled macOS local-ASR model catalog. Qwen3 MLX is the active default and
+// Apple Speech is the fallback; Sherpa backend/runtime identifiers remain for
+// decoding legacy catalog and persisted install state, not current recognition.
 
 import Foundation
 

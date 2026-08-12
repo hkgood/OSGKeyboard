@@ -34,7 +34,7 @@ public struct AppGroupPersistor {
         // Both engines always polish; ignore legacy off/transcribe modeId.
         state.mode             = .polish
         state.engineMode       = store.engineMode
-        // v0.2.1 follow-up: only the target locale is persisted —
+        // Only the target locale is persisted;
         // `translationEnabled` is derived from it. Hydrate once at
         // startup; `refreshRuntimeFlags` keeps the chip in sync while
         // the keyboard stays open.
@@ -47,23 +47,26 @@ public struct AppGroupPersistor {
         applyAPIKeyAvailability(store: store, into: state)
 
         #if DEBUG
-        // Print a masked view of the live App Group config so we can see
-        // from the device console exactly what the keyboard extension
-        // actually sees (and whether it agrees with the main App).
-        let key = store.apiKey
-        let masked: String
-        if key.count > 8 {
-            masked = "\(key.prefix(4))…\(key.suffix(4)) (\(key.count) chars)"
-        } else if key.isEmpty {
-            masked = "<empty>"
-        } else {
-            masked = "<\(key.count) chars>"
+        // Log only credential availability and the base URL origin. Never put
+        // credential fragments or URL path/query/userinfo into device logs.
+        let credentialStatus: String
+        switch Keychain.apiKeyOutcome(for: store.providerId, preferICloudSync: true) {
+        case .found(let value):
+            credentialStatus = value.isEmpty ? "empty" : "configured"
+        case .notFound:
+            credentialStatus = store.apiKey.isEmpty ? "empty" : "configured"
+        case .unavailable:
+            credentialStatus = "keychainUnavailable"
         }
+        let components = URLComponents(string: store.baseURL)
+        let baseURLOrigin = components?.scheme.flatMap { scheme in
+            components?.host.map { host in "\(scheme)://\(host)" }
+        } ?? "<invalid>"
         print("""
         🔍 [AppGroupPersistor.load]
            providerId      = \(store.providerId)
-           baseURL         = \(store.baseURL)
-           apiKey          = \(masked)
+           baseURLOrigin   = \(baseURLOrigin)
+           credential      = \(credentialStatus)
            model           = \(store.model)
            modeId          = \(store.modeId)
            localeId        = \(store.localeId)
@@ -136,11 +139,11 @@ public struct AppGroupPersistor {
         AppGroupStore().setEngineMode(engineMode)
     }
 
-    /// v0.2.1: persist translation target locale id (e.g. `"en"`,
+    /// Persist translation target locale id (e.g. `"en"`,
     /// `"ja"`, or `TranslationLanguageCatalog.offLocaleId`). The
     /// chip / picker call this through `KeyboardState.setTranslationTargetLocaleId`.
     ///
-    /// v0.2.1 follow-up: removed `persist(translationEnabled:)` — the
+    /// There is no `persist(translationEnabled:)` because the
     /// enabled state is derived from the locale id, so callers only
     /// need to write the locale. Keeping the legacy Bool overload
     /// around would have implied that there's a separate on/off

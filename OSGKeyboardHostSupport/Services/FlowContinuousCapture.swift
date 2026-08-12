@@ -1,5 +1,5 @@
 // FlowContinuousCapture.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // TypeWhisper-style continuous mic capture for Flow sessions: one
 // AVAudioEngine + input tap for the entire session. Utterances gate
@@ -413,6 +413,9 @@ private final class AdaptiveDownsampler: @unchecked Sendable {
     }
 }
 
+/// Owns the session-long capture graph on the main actor. The realtime tap
+/// must not touch UserDefaults, log, or invoke actor callbacks; it exchanges
+/// snapshots through lock-protected relays, and callbacks return on MainActor.
 @MainActor
 public final class FlowContinuousCapture {
 

@@ -32,13 +32,9 @@ enum MacMetrics {
     /// both this value, so the card breathes evenly. Applied as `VStack(spacing:)`
     /// between rows and `.padding(.vertical:)` on the card body.
     static let settingsRowGap: CGFloat = Spacing.md
-    /// Provider menu trigger width (legacy).
-    static let selectWidth: CGFloat = 200
     /// Text-field max width for provider credential rows (narrower than the
     /// old 360pt so long keys truncate instead of wrapping when the window shrinks).
     static let fieldWidth: CGFloat = 280
-    /// Legacy alias used by older call sites; prefer `fieldWidth`.
-    static let controlWidth: CGFloat = fieldWidth
     /// Horizontal inset inside settings cards — matches History / Dictionary rows.
     static let settingsCardInset: CGFloat = Spacing.md
     /// Below this row width, provider rows stack label above control.
@@ -266,19 +262,6 @@ struct MacInlineRow<Control: View>: View {
     }
 }
 
-/// Backwards-compatible alias: title + optional subtitle + trailing control.
-struct MacFormSubtitleRow<Control: View>: View {
-    let title: String
-    var subtitle: String? = nil
-    @ViewBuilder var control: () -> Control
-
-    var body: some View {
-        MacInlineRow(title: title, subtitle: subtitle) {
-            control()
-        }
-    }
-}
-
 /// Tappable navigation / action row inside a settings card.
 struct MacFormLinkRow: View {
     @Environment(\.themePalette) private var palette
@@ -324,8 +307,6 @@ struct MacProviderSettingRow<Content: View>: View {
 
     let title: String
     var subtitle: String? = nil
-    /// Retained for source compatibility; the control now fills its column.
-    var controlMaxWidth: CGFloat? = nil
     /// Cross-axis alignment between the label column and the control. Provider
     /// rows keep `.top` (model row grows a status line below its field); single
     /// control rows can pass `.center` to vertically center label and control.
@@ -428,22 +409,6 @@ struct MacSettingsToolButton: View {
     private var resolvedForeground: Color {
         if disabled { return palette.textTertiary }
         return foreground ?? palette.textPrimary
-    }
-}
-
-// MARK: - Legacy setting row
-
-/// Fixed label column + left-aligned control. Prefer `MacProviderSettingRow`
-/// for provider configuration cards.
-struct MacSettingRow<Content: View>: View {
-    let title: String
-    var controlMaxWidth: CGFloat? = nil
-    @ViewBuilder var content: () -> Content
-
-    var body: some View {
-        MacProviderSettingRow(title: title, controlMaxWidth: controlMaxWidth) {
-            content()
-        }
     }
 }
 

@@ -1,29 +1,32 @@
 // UsageStatsCluster.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // Cross-platform home / dashboard stats: 7-day chart + cumulative metrics.
 // Callers observe their store and pass plain values — Shared stays unbound
 // from platform singletons.
+//
+// Optional `header` sits above the 7-day chart inside the same surface card
+// (iOS Home glass preview field). Mac / plain call sites keep `EmptyView`.
 
 import SwiftUI
 #if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
 #endif
 
-public struct UsageStatsCluster: View {
-    @Environment(\.themePalette) private var palette
-
-    public enum Layout: Sendable, Equatable {
-        /// Chart left, 2×2 `UsageStatCard` grid right (Mac / iPad).
-        case split
-        /// Chart above a compact single-card 2×2 grid (iPhone).
-        case stacked
-    }
+public enum UsageStatsClusterLayout: Sendable, Equatable {
+    /// Chart left, 2×2 `UsageStatCard` grid right (Mac / iPad).
+    case split
+    /// Chart above a compact single-card 2×2 grid (iPhone).
+    case stacked
 
     /// 手机端 2×2 统计网格的紧凑固定高度（沿用旧版 HomeStatsCard 数值）。
-    static let compactGridHeight: CGFloat = 166
+    public static let compactGridHeight: CGFloat = 166
+}
 
-    public let layout: Layout
+public struct UsageStatsCluster<Header: View>: View {
+    @Environment(\.themePalette) private var palette
+
+    public let layout: UsageStatsClusterLayout
     public let language: AppUILanguage
     public let points: [UsageStatisticsStore.DailyUsagePoint]
     public let dictationCharacterCount: Int
@@ -32,16 +35,18 @@ public struct UsageStatsCluster: View {
     public let dictionaryTermCount: Int
     /// 小屏（如 iPhone SE）收紧 stacked 图表高度，把空间让给下方的输入框。
     public let compact: Bool
+    private let header: Header
 
     public init(
-        layout: Layout,
+        layout: UsageStatsClusterLayout,
         language: AppUILanguage,
         points: [UsageStatisticsStore.DailyUsagePoint],
         dictationCharacterCount: Int,
         dictationDurationSeconds: TimeInterval,
         translationCharacterCount: Int,
         dictionaryTermCount: Int,
-        compact: Bool = false
+        compact: Bool = false,
+        @ViewBuilder header: () -> Header
     ) {
         self.layout = layout
         self.language = language
@@ -51,6 +56,7 @@ public struct UsageStatsCluster: View {
         self.translationCharacterCount = translationCharacterCount
         self.dictionaryTermCount = dictionaryTermCount
         self.compact = compact
+        self.header = header()
     }
 
     public var body: some View {
@@ -66,7 +72,7 @@ public struct UsageStatsCluster: View {
 
     private var splitBody: some View {
         HStack(alignment: .top, spacing: Spacing.md) {
-            SevenDayUsageChart(points: points, language: language)
+            chartCard
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             splitStatGrid
                 .frame(maxWidth: .infinity)
@@ -112,13 +118,34 @@ public struct UsageStatsCluster: View {
 
     private var stackedBody: some View {
         VStack(spacing: compact ? Spacing.sm : Spacing.md) {
+            chartCard
+            compactStatGrid
+        }
+    }
+
+    /// Chart surface; when `header` is present it sits above the bars in the same card.
+    @ViewBuilder
+    private var chartCard: some View {
+        if Header.self == EmptyView.self {
             SevenDayUsageChart(
                 points: points,
                 language: language,
                 chartMinHeight: compact ? 72 : 96,
-                expands: false
+                expands: layout == .split
             )
-            compactStatGrid
+        } else {
+            UsageSurfaceCard(padding: Spacing.md) {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    header
+                    SevenDayUsageChart(
+                        points: points,
+                        language: language,
+                        chartMinHeight: compact ? 72 : 96,
+                        embedsInCard: false,
+                        expands: layout == .split
+                    )
+                }
+            }
         }
     }
 
@@ -156,7 +183,7 @@ public struct UsageStatsCluster: View {
             }
         }
         // 锁定紧凑固定高度（对齐旧版 HomeStatsCard 的 166pt），避免格子按内容撑高。
-        .frame(height: UsageStatsCluster.compactGridHeight)
+        .frame(height: UsageStatsClusterLayout.compactGridHeight)
         .background(palette.surface)
         .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
         .overlay(
@@ -195,5 +222,30 @@ public struct UsageStatsCluster: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.md)
+    }
+}
+
+extension UsageStatsCluster where Header == EmptyView {
+    public init(
+        layout: UsageStatsClusterLayout,
+        language: AppUILanguage,
+        points: [UsageStatisticsStore.DailyUsagePoint],
+        dictationCharacterCount: Int,
+        dictationDurationSeconds: TimeInterval,
+        translationCharacterCount: Int,
+        dictionaryTermCount: Int,
+        compact: Bool = false
+    ) {
+        self.init(
+            layout: layout,
+            language: language,
+            points: points,
+            dictationCharacterCount: dictationCharacterCount,
+            dictationDurationSeconds: dictationDurationSeconds,
+            translationCharacterCount: translationCharacterCount,
+            dictionaryTermCount: dictionaryTermCount,
+            compact: compact,
+            header: { EmptyView() }
+        )
     }
 }

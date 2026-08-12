@@ -8,6 +8,7 @@ import OSGKeyboardShared
 
 struct KeyboardSurfaceRoot: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Namespace private var keyboardTabSelectionNamespace
 
     @ObservedObject var state: KeyboardState
     @ObservedObject var typing: TypingSessionController
@@ -68,6 +69,16 @@ struct KeyboardSurfaceRoot: View {
         // Overlays are siblings of the surfaces, so the palette has to be
         // injected here or they fall back to the environment's dark default.
         .environment(\.themePalette, palette)
+        // The input surfaces are replaced when switching tabs. Keep one
+        // namespace above that switch so the selected glass pill can morph
+        // between the outgoing and incoming top-control instances.
+        .environment(\.keyboardTabSelectionNamespace, keyboardTabSelectionNamespace)
+        // Bottom-anchored on purpose: UIKit hands the input view a container up
+        // to the full screen height while the keyboard slides in, and centering
+        // a fixed-height surface in it parks the whole keyboard above the
+        // visible slot — which reads as a blank keyboard whenever that frame
+        // lingers (a slow Universal Clipboard read, a system alert).
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .animation(.easeInOut(duration: 0.15), value: state.surface)
         .onChange(of: state.surface) { _, newSurface in
             if newSurface != .typing {
@@ -90,26 +101,30 @@ struct KeyboardSurfaceRoot: View {
 
     @ViewBuilder
     private var clipboardOverlayLayer: some View {
-        switch state.clipboardOverlay {
-        case .none:
+        if !state.canShowClipboardEntry {
             EmptyView()
-        case .enableGuide:
-            ClipboardEnableGuideView(
-                onClose: state.dismissClipboardOverlay,
-                onOpenSettings: {
-                    state.dismissClipboardOverlay()
-                    state.openClipboardSettings()
-                }
-            )
-        case .historyPanel:
-            ClipboardHistoryPanelView(
-                history: ClipboardHistoryStore.shared,
-                onClose: state.dismissClipboardOverlay,
-                onClear: state.clearClipboardHistory,
-                onInsert: { state.insertClipboardText($0) },
-                onDelete: { state.deleteClipboardHistoryEntry($0) },
-                pastePermissionHint: nil
-            )
+        } else {
+            switch state.clipboardOverlay {
+            case .none:
+                EmptyView()
+            case .enableGuide:
+                ClipboardEnableGuideView(
+                    onClose: state.dismissClipboardOverlay,
+                    onOpenSettings: {
+                        state.dismissClipboardOverlay()
+                        state.openClipboardSettings()
+                    }
+                )
+            case .historyPanel:
+                ClipboardHistoryPanelView(
+                    history: ClipboardHistoryStore.shared,
+                    onClose: state.dismissClipboardOverlay,
+                    onClear: state.clearClipboardHistory,
+                    onInsert: { state.insertClipboardText($0) },
+                    onDelete: { state.deleteClipboardHistoryEntry($0) },
+                    pastePermissionHint: nil
+                )
+            }
         }
     }
 }

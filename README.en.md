@@ -5,9 +5,9 @@
 Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands at your cursor.
 
 ![Platform](https://img.shields.io/badge/iOS%20%2F%20iPadOS-26%2B-0078D4?logo=apple)
-![Platform](https://img.shields.io/badge/macOS-14%2B-555?logo=apple)
+![Platform](https://img.shields.io/badge/macOS-15%2B-555?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
-![Version](https://img.shields.io/badge/version-0.5.3-3aa05a)
+![Version](https://img.shields.io/badge/version-1.7.0-3aa05a)
 ![License](https://img.shields.io/badge/license-Source%20Available-blue)
 
 [Website](https://hkgood.github.io/OSGKeyboard/) · [中文 README](./README.md) · [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/)
@@ -18,7 +18,7 @@ Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands 
   </a>
   &nbsp;
   <a href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg">
-    <img src="docs/assets/badges/macos-en.svg" alt="Download now — macOS version" height="40">
+    <img src="docs/assets/badges/macos-en.svg" alt="Download historical macOS version 1.1" height="40">
   </a>
 </p>
 
@@ -30,7 +30,7 @@ Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands 
 - **Speak, don't edit** — tap (iOS) or hold Option (Mac); AI adds punctuation and structure for you
 - **Type in Chinese and English** — iOS keyboard ships full/double pinyin candidates, plus English autocomplete, autocorrect, and next-word prediction
 - **On-device by default** — local recognition on iOS; optional local models on Mac. Cloud upload only when you opt in
-- **Bring your own LLM** — built-in polish out of the box, or plug in DeepSeek, OpenAI, Anthropic, OpenRouter, and more
+- **Bring your own LLM** — local ASR needs no API key; polish and AI mode use your configured DeepSeek, OpenAI, Anthropic, OpenRouter, or compatible service
 - **Mac global dictation** — menu-bar app, bottom overlay with live feedback, inserts into the frontmost app
 
 ---
@@ -38,7 +38,7 @@ Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands 
 ## Three steps
 
 1. **Install & authorize** — add the iOS keyboard with Full Access; grant mic + Accessibility on Mac
-2. **Pick an engine** — local ASR + built-in polish (zero config), or your own API keys
+2. **Pick an engine** — local ASR works without a key; add your own API key for polish or AI mode
 3. **Start talking** — switch to OSGKeyboard, or hold Option on Mac
 
 ---
@@ -50,8 +50,10 @@ Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands 
 | Keyboard / global hotkey | ✅ | ✅ hold Option |
 | Chinese typing (full / Microsoft / Sogou double pinyin) | ✅ optional fuzzy pairs | — |
 | English typing (autocomplete / autocorrect / next-word) | ✅ offline lexicon + personal-dictionary boosts | — |
-| Local speech recognition | ✅ SpeechAnalyzer | ✅ SenseVoice / Qwen3 |
+| Local speech recognition | ✅ SpeechAnalyzer | ✅ Qwen3 MLX streaming (0.6B 4-bit default) + Apple Speech fallback |
 | AI polish | ✅ | ✅ |
+| Voice AI questions (explicit Insert / Send) | ✅ | — |
+| Voice-edit last input | ✅ | — |
 | Post-polish translation | ✅ | ✅ |
 | Personal dictionary | ✅ iCloud sync; protects polish and boosts English suggestions | ✅ |
 | Dictation history | ✅ | ✅ |
@@ -73,10 +75,10 @@ Speech is transcribed on-device by default. Polish sends **text only** — the t
   <img src="docs/assets/badges/ios-en.svg" alt="Download now from the App Store" height="40">
 </a>
 
-**Mac (Developer ID signed and notarized)**
+**Mac (historical version 1.1, Developer ID signed and notarized)**
 
 <a href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg">
-  <img src="docs/assets/badges/macos-en.svg" alt="Download now — macOS version" height="40">
+  <img src="docs/assets/badges/macos-en.svg" alt="Download historical macOS version 1.1" height="40">
 </a>
 
 ## Build from source
@@ -105,14 +107,15 @@ xcodebuild test -project OSGKeyboard.xcodeproj -scheme OSGKeyboard \
 OSGKeyboard/          Main iOS app (Flow session host)
 OSGKeyboardExt/       Custom keyboard extension
 OSGKeyboardMac/       macOS menu-bar app
-OSGKeyboardShared/    Shared framework (ASR, LLM, sync, design system)
+OSGKeyboardShared/    App/extension shared models, typing, sync, and UI
+OSGKeyboardHostSupport/ Host-only ASR, cloud, CLM, charts, and StoreKit
 ```
 
 **Flow session model (iOS):** the host app keeps a long-lived audio session; the keyboard sends start/stop signals via App Group; polished text is delivered back for insertion.
 
 **Engine modes:**
 
-- `local` — on-device ASR; built-in polish (or your own LLM key)
+- `local` — on-device ASR; raw text without a key, optional polish with your configured LLM key
 - `cloud` — uploads audio to your configured ASR provider, then polishes via LLM
 
 See [CHANGELOG.md](./CHANGELOG.md) for release history and [CONTRIBUTING.md](./CONTRIBUTING.md) for PR guidelines.
@@ -143,4 +146,4 @@ See [Third-Party Notices](./NOTICE-TYPING.md) for exact versions and licenses (C
 
 ## License
 
-[Source Available License](./LICENSE) — personal, non-commercial use only. Commercial licensing: [rocky.hk@gmail.com](mailto:rocky.hk@gmail.com).
+[Source Available License](./LICENSE) — this is not an open-source license. Personal, non-commercial local use is permitted; redistribution and public derivatives require permission. Commercial licensing: [rocky.hk@gmail.com](mailto:rocky.hk@gmail.com).

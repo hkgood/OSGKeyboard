@@ -1,5 +1,5 @@
 // ASRChunkTranscribing.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // Minimal ASR surface for pipelined utterance chunking. Keeps
 // `ChunkedUtterancePipeline` independent of iOS-only `SpeechAnalyzer`.

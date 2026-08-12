@@ -11,6 +11,8 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
     public let sourceHistoryEntryID: UUID?
     public let sourceHistoryEntryRevision: Int64?
     public let aiConversationID: UUID?
+    /// When set with `.aiQuestion`, host skips ASR and answers this text.
+    public let aiQuestionText: String?
 
     public static let dictation = FlowUtteranceRequest(mode: .dictation)
 
@@ -19,13 +21,15 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
         editSourceText: String? = nil,
         sourceHistoryEntryID: UUID? = nil,
         sourceHistoryEntryRevision: Int64? = nil,
-        aiConversationID: UUID? = nil
+        aiConversationID: UUID? = nil,
+        aiQuestionText: String? = nil
     ) {
         self.mode = mode
         self.editSourceText = editSourceText
         self.sourceHistoryEntryID = sourceHistoryEntryID
         self.sourceHistoryEntryRevision = sourceHistoryEntryRevision
         self.aiConversationID = aiConversationID
+        self.aiQuestionText = aiQuestionText
     }
 
     public static func editLastInput(
@@ -42,10 +46,14 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
     public var isEdit: Bool { mode == .editLastInput }
     public var isAIQuestion: Bool { mode == .aiQuestion }
 
-    public static func aiQuestion(conversationID: UUID) -> FlowUtteranceRequest {
+    public static func aiQuestion(
+        conversationID: UUID,
+        prefilledQuestion: String? = nil
+    ) -> FlowUtteranceRequest {
         FlowUtteranceRequest(
             mode: .aiQuestion,
-            aiConversationID: conversationID
+            aiConversationID: conversationID,
+            aiQuestionText: prefilledQuestion
         )
     }
 }

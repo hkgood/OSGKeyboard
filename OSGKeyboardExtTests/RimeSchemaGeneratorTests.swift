@@ -50,12 +50,12 @@ final class RimeSchemaGeneratorTests: XCTestCase {
         let configuration = TypingInputConfiguration(defaults: defaults)
         XCTAssertEqual(configuration.schema, .fullPinyin)
         XCTAssertTrue(configuration.fuzzyPairs.isEmpty)
-        XCTAssertFalse(configuration.defaultToTyping)
+        XCTAssertEqual(configuration.defaultInputMode, .voice)
         XCTAssertFalse(configuration.rememberLastSurface)
     }
 
     @MainActor
-    func testDefaultTypingPreferencePersistsAndDefaultsToOff() {
+    func testDefaultInputModePersistsAndDefaultsToVoice() {
         let suiteName = "TypingInputConfigurationTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
@@ -65,12 +65,38 @@ final class RimeSchemaGeneratorTests: XCTestCase {
             TypingInputConfiguration.preferredSurfaceOnOpen(defaults: defaults),
             .voice
         )
+        XCTAssertNil(TypingInputConfiguration.preferredTypingLanguageOnOpen(defaults: defaults))
 
         let configuration = TypingInputConfiguration(defaults: defaults)
-        configuration.defaultToTyping = true
+        configuration.defaultInputMode = .pinyin
 
         XCTAssertTrue(TypingInputConfiguration.prefersTypingOnOpen(defaults: defaults))
-        XCTAssertTrue(TypingInputConfiguration(defaults: defaults).defaultToTyping)
+        XCTAssertEqual(TypingInputConfiguration(defaults: defaults).defaultInputMode, .pinyin)
+        XCTAssertEqual(
+            TypingInputConfiguration.preferredOpenPreference(defaults: defaults).surface,
+            .typing
+        )
+        XCTAssertEqual(
+            TypingInputConfiguration.preferredOpenPreference(defaults: defaults).typingLanguage,
+            .chinese
+        )
+
+        configuration.defaultInputMode = .english
+        XCTAssertEqual(
+            TypingInputConfiguration.preferredOpenPreference(defaults: defaults).typingLanguage,
+            .english
+        )
+    }
+
+    @MainActor
+    func testLegacyDefaultToTypingMigratesToPinyin() {
+        let suiteName = "TypingInputConfigurationTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        defaults.set(true, forKey: "typing.input.defaultToTyping")
+        let configuration = TypingInputConfiguration(defaults: defaults)
+        XCTAssertEqual(configuration.defaultInputMode, .pinyin)
         XCTAssertEqual(
             TypingInputConfiguration.preferredSurfaceOnOpen(defaults: defaults),
             .typing
@@ -78,13 +104,13 @@ final class RimeSchemaGeneratorTests: XCTestCase {
     }
 
     @MainActor
-    func testRememberLastSurfaceOverridesDefaultToTyping() {
+    func testRememberLastSurfaceOverridesDefaultInputMode() {
         let suiteName = "TypingInputConfigurationTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let configuration = TypingInputConfiguration(defaults: defaults)
-        configuration.defaultToTyping = true
+        configuration.defaultInputMode = .pinyin
         configuration.rememberLastSurface = true
         TypingInputConfiguration.persistLastSurface(.voice, defaults: defaults)
 
@@ -94,10 +120,10 @@ final class RimeSchemaGeneratorTests: XCTestCase {
         )
 
         TypingInputConfiguration.persistLastSurface(.typing, defaults: defaults)
-        XCTAssertEqual(
-            TypingInputConfiguration.preferredSurfaceOnOpen(defaults: defaults),
-            .typing
-        )
+        TypingInputConfiguration.persistLastTypingLanguage(.english, defaults: defaults)
+        let preference = TypingInputConfiguration.preferredOpenPreference(defaults: defaults)
+        XCTAssertEqual(preference.surface, .typing)
+        XCTAssertEqual(preference.typingLanguage, .english)
     }
 
     @MainActor
@@ -107,12 +133,16 @@ final class RimeSchemaGeneratorTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let configuration = TypingInputConfiguration(defaults: defaults)
-        configuration.defaultToTyping = true
+        configuration.defaultInputMode = .pinyin
         configuration.rememberLastSurface = true
 
         XCTAssertEqual(
             TypingInputConfiguration.preferredSurfaceOnOpen(defaults: defaults),
             .typing
+        )
+        XCTAssertEqual(
+            TypingInputConfiguration.preferredTypingLanguageOnOpen(defaults: defaults),
+            .chinese
         )
     }
 

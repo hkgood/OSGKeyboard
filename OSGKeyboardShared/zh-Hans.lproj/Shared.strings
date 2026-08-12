@@ -132,7 +132,6 @@
 
 /* 键盘 UI（扩展与预览共用） */
 "keyboard.tapToTalkA11y" = "点击说话";
-"keyboard.translation.chip" = "翻译";
 "keyboard.translation.offMenu" = "不翻译";
 "keyboard.translation.a11y" = "翻译";
 "keyboard.translation.a11yHint" = "切换翻译或更改目标语言。";
@@ -270,8 +269,8 @@
 "mac.settings.volcengineAppId" = "APP ID";
 "mac.settings.volcengineAccessToken" = "Access Token";
 "mac.settings.volcengineApiKey" = "API Key";
-"mac.settings.volcengineApiKeyMode" = "使用新版 API Key 鉴权";
-"mac.settings.volcengineApiKeyModeSubtitle" = "新控制台请打开；已有 AppID + Token 可保持关闭。";
+"mac.settings.volcengineApiKeyMode" = "使用新版 API Key";
+"mac.settings.volcengineApiKeyModeSubtitle" = "新控制台用 API Key；旧版请关闭并用 APP ID + Token。";
 "mac.settings.volcengineNoteAppToken" = "旧版控制台：填写 APP ID 与 Access Token。Secret Key 无需填写。识别资源固定为豆包流式 2.0（volc.seedasr.sauc.duration）。";
 "mac.settings.volcengineNoteApiKey" = "新版控制台：只需填写 API Key。识别资源固定为豆包流式 2.0（volc.seedasr.sauc.duration）。";
 "mac.settings.recognition" = "识别方式";

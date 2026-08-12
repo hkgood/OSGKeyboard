@@ -32,7 +32,7 @@ struct OnboardingView: View {
     @State private var micStatus = AppPermissions.micStatus
     @State private var speechStatus = AppPermissions.speechStatus
     @State private var keyboardReady = KeyboardSetupBridge.isReadyForOnboardingSkip
-    // v0.2.0: no on-device model downloads remain, so the API setup
+    // No on-device model downloads remain, so the API setup
     // page no longer needs a ModelManager / pendingDownload binding.
 
     private var currentPage: OnboardingPage {
@@ -90,7 +90,7 @@ struct OnboardingView: View {
             applyOnboardingDefaultsIfNeeded()
             refreshPermissionStatuses()
             snapToVisiblePageIfNeeded()
-            // v0.2.0: no on-device ASR weights to warm up — iOS
+            // No on-device ASR weights need warming — iOS
             // `SpeechAnalyzer` ships with iOS 26 and is always ready.
         }
         .onChange(of: scenePhase) { _, phase in
@@ -111,13 +111,13 @@ struct OnboardingView: View {
     private func applyOnboardingDefaultsIfNeeded() {
         guard !config.hasCompletedOnboarding, config.onboardingPage == 0 else { return }
         // First-time users with no API key: default to local for a faster path.
-        // v0.2.0: iOS SpeechAnalyzer is the only on-device ASR path.
+        // iOS SpeechAnalyzer is the only on-device ASR path.
         if config.apiKey.isEmpty, config.engineMode == "cloud" {
             config.engineMode = "local"
         }
     }
 
-    /// v0.2.0: with iOS `SpeechAnalyzer` as the only local backend,
+    /// With iOS `SpeechAnalyzer` as the only local backend,
     /// the "local engine ready" check is always true — there is nothing
     /// for the user to download. Kept as a derived property so the
     /// existing call sites (which feed the Done button state) compile

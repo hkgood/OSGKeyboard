@@ -1,8 +1,10 @@
 // LocalASRModelManager.swift
 // OSGKeyboard · Shared
 //
-// Installs local ASR model archives and Sherpa runtimes under Application Support.
-// Catalog is bundled; installed state is persisted in `installed-manifest.json`.
+// Manages macOS local-ASR model files under Application Support. Qwen3 MLX
+// is the current runtime; Sherpa runtime IDs and install records remain only
+// for legacy catalog and persisted-state compatibility. Installed state is
+// persisted in `installed-manifest.json`.
 
 import Foundation
 

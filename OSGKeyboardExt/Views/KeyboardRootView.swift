@@ -4,8 +4,8 @@
 // Typeless-inspired keyboard surface. The keyboard is laid out in three
 // vertical bands, but the entire height is reserved for us — we set
 // `KeyboardViewController` drives height on `view` (priority 999) and mirrors
-// `KeyboardLayoutMetrics.totalHeight` in SwiftUI — see presentation offset
-// in `applyPresentationHeightOffset()`.
+// `KeyboardLayoutMetrics.totalHeight` in SwiftUI — the input view is bottom-
+// anchored so a transient over-tall system container cannot float the chrome.
 //
 //   ┌───────────────────────────────────────────┐
 //   │  [OSG]                  语音 中文 EN 译     │  ← header band (top)
@@ -296,6 +296,7 @@ public struct KeyboardRootView: View {
                     level: state.level,
                     remainingSeconds: state.phase == .recording ? state.utteranceRemainingSeconds : nil,
                     isEnabled: micButtonEnabled,
+                    usesLiquidGlass: true,
                     onToggle: state.tapMic,
                     onPressingChanged: micButtonEnabled
                         ? state.setMicTouchActive
@@ -425,6 +426,7 @@ public struct KeyboardRootView: View {
             systemName: "arrow.uturn.backward",
             label: ExtL10n.string("keyboard.undoA11y"),
             disabled: disabled,
+            usesLiquidGlass: true,
             hapticIntensity: state.keyboardHapticIntensity
         ) {
             state.undoLastInsertion()
@@ -458,6 +460,7 @@ public struct KeyboardRootView: View {
     }
 
     private var shouldShowClipboardSuggestion: Bool {
+        guard state.canShowClipboardEntry else { return false }
         guard let text = state.clipboardSuggestionText, !text.isEmpty else { return false }
         return true
     }
@@ -699,99 +702,5 @@ private struct TranscriptLine: View {
         case .mic:    return ExtL10n.string("keyboard.denied.mic")
         case .speech: return ExtL10n.string("keyboard.denied.speech")
         }
-    }
-}
-
-// MARK: - Cloud engine chip (cloud always ASR + LLM polish)
-
-private struct CloudEngineChip: View {
-    @Environment(\.themePalette) private var palette: ThemePalette
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "wand.and.stars")
-            ExtL10n.text("keyboard.placeholder.cloudBadge")
-        }
-        .font(TypeStyle.caption2)
-        .foregroundStyle(palette.accent)
-        .padding(.horizontal, Spacing.xs + 2)
-        .padding(.vertical, 6)
-        .frame(minHeight: 28)
-        .background(palette.accent.opacity(0.15), in: Capsule())
-        .overlay(Capsule().stroke(palette.accent.opacity(0.35), lineWidth: 0.5))
-    }
-}
-
-// MARK: - Local engine chip (shown instead of ModeChip when engineMode == "local")
-
-private struct LocalEngineChip: View {
-    @Environment(\.themePalette) private var palette: ThemePalette
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "iphone.badge.checkmark")
-            ExtL10n.text("keyboard.placeholder.localBadge")
-        }
-        .font(TypeStyle.caption2)
-        .foregroundStyle(palette.accent)
-        .padding(.horizontal, Spacing.xs + 2)
-        .padding(.vertical, 6)
-        .frame(minHeight: 28)
-        .background(palette.accent.opacity(0.15), in: Capsule())
-        .overlay(Capsule().stroke(palette.accent.opacity(0.35), lineWidth: 0.5))
-    }
-}
-
-// MARK: - Locale chip
-
-private struct LocaleChip: View {
-    @Environment(\.themePalette) private var palette: ThemePalette
-
-    let localeId: String
-    let onChange: (String) -> Void
-
-    private let options: [(id: String, labelKey: String)] = [
-        ("auto",    "locale.chip.auto"),
-        ("zh-Hans", "locale.chip.zh-Hans"),
-        ("zh-Hant", "locale.chip.zh-Hant"),
-        ("en-US",   "locale.chip.en-US"),
-        ("ja-JP",   "locale.chip.ja-JP"),
-        ("ko-KR",   "locale.chip.ko-KR")
-    ]
-
-    var body: some View {
-        Menu {
-            ForEach(options, id: \.id) { o in
-                Button {
-                    onChange(o.id)
-                } label: {
-                    if o.id == localeId {
-                        Label(ExtL10n.string(o.labelKey), systemImage: "checkmark")
-                    } else {
-                        Text(ExtL10n.string(o.labelKey))
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "globe")
-                Text(currentLabel)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .bold))
-            }
-            .font(TypeStyle.caption2)
-            .foregroundStyle(palette.textPrimary)
-            .padding(.horizontal, Spacing.xs + 2)
-            .padding(.vertical, 6)
-            .frame(minHeight: 28)
-            .background(palette.surfaceElevated, in: Capsule())
-            .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
-        }
-        .menuStyle(.button)
-    }
-
-    private var currentLabel: String {
-        options.first(where: { $0.id == localeId }).map { ExtL10n.string($0.labelKey) }
-            ?? ExtL10n.string("locale.chip.auto")
     }
 }

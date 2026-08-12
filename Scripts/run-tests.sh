@@ -134,6 +134,7 @@ run_xcodebuild() {
     -scheme "$scheme"
     -destination "$destination"
     -configuration "$CONFIGURATION"
+    -onlyUsePackageVersionsFromResolvedFile
     CODE_SIGNING_ALLOWED=NO
   )
   local test_id

@@ -7,7 +7,9 @@
 
 import AVFoundation
 import Foundation
+#if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
+#endif
 
 public enum FlowAudioRouteRecoveryPolicy {
     public static func shouldRebuild(
@@ -41,6 +43,9 @@ public final class FlowAudioEngineHandle: @unchecked Sendable {
     }
 }
 
+/// Process-wide owner of AVAudioSession and Flow's audio engines. Its serial
+/// queue orders every category, activation, route snapshot, and engine
+/// start/stop; that queue confinement justifies `@unchecked Sendable`.
 public final class FlowAudioSessionCoordinator: @unchecked Sendable {
     private struct CaptureActivation: Sendable {
         let snapshot: FlowAudioSessionSnapshot

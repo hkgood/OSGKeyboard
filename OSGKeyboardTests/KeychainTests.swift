@@ -17,6 +17,10 @@ final class KeychainTests: XCTestCase {
         try? Keychain.deleteAPIKey(for: "qwen")
         try? Keychain.deleteAPIKey(for: "openai")
         try? Keychain.deleteAPIKey(for: "deepseek")
+        try? Keychain.deleteAPIKey(for: "qwen", useICloudSync: true)
+        try? Keychain.deleteAPIKey(for: "openai", useICloudSync: true)
+        try? Keychain.deleteAPIKey(for: "deepseek", useICloudSync: true)
+        try? Keychain.deleteASRAPIKey(for: "openai", useICloudSync: true)
     }
 
     override func tearDownWithError() throws {
@@ -25,6 +29,10 @@ final class KeychainTests: XCTestCase {
         try? Keychain.deleteAPIKey(for: "qwen")
         try? Keychain.deleteAPIKey(for: "openai")
         try? Keychain.deleteAPIKey(for: "deepseek")
+        try? Keychain.deleteAPIKey(for: "qwen", useICloudSync: true)
+        try? Keychain.deleteAPIKey(for: "openai", useICloudSync: true)
+        try? Keychain.deleteAPIKey(for: "deepseek", useICloudSync: true)
+        try? Keychain.deleteASRAPIKey(for: "openai", useICloudSync: true)
         Keychain.resetTestMemoryStore()
     }
 
@@ -66,6 +74,19 @@ final class KeychainTests: XCTestCase {
         XCTAssertEqual(Keychain.apiKey(for: "qwen"), "sk-qwen")
     }
 
+    func testSynchronizedWritesVerifyBeforeRemovingLocalCopies() throws {
+        try Keychain.setAPIKey("llm-local", for: "openai")
+        try Keychain.setASRAPIKey("asr-local", for: "openai")
+
+        try Keychain.setAPIKey("llm-synced", for: "openai", useICloudSync: true)
+        try Keychain.setASRAPIKey("asr-synced", for: "openai", useICloudSync: true)
+
+        XCTAssertEqual(Keychain.apiKey(for: "openai", preferICloudSync: false), "llm-synced")
+        XCTAssertEqual(Keychain.asrApiKey(for: "openai", preferICloudSync: false), "asr-synced")
+        XCTAssertEqual(Keychain.apiKey(for: "openai", preferICloudSync: true), "llm-synced")
+        XCTAssertEqual(Keychain.asrApiKey(for: "openai", preferICloudSync: true), "asr-synced")
+    }
+
     /// Deleting a non-existent entry must be a no-op (idempotent), not an
     /// error — callers like `ProviderConfig.reset()` invoke it
     /// unconditionally.
@@ -73,6 +94,123 @@ final class KeychainTests: XCTestCase {
         // No prior write — should not throw.
         XCTAssertNoThrow(try Keychain.deleteAPIKey())
         XCTAssertNoThrow(try Keychain.deleteAPIKey())
+    }
+
+    // MARK: - Safe credential migration
+
+    func testMirroredWriteFailureRestoresBothPreviousValues() {
+        enum TestFailure: Error { case unavailable }
+        var local: String? = "old-local"
+        var synchronizable: String? = "old-sync"
+
+        XCTAssertThrowsError(
+            try Keychain.writeMirroredCredential(
+                "new-value",
+                readLocal: { local },
+                readSynchronizable: { synchronizable },
+                writeLocal: { local = $0 },
+                writeSynchronizable: {
+                    synchronizable = $0
+                    throw TestFailure.unavailable
+                },
+                deleteLocal: { local = nil },
+                deleteSynchronizable: { synchronizable = nil }
+            )
+        ) { error in
+            XCTAssertEqual(error as? Keychain.CredentialMigrationError, .unavailable)
+        }
+        XCTAssertEqual(local, "old-local")
+        XCTAssertEqual(synchronizable, "old-sync")
+    }
+
+    func testCopyTransactionWriteFailureKeepsSource() {
+        enum TestFailure: Error { case unavailable }
+        var source: String? = "credential"
+        var destination: String?
+
+        XCTAssertThrowsError(
+            try Keychain.copyCredentialTransaction(
+                source: { source },
+                destination: { destination },
+                writeDestination: { _ in throw TestFailure.unavailable },
+                readbackDestination: { destination },
+                deleteSource: { source = nil }
+            )
+        ) { error in
+            XCTAssertEqual(error as? Keychain.CredentialMigrationError, .unavailable)
+        }
+        XCTAssertNotNil(source)
+        XCTAssertNil(destination)
+    }
+
+    func testCopyTransactionRejectsDifferentDestinationWithoutDeletingSource() {
+        var source: String? = "source-credential"
+        var destination: String? = "destination-credential"
+        var didWrite = false
+
+        XCTAssertThrowsError(
+            try Keychain.copyCredentialTransaction(
+                source: { source },
+                destination: { destination },
+                writeDestination: { value in
+                    didWrite = true
+                    destination = value
+                },
+                readbackDestination: { destination },
+                deleteSource: { source = nil }
+            )
+        ) { error in
+            XCTAssertEqual(error as? Keychain.CredentialMigrationError, .conflict)
+        }
+        XCTAssertFalse(didWrite)
+        XCTAssertNotNil(source)
+        XCTAssertNotNil(destination)
+    }
+
+    func testCopyTransactionVerificationFailureKeepsSource() {
+        var source: String? = "credential"
+        var destination: String?
+
+        XCTAssertThrowsError(
+            try Keychain.copyCredentialTransaction(
+                source: { source },
+                destination: { destination },
+                writeDestination: { destination = $0 },
+                readbackDestination: { "different-readback" },
+                deleteSource: { source = nil }
+            )
+        ) { error in
+            XCTAssertEqual(error as? Keychain.CredentialMigrationError, .verificationFailed)
+        }
+        XCTAssertNotNil(source)
+    }
+
+    func testCopyTransactionDeletesSourceOnlyAfterVerifiedReadback() throws {
+        var source: String? = "credential"
+        var destination: String?
+
+        try Keychain.copyCredentialTransaction(
+            source: { source },
+            destination: { destination },
+            writeDestination: { destination = $0 },
+            readbackDestination: { destination },
+            deleteSource: { source = nil }
+        )
+
+        XCTAssertNil(source)
+        XCTAssertNotNil(destination)
+    }
+
+    func testLocalToICloudMigrationCoversLLMAndASRKeys() throws {
+        try Keychain.setAPIKey("llm-credential", for: "openai", useICloudSync: false)
+        try Keychain.setASRAPIKey("asr-credential", for: "openai", useICloudSync: false)
+
+        try Keychain.migrateLocalKeysToICloud()
+
+        XCTAssertEqual(Keychain.apiKey(for: "openai", preferICloudSync: false), "llm-credential")
+        XCTAssertEqual(Keychain.asrApiKey(for: "openai", preferICloudSync: false), "asr-credential")
+        XCTAssertNotNil(Keychain.apiKey(for: "openai", preferICloudSync: true))
+        XCTAssertNotNil(Keychain.asrApiKey(for: "openai", preferICloudSync: true))
     }
 
     // MARK: - AppGroupStore reading

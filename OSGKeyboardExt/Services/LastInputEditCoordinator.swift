@@ -15,7 +15,7 @@ final class LastInputEditCoordinator {
     private let stopFlow: () -> Void
     private let abortFlow: () -> Void
     private let acknowledge: (FlowAck.DeliveryOutcome) -> Void
-    private var hintTask: Task<Void, Never>?
+    private unowned let editHintScheduler: EditHintScheduler
     private var activeUtteranceID: UUID?
     private var reviewedUtteranceID: UUID?
     private var reviewedRevision: Int64?
@@ -26,7 +26,8 @@ final class LastInputEditCoordinator {
         beginFlow: @escaping (EditableInputReference) -> FlowUtteranceStartDisposition,
         stopFlow: @escaping () -> Void,
         abortFlow: @escaping () -> Void,
-        acknowledge: @escaping (FlowAck.DeliveryOutcome) -> Void
+        acknowledge: @escaping (FlowAck.DeliveryOutcome) -> Void,
+        editHintScheduler: EditHintScheduler
     ) {
         self.state = state
         self.textInserter = textInserter
@@ -34,6 +35,7 @@ final class LastInputEditCoordinator {
         self.stopFlow = stopFlow
         self.abortFlow = abortFlow
         self.acknowledge = acknowledge
+        self.editHintScheduler = editHintScheduler
     }
 
     func begin() {
@@ -222,33 +224,12 @@ final class LastInputEditCoordinator {
         reviewedRevision = nil
     }
 
-    func showAvailabilityHintAfterDictation() {
-        guard textInserter.editableReference() != nil else { return }
-        showHint(
-            ExtL10n.string("keyboard.edit.hint.available"),
-            isPositive: true,
-            durationNanoseconds: 10_000_000_000
+    private func showHint(_ message: String) {
+        editHintScheduler.show(
+            message: message,
+            isPositive: false,
+            duration: .milliseconds(2_500)
         )
-    }
-
-    private func showHint(
-        _ message: String,
-        isPositive: Bool = false,
-        durationNanoseconds: UInt64 = 2_500_000_000
-    ) {
-        hintTask?.cancel()
-        state.editHint = message
-        state.editHintIsPositive = isPositive
-        hintTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: durationNanoseconds)
-            guard !Task.isCancelled,
-                  self?.state.editHint == message,
-                  self?.state.editHintIsPositive == isPositive else {
-                return
-            }
-            self?.state.editHint = nil
-            self?.state.editHintIsPositive = false
-        }
     }
 
     private func startFailureMessage(

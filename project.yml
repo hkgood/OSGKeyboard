@@ -20,14 +20,11 @@ options:
   generateEmptyDirectories: true
   groupSortPosition: top
 
-# v0.2.0: dropped the local `Qwen3Speech` SPM fork. The "local" engine
-# now uses iOS 26 `SpeechAnalyzer` + `DictationTranscriber` exclusively,
-# which keeps the iOS dependency surface at zero SPM packages / Pods /
-# Carthage (matches the long-standing "zero dependencies" promise in the
-# README). Optional post-ASR cloud polish routes through DeepSeek (or
-# any OpenAI-compatible endpoint) using the existing `LLMClient`.
-# iOS targets remain zero-SPM-linked. macOS local ASR links mlx-audio-swift
-# (ThirdParty/) for Qwen3 MLX streaming; weights download via catalog.
+# iOS local ASR uses iOS 26 `SpeechAnalyzer` + `DictationTranscriber`.
+# The shared iOS framework links librime for Chinese typing. Optional
+# post-ASR polish and AI mode use the user-selected LLM provider.
+# macOS local ASR links mlx-audio-swift (ThirdParty/) for Qwen3 MLX
+# streaming; model weights are installed through the bundled catalog.
 
 packages:
   MLXAudio:
@@ -52,7 +49,7 @@ settings:
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
     MARKETING_VERSION: "1.7.0"
-    CURRENT_PROJECT_VERSION: "64"
+    CURRENT_PROJECT_VERSION: "65"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -79,6 +76,17 @@ targets:
           # crashes when both are passed. iOS 26 uses Icon Composer only.
           - "Assets.xcassets/AppIcon.appiconset"
           - "Resources/CustomLanguageModel/**"
+      # Real keyboard chrome for DEBUG what's-new recording (same UI as Ext).
+      - path: OSGKeyboardExt/Utilities/ExtL10n.swift
+      - path: OSGKeyboardExt/Views/AIKeyboardView.swift
+      - path: OSGKeyboardExt/Views/LastInputEditView.swift
+      - path: OSGKeyboardExt/Views/KeyboardTopControls.swift
+      - path: OSGKeyboardExt/Views/ClipboardKeyboardViews.swift
+      - path: OSGKeyboardExt/Views/NativeKeyboardKeyStyle.swift
+      - path: OSGKeyboardExt/en.lproj/Keyboard.strings
+        buildPhase: resources
+      - path: OSGKeyboardExt/zh-Hans.lproj/Keyboard.strings
+        buildPhase: resources
     entitlements:
       path: OSGKeyboard/OSGKeyboard.entitlements
       properties:
@@ -396,6 +404,7 @@ targets:
     platform: iOS
     sources:
       - path: OSGKeyboardTests
+      - path: Tests/ProviderToolRequestCoordinatorTests.swift
     info:
       path: OSGKeyboardTests/Info.plist
     dependencies:
@@ -414,6 +423,8 @@ targets:
     platform: iOS
     sources:
       - path: OSGKeyboardExtTests
+      - path: OSGKeyboardExt/Services/EditHintScheduler.swift
+      - path: OSGKeyboardExt/Services/ClipboardCaptureCoordinator.swift
       # Host-only dict fixture for librime deploy tests (not linked into Ext).
       - path: OSGKeyboard/Resources/Typing/Rime/osg_pinyin.dict.yaml
         buildPhase: resources
@@ -459,6 +470,7 @@ targets:
     deploymentTarget: "15.0"
     sources:
       - path: OSGKeyboardMacTests
+      - path: Tests/ProviderToolRequestCoordinatorTests.swift
     info:
       path: OSGKeyboardMacTests/Info.plist
     dependencies:
@@ -475,9 +487,9 @@ targets:
         BUNDLE_LOADER: "$(TEST_HOST)"
 
   # =========================================================
-  # macOS 菜单栏 App (Phase 1 · 云端 MVP)
+  # macOS 菜单栏 App
   # =========================================================
-  # Standalone menu-bar utility: record → cloud ASR → polish → clipboard.
+  # Standalone menu-bar utility: record → local/cloud ASR → polish → insert.
   # Reuses the platform-agnostic core files from OSGKeyboardShared at the
   # source level (no framework), excluding the iOS-only files that import
   # SpeechAnalyzer / AVAudioSession / UIKit / SwiftUI views. Local mode uses
@@ -503,6 +515,8 @@ targets:
           # iOS SpeechAnalyzer / AVAudioSession capture — Mac has its own paths.
           - "Services/ASRService.swift"
           - "Services/CloudASR/CloudASRService.swift"
+          - "Services/FlowAudioSessionCoordinator.swift"
+          - "Services/FlowCaptureVoiceProcessing.swift"
           - "Services/FlowContinuousCapture.swift"
           - "Services/LiveDictationController.swift"
           - "Models/AudioBufferSnapshot+AVFoundation.swift"
@@ -515,12 +529,14 @@ targets:
           - "**/*.swift.example"
           - "Resources/**"
           - "DesignSystem/WaveformView.swift"
-          - "DesignSystem/TranslationChip.swift"
           - "DesignSystem/RecordButton.swift"
+          - "DesignSystem/RecordButtonGesturePolicy.swift"
           - "Services/KeyboardState.swift"
+          - "Services/KeyboardOpenSurfacePolicy.swift"
           - "Services/CursorNavigation.swift"
           - "Models/MicVoiceAvailability+Keyboard.swift"
           - "Models/TypingInputConfiguration.swift"
+          - "Models/TypingSurfaceMetrics.swift"
           - "Typing/**"
           - "Utilities/ProgressiveDictationTranscriptAccumulator.swift"
       - path: OSGKeyboardShared/en.lproj/Shared.strings

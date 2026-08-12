@@ -22,18 +22,22 @@
   <p class="lang"><a href="#zh">中文</a> · <a href="#top">English</a></p>
   <div id="top">
   <h1>OSGKeyboard Privacy Policy</h1>
-  <p><strong>Last updated:</strong> August 10, 2026</p>
+  <p><strong>Last updated:</strong> August 12, 2026</p>
   <p>OSGKeyboard is a custom iOS keyboard that turns your voice into text. This policy explains what data the app processes and how it is used.</p>
 
   <h2>What we collect</h2>
   <ul>
     <li><strong>Voice audio</strong> — captured only while you actively record. The default on-device mode transcribes locally with Apple’s speech APIs and does not upload raw audio. If you explicitly enable cloud recognition, recordings are sent to the speech provider you configure for transcription; that provider’s privacy policy applies. OSGKeyboard does not store or proxy the audio on its own servers.</li>
     <li><strong>Transcribed text</strong> — when AI polish is enabled, the final text (not audio) is sent to the LLM provider whose API key you configured (e.g. OpenAI, DeepSeek) for punctuation and formatting. Without an API key, raw ASR text is inserted and no polish request is sent.</li>
-    <li><strong>AI mode questions</strong> — in AI keyboard mode, your spoken question text is sent to the same configured LLM provider to generate an answer. When that provider supports server-side web search, the provider may retrieve public web results to answer time-sensitive questions. Search queries and retrieved snippets are processed by that provider under its own privacy policy; OSGKeyboard does not operate a search index or proxy search traffic.</li>
+    <li><strong>AI mode questions</strong> — in AI keyboard mode, your spoken question text—or a question you tap from an idle suggestion—is sent to the same configured LLM provider to generate an answer. When that provider supports server-side web search, the provider may retrieve public web results to answer time-sensitive questions. Search queries and retrieved snippets are processed by that provider under its own privacy policy; OSGKeyboard does not operate a search index or proxy search traffic.</li>
+    <li><strong>AI idle suggestions</strong> — the main app may periodically download public hint titles (e.g. hot topics) from OSGKeyboard’s hint feed and, using your configured polish LLM, compress them into short on-device suggestion labels. Suggestion packs are cached in the App Group for the keyboard; the keyboard extension does not fetch the feed itself.</li>
+    <li><strong>Clipboard history (opt-in)</strong> — when you enable Clipboard History, the keyboard may read plain-text pasteboard content while it is visible and keep recent copies on device for the history panel and optional suggestion strip. Within about 30 seconds after a copy, AI mode may also offer clipboard-related idle suggestions; tapping one sends the clipboard text with that prompt to your configured LLM. Saying “clipboard” in an AI question does the same, because naming it is how you choose that text; every other AI question is sent without it. In both cases the clipboard body travels as separate quoted data, never as instructions. Clipboard history is local-only and not synced via iCloud.</li>
     <li><strong>API credentials</strong> — stored in the iOS Keychain and shared between the main app and keyboard extension. When iCloud settings sync is enabled, keys replicate through iCloud Keychain (not iCloud KVS JSON).</li>
-    <li><strong>App preferences</strong> — engine mode, language, and keyboard settings stored in App Group UserDefaults. Optional iCloud sync mirrors preferences, usage statistics, and voice history through your private iCloud account.</li>
+    <li><strong>App preferences</strong> — engine mode, language, and keyboard settings stored in App Group UserDefaults. Optional iCloud sync mirrors eligible preferences, usage statistics, and voice history through your private iCloud account. Clipboard-history consent and its suggestion-strip switch stay device-local and are not activated by iCloud settings sync.</li>
+    <li><strong>Optional clipboard history</strong> — off by default. When you turn it on, the keyboard may read text from the clipboard on this device or from Universal Clipboard; iOS does not provide a reliable way to distinguish those sources. Up to 15 accepted text items are stored only in the local App Group shared by this device’s host app and keyboard extension. Turning history off stops capture, turns off the suggestion strip, and keeps existing items. Reset Settings also keeps them; only the separate confirmed “Clear clipboard history” action removes them. There is no fixed expiry. Secure fields immediately hide clipboard UI and are not captured. Conservative filters reject common OTP shapes, private-key headers, JWTs, Bearer tokens, recognizable provider-key prefixes, and common Luhn-valid 16-digit card numbers, but cannot identify every password or secret. A rejected item can still be pasted through iOS; it is simply not added to history. Clipboard history is not automatically sent to AI. If you insert an item and then actively use polish, the inserted text may be included as context sent to the provider you configured.</li>
     <li><strong>On-device typing learning</strong> — the Chinese keyboard stores selected words and candidate frequencies in the App Group on your device. OSGKeyboard does not upload this user dictionary.</li>
   </ul>
+  <p>Clipboard sensitive-content filtering is applied to newly captured items. Existing history is retained until you use the confirmed clear action.</p>
 
   <h2>What we do not collect</h2>
   <ul>
@@ -46,7 +50,7 @@
   <ul>
     <li><strong>Microphone</strong> — required for voice input and background voice sessions.</li>
     <li><strong>Speech recognition</strong> — required for on-device transcription.</li>
-    <li><strong>Full Access</strong> — required so the keyboard can reach the microphone, read your API key, and communicate with the main app. Full Access does not grant us access to everything you type; we do not exfiltrate keystrokes.</li>
+    <li><strong>Full Access</strong> — required so the keyboard can reach the microphone, read your API key, communicate with the main app, and—only when clipboard history is enabled—read clipboard text. Full Access does not grant us access to everything you type; we do not exfiltrate keystrokes.</li>
   </ul>
 
   <h2>Third parties</h2>
@@ -55,6 +59,7 @@
   <h2>Data retention</h2>
   <p>Settings remain on your device until you delete the app or reset settings. With iCloud sync enabled, API keys use iCloud Keychain; preferences, statistics, and history may sync via your private iCloud account.</p>
   <p><strong>Voice history</strong> — successful transcripts may be saved in the main app’s History tab (up to 300 entries). With iCloud settings sync enabled, history may also sync across your devices.</p>
+  <p><strong>Clipboard history</strong> — stays in this device’s App Group, is capped at 15 entries, does not sync through iCloud, and has no fixed expiry. Turning the feature off or resetting settings keeps existing items. Use the separately confirmed clear action to delete them.</p>
 
   <h2>Contact</h2>
   <p>Questions: open an issue at <a href="https://github.com/hkgood/OSGKeyboard">github.com/hkgood/OSGKeyboard</a>.</p>
@@ -62,17 +67,21 @@
 
   <hr id="zh">
   <h1>OSGKeyboard 隐私政策</h1>
-  <p><strong>更新日期：</strong>2026 年 8 月 10 日</p>
+  <p><strong>更新日期：</strong>2026 年 8 月 12 日</p>
   <p>OSGKeyboard 是一款 iOS 自定义键盘，可将语音转为文字。本政策说明应用处理哪些数据及用途。</p>
 
   <h2>我们处理的数据</h2>
   <ul>
     <li><strong>语音音频</strong> — 仅在你主动录音时采集。默认本地模式通过 Apple 语音能力在设备端转写，不会上传原始录音。若你主动启用云端识别，录音会发送到你配置的语音服务商完成转写，并适用该服务商的隐私政策。OSGKeyboard 自身不会存储或中转音频。</li>
     <li><strong>转写文字</strong> — 当你配置了 LLM API Key 并启用润色时，最终文字（非音频）会发送到该服务商以整理标点和格式。未填写 API Key 时直接插入原始识别结果，不会发起润色请求。</li>
-    <li><strong>AI 模式问题</strong> — 在 AI 键盘模式下，语音转写后的问题文字会发送到同一套已配置的 LLM 服务商以生成回答。若该服务商支持服务端联网搜索，可能为回答时效性问题检索公开网页结果。搜索词与检索片段由该服务商按其隐私政策处理；OSGKeyboard 不运营搜索索引，也不中转搜索流量。</li>
+    <li><strong>AI 模式问题</strong> — 在 AI 键盘模式下，语音转写后的问题文字，或你点选空闲建议后生成的提问，会发送到同一套已配置的 LLM 服务商以生成回答。若该服务商支持服务端联网搜索，可能为回答时效性问题检索公开网页结果。搜索词与检索片段由该服务商按其隐私政策处理；OSGKeyboard 不运营搜索索引，也不中转搜索流量。</li>
+    <li><strong>AI 空闲建议</strong> — 主 App 可能定期从 OSGKeyboard 热点建议源下载公开标题，并使用你配置的润色 LLM 压缩为短标签，缓存在 App Group 供键盘读取；键盘扩展本身不会直接请求该源。</li>
+    <li><strong>剪贴板历史（可选）</strong> — 当你开启「剪贴板历史」后，键盘在可见期间可能读取纯文本粘贴板内容并在本机保存，供历史面板与可选建议条使用。复制后约 30 秒内，AI 模式也可能展示剪贴板相关空闲建议；点选后会将剪贴板正文与提示一并发送到你配置的 LLM。在 AI 提问中明确说出「剪贴板」同样如此——说出即代表你选择了这段材料；其余 AI 提问不会附带剪贴板。两种情况下剪贴板正文都作为单独引用的数据发送，绝不作为指令。剪贴板历史仅存本机，不经 iCloud 同步。</li>
     <li><strong>API 凭证</strong> — 保存在设备 Keychain，在主 App 与键盘扩展间共享。开启 iCloud 设置同步后，经 iCloud 钥匙串同步（非 iCloud KVS JSON）。</li>
-    <li><strong>应用偏好</strong> — 引擎、语言等设置保存在 App Group。可选 iCloud 同步经私有 iCloud 账户镜像偏好、统计与语音历史。</li>
+    <li><strong>应用偏好</strong> — 引擎、语言等设置保存在 App Group。可选 iCloud 同步经私有 iCloud 账户镜像可同步的偏好、统计与语音历史。剪贴板历史采集许可与建议条开关仅属于本机，不会被 iCloud 设置同步开启。</li>
+    <li><strong>可选剪贴板历史</strong> — 默认关闭。开启后，键盘可能读取本机剪贴板或通用剪贴板中的文字；iOS 无法可靠区分两者来源。最多 15 条通过规则的文本仅保存在本机主 App 与键盘扩展共享的 App Group。关闭历史只会停止采集、关闭建议条并保留已有记录；重置设置同样不会清除，只有单独确认的「清空剪贴板历史」操作会删除。历史没有固定过期时间。进入安全输入框会立即隐藏剪贴板入口与正文，且不会采集。保守过滤会拒绝常见 OTP 形态、私钥头、JWT、Bearer Token、具有明确服务商前缀的密钥以及常见的通过 Luhn 校验的 16 位卡号，但无法识别所有密码或秘密。被拒绝的内容仍可通过 iOS 一次性粘贴，只是不进入历史。剪贴板历史不会自动发送给 AI；插入后若主动使用润色，已插入文字可能作为上下文发送给你配置的服务商。</li>
   </ul>
+  <p>剪贴板敏感内容过滤仅在新内容采集时执行；已有历史会继续保留，直到你使用带确认的清空操作。</p>
 
   <h2>我们不收集的内容</h2>
   <ul>
@@ -85,7 +94,7 @@
   <ul>
     <li><strong>麦克风</strong> — 语音输入与后台语音会话所需。</li>
     <li><strong>语音识别</strong> — 端侧转写所需。</li>
-    <li><strong>完全访问</strong> — 使键盘能使用麦克风、读取 API Key 并与主 App 通信。完全访问不代表我们会收集全部击键内容。</li>
+    <li><strong>完全访问</strong> — 使键盘能使用麦克风、读取 API Key、与主 App 通信，并仅在你开启剪贴板历史后读取剪贴板文字。完全访问不代表我们会收集全部击键内容。</li>
   </ul>
 
   <h2>第三方</h2>
@@ -94,6 +103,7 @@
   <h2>数据保留</h2>
   <p>设置保留在设备上，直至卸载或重置。开启 iCloud 同步后，API 密钥走 iCloud 钥匙串；偏好、统计与历史可能经私有 iCloud 账户同步。</p>
   <p><strong>语音历史</strong> — 成功转写可保存在主 App「历史」页（最多 300 条）。开启 iCloud 设置同步后，历史也可能在多设备间同步。</p>
+  <p><strong>剪贴板历史</strong> — 仅保存在本机 App Group，上限 15 条，不经 iCloud 同步，也没有固定过期时间。关闭功能或重置设置会保留已有记录；需使用单独确认的清空操作才能删除。</p>
 
   <h2>联系</h2>
   <p>问题反馈：<a href="https://github.com/hkgood/OSGKeyboard">github.com/hkgood/OSGKeyboard</a></p>

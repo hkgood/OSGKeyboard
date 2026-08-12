@@ -316,10 +316,6 @@ final class KeyboardFlowCoordinator {
             snapshotReason: readySnapshot?.reason
         )
         state.flowSessionActive = sessionActive
-        state.debugPendingFlowStart = isPendingFlowStart
-        state.debugFlowRecording = isFlowRecording
-        state.debugAwaitingFlowResult = isAwaitingFlowResult
-        state.debugHasFullAccess = hasFullAccess()
         state.micVoiceAvailability = MicVoiceAvailabilityResolver.resolve(
             phase: state.phase,
             micDisabled: state.micDisabled,
@@ -639,6 +635,17 @@ final class KeyboardFlowCoordinator {
         conversationID: UUID
     ) -> FlowUtteranceStartDisposition {
         startUtterance(.aiQuestion(conversationID: conversationID))
+    }
+
+    func submitAIQuestion(
+        text: String,
+        conversationID: UUID
+    ) -> FlowUtteranceStartDisposition {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return .rejected(.pipelineBusy) }
+        return startUtterance(
+            .aiQuestion(conversationID: conversationID, prefilledQuestion: trimmed)
+        )
     }
 
     func stopAIRecording() {
@@ -1223,7 +1230,7 @@ final class KeyboardFlowCoordinator {
                     "status=\(result.status.rawValue) "
                         + "kind=\(result.errorKind?.rawValue ?? "none") "
                         + "utterance=\(result.utteranceId.uuidString.prefix(8)) "
-                        + "message=\(result.text ?? "nil")"
+                        + "messageLen=\(result.text?.count ?? 0)"
                 )
                 isAwaitingFlowResult = false
                 stopFlowWatchdog()
@@ -1738,6 +1745,26 @@ final class KeyboardFlowCoordinator {
         }
         FlowSessionBridge.setPendingKeyboardUtteranceId(currentUtteranceId)
         lastStoppedUtteranceId = nil
+
+        // Prefilled AI hint: skip mic / ASR and ask the host to answer text.
+        if currentUtteranceRequest?.isAIQuestion == true,
+           let question = currentUtteranceRequest?.aiQuestionText?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !question.isEmpty {
+            writeSubmitAIQuestion(question)
+            isFlowRecording = false
+            isAwaitingFlowResult = true
+            state.lastTranscript = question
+            state.phase = .processing
+            if let currentUtteranceId {
+                onAIRecognitionStarted(currentUtteranceId)
+            }
+            startFlowResultWatchdog()
+            recomputeMicVoiceAvailability()
+            traceState("startFlowRecording.submitAIQuestion")
+            return
+        }
+
         writeCommand(.startRecording)
         isFlowRecording = true
         state.lastTranscript = ""
@@ -1757,6 +1784,37 @@ final class KeyboardFlowCoordinator {
         }
         startFlowLevelWatchdog()
         traceState("startFlowRecording.started")
+    }
+
+    private func writeSubmitAIQuestion(_ text: String) {
+        guard let activeSessionId, let currentUtteranceId else { return }
+        let command = FlowCommand(
+            sessionId: activeSessionId,
+            utteranceId: currentUtteranceId,
+            commandSeq: nextCommandSeq(),
+            action: .submitAIQuestion,
+            localeId: state.localeId,
+            utteranceMode: .aiQuestion,
+            aiConversationID: currentUtteranceRequest?.aiConversationID,
+            aiQuestionText: text,
+            startDeadlineAt: currentStartDeadlineAt
+        )
+        FlowSessionBridge.writeCommand(command)
+        if let currentStartDeadlineAt {
+            FlowSessionBridge.writeStartTransaction(
+                FlowStartTransaction(
+                    sessionID: activeSessionId,
+                    utteranceID: currentUtteranceId,
+                    deadlineAt: currentStartDeadlineAt,
+                    phase: .issued
+                )
+            )
+        }
+        FlowTrace.keyboard(
+            "command.submitAIQuestion",
+            "seq=\(command.commandSeq) utterance=\(currentUtteranceId.uuidString.prefix(8)) "
+                + "chars=\(text.count)"
+        )
     }
 
     private func startUtteranceCountdown() {
@@ -2012,7 +2070,7 @@ final class KeyboardFlowCoordinator {
                         "via=resultWatchdog status=\(result.status.rawValue) "
                             + "kind=\(error.kind.rawValue) "
                             + "utterance=\(result.utteranceId.uuidString.prefix(8)) "
-                            + "message=\(error.message)"
+                            + "messageLen=\(error.message.count)"
                     )
                     self.state.phase = .error(
                         .fromFlowTranscription(error),

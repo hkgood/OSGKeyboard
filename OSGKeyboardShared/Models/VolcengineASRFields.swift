@@ -26,7 +26,7 @@ public struct VolcengineASRFields: Sendable, Equatable {
     public static let fixedResourceID = CloudASRModelCatalog.volcengineDefaultResourceID
 
     public init(
-        authMode: VolcengineASRAuthMode = .appToken,
+        authMode: VolcengineASRAuthMode = .apiKey,
         appID: String = "",
         accessToken: String = "",
         apiKeyCredential: String = ""
@@ -148,7 +148,7 @@ public struct VolcengineASRFields: Sendable, Equatable {
         // Legacy JSON without auth_mode: prefer app-token when present.
         if hasAppToken { return .appToken }
         if hasAPIKey { return .apiKey }
-        return .appToken
+        return .apiKey
     }
 
     private static func string(_ json: [String: Any], keys: [String]) -> String? {

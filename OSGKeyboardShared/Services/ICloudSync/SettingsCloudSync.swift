@@ -16,6 +16,7 @@ public extension Notification.Name {
 public enum SettingsCloudSyncError: Error, Equatable, Sendable {
     case encodeFailed
     case decodeFailed
+    case credentialMigrationFailed(Keychain.CredentialMigrationError)
 }
 
 @MainActor
@@ -28,15 +29,25 @@ public final class SettingsCloudSync {
     private let kvs: UbiquitousKeyValueStoreing
     private let makeStore: () -> AppGroupStore
     private let historyDefaults: () -> UserDefaults
+    private let migrateLocalKeysToICloud: () throws -> Void
+    private let migrateICloudKeysToLocal: () throws -> Void
 
     public init(
         kvs: UbiquitousKeyValueStoreing = NSUbiquitousKeyValueStore.default,
         makeStore: @escaping () -> AppGroupStore = { AppGroupStore() },
-        historyDefaults: @escaping () -> UserDefaults = { .standard }
+        historyDefaults: @escaping () -> UserDefaults = { .standard },
+        migrateLocalKeysToICloud: @escaping () throws -> Void = {
+            try Keychain.migrateLocalKeysToICloud()
+        },
+        migrateICloudKeysToLocal: @escaping () throws -> Void = {
+            try Keychain.migrateICloudKeysToLocal()
+        }
     ) {
         self.kvs = kvs
         self.makeStore = makeStore
         self.historyDefaults = historyDefaults
+        self.migrateLocalKeysToICloud = migrateLocalKeysToICloud
+        self.migrateICloudKeysToLocal = migrateICloudKeysToLocal
     }
 
     public func pullAndMergeIfEnabled() async {
@@ -61,6 +72,7 @@ public final class SettingsCloudSync {
 
     public func enableSync() async throws {
         let store = makeStore()
+        try performCredentialMigration(migrateLocalKeysToICloud)
         ICloudSyncPreferences.pushSettingsEnabled(true, kvs: kvs)
         ICloudSyncPreferences.pushDictionaryEnabled(true, kvs: kvs)
         ICloudSyncPreferences.cacheToAppGroup(
@@ -68,8 +80,6 @@ public final class SettingsCloudSync {
             dictionaryEnabled: true,
             store: store
         )
-
-        Keychain.migrateLocalKeysToICloud()
 
         let deviceID = SyncDeviceID.current(defaults: store.defaults)
         let config = store.configurationSnapshot()
@@ -91,12 +101,23 @@ public final class SettingsCloudSync {
         try await historySync.mergeAndPushIfEnabled()
     }
 
-    public func disableSync() {
+    public func disableSync() throws {
         let store = makeStore()
+        try performCredentialMigration(migrateICloudKeysToLocal)
         ICloudSyncPreferences.pushSettingsEnabled(false, kvs: kvs)
         ICloudSyncPreferences.pushDictionaryEnabled(false, kvs: kvs)
         store.setSettingsICloudSyncEnabled(false)
         store.setPersonalDictionaryICloudSyncEnabled(false)
+    }
+
+    private func performCredentialMigration(_ operation: () throws -> Void) throws {
+        do {
+            try operation()
+        } catch let error as Keychain.CredentialMigrationError {
+            throw SettingsCloudSyncError.credentialMigrationFailed(error)
+        } catch {
+            throw SettingsCloudSyncError.credentialMigrationFailed(.unavailable)
+        }
     }
 
     public func pullAndMerge(store: AppGroupStore) async {

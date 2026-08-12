@@ -1,5 +1,5 @@
 // CloudASRClients.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // Provider-specific cloud ASR backends with personal-dictionary bias.
 

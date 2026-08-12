@@ -118,4 +118,24 @@ final class KeyboardStateTests: XCTestCase {
         XCTAssertEqual(KeyboardState.InputMode.allCases, [.polish])
         XCTAssertEqual(KeyboardState.InputMode(rawValue: "polish"), .polish)
     }
+
+    func testSecureFieldImmediatelyHidesClipboardUIWithoutRestoringBody() {
+        let state = KeyboardState()
+        state.clipboardSuggestionText = "private clipboard body"
+        state.clipboardSuggestionChangeCount = 7
+        state.clipboardOverlay = .historyPanel
+
+        state.setSecureTextEntry(true)
+
+        XCTAssertFalse(state.canShowClipboardEntry)
+        XCTAssertNil(state.clipboardSuggestionText)
+        XCTAssertNil(state.clipboardSuggestionChangeCount)
+        XCTAssertEqual(state.clipboardOverlay, .none)
+
+        state.setSecureTextEntry(false)
+
+        XCTAssertTrue(state.canShowClipboardEntry)
+        XCTAssertNil(state.clipboardSuggestionText)
+        XCTAssertEqual(state.clipboardOverlay, .none)
+    }
 }

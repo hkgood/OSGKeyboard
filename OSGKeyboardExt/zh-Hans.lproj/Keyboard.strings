@@ -114,13 +114,19 @@
 "preview.localeChip.cycle" = "切换识别语言";
 
 /* Keyboard (ext) */
+"keyboard.tab.ai" = "AI";
+"keyboard.tab.voice" = "语音";
+"keyboard.tab.chinese" = "中文";
+"keyboard.tab.english" = "EN";
+"keyboard.tab.ai.a11y" = "切换到 AI 问答";
+"keyboard.tab.voice.a11y" = "切换到语音输入";
+"keyboard.tab.chinese.a11y" = "切换到中文输入";
+"keyboard.tab.english.a11y" = "切换到英文输入";
 "keyboard.placeholder.idle" = "点按说话";
 "keyboard.placeholder.preparing" = "准备中…";
 "keyboard.placeholder.preparingRecording" = "准备录音…";
 "keyboard.placeholder.processing" = "处理中…";
 "keyboard.placeholder.error" = "润色失败";
-"keyboard.placeholder.localBadge" = "本地";
-"keyboard.placeholder.cloudBadge" = "云端";
 "keyboard.models.notDownloaded" = "本地模型尚未下载";
 "keyboard.models.downloadHint" = "打开 OSGKeyboard 下载模型";
 "keyboard.rec" = "REC";
@@ -183,20 +189,8 @@
 "keyboard.dictation.failed" = "录音失败，请重试";
 "keyboard.dictation.resultTimeout" = "等待录音结果超时，请返回 OSGKeyboard 完成录音后重试";
 
-/* Locale chip (short labels) */
-"locale.chip.auto" = "自动";
-"locale.chip.zh-Hans" = "简";
-"locale.chip.zh-Hant" = "繁";
-"locale.chip.en-US" = "EN";
-"locale.chip.ja-JP" = "日";
-"locale.chip.ko-KR" = "韩";
-
-/* Translation chip (v0.3) */
-"keyboard.translation.chip" = "翻译";
+/* 翻译菜单 */
 "keyboard.translation.offMenu" = "不翻译";
-"keyboard.translation.off" = "不翻译";
-"keyboard.translation.enable" = "开启翻译";
-"keyboard.translation.disable" = "关闭翻译";
 "keyboard.translation.a11y" = "翻译";
 "keyboard.translation.a11yHint" = "切换翻译开关或修改目标语言。";
 "keyboard.clipboard.a11y" = "剪贴板";
@@ -208,6 +202,9 @@
 "keyboard.clipboard.panel.delete" = "删除";
 "keyboard.clipboard.panel.close" = "关闭剪贴板";
 "keyboard.clipboard.panel.closeHint" = "返回键盘输入界面。";
+"keyboard.clipboard.clear.title" = "清空剪贴板历史？";
+"keyboard.clipboard.clear.message" = "将从本机永久删除全部剪贴板历史，且无法撤销。";
+"keyboard.clipboard.clear.confirm" = "清空历史";
 "keyboard.clipboard.suggestion.dismissA11y" = "关闭剪贴板建议";
 "keyboard.clipboard.suggestion.dismissHint" = "隐藏本次剪贴板建议条。";
 "keyboard.voice.cancel" = "取消本次语音输入";
@@ -276,6 +273,7 @@
 
 /* AI 问答模式 */
 "keyboard.ai.placeholder" = "点击麦克风向 AI 提问";
+"keyboard.ai.hintA11yPrefix" = "建议：";
 "keyboard.ai.hint" = "先插入 AI 回答，再按发送";
 "keyboard.ai.listening" = "正在聆听…";
 "keyboard.ai.recognizing" = "正在识别问题…";
@@ -295,3 +293,4 @@
 "keyboard.ai.error.startTimeout" = "麦克风启动超时，请重试";
 "keyboard.ai.error.requestTimeout" = "AI 回答超时，请重试";
 "keyboard.ai.error.requestFailed" = "AI 回答失败，请重试";
+"keyboard.ai.error.clipboardUnavailable" = "剪贴板建议已过期，请重新复制文本";

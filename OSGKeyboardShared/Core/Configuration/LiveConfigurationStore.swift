@@ -87,7 +87,9 @@ public struct LiveConfigurationSnapshot {
     }
 }
 
-/// Ephemeral `ConfigurationStore` backed by a user-edited snapshot.
+/// Ephemeral `ConfigurationStore` backed by an immutable capture of the edited
+/// values. API keys remain in this in-memory snapshot and are never persisted
+/// by the store; `@unchecked Sendable` covers the referenced UserDefaults handle.
 public struct LiveConfigurationStore: ConfigurationStore, @unchecked Sendable {
     private let snapshot: LiveConfigurationSnapshot
 

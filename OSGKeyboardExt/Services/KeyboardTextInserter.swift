@@ -21,6 +21,7 @@ final class KeyboardTextInserter {
     private let fieldContextProvider: () -> FlowFieldContext?
     private let selectedText: () -> String?
     private let scheduleAutoClearError: () -> Void
+    private unowned let editHintScheduler: EditHintScheduler
 
     /// Exact string last inserted through this inserter — dictation, AI answer,
     /// edit result or clipboard paste (including any word-boundary separator).
@@ -33,7 +34,6 @@ final class KeyboardTextInserter {
     private var redoContextBefore: String?
     private let extensionInstanceID = UUID()
     private var lastEditUndo: PendingTextEditTransaction?
-    private var editHintTask: Task<Void, Never>?
     /// Suppresses availability refresh while we walk `deleteBackward`
     /// for undo, so intermediate contexts don't flicker the button.
     private var isUndoing = false
@@ -45,7 +45,8 @@ final class KeyboardTextInserter {
         contextBeforeInput: @escaping () -> String?,
         fieldContextProvider: @escaping () -> FlowFieldContext?,
         selectedText: @escaping () -> String?,
-        scheduleAutoClearError: @escaping () -> Void
+        scheduleAutoClearError: @escaping () -> Void,
+        editHintScheduler: EditHintScheduler
     ) {
         self.state = state
         self.insertText = insertText
@@ -54,6 +55,7 @@ final class KeyboardTextInserter {
         self.fieldContextProvider = fieldContextProvider
         self.selectedText = selectedText
         self.scheduleAutoClearError = scheduleAutoClearError
+        self.editHintScheduler = editHintScheduler
     }
 
     func handleFlowTranscript(
@@ -510,28 +512,16 @@ final class KeyboardTextInserter {
                 extensionInstanceID: extensionInstanceID
             )
         )
-        editHintTask?.cancel()
         let hint = ExtL10n.string("keyboard.edit.hint.available")
-        state.editHint = hint
-        state.editHintIsPositive = true
-        editHintTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 10_000_000_000)
-            guard !Task.isCancelled,
-                  self?.state.editHint == hint,
-                  self?.state.editHintIsPositive == true else {
-                return
-            }
-            self?.state.editHint = nil
-            self?.state.editHintIsPositive = false
-        }
+        editHintScheduler.show(
+            message: hint,
+            isPositive: true,
+            duration: .seconds(10)
+        )
     }
 
     private func clearEditHintIfPositive() {
-        guard state.editHintIsPositive else { return }
-        editHintTask?.cancel()
-        editHintTask = nil
-        state.editHint = nil
-        state.editHintIsPositive = false
+        editHintScheduler.clearPositive()
     }
 
     private func clearLastInsertion() {

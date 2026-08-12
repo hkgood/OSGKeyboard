@@ -90,10 +90,9 @@ public struct LLMRequest: Codable, Sendable {
         var cjkCount = 0
         var nonCJKCount = 0
         for scalar in text.unicodeScalars {
-            switch scalar.value {
-            case 0x4E00...0x9FFF, 0x3400...0x4DBF, 0xF900...0xFAFF:
+            if HanScript.isIdeograph(scalar) {
                 cjkCount += 1
-            default:
+            } else {
                 nonCJKCount += 1
             }
         }

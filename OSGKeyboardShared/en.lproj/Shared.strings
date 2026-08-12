@@ -133,7 +133,6 @@
 
 /* Keyboard UI (shared between extension + preview) */
 "keyboard.tapToTalkA11y" = "Tap to talk";
-"keyboard.translation.chip" = "Translate";
 "keyboard.translation.offMenu" = "Don't translate";
 "keyboard.translation.a11y" = "Translation";
 "keyboard.translation.a11yHint" = "Toggle translation or change the target language.";
@@ -271,8 +270,8 @@
 "mac.settings.volcengineAppId" = "APP ID";
 "mac.settings.volcengineAccessToken" = "Access Token";
 "mac.settings.volcengineApiKey" = "API Key";
-"mac.settings.volcengineApiKeyMode" = "New API Key auth";
-"mac.settings.volcengineApiKeyModeSubtitle" = "On for the new console; off keeps APP ID + Access Token.";
+"mac.settings.volcengineApiKeyMode" = "Use new API Key";
+"mac.settings.volcengineApiKeyModeSubtitle" = "API Key for the new console; turn off for APP ID + Token.";
 "mac.settings.volcengineNoteAppToken" = "Legacy console: APP ID + Access Token. Secret Key not required. Resource fixed to Doubao streaming 2.0 (volc.seedasr.sauc.duration).";
 "mac.settings.volcengineNoteApiKey" = "New console: API Key only. Resource fixed to Doubao streaming 2.0 (volc.seedasr.sauc.duration).";
 "mac.settings.recognition" = "RECOGNITION METHOD";

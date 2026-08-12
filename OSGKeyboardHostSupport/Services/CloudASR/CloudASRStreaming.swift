@@ -1,5 +1,5 @@
 // CloudASRStreaming.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // Utterance-scoped cloud ASR sessions: one long-lived connection per press,
 // streaming PCM up and interim text down. Chunked batch ASR remains the
@@ -9,6 +9,35 @@ import Foundation
 #if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
 #endif
+
+enum CloudASRLogMetadata {
+    static func describe(_ error: Error) -> String {
+        if let cloudError = error as? CloudASRError {
+            switch cloudError {
+            case .noAPIKey:
+                return "category=noAPIKey"
+            case .invalidURL:
+                return "category=invalidURL"
+            case .http(let status, let message):
+                return "category=http status=\(status) detailBytes=\(message?.utf8.count ?? 0)"
+            case .decoding(let detail):
+                return "category=decoding detailBytes=\(detail.utf8.count)"
+            case .transport(let detail):
+                return "category=transport detailBytes=\(detail.utf8.count)"
+            case .emptyTranscript:
+                return "category=emptyTranscript"
+            case .audioTooLong:
+                return "category=audioTooLong"
+            case .providerUnsupported:
+                return "category=providerUnsupported"
+            }
+        }
+        if let urlError = error as? URLError {
+            return "category=url code=\(urlError.code.rawValue)"
+        }
+        return "category=\(String(reflecting: type(of: error)))"
+    }
+}
 
 /// Long-lived cloud ASR session for one Flow utterance.
 public protocol CloudASRStreamingSession: Sendable {
@@ -125,7 +154,7 @@ public actor StreamingUtterancePipeline {
                     + "elapsed=\(FlowTrace.seconds(since: startedAt))s"
             )
             return .success(ChunkedUtteranceSuccess(text: finalText))
-        } catch is CancellationError {
+        } catch where ProviderToolCancellation.matches(error) {
             activeSession?.cancel()
             activeSession = nil
             FlowTrace.asr("cloud.stream.cancelled", "uploadedSamples=\(uploadedSamples)")
@@ -138,7 +167,7 @@ public actor StreamingUtterancePipeline {
                 "asr.cloud.stream.failed",
                 "uploadedSamples=\(uploadedSamples) "
                     + "elapsed=\(FlowTrace.seconds(since: startedAt))s "
-                    + "error=\(error.localizedDescription)"
+                    + "\(CloudASRLogMetadata.describe(error))"
             )
             return .failure(error.localizedDescription)
         }

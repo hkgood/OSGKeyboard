@@ -4,11 +4,21 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VENDOR="$ROOT/ThirdParty/mlx-audio-swift"
-PATCH_MARKER="$VENDOR/.osg-context-patch-applied"
+PATCH_MARKER="$VENDOR/.osg-context-patch-v2-applied"
+PINNED_COMMIT="d302a5c6080d2bb97bae38c7418f82abb76013b6"
 
 if [[ ! -f "$VENDOR/Package.swift" ]]; then
-  echo "Cloning mlx-audio-swift into ThirdParty/..."
-  git clone --depth 1 https://github.com/Blaizzy/mlx-audio-swift "$VENDOR"
+  echo "Cloning pinned mlx-audio-swift into ThirdParty/..."
+  git clone --filter=blob:none --no-checkout https://github.com/Blaizzy/mlx-audio-swift "$VENDOR"
+  git -C "$VENDOR" fetch --depth 1 origin "$PINNED_COMMIT"
+  git -C "$VENDOR" checkout --detach FETCH_HEAD
+fi
+
+ACTUAL_COMMIT="$(git -C "$VENDOR" rev-parse HEAD)"
+if [[ "$ACTUAL_COMMIT" != "$PINNED_COMMIT" ]]; then
+  echo "error: mlx-audio-swift is at $ACTUAL_COMMIT; expected $PINNED_COMMIT" >&2
+  echo "Remove ThirdParty/mlx-audio-swift and rerun this script." >&2
+  exit 1
 fi
 
 if [[ -f "$PATCH_MARKER" ]]; then
@@ -32,7 +42,19 @@ if "mlx-swift.git\", exact:" not in mtext:
         '.package(url: "https://github.com/ml-explore/mlx-swift.git", .upToNextMajor(from: "0.30.6")),',
         '.package(url: "https://github.com/ml-explore/mlx-swift.git", exact: "0.31.3"),',
     )
-    manifest.write_text(mtext)
+mtext = mtext.replace(
+    '.package(url: "https://github.com/ml-explore/mlx-swift-lm.git", .upToNextMajor(from: "3.31.3")),',
+    '.package(url: "https://github.com/ml-explore/mlx-swift-lm.git", exact: "3.31.3"),',
+)
+mtext = mtext.replace(
+    '.package(url: "https://github.com/huggingface/swift-transformers.git", .upToNextMajor(from: "1.1.6")),',
+    '.package(url: "https://github.com/huggingface/swift-transformers.git", exact: "1.1.9"),',
+)
+mtext = mtext.replace(
+    '.package(url: "https://github.com/huggingface/swift-huggingface.git", .upToNextMajor(from: "0.8.1"))',
+    '.package(url: "https://github.com/huggingface/swift-huggingface.git", exact: "0.8.1")',
+)
+manifest.write_text(mtext)
 
 text = types.read_text()
 if "public var context: String?" not in text:
@@ -53,14 +75,16 @@ if "public var context: String?" not in text:
     types.write_text(text)
 
 text = session.read_text()
-text = text.replace(
-    "            language: params.config.language\n        )",
-    "            context: params.config.context ?? \"\",\n            language: params.config.language\n        )",
-)
-text = text.replace(
-    "            language: config.language\n        )",
-    "            context: config.context ?? \"\",\n            language: config.language\n        )",
-)
+if "context: params.config.context" not in text:
+    text = text.replace(
+        "            language: params.config.language\n        )",
+        "            context: params.config.context ?? \"\",\n            language: params.config.language\n        )",
+    )
+if "context: config.context" not in text:
+    text = text.replace(
+        "            language: config.language\n        )",
+        "            context: config.context ?? \"\",\n            language: config.language\n        )",
+    )
 session.write_text(text)
 PY
 

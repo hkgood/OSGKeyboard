@@ -99,10 +99,12 @@ public struct SearchAugmentedChatClient: LLMClient {
                 throw LLMError.transport("non-HTTP response")
             }
             if !(200..<300).contains(http.statusCode) {
-                #if DEBUG
-                let bodyText = String(data: data, encoding: .utf8) ?? ""
-                print("⚠️ Search chat HTTP \(http.statusCode): \(bodyText.prefix(500))")
-                #endif
+                LLMHTTPDiagnostics.logFailure(
+                    providerId: providerId,
+                    statusCode: http.statusCode,
+                    responseByteCount: data.count,
+                    response: http
+                )
                 if http.statusCode == 429 { throw LLMError.rateLimited }
                 throw LLMError.http(status: http.statusCode)
             }
@@ -136,6 +138,7 @@ public struct SearchAugmentedChatClient: LLMClient {
                     for try await event in LLMStreamingSession.mapSSE(
                         session: session,
                         request: req,
+                        providerId: providerId,
                         parse: LLMStreamDeltaParser.chatCompletionsDelta(from:)
                     ) {
                         continuation.yield(event)

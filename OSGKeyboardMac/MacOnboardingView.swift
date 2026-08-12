@@ -2,7 +2,9 @@
 // OSGKeyboard · Mac
 //
 // A short first-run setup for the macOS app. It is intentionally separate
-// from iOS onboarding because Mac needs Accessibility and optional Sherpa setup.
+// from iOS onboarding because Mac needs Accessibility and local-model setup.
+// The current local runtime defaults to Qwen3 MLX with Apple Speech fallback;
+// Sherpa identifiers and install records are retained only for migration compatibility.
 //
 // Visual language mirrors the iOS onboarding: an ambient top gradient, a
 // glowing hero icon, a large title block, and elongated capsule progress

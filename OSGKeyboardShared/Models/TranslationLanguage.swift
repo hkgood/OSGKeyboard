@@ -4,7 +4,7 @@
 // Catalog of target languages the translation feature can produce.
 //
 // Kept deliberately small (~10 entries) to match the kind of choices
-// the user makes in the Settings picker / keyboard chip. We don't try
+// the user makes in the Settings picker / keyboard menu. We don't try
 // to expose every BCP-47 locale — the prompt just needs a target
 // language name, and a curated list reads better than a 100-row scroll.
 //
@@ -30,8 +30,7 @@ public struct TranslationLanguage: Identifiable, Hashable, Sendable {
 public enum TranslationLanguageCatalog {
     /// Sentinel id for "don't translate" — the default selection in the
     /// picker. Picked over an `Optional<TranslationLanguage>` so the
-    /// single-row `Picker` binding stays a plain `String` (and the same
-    /// code path also works for the `TranslationChip` Menu).
+    /// single-row `Picker` binding and keyboard menu stay a plain `String`.
     public static let offLocaleId = "off"
     /// Default target language id used on fresh installs when translation
     /// is enabled. The picker still defaults to `offLocaleId` — this is
@@ -39,7 +38,7 @@ public enum TranslationLanguageCatalog {
     /// recovered without a remembered target.
     public static let defaultLocaleId = "en"
 
-    /// Curated set. Order matters — the picker / chip render top-to-
+    /// Curated set. Order matters — the picker / menu render top-to-
     /// bottom, with `offLocaleId` ("不翻译") at the very top so the
     /// "turn off" action is one tap away from any enabled state.
     public static let all: [TranslationLanguage] = [

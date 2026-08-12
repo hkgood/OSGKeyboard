@@ -125,6 +125,8 @@ public enum ProviderModelService {
             return resolved
         } catch let error as ProviderModelServiceError {
             throw error
+        } catch where ProviderToolCancellation.matches(error) {
+            throw CancellationError()
         } catch {
             throw ProviderModelServiceError.transport(String(describing: error))
         }

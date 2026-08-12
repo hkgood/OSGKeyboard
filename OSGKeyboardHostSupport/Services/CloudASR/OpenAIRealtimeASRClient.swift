@@ -1,5 +1,5 @@
 // OpenAIRealtimeASRClient.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // OpenAI Realtime transcription (WebSocket). Streams PCM and transcript
 // deltas for utterance-level ASR. Batch `/audio/transcriptions` remains the
@@ -94,8 +94,15 @@ struct OpenAIRealtimeASRClient: CloudASRTranscribing, CloudASRStreamingCapable {
             )
             session.cancel()
         } catch {
+            guard Self.shouldFallbackToBatch(afterProbeError: error) else {
+                throw CancellationError()
+            }
             try await batchClient.probeConnection()
         }
+    }
+
+    static func shouldFallbackToBatch(afterProbeError error: Error) -> Bool {
+        !ProviderToolCancellation.matches(error)
     }
 
     private var resolvedRealtimeModel: String {
@@ -326,6 +333,8 @@ private final class OpenAIRealtimeStreamingSession: CloudASRStreamingSession, @u
         }
         do {
             try await wsTask.send(.string(string))
+        } catch where ProviderToolCancellation.matches(error) {
+            throw CancellationError()
         } catch {
             throw CloudASRError.transport(error.localizedDescription)
         }

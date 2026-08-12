@@ -2,15 +2,17 @@
 // OSGKeyboard · Main App
 //
 // Observes usage + dictionary counts and feeds the shared
-// `UsageStatsCluster` (phone stacked / iPad split).
+// `UsageStatsCluster` (phone stacked / iPad split). Optional `header`
+// (e.g. glass preview field) sits on the 7-day chart card.
 
 import SwiftUI
 import OSGKeyboardShared
 import OSGKeyboardHostSupport
 
-struct HomeUsageStatsSection: View {
-    let layout: UsageStatsCluster.Layout
+struct HomeUsageStatsSection<Header: View>: View {
+    let layout: UsageStatsClusterLayout
     var compact: Bool = false
+    @ViewBuilder var header: () -> Header
 
     @ObservedObject private var stats = UsageStatisticsStore.shared
     @ObservedObject private var config = ProviderConfig.shared
@@ -26,7 +28,8 @@ struct HomeUsageStatsSection: View {
             dictationDurationSeconds: stats.dictationDurationSeconds,
             translationCharacterCount: stats.translationCharacterCount,
             dictionaryTermCount: dictionaryCount,
-            compact: compact
+            compact: compact,
+            header: header
         )
         .onAppear(perform: refreshDictionaryCount)
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
@@ -42,6 +45,12 @@ struct HomeUsageStatsSection: View {
 
     private func refreshDictionaryCount() {
         dictionaryCount = AppGroupStore().personalDictionary.entries.count
+    }
+}
+
+extension HomeUsageStatsSection where Header == EmptyView {
+    init(layout: UsageStatsClusterLayout, compact: Bool = false) {
+        self.init(layout: layout, compact: compact, header: { EmptyView() })
     }
 }
 

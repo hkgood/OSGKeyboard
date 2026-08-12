@@ -220,8 +220,8 @@ struct GeneralSettingsView: View {
 
                 CardSection("settings.general.keyboard.title") {
                     VStack(spacing: 0) {
-                        DefaultTypingInputToggleRow(
-                            isOn: $typingConfiguration.defaultToTyping
+                        DefaultInputModePickerRow(
+                            selection: $typingConfiguration.defaultInputMode
                         )
 
                         Divider().background(palette.divider)
@@ -311,6 +311,8 @@ struct AIAgentSettingsView: View {
 struct ClipboardSettingsView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @ObservedObject var config: ProviderConfig
+    @ObservedObject private var history = ClipboardHistoryStore.shared
+    @State private var showClearConfirmation = false
 
     var body: some View {
         ScrollView {
@@ -364,6 +366,20 @@ struct ClipboardSettingsView: View {
                         Divider().background(palette.divider)
 
                         Button {
+                            AppPermissions.requestPasteAccess()
+                        } label: {
+                            SettingsNavigationRow(
+                                titleText: AppL10n.string(
+                                    "settings.clipboard.paste.request",
+                                    language: config.uiLanguage
+                                )
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Divider().background(palette.divider)
+
+                        Button {
                             AppPermissions.openSystemSettings()
                         } label: {
                             SettingsNavigationRow(
@@ -377,12 +393,57 @@ struct ClipboardSettingsView: View {
                     }
                     .surfaceCard()
                 }
+
+                CardSection("settings.clipboard.storage.section") {
+                    VStack(spacing: 0) {
+                        Text("settings.clipboard.storage.body")
+                            .font(.footnote)
+                            .foregroundStyle(palette.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+
+                        Divider().background(palette.divider)
+
+                        Button(role: .destructive) {
+                            showClearConfirmation = true
+                        } label: {
+                            HStack {
+                                Text("settings.clipboard.clear.button")
+                                Spacer()
+                                Image(systemName: "trash")
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(history.entries.isEmpty)
+                        .opacity(history.entries.isEmpty ? 0.45 : 1)
+                    }
+                    .surfaceCard()
+                }
             }
         }
         .background(palette.background.ignoresSafeArea())
         .navigationTitle(AppL10n.string("settings.clipboard.title", language: config.uiLanguage))
         .navigationBarTitleDisplayMode(.inline)
         .hidesTabBarWhenPushed()
+        .confirmationDialog(
+            "settings.clipboard.clear.title",
+            isPresented: $showClearConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("settings.clipboard.clear.confirm", role: .destructive) {
+                history.clearAll()
+            }
+            Button("common.cancel", role: .cancel) {}
+        } message: {
+            Text("settings.clipboard.clear.message")
+        }
+        .onAppear {
+            history.reload()
+        }
         .onChange(of: config.clipboardHistoryEnabled) { _, enabled in
             if !enabled {
                 config.clipboardCandidateBarEnabled = false

@@ -69,4 +69,13 @@ final class ProgressiveDictationTranscriptAccumulatorTests: XCTestCase {
 
         XCTAssertEqual(composed, "先这样用着，就算目前的可用性已经提升很多了")
     }
+
+    func testComposerMapsNormalizedOverlapThroughRawPunctuation() {
+        let composed = DictationTextComposer.compose(
+            anchor: "先这样用着，就算目前的可用性已经",
+            live: "可用性，已经提升很多了"
+        )
+
+        XCTAssertEqual(composed, "先这样用着，就算目前的可用性已经提升很多了")
+    }
 }

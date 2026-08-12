@@ -47,7 +47,7 @@ public struct RimePinyinAnnotator: Sendable {
                 phraseCodes[text] = (code, weight)
             }
 
-            if text.count == 1, Self.isCJKIdeograph(text.unicodeScalars.first!) {
+            if text.count == 1, HanScript.isIdeograph(text.unicodeScalars.first!) {
                 if let existing = characterCodes[text] {
                     if weight >= existing.weight {
                         characterCodes[text] = (code, weight)
@@ -131,7 +131,7 @@ public struct RimePinyinAnnotator: Sendable {
 
         for scalar in term.unicodeScalars {
             let kind: RunKind
-            if isCJKIdeograph(scalar) {
+            if HanScript.isIdeograph(scalar) {
                 kind = .cjk
             } else if scalar.isASCII, CharacterSet.letters.contains(scalar)
                 || CharacterSet.decimalDigits.contains(scalar)
@@ -170,15 +170,10 @@ public struct RimePinyinAnnotator: Sendable {
     }
 
     public static func isCJKIdeograph(_ scalar: Unicode.Scalar) -> Bool {
-        switch scalar.value {
-        case 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF:
-            return true
-        default:
-            return false
-        }
+        HanScript.isIdeograph(scalar)
     }
 
     public static func containsCJK(_ text: String) -> Bool {
-        text.unicodeScalars.contains(where: isCJKIdeograph)
+        HanScript.containsIdeograph(in: text)
     }
 }

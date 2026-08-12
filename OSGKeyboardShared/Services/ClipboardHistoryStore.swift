@@ -59,11 +59,21 @@ public final class ClipboardHistoryStore: ObservableObject {
         rawText: String?,
         changeCount: Int?
     ) -> ClipboardHistoryEntry? {
+        let sanitized = ClipboardHistoryPolicy.sanitizedEntries(entries)
+        if sanitized != entries {
+            entries = sanitized
+            persist()
+        }
         guard let text = ClipboardHistoryPolicy.acceptedText(from: rawText) else {
             return nil
         }
         let entry = ClipboardHistoryEntry(text: text, changeCount: changeCount)
-        entries = ClipboardHistoryPolicy.merging(incoming: entry, into: entries)
+        let merged = ClipboardHistoryPolicy.merging(incoming: entry, into: entries)
+        let bounded = ClipboardHistoryPolicy.sanitizedEntries(merged)
+        guard bounded.first?.id == entry.id else {
+            return nil
+        }
+        entries = bounded
         persist()
         if let changeCount {
             lastObservedChangeCount = changeCount
@@ -91,6 +101,14 @@ public final class ClipboardHistoryStore: ObservableObject {
 
     public var newestEntry: ClipboardHistoryEntry? {
         entries.first
+    }
+
+    /// Newest entry still inside the AI clipboard-hint window, if any.
+    public func newestAIHintEligibleEntry(now: Date = Date()) -> ClipboardHistoryEntry? {
+        guard let newest = newestEntry,
+              ClipboardHistoryPolicy.isEligibleForAIHint(newest, now: now)
+        else { return nil }
+        return newest
     }
 
     /// Whether the suggestion strip should offer `newestEntry` for this changeCount.
@@ -130,7 +148,11 @@ public final class ClipboardHistoryStore: ObservableObject {
         guard let data = defaults.data(forKey: Keys.entries) else { return [] }
         do {
             let decoded = try JSONDecoder().decode([ClipboardHistoryEntry].self, from: data)
-            return Array(decoded.prefix(ClipboardHistoryPolicy.maxEntries))
+            let sanitized = ClipboardHistoryPolicy.sanitizedEntries(decoded)
+            if sanitized != decoded, let cleanedData = try? JSONEncoder().encode(sanitized) {
+                defaults.set(cleanedData, forKey: Keys.entries)
+            }
+            return sanitized
         } catch {
             OSGLog.config.warning(
                 "clipboard history decode failed: \(error.localizedDescription, privacy: .public)"

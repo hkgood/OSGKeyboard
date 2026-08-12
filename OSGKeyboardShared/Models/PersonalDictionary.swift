@@ -260,21 +260,12 @@ extension PersonalDictionary {
         guard !term.isEmpty else { return false }
         var hasLatinLetter = false
         for scalar in term.unicodeScalars {
-            if isCJKIdeograph(scalar) { return false }
+            if HanScript.isIdeograph(scalar) { return false }
             if scalar.isASCII, CharacterSet.letters.contains(scalar) {
                 hasLatinLetter = true
             }
         }
         return hasLatinLetter
-    }
-
-    private static func isCJKIdeograph(_ scalar: Unicode.Scalar) -> Bool {
-        switch scalar.value {
-        case 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF:
-            return true
-        default:
-            return false
-        }
     }
 
     /// Case-insensitive lookup by canonical term.

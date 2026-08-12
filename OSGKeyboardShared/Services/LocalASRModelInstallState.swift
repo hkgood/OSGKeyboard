@@ -1,5 +1,8 @@
 // LocalASRModelInstallState.swift
 // OSGKeyboard · Shared
+//
+// Validates macOS Qwen3 MLX model installs. Sherpa model layouts and runtime
+// binaries are recognized only for legacy catalog and install-state compatibility.
 
 import Foundation
 

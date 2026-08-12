@@ -1,5 +1,5 @@
 // CloudASRConnectionCheck.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // Settings "validate connection" probe shared by iOS and macOS.
 

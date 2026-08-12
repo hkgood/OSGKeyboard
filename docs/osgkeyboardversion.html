@@ -185,35 +185,27 @@
         <h2>新功能</h2>
 
         <div class="group">
-          <p class="group-title">AI 键盘模式</p>
+          <p class="group-title">AI 模式</p>
+          <div class="wn-media wide">
+            <video src="assets/whats-new/ai-keyboard-zh.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          </div>
           <ul>
-            <li>新增临时多轮 AI 输入面：把口述问题直接交给已配置模型，滚动查看最新答案，再通过「插入」或「发送」写入当前输入框</li>
-            <li>只有真正插入的答案会进入历史与 AI 字数统计</li>
-            <li>支持服务商侧联网搜索（在可用时自动启用），并强制开启 thinking；失败时会静默改为无搜索重试</li>
+            <li>键盘可切换到 <strong>AI</strong>：对着麦克风提问，答案显示在键盘上，方便查看后再写入</li>
+            <li>在即时通信等输入框中，先点白色<strong>「插入」</strong>，再点绿色<strong>「发送」</strong>；只有真正插入的内容会进入历史与字数统计</li>
+            <li>需要时会联网查资料；失败时会自动换方式重试</li>
+            <li>设置 → <strong>AI Agent</strong> 可调节<strong>「回复篇幅」</strong>：简短 / 中等 / 详细</li>
           </ul>
         </div>
 
         <div class="group">
-          <p class="group-title">API Key 与模型</p>
+          <p class="group-title">剪贴板历史</p>
+          <div class="wn-media wide">
+            <video src="assets/whats-new/clipboard-history-zh.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          </div>
           <ul>
-            <li>润色与 AI 模式均需自行填写 API Key；未配置时首页与麦克风上方会提示，听写仍可插入原始识别结果</li>
-            <li>更新多家服务商的默认模型（含 OpenAI <code>gpt-5.4-mini</code>）；已保存的模型名不受影响</li>
-          </ul>
-        </div>
-
-        <div class="group">
-          <p class="group-title">iPad 体验</p>
-          <ul>
-            <li>语音面与打字面新增系统 🌐 键（轻点切换键盘，长按打开系统键盘列表）</li>
-            <li>打字布局适配 iPad：更高键行、横竖屏缩进、首行数字角标，并铺满宿主宽度</li>
-            <li>打字顶栏新增撤销 / 重做 / 拷贝 / 剪切</li>
-          </ul>
-        </div>
-
-        <div class="group">
-          <p class="group-title">编辑上次输入</p>
-          <ul>
-            <li>长按麦克风口述如何修改最近一次已验证输入，预览后可替换或追加，且不暴露无关输入框内容</li>
+            <li>在设置 → <strong>剪贴板</strong> 开启<strong>「历史记录」</strong>（默认关闭）；本机保存最近 15 条纯文本</li>
+            <li>顶栏<strong>剪贴板</strong>按钮打开历史，点一条即可插入；也可开启<strong>「建议条」</strong>，最新复制显示在键盘上方，点一下就能用</li>
+            <li>建议在系统设置里把<strong>「从其他 App 粘贴」</strong>设为<strong>「允许」</strong>，减少每次复制的弹窗</li>
           </ul>
         </div>
       </section>
@@ -221,18 +213,7 @@
       <section class="section">
         <h2>变更</h2>
         <ul>
-          <li>移除内置 DeepSeek Key 回退；本地 / 云端润色与 AI 均使用你自己的 Key</li>
-          <li>移除键盘长按剪贴板语音指令相关能力；普通听写、编辑上次输入与拷贝 / 剪切仍可用</li>
-          <li>隐私政策补充：用户自备 LLM Key、AI 模式可选联网搜索</li>
-        </ul>
-      </section>
-
-      <section class="section">
-        <h2>问题修复</h2>
-        <ul>
-          <li>修复中文输入引擎长期无法初始化：部署改为在引导与打开 App 时确定性执行，键盘可在部署完成后自动恢复</li>
-          <li>修复润色代答问句：口述问句时保留问句本身，不再被改写成回答</li>
-          <li>多项 iPad 布局、录音取消、连续编辑与首录速度相关修复</li>
+          <li><strong>翻译</strong>入口移到语音键盘麦克风旁（与撤销对称）；原顶栏位置改为剪贴板按钮</li>
         </ul>
       </section>
     </div>
@@ -242,35 +223,27 @@
         <h2>New Features</h2>
 
         <div class="group">
-          <p class="group-title">AI keyboard mode</p>
+          <p class="group-title">AI mode</p>
+          <div class="wn-media wide">
+            <video src="assets/whats-new/ai-keyboard-en.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          </div>
           <ul>
-            <li>Temporary multi-turn AI surface: send spoken questions to your configured model, review the latest answer, then Insert or Send into the host field</li>
-            <li>Only inserted answers enter history and AI character statistics</li>
-            <li>Provider-side web search when available, with thinking forced on; silent retry without search on failure</li>
+            <li>Switch the keyboard to <strong>AI</strong>, ask with the microphone, and review the answer on the keyboard before inserting it</li>
+            <li>In messaging fields, tap white <strong>Insert</strong>, then green <strong>Send</strong>; only inserted answers count toward history and character stats</li>
+            <li>Looks up online info when needed, and retries another way if that fails</li>
+            <li>In Settings → <strong>AI Agent</strong>, choose <strong>Response length</strong>: Short / Medium / Detailed</li>
           </ul>
         </div>
 
         <div class="group">
-          <p class="group-title">API keys &amp; models</p>
+          <p class="group-title">Clipboard history</p>
+          <div class="wn-media wide">
+            <video src="assets/whats-new/clipboard-history-en.mp4" autoplay muted loop playsinline preload="metadata"></video>
+          </div>
           <ul>
-            <li>Polish and AI mode require your own API key; Home and the mic line tip you when it’s missing, while dictation still inserts raw ASR</li>
-            <li>Refreshed default models across providers (including OpenAI <code>gpt-5.4-mini</code>); saved model names are unchanged</li>
-          </ul>
-        </div>
-
-        <div class="group">
-          <p class="group-title">iPad</p>
-          <ul>
-            <li>System 🌐 key on voice and typing surfaces (tap to switch, long-press for the system picker)</li>
-            <li>Typing layout adapted for iPad: taller rows, orientation-aware inset, number overlays, full host width</li>
-            <li>Undo / redo / copy / cut cluster on the typing top bar</li>
-          </ul>
-        </div>
-
-        <div class="group">
-          <p class="group-title">Edit last input</p>
-          <ul>
-            <li>Long-press the mic to describe changes to the last verified insertion, then preview and replace or append — without exposing unrelated field text</li>
+            <li>Turn on <strong>History</strong> in Settings → <strong>Clipboard</strong> (off by default); keeps the latest 15 plain-text copies on this device</li>
+            <li>Open history from the top-bar <strong>Clipboard</strong> button and tap an item to insert; optional <strong>Suggestion strip</strong> shows the newest copy above the keys for one-tap use</li>
+            <li>Set system <strong>Paste from Other Apps</strong> to <strong>Allow</strong> to reduce paste prompts after each copy</li>
           </ul>
         </div>
       </section>
@@ -278,18 +251,7 @@
       <section class="section">
         <h2>Changes</h2>
         <ul>
-          <li>Removed the built-in DeepSeek key fallback; local/cloud polish and AI use your key only</li>
-          <li>Removed clipboard voice-command capture from the iOS keyboard; normal dictation, last-input editing, and copy/cut remain</li>
-          <li>Privacy policy updated for user-owned LLM keys and optional AI-mode provider web search</li>
-        </ul>
-      </section>
-
-      <section class="section">
-        <h2>Fixes</h2>
-        <ul>
-          <li>Chinese input engine can initialize reliably: host deployment runs deterministically during onboarding / app open, and the keyboard recovers after deployment completes</li>
-          <li>Polish no longer answers question drafts — questions stay questions across styles and intensities</li>
-          <li>Multiple iPad layout, cancel-while-recording, repeat-edit, and first-mic latency fixes</li>
+          <li><strong>Translation</strong> moves to the voice keyboard beside the mic (mirrored with Undo); the former top-bar slot is now the Clipboard button</li>
         </ul>
       </section>
     </div>
@@ -332,7 +294,7 @@
         <div class="group">
           <p class="group-title">编辑上次输入</p>
           <div class="wn-media wide">
-            <video src="assets/whats-new/edit-last-input.mp4" autoplay muted loop playsinline preload="metadata"></video>
+            <video src="assets/whats-new/edit-last-input-zh.mp4" autoplay muted loop playsinline preload="metadata"></video>
           </div>
           <ul>
             <li>刚用 OSGKeyboard 输入过内容时，麦克风上方会提示<strong>「长按可编辑上一条」</strong></li>
@@ -431,7 +393,7 @@
         <div class="group">
           <p class="group-title">Edit last input</p>
           <div class="wn-media wide">
-            <video src="assets/whats-new/edit-last-input.mp4" autoplay muted loop playsinline preload="metadata"></video>
+            <video src="assets/whats-new/edit-last-input-en.mp4" autoplay muted loop playsinline preload="metadata"></video>
           </div>
           <ul>
             <li>Right after you insert text with OSGKeyboard, the mic shows <strong>“Hold to edit your last input”</strong></li>

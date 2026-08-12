@@ -18,6 +18,7 @@ struct MainAppRoot: View {
     @ObservedObject private var releaseNotes = ReleaseNotesController.shared
     @StateObject private var flowManager = FlowSessionManager()
     @State private var clmWarmupTask: Task<Void, Never>?
+    @State private var rimeStartupTask: Task<Void, Never>?
 
     var body: some View {
         Group {
@@ -67,13 +68,19 @@ struct MainAppRoot: View {
             if config.hasCompletedOnboarding {
                 // Rime deployment is host-only and idempotent. Run it
                 // immediately when missing so returning users never have to
-                // wait for an opportunistic background warmup.
-                RimeDeploymentController.shared.deployNow(reason: "MainAppRoot.onAppear")
-                // Automatically arm the low-profile PiP on every host open.
-                // Capture/ASR remain lazy and start only on an actual mic press.
-                flowManager.activateOnForeground(reason: "MainAppRoot.onAppear")
-                scheduleCLMWarmup(reason: "MainAppRoot.onAppear")
-                releaseNotes.presentIfNeeded(onboardingCompleted: true)
+                // wait for an opportunistic background warmup. The startup
+                // scheduler yields the first frame before beginning deployment.
+                if scenePhase == .active {
+                    activateForegroundServices(reason: "MainAppRoot.onAppear")
+                    AIHintRefreshService.refreshIfNeeded(reason: "MainAppRoot.onAppear")
+                    releaseNotes.presentIfNeeded(onboardingCompleted: true)
+                } else {
+                    OSGDiag.log(
+                        "MainAppRoot.onAppear defer foreground services scene="
+                            + "\(String(describing: scenePhase))",
+                        category: "flow"
+                    )
+                }
             } else {
                 OSGDiag.log(
                     "MainAppRoot.onAppear skip Flow/CLM/Rime (onboarding incomplete)",
@@ -86,14 +93,15 @@ struct MainAppRoot: View {
         }
         .onChange(of: config.hasCompletedOnboarding) { _, done in
             if done {
-                flowManager.activateOnForeground(reason: "onboardingCompleted")
                 // Deploy now rather than via warmup: the user just finished
                 // setup, is still in the app, and has not started using the
                 // keyboard yet — so there is nothing to race for memory. This
                 // also covers users who skipped the keyboard page entirely.
-                RimeDeploymentController.shared.deployNow(reason: "onboardingCompleted")
-                scheduleCLMWarmup(reason: "onboardingCompleted")
-                releaseNotes.presentIfNeeded(onboardingCompleted: true)
+                if scenePhase == .active {
+                    activateForegroundServices(reason: "onboardingCompleted")
+                    AIHintRefreshService.refreshIfNeeded(reason: "onboardingCompleted")
+                    releaseNotes.presentIfNeeded(onboardingCompleted: true)
+                }
             }
         }
         .onChange(of: scenePhase) { _, phase in
@@ -101,19 +109,53 @@ struct MainAppRoot: View {
             guard phase == .active else {
                 clmWarmupTask?.cancel()
                 clmWarmupTask = nil
+                rimeStartupTask?.cancel()
+                rimeStartupTask = nil
                 FlowSessionBridge.setHostHeavy(false)
                 return
             }
             if config.hasCompletedOnboarding {
-                RimeDeploymentController.shared.deployNow(reason: "scenePhase.active")
-                flowManager.activateOnForeground(reason: "scenePhase.active")
-                // Retry deferred CLM after a jetsam-prone launch.
-                scheduleCLMWarmup(reason: "scenePhase.active.retry")
+                activateForegroundServices(reason: "scenePhase.active")
+                AIHintRefreshService.refreshIfNeeded(reason: "scenePhase.active")
                 releaseNotes.presentIfNeeded(onboardingCompleted: true)
             }
             Task {
                 await AppCloudSync.shared.pullAllIfEnabled()
             }
+        }
+    }
+
+    /// Starts foreground-only services once per active transition. Rime yields
+    /// the first frame; Flow and CLM keep their existing lazy-heavy-work rules.
+    private func activateForegroundServices(reason: String) {
+        scheduleRimeDeployment(reason: reason)
+        // Automatically arm the low-profile PiP on every host open.
+        // Capture/ASR remain lazy and start only on an actual mic press.
+        flowManager.activateOnForeground(reason: reason)
+        // Retry deferred CLM after a jetsam-prone launch.
+        scheduleCLMWarmup(reason: reason)
+        releaseNotes.presentIfNeeded(onboardingCompleted: true)
+    }
+
+    /// Rime remains startup-owned, but a short delay keeps its CPU and file I/O
+    /// away from SwiftUI's first-frame layout on installs and version updates.
+    private func scheduleRimeDeployment(reason: String) {
+        rimeStartupTask?.cancel()
+        guard !RimeResourceInstaller.isReady else {
+            RimeDeploymentController.shared.refreshStatus()
+            rimeStartupTask = nil
+            return
+        }
+
+        OSGDiag.log(
+            "rime startup scheduled reason=\(reason) delay=500ms \(OSGDiag.memoryTag())",
+            category: "flow"
+        )
+        rimeStartupTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled, scenePhase == .active else { return }
+            RimeDeploymentController.shared.deployNow(reason: reason)
+            rimeStartupTask = nil
         }
     }
 

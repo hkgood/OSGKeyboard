@@ -10,7 +10,7 @@
 import SwiftUI
 import OSGKeyboardShared
 
-// MARK: - Local models group (v0.2.0)
+// MARK: - Local models group
 
 struct LocalModelsGroup: View {
     @Environment(\.themePalette) private var palette: ThemePalette

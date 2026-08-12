@@ -189,39 +189,6 @@ struct RepeatingDeleteButton: View {
     }
 }
 
-// MARK: - Press-down typing key
-
-/// Fires on touch-down (not release) so click sound / haptic match the stock
-/// keyboard and the voice toolbar’s RectangularToolbarButton.
-struct PressDownKeyButton<Label: View>: View {
-    var disabled: Bool = false
-    let action: () -> Void
-    @ViewBuilder let label: (_ isPressed: Bool) -> Label
-
-    @State private var isPressing = false
-
-    var body: some View {
-        label(isPressing)
-            .contentShape(Rectangle())
-            .gesture(pressGesture)
-            .opacity(disabled ? 0.38 : 1)
-            .allowsHitTesting(!disabled)
-            .accessibilityAddTraits(.isButton)
-    }
-
-    private var pressGesture: some Gesture {
-        DragGesture(minimumDistance: 0)
-            .onChanged { _ in
-                guard !disabled, !isPressing else { return }
-                isPressing = true
-                action()
-            }
-            .onEnded { _ in
-                isPressing = false
-            }
-    }
-}
-
 // MARK: - Rectangular toolbar button
 
 struct RectangularToolbarButton: View {
@@ -233,6 +200,7 @@ struct RectangularToolbarButton: View {
     let label: String
     let disabled: Bool
     let isSend: Bool
+    let usesLiquidGlass: Bool
     /// Settings → General → Haptics; space / return use `.action` role.
     var hapticIntensity: KeyboardHapticIntensity = .off
     let action: () -> Void
@@ -241,6 +209,7 @@ struct RectangularToolbarButton: View {
         systemName: String,
         label: String,
         disabled: Bool = false,
+        usesLiquidGlass: Bool = false,
         hapticIntensity: KeyboardHapticIntensity = .off,
         action: @escaping () -> Void
     ) {
@@ -250,6 +219,7 @@ struct RectangularToolbarButton: View {
         self.label = label
         self.disabled = disabled
         self.isSend = false
+        self.usesLiquidGlass = usesLiquidGlass
         self.hapticIntensity = hapticIntensity
         self.action = action
     }
@@ -259,6 +229,7 @@ struct RectangularToolbarButton: View {
         label: String,
         disabled: Bool = false,
         isSend: Bool = false,
+        usesLiquidGlass: Bool = false,
         hapticIntensity: KeyboardHapticIntensity = .off,
         action: @escaping () -> Void
     ) {
@@ -267,6 +238,7 @@ struct RectangularToolbarButton: View {
         self.label = label
         self.disabled = disabled
         self.isSend = isSend
+        self.usesLiquidGlass = usesLiquidGlass
         self.hapticIntensity = hapticIntensity
         self.action = action
         self.title = title
@@ -276,6 +248,7 @@ struct RectangularToolbarButton: View {
         spaceStyle: Bool,
         label: String,
         disabled: Bool = false,
+        usesLiquidGlass: Bool = false,
         hapticIntensity: KeyboardHapticIntensity = .off,
         action: @escaping () -> Void
     ) {
@@ -285,6 +258,7 @@ struct RectangularToolbarButton: View {
         self.label = label
         self.disabled = disabled
         self.isSend = false
+        self.usesLiquidGlass = usesLiquidGlass
         self.hapticIntensity = hapticIntensity
         self.action = action
     }
@@ -292,31 +266,59 @@ struct RectangularToolbarButton: View {
     @State private var isPressing = false
 
     var body: some View {
-        ToolbarKeySurface(
-            isPressed: isPressing,
-            cornerRadius: ToolbarButtonMetrics.cornerRadius,
-            emphasis: isSend ? .send : .standard
-        ) {
-            if spaceStyle {
-                Capsule()
-                    .fill(buttonForeground)
-                    .frame(width: ToolbarButtonMetrics.spaceBarCapsuleWidth, height: 3)
-            } else if let systemName {
-                Image(systemName: systemName)
-                    .font(.system(size: ToolbarButtonMetrics.iconSize, weight: .semibold))
-                    .foregroundStyle(buttonForeground)
-            } else if let title {
-                Text(title)
-                    .font(.system(size: ToolbarButtonMetrics.titleSize, weight: .semibold))
-                    .foregroundStyle(buttonForeground)
+        buttonSurface
+            .contentShape(Rectangle())
+            .gesture(pressGesture)
+            .opacity(disabled ? 0.38 : 1)
+            .allowsHitTesting(!disabled)
+            .accessibilityLabel(Text(label))
+            .accessibilityAddTraits(.isButton)
+    }
+
+    @ViewBuilder
+    private var buttonSurface: some View {
+        if usesLiquidGlass {
+            ZStack {
+                Color.clear
+                buttonContent
+            }
+            .glassEffect(
+                .regular.interactive(),
+                in: RoundedRectangle(
+                    cornerRadius: ToolbarButtonMetrics.cornerRadius,
+                    style: .continuous
+                )
+            )
+            // The custom press gesture fires on touch-down; mirror that state
+            // visually while Liquid Glass supplies its native light response.
+            .scaleEffect(isPressing ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.08), value: isPressing)
+        } else {
+            ToolbarKeySurface(
+                isPressed: isPressing,
+                cornerRadius: ToolbarButtonMetrics.cornerRadius,
+                emphasis: isSend ? .send : .standard
+            ) {
+                buttonContent
             }
         }
-        .contentShape(Rectangle())
-        .gesture(pressGesture)
-        .opacity(disabled ? 0.38 : 1)
-        .allowsHitTesting(!disabled)
-        .accessibilityLabel(Text(label))
-        .accessibilityAddTraits(.isButton)
+    }
+
+    @ViewBuilder
+    private var buttonContent: some View {
+        if spaceStyle {
+            Capsule()
+                .fill(buttonForeground)
+                .frame(width: ToolbarButtonMetrics.spaceBarCapsuleWidth, height: 3)
+        } else if let systemName {
+            Image(systemName: systemName)
+                .font(.system(size: ToolbarButtonMetrics.iconSize, weight: .semibold))
+                .foregroundStyle(buttonForeground)
+        } else if let title {
+            Text(title)
+                .font(.system(size: ToolbarButtonMetrics.titleSize, weight: .semibold))
+                .foregroundStyle(buttonForeground)
+        }
     }
 
     private var buttonForeground: Color {

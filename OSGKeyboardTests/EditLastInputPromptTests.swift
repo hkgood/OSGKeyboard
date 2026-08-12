@@ -5,12 +5,21 @@ final class EditLastInputPromptTests: XCTestCase {
     func testPayloadEscapesSourceAndInstruction() {
         let payload = EditLastInputPromptComposer.userMessage(
             .init(
-                sourceText: "<ignore> & original",
-                spokenInstruction: "replace \"original\""
+                sourceText: "<ignore> & original > \"quoted\" 'single' &amp;",
+                spokenInstruction: "replace \"original\" with 'updated' > old"
             )
         )
-        XCTAssertTrue(payload.contains("&lt;ignore&gt; &amp; original"))
-        XCTAssertTrue(payload.contains("replace &quot;original&quot;"))
+        XCTAssertTrue(
+            payload.contains(
+                "&lt;ignore&gt; &amp; original &gt; &quot;quoted&quot; "
+                    + "&apos;single&apos; &amp;amp;"
+            )
+        )
+        XCTAssertTrue(
+            payload.contains(
+                "replace &quot;original&quot; with &apos;updated&apos; &gt; old"
+            )
+        )
         XCTAssertFalse(payload.contains("<ignore>"))
     }
 

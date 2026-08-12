@@ -35,6 +35,41 @@ public enum LLMError: Error, LocalizedError, Sendable, Equatable {
     }
 }
 
+enum LLMHTTPDiagnostics {
+    static func logFailure(
+        providerId: String,
+        statusCode: Int,
+        responseByteCount: Int,
+        response: HTTPURLResponse
+    ) {
+        #if DEBUG
+        let provider = safeToken(providerId) ?? "unknown"
+        let requestID = [
+            "x-request-id",
+            "request-id",
+            "x-correlation-id",
+            "cf-ray",
+        ]
+        .compactMap { response.value(forHTTPHeaderField: $0) }
+        .compactMap(safeToken)
+        .first
+        let requestMetadata = requestID.map { " requestId=\($0)" } ?? ""
+        print(
+            "⚠️ LLM HTTP error provider=\(provider) status=\(statusCode) "
+                + "responseBytes=\(responseByteCount)\(requestMetadata)"
+        )
+        #endif
+    }
+
+    private static func safeToken(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.count <= 128 else { return nil }
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-._:"))
+        guard trimmed.unicodeScalars.allSatisfy(allowed.contains) else { return nil }
+        return trimmed
+    }
+}
+
 public struct LLMGenerationOptions: Sendable, Equatable {
     public let temperature: Double?
     public let topP: Double?
@@ -230,11 +265,12 @@ public struct OpenAICompatibleClient: LLMClient {
                 throw LLMError.transport("non-HTTP response")
             }
             if !(200..<300).contains(http.statusCode) {
-                #if DEBUG
-                // Log full body for debugging — never expose to UI.
-                let body = String(data: data, encoding: .utf8) ?? ""
-                print("⚠️ LLM HTTP \(http.statusCode): \(body.prefix(500))")
-                #endif
+                LLMHTTPDiagnostics.logFailure(
+                    providerId: providerId,
+                    statusCode: http.statusCode,
+                    responseByteCount: data.count,
+                    response: http
+                )
                 if http.statusCode == 429 { throw LLMError.rateLimited }
                 throw LLMError.http(status: http.statusCode)
             }
@@ -277,6 +313,7 @@ public struct OpenAICompatibleClient: LLMClient {
                     for try await event in LLMStreamingSession.mapSSE(
                         session: session,
                         request: req,
+                        providerId: providerId,
                         parse: LLMStreamDeltaParser.chatCompletionsDelta(from:)
                     ) {
                         continuation.yield(event)

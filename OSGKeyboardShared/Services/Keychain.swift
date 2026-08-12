@@ -18,6 +18,15 @@ public enum Keychain: @unchecked Sendable {
         case unexpectedStatus(OSStatus)
     }
 
+    public enum CredentialMigrationError: Error, Sendable, Equatable {
+        case unavailable
+        case conflict
+        case verificationFailed
+    }
+
+    typealias CredentialRead = () throws -> String?
+    typealias CredentialWrite = (String) throws -> Void
+
     private static let service = "com.osgkeyboard.apikey"
     private static let legacyAccount = "current"
     /// Must match `AppGroupConfiguration.defaultPolishProviderId` so bare
@@ -151,8 +160,35 @@ public enum Keychain: @unchecked Sendable {
             return
         }
         if useICloudSync {
-            try writeASRKey(key, providerId: providerId, synchronizable: true)
-            try? deleteASRKey(providerId: providerId, synchronizable: false)
+            try writeMirroredCredential(
+                key,
+                readLocal: {
+                    try migrationValue(
+                        from: readASRKeyOutcome(
+                            providerId: providerId,
+                            synchronizable: false,
+                            fallbackToLegacyProviderAccount: false
+                        )
+                    )
+                },
+                readSynchronizable: {
+                    try migrationValue(
+                        from: readASRKeyOutcome(
+                            providerId: providerId,
+                            synchronizable: true,
+                            fallbackToLegacyProviderAccount: false
+                        )
+                    )
+                },
+                writeLocal: { try writeASRKey($0, providerId: providerId, synchronizable: false) },
+                writeSynchronizable: {
+                    try writeASRKey($0, providerId: providerId, synchronizable: true)
+                },
+                deleteLocal: { try deleteASRKey(providerId: providerId, synchronizable: false) },
+                deleteSynchronizable: {
+                    try deleteASRKey(providerId: providerId, synchronizable: true)
+                }
+            )
         } else {
             try writeASRKey(key, providerId: providerId, synchronizable: false)
         }
@@ -172,7 +208,11 @@ public enum Keychain: @unchecked Sendable {
         return nil
     }
 
-    private static func readASRKeyOutcome(providerId: String, synchronizable: Bool) -> ReadOutcome {
+    private static func readASRKeyOutcome(
+        providerId: String,
+        synchronizable: Bool,
+        fallbackToLegacyProviderAccount: Bool = true
+    ) -> ReadOutcome {
         var query = baseASRQuery(providerId: providerId, synchronizable: synchronizable)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -187,14 +227,18 @@ public enum Keychain: @unchecked Sendable {
             return .found(str)
         case errSecItemNotFound:
             // Pre-split installs stored one key under `provider.<id>` for both stages.
-            return readKeyOutcome(providerId: providerId, synchronizable: synchronizable)
+            return fallbackToLegacyProviderAccount
+                ? readKeyOutcome(providerId: providerId, synchronizable: synchronizable)
+                : .notFound
         default:
             if shouldUseMemoryFallback(for: status) {
                 if let value = memoryRead(account: asrAccount(for: providerId), synchronizable: synchronizable) {
                     return .found(value)
                 }
                 // Pre-split installs: fall through to polish-key account.
-                return readKeyOutcome(providerId: providerId, synchronizable: synchronizable)
+                return fallbackToLegacyProviderAccount
+                    ? readKeyOutcome(providerId: providerId, synchronizable: synchronizable)
+                    : .notFound
             }
             #if DEBUG
             print("⚠️ [OSGKeyboard] ASR Keychain read returned OSStatus \(status); reporting unavailable.")
@@ -258,6 +302,9 @@ public enum Keychain: @unchecked Sendable {
 
     // MARK: - LLM keys
 
+    /// Reads synchronizable then local when iCloud is preferred (retrying sync
+    /// after local miss); otherwise reads local only. This optional API folds
+    /// locked/unavailable into nil—use `apiKeyOutcome` when that distinction matters.
     public static func apiKey(for providerId: String, preferICloudSync: Bool = false) -> String? {
         if preferICloudSync, let synced = readKey(providerId: providerId, synchronizable: true) {
             return synced
@@ -366,14 +413,36 @@ public enum Keychain: @unchecked Sendable {
 
     // MARK: - Write
 
+    /// An empty value deletes the selected storage. A synchronized write
+    /// removes its local counterpart; a local write leaves any synchronized
+    /// counterpart intact until an explicit sync migration or deletion.
     public static func setAPIKey(_ key: String, for providerId: String, useICloudSync: Bool = false) throws {
         if key.isEmpty {
             try deleteAPIKey(for: providerId, useICloudSync: useICloudSync)
             return
         }
         if useICloudSync {
-            try writeKey(key, providerId: providerId, synchronizable: true)
-            try? deleteKey(providerId: providerId, synchronizable: false)
+            try writeMirroredCredential(
+                key,
+                readLocal: {
+                    try migrationValue(
+                        from: readKeyOutcome(providerId: providerId, synchronizable: false)
+                    )
+                },
+                readSynchronizable: {
+                    try migrationValue(
+                        from: readKeyOutcome(providerId: providerId, synchronizable: true)
+                    )
+                },
+                writeLocal: { try writeKey($0, providerId: providerId, synchronizable: false) },
+                writeSynchronizable: {
+                    try writeKey($0, providerId: providerId, synchronizable: true)
+                },
+                deleteLocal: { try deleteKey(providerId: providerId, synchronizable: false) },
+                deleteSynchronizable: {
+                    try deleteKey(providerId: providerId, synchronizable: true)
+                }
+            )
         } else {
             try writeKey(key, providerId: providerId, synchronizable: false)
         }
@@ -458,21 +527,377 @@ public enum Keychain: @unchecked Sendable {
         throw KeychainError.unexpectedStatus(status)
     }
 
-    /// Copy non-empty local keys into synchronizable Keychain items.
-    public static func migrateLocalKeysToICloud() {
-        for provider in LLMProvider.presets {
-            guard let local = readKey(providerId: provider.id, synchronizable: false), !local.isEmpty else {
-                continue
+    // MARK: - Credential migration
+
+    /// Writes the same explicit user value to device-only and synchronizable
+    /// stores. Any failure restores both previous values before returning.
+    static func writeMirroredCredential(
+        _ value: String,
+        readLocal: CredentialRead,
+        readSynchronizable: CredentialRead,
+        writeLocal: CredentialWrite,
+        writeSynchronizable: CredentialWrite,
+        deleteLocal: () throws -> Void,
+        deleteSynchronizable: () throws -> Void
+    ) throws {
+        let previousLocal = try migrationOperation(readLocal)
+        let previousSynchronizable = try migrationOperation(readSynchronizable)
+        do {
+            try migrationOperation { try writeLocal(value) }
+            guard try migrationOperation(readLocal) == value else {
+                throw CredentialMigrationError.verificationFailed
             }
-            try? writeKey(local, providerId: provider.id, synchronizable: true)
-            try? deleteKey(providerId: provider.id, synchronizable: false)
+            try migrationOperation { try writeSynchronizable(value) }
+            guard try migrationOperation(readSynchronizable) == value else {
+                throw CredentialMigrationError.verificationFailed
+            }
+        } catch {
+            let originalError = (error as? CredentialMigrationError) ?? .unavailable
+            var restoreFailed = false
+            do {
+                try restoreCredential(
+                    previousLocal,
+                    write: writeLocal,
+                    delete: deleteLocal
+                )
+            } catch {
+                restoreFailed = true
+            }
+            do {
+                try restoreCredential(
+                    previousSynchronizable,
+                    write: writeSynchronizable,
+                    delete: deleteSynchronizable
+                )
+            } catch {
+                restoreFailed = true
+            }
+            if restoreFailed {
+                throw CredentialMigrationError.unavailable
+            }
+            throw originalError
         }
-        for provider in LLMProvider.asrSelectablePresets {
-            guard let local = readASRKey(providerId: provider.id, synchronizable: false), !local.isEmpty else {
-                continue
+    }
+
+    /// Pure copy/verify/delete transaction. Tests inject each operation so
+    /// failure paths never need to manipulate or expose real credentials.
+    @discardableResult
+    static func copyCredentialTransaction(
+        source: CredentialRead,
+        destination: CredentialRead,
+        writeDestination: CredentialWrite,
+        readbackDestination: CredentialRead,
+        deleteSource: () throws -> Void
+    ) throws -> String? {
+        let sourceValue = try migrationOperation(source)
+        guard let sourceValue, !sourceValue.isEmpty else { return nil }
+
+        if let destinationValue = try migrationOperation(destination),
+           destinationValue != sourceValue {
+            throw CredentialMigrationError.conflict
+        }
+
+        try migrationOperation {
+            try writeDestination(sourceValue)
+        }
+        let readback = try migrationOperation(readbackDestination)
+        guard readback == sourceValue else {
+            throw CredentialMigrationError.verificationFailed
+        }
+        try migrationOperation(deleteSource)
+        return sourceValue
+    }
+
+    /// Copy non-empty local LLM and ASR keys into synchronizable items.
+    /// Device-only shadow copies are retained for a safe sync disable.
+    public static func migrateLocalKeysToICloud() throws {
+        try migrateAllCredentials(
+            sourceSynchronizable: false,
+            destinationSynchronizable: true,
+            deleteSourcesAfterVerification: false
+        )
+    }
+
+    /// Copy synchronizable LLM and ASR keys back to device-only items before
+    /// settings sync is disabled.
+    public static func migrateICloudKeysToLocal() throws {
+        try migrateAllCredentials(
+            sourceSynchronizable: true,
+            destinationSynchronizable: false,
+            deleteSourcesAfterVerification: true
+        )
+    }
+
+    /// Stores a legacy plaintext value in the selected provider account and
+    /// verifies it. The caller remains responsible for deleting its source.
+    static func copyAPIKeyToSelectedStorage(
+        _ key: String,
+        providerId: String,
+        useICloudSync: Bool
+    ) throws {
+        _ = try copyCredentialTransaction(
+            source: { key },
+            destination: {
+                try migrationValue(
+                    from: readKeyOutcome(providerId: providerId, synchronizable: useICloudSync)
+                )
+            },
+            writeDestination: { value in
+                try setAPIKey(value, for: providerId, useICloudSync: useICloudSync)
+            },
+            readbackDestination: {
+                try migrationValue(
+                    from: readKeyOutcome(providerId: providerId, synchronizable: useICloudSync)
+                )
+            },
+            deleteSource: {}
+        )
+    }
+
+    /// Safely migrates the legacy `current` account into the selected provider
+    /// account. A failed write or unavailable Keychain leaves the source intact.
+    static func migrateLegacyAPIKey(
+        to providerId: String,
+        useICloudSync: Bool
+    ) throws {
+        _ = try copyCredentialTransaction(
+            source: { legacyAPIKey() },
+            destination: {
+                try migrationValue(
+                    from: readKeyOutcome(providerId: providerId, synchronizable: useICloudSync)
+                )
+            },
+            writeDestination: { value in
+                try setAPIKey(value, for: providerId, useICloudSync: useICloudSync)
+            },
+            readbackDestination: {
+                try migrationValue(
+                    from: readKeyOutcome(providerId: providerId, synchronizable: useICloudSync)
+                )
+            },
+            deleteSource: {
+                try deleteLegacyAPIKey()
             }
-            try? writeASRKey(local, providerId: provider.id, synchronizable: true)
-            try? deleteASRKey(providerId: provider.id, synchronizable: false)
+        )
+    }
+
+    /// Copies the retired qwen ASR credential into bailian without deleting
+    /// either qwen account, which may still be needed by LLM or rollback paths.
+    static func copyQwenASRKeyToBailian(useICloudSync: Bool) throws {
+        _ = try copyCredentialTransaction(
+            source: {
+                if let dedicated = try preferredMigrationValue(
+                    providerId: "qwen",
+                    synchronizable: useICloudSync,
+                    asr: true
+                ) {
+                    return dedicated
+                }
+                return try preferredMigrationValue(
+                    providerId: "qwen",
+                    synchronizable: useICloudSync,
+                    asr: false
+                )
+            },
+            destination: {
+                try migrationValue(
+                    from: readASRKeyOutcome(
+                        providerId: "bailian",
+                        synchronizable: useICloudSync,
+                        fallbackToLegacyProviderAccount: false
+                    )
+                )
+            },
+            writeDestination: { value in
+                try setASRAPIKey(value, for: "bailian", useICloudSync: useICloudSync)
+            },
+            readbackDestination: {
+                try migrationValue(
+                    from: readASRKeyOutcome(
+                        providerId: "bailian",
+                        synchronizable: useICloudSync,
+                        fallbackToLegacyProviderAccount: false
+                    )
+                )
+            },
+            deleteSource: {}
+        )
+    }
+
+    private static func migrateAllCredentials(
+        sourceSynchronizable: Bool,
+        destinationSynchronizable: Bool,
+        deleteSourcesAfterVerification: Bool
+    ) throws {
+        var verifiedSources: [(providerId: String, asr: Bool)] = []
+        for providerId in Set(LLMProvider.presets.map(\.id)).sorted() {
+            if try copyCredential(
+                providerId: providerId,
+                sourceSynchronizable: sourceSynchronizable,
+                destinationSynchronizable: destinationSynchronizable,
+                asr: false
+            ) {
+                verifiedSources.append((providerId, false))
+            }
+        }
+        let asrProviderIds = Set(
+            (LLMProvider.presets + LLMProvider.asrSelectablePresets).map(\.id)
+        )
+        for providerId in asrProviderIds.sorted() {
+            if try copyCredential(
+                providerId: providerId,
+                sourceSynchronizable: sourceSynchronizable,
+                destinationSynchronizable: destinationSynchronizable,
+                asr: true
+            ) {
+                verifiedSources.append((providerId, true))
+            }
+        }
+        guard deleteSourcesAfterVerification else { return }
+        var cleanupFailed = false
+        for source in verifiedSources {
+            do {
+                if source.asr {
+                    try deleteASRKey(
+                        providerId: source.providerId,
+                        synchronizable: sourceSynchronizable
+                    )
+                } else {
+                    try deleteKey(
+                        providerId: source.providerId,
+                        synchronizable: sourceSynchronizable
+                    )
+                }
+            } catch {
+                cleanupFailed = true
+                // Every destination has already been verified, so a retained
+                // source is a harmless shadow that a later migration can retry.
+                OSGLog.config.warning(
+                    "credential source cleanup deferred provider=\(source.providerId, privacy: .public)"
+                )
+            }
+        }
+        if cleanupFailed {
+            throw CredentialMigrationError.unavailable
+        }
+    }
+
+    private static func copyCredential(
+        providerId: String,
+        sourceSynchronizable: Bool,
+        destinationSynchronizable: Bool,
+        asr: Bool
+    ) throws -> Bool {
+        let copied = try copyCredentialTransaction(
+            source: {
+                try migrationValue(
+                    from: asr
+                        ? readASRKeyOutcome(
+                            providerId: providerId,
+                            synchronizable: sourceSynchronizable,
+                            fallbackToLegacyProviderAccount: false
+                        )
+                        : readKeyOutcome(providerId: providerId, synchronizable: sourceSynchronizable)
+                )
+            },
+            destination: {
+                try migrationValue(
+                    from: asr
+                        ? readASRKeyOutcome(
+                            providerId: providerId,
+                            synchronizable: destinationSynchronizable,
+                            fallbackToLegacyProviderAccount: false
+                        )
+                        : readKeyOutcome(providerId: providerId, synchronizable: destinationSynchronizable)
+                )
+            },
+            writeDestination: { value in
+                if asr {
+                    try writeASRKey(
+                        value,
+                        providerId: providerId,
+                        synchronizable: destinationSynchronizable
+                    )
+                } else {
+                    try writeKey(
+                        value,
+                        providerId: providerId,
+                        synchronizable: destinationSynchronizable
+                    )
+                }
+            },
+            readbackDestination: {
+                try migrationValue(
+                    from: asr
+                        ? readASRKeyOutcome(
+                            providerId: providerId,
+                            synchronizable: destinationSynchronizable,
+                            fallbackToLegacyProviderAccount: false
+                        )
+                        : readKeyOutcome(providerId: providerId, synchronizable: destinationSynchronizable)
+                )
+            },
+            deleteSource: {}
+        )
+        return copied != nil
+    }
+
+    private static func preferredMigrationValue(
+        providerId: String,
+        synchronizable: Bool,
+        asr: Bool
+    ) throws -> String? {
+        let preferred = try migrationValue(
+            from: asr
+                ? readASRKeyOutcome(
+                    providerId: providerId,
+                    synchronizable: synchronizable,
+                    fallbackToLegacyProviderAccount: false
+                )
+                : readKeyOutcome(providerId: providerId, synchronizable: synchronizable)
+        )
+        if let preferred, !preferred.isEmpty { return preferred }
+        return try migrationValue(
+            from: asr
+                ? readASRKeyOutcome(
+                    providerId: providerId,
+                    synchronizable: !synchronizable,
+                    fallbackToLegacyProviderAccount: false
+                )
+                : readKeyOutcome(providerId: providerId, synchronizable: !synchronizable)
+        )
+    }
+
+    private static func migrationValue(from outcome: ReadOutcome) throws -> String? {
+        switch outcome {
+        case .found(let value):
+            return value
+        case .notFound:
+            return nil
+        case .unavailable:
+            throw CredentialMigrationError.unavailable
+        }
+    }
+
+    private static func migrationOperation<T>(_ operation: () throws -> T) throws -> T {
+        do {
+            return try operation()
+        } catch let error as CredentialMigrationError {
+            throw error
+        } catch {
+            throw CredentialMigrationError.unavailable
+        }
+    }
+
+    private static func restoreCredential(
+        _ previousValue: String?,
+        write: CredentialWrite,
+        delete: () throws -> Void
+    ) throws {
+        if let previousValue {
+            try write(previousValue)
+        } else {
+            try delete()
         }
     }
 

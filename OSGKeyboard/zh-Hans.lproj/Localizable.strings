@@ -101,7 +101,7 @@
 "settings.appearance.light" = "浅色";
 "settings.appearance.dark" = "深色";
 "settings.reset.title" = "重置所有设置?";
-"settings.reset.message" = "将清空 API Key、模型、接口地址、语音历史及云端确认状态。";
+"settings.reset.message" = "将清空 API Key、模型、接口地址、语音历史及云端确认状态；剪贴板历史会保留。";
 "settings.reset.confirm" = "重置所有设置";
 "settings.engine.title" = "语音转写与润色";
 "settings.engine.subtitle" = "本地：系统内置转写；云端：ASR 转写，可用 LLM 润色。";
@@ -142,8 +142,8 @@
 "settings.asr.volcengine.appId" = "APP ID";
 "settings.asr.volcengine.accessToken" = "Access Token";
 "settings.asr.volcengine.apiKey" = "API Key";
-"settings.asr.volcengine.apiKeyMode.title" = "使用新版 API Key 鉴权";
-"settings.asr.volcengine.apiKeyMode.subtitle" = "新控制台请打开此开关；已有 AppID + Token 可保持关闭。";
+"settings.asr.volcengine.apiKeyMode.title" = "使用新版 API Key";
+"settings.asr.volcengine.apiKeyMode.subtitle" = "新控制台用 API Key；旧版请关闭并用 APP ID + Token。";
 "settings.asr.volcengine.note.appToken" = "旧版控制台：填写 APP ID 与 Access Token。Secret Key 无需填写。识别资源固定为豆包流式 2.0（volc.seedasr.sauc.duration）。";
 "settings.asr.volcengine.note.apiKey" = "新版控制台：只需填写 API Key。识别资源固定为豆包流式 2.0（volc.seedasr.sauc.duration）。";
 "provider.openai" = "OpenAI";
@@ -205,17 +205,27 @@
 "settings.clipboard.subtitle.on" = "已开启";
 "settings.clipboard.subtitle.off" = "已关闭";
 "settings.clipboard.history.title" = "历史记录";
-"settings.clipboard.history.footer" = "本机保存最近 15 条纯文本。";
+"settings.clipboard.history.footer" = "默认关闭。开启后采集本机或通用剪贴板复制的文本，并在本机 App Group 中保存最近 15 条；复制约 30 秒内，AI 模式也可展示剪贴板相关建议。";
 "settings.clipboard.candidate.title" = "建议条";
 "settings.clipboard.candidate.footer" = "最新复制显示在键盘上方，点一下即可插入。";
 "settings.clipboard.paste.section" = "系统授权";
-"settings.clipboard.paste.body" = "将「从其他 App 粘贴」设为「允许」，即可不再弹窗。若没有此项，先复制文字并点一次键盘建议条。";
+"settings.clipboard.paste.body" = "先复制一段文字，再点「请求粘贴权限」并允许访问；iOS 随后会生成「从其他 App 粘贴」设置项，可将其设为「允许」。";
+"settings.clipboard.paste.request" = "请求粘贴权限";
 "settings.clipboard.paste.open" = "打开系统设置";
+"settings.clipboard.storage.section" = "本机历史";
+"settings.clipboard.storage.body" = "关闭「历史记录」只会停止采集并关闭建议条，已有记录仍会保留。剪贴板历史不经 iCloud 同步，也不会自动发送给 AI；插入后若主动使用润色，内容可能作为上下文发送给你配置的服务商。敏感内容过滤采用保守规则，无法识别所有密码。";
+"settings.clipboard.clear.button" = "清空剪贴板历史";
+"settings.clipboard.clear.title" = "清空剪贴板历史？";
+"settings.clipboard.clear.message" = "将从本机永久删除全部剪贴板历史，且无法撤销。";
+"settings.clipboard.clear.confirm" = "清空历史";
 "settings.typingInput.title" = "文本输入";
-"settings.typingInput.default.title" = "默认进行文字输入";
-"settings.typingInput.default.description" = "打开键盘时，默认使用文字输入键盘而非语音输入";
+"settings.typingInput.default.title" = "默认输入方式";
+"settings.typingInput.default.description" = "打开键盘时使用此方式";
+"settings.typingInput.default.mode.voice" = "语音";
+"settings.typingInput.default.mode.pinyin" = "拼音";
+"settings.typingInput.default.mode.english" = "英文";
 "settings.typingInput.rememberLast.title" = "记住上次选择";
-"settings.typingInput.rememberLast.description" = "下次打开键盘时，保持你上次离开时的语音或文字输入界面";
+"settings.typingInput.rememberLast.description" = "下次打开时恢复上次界面";
 "settings.typingInput.schema.section" = "输入方案";
 "settings.typingInput.schema.picker" = "拼音方案";
 "typing.schema.fullPinyin" = "全拼";
@@ -228,8 +238,8 @@
 "settings.typingInput.resources.ready" = "已就绪";
 "settings.typingInput.resources.pending" = "待初始化";
 "settings.typingInput.resources.redeploy" = "重新部署输入法资源";
-"settings.speechRecognition.title" = "语音识别配置";
-"settings.textPolish.title" = "文本润色配置";
+"settings.speechRecognition.title" = "语音识别";
+"settings.textPolish.title" = "文本润色";
 "settings.preferences.title" = "偏好设置";
 "settings.dictionaryAndPolish.title" = "词库与润色";
 "settings.polishPreferences.title" = "润色偏好";
@@ -240,7 +250,7 @@
 "settings.keyboardHaptic.off" = "关";
 "settings.keyboardHaptic.light" = "轻";
 "settings.keyboardHaptic.strong" = "强";
-"settings.cursorDragNavigation.title" = "麦克风旁拖动移动光标";
+"settings.cursorDragNavigation.title" = "触摸空白区域移动光标";
 "settings.systemPrompt.reset" = "重置";
 "settings.asrLocale" = "识别语言";
 "settings.engineBadge.ios26" = "SpeechAnalyzer — 始终端侧";
@@ -342,15 +352,13 @@
 "keyboard.placeholder.preparing" = "准备中…";
 "keyboard.placeholder.processing" = "处理中…";
 "keyboard.placeholder.error" = "润色失败";
-"keyboard.placeholder.localBadge" = "本地";
-"keyboard.placeholder.cloudBadge" = "云端";
 "keyboard.rec" = "REC";
 "keyboard.space" = "空格";
 "keyboard.denied.mic" = "麦克风被拒绝";
 "keyboard.denied.speech" = "语音识别被拒绝";
 "keyboard.openSettingsA11y" = "打开 OSGKeyboard 设置";
 "keyboard.deniedHint" = "打开 OSGKeyboard 设置,可授予麦克风 / 语音识别权限。";
-"keyboard.pressToTalkA11y" = "按住说话";
+"keyboard.tapToTalkA11y" = "点按说话";
 
 /* Mode chip labels */
 "mode.off" = "关闭";
@@ -398,6 +406,8 @@
 "home.flow.startShort" = "开启";
 "home.preview.label" = "输入测试";
 "home.preview.placeholder" = "点这里试试键盘";
+"home.card.history.empty" = "还没有语音识别记录";
+"home.card.dictionary.empty" = "还没有词条";
 "home.wide.tagline.subtitle" = "切换到任意 App，点键盘麦克风即可听写。";
 "home.wide.mode.cloud" = "云端";
 "home.wide.mode.local" = "本机";
@@ -577,3 +587,4 @@
 "flow.warning.polishDegradedQuality" = "本次润色结果未通过校验，已插入保守处理版本。";
 "flow.error.editLastInputFailed" = "未能完成编辑，请重试。";
 "flow.error.aiQuestionFailed" = "AI 回答失败，请重试。";
+"flow.error.clipboardUnavailable" = "没有可用的剪贴板内容。请开启剪贴板历史并先复制文本。";

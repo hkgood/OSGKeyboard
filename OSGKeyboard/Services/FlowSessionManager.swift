@@ -46,7 +46,7 @@ final class FlowSessionManager: ObservableObject {
     private let polisher = PolishingService()
     /// AI-mode turns are intentionally process-local and never persisted.
     private let aiConversations = AIConversationStore()
-    /// Cached ASR instance. v0.2.0: the only on-device backend is iOS
+    /// Cached ASR instance. The only on-device backend is iOS
     /// `SpeechAnalyzer`, which has no warm-up step — we can hand the
     /// factory-built service straight back without going through the
     /// old `OnDeviceModelWarmup` registry.
@@ -550,7 +550,7 @@ final class FlowSessionManager: ObservableObject {
 
         Task { @MainActor [weak self] in
             await self?.reactivateCaptureIfNeeded()
-            // v0.2.0: iOS `SpeechAnalyzer` is bundled with the OS; no
+            // iOS `SpeechAnalyzer` is bundled with the OS; no
             // on-device weights to reload after a background trip.
             self?.bindSessionASRIfNeeded()
             // ASR warmup stays on first mic press — never on foreground bounce.
@@ -1283,6 +1283,168 @@ final class FlowSessionManager: ObservableObject {
             if let conversationID = command.aiConversationID {
                 Task { await aiConversations.removeConversation(conversationID) }
             }
+        case .submitAIQuestion:
+            guard command.resolvedUtteranceMode == .aiQuestion else {
+                storeRejectedStart(
+                    command,
+                    message: AppL10n.string("flow.error.aiQuestionFailed"),
+                    status: .error
+                )
+                return
+            }
+            let question = command.aiQuestionText?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !question.isEmpty else {
+                storeRejectedStart(
+                    command,
+                    message: AppL10n.string("flow.error.aiQuestionFailed"),
+                    status: .error
+                )
+                return
+            }
+            let startDecision = FlowStartTransactionPolicy.decide(
+                incomingUtteranceID: command.utteranceId,
+                deadlineAt: command.startDeadlineAt,
+                hostState: hostUtteranceState
+            )
+            switch startDecision {
+            case .idempotent:
+                refreshHostReady()
+                return
+            case .rejectBusy, .rejectExpired:
+                let status: FlowResult.Status =
+                    startDecision == .rejectExpired ? .timeout : .error
+                storeRejectedStart(
+                    command,
+                    message: AppL10n.string("flow.error.recognitionInterrupted"),
+                    status: status
+                )
+                return
+            case .accept:
+                break
+            }
+            guard prepareUtteranceIdentity(
+                utteranceId: command.utteranceId,
+                commandSeq: command.commandSeq
+            ) else { return }
+            currentUtteranceMode = .aiQuestion
+            pendingAIConversationID = command.aiConversationID
+            pendingEditSourceText = nil
+            pendingSourceHistoryEntryID = nil
+            pendingSourceHistoryEntryRevision = nil
+            startingUtteranceId = nil
+            startTransactionDeadlineAt = nil
+            FlowSessionBridge.clearStartTransaction()
+            isUtteranceRecording = false
+            isUtteranceProcessing = true
+            refreshHostReady()
+            let conversationID = command.aiConversationID
+            let utteranceId = command.utteranceId
+            let commandSeq = command.commandSeq
+            let sessionId = command.sessionId
+            Task { @MainActor [weak self] in
+                await self?.answerPrefilledAIQuestion(
+                    question: question,
+                    conversationID: conversationID,
+                    sessionId: sessionId,
+                    utteranceId: utteranceId,
+                    commandSeq: commandSeq
+                )
+            }
+        }
+    }
+
+    /// Clipboard body for an explicitly spoken clipboard request. Opt-in
+    /// history is the authorization gate, and while the keyboard is visible its
+    /// newest stored item is the live pasteboard. Unlike the idle hint cards,
+    /// naming the clipboard out loud is not bound to the 30s hint window.
+    private func clipboardMaterialForAIQuestion(store: AppGroupStore) -> String? {
+        guard store.clipboardHistoryEnabled else { return nil }
+        return ClipboardHistoryStore().newestEntry?.text
+    }
+
+    /// Skip ASR and answer a prefilled AI hint / typed question.
+    private func answerPrefilledAIQuestion(
+        question: String,
+        conversationID: UUID?,
+        sessionId: UUID,
+        utteranceId: UUID,
+        commandSeq: Int64
+    ) async {
+        guard let conversationID else {
+            guard claimTerminal(utteranceId: utteranceId) else { return }
+            storeFinalizedError(
+                AppL10n.string("flow.error.aiQuestionFailed"),
+                kind: .generic,
+                sessionId: sessionId,
+                utteranceId: utteranceId,
+                commandSeq: commandSeq
+            )
+            return
+        }
+
+        storeRawCandidate(
+            question,
+            sessionId: sessionId,
+            utteranceId: utteranceId,
+            commandSeq: commandSeq
+        )
+
+        let pipelineStore = AppGroupStore()
+        do {
+            let service = try AIQuestionService.configured(
+                store: pipelineStore,
+                conversations: aiConversations
+            )
+            aiAnswerStreamThrottle = AIAnswerStreamThrottle()
+            let answer = try await service.answer(
+                question: question,
+                conversationID: conversationID,
+                targetLocaleID: pipelineStore.translationTargetLocaleId
+            ) { [weak self] partial in
+                Task { @MainActor in
+                    self?.publishStreamingAIAnswerIfNeeded(
+                        partial,
+                        sessionId: sessionId,
+                        utteranceId: utteranceId,
+                        commandSeq: commandSeq,
+                        aiConversationID: conversationID,
+                        force: partial.isEmpty
+                    )
+                }
+            }
+            publishStreamingAIAnswerIfNeeded(
+                answer,
+                sessionId: sessionId,
+                utteranceId: utteranceId,
+                commandSeq: commandSeq,
+                aiConversationID: conversationID,
+                force: true
+            )
+            guard claimTerminal(utteranceId: utteranceId) else { return }
+            await service.commitSuccessfulTurn(
+                question: question,
+                answer: answer,
+                conversationID: conversationID
+            )
+            storeFinalizedResult(
+                answer,
+                warning: nil,
+                sessionId: sessionId,
+                utteranceId: utteranceId,
+                commandSeq: commandSeq,
+                aiConversationID: conversationID
+            )
+        } catch {
+            guard claimTerminal(utteranceId: utteranceId) else { return }
+            storeFinalizedError(
+                AppL10n.string("flow.error.aiQuestionFailed"),
+                kind: .generic,
+                sessionId: sessionId,
+                utteranceId: utteranceId,
+                commandSeq: commandSeq,
+                aiConversationID: conversationID
+            )
         }
     }
 
@@ -1389,30 +1551,6 @@ final class FlowSessionManager: ObservableObject {
                 commandSeq: currentCommandSeq,
                 status: .partial,
                 text: trimmed,
-                rawText: trimmed,
-                hostGeneration: FlowSessionBridge.currentHostGeneration(),
-                revision: Self.resultRevision(),
-                utteranceMode: currentUtteranceMode,
-                aiConversationID: pendingAIConversationID
-            )
-        )
-    }
-
-    private func storeCurrentFinal(_ text: String, warning: String? = nil) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            storeCurrentError(AppL10n.string("flow.error.noSpeech"), kind: .noSpeech)
-            return
-        }
-        guard let activeSessionId, let currentUtteranceId else { return }
-        FlowSessionBridge.writeResult(
-            FlowResult(
-                sessionId: activeSessionId,
-                utteranceId: currentUtteranceId,
-                commandSeq: currentCommandSeq,
-                status: .final,
-                text: trimmed,
-                warning: warning,
                 rawText: trimmed,
                 hostGeneration: FlowSessionBridge.currentHostGeneration(),
                 revision: Self.resultRevision(),
@@ -1777,16 +1915,19 @@ final class FlowSessionManager: ObservableObject {
                     manager.currentPartial = ""
                 case .failure(let message):
                     manager.asrFailureMessage = message
-                    manager.debug("asr error: \(message)")
+                    manager.debug(
+                        "asr error category=asrFailure errorBytes=\(message.utf8.count)"
+                    )
                     FlowTrace.warn(
                         "asr.outcome.failed",
                         "engine=\(manager.store.engineMode) streaming=\(useStreaming ? 1 : 0) "
                             + "partialLen=\(manager.currentPartial.count) "
-                            + "bestPartialLen=\(manager.bestPartialSnapshot.count) error=\(message)"
+                            + "bestPartialLen=\(manager.bestPartialSnapshot.count) "
+                            + "errorCategory=asrFailure errorBytes=\(message.utf8.count)"
                     )
                     // Prefer any non-empty partial over a hard no-speech failure.
-                    // finishProcessing used to clear bestPartialSnapshot and race
-                    // finalize into an empty transcript even when ASR had text.
+                    // Clearing `bestPartialSnapshot` here would race finalize
+                    // into an empty transcript even when ASR had usable text.
                     let recovery = [
                         manager.currentPartial,
                         manager.bestPartialSnapshot
@@ -1974,39 +2115,6 @@ final class FlowSessionManager: ObservableObject {
         currentCommandSeq = 0
         refreshHostReady()
         debug("utterance failed: \(message)")
-    }
-
-    private func finishProcessing(
-        withError message: String,
-        kind: FlowSessionKeys.TranscriptionErrorKind = .asrFailed
-    ) {
-        guard claimTerminal(utteranceId: currentUtteranceId) else { return }
-        isUtteranceProcessing = false
-        startingUtteranceId = nil
-        startTransactionDeadlineAt = nil
-        FlowSessionBridge.clearStartTransaction()
-        utteranceRecordingStartedAt = nil
-        utteranceSafetyTask?.cancel()
-        utteranceSafetyTask = nil
-        finalizeTask?.cancel()
-        finalizeTask = nil
-        chunkedPipeline = nil
-        capture.cancelUtterance()
-        releaseCaptureAfterPiPUtteranceIfNeeded()
-        currentPartial = ""
-        lastFinal = ""
-        lastFinalWithPauseMarks = ""
-        bestPartialSnapshot = ""
-        utterancePCMSamples = []
-        chunkWarnings = []
-        storeCurrentError(message, kind: kind)
-        pendingFieldContext = nil
-        clearPendingInstructionState()
-        utteranceGeneration &+= 1
-        currentUtteranceId = nil
-        currentCommandSeq = 0
-        refreshHostReady()
-        debug("utterance processing failed: \(message)")
     }
 
     private func claimTerminal(utteranceId: UUID?) -> Bool {
@@ -2207,6 +2315,23 @@ final class FlowSessionManager: ObservableObject {
                 return
             }
 
+            let spoken = AIClipboardPrompt.resolveSpoken(
+                question: text,
+                material: clipboardMaterialForAIQuestion(store: pipelineStore)
+            )
+            guard case .ready(let question) = spoken else {
+                guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
+                storeFinalizedError(
+                    AppL10n.string("flow.error.clipboardUnavailable"),
+                    kind: .generic,
+                    sessionId: finalizeSessionId,
+                    utteranceId: finalizeUtteranceId,
+                    commandSeq: finalizeCommandSeq,
+                    aiConversationID: aiConversationID
+                )
+                return
+            }
+
             do {
                 let service = try AIQuestionService.configured(
                     store: pipelineStore,
@@ -2218,7 +2343,7 @@ final class FlowSessionManager: ObservableObject {
                 let publishCommandSeq = finalizeCommandSeq
                 let publishConversationID = aiConversationID
                 let answer = try await service.answer(
-                    question: text,
+                    question: question,
                     conversationID: aiConversationID,
                     targetLocaleID: pipelineStore.translationTargetLocaleId
                 ) { [weak self] partial in
@@ -2244,7 +2369,7 @@ final class FlowSessionManager: ObservableObject {
                 )
                 guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
                 await service.commitSuccessfulTurn(
-                    question: text,
+                    question: question,
                     answer: answer,
                     conversationID: aiConversationID
                 )
@@ -2404,13 +2529,13 @@ final class FlowSessionManager: ObservableObject {
             if isInstructionMode {
                 FlowDiagnostics.log(
                     "instruction edit failed after \(String(format: "%.1f", Date().timeIntervalSince(polishStarted)))s: " +
-                    "\(error.localizedDescription)"
+                    "\(Self.safeErrorLogMetadata(error))"
                 )
                 FlowTrace.warn(
                     "editLastInput.failed",
                     "elapsed=\(FlowTrace.seconds(since: polishStarted))s "
                         + "cancelled=\(error is CancellationError ? 1 : 0) "
-                        + "error=\(error.localizedDescription)"
+                        + "\(Self.safeErrorLogMetadata(error))"
                 )
                 guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
                 storeFinalizedError(
@@ -2432,14 +2557,14 @@ final class FlowSessionManager: ObservableObject {
                 )
                 FlowDiagnostics.log(
                     "polish failed after \(String(format: "%.1f", Date().timeIntervalSince(polishStarted)))s: " +
-                    "\(error.localizedDescription)"
+                    "\(Self.safeErrorLogMetadata(error))"
                 )
                 FlowTrace.warn(
                     "polish.failed",
                     "mode=\(Self.polishModeLogLabel(polishMode)) engine=\(engineMode) "
                         + "elapsed=\(FlowTrace.seconds(since: polishStarted))s "
                         + "cancelled=\(error is CancellationError ? 1 : 0) "
-                        + "error=\(error.localizedDescription)"
+                        + "\(Self.safeErrorLogMetadata(error))"
                 )
                 FlowTrace.transcript(
                     "polish.fallback",
@@ -2651,7 +2776,7 @@ final class FlowSessionManager: ObservableObject {
             "host.deliveredError",
             "kind=\(kind.rawValue) status=\(status.rawValue) "
                 + "utterance=\(utteranceId.uuidString.prefix(8)) commandSeq=\(commandSeq) "
-                + "message=\(message)"
+                + "messageBytes=\(message.utf8.count)"
         )
         FlowSessionBridge.writeResult(
             FlowResult(
@@ -2775,10 +2900,13 @@ final class FlowSessionManager: ObservableObject {
             )
             return resolved
         case .failure(let message):
-            FlowDiagnostics.log("batch fallback failed: \(message)")
+            FlowDiagnostics.log(
+                "batch fallback failed category=asrFailure errorBytes=\(message.utf8.count)"
+            )
             FlowTrace.warn(
                 "asr.batchFallback.failed",
-                "samples=\(samples.count) rms=\(FlowTrace.rms(samples)) error=\(message)"
+                "samples=\(samples.count) rms=\(FlowTrace.rms(samples)) "
+                    + "errorCategory=asrFailure errorBytes=\(message.utf8.count)"
             )
             return currentText
         case .cancelled:
@@ -2788,7 +2916,7 @@ final class FlowSessionManager: ObservableObject {
     }
 
     private func asrWaitTimeout() -> TimeInterval {
-        // v0.2.0: local engine is iOS `SpeechAnalyzer` only, so the
+        // Local engine is iOS `SpeechAnalyzer` only, so the
         // previous Qwen3-specific timeout collapses into the shared
         // local path.
         if store.engineMode == "local" {
@@ -2866,27 +2994,9 @@ final class FlowSessionManager: ObservableObject {
         FlowDiagnostics.log(message)
     }
 
-    // MARK: - Temporary Flow debug panel (remove after orange-mic investigation)
-
-    /// Snapshot for the on-screen debug panel. Safe to call from the main actor.
-    func makeDebugRows() -> [FlowDebugRow] {
-        let snapshot = FlowSessionBridge.readySnapshot()
-        let hostRows = FlowDebugAppGroupSnapshot.rows()
-        let memRows: [FlowDebugRow] = [
-            FlowDebugRow("isActive", isActive ? "1" : "0"),
-            FlowDebugRow("isStarting", isStarting ? "1" : "0"),
-            FlowDebugRow("coldStart", isColdStartHandoff ? "1" : "0"),
-            FlowDebugRow("engineLive", capture.engineIsLive ? "1" : "0"),
-            FlowDebugRow("audioFresh", capture.engineHasRecentAudio(maxAge: 2) ? "1" : "0"),
-            FlowDebugRow("mem.reason", snapshot?.reason.rawValue ?? "nil"),
-            FlowDebugRow("utt.rec", isUtteranceRecording ? "1" : "0"),
-            FlowDebugRow("utt.proc", isUtteranceProcessing ? "1" : "0"),
-            FlowDebugRow("sessionId", activeSessionId.map { String($0.uuidString.prefix(8)) } ?? "nil"),
-            FlowDebugRow("warning", sessionWarning == nil ? "0" : "1"),
-            FlowDebugRow("bridgeReady", FlowSessionBridge.isHostReady() ? "1" : "0")
-        ]
-        // Prefer App Group snap.reason near the top of the shared block.
-        return memRows + hostRows
+    private static func safeErrorLogMetadata(_ error: Error) -> String {
+        "errorCategory=\(String(reflecting: type(of: error))) "
+            + "errorBytes=\(error.localizedDescription.utf8.count)"
     }
 
     private func traceIgnoredCommand(reason: String, command: FlowCommand, detail: String) {

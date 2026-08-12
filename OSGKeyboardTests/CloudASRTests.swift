@@ -125,6 +125,61 @@ final class CloudASRTests: XCTestCase {
         XCTAssertEqual(config.asrModel, CloudASRModelCatalog.alibabaFunASRRealtime)
     }
 
+    func testLegacyQwenASRConfigCopiesDedicatedKeyToBailian() throws {
+        clearQwenMigrationKeys()
+        defer { clearQwenMigrationKeys() }
+        let suite = "group.com.osgkeyboard.tests.qwen-asr-key.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(false, forKey: AppGroupConfiguration.Keys.settingsICloudSyncEnabled)
+        defaults.set("qwen", forKey: AppGroupConfiguration.Keys.asrProviderId)
+        try Keychain.setASRAPIKey("dedicated-credential", for: "qwen", useICloudSync: false)
+
+        _ = AppGroupConfiguration.load(fromAvailable: defaults)
+
+        XCTAssertNotNil(Keychain.asrApiKey(for: "qwen", preferICloudSync: false))
+        XCTAssertNotNil(Keychain.asrApiKey(for: "bailian", preferICloudSync: false))
+    }
+
+    func testLegacyQwenASRConfigFallsBackToProviderKey() throws {
+        clearQwenMigrationKeys()
+        defer { clearQwenMigrationKeys() }
+        let suite = "group.com.osgkeyboard.tests.qwen-provider-key.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(false, forKey: AppGroupConfiguration.Keys.settingsICloudSyncEnabled)
+        defaults.set("qwen", forKey: AppGroupConfiguration.Keys.asrProviderId)
+        try Keychain.setAPIKey("provider-credential", for: "qwen", useICloudSync: false)
+
+        _ = AppGroupConfiguration.load(fromAvailable: defaults)
+
+        XCTAssertNotNil(Keychain.apiKey(for: "qwen", preferICloudSync: false))
+        XCTAssertNotNil(Keychain.asrApiKey(for: "bailian", preferICloudSync: false))
+    }
+
+    func testLegacyQwenASRConfigDoesNotOverwriteDifferentBailianKey() throws {
+        clearQwenMigrationKeys()
+        defer { clearQwenMigrationKeys() }
+        let suite = "group.com.osgkeyboard.tests.qwen-key-conflict.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(false, forKey: AppGroupConfiguration.Keys.settingsICloudSyncEnabled)
+        defaults.set("qwen", forKey: AppGroupConfiguration.Keys.asrProviderId)
+        try Keychain.setASRAPIKey("qwen-credential", for: "qwen", useICloudSync: false)
+        try Keychain.setASRAPIKey("bailian-credential", for: "bailian", useICloudSync: false)
+
+        _ = AppGroupConfiguration.load(fromAvailable: defaults)
+
+        XCTAssertTrue(
+            Keychain.asrApiKey(for: "bailian", preferICloudSync: false)
+                == "bailian-credential"
+        )
+        XCTAssertNotNil(Keychain.asrApiKey(for: "qwen", preferICloudSync: false))
+    }
+
     func testVolcengineASRFieldsJSONParsing() {
         let json = #"{"app_id":"app-1","access_token":"tok-2","resource_id":"res-3"}"#
         let fields = VolcengineASRFields.parse(apiKey: json, resourceFallback: "")
@@ -202,6 +257,12 @@ final class CloudASRTests: XCTestCase {
         XCTAssertEqual(parsed.accessToken, "tok-2")
     }
 
+    func testVolcengineASRFieldsEmptyDefaultsToAPIKeyMode() {
+        let fields = VolcengineASRFields.parse(apiKey: "")
+        XCTAssertEqual(fields.authMode, .apiKey)
+        XCTAssertFalse(fields.hasUsableCredentials)
+    }
+
     func testVolcengineASRFieldsEmptyAPIKeyModeIsNotUsable() {
         let json = #"{"auth_mode":"api_key"}"#
         let fields = VolcengineASRFields.parse(apiKey: json)
@@ -252,11 +313,31 @@ final class CloudASRTests: XCTestCase {
         XCTAssertEqual(String(data: wav.dropFirst(8).prefix(4), encoding: .ascii), "WAVE")
     }
 
+    func testOpenAIRealtimeProbeCancellationDoesNotUseBatchFallback() {
+        XCTAssertFalse(
+            OpenAIRealtimeASRClient.shouldFallbackToBatch(afterProbeError: CancellationError())
+        )
+        XCTAssertFalse(
+            OpenAIRealtimeASRClient.shouldFallbackToBatch(afterProbeError: URLError(.cancelled))
+        )
+        XCTAssertTrue(
+            OpenAIRealtimeASRClient.shouldFallbackToBatch(
+                afterProbeError: CloudASRError.transport("handshake failed")
+            )
+        )
+    }
+
     func testVocabularyFingerprintChangesWhenDictionaryChanges() {
         let emptyFP = PersonalDictionary.empty.vocabularySyncFingerprint()
         let withTerm = PersonalDictionary(entries: [
             PersonalDictionary.Entry(term: "Kubernetes", category: .technical, source: .manual),
         ])
         XCTAssertNotEqual(emptyFP, withTerm.vocabularySyncFingerprint())
+    }
+
+    private func clearQwenMigrationKeys() {
+        try? Keychain.deleteAPIKey(for: "qwen", useICloudSync: true)
+        try? Keychain.deleteASRAPIKey(for: "qwen", useICloudSync: true)
+        try? Keychain.deleteASRAPIKey(for: "bailian", useICloudSync: true)
     }
 }

@@ -8,6 +8,10 @@
 
 import Foundation
 
+/// Sendable facade over thread-safe UserDefaults, hence `@unchecked`; callers
+/// must still serialize compound read-modify-write mutations. iOS requires the
+/// App Group (except unsigned tests), while macOS may use `.standard`. API keys
+/// are resolved from Keychain and never saved here.
 public struct AppGroupStore: @unchecked Sendable {
     public let defaults: UserDefaults
 
@@ -93,9 +97,6 @@ public struct AppGroupStore: @unchecked Sendable {
     public var polishProviderIdOverride: String? { configuration.polishProviderIdOverride }
     public var isCloudAPIKeyMissingForVoiceInput: Bool { configuration.isCloudAPIKeyMissingForVoiceInput }
     public var localASRCustomLanguageModelEnabled: Bool { configuration.localASRCustomLanguageModelEnabled }
-
-    /// Whether the keyboard top-bar translation chip should render.
-    public var isTranslationChipVisible: Bool { true }
 
     // MARK: - Writes
 
@@ -208,6 +209,8 @@ public struct AppGroupStore: @unchecked Sendable {
         set { setOnboardingPage(newValue) }
     }
 
+    /// Commits onboarding to both the App Group and the reboot-durable
+    /// Keychain marker; callers must preserve this dual-write invariant.
     public func setHasCompletedOnboarding(_ completed: Bool) {
         mutateConfiguration { config in
             config.hasCompletedOnboarding = completed

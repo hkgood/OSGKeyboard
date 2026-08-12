@@ -32,7 +32,11 @@ public struct EditTextPager: View {
     public var body: some View {
         GeometryReader { proxy in
             ScrollView(.horizontal) {
-                LazyHStack(spacing: 0) {
+                // Two pages only — prefer HStack so page `1` is laid out in the
+                // same update that sets `scrollPosition`, avoiding a stuck
+                // LazyHStack that leaves the indicator on “edited” while still
+                // showing the original text.
+                HStack(spacing: 0) {
                     textPage(title: originalTitle, text: originalText)
                         .frame(
                             width: proxy.size.width,

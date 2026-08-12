@@ -66,6 +66,38 @@ final class AIKeyboardCoordinator {
         }
     }
 
+    /// Tap an idle hint card: resolve its material, skip the mic, ask the host.
+    func submitHintCard(_ card: AIHintCard) {
+        switch state.aiSession.phase {
+        case .inactive, .idle, .failed:
+            break
+        case .preparing, .listening, .recognizing, .generating,
+             .ready, .awaitingSend, .inserted, .sent:
+            return
+        }
+        enterIfNeeded()
+        let resolution = AIHintPool.resolvePrompt(
+            for: card,
+            clipboardText: ClipboardHistoryStore.shared.newestAIHintEligibleEntry()?.text
+        )
+        guard case .ready(let prompt) = resolution else {
+            // The clipboard window closed between rendering and this tap.
+            state.aiSession.fail(
+                ExtL10n.string("keyboard.ai.error.clipboardUnavailable"),
+                utteranceID: nil
+            )
+            return
+        }
+        guard let conversationID = state.aiSession.conversationID else { return }
+        let disposition = flow.submitAIQuestion(
+            text: prompt,
+            conversationID: conversationID
+        )
+        if case .rejected(let rejection) = disposition {
+            state.aiSession.fail(message(for: rejection), utteranceID: nil)
+        }
+    }
+
     func cancel() {
         guard state.aiSession.isBusy else { return }
         flow.cancelAIRecording()
