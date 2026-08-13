@@ -5,6 +5,15 @@ import XCTest
 @testable import OSGKeyboardShared
 
 final class AIClipboardPromptTests: XCTestCase {
+    func testInternalClipboardEnvelopeIsDetected() {
+        let prompt = AIClipboardPrompt.compose(
+            instruction: "请翻译剪贴板",
+            material: "hello"
+        )
+        XCTAssertTrue(AIClipboardPrompt.isInternalPrompt(prompt))
+        XCTAssertFalse(AIClipboardPrompt.isInternalPrompt("请翻译剪贴板"))
+    }
+
     func testComposeKeepsInstructionAndMaterialInSeparateBlocks() {
         let prompt = AIClipboardPrompt.compose(
             instruction: "请翻译剪贴板",

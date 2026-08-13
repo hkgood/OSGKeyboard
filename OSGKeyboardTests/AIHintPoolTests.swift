@@ -12,19 +12,21 @@ final class AIHintPoolTests: XCTestCase {
         XCTAssertEqual(AIHintLocaleResolver.packLocale(preferredLanguages: ["en-US"]), "en")
     }
 
-    func testClipboardWindowForcesOnlyClipboardCards() {
+    func testClipboardWindowNeverPutsClipboardCardsInCarousel() {
         let pack = AIHintPack(
             locale: "zh",
             cards: AIHintLocalCatalog.cards(locale: "zh")
         )
         let recent = ClipboardHistoryEntry(text: "hello", createdAt: Date())
-        let cards = AIHintPool.activeCards(
-            pack: pack,
-            clipboardHistoryEnabled: true,
-            newestClipboard: recent
+        XCTAssertTrue(
+            AIHintPool.isClipboardSkillWindowActive(
+                clipboardHistoryEnabled: true,
+                newestClipboard: recent
+            )
         )
+        let cards = AIHintPool.activeCards(pack: pack)
         XCTAssertFalse(cards.isEmpty)
-        XCTAssertTrue(cards.allSatisfy(\.requiresClipboard30s))
+        XCTAssertTrue(cards.allSatisfy { !$0.requiresClipboard30s })
     }
 
     func testClipboardDisabledDropsClipboardCards() {
@@ -32,11 +34,7 @@ final class AIHintPoolTests: XCTestCase {
             locale: "zh",
             cards: AIHintLocalCatalog.cards(locale: "zh")
         )
-        let cards = AIHintPool.activeCards(
-            pack: pack,
-            clipboardHistoryEnabled: false,
-            newestClipboard: ClipboardHistoryEntry(text: "hello")
-        )
+        let cards = AIHintPool.activeCards(pack: pack)
         XCTAssertFalse(cards.isEmpty)
         XCTAssertTrue(cards.allSatisfy { !$0.requiresClipboard30s })
     }

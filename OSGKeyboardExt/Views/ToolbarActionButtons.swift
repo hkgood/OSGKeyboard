@@ -10,6 +10,8 @@ import OSGKeyboardShared
 
 private enum ToolbarButtonMetrics {
     static let iconSize: CGFloat = 14
+    /// Slightly larger glyph so a 52 pt circular glass key does not look sparse.
+    static let circleIconSize: CGFloat = 17
     static let titleSize: CGFloat = 16
     static let cornerRadius: CGFloat = KeyboardChromeLayout.actionKeyCornerRadius
     static let spaceBarCapsuleWidth: CGFloat = 31
@@ -201,6 +203,7 @@ struct RectangularToolbarButton: View {
     let disabled: Bool
     let isSend: Bool
     let usesLiquidGlass: Bool
+    let usesCircleGlass: Bool
     /// Settings → General → Haptics; space / return use `.action` role.
     var hapticIntensity: KeyboardHapticIntensity = .off
     let action: () -> Void
@@ -210,6 +213,7 @@ struct RectangularToolbarButton: View {
         label: String,
         disabled: Bool = false,
         usesLiquidGlass: Bool = false,
+        usesCircleGlass: Bool = false,
         hapticIntensity: KeyboardHapticIntensity = .off,
         action: @escaping () -> Void
     ) {
@@ -220,6 +224,7 @@ struct RectangularToolbarButton: View {
         self.disabled = disabled
         self.isSend = false
         self.usesLiquidGlass = usesLiquidGlass
+        self.usesCircleGlass = usesCircleGlass
         self.hapticIntensity = hapticIntensity
         self.action = action
     }
@@ -239,6 +244,7 @@ struct RectangularToolbarButton: View {
         self.disabled = disabled
         self.isSend = isSend
         self.usesLiquidGlass = usesLiquidGlass
+        self.usesCircleGlass = false
         self.hapticIntensity = hapticIntensity
         self.action = action
         self.title = title
@@ -259,6 +265,7 @@ struct RectangularToolbarButton: View {
         self.disabled = disabled
         self.isSend = false
         self.usesLiquidGlass = usesLiquidGlass
+        self.usesCircleGlass = false
         self.hapticIntensity = hapticIntensity
         self.action = action
     }
@@ -267,7 +274,7 @@ struct RectangularToolbarButton: View {
 
     var body: some View {
         buttonSurface
-            .contentShape(Rectangle())
+            .contentShape(usesCircleGlass ? AnyShape(Circle()) : AnyShape(Rectangle()))
             .gesture(pressGesture)
             .opacity(disabled ? 0.38 : 1)
             .allowsHitTesting(!disabled)
@@ -282,13 +289,7 @@ struct RectangularToolbarButton: View {
                 Color.clear
                 buttonContent
             }
-            .glassEffect(
-                .regular.interactive(),
-                in: RoundedRectangle(
-                    cornerRadius: ToolbarButtonMetrics.cornerRadius,
-                    style: .continuous
-                )
-            )
+            .modifier(ToolbarLiquidGlass(isCircle: usesCircleGlass))
             // The custom press gesture fires on touch-down; mirror that state
             // visually while Liquid Glass supplies its native light response.
             .scaleEffect(isPressing ? 0.97 : 1)
@@ -312,7 +313,12 @@ struct RectangularToolbarButton: View {
                 .frame(width: ToolbarButtonMetrics.spaceBarCapsuleWidth, height: 3)
         } else if let systemName {
             Image(systemName: systemName)
-                .font(.system(size: ToolbarButtonMetrics.iconSize, weight: .semibold))
+                .font(.system(
+                    size: usesCircleGlass
+                        ? ToolbarButtonMetrics.circleIconSize
+                        : ToolbarButtonMetrics.iconSize,
+                    weight: .semibold
+                ))
                 .foregroundStyle(buttonForeground)
         } else if let title {
             Text(title)
@@ -338,5 +344,23 @@ struct RectangularToolbarButton: View {
             .onEnded { _ in
                 isPressing = false
             }
+    }
+}
+
+private struct ToolbarLiquidGlass: ViewModifier {
+    let isCircle: Bool
+
+    func body(content: Content) -> some View {
+        if isCircle {
+            content.glassEffect(.regular.interactive(), in: Circle())
+        } else {
+            content.glassEffect(
+                .regular.interactive(),
+                in: RoundedRectangle(
+                    cornerRadius: ToolbarButtonMetrics.cornerRadius,
+                    style: .continuous
+                )
+            )
+        }
     }
 }

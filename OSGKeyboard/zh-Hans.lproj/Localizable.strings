@@ -422,7 +422,7 @@
 "home.engine.attentionBanner" = "本地语音识别模型尚未就绪，请先下载并等待加载完成后再使用语音输入。";
 
 /* Tabs */
-"tab.keyboard" = "键盘";
+"tab.keyboard" = "首页";
 "tab.history" = "历史";
 "tab.dictionary" = "词库";
 "tab.styles" = "风格";

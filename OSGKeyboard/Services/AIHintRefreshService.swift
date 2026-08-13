@@ -1,8 +1,9 @@
 // AIHintRefreshService.swift
 // OSGKeyboard · Main App
 //
-// Silent 12h refresh: fetch remote packs, compress titles with polish LLM,
-// merge local evergreen cards, write App Group ready packs for the keyboard.
+        // Silent 12h refresh: fetch remote packs, extract keywords (LLM only
+        // for leftovers), merge local evergreen cards, write App Group ready
+        // packs for the keyboard.
 
 import Foundation
 import OSGKeyboardShared

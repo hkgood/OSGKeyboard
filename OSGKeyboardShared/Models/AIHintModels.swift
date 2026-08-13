@@ -1,10 +1,38 @@
 // AIHintModels.swift
 // OSGKeyboard · Shared
 //
-// Hint cards for the AI-mode idle carousel. Remote packs use `text`; the
-// host compresses that into `displayText` before writing the ready pack.
+// Hint cards for the AI-mode idle carousel. Remote packs use `text` plus
+// optional `metadata`; the host extracts a keyword `displayText` for the chip.
 
 import Foundation
+
+public struct AIHintMetadata: Codable, Equatable, Sendable {
+    public var title: String?
+    public var city: String?
+    public var tempC: Double?
+    public var soul: String?
+    public var name: String?
+    public var date: String?
+    public var day: String?
+
+    public init(
+        title: String? = nil,
+        city: String? = nil,
+        tempC: Double? = nil,
+        soul: String? = nil,
+        name: String? = nil,
+        date: String? = nil,
+        day: String? = nil
+    ) {
+        self.title = title
+        self.city = city
+        self.tempC = tempC
+        self.soul = soul
+        self.name = name
+        self.date = date
+        self.day = day
+    }
+}
 
 public struct AIHintCard: Codable, Equatable, Identifiable, Sendable {
     public let id: String
@@ -17,6 +45,7 @@ public struct AIHintCard: Codable, Equatable, Identifiable, Sendable {
     public var source: String
     public var locale: String
     public var conditions: [String]
+    public var metadata: AIHintMetadata?
 
     public init(
         id: String,
@@ -26,7 +55,8 @@ public struct AIHintCard: Codable, Equatable, Identifiable, Sendable {
         priority: Int = 50,
         source: String = "local",
         locale: String = "zh",
-        conditions: [String] = []
+        conditions: [String] = [],
+        metadata: AIHintMetadata? = nil
     ) {
         self.id = id
         self.displayText = displayText
@@ -36,14 +66,24 @@ public struct AIHintCard: Codable, Equatable, Identifiable, Sendable {
         self.source = source
         self.locale = locale
         self.conditions = conditions
+        self.metadata = metadata
     }
 
     public var requiresClipboard30s: Bool {
         conditions.contains("clipboard_30s") || category == "clipboard"
     }
 
+    /// Keyword shown in the idle chip; prefers feed metadata over raw `text`.
+    public var resolvedDisplayText: String {
+        AIHintKeywordExtractor.displayText(for: self)
+    }
+
+    public var visualKind: AIHintVisualKind {
+        AIHintVisualKind.resolve(self)
+    }
+
     enum CodingKeys: String, CodingKey {
-        case id, displayText, text, prompt, category, priority, source, locale, conditions
+        case id, displayText, text, prompt, category, priority, source, locale, conditions, metadata
     }
 
     public init(from decoder: Decoder) throws {
@@ -55,6 +95,7 @@ public struct AIHintCard: Codable, Equatable, Identifiable, Sendable {
         source = try container.decodeIfPresent(String.self, forKey: .source) ?? "remote"
         locale = try container.decodeIfPresent(String.self, forKey: .locale) ?? "zh"
         conditions = try container.decodeIfPresent([String].self, forKey: .conditions) ?? []
+        metadata = try container.decodeIfPresent(AIHintMetadata.self, forKey: .metadata)
         if let display = try container.decodeIfPresent(String.self, forKey: .displayText),
            !display.isEmpty {
             displayText = display
@@ -73,6 +114,7 @@ public struct AIHintCard: Codable, Equatable, Identifiable, Sendable {
         try container.encode(source, forKey: .source)
         try container.encode(locale, forKey: .locale)
         try container.encode(conditions, forKey: .conditions)
+        try container.encodeIfPresent(metadata, forKey: .metadata)
     }
 }
 

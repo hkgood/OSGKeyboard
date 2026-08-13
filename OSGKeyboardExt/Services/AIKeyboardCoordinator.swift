@@ -66,20 +66,44 @@ final class AIKeyboardCoordinator {
         }
     }
 
+    /// Tap a clipboard skill chip: same fail-closed material path as hint cards.
+    func submitClipboardSkill(_ skill: AIClipboardSkill) {
+        guard canAcceptIdleSubmit else { return }
+        enterIfNeeded()
+        let instruction = AIClipboardSkillCatalog.instruction(
+            for: skill,
+            locale: AIHintLocaleResolver.packLocale(),
+            translationTargetLocaleId: state.translationTargetLocaleId
+        )
+        let resolution = AIClipboardPrompt.resolve(
+            instruction: instruction,
+            material: ClipboardHistoryStore.shared.newestAIHintEligibleEntry()?.text
+        )
+        submitResolvedPrompt(resolution)
+    }
+
     /// Tap an idle hint card: resolve its material, skip the mic, ask the host.
     func submitHintCard(_ card: AIHintCard) {
-        switch state.aiSession.phase {
-        case .inactive, .idle, .failed:
-            break
-        case .preparing, .listening, .recognizing, .generating,
-             .ready, .awaitingSend, .inserted, .sent:
-            return
-        }
+        guard canAcceptIdleSubmit else { return }
         enterIfNeeded()
         let resolution = AIHintPool.resolvePrompt(
             for: card,
             clipboardText: ClipboardHistoryStore.shared.newestAIHintEligibleEntry()?.text
         )
+        submitResolvedPrompt(resolution)
+    }
+
+    private var canAcceptIdleSubmit: Bool {
+        switch state.aiSession.phase {
+        case .inactive, .idle, .failed:
+            return true
+        case .preparing, .listening, .recognizing, .generating,
+             .ready, .awaitingSend, .inserted, .sent:
+            return false
+        }
+    }
+
+    private func submitResolvedPrompt(_ resolution: AIClipboardPrompt.Resolution) {
         guard case .ready(let prompt) = resolution else {
             // The clipboard window closed between rendering and this tap.
             state.aiSession.fail(
@@ -132,11 +156,21 @@ final class AIKeyboardCoordinator {
         state.aiSession.beginRecognizing(utteranceID: utteranceID)
     }
 
+    func generatingStarted(_ utteranceID: UUID) {
+        state.aiSession.beginGenerating(question: "", utteranceID: utteranceID)
+    }
+
     func receiveTranscript(
         _ transcript: String,
         utteranceID: UUID,
         status: FlowResult.Status
     ) {
+        if AIClipboardPrompt.isInternalPrompt(transcript) {
+            if status == .rawReady {
+                state.aiSession.beginGenerating(question: "", utteranceID: utteranceID)
+            }
+            return
+        }
         state.aiSession.updateTranscript(transcript, utteranceID: utteranceID)
         if status == .rawReady {
             state.aiSession.beginGenerating(

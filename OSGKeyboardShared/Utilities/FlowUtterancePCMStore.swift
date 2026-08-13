@@ -36,6 +36,11 @@ public final class FlowUtterancePCMStore: @unchecked Sendable {
         lock.withLock { samples.count }
     }
 
+    /// Copy of accumulated samples without clearing the store.
+    public func snapshot() -> [Float] {
+        lock.withLock { samples }
+    }
+
     /// Returns accumulated samples and clears the store.
     public func consume() -> [Float] {
         lock.withLock {

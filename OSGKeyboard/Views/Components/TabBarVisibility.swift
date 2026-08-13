@@ -52,8 +52,20 @@ extension View {
 }
 
 enum TabBarDockMetrics {
-    /// Clearance above the floating dock (icon row + vertical padding + home indicator).
-    static let scrollClearance: CGFloat = 100
+    static let itemHeight: CGFloat = 52
+    static let iconSize: CGFloat = 24
+    /// Horizontal glass pad is 0: the selected capsule's `selectionInset`
+    /// is the only side gap. `Spacing.md` (16) plus that 5 pt was ~3–4×
+    /// the 5 pt top/bottom gap.
+    static let dockInsetHorizontal: CGFloat = 0
+    static let dockInsetVertical: CGFloat = Spacing.sm
+    /// Gap between the selected fill and the glass dock / neighbouring tabs.
+    static let selectionInset: CGFloat = 5
+    static let bottomPadding: CGFloat = Spacing.xs
+    /// Clearance above the floating dock (bar + home-indicator slack).
+    static var scrollClearance: CGFloat {
+        itemHeight + dockInsetVertical * 2 + bottomPadding + 20
+    }
 }
 
 private struct TabBarScrollBottomPaddingModifier: ViewModifier {

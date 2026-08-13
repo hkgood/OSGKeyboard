@@ -205,8 +205,8 @@ struct HomeView: View {
 
     // MARK: - History / dictionary cards
 
-    /// Two independent cards; each header mirrors the stats tiles (accent icon
-    /// + small uppercase label) and the body grows with its rows.
+    /// Two independent cards; each header is an accent icon + uppercase label
+    /// and the body grows with its rows.
     private var homeLibrarySection: some View {
         VStack(spacing: Spacing.md) {
             historyCard
@@ -290,11 +290,11 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 HStack(spacing: Spacing.xs) {
                     Image(systemName: systemImage)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(palette.accent)
                         .symbolRenderingMode(.hierarchical)
                     Text(titleKey)
-                        .font(TypeStyle.caption2)
+                        .font(.system(size: 13, weight: .semibold))
                         .tracking(0.6)
                         .textCase(.uppercase)
                         .foregroundStyle(palette.textTertiary)

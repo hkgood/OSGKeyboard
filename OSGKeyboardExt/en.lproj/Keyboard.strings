@@ -294,3 +294,6 @@
 "keyboard.ai.error.requestTimeout" = "AI response timed out. Try again";
 "keyboard.ai.error.requestFailed" = "AI response failed. Try again";
 "keyboard.ai.error.clipboardUnavailable" = "This clipboard suggestion expired. Copy the text again";
+"keyboard.ai.skill.reply" = "Reply";
+"keyboard.ai.skill.summarize" = "Summarize";
+"keyboard.ai.skill.translate" = "Translate";

@@ -13,7 +13,7 @@ import OSGKeyboardShared
 struct ClipboardHistoryDemoView: View {
     private enum Layout {
         static let micSize: CGFloat = 121
-        static let undoSize: CGFloat = 44
+        static let undoSize: CGFloat = 52
         static let micToButtonGap: CGFloat = 8
         static let actionClusterTopGap: CGFloat = Spacing.xl
         static let micUpwardAdjustment: CGFloat =

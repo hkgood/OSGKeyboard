@@ -161,7 +161,7 @@ public struct AISessionState: Equatable, Sendable {
     /// replace the previous committed `answer` until `receiveAnswer`.
     public mutating func receivePartialAnswer(_ text: String, utteranceID: UUID) {
         guard isActive, activeUtteranceID == utteranceID else { return }
-        if phase == .recognizing {
+        if phase == .recognizing || phase == .preparing {
             phase = .generating
         }
         guard phase == .generating else { return }

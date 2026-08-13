@@ -44,7 +44,7 @@ struct MainTabView: View {
                     if !isTabBarHidden {
                         // Match floating dock + home-indicator clearance so
                         // page footers / scroll ends sit above MinimalTabBar.
-                        Color.clear.frame(height: 100)
+                        Color.clear.frame(height: TabBarDockMetrics.scrollClearance)
                     }
                 }
                 .onPreferenceChange(TabBarHiddenPreferenceKey.self) { hidden in

@@ -280,25 +280,18 @@ struct KeyboardTranslationMenuButton: View, Equatable {
                 }
             }
         } label: {
-            // Match the adjacent undo key: 44×44 rounded Liquid Glass control.
             ZStack {
                 Color.clear
                 Image(systemName: isEnabled ? "character.bubble.fill" : "character.bubble")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(
                         isEnabled
                             ? palette.accent
                             : palette.textSecondary
                     )
             }
-            .contentShape(Rectangle())
-            .glassEffect(
-                .regular.interactive(),
-                in: RoundedRectangle(
-                    cornerRadius: KeyboardChromeLayout.actionKeyCornerRadius,
-                    style: .continuous
-                )
-            )
+            .contentShape(Circle())
+            .glassEffect(.regular.interactive(), in: Circle())
         }
         .menuStyle(.button)
         .accessibilityLabel(Text(SharedL10n.string("keyboard.translation.a11y")))

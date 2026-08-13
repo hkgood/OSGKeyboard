@@ -22,8 +22,8 @@ import OSGKeyboardShared
 private enum KeyboardLayoutMetrics {
     static let micSize: CGFloat = 121
     static let micToButtonGap: CGFloat = 8
-    /// Square undo key beside the mic (outer edge, aligned with delete).
-    static let undoButtonSize: CGFloat = 44
+    /// Circular undo / translation keys beside the mic (outer edge).
+    static let undoButtonSize: CGFloat = 52
     static let bottomActionRowHeight: CGFloat = KeyboardChromeLayout.actionKeyHeight
     static let bottomActionSpacing: CGFloat = KeyboardChromeLayout.actionKeySpacing
     /// Gap between the top control row and the transcript / hint line.
@@ -419,7 +419,7 @@ public struct KeyboardRootView: View {
         .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
     }
 
-    /// Square undo key on the outer drag pad — same chrome / haptic / click
+    /// Circular undo key on the outer drag pad — same chrome / haptic / click
     /// as space & return. Vertically matches the mic disc.
     private func undoButton(disabled: Bool, visible: Bool) -> some View {
         RectangularToolbarButton(
@@ -427,6 +427,7 @@ public struct KeyboardRootView: View {
             label: ExtL10n.string("keyboard.undoA11y"),
             disabled: disabled,
             usesLiquidGlass: true,
+            usesCircleGlass: true,
             hapticIntensity: state.keyboardHapticIntensity
         ) {
             state.undoLastInsertion()

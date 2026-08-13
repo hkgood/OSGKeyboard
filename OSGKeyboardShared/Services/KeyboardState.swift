@@ -239,6 +239,8 @@ public final class KeyboardState: ObservableObject {
     public var sendAIAnswer: () -> Void = {}
     /// Sends a tapped idle hint card as the AI question (skip microphone).
     public var submitAIHint: (AIHintCard) -> Void = { _ in }
+    /// Sends a clipboard skill (reply / summarize / translate / future).
+    public var submitAIClipboardSkill: (AIClipboardSkill) -> Void = { _ in }
     public var openSettings:        () -> Void = {}
     /// Opens the host app straight to input-resource deployment. Used by the
     /// typing surface when Rime resources have not been deployed yet.
@@ -303,8 +305,9 @@ public final class KeyboardState: ObservableObject {
         surface == .ai && aiSession.isBusy
     }
 
-    /// Normal dictation can be discarded from initial microphone startup
-    /// through ASR / polish processing. Edit mode owns its separate close flow.
+    /// Normal dictation can be discarded from microphone startup through
+    /// ASR / polish, including the abort-wait after Cancel until the host
+    /// acks (coordinator keeps `phase == .processing` for that window).
     public var canCancelVoiceInput: Bool {
         guard !editSession.isActive else { return false }
         switch phase {
@@ -360,6 +363,8 @@ extension KeyboardState.Phase.ErrorKind {
             return .hostAudioUnavailable
         case .asrFailed, .generic:
             return .hostTranscriptionFailed(error.message)
+        case .discardedEmpty:
+            return .noSpeechDetected
         }
     }
 }

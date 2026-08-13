@@ -446,6 +446,9 @@ public final class KeyboardViewController: UIInputViewController {
         flowCoordinator.onAIRecognitionStarted = { [weak self] utteranceID in
             self?.aiKeyboardCoordinator.recognitionStarted(utteranceID)
         }
+        flowCoordinator.onAIGeneratingStarted = { [weak self] utteranceID in
+            self?.aiKeyboardCoordinator.generatingStarted(utteranceID)
+        }
         flowCoordinator.onAITranscript = { [weak self] transcript, utteranceID, status in
             self?.aiKeyboardCoordinator.receiveTranscript(
                 transcript,
@@ -464,6 +467,9 @@ public final class KeyboardViewController: UIInputViewController {
         }
         flowCoordinator.onAIFailure = { [weak self] message, utteranceID in
             self?.aiKeyboardCoordinator.fail(message, utteranceID: utteranceID)
+        }
+        flowCoordinator.onAICancelled = { [weak self] in
+            self?.state.aiSession.cancelCurrentWork()
         }
         _ = textInserter.recoverPendingEditTransactionIfNeeded()
 
@@ -510,6 +516,9 @@ public final class KeyboardViewController: UIInputViewController {
         }
         state.submitAIHint = { [weak self] card in
             self?.aiKeyboardCoordinator.submitHintCard(card)
+        }
+        state.submitAIClipboardSkill = { [weak self] skill in
+            self?.aiKeyboardCoordinator.submitClipboardSkill(skill)
         }
         state.openSettings        = { [weak self] in self?.openHostApp() }
         state.openInputMethodSetup = { [weak self] in self?.openHostApp(path: "deployrime") }

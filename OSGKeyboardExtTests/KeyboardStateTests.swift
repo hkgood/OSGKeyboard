@@ -110,6 +110,11 @@ final class KeyboardStateTests: XCTestCase {
             KeyboardState.Phase.ErrorKind.fromFlowTranscription(flowError),
             .hostTranscriptionFailed("asr failed")
         )
+        let discarded = FlowTranscriptionError(message: "", kind: .discardedEmpty)
+        XCTAssertEqual(
+            KeyboardState.Phase.ErrorKind.fromFlowTranscription(discarded),
+            .noSpeechDetected
+        )
     }
 
     func testInputModeIsPolishOnly() {

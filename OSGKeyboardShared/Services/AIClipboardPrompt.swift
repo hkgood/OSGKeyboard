@@ -48,6 +48,11 @@ public enum AIClipboardPrompt: Sendable {
         return resolve(instruction: question, material: material)
     }
 
+    /// True when `text` is the clipboard-AI XML envelope, not user-visible copy.
+    public static func isInternalPrompt(_ text: String) -> Bool {
+        text.contains("<clipboard_request") || text.contains("clipboard-ai-v1")
+    }
+
     /// Instruction text with any inline material placeholder removed.
     static func strippingPlaceholder(_ prompt: String) -> String {
         trimmed(prompt.replacingOccurrences(of: materialPlaceholder, with: ""))

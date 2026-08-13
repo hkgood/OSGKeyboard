@@ -61,10 +61,12 @@ final class KeyboardFlowCoordinator {
     var onAIUtterancePrepared: (UUID) -> Void = { _ in }
     var onAIRecordingStarted: (UUID) -> Void = { _ in }
     var onAIRecognitionStarted: (UUID) -> Void = { _ in }
+    var onAIGeneratingStarted: (UUID) -> Void = { _ in }
     var onAITranscript: (String, UUID, FlowResult.Status) -> Void = { _, _, _ in }
     var onAIStreamingAnswer: (String, UUID) -> Void = { _, _ in }
     var onAIResult: (FlowResult) -> Void = { _ in }
     var onAIFailure: (String, UUID?) -> Void = { _, _ in }
+    var onAICancelled: () -> Void = {}
     /// Utterance whose final result we already inserted (or failed). Prevents
     /// `adoptHostBusyStateIfNeeded` from re-entering `.processing` after a
     /// stale App Group snapshot still says `reason=processing`.
@@ -414,6 +416,29 @@ final class KeyboardFlowCoordinator {
             isFlowRecording = false
             stopUtteranceCountdown()
             ExtensionScreenWakeLock.release()
+            if FlowKeyboardAdoptBusyPolicy.isStaleDeliveredProcessing(
+                busyUtteranceId: busyId,
+                latestResult: FlowSessionBridge.latestResult(),
+                latestAck: FlowSessionBridge.latestAck()
+            ) {
+                // Already acked, result gone, host forgot to drop the gate.
+                // Abort unsticks the host. Do not await — claimTerminal already
+                // ran, so abort will not write a new result. Remember the id
+                // so this same refresh cannot re-adopt before the host poll.
+                writeCommand(.abort)
+                lastConsumedUtteranceId = busyId
+                lastStoppedUtteranceId = busyId
+                isAwaitingFlowResult = false
+                currentUtteranceId = nil
+                state.phase = .idle
+                state.lastTranscript = ""
+                traceState(
+                    "adoptHostBusy.staleProcessingReleased",
+                    extra: "utterance=\(busyId.uuidString.prefix(8))"
+                )
+                return
+            }
+            // Missing result with no matching ack is live ASR/LLM — wait.
             state.phase = .processing
             if state.lastTranscript.isEmpty {
                 state.lastTranscript = ExtL10n.string("keyboard.flow.transcribing")
@@ -557,6 +582,12 @@ final class KeyboardFlowCoordinator {
         case .requestingPermissions:
             break
         case .idle, .denied, .error:
+            // A second tap while still waiting for the host must cancel the
+            // pending start instead of stacking another utterance.
+            if currentUtteranceRequest != nil {
+                cancelCurrentDictation()
+                return
+            }
             _ = startUtterance(.dictation)
         case .processing:
             break
@@ -655,34 +686,8 @@ final class KeyboardFlowCoordinator {
 
     func cancelAIRecording() {
         guard currentUtteranceRequest?.isAIQuestion == true else { return }
-        recordWhenHostReady = false
-        recordAfterHandoff = false
-        isPendingFlowStart = false
-        flowStartDeadline = 0
-        coldStartDebouncer.reset()
-        stopHostReadyWait()
-        stopFlowWatchdog()
-        stopUtteranceCountdown()
-        ExtensionScreenWakeLock.release()
-        state.level = 0
-        state.phase = .idle
-        state.lastTranscript = ""
-
-        guard let utteranceID = currentUtteranceId,
-              isFlowRecording || isAwaitingFlowResult else {
-            clearUnissuedUtterance()
-            isFlowRecording = false
-            isAwaitingFlowResult = false
-            recomputeMicVoiceAvailability()
-            return
-        }
-
-        cancelledAIUtteranceIDs.insert(utteranceID)
-        writeCommand(.abort)
-        isFlowRecording = false
-        isAwaitingFlowResult = true
-        startFlowResultWatchdog()
-        recomputeMicVoiceAvailability()
+        prepareLocalCancel()
+        beginAwaitingAbort(tracking: &cancelledAIUtteranceIDs)
     }
 
     func endAIConversation(_ conversationID: UUID) {
@@ -708,11 +713,27 @@ final class KeyboardFlowCoordinator {
     }
 
     func cancelCurrentDictation() {
-        guard currentUtteranceRequest?.isEdit != true,
-              currentUtteranceRequest?.isAIQuestion != true else {
+        if currentUtteranceRequest?.isAIQuestion == true {
+            cancelAIRecording()
             return
         }
+        guard currentUtteranceRequest?.isEdit != true else { return }
 
+        prepareLocalCancel()
+        let hadIssuedTransport = currentUtteranceId != nil
+            && (isFlowRecording || isAwaitingFlowResult)
+        beginAwaitingAbort(tracking: &cancelledDictationUtteranceIDs)
+        traceState(
+            "dictation.cancelled",
+            extra: hadIssuedTransport
+                ? "utterance=\(currentUtteranceId?.uuidString.prefix(8) ?? "none")"
+                : "transport=localOnly"
+        )
+    }
+
+    /// Stop local wait/prime timers before an abort. Does not change phase;
+    /// `beginAwaitingAbort` keeps `.processing` until the host acks.
+    private func prepareLocalCancel() {
         recordWhenHostReady = false
         recordAfterHandoff = false
         isPendingFlowStart = false
@@ -723,29 +744,37 @@ final class KeyboardFlowCoordinator {
         stopUtteranceCountdown()
         ExtensionScreenWakeLock.release()
         state.level = 0
-        state.phase = .idle
         state.lastTranscript = ""
+    }
 
+    /// Keep the cancel chrome (X + white mic) until the host finishes abort.
+    private func beginAwaitingAbort(tracking cancelledIDs: inout Set<UUID>) {
         guard let utteranceID = currentUtteranceId,
               isFlowRecording || isAwaitingFlowResult else {
-            clearUnissuedUtterance()
-            isFlowRecording = false
-            isAwaitingFlowResult = false
-            recomputeMicVoiceAvailability()
-            traceState("dictation.cancelled", extra: "transport=localOnly")
+            finishLocalCancel()
             return
         }
-
-        cancelledDictationUtteranceIDs.insert(utteranceID)
+        if cancelledIDs.contains(utteranceID), isAwaitingFlowResult {
+            state.phase = .processing
+            recomputeMicVoiceAvailability()
+            return
+        }
+        cancelledIDs.insert(utteranceID)
         writeCommand(.abort)
         isFlowRecording = false
         isAwaitingFlowResult = true
+        state.phase = .processing
         startFlowResultWatchdog()
         recomputeMicVoiceAvailability()
-        traceState(
-            "dictation.cancelled",
-            extra: "utterance=\(utteranceID.uuidString.prefix(8))"
-        )
+    }
+
+    private func finishLocalCancel() {
+        clearUnissuedUtterance()
+        isFlowRecording = false
+        isAwaitingFlowResult = false
+        state.phase = .idle
+        state.lastTranscript = ""
+        recomputeMicVoiceAvailability()
     }
 
     func abortEditRecording() {
@@ -1085,9 +1114,11 @@ final class KeyboardFlowCoordinator {
             if isFlowRecording {
                 writeCommand(.abort)
                 ExtensionScreenWakeLock.release()
+                // Remember the aborted id so the next keyboard open cannot
+                // re-adopt a lagging host snapshot as 「识别中」.
+                lastStoppedUtteranceId = currentUtteranceId
             }
             currentUtteranceId = nil
-            lastStoppedUtteranceId = nil
             isFlowRecording = false
             isPendingFlowStart = false
             recordAfterHandoff = false
@@ -1172,6 +1203,10 @@ final class KeyboardFlowCoordinator {
             }
             if let result = matchingResult(),
                consumeCancelledDictationResultIfNeeded(result) {
+                return
+            }
+            if let result = matchingResult(),
+               consumeDiscardedEmptyResultIfNeeded(result) {
                 return
             }
             if let result = matchingResult(),
@@ -1306,6 +1341,42 @@ final class KeyboardFlowCoordinator {
         recomputeMicVoiceAvailability()
         traceState(
             "dictation.cancelledResultDiscarded",
+            extra: "utterance=\(result.utteranceId.uuidString.prefix(8))"
+        )
+        return true
+    }
+
+    private func consumeDiscardedEmptyResultIfNeeded(_ result: FlowResult) -> Bool {
+        guard result.errorKind == .discardedEmpty,
+              result.status == .aborted || isTerminalFailure(result) else {
+            return false
+        }
+        FlowSessionBridge.writeAck(
+            FlowAck(
+                sessionId: result.sessionId,
+                utteranceId: result.utteranceId,
+                commandSeq: result.commandSeq,
+                hostGeneration: result.hostGeneration,
+                revision: result.revision,
+                deliveryOutcome: .rejected
+            )
+        )
+        lastConsumedUtteranceId = result.utteranceId
+        lastStoppedUtteranceId = nil
+        stopUtteranceCountdown()
+        stopFlowWatchdog()
+        ExtensionScreenWakeLock.release()
+        let wasAI = currentUtteranceRequest?.isAIQuestion == true
+        resetEditTransportState()
+        state.level = 0
+        state.phase = .idle
+        state.lastTranscript = ""
+        recomputeMicVoiceAvailability()
+        if wasAI {
+            onAICancelled()
+        }
+        traceState(
+            "utterance.discardedEmptyTap",
             extra: "utterance=\(result.utteranceId.uuidString.prefix(8))"
         )
         return true
@@ -1754,10 +1825,10 @@ final class KeyboardFlowCoordinator {
             writeSubmitAIQuestion(question)
             isFlowRecording = false
             isAwaitingFlowResult = true
-            state.lastTranscript = question
+            state.lastTranscript = ""
             state.phase = .processing
             if let currentUtteranceId {
-                onAIRecognitionStarted(currentUtteranceId)
+                onAIGeneratingStarted(currentUtteranceId)
             }
             startFlowResultWatchdog()
             recomputeMicVoiceAvailability()
@@ -1935,6 +2006,11 @@ final class KeyboardFlowCoordinator {
             if (result.status == .partial || result.status == .rawReady),
                let partial = result.text,
                !partial.isEmpty {
+                if result.resolvedUtteranceMode == .aiQuestion,
+                   AIClipboardPrompt.isInternalPrompt(partial) {
+                    onAIGeneratingStarted(result.utteranceId)
+                    return
+                }
                 state.lastTranscript = partial
                 if result.resolvedUtteranceMode == .aiQuestion {
                     onAITranscript(partial, result.utteranceId, result.status)
@@ -1980,6 +2056,10 @@ final class KeyboardFlowCoordinator {
                 }
                 if let result = self.matchingResult(),
                    self.consumeCancelledDictationResultIfNeeded(result) {
+                    return
+                }
+                if let result = self.matchingResult(),
+                   self.consumeDiscardedEmptyResultIfNeeded(result) {
                     return
                 }
                 if let result = self.matchingResult(),

@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **AI idle hint keywords**: chips show the entity (from feed `metadata.title` / city / holiday name) instead of a long sentence; category prefixes like「全网热点：」are dropped, and LLM compression is only a last resort. / **AI 空闲建议关键词**：芯片展示实体（来自 feed 的 `metadata.title` / 城市 / 节日名）而不再是长句；去掉「全网热点：」一类前缀，LLM 压缩仅作兜底。
+- **AI idle hint chrome**: each rotating suggestion sits in a Liquid Glass capsule with a category SF Symbol (calendar, weather, news, stocks, trending, search). / **AI 空闲建议样式**：轮播建议放入 Liquid Glass 胶囊，左侧为类型 SF Symbol（日历、天气、新闻、股票、热搜、搜索）。
+- **Clipboard AI skills**: within 30 seconds of a copy, AI idle shows compact circular Reply / Summarize / Translate buttons; translate follows the keyboard language setting, or Chinese ↔ English when unset. The skill list is catalog-based so more actions can be added later. / **剪贴板 AI 技能**：复制后约 30 秒内，空闲态改为小圆形「回复 / 总结 / 翻译」按钮；翻译跟随键盘目标语言，未设置时中英互译。技能来自目录，便于日后扩展。
+- **Clipboard Translate label**: the Translate chip shows the live direction — `中译英` / `To JP` when a target is set, `中↔英` / `CN↔EN` when unset, and `简↔繁` when Chinese UI targets 简体 or 繁體. / **剪贴板翻译文案**：翻译按钮按当前设置显示方向——已选目标为「中译英」/「To JP」，未设置为「中↔英」/「CN↔EN」，中文界面目标为简繁时为「简↔繁」。
+
+- **AI idle capsule size**: rotating suggestion chips keep a 44 pt tap height with 16 pt side padding. / **AI 空闲胶囊尺寸**：轮播建议芯片保持 44 pt 点击高度，左右各 16 pt 内边距。
+- **Undo / translation chrome**: voice mic-row undo and translation controls are 52 pt circular Liquid Glass buttons. / **撤销与翻译按钮**：语音麦克风行的撤销、翻译改为 52 pt 圆形 Liquid Glass 按钮。
+- **Clipboard skill circles**: Reply / Summarize / Translate idle buttons match the same 52 pt circle. / **剪贴板技能圆钮**：回复 / 总结 / 翻译空闲按钮与语音侧键同为 52 pt 圆。
+- **Home tab selection**: the dock stays Liquid Glass at its original height; the selected tab is a wider green fill capsule with a 5 pt inset, not a second glass chip. Dock items are 24 pt icons with Home / Styles / Settings labels. / **首页 Tab 选中态**：dock 仍是原高度 Liquid Glass；选中项改为更宽的绿色填充胶囊，距栏边 5 pt，不再套第二层玻璃。dock 为 24 pt 图标加「首页 / 风格 / 设置」文字。
+- **Home library card titles**: History and Personal dictionary headers use a 16 pt icon and 13 pt label. / **首页资料卡标题**：历史与个性词库标题改为 16 pt 图标、13 pt 文字。
+
+### Fixed
+- **Clipboard skills jumped to a sentence chip**: copying no longer swaps the three skill buttons for a leftover carousel card such as “translate the clipboard”. Clipboard sentence cards stay out of the idle rotation. / **剪贴板技能跳成句子芯片**：复制后不再把三个技能按钮换成「把剪贴板翻译成…」这类旧轮播卡片；剪贴板句子不再进入空闲轮播。
+- **Clipboard skill status XML**: tapping Reply / Summarize / Translate no longer flashes the internal `<clipboard_request>` envelope above the mic. / **剪贴板技能状态 XML**：点回复 / 总结 / 翻译不再把内部 `<clipboard_request>` 信封闪现在麦克风上方。
+- **Idle keyboard re-adopted recognition**: aborting a session now remembers that utterance id, so a lagging host `processing` snapshot cannot reopen the voice keyboard in 「识别中」. / **空闲打开误进识别中**：中止会话会记住该句 id，滞后的主机 processing 快照不会在下次打开语音键盘时显示「识别中」。
+- **Voice cancel chrome until result**: Cancel (X) stays up through ASR/polish and through abort wait after leaving AI Agent, so the voice mic no longer looks ready while the host is still busy. / **语音取消直到出结果**：X 一直保留到识别/润色结束，以及离开 AI Agent 后的中断收尾；语音麦克风不再在宿主仍忙时显示为可用。
+- **Empty double-tap skip**: a mic press shorter than 300 ms with near-silence (or no samples) is discarded before ASR, so accidental double taps no longer wait on a no-speech error. / **空连点跳过**：按下短于 300ms 且接近静音（或尚无样本）的录音在进入识别前丢弃，避免误触后长时间等待「没听清」。
+- **AI hint left the mic stuck**: prefilled AI questions now drop the host processing gate after the answer or error; consuming an ack for the live utterance also heals a leaked gate. Reopening the keyboard only aborts when App Group already acked that utterance and the result is gone — a live LLM/ASR wait with no result yet is left running. Cancel during generate no longer delivers the answer afterwards. / **AI 建议卡住麦克风**：预填 AI 问题在出答案或失败后会关掉宿主 processing 闸门；若键盘已 ack 当前句而闸门仍开着，宿主消费 ack 时一并放闸。再次打开键盘仅在 App Group 已 ack 且结果已空时才中断残留闸门；LLM/ASR 仍在跑、尚无结果时继续等待。生成中取消后不再把答案写回来。
+
+## [1.7.5] - 2026-08-13
+
 ### Added
 - **AI idle hint carousel**: AI mode empty state rotates one-line suggestions (local evergreen + optional remote hot topics); tap sends the card prompt to the LLM without the mic. Coexists with the clipboard suggestion strip in the top bar. / **AI 空闲建议轮播**：AI 模式空状态轮播单行建议（内置常驻 + 可选远程热点）；点按即跳过麦克风把卡片 prompt 发给模型。与顶栏剪贴板建议条并存。
 - **Hint feed refresh**: main app silently fetches `https://key.osglab.com/hints` about every 12 hours, compresses titles with the user’s polish LLM, and writes App Group ready packs for the keyboard. / **建议源刷新**：主 App 约每 12 小时静默拉取 `https://key.osglab.com/hints`，用用户润色 LLM 压缩标题，写入 App Group 供键盘只读。

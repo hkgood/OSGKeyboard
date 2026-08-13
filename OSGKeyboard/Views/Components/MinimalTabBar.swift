@@ -1,9 +1,9 @@
 // MinimalTabBar.swift
 // OSGKeyboard · Main App
 //
-// Bottom tab bar — three icons, no labels.
-// Capsule uses iOS 26 Liquid Glass (.regular.interactive) so content
-// behind the dock refracts through on scroll.
+// Bottom tab bar — icon + label for Home / Styles / Settings.
+// The dock capsule is iOS 26 Liquid Glass; the selected tab is a green
+// fill inside that capsule (Photos-style), not a second glass layer.
 // History + dictionary live as Home cards (not dock tabs).
 
 import SwiftUI
@@ -53,66 +53,66 @@ enum AppTab: Int, CaseIterable {
 struct MinimalTabBar: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @Environment(\.colorScheme) private var colorScheme
-    @Namespace private var selectionGlassNamespace
+    @Namespace private var selectionNamespace
     @Binding var selection: AppTab
 
     var body: some View {
-        GlassEffectContainer(spacing: 0) {
-            HStack(spacing: 0) {
-                ForEach(AppTab.allCases, id: \.rawValue) { tab in
-                    Button {
-                        withAnimation(Motion.soft) {
-                            selection = tab
-                        }
-                    } label: {
+        HStack(spacing: 0) {
+            ForEach(AppTab.allCases, id: \.rawValue) { tab in
+                Button {
+                    withAnimation(Motion.soft) {
+                        selection = tab
+                    }
+                } label: {
+                    VStack(spacing: 2) {
                         Group {
                             if let sfSymbol = tab.sfSymbol {
                                 Image(systemName: sfSymbol)
-                                    .font(.system(size: 20, weight: .regular))
+                                    .font(.system(size: TabBarDockMetrics.iconSize, weight: .regular))
                             } else {
-                                MaterialIcon(name: tab.icon, size: 24)
+                                MaterialIcon(name: tab.icon, size: TabBarDockMetrics.iconSize)
                             }
                         }
-                        .foregroundStyle(tabIconColor(for: tab))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background {
-                            if selection == tab {
-                                // Capsule, not circle: a circle would inscribe to the
-                                // smaller edge and leave the tab slot looking empty.
-                                Color.clear
-                                    .frame(width: 52, height: 44)
-                                    .glassEffect(
-                                        .regular
-                                            .tint(palette.accent.opacity(0.18))
-                                            .interactive(),
-                                        in: .capsule
-                                    )
-                                    .glassEffectID(
-                                        "main-tab-selection",
-                                        in: selectionGlassNamespace
-                                    )
-                                    .glassEffectTransition(.matchedGeometry)
-                                    .matchedGeometryEffect(
-                                        id: "main-tab-selection",
-                                        in: selectionGlassNamespace
-                                    )
-                            }
-                        }
-                        .contentShape(Rectangle())
+                        Text(tab.accessibilityKey)
+                            .font(TypeStyle.caption2)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(tab.accessibilityKey)
-                    .accessibilityAddTraits(selection == tab ? .isSelected : [])
+                    .foregroundStyle(tabIconColor(for: tab))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: TabBarDockMetrics.itemHeight)
+                    .background {
+                        if selection == tab {
+                            // Stretch into the dock padding so top/bottom
+                            // leftover matches the side leftover (~5 pt).
+                            Capsule()
+                                .fill(palette.accentMuted)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .padding(.horizontal, TabBarDockMetrics.selectionInset)
+                                .padding(
+                                    .vertical,
+                                    TabBarDockMetrics.selectionInset
+                                        - TabBarDockMetrics.dockInsetVertical
+                                )
+                                .matchedGeometryEffect(
+                                    id: "main-tab-selection",
+                                    in: selectionNamespace
+                                )
+                        }
+                    }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel(tab.accessibilityKey)
+                .accessibilityAddTraits(selection == tab ? .isSelected : [])
             }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm)
-            .glassEffect(.regular.interactive(), in: .capsule)
         }
+        .padding(.horizontal, TabBarDockMetrics.dockInsetHorizontal)
+        .padding(.vertical, TabBarDockMetrics.dockInsetVertical)
+        .glassEffect(.regular.interactive(), in: .capsule)
         .frame(maxWidth: 280)
         .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.bottom, Spacing.xs)
+        .padding(.bottom, TabBarDockMetrics.bottomPadding)
     }
 
     private func tabIconColor(for tab: AppTab) -> Color {

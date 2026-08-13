@@ -1,34 +1,21 @@
 // AIHintPool.swift
 // OSGKeyboard · Shared
 //
-// Builds the idle carousel pool: 100% clipboard cards while eligible,
-// otherwise a shuffled mix of non-clipboard local + remote cards.
+// Builds the idle carousel pool from local + remote cards. Clipboard
+// sentence cards are excluded: the 30s copy window shows skill chips.
 
 import Foundation
 
 public enum AIHintPool: Sendable {
     public static func activeCards(
-        pack: AIHintPack,
-        clipboardHistoryEnabled: Bool,
-        newestClipboard: ClipboardHistoryEntry?,
-        now: Date = Date()
+        pack: AIHintPack
     ) -> [AIHintCard] {
-        let clipboardEligible = clipboardHistoryEnabled
-            && newestClipboard.map { ClipboardHistoryPolicy.isEligibleForAIHint($0, now: now) } == true
-
-        let clipboardCards = pack.cards.filter(\.requiresClipboard30s)
         let regularCards = pack.cards.filter { !$0.requiresClipboard30s }
             .filter { !isHistoricalToday($0) }
 
-        // Within 30s: only clipboard-related sentences.
-        if clipboardEligible {
-            let pool = clipboardCards.isEmpty
-                ? AIHintLocalCatalog.cards(locale: pack.locale).filter(\.requiresClipboard30s)
-                : clipboardCards
-            return pool.sorted { $0.priority > $1.priority }
-        }
-
-        // Otherwise: drop clipboard-conditioned cards entirely.
+        // Clipboard-conditioned sentences no longer rotate in the carousel;
+        // the 30s window shows skill chips instead. Keep evergreen content
+        // loaded so leaving the window does not flash a leftover clipboard card.
         var merged = regularCards
         let localRegular = AIHintLocalCatalog.cards(locale: pack.locale)
             .filter { !$0.requiresClipboard30s }
@@ -36,6 +23,16 @@ public enum AIHintPool: Sendable {
             merged.append(card)
         }
         return merged.sorted { $0.priority > $1.priority }
+    }
+
+    /// Copy-then-30s window where clipboard skill chips replace the carousel.
+    public static func isClipboardSkillWindowActive(
+        clipboardHistoryEnabled: Bool,
+        newestClipboard: ClipboardHistoryEntry?,
+        now: Date = Date()
+    ) -> Bool {
+        clipboardHistoryEnabled
+            && newestClipboard.map { ClipboardHistoryPolicy.isEligibleForAIHint($0, now: now) } == true
     }
 
     /// Prompt for a tapped card. Clipboard cards fail closed so an expired

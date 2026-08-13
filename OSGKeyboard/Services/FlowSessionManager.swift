@@ -1069,8 +1069,20 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.clearResult()
         // Ack clears the terminal result; republish ready immediately so the
         // keyboard does not linger on awaitingDelivery / starting between the
-        // 500 ms poll and the next heartbeat.
-        refreshHostReady()
+        // 500 ms poll and the next heartbeat. If processing is still true for
+        // this same utterance, the writer forgot to drop the gate — heal here.
+        if FlowHostAckGatePolicy.shouldDropProcessingGate(
+            ackUtteranceId: ack.utteranceId,
+            currentUtteranceId: currentUtteranceId,
+            isUtteranceProcessing: isUtteranceProcessing
+        ) {
+            completeFinalizeCleanup(
+                sessionId: ack.sessionId,
+                utteranceId: ack.utteranceId
+            )
+        } else {
+            refreshHostReady()
+        }
     }
 
     private func hasUnacknowledgedTerminalResult() -> Bool {
@@ -1280,6 +1292,10 @@ final class FlowSessionManager: ObservableObject {
         case .cancelPrimeAudio:
             cancelAudioPrime(command)
         case .endAIConversation:
+            if currentUtteranceMode == .aiQuestion,
+               (isUtteranceProcessing || isUtteranceRecording) {
+                abortUtterance()
+            }
             if let conversationID = command.aiConversationID {
                 Task { await aiConversations.removeConversation(conversationID) }
             }
@@ -1371,25 +1387,30 @@ final class FlowSessionManager: ObservableObject {
         utteranceId: UUID,
         commandSeq: Int64
     ) async {
-        guard let conversationID else {
-            guard claimTerminal(utteranceId: utteranceId) else { return }
-            storeFinalizedError(
-                AppL10n.string("flow.error.aiQuestionFailed"),
-                kind: .generic,
+        // Hint-card / prefilled questions never go through `finalizeUtterance`,
+        // so this path must drop the processing gate itself. Leaving it set
+        // keeps `reason=processing` forever and the keyboard mic unclickable.
+        defer {
+            completeFinalizeCleanup(
                 sessionId: sessionId,
-                utteranceId: utteranceId,
-                commandSeq: commandSeq
+                utteranceId: utteranceId
             )
+        }
+        guard let conversationID else {
+            claimAndStoreTerminal(utteranceId: utteranceId) {
+                storeFinalizedError(
+                    AppL10n.string("flow.error.aiQuestionFailed"),
+                    kind: .generic,
+                    sessionId: sessionId,
+                    utteranceId: utteranceId,
+                    commandSeq: commandSeq
+                )
+            }
             return
         }
 
-        storeRawCandidate(
-            question,
-            sessionId: sessionId,
-            utteranceId: utteranceId,
-            commandSeq: commandSeq
-        )
-
+        // Do not publish the prompt as a "transcript" — clipboard skills
+        // send an XML envelope that must never appear above the mic.
         let pipelineStore = AppGroupStore()
         do {
             let service = try AIQuestionService.configured(
@@ -1413,6 +1434,8 @@ final class FlowSessionManager: ObservableObject {
                     )
                 }
             }
+            // Abort during the LLM await must not commit or deliver.
+            guard canStoreTerminal(for: utteranceId) else { return }
             publishStreamingAIAnswerIfNeeded(
                 answer,
                 sessionId: sessionId,
@@ -1421,30 +1444,32 @@ final class FlowSessionManager: ObservableObject {
                 aiConversationID: conversationID,
                 force: true
             )
-            guard claimTerminal(utteranceId: utteranceId) else { return }
             await service.commitSuccessfulTurn(
                 question: question,
                 answer: answer,
                 conversationID: conversationID
             )
-            storeFinalizedResult(
-                answer,
-                warning: nil,
-                sessionId: sessionId,
-                utteranceId: utteranceId,
-                commandSeq: commandSeq,
-                aiConversationID: conversationID
-            )
+            claimAndStoreTerminal(utteranceId: utteranceId) {
+                storeFinalizedResult(
+                    answer,
+                    warning: nil,
+                    sessionId: sessionId,
+                    utteranceId: utteranceId,
+                    commandSeq: commandSeq,
+                    aiConversationID: conversationID
+                )
+            }
         } catch {
-            guard claimTerminal(utteranceId: utteranceId) else { return }
-            storeFinalizedError(
-                AppL10n.string("flow.error.aiQuestionFailed"),
-                kind: .generic,
-                sessionId: sessionId,
-                utteranceId: utteranceId,
-                commandSeq: commandSeq,
-                aiConversationID: conversationID
-            )
+            claimAndStoreTerminal(utteranceId: utteranceId) {
+                storeFinalizedError(
+                    AppL10n.string("flow.error.aiQuestionFailed"),
+                    kind: .generic,
+                    sessionId: sessionId,
+                    utteranceId: utteranceId,
+                    commandSeq: commandSeq,
+                    aiConversationID: conversationID
+                )
+            }
         }
     }
 
@@ -1993,6 +2018,26 @@ final class FlowSessionManager: ObservableObject {
     private func endUtterance() {
         guard isUtteranceRecording else { return }
 
+        let duration = utteranceRecordingStartedAt.map { Date().timeIntervalSince($0) } ?? 0
+        if currentUtteranceMode != .editLastInput,
+           duration < FlowEmptyTapSkipPolicy.maxDurationSeconds {
+            let samples = capture.utterancePCMSnapshot()
+            let peak = FlowEmptyTapSkipPolicy.peakAbs(samples)
+            if FlowEmptyTapSkipPolicy.shouldSkip(
+                durationSeconds: duration,
+                sampleCount: samples.count,
+                peakAmplitude: peak
+            ) {
+                FlowTrace.pipeline(
+                    "utterance.skipEmptyTap",
+                    "duration=\(String(format: "%.3f", duration))s "
+                        + "samples=\(samples.count) peak=\(String(format: "%.4f", peak))"
+                )
+                abortUtterance(kind: .discardedEmpty, message: "")
+                return
+            }
+        }
+
         // Close the mic gate first, then mark processing before dropping the
         // recording flag so the poll loop cannot start a second utterance.
         isUtteranceRecording = false
@@ -2040,12 +2085,15 @@ final class FlowSessionManager: ObservableObject {
         debug("utterance stopped, draining tail")
     }
 
-    private func abortUtterance() {
+    private func abortUtterance(
+        kind: FlowSessionKeys.TranscriptionErrorKind = .recognitionInterrupted,
+        message: String? = nil
+    ) {
         let utteranceId = currentUtteranceId
         if claimTerminal(utteranceId: utteranceId) {
             storeCurrentError(
-                AppL10n.string("flow.error.recognitionInterrupted"),
-                kind: .recognitionInterrupted,
+                message ?? AppL10n.string("flow.error.recognitionInterrupted"),
+                kind: kind,
                 status: .aborted
             )
         }
@@ -2123,6 +2171,24 @@ final class FlowSessionManager: ObservableObject {
         }
         terminalUtteranceIds.insert(utteranceId)
         return true
+    }
+
+    /// After an `await`, refuse to write if this utterance was aborted or replaced.
+    private func canStoreTerminal(for utteranceId: UUID?) -> Bool {
+        guard let utteranceId else { return false }
+        return FlowTerminalStorePolicy.canStore(
+            currentUtteranceId: currentUtteranceId,
+            finishedUtteranceId: utteranceId,
+            alreadyTerminal: terminalUtteranceIds.contains(utteranceId)
+        )
+    }
+
+    /// Claim + write with no `await` between them, so abort cannot sneak a
+    /// second payload in after `claimTerminal`.
+    private func claimAndStoreTerminal(utteranceId: UUID?, store: () -> Void) {
+        guard canStoreTerminal(for: utteranceId) else { return }
+        guard claimTerminal(utteranceId: utteranceId) else { return }
+        store()
     }
 
     private func clearPendingInstructionState() {
@@ -2358,6 +2424,8 @@ final class FlowSessionManager: ObservableObject {
                         )
                     }
                 }
+                // Abort during the LLM await must not commit or deliver.
+                guard canStoreTerminal(for: finalizeUtteranceId) else { return }
                 // Flush the final draft when throttle skipped the last characters.
                 publishStreamingAIAnswerIfNeeded(
                     answer,
@@ -2367,30 +2435,32 @@ final class FlowSessionManager: ObservableObject {
                     aiConversationID: aiConversationID,
                     force: true
                 )
-                guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
                 await service.commitSuccessfulTurn(
                     question: question,
                     answer: answer,
                     conversationID: aiConversationID
                 )
-                storeFinalizedResult(
-                    answer,
-                    warning: chunkNote,
-                    sessionId: finalizeSessionId,
-                    utteranceId: finalizeUtteranceId,
-                    commandSeq: finalizeCommandSeq,
-                    aiConversationID: aiConversationID
-                )
+                claimAndStoreTerminal(utteranceId: finalizeUtteranceId) {
+                    storeFinalizedResult(
+                        answer,
+                        warning: chunkNote,
+                        sessionId: finalizeSessionId,
+                        utteranceId: finalizeUtteranceId,
+                        commandSeq: finalizeCommandSeq,
+                        aiConversationID: aiConversationID
+                    )
+                }
             } catch {
-                guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
-                storeFinalizedError(
-                    AppL10n.string("flow.error.aiQuestionFailed"),
-                    kind: .generic,
-                    sessionId: finalizeSessionId,
-                    utteranceId: finalizeUtteranceId,
-                    commandSeq: finalizeCommandSeq,
-                    aiConversationID: aiConversationID
-                )
+                claimAndStoreTerminal(utteranceId: finalizeUtteranceId) {
+                    storeFinalizedError(
+                        AppL10n.string("flow.error.aiQuestionFailed"),
+                        kind: .generic,
+                        sessionId: finalizeSessionId,
+                        utteranceId: finalizeUtteranceId,
+                        commandSeq: finalizeCommandSeq,
+                        aiConversationID: aiConversationID
+                    )
+                }
             }
             return
         }

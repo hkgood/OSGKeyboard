@@ -423,7 +423,7 @@
 "home.engine.attentionBanner" = "Local ASR model is not ready yet. Download it and wait for warm-up before dictating.";
 
 /* Tabs */
-"tab.keyboard" = "Keyboard";
+"tab.keyboard" = "Home";
 "tab.history" = "History";
 "tab.dictionary" = "Dictionary";
 "tab.styles" = "Styles";

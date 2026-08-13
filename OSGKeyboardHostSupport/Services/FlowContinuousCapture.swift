@@ -1126,6 +1126,12 @@ public final class FlowContinuousCapture {
         return report
     }
 
+    /// Copy of utterance PCM so the host can decide empty-tap skip
+    /// without consuming the buffer used by the normal drain path.
+    public func utterancePCMSnapshot() -> [Float] {
+        utterancePCMStore.snapshot()
+    }
+
     /// Returns the utterance PCM accumulated during the last recording cycle.
     public func consumeUtteranceSamples() -> [Float] {
         utterancePCMStore.consume()

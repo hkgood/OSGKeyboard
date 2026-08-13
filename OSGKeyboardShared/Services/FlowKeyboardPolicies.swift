@@ -110,10 +110,80 @@ public enum FlowKeyboardAdoptBusyPolicy {
             guard !isAwaitingFlowResult else { return .none }
             guard let busyId = snapshot.busyUtteranceId else { return .none }
             guard busyId != lastConsumedUtteranceId else { return .none }
+            guard busyId != lastStoppedUtteranceId else { return .none }
             return .adoptProcessing(sessionId: sessionId, utteranceId: busyId)
         default:
             return .none
         }
+    }
+
+    /// Host still advertises `processing` for an utterance the keyboard already
+    /// acked, and the result mailbox is empty. That is a leaked gate — not a
+    /// live ASR/LLM wait (those have no ack yet).
+    public static func isStaleDeliveredProcessing(
+        busyUtteranceId: UUID,
+        latestResult: FlowResult?,
+        latestAck: FlowAck?
+    ) -> Bool {
+        guard let ack = latestAck, ack.utteranceId == busyUtteranceId else {
+            return false
+        }
+        if latestResult?.utteranceId == busyUtteranceId {
+            return false
+        }
+        return true
+    }
+}
+
+// MARK: - Terminal store after await
+
+public enum FlowTerminalStorePolicy {
+    /// After an `await`, only the still-current, not-yet-terminal utterance
+    /// may write a final/error payload. Abort during LLM must not deliver.
+    public static func canStore(
+        currentUtteranceId: UUID?,
+        finishedUtteranceId: UUID,
+        alreadyTerminal: Bool
+    ) -> Bool {
+        currentUtteranceId == finishedUtteranceId && !alreadyTerminal
+    }
+}
+
+// MARK: - Ack must drop a leaked processing gate
+
+public enum FlowHostAckGatePolicy {
+    /// The keyboard acked this live utterance; the processing flag must not
+    /// outlive that ack (hint-card used to leak `reason=processing`).
+    public static func shouldDropProcessingGate(
+        ackUtteranceId: UUID,
+        currentUtteranceId: UUID?,
+        isUtteranceProcessing: Bool
+    ) -> Bool {
+        isUtteranceProcessing && currentUtteranceId == ackUtteranceId
+    }
+}
+
+// MARK: - Empty double-tap skip
+
+/// Drop a take before ASR when the press was too short to be speech.
+public enum FlowEmptyTapSkipPolicy {
+    public static let maxDurationSeconds: TimeInterval = 0.3
+    public static let silencePeakThreshold: Float =
+        FlowCaptureTailDrainPolicy.flowDefault.silenceRMSThreshold
+
+    public static func peakAbs(_ samples: [Float]) -> Float {
+        samples.reduce(Float(0)) { max($0, abs($1)) }
+    }
+
+    /// `sampleCount == 0` or a missing peak counts as silence.
+    public static func shouldSkip(
+        durationSeconds: TimeInterval,
+        sampleCount: Int,
+        peakAmplitude: Float?
+    ) -> Bool {
+        guard durationSeconds < maxDurationSeconds else { return false }
+        if sampleCount <= 0 { return true }
+        return (peakAmplitude ?? 0) < silencePeakThreshold
     }
 }
 

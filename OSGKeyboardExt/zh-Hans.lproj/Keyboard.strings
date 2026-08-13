@@ -294,3 +294,6 @@
 "keyboard.ai.error.requestTimeout" = "AI 回答超时，请重试";
 "keyboard.ai.error.requestFailed" = "AI 回答失败，请重试";
 "keyboard.ai.error.clipboardUnavailable" = "剪贴板建议已过期，请重新复制文本";
+"keyboard.ai.skill.reply" = "回复";
+"keyboard.ai.skill.summarize" = "总结";
+"keyboard.ai.skill.translate" = "翻译";

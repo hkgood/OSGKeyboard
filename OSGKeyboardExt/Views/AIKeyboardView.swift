@@ -15,6 +15,7 @@ struct AIKeyboardView: View {
         static let actionButtonMaxWidth: CGFloat = 150
         static let statusHeight: CGFloat = 20
         static let carouselInterval: TimeInterval = 4
+        static let skillButtonSize: CGFloat = 52
     }
 
     @Environment(\.colorScheme) private var colorScheme
@@ -61,6 +62,7 @@ struct AIKeyboardView: View {
             // Reduce Motion stops the rotation, not the data: a card whose
             // clipboard window has closed must still leave the carousel.
             reloadHintPool(resetBag: false)
+            guard !showsClipboardSkills else { return }
             if reduceMotion, let hint = currentHint,
                poolCards.contains(where: { $0.id == hint.id }) {
                 return
@@ -127,8 +129,13 @@ struct AIKeyboardView: View {
     private var answerArea: some View {
         ZStack(alignment: .bottom) {
             if showsPlaceholder {
-                hintCarousel
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if showsClipboardSkills {
+                    clipboardSkillRow
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    hintCarousel
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             } else {
                 ScrollViewReader { proxy in
                     ScrollView(.vertical) {
@@ -173,27 +180,79 @@ struct AIKeyboardView: View {
             guard let hint = currentHint else { return }
             state.submitAIHint(hint)
         } label: {
-            Text(currentHint?.displayText ?? ExtL10n.string("keyboard.ai.placeholder"))
-                .font(TypeStyle.body)
-                .foregroundStyle(palette.textTertiary)
-                .multilineTextAlignment(.center)
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .padding(.horizontal, Spacing.md)
-                .opacity(hintOpacity)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .contentShape(Rectangle())
+            HStack(spacing: 6) {
+                if let hint = currentHint {
+                    Image(systemName: hint.visualKind.systemImage)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(palette.textPrimary.opacity(0.55))
+                }
+                Text(currentHint.map(\.resolvedDisplayText) ?? ExtL10n.string("keyboard.ai.placeholder"))
+                    .font(TypeStyle.bodyEmph)
+                    .foregroundStyle(palette.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 44)
+            .opacity(hintOpacity)
+            .glassEffect(.regular.interactive(), in: Capsule())
         }
         .buttonStyle(.plain)
+        .fixedSize()
         // A busy session already owns the surface; the status line explains a
         // missing LLM. Both keep the hint from being a tap with no outcome.
         .disabled(currentHint == nil || !state.aiServiceAvailable || state.aiSession.isBusy)
         .accessibilityLabel(
             Text(
                 currentHint.map {
-                    "\(ExtL10n.string("keyboard.ai.hintA11yPrefix"))\($0.displayText)"
+                    "\(ExtL10n.string("keyboard.ai.hintA11yPrefix"))\($0.resolvedDisplayText)"
                 } ?? ExtL10n.string("keyboard.ai.placeholder")
             )
+        )
+    }
+
+    private var clipboardSkillRow: some View {
+        HStack(spacing: Spacing.lg) {
+            ForEach(AIClipboardSkillCatalog.visible()) { skill in
+                Button {
+                    state.submitAIClipboardSkill(skill)
+                } label: {
+                    VStack(spacing: 6) {
+                        Image(systemName: skill.systemImage)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(palette.textPrimary.opacity(0.85))
+                            .frame(width: Layout.skillButtonSize, height: Layout.skillButtonSize)
+                            .glassEffect(.regular.interactive(), in: Circle())
+                        Text(clipboardSkillTitle(skill))
+                            .font(TypeStyle.caption2)
+                            .foregroundStyle(palette.textSecondary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(!state.aiServiceAvailable || state.aiSession.isBusy)
+                .accessibilityLabel(Text(clipboardSkillTitle(skill)))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Translate follows the keyboard target; Reply / Summarize stay static.
+    private func clipboardSkillTitle(_ skill: AIClipboardSkill) -> String {
+        if skill.id == AIClipboardSkillCatalog.translateID {
+            return AIClipboardSkillCatalog.translateButtonTitle(
+                translationTargetLocaleId: state.translationTargetLocaleId,
+                uiLanguage: AppGroupStore().uiLanguage
+            )
+        }
+        return ExtL10n.string(skill.titleKey)
+    }
+
+    /// Copy-then-30s window: skill chips replace the rotating hint.
+    private var showsClipboardSkills: Bool {
+        guard showsPlaceholder, state.clipboardHistoryEnabled else { return false }
+        return AIHintPool.isClipboardSkillWindowActive(
+            clipboardHistoryEnabled: true,
+            newestClipboard: clipboardHistory.newestEntry
         )
     }
 
@@ -367,16 +426,20 @@ struct AIKeyboardView: View {
                 ? ExtL10n.string("keyboard.ai.listening")
                 : state.aiSession.transcript
         case .recognizing:
-            return state.aiSession.transcript.isEmpty
-                ? ExtL10n.string("keyboard.ai.recognizing")
-                : state.aiSession.transcript
+            if state.aiSession.transcript.isEmpty
+                || AIClipboardPrompt.isInternalPrompt(state.aiSession.transcript) {
+                return ExtL10n.string("keyboard.ai.recognizing")
+            }
+            return state.aiSession.transcript
         case .generating:
             if let draft = state.aiSession.draftAnswerText, !draft.isEmpty {
                 return ExtL10n.string("keyboard.ai.generating")
             }
-            return state.aiSession.transcript.isEmpty
-                ? ExtL10n.string("keyboard.ai.thinking")
-                : state.aiSession.transcript
+            if state.aiSession.transcript.isEmpty
+                || AIClipboardPrompt.isInternalPrompt(state.aiSession.transcript) {
+                return ExtL10n.string("keyboard.ai.thinking")
+            }
+            return state.aiSession.transcript
         case .failed:
             return ExtL10n.string("keyboard.ai.error.requestFailed")
         }
@@ -391,19 +454,18 @@ struct AIKeyboardView: View {
     // MARK: - Carousel
 
     /// Rebuild the pool and show a card right away, without a fade.
+    /// Skip advancing the chip while clipboard skills own the surface, so a
+    /// leftover clipboard sentence cannot replace the three buttons.
     private func resetCarousel() {
         reloadHintPool(resetBag: true)
+        guard !showsClipboardSkills else { return }
         showNextHint(animated: false)
     }
 
     private func reloadHintPool(resetBag: Bool) {
         let locale = AIHintLocaleResolver.packLocale()
         let pack = AIHintStore.resolvedPack(locale: locale)
-        poolCards = AIHintPool.activeCards(
-            pack: pack,
-            clipboardHistoryEnabled: state.clipboardHistoryEnabled,
-            newestClipboard: clipboardHistory.newestEntry
-        )
+        poolCards = AIHintPool.activeCards(pack: pack)
         if resetBag {
             carouselBag.reset()
         }
