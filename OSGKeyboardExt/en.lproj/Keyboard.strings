@@ -297,3 +297,9 @@
 "keyboard.ai.skill.reply" = "Reply";
 "keyboard.ai.skill.summarize" = "Summarize";
 "keyboard.ai.skill.translate" = "Translate";
+"keyboard.ai.skill.extractTodos" = "Tasks";
+"keyboard.ai.skill.noTodos" = "No tasks in the clipboard";
+"keyboard.ai.skill.extracting" = "Finding tasks…";
+"keyboard.ai.skill.runningShortcut" = "Running Shortcut…";
+"keyboard.ai.skill.shortcutMissing" = "Companion Shortcut not found. Reinstall it in Skills";
+"keyboard.ai.skill.handoffFailed" = "Couldn’t open the app to run the Shortcut";

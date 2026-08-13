@@ -18,6 +18,8 @@ public enum OSGDiag {
             OSGLog.keyboardExt.info("\(line, privacy: .public)")
         case "flow", "asr":
             OSGLog.flow.info("\(line, privacy: .public)")
+        case "skills":
+            OSGLog.config.info("\(line, privacy: .public)")
         default:
             OSGLog.config.info("\(line, privacy: .public)")
         }

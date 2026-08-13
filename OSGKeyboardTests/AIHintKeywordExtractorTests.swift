@@ -235,4 +235,14 @@ final class AIClipboardSkillTests: XCTestCase {
         XCTAssertTrue(prompt.contains("概括"))
         XCTAssertTrue(prompt.contains("不要改写成可发送的短消息"))
     }
+
+    func testExtractTodosAsksForNONEWhenEmpty() {
+        let prompt = AIClipboardSkillCatalog.instruction(
+            skillID: AIClipboardSkillCatalog.extractTodosID,
+            locale: "zh",
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
+        )
+        XCTAssertTrue(prompt.contains("NONE"))
+        XCTAssertTrue(prompt.contains("不要把整段原文当成一条待办"))
+    }
 }

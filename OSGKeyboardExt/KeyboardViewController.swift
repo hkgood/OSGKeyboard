@@ -520,6 +520,11 @@ public final class KeyboardViewController: UIInputViewController {
         state.submitAIClipboardSkill = { [weak self] skill in
             self?.aiKeyboardCoordinator.submitClipboardSkill(skill)
         }
+        state.runClipboardExportSkill = { [weak self] skillID, titles in
+            AppGroupStore().setPendingShortcutRun(skillID: skillID, titles: titles)
+            AIAgentShortcutRun.trace("keyboard.openHost osgkeyboard://skill/run")
+            self?.openSkillShortcutRun()
+        }
         state.openSettings        = { [weak self] in self?.openHostApp() }
         state.openInputMethodSetup = { [weak self] in self?.openHostApp(path: "deployrime") }
         state.openClipboardSettings = { [weak self] in
@@ -941,6 +946,19 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     // MARK: - Open host app
+
+    private func openSkillShortcutRun() {
+        guard hasFullAccess else {
+            state.skillTipText = ExtL10n.string("keyboard.error.fullAccessForJump")
+            return
+        }
+        guard let url = URL(string: "osgkeyboard://skill/run") else { return }
+        HostAppLauncher.open(url: url, from: self) { [weak self] success in
+            AIAgentShortcutRun.trace("keyboard.openHost result success=\(success)")
+            if success { return }
+            self?.state.skillTipText = ExtL10n.string("keyboard.ai.skill.handoffFailed")
+        }
+    }
 
     private func openHostApp(path: String = "settings") {
         guard hasFullAccess else {

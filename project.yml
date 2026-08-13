@@ -76,6 +76,7 @@ targets:
           # crashes when both are passed. iOS 26 uses Icon Composer only.
           - "Assets.xcassets/AppIcon.appiconset"
           - "Resources/CustomLanguageModel/**"
+          - "Resources/Shortcuts/**"
       # Real keyboard chrome for DEBUG what's-new recording (same UI as Ext).
       - path: OSGKeyboardExt/Utilities/ExtL10n.swift
       - path: OSGKeyboardExt/Views/AIKeyboardView.swift
@@ -120,6 +121,7 @@ targets:
       - path: OSGKeyboard/Resources/Typing/Rime/manifest.json
       - path: OSGKeyboard/Resources/HostCLM/v1/OSGKeyboardCLM.bin
       - path: OSGKeyboard/Resources/HostCLM/v1/compiled-manifest.json
+      - path: OSGKeyboard/Resources/Shortcuts/OSGExtractTodos.shortcut
       - path: OSGKeyboard/Resources/LocalASR/local-asr-catalog.json
       - path: OSGKeyboard/Resources/Typing/Licenses/NOTICE.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE.txt
@@ -194,6 +196,7 @@ targets:
           - zalo
           - skype
           - zoomus
+          - shortcuts
           - things
           - todoist
           - evernote

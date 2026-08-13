@@ -55,6 +55,17 @@ struct AIKeyboardView: View {
         }
         .onChange(of: state.clipboardHistoryEnabled) { _, _ in resetCarousel() }
         .onChange(of: clipboardHistory.entries.first?.id) { _, _ in resetCarousel() }
+        .onChange(of: state.enabledClipboardSkillIDs) { _, _ in resetCarousel() }
+        .onChange(of: state.skillTipText) { _, tip in
+            guard let tip, !tip.isEmpty else { return }
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 2_800_000_000)
+                if state.skillTipText == tip {
+                    state.skillTipText = nil
+                }
+            }
+        }
+        .animation(Motion.soft, value: state.skillTipText)
         .onReceive(
             Timer.publish(every: Layout.carouselInterval, on: .main, in: .common).autoconnect()
         ) { _ in
@@ -172,6 +183,19 @@ struct AIKeyboardView: View {
             statusLine
                 .frame(height: Layout.statusHeight)
                 .padding(.horizontal, Spacing.md)
+
+            if let tip = state.skillTipText, !tip.isEmpty {
+                Text(tip)
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .glassEffect(.regular, in: Capsule())
+                    .padding(.bottom, Layout.statusHeight + Spacing.sm)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
         }
     }
 
@@ -212,8 +236,9 @@ struct AIKeyboardView: View {
     }
 
     private var clipboardSkillRow: some View {
-        HStack(spacing: Spacing.lg) {
-            ForEach(AIClipboardSkillCatalog.visible()) { skill in
+        let skills = visibleClipboardSkills
+        let row = HStack(spacing: Spacing.lg) {
+            ForEach(skills) { skill in
                 Button {
                     state.submitAIClipboardSkill(skill)
                 } label: {
@@ -233,6 +258,15 @@ struct AIKeyboardView: View {
                 .accessibilityLabel(Text(clipboardSkillTitle(skill)))
             }
         }
+        return Group {
+            if skills.count > 4 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    row.padding(.horizontal, Spacing.md)
+                }
+            } else {
+                row
+            }
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -250,10 +284,15 @@ struct AIKeyboardView: View {
     /// Copy-then-30s window: skill chips replace the rotating hint.
     private var showsClipboardSkills: Bool {
         guard showsPlaceholder, state.clipboardHistoryEnabled else { return false }
+        guard !visibleClipboardSkills.isEmpty else { return false }
         return AIHintPool.isClipboardSkillWindowActive(
             clipboardHistoryEnabled: true,
             newestClipboard: clipboardHistory.newestEntry
         )
+    }
+
+    private var visibleClipboardSkills: [AIClipboardSkill] {
+        AIClipboardSkillCatalog.visible(enabledIDs: state.enabledClipboardSkillIDs)
     }
 
     /// No draft/answer yet — show the centered hint carousel instead of a scroll body.
@@ -432,6 +471,9 @@ struct AIKeyboardView: View {
             }
             return state.aiSession.transcript
         case .generating:
+            if state.pendingClipboardSkillID == AIClipboardSkillCatalog.extractTodosID {
+                return ExtL10n.string("keyboard.ai.skill.extracting")
+            }
             if let draft = state.aiSession.draftAnswerText, !draft.isEmpty {
                 return ExtL10n.string("keyboard.ai.generating")
             }

@@ -132,6 +132,8 @@
         "OSGKeyboardTests/CursorNavigationTests",
         "OSGKeyboardTests/KeyboardTranslationConfigProtectionTests",
         "OSGKeyboardTests/AIHintPoolTests",
+        "OSGKeyboardTests/AIHintKeywordExtractorTests",
+        "OSGKeyboardTests/AIAgentSkillLayoutTests",
         "OSGKeyboardTests/ClipboardHistoryPolicyTests",
         "OSGKeyboardTests/ClipboardHistoryStoreTests"
       ]

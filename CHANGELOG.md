@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Skills tab**: Home dock and iPad sidebar add Skills between Home and Styles; cards list default Reply / Summarize / Translate plus installable export skills (max 8 enabled, long-press drag to reorder). / **技能 Tab**：首页 Dock 与 iPad 侧栏在「首页」和「风格」之间新增「技能」；卡片列出默认的回复 / 总结 / 翻译以及可安装的出口技能（最多启用 8 个，长按拖动排序）。
+- **Extract tasks skill**: the Skills tab opens a ready-made companion Shortcut named `OSG · 提取待办` on the system Add page (split lines → Reminders, default list). After you tap Add, copying text and tapping Tasks asks the LLM for to-dos and silently adds them; no tasks stays in the current app with a keyboard tip. / **提取待办技能**：技能页会打开已做好的配套捷径 `OSG · 提取待办` 的系统添加页（按行拆分并写入默认提醒清单）。点添加后，复制文字并点「待办」会让模型抽取待办并静默写入；没有待办则留在当前 App，键盘上给出提示。
+
+### Fixed
+- **Extract tasks Shortcut**: receive Shortcut Input as Text, then split lines and add each title to Reminders — the previous recipe could finish successfully without creating items. / **提取待办捷径**：先把快捷指令输入收成文本，再按行写入提醒；旧配方会成功跑完但不创建条目。
+
 ### Changed
 - **AI idle hint keywords**: chips show the entity (from feed `metadata.title` / city / holiday name) instead of a long sentence; category prefixes like「全网热点：」are dropped, and LLM compression is only a last resort. / **AI 空闲建议关键词**：芯片展示实体（来自 feed 的 `metadata.title` / 城市 / 节日名）而不再是长句；去掉「全网热点：」一类前缀，LLM 压缩仅作兜底。
 - **AI idle hint chrome**: each rotating suggestion sits in a Liquid Glass capsule with a category SF Symbol (calendar, weather, news, stocks, trending, search). / **AI 空闲建议样式**：轮播建议放入 Liquid Glass 胶囊，左侧为类型 SF Symbol（日历、天气、新闻、股票、热搜、搜索）。
@@ -16,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **AI idle capsule size**: rotating suggestion chips keep a 44 pt tap height with 16 pt side padding. / **AI 空闲胶囊尺寸**：轮播建议芯片保持 44 pt 点击高度，左右各 16 pt 内边距。
 - **Undo / translation chrome**: voice mic-row undo and translation controls are 52 pt circular Liquid Glass buttons. / **撤销与翻译按钮**：语音麦克风行的撤销、翻译改为 52 pt 圆形 Liquid Glass 按钮。
 - **Clipboard skill circles**: Reply / Summarize / Translate idle buttons match the same 52 pt circle. / **剪贴板技能圆钮**：回复 / 总结 / 翻译空闲按钮与语音侧键同为 52 pt 圆。
-- **Home tab selection**: the dock stays Liquid Glass at its original height; the selected tab is a wider green fill capsule with a 5 pt inset, not a second glass chip. Dock items are 24 pt icons with Home / Styles / Settings labels. / **首页 Tab 选中态**：dock 仍是原高度 Liquid Glass；选中项改为更宽的绿色填充胶囊，距栏边 5 pt，不再套第二层玻璃。dock 为 24 pt 图标加「首页 / 风格 / 设置」文字。
+- **Home tab selection**: the dock stays Liquid Glass at its original height; the selected tab is a wider green fill capsule with a 5 pt inset, not a second glass chip. Dock items are 24 pt icons with Home / Skills / Styles / Settings labels. / **首页 Tab 选中态**：dock 仍是原高度 Liquid Glass；选中项改为更宽的绿色填充胶囊，距栏边 5 pt，不再套第二层玻璃。dock 为 24 pt 图标加「首页 / 技能 / 风格 / 设置」文字。
 - **Home library card titles**: History and Personal dictionary headers use a 16 pt icon and 13 pt label. / **首页资料卡标题**：历史与个性词库标题改为 16 pt 图标、13 pt 文字。
 
 ### Fixed

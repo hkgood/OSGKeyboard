@@ -97,6 +97,10 @@ public struct AppGroupStore: @unchecked Sendable {
     public var polishProviderIdOverride: String? { configuration.polishProviderIdOverride }
     public var isCloudAPIKeyMissingForVoiceInput: Bool { configuration.isCloudAPIKeyMissingForVoiceInput }
     public var localASRCustomLanguageModelEnabled: Bool { configuration.localASRCustomLanguageModelEnabled }
+    /// Kept off `AppGroupConfiguration.save()` so other settings writes cannot clobber it.
+    public var agentSkillLayout: AIAgentSkillLayout {
+        Self.decodeAgentSkillLayout(from: defaults)
+    }
 
     // MARK: - Writes
 
@@ -197,6 +201,59 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setLocalASRCustomLanguageModelEnabled(_ enabled: Bool) {
         mutateConfiguration { $0.localASRCustomLanguageModelEnabled = enabled }
+    }
+
+    public func setAgentSkillLayout(_ layout: AIAgentSkillLayout) {
+        do {
+            let data = try JSONEncoder().encode(layout.sanitized())
+            defaults.set(data, forKey: AppGroupConfiguration.Keys.agentSkillLayout)
+        } catch {
+            OSGLog.config.warning("agentSkillLayout encode failed: \(error.localizedDescription, privacy: .public)")
+        }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setPendingShortcutRun(skillID: String, titles: [String]) {
+        let payload = AIAgentShortcutRunPayload(skillID: skillID, titles: titles)
+        if let data = AIAgentShortcutRun.encode(payload) {
+            defaults.set(data, forKey: AIAgentShortcutRun.pendingKey)
+            AIAgentShortcutRun.trace(
+                "appGroup.writePending skill=\(skillID) items=\(titles.count) bytes=\(data.count)"
+            )
+        } else {
+            AIAgentShortcutRun.trace("appGroup.writePending FAILED encode skill=\(skillID)")
+        }
+    }
+
+    public func consumePendingShortcutRun(now: Date = Date()) -> AIAgentShortcutRunPayload? {
+        let data = defaults.data(forKey: AIAgentShortcutRun.pendingKey)
+        defaults.removeObject(forKey: AIAgentShortcutRun.pendingKey)
+        guard let data else {
+            AIAgentShortcutRun.trace("appGroup.consumePending missing")
+            return nil
+        }
+        guard let payload = AIAgentShortcutRun.decode(data, now: now) else {
+            AIAgentShortcutRun.trace(
+                "appGroup.consumePending dropped bytes=\(data.count) (expired or empty titles)"
+            )
+            return nil
+        }
+        AIAgentShortcutRun.trace(
+            "appGroup.consumePending ok skill=\(payload.skillID) items=\(payload.titles.count)"
+        )
+        return payload
+    }
+
+    private static func decodeAgentSkillLayout(from defaults: UserDefaults) -> AIAgentSkillLayout {
+        guard let data = defaults.data(forKey: AppGroupConfiguration.Keys.agentSkillLayout) else {
+            return .default
+        }
+        do {
+            return try JSONDecoder().decode(AIAgentSkillLayout.self, from: data).sanitized()
+        } catch {
+            OSGLog.config.warning("agentSkillLayout decode failed: \(error.localizedDescription, privacy: .public)")
+            return .default
+        }
     }
 
     public var hasCompletedOnboarding: Bool {

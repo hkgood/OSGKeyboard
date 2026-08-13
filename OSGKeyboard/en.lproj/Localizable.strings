@@ -427,7 +427,34 @@
 "tab.history" = "History";
 "tab.dictionary" = "Dictionary";
 "tab.styles" = "Styles";
+"tab.skills" = "Skills";
 "tab.settings" = "Settings";
+
+/* AI Agent skills */
+"skills.title" = "Skills";
+"skills.enabled.section" = "In use (%d/%d)";
+"skills.enabled.empty" = "No skills on the keyboard. Turn one on from the list below.";
+"skills.available.section" = "Available";
+"skills.clipboardHistory.banner" = "Turn on Clipboard History in Settings to use these skills after you copy text.";
+"skills.detail.title" = "Skill";
+"skills.badge.default" = "Default skill";
+"skills.action.turnOff" = "Turn off";
+"skills.action.turnOffHint" = "Removes it from the keyboard only.";
+"skills.action.addToKeyboard" = "Add to keyboard";
+"skills.action.reinstallShortcut" = "Reinstall Shortcut";
+"skills.full.title" = "Skill slots full";
+"skills.full.message" = "You can enable up to 8 skills. Turn one off, then add this skill from its card.";
+"skills.reply.name" = "Reply";
+"skills.reply.description" = "Draft a polite reply from the copied text, ready to insert.";
+"skills.summarize.name" = "Summarize";
+"skills.summarize.description" = "Keep the key facts and conclusions, without rewriting it as a chat message.";
+"skills.translate.name" = "Translate";
+"skills.translate.description" = "Translate the copied text using your keyboard language setting.";
+"skills.extractTodos.name" = "Extract tasks";
+"skills.extractTodos.description" = "Extract to-dos from copied text into Reminders.";
+"skills.install.lead" = "Add it, then confirm. Don’t rename it.";
+"skills.install.openShortcuts" = "Add Shortcut";
+"skills.install.confirmAdded" = "I've added it";
 
 /* Polish style packs */
 "polishStyles.title" = "Polish styles";

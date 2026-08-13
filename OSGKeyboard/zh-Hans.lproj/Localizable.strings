@@ -426,7 +426,34 @@
 "tab.history" = "历史";
 "tab.dictionary" = "词库";
 "tab.styles" = "风格";
+"tab.skills" = "技能";
 "tab.settings" = "设置";
+
+/* AI Agent 技能 */
+"skills.title" = "技能";
+"skills.enabled.section" = "使用中（%d/%d）";
+"skills.enabled.empty" = "键盘上还没有技能。从下方列表打开一个即可。";
+"skills.available.section" = "可添加";
+"skills.clipboardHistory.banner" = "请先在设置中打开剪贴板历史，复制文字后才能在键盘上使用这些技能。";
+"skills.detail.title" = "技能";
+"skills.badge.default" = "默认技能";
+"skills.action.turnOff" = "关闭";
+"skills.action.turnOffHint" = "只从键盘拿掉，不会删除捷径。";
+"skills.action.addToKeyboard" = "添加到键盘";
+"skills.action.reinstallShortcut" = "重新安装捷径";
+"skills.full.title" = "技能已满";
+"skills.full.message" = "最多同时启用 8 个技能。请先关闭一个，再从卡片手动添加。";
+"skills.reply.name" = "回复";
+"skills.reply.description" = "根据复制的内容起草一段礼貌回复，可插入当前输入框。";
+"skills.summarize.name" = "总结";
+"skills.summarize.description" = "保留关键事实与结论，不会改写成可发送的短消息。";
+"skills.translate.name" = "翻译";
+"skills.translate.description" = "按键盘目标语言翻译复制的内容。";
+"skills.extractTodos.name" = "提取待办";
+"skills.extractTodos.description" = "从复制内容提取待办，写入提醒事项。";
+"skills.install.lead" = "添加后点「我已添加」，请勿改名。";
+"skills.install.openShortcuts" = "添加捷径";
+"skills.install.confirmAdded" = "我已添加";
 
 /* 润色风格包 */
 "polishStyles.title" = "润色风格";
