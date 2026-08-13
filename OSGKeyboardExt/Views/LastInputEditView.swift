@@ -45,14 +45,19 @@ struct LastInputEditView: View {
         .frame(height: KeyboardChromeLayout.totalHeight)
         .environment(\.themePalette, palette)
         .onChange(of: state.editSession) { _, newValue in
-            guard newValue.review != nil else {
+            guard let review = newValue.review else {
                 selectedPage = 0
                 return
             }
-            if reduceMotion {
-                selectedPage = 1
-            } else {
-                withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.86)) {
+            // Set page before the pager remounts (see `.id` on `pages`) so the
+            // fresh ScrollView opens on「编辑后」instead of flipping the dots
+            // while still showing「原文」.
+            selectedPage = 1
+            if !reduceMotion {
+                // Re-assert after layout; spring is only for subsequent swipes.
+                Task { @MainActor in
+                    await Task.yield()
+                    guard state.editSession.review?.utteranceID == review.utteranceID else { return }
                     selectedPage = 1
                 }
             }
@@ -83,6 +88,8 @@ struct LastInputEditView: View {
                 contentBottomInset: 30,
                 selectedPage: $selectedPage
             )
+            // Remount when review text arrives so scrollPosition can open on page 1.
+            .id(state.editSession.review?.utteranceID.uuidString ?? "edit-source")
         }
     }
 
@@ -113,7 +120,7 @@ struct LastInputEditView: View {
             helperText(leftHelper)
             Button(action: primaryAction) {
                 ZStack {
-                    Capsule().fill(palette.accent)
+                    Color.clear
                     if case .listening = state.editSession {
                         Capsule()
                             .stroke(Color.white.opacity(0.28), lineWidth: 1.5)
@@ -126,6 +133,8 @@ struct LastInputEditView: View {
                     width: Layout.primaryButtonWidth,
                     height: Layout.primaryButtonHeight
                 )
+                // 实心填充、无外扩阴影：避免玻璃投影被键盘底边裁切。
+                .background(palette.accent, in: Capsule())
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)

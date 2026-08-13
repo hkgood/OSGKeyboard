@@ -131,8 +131,10 @@ struct MacSettingsView: View {
                     title: MacL10n.string("mac.settings.model", language: lang),
                     placeholder: currentPolishProvider.defaultModel,
                     model: $viewModel.config.model,
+                    providerIdentity: viewModel.config.providerId,
+                    endpointIdentity: viewModel.config.baseURL,
                     apiKey: viewModel.config.apiKey,
-                    fetchModels: fetchMacLLMModels,
+                    makeFetchModelsRequest: makeMacLLMModelsRequest,
                     language: lang
                 )
                 .id(viewModel.config.providerId)
@@ -143,7 +145,11 @@ struct MacSettingsView: View {
                 )
                 MacProviderToolsRow(
                     title: MacL10n.string("mac.settings.connectionCheck", language: lang),
-                    validate: validateMacLLM,
+                    providerIdentity: viewModel.config.providerId,
+                    endpointIdentity: viewModel.config.baseURL,
+                    credentialIdentity: viewModel.config.apiKey,
+                    modelIdentity: viewModel.config.model,
+                    makeValidateRequest: makeMacLLMValidateRequest,
                     language: lang
                 )
                 MacProviderSettingRow(title: MacL10n.string("mac.settings.translation", language: lang)) {
@@ -179,7 +185,11 @@ struct MacSettingsView: View {
                 }
                 MacProviderToolsRow(
                     title: MacL10n.string("mac.settings.connectionCheck", language: lang),
-                    validate: validateMacASR,
+                    providerIdentity: viewModel.config.asrProviderId,
+                    endpointIdentity: viewModel.config.asrBaseURL,
+                    credentialIdentity: viewModel.config.asrApiKey,
+                    modelIdentity: viewModel.config.asrModel,
+                    makeValidateRequest: makeMacASRValidateRequest,
                     language: lang
                 )
             }
@@ -226,14 +236,6 @@ struct MacSettingsView: View {
                 isSecret: true
             )
         }
-        MacProviderNoteRow(
-            text: MacL10n.string(
-                macVolcengineFields.usesAPIKeyAuth
-                    ? "mac.settings.volcengineNoteApiKey"
-                    : "mac.settings.volcengineNoteAppToken",
-                language: lang
-            )
-        )
     }
 
     @ViewBuilder
@@ -256,8 +258,10 @@ struct MacSettingsView: View {
             title: MacL10n.string("mac.settings.asrModel", language: lang),
             placeholder: CloudASRModelCatalog.defaultModel(for: viewModel.config.asrProviderId),
             model: $viewModel.config.asrModel,
+            providerIdentity: viewModel.config.asrProviderId,
+            endpointIdentity: viewModel.config.asrBaseURL,
             apiKey: viewModel.config.asrApiKey,
-            fetchModels: fetchMacASRModels,
+            makeFetchModelsRequest: makeMacASRModelsRequest,
             language: lang
         )
         .id(viewModel.config.asrProviderId)
@@ -443,39 +447,65 @@ struct MacSettingsView: View {
         viewModel.config.asrApiKey = fields.encodedAPIKey
     }
 
-    private func validateMacLLM() async throws {
-        let client = LLMClientFactory.make(
-            providerId: viewModel.config.providerId,
-            baseURL: viewModel.config.baseURL,
-            apiKey: viewModel.config.apiKey,
-            model: viewModel.config.model,
-            thinkingEnabled: viewModel.config.llmThinkingEnabled
-        )
-        _ = try await client.polish("ping", systemPrompt: "Reply with the single word PONG.")
+    @MainActor
+    private func makeMacLLMValidateRequest() -> ProviderToolRequest<Void> {
+        let providerID = viewModel.config.providerId
+        let baseURL = viewModel.config.baseURL
+        let apiKey = viewModel.config.apiKey
+        let model = viewModel.config.model
+        let thinkingEnabled = viewModel.config.llmThinkingEnabled
+        return ProviderToolRequest(providerIdentity: providerID) {
+            let client = LLMClientFactory.make(
+                providerId: providerID,
+                baseURL: baseURL,
+                apiKey: apiKey,
+                model: model,
+                thinkingEnabled: thinkingEnabled
+            )
+            _ = try await client.polish("ping", systemPrompt: "Reply with the single word PONG.")
+        }
     }
 
-    private func fetchMacLLMModels() async throws -> [String] {
-        try await ProviderModelService.listLLMModels(
-            providerId: viewModel.config.providerId,
-            baseURL: viewModel.config.baseURL,
-            apiKey: viewModel.config.apiKey,
-            currentModel: viewModel.config.model
-        )
+    @MainActor
+    private func makeMacLLMModelsRequest() -> ProviderToolRequest<[String]> {
+        let providerID = viewModel.config.providerId
+        let baseURL = viewModel.config.baseURL
+        let apiKey = viewModel.config.apiKey
+        let currentModel = viewModel.config.model
+        return ProviderToolRequest(providerIdentity: providerID) {
+            try await ProviderModelService.listLLMModels(
+                providerId: providerID,
+                baseURL: baseURL,
+                apiKey: apiKey,
+                currentModel: currentModel
+            )
+        }
     }
 
-    private func validateMacASR() async throws {
+    @MainActor
+    private func makeMacASRValidateRequest() -> ProviderToolRequest<Void> {
         let persisted = AppGroupStore(defaults: viewModel.defaults)
         let store = LiveConfigurationStore(config: viewModel.config, fallback: persisted)
-        try await CloudASRConnectionCheck.validate(store: store)
+        let providerID = viewModel.config.asrProviderId
+        return ProviderToolRequest(providerIdentity: providerID) {
+            try await CloudASRConnectionCheck.validate(store: store)
+        }
     }
 
-    private func fetchMacASRModels() async throws -> [String] {
-        try await ProviderModelService.listASRModels(
-            providerId: viewModel.config.asrProviderId,
-            baseURL: viewModel.config.asrBaseURL,
-            apiKey: viewModel.config.asrApiKey,
-            currentModel: viewModel.config.asrModel
-        )
+    @MainActor
+    private func makeMacASRModelsRequest() -> ProviderToolRequest<[String]> {
+        let providerID = viewModel.config.asrProviderId
+        let baseURL = viewModel.config.asrBaseURL
+        let apiKey = viewModel.config.asrApiKey
+        let currentModel = viewModel.config.asrModel
+        return ProviderToolRequest(providerIdentity: providerID) {
+            try await ProviderModelService.listASRModels(
+                providerId: providerID,
+                baseURL: baseURL,
+                apiKey: apiKey,
+                currentModel: currentModel
+            )
+        }
     }
 
     // MARK: - Bindings

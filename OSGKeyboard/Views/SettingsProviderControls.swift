@@ -125,12 +125,16 @@ struct SettingsModelPickerRow: View {
     let title: String
     let placeholder: String
     @Binding var model: String
-    let fetchModels: () async throws -> [String]
+    let providerIdentity: String
+    let endpointIdentity: String
+    let credentialIdentity: String
+    let makeFetchModelsRequest: @MainActor () -> ProviderToolRequest<[String]>
 
     @State private var models: [String] = []
     @State private var isRunning = false
     @State private var message: String?
     @State private var failed = false
+    @State private var requestCoordinator = ProviderToolRequestCoordinator()
 
     private let controlHeight: CGFloat = 38
 
@@ -150,6 +154,11 @@ struct SettingsModelPickerRow: View {
                 }
             }
         }
+        .onChange(of: providerIdentity) { _, _ in invalidateRequest() }
+        .onChange(of: endpointIdentity) { _, _ in invalidateRequest() }
+        .onChange(of: credentialIdentity) { _, _ in invalidateRequest() }
+        .onChange(of: model) { _, _ in invalidateRequestIfRunning() }
+        .onDisappear { invalidateRequest() }
     }
 
     /// Editable model id + trailing menu chevron in one well (same chrome as
@@ -158,7 +167,7 @@ struct SettingsModelPickerRow: View {
         let shape = RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
         let chevronWidth: CGFloat = 28
         return ZStack(alignment: .trailing) {
-            TextField(placeholder, text: $model)
+            TextField(placeholder, text: editableModelBinding)
                 .keyboardType(.asciiCapable)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled(true)
@@ -177,6 +186,7 @@ struct SettingsModelPickerRow: View {
                 } else {
                     ForEach(models, id: \.self) { modelId in
                         Button {
+                            invalidateRequest()
                             model = modelId
                             message = AppL10n.format("settings.provider.modelSelected", modelId)
                             failed = false
@@ -203,7 +213,7 @@ struct SettingsModelPickerRow: View {
 
     private var refreshButton: some View {
         Button {
-            Task { await runFetchModels() }
+            runFetchModels()
         } label: {
             Group {
                 if isRunning {
@@ -227,25 +237,68 @@ struct SettingsModelPickerRow: View {
         .accessibilityLabel(AppL10n.string("settings.provider.fetchModels"))
     }
 
+    private var editableModelBinding: Binding<String> {
+        Binding(
+            get: { model },
+            set: { newValue in
+                invalidateRequest()
+                model = newValue
+            }
+        )
+    }
+
     @MainActor
-    private func runFetchModels() async {
+    private func runFetchModels() {
+        let request = makeFetchModelsRequest()
+        let currentModel = model
+        let runningMessage = AppL10n.string("settings.provider.loadingModels")
+        let emptyMessage = SharedL10n.string("providerTools.error.empty")
+
         isRunning = true
         failed = false
-        defer { isRunning = false }
+        message = runningMessage
 
-        let outcome = await ProviderToolRunner.runFetchModels(
-            runningMessage: AppL10n.string("settings.provider.loadingModels"),
-            loadedMessage: { AppL10n.format("settings.provider.modelsLoaded", $0) },
-            emptyMessage: SharedL10n.string("providerTools.error.empty"),
-            currentModel: model,
-            fetchModels: fetchModels
+        requestCoordinator.start(
+            providerIdentity: request.providerIdentity,
+            operation: {
+                await ProviderToolRunner.runFetchModels(
+                    runningMessage: runningMessage,
+                    loadedMessage: { AppL10n.format("settings.provider.modelsLoaded", $0) },
+                    emptyMessage: emptyMessage,
+                    currentModel: currentModel,
+                    fetchModels: request.operation
+                )
+            },
+            commit: { outcome in
+                isRunning = false
+                switch outcome {
+                case .cancelled:
+                    message = nil
+                    failed = false
+                case .completed(let state, let selectedModel):
+                    models = state.models
+                    message = state.message
+                    failed = state.failed
+                    if let selectedModel {
+                        model = selectedModel
+                    }
+                }
+            }
         )
-        models = outcome.state.models
-        message = outcome.state.message
-        failed = outcome.state.failed
-        if let selected = outcome.selectedModel {
-            model = selected
-        }
+    }
+
+    @MainActor
+    private func invalidateRequest() {
+        requestCoordinator.invalidate()
+        isRunning = false
+        message = nil
+        failed = false
+    }
+
+    @MainActor
+    private func invalidateRequestIfRunning() {
+        guard requestCoordinator.isRunning else { return }
+        invalidateRequest()
     }
 }
 
@@ -254,11 +307,16 @@ struct SettingsModelPickerRow: View {
 struct SettingsProviderToolsRow: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
-    let validate: () async throws -> Void
+    let providerIdentity: String
+    let endpointIdentity: String
+    let credentialIdentity: String
+    let modelIdentity: String
+    let makeValidateRequest: @MainActor () -> ProviderToolRequest<Void>
 
     @State private var isRunning = false
     @State private var message: String?
     @State private var failed = false
+    @State private var requestCoordinator = ProviderToolRequestCoordinator()
 
     var body: some View {
         HStack(alignment: .center, spacing: Spacing.sm) {
@@ -280,7 +338,7 @@ struct SettingsProviderToolsRow: View {
             Spacer(minLength: 0)
 
             Button {
-                Task { await runValidate() }
+                runValidate()
             } label: {
                 Text(AppL10n.string("settings.provider.validate"))
                     .font(TypeStyle.body)
@@ -297,20 +355,51 @@ struct SettingsProviderToolsRow: View {
             .disabled(isRunning)
         }
         .settingsListRow()
+        .onChange(of: providerIdentity) { _, _ in invalidateRequest() }
+        .onChange(of: endpointIdentity) { _, _ in invalidateRequest() }
+        .onChange(of: credentialIdentity) { _, _ in invalidateRequest() }
+        .onChange(of: modelIdentity) { _, _ in invalidateRequest() }
+        .onDisappear { invalidateRequest() }
     }
 
     @MainActor
-    private func runValidate() async {
+    private func runValidate() {
+        let request = makeValidateRequest()
+        let runningMessage = AppL10n.string("api.test.running")
+        let successMessage = AppL10n.string("api.test.success")
+
         isRunning = true
         failed = false
-        defer { isRunning = false }
+        message = runningMessage
 
-        let outcome = await ProviderToolRunner.runValidate(
-            runningMessage: AppL10n.string("api.test.running"),
-            successMessage: AppL10n.string("api.test.success"),
-            validate: validate
+        requestCoordinator.start(
+            providerIdentity: request.providerIdentity,
+            operation: {
+                await ProviderToolRunner.runValidate(
+                    runningMessage: runningMessage,
+                    successMessage: successMessage,
+                    validate: request.operation
+                )
+            },
+            commit: { outcome in
+                isRunning = false
+                switch outcome {
+                case .cancelled:
+                    message = nil
+                    failed = false
+                case .completed(let state):
+                    message = state.message
+                    failed = state.failed
+                }
+            }
         )
-        message = outcome.message
-        failed = outcome.failed
+    }
+
+    @MainActor
+    private func invalidateRequest() {
+        requestCoordinator.invalidate()
+        isRunning = false
+        message = nil
+        failed = false
     }
 }

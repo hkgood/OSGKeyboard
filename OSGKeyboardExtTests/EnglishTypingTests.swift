@@ -177,6 +177,111 @@ final class EnglishTypingTests: XCTestCase {
     }
 
     @MainActor
+    func testOldWordBackspaceRehydratesSuggestionsFromDocumentContext() {
+        var preceding = "board"
+        let following = "\n"
+        let typing = TypingSessionController()
+        typing.suggestionsEnabled = true
+        typing.precedingTextProvider = { preceding }
+        typing.followingTextProvider = { following }
+        _ = typing.setLanguage(.english)
+        typing.enterTypingMode()
+        typing.synchronizeEnglishDocumentContext(caretMoved: true)
+
+        func apply(_ output: TypingOutput) {
+            for _ in 0..<output.deleteCount {
+                if !preceding.isEmpty { preceding.removeLast() }
+            }
+            preceding += output.text
+            typing.syncAutocapitalization(
+                accountingForInsert: output.text,
+                deleteCount: output.deleteCount
+            )
+        }
+
+        apply(typing.handleKey("⌫"))
+        XCTAssertEqual(preceding, "boar")
+        XCTAssertEqual(typing.composition.preedit, "boar")
+
+        apply(typing.handleKey("⌫"))
+        XCTAssertEqual(preceding, "boa")
+        XCTAssertEqual(typing.composition.preedit, "boa")
+        XCTAssertTrue(
+            typing.composition.candidates.contains {
+                $0.text.compare("boat", options: .caseInsensitive) == .orderedSame
+            }
+        )
+
+        apply(typing.handleKey("t"))
+        XCTAssertEqual(preceding, "boat")
+        XCTAssertEqual(typing.composition.preedit.lowercased(), "boat")
+    }
+
+    @MainActor
+    func testCandidateReplacementRejectsStaleDocumentAnchor() {
+        var preceding = ""
+        let typing = TypingSessionController()
+        typing.suggestionsEnabled = true
+        typing.precedingTextProvider = { preceding }
+        typing.followingTextProvider = { "" }
+        _ = typing.setLanguage(.english)
+        typing.enterTypingMode()
+
+        for key in ["b", "o", "a"] {
+            let output = typing.handleKey(key)
+            preceding += output.text
+            typing.syncAutocapitalization(accountingForInsert: output.text)
+        }
+        guard let boatIndex = typing.composition.candidates.firstIndex(where: {
+            $0.text.compare("boat", options: .caseInsensitive) == .orderedSame
+        }) else {
+            return XCTFail("expected boat completion")
+        }
+
+        preceding = "board"
+        let output = typing.selectCandidate(at: boatIndex)
+
+        XCTAssertEqual(output, .none)
+        XCTAssertEqual(typing.composition.preedit.lowercased(), "board")
+    }
+
+    @MainActor
+    func testMidWordCaretSuppressesUnsafeBackwardOnlyReplacement() {
+        let typing = TypingSessionController()
+        typing.suggestionsEnabled = true
+        typing.precedingTextProvider = { "boa" }
+        typing.followingTextProvider = { "rd" }
+        _ = typing.setLanguage(.english)
+        typing.enterTypingMode()
+
+        typing.synchronizeEnglishDocumentContext(caretMoved: true)
+
+        XCTAssertTrue(typing.composition.candidates.isEmpty)
+        XCTAssertTrue(typing.composition.preedit.isEmpty)
+    }
+
+    @MainActor
+    func testStaleHostCallbackDoesNotDiscardLocalEnglishWord() {
+        var preceding = ""
+        let typing = TypingSessionController()
+        typing.suggestionsEnabled = true
+        typing.precedingTextProvider = { preceding }
+        typing.followingTextProvider = { "" }
+        _ = typing.setLanguage(.english)
+        typing.enterTypingMode()
+
+        let output = typing.handleKey("h")
+        typing.syncAutocapitalization(accountingForInsert: output.text)
+        typing.synchronizeEnglishDocumentContext(caretMoved: true)
+
+        XCTAssertEqual(typing.composition.preedit.lowercased(), "h")
+
+        preceding = "h"
+        typing.synchronizeEnglishDocumentContext()
+        XCTAssertEqual(typing.composition.preedit.lowercased(), "h")
+    }
+
+    @MainActor
     func testAutocorrectUndoRestoresOriginal() {
         let typing = TypingSessionController()
         typing.suggestionsEnabled = true

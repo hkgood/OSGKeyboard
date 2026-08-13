@@ -2,93 +2,106 @@ name: CI
 
 on:
   push:
-    branches: [0.1, 0.2, develop]
+    branches: [main]
   pull_request:
-    branches: [0.1, 0.2, develop]
+    branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # =========================================================
-  # SwiftLint (light config — fails only on severe issues)
-  # =========================================================
+  validate:
+    name: Validate manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Validate test suite manifest
+        run: ./Scripts/run-tests.sh validate
+      - name: Check sensitive logs
+        run: |
+          python3 Scripts/check_sensitive_logs.py --self-test
+          python3 Scripts/check_sensitive_logs.py
+
   lint:
     name: SwiftLint
-    # macos-14 runner ships Xcode 16.x (default 16.4 in 2026). We pin to
-    # 16.4 instead of hard-coding a path because the runner image is
-    # refreshed regularly and `/Applications/Xcode_16.0.app` is no
-    # longer pre-installed — that's the bug this PR fixes.
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
-      - name: Select Xcode 16.4
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app
-      - name: Install SwiftLint
-        run: brew install swiftlint
-      - name: Run SwiftLint
-        # Run twice: --quiet to fail on errors only, --strict to fail
-        # on warnings too. The current .swiftlint.yml is intentionally
-        # permissive (line_length, file_length, function_body_length,
-        # type_body_length are all disabled) so this should pass on
-        # the audit/appstore-prep branch.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Verify toolchain
         run: |
-          swiftlint lint --quiet
-          swiftlint lint --quiet --strict
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version
+          test "$(xcodebuild -version | awk 'NR == 1 { print $2 }')" = "26.6"
+          test "$(xcrun --sdk iphonesimulator --show-sdk-version | cut -d. -f1)" = "26"
+          command -v swiftlint >/dev/null || brew install swiftlint
+          test "$(swiftlint version)" = "0.65.0"
+      - name: Run SwiftLint
+        run: swiftlint lint --quiet --strict
 
-  # =========================================================
-  # Build the main app + keyboard extension
-  # =========================================================
-  build:
-    name: Build (${{ matrix.destination }})
-    needs: lint
-    runs-on: macos-14
-    strategy:
-      fail-fast: false
-      matrix:
-        destination:
-          - generic/platform=iOS Simulator
+  ios:
+    name: iOS / Extension
+    needs: [validate, lint]
+    runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
-      - name: Select Xcode 16.4
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Verify toolchain
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version
+          test "$(xcodebuild -version | awk 'NR == 1 { print $2 }')" = "26.6"
+          test "$(xcrun --sdk iphonesimulator --show-sdk-version | cut -d. -f1)" = "26"
+      - name: Install pinned XcodeGen
+        run: ./Scripts/install-xcodegen-ci.sh
       - name: Generate project
         run: ./Scripts/generate-xcodeproj.sh
-      - name: Build
+      - name: Run PR test preset
+        run: SKIP_GENERATE=1 ./Scripts/run-tests.sh pr
+      - name: Build Release
         run: |
-          set -o pipefail
+          set -euo pipefail
           xcodebuild \
             -project OSGKeyboard.xcodeproj \
             -scheme OSGKeyboard \
-            -destination "${{ matrix.destination }}" \
-            -configuration Debug \
-            build \
-            | xcpretty
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Release \
+            -onlyUsePackageVersionsFromResolvedFile \
+            CODE_SIGNING_ALLOWED=NO \
+            build
 
-  # =========================================================
-  # Unit tests
-  # =========================================================
-  test:
-    name: Unit tests
-    needs: lint
-    runs-on: macos-14
+  mac:
+    name: macOS
+    needs: [validate, lint]
+    runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
-      - name: Select Xcode 16.4
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Verify toolchain
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version
+          test "$(xcodebuild -version | awk 'NR == 1 { print $2 }')" = "26.6"
+          test "$(uname -m)" = "arm64"
+      - name: Install pinned XcodeGen
+        run: ./Scripts/install-xcodegen-ci.sh
       - name: Generate project
         run: ./Scripts/generate-xcodeproj.sh
-      - name: Validate test suite manifest
-        run: ./Scripts/run-tests.sh validate
-      - name: Run tests (pr preset)
-        # pr = critical-path groups including OSGKeyboardExtTests.
-        # See Tests/suite-manifest.json and docs/TESTING.md.
+      - name: Run macOS tests
+        run: SKIP_GENERATE=1 ./Scripts/run-tests.sh mac
+      - name: Build Release
         run: |
-          set -o pipefail
-          SKIP_GENERATE=1 ./Scripts/run-tests.sh pr
+          set -euo pipefail
+          xcodebuild \
+            -project OSGKeyboard.xcodeproj \
+            -scheme OSGKeyboardMac \
+            -destination 'platform=macOS' \
+            -configuration Release \
+            -onlyUsePackageVersionsFromResolvedFile \
+            CODE_SIGNING_ALLOWED=NO \
+            build

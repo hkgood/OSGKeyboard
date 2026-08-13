@@ -72,8 +72,8 @@ public struct ProgressiveDictationTranscriptAccumulator: Sendable {
         candidate: String,
         startDelta: Double
     ) -> String? {
-        let normalizedPrevious = DictationTextComposer.normalizeForOverlap(previous)
-        let normalizedCandidate = DictationTextComposer.normalizeForOverlap(candidate)
+        let normalizedPrevious = TranscriptOverlapUtilities.normalized(previous)
+        let normalizedCandidate = TranscriptOverlapUtilities.normalized(candidate)
         guard !normalizedPrevious.isEmpty, !normalizedCandidate.isEmpty else {
             return nil
         }

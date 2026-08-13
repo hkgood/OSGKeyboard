@@ -1,8 +1,8 @@
 // AIKeyboardView.swift
 // OSGKeyboard · Keyboard Extension
 //
-// Temporary voice-to-AI surface. The latest answer remains visible while a
-// follow-up is running and is inserted only through the explicit Send action.
+// Product voice-to-AI conversation surface. The latest answer remains visible
+// while a follow-up runs and is inserted only through the explicit Send action.
 
 import SwiftUI
 import OSGKeyboardShared
@@ -14,12 +14,23 @@ struct AIKeyboardView: View {
         static let actionButtonHeight: CGFloat = 50
         static let actionButtonMaxWidth: CGFloat = 150
         static let statusHeight: CGFloat = 20
+        static let carouselInterval: TimeInterval = 4
+        static let skillButtonSize: CGFloat = 52
     }
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var state: KeyboardState
     @ObservedObject var typing: TypingSessionController
+    /// A copy made while the keyboard is visible must reach the carousel
+    /// immediately, not on the next rotation tick.
+    @ObservedObject private var clipboardHistory = ClipboardHistoryStore.shared
     let onInsert: (String) -> Void
+
+    @State private var currentHint: AIHintCard?
+    @State private var hintOpacity: Double = 1
+    @State private var carouselBag = AIHintCarouselBag()
+    @State private var poolCards: [AIHintCard] = []
 
     private var palette: ThemePalette {
         colorScheme == .dark ? Palette.dark : Palette.light
@@ -37,6 +48,27 @@ struct AIKeyboardView: View {
         .frame(maxWidth: .infinity)
         .frame(height: resolvedHeight)
         .environment(\.themePalette, palette)
+        .onAppear { resetCarousel() }
+        .onChange(of: state.aiSession.phase) { _, phase in
+            guard phase == .idle || phase == .failed else { return }
+            resetCarousel()
+        }
+        .onChange(of: state.clipboardHistoryEnabled) { _, _ in resetCarousel() }
+        .onChange(of: clipboardHistory.entries.first?.id) { _, _ in resetCarousel() }
+        .onReceive(
+            Timer.publish(every: Layout.carouselInterval, on: .main, in: .common).autoconnect()
+        ) { _ in
+            guard showsPlaceholder else { return }
+            // Reduce Motion stops the rotation, not the data: a card whose
+            // clipboard window has closed must still leave the carousel.
+            reloadHintPool(resetBag: false)
+            guard !showsClipboardSkills else { return }
+            if reduceMotion, let hint = currentHint,
+               poolCards.contains(where: { $0.id == hint.id }) {
+                return
+            }
+            showNextHint(animated: !reduceMotion)
+        }
     }
 
     private var resolvedHeight: CGFloat {
@@ -56,17 +88,33 @@ struct AIKeyboardView: View {
         )
     }
 
+    @ViewBuilder
     private var topBar: some View {
-        HStack(spacing: Spacing.xs) {
-            KeyboardBrandLogo(action: state.openSettings)
-            Spacer(minLength: 0)
-            if state.canCancelAIInput {
+        if state.canCancelAIInput {
+            HStack(spacing: Spacing.xs) {
+                KeyboardBrandLogo(action: state.openSettings)
+                Spacer(minLength: 0)
                 KeyboardCancelButton(
                     action: state.cancelAIInput,
                     accessibilityLabel: ExtL10n.text("keyboard.ai.cancel"),
                     accessibilityHint: ExtL10n.text("keyboard.ai.cancelHint")
                 )
-            } else {
+            }
+            .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
+        } else if state.canShowClipboardEntry,
+                  let suggestion = state.clipboardSuggestionText,
+                  !suggestion.isEmpty {
+            // Replaces logo + capsule tabs until dismissed.
+            ClipboardSuggestionBar(
+                text: suggestion,
+                onInsert: { state.insertClipboardText(suggestion) },
+                onDismiss: state.dismissClipboardSuggestion
+            )
+            .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
+        } else {
+            HStack(spacing: Spacing.xs) {
+                KeyboardBrandLogo(action: state.openSettings)
+                Spacer(minLength: 0)
                 KeyboardTopControls(
                     state: state,
                     typing: typing,
@@ -74,20 +122,20 @@ struct AIKeyboardView: View {
                     onInsert: onInsert
                 )
             }
+            .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
         }
-        .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
     }
 
     private var answerArea: some View {
         ZStack(alignment: .bottom) {
             if showsPlaceholder {
-                // Empty-state tip: geometric center of the answer plane.
-                Text(ExtL10n.string("keyboard.ai.placeholder"))
-                    .font(TypeStyle.body)
-                    .foregroundStyle(palette.textTertiary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, Spacing.md)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if showsClipboardSkills {
+                    clipboardSkillRow
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    hintCarousel
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             } else {
                 ScrollViewReader { proxy in
                     ScrollView(.vertical) {
@@ -127,7 +175,88 @@ struct AIKeyboardView: View {
         }
     }
 
-    /// No draft/answer yet — show the centered mic guidance instead of a scroll body.
+    private var hintCarousel: some View {
+        Button {
+            guard let hint = currentHint else { return }
+            state.submitAIHint(hint)
+        } label: {
+            HStack(spacing: 6) {
+                if let hint = currentHint {
+                    Image(systemName: hint.visualKind.systemImage)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(palette.textPrimary.opacity(0.55))
+                }
+                Text(currentHint.map(\.resolvedDisplayText) ?? ExtL10n.string("keyboard.ai.placeholder"))
+                    .font(TypeStyle.bodyEmph)
+                    .foregroundStyle(palette.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 44)
+            .opacity(hintOpacity)
+            .glassEffect(.regular.interactive(), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .fixedSize()
+        // A busy session already owns the surface; the status line explains a
+        // missing LLM. Both keep the hint from being a tap with no outcome.
+        .disabled(currentHint == nil || !state.aiServiceAvailable || state.aiSession.isBusy)
+        .accessibilityLabel(
+            Text(
+                currentHint.map {
+                    "\(ExtL10n.string("keyboard.ai.hintA11yPrefix"))\($0.resolvedDisplayText)"
+                } ?? ExtL10n.string("keyboard.ai.placeholder")
+            )
+        )
+    }
+
+    private var clipboardSkillRow: some View {
+        HStack(spacing: Spacing.lg) {
+            ForEach(AIClipboardSkillCatalog.visible()) { skill in
+                Button {
+                    state.submitAIClipboardSkill(skill)
+                } label: {
+                    VStack(spacing: 6) {
+                        Image(systemName: skill.systemImage)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(palette.textPrimary.opacity(0.85))
+                            .frame(width: Layout.skillButtonSize, height: Layout.skillButtonSize)
+                            .glassEffect(.regular.interactive(), in: Circle())
+                        Text(clipboardSkillTitle(skill))
+                            .font(TypeStyle.caption2)
+                            .foregroundStyle(palette.textSecondary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(!state.aiServiceAvailable || state.aiSession.isBusy)
+                .accessibilityLabel(Text(clipboardSkillTitle(skill)))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Translate follows the keyboard target; Reply / Summarize stay static.
+    private func clipboardSkillTitle(_ skill: AIClipboardSkill) -> String {
+        if skill.id == AIClipboardSkillCatalog.translateID {
+            return AIClipboardSkillCatalog.translateButtonTitle(
+                translationTargetLocaleId: state.translationTargetLocaleId,
+                uiLanguage: AppGroupStore().uiLanguage
+            )
+        }
+        return ExtL10n.string(skill.titleKey)
+    }
+
+    /// Copy-then-30s window: skill chips replace the rotating hint.
+    private var showsClipboardSkills: Bool {
+        guard showsPlaceholder, state.clipboardHistoryEnabled else { return false }
+        return AIHintPool.isClipboardSkillWindowActive(
+            clipboardHistoryEnabled: true,
+            newestClipboard: clipboardHistory.newestEntry
+        )
+    }
+
+    /// No draft/answer yet — show the centered hint carousel instead of a scroll body.
     private var showsPlaceholder: Bool {
         let hasDraft = !(state.aiSession.draftAnswerText?.isEmpty ?? true)
         return !hasDraft && state.aiSession.answer == nil
@@ -159,7 +288,7 @@ struct AIKeyboardView: View {
     private var aiMicrophoneButton: some View {
         Button(action: state.tapAIMic) {
             ZStack {
-                Capsule().fill(palette.accent)
+                Color.clear
                 if state.aiSession.phase == .listening {
                     Capsule()
                         .stroke(Color.white.opacity(0.28), lineWidth: 1.5)
@@ -173,6 +302,8 @@ struct AIKeyboardView: View {
                 minHeight: Layout.actionButtonHeight,
                 maxHeight: Layout.actionButtonHeight
             )
+            // 实心填充、无外扩阴影：避免玻璃投影被键盘底边裁切。
+            .background(palette.accent, in: Capsule())
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -214,11 +345,8 @@ struct AIKeyboardView: View {
                 minHeight: Layout.actionButtonHeight,
                 maxHeight: Layout.actionButtonHeight
             )
-            .background(
-                answerActionFill,
-                in: Capsule()
-            )
-            .overlay(Capsule().stroke(answerActionBorder, lineWidth: 0.5))
+            // 实心填充、无外扩阴影：避免玻璃投影被键盘底边裁切。
+            .background(answerActionFill, in: Capsule())
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -255,11 +383,11 @@ struct AIKeyboardView: View {
 
     private var answerActionFill: Color {
         guard state.aiSession.canPerformAnswerAction else {
-            return palette.surfaceElevated
+            return palette.surfaceElevated.opacity(0.55)
         }
         return state.aiSession.canSend
             ? palette.accent
-            : NativeKeyboardKeyColors.fill(for: colorScheme)
+            : palette.surfaceElevated
     }
 
     private var answerActionForeground: Color {
@@ -269,13 +397,6 @@ struct AIKeyboardView: View {
         return state.aiSession.canSend
             ? .white
             : NativeKeyboardKeyColors.text(for: colorScheme)
-    }
-
-    private var answerActionBorder: Color {
-        guard state.aiSession.canSend else {
-            return palette.divider
-        }
-        return Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08)
     }
 
     private var microphoneDisabled: Bool {
@@ -305,16 +426,20 @@ struct AIKeyboardView: View {
                 ? ExtL10n.string("keyboard.ai.listening")
                 : state.aiSession.transcript
         case .recognizing:
-            return state.aiSession.transcript.isEmpty
-                ? ExtL10n.string("keyboard.ai.recognizing")
-                : state.aiSession.transcript
+            if state.aiSession.transcript.isEmpty
+                || AIClipboardPrompt.isInternalPrompt(state.aiSession.transcript) {
+                return ExtL10n.string("keyboard.ai.recognizing")
+            }
+            return state.aiSession.transcript
         case .generating:
             if let draft = state.aiSession.draftAnswerText, !draft.isEmpty {
                 return ExtL10n.string("keyboard.ai.generating")
             }
-            return state.aiSession.transcript.isEmpty
-                ? ExtL10n.string("keyboard.ai.thinking")
-                : state.aiSession.transcript
+            if state.aiSession.transcript.isEmpty
+                || AIClipboardPrompt.isInternalPrompt(state.aiSession.transcript) {
+                return ExtL10n.string("keyboard.ai.thinking")
+            }
+            return state.aiSession.transcript
         case .failed:
             return ExtL10n.string("keyboard.ai.error.requestFailed")
         }
@@ -324,5 +449,42 @@ struct AIKeyboardView: View {
         state.aiSession.phase == .listening
             ? "keyboard.ai.stopA11y"
             : "keyboard.ai.startA11y"
+    }
+
+    // MARK: - Carousel
+
+    /// Rebuild the pool and show a card right away, without a fade.
+    /// Skip advancing the chip while clipboard skills own the surface, so a
+    /// leftover clipboard sentence cannot replace the three buttons.
+    private func resetCarousel() {
+        reloadHintPool(resetBag: true)
+        guard !showsClipboardSkills else { return }
+        showNextHint(animated: false)
+    }
+
+    private func reloadHintPool(resetBag: Bool) {
+        let locale = AIHintLocaleResolver.packLocale()
+        let pack = AIHintStore.resolvedPack(locale: locale)
+        poolCards = AIHintPool.activeCards(pack: pack)
+        if resetBag {
+            carouselBag.reset()
+        }
+    }
+
+    private func showNextHint(animated: Bool) {
+        guard let next = carouselBag.next(from: poolCards) else {
+            currentHint = nil
+            return
+        }
+        if animated, !reduceMotion {
+            withAnimation(Motion.soft) { hintOpacity = 0 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                currentHint = next
+                withAnimation(Motion.soft) { hintOpacity = 1 }
+            }
+        } else {
+            currentHint = next
+            hintOpacity = 1
+        }
     }
 }

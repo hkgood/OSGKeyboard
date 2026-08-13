@@ -1,10 +1,10 @@
 // PolishingService.swift
 // OSGKeyboard · Shared
 //
-// v0.3.0 rewrite: one-step "intelligent" polish that combines ASR
-// error correction, filler removal, and tone adaptation in a single
-// LLM call. The previous design was two separate steps (correction
-// then polish) which doubled latency and token cost; Typeless,
+// One-step intelligent polish combines ASR error correction, filler
+// removal, and tone adaptation in a single LLM call. Keeping these
+// operations merged avoids the latency and token cost of separate
+// correction and polish requests; Typeless,
 // Wispr Flow, and the "intelligent" rewrite literature all confirm
 // the merged prompt performs just as well for everyday Chinese /
 // English dictation while halving the network round-trip.
@@ -59,7 +59,7 @@ public actor PolishingService {
         case keychainLocked
     }
 
-    /// v0.2.1: what the LLM should do with the raw transcript. The
+    /// What the LLM should do with the raw transcript. The
     /// polish path stays the default so every existing call site keeps
     /// its current behaviour — translation is opt-in via the `translate`
     /// case and gets a target-locale parameter baked into the prompt.
@@ -89,10 +89,10 @@ public actor PolishingService {
         self.timeout = timeout ?? LLMClientFactory.defaultRequestTimeout
     }
 
-    /// v0.3.0: context-aware polish entry point. The optional
+    /// Context-aware polish entry point. The optional
     /// `PolishContext` carries per-call signals (app context,
     /// intensity, preceding text). Translation is a separate concept
-    /// (see `mode` below) so callers wanting the v0.2.1 translate
+    /// (see `mode` below) so callers wanting the translate
     /// flow should keep using the override prompt / providerId
     /// overloads exposed by the host.
     public func polish(

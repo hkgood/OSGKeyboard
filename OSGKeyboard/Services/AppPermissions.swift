@@ -1,7 +1,7 @@
 // AppPermissions.swift
 // OSGKeyboard · Main App
 //
-// Central permission status for onboarding and Flow session startup.
+// Central permission handling for onboarding, Flow, and clipboard access.
 
 import AVFoundation
 import Speech
@@ -76,6 +76,16 @@ enum AppPermissions {
     static func openSystemSettings() {
         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
         UIApplication.shared.open(url)
+    }
+
+    /// Performs an explicit direct read so iOS can present paste authorization
+    /// and create the app's "Paste from Other Apps" settings entry.
+    @MainActor
+    @discardableResult
+    static func requestPasteAccess() -> Bool {
+        let pasteboard = UIPasteboard.general
+        guard pasteboard.hasStrings else { return false }
+        return pasteboard.string != nil
     }
 
     /// Home-screen guidance when Flow permissions are missing after onboarding.

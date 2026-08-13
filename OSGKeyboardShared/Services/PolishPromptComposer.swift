@@ -246,15 +246,6 @@ public enum PolishPromptComposer {
         """
     }
 
-    private static func escapeXML(_ text: String) -> String {
-        text
-            .replacingOccurrences(of: "&", with: "&amp;")
-            .replacingOccurrences(of: "<", with: "&lt;")
-            .replacingOccurrences(of: ">", with: "&gt;")
-            .replacingOccurrences(of: "\"", with: "&quot;")
-            .replacingOccurrences(of: "'", with: "&apos;")
-    }
-
     internal static let englishFunFormattingPrompt = """
     You format ASR transcripts before a built-in creative personality rewrites them.
 
@@ -379,7 +370,7 @@ public enum PolishPromptComposer {
     public static func dictationUserPayload(_ text: String) -> String {
         """
         <dictation_request protocol="polish-v1">
-          <dictation_draft>\(escapeXML(text))</dictation_draft>
+          <dictation_draft>\(PromptXMLEscaping.escapeTextContent(text))</dictation_draft>
         </dictation_request>
         """
     }

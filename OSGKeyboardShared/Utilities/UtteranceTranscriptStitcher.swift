@@ -105,8 +105,8 @@ public struct UtteranceTranscriptStitcher: Sendable {
         }
 
         // Punctuation-insensitive CJK overlap (e.g. "很好，" + "很好继续").
-        let normalizedPrev = normalizeForOverlap(previous)
-        let normalizedNext = normalizeForOverlap(trimmedNext)
+        let normalizedPrev = TranscriptOverlapUtilities.normalized(previous)
+        let normalizedNext = TranscriptOverlapUtilities.normalized(trimmedNext)
         let nPrev = Array(normalizedPrev)
         let nNext = Array(normalizedNext)
         let normProbe = min(64, nPrev.count, nNext.count)
@@ -114,7 +114,10 @@ public struct UtteranceTranscriptStitcher: Sendable {
             for length in stride(from: normProbe, through: 2, by: -1) {
                 if nPrev.suffix(length).elementsEqual(nNext.prefix(length)) {
                     // Map normalized overlap length back to raw `next` drop count.
-                    let drop = overlapDropCount(in: trimmedNext, normalizedPrefixLength: length)
+                    let drop = TranscriptOverlapUtilities.rawDropCount(
+                        in: trimmedNext,
+                        normalizedPrefixLength: length
+                    )
                     return previous + String(trimmedNext.dropFirst(drop))
                 }
             }
@@ -138,27 +141,6 @@ public struct UtteranceTranscriptStitcher: Sendable {
         }
 
         return DictationTextComposer.compose(anchor: previous, live: trimmedNext)
-    }
-
-    private static func normalizeForOverlap(_ text: String) -> String {
-        text.unicodeScalars.filter {
-            !CharacterSet.whitespacesAndNewlines.contains($0)
-                && !CharacterSet.punctuationCharacters.contains($0)
-        }.map { Character($0) }.reduce(into: "") { $0.append($1) }
-    }
-
-    /// How many raw characters to drop from `next` given a normalized-prefix overlap length.
-    private static func overlapDropCount(in next: String, normalizedPrefixLength: Int) -> Int {
-        var normalizedCount = 0
-        var rawIndex = next.startIndex
-        while rawIndex < next.endIndex, normalizedCount < normalizedPrefixLength {
-            let scalar = next[rawIndex]
-            if !scalar.isWhitespace, !scalar.isPunctuation {
-                normalizedCount += 1
-            }
-            rawIndex = next.index(after: rawIndex)
-        }
-        return next.distance(from: next.startIndex, to: rawIndex)
     }
 
     private func naiveWithPauseMarks(threshold: Double) -> String {

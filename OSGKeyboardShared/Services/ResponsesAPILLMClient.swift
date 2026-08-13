@@ -70,10 +70,12 @@ public struct ResponsesAPILLMClient: LLMClient {
                 throw LLMError.transport("non-HTTP response")
             }
             if !(200..<300).contains(http.statusCode) {
-                #if DEBUG
-                let bodyText = String(data: data, encoding: .utf8) ?? ""
-                print("⚠️ Responses API HTTP \(http.statusCode): \(bodyText.prefix(500))")
-                #endif
+                LLMHTTPDiagnostics.logFailure(
+                    providerId: providerId,
+                    statusCode: http.statusCode,
+                    responseByteCount: data.count,
+                    response: http
+                )
                 if http.statusCode == 429 { throw LLMError.rateLimited }
                 throw LLMError.http(status: http.statusCode)
             }
@@ -111,6 +113,7 @@ public struct ResponsesAPILLMClient: LLMClient {
                     for try await event in LLMStreamingSession.mapSSE(
                         session: session,
                         request: request,
+                        providerId: providerId,
                         parse: LLMStreamDeltaParser.responsesOutputTextDelta(from:)
                     ) {
                         continuation.yield(event)

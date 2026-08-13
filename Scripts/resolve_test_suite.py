@@ -23,6 +23,8 @@ TEST_ROOTS = [
     ROOT / "OSGKeyboardExtTests",
     ROOT / "OSGKeyboardMacTests",
 ]
+SHARED_TEST_ROOT = ROOT / "Tests"
+SHARED_TEST_TARGETS = ["OSGKeyboardTests", "OSGKeyboardMacTests"]
 
 
 def load_manifest() -> dict:
@@ -87,6 +89,11 @@ def discover_on_disk_test_classes() -> dict[str, Path]:
             class_name = path.stem
             test_id = f"{target}/{class_name}"
             found[test_id] = path
+    if SHARED_TEST_ROOT.is_dir():
+        for path in sorted(SHARED_TEST_ROOT.glob("*Tests.swift")):
+            for target in SHARED_TEST_TARGETS:
+                test_id = f"{target}/{path.stem}"
+                found[test_id] = path
     return found
 
 

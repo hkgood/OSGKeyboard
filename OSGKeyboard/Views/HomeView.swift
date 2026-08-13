@@ -1,16 +1,18 @@
 // HomeView.swift
 // OSGKeyboard · Main App
 //
-// Minimal home: logo, status capsule, flow hints, inline preview field.
-//
-// v0.2.0: removed the on-device model warm-up / download state machine
-// (Qwen3 CoreML is gone). The local engine uses iOS 26 `SpeechAnalyzer`
-// which is always ready, so the previous "model warming / download"
-// capsule states collapse into a single "ready" line.
+// Home: logo, flow hints, usage stats, history + dictionary entry card,
+// then engine / session status at the scroll bottom. History/dictionary
+// open via push (system back) rather than bottom-tab destinations.
 
 import SwiftUI
 import OSGKeyboardShared
 import UIKit
+
+private enum HomeRoute: Hashable {
+    case history
+    case dictionary
+}
 
 struct HomeView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
@@ -18,12 +20,13 @@ struct HomeView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @ObservedObject private var config = ProviderConfig.shared
+    @ObservedObject private var speechHistory = SpeechHistoryStore.shared
     @EnvironmentObject private var flowManager: FlowSessionManager
-    @FocusState private var previewFocused: Bool
-    @State private var previewText = ""
     @State private var keyboardHintDismissed = HomeGuideState.isKeyboardHintDismissed
     @State private var micStatus = AppPermissions.micStatus
     @State private var speechStatus = AppPermissions.speechStatus
+    @State private var path = NavigationPath()
+    @State private var dictionaryPreviewEntries: [PersonalDictionary.Entry] = []
 
     private var usesWideLayout: Bool {
         horizontalSizeClass == .regular
@@ -61,26 +64,43 @@ struct HomeView: View {
     }
 
     var body: some View {
-        Group {
-            if usesWideLayout {
-                wideBody
-            } else {
-                phoneBody
+        NavigationStack(path: $path) {
+            Group {
+                if usesWideLayout {
+                    wideBody
+                } else {
+                    phoneBody
+                }
+            }
+            .toolbar(path.isEmpty ? .hidden : .automatic, for: .navigationBar)
+            .navigationDestination(for: HomeRoute.self) { route in
+                switch route {
+                case .history:
+                    HistoryView()
+                case .dictionary:
+                    PersonalDictionaryView()
+                }
             }
         }
         .onAppear {
             refreshPermissionStatuses()
+            refreshDictionaryPreview()
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             refreshPermissionStatuses()
+            refreshDictionaryPreview()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             refreshPermissionStatuses()
+            refreshDictionaryPreview()
         }
-        .onChange(of: previewFocused) { _, focused in
-            guard focused else { return }
-            Task { await flowManager.refreshForInlineKeyboardFocus() }
+        .onReceive(NotificationCenter.default.publisher(for: .personalDictionaryDidSyncFromCloud)) { _ in
+            refreshDictionaryPreview()
+        }
+        .onChange(of: path.count) { _, count in
+            guard count == 0 else { return }
+            refreshDictionaryPreview()
         }
     }
 
@@ -89,109 +109,83 @@ struct HomeView: View {
     private var phoneBody: some View {
         GeometryReader { geo in
             let gradientHeight = geo.size.height * 0.30 + geo.safeAreaInsets.top
-            // 小屏（如 iPhone SE）压缩顶部留白，把空间让给自适应的输入框，
-            // 避免固定块之和超出视口、底部状态行被 tab 栏遮挡。
             let isCompact = geo.size.height < 700
-            // logo 上下留白对称，避免视觉上偏下。
             let logoTopPadding = isCompact ? Spacing.lg : Spacing.xxl
             let logoBottomPadding = isCompact ? Spacing.lg : Spacing.xxl
             let extrasBottomPadding = isCompact ? Spacing.sm : Spacing.lg
-            // 有警告/引导时进一步压低输入框下限，把垂直空间让给底部状态行。
-            let previewMinHeight: CGFloat = {
-                if showsFlowSessionExtras {
-                    return isCompact ? 44 : 88
-                }
-                return isCompact ? 72 : 160
-            }()
 
             ZStack(alignment: .top) {
                 sessionHeaderGradient(height: gradientHeight)
                     .ignoresSafeArea(edges: .top)
                     .allowsHitTesting(false)
 
-                VStack(spacing: 0) {
-                    logoHeader(compact: isCompact)
-                        .padding(.top, logoTopPadding)
-                        .padding(.bottom, logoBottomPadding)
+                ScrollView {
+                    VStack(spacing: 0) {
+                        logoHeader(compact: isCompact)
+                            .padding(.top, logoTopPadding)
+                            .padding(.bottom, logoBottomPadding)
 
-                    if showsFlowSessionExtras {
-                        flowSessionExtras
+                        if showsFlowSessionExtras {
+                            flowSessionExtras
+                                .padding(.horizontal, Spacing.lg)
+                                .padding(.bottom, extrasBottomPadding)
+                        }
+
+                        HomeUsageStatsSection(layout: .stacked, compact: isCompact)
                             .padding(.horizontal, Spacing.lg)
-                            .padding(.bottom, extrasBottomPadding)
+                            .padding(.bottom, Spacing.md)
+
+                        homeLibrarySection
+                            .padding(.horizontal, Spacing.lg)
+                            .padding(.bottom, Spacing.xl)
+
+                        // Scrolls with the page (not pinned); clearance comes from
+                        // `tabBarScrollBottomPadding` so the dock never covers it.
+                        scrollStatusFooter
+                            .padding(.horizontal, Spacing.lg)
                     }
-
-                    HomeUsageStatsSection(layout: .stacked, compact: isCompact)
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.bottom, Spacing.md)
-
-                    // 弹性输入框：吸收剩余高度；底部状态通过 safeAreaInset 锚定在
-                    // tab 栏之上，警告变高时输入框自动变矮，不再被 dock 挡住。
-                    previewField(minHeight: previewMinHeight)
-                        .padding(.horizontal, Spacing.lg)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                        .layoutPriority(-1)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    phoneStatusFooter
+                    .frame(maxWidth: .infinity)
+                    .tabBarScrollBottomPadding()
                 }
             }
             .background(palette.background)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                if previewFocused {
-                    previewFocused = false
-                }
-            }
         }
     }
 
-    /// Engine + Flow 状态行：作为 bottom inset，始终压在自定义 tab 栏之上。
-    private var phoneStatusFooter: some View {
-        HStack(spacing: Spacing.sm) {
+    /// Engine + Flow status — last content in the scroll stack.
+    private var scrollStatusFooter: some View {
+        VStack(spacing: Spacing.xs) {
             engineStatusLine
             flowStatusFooter
         }
         .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.horizontal, Spacing.lg)
-        .padding(.top, Spacing.sm)
-        .padding(.bottom, Spacing.sm)
-        .background(palette.background.opacity(0.96))
+        .multilineTextAlignment(.center)
     }
 
     // MARK: - Wide layout (iPad / regular width)
 
     private var wideBody: some View {
-        VStack(spacing: 0) {
+        ScrollView {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 wideHeroHeader
 
-                // On iPad / regular width the keyboard-setup hint (and any
-                // other flow-session extras) used to render below
-                // `HomeUsageStatsSection`, burying the most actionable guidance
-                // beneath the stats cards. Match the phone layout's ordering:
-                // hero header → hint → stats → preview, so the hint sits at
-                // the top of the page and is the first thing a user notices.
                 if showsFlowSessionExtras {
                     flowSessionExtras
                 }
 
                 HomeUsageStatsSection(layout: .split)
 
-                widePreviewStage
+                homeLibrarySection
+
+                scrollStatusFooter
+                    .frame(maxWidth: .infinity)
             }
             .padding(.horizontal, WideLayoutMetrics.pageHorizontalInset)
             .padding(.top, Spacing.sm)
-            .padding(.bottom, Spacing.md)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .tabBarScrollBottomPadding()
         }
         .background(palette.background)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if previewFocused {
-                previewFocused = false
-            }
-        }
     }
 
     private var wideHeroHeader: some View {
@@ -209,22 +203,162 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var widePreviewStage: some View {
-        WideCard(padding: Spacing.md, cornerRadius: Radius.large) {
-            previewFieldContent
-                .frame(
-                    maxWidth: .infinity,
-                    minHeight: WideLayoutMetrics.dictationCanvasMinHeight,
-                    maxHeight: .infinity,
-                    alignment: .topLeading
-                )
+    // MARK: - History / dictionary cards
+
+    /// Two independent cards; each header is an accent icon + uppercase label
+    /// and the body grows with its rows.
+    private var homeLibrarySection: some View {
+        VStack(spacing: Spacing.md) {
+            historyCard
+            dictionaryCard
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private var historyCard: some View {
+        let entries = Array(speechHistory.entries.prefix(Self.libraryPreviewLimit))
+        return homeLibraryCard(
+            titleKey: "history.title",
+            systemImage: "clock.arrow.circlepath",
+            route: .history
+        ) {
+            if entries.isEmpty {
+                libraryEmptyLine("home.card.history.empty")
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                        if index > 0 { libraryRowDivider }
+                        HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+                            Text(entry.text)
+                                .font(TypeStyle.footnote)
+                                .foregroundStyle(palette.textSecondary)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                            Spacer(minLength: Spacing.xs)
+                            Text(Self.previewTimeFormatter.string(from: entry.createdAt))
+                                .font(TypeStyle.caption2)
+                                .foregroundStyle(palette.textTertiary)
+                                .monospacedDigit()
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, Spacing.sm)
+                    }
+                }
+            }
+        }
+    }
+
+    private var dictionaryCard: some View {
+        homeLibraryCard(
+            titleKey: "settings.personalDictionary.title",
+            systemImage: "character.book.closed",
+            route: .dictionary
+        ) {
+            if dictionaryPreviewEntries.isEmpty {
+                libraryEmptyLine("home.card.dictionary.empty")
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(dictionaryPreviewEntries.enumerated()), id: \.element.id) { index, entry in
+                        if index > 0 { libraryRowDivider }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(entry.term)
+                                .font(TypeStyle.body)
+                                .foregroundStyle(palette.textPrimary)
+                                .lineLimit(1)
+                            Text(dictionaryDetailLine(for: entry))
+                                .font(TypeStyle.caption2)
+                                .foregroundStyle(palette.textTertiary)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, Spacing.sm)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Card shell: accent icon + label top-left, chevron trailing, custom body.
+    private func homeLibraryCard<Content: View>(
+        titleKey: LocalizedStringKey,
+        systemImage: String,
+        route: HomeRoute,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        Button {
+            path.append(route)
+        } label: {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(palette.accent)
+                        .symbolRenderingMode(.hierarchical)
+                    Text(titleKey)
+                        .font(.system(size: 13, weight: .semibold))
+                        .tracking(0.6)
+                        .textCase(.uppercase)
+                        .foregroundStyle(palette.textTertiary)
+                    Spacer(minLength: Spacing.xs)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(palette.textTertiary)
+                }
+                content()
+            }
+            .padding(Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .surfaceCard()
+        .accessibilityElement(children: .combine)
+    }
+
+    private var libraryRowDivider: some View {
+        Rectangle()
+            .fill(palette.divider)
+            .frame(height: 0.5)
+    }
+
+    private func libraryEmptyLine(_ key: LocalizedStringKey) -> some View {
+        Text(key)
+            .font(TypeStyle.footnote)
+            .foregroundStyle(palette.textTertiary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, Spacing.xs)
+    }
+
+    /// Source · uses · aliases — same secondary line as the dictionary page rows.
+    private func dictionaryDetailLine(for entry: PersonalDictionary.Entry) -> String {
+        var parts = [SharedL10n.string(entry.source.labelKey, language: config.uiLanguage)]
+        if entry.usageCount > 1 {
+            let format = AppL10n.string(
+                "settings.personalDictionary.usageCount",
+                language: config.uiLanguage
+            )
+            parts.append(String(format: format, entry.usageCount))
+        }
+        if !entry.aliases.isEmpty {
+            parts.append(entry.aliases.joined(separator: " / "))
+        }
+        return parts.joined(separator: " · ")
     }
 
     private func refreshPermissionStatuses() {
         micStatus = AppPermissions.micStatus
         speechStatus = AppPermissions.speechStatus
+    }
+
+    private func refreshDictionaryPreview() {
+        dictionaryPreviewEntries = AppGroupStore().personalDictionary.entries
+            .sorted { lhs, rhs in
+                if lhs.updatedAt != rhs.updatedAt {
+                    return lhs.updatedAt > rhs.updatedAt
+                }
+                return lhs.usageCount > rhs.usageCount
+            }
+            .prefix(Self.libraryPreviewLimit)
+            .map { $0 }
     }
 
     private func handlePermissionGuidanceAction() {
@@ -292,7 +426,7 @@ struct HomeView: View {
                 .frame(width: 6, height: 6)
 
             if needsAPIKeySetup {
-                // 云端引擎缺 API Key：不显示就绪 / 计时 / 结束按钮。
+                // 无按钮：引导卡片已提示去设置填 API Key。
                 Text("home.flow.notReady")
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.warning)
@@ -359,7 +493,6 @@ struct HomeView: View {
                 .padding(.leading, Spacing.xs)
             }
         }
-        .fixedSize(horizontal: true, vertical: false)
         .animation(Motion.soft, value: flowManager.isActive)
     }
 
@@ -461,7 +594,7 @@ struct HomeView: View {
     }
 
     /// Single source of truth for the logo status capsule. The local
-    /// engine is always "ready" in v0.2.0 (iOS `SpeechAnalyzer` ships
+    /// engine is always "ready" because iOS `SpeechAnalyzer` ships
     /// with the OS), so the previous downloading / warming / failed
     /// states collapse into the cloud-engine branch.
     private var flowCapsuleStatusMessage: String {
@@ -484,32 +617,6 @@ struct HomeView: View {
         return AppL10n.string("home.flow.inactive")
     }
 
-    // MARK: - Preview field
-
-    private func previewField(minHeight: CGFloat) -> some View {
-        previewFieldContent
-            .frame(maxWidth: .infinity, minHeight: minHeight, maxHeight: .infinity, alignment: .topLeading)
-            .padding(Spacing.md)
-            .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(previewFocused ? palette.dividerStrong : palette.dividerStrong.opacity(0.75), lineWidth: 1)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            .onTapGesture {
-                previewFocused = true
-            }
-    }
-
-    private var previewFieldContent: some View {
-        TextField("home.preview.placeholder", text: $previewText, axis: .vertical)
-            .font(TypeStyle.body)
-            .foregroundStyle(palette.textPrimary)
-            .tint(palette.accent)
-            .focused($previewFocused)
-            .lineLimit(1...100)
-    }
-
     private var engineStatusLine: some View {
         Text(
             EngineServiceLabel.summary(
@@ -525,6 +632,16 @@ struct HomeView: View {
         .multilineTextAlignment(.center)
         .fixedSize(horizontal: false, vertical: true)
     }
+
+    /// Rows shown inside the history / dictionary preview cards.
+    private static let libraryPreviewLimit = 3
+
+    private static let previewTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter
+    }()
 }
 
 // MARK: - Home guidance persistence

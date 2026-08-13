@@ -1,18 +1,13 @@
 // ASRService.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
-// Speech-to-text abstraction. As of iOS 26 being the minimum
-// deployment target, the only ASR backend is `SpeechAnalyzer` +
-// `DictationTranscriber` — always on-device, no cloud fallback, no
-// `requiresOnDevice` toggle. The previous legacy recognizer path is
-// gone; if a future platform ever needs it back,
-// reintroduce as a sibling class in `ASRServiceFactory.make()`.
+// Speech-to-text abstraction for foreground host flows. Local mode uses
+// iOS 26 `SpeechAnalyzer` + `DictationTranscriber`; cloud mode uses the
+// provider selected in the user's configuration.
 //
-// Lives in `OSGKeyboardShared` (not the keyboard extension target) so
-// that the host app's `KeyboardPreviewSheet` can run the same ASR
-// pipeline against real iOS audio — without it, the in-app preview
-// was a static mock that never actually called `SFSpeechRecognizer`,
-// and "did you actually wire up ASR?" was a fair review note.
+// Lives in `OSGKeyboardHostSupport` because the foreground host owns
+// audio capture and recognition. The keyboard extension receives
+// completed results through the Flow bridge instead of running ASR.
 
 import Foundation
 import AVFoundation
@@ -36,9 +31,8 @@ extension AVAudioPCMBuffer: @unchecked @retroactive Sendable {}
 public protocol ASRService: ASRChunkTranscribing, Sendable {
     /// Start a transcription session. The returned stream emits `.partial`
     /// updates and exactly one `.final` (or `.error`) before finishing.
-    /// `SpeechAnalyzer` is always fully on-device, so there is no
-    /// `requiresOnDevice` flag — that legacy cloud-fallback control
-    /// doesn't apply to the iOS 26 `SpeechAnalyzer` path.
+    /// The local `SpeechAnalyzer` path is fully on-device, so this
+    /// abstraction does not expose the legacy `requiresOnDevice` flag.
     func transcribe(
         stream: AsyncStream<AudioBufferSnapshot>,
         locale: Locale
@@ -385,8 +379,8 @@ final class SpeechAnalyzerASR: ASRService, @unchecked Sendable {
         }
     }
 
-    /// Canonical capture format: 16 kHz mono Float32 from `AudioCaptureService`
-    /// / `PreviewASRController` before it reaches SpeechAnalyzer.
+    /// Canonical 16 kHz mono Float32 format produced by the host capture
+    /// pipelines before samples reach SpeechAnalyzer.
     private static let captureFormat = AVAudioFormat(
         commonFormat: .pcmFormatFloat32,
         sampleRate: 16_000,

@@ -22,6 +22,7 @@ private enum SettingsRoute: Hashable {
     case textPolish
     case general
     case aiAgent
+    case clipboard
     case about
 }
 
@@ -96,7 +97,19 @@ struct SettingsView: View {
                 settingsDestination(for: route)
             }
             .task { await loadDynamicLocales() }
+            .onAppear { consumeClipboardDeepLinkIfNeeded() }
+            .onReceive(NotificationCenter.default.publisher(for: .osgOpenSettingsDeepLink)) { _ in
+                consumeClipboardDeepLinkIfNeeded()
+            }
         }
+    }
+
+    private func consumeClipboardDeepLinkIfNeeded() {
+        guard SettingsDeepLink.consumePending() == .clipboard else { return }
+        if !path.isEmpty {
+            path = NavigationPath()
+        }
+        path.append(SettingsRoute.clipboard)
     }
 
     @ViewBuilder
@@ -110,6 +123,8 @@ struct SettingsView: View {
             GeneralSettingsView(config: config)
         case .aiAgent:
             AIAgentSettingsView(config: config)
+        case .clipboard:
+            ClipboardSettingsView(config: config)
         case .about:
             AboutSettingsView(config: config)
         }
@@ -131,6 +146,14 @@ struct SettingsView: View {
                         config.aiResponseLength.labelKey,
                         language: config.uiLanguage
                     )
+                )
+
+                Divider().background(palette.divider)
+
+                settingsRouteButton(
+                    .clipboard,
+                    title: "settings.clipboard.title",
+                    subtitle: clipboardSettingsSubtitle
                 )
 
                 Divider().background(palette.divider)
@@ -189,6 +212,13 @@ struct SettingsView: View {
             SettingsVersionRow()
         }
         .surfaceCard()
+    }
+
+    private var clipboardSettingsSubtitle: String {
+        if config.clipboardHistoryEnabled {
+            return AppL10n.string("settings.clipboard.subtitle.on", language: config.uiLanguage)
+        }
+        return AppL10n.string("settings.clipboard.subtitle.off", language: config.uiLanguage)
     }
 
     private func settingsRouteButton(

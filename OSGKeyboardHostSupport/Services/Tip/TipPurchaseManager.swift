@@ -1,5 +1,5 @@
 // TipPurchaseManager.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // Optional ¥30 consumable tip via StoreKit 2. Voluntary support only —
 // no feature gates, no App Group sync, no restore (Apple consumable rules).

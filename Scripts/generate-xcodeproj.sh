@@ -6,6 +6,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 PBXPROJ="$ROOT/OSGKeyboard.xcodeproj/project.pbxproj"
+PACKAGE_LOCK="$ROOT/Scripts/Package.resolved.lock"
+GENERATED_PACKAGE_LOCK="$ROOT/OSGKeyboard.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved"
 
 # XcodeGen requires configFiles listed in project.yml to exist on disk.
 # Signing.local.xcconfig is gitignored so each machine keeps its own team ID.
@@ -24,6 +26,13 @@ fi
 "$ROOT/Scripts/ensure-mlx-audio-swift.sh"
 
 xcodegen generate
+
+if [[ ! -f "$PACKAGE_LOCK" ]]; then
+  echo "error: missing reviewed SwiftPM lock at $PACKAGE_LOCK" >&2
+  exit 1
+fi
+mkdir -p "$(dirname "$GENERATED_PACKAGE_LOCK")"
+cp "$PACKAGE_LOCK" "$GENERATED_PACKAGE_LOCK"
 
 "$ROOT/Scripts/patch-spm-local-package.sh"
 

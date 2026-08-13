@@ -25,22 +25,15 @@ public enum EditLastInputPromptComposer {
         """
         <edit_request protocol="edit-last-input-v1">
           <source_text>
-        \(escapeXML(input.sourceText))
+        \(PromptXMLEscaping.escapeTextContent(input.sourceText))
           </source_text>
           <spoken_instruction>
-        \(escapeXML(input.spokenInstruction.trimmingCharacters(in: .whitespacesAndNewlines)))
+        \(PromptXMLEscaping.escapeTextContent(
+            input.spokenInstruction.trimmingCharacters(in: .whitespacesAndNewlines)
+        ))
           </spoken_instruction>
         </edit_request>
         """
-    }
-
-    private static func escapeXML(_ text: String) -> String {
-        text
-            .replacingOccurrences(of: "&", with: "&amp;")
-            .replacingOccurrences(of: "<", with: "&lt;")
-            .replacingOccurrences(of: ">", with: "&gt;")
-            .replacingOccurrences(of: "\"", with: "&quot;")
-            .replacingOccurrences(of: "'", with: "&apos;")
     }
 
     private static let chinesePrompt = """

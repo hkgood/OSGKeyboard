@@ -32,6 +32,10 @@ What you expected to happen.
 
 Paste the relevant Console.app output filtered to `OSGKeyboard`. Wrap in triple backticks.
 
+Before uploading, remove DEBUG transcript/prompt/clipboard content, API keys,
+authorization headers, request/response bodies, and any other credentials or
+personal data. Do not attach unreviewed raw DEBUG logs.
+
 ```
 <logs here>
 ```

@@ -6,18 +6,9 @@
 // default) or one of the 10 target languages, all from a single
 // `Menu`.
 //
-// v0.2.1 follow-up: row is rendered through an `isVisible` parameter
-// so callers (`SettingsView`, `OnboardingView`) can drop the row
-// entirely when the engine can't run the cloud translate-and-polish
-// step (`ProviderConfig.isTranslationRowVisible`). The "needs cloud"
-// inline hint was deleted along with the previous Bool toggle — the
-// user only sees the row when the engine can act on the choice.
-//
-// v0.2.1 final review: both engines now run the translate-and-polish
-// step (the local engine routes through DeepSeek via
-// `ProviderConfig.localModeProviderId`), so the row title changed
-// from "Translation" to "Polish then translate" to match the new
-// always-on translation contract.
+// `isVisible` keeps conditional rendering under caller control. Current
+// settings expose the row for both local and cloud ASR modes, and both
+// use the user's selected polish provider.
 //
 // Mapping to persisted state:
 //   • "不翻译"            → translationTargetLocaleId = "off"

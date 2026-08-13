@@ -1,8 +1,9 @@
 // LocalASRCapabilities.swift
 // OSGKeyboard · Shared
 //
-// Declares what each on-device ASR backend can accept for vocabulary bias.
-// Callers must consult capabilities before building a `LocalASRBiasPayload`.
+// Declares vocabulary-bias capabilities for the current macOS Qwen3 MLX
+// runtime and Apple Speech fallback. Sherpa entries remain only to interpret
+// legacy backend identifiers and install state.
 
 import Foundation
 
@@ -62,7 +63,7 @@ public struct LocalASRCapabilities: Sendable, Equatable {
         hotwordReloadCost: .none
     )
 
-    /// Sherpa Qwen3 — hard hotwords via `--qwen3-asr-hotwords`.
+    /// Legacy Sherpa Qwen3 capability retained for persisted backend compatibility.
     public static let sherpaQwen3 = LocalASRCapabilities(
         hotwordMode: .recognizerScoped,
         maxHotwordCount: 100,
@@ -71,7 +72,7 @@ public struct LocalASRCapabilities: Sendable, Equatable {
         hotwordReloadCost: .recognizerReload
     )
 
-    /// Sherpa SenseVoice — fast Chinese baseline without hotwords.
+    /// Legacy Sherpa SenseVoice capability retained for persisted backend compatibility.
     public static let sherpaSenseVoice = LocalASRCapabilities(
         hotwordMode: .none,
         maxHotwordCount: 0,
@@ -80,7 +81,7 @@ public struct LocalASRCapabilities: Sendable, Equatable {
         hotwordReloadCost: .none
     )
 
-    /// FunASR Paraformer (Sherpa offline) — no project hotword API.
+    /// Legacy Sherpa Paraformer capability retained for persisted backend compatibility.
     public static let sherpaParaformer = LocalASRCapabilities(
         hotwordMode: .none,
         maxHotwordCount: 0,

@@ -14,10 +14,6 @@ struct MainTabContent: View {
         switch tab {
         case .keyboard:
             HomeView()
-        case .history:
-            HistoryView()
-        case .dictionary:
-            PersonalDictionaryView()
         case .styles:
             PolishStylesView()
         case .settings:

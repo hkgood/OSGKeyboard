@@ -24,7 +24,13 @@ included:
   - OSGKeyboard
   - OSGKeyboardExt
   - OSGKeyboardShared
+  - OSGKeyboardHostSupport
+  - OSGKeyboardMac
   - OSGKeyboardTests
+  - OSGKeyboardExtTests
+  - OSGKeyboardMacTests
+  - OSGKeyboardUITests
+  - Tests
 
 excluded:
   - build

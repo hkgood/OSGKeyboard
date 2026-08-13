@@ -1,5 +1,5 @@
 // SevenDayUsageChart.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // 7-day dictation bar chart. Platform shells wrap this in their own page
 // layout; the chart itself only needs points + UI language.

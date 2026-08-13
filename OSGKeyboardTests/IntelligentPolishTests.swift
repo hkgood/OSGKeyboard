@@ -1,7 +1,7 @@
 // IntelligentPolishTests.swift
 // OSGKeyboard · Tests
 //
-// v0.3.0: locks the behavior of the rewritten PolishingService and
+// Locks the behavior of the single-pass PolishingService and
 // its supporting service (AppContextDetector).
 // The tests are deliberately hermetic — no LLMClient, no ASR, no
 // App Group — so they run in <100 ms total.
@@ -720,11 +720,6 @@ private final class CapturingLLMClient: LLMClient, @unchecked Sendable {
             timeout: timeout
         )
     }
-}
-
-private final class EchoLLMClient: LLMClient, @unchecked Sendable {
-    let requestTimeout: TimeInterval = 15
-    func polish(_ text: String, systemPrompt: String, timeout: TimeInterval?) async throws -> String { text }
 }
 
 private final class ThrowingLLMClient: LLMClient, @unchecked Sendable {

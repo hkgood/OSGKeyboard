@@ -188,6 +188,28 @@ final class FlowKeyboardPoliciesTests: XCTestCase {
             ),
             .none
         )
+
+        let processing = FlowReadySnapshot(
+            sessionId: sessionId,
+            ready: false,
+            reason: .processing,
+            engineMode: "cloud",
+            localeId: "zh-Hans",
+            busyUtteranceId: utteranceId,
+            hostGeneration: "gen-1"
+        )
+        XCTAssertEqual(
+            FlowKeyboardAdoptBusyPolicy.decide(
+                snapshot: processing,
+                currentHostGeneration: "gen-1",
+                isFlowRecording: false,
+                isAwaitingFlowResult: false,
+                lastConsumedUtteranceId: nil,
+                lastStoppedUtteranceId: utteranceId
+            ),
+            .none,
+            "an aborted utterance must not come back as 识别中 on the next open"
+        )
     }
 
     func testIgnoresDeadHostGenerationSnapshot() {
@@ -231,6 +253,138 @@ final class FlowKeyboardPoliciesTests: XCTestCase {
                 lastStoppedUtteranceId: nil
             ),
             .clearStickyProcessing
+        )
+    }
+
+    func testStaleDeliveredProcessingRequiresMatchingAckWithoutResult() {
+        let busyId = UUID()
+        let sessionId = UUID()
+        XCTAssertFalse(
+            FlowKeyboardAdoptBusyPolicy.isStaleDeliveredProcessing(
+                busyUtteranceId: busyId,
+                latestResult: nil,
+                latestAck: nil
+            ),
+            "live ASR/LLM has no result and no ack yet — must wait, not abort"
+        )
+
+        let otherAck = FlowAck(
+            sessionId: sessionId,
+            utteranceId: UUID(),
+            commandSeq: 1
+        )
+        XCTAssertFalse(
+            FlowKeyboardAdoptBusyPolicy.isStaleDeliveredProcessing(
+                busyUtteranceId: busyId,
+                latestResult: nil,
+                latestAck: otherAck
+            ),
+            "ack for a previous utterance must not abort the live one"
+        )
+
+        let matchingAck = FlowAck(
+            sessionId: sessionId,
+            utteranceId: busyId,
+            commandSeq: 1
+        )
+        XCTAssertTrue(
+            FlowKeyboardAdoptBusyPolicy.isStaleDeliveredProcessing(
+                busyUtteranceId: busyId,
+                latestResult: nil,
+                latestAck: matchingAck
+            ),
+            "acked + empty mailbox + still processing is a leaked gate"
+        )
+
+        let liveResult = FlowResult(
+            sessionId: sessionId,
+            utteranceId: busyId,
+            commandSeq: 1,
+            status: .streaming,
+            text: "draft"
+        )
+        XCTAssertFalse(
+            FlowKeyboardAdoptBusyPolicy.isStaleDeliveredProcessing(
+                busyUtteranceId: busyId,
+                latestResult: liveResult,
+                latestAck: matchingAck
+            ),
+            "result still sitting for this utterance is waitable, not stale"
+        )
+        XCTAssertFalse(
+            FlowKeyboardAdoptBusyPolicy.isStaleDeliveredProcessing(
+                busyUtteranceId: UUID(),
+                latestResult: liveResult,
+                latestAck: matchingAck
+            )
+        )
+    }
+
+    func testTerminalStorePolicyRejectsAbortAndReplacement() {
+        let live = UUID()
+        XCTAssertTrue(
+            FlowTerminalStorePolicy.canStore(
+                currentUtteranceId: live,
+                finishedUtteranceId: live,
+                alreadyTerminal: false
+            )
+        )
+        XCTAssertFalse(
+            FlowTerminalStorePolicy.canStore(
+                currentUtteranceId: nil,
+                finishedUtteranceId: live,
+                alreadyTerminal: false
+            ),
+            "abort cleared currentUtteranceId — do not deliver"
+        )
+        XCTAssertFalse(
+            FlowTerminalStorePolicy.canStore(
+                currentUtteranceId: UUID(),
+                finishedUtteranceId: live,
+                alreadyTerminal: false
+            ),
+            "a newer utterance owns the gate"
+        )
+        XCTAssertFalse(
+            FlowTerminalStorePolicy.canStore(
+                currentUtteranceId: live,
+                finishedUtteranceId: live,
+                alreadyTerminal: true
+            ),
+            "already terminal — abort already claimed"
+        )
+    }
+
+    func testAckGateDropsProcessingOnlyForTheLiveUtterance() {
+        let live = UUID()
+        XCTAssertTrue(
+            FlowHostAckGatePolicy.shouldDropProcessingGate(
+                ackUtteranceId: live,
+                currentUtteranceId: live,
+                isUtteranceProcessing: true
+            )
+        )
+        XCTAssertFalse(
+            FlowHostAckGatePolicy.shouldDropProcessingGate(
+                ackUtteranceId: live,
+                currentUtteranceId: live,
+                isUtteranceProcessing: false
+            )
+        )
+        XCTAssertFalse(
+            FlowHostAckGatePolicy.shouldDropProcessingGate(
+                ackUtteranceId: live,
+                currentUtteranceId: UUID(),
+                isUtteranceProcessing: true
+            ),
+            "must not clobber a newer utterance"
+        )
+        XCTAssertFalse(
+            FlowHostAckGatePolicy.shouldDropProcessingGate(
+                ackUtteranceId: live,
+                currentUtteranceId: nil,
+                isUtteranceProcessing: true
+            )
         )
     }
 
@@ -368,6 +522,61 @@ final class FlowKeyboardPoliciesTests: XCTestCase {
                 recordingState: .recording
             ),
             .none
+        )
+    }
+}
+
+// MARK: - Empty tap skip
+
+extension FlowKeyboardPoliciesTests {
+    func testEmptyTapSkipRequiresShortDuration() {
+        XCTAssertTrue(
+            FlowEmptyTapSkipPolicy.shouldSkip(
+                durationSeconds: 0.2,
+                sampleCount: 0,
+                peakAmplitude: nil
+            )
+        )
+        XCTAssertFalse(
+            FlowEmptyTapSkipPolicy.shouldSkip(
+                durationSeconds: 0.35,
+                sampleCount: 0,
+                peakAmplitude: nil
+            )
+        )
+    }
+
+    func testEmptyTapSkipTreatsMissingSamplesAsSilence() {
+        XCTAssertTrue(
+            FlowEmptyTapSkipPolicy.shouldSkip(
+                durationSeconds: 0.1,
+                sampleCount: 16,
+                peakAmplitude: nil
+            )
+        )
+    }
+
+    func testEmptyTapSkipKeepsShortSpeech() {
+        XCTAssertFalse(
+            FlowEmptyTapSkipPolicy.shouldSkip(
+                durationSeconds: 0.2,
+                sampleCount: 3_200,
+                peakAmplitude: 0.2
+            )
+        )
+    }
+
+    func testEmptyTapSkipDropsShortSilence() {
+        XCTAssertTrue(
+            FlowEmptyTapSkipPolicy.shouldSkip(
+                durationSeconds: 0.2,
+                sampleCount: 3_200,
+                peakAmplitude: 0.001
+            )
+        )
+        XCTAssertEqual(
+            FlowEmptyTapSkipPolicy.peakAbs([0.001, -0.004, 0.002]),
+            0.004
         )
     }
 }

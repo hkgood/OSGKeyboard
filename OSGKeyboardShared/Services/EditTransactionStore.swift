@@ -21,6 +21,8 @@ public struct HistoryMutation: Codable, Equatable, Sendable, Identifiable {
     public let sequence: Int64
     public let action: Action
     public let entryID: UUID
+    /// Optimistic-lock revision; a mismatch preserves the edit as a new row
+    /// instead of overwriting a newer history value.
     public let expectedRevision: Int64?
     public let text: String?
     public let engineMode: String?
@@ -53,6 +55,8 @@ public struct HistoryMutation: Codable, Equatable, Sendable, Identifiable {
     }
 }
 
+/// Durable FIFO between the extension and host. Enqueue is idempotent by
+/// mutation ID; the host removes an item only after applying and acknowledging it.
 public enum HistoryMutationOutbox {
     private static let key = "editLastInput.historyMutations.v1"
     public static func enqueue(
@@ -163,6 +167,8 @@ public struct PendingTextEditTransaction: Codable, Equatable, Sendable {
         case append
     }
 
+    /// Crash-recovery ordering: persist `prepared` before touching the field,
+    /// then `fieldApplied` before enqueueing history, and `committed` last.
     public enum Phase: String, Codable, Sendable {
         case prepared
         case fieldApplied

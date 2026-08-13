@@ -4,8 +4,8 @@
 // Typeless-inspired keyboard surface. The keyboard is laid out in three
 // vertical bands, but the entire height is reserved for us — we set
 // `KeyboardViewController` drives height on `view` (priority 999) and mirrors
-// `KeyboardLayoutMetrics.totalHeight` in SwiftUI — see presentation offset
-// in `applyPresentationHeightOffset()`.
+// `KeyboardLayoutMetrics.totalHeight` in SwiftUI — the input view is bottom-
+// anchored so a transient over-tall system container cannot float the chrome.
 //
 //   ┌───────────────────────────────────────────┐
 //   │  [OSG]                  语音 中文 EN 译     │  ← header band (top)
@@ -22,8 +22,8 @@ import OSGKeyboardShared
 private enum KeyboardLayoutMetrics {
     static let micSize: CGFloat = 121
     static let micToButtonGap: CGFloat = 8
-    /// Square undo key beside the mic (outer edge, aligned with delete).
-    static let undoButtonSize: CGFloat = 44
+    /// Circular undo / translation keys beside the mic (outer edge).
+    static let undoButtonSize: CGFloat = 52
     static let bottomActionRowHeight: CGFloat = KeyboardChromeLayout.actionKeyHeight
     static let bottomActionSpacing: CGFloat = KeyboardChromeLayout.actionKeySpacing
     /// Gap between the top control row and the transcript / hint line.
@@ -215,26 +215,41 @@ public struct KeyboardRootView: View {
     // MARK: - Top bar
 
     private var topBar: some View {
-        HStack(spacing: Spacing.xs) {
-            KeyboardBrandLogo(action: state.openSettings)
-            // Globe key now lives at the bottom-left of the keyboard (matching
-            // iOS system layout); see micActionRow's bottom HStack.
-            // Engine controls remain available in the host app.
-            // App context is auto-detected on each mic press — no UI.
-            Spacer(minLength: 0)
+        Group {
             if state.canCancelVoiceInput {
-                KeyboardCancelButton(
-                    action: state.cancelVoiceInput,
-                    accessibilityLabel: ExtL10n.text("keyboard.voice.cancel"),
-                    accessibilityHint: ExtL10n.text("keyboard.voice.cancelHint")
+                HStack(spacing: Spacing.xs) {
+                    KeyboardBrandLogo(action: state.openSettings)
+                    Spacer(minLength: 0)
+                    KeyboardCancelButton(
+                        action: state.cancelVoiceInput,
+                        accessibilityLabel: ExtL10n.text("keyboard.voice.cancel"),
+                        accessibilityHint: ExtL10n.text("keyboard.voice.cancelHint")
+                    )
+                }
+            } else if shouldShowClipboardSuggestion {
+                // Occupies the logo + capsule-tab slot until dismissed.
+                ClipboardSuggestionBar(
+                    text: state.clipboardSuggestionText ?? "",
+                    onInsert: {
+                        if let text = state.clipboardSuggestionText {
+                            state.insertClipboardText(text)
+                        }
+                    },
+                    onDismiss: state.dismissClipboardSuggestion
                 )
             } else {
-                KeyboardTopControls(
-                    state: state,
-                    typing: typing,
-                    palette: palette,
-                    onInsert: onInsert
-                )
+                HStack(spacing: Spacing.xs) {
+                    KeyboardBrandLogo(action: state.openSettings)
+                    // Globe key now lives at the bottom-left of the keyboard (matching
+                    // iOS system layout); see micActionRow's bottom HStack.
+                    Spacer(minLength: 0)
+                    KeyboardTopControls(
+                        state: state,
+                        typing: typing,
+                        palette: palette,
+                        onInsert: onInsert
+                    )
+                }
             }
         }
         .padding(.horizontal, KeyboardTopBarMetrics.horizontalInset)
@@ -269,6 +284,10 @@ public struct KeyboardRootView: View {
                                 disabled: editingBlocked || !state.undoAvailable,
                                 visible: undoVisible
                             )
+                        } else {
+                            // Right-handed undo is on the trailing pad; put
+                            // translation on the leading (mic-left) side.
+                            translationButton(visible: undoVisible)
                         }
                     }
 
@@ -277,6 +296,7 @@ public struct KeyboardRootView: View {
                     level: state.level,
                     remainingSeconds: state.phase == .recording ? state.utteranceRemainingSeconds : nil,
                     isEnabled: micButtonEnabled,
+                    usesLiquidGlass: true,
                     onToggle: state.tapMic,
                     onPressingChanged: micButtonEnabled
                         ? state.setMicTouchActive
@@ -297,6 +317,10 @@ public struct KeyboardRootView: View {
                                 disabled: editingBlocked || !state.undoAvailable,
                                 visible: undoVisible
                             )
+                        } else {
+                            // Default: translation sits on the mic's right,
+                            // symmetric with undo on the left.
+                            translationButton(visible: undoVisible)
                         }
                     }
             }
@@ -395,13 +419,15 @@ public struct KeyboardRootView: View {
         .frame(height: KeyboardLayoutMetrics.bottomActionRowHeight)
     }
 
-    /// Square undo key on the outer drag pad — same chrome / haptic / click
+    /// Circular undo key on the outer drag pad — same chrome / haptic / click
     /// as space & return. Vertically matches the mic disc.
     private func undoButton(disabled: Bool, visible: Bool) -> some View {
         RectangularToolbarButton(
             systemName: "arrow.uturn.backward",
             label: ExtL10n.string("keyboard.undoA11y"),
             disabled: disabled,
+            usesLiquidGlass: true,
+            usesCircleGlass: true,
             hapticIntensity: state.keyboardHapticIntensity
         ) {
             state.undoLastInsertion()
@@ -414,6 +440,30 @@ public struct KeyboardRootView: View {
         .opacity(visible ? 1 : 0)
         .allowsHitTesting(visible && !disabled)
         .accessibilityHidden(!visible)
+    }
+
+    /// Translation chip relocated from the top bar — mirrors undo across the mic.
+    private func translationButton(visible: Bool) -> some View {
+        KeyboardTranslationMenuButton(
+            palette: palette,
+            targetLocaleId: state.translationTargetLocaleId,
+            onSelect: state.setTranslationTargetLocaleId
+        )
+        .equatable()
+        .frame(
+            width: KeyboardLayoutMetrics.undoButtonSize,
+            height: KeyboardLayoutMetrics.undoButtonSize
+        )
+        .offset(y: -KeyboardLayoutMetrics.micUpwardAdjustment)
+        .opacity(visible ? 1 : 0)
+        .allowsHitTesting(visible)
+        .accessibilityHidden(!visible)
+    }
+
+    private var shouldShowClipboardSuggestion: Bool {
+        guard state.canShowClipboardEntry else { return false }
+        guard let text = state.clipboardSuggestionText, !text.isEmpty else { return false }
+        return true
     }
 
     private func bottomSpaceButton(disabled: Bool) -> some View {
@@ -653,99 +703,5 @@ private struct TranscriptLine: View {
         case .mic:    return ExtL10n.string("keyboard.denied.mic")
         case .speech: return ExtL10n.string("keyboard.denied.speech")
         }
-    }
-}
-
-// MARK: - Cloud engine chip (cloud always ASR + LLM polish)
-
-private struct CloudEngineChip: View {
-    @Environment(\.themePalette) private var palette: ThemePalette
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "wand.and.stars")
-            ExtL10n.text("keyboard.placeholder.cloudBadge")
-        }
-        .font(TypeStyle.caption2)
-        .foregroundStyle(palette.accent)
-        .padding(.horizontal, Spacing.xs + 2)
-        .padding(.vertical, 6)
-        .frame(minHeight: 28)
-        .background(palette.accent.opacity(0.15), in: Capsule())
-        .overlay(Capsule().stroke(palette.accent.opacity(0.35), lineWidth: 0.5))
-    }
-}
-
-// MARK: - Local engine chip (shown instead of ModeChip when engineMode == "local")
-
-private struct LocalEngineChip: View {
-    @Environment(\.themePalette) private var palette: ThemePalette
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: "iphone.badge.checkmark")
-            ExtL10n.text("keyboard.placeholder.localBadge")
-        }
-        .font(TypeStyle.caption2)
-        .foregroundStyle(palette.accent)
-        .padding(.horizontal, Spacing.xs + 2)
-        .padding(.vertical, 6)
-        .frame(minHeight: 28)
-        .background(palette.accent.opacity(0.15), in: Capsule())
-        .overlay(Capsule().stroke(palette.accent.opacity(0.35), lineWidth: 0.5))
-    }
-}
-
-// MARK: - Locale chip
-
-private struct LocaleChip: View {
-    @Environment(\.themePalette) private var palette: ThemePalette
-
-    let localeId: String
-    let onChange: (String) -> Void
-
-    private let options: [(id: String, labelKey: String)] = [
-        ("auto",    "locale.chip.auto"),
-        ("zh-Hans", "locale.chip.zh-Hans"),
-        ("zh-Hant", "locale.chip.zh-Hant"),
-        ("en-US",   "locale.chip.en-US"),
-        ("ja-JP",   "locale.chip.ja-JP"),
-        ("ko-KR",   "locale.chip.ko-KR")
-    ]
-
-    var body: some View {
-        Menu {
-            ForEach(options, id: \.id) { o in
-                Button {
-                    onChange(o.id)
-                } label: {
-                    if o.id == localeId {
-                        Label(ExtL10n.string(o.labelKey), systemImage: "checkmark")
-                    } else {
-                        Text(ExtL10n.string(o.labelKey))
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: "globe")
-                Text(currentLabel)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .bold))
-            }
-            .font(TypeStyle.caption2)
-            .foregroundStyle(palette.textPrimary)
-            .padding(.horizontal, Spacing.xs + 2)
-            .padding(.vertical, 6)
-            .frame(minHeight: 28)
-            .background(palette.surfaceElevated, in: Capsule())
-            .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
-        }
-        .menuStyle(.button)
-    }
-
-    private var currentLabel: String {
-        options.first(where: { $0.id == localeId }).map { ExtL10n.string($0.labelKey) }
-            ?? ExtL10n.string("locale.chip.auto")
     }
 }

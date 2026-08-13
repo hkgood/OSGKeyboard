@@ -4,7 +4,7 @@
 // Catalog of target languages the translation feature can produce.
 //
 // Kept deliberately small (~10 entries) to match the kind of choices
-// the user makes in the Settings picker / keyboard chip. We don't try
+// the user makes in the Settings picker / keyboard menu. We don't try
 // to expose every BCP-47 locale — the prompt just needs a target
 // language name, and a curated list reads better than a 100-row scroll.
 //
@@ -25,13 +25,51 @@ public struct TranslationLanguage: Identifiable, Hashable, Sendable {
         self.promptLanguageName = promptLanguageName
         self.nativeName = nativeName
     }
+
+    /// One-character Chinese token for compact chips such as「中译英」.
+    public var chineseShort: String {
+        switch id {
+        case "en": return "英"
+        case "zh-Hans": return "中"
+        case "zh-Hant": return "繁"
+        case "ja": return "日"
+        case "ko": return "韩"
+        case "fr": return "法"
+        case "de": return "德"
+        case "es": return "西"
+        case "ru": return "俄"
+        case "pt": return "葡"
+        default: return nativeName
+        }
+    }
+
+    /// Country-style English code for compact chips such as「To JP」.
+    public var englishShort: String {
+        switch id {
+        case "en": return "EN"
+        case "zh-Hans": return "CN"
+        case "zh-Hant": return "TW"
+        case "ja": return "JP"
+        case "ko": return "KR"
+        case "fr": return "FR"
+        case "de": return "DE"
+        case "es": return "ES"
+        case "ru": return "RU"
+        case "pt": return "PT"
+        default: return id.uppercased()
+        }
+    }
+
+    /// True when this target is a Chinese script (简体 or 繁體).
+    public var isChineseScript: Bool {
+        id == "zh-Hans" || id == "zh-Hant"
+    }
 }
 
 public enum TranslationLanguageCatalog {
     /// Sentinel id for "don't translate" — the default selection in the
     /// picker. Picked over an `Optional<TranslationLanguage>` so the
-    /// single-row `Picker` binding stays a plain `String` (and the same
-    /// code path also works for the `TranslationChip` Menu).
+    /// single-row `Picker` binding and keyboard menu stay a plain `String`.
     public static let offLocaleId = "off"
     /// Default target language id used on fresh installs when translation
     /// is enabled. The picker still defaults to `offLocaleId` — this is
@@ -39,7 +77,7 @@ public enum TranslationLanguageCatalog {
     /// recovered without a remembered target.
     public static let defaultLocaleId = "en"
 
-    /// Curated set. Order matters — the picker / chip render top-to-
+    /// Curated set. Order matters — the picker / menu render top-to-
     /// bottom, with `offLocaleId` ("不翻译") at the very top so the
     /// "turn off" action is one tap away from any enabled state.
     public static let all: [TranslationLanguage] = [

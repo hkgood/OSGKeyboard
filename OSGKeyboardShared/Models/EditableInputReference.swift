@@ -60,7 +60,8 @@ public struct EditableInputReference: Codable, Equatable, Sendable {
         now >= expiresAt
     }
 
-    /// Rebuilt extensions must prove the entire insertion is still at the caret.
+    /// Rebuilt extensions must match the complete inserted string at the caret
+    /// and, when captured, the same field fingerprint; a suffix sample is insufficient.
     public func isFullyVerified(
         contextBeforeInput: String?,
         fieldFingerprint: String?
@@ -75,6 +76,9 @@ public struct EditableInputReference: Codable, Equatable, Sendable {
     }
 }
 
+/// App Group cache shared across extension instances. Loads evict references
+/// after their TTL; callers must never save secure-field text because this is
+/// cross-process persistence, not protected credential storage.
 public enum EditableInputReferenceStore {
     private static let key = "editLastInput.reference.v1"
 

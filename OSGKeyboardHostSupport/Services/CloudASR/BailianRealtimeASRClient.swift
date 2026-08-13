@@ -1,5 +1,5 @@
 // BailianRealtimeASRClient.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // Alibaba Cloud Bailian / DashScope realtime ASR over the classic inference
 // WebSocket (`/api-ws/v1/inference`). Utterance-level duplex session with
@@ -145,6 +145,8 @@ struct BailianRealtimeASRClient: CloudASRTranscribing, CloudASRStreamingCapable 
     static func sendText(_ text: String, task: URLSessionWebSocketTask) async throws {
         do {
             try await task.send(.string(text))
+        } catch where ProviderToolCancellation.matches(error) {
+            throw CancellationError()
         } catch {
             throw CloudASRError.transport(error.localizedDescription)
         }
@@ -153,6 +155,8 @@ struct BailianRealtimeASRClient: CloudASRTranscribing, CloudASRStreamingCapable 
     static func sendBinary(_ data: Data, task: URLSessionWebSocketTask) async throws {
         do {
             try await task.send(.data(data))
+        } catch where ProviderToolCancellation.matches(error) {
+            throw CancellationError()
         } catch {
             throw CloudASRError.transport(error.localizedDescription)
         }

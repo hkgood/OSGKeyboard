@@ -16,6 +16,13 @@ import UIKit
 public final class KeyboardState: ObservableObject {
     public init() {}
 
+    /// Full-height clipboard UI layered over the active keyboard surface.
+    public enum ClipboardKeyboardOverlay: Equatable {
+        case none
+        case enableGuide
+        case historyPanel
+    }
+
     /// Pipeline phase. Errors are structured so the UI layer can choose
     /// the right icon / copy for each failure mode without
     /// reverse-parsing a free-form string.
@@ -111,13 +118,13 @@ public final class KeyboardState: ObservableObject {
     /// keyboard never assumes the audio-uploading engine before the App
     /// Group config has been read.
     @Published public var engineMode: String = "local"
-    /// v0.2.1 follow-up: derived — translation is on iff a target
+    /// Derived: translation is on iff a target
     /// locale has been selected (mirrors `ProviderConfig.translationEnabled`
     /// so the chip / pipeline read the same source of truth).
     public var translationEnabled: Bool {
         translationTargetLocaleId != TranslationLanguageCatalog.offLocaleId
     }
-    /// v0.2.1: target locale id the translate-and-polish prompt should
+    /// Target locale id the translate-and-polish prompt should
     /// produce (e.g. `"en"`, `"ja"`). Mirrored from `ProviderConfig`.
     /// Defaults to `offLocaleId` so the keyboard boots in the "off"
     /// state on first install.
@@ -129,6 +136,22 @@ public final class KeyboardState: ObservableObject {
     @Published public var returnKeyRole: ReturnKeyRole = .newline
     /// Press-and-drag pads beside the mic for four-way caret movement.
     @Published public var cursorDragNavigationEnabled: Bool = true
+    /// Opt-in clipboard history capture (mirrored from App Group).
+    @Published public var clipboardHistoryEnabled: Bool = false
+    /// Opt-in clipboard suggestion strip (requires history enabled).
+    @Published public var clipboardCandidateBarEnabled: Bool = false
+    /// Host field is a password / secure entry — never read pasteboard.
+    @Published public var isSecureTextEntry: Bool = false
+    /// Secure fields hide every clipboard-history entry point.
+    public var canShowClipboardEntry: Bool {
+        !isSecureTextEntry
+    }
+    /// Full-keyboard clipboard overlay (enable guide or history list).
+    @Published public var clipboardOverlay: ClipboardKeyboardOverlay = .none
+    /// Suggestion strip above keys (newest clipboard item).
+    @Published public var clipboardSuggestionText: String?
+    /// Pasteboard changeCount associated with the current suggestion (for dismiss).
+    @Published public var clipboardSuggestionChangeCount: Int?
     /// Typing-grid haptic strength (off / light / strong).
     @Published public var keyboardHapticIntensity: KeyboardHapticIntensity = .default
     /// Single source of truth for selecting iPad-scale keyboard metrics.
@@ -156,7 +179,7 @@ public final class KeyboardState: ObservableObject {
     @Published public var cutAvailable: Bool = false
     /// Closed state machine for long-press editing of the last insertion.
     @Published public var editSession: EditSessionState = .inactive
-    /// Temporary AI conversation UI state. The host owns the actual messages.
+    /// AI conversation UI state for the keyboard surface. The host owns the actual messages.
     @Published public var aiSession: AISessionState = .inactive
     @Published public var editCanReplaceOriginal: Bool = false
     /// Short idle feedback (availability, expiry, missing LLM).
@@ -168,11 +191,17 @@ public final class KeyboardState: ObservableObject {
         translationEnabled
     }
 
-    /// Whether the keyboard top-bar translation chip should render.
-    public var isTranslationChipVisible: Bool { true }
-
     /// Convenience shorthand used by the pipeline and views.
     public var isLocalEngine: Bool { engineMode == "local" }
+
+    /// Applies the non-persistent secure-field UI policy immediately.
+    public func setSecureTextEntry(_ isSecure: Bool) {
+        isSecureTextEntry = isSecure
+        guard isSecure else { return }
+        clipboardSuggestionText = nil
+        clipboardSuggestionChangeCount = nil
+        clipboardOverlay = .none
+    }
 
     // MARK: - Host-app onboarding gate
 
@@ -193,47 +222,6 @@ public final class KeyboardState: ObservableObject {
         }
     }
 
-    // MARK: - Temporary Flow debug (remove after orange-mic investigation)
-
-    /// Mirrored from `KeyboardFlowCoordinator` for the on-screen debug panel.
-    @Published public var debugPendingFlowStart: Bool = false
-    @Published public var debugFlowRecording: Bool = false
-    @Published public var debugAwaitingFlowResult: Bool = false
-    @Published public var debugHasFullAccess: Bool = false
-
-    /// Snapshot for the keyboard debug panel.
-    public func makeFlowDebugRows(hasFullAccess: Bool) -> [FlowDebugRow] {
-        debugHasFullAccess = hasFullAccess
-        let micLabel: String = {
-            switch micVoiceAvailability {
-            case .ready: return "ready"
-            case .recording: return "recording"
-            case .processing: return "processing"
-            case .unavailable(let reason):
-                switch reason {
-                case .hostNotReady: return "unavailable(hostNotReady)"
-                case .preparingSession: return "unavailable(preparingSession)"
-                case .noFullAccess: return "unavailable(noFullAccess)"
-                case .appGroupUnavailable: return "unavailable(appGroupUnavailable)"
-                case .missingAPIKey: return "unavailable(missingAPIKey)"
-                case .onboardingIncomplete: return "unavailable(onboardingIncomplete)"
-                }
-            }
-        }()
-        let localRows: [FlowDebugRow] = [
-            FlowDebugRow("mic", micLabel),
-            FlowDebugRow("phase", String(describing: phase)),
-            FlowDebugRow("pendingStart", debugPendingFlowStart ? "1" : "0"),
-            FlowDebugRow("kb.recording", debugFlowRecording ? "1" : "0"),
-            FlowDebugRow("kb.awaiting", debugAwaitingFlowResult ? "1" : "0"),
-            FlowDebugRow("fullAccess", hasFullAccess ? "1" : "0"),
-            FlowDebugRow("micDisabled", micDisabled ? "1" : "0"),
-            FlowDebugRow("flowSessionPub", flowSessionActive ? "1" : "0"),
-            FlowDebugRow("engine", engineMode)
-        ]
-        return localRows + FlowDebugAppGroupSnapshot.rows()
-    }
-
     // Action hooks — injected by the view controller at install time.
     public var beginRecording:      () -> Void = {}
     public var endRecording:        () -> Void = {}
@@ -249,10 +237,25 @@ public final class KeyboardState: ObservableObject {
     public var tapAIMic: () -> Void = {}
     public var cancelAIInput: () -> Void = {}
     public var sendAIAnswer: () -> Void = {}
+    /// Sends a tapped idle hint card as the AI question (skip microphone).
+    public var submitAIHint: (AIHintCard) -> Void = { _ in }
+    /// Sends a clipboard skill (reply / summarize / translate / future).
+    public var submitAIClipboardSkill: (AIClipboardSkill) -> Void = { _ in }
     public var openSettings:        () -> Void = {}
     /// Opens the host app straight to input-resource deployment. Used by the
     /// typing surface when Rime resources have not been deployed yet.
     public var openInputMethodSetup: () -> Void = {}
+    /// Opens the host app Settings → Clipboard page (enable history toggle).
+    public var openClipboardSettings: () -> Void = {}
+    /// Top-bar clipboard button: guide when history off, else history panel.
+    public var openClipboardPanel: () -> Void = {}
+    public var dismissClipboardOverlay: () -> Void = {}
+    public var insertClipboardText: (String) -> Void = { _ in }
+    public var dismissClipboardSuggestion: () -> Void = {}
+    public var clearClipboardHistory: () -> Void = {}
+    public var deleteClipboardHistoryEntry: (UUID) -> Void = { _ in }
+    /// Notify that the user inserted text (hides suggestion strip).
+    public var noteUserDidInputText: () -> Void = {}
     /// System globe (🌐) key target. Kept weak to avoid a state → controller
     /// ownership cycle; UIKit's standard all-touch-events action provides both
     /// tap-to-advance and long-press input-mode selection.
@@ -261,7 +264,7 @@ public final class KeyboardState: ObservableObject {
     public var setMode:             (InputMode) -> Void = { _ in }
     public var setLocale:           (String) -> Void = { _ in }
     public var setEngineMode:        (String) -> Void = { _ in }
-    /// v0.2.1 follow-up: only the locale picker remains — `enabled`
+    /// Only the locale picker remains; `enabled`
     /// is derived from the locale id, so there's no separate toggle to
     /// persist. Wired in `KeyboardViewController.installStateActions`.
     public var setTranslationTargetLocaleId: (String) -> Void = { _ in }
@@ -302,8 +305,9 @@ public final class KeyboardState: ObservableObject {
         surface == .ai && aiSession.isBusy
     }
 
-    /// Normal dictation can be discarded from initial microphone startup
-    /// through ASR / polish processing. Edit mode owns its separate close flow.
+    /// Normal dictation can be discarded from microphone startup through
+    /// ASR / polish, including the abort-wait after Cancel until the host
+    /// acks (coordinator keeps `phase == .processing` for that window).
     public var canCancelVoiceInput: Bool {
         guard !editSession.isActive else { return false }
         switch phase {
@@ -359,6 +363,8 @@ extension KeyboardState.Phase.ErrorKind {
             return .hostAudioUnavailable
         case .asrFailed, .generic:
             return .hostTranscriptionFailed(error.message)
+        case .discardedEmpty:
+            return .noSpeechDetected
         }
     }
 }

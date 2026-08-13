@@ -122,6 +122,11 @@ final class LLMClientTests: XCTestCase {
         XCTAssertEqual(body["max_tokens"] as? Int, 256)
     }
 
+    func testTokenEstimateCountsHanScalarsAndGroupsOtherText() {
+        XCTAssertEqual(LLMRequest.estimatedTokenCount(for: "你好abcd"), 3)
+        XCTAssertEqual(LLMRequest.estimatedTokenCount(for: "こんにちは"), 2)
+    }
+
     func testLLMResponseDecodesCachedPromptUsage() throws {
         let data = """
         {
@@ -356,7 +361,8 @@ final class LLMClientTests: XCTestCase {
 
         let counter = CallCounter()
         let countingClient = CountingLLMClient(counter: counter) { raw, _ in
-            "POLISHED: \(raw)"
+            XCTAssertEqual(raw, PolishPromptComposer.dictationUserPayload("hello world"))
+            return "POLISHED: hello world"
         }
 
         let store = AppGroupStore(defaults: defaults)
@@ -384,7 +390,8 @@ final class LLMClientTests: XCTestCase {
 
         let counter = CallCounter()
         let countingClient = CountingLLMClient(counter: counter) { raw, _ in
-            "POLISHED: \(raw)"
+            XCTAssertEqual(raw, PolishPromptComposer.dictationUserPayload("hello world"))
+            return "POLISHED: hello world"
         }
 
         let store = AppGroupStore(defaults: defaults)
@@ -400,8 +407,7 @@ final class LLMClientTests: XCTestCase {
         XCTAssertEqual(calls, 1, "local engine must always invoke the polish LLM step")
     }
 
-    /// Local engine pins DeepSeek — cloud-provider URL/model in App Group
-    /// must not leak into the LLM request (regression: Qwen URL + DeepSeek key → 401).
+    /// Anthropic provider selection must construct the Messages API client.
     func testLLMClientFactoryRoutesAnthropic() {
         let client = LLMClientFactory.make(
             providerId: "anthropic",
@@ -516,7 +522,7 @@ final class LLMClientTests: XCTestCase {
         XCTAssertEqual(cloud.model, "qwen-plus", "cloud engine must keep user model")
     }
 
-    func testTranslationChipVisibleWithoutTargetLocale() {
+    func testTranslationIsInactiveWithoutTargetLocale() {
         let suiteName = "group.com.osgkeyboard.shared.tests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
@@ -525,13 +531,11 @@ final class LLMClientTests: XCTestCase {
         defaults.set("cloud", forKey: "config.engineMode")
         defaults.set(TranslationLanguageCatalog.offLocaleId, forKey: "config.translationTargetLocaleId")
         let cloudStore = AppGroupStore(defaults: defaults)
-        XCTAssertTrue(cloudStore.isTranslationChipVisible)
         XCTAssertFalse(cloudStore.isTranslationEffective)
 
         defaults.set("local", forKey: "config.engineMode")
         defaults.set(TranslationLanguageCatalog.offLocaleId, forKey: "config.translationTargetLocaleId")
         let localStore = AppGroupStore(defaults: defaults)
-        XCTAssertTrue(localStore.isTranslationChipVisible)
         XCTAssertFalse(localStore.isTranslationEffective)
     }
 

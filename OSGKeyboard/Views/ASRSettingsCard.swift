@@ -22,7 +22,13 @@ struct ASRSettingsCard: View {
                 genericRows
             }
             rowDivider
-            SettingsProviderToolsRow(validate: validateConnection)
+            SettingsProviderToolsRow(
+                providerIdentity: config.asrProviderId,
+                endpointIdentity: config.asrBaseURL,
+                credentialIdentity: config.asrApiKey,
+                modelIdentity: config.asrModel,
+                makeValidateRequest: makeValidateRequest
+            )
         }
         .surfaceCard(enabled: showsSurface)
     }
@@ -51,7 +57,10 @@ struct ASRSettingsCard: View {
             title: AppL10n.string("settings.asr.model"),
             placeholder: CloudASRModelCatalog.defaultModel(for: config.asrProviderId),
             model: $config.asrModel,
-            fetchModels: fetchModels
+            providerIdentity: config.asrProviderId,
+            endpointIdentity: config.asrBaseURL,
+            credentialIdentity: config.asrApiKey,
+            makeFetchModelsRequest: makeFetchModelsRequest
         )
         .id(config.asrProviderId)
     }
@@ -108,16 +117,6 @@ struct ASRSettingsCard: View {
                     isMonospaced: true
                 )
             }
-
-            rowDivider
-            SettingsProviderRow(title: AppL10n.string("settings.provider.note")) {
-                Text(volcengineFields.usesAPIKeyAuth
-                     ? "settings.asr.volcengine.note.apiKey"
-                     : "settings.asr.volcengine.note.appToken")
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textTertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
         }
     }
 
@@ -152,18 +151,29 @@ struct ASRSettingsCard: View {
         config.asrApiKey = fields.encodedAPIKey
     }
 
-    private func validateConnection() async throws {
+    @MainActor
+    private func makeValidateRequest() -> ProviderToolRequest<Void> {
         let persisted = AppGroupStore()
-        let live = LiveConfigurationStore(config: config, fallback: persisted)
-        try await CloudASRConnectionCheck.validate(store: live)
+        let store = LiveConfigurationStore(config: config, fallback: persisted)
+        let providerID = config.asrProviderId
+        return ProviderToolRequest(providerIdentity: providerID) {
+            try await CloudASRConnectionCheck.validate(store: store)
+        }
     }
 
-    private func fetchModels() async throws -> [String] {
-        try await ProviderModelService.listASRModels(
-            providerId: config.asrProviderId,
-            baseURL: config.asrBaseURL,
-            apiKey: config.asrApiKey,
-            currentModel: config.asrModel
-        )
+    @MainActor
+    private func makeFetchModelsRequest() -> ProviderToolRequest<[String]> {
+        let providerID = config.asrProviderId
+        let baseURL = config.asrBaseURL
+        let apiKey = config.asrApiKey
+        let currentModel = config.asrModel
+        return ProviderToolRequest(providerIdentity: providerID) {
+            try await ProviderModelService.listASRModels(
+                providerId: providerID,
+                baseURL: baseURL,
+                apiKey: apiKey,
+                currentModel: currentModel
+            )
+        }
     }
 }

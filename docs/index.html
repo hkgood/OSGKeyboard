@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>OSGKeyboard — 开口即文字 · iOS &amp; Mac 语音输入 / 听写键盘</title>
-  <meta name="description" content="OSGKeyboard 是免费开源的 iPhone / iPad / Mac 语音输入与听写键盘：默认本地识别、BYOK AI 润色、个性词库。开口即文字，避免重复订阅。">
-  <meta name="keywords" content="OSGKeyboard, 语音输入, 听写键盘, iOS 语音键盘, Mac 听写, 本地语音识别, BYOK, 开源听写, Typeless 替代, Superwhisper 替代, privacy dictation, voice keyboard">
+  <meta name="description" content="OSGKeyboard 是源码可见的 iPhone / iPad / Mac 语音输入与听写键盘：默认本地识别、BYOK AI 润色、个性词库。开口即文字，避免重复订阅。">
+  <meta name="keywords" content="OSGKeyboard, 语音输入, 听写键盘, iOS 语音键盘, Mac 听写, 本地语音识别, BYOK, 源码可见听写, Typeless 替代, Superwhisper 替代, privacy dictation, voice keyboard">
   <meta name="author" content="OSGKeyboard / Extreme Pocket">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <meta name="theme-color" content="#0a0a0b" media="(prefers-color-scheme: dark)">
@@ -20,14 +20,14 @@
   <meta property="og:site_name" content="OSGKeyboard">
   <meta property="og:locale" content="zh_CN">
   <meta property="og:locale:alternate" content="en_US">
-  <meta property="og:title" content="OSGKeyboard — 开口即文字 · 开源语音输入">
-  <meta property="og:description" content="免费 · 跨端 · 开源 · 隐私优先 · BYOK。语音默认留在本机，AI 润色用你自己的 Key。">
+  <meta property="og:title" content="OSGKeyboard — 开口即文字 · 源码可见语音输入">
+  <meta property="og:description" content="免费核心功能 · 跨端 · 源码可见 · 隐私优先 · BYOK。语音默认留在本机，AI 润色用你自己的 Key。">
   <meta property="og:url" content="https://hkgood.github.io/OSGKeyboard/">
   <meta property="og:image" content="https://hkgood.github.io/OSGKeyboard/assets/screenshots/zh/dark/mac-dashboard.png">
   <meta property="og:image:alt" content="OSGKeyboard Mac 与 iOS 界面预览">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="OSGKeyboard — 开口即文字">
-  <meta name="twitter:description" content="免费开源跨端语音输入。本地识别，BYOK 润色。iPhone、iPad、Mac。">
+  <meta name="twitter:description" content="源码可见的跨端语音输入。本地识别，BYOK 润色。iPhone、iPad、Mac。">
   <meta name="twitter:image" content="https://hkgood.github.io/OSGKeyboard/assets/screenshots/zh/dark/mac-dashboard.png">
   <script type="application/ld+json">
   {
@@ -38,7 +38,7 @@
         "@id": "https://hkgood.github.io/OSGKeyboard/#website",
         "url": "https://hkgood.github.io/OSGKeyboard/",
         "name": "OSGKeyboard",
-        "description": "Free open-source voice input for iPhone, iPad, and Mac. On-device recognition, BYOK AI polish.",
+        "description": "Source-available voice input for iPhone, iPad, and Mac. On-device recognition, BYOK AI polish.",
         "inLanguage": ["zh-Hans", "en"],
         "publisher": { "@id": "https://hkgood.github.io/OSGKeyboard/#org" }
       },
@@ -59,7 +59,7 @@
         "@id": "https://hkgood.github.io/OSGKeyboard/#app",
         "name": "OSGKeyboard",
         "alternateName": ["OSG Keyboard", "开口即文字"],
-        "operatingSystem": "iOS 26+, iPadOS 26+, macOS 26+",
+        "operatingSystem": "iOS 26+, iPadOS 26+, macOS 15+",
         "applicationCategory": "UtilitiesApplication",
         "applicationSubCategory": "Voice Dictation Keyboard",
         "url": "https://hkgood.github.io/OSGKeyboard/",
@@ -67,8 +67,8 @@
         "installUrl": "https://apps.apple.com/app/osgkeyboard/id6781553267",
         "image": "https://hkgood.github.io/OSGKeyboard/assets/app-icon.png",
         "screenshot": "https://hkgood.github.io/OSGKeyboard/assets/hero-devices.png",
-        "description": "Free open-source voice input for iPhone, iPad, and Mac. On-device speech recognition by default, BYOK AI polish, personal dictionary, and Mac global hotkey dictation.",
-        "softwareVersion": "0.5.4",
+        "description": "Source-available voice input for iPhone, iPad, and Mac. On-device speech recognition by default, BYOK AI polish, personal dictionary, and Mac global hotkey dictation.",
+        "softwareVersion": "1.7.5",
         "isAccessibleForFree": true,
         "offers": {
           "@type": "Offer",
@@ -83,7 +83,9 @@
           "On-device speech recognition",
           "Custom iOS keyboard extension",
           "Mac global Option-key dictation",
+          "Qwen3 MLX streaming ASR on Mac with Apple Speech fallback",
           "BYOK AI text polish",
+          "Voice AI questions with explicit insert and send actions",
           "Personal dictionary with optional iCloud sync",
           "Dictation history"
         ]
@@ -113,7 +115,7 @@
             "name": "支持哪些设备？",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "iPhone、iPad（自定义键盘）与 Mac（菜单栏全局听写，按住 Option）。需要较新的系统版本（iOS/iPadOS/macOS 26+）。"
+              "text": "iPhone、iPad（自定义键盘）与 Mac（菜单栏全局听写，按住 Option）。需要 iOS/iPadOS 26+ 或 macOS 15+。"
             }
           },
           {
@@ -121,7 +123,7 @@
             "name": "和 Typeless、Superwhisper 有什么不同？",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "OSGKeyboard 开源、本地模式完全免费、支持 iPhone/iPad/Mac，并用 BYOK 接入你已有的 LLM 额度，避免再开一份听写订阅。见本页产品对比表。"
+              "text": "OSGKeyboard 源码可见、本地模式免费、支持 iPhone/iPad/Mac，并用 BYOK 接入你已有的 LLM 额度。源码许可仅允许个人非商用本地使用。"
             }
           }
         ]
@@ -925,16 +927,16 @@
         <div class="hero-copy">
           <div class="eyebrow">
             <span class="material-symbols-outlined" aria-hidden="true">graphic_eq</span>
-            <span data-i18n="hero.eyebrow">Free · Open · Cross-platform</span>
+            <span data-i18n="hero.eyebrow">Source Available · Cross-platform</span>
           </div>
           <h1 data-i18n="hero.title">开口即文字</h1>
-          <p class="lead" data-i18n="hero.lead">免费开源的跨端语音输入。本地识别，自带 API Key 润色，避免重复订阅。iPhone、iPad、Mac — 说完即落字。</p>
+          <p class="lead" data-i18n="hero.lead">源码可见的跨端语音输入。本地识别，自备 API Key 润色。iPhone、iPad、Mac — 说完即落字。</p>
           <div class="hero-cta">
             <a class="store-badge" id="heroStoreBadge" href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267" rel="noopener" aria-label="Download for iPhone and iPad">
               <img id="heroStoreBadgeImg" src="assets/badges/ios-zh.svg" width="144" height="40" alt="立即下载 App Store 版">
             </a>
-            <a class="store-badge" href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg" rel="noopener" aria-label="Download for macOS">
-              <img class="macos-badge-img" src="assets/badges/macos-zh.svg" width="144" height="40" alt="立即下载 macOS 版本">
+            <a class="store-badge" href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg" rel="noopener" aria-label="Download historical macOS version 1.1" title="Historical macOS version 1.1">
+              <img class="macos-badge-img" src="assets/badges/macos-zh.svg" width="144" height="40" alt="下载 macOS 历史版本 1.1">
             </a>
             <a class="btn btn-ghost" href="https://github.com/hkgood/OSGKeyboard" rel="noopener">
               <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
@@ -958,7 +960,7 @@
     <section class="block" id="why">
       <div class="wrap">
         <div class="block-head reveal">
-          <h2 data-i18n="diff.title">开源，尽是不同</h2>
+          <h2 data-i18n="diff.title">源码可见，边界清晰</h2>
           <p data-i18n="diff.subtitle">差异写在产品里，不写在定价页。切换下方主题，看清每一项。</p>
         </div>
         <div class="diff-explorer reveal">
@@ -973,7 +975,7 @@
           </button>
           <button type="button" class="pillar" role="tab" id="tab-open" aria-selected="false" aria-controls="panel-open" data-pillar="open" tabindex="-1">
             <span class="material-symbols-outlined" aria-hidden="true">code</span>
-            <span data-i18n="diff.open.t">开源</span>
+            <span data-i18n="diff.open.t">源码可见</span>
           </button>
           <button type="button" class="pillar" role="tab" id="tab-privacy" aria-selected="false" aria-controls="panel-privacy" data-pillar="privacy" tabindex="-1">
             <span class="material-symbols-outlined" aria-hidden="true">shield_lock</span>
@@ -1039,7 +1041,7 @@
           </div>
 
           <div class="pillar-panel" id="panel-open" role="tabpanel" aria-labelledby="tab-open" data-panel="open" hidden>
-            <p class="pillar-panel-kicker" data-i18n="diff.open.k">闭源工具让你相信隐私页；我们让你直接读仓库。</p>
+            <p class="pillar-panel-kicker" data-i18n="diff.open.k">隐私路径可直接审计；使用与分发边界以 Source Available License 为准。</p>
             <div class="pillar-points">
               <div class="pillar-point">
                 <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
@@ -1047,19 +1049,19 @@
                 <p data-i18n="diff.open.1.b">识别、润色、存储路径都在 GitHub，可自行核对。</p>
               </div>
               <div class="pillar-point">
-                <span class="material-symbols-outlined" aria-hidden="true">fork_right</span>
-                <h4 data-i18n="diff.open.2.t">可 fork</h4>
-                <p data-i18n="diff.open.2.b">改键位、换引擎、裁功能——仓库在，路就在。</p>
+                <span class="material-symbols-outlined" aria-hidden="true">build</span>
+                <h4 data-i18n="diff.open.2.t">可本地修改</h4>
+                <p data-i18n="diff.open.2.b">可为个人非商用目的构建和修改；不得未经授权公开分发衍生版本。</p>
               </div>
               <div class="pillar-point">
                 <span class="material-symbols-outlined" aria-hidden="true">gavel</span>
                 <h4 data-i18n="diff.open.3.t">许可清晰</h4>
-                <p data-i18n="diff.open.3.b">开源许可写在仓库里，不是营销口号。</p>
+                <p data-i18n="diff.open.3.b">许可明确写明：源码可见并不等于开源。</p>
               </div>
               <div class="pillar-point">
                 <span class="material-symbols-outlined" aria-hidden="true">build</span>
-                <h4 data-i18n="diff.open.4.t">可自建</h4>
-                <p data-i18n="diff.open.4.b">按文档用 Xcode 编译安装，不依赖我们的商店账号。</p>
+                <h4 data-i18n="diff.open.4.t">可个人自建</h4>
+                <p data-i18n="diff.open.4.b">可按许可用 Xcode 构建，在自己控制的设备上非商用运行。</p>
               </div>
             </div>
           </div>
@@ -1140,11 +1142,11 @@
             </thead>
             <tbody>
               <tr>
-                <th scope="row" data-i18n="vs.row.open">开源</th>
+                <th scope="row" data-i18n="vs.row.open">源码许可</th>
                 <td class="cell-mute" data-i18n="vs.no">—</td>
                 <td class="cell-mute" data-i18n="vs.no">—</td>
                 <td data-i18n="vs.yes">✓</td>
-                <td class="col-osg" data-i18n="vs.yes">✓</td>
+                <td class="col-osg" data-i18n="vs.osg.license">源码可见（非开源）</td>
               </tr>
               <tr>
                 <th scope="row" data-i18n="vs.row.price">付费</th>
@@ -1237,11 +1239,11 @@
           </article>
           <article class="faq-item reveal">
             <h3 data-i18n="faq.3.q">支持哪些设备？</h3>
-            <p data-i18n="faq.3.a">iPhone / iPad 自定义键盘，以及 Mac 菜单栏全局听写（按住 Option）。需 iOS / iPadOS / macOS 26+。</p>
+            <p data-i18n="faq.3.a">iPhone / iPad 自定义键盘，以及 Mac 菜单栏全局听写（按住 Option）。需 iOS / iPadOS 26+ 或 macOS 15+。</p>
           </article>
           <article class="faq-item reveal">
             <h3 data-i18n="faq.4.q">和 Typeless、Superwhisper 有什么不同？</h3>
-            <p data-i18n="faq.4.a">开源、本地免费、手机+Mac 都有，并用 BYOK 复用已有 LLM 额度。见上方对比表。</p>
+            <p data-i18n="faq.4.a">源码可见、本地模式免费、手机+Mac 都有，并用 BYOK 复用已有 LLM 额度。源码许可并非开源许可。</p>
           </article>
         </div>
         <div class="resource-links reveal">
@@ -1257,14 +1259,14 @@
       <div class="wrap reveal">
         <div class="block-head">
           <h2 data-i18n="download.title">立即下载</h2>
-          <p data-i18n="download.subtitle">iPhone / iPad 从 App Store 安装；Mac 直接下载已签名并公证的 DMG。</p>
+          <p data-i18n="download.subtitle">iPhone / iPad 从 App Store 安装；下方 Mac DMG 为已签名并公证的历史版本 1.1。</p>
         </div>
         <div class="platform-downloads">
           <a class="store-badge" id="footerStoreBadge" href="https://apps.apple.com/cn/app/osgkeyboard/id6781553267" rel="noopener" aria-label="Download for iPhone and iPad">
             <img id="footerStoreBadgeImg" src="assets/badges/ios-zh.svg" width="144" height="40" alt="立即下载 App Store 版">
           </a>
-          <a class="store-badge" href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg" rel="noopener" aria-label="Download for macOS">
-            <img class="macos-badge-img" src="assets/badges/macos-zh.svg" width="144" height="40" alt="立即下载 macOS 版本">
+          <a class="store-badge" href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg" rel="noopener" aria-label="Download historical macOS version 1.1" title="Historical macOS version 1.1">
+            <img class="macos-badge-img" src="assets/badges/macos-zh.svg" width="144" height="40" alt="下载 macOS 历史版本 1.1">
           </a>
         </div>
         <div class="hero-cta" style="margin-bottom:0">
@@ -1278,7 +1280,7 @@
 
   <footer>
     <div class="wrap footer-inner">
-      <span data-i18n="footer.copy">© OSGKeyboard · v0.5.4 · 源码可见</span>
+      <span data-i18n="footer.copy">© OSGKeyboard · v1.7.5 · 源码可见（非开源）</span>
       <span class="footer-links">
         <a href="#download" data-i18n="footer.download">Download</a>
         <a href="#start" data-i18n="footer.install">Install</a>
@@ -1294,16 +1296,16 @@
     const copy = {
       en: {
         "nav.github": "GitHub",
-        "hero.eyebrow": "Free · Open · Cross-platform",
+        "hero.eyebrow": "Source Available · Cross-platform",
         "hero.title": "Speak it. It's typed.",
-        "hero.lead": "Free, open-source voice input across iPhone, iPad, and Mac. On-device recognition. Bring your own API key — no double-billing.",
+        "hero.lead": "Source-available voice input across iPhone, iPad, and Mac. On-device recognition. Bring your own API key.",
         "hero.cta.primary": "Get it now",
         "hero.cta.secondary": "View source",
         "hero.meta1": "On-device by default",
         "hero.meta2": "BYOK — no double pay",
         "hero.meta3": "iOS · iPad · Mac",
-        "diff.title": "Open source. Built different.",
-        "diff.subtitle": "Designed into the product — not the pricing page. Switch a theme below to see each difference.",
+        "diff.title": "Source visible. Boundaries clear.",
+        "diff.subtitle": "Inspect the implementation and read the license before building or modifying it.",
         "diff.hint": "Show details",
         "diff.free.t": "Free",
         "diff.free.b": "Core open. No Pro wall.",
@@ -1327,17 +1329,17 @@
         "diff.cross.3.b": "Hold Option to dictate globally; menu bar stays out of your way.",
         "diff.cross.4.t": "Dictionary sync",
         "diff.cross.4.b": "Optional iCloud for terms — turn it off and stay fully local.",
-        "diff.open.t": "Open source",
-        "diff.open.b": "Auditable code. Verifiable trust.",
-        "diff.open.k": "Closed tools ask you to trust a privacy page. We hand you the repo.",
+        "diff.open.t": "Source available",
+        "diff.open.b": "Auditable code. Explicit license.",
+        "diff.open.k": "Audit the privacy path directly; use and distribution remain governed by the Source Available License.",
         "diff.open.1.t": "Auditable",
         "diff.open.1.b": "ASR, polish, and storage paths live on GitHub — inspect them yourself.",
-        "diff.open.2.t": "Forkable",
-        "diff.open.2.b": "Change hotkeys, swap engines, trim features — the code is there.",
+        "diff.open.2.t": "Locally modifiable",
+        "diff.open.2.b": "Personal, non-commercial local changes are allowed; public derivative distribution requires permission.",
         "diff.open.3.t": "Clear license",
-        "diff.open.3.b": "The open-source license is in the repo, not a slogan.",
-        "diff.open.4.t": "Self-build",
-        "diff.open.4.b": "Build with Xcode from the docs — no dependency on our store account.",
+        "diff.open.3.b": "The license states clearly that source available does not mean open source.",
+        "diff.open.4.t": "Personal self-build",
+        "diff.open.4.b": "Build with Xcode for non-commercial use on devices you own or control.",
         "diff.privacy.t": "Privacy",
         "diff.privacy.b": "On-device by default. Audio stays local.",
         "diff.privacy.k": "Local is the default path — privacy isn’t a paid upgrade.",
@@ -1361,8 +1363,8 @@
         "compare.4.t": "Keys stay on-device",
         "compare.4.b": "Stored in Keychain. Never routed through our servers.",
         "vs.title": "How we compare",
-        "vs.subtitle": "Free tiers run out. Subscriptions add up. Open source: local free, cloud on your key.",
-        "vs.row.open": "Open source",
+        "vs.subtitle": "Free tiers run out. Subscriptions add up. OSGKeyboard keeps local mode free and cloud usage on your key.",
+        "vs.row.open": "Source license",
         "vs.row.price": "Pricing",
         "vs.row.local": "On-device ASR",
         "vs.row.byok": "BYOK",
@@ -1370,6 +1372,7 @@
         "vs.yes": "✓",
         "vs.no": "—",
         "vs.partial": "Partial (Pro)",
+        "vs.osg.license": "Source available (not open source)",
         "vs.typeless.price": "≈8,000 words/week free.\nSubscription isn’t cheap: Pro ~$12/mo (annual) / $30/mo (monthly).",
         "vs.superwhisper.price": "Limited free tier.\nPro ~$8.5/mo, lifetime ~$250.",
         "vs.openless.price": "Free app; ASR / polish billed to your key.",
@@ -1390,17 +1393,17 @@
         "faq.2.q": "Does my voice upload to your servers?",
         "faq.2.a": "Not by default. iOS uses on-device ASR; audio leaves the device only if you opt into a cloud engine you configure. Polish sends text, not raw audio.",
         "faq.3.q": "Which devices are supported?",
-        "faq.3.a": "iPhone / iPad custom keyboard, plus Mac menu-bar global dictation (hold Option). Requires iOS / iPadOS / macOS 26+.",
+        "faq.3.a": "iPhone / iPad custom keyboard, plus Mac menu-bar global dictation (hold Option). Requires iOS / iPadOS 26+ or macOS 15+.",
         "faq.4.q": "How is it different from Typeless or Superwhisper?",
-        "faq.4.a": "Open source, free local mode, phone + Mac, and BYOK so you reuse LLM credits you already pay for. See the comparison table above.",
+        "faq.4.a": "Source available, free local mode, phone + Mac, and BYOK so you reuse LLM credits you already pay for. The source license is not open source.",
         "faq.link.install": "Setup in 3 steps →",
         "faq.link.compare": "Product comparison →",
         "faq.link.download": "Download now →",
         "download.title": "Download now",
-        "download.subtitle": "Get iPhone / iPad from the App Store, or download the signed and notarized DMG for Mac.",
+        "download.subtitle": "Get iPhone / iPad from the App Store. The Mac DMG below is the signed and notarized historical version 1.1.",
         "download.install": "Installation steps",
         "download.source": "GitHub source",
-        "footer.copy": "© OSGKeyboard · v0.5.4 · source available",
+        "footer.copy": "© OSGKeyboard · v1.7.5 · source available (not open source)",
         "footer.download": "Download",
         "footer.install": "Setup",
         "footer.compare": "Compare",
@@ -1410,16 +1413,16 @@
       },
       zh: {
         "nav.github": "GitHub",
-        "hero.eyebrow": "免费 · 开源 · 跨端",
+        "hero.eyebrow": "源码可见 · 跨端",
         "hero.title": "开口即文字",
-        "hero.lead": "免费开源的跨端语音输入。本地识别，自带 API Key 润色，避免重复订阅。iPhone、iPad、Mac — 说完即落字。",
+        "hero.lead": "源码可见的跨端语音输入。本地识别，自备 API Key 润色。iPhone、iPad、Mac — 说完即落字。",
         "hero.cta.primary": "立即获取",
         "hero.cta.secondary": "查看源码",
         "hero.meta1": "默认本地识别",
         "hero.meta2": "BYOK 不重复付费",
         "hero.meta3": "iOS · iPad · Mac",
-        "diff.title": "开源，尽是不同",
-        "diff.subtitle": "差异写在产品里，不写在定价页。切换下方主题，看清每一项。",
+        "diff.title": "源码可见，边界清晰",
+        "diff.subtitle": "可直接审计实现；构建与修改前请阅读源码可见许可。",
         "diff.hint": "展开详情",
         "diff.free.t": "免费",
         "diff.free.b": "核心全开，没有 Pro 墙。",
@@ -1443,17 +1446,17 @@
         "diff.cross.3.b": "按住 Option 全局听写，菜单栏常驻，不抢焦点。",
         "diff.cross.4.t": "词库可同步",
         "diff.cross.4.b": "可选 iCloud 同步个性词；关掉也完全能离线用。",
-        "diff.open.t": "开源",
-        "diff.open.b": "代码可审计，信任可验证。",
-        "diff.open.k": "闭源工具让你相信隐私页；我们让你直接读仓库。",
+        "diff.open.t": "源码可见",
+        "diff.open.b": "代码可审计，许可边界明确。",
+        "diff.open.k": "隐私路径可直接审计；使用与分发边界以 Source Available License 为准。",
         "diff.open.1.t": "可审计",
         "diff.open.1.b": "识别、润色、存储路径都在 GitHub，可自行核对。",
-        "diff.open.2.t": "可 fork",
-        "diff.open.2.b": "改键位、换引擎、裁功能——仓库在，路就在。",
+        "diff.open.2.t": "可本地修改",
+        "diff.open.2.b": "可为个人非商用目的构建和修改；不得未经授权公开分发衍生版本。",
         "diff.open.3.t": "许可清晰",
-        "diff.open.3.b": "开源许可写在仓库里，不是营销口号。",
-        "diff.open.4.t": "可自建",
-        "diff.open.4.b": "按文档用 Xcode 编译安装，不依赖我们的商店账号。",
+        "diff.open.3.b": "许可明确写明：源码可见并不等于开源。",
+        "diff.open.4.t": "可个人自建",
+        "diff.open.4.b": "可按许可用 Xcode 构建，在自己控制的设备上非商用运行。",
         "diff.privacy.t": "隐私",
         "diff.privacy.b": "默认本地，录音不上云。",
         "diff.privacy.k": "默认路径就是本地——隐私不是付费升级项。",
@@ -1468,8 +1471,8 @@
         "diff.byok.t": "BYOK",
         "diff.byok.b": "本地免费；云端 Key 自付。",
         "vs.title": "和常见听写工具比一比",
-        "vs.subtitle": "免费额度用着用着就撞墙；订阅不便宜。开源这条路：本地免费，云端 Key 自付。",
-        "vs.row.open": "开源",
+        "vs.subtitle": "免费额度用着用着就撞墙；订阅不便宜。OSGKeyboard 本地模式免费，云端 Key 自付。",
+        "vs.row.open": "源码许可",
         "vs.row.price": "付费",
         "vs.row.local": "可本地识别",
         "vs.row.byok": "BYOK",
@@ -1477,6 +1480,7 @@
         "vs.yes": "✓",
         "vs.no": "—",
         "vs.partial": "部分（Pro）",
+        "vs.osg.license": "源码可见（非开源）",
         "vs.typeless.price": "每周约 8,000 词免费额度。\n订阅不便宜：Pro 约 $12/月起（年付）/ $30/月（月付）。",
         "vs.superwhisper.price": "免费档额度有限。\nPro 约 $8.5/月，买断约 $250。",
         "vs.openless.price": "App 免费；识别 / 润色按你的 Key 计费。",
@@ -1506,17 +1510,17 @@
         "faq.2.q": "语音会上传到你们的服务器吗？",
         "faq.2.a": "默认不会。iOS 走端侧识别；只有你主动开云端引擎时，音频才发往你配置的服务商。润色默认只发文字。",
         "faq.3.q": "支持哪些设备？",
-        "faq.3.a": "iPhone / iPad 自定义键盘，以及 Mac 菜单栏全局听写（按住 Option）。需 iOS / iPadOS / macOS 26+。",
+        "faq.3.a": "iPhone / iPad 自定义键盘，以及 Mac 菜单栏全局听写（按住 Option）。需 iOS / iPadOS 26+ 或 macOS 15+。",
         "faq.4.q": "和 Typeless、Superwhisper 有什么不同？",
-        "faq.4.a": "开源、本地免费、手机+Mac 都有，并用 BYOK 复用已有 LLM 额度。见上方对比表。",
+        "faq.4.a": "源码可见、本地模式免费、手机+Mac 都有，并用 BYOK 复用已有 LLM 额度。源码许可并非开源许可。",
         "faq.link.install": "安装三步 →",
         "faq.link.compare": "产品对比 →",
         "faq.link.download": "立即下载 →",
         "download.title": "立即下载",
-        "download.subtitle": "iPhone / iPad 从 App Store 安装；Mac 直接下载已签名并公证的 DMG。",
+        "download.subtitle": "iPhone / iPad 从 App Store 安装；下方 Mac DMG 为已签名并公证的历史版本 1.1。",
         "download.install": "查看安装步骤",
         "download.source": "GitHub 源码",
-        "footer.copy": "© OSGKeyboard · v0.5.4 · 源码可见",
+        "footer.copy": "© OSGKeyboard · v1.7.5 · 源码可见（非开源）",
         "footer.download": "下载",
         "footer.install": "安装",
         "footer.compare": "对比",
@@ -1532,14 +1536,14 @@
         src: "assets/badges/ios-zh.svg",
         alt: "立即下载 App Store 版",
         macSrc: "assets/badges/macos-zh.svg",
-        macAlt: "立即下载 macOS 版本"
+        macAlt: "下载 macOS 历史版本 1.1"
       },
       en: {
         href: "https://apps.apple.com/app/osgkeyboard/id6781553267",
         src: "assets/badges/ios-en.svg",
         alt: "Download now from the App Store",
         macSrc: "assets/badges/macos-en.svg",
-        macAlt: "Download now — macOS version"
+        macAlt: "Download historical macOS version 1.1"
       }
     };
 
@@ -1566,12 +1570,12 @@
       document.documentElement.lang = lang === "zh" ? "zh-Hans" : "en";
       document.title = lang === "zh"
         ? "OSGKeyboard — 开口即文字 · iOS & Mac 语音输入 / 听写键盘"
-        : "OSGKeyboard — Speak it. It's typed. · Free open-source voice keyboard";
+        : "OSGKeyboard — Speak it. It's typed. · Source-available voice keyboard";
       const desc = document.querySelector('meta[name="description"]');
       if (desc) {
         desc.setAttribute("content", lang === "zh"
-          ? "OSGKeyboard 是免费开源的 iPhone / iPad / Mac 语音输入与听写键盘：默认本地识别、BYOK AI 润色、个性词库。开口即文字，避免重复订阅。"
-          : "OSGKeyboard is a free open-source voice keyboard for iPhone, iPad, and Mac: on-device recognition, BYOK AI polish, personal dictionary. Speak it — it's typed.");
+          ? "OSGKeyboard 是源码可见的 iPhone / iPad / Mac 语音输入与听写键盘：默认本地识别、BYOK AI 润色、个性词库。开口即文字。"
+          : "OSGKeyboard is a source-available voice keyboard for iPhone, iPad, and Mac: on-device recognition, BYOK AI polish, personal dictionary. Speak it — it's typed.");
       }
       document.querySelectorAll("[data-i18n]").forEach((el) => {
         const value = strings[el.getAttribute("data-i18n")];

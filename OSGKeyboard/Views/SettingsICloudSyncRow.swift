@@ -122,18 +122,26 @@ struct SettingsICloudSyncRow: View {
                 do {
                     try await CloudSyncContext.shared.dictionarySyncService.enableSync()
                 } catch let error as PersonalDictionaryCloudSyncError {
-                    CloudSyncContext.shared.settingsSyncService.disableSync()
-                    isEnabled = false
-                    syncErrorMessage = localizedDictionarySyncError(error)
+                    do {
+                        try CloudSyncContext.shared.settingsSyncService.disableSync()
+                        isEnabled = false
+                        syncErrorMessage = localizedDictionarySyncError(error)
+                    } catch let rollbackError as SettingsCloudSyncError {
+                        reloadFromStore()
+                        syncErrorMessage = localizedSyncError(rollbackError)
+                    } catch {
+                        reloadFromStore()
+                        syncErrorMessage = error.localizedDescription
+                    }
                     isApplyingToggle = false
                     return
                 }
                 reloadFromStore()
             } catch let error as SettingsCloudSyncError {
-                isEnabled = false
+                reloadFromStore()
                 syncErrorMessage = localizedSyncError(error)
             } catch {
-                isEnabled = false
+                reloadFromStore()
                 syncErrorMessage = error.localizedDescription
             }
             isApplyingToggle = false
@@ -141,9 +149,19 @@ struct SettingsICloudSyncRow: View {
     }
 
     private func disableSync() {
-        CloudSyncContext.shared.settingsSyncService.disableSync()
-        isEnabled = false
         syncErrorMessage = nil
+        isApplyingToggle = true
+        do {
+            try CloudSyncContext.shared.settingsSyncService.disableSync()
+            reloadFromStore()
+        } catch let error as SettingsCloudSyncError {
+            reloadFromStore()
+            syncErrorMessage = localizedSyncError(error)
+        } catch {
+            reloadFromStore()
+            syncErrorMessage = error.localizedDescription
+        }
+        isApplyingToggle = false
     }
 
     private func syncNow() {
@@ -170,6 +188,8 @@ struct SettingsICloudSyncRow: View {
     private func localizedSyncError(_ error: SettingsCloudSyncError) -> String {
         switch error {
         case .encodeFailed, .decodeFailed:
+            return AppL10n.string("settings.appSettings.iCloudSync.error.generic")
+        case .credentialMigrationFailed:
             return AppL10n.string("settings.appSettings.iCloudSync.error.generic")
         }
     }

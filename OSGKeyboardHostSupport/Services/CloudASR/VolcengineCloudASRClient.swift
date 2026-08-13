@@ -1,5 +1,5 @@
 // VolcengineCloudASRClient.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // Volcengine SAUC bigmodel ASR client. Utterance-level WebSocket session with
 // enable_nonstream (official two-pass): interim text for on-screen partials,
@@ -363,9 +363,12 @@ private final class VolcengineStreamingSession: CloudASRStreamingSession, @unche
 
             guard let frame = VolcengineFrame.parse(data) else { continue }
             if frame.messageType == .errorMessage {
-                let body = String(data: frame.payload, encoding: .utf8) ?? ""
                 let code = frame.errorCode ?? 0
-                publishFailure(CloudASRError.transport("ASR error \(code): \(body)"))
+                publishFailure(
+                    CloudASRError.transport(
+                        "ASR error code=\(code) responseBytes=\(frame.payload.count)"
+                    )
+                )
                 return
             }
             guard frame.messageType == .fullServerResponse else { continue }
@@ -397,6 +400,8 @@ private final class VolcengineStreamingSession: CloudASRStreamingSession, @unche
     private func send(_ data: Data) async throws {
         do {
             try await wsTask.send(.data(data))
+        } catch where ProviderToolCancellation.matches(error) {
+            throw CancellationError()
         } catch {
             throw CloudASRError.transport(error.localizedDescription)
         }

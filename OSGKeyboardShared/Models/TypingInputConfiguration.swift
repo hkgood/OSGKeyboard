@@ -41,6 +41,38 @@ public enum TypingInputSchema: String, CaseIterable, Identifiable, Codable, Send
     }
 }
 
+/// Default keyboard open mode when "remember last" is off.
+public enum DefaultInputMode: String, CaseIterable, Identifiable, Codable, Sendable {
+    case voice
+    case pinyin
+    case english
+
+    public var id: String { rawValue }
+
+    public var labelKey: String {
+        switch self {
+        case .voice: return "settings.typingInput.default.mode.voice"
+        case .pinyin: return "settings.typingInput.default.mode.pinyin"
+        case .english: return "settings.typingInput.default.mode.english"
+        }
+    }
+
+    public var surface: KeyboardState.Surface {
+        switch self {
+        case .voice: return .voice
+        case .pinyin, .english: return .typing
+        }
+    }
+
+    public var typingLanguage: TypingInputLanguage? {
+        switch self {
+        case .voice: return nil
+        case .pinyin: return .chinese
+        case .english: return .english
+        }
+    }
+}
+
 public enum PinyinFuzzyPair: String, CaseIterable, Identifiable, Codable, Sendable {
     case zhZ
     case chC
@@ -84,9 +116,12 @@ public final class TypingInputConfiguration: ObservableObject {
     private enum Key {
         static let schema = "typing.input.schema"
         static let fuzzyPairs = "typing.input.fuzzyPairs"
+        /// Legacy bool; migrated into `defaultInputMode` (true → pinyin).
         static let defaultToTyping = "typing.input.defaultToTyping"
+        static let defaultInputMode = "typing.input.defaultInputMode"
         static let rememberLastSurface = "typing.input.rememberLastSurface"
         static let lastSurface = "typing.input.lastSurface"
+        static let lastTypingLanguage = "typing.input.lastTypingLanguage"
         static let resourceVersion = "typing.rime.resourceVersion"
         static let personalDictionaryFingerprint = "typing.rime.personalDictionaryFingerprint"
     }
@@ -102,13 +137,13 @@ public final class TypingInputConfiguration: ObservableObject {
         didSet { persistIfReady() }
     }
 
-    /// Selects the text keyboard whenever the extension becomes visible.
-    /// Ignored when `rememberLastSurface` is on and a prior surface was saved.
-    @Published public var defaultToTyping: Bool {
+    /// Static open preference when `rememberLastSurface` is off.
+    /// Ignored when remembering and a prior surface was saved.
+    @Published public var defaultInputMode: DefaultInputMode {
         didSet { persistIfReady() }
     }
 
-    /// When on, reopen on the voice/typing surface left at the last dismiss.
+    /// When on, reopen on the voice/typing/AI surface (and typing language) left last time.
     @Published public var rememberLastSurface: Bool {
         didSet { persistIfReady() }
     }
@@ -119,7 +154,7 @@ public final class TypingInputConfiguration: ObservableObject {
         schema = TypingInputSchema(rawValue: schemaId) ?? .fullPinyin
         let fuzzyIds = self.defaults.stringArray(forKey: Key.fuzzyPairs) ?? []
         fuzzyPairs = Set(fuzzyIds.compactMap(PinyinFuzzyPair.init(rawValue:)))
-        defaultToTyping = self.defaults.bool(forKey: Key.defaultToTyping)
+        defaultInputMode = Self.resolveDefaultInputMode(from: self.defaults)
         rememberLastSurface = self.defaults.bool(forKey: Key.rememberLastSurface)
         isHydrating = false
     }
@@ -142,16 +177,16 @@ public final class TypingInputConfiguration: ObservableObject {
             ?? .fullPinyin
         let fuzzyIds = defaults.stringArray(forKey: Key.fuzzyPairs) ?? []
         fuzzyPairs = Set(fuzzyIds.compactMap(PinyinFuzzyPair.init(rawValue:)))
-        defaultToTyping = defaults.bool(forKey: Key.defaultToTyping)
+        defaultInputMode = Self.resolveDefaultInputMode(from: defaults)
         rememberLastSurface = defaults.bool(forKey: Key.rememberLastSurface)
         isHydrating = false
     }
 
-    /// Legacy helper for the default-to-typing toggle only (not full open policy).
+    /// Legacy helper: true when the static default opens on the typing surface.
     nonisolated public static func prefersTypingOnOpen(
         defaults: UserDefaults? = nil
     ) -> Bool {
-        (defaults ?? AppGroup.defaultsIfAvailable)?.bool(forKey: Key.defaultToTyping) ?? false
+        resolveDefaultInputMode(from: defaults ?? AppGroup.defaultsIfAvailable).surface == .typing
     }
 
     nonisolated public static func remembersLastSurface(
@@ -161,26 +196,43 @@ public final class TypingInputConfiguration: ObservableObject {
     }
 
     /// Surface to show on the first frame of a keyboard presentation.
-    /// Prefer last-left surface when remembering; otherwise default-to-typing.
+    /// Prefer last-left surface when remembering; otherwise default input mode.
     nonisolated public static func preferredSurfaceOnOpen(
         defaults: UserDefaults? = nil
     ) -> KeyboardState.Surface {
+        preferredOpenPreference(defaults: defaults).surface
+    }
+
+    /// Typing language to apply when opening onto the typing surface.
+    nonisolated public static func preferredTypingLanguageOnOpen(
+        defaults: UserDefaults? = nil
+    ) -> TypingInputLanguage? {
+        preferredOpenPreference(defaults: defaults).typingLanguage
+    }
+
+    nonisolated public static func preferredOpenPreference(
+        defaults: UserDefaults? = nil
+    ) -> (surface: KeyboardState.Surface, typingLanguage: TypingInputLanguage?) {
         let store = defaults ?? AppGroup.defaultsIfAvailable
-        guard let store else { return .voice }
+        guard let store else { return (.voice, nil) }
 
         // AI is an explicit product surface. Restore it as an empty temporary
         // conversation even when the general "remember surface" toggle is off.
         if store.string(forKey: Key.lastSurface) == KeyboardState.Surface.ai.rawValue {
-            return .ai
+            return (.ai, nil)
         }
 
         if store.bool(forKey: Key.rememberLastSurface),
            let raw = store.string(forKey: Key.lastSurface),
            let surface = KeyboardState.Surface(rawValue: raw) {
-            return surface
+            let language: TypingInputLanguage? = surface == .typing
+                ? persistedTypingLanguage(defaults: store) ?? .chinese
+                : nil
+            return (surface, language)
         }
 
-        return store.bool(forKey: Key.defaultToTyping) ? .typing : .voice
+        let mode = resolveDefaultInputMode(from: store)
+        return (mode.surface, mode.typingLanguage)
     }
 
     /// Persist the surface present when the keyboard leaves the screen.
@@ -189,6 +241,15 @@ public final class TypingInputConfiguration: ObservableObject {
         defaults: UserDefaults? = nil
     ) {
         (defaults ?? AppGroup.defaultsIfAvailable)?.set(surface.rawValue, forKey: Key.lastSurface)
+    }
+
+    /// Persist the typing language left on the typing surface.
+    nonisolated public static func persistLastTypingLanguage(
+        _ language: TypingInputLanguage,
+        defaults: UserDefaults? = nil
+    ) {
+        (defaults ?? AppGroup.defaultsIfAvailable)?
+            .set(language.rawValue, forKey: Key.lastTypingLanguage)
     }
 
     nonisolated public static func installedResourceVersion(
@@ -219,11 +280,32 @@ public final class TypingInputConfiguration: ObservableObject {
             .set(value, forKey: Key.personalDictionaryFingerprint)
     }
 
+    nonisolated private static func resolveDefaultInputMode(
+        from defaults: UserDefaults?
+    ) -> DefaultInputMode {
+        guard let defaults else { return .voice }
+        if let raw = defaults.string(forKey: Key.defaultInputMode),
+           let mode = DefaultInputMode(rawValue: raw) {
+            return mode
+        }
+        // Migrate legacy toggle: on → pinyin, off → voice.
+        return defaults.bool(forKey: Key.defaultToTyping) ? .pinyin : .voice
+    }
+
+    nonisolated private static func persistedTypingLanguage(
+        defaults: UserDefaults
+    ) -> TypingInputLanguage? {
+        guard let raw = defaults.string(forKey: Key.lastTypingLanguage) else { return nil }
+        return TypingInputLanguage(rawValue: raw)
+    }
+
     private func persistIfReady() {
         guard !isHydrating else { return }
         defaults.set(schema.rawValue, forKey: Key.schema)
         defaults.set(fuzzyPairs.map(\.rawValue).sorted(), forKey: Key.fuzzyPairs)
-        defaults.set(defaultToTyping, forKey: Key.defaultToTyping)
+        defaults.set(defaultInputMode.rawValue, forKey: Key.defaultInputMode)
+        // Keep legacy bool in sync for any older readers still checking it.
+        defaults.set(defaultInputMode.surface == .typing, forKey: Key.defaultToTyping)
         defaults.set(rememberLastSurface, forKey: Key.rememberLastSurface)
         AppGroupConfigDarwin.postConfigChanged()
     }

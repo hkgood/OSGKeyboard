@@ -25,51 +25,50 @@ struct PersonalDictionaryView: View {
     private let aliasGenerator = DictionaryAliasGenerator()
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                palette.background.ignoresSafeArea()
+        ZStack {
+            palette.background.ignoresSafeArea()
 
-                if dictionary.entries.isEmpty {
-                    emptyState
-                } else {
-                    list
-                }
+            if dictionary.entries.isEmpty {
+                emptyState
+            } else {
+                list
             }
-            .background(palette.background)
-            .navigationTitle("settings.personalDictionary.title")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                if !dictionary.entries.isEmpty {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showClearAllConfirmation = true
-                        } label: {
-                            Image(systemName: "trash")
-                        }
-                        .accessibilityLabel(AppL10n.string("settings.personalDictionary.clearAll"))
-                        .confirmationDialog(
-                            AppL10n.string("settings.personalDictionary.clearAll.confirmTitle"),
-                            isPresented: $showClearAllConfirmation,
-                            titleVisibility: .visible
-                        ) {
-                            Button(AppL10n.string("settings.personalDictionary.clearAll.confirm"), role: .destructive) {
-                                clearAll()
-                            }
-                            Button(AppL10n.string("common.cancel"), role: .cancel) {}
-                        } message: {
-                            Text("settings.personalDictionary.clearAll.message")
-                        }
-                    }
-                }
+        }
+        .background(palette.background)
+        .navigationTitle("settings.personalDictionary.title")
+        .navigationBarTitleDisplayMode(.inline)
+        .hidesTabBarWhenPushed()
+        .toolbar {
+            if !dictionary.entries.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        editingEntry = nil
-                        showEntrySheet = true
+                        showClearAllConfirmation = true
                     } label: {
-                        Image(systemName: "plus")
+                        Image(systemName: "trash")
                     }
-                    .accessibilityLabel(AppL10n.string("settings.personalDictionary.add.title"))
+                    .accessibilityLabel(AppL10n.string("settings.personalDictionary.clearAll"))
+                    .confirmationDialog(
+                        AppL10n.string("settings.personalDictionary.clearAll.confirmTitle"),
+                        isPresented: $showClearAllConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button(AppL10n.string("settings.personalDictionary.clearAll.confirm"), role: .destructive) {
+                            clearAll()
+                        }
+                        Button(AppL10n.string("common.cancel"), role: .cancel) {}
+                    } message: {
+                        Text("settings.personalDictionary.clearAll.message")
+                    }
                 }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    editingEntry = nil
+                    showEntrySheet = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel(AppL10n.string("settings.personalDictionary.add.title"))
             }
         }
         .sheet(isPresented: $showEntrySheet) {

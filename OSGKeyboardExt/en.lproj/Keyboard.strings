@@ -114,13 +114,19 @@
 "preview.localeChip.cycle" = "Cycle recognition language";
 
 /* Keyboard (ext) */
+"keyboard.tab.ai" = "AI";
+"keyboard.tab.voice" = "Voice";
+"keyboard.tab.chinese" = "中文";
+"keyboard.tab.english" = "EN";
+"keyboard.tab.ai.a11y" = "Switch to AI Q&A";
+"keyboard.tab.voice.a11y" = "Switch to voice input";
+"keyboard.tab.chinese.a11y" = "Switch to Chinese typing";
+"keyboard.tab.english.a11y" = "Switch to English typing";
 "keyboard.placeholder.idle" = "Tap to talk";
 "keyboard.placeholder.preparing" = "Preparing";
 "keyboard.placeholder.preparingRecording" = "Preparing mic…";
 "keyboard.placeholder.processing" = "Processing";
 "keyboard.placeholder.error" = "Polishing failed";
-"keyboard.placeholder.localBadge" = "On-device";
-"keyboard.placeholder.cloudBadge" = "Cloud";
 "keyboard.models.notDownloaded" = "On-device models not downloaded";
 "keyboard.models.downloadHint" = "Open OSGKeyboard to download models";
 "keyboard.rec" = "REC";
@@ -130,7 +136,7 @@
 "keyboard.openSettingsA11y" = "Open OSGKeyboard settings";
 "keyboard.deniedHint" = "Opens the OSGKeyboard settings page where you can grant microphone or speech recognition access.";
 "keyboard.tapToTalkA11y" = "Tap to talk";
-"keyboard.undoA11y" = "Undo last dictation";
+"keyboard.undoA11y" = "Undo last input";
 "keyboard.redoA11y" = "Redo";
 "keyboard.copyA11y" = "Copy";
 "keyboard.cutA11y" = "Cut";
@@ -183,22 +189,24 @@
 "keyboard.dictation.failed" = "Recording failed. Try again.";
 "keyboard.dictation.resultTimeout" = "Timed out waiting for dictation. Finish in OSGKeyboard and retry.";
 
-/* Locale chip (short labels) */
-"locale.chip.auto" = "Auto";
-"locale.chip.zh-Hans" = "简";
-"locale.chip.zh-Hant" = "繁";
-"locale.chip.en-US" = "EN";
-"locale.chip.ja-JP" = "日";
-"locale.chip.ko-KR" = "韩";
-
-/* Translation chip (v0.3) */
-"keyboard.translation.chip" = "Translate";
+/* Translation menu */
 "keyboard.translation.offMenu" = "Don't translate";
-"keyboard.translation.off" = "Don't translate";
-"keyboard.translation.enable" = "Enable translation";
-"keyboard.translation.disable" = "Disable translation";
 "keyboard.translation.a11y" = "Translation";
 "keyboard.translation.a11yHint" = "Toggle translation or change the target language.";
+"keyboard.clipboard.a11y" = "Clipboard";
+"keyboard.clipboard.a11yHint" = "Open clipboard history or enable clipboard capture.";
+"keyboard.clipboard.guide.body" = "Turn on clipboard history in Settings first.";
+"keyboard.clipboard.guide.cta" = "Open Settings";
+"keyboard.clipboard.panel.title" = "Clipboard";
+"keyboard.clipboard.panel.empty" = "No history yet";
+"keyboard.clipboard.panel.delete" = "Delete";
+"keyboard.clipboard.panel.close" = "Close clipboard";
+"keyboard.clipboard.panel.closeHint" = "Return to the keyboard.";
+"keyboard.clipboard.clear.title" = "Clear clipboard history?";
+"keyboard.clipboard.clear.message" = "This permanently removes all saved clipboard items from this device. This cannot be undone.";
+"keyboard.clipboard.clear.confirm" = "Clear history";
+"keyboard.clipboard.suggestion.dismissA11y" = "Dismiss clipboard suggestion";
+"keyboard.clipboard.suggestion.dismissHint" = "Hide this clipboard suggestion strip.";
 "keyboard.voice.cancel" = "Cancel voice input";
 "keyboard.voice.cancelHint" = "Discard the current recording, recognition, and polish result.";
 "keyboard.scenario.a11y" = "Polish scenario";
@@ -265,6 +273,7 @@
 
 /* AI question mode */
 "keyboard.ai.placeholder" = "Tap the microphone to ask AI";
+"keyboard.ai.hintA11yPrefix" = "Suggestion: ";
 "keyboard.ai.hint" = "Insert the AI answer, then tap Send";
 "keyboard.ai.listening" = "Listening…";
 "keyboard.ai.recognizing" = "Recognizing your question…";
@@ -284,3 +293,7 @@
 "keyboard.ai.error.startTimeout" = "Microphone startup timed out. Try again";
 "keyboard.ai.error.requestTimeout" = "AI response timed out. Try again";
 "keyboard.ai.error.requestFailed" = "AI response failed. Try again";
+"keyboard.ai.error.clipboardUnavailable" = "This clipboard suggestion expired. Copy the text again";
+"keyboard.ai.skill.reply" = "Reply";
+"keyboard.ai.skill.summarize" = "Summarize";
+"keyboard.ai.skill.translate" = "Translate";

@@ -1,5 +1,5 @@
 // AlibabaVocabularySync.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // Syncs PersonalDictionary → DashScope custom vocabulary (Fun-ASR Flash).
 

@@ -1,10 +1,10 @@
 // CustomLanguageModelManager.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
-// Prepares the bundled SFCustomLanguageModelData asset on device and shares
-// the compiled LM + Vocab through the App Group container. Both the host app
-// and keyboard extension read the same prepared configuration for
-// DictationTranscriber content hints.
+// Prepares the bundled SFCustomLanguageModelData asset for the host app's
+// iOS SpeechAnalyzer pipeline and caches the compiled LM + Vocab in the
+// App Group container. The keyboard extension does not run ASR or load
+// these assets.
 
 import Foundation
 import Speech
@@ -250,8 +250,8 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
     // MARK: - Bundle / disk helpers
 
     private static var resourceBundle: Bundle {
-        // CLM assets ship in the host app bundle (not the extension Shared
-        // framework) so the keyboard process never mmaps the training bin.
+        // CLM assets ship in the host app bundle, so the keyboard process
+        // never mmaps the training bin.
         Bundle.main
     }
 

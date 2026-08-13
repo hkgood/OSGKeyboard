@@ -49,23 +49,26 @@ public final class KeyboardViewController: UIInputViewController {
 
     private var hosting: UIHostingController<KeyboardSurfaceRoot>?
     private var keyboardHeightConstraint: NSLayoutConstraint?
-    private var systemEncapsulatedHeight: CGFloat = 228
-    /// Presentation height priming is only valid during the slide-in. After
-    /// `viewDidAppear` we must keep the constraint at `target` — re-applying
-    /// the offset (or letting a paste alert interrupt the appear sequence)
-    /// makes the slot land at `target + encapsulated` and floats the chrome.
+    /// The system owns the input view's height during the slide-in via a
+    /// required `UIView-Encapsulated-Layout-Height` constraint, which it walks
+    /// from the full screen height down to the keyboard slot. Our own
+    /// constraint only has to hold `target` and stay out of that transition.
     private enum HeightPresentationPhase {
         case idle
-        case priming
         case presented
     }
     private var heightPhase: HeightPresentationPhase = .idle
+    /// Last logged layout snapshot, so `viewDidLayoutSubviews` only reports
+    /// changes instead of every pass.
+    private var lastLoggedLayoutSnapshot: String?
     private var cancellables = Set<AnyCancellable>()
 
+    private var editHintScheduler: EditHintScheduler!
     private var textInserter: KeyboardTextInserter!
     private var flowCoordinator: KeyboardFlowCoordinator!
     private var lastInputEditCoordinator: LastInputEditCoordinator!
     private var aiKeyboardCoordinator: AIKeyboardCoordinator!
+    private var clipboardCapture: ClipboardCaptureCoordinator!
     private var configSync: KeyboardConfigSync!
     /// UIKit may synchronously lay out the view during `viewDidLoad`.
     /// Keep this optional so an early layout pass is harmless.
@@ -166,6 +169,10 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        clipboardCapture?.keyboardWillDisappear()
+        // Presentation-scoped hints must never survive a reused extension
+        // controller, including an active Flow handoff.
+        editHintScheduler?.invalidate()
         OSGDiag.log(
             "KVC.viewWillDisappear surface=\(state.surface.rawValue) "
                 + "preserve=\(flowCoordinator.preservesLifecycleOnDisappear) \(OSGDiag.memoryTag())",
@@ -179,6 +186,10 @@ public final class KeyboardViewController: UIInputViewController {
         TypingInputConfiguration.persistLastSurface(
             preserve ? .voice : state.surface
         )
+        // Remember pinyin/English with the surface so "remember last" restores both.
+        if state.surface == .typing {
+            TypingInputConfiguration.persistLastTypingLanguage(typingSession.language)
+        }
         if state.surface == .ai {
             // AI context never survives a keyboard presentation, but the
             // selected surface itself is restored on the next open.
@@ -208,12 +219,12 @@ public final class KeyboardViewController: UIInputViewController {
         setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
         configureDictationBehavior()
         KeyboardSetupBridge.markExtensionAppearance(hasFullAccess: hasFullAccess)
-        state.debugHasFullAccess = hasFullAccess
         // Refresh only Flow/config state; edit targets come from verified OSG insertions.
         flowCoordinator.refreshSessionState()
         flowCoordinator.startSessionMonitor()
         configSync.syncOnboardingStateFromAppGroup()
         configSync.refreshConfigFromAppGroup()
+        clipboardCapture.refreshFlagsFromStore()
         // Settings may have changed while the extension stayed alive.
         applyPreferredSurfaceOnOpen()
         // Re-warm Taptic after host app switches: SwiftUI `onAppear` often
@@ -223,6 +234,7 @@ public final class KeyboardViewController: UIInputViewController {
             OSGDiag.log("KVC.viewWillAppear enterTypingMode", category: "boot")
             typingSession.enterTypingMode()
         }
+        clipboardCapture.keyboardDidAppear()
         OSGDiag.log(
             "KVC.viewWillAppear done surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
             category: "boot"
@@ -231,20 +243,18 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewIsAppearing(_ animated: Bool) {
         super.viewIsAppearing(animated)
-        if heightPhase == .presented {
-            // Spurious re-appear while already on screen (e.g. system alert
-            // lifecycle noise) — never re-run the offset trick.
-            lockPresentedKeyboardHeight()
-        } else {
-            heightPhase = .priming
-            applyPresentationHeightOffset()
-        }
+        // One constant, every time: the previous "prime at target − system
+        // encapsulated height" trick read the pre-presentation full-screen
+        // height (874 pt on an iPhone), clamped to 0, and could not win against
+        // the system's required constraint anyway.
+        lockPresentedKeyboardHeight()
         OSGDiag.log(
             "KVC.viewIsAppearing phase=\(heightPhaseLog) "
                 + "height=\(keyboardHeightConstraint?.constant ?? -1) "
                 + "\(OSGDiag.memoryTag())",
             category: "boot"
         )
+        logHeightConstraints(tag: "viewIsAppearing")
     }
 
     public override func viewDidAppear(_ animated: Bool) {
@@ -262,6 +272,26 @@ public final class KeyboardViewController: UIInputViewController {
             guard let self, self.heightPhase == .presented else { return }
             self.flowCoordinator.ensurePiPReadyOnKeyboardOpen()
         }
+        #if DEBUG
+        WhatsNewDemoDriver.resetForNewPresentation()
+        WhatsNewDemoDriver.startIfNeeded(
+            state: state,
+            host: WhatsNewDemoDriver.HostHooks(
+                insertText: { [weak self] text in
+                    self?.textDocumentProxy.insertText(text)
+                },
+                deleteBackward: { [weak self] in
+                    self?.textDocumentProxy.deleteBackward()
+                },
+                contextBeforeInput: { [weak self] in
+                    self?.textDocumentProxy.documentContextBeforeInput
+                },
+                performReturn: { [weak self] in
+                    self?.textDocumentProxy.insertText("\n")
+                }
+            )
+        )
+        #endif
         OSGDiag.log(
             "KVC.viewDidAppear done height=\(targetKeyboardHeight) \(OSGDiag.memoryTag())",
             category: "boot"
@@ -271,12 +301,14 @@ public final class KeyboardViewController: UIInputViewController {
     public override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
         refreshReturnKeyRole()
+        typingSession.synchronizeEnglishDocumentContext()
         textInserter?.refreshEditingAvailability()
         lastInputEditCoordinator?.refreshContext()
     }
 
     public override func selectionDidChange(_ textInput: UITextInput?) {
         super.selectionDidChange(textInput)
+        typingSession.synchronizeEnglishDocumentContext(caretMoved: true)
         textInserter?.refreshEditingAvailability()
         lastInputEditCoordinator?.refreshContext()
     }
@@ -321,11 +353,13 @@ public final class KeyboardViewController: UIInputViewController {
         refreshLayoutMode()
         cursorDrag?.layoutChrome()
         enforcePresentedKeyboardHeightIfNeeded()
+        logLayoutSnapshotIfChanged()
     }
 
     // MARK: - Services
 
     private func installServices() {
+        editHintScheduler = EditHintScheduler(state: state)
         textInserter = KeyboardTextInserter(
             state: state,
             insertText: { [weak self] text in self?.textDocumentProxy.insertText(text) },
@@ -333,7 +367,8 @@ public final class KeyboardViewController: UIInputViewController {
             contextBeforeInput: { [weak self] in self?.textDocumentProxy.documentContextBeforeInput },
             fieldContextProvider: { [weak self] in self?.captureFieldContext() },
             selectedText: { [weak self] in self?.textDocumentProxy.selectedText },
-            scheduleAutoClearError: { [weak self] in self?.scheduleAutoClearError() }
+            scheduleAutoClearError: { [weak self] in self?.scheduleAutoClearError() },
+            editHintScheduler: editHintScheduler
         )
 
         configSync = KeyboardConfigSync(
@@ -371,7 +406,8 @@ public final class KeyboardViewController: UIInputViewController {
             abortFlow: { [weak self] in self?.flowCoordinator.abortEditRecording() },
             acknowledge: { [weak self] outcome in
                 self?.flowCoordinator.acknowledgeEditResult(outcome)
-            }
+            },
+            editHintScheduler: editHintScheduler
         )
         flowCoordinator.onEditHostRecordingConfirmed = { [weak self] in
             self?.lastInputEditCoordinator.hostRecordingConfirmed()
@@ -392,6 +428,15 @@ public final class KeyboardViewController: UIInputViewController {
                 self?.textDocumentProxy.insertText("\n")
             }
         )
+        clipboardCapture = ClipboardCaptureCoordinator(state: state)
+        clipboardCapture.configure(
+            isSecure: { [weak self] in
+                self?.textDocumentProxy.isSecureTextEntry ?? false
+            },
+            hasFullAccess: { [weak self] in
+                self?.hasFullAccess ?? false
+            }
+        )
         flowCoordinator.onAIUtterancePrepared = { [weak self] utteranceID in
             self?.aiKeyboardCoordinator.utterancePrepared(utteranceID)
         }
@@ -400,6 +445,9 @@ public final class KeyboardViewController: UIInputViewController {
         }
         flowCoordinator.onAIRecognitionStarted = { [weak self] utteranceID in
             self?.aiKeyboardCoordinator.recognitionStarted(utteranceID)
+        }
+        flowCoordinator.onAIGeneratingStarted = { [weak self] utteranceID in
+            self?.aiKeyboardCoordinator.generatingStarted(utteranceID)
         }
         flowCoordinator.onAITranscript = { [weak self] transcript, utteranceID, status in
             self?.aiKeyboardCoordinator.receiveTranscript(
@@ -419,6 +467,9 @@ public final class KeyboardViewController: UIInputViewController {
         }
         flowCoordinator.onAIFailure = { [weak self] message, utteranceID in
             self?.aiKeyboardCoordinator.fail(message, utteranceID: utteranceID)
+        }
+        flowCoordinator.onAICancelled = { [weak self] in
+            self?.state.aiSession.cancelCurrentWork()
         }
         _ = textInserter.recoverPendingEditTransactionIfNeeded()
 
@@ -463,8 +514,43 @@ public final class KeyboardViewController: UIInputViewController {
         state.sendAIAnswer = { [weak self] in
             self?.aiKeyboardCoordinator.sendLatestAnswer()
         }
+        state.submitAIHint = { [weak self] card in
+            self?.aiKeyboardCoordinator.submitHintCard(card)
+        }
+        state.submitAIClipboardSkill = { [weak self] skill in
+            self?.aiKeyboardCoordinator.submitClipboardSkill(skill)
+        }
         state.openSettings        = { [weak self] in self?.openHostApp() }
         state.openInputMethodSetup = { [weak self] in self?.openHostApp(path: "deployrime") }
+        state.openClipboardSettings = { [weak self] in
+            SettingsDeepLink.setPending(.clipboard)
+            self?.openHostApp(path: "settings/clipboard")
+        }
+        state.openClipboardPanel = { [weak self] in
+            self?.clipboardCapture.openPanelFromTopButton()
+        }
+        state.dismissClipboardOverlay = { [weak self] in
+            self?.clipboardCapture.dismissOverlay()
+        }
+        state.insertClipboardText = { [weak self] text in
+            guard let self else { return }
+            self.clipboardCapture.insertText(text) { insertText in
+                // Via the inserter so the undo key can roll a paste back.
+                self.textInserter.insertPasteboardText(insertText)
+            }
+        }
+        state.dismissClipboardSuggestion = { [weak self] in
+            self?.clipboardCapture.dismissSuggestion()
+        }
+        state.clearClipboardHistory = { [weak self] in
+            self?.clipboardCapture.clearHistory()
+        }
+        state.deleteClipboardHistoryEntry = { [weak self] id in
+            self?.clipboardCapture.deleteEntry(id: id)
+        }
+        state.noteUserDidInputText = { [weak self] in
+            self?.clipboardCapture.noteUserDidInputText()
+        }
         // The globe UIButton registers this controller's standard
         // `handleInputModeList(from:with:)` action for all touch events.
         state.inputModeController = self
@@ -552,18 +638,22 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     private func applyPreferredSurfaceOnOpen() {
-        let preferred = TypingInputConfiguration.preferredSurfaceOnOpen()
+        let preference = TypingInputConfiguration.preferredOpenPreference()
         let resolved = KeyboardOpenSurfacePolicy.resolve(
             locksTypingSurface: state.locksTypingSurface,
-            preferred: preferred
+            preferred: preference.surface
         )
         OSGDiag.log(
-            "applyPreferredSurfaceOnOpen preferred=\(preferred.rawValue) "
+            "applyPreferredSurfaceOnOpen preferred=\(preference.surface.rawValue) "
                 + "resolved=\(resolved.rawValue) "
+                + "lang=\(preference.typingLanguage?.rawValue ?? "-") "
                 + "locksTyping=\(state.locksTypingSurface ? 1 : 0)",
             category: "boot"
         )
         applySurface(resolved)
+        if resolved == .typing, let language = preference.typingLanguage {
+            _ = typingSession.setLanguage(language)
+        }
         if resolved == .ai {
             aiKeyboardCoordinator.beginNewPresentation()
         }
@@ -573,26 +663,20 @@ public final class KeyboardViewController: UIInputViewController {
     /// so a reused keyboard instance does not animate voice → typing on show.
     private func prepareSurfaceForNextPresentation() {
         guard !TypingInputConfiguration.remembersLastSurface() else { return }
-        let preferred = TypingInputConfiguration.preferredSurfaceOnOpen()
-        guard state.surface != preferred else { return }
-        state.surface = preferred
+        let preference = TypingInputConfiguration.preferredOpenPreference()
+        if state.surface != preference.surface {
+            state.surface = preference.surface
+        }
+        if preference.surface == .typing, let language = preference.typingLanguage {
+            _ = typingSession.setLanguage(language)
+        }
     }
 
     private func refreshKeyboardHeight() {
-        // `applyPresentationHeightOffset()` is only a one-time presentation
-        // primer used before `viewDidAppear`. Reusing it after a surface
-        // switch subtracts the system's ~228 pt encapsulated height from the
-        // requested typing height and collapses the keyboard to a thin strip.
-        // Once presented, update our height constraint directly, matching the
-        // final assignment in `viewDidAppear`. Avoid synchronous layout here:
-        // this is also called during `viewDidLoad`, where re-entrant layout can
-        // observe partially initialized controller dependencies.
-        if heightPhase == .presented {
-            lockPresentedKeyboardHeight()
-        } else {
-            keyboardHeightConstraint?.constant = targetKeyboardHeight
-            view.setNeedsLayout()
-        }
+        // Avoid synchronous layout here: this is also called during
+        // `viewDidLoad`, where re-entrant layout can observe partially
+        // initialized controller dependencies.
+        lockPresentedKeyboardHeight()
     }
 
     private func refreshLayoutMode() {
@@ -617,7 +701,6 @@ public final class KeyboardViewController: UIInputViewController {
     private var heightPhaseLog: String {
         switch heightPhase {
         case .idle: return "idle"
-        case .priming: return "priming"
         case .presented: return "presented"
         }
     }
@@ -627,8 +710,8 @@ public final class KeyboardViewController: UIInputViewController {
         view.setNeedsLayout()
     }
 
-    /// After presentation, the constraint must stay at `target`. Spurious
-    /// lifecycle noise must not leave us primed at `target − encapsulated`.
+    /// The constraint must stay at `target` once presented, whatever the system
+    /// did to the input view's height during the transition.
     private func enforcePresentedKeyboardHeightIfNeeded() {
         guard heightPhase == .presented else { return }
         let target = targetKeyboardHeight
@@ -644,14 +727,20 @@ public final class KeyboardViewController: UIInputViewController {
 
     private func refreshReturnKeyRole() {
         state.returnKeyRole = returnKeyRole(for: textDocumentProxy.returnKeyType ?? .default)
+        let isSecure = textDocumentProxy.isSecureTextEntry ?? false
+        state.setSecureTextEntry(isSecure)
+        clipboardCapture?.secureEntryDidChange(isSecure: isSecure)
         // Secure fields must not run English autocomplete / autocorrect / learning.
-        typingSession.suggestionsEnabled = !(textDocumentProxy.isSecureTextEntry ?? false)
+        typingSession.suggestionsEnabled = !isSecure
         typingSession.syncAutocapitalization()
     }
 
     private func installTypingContextProviders() {
         typingSession.precedingTextProvider = { [weak self] in
             self?.textDocumentProxy.documentContextBeforeInput
+        }
+        typingSession.followingTextProvider = { [weak self] in
+            self?.textDocumentProxy.documentContextAfterInput
         }
         typingSession.autocapitalizationModeProvider = { [weak self] in
             Self.typingAutocapitalizationMode(
@@ -722,18 +811,36 @@ public final class KeyboardViewController: UIInputViewController {
         keyboardHeightConstraint = constraint
     }
 
-    private func applyPresentationHeightOffset() {
-        // Only valid while priming the slide-in. Callers must not invoke this
-        // after `heightPhase == .presented`.
-        if let encapsulated = view.constraints.first(where: { constraint in
-            constraint.firstItem as? UIView === view
-                && constraint.firstAttribute == .height
-                && constraint !== keyboardHeightConstraint
-        }) {
-            systemEncapsulatedHeight = encapsulated.constant
+    /// Every height constraint the system and we put on the input view. The
+    /// system's own constant walks from the full screen height down to the
+    /// keyboard slot during the slide-in, so this is what to check whenever the
+    /// surface appears mis-sized or off-slot.
+    private func logHeightConstraints(tag: String) {
+        let heights = view.constraints.filter { constraint in
+            constraint.firstItem as? UIView === view && constraint.firstAttribute == .height
         }
-        let primed = targetKeyboardHeight - systemEncapsulatedHeight
-        keyboardHeightConstraint?.constant = max(0, primed)
+        let described = heights.map { constraint in
+            let name = constraint === keyboardHeightConstraint
+                ? "ours"
+                : (constraint.identifier ?? "system")
+            return "\(name)=\(Int(constraint.constant))@\(Int(constraint.priority.rawValue))"
+                + (constraint.isActive ? "" : "(inactive)")
+        }
+        OSGDiag.log(
+            "KVC.heightConstraints[\(tag)] \(described.joined(separator: " "))",
+            category: "boot"
+        )
+    }
+
+    private func logLayoutSnapshotIfChanged() {
+        let snapshot = "phase=\(heightPhaseLog) "
+            + "view=\(Int(view.bounds.height)) "
+            + "host=\(Int(hosting?.view.bounds.height ?? -1)) "
+            + "constraint=\(Int(keyboardHeightConstraint?.constant ?? -1)) "
+            + "target=\(Int(targetKeyboardHeight))"
+        guard snapshot != lastLoggedLayoutSnapshot else { return }
+        lastLoggedLayoutSnapshot = snapshot
+        OSGDiag.log("KVC.layout \(snapshot)", category: "boot")
     }
 
     private func installSwiftUI() {

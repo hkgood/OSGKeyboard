@@ -12,6 +12,9 @@
 import Foundation
 import Combine
 
+/// UI-owned ObservableObject; construct and mutate it on the main thread.
+/// `@unchecked Sendable` does not make `@Published` thread-safe. Credential
+/// observers write only Keychain, while non-secret configuration uses App Group defaults.
 public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     public static let shared = ProviderConfig()
 
@@ -32,6 +35,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
             persistConfiguration()
         }
     }
+    /// Its observer updates only the provider-scoped Keychain item; the value
+    /// must never enter `configuration` or App Group UserDefaults.
     @Published public var apiKey: String {
         didSet {
             guard oldValue != apiKey, !isSyncingProviderAPIKey else { return }
@@ -42,6 +47,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
                     useICloudSync: configuration.settingsICloudSyncEnabled
                 )
             } catch {
+                isSyncingProviderAPIKey = true
+                apiKey = oldValue
+                isSyncingProviderAPIKey = false
                 OSGLog.config.warning("Keychain write failed: \(error.localizedDescription, privacy: .public)")
             }
         }
@@ -80,6 +88,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
                     useICloudSync: configuration.settingsICloudSyncEnabled
                 )
             } catch {
+                isSyncingASRProviderAPIKey = true
+                asrApiKey = oldValue
+                isSyncingASRProviderAPIKey = false
                 OSGLog.config.warning("ASR Keychain write failed: \(error.localizedDescription, privacy: .public)")
             }
         }
@@ -167,7 +178,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
             persistConfiguration()
         }
     }
-    /// v0.2.1: whether to translate the transcript into
+    /// Whether to translate the transcript into
     /// `translationTargetLocaleId` before insertion. **Derived** —
     /// translation is on iff the user has selected a target locale
     /// (i.e. the persisted id is anything other than
@@ -175,7 +186,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     public var translationEnabled: Bool {
         configuration.translationEnabled
     }
-    /// v0.2.1: BCP-47-ish target language id (e.g. `en`, `ja`, `ko`) the
+    /// BCP-47-ish target language id (e.g. `en`, `ja`, `ko`) the
     /// translate-and-polish prompt should produce. Default `"off"` —
     /// translation is opt-in. Persisted in the App Group so the keyboard
     /// extension can honour it (and so the chip on the keyboard reflects
@@ -260,6 +271,26 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         }
     }
 
+    /// When enabled, the keyboard records clipboard text into a local history list.
+    @Published public var clipboardHistoryEnabled: Bool {
+        didSet {
+            guard !isApplyingConfiguration,
+                  clipboardHistoryEnabled != configuration.clipboardHistoryEnabled else { return }
+            configuration.clipboardHistoryEnabled = clipboardHistoryEnabled
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
+    /// When enabled (and history is on), show the newest clipboard item as a suggestion strip.
+    @Published public var clipboardCandidateBarEnabled: Bool {
+        didSet {
+            guard !isApplyingConfiguration,
+                  clipboardCandidateBarEnabled != configuration.clipboardCandidateBarEnabled else { return }
+            configuration.clipboardCandidateBarEnabled = clipboardCandidateBarEnabled
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
     /// When enabled, the host app tries to return to the source app after a cold-start handoff.
     @Published public var flowSkipAppSwitch: Bool {
         didSet {
@@ -329,6 +360,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
 
     private let defaults: UserDefaults
     private var configuration: AppGroupConfiguration
+    /// Suppresses `@Published` observer persistence while a complete snapshot
+    /// or preset is applied, preventing reentrant writes of partial state.
     private var isApplyingConfiguration = false
     private var isSyncingProviderAPIKey = false
     private var isSyncingASRProviderAPIKey = false
@@ -401,6 +434,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         polishIntensity = configuration.polishIntensity
         aiResponseLength = configuration.aiResponseLength
         llmThinkingEnabled = configuration.llmThinkingEnabled
+        clipboardHistoryEnabled = configuration.clipboardHistoryEnabled
+        clipboardCandidateBarEnabled = configuration.clipboardCandidateBarEnabled
         flowSkipAppSwitch = configuration.flowSkipAppSwitch
         flowInactivityDuration = configuration.flowInactivityDuration
         localASRCustomLanguageModelEnabled = configuration.localASRCustomLanguageModelEnabled
@@ -431,6 +466,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         aiResponseLength = .default
         localASRCustomLanguageModelEnabled = true
         llmThinkingEnabled = false
+        clipboardHistoryEnabled = false
+        clipboardCandidateBarEnabled = false
         hasAcknowledgedCloudSharing = false
         configuration.providerId = polishPreset.id
         configuration.baseURL = polishPreset.defaultBaseURL
@@ -444,6 +481,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         configuration.aiResponseLength = .default
         configuration.localASRCustomLanguageModelEnabled = true
         configuration.llmThinkingEnabled = false
+        configuration.clipboardHistoryEnabled = false
+        configuration.clipboardCandidateBarEnabled = false
         configuration.hasAcknowledgedCloudSharing = false
         isApplyingConfiguration = false
         persistConfiguration()
@@ -495,6 +534,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         polishIntensity = fresh.polishIntensity
         aiResponseLength = fresh.aiResponseLength
         llmThinkingEnabled = fresh.llmThinkingEnabled
+        clipboardHistoryEnabled = fresh.clipboardHistoryEnabled
+        clipboardCandidateBarEnabled = fresh.clipboardCandidateBarEnabled
         flowSkipAppSwitch = fresh.flowSkipAppSwitch
         flowInactivityDuration = fresh.flowInactivityDuration
         localASRCustomLanguageModelEnabled = fresh.localASRCustomLanguageModelEnabled

@@ -1,5 +1,5 @@
 // CloudASRService.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // Cloud-engine ASR: uploads PCM to the user's configured provider with
 // personal-dictionary bias. Streaming-capable providers use one utterance
@@ -11,6 +11,10 @@ import os
 import OSGKeyboardShared
 #endif
 
+/// Uploads PCM only on the user-selected cloud engine path; provider clients
+/// reject missing credentials before network transmission. Personal dictionary
+/// entries are sent as recognition bias. Mutable client/cancellation state is
+/// lock-protected, which is the basis for `@unchecked Sendable`.
 public final class CloudASRService: ASRService, @unchecked Sendable {
     private let store: any ConfigurationStore
     private let session: URLSession
@@ -56,7 +60,9 @@ public final class CloudASRService: ASRService, @unchecked Sendable {
         do {
             try await client.prepare(dictionary: store.personalDictionary)
         } catch {
-            OSGLog.asr.warning("cloud ASR vocabulary prepare failed: \(error.localizedDescription, privacy: .public)")
+            OSGLog.asr.warning(
+                "cloud ASR vocabulary prepare failed: \(CloudASRLogMetadata.describe(error), privacy: .public)"
+            )
         }
     }
 
@@ -89,7 +95,7 @@ public final class CloudASRService: ASRService, @unchecked Sendable {
                     + "rms=\(FlowTrace.rms(samples)) elapsed=\(FlowTrace.seconds(since: startedAt))s"
             )
             return trimmed.isEmpty ? .success("") : .success(trimmed)
-        } catch is CancellationError {
+        } catch where ProviderToolCancellation.matches(error) {
             FlowTrace.asr("cloud.chunk.cancelled", "samples=\(samples.count)")
             return .cancelled
         } catch {
@@ -97,7 +103,7 @@ public final class CloudASRService: ASRService, @unchecked Sendable {
                 "asr.cloud.chunk.failed",
                 "provider=\(store.asrProviderId) samples=\(samples.count) "
                     + "rms=\(FlowTrace.rms(samples)) elapsed=\(FlowTrace.seconds(since: startedAt))s "
-                    + "error=\(error.localizedDescription)"
+                    + "\(CloudASRLogMetadata.describe(error))"
             )
             return .failure(error.localizedDescription)
         }
@@ -129,9 +135,11 @@ public final class CloudASRService: ASRService, @unchecked Sendable {
                 dictionary: store.personalDictionary,
                 onPartial: onPartial
             )
+        } catch where ProviderToolCancellation.matches(error) {
+            return .cancelled
         } catch {
             OSGLog.asr.warning(
-                "streaming ASR session open failed, using chunked batch: \(error.localizedDescription, privacy: .public)"
+                "streaming ASR session open failed, using chunked batch: \(CloudASRLogMetadata.describe(error), privacy: .public)"
             )
             let pipeline = ChunkedUtterancePipeline(asr: self, locale: locale)
             return await pipeline.transcribe(stream: stream, onPartial: onPartial)

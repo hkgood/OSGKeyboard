@@ -35,13 +35,22 @@ struct APISettingsCard: View {
                 title: AppL10n.string("api.model"),
                 placeholder: LLMProvider.provider(id: config.providerId).defaultModel,
                 model: $config.model,
-                fetchModels: fetchModels
+                providerIdentity: config.providerId,
+                endpointIdentity: config.baseURL,
+                credentialIdentity: config.apiKey,
+                makeFetchModelsRequest: makeFetchModelsRequest
             )
             .id(config.providerId)
             rowDivider
             thinkingRow
             rowDivider
-            SettingsProviderToolsRow(validate: validateConnection)
+            SettingsProviderToolsRow(
+                providerIdentity: config.providerId,
+                endpointIdentity: config.baseURL,
+                credentialIdentity: config.apiKey,
+                modelIdentity: config.model,
+                makeValidateRequest: makeValidateRequest
+            )
         }
         .surfaceCard(enabled: showsSurface)
     }
@@ -72,25 +81,40 @@ struct APISettingsCard: View {
         .settingsListRow()
     }
 
-    private func validateConnection() async throws {
+    @MainActor
+    private func makeValidateRequest() -> ProviderToolRequest<Void> {
         // Use on-screen config — not a fresh AppGroupStore — so a just-typed
         // key is visible even if Keychain write is still settling.
-        let client = LLMClientFactory.make(
-            providerId: config.providerId,
-            baseURL: config.baseURL,
-            apiKey: config.apiKey,
-            model: config.model,
-            thinkingEnabled: config.llmThinkingEnabled
-        )
-        _ = try await client.polish("ping", systemPrompt: "Reply with the single word PONG.")
+        let providerID = config.providerId
+        let baseURL = config.baseURL
+        let apiKey = config.apiKey
+        let model = config.model
+        let thinkingEnabled = config.llmThinkingEnabled
+        return ProviderToolRequest(providerIdentity: providerID) {
+            let client = LLMClientFactory.make(
+                providerId: providerID,
+                baseURL: baseURL,
+                apiKey: apiKey,
+                model: model,
+                thinkingEnabled: thinkingEnabled
+            )
+            _ = try await client.polish("ping", systemPrompt: "Reply with the single word PONG.")
+        }
     }
 
-    private func fetchModels() async throws -> [String] {
-        try await ProviderModelService.listLLMModels(
-            providerId: config.providerId,
-            baseURL: config.baseURL,
-            apiKey: config.apiKey,
-            currentModel: config.model
-        )
+    @MainActor
+    private func makeFetchModelsRequest() -> ProviderToolRequest<[String]> {
+        let providerID = config.providerId
+        let baseURL = config.baseURL
+        let apiKey = config.apiKey
+        let currentModel = config.model
+        return ProviderToolRequest(providerIdentity: providerID) {
+            try await ProviderModelService.listLLMModels(
+                providerId: providerID,
+                baseURL: baseURL,
+                apiKey: apiKey,
+                currentModel: currentModel
+            )
+        }
     }
 }

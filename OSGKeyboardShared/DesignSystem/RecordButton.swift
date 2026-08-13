@@ -25,6 +25,7 @@ public struct RecordButton: View {
     public let level: Double
     public let remainingSeconds: Int?
     public let isEnabled: Bool
+    public let usesLiquidGlass: Bool
     public let onToggle: () -> Void
     public let onPressingChanged: (Bool) -> Void
     /// When non-nil, a 0.45s hold starts explicit editing of the last insertion.
@@ -42,6 +43,7 @@ public struct RecordButton: View {
         level: Double,
         remainingSeconds: Int? = nil,
         isEnabled: Bool = true,
+        usesLiquidGlass: Bool = false,
         onToggle: @escaping () -> Void,
         onPressingChanged: @escaping (Bool) -> Void = { _ in },
         onEditLongPressBegan: (() -> Void)? = nil
@@ -50,6 +52,7 @@ public struct RecordButton: View {
         self.level = level
         self.remainingSeconds = remainingSeconds
         self.isEnabled = isEnabled
+        self.usesLiquidGlass = usesLiquidGlass
         self.onToggle = onToggle
         self.onPressingChanged = onPressingChanged
         self.onEditLongPressBegan = onEditLongPressBegan
@@ -104,11 +107,22 @@ public struct RecordButton: View {
                 .frame(width: Layout.outerRing, height: Layout.outerRing)
 
             ZStack {
-                Circle()
-                    .fill(discGradient)
-                Circle()
-                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
-                    .blendMode(.overlay)
+                if usesLiquidGlass {
+                    Circle()
+                        .fill(.clear)
+                        .glassEffect(
+                            .regular
+                                .tint(glassTint)
+                                .interactive(),
+                            in: .circle
+                        )
+                } else {
+                    Circle()
+                        .fill(discGradient)
+                    Circle()
+                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                        .blendMode(.overlay)
+                }
 
                 Group {
                     switch phase {
@@ -169,6 +183,19 @@ public struct RecordButton: View {
             breath = (new == .recording)
         }
         .accessibilityLabel(Text(SharedL10n.string("keyboard.tapToTalkA11y")))
+    }
+
+    private var glassTint: Color {
+        switch phase {
+        case .recording:
+            return recordingTint
+        case .error, .idleUnavailable:
+            return palette.warning.opacity(0.85)
+        case .preparing, .processing:
+            return palette.surfaceElevated
+        case .idleReady:
+            return palette.accent
+        }
     }
 
     private var isIdle: Bool {

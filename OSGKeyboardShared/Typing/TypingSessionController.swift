@@ -35,6 +35,9 @@ public final class TypingSessionController: ObservableObject {
 
     /// Live document prefix ahead of the caret (from `UITextDocumentProxy`).
     public var precedingTextProvider: (() -> String?)?
+    /// Live document suffix after the caret. A non-empty word suffix means
+    /// the caret is inside a word, where backward-only replacement is unsafe.
+    public var followingTextProvider: (() -> String?)?
     /// Host field autocapitalization preference.
     public var autocapitalizationModeProvider: (() -> TypingAutocapitalizationMode)?
 
@@ -65,6 +68,7 @@ public final class TypingSessionController: ObservableObject {
     // English word-level state (characters are already in the document).
     private var englishCurrentWord: String = ""
     private var englishPreviousWord: String = ""
+    private var englishFollowingWordSuffix: String = ""
     private var pendingAutocorrection: EnglishCorrectionDecision?
     private var personalTermsCache: [String] = []
     /// User tapped Shift for a one-shot capital; autocap must not overwrite this.
@@ -204,6 +208,7 @@ public final class TypingSessionController: ObservableObject {
             englishEngine.prepare()
             refreshEnglishSuggestions()
             syncAutocapitalization()
+            synchronizeEnglishDocumentContext(caretMoved: true)
         } else {
             clearEnglishWordState(keepPrevious: false)
             composition = engine.composition
@@ -357,7 +362,7 @@ public final class TypingSessionController: ObservableObject {
         }
 
         // Punctuation / digit: commit current word first, then insert.
-        var output = commitEnglishWord(suffix: "")
+        let output = commitEnglishWord(suffix: "")
         clearOneShotShiftIfNeeded()
         if output.isEmpty {
             return .insert(String(ch))
@@ -386,11 +391,6 @@ public final class TypingSessionController: ObservableObject {
             if !englishCurrentWord.isEmpty {
                 englishCurrentWord.removeLast()
                 refreshEnglishSuggestions()
-            } else if !englishPreviousWord.isEmpty {
-                // Stepping back into the previous word.
-                englishCurrentWord = englishPreviousWord
-                englishPreviousWord = ""
-                refreshEnglishSuggestions()
             } else {
                 composition = .empty
             }
@@ -404,7 +404,9 @@ public final class TypingSessionController: ObservableObject {
             clearOneShotShiftIfNeeded()
         }
 
-        guard suggestionsEnabled, !word.isEmpty else {
+        guard suggestionsEnabled,
+              englishFollowingWordSuffix.isEmpty,
+              !word.isEmpty else {
             if !word.isEmpty {
                 englishPreviousWord = word
                 englishCurrentWord = ""
@@ -413,7 +415,8 @@ public final class TypingSessionController: ObservableObject {
             return suffix.isEmpty ? .none : .insert(suffix)
         }
 
-        if var decision = englishEngine.correctionDecision(
+        if englishCurrentWordMatchesDocument(),
+           var decision = englishEngine.correctionDecision(
             for: word,
             personalTerms: personalTermsCache,
             learnedBoosts: learningStore.snapshot()
@@ -441,6 +444,7 @@ public final class TypingSessionController: ObservableObject {
 
     private func selectEnglishCandidate(at index: Int) -> TypingOutput {
         guard composition.candidates.indices.contains(index) else { return .none }
+        guard englishCandidateAnchorMatchesDocument() else { return .none }
         let chosen = composition.candidates[index].text
 
         // Restoring original after autocorrect (no current word).
@@ -483,6 +487,11 @@ public final class TypingSessionController: ObservableObject {
     private func refreshEnglishSuggestions(afterCommittedWord word: String? = nil) {
         guard language == .english else { return }
         guard suggestionsEnabled else {
+            clearEnglishWordState(keepPrevious: false)
+            composition = .empty
+            return
+        }
+        guard englishFollowingWordSuffix.isEmpty else {
             composition = .empty
             return
         }
@@ -514,15 +523,56 @@ public final class TypingSessionController: ObservableObject {
         deleteCount: Int = 0
     ) {
         guard language == .english, page == .letters else { return }
-        guard !capsLock, !shiftHeld, !shiftPrimedByUser else { return }
-        let mode = autocapitalizationModeProvider?() ?? .sentences
         let preceding = resolvedPrecedingText(
             accountingForInsert: insert,
             deleteCount: deleteCount
         )
+        if !insert.isEmpty || deleteCount > 0 {
+            synchronizeEnglishWordState(
+                precedingText: preceding ?? "",
+                followingText: followingTextProvider?()
+            )
+        }
+        guard !capsLock, !shiftHeld, !shiftPrimedByUser else { return }
+        let mode = autocapitalizationModeProvider?() ?? .sentences
         shiftActive = TypingAutocapitalization.shouldCapitalize(
             precedingText: preceding,
             mode: mode
+        )
+    }
+
+    /// Rebuilds English suggestion state from the real caret context.
+    /// At the document end, callbacks keep the local shadow when a host
+    /// briefly reports the immediately preceding edit (common in Notes).
+    public func synchronizeEnglishDocumentContext(caretMoved: Bool = false) {
+        guard language == .english else { return }
+        guard suggestionsEnabled else {
+            clearEnglishWordState(keepPrevious: false)
+            composition = .empty
+            return
+        }
+        guard let preceding = precedingTextProvider?() else {
+            if caretMoved {
+                clearEnglishWordState(keepPrevious: false)
+                composition = .empty
+            }
+            return
+        }
+        if shouldPreserveLocalEnglishContext(over: preceding) {
+            return
+        }
+        applyEnglishDocumentSnapshot(preceding)
+    }
+
+    private func applyEnglishDocumentSnapshot(_ preceding: String) {
+        if let pending = pendingAutocorrection,
+           !preceding.hasSuffix(pending.replacement + pending.appliedSuffix) {
+            pendingAutocorrection = nil
+        }
+        _ = storePrecedingShadow(preceding)
+        synchronizeEnglishWordState(
+            precedingText: preceding,
+            followingText: followingTextProvider?()
         )
     }
 
@@ -634,7 +684,95 @@ public final class TypingSessionController: ObservableObject {
     private func clearEnglishWordState(keepPrevious: Bool) {
         englishCurrentWord = ""
         if !keepPrevious { englishPreviousWord = "" }
+        englishFollowingWordSuffix = ""
         pendingAutocorrection = nil
+    }
+
+    private func synchronizeEnglishWordState(
+        precedingText: String,
+        followingText: String?
+    ) {
+        let current = Self.englishWordBeforeCaret(in: precedingText)
+        let textBeforeCurrent = String(precedingText.dropLast(current.count))
+        englishCurrentWord = current
+        englishPreviousWord = Self.previousEnglishWord(in: textBeforeCurrent)
+        englishFollowingWordSuffix = Self.englishWordAfterCaret(in: followingText ?? "")
+        refreshEnglishSuggestions()
+    }
+
+    private func shouldPreserveLocalEnglishContext(over proxyText: String) -> Bool {
+        guard !englishCurrentWord.isEmpty,
+              (followingTextProvider?() ?? "").isEmpty,
+              !precedingShadow.isEmpty,
+              proxyText != precedingShadow,
+              Self.englishWordBeforeCaret(in: precedingShadow) == englishCurrentWord,
+              Self.englishWordBeforeCaret(in: proxyText) != englishCurrentWord else {
+            return false
+        }
+        return precedingShadow.hasPrefix(proxyText) || proxyText.hasPrefix(precedingShadow)
+    }
+
+    private func englishCandidateAnchorMatchesDocument() -> Bool {
+        guard englishCurrentWordMatchesDocument() else {
+            if let preceding = precedingTextProvider?() {
+                applyEnglishDocumentSnapshot(preceding)
+            } else {
+                clearEnglishWordState(keepPrevious: false)
+                composition = .empty
+            }
+            return false
+        }
+        return true
+    }
+
+    private func englishCurrentWordMatchesDocument() -> Bool {
+        guard englishFollowingWordSuffix.isEmpty else { return false }
+        if let following = followingTextProvider?(),
+           !Self.englishWordAfterCaret(in: following).isEmpty {
+            return false
+        }
+        guard let preceding = precedingTextProvider?() else {
+            return true
+        }
+        return Self.englishWordBeforeCaret(in: preceding) == englishCurrentWord
+    }
+
+    private static func englishWordBeforeCaret(in text: String) -> String {
+        var reversed: [Character] = []
+        for character in text.reversed() {
+            guard isEnglishWordCharacter(character) else { break }
+            reversed.append(character)
+        }
+        return String(reversed.reversed())
+    }
+
+    private static func englishWordAfterCaret(in text: String) -> String {
+        String(text.prefix(while: isEnglishWordCharacter))
+    }
+
+    private static func previousEnglishWord(in text: String) -> String {
+        var remainder = text
+        while let last = remainder.last, !isEnglishWordCharacter(last) {
+            remainder.removeLast()
+        }
+        return englishWordBeforeCaret(in: remainder)
+    }
+
+    private static func isEnglishWordCharacter(_ character: Character) -> Bool {
+        if character == "'" || character == "’" || character == "-" {
+            return true
+        }
+        guard character.isLetter else { return false }
+        return character.unicodeScalars.allSatisfy { scalar in
+            switch scalar.value {
+            case 0x0041...0x007A,
+                 0x00C0...0x024F,
+                 0x1E00...0x1EFF:
+                return true
+            default:
+                return false
+            }
+        }
     }
 
     private func refreshPersonalTerms() {

@@ -11,9 +11,8 @@
 // stages sortable, which matters because the pipeline spans two processes
 // (main app captures and recognises, keyboard extension inserts).
 //
-// Transcript payloads are logged in the clear only in DEBUG builds. Release
-// builds mark them `.private` so recognised speech never lands in a sysdiagnose
-// the user shares with a third party.
+// Transcript payloads are never logged. Both DEBUG and Release retain only
+// structural metadata so recognised speech cannot land in console archives.
 
 import Foundation
 import os
@@ -55,23 +54,18 @@ public enum FlowTrace {
 
     // MARK: - Transcript payloads
 
-    /// Logs recognised / polished text plus its length.
+    /// Logs structural metadata for recognised / polished text.
     ///
     /// `step` names the point in the path (`asr.chunk`, `asr.final`,
     /// `polish.input`, `polish.output`, `keyboard.insert`), so a diff between
     /// two adjacent `text.*` lines shows exactly which stage changed the text.
+    /// The payload itself is intentionally omitted in every build configuration.
     public static func transcript(_ step: String, _ text: String, _ detail: String = "") {
         let length = text.count
         let empty = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        #if DEBUG
         OSGLog.asr.info(
-            "[trace] stage=text.\(step, privacy: .public) len=\(length, privacy: .public) empty=\(empty, privacy: .public) \(detail, privacy: .public) text=\(text, privacy: .public)"
+            "[trace] stage=text.\(step, privacy: .public) len=\(length, privacy: .public) empty=\(empty, privacy: .public) \(detail, privacy: .public)"
         )
-        #else
-        OSGLog.asr.info(
-            "[trace] stage=text.\(step, privacy: .public) len=\(length, privacy: .public) empty=\(empty, privacy: .public) \(detail, privacy: .public) text=\(text, privacy: .private)"
-        )
-        #endif
     }
 
     // MARK: - Formatting helpers

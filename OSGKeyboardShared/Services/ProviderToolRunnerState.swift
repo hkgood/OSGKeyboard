@@ -24,34 +24,123 @@ public struct ProviderToolRunnerState: Equatable, Sendable {
     }
 }
 
+public enum ProviderToolCompletion: Equatable, Sendable {
+    case completed(ProviderToolRunnerState)
+    case cancelled
+}
+
+public enum ProviderModelFetchCompletion: Equatable, Sendable {
+    case completed(state: ProviderToolRunnerState, selectedModel: String?)
+    case cancelled
+}
+
+/// Immutable operation captured synchronously by a Settings tool button.
+/// The coordinator only retains the resulting task handle, generation, and
+/// provider identity; it never stores request credentials or configuration.
+public struct ProviderToolRequest<Output: Sendable>: Sendable {
+    public let providerIdentity: String
+    public let operation: @Sendable () async throws -> Output
+
+    public init(
+        providerIdentity: String,
+        operation: @escaping @Sendable () async throws -> Output
+    ) {
+        self.providerIdentity = providerIdentity
+        self.operation = operation
+    }
+}
+
+public enum ProviderToolCancellation {
+    public static func matches(_ error: Error) -> Bool {
+        if error is CancellationError {
+            return true
+        }
+        if let urlError = error as? URLError, urlError.code == .cancelled {
+            return true
+        }
+        if let llmError = error as? LLMError, llmError == .cancelled {
+            return true
+        }
+        return false
+    }
+}
+
+/// Main-actor request gate shared by iOS and macOS Settings rows.
+///
+/// Task cancellation is best-effort. The monotonically increasing generation
+/// and provider identity are the correctness boundary for late completions.
 @MainActor
+public final class ProviderToolRequestCoordinator {
+    public private(set) var task: Task<Void, Never>?
+    public private(set) var generation: UInt64 = 0
+
+    private var providerIdentity: String?
+
+    public init() {}
+
+    public var isRunning: Bool {
+        task != nil
+    }
+
+    public func start<Output: Sendable>(
+        providerIdentity: String,
+        operation: @escaping @Sendable () async -> Output,
+        commit: @escaping @MainActor (Output) -> Void
+    ) {
+        task?.cancel()
+        generation &+= 1
+        let requestGeneration = generation
+        self.providerIdentity = providerIdentity
+
+        task = Task { [weak self] in
+            let output = await operation()
+            guard let self,
+                  self.generation == requestGeneration,
+                  self.providerIdentity == providerIdentity else {
+                return
+            }
+            self.task = nil
+            commit(output)
+        }
+    }
+
+    public func invalidate() {
+        generation &+= 1
+        providerIdentity = nil
+        task?.cancel()
+        task = nil
+    }
+}
+
 public enum ProviderToolRunner {
     public static func runValidate(
         runningMessage: String,
         successMessage: String,
-        validate: () async throws -> Void
-    ) async -> ProviderToolRunnerState {
+        validate: @Sendable () async throws -> Void
+    ) async -> ProviderToolCompletion {
         var state = ProviderToolRunnerState(isRunning: true, message: runningMessage, failed: false)
         do {
             try await validate()
             state.isRunning = false
             state.message = successMessage
             state.failed = false
+        } catch where ProviderToolCancellation.matches(error) {
+            return .cancelled
         } catch {
             state.isRunning = false
             state.failed = true
             state.message = (error as? LocalizedError)?.errorDescription ?? "\(error)"
         }
-        return state
+        return .completed(state)
     }
 
     public static func runFetchModels(
         runningMessage: String,
-        loadedMessage: (Int) -> String,
+        loadedMessage: @Sendable (Int) -> String,
         emptyMessage: String,
         currentModel: String,
-        fetchModels: () async throws -> [String]
-    ) async -> (state: ProviderToolRunnerState, selectedModel: String?) {
+        fetchModels: @Sendable () async throws -> [String]
+    ) async -> ProviderModelFetchCompletion {
         var state = ProviderToolRunnerState(isRunning: true, message: runningMessage, failed: false)
         do {
             let fetched = try await fetchModels()
@@ -60,7 +149,7 @@ public enum ProviderToolRunner {
                 state.failed = true
                 state.message = emptyMessage
                 state.models = []
-                return (state, nil)
+                return .completed(state: state, selectedModel: nil)
             }
 
             var resolved = fetched
@@ -79,13 +168,15 @@ public enum ProviderToolRunner {
             } else {
                 selected = nil
             }
-            return (state, selected)
+            return .completed(state: state, selectedModel: selected)
+        } catch where ProviderToolCancellation.matches(error) {
+            return .cancelled
         } catch {
             state.isRunning = false
             state.failed = true
             state.message = (error as? LocalizedError)?.errorDescription ?? "\(error)"
             state.models = []
-            return (state, nil)
+            return .completed(state: state, selectedModel: nil)
         }
     }
 }

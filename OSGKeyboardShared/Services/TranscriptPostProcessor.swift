@@ -40,7 +40,7 @@ public enum TranscriptPostProcessor: Sendable {
             return false
         }
 
-        let cjkCount = trimmed.unicodeScalars.filter(isCJKScalar).count
+        let cjkCount = trimmed.unicodeScalars.filter(HanScript.isIdeograph).count
         if cjkCount > 0 {
             // Tier 1 — ultra-short
             if trimmed.count <= 4 && cjkCount <= 4 {
@@ -63,7 +63,7 @@ public enum TranscriptPostProcessor: Sendable {
     public static func isTier2SkipUtterance(_ text: String) -> Bool {
         let stripped = stripLeadingFillers(text)
         if stripped.isEmpty { return true }
-        let cjk = stripped.unicodeScalars.filter(isCJKScalar).count
+        let cjk = stripped.unicodeScalars.filter(HanScript.isIdeograph).count
         if stripped.count <= 4 && cjk <= 4 { return true }
 
         if hasCommunicativeSignal(stripped) { return false }
@@ -486,7 +486,7 @@ public enum TranscriptPostProcessor: Sendable {
     }
 
     private static func isCJKCharacter(_ character: Character) -> Bool {
-        character.unicodeScalars.contains(where: isCJKScalar)
+        character.unicodeScalars.contains(where: HanScript.isIdeograph)
     }
 
     private static func isClosingPunctuation(_ character: Character) -> Bool {
@@ -511,14 +511,5 @@ public enum TranscriptPostProcessor: Sendable {
 
     private static func isEmojiScalar(_ scalar: Unicode.Scalar) -> Bool {
         scalar.properties.isEmoji && (scalar.value > 0x238C || scalar.properties.isEmojiPresentation)
-    }
-
-    private static func isCJKScalar(_ scalar: Unicode.Scalar) -> Bool {
-        switch scalar.value {
-        case 0x4E00...0x9FFF, 0x3400...0x4DBF, 0xF900...0xFAFF:
-            return true
-        default:
-            return false
-        }
     }
 }

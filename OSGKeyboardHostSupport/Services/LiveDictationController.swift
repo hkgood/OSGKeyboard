@@ -1,40 +1,27 @@
 // LiveDictationController.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // Unified on-device dictation session: mic capture + iOS 26 SpeechAnalyzer.
-// Used by the keyboard preview sheet, host-app dictation handoff, and any
-// other foreground surface that needs live ASR without duplicating pipeline code.
+// Retained for foreground preview and one-shot handoff surfaces that need
+// live ASR without duplicating the host-owned audio pipeline.
 //
-// STATUS (v0.1.2): Retained as a "preview / one-shot handoff" path.
 // The *primary* voice-session path is `FlowSessionManager` +
-// `FlowContinuousCapture` (TypeWhisper-style continuous capture shared
-// between host app and keyboard extension). The keyboard extension
-// consumes results through `FlowSessionBridge`.
+// `FlowContinuousCapture`; the keyboard extension consumes its results
+// through `FlowSessionBridge`.
 //
 // This class is still imported by:
-//   - `OSGKeyboard/Views/PreviewASRController.swift` (typealias)
 //   - `OSGKeyboard/Views/KeyboardPreviewSheet.swift` (in-app preview)
-//   - `OSGKeyboard/Views/KeyboardPreviewSheet.swift` (host-app ASR preview)
 //   - `OSGKeyboardTests/PreviewASRControllerStateTests.swift`
 //
-// Do NOT remove without updating those call sites. The earlier
-// `OSGKeyboardExt/Services/AudioCaptureService.swift` *was* a true
-// dead duplicate and has been deleted (see AUDIT_APPSTORE.md P0-3).
+// Do NOT remove without updating those call sites.
 // Owns its own AVAudioEngine + AVAudioSession, downsamples to 16 kHz
-// mono Float32 on the audio thread (same as `AudioCaptureService`), and
-// feeds `AudioBufferSnapshot` to the shared `ASRService` (the same
-// pipeline the real keyboard extension
-// uses, so the preview exercises the *real* iOS speech APIs, not a
-// stub). Without this the in-app preview was a hardcoded transcript
-// and "did you actually call SFSpeechRecognizer?" was a fair review
-// note.
+// mono Float32 on the audio thread, and feeds `AudioBufferSnapshot` to
+// the HostSupport `ASRService`, so previews exercise the real iOS
+// speech APIs instead of a stub.
 //
-// Why not reuse `AudioCaptureService` from the extension? It lives in
-// `OSGKeyboardExt`, an `app-extension` target — the main app can't
-// import its symbols. We could move it to `OSGKeyboardShared`, but
-// `AVAudioSession` lifecycle differs enough between a keyboard
-// extension (no background, no recording entitlement surprise) and a
-// foreground app that a copy here is the lesser evil.
+// This stays in HostSupport because foreground `AVAudioSession`
+// lifecycle and recording ownership do not belong in the keyboard
+// extension or the platform-neutral Shared target.
 
 import Foundation
 import AVFoundation
@@ -411,7 +398,7 @@ public final class LiveDictationController: ObservableObject {
                         controller.phase = .idle
                     }
                 case .failure(let message):
-                    controller.debug("asr error: \(message)")
+                    controller.debug("asr failed messageLen=\(message.count)")
                     controller.teardownCapturePipeline()
                     controller.errorMessage = message
                     controller.phase = .error(message)
@@ -442,7 +429,7 @@ public final class LiveDictationController: ObservableObject {
     // `requestAuthorization` callback were re-typed in the
     // `@MainActor` context of the caller, and the runtime
     // assertion came right back — same crash, different symbol:
-    // `closure #1 in closure #2 in PreviewASRController.start(locale:)`.
+    // `closure #1 in closure #2 in LiveDictationController.start(locale:)`.
     //
     // The fix that survives inlining is the *function-reference*
     // pattern, the same one used for `installTap` in
@@ -526,8 +513,8 @@ public final class LiveDictationController: ObservableObject {
             let meter = min(Double(rms) * 4.0, 1.0)
             onMeter(meter)
 
-            // 2) Downsample to 16 kHz mono Float32 for ASR (matches
-            // `AudioCaptureService` and Apple's `considering:` hint).
+            // 2) Downsample to the 16 kHz mono Float32 format expected by
+            // HostSupport ASR and Apple's `considering:` hint.
             let outFrames = AVAudioFrameCount(
                 Double(buffer.frameLength) * targetFormat.sampleRate / hwFormat.sampleRate
             )

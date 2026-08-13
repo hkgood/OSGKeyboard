@@ -1,5 +1,5 @@
 // SupportDeveloperSection.swift
-// OSGKeyboard · Shared
+// OSGKeyboard · HostSupport
 //
 // Optional voluntary tip block for Settings. Does not gate features.
 

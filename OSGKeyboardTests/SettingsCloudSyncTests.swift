@@ -19,13 +19,17 @@ final class SettingsCloudSyncTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
+        Keychain.resetTestMemoryStore()
         suiteName = "group.com.osgkeyboard.shared.tests.settings.\(UUID().uuidString)"
         defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         defaults.set(deviceA, forKey: "sync.deviceID.v1")
         store = AppGroupStore(defaults: defaults)
         kvs = FakeUbiquitousKeyValueStore()
-        settingsSync = SettingsCloudSync(kvs: kvs) { [unowned self] in store }
+        settingsSync = SettingsCloudSync(
+            kvs: kvs,
+            makeStore: { [unowned self] in store }
+        )
     }
 
     override func tearDown() {
@@ -34,6 +38,8 @@ final class SettingsCloudSyncTests: XCTestCase {
         try? Keychain.deleteAPIKey(for: "openai", useICloudSync: true)
         try? Keychain.deleteAPIKey(for: "qwen", useICloudSync: false)
         try? Keychain.deleteAPIKey(for: "qwen", useICloudSync: true)
+        try? Keychain.deleteASRAPIKey(for: "openai", useICloudSync: true)
+        Keychain.resetTestMemoryStore()
         super.tearDown()
     }
 
@@ -126,6 +132,81 @@ final class SettingsCloudSyncTests: XCTestCase {
         XCTAssertNil(reencodedObject["flowKeepAliveMode"])
     }
 
+    func testLegacyClipboardFieldsDecodeButAreNotReencoded() throws {
+        let payload = SyncedAppSettingsV2.seeded(
+            from: AppGroupConfiguration.load(fromAvailable: defaults),
+            deviceID: deviceA,
+            updatedAt: Date(timeIntervalSince1970: 100)
+        )
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoder.encode(payload)) as? [String: Any]
+        )
+        let legacyField = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: encoder.encode(
+                    SyncedField(value: true, updatedAt: Date(timeIntervalSince1970: 200), deviceID: deviceB)
+                )
+            ) as? [String: Any]
+        )
+        object["clipboardHistoryEnabled"] = legacyField
+        object["clipboardCandidateBarEnabled"] = legacyField
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try settingsSync.decodeV2(legacyData)
+        let reencoded = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoder.encode(decoded)) as? [String: Any]
+        )
+
+        XCTAssertNil(reencoded["clipboardHistoryEnabled"])
+        XCTAssertNil(reencoded["clipboardCandidateBarEnabled"])
+    }
+
+    func testRemoteClipboardTrueDoesNotActivateLocalConsent() async throws {
+        store.setSettingsICloudSyncEnabled(true)
+        store.setClipboardHistoryEnabled(false)
+        store.setClipboardCandidateBarEnabled(false)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let remote = SyncedAppSettingsV2.seeded(
+            from: AppGroupConfiguration.load(fromAvailable: defaults),
+            deviceID: deviceB,
+            updatedAt: Date(timeIntervalSince1970: 100)
+        )
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoder.encode(remote)) as? [String: Any]
+        )
+        let remoteTrue = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: encoder.encode(
+                    SyncedField(value: true, updatedAt: Date(timeIntervalSince1970: 900), deviceID: deviceB)
+                )
+            ) as? [String: Any]
+        )
+        object["clipboardHistoryEnabled"] = remoteTrue
+        object["clipboardCandidateBarEnabled"] = remoteTrue
+        kvs.set(
+            try JSONSerialization.data(withJSONObject: object),
+            forKey: SettingsCloudSync.kvsKey
+        )
+
+        await settingsSync.pullAndMerge(store: store)
+
+        XCTAssertFalse(store.clipboardHistoryEnabled)
+        XCTAssertFalse(store.clipboardCandidateBarEnabled)
+    }
+
+    func testClipboardTogglesRemainSharedThroughLocalAppGroupDefaults() {
+        store.setClipboardHistoryEnabled(true)
+        store.setClipboardCandidateBarEnabled(true)
+
+        let extensionSideReader = AppGroupStore(defaults: defaults)
+
+        XCTAssertTrue(extensionSideReader.clipboardHistoryEnabled)
+        XCTAssertTrue(extensionSideReader.clipboardCandidateBarEnabled)
+    }
+
     func testLegacyV1PullDoesNotClearKeychain() async throws {
         try Keychain.setAPIKey("sk-local-openai", for: "openai", useICloudSync: false)
         store.setSettingsICloudSyncEnabled(true)
@@ -165,6 +246,50 @@ final class SettingsCloudSyncTests: XCTestCase {
         XCTAssertTrue(store.settingsICloudSyncEnabled)
         XCTAssertTrue(store.personalDictionaryICloudSyncEnabled)
         XCTAssertEqual(Keychain.apiKey(for: "openai", preferICloudSync: true), "sk-local-openai")
+    }
+
+    func testDisableSyncMigratesKeyLocallyBeforeTurningFlagsOff() throws {
+        try Keychain.setAPIKey("synced-credential", for: "openai", useICloudSync: true)
+        store.setSettingsICloudSyncEnabled(true)
+        store.setPersonalDictionaryICloudSyncEnabled(true)
+
+        try settingsSync.disableSync()
+
+        XCTAssertFalse(store.settingsICloudSyncEnabled)
+        XCTAssertFalse(store.personalDictionaryICloudSyncEnabled)
+        XCTAssertNotNil(Keychain.apiKey(for: "openai", preferICloudSync: false))
+    }
+
+    func testDisableSyncFailureKeepsFlagsEnabled() {
+        store.setSettingsICloudSyncEnabled(true)
+        store.setPersonalDictionaryICloudSyncEnabled(true)
+        ICloudSyncPreferences.pushSettingsEnabled(true, kvs: kvs)
+        ICloudSyncPreferences.pushDictionaryEnabled(true, kvs: kvs)
+        let failingSync = SettingsCloudSync(
+            kvs: kvs,
+            makeStore: { [unowned self] in store },
+            migrateLocalKeysToICloud: {},
+            migrateICloudKeysToLocal: {
+                throw Keychain.CredentialMigrationError.conflict
+            }
+        )
+
+        XCTAssertThrowsError(try failingSync.disableSync()) { error in
+            XCTAssertEqual(
+                error as? SettingsCloudSyncError,
+                .credentialMigrationFailed(.conflict)
+            )
+        }
+        XCTAssertTrue(store.settingsICloudSyncEnabled)
+        XCTAssertTrue(store.personalDictionaryICloudSyncEnabled)
+        XCTAssertEqual(
+            kvs.object(forKey: ICloudSyncPreferences.settingsEnabledKey) as? Bool,
+            true
+        )
+        XCTAssertEqual(
+            kvs.object(forKey: ICloudSyncPreferences.dictionaryEnabledKey) as? Bool,
+            true
+        )
     }
 
     func testPullAndMergeAppliesRemoteSettingsToAppGroup() async throws {

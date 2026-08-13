@@ -9,7 +9,9 @@
 
 import AVFoundation
 import Foundation
+#if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
+#endif
 
 public enum FlowCaptureVoiceProcessing {
 

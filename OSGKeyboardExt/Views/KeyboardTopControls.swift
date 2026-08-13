@@ -7,6 +7,17 @@
 import SwiftUI
 import OSGKeyboardShared
 
+private struct KeyboardTabSelectionNamespaceKey: EnvironmentKey {
+    static let defaultValue: Namespace.ID? = nil
+}
+
+extension EnvironmentValues {
+    var keyboardTabSelectionNamespace: Namespace.ID? {
+        get { self[KeyboardTabSelectionNamespaceKey.self] }
+        set { self[KeyboardTabSelectionNamespaceKey.self] = newValue }
+    }
+}
+
 enum KeyboardTopBarMetrics {
     static let height: CGFloat = 44
     static let horizontalInset: CGFloat = 12
@@ -14,6 +25,9 @@ enum KeyboardTopBarMetrics {
     static let nestedHorizontalInset: CGFloat = horizontalInset - KeyboardChromeLayout.horizontalInset
     static let logoHeight: CGFloat = 22
     static let logoWidth: CGFloat = logoHeight * 952 / 291
+    /// Shared footprint for top-trailing chips (clipboard, cancel/X, translation).
+    static let trailingChipSize: CGFloat = 34
+    static let trailingChipIconSize: CGFloat = 15
 }
 
 struct KeyboardBrandLogo: View {
@@ -41,34 +55,33 @@ struct KeyboardBrandLogo: View {
 }
 
 struct KeyboardCancelButton: View {
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.themePalette) private var palette
+    @Environment(\.colorScheme) private var colorScheme
 
     let action: () -> Void
     let accessibilityLabel: Text
     let accessibilityHint: Text
 
     var body: some View {
+        // Same 34×34 chip as KeyboardClipboardMenuButton / translation.
         Button(action: action) {
             Image(systemName: "xmark")
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: KeyboardTopBarMetrics.trailingChipIconSize, weight: .medium))
                 .foregroundStyle(palette.textSecondary)
-                .frame(width: 34, height: 34)
-                .background(buttonFill, in: Circle())
-                .overlay(
-                    Circle()
-                        .stroke(palette.divider, lineWidth: 0.5)
+                .frame(
+                    width: KeyboardTopBarMetrics.trailingChipSize,
+                    height: KeyboardTopBarMetrics.trailingChipSize
                 )
-                .frame(width: 44, height: 44)
+                // 不透明键面色：玻璃时代靠折射显「实」，半透明实心会发淡。
+                .background(NativeKeyboardKeyColors.fill(for: colorScheme), in: Circle())
+                .overlay(
+                    Circle().stroke(palette.divider, lineWidth: 0.5)
+                )
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
-    }
-
-    private var buttonFill: Color {
-        colorScheme == .dark ? Color(white: 0.30) : .white
     }
 }
 
@@ -80,16 +93,18 @@ private enum KeyboardInputTab: CaseIterable {
 
     var title: String {
         switch self {
-        case .ai: return "AI"
-        case .voice: return "语音"
-        case .chinese: return "中文"
-        case .english: return "EN"
+        case .ai: return ExtL10n.string("keyboard.tab.ai")
+        case .voice: return ExtL10n.string("keyboard.tab.voice")
+        case .chinese: return ExtL10n.string("keyboard.tab.chinese")
+        case .english: return ExtL10n.string("keyboard.tab.english")
         }
     }
 }
 
 struct KeyboardTopControls: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.keyboardTabSelectionNamespace) private var sharedSelectionNamespace
+    @Namespace private var fallbackSelectionNamespace
 
     @ObservedObject var state: KeyboardState
     @ObservedObject var typing: TypingSessionController
@@ -99,55 +114,69 @@ struct KeyboardTopControls: View {
 
     var body: some View {
         HStack(spacing: 6) {
+            // 分段轨道：不透明灰底；选中项用白/升高键面滑动，避免半透明发淡。
             HStack(spacing: 2) {
                 ForEach(KeyboardInputTab.allCases, id: \.self) { tab in
-                    Button {
-                        select(tab)
-                    } label: {
-                        Text(tab.title)
-                            .font(.system(size: 12, weight: isSelected(tab) ? .semibold : .medium))
-                            .foregroundStyle(
-                                isSelected(tab) ? palette.textPrimary : palette.textSecondary
-                            )
-                            .frame(
-                                width: tab == .english || tab == .ai ? 34 : 42,
-                                height: 30
-                            )
-                            .background {
-                                if isSelected(tab) {
-                                    Capsule()
-                                        .fill(selectedFill)
-                                        .shadow(
-                                            color: Color.black.opacity(colorScheme == .dark ? 0.22 : 0.10),
-                                            radius: 1.5,
-                                            y: 1
-                                        )
-                                }
-                            }
-                    }
-                    .buttonStyle(TopControlPressStyle(pressedFill: pressedFill))
-                    .disabled(tab != .voice && !state.canEnterTypingSurface)
-                    .opacity(tabOpacity(tab))
-                    .accessibilityLabel(accessibilityLabel(for: tab))
-                    .accessibilityAddTraits(isSelected(tab) ? .isSelected : [])
+                    tabButton(tab)
                 }
             }
             .padding(2)
-            .background(trackFill, in: Capsule())
-
-            KeyboardTranslationMenuButton(
-                palette: palette,
-                targetLocaleId: state.translationTargetLocaleId,
-                onSelect: state.setTranslationTargetLocaleId
+            .background(tabTrackFill, in: Capsule())
+            .overlay(
+                Capsule().stroke(palette.divider, lineWidth: 0.5)
             )
-            // Decouple the open picker from the keyboard's 1 Hz App Group
-            // poll so scrolling does not reset or dismiss the menu.
-            .equatable()
+
+            if state.canShowClipboardEntry {
+                KeyboardClipboardMenuButton(
+                    palette: palette,
+                    action: state.openClipboardPanel
+                )
+                .equatable()
+            }
         }
     }
 
-    private var selectedFill: Color {
-        colorScheme == .dark ? Color(white: 0.38) : .white
+    private func tabButton(_ tab: KeyboardInputTab) -> some View {
+        let selected = isSelected(tab)
+        let width: CGFloat = tab == .english || tab == .ai ? 34 : 42
+
+        return Button {
+            withAnimation(Motion.soft) {
+                select(tab)
+            }
+        } label: {
+            tabLabel(tab, selected: selected, width: width)
+        }
+        .buttonStyle(TopControlPressStyle(pressedFill: pressedFill))
+        .disabled(tab != .voice && !state.canEnterTypingSurface)
+        .opacity(tabOpacity(tab))
+        .accessibilityLabel(accessibilityLabel(for: tab))
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private func tabLabel(
+        _ tab: KeyboardInputTab,
+        selected: Bool,
+        width: CGFloat
+    ) -> some View {
+        let label = Text(tab.title)
+            .font(.system(size: 12, weight: selected ? .semibold : .medium))
+            .foregroundStyle(selected ? palette.textPrimary : palette.textSecondary)
+            .frame(width: width, height: 30)
+
+        if selected {
+            let namespace = sharedSelectionNamespace ?? fallbackSelectionNamespace
+            // 去玻璃但保留滑动高亮：不透明键面胶囊在标签间平滑移动。
+            label.background(
+                Capsule()
+                    .fill(NativeKeyboardKeyColors.fill(for: colorScheme))
+                    .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
+                    .matchedGeometryEffect(id: "keyboard-tab-selection", in: namespace)
+            )
+        } else {
+            label
+        }
     }
 
     private func tabOpacity(_ tab: KeyboardInputTab) -> Double {
@@ -158,12 +187,14 @@ struct KeyboardTopControls: View {
         return 0.42
     }
 
-    private var trackFill: Color {
-        colorScheme == .dark ? Color(white: 0.18) : Color.black.opacity(0.08)
-    }
-
     private var pressedFill: Color {
         colorScheme == .dark ? Color(white: 0.22) : Color(white: 0.84)
+    }
+
+    /// 分段轨道底色：不透明，且与选中键面（NativeKeyboardKeyColors.fill）拉开明度，
+    /// 深色下压暗、浅色下提亮，让滑动的选中项始终清晰可辨。
+    private var tabTrackFill: Color {
+        colorScheme == .dark ? Color(white: 0.12) : Color(white: 0.87)
     }
 
     private func isSelected(_ tab: KeyboardInputTab) -> Bool {
@@ -211,17 +242,15 @@ struct KeyboardTopControls: View {
 
     private func accessibilityLabel(for tab: KeyboardInputTab) -> String {
         switch tab {
-        case .ai: return "切换到 AI 问答"
-        case .voice: return "切换到语音输入"
-        case .chinese: return "切换到中文输入"
-        case .english: return "切换到英文输入"
+        case .ai: return ExtL10n.string("keyboard.tab.ai.a11y")
+        case .voice: return ExtL10n.string("keyboard.tab.voice.a11y")
+        case .chinese: return ExtL10n.string("keyboard.tab.chinese.a11y")
+        case .english: return ExtL10n.string("keyboard.tab.english.a11y")
         }
     }
 }
 
-private struct KeyboardTranslationMenuButton: View, Equatable {
-    @Environment(\.colorScheme) private var colorScheme
-
+struct KeyboardTranslationMenuButton: View, Equatable {
     let palette: ThemePalette
     let targetLocaleId: String
     let onSelect: (String) -> Void
@@ -251,27 +280,22 @@ private struct KeyboardTranslationMenuButton: View, Equatable {
                 }
             }
         } label: {
-            Image(systemName: isEnabled ? "character.bubble.fill" : "character.bubble")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(isEnabled ? palette.accent : palette.textSecondary)
-                .frame(width: 34, height: 34)
-                .background(buttonFill, in: Circle())
-                .overlay(Circle().stroke(buttonStroke, lineWidth: 0.5))
+            ZStack {
+                Color.clear
+                Image(systemName: isEnabled ? "character.bubble.fill" : "character.bubble")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(
+                        isEnabled
+                            ? palette.accent
+                            : palette.textSecondary
+                    )
+            }
+            .contentShape(Circle())
+            .glassEffect(.regular.interactive(), in: Circle())
         }
         .menuStyle(.button)
         .accessibilityLabel(Text(SharedL10n.string("keyboard.translation.a11y")))
         .accessibilityHint(Text(SharedL10n.string("keyboard.translation.a11yHint")))
-    }
-
-    private var buttonFill: Color {
-        if isEnabled {
-            return palette.accent.opacity(colorScheme == .dark ? 0.28 : 0.16)
-        }
-        return colorScheme == .dark ? Color(white: 0.30) : .white
-    }
-
-    private var buttonStroke: Color {
-        isEnabled ? palette.accent.opacity(0.35) : palette.divider
     }
 
     private func displayLabel(for language: TranslationLanguage) -> String {

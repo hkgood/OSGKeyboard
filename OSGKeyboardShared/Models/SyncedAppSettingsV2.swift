@@ -55,6 +55,8 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         aiResponseLength: SyncedField<AIResponseLength>? = nil,
         activePolishStyleId: SyncedField<String>,
         llmThinkingEnabled: SyncedField<Bool>,
+        clipboardHistoryEnabled: SyncedField<Bool>? = nil,
+        clipboardCandidateBarEnabled: SyncedField<Bool>? = nil,
         flowSkipAppSwitch: SyncedField<Bool>,
         flowInactivityDuration: SyncedField<FlowInactivityDuration>
     ) {
@@ -86,6 +88,10 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         )
         self.activePolishStyleId = activePolishStyleId
         self.llmThinkingEnabled = llmThinkingEnabled
+        // Kept as optional parameters so old call sites and payload fixtures
+        // remain source-compatible. Clipboard consent is device-local.
+        _ = clipboardHistoryEnabled
+        _ = clipboardCandidateBarEnabled
         self.flowSkipAppSwitch = flowSkipAppSwitch
         self.flowInactivityDuration = flowInactivityDuration
     }
@@ -111,6 +117,8 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         case aiResponseLength
         case activePolishStyleId
         case llmThinkingEnabled
+        case clipboardHistoryEnabled
+        case clipboardCandidateBarEnabled
         case flowSkipAppSwitch
         case flowInactivityDuration
     }
@@ -182,6 +190,14 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             updatedAt: keyboardHapticIntensity.updatedAt,
             deviceID: keyboardHapticIntensity.deviceID
         )
+        _ = try container.decodeIfPresent(
+            SyncedField<Bool>.self,
+            forKey: .clipboardHistoryEnabled
+        )
+        _ = try container.decodeIfPresent(
+            SyncedField<Bool>.self,
+            forKey: .clipboardCandidateBarEnabled
+        )
         flowSkipAppSwitch = try container.decode(SyncedField<Bool>.self, forKey: .flowSkipAppSwitch)
         flowInactivityDuration = try container.decode(
             SyncedField<FlowInactivityDuration>.self,
@@ -240,6 +256,32 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             flowSkipAppSwitch.updatedAt,
             flowInactivityDuration.updatedAt,
         ].max() ?? .distantPast
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
+        try container.encode(providerId, forKey: .providerId)
+        try container.encode(baseURL, forKey: .baseURL)
+        try container.encode(model, forKey: .model)
+        try container.encode(asrProviderId, forKey: .asrProviderId)
+        try container.encode(asrBaseURL, forKey: .asrBaseURL)
+        try container.encode(asrModel, forKey: .asrModel)
+        try container.encode(modeId, forKey: .modeId)
+        try container.encode(localeId, forKey: .localeId)
+        try container.encode(engineMode, forKey: .engineMode)
+        try container.encode(hasAcknowledgedCloudSharing, forKey: .hasAcknowledgedCloudSharing)
+        try container.encode(uiLanguage, forKey: .uiLanguage)
+        try container.encode(translationTargetLocaleId, forKey: .translationTargetLocaleId)
+        try container.encode(handednessPreference, forKey: .handednessPreference)
+        try container.encode(cursorDragNavigationEnabled, forKey: .cursorDragNavigationEnabled)
+        try container.encode(keyboardHapticIntensity, forKey: .keyboardHapticIntensity)
+        try container.encode(polishIntensity, forKey: .polishIntensity)
+        try container.encode(aiResponseLength, forKey: .aiResponseLength)
+        try container.encode(activePolishStyleId, forKey: .activePolishStyleId)
+        try container.encode(llmThinkingEnabled, forKey: .llmThinkingEnabled)
+        try container.encode(flowSkipAppSwitch, forKey: .flowSkipAppSwitch)
+        try container.encode(flowInactivityDuration, forKey: .flowInactivityDuration)
     }
 }
 

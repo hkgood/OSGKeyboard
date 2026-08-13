@@ -88,11 +88,16 @@ struct MacSettingsICloudSyncRow: View {
                 do {
                     try await MacICloudSyncBootstrap.dictionarySync.enableSync()
                 } catch let error as PersonalDictionaryCloudSyncError {
-                    MacICloudSyncBootstrap.settingsSync.disableSync()
-                    isEnabled = false
-                    if case .payloadTooLarge = error {
-                        syncErrorMessage = MacL10n.string("mac.sync.error.dictTooLarge", language: language)
-                    } else {
+                    do {
+                        try MacICloudSyncBootstrap.settingsSync.disableSync()
+                        isEnabled = false
+                        if case .payloadTooLarge = error {
+                            syncErrorMessage = MacL10n.string("mac.sync.error.dictTooLarge", language: language)
+                        } else {
+                            syncErrorMessage = MacL10n.string("mac.sync.error.generic", language: language)
+                        }
+                    } catch {
+                        reloadFromStore()
                         syncErrorMessage = MacL10n.string("mac.sync.error.generic", language: language)
                     }
                     isApplyingToggle = false
@@ -100,7 +105,7 @@ struct MacSettingsICloudSyncRow: View {
                 }
                 reloadFromStore()
             } catch {
-                isEnabled = false
+                reloadFromStore()
                 syncErrorMessage = MacL10n.string("mac.sync.error.generic", language: language)
             }
             isApplyingToggle = false
@@ -108,9 +113,16 @@ struct MacSettingsICloudSyncRow: View {
     }
 
     private func disableSync() {
-        MacICloudSyncBootstrap.settingsSync.disableSync()
-        isEnabled = false
         syncErrorMessage = nil
+        isApplyingToggle = true
+        do {
+            try MacICloudSyncBootstrap.settingsSync.disableSync()
+            reloadFromStore()
+        } catch {
+            reloadFromStore()
+            syncErrorMessage = MacL10n.string("mac.sync.error.generic", language: language)
+        }
+        isApplyingToggle = false
     }
 
     private func syncNow() {

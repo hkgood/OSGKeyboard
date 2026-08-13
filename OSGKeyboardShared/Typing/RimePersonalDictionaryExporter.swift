@@ -53,7 +53,7 @@ public enum RimePersonalDictionaryExporter {
             for alias in entry.aliases {
                 let trimmed = alias.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else { continue }
-                guard !RimePinyinAnnotator.containsCJK(trimmed) else { continue }
+                guard !HanScript.containsIdeograph(in: trimmed) else { continue }
                 let latin = RimePinyinAnnotator.latinSpellerCode(trimmed)
                 guard !latin.isEmpty else { continue }
                 append(text: term, code: latin)

@@ -14,6 +14,21 @@ final class UtteranceTranscriptStitcherTests: XCTestCase {
         XCTAssertEqual(merged, "今天天气很好我们继续")
     }
 
+    func testNormalizedOverlapMapsThroughRawPunctuation() {
+        let merged = UtteranceTranscriptStitcher.mergeWithOverlap(
+            previous: "先这样用着，就算目前的可用性已经",
+            next: "可用性，已经提升很多了"
+        )
+        XCTAssertEqual(merged, "先这样用着，就算目前的可用性已经提升很多了")
+    }
+
+    func testSingleCharacterOverlapRemainsStitcherSpecific() {
+        XCTAssertEqual(
+            UtteranceTranscriptStitcher.mergeWithOverlap(previous: "版本A", next: "A继续"),
+            "版本A继续"
+        )
+    }
+
     func testStitcherOrdersChunksByIndex() {
         var stitcher = UtteranceTranscriptStitcher()
         stitcher.append(index: 1, text: "第二段")

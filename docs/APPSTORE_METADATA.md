@@ -1,349 +1,210 @@
-# App Store Connect — OSGKeyboard v0.1.2
+# App Store Connect — OSGKeyboard 1.7.5 (build 66)
 
-> Use this document as a single source of truth for App Store Connect
-> version metadata. All values are Apple-compliant (character limits
-> respected, no marketing claims that would trigger Guideline 4.0).
+> Current metadata baseline for the iOS/iPadOS App Store build. Version and build
+> numbers come from `project.yml`. The repository also contains a separate
+> macOS 15+ Developer ID target; it is not this App Store listing.
 
----
-
-## App Information
+## App information
 
 | Field | Value | Notes |
 |---|---|---|
-| **App name** | `OSGKeyboard` | CFBundleDisplayName. ≤ 30 chars. |
-| **Subtitle** | `Voice input, everywhere` | ≤ 30 chars. |
-| **Bundle ID** | `com.osgkeyboard.ios` | project.yml `bundleIdPrefix` + target name. |
-| **SKU** | `OSGKB-001` | Internal; not user-visible. |
-| **Primary locale** | `en-US` |  |
-| **Category (primary)** | `Utilities` | LSApplicationCategoryType. |
-| **Category (secondary)** | `Productivity` | Optional, helps discovery. |
-| **Content rights** | `No third-party content` | Default. |
-| **Age rating** | `4+` | No objectionable content. |
+| App name | `OSGKeyboard` | ≤ 30 characters |
+| Subtitle | `Voice input, everywhere` | ≤ 30 characters |
+| Bundle ID | `com.osgkeyboard.ios` | iOS host target |
+| Version / build | `1.7.5` / `66` | `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` |
+| Minimum system | iOS/iPadOS 26 | iPhone and iPad |
+| Primary locale | `en-US` | Simplified Chinese is also bundled |
+| Primary category | Utilities | |
+| Secondary category | Productivity | Optional |
+| Age rating | 4+ | No objectionable content |
 
----
-
-## URLs (required)
+## URLs
 
 | Field | Value |
 |---|---|
-| **Support URL** | `https://github.com/hkgood/OSGKeyboard/issues` |
-| **Marketing URL** | `https://github.com/hkgood/OSGKeyboard` |
-| **Privacy Policy URL** | `https://hkgood.github.io/OSGKeyboard/privacy/` |
-| **EULA** | *Leave blank* — use Apple's standard EULA |
+| Support URL | `https://github.com/hkgood/OSGKeyboard/issues` |
+| Marketing URL | `https://hkgood.github.io/OSGKeyboard/` |
+| Privacy Policy URL | `https://hkgood.github.io/OSGKeyboard/privacy/` |
+| EULA | Leave blank; use Apple's standard EULA |
 
----
-
-## Pricing & Availability
+## Pricing and availability
 
 | Field | Value |
 |---|---|
-| **Price** | Free (0 USD) |
-| **In-App Purchases** | Optional voluntary tip — Consumable `ByRockyACoffee` (¥28 China tier; no feature unlock) |
-| **Availability** | All App Store territories (default) |
-| **Pre-order** | No |
-| **Volume purchase** | No |
+| Price | Free |
+| In-App Purchases | Optional consumable tip `ByRockyACoffee`; unlocks no feature |
+| Availability | All configured App Store territories |
+| Pre-order | No |
 
----
+## Description (≤ 4000 characters)
 
-## Description (≤ 4000 chars)
+```text
+OSGKeyboard is a voice and typing keyboard for iPhone and iPad. Speak in
+any app and insert the transcript at the cursor, or switch to Chinese and
+English typing without leaving the keyboard.
 
-```
-OSGKeyboard is a free, open-source custom keyboard for iOS 26 that turns
-your voice into clean, AI-polished text — in any app.
+VOICE INPUT
 
-Hold the mic key, speak naturally, release. By default the keyboard
-transcribes your voice entirely on-device (Apple's iOS 26
-SpeechAnalyzer + DictationTranscriber), and only the final text is
-sent to the AI you choose to polish it — your audio never leaves your
-device unless you explicitly opt into the cloud ASR engine, which
-uploads recordings to the provider you configure.
+• On-device by default. iOS 26 SpeechAnalyzer and DictationTranscriber
+  transcribe locally.
+• Optional cloud recognition. Audio leaves the device only after you
+  enable a cloud ASR provider and configure its credentials.
+• Optional AI polish and translation. Add your own provider API key;
+  without a key, recognized text can still be inserted.
+• AI keyboard mode. Ask a spoken question, review the generated answer,
+  then explicitly insert or send it.
+• Edit the last verified OSGKeyboard insertion by voice before replacing
+  or appending the result.
 
-WHY OSGKEYBOARD
+TYPING
 
-• Works everywhere — Messages, Notes, Mail, Slack, ChatGPT, Claude,
-  Cursor, browsers, terminal apps. Anywhere you can type, OSGKeyboard
-  types for you.
-• Push-to-talk, the way voice should work. No more "Hey Siri" mode that
-  listens to the whole room.
-• On-device speech recognition by default. Powered by Apple's iOS 26
-  speech pipeline — no audio upload unless you explicitly enable the
-  optional cloud ASR engine (confirmation required).
-• Bring-your-own AI. Connect any OpenAI-compatible endpoint (OpenAI,
-  DeepSeek, Qwen DashScope, Moonshot, Zhipu, your own self-hosted
-  server). Your API key stays in the iOS Keychain.
-• Three polish modes:
-    – Off: raw transcript.
-    – Transcribe: just the cleaned-up text.
-    – Polish: punctuation, structure, and grammar via your chosen LLM.
-• Continuous flow. One session, many utterances — no need to re-open
-  the host app between thoughts.
-• Zero dependencies. No trackers, no analytics, no crash reporters.
-  The whole project is ~8,700 lines of Swift you can audit in an
-  afternoon.
-• Privacy first. PrivacyInfo.xcprivacy declares exactly what the app
-  touches (voice audio + transcripts, on-device by default, never
-  linked or tracked); we don't run a server.
+• Chinese full pinyin, Microsoft double pinyin, and Sogou double pinyin,
+  with optional fuzzy-pinyin pairs.
+• English autocomplete, autocorrect, and next-word prediction from
+  offline resources.
+• Personal dictionary terms can participate in Chinese candidates,
+  English suggestions, ASR correction, and polish protection.
+• iPhone and iPad layouts, including iPad globe and editing controls.
+• Optional clipboard history is off by default and keeps up to 15 text
+  items from this device or Universal Clipboard in this device's App Group.
+  Turning it off keeps existing history; clearing is a separate confirmed action.
 
-OPTIONAL SUPPORT
+PRIVACY
 
-OSGKeyboard is completely free — every feature is available without
-payment. If you'd like to support development, Settings includes an
-optional in-app tip (Consumable). It does not unlock anything extra.
+• No advertising, analytics, or tracking SDKs.
+• Local recognition does not upload audio.
+• Cloud ASR and LLM requests go directly to the provider you configure.
+• Provider keys are stored in Keychain.
+• Clipboard history stays device-local, does not iCloud-sync, and is not
+  sent to AI automatically. Text you insert may later be included when you
+  actively invoke polish with your configured provider.
+• Core use requires no OSGKeyboard account.
 
-BUILT FOR
+OSGKeyboard's own code is source available for audit and personal,
+non-commercial local use. It is not MIT-licensed or open source; see the
+repository LICENSE for redistribution and commercial-use restrictions.
 
-• iOS 26 and later, iPhone and iPad.
-• Anyone who types more than 100 words a day on their phone.
-• Developers, writers, students, and translators who want voice input
-  that respects their privacy.
-
-OPEN SOURCE
-
-OSGKeyboard is MIT-licensed and developed in the open. Issues, pull
-requests, and translations are welcome on GitHub.
+Requires iOS or iPadOS 26 or later.
 
 https://github.com/hkgood/OSGKeyboard
 ```
 
----
+## Promotional text (≤ 170 characters)
 
-## Promotional Text (≤ 170 chars, editable without new build)
-
-```
-Voice input, everywhere. Hold the mic, speak, release — AI-polished
-text lands at your cursor. On-device speech, your own API key, zero
-trackers. iOS 26+, free & open-source.
+```text
+Voice input anywhere, with on-device recognition by default. Add your own AI key for polish, translation, and AI answers. Also types Chinese and English.
 ```
 
-> Apple allows you to change the Promotional Text at any time without
-> submitting a new build. Use it for launch-day announcements.
+## Keywords (≤ 100 characters)
 
----
-
-## Keywords (≤ 100 chars, comma-separated)
-
-```
-keyboard,voice,dictation,speech,transcribe,AI,polish,whisper,gpt,openai,productivity,accessibility
+```text
+keyboard,voice,dictation,speech,transcribe,AI,pinyin,Chinese,English,polish,typing,productivity
 ```
 
-> 97 chars. Apple matches keywords against search terms; avoid the
-> app name (already indexed) and competitor names.
+## What's new in 1.7.5
 
----
-
-## Release Notes (for v0.1.2, ≤ 4000 chars)
-
-```
-Welcome to OSGKeyboard v0.1.2 — our App Store debut!
-
-This release focuses on review-driven polish for the iOS 26 launch:
-
+```text
 NEW
-• Dynamic ASR locale picker — Settings now lists every locale Apple's
-  speech framework supports, with an on-device badge so you know which
-  ones keep your audio on your phone.
-• Apple-on-device flow polish — the continuous-capture session survives
-  app switching and can run for up to an hour in the foreground.
-• Per-locale on-device indicator — choose Chinese (Simplified) and
-  you'll see the iPhone icon next to it, confirming audio never leaves
-  your device.
-
-FIXED
-• Light/dark mode is now consistent — cards and buttons follow the
-  active theme everywhere, including the in-app keyboard preview.
-• iPhone-only lock — we removed iPad multitasking support; the app
-  declares iPhone as the only target family. This fixed TestFlight
-  error 90474 and the previously-misleading "supports iPad" badge.
-• Keyboard preview cycling — tapping the disc now correctly cycles
-  through idle → recording → processing → idle, with sample
-  transcripts in the recording state.
-• Embedded keyboard strings — Chinese and English keyboard strings
-  are now properly bundled into the extension binary, so language
-  switching works the moment you install the keyboard.
-• Actool crash on iOS 26 — the legacy Icon Composer icon was removed
-  to stop App Store Connect rejecting the build.
+• Optional clipboard history (latest 15 plain-text items) with a top-bar
+  panel and suggestion strip; AI idle hints can use a fresh copy for ~30s.
+• AI mode empty state rotates one-line suggestions; tap sends the card
+  prompt without using the mic.
+• Spoken clipboard requests in AI mode attach stored clipboard text when
+  you name the clipboard out loud.
+• Settings → AI Agent adds Response length (Short / Medium / Detailed).
+• AI answers stream into the keyboard as the model writes.
 
 CHANGED
-• The keyboard's top divider line is gone — the subtle highlight
-  gradient is retained for visual structure without the hard separator.
-• README is consistent with the implemented capability set (iOS 26
-  on-device SpeechAnalyzer + DictationTranscriber only).
-
-KNOWN ISSUES
-• Continuous mode requires Full Access (Apple's policy, not ours).
-  The onboarding flow walks you through enabling it.
-• Some iCloud-synced keyboards can take a few seconds to appear in
-  the Add New Keyboard list. This is iOS 26 behavior.
-
-We'd love to hear from you — open an issue on GitHub, or rate this
-version to help others find it.
+• History and Personal dictionary move from the tab bar onto Home preview
+  cards; engine status scrolls with the page.
+• Translation control sits beside the mic (mirrored with Undo); the former
+  top-bar slot is the Clipboard button.
+• Undo covers clipboard pastes as well as dictation, AI answers, and edits.
 ```
-
----
-
-## What's New in This Version
-
-*(Same as Release Notes, but shorter; the What's New field is also
-capped at 4000 chars. Apple displays it in the Updates tab.)*
-
-```
-Welcome to v0.1.2 — our App Store debut!
-
-NEW: Dynamic ASR locale picker with on-device indicator. Continuous
-flow sessions survive app switching for up to an hour. Polish modes:
-off / transcribe / polish.
-
-FIXED: Light/dark mode is now consistent across the keyboard preview.
-TestFlight error 90474 (iPhone-only) is resolved. Keyboard preview
-disc correctly cycles idle → recording → processing. Keyboard
-strings are properly embedded in the extension bundle for instant
-language switching.
-
-CHANGED: The hard divider line on the keyboard is gone; the subtle
-gradient highlight remains.
-
-We'd love your feedback — open an issue on GitHub or rate this app.
-```
-
----
-
-## App Privacy (App Store Connect "Privacy" section)
-
-Choose **"Yes, we collect data from this app"** because optional cloud
-recognition sends audio and cloud polish/translation sends user text to
-the provider selected by the user. Declare **Audio Data** and **Other
-User Content** for **App Functionality**, linked to the user, and not
-used for tracking. The exact answers are listed under
-[App Privacy answers](#app-privacy-answers).
-
-On-device recognition remains the default and does not upload audio.
-The app does not embed analytics, crash-reporting, advertising, or
-tracking SDKs.
-
----
-
-## Encryption (annual survey)
-
-`Info.plist` declares `ITSAppUsesNonExemptEncryption = false`. The
-annual survey will be auto-skipped on upload. If prompted manually:
-
-* Does your app use encryption? **No** (the LLM call uses HTTPS, which
-  Apple classifies as "standard internet protocols" and is exempt
-  under category 5 part 2 note 4 of the EAR).
-* Is your app exempt under Category 5 Part 2? **Yes** (HTTPS only).
-
----
 
 ## App Review information
 
-When the build is uploaded and you click "Add for Review", fill in:
-
 | Field | Value |
 |---|---|
-| **Sign-in required** | No (no account) |
-| **Demo account** | n/a |
-| **Contact info** | (your Apple Developer account email) |
-| **Phone** | (your phone; only Apple sees it) |
-| **Notes to reviewer** | (see below) |
+| Sign-in required | No |
+| Demo account | Not applicable |
+| Contact info | Maintainer's Apple Developer account details |
 
 ### Notes to App Review
 
-```
-OSGKeyboard is a free, open-source custom keyboard. To test it end
-to end, please:
+```text
+OSGKeyboard is a custom keyboard for iOS/iPadOS 26.
 
-1. Install the keyboard:
+1. Add the keyboard:
    Settings → General → Keyboard → Keyboards → Add New Keyboard →
-   under "Third-Party Keyboards" choose "OSGKeyboard".
-2. Enable Full Access for OSGKeyboard (onboarding in the app walks
-   through this, but you can also tap it in the keyboard settings).
-   Full Access is required for the continuous-capture flow session
-   (network access for the LLM polish step + shared App Group
-   container with the main app). On-device recognition is the default
-   and does not upload audio. If the user explicitly enables cloud
-   recognition, recordings are sent to the speech provider configured
-   in Settings. Transcribed text may also be sent to the configured
-   LLM endpoint for polish or translation.
-3. In any app, switch to OSGKeyboard (globe key), then hold the
-   purple mic key, speak, and release.
-4. For the LLM polish demo: open OSGKeyboard's main app, Settings,
-   Provider. Enter any OpenAI-compatible key (OpenAI, DeepSeek,
-   Qwen, Moonshot, Zhipu, or a self-hosted URL). The default
-   provider "Custom" works with a local mock server if you have
-   one running.
-5. The privacy policy is at
-   https://hkgood.github.io/OSGKeyboard/privacy/
+   OSGKeyboard.
+2. Enable Full Access. It is required for App Group communication between
+   the keyboard and host app and for optional provider network requests.
+3. Complete onboarding in the OSGKeyboard host app.
+4. In any editable field, switch to OSGKeyboard and tap the microphone.
+   The default local engine uses on-device Apple speech recognition.
+5. AI polish and AI mode require a user-owned provider key in Settings.
+   Without a key, local dictation still inserts recognized text.
+6. Optional tip product `ByRockyACoffee` is consumable and unlocks no
+   feature.
+7. Clipboard history is off by default. To test it, open Settings →
+   Clipboard, enable History, copy text on this device or through Universal
+   Clipboard, then return to the keyboard. Secure fields hide the clipboard
+   entry point. Turning History off preserves saved items; use the separate
+   confirmed clear action to delete them.
 
-6. Optional tip (Consumable IAP ByRockyACoffee): open
-   Settings → "Support the Developer". All features remain free before
-   and after purchase; the tip does not unlock anything. Consumable
-   tips cannot be restored (stated in UI).
+Privacy policy:
+https://hkgood.github.io/OSGKeyboard/privacy/
 
-Source code: https://github.com/hkgood/OSGKeyboard
+Source and license:
+https://github.com/hkgood/OSGKeyboard
 ```
-
----
 
 ## App Privacy answers
 
-Use these conservative disclosures in App Store Connect → App Privacy.
-They cover optional cloud recognition and cloud text polish even though
-on-device recognition remains the default.
+Use conservative disclosures that cover optional cloud recognition, cloud
+polish/translation, and AI mode even though local recognition is the default.
 
-### Data types collected
+### User Content → Audio Data
 
-#### User Content → Audio Data
+- Collected: Yes
+- Purpose: App Functionality
+- Linked to the user: Yes
+- Used for tracking: No
 
-- **Collected:** Yes
-- **Purpose:** App Functionality
-- **Linked to the user:** Yes
-- **Used for tracking:** No
-
-Audio is sent off-device only after the user explicitly enables cloud
-recognition. The configured provider may associate requests with the
-user's provider account/API credential, so the conservative answer is
-"linked".
-
-#### User Content → Other User Content
-
-- **Collected:** Yes
-- **Purpose:** App Functionality
-- **Linked to the user:** Yes
-- **Used for tracking:** No
-
-This covers transcripts, polish prompts, optional translation text, and
-personal-dictionary terms included in those requests. A configured
-provider may associate requests with the user's provider account/API
+Audio is sent off-device only when the user enables cloud recognition. The
+configured provider may associate requests with the user's provider
 credential.
+
+### User Content → Other User Content
+
+- Collected: Yes
+- Purpose: App Functionality
+- Linked to the user: Yes
+- Used for tracking: No
+
+This covers transcripts, polish/translation text, AI questions, optional
+provider search requests, dictionary terms included in provider prompts, and
+clipboard text only after the user inserts it and actively invokes polish.
+Device-local clipboard history by itself is not collected by the developer.
 
 ### Do not select
 
-- Contact Info, Financial Info, Location, Contacts, Photos or Videos
-- Browsing History, Search History, Purchases, Identifiers
-- Usage Data or Diagnostics (stored locally/private iCloud only)
-- Third-Party Advertising, Developer Advertising or Marketing,
-  Analytics, Product Personalization, or Other Purposes
-- Tracking
+- Advertising, marketing, analytics, product personalization, or tracking
+- Contact information, location, contacts, photos, browsing/search history
+- Usage data or diagnostics stored only locally or in the user's private iCloud
 
-### URLs
+## Encryption
 
-- **Privacy Policy URL:** `https://hkgood.github.io/OSGKeyboard/privacy/`
-- **User Privacy Choices URL:** leave blank (optional); users can disable
-  cloud recognition/polish, clear history, reset settings, or delete the
-  app as described in the policy.
-
----
+`Info.plist` declares `ITSAppUsesNonExemptEncryption = false`. Network calls use
+standard HTTPS. Re-evaluate this answer if non-exempt cryptography is added.
 
 ## Submission checklist
 
-- [ ] All 10 screenshots replaced with real Simulator captures
-      (5 × 1290×2796 + 5 × 1179×2556)
-- [ ] Archive in Xcode → Product → Archive → Distribute App → App
-      Store Connect → Upload
-- [ ] Select the new build under "Builds" in the version
-- [ ] Fill in metadata from this document
-- [ ] Privacy: Audio Data + Other User Content; App Functionality;
-      linked to user; not used for tracking
-- [ ] Encryption: skip (auto-skipped via Info.plist key)
-- [ ] Add for review
-- [ ] Submit
+- [ ] Confirm `project.yml` still reads version 1.7.5 / build 66
+- [ ] Open the existing Xcode project (do not regenerate unless needed)
+- [ ] Run the release build and test suites on macOS with Xcode 26
+- [ ] Replace screenshots with captures from the submitted build
+- [ ] Verify the privacy answers against the submitted provider features
+- [ ] Confirm the tip product remains optional and unlocks no feature
+- [ ] Upload, select build 66, add review notes, and submit

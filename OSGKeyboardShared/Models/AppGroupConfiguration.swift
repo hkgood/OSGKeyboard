@@ -39,13 +39,17 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let polishIntensity = "config.polishIntensity"
         public static let aiResponseLength = "config.aiResponseLength"
         public static let llmThinkingEnabled = "config.llmThinkingEnabled"
+        /// When true, the keyboard records system clipboard text into local history.
+        public static let clipboardHistoryEnabled = "config.clipboardHistoryEnabled"
+        /// When true (and history is on), show the newest clipboard item as a suggestion strip.
+        public static let clipboardCandidateBarEnabled = "config.clipboardCandidateBarEnabled"
         public static let detectedAppContext = "config.detectedAppContext"
         public static let detectedAppContextAt = "config.detectedAppContextAt"
         public static let personalDictionary = "config.personalDictionary.v1"
         public static let polishStyleCatalog = "config.polishStyles.v1"
         public static let activePolishStyleId = "config.activePolishStyleId"
         public static let polishStylesMigrated = "config.polishStyles.migrated"
-        /// Keys used by the removed pre-v0.3 manual scenario implementation.
+        /// Legacy keys from the removed manual scenario implementation.
         public static let legacyPolishScenarioId = "config.polishScenarioId"
         public static let legacySystemPrompt = "config.systemPrompt"
         /// When true, the main app mirrors the personal dictionary via iCloud KVS.
@@ -94,6 +98,10 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var aiResponseLength: AIResponseLength
     /// Enables provider-specific reasoning / thinking controls for polish LLM requests.
     public var llmThinkingEnabled: Bool
+    /// Opt-in clipboard history capture in the keyboard extension.
+    public var clipboardHistoryEnabled: Bool
+    /// Opt-in clipboard suggestion strip above the key surfaces.
+    public var clipboardCandidateBarEnabled: Bool
     public var personalDictionary: PersonalDictionary
     public var polishStyleCatalog: PolishStyleCatalog
     public var activePolishStyleId: String
@@ -222,7 +230,9 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         return load(fromAvailable: store)
     }
 
-    /// Loads configuration from a known-available UserDefaults suite.
+    /// Loads and idempotently migrates a known-available suite; this is not a
+    /// pure read. Missing defaults distinguish upgrades (legacy cloud engine)
+    /// from fresh installs (local engine) before being persisted.
     public static func load(fromAvailable defaults: UserDefaults) -> AppGroupConfiguration {
         let storedProviderId = defaults.string(forKey: Keys.providerId)
         var config = AppGroupConfiguration(
@@ -269,6 +279,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
                 storedRawValue: defaults.string(forKey: Keys.aiResponseLength)
             ),
             llmThinkingEnabled: defaults.bool(forKey: Keys.llmThinkingEnabled),
+            clipboardHistoryEnabled: defaults.bool(forKey: Keys.clipboardHistoryEnabled),
+            clipboardCandidateBarEnabled: defaults.bool(forKey: Keys.clipboardCandidateBarEnabled),
             personalDictionary: decodePersonalDictionary(from: defaults),
             polishStyleCatalog: decodePolishStyleCatalog(from: defaults),
             activePolishStyleId: defaults.string(forKey: Keys.activePolishStyleId)
@@ -326,6 +338,15 @@ public struct AppGroupConfiguration: Sendable, Equatable {
 
         // Legacy qwen cloud ASR → bailian realtime (HTTP Flash path removed).
         if config.asrProviderId == "qwen" {
+            do {
+                try Keychain.copyQwenASRKeyToBailian(
+                    useICloudSync: config.settingsICloudSyncEnabled
+                )
+            } catch {
+                OSGLog.config.warning(
+                    "qwen ASR credential migration deferred: \(String(describing: error), privacy: .public)"
+                )
+            }
             let bailian = LLMProvider.provider(id: "bailian")
             config.asrProviderId = "bailian"
             config.asrBaseURL = bailian.defaultBaseURL
@@ -401,6 +422,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(polishIntensity.rawValue, forKey: Keys.polishIntensity)
         defaults.set(aiResponseLength.rawValue, forKey: Keys.aiResponseLength)
         defaults.set(llmThinkingEnabled, forKey: Keys.llmThinkingEnabled)
+        defaults.set(clipboardHistoryEnabled, forKey: Keys.clipboardHistoryEnabled)
+        defaults.set(clipboardCandidateBarEnabled, forKey: Keys.clipboardCandidateBarEnabled)
         defaults.set(activePolishStyleId, forKey: Keys.activePolishStyleId)
         defaults.set(flowSkipAppSwitch, forKey: Keys.flowSkipAppSwitch)
         defaults.set(flowInactivityDuration.rawValue, forKey: Keys.flowInactivityDuration)
@@ -496,7 +519,9 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         }
     }
 
-    /// Read the API key from the Keychain, falling back to a one-time migration from UserDefaults.
+    /// Resolves the provider-scoped Keychain item, then the legacy `current`
+    /// account, then plaintext defaults. Legacy sources are removed after the
+    /// selected local or synchronizable target is read back exactly.
     static func resolveAPIKey(
         defaults: UserDefaults?,
         providerId: String,
@@ -506,20 +531,40 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             return stored
         }
         if let legacyKeychain = Keychain.legacyAPIKey(), !legacyKeychain.isEmpty {
-            try? Keychain.setAPIKey(legacyKeychain, for: providerId, useICloudSync: preferICloudSync)
-            try? Keychain.deleteLegacyAPIKey()
+            do {
+                try Keychain.migrateLegacyAPIKey(
+                    to: providerId,
+                    useICloudSync: preferICloudSync
+                )
+            } catch {
+                OSGLog.config.warning(
+                    "legacy Keychain credential migration deferred: \(String(describing: error), privacy: .public)"
+                )
+            }
             return legacyKeychain
         }
         if let defaults,
            let legacy = defaults.string(forKey: Keys.apiKeyLegacy),
            !legacy.isEmpty {
-            try? Keychain.setAPIKey(legacy, for: providerId, useICloudSync: preferICloudSync)
-            defaults.removeObject(forKey: Keys.apiKeyLegacy)
+            do {
+                try Keychain.copyAPIKeyToSelectedStorage(
+                    legacy,
+                    providerId: providerId,
+                    useICloudSync: preferICloudSync
+                )
+                defaults.removeObject(forKey: Keys.apiKeyLegacy)
+            } catch {
+                OSGLog.config.warning(
+                    "legacy defaults credential migration deferred: \(String(describing: error), privacy: .public)"
+                )
+            }
             return legacy
         }
         return ""
     }
 
+    /// Resolves the ASR-scoped account first, then falls back to the matching
+    /// polish-provider account used before ASR credentials were split.
     static func resolveASRAPIKey(
         defaults: UserDefaults?,
         providerId: String,
@@ -527,6 +572,23 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     ) -> String {
         if let stored = Keychain.asrApiKey(for: providerId, preferICloudSync: preferICloudSync), !stored.isEmpty {
             return stored
+        }
+        if providerId == "bailian" {
+            try? Keychain.copyQwenASRKeyToBailian(useICloudSync: preferICloudSync)
+            if let migrated = Keychain.asrApiKey(
+                for: providerId,
+                preferICloudSync: preferICloudSync
+            ), !migrated.isEmpty {
+                return migrated
+            }
+            // Keep a compatibility read while older signed installs may still
+            // hold the DashScope credential under qwen accounts.
+            if let legacyQwen = Keychain.asrApiKey(
+                for: "qwen",
+                preferICloudSync: preferICloudSync
+            ), !legacyQwen.isEmpty {
+                return legacyQwen
+            }
         }
         // Pre-split installs: one shared key under `provider.<id>`.
         return resolveAPIKey(defaults: defaults, providerId: providerId, preferICloudSync: preferICloudSync)

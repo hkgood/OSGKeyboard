@@ -1,25 +1,22 @@
 // MinimalTabBar.swift
 // OSGKeyboard · Main App
 //
-// Bottom tab bar — five icons, no labels.
-// Capsule uses iOS 26 Liquid Glass (.regular.interactive) so content
-// behind the dock refracts through on scroll.
+// Bottom tab bar — icon + label for Home / Styles / Settings.
+// The dock capsule is iOS 26 Liquid Glass; the selected tab is a green
+// fill inside that capsule (Photos-style), not a second glass layer.
+// History + dictionary live as Home cards (not dock tabs).
 
 import SwiftUI
 import OSGKeyboardShared
 
 enum AppTab: Int, CaseIterable {
     case keyboard
-    case history
-    case dictionary
     case styles
     case settings
 
     var icon: MaterialIconName {
         switch self {
         case .keyboard: return .keyboard
-        case .history: return .menuBook // unused — history uses SF Symbol
-        case .dictionary: return .menuBook // unused — dictionary uses SF Symbol
         case .styles: return .menuBook // unused — styles uses SF Symbol
         case .settings: return .settings
         }
@@ -28,8 +25,6 @@ enum AppTab: Int, CaseIterable {
     /// SF Symbol overrides shared with the Mac and iPad sidebars.
     var sfSymbol: String? {
         switch self {
-        case .history: return "clock.arrow.circlepath"
-        case .dictionary: return "character.book.closed"
         case .styles: return "text.badge.star"
         default: return nil
         }
@@ -38,8 +33,6 @@ enum AppTab: Int, CaseIterable {
     var accessibilityKey: LocalizedStringKey {
         switch self {
         case .keyboard: return "tab.keyboard"
-        case .history: return "tab.history"
-        case .dictionary: return "tab.dictionary"
         case .styles: return "tab.styles"
         case .settings: return "tab.settings"
         }
@@ -51,8 +44,6 @@ enum AppTab: Int, CaseIterable {
     var sidebarSystemImage: String {
         switch self {
         case .keyboard: return "house"
-        case .history: return "clock.arrow.circlepath"
-        case .dictionary: return "character.book.closed"
         case .styles: return "text.badge.star"
         case .settings: return "gearshape"
         }
@@ -62,25 +53,53 @@ enum AppTab: Int, CaseIterable {
 struct MinimalTabBar: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @Environment(\.colorScheme) private var colorScheme
+    @Namespace private var selectionNamespace
     @Binding var selection: AppTab
 
     var body: some View {
         HStack(spacing: 0) {
             ForEach(AppTab.allCases, id: \.rawValue) { tab in
                 Button {
-                    withAnimation(Motion.quick) { selection = tab }
+                    withAnimation(Motion.soft) {
+                        selection = tab
+                    }
                 } label: {
-                    Group {
-                        if let sfSymbol = tab.sfSymbol {
-                            Image(systemName: sfSymbol)
-                                .font(.system(size: 20, weight: .regular))
-                        } else {
-                            MaterialIcon(name: tab.icon, size: 24)
+                    VStack(spacing: 2) {
+                        Group {
+                            if let sfSymbol = tab.sfSymbol {
+                                Image(systemName: sfSymbol)
+                                    .font(.system(size: TabBarDockMetrics.iconSize, weight: .regular))
+                            } else {
+                                MaterialIcon(name: tab.icon, size: TabBarDockMetrics.iconSize)
+                            }
                         }
+                        Text(tab.accessibilityKey)
+                            .font(TypeStyle.caption2)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                     .foregroundStyle(tabIconColor(for: tab))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 48)
+                    .frame(height: TabBarDockMetrics.itemHeight)
+                    .background {
+                        if selection == tab {
+                            // Stretch into the dock padding so top/bottom
+                            // leftover matches the side leftover (~5 pt).
+                            Capsule()
+                                .fill(palette.accentMuted)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .padding(.horizontal, TabBarDockMetrics.selectionInset)
+                                .padding(
+                                    .vertical,
+                                    TabBarDockMetrics.selectionInset
+                                        - TabBarDockMetrics.dockInsetVertical
+                                )
+                                .matchedGeometryEffect(
+                                    id: "main-tab-selection",
+                                    in: selectionNamespace
+                                )
+                        }
+                    }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -88,12 +107,12 @@ struct MinimalTabBar: View {
                 .accessibilityAddTraits(selection == tab ? .isSelected : [])
             }
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
+        .padding(.horizontal, TabBarDockMetrics.dockInsetHorizontal)
+        .padding(.vertical, TabBarDockMetrics.dockInsetVertical)
         .glassEffect(.regular.interactive(), in: .capsule)
-        .frame(maxWidth: 336)
+        .frame(maxWidth: 280)
         .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.bottom, Spacing.xs)
+        .padding(.bottom, TabBarDockMetrics.bottomPadding)
     }
 
     private func tabIconColor(for tab: AppTab) -> Color {

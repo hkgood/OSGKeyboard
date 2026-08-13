@@ -139,5 +139,7 @@ public enum FlowSessionKeys {
         case audioUnavailable
         case asrFailed
         case generic
+        /// Short silent tap discarded before ASR — keyboard returns to idle quietly.
+        case discardedEmpty
     }
 }

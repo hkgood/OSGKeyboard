@@ -27,60 +27,59 @@ struct HistoryView: View {
     }()
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                palette.background.ignoresSafeArea()
+        ZStack {
+            palette.background.ignoresSafeArea()
 
-                if store.entries.isEmpty {
-                    emptyState
-                } else {
-                    list
-                }
+            if store.entries.isEmpty {
+                emptyState
+            } else {
+                list
             }
-            .background(palette.background)
-            .navigationTitle("history.title")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                if !store.entries.isEmpty {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showClearConfirmation = true
-                        } label: {
-                            Image(systemName: "trash")
-                        }
-                        .accessibilityLabel("history.clear.button")
+        }
+        .background(palette.background)
+        .navigationTitle("history.title")
+        .navigationBarTitleDisplayMode(.inline)
+        .hidesTabBarWhenPushed()
+        .toolbar {
+            if !store.entries.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showClearConfirmation = true
+                    } label: {
+                        Image(systemName: "trash")
                     }
+                    .accessibilityLabel("history.clear.button")
                 }
             }
-            .confirmationDialog(
-                "history.clear.title",
-                isPresented: $showClearConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("history.clear.confirm", role: .destructive) {
-                    store.clearAll()
-                }
-                Button("common.cancel", role: .cancel) {}
-            } message: {
-                Text("history.clear.message")
+        }
+        .confirmationDialog(
+            "history.clear.title",
+            isPresented: $showClearConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("history.clear.confirm", role: .destructive) {
+                store.clearAll()
             }
-            .confirmationDialog(
-                "history.clearDay.title",
-                isPresented: $showDeleteDayConfirmation,
-                titleVisibility: .visible
-            ) {
-                Button("history.clearDay.confirm", role: .destructive) {
-                    if let day = dayPendingDelete {
-                        store.deleteEntries(on: day)
-                    }
-                    dayPendingDelete = nil
+            Button("common.cancel", role: .cancel) {}
+        } message: {
+            Text("history.clear.message")
+        }
+        .confirmationDialog(
+            "history.clearDay.title",
+            isPresented: $showDeleteDayConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("history.clearDay.confirm", role: .destructive) {
+                if let day = dayPendingDelete {
+                    store.deleteEntries(on: day)
                 }
-                Button("common.cancel", role: .cancel) {
-                    dayPendingDelete = nil
-                }
-            } message: {
-                Text("history.clearDay.message")
+                dayPendingDelete = nil
             }
+            Button("common.cancel", role: .cancel) {
+                dayPendingDelete = nil
+            }
+        } message: {
+            Text("history.clearDay.message")
         }
     }
 

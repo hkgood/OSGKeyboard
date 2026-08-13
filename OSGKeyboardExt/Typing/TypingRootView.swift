@@ -120,7 +120,18 @@ struct TypingRootView: View {
     @ViewBuilder
     private var topRegion: some View {
         if hasCandidateContent {
+            // Composing Chinese/English candidates hide the clipboard strip.
             candidateBar
+        } else if state.canShowClipboardEntry,
+                  let suggestion = state.clipboardSuggestionText,
+                  !suggestion.isEmpty {
+            // Same slot as logo + capsule tabs — hide chrome until dismissed.
+            ClipboardSuggestionBar(
+                text: suggestion,
+                onInsert: { state.insertClipboardText(suggestion) },
+                onDismiss: state.dismissClipboardSuggestion
+            )
+            .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
         } else {
             idleTopBar
         }
@@ -539,17 +550,13 @@ struct TypingRootView: View {
             )
             .fill(visualKeyFill(for: key, pressed: showPressed))
         )
+        // 无投影：与 NativeKeyboardKeySurface 一致，靠填充 + 描边表达层次。
         .overlay(
             RoundedRectangle(
                 cornerRadius: TypingLayoutMetrics.keyCornerRadius,
                 style: .continuous
             )
             .stroke(visualKeyBorder(for: key), lineWidth: 0.5)
-        )
-        .shadow(
-            color: Color.black.opacity(showPressed ? 0.04 : 0.13),
-            radius: showPressed ? 0.5 : 1,
-            y: showPressed ? 0 : 1
         )
         .scaleEffect(pressed ? 0.98 : 1)
         .animation(.easeOut(duration: 0.08), value: pressed)

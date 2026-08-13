@@ -70,6 +70,12 @@ public struct AnthropicMessagesClient: LLMClient {
                 throw LLMError.transport("non-HTTP response")
             }
             if !(200..<300).contains(http.statusCode) {
+                LLMHTTPDiagnostics.logFailure(
+                    providerId: "anthropic",
+                    statusCode: http.statusCode,
+                    responseByteCount: data.count,
+                    response: http
+                )
                 if http.statusCode == 429 { throw LLMError.rateLimited }
                 throw LLMError.http(status: http.statusCode)
             }
@@ -123,6 +129,7 @@ public struct AnthropicMessagesClient: LLMClient {
                     for try await event in LLMStreamingSession.mapSSE(
                         session: session,
                         request: request,
+                        providerId: "anthropic",
                         parse: LLMStreamDeltaParser.anthropicTextDelta(from:)
                     ) {
                         continuation.yield(event)

@@ -152,15 +152,21 @@ struct AIResponseLengthPickerRow: View {
     }
 }
 
-// MARK: - Default input surface toggle
+// MARK: - Default input mode picker
 
-struct DefaultTypingInputToggleRow: View {
+struct DefaultInputModePickerRow: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @ObservedObject private var config = ProviderConfig.shared
-    @Binding var isOn: Bool
+    @Binding var selection: DefaultInputMode
+
+    private var options: [(id: String, label: String)] {
+        DefaultInputMode.allCases.map { mode in
+            (mode.rawValue, AppL10n.string(mode.labelKey, language: config.uiLanguage))
+        }
+    }
 
     var body: some View {
-        Toggle(isOn: $isOn) {
+        HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(AppL10n.string("settings.typingInput.default.title", language: config.uiLanguage))
                     .font(TypeStyle.body)
@@ -170,9 +176,37 @@ struct DefaultTypingInputToggleRow: View {
                     .foregroundStyle(palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            Spacer(minLength: 8)
+
+            Menu {
+                ForEach(options, id: \.id) { option in
+                    Button {
+                        selection = DefaultInputMode(rawValue: option.id) ?? .voice
+                    } label: {
+                        if option.id == selection.rawValue {
+                            Label(option.label, systemImage: "checkmark")
+                        } else {
+                            Text(option.label)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(currentLabel)
+                        .font(TypeStyle.body)
+                        .foregroundStyle(palette.textSecondary)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(palette.textTertiary)
+                }
+            }
         }
-        .tint(palette.accent)
         .settingsListRow()
+    }
+
+    private var currentLabel: String {
+        options.first(where: { $0.id == selection.rawValue })?.label ?? "—"
     }
 }
 

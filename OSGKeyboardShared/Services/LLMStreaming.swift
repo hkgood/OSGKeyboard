@@ -59,7 +59,8 @@ public struct AIAnswerStreamThrottle: Sendable, Equatable {
 enum LLMStreamTransport {
     static func sseJSONPayloads(
         session: URLSession,
-        request: URLRequest
+        request: URLRequest,
+        providerId: String
     ) -> AsyncThrowingStream<Data, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
@@ -69,15 +70,16 @@ enum LLMStreamTransport {
                         throw LLMError.transport("non-HTTP response")
                     }
                     if !(200..<300).contains(http.statusCode) {
-                        var body = Data()
-                        for try await byte in bytes {
-                            body.append(byte)
-                            if body.count > 2_048 { break }
+                        var responseByteCount = 0
+                        for try await _ in bytes {
+                            responseByteCount += 1
                         }
-                        #if DEBUG
-                        let bodyText = String(data: body, encoding: .utf8) ?? ""
-                        print("⚠️ LLM stream HTTP \(http.statusCode): \(bodyText.prefix(500))")
-                        #endif
+                        LLMHTTPDiagnostics.logFailure(
+                            providerId: providerId,
+                            statusCode: http.statusCode,
+                            responseByteCount: responseByteCount,
+                            response: http
+                        )
                         if http.statusCode == 429 { throw LLMError.rateLimited }
                         throw LLMError.http(status: http.statusCode)
                     }
@@ -221,6 +223,7 @@ enum LLMStreamingSession {
     static func mapSSE(
         session: URLSession,
         request: URLRequest,
+        providerId: String,
         parse: @escaping @Sendable (Data) -> String?
     ) -> AsyncThrowingStream<LLMStreamEvent, Error> {
         AsyncThrowingStream { continuation in
@@ -228,7 +231,8 @@ enum LLMStreamingSession {
                 do {
                     for try await payload in LLMStreamTransport.sseJSONPayloads(
                         session: session,
-                        request: request
+                        request: request,
+                        providerId: providerId
                     ) {
                         try Task.checkCancellation()
                         if let chunk = parse(payload), !chunk.isEmpty {
