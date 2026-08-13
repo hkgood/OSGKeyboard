@@ -142,26 +142,14 @@ struct PolishStylesView: View {
                     editingPack = pack
                 }
             } label: {
-                Image(systemName: pack.kind == .builtin ? "eye" : "pencil")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(palette.textSecondary)
-                    .frame(width: 30, height: 30)
-                    .background(palette.background.opacity(0.75), in: Circle())
+                CatalogCardChrome.editIcon(palette: palette)
             }
             .padding(Spacing.sm)
             .buttonStyle(.plain)
-            .accessibilityLabel(
-                Text(pack.kind == .builtin ? "polishStyles.viewPrompt" : "polishStyles.edit")
-            )
+            .accessibilityLabel(Text("polishStyles.edit"))
 
             if isSelected {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 21, weight: .semibold))
-                    .foregroundStyle(palette.accent)
-                    .background(Color.white, in: Circle())
-                    .padding(Spacing.sm)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    .allowsHitTesting(false)
+                CatalogCardChrome.checkIcon(palette: palette)
             }
         }
         .background(

@@ -134,6 +134,10 @@
         "OSGKeyboardTests/AIHintPoolTests",
         "OSGKeyboardTests/AIHintKeywordExtractorTests",
         "OSGKeyboardTests/AIAgentSkillLayoutTests",
+        "OSGKeyboardTests/AIUserSkillTests",
+        "OSGKeyboardTests/AIUserSkillStoreTests",
+        "OSGKeyboardTests/AIEventExtractionTests",
+        "OSGKeyboardTests/AIAddressExtractionTests",
         "OSGKeyboardTests/ClipboardHistoryPolicyTests",
         "OSGKeyboardTests/ClipboardHistoryStoreTests"
       ]

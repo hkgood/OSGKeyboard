@@ -44,8 +44,10 @@ public struct AIAgentSkillLayout: Codable, Equatable, Sendable {
     }
 
     /// Drops unknown IDs, unconfirmed export skills, and duplicates; caps at 8.
-    public func sanitized() -> AIAgentSkillLayout {
-        let known = Dictionary(uniqueKeysWithValues: AIClipboardSkillCatalog.catalog.map { ($0.id, $0) })
+    public func sanitized(
+        catalog: [AIClipboardSkill] = AIClipboardSkillCatalog.catalog
+    ) -> AIAgentSkillLayout {
+        let known = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
         var seenEnabled = Set<String>()
         let enabled = enabledIDs.filter { id in
             guard let skill = known[id], seenEnabled.insert(id).inserted else { return false }

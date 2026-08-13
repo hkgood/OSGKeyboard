@@ -1,7 +1,7 @@
 // AIAgentShortcutRunner.swift
 // OSGKeyboard · Main App
 //
-// Consumes the keyboard's pending extract-todos payload and opens the
+// Consumes the keyboard's pending export-skill payload and opens the
 // companion Shortcut. Release builds stay in Shortcuts. DEBUG builds add
 // x-callback URLs so Console can record success / error / cancel.
 
@@ -13,15 +13,22 @@ enum AIAgentShortcutRunner {
     static func runPendingIfNeeded() {
         AIAgentShortcutRun.trace("host.runPending begin")
         guard let payload = AppGroupStore().consumePendingShortcutRun() else { return }
-        guard let skill = AIClipboardSkillCatalog.skill(id: payload.skillID),
+        let catalog = AppGroupStore().agentUserSkillCatalog
+        guard let skill = AIClipboardSkillCatalog.skill(id: payload.skillID, userCatalog: catalog),
               let name = skill.shortcutName else {
             AIAgentShortcutRun.trace(
                 "host.runPending skip unknownSkill=\(payload.skillID)"
             )
             return
         }
-        AIAgentShortcutRun.traceBody("host.titlesToShortcut", payload.joinedTitles)
-        guard let url = shortcutsURL(name: name, text: payload.joinedTitles) else {
+        guard let text = shortcutText(for: skill, payload: payload) else {
+            AIAgentShortcutRun.trace(
+                "host.runPending skip textBuildFailed skill=\(payload.skillID)"
+            )
+            return
+        }
+        AIAgentShortcutRun.traceBody("host.titlesToShortcut", text)
+        guard let url = shortcutsURL(name: name, text: text) else {
             AIAgentShortcutRun.trace("host.runPending skip URLBuildFailed name=\(name)")
             return
         }
@@ -53,6 +60,21 @@ enum AIAgentShortcutRunner {
                 + "errorMessage=\(errorMessage ?? "-") "
                 + "(Shortcuts finished; does not prove reminder rows exist)"
         )
+    }
+
+    /// Navigate: pick 高德 → 百度 → Apple Maps, pass that URL to the Shortcut.
+    /// Other export skills send the parsed lines unchanged.
+    private static func shortcutText(
+        for skill: AIClipboardSkill,
+        payload: AIAgentShortcutRunPayload
+    ) -> String? {
+        if skill.id == AIClipboardSkillCatalog.navigateID {
+            return AIMapNavigation.shortcutInput(
+                from: payload.joinedTitles,
+                canOpen: { UIApplication.shared.canOpenURL($0) }
+            )
+        }
+        return payload.joinedTitles
     }
 
     private static func shortcutsURL(name: String, text: String) -> URL? {

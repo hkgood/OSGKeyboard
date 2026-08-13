@@ -8,14 +8,15 @@
 import Foundation
 
 public enum AIModeLLMClientFactory {
-    /// Build an AI-mode client. Thinking is always forced on for this path.
-    /// When `allowWebSearch` is false, returns the plain polish-compatible client.
+    /// Build an AI-mode client. Thinking defaults on for spoken questions.
+    /// Clipboard skills pass `thinkingEnabled` from the skill (built-in: off).
     public static func make(
         providerId: String,
         baseURL: String,
         apiKey: String,
         model: String,
         allowWebSearch: Bool = true,
+        thinkingEnabled: Bool = true,
         session: URLSession = .shared
     ) -> any LLMClient {
         let plain = LLMClientFactory.make(
@@ -23,10 +24,10 @@ public enum AIModeLLMClientFactory {
             baseURL: baseURL,
             apiKey: apiKey,
             model: model,
-            thinkingEnabled: true,
+            thinkingEnabled: thinkingEnabled,
             session: session
         )
-        guard allowWebSearch else { return plain }
+        guard thinkingEnabled, allowWebSearch else { return plain }
 
         guard let searching = makeSearchingClient(
             providerId: providerId,

@@ -30,8 +30,17 @@ public struct AIClipboardSkill: Identifiable, Equatable, Sendable {
     public let shortcutName: String?
     /// Optional `icloud.com/shortcuts/` share URL. Nil → open the bundled file.
     public let shortcutICloudURL: URL?
+    /// Bundled `.shortcut` resource name without extension. Nil → no file fallback.
+    public let shortcutResourceName: String?
+    /// User-created skills store display copy here instead of localization keys.
+    public let customName: String?
+    public let customSummary: String?
+    public let customPrompt: String?
+    /// Built-in skills are always false. Custom skills default off.
+    public let thinkingEnabled: Bool
 
     public var requiresShortcut: Bool { kind == .export }
+    public var isUserCreated: Bool { id.hasPrefix("user.") }
 
     public init(
         id: String,
@@ -42,7 +51,12 @@ public struct AIClipboardSkill: Identifiable, Equatable, Sendable {
         kind: AIClipboardSkillKind,
         isDefault: Bool,
         shortcutName: String? = nil,
-        shortcutICloudURL: URL? = nil
+        shortcutICloudURL: URL? = nil,
+        shortcutResourceName: String? = nil,
+        customName: String? = nil,
+        customSummary: String? = nil,
+        customPrompt: String? = nil,
+        thinkingEnabled: Bool = false
     ) {
         self.id = id
         self.systemImage = systemImage
@@ -53,6 +67,11 @@ public struct AIClipboardSkill: Identifiable, Equatable, Sendable {
         self.isDefault = isDefault
         self.shortcutName = shortcutName
         self.shortcutICloudURL = shortcutICloudURL
+        self.shortcutResourceName = shortcutResourceName
+        self.customName = customName
+        self.customSummary = customSummary
+        self.customPrompt = customPrompt
+        self.thinkingEnabled = id.hasPrefix("user.") ? thinkingEnabled : false
     }
 }
 
@@ -63,8 +82,20 @@ public enum AIClipboardSkillCatalog: Sendable {
     public static let extractTodosID = "extractTodos"
     public static let extractTodosShortcutName = "OSG · 提取待办"
     public static let extractTodosShortcutICloudURL = URL(
-        string: "https://www.icloud.com/shortcuts/520317da7ae74759b64d5fb069c71f81"
+        string: "https://www.icloud.com/shortcuts/65bf33ba4206484ba78d582eaf1e9c44"
     )!
+    public static let extractTodosResourceName = "OSGExtractTodos"
+
+    public static let extractEventsID = "extractEvents"
+    public static let extractEventsShortcutName = "OSG · 提取日程"
+    public static let extractEventsShortcutICloudURL = URL(
+        string: "https://www.icloud.com/shortcuts/1f4afcf7ee22400cbf84e319d969aadf"
+    )!
+    public static let extractEventsResourceName = "OSGExtractEvents"
+
+    public static let navigateID = "navigate"
+    public static let navigateShortcutName = "OSG · 导航"
+    public static let navigateResourceName = "OSGNavigate"
 
     /// Full built-in catalog, in a stable display order for the Skills tab.
     public static let catalog: [AIClipboardSkill] = [
@@ -104,35 +135,76 @@ public enum AIClipboardSkillCatalog: Sendable {
             kind: .export,
             isDefault: false,
             shortcutName: extractTodosShortcutName,
-            shortcutICloudURL: extractTodosShortcutICloudURL
+            shortcutICloudURL: extractTodosShortcutICloudURL,
+            shortcutResourceName: extractTodosResourceName
+        ),
+        AIClipboardSkill(
+            id: extractEventsID,
+            systemImage: "calendar",
+            titleKey: "keyboard.ai.skill.extractEvents",
+            cardTitleKey: "skills.extractEvents.name",
+            descriptionKey: "skills.extractEvents.description",
+            kind: .export,
+            isDefault: false,
+            shortcutName: extractEventsShortcutName,
+            shortcutICloudURL: extractEventsShortcutICloudURL,
+            shortcutResourceName: extractEventsResourceName
+        ),
+        AIClipboardSkill(
+            id: navigateID,
+            systemImage: "arrow.triangle.turn.up.right.diamond.fill",
+            titleKey: "keyboard.ai.skill.navigate",
+            cardTitleKey: "skills.navigate.name",
+            descriptionKey: "skills.navigate.description",
+            kind: .export,
+            isDefault: false,
+            shortcutName: navigateShortcutName,
+            shortcutResourceName: navigateResourceName
         ),
     ]
 
     /// Legacy alias: the three default transform skills used to be the whole list.
     public static let builtIn: [AIClipboardSkill] = catalog
 
-    public static func skill(id: String) -> AIClipboardSkill? {
-        catalog.first { $0.id == id }
+    public static func all(userCatalog: AIUserSkillCatalog = .empty) -> [AIClipboardSkill] {
+        catalog + userCatalog.entries.map { $0.asClipboardSkill() }
+    }
+
+    public static func skill(
+        id: String,
+        userCatalog: AIUserSkillCatalog = .empty
+    ) -> AIClipboardSkill? {
+        catalog.first { $0.id == id } ?? userCatalog.skill(id: id)?.asClipboardSkill()
     }
 
     /// `enabledIDs` is the Skills-tab order. `nil` keeps the default three.
     /// An explicit empty array shows no chips (carousel fallback).
-    public static func visible(enabledIDs: [String]? = nil) -> [AIClipboardSkill] {
+    public static func visible(
+        enabledIDs: [String]? = nil,
+        userCatalog: AIUserSkillCatalog = .empty
+    ) -> [AIClipboardSkill] {
         let ids = enabledIDs ?? AIAgentSkillLayout.defaultEnabledIDs
         guard !ids.isEmpty else { return [] }
-        let byID = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
+        let byID = Dictionary(uniqueKeysWithValues: all(userCatalog: userCatalog).map { ($0.id, $0) })
         return ids.compactMap { byID[$0] }
     }
 
     public static func instruction(
         for skill: AIClipboardSkill,
         locale: String,
-        translationTargetLocaleId: String
+        translationTargetLocaleId: String,
+        now: Date = Date()
     ) -> String {
-        instruction(
+        if let custom = skill.customPrompt?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+           !custom.isEmpty {
+            return custom
+        }
+        return instruction(
             skillID: skill.id,
             locale: locale,
-            translationTargetLocaleId: translationTargetLocaleId
+            translationTargetLocaleId: translationTargetLocaleId,
+            now: now
         )
     }
 
@@ -159,7 +231,8 @@ public enum AIClipboardSkillCatalog: Sendable {
     public static func instruction(
         skillID: String,
         locale: String,
-        translationTargetLocaleId: String
+        translationTargetLocaleId: String,
+        now: Date = Date()
     ) -> String {
         let zh = locale == "zh"
         switch skillID {
@@ -188,11 +261,70 @@ public enum AIClipboardSkillCatalog: Sendable {
                 If there are no actionable tasks, output NONE and nothing else. Do not treat the whole clipboard as one task.
                 If the clipboard itself is already one short task (for example "buy milk"), output that single line.
                 """
+        case extractEventsID:
+            return eventInstruction(zh: zh, now: now)
+        case navigateID:
+            return navigateInstruction(zh: zh)
         default:
             return zh
                 ? "请根据剪贴板内容完成用户选择的操作。"
                 : "Complete the selected action using the clipboard text."
         }
+    }
+
+    private static func navigateInstruction(zh: Bool) -> String {
+        if zh {
+            return """
+            请从剪贴板提取明确的地点用于导航。只输出一行，两段用 | 分隔：起点|终点
+            从当前位置出发则起点留空，但保留竖线，例如 |朝阳区酒仙桥路10号
+            两点都写了则两侧都填，例如 北京南站|三里屯太古里
+            可以是完整地址或常用地名。不要编号、不要解释、不要多行、不要链接。
+            若有多条地址，只输出最明确的一条。
+            没有可导航的地点时，只输出 NONE。不要把整段原文当成一个地点。
+            """
+        }
+        return """
+        Extract one place for turn-by-turn navigation from the clipboard. One line, two fields separated by | : origin|destination
+        Leave origin empty when starting from the current location, but keep the pipe, for example |10 Jiuxianqiao Road
+        Fill both sides when the source names two places, for example Beijing South|Sanlitun Taikoo Li
+        A full address or a well-known place name is fine. No numbering, commentary, extra lines, or URLs.
+        If there are several addresses, output only the clearest one.
+        If there is no navigable place, output NONE and nothing else. Do not treat the whole clipboard as one place.
+        """
+    }
+
+    /// Clock context so relative phrases (tomorrow, 3pm) resolve to local time.
+    private static func eventInstruction(zh: Bool, now: Date) -> String {
+        let clock = clockContext(now: now, zh: zh)
+        if zh {
+            return """
+            \(clock)
+            请从剪贴板提取明确的日程。每条一行，四段用 | 分隔：开始|结束|标题|地点
+            开始有钟点用 YYYY-MM-DD HH:mm；只有日期（全天）用 YYYY-MM-DD。没有结束时间或地点则该段留空，但保留竖线。标题中不要出现 |。最多 20 条。不要编号、不要解释。
+            只有时刻、没有日期时，使用今天的日期。日期和时间都没有的条目不要输出。
+            原文写了结束时间就填写结束段，否则留空（后续按 1 小时处理）。原文有地点就填写地点段。
+            若没有任何带日期或时间的日程，只输出 NONE，不要把整段原文当成一条日程。
+            """
+        }
+        return """
+        \(clock)
+        Extract explicit calendar events from the clipboard. One event per line, four fields separated by | : start|end|title|location
+        Timed start uses YYYY-MM-DD HH:mm; date-only (all-day) uses YYYY-MM-DD. Leave end or location empty when unknown, but keep the pipes. Do not put | in the title. Maximum 20 lines. No numbering or commentary.
+        Time without a date uses today. Skip items that have neither a date nor a time.
+        Fill the end field when the source gives an end time; otherwise leave it empty (treated as 1 hour). Fill location when the source names a place.
+        If there are no events with a date or time, output NONE and nothing else. Do not treat the whole clipboard as one event.
+        """
+    }
+
+    private static func clockContext(now: Date, zh: Bool) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: zh ? "zh_CN" : "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+        formatter.dateFormat = zh ? "yyyy年M月d日EEEE HH:mm" : "EEEE, d MMMM yyyy, HH:mm"
+        let stamp = formatter.string(from: now)
+        return zh
+            ? "现在是\(stamp)（设备本地时区）。"
+            : "It is now \(stamp) (device local timezone)."
     }
 
     /// Uses the keyboard translation target when set; otherwise Chinese ↔ English.

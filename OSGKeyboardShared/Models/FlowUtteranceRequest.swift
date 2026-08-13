@@ -13,6 +13,8 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
     public let aiConversationID: UUID?
     /// When set with `.aiQuestion`, host skips ASR and answers this text.
     public let aiQuestionText: String?
+    /// Clipboard-skill thinking override. Nil keeps AI-mode default (on).
+    public let aiThinkingEnabled: Bool?
 
     public static let dictation = FlowUtteranceRequest(mode: .dictation)
 
@@ -22,7 +24,8 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
         sourceHistoryEntryID: UUID? = nil,
         sourceHistoryEntryRevision: Int64? = nil,
         aiConversationID: UUID? = nil,
-        aiQuestionText: String? = nil
+        aiQuestionText: String? = nil,
+        aiThinkingEnabled: Bool? = nil
     ) {
         self.mode = mode
         self.editSourceText = editSourceText
@@ -30,6 +33,7 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
         self.sourceHistoryEntryRevision = sourceHistoryEntryRevision
         self.aiConversationID = aiConversationID
         self.aiQuestionText = aiQuestionText
+        self.aiThinkingEnabled = aiThinkingEnabled
     }
 
     public static func editLastInput(
@@ -48,12 +52,14 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
 
     public static func aiQuestion(
         conversationID: UUID,
-        prefilledQuestion: String? = nil
+        prefilledQuestion: String? = nil,
+        thinkingEnabled: Bool? = nil
     ) -> FlowUtteranceRequest {
         FlowUtteranceRequest(
             mode: .aiQuestion,
             aiConversationID: conversationID,
-            aiQuestionText: prefilledQuestion
+            aiQuestionText: prefilledQuestion,
+            aiThinkingEnabled: thinkingEnabled
         )
     }
 }

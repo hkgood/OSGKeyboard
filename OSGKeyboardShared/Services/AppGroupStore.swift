@@ -99,7 +99,11 @@ public struct AppGroupStore: @unchecked Sendable {
     public var localASRCustomLanguageModelEnabled: Bool { configuration.localASRCustomLanguageModelEnabled }
     /// Kept off `AppGroupConfiguration.save()` so other settings writes cannot clobber it.
     public var agentSkillLayout: AIAgentSkillLayout {
-        Self.decodeAgentSkillLayout(from: defaults)
+        Self.decodeAgentSkillLayout(from: defaults, userCatalog: agentUserSkillCatalog)
+    }
+
+    public var agentUserSkillCatalog: AIUserSkillCatalog {
+        Self.decodeUserSkillCatalog(from: defaults)
     }
 
     // MARK: - Writes
@@ -205,10 +209,26 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setAgentSkillLayout(_ layout: AIAgentSkillLayout) {
         do {
-            let data = try JSONEncoder().encode(layout.sanitized())
+            let data = try JSONEncoder().encode(
+                layout.sanitized(catalog: AIClipboardSkillCatalog.all(userCatalog: agentUserSkillCatalog))
+            )
             defaults.set(data, forKey: AppGroupConfiguration.Keys.agentSkillLayout)
         } catch {
             OSGLog.config.warning("agentSkillLayout encode failed: \(error.localizedDescription, privacy: .public)")
+        }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setAgentUserSkillCatalog(_ catalog: AIUserSkillCatalog) {
+        do {
+            defaults.set(
+                try JSONEncoder().encode(catalog),
+                forKey: AppGroupConfiguration.Keys.agentUserSkillCatalog
+            )
+        } catch {
+            OSGLog.config.warning(
+                "agentUserSkillCatalog encode failed: \(error.localizedDescription, privacy: .public)"
+            )
         }
         AppGroupConfigDarwin.postConfigChanged()
     }
@@ -244,15 +264,34 @@ public struct AppGroupStore: @unchecked Sendable {
         return payload
     }
 
-    private static func decodeAgentSkillLayout(from defaults: UserDefaults) -> AIAgentSkillLayout {
+    private static func decodeAgentSkillLayout(
+        from defaults: UserDefaults,
+        userCatalog: AIUserSkillCatalog
+    ) -> AIAgentSkillLayout {
+        let catalog = AIClipboardSkillCatalog.all(userCatalog: userCatalog)
         guard let data = defaults.data(forKey: AppGroupConfiguration.Keys.agentSkillLayout) else {
             return .default
         }
         do {
-            return try JSONDecoder().decode(AIAgentSkillLayout.self, from: data).sanitized()
+            return try JSONDecoder().decode(AIAgentSkillLayout.self, from: data)
+                .sanitized(catalog: catalog)
         } catch {
             OSGLog.config.warning("agentSkillLayout decode failed: \(error.localizedDescription, privacy: .public)")
             return .default
+        }
+    }
+
+    private static func decodeUserSkillCatalog(from defaults: UserDefaults) -> AIUserSkillCatalog {
+        guard let data = defaults.data(forKey: AppGroupConfiguration.Keys.agentUserSkillCatalog) else {
+            return .empty
+        }
+        do {
+            return try JSONDecoder().decode(AIUserSkillCatalog.self, from: data)
+        } catch {
+            OSGLog.config.warning(
+                "agentUserSkillCatalog decode failed: \(error.localizedDescription, privacy: .public)"
+            )
+            return .empty
         }
     }
 

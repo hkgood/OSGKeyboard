@@ -49,7 +49,7 @@ settings:
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
     MARKETING_VERSION: "1.7.5"
-    CURRENT_PROJECT_VERSION: "67"
+    CURRENT_PROJECT_VERSION: "69"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -88,6 +88,17 @@ targets:
         buildPhase: resources
       - path: OSGKeyboardExt/zh-Hans.lproj/Keyboard.strings
         buildPhase: resources
+      # `.shortcut` is not a XcodeGen-known resource type; list each file
+      # as an explicit resource source or it never lands in the app bundle.
+      - path: OSGKeyboard/Resources/Shortcuts/OSGExtractTodos.shortcut
+        type: file
+        buildPhase: resources
+      - path: OSGKeyboard/Resources/Shortcuts/OSGExtractEvents.shortcut
+        type: file
+        buildPhase: resources
+      - path: OSGKeyboard/Resources/Shortcuts/OSGNavigate.shortcut
+        type: file
+        buildPhase: resources
     entitlements:
       path: OSGKeyboard/OSGKeyboard.entitlements
       properties:
@@ -121,7 +132,6 @@ targets:
       - path: OSGKeyboard/Resources/Typing/Rime/manifest.json
       - path: OSGKeyboard/Resources/HostCLM/v1/OSGKeyboardCLM.bin
       - path: OSGKeyboard/Resources/HostCLM/v1/compiled-manifest.json
-      - path: OSGKeyboard/Resources/Shortcuts/OSGExtractTodos.shortcut
       - path: OSGKeyboard/Resources/LocalASR/local-asr-catalog.json
       - path: OSGKeyboard/Resources/Typing/Licenses/NOTICE.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE.txt
@@ -197,6 +207,10 @@ targets:
           - skype
           - zoomus
           - shortcuts
+          - iosamap
+          - amapuri
+          - baidumap
+          - maps
           - things
           - todoist
           - evernote

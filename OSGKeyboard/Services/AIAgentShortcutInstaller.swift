@@ -10,8 +10,6 @@ import UIKit
 import OSGKeyboardShared
 
 enum AIAgentShortcutInstaller {
-    static let bundledResourceName = "OSGExtractTodos"
-
     @MainActor
     static func openInstallPage(for skill: AIClipboardSkill) {
         if let shareURL = skill.shortcutICloudURL,
@@ -19,17 +17,19 @@ enum AIAgentShortcutInstaller {
             UIApplication.shared.open(installURL)
             return
         }
-        openBundledShortcut()
+        openBundledShortcut(for: skill)
     }
 
     @MainActor
-    private static func openBundledShortcut() {
-        guard let bundled = Bundle.main.url(
-            forResource: bundledResourceName,
-            withExtension: "shortcut"
-        ) else { return }
+    private static func openBundledShortcut(for skill: AIClipboardSkill) {
+        guard let resource = skill.shortcutResourceName,
+              let bundled = Bundle.main.url(
+                forResource: resource,
+                withExtension: "shortcut"
+              ) else { return }
+        let fileName = skill.shortcutName ?? resource
         let tmp = FileManager.default.temporaryDirectory
-            .appendingPathComponent("\(AIClipboardSkillCatalog.extractTodosShortcutName).shortcut")
+            .appendingPathComponent("\(fileName).shortcut")
         try? FileManager.default.removeItem(at: tmp)
         do {
             try FileManager.default.copyItem(at: bundled, to: tmp)

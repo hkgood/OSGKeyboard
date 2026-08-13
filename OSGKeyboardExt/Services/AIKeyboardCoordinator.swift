@@ -90,7 +90,7 @@ final class AIKeyboardCoordinator {
         if case .materialUnavailable = resolution {
             AIAgentShortcutRun.trace("keyboard.submit rejected clipboardUnavailable skill=\(skill.id)")
         }
-        submitResolvedPrompt(resolution)
+        submitResolvedPrompt(resolution, thinkingEnabled: skill.thinkingEnabled)
     }
 
     /// Tap an idle hint card: resolve its material, skip the mic, ask the host.
@@ -114,7 +114,10 @@ final class AIKeyboardCoordinator {
         }
     }
 
-    private func submitResolvedPrompt(_ resolution: AIClipboardPrompt.Resolution) {
+    private func submitResolvedPrompt(
+        _ resolution: AIClipboardPrompt.Resolution,
+        thinkingEnabled: Bool? = nil
+    ) {
         guard case .ready(let prompt) = resolution else {
             // The clipboard window closed between rendering and this tap.
             state.pendingClipboardSkillID = nil
@@ -130,7 +133,8 @@ final class AIKeyboardCoordinator {
         }
         let disposition = flow.submitAIQuestion(
             text: prompt,
-            conversationID: conversationID
+            conversationID: conversationID,
+            thinkingEnabled: thinkingEnabled
         )
         if case .rejected(let rejection) = disposition {
             state.pendingClipboardSkillID = nil
@@ -236,14 +240,37 @@ final class AIKeyboardCoordinator {
 
     private var isPendingExportSkill: Bool {
         guard let id = state.pendingClipboardSkillID else { return false }
-        return AIClipboardSkillCatalog.skill(id: id)?.kind == .export
+        return resolvedSkill(id: id)?.kind == .export
     }
 
-    /// Parse extract-todos. Empty → in-keyboard tip, stay in the host app.
-    /// Titles → hand off to the host to run the companion Shortcut.
+    private func resolvedSkill(id: String) -> AIClipboardSkill? {
+        AIClipboardSkillCatalog.skill(
+            id: id,
+            userCatalog: AppGroupStore().agentUserSkillCatalog
+        )
+    }
+
+    /// Parse an export skill. Empty → in-keyboard tip, stay in the host app.
+    /// Lines → hand off to the host to run the companion Shortcut.
     private func finishExportSkill(answer: String) {
         let source = ClipboardHistoryStore.shared.newestAIHintEligibleEntry()?.text
-        let items = AITodoExtraction.items(from: answer, sourceClipboard: source)
+        let skillID = state.pendingClipboardSkillID
+        let items: [String]
+        let emptyTipKey: String
+        switch skillID {
+        case AIClipboardSkillCatalog.extractEventsID:
+            items = AIEventExtraction.lines(from: answer, sourceClipboard: source)
+            emptyTipKey = "keyboard.ai.skill.noEvents"
+        case AIClipboardSkillCatalog.extractTodosID:
+            items = AITodoExtraction.items(from: answer, sourceClipboard: source)
+            emptyTipKey = "keyboard.ai.skill.noTodos"
+        case AIClipboardSkillCatalog.navigateID:
+            items = AIAddressExtraction.lines(from: answer, sourceClipboard: source)
+            emptyTipKey = "keyboard.ai.skill.noAddress"
+        default:
+            items = AIGenericSkillExport.items(from: answer)
+            emptyTipKey = "keyboard.ai.skill.noExportItems"
+        }
         AIAgentShortcutRun.traceBody("keyboard.llmRaw", answer)
         AIAgentShortcutRun.trace(
             "keyboard.parse items=\(items.count) clipboardChars=\(source?.count ?? 0)"
@@ -253,7 +280,6 @@ final class AIKeyboardCoordinator {
             AIAgentShortcutRun.traceBody("keyboard.parsedTitles", items.joined(separator: "\n"))
         }
         #endif
-        let skillID = state.pendingClipboardSkillID
         state.pendingClipboardSkillID = nil
         if state.aiSession.isBusy {
             state.aiSession.cancelCurrentWork()
@@ -263,11 +289,11 @@ final class AIKeyboardCoordinator {
         }
         guard !items.isEmpty else {
             AIAgentShortcutRun.trace("keyboard.parse empty — skip Shortcuts")
-            state.skillTipText = ExtL10n.string("keyboard.ai.skill.noTodos")
+            state.skillTipText = ExtL10n.string(emptyTipKey)
             return
         }
         guard let skillID,
-              AIClipboardSkillCatalog.skill(id: skillID)?.shortcutName != nil else {
+              resolvedSkill(id: skillID)?.shortcutName != nil else {
             AIAgentShortcutRun.trace("keyboard.parse missingShortcut skill=\(skillID ?? "nil")")
             state.skillTipText = ExtL10n.string("keyboard.ai.skill.shortcutMissing")
             return

@@ -71,6 +71,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let localASRCustomLanguageModelEnabled = "config.localASR.customLanguageModelEnabled"
         /// Enabled AI Agent skill IDs (order) + confirmed companion Shortcuts.
         public static let agentSkillLayout = "config.aiAgentSkills.layout.v1"
+        /// User-created clipboard skills (no cloud sync; App Group only).
+        public static let agentUserSkillCatalog = "config.aiAgentSkills.userCatalog.v1"
     }
 
     // MARK: - Stored fields

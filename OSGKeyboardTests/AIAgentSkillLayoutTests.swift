@@ -101,6 +101,28 @@ final class AIAgentSkillLayoutTests: XCTestCase {
         )
     }
 
+    func testReorderMovesEnabledSkillToIndex() {
+        let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
+        store.moveEnabled(id: AIClipboardSkillCatalog.summarizeID, toIndex: 2)
+        XCTAssertEqual(
+            store.layout.enabledIDs,
+            [
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.translateID,
+                AIClipboardSkillCatalog.summarizeID,
+            ]
+        )
+        store.moveEnabled(id: AIClipboardSkillCatalog.summarizeID, toIndex: 0)
+        XCTAssertEqual(
+            store.layout.enabledIDs,
+            [
+                AIClipboardSkillCatalog.summarizeID,
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.translateID,
+            ]
+        )
+    }
+
     func testVisibleEmptyEnabledIDsShowsNoChips() {
         XCTAssertEqual(AIClipboardSkillCatalog.visible(enabledIDs: []).map(\.id), [])
     }
@@ -183,17 +205,52 @@ final class AIAgentSkillLayoutTests: XCTestCase {
         )
         XCTAssertEqual(skill?.shortcutICloudURL?.host, "www.icloud.com")
         XCTAssertEqual(skill?.shortcutName, "OSG · 提取待办")
+        XCTAssertEqual(skill?.shortcutResourceName, "OSGExtractTodos")
+    }
+
+    func testExtractEventsUsesICloudShareLink() {
+        let skill = AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.extractEventsID)
+        XCTAssertEqual(
+            skill?.shortcutICloudURL,
+            AIClipboardSkillCatalog.extractEventsShortcutICloudURL
+        )
+        XCTAssertEqual(skill?.shortcutICloudURL?.host, "www.icloud.com")
+        XCTAssertEqual(skill?.shortcutName, "OSG · 提取日程")
+        XCTAssertEqual(
+            skill?.shortcutResourceName,
+            "OSGExtractEvents"
+        )
+        XCTAssertEqual(skill?.systemImage, "calendar")
+        XCTAssertFalse(skill?.isDefault ?? true)
+        XCTAssertEqual(
+            AIAgentShortcutRun.iCloudShareToken(from: skill!.shortcutICloudURL!),
+            "1f4afcf7ee22400cbf84e319d969aadf"
+        )
+    }
+
+    func testNavigateUsesBundledShortcut() {
+        let skill = AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.navigateID)
+        XCTAssertNil(skill?.shortcutICloudURL)
+        XCTAssertEqual(skill?.shortcutName, "OSG · 导航")
+        XCTAssertEqual(skill?.shortcutResourceName, "OSGNavigate")
+        XCTAssertEqual(
+            skill?.systemImage,
+            "arrow.triangle.turn.up.right.diamond.fill"
+        )
+        XCTAssertFalse(skill?.isDefault ?? true)
+        XCTAssertEqual(skill?.kind, .export)
+        XCTAssertTrue(skill?.requiresShortcut ?? false)
     }
 
     func testICloudShareLinkMapsToShortcutsInstallURL() {
-        let share = URL(string: "https://www.icloud.com/shortcuts/520317da7ae74759b64d5fb069c71f81")!
+        let share = URL(string: "https://www.icloud.com/shortcuts/65bf33ba4206484ba78d582eaf1e9c44")!
         let url = AIAgentShortcutRun.shortcutsInstallURL(from: share)
         XCTAssertEqual(url?.scheme, "shortcuts")
         XCTAssertEqual(url?.host, "shortcuts")
-        XCTAssertEqual(url?.path, "/520317da7ae74759b64d5fb069c71f81")
+        XCTAssertEqual(url?.path, "/65bf33ba4206484ba78d582eaf1e9c44")
         XCTAssertEqual(
             AIAgentShortcutRun.iCloudShareToken(from: share),
-            "520317da7ae74759b64d5fb069c71f81"
+            "65bf33ba4206484ba78d582eaf1e9c44"
         )
     }
 }

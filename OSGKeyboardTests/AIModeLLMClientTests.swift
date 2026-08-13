@@ -77,6 +77,18 @@ final class AIModeLLMClientTests: XCTestCase {
         XCTAssertTrue(client is AIModeSearchFallbackClient)
     }
 
+    func testFactorySkipsSearchWhenThinkingDisabled() {
+        let client = AIModeLLMClientFactory.make(
+            providerId: "openai",
+            baseURL: "https://api.openai.com/v1",
+            apiKey: "sk-test",
+            model: "gpt-5.4-mini",
+            thinkingEnabled: false
+        )
+        XCTAssertFalse(client is AIModeSearchFallbackClient)
+        XCTAssertTrue(client is OpenAICompatibleClient)
+    }
+
     func testFactoryPlainForGroq() {
         let client = AIModeLLMClientFactory.make(
             providerId: "groq",
