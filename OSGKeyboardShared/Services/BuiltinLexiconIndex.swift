@@ -1,7 +1,7 @@
 // BuiltinLexiconIndex.swift
 // OSGKeyboard · Shared
 //
-// In-memory index over bundled `phrases.tsv` (~10k computer terms).
+// In-memory index over the bundled project-curated AI/technology `phrases.tsv`.
 // macOS local ASR consumes a Top-N subset; the full index also backs
 // polish supplements and future retrieval.
 

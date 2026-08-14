@@ -51,6 +51,7 @@ final class LibrimeIntegrationTests: XCTestCase {
             distributionVersion: "tests"
         )
         try bridge.start()
+        defer { bridge.finalizeRuntime() }
 
         let vectors: [(TypingInputSchema, String)] = [
             (.fullPinyin, "nihao"),
@@ -141,40 +142,34 @@ final class LibrimeIntegrationTests: XCTestCase {
         let userFiles = fileManager.enumerator(atPath: user.path)?
             .compactMap { $0 as? String } ?? []
         XCTAssertTrue(userFiles.contains(where: { $0.contains("userdb") }))
+    }
 
-        // Redeploy with one fuzzy pair and verify it affects actual Rime
-        // candidates rather than just generated YAML.
-        for schema in TypingInputSchema.allCases {
-            try RimeSchemaGenerator.schema(for: schema, fuzzyPairs: [.nL]).write(
-                to: shared.appendingPathComponent("\(schema.rawValue).schema.yaml"),
-                atomically: true,
-                encoding: .utf8
-            )
-        }
-        let fuzzyDeployer = OSGRimeBridge(
-            sharedDataDirectory: shared.path,
-            userDataDirectory: user.path,
-            distributionVersion: "tests-fuzzy"
-        )
-        try fuzzyDeployer.deploy(withFullCheck: true)
-        fuzzyDeployer.finalizeRuntime()
+    func testNLFuzzyMapsLihaoToNihao() throws {
+        let env = try stagedRimeEnvironment(fuzzyPairs: [.nL])
+        defer { try? env.fileManager.removeItem(at: env.root) }
 
-        let fuzzyBridge = OSGRimeBridge(
-            sharedDataDirectory: shared.path,
-            userDataDirectory: user.path,
-            distributionVersion: "tests-fuzzy"
+        let deployer = OSGRimeBridge(
+            sharedDataDirectory: env.shared.path,
+            userDataDirectory: env.user.path,
+            distributionVersion: "tests-fuzzy-nl"
         )
-        try fuzzyBridge.start()
-        XCTAssertTrue(fuzzyBridge.selectSchema(TypingInputSchema.fullPinyin.rawValue))
-        for scalar in "lihao".utf8 {
-            XCTAssertTrue(fuzzyBridge.processKeyCode(Int32(scalar), modifiers: 0))
-        }
-        let fuzzySnapshot = fuzzyBridge.snapshot(withCandidateLimit: 100)
+        try deployer.deploy(withFullCheck: true)
+        deployer.finalizeRuntime()
+
+        let bridge = OSGRimeBridge(
+            sharedDataDirectory: env.shared.path,
+            userDataDirectory: env.user.path,
+            distributionVersion: "tests-fuzzy-nl"
+        )
+        try bridge.start()
+        defer { bridge.finalizeRuntime() }
+        XCTAssertTrue(bridge.selectSchema(TypingInputSchema.fullPinyin.rawValue))
+        type("lihao", on: bridge)
+        let snapshot = bridge.snapshot(withCandidateLimit: 100)
         XCTAssertTrue(
-            fuzzySnapshot.candidates.contains(where: { $0.text == "你好" }),
-            "n/l fuzzy candidates: \(fuzzySnapshot.candidates.map(\.text).prefix(20))"
+            snapshot.candidates.contains(where: { $0.text == "你好" }),
+            "n/l fuzzy candidates: \(snapshot.candidates.map(\.text).prefix(20))"
         )
-        fuzzyBridge.finalizeRuntime()
     }
 
     func testPersonalDictionarySidecarPinsSameCodeCandidates() throws {
@@ -541,7 +536,9 @@ final class LibrimeIntegrationTests: XCTestCase {
         )
     }
 
-    private func stagedRimeEnvironment() throws -> (
+    private func stagedRimeEnvironment(
+        fuzzyPairs: Set<PinyinFuzzyPair> = []
+    ) throws -> (
         root: URL,
         shared: URL,
         user: URL,
@@ -569,7 +566,7 @@ final class LibrimeIntegrationTests: XCTestCase {
             encoding: .utf8
         )
         for schema in TypingInputSchema.allCases {
-            try RimeSchemaGenerator.schema(for: schema, fuzzyPairs: []).write(
+            try RimeSchemaGenerator.schema(for: schema, fuzzyPairs: fuzzyPairs).write(
                 to: shared.appendingPathComponent("\(schema.rawValue).schema.yaml"),
                 atomically: true,
                 encoding: .utf8

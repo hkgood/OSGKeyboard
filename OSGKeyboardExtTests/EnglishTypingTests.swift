@@ -22,8 +22,7 @@ final class EnglishTypingTests: XCTestCase {
     @MainActor
     func testChineseTypingDoesNotLoadEnglishLexicon() {
         EnglishLexicon.shared.unload()
-        let typing = TypingSessionController()
-        _ = typing.setLanguage(.chinese)
+        let typing = makeTypingSession(language: .chinese)
         typing.enterTypingMode()
         XCTAssertFalse(EnglishLexicon.shared.isLoaded)
         _ = typing.setLanguage(.english)
@@ -124,10 +123,10 @@ final class EnglishTypingTests: XCTestCase {
     func testEnglishShiftArmsAfterReturnLikeNotes() {
         // Simulates Notes: proxy preceding text gains a trailing newline after Return.
         var preceding = "Hello"
-        let typing = TypingSessionController()
+        let typing = makeTypingSession()
         typing.precedingTextProvider = { preceding }
         typing.autocapitalizationModeProvider = { .sentences }
-        _ = typing.setLanguage(.english)
+        typing.syncAutocapitalization()
         XCTAssertFalse(typing.shiftActive, "mid-word should not arm Shift")
 
         _ = typing.handleReturn()
@@ -144,10 +143,10 @@ final class EnglishTypingTests: XCTestCase {
     func testEnglishShiftArmsWhenProxyLagsAfterReturn() {
         // Notes often still reports pre-Return context right after insertText("\n").
         var preceding = "Hello"
-        let typing = TypingSessionController()
+        let typing = makeTypingSession()
         typing.precedingTextProvider = { preceding }
         typing.autocapitalizationModeProvider = { .sentences }
-        _ = typing.setLanguage(.english)
+        typing.syncAutocapitalization()
 
         _ = typing.handleReturn()
         // Proxy intentionally stale — still "Hello" without "\n".
@@ -159,10 +158,10 @@ final class EnglishTypingTests: XCTestCase {
     @MainActor
     func testEnglishShiftArmsWhenProxyLagsAfterPeriod() {
         var preceding = "Hello"
-        let typing = TypingSessionController()
+        let typing = makeTypingSession()
         typing.precedingTextProvider = { preceding }
         typing.autocapitalizationModeProvider = { .sentences }
-        _ = typing.setLanguage(.english)
+        typing.syncAutocapitalization()
 
         _ = typing.handleKey(".")
         typing.syncAutocapitalization(accountingForInsert: ".")
@@ -171,9 +170,7 @@ final class EnglishTypingTests: XCTestCase {
 
     @MainActor
     func testEnglishIdleShowsNoCandidatesUntilLetterTyped() {
-        let typing = TypingSessionController()
-        typing.suggestionsEnabled = true
-        _ = typing.setLanguage(.english)
+        let typing = makeTypingSession()
         typing.enterTypingMode()
         XCTAssertTrue(typing.composition.candidates.isEmpty)
 
@@ -202,9 +199,7 @@ final class EnglishTypingTests: XCTestCase {
 
     @MainActor
     func testEnglishTypingEmitsCompletionsIntoComposition() {
-        let typing = TypingSessionController()
-        typing.suggestionsEnabled = true
-        _ = typing.setLanguage(.english)
+        let typing = makeTypingSession()
         typing.enterTypingMode()
 
         _ = typing.handleKey("h")
@@ -219,11 +214,9 @@ final class EnglishTypingTests: XCTestCase {
     func testOldWordBackspaceRehydratesSuggestionsFromDocumentContext() {
         var preceding = "board"
         let following = "\n"
-        let typing = TypingSessionController()
-        typing.suggestionsEnabled = true
+        let typing = makeTypingSession()
         typing.precedingTextProvider = { preceding }
         typing.followingTextProvider = { following }
-        _ = typing.setLanguage(.english)
         typing.enterTypingMode()
         typing.synchronizeEnglishDocumentContext(caretMoved: true)
 
@@ -259,11 +252,9 @@ final class EnglishTypingTests: XCTestCase {
     @MainActor
     func testCandidateReplacementRejectsStaleDocumentAnchor() {
         var preceding = ""
-        let typing = TypingSessionController()
-        typing.suggestionsEnabled = true
+        let typing = makeTypingSession()
         typing.precedingTextProvider = { preceding }
         typing.followingTextProvider = { "" }
-        _ = typing.setLanguage(.english)
         typing.enterTypingMode()
 
         for key in ["b", "o", "a"] {
@@ -286,11 +277,9 @@ final class EnglishTypingTests: XCTestCase {
 
     @MainActor
     func testMidWordCaretSuppressesUnsafeBackwardOnlyReplacement() {
-        let typing = TypingSessionController()
-        typing.suggestionsEnabled = true
+        let typing = makeTypingSession()
         typing.precedingTextProvider = { "boa" }
         typing.followingTextProvider = { "rd" }
-        _ = typing.setLanguage(.english)
         typing.enterTypingMode()
 
         typing.synchronizeEnglishDocumentContext(caretMoved: true)
@@ -302,11 +291,9 @@ final class EnglishTypingTests: XCTestCase {
     @MainActor
     func testStaleHostCallbackDoesNotDiscardLocalEnglishWord() {
         var preceding = ""
-        let typing = TypingSessionController()
-        typing.suggestionsEnabled = true
+        let typing = makeTypingSession()
         typing.precedingTextProvider = { preceding }
         typing.followingTextProvider = { "" }
-        _ = typing.setLanguage(.english)
         typing.enterTypingMode()
 
         let output = typing.handleKey("h")
@@ -337,7 +324,7 @@ final class EnglishTypingTests: XCTestCase {
 
     @MainActor
     func testPeriodShortcutReplacesDoubleSpace() {
-        let typing = TypingSessionController()
+        let typing = makeTypingSession()
         _ = typing.setLanguage(.english)
         typing.enterTypingMode()
 
@@ -356,7 +343,7 @@ final class EnglishTypingTests: XCTestCase {
 
     @MainActor
     func testPeriodShortcutDoesNotFireAfterAnotherLetter() {
-        let typing = TypingSessionController()
+        let typing = makeTypingSession()
         _ = typing.setLanguage(.english)
         typing.enterTypingMode()
 
@@ -369,8 +356,7 @@ final class EnglishTypingTests: XCTestCase {
 
     @MainActor
     func testPeriodShortcutDoesNotFireAfterSentenceTerminator() {
-        let typing = TypingSessionController()
-        _ = typing.setLanguage(.english)
+        let typing = makeTypingSession()
         typing.precedingTextProvider = { "Hello." }
         typing.enterTypingMode()
         typing.syncAutocapitalization()
@@ -382,8 +368,7 @@ final class EnglishTypingTests: XCTestCase {
 
     @MainActor
     func testChineseSpaceDoesNotUsePeriodShortcut() {
-        let typing = TypingSessionController()
-        _ = typing.setLanguage(.chinese)
+        let typing = makeTypingSession(language: .chinese)
         let first = typing.handleSpace()
         let second = typing.handleSpace()
         XCTAssertEqual(first.text, " ")
@@ -526,9 +511,7 @@ final class EnglishTypingTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
         let store = EnglishLearningStore(defaults: defaults)
-        let typing = TypingSessionController(learningStore: store)
-        typing.suggestionsEnabled = true
-        _ = typing.setLanguage(.english)
+        let typing = makeTypingSession(learningStore: store)
         typing.enterTypingMode()
 
         for character in ["t", "e", "h"] {
@@ -545,9 +528,7 @@ final class EnglishTypingTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
         let store = EnglishLearningStore(defaults: defaults)
-        let typing = TypingSessionController(learningStore: store)
-        typing.suggestionsEnabled = true
-        _ = typing.setLanguage(.english)
+        let typing = makeTypingSession(learningStore: store)
         typing.enterTypingMode()
 
         for character in ["t", "e", "h"] {
@@ -581,10 +562,25 @@ final class EnglishTypingTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defaults.removePersistentDomain(forName: suite)
         let store = EnglishLearningStore(defaults: defaults)
-        let typing = TypingSessionController(learningStore: store)
-        typing.suggestionsEnabled = true
-        _ = typing.setLanguage(.english)
+        let typing = makeTypingSession(learningStore: store)
         typing.enterTypingMode()
+        return typing
+    }
+
+    @MainActor
+    private func makeTypingSession(
+        learningStore: EnglishLearningStore? = nil,
+        language: TypingInputLanguage = .english
+    ) -> TypingSessionController {
+        let store = learningStore ?? EnglishLearningStore(
+            defaults: UserDefaults(suiteName: "english.tests.\(UUID().uuidString)")!
+        )
+        let typing = TypingSessionController(
+            engine: { NoopRimeEngine() },
+            learningStore: store
+        )
+        typing.suggestionsEnabled = true
+        _ = typing.setLanguage(language)
         return typing
     }
 
@@ -595,4 +591,27 @@ final class EnglishTypingTests: XCTestCase {
             deleteCount: output.deleteCount
         )
     }
+}
+
+@MainActor
+private final class NoopRimeEngine: RimeEngineBridging {
+    var composition: TypingComposition = .empty
+    var isReady = true
+    var schema: TypingInputSchema = .fullPinyin
+
+    func prepare() async throws {}
+    func teardown() { composition = .empty }
+    func setLanguage(_ language: TypingInputLanguage) {}
+    @discardableResult
+    func setSchema(_ schema: TypingInputSchema) -> Bool {
+        self.schema = schema
+        return true
+    }
+    func processCharacter(_ character: Character) -> String? { nil }
+    func processBackspace() -> String? { nil }
+    func processSpace() -> String? { " " }
+    func processReturn() -> String? { "\n" }
+    func selectCandidate(at index: Int) -> String { "" }
+    func flushPreedit() -> String { "" }
+    func clearComposition() { composition = .empty }
 }

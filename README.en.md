@@ -63,7 +63,7 @@ Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands 
 
 ## Privacy
 
-Speech is transcribed on-device by default. Polish sends **text only** — the transcript and a small amount of nearby cursor text for continuity, never raw audio. Chinese candidate learning and English suggestion/autocorrect learning stay in the on-device App Group and are not uploaded. Secure fields disable English suggestions and autocorrect. Cursor context is not logged or saved to voice history. See the [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/).
+Speech is transcribed on-device by default. Audio or text leaves the device only when you actively choose a cloud engine, polish, AI, or a skill, and it goes directly to your configured provider. Clipboard history is off by default, capped at 15 local items, and sent only after an explicit clipboard action. Chinese and English typing learning stays local. API keys use Keychain (optionally iCloud Keychain), while downloaded Mac speech models and local inference remain on the Mac. See the [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/).
 
 ---
 

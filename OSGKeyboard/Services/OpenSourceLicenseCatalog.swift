@@ -36,7 +36,7 @@ enum OpenSourceLicenseCatalog {
             purpose: "MaterialIcons-Regular.ttf bundled with the iOS app for Settings and navigation iconography.",
             url: URL(string: "https://github.com/google/material-design-icons"),
             licenseText: resourceText(
-                named: "LICENSE-PINYIN-SIMP-APACHE",
+                named: "LICENSE-MATERIAL-ICONS-APACHE",
                 fallback: apache2Text
             ),
             platforms: [.iOS]
@@ -111,12 +111,68 @@ enum OpenSourceLicenseCatalog {
             platforms: [.iOS]
         ),
         .init(
+            id: "osg-ai-tech-lexicon",
+            name: "OSG AI/technology speech lexicon",
+            licenseName: "MIT (data subset only)",
+            purpose: "Project-curated bilingual names and technology terms used by the iOS custom language model and Mac local-ASR prompt bias. This notice applies only to the lexicon data, not to OSGKeyboard as a whole.",
+            url: URL(
+                string: "https://github.com/hkgood/OSGKeyboard/tree/main/Scripts/lexicon/seeds"
+            ),
+            licenseText: curatedLexiconNoticeText,
+            platforms: [.iOS, .macOS]
+        ),
+        .init(
             id: "mlx-audio-swift",
             name: "mlx-audio-swift",
             licenseName: "MIT",
             purpose: "macOS local Qwen3 MLX streaming ASR (MLXAudioSTT), linked only in the Mac app target.",
             url: URL(string: "https://github.com/Blaizzy/mlx-audio-swift"),
             licenseText: mlxAudioMITText,
+            platforms: [.macOS]
+        ),
+        .init(
+            id: "mlx-swift",
+            name: "mlx-swift 0.31.3",
+            licenseName: "MIT",
+            purpose: "Apple MLX tensor and neural-network runtime used transitively by mlx-audio-swift.",
+            url: URL(string: "https://github.com/ml-explore/mlx-swift"),
+            licenseText: mitLicenseText(copyright: "Copyright (c) 2023 ml-explore"),
+            platforms: [.macOS]
+        ),
+        .init(
+            id: "mlx-swift-lm",
+            name: "mlx-swift-lm 3.31.3",
+            licenseName: "MIT",
+            purpose: "MLX language-model utilities used transitively by the Mac local speech runtime.",
+            url: URL(string: "https://github.com/ml-explore/mlx-swift-lm"),
+            licenseText: mitLicenseText(copyright: "Copyright (c) 2024 ml-explore"),
+            platforms: [.macOS]
+        ),
+        .init(
+            id: "swift-transformers",
+            name: "swift-transformers 1.1.9",
+            licenseName: "Apache-2.0",
+            purpose: "Tokenizer and model utilities used transitively by mlx-audio-swift.",
+            url: URL(string: "https://github.com/huggingface/swift-transformers"),
+            licenseText: apacheLicenseText(copyright: "Copyright 2022 Hugging Face SAS."),
+            platforms: [.macOS]
+        ),
+        .init(
+            id: "swift-huggingface",
+            name: "swift-huggingface 0.8.1",
+            licenseName: "Apache-2.0",
+            purpose: "Hugging Face Hub client used to download the user-selected Mac speech model.",
+            url: URL(string: "https://github.com/huggingface/swift-huggingface"),
+            licenseText: apacheLicenseText(copyright: "Copyright 2025 Hugging Face SAS."),
+            platforms: [.macOS]
+        ),
+        .init(
+            id: "qwen3-asr-mlx",
+            name: "Qwen3-ASR 0.6B / 1.7B MLX 4-bit models",
+            licenseName: "Apache-2.0",
+            purpose: "Optional speech-model weights downloaded at runtime for on-device Mac transcription. The MLX conversions are published by mlx-community from Qwen/Qwen3-ASR.",
+            url: URL(string: "https://huggingface.co/collections/mlx-community/qwen3-asr"),
+            licenseText: qwenModelApacheText,
             platforms: [.macOS]
         ),
     ]
@@ -187,6 +243,48 @@ enum OpenSourceLicenseCatalog {
 
     \(mitText.components(separatedBy: "\n").dropFirst(2).joined(separator: "\n"))
     """
+
+    static let curatedLexiconNoticeText = """
+    OSG AI/technology speech lexicon
+
+    Copyright (c) OSGKeyboard contributors
+
+    The phrase list under Scripts/lexicon/seeds/ai_tech_brands_seed.tsv and
+    its generated CustomLanguageModel phrase data are made available under
+    the MIT License below. This grant covers only that curated data subset.
+    OSGKeyboard itself remains source-available under the repository LICENSE
+    and is not distributed under the MIT License.
+
+    \(mitText.components(separatedBy: "\n").dropFirst(2).joined(separator: "\n"))
+    """
+
+    static let qwenModelApacheText = """
+    mlx-community/Qwen3-ASR-0.6B-4bit and Qwen3-ASR-1.7B-4bit
+
+    Converted to MLX format from Qwen/Qwen3-ASR using mlx-audio 0.3.1.
+    Both model cards declare license: apache-2.0. Model weights are optional
+    runtime downloads and are not stored in the OSGKeyboard repository.
+
+    \(apacheLicenseText(copyright: "Copyright Qwen and model contributors."))
+    """
+
+    private static func mitLicenseText(copyright: String) -> String {
+        """
+        MIT License
+
+        \(copyright)
+
+        \(mitText.components(separatedBy: "\n").dropFirst(2).joined(separator: "\n"))
+        """
+    }
+
+    private static func apacheLicenseText(copyright: String) -> String {
+        let fullLicense = resourceText(
+            named: "LICENSE-PINYIN-SIMP-APACHE",
+            fallback: apache2Text
+        )
+        return "\(copyright)\n\n\(fullLicense)"
+    }
 
     static let englishLexiconNoticeText = """
     OSG English typing lexicon (project-owned notice)

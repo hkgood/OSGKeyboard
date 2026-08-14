@@ -13,9 +13,9 @@ final class LocalASRBiasAdapterTests: XCTestCase {
         let url = dir.appendingPathComponent("phrases.tsv")
         let tsv = """
         word\tpinyin\tsource\tweight
-        SwiftUI\tswift ui\tcomputer_terms\t5
-        Kubernetes\tku bo ne si\tcomputer_terms\t5
-        一致性\tyi zhi xing\tcomputer_terms\t5
+        SwiftUI\tswift ui\tai_tech_seed\t90
+        Kubernetes\tku bo ne si\tai_tech_seed\t90
+        一致性\tyi zhi xing\tai_tech_seed\t80
         """
         try tsv.write(to: url, atomically: true, encoding: .utf8)
         addTeardownBlock {
@@ -103,11 +103,12 @@ final class LocalASRBiasAdapterTests: XCTestCase {
 
     func testBuiltinLexiconParsesTSV() {
         let terms = BuiltinLexiconIndex.parseTSV(
-            "word\tpinyin\tsource\tweight\nFoo\tfoo\tcomputer_terms\t5\n"
+            "word\tpinyin\tsource\tweight\nFoo\tfoo\tai_tech_seed\t80\n"
         )
         XCTAssertEqual(terms.count, 1)
         XCTAssertEqual(terms[0].word, "Foo")
-        XCTAssertEqual(terms[0].weight, 5)
+        XCTAssertEqual(terms[0].source, "ai_tech_seed")
+        XCTAssertEqual(terms[0].weight, 80)
     }
 
     func testPolishingServiceMergesDictionarySupplement() {

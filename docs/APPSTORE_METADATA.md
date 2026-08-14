@@ -1,4 +1,4 @@
-# App Store Connect — OSGKeyboard 1.7.5 (build 66)
+# App Store Connect — OSGKeyboard 1.8.0 (build 72)
 
 > Current metadata baseline for the iOS/iPadOS App Store build. Version and build
 > numbers come from `project.yml`. The repository also contains a separate
@@ -11,7 +11,7 @@
 | App name | `OSGKeyboard` | ≤ 30 characters |
 | Subtitle | `Voice input, everywhere` | ≤ 30 characters |
 | Bundle ID | `com.osgkeyboard.ios` | iOS host target |
-| Version / build | `1.7.5` / `66` | `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` |
+| Version / build | `1.8.0` / `72` | `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` |
 | Minimum system | iOS/iPadOS 26 | iPhone and iPad |
 | Primary locale | `en-US` | Simplified Chinese is also bundled |
 | Primary category | Utilities | |
@@ -101,25 +101,31 @@ Voice input anywhere, with on-device recognition by default. Add your own AI key
 keyboard,voice,dictation,speech,transcribe,AI,pinyin,Chinese,English,polish,typing,productivity
 ```
 
-## What's new in 1.7.5
+## What's new in 1.8.0
 
 ```text
 NEW
-• Optional clipboard history (latest 15 plain-text items) with a top-bar
-  panel and suggestion strip; AI idle hints can use a fresh copy for ~30s.
-• AI mode empty state rotates one-line suggestions; tap sends the card
-  prompt without using the mic.
-• Spoken clipboard requests in AI mode attach stored clipboard text when
-  you name the clipboard out loud.
-• Settings → AI Agent adds Response length (Short / Medium / Detailed).
-• AI answers stream into the keyboard as the model writes.
+• Skills center with Reply, Summarize, Translate, custom skills, and
+  exports to Reminders, Calendar, Notes, and Maps.
+• English QuickType-style suggestions with smarter system, contact,
+  text-replacement, and neighbor-key corrections.
+• Improved Pinyin abbreviations and on-device typing-habit learning.
+• Overlapping key presses, double-space period, contextual Return labels,
+  and a full-width iPad keyboard with editing controls.
+• AI keyboard answers stream as they are generated and can use provider
+  web search for current information.
+• Optional on-device clipboard history and one-tap clipboard skills.
 
 CHANGED
-• History and Personal dictionary move from the tab bar onto Home preview
-  cards; engine status scrolls with the page.
-• Translation control sits beside the mic (mirrored with Undo); the former
-  top-bar slot is the Clipboard button.
-• Undo covers clipboard pastes as well as dictation, AI answers, and edits.
+• Hold the microphone to edit the last verified input, then preview,
+  replace, or append the result.
+• Undo now covers dictation, AI answers, edits, and clipboard pastes.
+• Home cards and navigation make History, Personal Dictionary, Skills,
+  Styles, and Settings easier to find.
+
+FIXED
+• Improved Chinese input setup, Universal Clipboard responsiveness,
+  keyboard switching, recording cancellation, and AI session recovery.
 ```
 
 ## App Review information
@@ -183,10 +189,14 @@ credential.
 - Linked to the user: Yes
 - Used for tracking: No
 
-This covers transcripts, polish/translation text, AI questions, optional
-provider search requests, dictionary terms included in provider prompts, and
-clipboard text only after the user inserts it and actively invokes polish.
-Device-local clipboard history by itself is not collected by the developer.
+This covers transcripts and nearby cursor context used for polish/translation,
+AI questions and skill prompts, optional provider search requests, dictionary
+terms included in provider prompts, and clipboard text only after the user
+actively invokes a clipboard skill, names the clipboard in AI mode, or inserts
+it and requests polish. Skill results may also be handed on-device to an Apple
+Shortcut, while navigation addresses may be opened in the selected map app.
+Device-local clipboard history and typing-learning data by themselves are not
+collected by the developer.
 
 ### Do not select
 
@@ -201,10 +211,10 @@ standard HTTPS. Re-evaluate this answer if non-exempt cryptography is added.
 
 ## Submission checklist
 
-- [ ] Confirm `project.yml` still reads version 1.7.5 / build 66
+- [ ] Confirm `project.yml` still reads version 1.8.0 / build 72
 - [ ] Open the existing Xcode project (do not regenerate unless needed)
 - [ ] Run the release build and test suites on macOS with Xcode 26
 - [ ] Replace screenshots with captures from the submitted build
 - [ ] Verify the privacy answers against the submitted provider features
 - [ ] Confirm the tip product remains optional and unlocks no feature
-- [ ] Upload, select build 66, add review notes, and submit
+- [ ] Upload, select build 72, add review notes, and submit

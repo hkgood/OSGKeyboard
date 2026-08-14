@@ -97,7 +97,7 @@ final class KeyboardSurfaceStateTests: XCTestCase {
     }
 
     func testKeyRowsFollowTypingLanguageOnNumberPage() {
-        let typing = TypingSessionController()
+        let typing = TypingSessionController(engine: { TrackingStubRimeEngine() })
         typing.setPage(.numbers)
         XCTAssertEqual(typing.keyRows[1], ["-", "/", "：", "；", "（", "）", "￥", "@", "“", "”"])
 
@@ -325,7 +325,7 @@ final class KeyboardSurfaceStateTests: XCTestCase {
     }
 
     func testResourceRetryIsSkippedWhenNoErrorIsPending() {
-        let typing = TypingSessionController()
+        let typing = TypingSessionController(engine: { TrackingStubRimeEngine() })
         XCTAssertNil(typing.lastError)
         XCTAssertFalse(typing.lastErrorNeedsHostDeployment)
 
@@ -338,7 +338,7 @@ final class KeyboardSurfaceStateTests: XCTestCase {
     }
 
     func testSharedCapsuleCanSelectSpecificTypingLanguage() {
-        let typing = TypingSessionController()
+        let typing = TypingSessionController(engine: { TrackingStubRimeEngine() })
         XCTAssertEqual(typing.language, .chinese)
 
         XCTAssertEqual(typing.setLanguage(.english), .none)
@@ -349,7 +349,7 @@ final class KeyboardSurfaceStateTests: XCTestCase {
     }
 
     func testShiftStateProducesUppercaseKeyRows() {
-        let typing = TypingSessionController()
+        let typing = TypingSessionController(engine: { TrackingStubRimeEngine() })
         XCTAssertFalse(typing.shiftActive)
 
         _ = typing.handleKey("⇧")
@@ -360,7 +360,7 @@ final class KeyboardSurfaceStateTests: XCTestCase {
     }
 
     func testManualShiftSurvivesAutocapitalizationSync() {
-        let typing = TypingSessionController()
+        let typing = TypingSessionController(engine: { TrackingStubRimeEngine() })
         // Providers must be set before language switch (which syncs autocap).
         typing.precedingTextProvider = { "hello " } // mid-sentence: auto stays off
         typing.autocapitalizationModeProvider = { .sentences }
@@ -376,7 +376,7 @@ final class KeyboardSurfaceStateTests: XCTestCase {
     }
 
     func testShiftHoldTypesUppercaseWithoutEnteringCapsLock() {
-        let typing = TypingSessionController()
+        let typing = TypingSessionController(engine: { TrackingStubRimeEngine() })
         _ = typing.setLanguage(.english)
         typing.precedingTextProvider = { "hello " }
         typing.autocapitalizationModeProvider = { .sentences }
@@ -396,7 +396,7 @@ final class KeyboardSurfaceStateTests: XCTestCase {
     }
 
     func testShiftHoldWithoutTypingActsAsTap() {
-        let typing = TypingSessionController()
+        let typing = TypingSessionController(engine: { TrackingStubRimeEngine() })
         typing.beginShiftHold()
         typing.endShiftHold()
         XCTAssertTrue(typing.shiftActive)

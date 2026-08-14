@@ -130,6 +130,7 @@
         "OSGKeyboardExtTests/PinyinNextKeyResolverTests",
         "OSGKeyboardExtTests/RimeSchemaGeneratorTests",
         "OSGKeyboardExtTests/RimePersonalDictionaryExporterTests",
+        "OSGKeyboardExtTests/TypingTouchTrackerTests",
         "OSGKeyboardTests/CursorNavigationTests",
         "OSGKeyboardTests/KeyboardTranslationConfigProtectionTests",
         "OSGKeyboardTests/AIHintPoolTests",
@@ -139,6 +140,7 @@
         "OSGKeyboardTests/AIUserSkillStoreTests",
         "OSGKeyboardTests/AIEventExtractionTests",
         "OSGKeyboardTests/AIAddressExtractionTests",
+        "OSGKeyboardTests/AINoteExportTests",
         "OSGKeyboardTests/ClipboardHistoryPolicyTests",
         "OSGKeyboardTests/ClipboardHistoryStoreTests"
       ]
