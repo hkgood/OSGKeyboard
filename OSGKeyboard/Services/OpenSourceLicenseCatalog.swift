@@ -105,7 +105,7 @@ enum OpenSourceLicenseCatalog {
             id: "english-typing-lexicon",
             name: "OSG English typing lexicon",
             licenseName: "Project-owned notice",
-            purpose: "Offline English autocomplete, autocorrect, and next-word ranking lists curated by OSGKeyboard (english_lexicon.tsv / english_bigrams.tsv). Not derived from GPL/LGPL dictionaries; relative ranks are ordering weights only.",
+            purpose: "Offline English autocomplete, autocorrect, and next-word ranking (english_lexicon.bin, compiled from TSV). Log-scaled ranks derived from Peter Norvig’s public-domain n-gram counts; not GPL/LGPL dictionaries.",
             url: URL(string: "https://github.com/hkgood/OSGKeyboard/blob/main/NOTICE-TYPING.md"),
             licenseText: englishLexiconNoticeText,
             platforms: [.iOS]
@@ -191,16 +191,17 @@ enum OpenSourceLicenseCatalog {
     static let englishLexiconNoticeText = """
     OSG English typing lexicon (project-owned notice)
 
-    english_lexicon.tsv and english_bigrams.tsv are curated by OSGKeyboard for
-    offline English autocomplete, autocorrect, and next-word ranking inside the
-    iOS keyboard extension.
+    english_lexicon.bin (compiled from english_lexicon.tsv / english_bigrams.tsv)
+    is the mmap ranking table for offline English autocomplete, autocorrect,
+    and next-word prediction.
 
-    These lists are not derived from GPL or LGPL dictionaries. Relative
-    frequency values are synthetic ordering weights for ranking only, not
-    verbatim counts from a single third-party corpus.
+    Unigram ranks and truncated bigrams are derived from Peter Norvig’s
+    public-domain n-gram count files (https://norvig.com/ngrams/). OSGKeyboard
+    does not ship the raw corpus. Relative frequency values are log-scaled
+    ordering weights, not verbatim Google counts.
 
     See NOTICE-TYPING.md in the OSGKeyboard repository for the full typing
-    keyboard attribution map (Chinese Rime stack vs OSG-owned English data).
+    keyboard attribution map (Chinese Rime stack vs English data).
     """
 
     static let bsd3Text = """

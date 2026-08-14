@@ -30,11 +30,16 @@ commit, SHA-256 and output SHA-256.
 - Eight opt-in fuzzy-pinyin rule groups.
 - Offline English typing data under
   `OSGKeyboardShared/Resources/Typing/English/`:
-  - `english_lexicon.tsv` — curated word list with synthetic relative
-    frequency ranks for autocomplete / autocorrect
-  - `english_bigrams.tsv` — light next-word candidates
-  - Not derived from GPL/LGPL dictionaries; ranks are ordering weights,
-    not a single third-party corpus dump
+  - `english_lexicon.bin` — mmap-friendly binary of the top 40k alphabetic
+    unigrams (log-scaled ranks) plus truncated bigrams; this is what the
+    keyboard extension loads
+  - `english_lexicon.tsv` / `english_bigrams.tsv` — build inputs derived from
+    Peter Norvig’s public-domain `count_1w.txt` / `count_2w.txt`
+    (https://norvig.com/ngrams/; not GPL/LGPL dictionaries). Not copied into
+    the app bundle.
+  - Rebuild with `python3 Scripts/typing/build_english_lexicon.py`
+    (add `--from-tsv` to compile the binary from existing TSV without network)
+
 
 ## Reference only
 

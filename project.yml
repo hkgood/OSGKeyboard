@@ -139,6 +139,7 @@ targets:
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-JIEBA-MIT.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-PHRASE-PINYIN-DATA-MIT.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-PINYIN-DATA-MIT.txt
+      - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-NORVIG-PD.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/THIRD_PARTY_NOTICES.md
       - path: OSGKeyboard/Resources/Typing/Licenses/third-party-notices.zip
       - path: OSGKeyboard/Resources/Typing/Licenses/LIBRIME-COMBINED-NOTICES.txt
@@ -348,9 +349,7 @@ targets:
         buildPhase: resources
       # Prefer sources+buildPhase over target-level `resources:` — the latter
       # was not emitting Copy Bundle Resources entries for this framework.
-      - path: OSGKeyboardShared/Resources/Typing/English/english_lexicon.tsv
-        buildPhase: resources
-      - path: OSGKeyboardShared/Resources/Typing/English/english_bigrams.tsv
+      - path: OSGKeyboardShared/Resources/Typing/English/english_lexicon.bin
         buildPhase: resources
       - path: OSGKeyboardShared/Resources/PolishStyles
         buildPhase: resources
@@ -581,6 +580,8 @@ targets:
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-PHRASE-PINYIN-DATA-MIT.txt
         buildPhase: resources
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-PINYIN-DATA-MIT.txt
+        buildPhase: resources
+      - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-NORVIG-PD.txt
         buildPhase: resources
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE.txt
         buildPhase: resources

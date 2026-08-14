@@ -14,7 +14,8 @@ public struct AIUserSkill: Codable, Equatable, Identifiable, Sendable {
     public var summary: String
     public var systemImage: String
     public var prompt: String
-    public var shortcutICloudURL: URL
+    /// Optional iCloud share URL. Nil means the skill only transforms text.
+    public var shortcutICloudURL: URL?
     /// Name used by `shortcuts://run-shortcut?name=`. Independent of `name`.
     public var shortcutName: String
     /// Per-skill reasoning. Built-in skills are always off; custom defaults off.
@@ -28,8 +29,8 @@ public struct AIUserSkill: Codable, Equatable, Identifiable, Sendable {
         summary: String = "",
         systemImage: String = AIUserSkillLimits.defaultSystemImage,
         prompt: String,
-        shortcutICloudURL: URL,
-        shortcutName: String,
+        shortcutICloudURL: URL? = nil,
+        shortcutName: String = "",
         thinkingEnabled: Bool = false,
         createdAt: Date = Date(),
         updatedAt: Date? = nil
@@ -49,15 +50,16 @@ public struct AIUserSkill: Codable, Equatable, Identifiable, Sendable {
     public var isUserCreated: Bool { id.hasPrefix("user.") }
 
     public func asClipboardSkill() -> AIClipboardSkill {
-        AIClipboardSkill(
+        let exportsToShortcut = shortcutICloudURL != nil
+        return AIClipboardSkill(
             id: id,
             systemImage: systemImage,
             titleKey: "",
             cardTitleKey: "",
             descriptionKey: "",
-            kind: .export,
+            kind: exportsToShortcut ? .export : .transform,
             isDefault: false,
-            shortcutName: shortcutName,
+            shortcutName: exportsToShortcut ? shortcutName : nil,
             shortcutICloudURL: shortcutICloudURL,
             customName: name,
             customSummary: summary,
@@ -149,9 +151,13 @@ public struct AIUserSkillCatalog: Codable, Equatable, Sendable {
                 maximum: AIUserSkillLimits.maximumPromptCharacters
             )
         }
-        guard !shortcutName.isEmpty else { throw AIUserSkillValidationError.emptyShortcutName }
-        guard AIShortcutShareLink.isValid(skill.shortcutICloudURL) else {
-            throw AIUserSkillValidationError.invalidShortcutLink
+        if let shortcutURL = skill.shortcutICloudURL {
+            guard !shortcutName.isEmpty else {
+                throw AIUserSkillValidationError.emptyShortcutName
+            }
+            guard AIShortcutShareLink.isValid(shortcutURL) else {
+                throw AIUserSkillValidationError.invalidShortcutLink
+            }
         }
         guard !icon.isEmpty else { throw AIUserSkillValidationError.emptyIcon }
 

@@ -238,17 +238,19 @@ public struct KeyboardRootView: View {
                     onDismiss: state.dismissClipboardSuggestion
                 )
             } else {
-                HStack(spacing: Spacing.xs) {
-                    KeyboardBrandLogo(action: state.openSettings)
-                    // Globe key now lives at the bottom-left of the keyboard (matching
-                    // iOS system layout); see micActionRow's bottom HStack.
-                    Spacer(minLength: 0)
+                ZStack {
                     KeyboardTopControls(
                         state: state,
                         typing: typing,
                         palette: palette,
                         onInsert: onInsert
                     )
+                    HStack {
+                        KeyboardBrandLogo(action: state.openSettings)
+                        // Globe key now lives at the bottom-left of the keyboard (matching
+                        // iOS system layout); see micActionRow's bottom HStack.
+                        Spacer(minLength: 0)
+                    }
                 }
             }
         }

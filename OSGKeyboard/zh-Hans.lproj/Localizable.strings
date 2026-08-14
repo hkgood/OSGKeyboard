@@ -476,10 +476,10 @@
 "skills.editor.prompt" = "文本处理提示词";
 "skills.editor.thinking" = "思考";
 "skills.editor.thinkingHint" = "默认关闭。仅在需要该技能更慢、更深的推理时开启。";
-"skills.editor.shortcut" = "捷径";
+"skills.editor.shortcut" = "捷径（可选）";
 "skills.editor.linkPlaceholder" = "https://www.icloud.com/shortcuts/…";
-"skills.editor.shortcutNamePlaceholder" = "捷径名称（可与技能名称不同）";
-"skills.editor.shortcutHint" = "粘贴 iCloud 分享链接。发布名称会自动填入，也可以自行修改。添加到「快捷指令」后请勿改名。";
+"skills.editor.shortcutNamePlaceholder" = "捷径名称（填写链接时必填）";
+"skills.editor.shortcutHint" = "不填链接时仅处理文字，结果确认后插入。填写链接时会自动读取捷径名称；添加到「快捷指令」后请勿改名。";
 "skills.editor.lookingUp" = "正在读取捷径名称…";
 "skills.editor.resolvedName" = "将运行：%@";
 "skills.editor.lookupFailed" = "无法读取捷径名称。请检查链接，或手动填写名称。";

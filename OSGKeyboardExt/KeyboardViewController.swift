@@ -42,6 +42,7 @@ public final class KeyboardViewController: UIInputViewController {
     private var typingSession: TypingSessionController {
         if let typingSessionStorage { return typingSessionStorage }
         let created = TypingSessionController()
+        created.systemLexicon = UIKitEnglishSystemLexicon()
         typingSessionStorage = created
         return created
     }
@@ -233,6 +234,7 @@ public final class KeyboardViewController: UIInputViewController {
         if state.surface == .typing {
             OSGDiag.log("KVC.viewWillAppear enterTypingMode", category: "boot")
             typingSession.enterTypingMode()
+            refreshEnglishSupplementaryLexicon()
         }
         clipboardCapture.keyboardDidAppear()
         OSGDiag.log(
@@ -633,6 +635,7 @@ public final class KeyboardViewController: UIInputViewController {
         state.surface = surface
         if surface == .typing {
             typingSession.enterTypingMode()
+            refreshEnglishSupplementaryLexicon()
         } else {
             typingSession.leaveTypingMode()
         }
@@ -751,6 +754,33 @@ public final class KeyboardViewController: UIInputViewController {
             Self.typingAutocapitalizationMode(
                 for: self?.textDocumentProxy.autocapitalizationType ?? .sentences
             )
+        }
+    }
+
+    /// Contacts and user text replacements, without a Contacts permission.
+    ///
+    /// `requestSupplementaryLexicon` replies on `com.apple.TextInput.lexicon-request`,
+    /// not the main actor. Touching `TypingSessionController` there traps in Swift 6
+    /// (`_dispatch_assert_queue_fail`) and the extension is killed on appear.
+    private func refreshEnglishSupplementaryLexicon() {
+        requestSupplementaryLexicon { @Sendable lexicon in
+            Task { @MainActor [weak self] in
+                self?.applySupplementaryLexicon(lexicon)
+            }
+        }
+    }
+
+    private func applySupplementaryLexicon(_ lexicon: UILexicon) {
+        typingSessionStorage?.supplementaryWords = lexicon.entries.compactMap { entry -> String? in
+            let text = entry.documentText.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { return nil }
+            let parts = text.split { $0.isWhitespace || $0 == "," }
+            guard parts.count == 1 else { return nil }
+            let token = String(parts[0])
+            guard token.allSatisfy({ $0.isLetter || $0 == "'" || $0 == "’" || $0 == "-" }) else {
+                return nil
+            }
+            return token
         }
     }
 

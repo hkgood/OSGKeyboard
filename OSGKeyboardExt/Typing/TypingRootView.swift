@@ -142,29 +142,31 @@ struct TypingRootView: View {
     }
 
     private var idleTopBar: some View {
-        HStack(spacing: Spacing.xs) {
-            KeyboardBrandLogo(action: state.openSettings)
-            // Globe key now lives at the bottom-left of the keyboard (matching
-            // iOS system layout); see the typingKeySurface ForEach.
-
-            if let err = typing.lastError {
-                typingErrorLabel(err)
-            }
-
-            // iOS-style editing cluster (undo / redo / copy / cut) — iPad only,
-            // where the top bar has room to mirror the system shortcut row.
-            if state.usesIPadLayoutMetrics {
-                editingToolbar
-            }
-
-            Spacer(minLength: 0)
-
+        ZStack {
             KeyboardTopControls(
                 state: state,
                 typing: typing,
                 palette: palette,
                 onInsert: onInsert
             )
+
+            HStack(spacing: Spacing.xs) {
+                KeyboardBrandLogo(action: state.openSettings)
+                // Globe key now lives at the bottom-left of the keyboard (matching
+                // iOS system layout); see the typingKeySurface ForEach.
+
+                if let err = typing.lastError {
+                    typingErrorLabel(err)
+                }
+
+                // iOS-style editing cluster (undo / redo / copy / cut) — iPad only,
+                // where the top bar has room to mirror the system shortcut row.
+                if state.usesIPadLayoutMetrics {
+                    editingToolbar
+                }
+
+                Spacer(minLength: 0)
+            }
         }
         .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
     }
@@ -206,47 +208,11 @@ struct TypingRootView: View {
                 editingToolbar
                     .padding(.leading, KeyboardTopBarMetrics.nestedHorizontalInset)
             }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Spacing.xs) {
-                    if typing.composition.candidates.isEmpty {
-                        selectedCandidateLabel(text: typing.composition.preedit)
-                    } else if typing.isCandidatePanelExpanded {
-                        candidateChip(text: typing.composition.candidates[0].text) {
-                            apply(typing.selectCandidate(at: 0))
-                        }
-                    } else {
-                        ForEach(
-                            Array(
-                                typing.composition.candidates
-                                    .prefix(TypingLayoutMetrics.collapsedBarCandidateLimit)
-                                    .enumerated()
-                            ),
-                            id: \.element.id
-                        ) { index, candidate in
-                            if index == 0 {
-                                candidateChip(text: candidate.text) {
-                                    apply(typing.selectCandidate(at: index))
-                                }
-                            } else {
-                                Text(candidate.text)
-                                    .font(.system(size: 20, weight: .regular))
-                                    .foregroundStyle(palette.textPrimary)
-                                    .padding(.horizontal, 10)
-                                    .frame(height: 40)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        apply(typing.selectCandidate(at: index))
-                                    }
-                                    .accessibilityAddTraits(.isButton)
-                                    .accessibilityLabel(candidate.text)
-                            }
-                        }
-                    }
-                }
-                .padding(.leading, KeyboardTopBarMetrics.nestedHorizontalInset)
-                .padding(.trailing, Spacing.xs)
+            if typing.language == .english {
+                englishQuickTypeBar
+            } else {
+                chineseCandidateStrip
             }
-            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
 
             if typing.canExpandCandidatePanel {
                 expandChevronButton
@@ -254,6 +220,90 @@ struct TypingRootView: View {
                 Color.clear.frame(width: KeyboardTopBarMetrics.nestedHorizontalInset)
             }
         }
+    }
+
+    /// Three equal QuickType slots. Space applies only `role == .correction`.
+    private var englishQuickTypeBar: some View {
+        HStack(spacing: 0) {
+            ForEach(
+                Array(
+                    typing.composition.candidates
+                        .prefix(EnglishSuggestionEngine.slotCount)
+                        .enumerated()
+                ),
+                id: \.element.id
+            ) { index, candidate in
+                if index > 0 {
+                    Rectangle()
+                        .fill(palette.dividerStrong)
+                        .frame(width: 1, height: 18)
+                }
+                englishQuickTypeSlot(candidate, index: index)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.leading, KeyboardTopBarMetrics.nestedHorizontalInset)
+    }
+
+    private func englishQuickTypeSlot(_ candidate: TypingCandidate, index: Int) -> some View {
+        let label = candidate.isQuoted ? "\"\(candidate.text)\"" : candidate.text
+        let weight: Font.Weight = candidate.role == .correction ? .semibold : .regular
+        return Text(label)
+            .font(.system(size: 17, weight: weight))
+            .foregroundStyle(palette.textPrimary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .frame(maxWidth: .infinity, minHeight: 40)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                apply(typing.selectCandidate(at: index))
+            }
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel(candidate.text)
+    }
+
+    private var chineseCandidateStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Spacing.xs) {
+                if typing.composition.candidates.isEmpty {
+                    selectedCandidateLabel(text: typing.composition.preedit)
+                } else if typing.isCandidatePanelExpanded {
+                    candidateChip(text: typing.composition.candidates[0].text) {
+                        apply(typing.selectCandidate(at: 0))
+                    }
+                } else {
+                    ForEach(
+                        Array(
+                            typing.composition.candidates
+                                .prefix(TypingLayoutMetrics.collapsedBarCandidateLimit)
+                                .enumerated()
+                        ),
+                        id: \.element.id
+                    ) { index, candidate in
+                        if index == 0 {
+                            candidateChip(text: candidate.text) {
+                                apply(typing.selectCandidate(at: index))
+                            }
+                        } else {
+                            Text(candidate.text)
+                                .font(.system(size: 20, weight: .regular))
+                                .foregroundStyle(palette.textPrimary)
+                                .padding(.horizontal, 10)
+                                .frame(height: 40)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    apply(typing.selectCandidate(at: index))
+                                }
+                                .accessibilityAddTraits(.isButton)
+                                .accessibilityLabel(candidate.text)
+                        }
+                    }
+                }
+            }
+            .padding(.leading, KeyboardTopBarMetrics.nestedHorizontalInset)
+            .padding(.trailing, Spacing.xs)
+        }
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
 
     /// Opaque chip like the translation control so ▼ never shares pixels with text.

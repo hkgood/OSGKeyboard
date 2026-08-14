@@ -27,6 +27,10 @@ public final class TypingSessionController: ObservableObject {
 
     /// When true, English suggestions / autocorrect stay off (secure fields).
     @Published public var suggestionsEnabled: Bool = true
+    /// `UITextChecker` completions / guesses. Empty in unit tests.
+    public var systemLexicon: EnglishSystemLexiconProviding = EmptyEnglishSystemLexicon()
+    /// Names and text replacements from `requestSupplementaryLexicon`.
+    public var supplementaryWords: [String] = []
 
     /// Chevron appears only for Chinese composition with at least two candidates.
     public var canExpandCandidatePanel: Bool {
@@ -128,9 +132,15 @@ public final class TypingSessionController: ObservableObject {
         )
         TypingInputConfiguration.shared.reload()
         refreshPersonalTerms()
-        // English lexicon is small; load when entering typing (not at KVC init).
-        englishEngine.prepare()
-        OSGDiag.log("typing.enter after englishPrepare \(OSGDiag.memoryTag())", category: "boot")
+        // mmap the English table only while English is active. Chinese typing
+        // already has Rime; loading both on appear is what jetsams the extension.
+        if language == .english {
+            englishEngine.prepare()
+            OSGDiag.log("typing.enter after englishPrepare \(OSGDiag.memoryTag())", category: "boot")
+        } else {
+            EnglishLexicon.shared.unload()
+            OSGDiag.log("typing.enter skip englishPrepare lang=\(language.rawValue) \(OSGDiag.memoryTag())", category: "boot")
+        }
         syncAutocapitalization()
         if FlowSessionBridge.isHostHeavy() {
             OSGDiag.log("typing.enter defer rime hostHeavy=1 — retry scheduled", category: "boot")
@@ -216,6 +226,7 @@ public final class TypingSessionController: ObservableObject {
             synchronizeEnglishDocumentContext(caretMoved: true)
         } else {
             clearEnglishWordState(keepPrevious: false)
+            EnglishLexicon.shared.unload()
             composition = engine.composition
         }
         return output
@@ -427,6 +438,9 @@ public final class TypingSessionController: ObservableObject {
                 pendingAutocorrection = nil
                 englishCurrentWord = pending.original
                 learningStore.recordDefense(of: pending.original)
+                #if canImport(UIKit)
+                UIKitEnglishSystemLexicon.learnWord(pending.original)
+                #endif
                 refreshEnglishSuggestions()
                 return .replace(deleteCount: deleteCount, with: pending.original)
             }
@@ -461,15 +475,18 @@ public final class TypingSessionController: ObservableObject {
            var decision = englishEngine.correctionDecision(
             for: word,
             personalTerms: personalTermsCache,
-            learnedBoosts: learningStore.snapshot()
+            learnedBoosts: learningStore.snapshot(),
+            previousWord: englishPreviousWord,
+            systemWords: supplementaryWords,
+            systemGuesses: systemLexicon.guesses(for: word, limit: 6)
         ) {
             decision.appliedSuffix = suffix
             pendingAutocorrection = decision
             englishPreviousWord = decision.replacement
             englishCurrentWord = ""
-            learningStore.recordAcceptance(of: decision.replacement)
-            // Suggestions stay hidden until the user starts the next word.
-            composition = .empty
+            // Machine-applied correction does not count as the user accepting
+            // the replacement — otherwise names train the wrong word.
+            refreshEnglishSuggestions(afterCommittedWord: decision.replacement)
             return .replace(
                 deleteCount: word.count,
                 with: decision.replacement + suffix
@@ -479,7 +496,17 @@ public final class TypingSessionController: ObservableObject {
         englishPreviousWord = word
         englishCurrentWord = ""
         pendingAutocorrection = nil
-        learningStore.recordAcceptance(of: word, amount: 1)
+        // Learn OOV / names the user actually committed; skip common words.
+        if !englishEngine.isKnownWord(
+            word,
+            personalTerms: personalTermsCache,
+            systemWords: supplementaryWords
+        ) {
+            learningStore.recordDefense(of: word, amount: 2)
+            #if canImport(UIKit)
+            UIKitEnglishSystemLexicon.learnWord(word)
+            #endif
+        }
         refreshEnglishSuggestions(afterCommittedWord: word)
         return suffix.isEmpty ? .none : .insert(suffix)
     }
@@ -487,7 +514,8 @@ public final class TypingSessionController: ObservableObject {
     private func selectEnglishCandidate(at index: Int) -> TypingOutput {
         guard composition.candidates.indices.contains(index) else { return .none }
         guard englishCandidateAnchorMatchesDocument() else { return .none }
-        let chosen = composition.candidates[index].text
+        let candidate = composition.candidates[index]
+        let chosen = candidate.text
 
         // Restoring original after autocorrect (no current word).
         if englishCurrentWord.isEmpty,
@@ -498,8 +526,20 @@ public final class TypingSessionController: ObservableObject {
             englishPreviousWord = pending.original
             englishCurrentWord = ""
             learningStore.recordDefense(of: pending.original)
+            #if canImport(UIKit)
+            UIKitEnglishSystemLexicon.learnWord(pending.original)
+            #endif
             refreshEnglishSuggestions(afterCommittedWord: pending.original)
             return .replace(deleteCount: deleteCount, with: pending.original + " ")
+        }
+
+        if candidate.role == .verbatim {
+            learningStore.recordDefense(of: chosen)
+            #if canImport(UIKit)
+            UIKitEnglishSystemLexicon.learnWord(chosen)
+            #endif
+        } else {
+            learningStore.recordAcceptance(of: chosen)
         }
 
         if !englishCurrentWord.isEmpty {
@@ -507,7 +547,6 @@ public final class TypingSessionController: ObservableObject {
             englishPreviousWord = chosen
             englishCurrentWord = ""
             pendingAutocorrection = nil
-            learningStore.recordAcceptance(of: chosen)
             refreshEnglishSuggestions(afterCommittedWord: chosen)
             return .replace(deleteCount: deleteCount, with: chosen + " ")
         }
@@ -516,7 +555,6 @@ public final class TypingSessionController: ObservableObject {
         englishPreviousWord = chosen
         englishCurrentWord = ""
         pendingAutocorrection = nil
-        learningStore.recordAcceptance(of: chosen)
         refreshEnglishSuggestions(afterCommittedWord: chosen)
         return .insert(chosen + " ")
     }
@@ -537,19 +575,23 @@ public final class TypingSessionController: ObservableObject {
             composition = .empty
             return
         }
-        // Idle / between words: no candidate bar. Completions start after
-        // the first letter of the current word.
+        // With no active English word, keep the candidate bar empty. This also
+        // prevents next-word predictions from appearing between committed words.
         guard !englishCurrentWord.isEmpty else {
             composition = .empty
             return
         }
         let previous = word ?? englishPreviousWord
+        let typed = englishCurrentWord
         let context = EnglishSuggestionContext(
-            currentWord: englishCurrentWord,
+            currentWord: typed,
             previousWord: previous,
             personalTerms: personalTermsCache,
             learnedBoosts: learningStore.snapshot(),
-            includeOriginalAfterCorrection: nil
+            includeOriginalAfterCorrection: pendingAutocorrection?.original,
+            systemWords: supplementaryWords,
+            systemCompletions: typed.isEmpty ? [] : systemLexicon.completions(prefix: typed, limit: 6),
+            systemGuesses: typed.count >= 3 ? systemLexicon.guesses(for: typed, limit: 6) : []
         )
         composition = englishEngine.compositionWhileTyping(context)
     }

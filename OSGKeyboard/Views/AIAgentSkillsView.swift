@@ -334,8 +334,17 @@ struct AIAgentSkillsView: View {
     }
 
     private func saveDraft(_ draft: SkillEditorDraft) throws {
-        guard let url = AIShortcutShareLink.parse(draft.shortcutLink) else {
-            throw AIUserSkillValidationError.invalidShortcutLink
+        let rawShortcutLink = draft.shortcutLink.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        let shortcutURL: URL?
+        if rawShortcutLink.isEmpty {
+            shortcutURL = nil
+        } else {
+            guard let parsedURL = AIShortcutShareLink.parse(rawShortcutLink) else {
+                throw AIUserSkillValidationError.invalidShortcutLink
+            }
+            shortcutURL = parsedURL
         }
         let skill = AIUserSkill(
             id: draft.id,
@@ -343,7 +352,7 @@ struct AIAgentSkillsView: View {
             summary: draft.summary,
             systemImage: draft.systemImage,
             prompt: draft.prompt,
-            shortcutICloudURL: url,
+            shortcutICloudURL: shortcutURL,
             shortcutName: draft.shortcutName,
             thinkingEnabled: draft.thinkingEnabled
         )
@@ -565,7 +574,7 @@ private struct SkillEditorDraft: Identifiable, Equatable {
             summary: skill.summary,
             systemImage: skill.systemImage,
             prompt: skill.prompt,
-            shortcutLink: skill.shortcutICloudURL.absoluteString,
+            shortcutLink: skill.shortcutICloudURL?.absoluteString ?? "",
             shortcutName: skill.shortcutName,
             thinkingEnabled: skill.thinkingEnabled
         )
@@ -957,11 +966,18 @@ private struct SkillEditorSheet: View {
     }
 
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let trimmedShortcutLink = shortcutLink.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        let validShortcutConfiguration = trimmedShortcutLink.isEmpty
+            || (
+                AIShortcutShareLink.parse(trimmedShortcutLink) != nil
+                    && !shortcutName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            )
+        return !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && prompt.count <= AIUserSkillLimits.maximumPromptCharacters
-            && !shortcutName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && AIShortcutShareLink.parse(shortcutLink) != nil
+            && validShortcutConfiguration
     }
 
     private var currentDraft: SkillEditorDraft {

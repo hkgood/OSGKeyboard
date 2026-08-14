@@ -1,0 +1,7 @@
+Peter Norvig’s n-gram count files (https://norvig.com/ngrams/)
+
+Norvig states: “I hereby release all these files into the public domain.”
+
+OSGKeyboard does not redistribute the raw count files. `Scripts/typing/build_english_lexicon.py`
+derives compact log-scaled unigram ranks and a truncated bigram list, then
+compiles `english_lexicon.bin` for the keyboard extension to mmap.
