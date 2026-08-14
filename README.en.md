@@ -7,7 +7,7 @@ Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands 
 ![Platform](https://img.shields.io/badge/iOS%20%2F%20iPadOS-26%2B-0078D4?logo=apple)
 ![Platform](https://img.shields.io/badge/macOS-15%2B-555?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
-![Version](https://img.shields.io/badge/version-1.7.5-3aa05a)
+![Version](https://img.shields.io/badge/version-1.8.0-3aa05a)
 ![License](https://img.shields.io/badge/license-Source%20Available-blue)
 
 [Website](https://hkgood.github.io/OSGKeyboard/) · [中文 README](./README.md) · [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/)

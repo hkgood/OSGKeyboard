@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-08-14
+
 ### Added
 - **English QuickType bar**: while typing a word, three equal slots show the verbatim text (quoted when unknown), the unique Space correction, and a completion. The bar stays empty before typing and between committed words. / **英文 QuickType 栏**：输入单词时，三个等宽格显示原文（生词带引号）、空格会采用的唯一纠错和补全；尚未输入及单词提交后保持空白。
 - **System English lexicon**: typing uses `UITextChecker` completions/guesses and `requestSupplementaryLexicon` contact names / text replacements. / **系统英文词库**：打字使用 `UITextChecker` 补全/猜测，以及 `requestSupplementaryLexicon` 的通讯录名与文本替换。
@@ -26,6 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Custom skills**: Skills tab `+` adds a user skill (name, about, SF Symbol, prompt, optional iCloud Shortcut link with name lookup, independent Shortcut name, thinking off by default). Without a link, the model result is reviewed and inserted directly; with a link, it keeps the Shortcut export flow. Built-in thinking stays off and disabled. No cap on how many custom skills you can save; the keyboard still holds at most 8. / **自定义技能**：技能页右上角 `+` 可添加用户技能（名称、介绍、SF Symbol、提示词、可选 iCloud 捷径链接并自动读取名称、可与技能名分开的捷径名、思考默认关）。不填链接时，模型结果经确认后直接插入；填写链接时继续走捷径导出流程。内置技能思考固定关闭且不可开。自定义数量不设上限，键盘仍最多启用 8 个。
 
 ### Changed
+- **Privacy and third-party disclosures**: align the bundled and web privacy policies with AI Agent skills, Shortcuts/maps handoff, OSGKeyboard web endpoints, Keychain/iCloud behavior, clipboard retention, local typing learning, and Mac model downloads; expand the iOS/macOS license catalog with complete upstream notices. / **隐私与第三方披露**：统一 App 内与网页隐私政策，补充 AI Agent 技能、快捷指令/地图交接、OSGKeyboard 网页端点、Keychain/iCloud、剪贴板保留、本地输入学习与 Mac 模型下载，并为 iOS/macOS 许可目录补齐上游声明。
+- **Licensed local speech lexicon**: rebuild the Apple custom language model from the project-curated MIT data subset only, replacing the previous third-party cell-dictionary import chain. / **许可明确的本地语音词表**：Apple 自定义语言模型改为仅由项目维护的 MIT 数据子集重建，替换原第三方细胞词库导入链。
 - **Keyboard input tabs**: the four-tab capsule is centered independently of the side controls, with equal 42 pt hit widths and a translucent-black light-mode track. AI and Voice use enlarged `sparkle` and `waveform.mid` symbols, and the leading logo is 16 pt tall. / **键盘输入标签**：四标签胶囊不受两侧控件影响并在键盘上独立居中，点击宽度统一为 42 pt，浅色模式轨道使用半透明黑色；AI 与语音使用放大的 `sparkle` 和 `waveform.mid` 图标，左侧 Logo 高度为 16 pt。
 - **English lexicon mmap**: the 40k-word English table loads only in English and stays file-mapped; Chinese typing no longer pulls it in on keyboard appear. / **英文词表 mmap**：4 万词英文表仅在英文加载且走文件映射；中文打字不再在唤起键盘时一并灌入。
 - **English autocorrect conservatism**: Title Case / short / ALL CAPS tokens are not replaced, except same-length transpositions (`Teh` → `The`). Machine-applied corrections no longer boost the replacement; rejecting them learns the original. / **英文自动更正更克制**：Title Case / 短词 / 全大写默认不改，仅保留同长换位（`Teh` → `The`）。机器改写不再给新词加分；拒绝纠错会学会原文。
