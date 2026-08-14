@@ -238,6 +238,11 @@
 "settings.typingInput.resources.ready" = "已就绪";
 "settings.typingInput.resources.pending" = "待初始化";
 "settings.typingInput.resources.redeploy" = "重新部署输入法资源";
+"settings.typingInput.habits.clear" = "清除打字习惯";
+"settings.typingInput.habits.clear.title" = "清除打字习惯？";
+"settings.typingInput.habits.clear.confirm" = "清除";
+"settings.typingInput.habits.clear.message" = "将重置中文和英文的学习词序。个性词库中的词条会保留。";
+"settings.typingInput.habits.footer" = "只清除使用频度。你手动加入个性词库的词不会受影响。";
 "settings.speechRecognition.title" = "语音识别";
 "settings.textPolish.title" = "文本润色";
 "settings.preferences.title" = "偏好设置";

@@ -12,6 +12,7 @@ struct TypingInputSettingsView: View {
     @ObservedObject private var config = ProviderConfig.shared
     @ObservedObject private var configuration = TypingInputConfiguration.shared
     @ObservedObject private var deployment = RimeDeploymentController.shared
+    @State private var showClearHabitsConfirmation = false
 
     private var isDeploying: Bool { deployment.isDeploying }
 
@@ -69,11 +70,36 @@ struct TypingInputSettingsView: View {
                 }
                 .disabled(isDeploying)
             }
+
+            Section {
+                Button(AppL10n.string("settings.typingInput.habits.clear", language: config.uiLanguage)) {
+                    showClearHabitsConfirmation = true
+                }
+                .disabled(isDeploying)
+                .foregroundStyle(palette.danger)
+            } footer: {
+                Text(AppL10n.string("settings.typingInput.habits.footer", language: config.uiLanguage))
+            }
         }
         .scrollContentBackground(.hidden)
         .background(palette.background)
         .navigationTitle(AppL10n.string("settings.typingInput.title", language: config.uiLanguage))
         .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog(
+            AppL10n.string("settings.typingInput.habits.clear.title", language: config.uiLanguage),
+            isPresented: $showClearHabitsConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(
+                AppL10n.string("settings.typingInput.habits.clear.confirm", language: config.uiLanguage),
+                role: .destructive
+            ) {
+                deployment.clearTypingHabits()
+            }
+            Button(AppL10n.string("common.cancel", language: config.uiLanguage), role: .cancel) {}
+        } message: {
+            Text(AppL10n.string("settings.typingInput.habits.clear.message", language: config.uiLanguage))
+        }
     }
 
     private var hasDeploymentError: Bool {

@@ -456,6 +456,24 @@ final class KeyboardSurfaceStateTests: XCTestCase {
         XCTAssertEqual(engine.lastProcessedCharacter, "n")
         XCTAssertEqual(typing.composition.preedit, "n")
     }
+
+    func testSecureFieldInsertsLatinWithoutRime() {
+        let engine = TrackingStubRimeEngine()
+        let typing = TypingSessionController(engine: { engine })
+
+        _ = typing.handleKey("n")
+        XCTAssertEqual(engine.processCharacterCallCount, 1)
+
+        typing.suggestionsEnabled = false
+        XCTAssertTrue(typing.composition.preedit.isEmpty)
+        XCTAssertEqual(engine.clearCompositionCallCount, 1)
+
+        XCTAssertEqual(typing.handleKey("a"), .insert("a"))
+        XCTAssertEqual(engine.processCharacterCallCount, 1)
+        XCTAssertEqual(typing.handleSpace(), .insert(" "))
+        XCTAssertEqual(engine.processSpaceCallCount, 0)
+        XCTAssertEqual(typing.selectCandidate(at: 0), .none)
+    }
 }
 
 /// Stub that records `processCharacter` calls for Chinese Shift bypass tests.
@@ -465,6 +483,8 @@ private final class TrackingStubRimeEngine: RimeEngineBridging {
     var isReady: Bool = true
     var schema: TypingInputSchema = .fullPinyin
     private(set) var processCharacterCallCount = 0
+    private(set) var processSpaceCallCount = 0
+    private(set) var clearCompositionCallCount = 0
     private(set) var lastProcessedCharacter: Character?
 
     func prepare() async throws {}
@@ -496,6 +516,7 @@ private final class TrackingStubRimeEngine: RimeEngineBridging {
     }
 
     func processSpace() -> String? {
+        processSpaceCallCount += 1
         composition = .empty
         return " "
     }
@@ -517,6 +538,7 @@ private final class TrackingStubRimeEngine: RimeEngineBridging {
     }
 
     func clearComposition() {
+        clearCompositionCallCount += 1
         composition = .empty
     }
 }

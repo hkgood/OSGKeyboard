@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Pinyin abbreviation ranking**: drop dialect single-letter syllables (`m` / `n` / `ng` / `hm`) before abbrev so mixes like `wom` prefer 我们, matching rime-pinyin-simp; full pinyin also allows `zh` / `ch` / `sh` two-key abbrev (resource version `2.4.0`). / **拼音简拼排序**：在简拼前擦掉方言单字母音节（`m` / `n` / `ng` / `hm`），使 `wom` 一类混拼优先「我们」，对齐 rime-pinyin-simp；全拼同时支持 `zh` / `ch` / `sh` 两键简拼（资源版本 `2.4.0`）。
+- **Clear typing habits**: Settings → Text Input can reset learned Chinese Rime user dictionaries and English boosts without deleting the personal dictionary. / **清除打字习惯**：设置 → 文本输入可重置中文 Rime 用户词库与英文加分，不删除个性词库。
 - **Overlapping key presses**: the typing grid tracks multiple fingers, so the next key can go down before the previous lifts. Pending letters commit in press order (not release order); Shift can be held with one finger while another types. / **叠指连打**：打字网格跟踪多指，上一键未松开也可按下下一键。未提交的字母按按下顺序出字（而非抬手顺序）；一只手指按住 Shift 时另一只可打字。
 - **Period shortcut**: in English, a second Space shortly after a Space that follows a word becomes `. ` and arms sentence Shift, matching the system "." Shortcut. / **句号快捷**：英文下，在单词后的空格上短时间内再按一次空格会变成 `. ` 并点亮句首 Shift，对齐系统「句号快捷」。
 - **Return key labels**: Go / Search / Send / Done / Next / Join and the other `UIReturnKeyType` values show their system captions on the green action key instead of collapsing to Send or a return arrow. / **回车键文案**：前往 / 搜索 / 发送 / 完成 / 下一项 / 加入等 `UIReturnKeyType` 在绿色动作键上显示系统对应文案，不再一律变成「发送」或换行箭头。
@@ -26,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Skill drag preview corners**: the lift preview clips to the card’s continuous rounded rect so square white corners no longer show. / **技能拖动圆角**：拖起预览按卡片连续圆角裁剪，去掉圆角外的直角白底。
 
 ### Changed
+- **Chinese user-dict flush**: leaving the typing surface finalizes librime so user-frequency ticks persist; secure fields insert Latin and skip Rime so passwords are not learned. / **中文用户词落盘**：离开打字表面时 finalize librime，使用频度得以保存；安全输入框改为直接插入拉丁字母、不进 Rime，避免把密码写入用户词库。
 - **Bundled Shortcut names**: Tasks and Events now install their signed in-app resources as `OSGExtractTodos` and `OSGExtractEvents`, matching `OSGSaveToNotes`; existing Chinese-named copies must be replaced from the Skills tab. / **内置捷径名称**：待办与日程改为安装 App 内签名资源 `OSGExtractTodos` 和 `OSGExtractEvents`，与 `OSGSaveToNotes` 保持一致；已有中文名称版本需从技能页重新安装。
 - **Navigation icons**: Skills uses a wand; Styles uses a dial. The phone dock and iPad sidebar (except Home) use outline when idle and fill when selected. Mac Styles / Settings follow the same pairing. iPad and Mac Home stay the house icon. / **导航图标**：技能改为魔杖，风格改为旋钮。手机 Dock 与 iPad 侧栏（除首页外）未选中描边、选中填充；Mac 的风格 / 设置同样切换。iPad / Mac 首页仍用房子图标。
 - **Phone dock size**: slightly smaller — 22 pt icons, 46 pt rows, 8 pt glass padding. / **手机 Dock 尺寸**：略缩小，图标 22 pt、行高 46 pt、玻璃内边距 8 pt。
