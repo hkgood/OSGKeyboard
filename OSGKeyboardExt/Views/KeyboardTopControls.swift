@@ -23,8 +23,10 @@ enum KeyboardTopBarMetrics {
     static let horizontalInset: CGFloat = 12
     /// TypingRootView already contributes 8 pt around the entire key surface.
     static let nestedHorizontalInset: CGFloat = horizontalInset - KeyboardChromeLayout.horizontalInset
-    static let logoHeight: CGFloat = 22
+    static let logoHeight: CGFloat = 16
     static let logoWidth: CGFloat = logoHeight * 952 / 291
+    /// Equal hit width for AI / Voice / Chinese / English input tabs.
+    static let inputTabWidth: CGFloat = 42
     /// Shared footprint for top-trailing chips (clipboard, cancel/X, translation).
     static let trailingChipSize: CGFloat = 34
     static let trailingChipIconSize: CGFloat = 15
@@ -113,39 +115,45 @@ struct KeyboardTopControls: View {
     let onInsert: (String) -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
-            // 分段轨道：不透明灰底；选中项用白/升高键面滑动，避免半透明发淡。
-            HStack(spacing: 2) {
-                ForEach(KeyboardInputTab.allCases, id: \.self) { tab in
-                    tabButton(tab)
+        ZStack {
+            inputTabSwitcher
+            if state.canShowClipboardEntry {
+                HStack {
+                    Spacer(minLength: 0)
+                    KeyboardClipboardMenuButton(
+                        palette: palette,
+                        action: state.openClipboardPanel
+                    )
+                    .equatable()
                 }
             }
-            .padding(2)
-            .background(tabTrackFill, in: Capsule())
-            .overlay(
-                Capsule().stroke(palette.divider, lineWidth: 0.5)
-            )
+        }
+        .frame(maxWidth: .infinity)
+    }
 
-            if state.canShowClipboardEntry {
-                KeyboardClipboardMenuButton(
-                    palette: palette,
-                    action: state.openClipboardPanel
-                )
-                .equatable()
+    private var inputTabSwitcher: some View {
+        // 分段轨道固定在键盘水平中心，不受两侧 Logo / 剪贴板入口影响。
+        HStack(spacing: 2) {
+            ForEach(KeyboardInputTab.allCases, id: \.self) { tab in
+                tabButton(tab)
             }
         }
+        .padding(2)
+        .background(tabTrackFill, in: Capsule())
+        .overlay(
+            Capsule().stroke(palette.divider, lineWidth: 0.5)
+        )
     }
 
     private func tabButton(_ tab: KeyboardInputTab) -> some View {
         let selected = isSelected(tab)
-        let width: CGFloat = tab == .english || tab == .ai ? 34 : 42
 
         return Button {
             withAnimation(Motion.soft) {
                 select(tab)
             }
         } label: {
-            tabLabel(tab, selected: selected, width: width)
+            tabLabel(tab, selected: selected)
         }
         .buttonStyle(TopControlPressStyle(pressedFill: pressedFill))
         .disabled(tab != .voice && !state.canEnterTypingSurface)
@@ -157,13 +165,11 @@ struct KeyboardTopControls: View {
     @ViewBuilder
     private func tabLabel(
         _ tab: KeyboardInputTab,
-        selected: Bool,
-        width: CGFloat
+        selected: Bool
     ) -> some View {
-        let label = Text(tab.title)
-            .font(.system(size: 12, weight: selected ? .semibold : .medium))
+        let label = tabContent(tab, selected: selected)
             .foregroundStyle(selected ? palette.textPrimary : palette.textSecondary)
-            .frame(width: width, height: 30)
+            .frame(width: KeyboardTopBarMetrics.inputTabWidth, height: 30)
 
         if selected {
             let namespace = sharedSelectionNamespace ?? fallbackSelectionNamespace
@@ -179,6 +185,20 @@ struct KeyboardTopControls: View {
         }
     }
 
+    @ViewBuilder
+    private func tabContent(_ tab: KeyboardInputTab, selected: Bool) -> some View {
+        if tab == .ai {
+            Image(systemName: "sparkle")
+                .font(.system(size: 15, weight: selected ? .semibold : .medium))
+        } else if tab == .voice {
+            Image(systemName: "waveform.mid")
+                .font(.system(size: 15, weight: selected ? .semibold : .medium))
+        } else {
+            Text(tab.title)
+                .font(.system(size: 12, weight: selected ? .semibold : .medium))
+        }
+    }
+
     private func tabOpacity(_ tab: KeyboardInputTab) -> Double {
         guard tab != .voice, !state.canEnterTypingSurface else { return 1 }
         if case .recording = state.phase {
@@ -191,10 +211,10 @@ struct KeyboardTopControls: View {
         colorScheme == .dark ? Color(white: 0.22) : Color(white: 0.84)
     }
 
-    /// 分段轨道底色：不透明，且与选中键面（NativeKeyboardKeyColors.fill）拉开明度，
-    /// 深色下压暗、浅色下提亮，让滑动的选中项始终清晰可辨。
+    /// 分段轨道底色与选中键面（NativeKeyboardKeyColors.fill）拉开明度；
+    /// 浅色模式叠加半透明黑色，在不同宿主键盘底色上维持可见对比。
     private var tabTrackFill: Color {
-        colorScheme == .dark ? Color(white: 0.12) : Color(white: 0.87)
+        colorScheme == .dark ? Color(white: 0.12) : Color.black.opacity(0.12)
     }
 
     private func isSelected(_ tab: KeyboardInputTab) -> Bool {

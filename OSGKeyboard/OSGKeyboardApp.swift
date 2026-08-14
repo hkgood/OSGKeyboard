@@ -31,6 +31,7 @@ struct OSGKeyboardApp: App {
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--whats-new-host") {
                 // Approach A: Notes-like host only; real keyboard extension overlays it.
+                // Also used by `--keyboard-appear-stress=` (pass both flags).
                 Self.makeWhatsNewHostView()
             } else if ProcessInfo.processInfo.arguments.contains("--edit-demo") {
                 EditDemoView()
@@ -79,8 +80,13 @@ struct OSGKeyboardApp: App {
         let scenario = whatsNewScenario(from: args) ?? .edit
         let language = whatsNewLanguage(from: args)
         let seed = whatsNewSeedText(for: scenario, language: language)
+        let appearStressCount = keyboardAppearStressCount(from: args)
         WhatsNewDemoScenario.clear()
-        WhatsNewDemoScenario.arm(scenario, seedText: seed, language: language)
+        // Stress must not arm What's New playback — that drives keys on the
+        // extension while we are tearing it down.
+        if appearStressCount == 0 {
+            WhatsNewDemoScenario.arm(scenario, seedText: seed, language: language)
+        }
         if let defaults = AppGroup.defaultsIfAvailable {
             defaults.set(true, forKey: AppGroupConfiguration.Keys.hasCompletedOnboarding)
             // Force extension ExtL10n / SharedL10n into the demo language.
@@ -98,11 +104,31 @@ struct OSGKeyboardApp: App {
             }
             defaults.synchronize()
         }
+        if appearStressCount > 0, let defaults = AppGroup.defaultsIfAvailable {
+            // Hit the crash path: typing surface + English supplementary lexicon.
+            defaults.set("english", forKey: "typing.input.defaultInputMode")
+            defaults.set(true, forKey: "typing.input.rememberLastSurface")
+            defaults.set("typing", forKey: "typing.input.lastSurface")
+            defaults.set("english", forKey: "typing.input.lastTypingLanguage")
+            defaults.synchronize()
+        }
         return NotesHostDemoView(
             scenario: scenario,
             seedText: seed,
-            language: language
+            language: language,
+            appearStressCount: appearStressCount
         )
+    }
+
+    private static func keyboardAppearStressCount(from args: [String]) -> Int {
+        if let paired = args.first(where: { $0.hasPrefix("--keyboard-appear-stress=") }) {
+            return Int(paired.dropFirst("--keyboard-appear-stress=".count)) ?? 0
+        }
+        if let idx = args.firstIndex(of: "--keyboard-appear-stress"),
+           args.index(after: idx) < args.endIndex {
+            return Int(args[args.index(after: idx)]) ?? 0
+        }
+        return 0
     }
 
     private static func whatsNewScenario(from args: [String]) -> WhatsNewDemoScenario? {

@@ -72,7 +72,7 @@ public struct RimeResourcePaths: Sendable {
 public actor RimeResourceInstaller {
     public static let shared = RimeResourceInstaller()
     /// Bump when SharedSupport layout / schema / import_tables contract changes.
-    public static let resourceVersion = "2.3.0"
+    public static let resourceVersion = "2.4.0"
 
     public init() {}
 
@@ -230,6 +230,28 @@ public actor RimeResourceInstaller {
         // user dictionaries. `sync_user_data` is for external Rime sync
         // deployments and is intentionally not needed here.
         bridge.finalizeRuntime()
+    }
+
+    /// Deletes librime user dictionaries under `UserData`, keeping `build/`
+    /// so `isReady` stays true. Host-only: the keyboard must not race LevelDB.
+    public func clearUserDictionary() throws {
+        guard Self.canDeployInCurrentProcess else {
+            throw RimeResourceError.hostAppRequired
+        }
+        let paths = try RimeResourcePaths.resolve()
+        try Self.removeUserDictionaries(in: paths.userData)
+    }
+
+    /// Testable file-level wipe. Matches LevelDB folders like `osg_pinyin.userdb`.
+    nonisolated public static func removeUserDictionaries(
+        in userData: URL,
+        fileManager: FileManager = .default
+    ) throws {
+        guard fileManager.fileExists(atPath: userData.path) else { return }
+        let names = try fileManager.contentsOfDirectory(atPath: userData.path)
+        for name in names where name.lowercased().contains("userdb") {
+            try fileManager.removeItem(at: userData.appendingPathComponent(name))
+        }
     }
 }
 

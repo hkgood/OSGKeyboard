@@ -1,4 +1,8 @@
-# Third-party notices — Typing keyboard
+# Third-party notices — OSGKeyboard
+
+OSGKeyboard itself is source-available under the repository `LICENSE`; it is
+not an open-source or MIT-licensed application. The notices below apply only
+to the named third-party components or explicitly identified data subsets.
 
 The generated Chinese source manifest is
 `OSGKeyboard/Resources/Typing/Rime/manifest.json`. Exact librime
@@ -14,6 +18,7 @@ binary dependency licenses are bundled beside `NOTICE.txt`.
 | [fxsjy/jieba](https://github.com/fxsjy/jieba) | `67fa2e3…` | MIT | Modern Simplified-Chinese word frequencies |
 | [phrase-pinyin-data](https://github.com/mozillazg/phrase-pinyin-data) | `cee0ed6…` | MIT | Phrase pronunciations |
 | [pinyin-data](https://github.com/mozillazg/pinyin-data) | `923b108…` | MIT | Character-pronunciation fallback |
+| [Google Material Icons](https://github.com/google/material-design-icons) | Bundled font snapshot | Apache-2.0 | iOS Settings and navigation iconography |
 
 `Scripts/typing/build_rime_dictionary.py` deterministically merges these
 sources into `osg_pinyin.dict.yaml`; its manifest records every source URL,
@@ -28,13 +33,37 @@ commit, SHA-256 and output SHA-256.
 - Microsoft/Sogou mappings were independently encoded from public key-map
   specifications; GPL schema files were not copied.
 - Eight opt-in fuzzy-pinyin rule groups.
+- Project-curated bilingual AI/technology speech phrases under
+  `Scripts/lexicon/seeds/ai_tech_brands_seed.tsv`. This data subset and its
+  generated CLM phrase list are MIT-licensed; that grant does not change the
+  source-available license of the app.
 - Offline English typing data under
   `OSGKeyboardShared/Resources/Typing/English/`:
-  - `english_lexicon.tsv` — curated word list with synthetic relative
-    frequency ranks for autocomplete / autocorrect
-  - `english_bigrams.tsv` — light next-word candidates
-  - Not derived from GPL/LGPL dictionaries; ranks are ordering weights,
-    not a single third-party corpus dump
+  - `english_lexicon.bin` — mmap-friendly binary of the top 40k alphabetic
+    unigrams (log-scaled ranks) plus truncated bigrams; this is what the
+    keyboard extension loads
+  - `english_lexicon.tsv` / `english_bigrams.tsv` — build inputs derived from
+    Peter Norvig’s public-domain `count_1w.txt` / `count_2w.txt`
+    (https://norvig.com/ngrams/; not GPL/LGPL dictionaries). Not copied into
+    the app bundle.
+  - Rebuild with `python3 Scripts/typing/build_english_lexicon.py`
+    (add `--from-tsv` to compile the binary from existing TSV without network)
+
+## macOS local speech stack
+
+| Component | Pinned version | License | Purpose |
+|-----------|----------------|---------|---------|
+| [mlx-audio-swift](https://github.com/Blaizzy/mlx-audio-swift) | `d302a5c…` | MIT | Qwen3 streaming ASR integration |
+| [mlx-swift](https://github.com/ml-explore/mlx-swift) | `0.31.3` | MIT | Apple MLX tensor runtime |
+| [mlx-swift-lm](https://github.com/ml-explore/mlx-swift-lm) | `3.31.3` | MIT | MLX model utilities |
+| [swift-transformers](https://github.com/huggingface/swift-transformers) | `1.1.9` | Apache-2.0 | Tokenizer and model utilities |
+| [swift-huggingface](https://github.com/huggingface/swift-huggingface) | `0.8.1` | Apache-2.0 | Model download client |
+| [Qwen3-ASR 0.6B / 1.7B MLX 4-bit](https://huggingface.co/mlx-community) | Runtime download | Apache-2.0 | Optional on-device speech-model weights |
+
+The Qwen models are downloaded only after the user selects a local model on
+macOS. They are not committed to this repository. Their model cards identify
+the original Qwen3-ASR model and the mlx-community conversion.
+
 
 ## Reference only
 

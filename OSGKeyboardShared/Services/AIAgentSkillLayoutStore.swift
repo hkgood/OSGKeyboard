@@ -130,29 +130,32 @@ public final class AIAgentSkillLayoutStore: ObservableObject {
     }
 
     public func saveUserSkill(_ skill: AIUserSkill) throws {
-        let previousURL = userCatalog.skill(id: skill.id)?.shortcutICloudURL
+        let previousSkill = userCatalog.skill(id: skill.id)
+        let previousURL = previousSkill?.shortcutICloudURL
+        let previousLayout = layout.sanitized(catalog: mergedCatalog)
         var catalog = userCatalog
         try catalog.upsert(skill)
         commitUserCatalog(catalog)
-        if previousURL != nil, previousURL != skill.shortcutICloudURL {
-            dropShortcutConfirmation(for: skill.id)
+        guard previousSkill != nil, previousURL != skill.shortcutICloudURL else {
+            return
         }
+        let keepsKeyboardSlot = skill.shortcutICloudURL == nil
+        commitLayout(
+            AIAgentSkillLayout(
+                enabledIDs: keepsKeyboardSlot
+                    ? previousLayout.enabledIDs
+                    : previousLayout.enabledIDs.filter { $0 != skill.id },
+                confirmedShortcutIDs: previousLayout.confirmedShortcutIDs.filter {
+                    $0 != skill.id
+                }
+            )
+        )
     }
 
     public func deleteUserSkill(id: String) {
         var catalog = userCatalog
         catalog.remove(id: id)
         commitUserCatalog(catalog)
-        let current = layout.sanitized(catalog: mergedCatalog)
-        commitLayout(
-            AIAgentSkillLayout(
-                enabledIDs: current.enabledIDs.filter { $0 != id },
-                confirmedShortcutIDs: current.confirmedShortcutIDs.filter { $0 != id }
-            )
-        )
-    }
-
-    private func dropShortcutConfirmation(for id: String) {
         let current = layout.sanitized(catalog: mergedCatalog)
         commitLayout(
             AIAgentSkillLayout(

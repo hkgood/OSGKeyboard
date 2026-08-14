@@ -238,6 +238,11 @@
 "settings.typingInput.resources.ready" = "Ready";
 "settings.typingInput.resources.pending" = "Not initialized";
 "settings.typingInput.resources.redeploy" = "Redeploy Input Resources";
+"settings.typingInput.habits.clear" = "Clear Typing Habits";
+"settings.typingInput.habits.clear.title" = "Clear Typing Habits?";
+"settings.typingInput.habits.clear.confirm" = "Clear";
+"settings.typingInput.habits.clear.message" = "Resets learned word order for Chinese and English. Personal dictionary entries are kept.";
+"settings.typingInput.habits.footer" = "Learned frequency only. Words you added to the personal dictionary stay.";
 "settings.speechRecognition.title" = "Speech Recognition";
 "settings.textPolish.title" = "Text Polish";
 "settings.preferences.title" = "Preferences";
@@ -477,10 +482,10 @@
 "skills.editor.prompt" = "Processing prompt";
 "skills.editor.thinking" = "Thinking";
 "skills.editor.thinkingHint" = "Off by default. Turn on only when you want slower, deeper reasoning for this skill.";
-"skills.editor.shortcut" = "Shortcut";
+"skills.editor.shortcut" = "Shortcut (Optional)";
 "skills.editor.linkPlaceholder" = "https://www.icloud.com/shortcuts/…";
-"skills.editor.shortcutNamePlaceholder" = "Shortcut name (can differ from the skill name)";
-"skills.editor.shortcutHint" = "Paste an iCloud share link. The published Shortcut name is filled in automatically and you can change it. Don’t rename it in the Shortcuts app after adding.";
+"skills.editor.shortcutNamePlaceholder" = "Shortcut name (required with a link)";
+"skills.editor.shortcutHint" = "Leave the link empty to process text and insert the result after review. With a link, the Shortcut name is filled in automatically. Don’t rename it after adding.";
 "skills.editor.lookingUp" = "Looking up Shortcut name…";
 "skills.editor.resolvedName" = "Will run: %@";
 "skills.editor.lookupFailed" = "Couldn’t read the Shortcut name. Check the link, or type the name yourself.";

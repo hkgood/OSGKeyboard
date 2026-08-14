@@ -21,6 +21,18 @@ public enum TypingInputLanguage: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// Role of an English QuickType slot. Chinese candidates stay `.completion`.
+public enum TypingCandidateRole: String, Equatable, Sendable {
+    /// The word currently being typed. Space does not replace it.
+    case verbatim
+    /// The unique slot Space will apply when autocorrect is armed.
+    case correction
+    /// Prefix completion; tap to accept, Space ignores it.
+    case completion
+    /// Next-word prediction after a committed word; tap to insert.
+    case nextWord
+}
+
 /// One candidate row item after composing.
 public struct TypingCandidate: Identifiable, Equatable, Sendable {
     public let id: String
@@ -28,17 +40,24 @@ public struct TypingCandidate: Identifiable, Equatable, Sendable {
     public let annotation: String?
     /// Absolute engine index for Chinese selection (may differ from display order).
     public let engineIndex: Int
+    public let role: TypingCandidateRole
+    /// Unknown verbatim shown in quotes, matching the system / KeyboardKit contract.
+    public let isQuoted: Bool
 
     public init(
         id: String = UUID().uuidString,
         text: String,
         annotation: String? = nil,
-        engineIndex: Int = 0
+        engineIndex: Int = 0,
+        role: TypingCandidateRole = .completion,
+        isQuoted: Bool = false
     ) {
         self.id = id
         self.text = text
         self.annotation = annotation
         self.engineIndex = engineIndex
+        self.role = role
+        self.isQuoted = isQuoted
     }
 }
 

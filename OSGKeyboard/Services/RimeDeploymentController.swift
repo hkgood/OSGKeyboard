@@ -90,4 +90,31 @@ final class RimeDeploymentController: ObservableObject {
             }
         }
     }
+
+    /// Wipes implicit typing habits under the same hostHeavy gate as deploy,
+    /// so the keyboard extension cannot keep LevelDB open while files vanish.
+    func clearTypingHabits() {
+        guard activeTask == nil else { return }
+
+        OSGDiag.log("typing.habits.clear begin \(OSGDiag.memoryTag())", category: "flow")
+        status = .deploying
+        activeTask = Task { @MainActor in
+            defer { activeTask = nil }
+            FlowSessionBridge.setHostHeavy(true)
+            do {
+                try await TypingHabitStore.clearAll()
+                FlowSessionBridge.setHostHeavy(false)
+                AppGroupConfigDarwin.postConfigChanged()
+                status = RimeResourceInstaller.isReady ? .ready : .idle
+                OSGDiag.log("typing.habits.clear done \(OSGDiag.memoryTag())", category: "flow")
+            } catch {
+                FlowSessionBridge.setHostHeavy(false)
+                status = .failed(error.localizedDescription)
+                OSGDiag.log(
+                    "typing.habits.clear failed error=\(error.localizedDescription)",
+                    category: "flow"
+                )
+            }
+        }
+    }
 }

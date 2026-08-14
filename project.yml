@@ -49,7 +49,7 @@ settings:
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
     MARKETING_VERSION: "1.7.5"
-    CURRENT_PROJECT_VERSION: "71"
+    CURRENT_PROJECT_VERSION: "72"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -136,9 +136,11 @@ targets:
       - path: OSGKeyboard/Resources/Typing/Licenses/NOTICE.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-PINYIN-SIMP-APACHE.txt
+      - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-MATERIAL-ICONS-APACHE.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-JIEBA-MIT.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-PHRASE-PINYIN-DATA-MIT.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-PINYIN-DATA-MIT.txt
+      - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-NORVIG-PD.txt
       - path: OSGKeyboard/Resources/Typing/Licenses/THIRD_PARTY_NOTICES.md
       - path: OSGKeyboard/Resources/Typing/Licenses/third-party-notices.zip
       - path: OSGKeyboard/Resources/Typing/Licenses/LIBRIME-COMBINED-NOTICES.txt
@@ -348,9 +350,7 @@ targets:
         buildPhase: resources
       # Prefer sources+buildPhase over target-level `resources:` — the latter
       # was not emitting Copy Bundle Resources entries for this framework.
-      - path: OSGKeyboardShared/Resources/Typing/English/english_lexicon.tsv
-        buildPhase: resources
-      - path: OSGKeyboardShared/Resources/Typing/English/english_bigrams.tsv
+      - path: OSGKeyboardShared/Resources/Typing/English/english_lexicon.bin
         buildPhase: resources
       - path: OSGKeyboardShared/Resources/PolishStyles
         buildPhase: resources
@@ -576,11 +576,15 @@ targets:
         buildPhase: resources
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-PINYIN-SIMP-APACHE.txt
         buildPhase: resources
+      - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-MATERIAL-ICONS-APACHE.txt
+        buildPhase: resources
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-JIEBA-MIT.txt
         buildPhase: resources
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-PHRASE-PINYIN-DATA-MIT.txt
         buildPhase: resources
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-PINYIN-DATA-MIT.txt
+        buildPhase: resources
+      - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE-NORVIG-PD.txt
         buildPhase: resources
       - path: OSGKeyboard/Resources/Typing/Licenses/LICENSE.txt
         buildPhase: resources

@@ -35,6 +35,10 @@ public final class EnglishLearningStore: @unchecked Sendable {
         (defaults.dictionary(forKey: Self.defaultsKey) as? [String: Int]) ?? [:]
     }
 
+    public func clear() {
+        defaults.removeObject(forKey: Self.defaultsKey)
+    }
+
     private func mutate(word: String, delta: Int) {
         let key = word.lowercased()
         guard !key.isEmpty else { return }

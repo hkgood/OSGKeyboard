@@ -20,6 +20,9 @@ final class LLMClientTests: XCTestCase {
         try? Keychain.deleteAPIKey(for: "qwen")
         try? Keychain.deleteAPIKey(for: "openai")
         try? Keychain.deleteAPIKey(for: "deepseek")
+        try? Keychain.deleteAPIKey(for: "qwen", useICloudSync: true)
+        try? Keychain.deleteAPIKey(for: "openai", useICloudSync: true)
+        try? Keychain.deleteAPIKey(for: "deepseek", useICloudSync: true)
         StubURLProtocolStorage.config = nil
         StubURLProtocolStorage.delaySeconds = 0
         StubURLProtocolStorage.lastRequest = nil
@@ -31,6 +34,9 @@ final class LLMClientTests: XCTestCase {
         try? Keychain.deleteAPIKey(for: "qwen")
         try? Keychain.deleteAPIKey(for: "openai")
         try? Keychain.deleteAPIKey(for: "deepseek")
+        try? Keychain.deleteAPIKey(for: "qwen", useICloudSync: true)
+        try? Keychain.deleteAPIKey(for: "openai", useICloudSync: true)
+        try? Keychain.deleteAPIKey(for: "deepseek", useICloudSync: true)
         Keychain.resetTestMemoryStore()
         StubURLProtocolStorage.config = nil
         StubURLProtocolStorage.delaySeconds = 0
@@ -65,6 +71,7 @@ final class LLMClientTests: XCTestCase {
         defer { defaults.removePersistentDomain(forName: suiteName) }
 
         let config = ProviderConfig(defaults: defaults)
+        config.apiKey = ""
         config.engineMode = "cloud"
         XCTAssertFalse(config.isConfigured)
         config.engineMode = "local"

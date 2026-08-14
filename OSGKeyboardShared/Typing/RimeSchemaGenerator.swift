@@ -43,7 +43,9 @@ public enum RimeSchemaGenerator {
         let alphabet = inputSchema == .fullPinyin
             ? "zyxwvutsrqponmlkjihgfedcba"
             : "zyxwvutsrqponmlkjihgfedcba;"
-        let algebra = fuzzyRules(fuzzyPairs) + algebraRules(for: inputSchema)
+        // Dialect single-letter syllables must be erased before fuzzy/abbrev
+        // so `n/l` cannot revive 嗯 as `l`, and `wom` cannot exact-match 我呒.
+        let algebra = dialectEraseRules + fuzzyRules(fuzzyPairs) + algebraRules(for: inputSchema)
         let algebraYAML = algebra.map { "    - '\($0)'" }.joined(separator: "\n")
 
         return """
@@ -112,6 +114,16 @@ public enum RimeSchemaGenerator {
         """
     }
 
+    /// Drop Wu/dialect exact spellings (`呒 m`, `嗯 n/ng`, `噷 hm`) before
+    /// first-letter abbrev, matching rime-pinyin-simp. Keep the dictionary
+    /// rows; 嗯 remains reachable as `en`, 呒 as `mu`.
+    public static let dialectEraseRules: [String] = [
+        "erase/^hm$/",
+        "erase/^m$/",
+        "erase/^n$/",
+        "erase/^ng$/"
+    ]
+
     /// Rules run against full-pinyin dictionary codes before double-pinyin
     /// transforms, so fuzzy pairs work consistently in all three schemas.
     public static func fuzzyRules(_ enabled: Set<PinyinFuzzyPair>) -> [String] {
@@ -144,7 +156,9 @@ public enum RimeSchemaGenerator {
         case .fullPinyin:
             return [
                 "derive/^([jqxy])u$/$1v/",
-                "abbrev/^([a-z]).+$/$1/"
+                "abbrev/^([a-z]).+$/$1/",
+                // Two-letter initials; do not add this to double pinyin.
+                "abbrev/^([zcs]h).+$/$1/"
             ]
 
         case .microsoftDoublePinyin, .sogouDoublePinyin:

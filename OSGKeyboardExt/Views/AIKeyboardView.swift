@@ -132,15 +132,17 @@ struct AIKeyboardView: View {
             )
             .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
         } else {
-            HStack(spacing: Spacing.xs) {
-                KeyboardBrandLogo(action: state.openSettings)
-                Spacer(minLength: 0)
+            ZStack {
                 KeyboardTopControls(
                     state: state,
                     typing: typing,
                     palette: palette,
                     onInsert: onInsert
                 )
+                HStack {
+                    KeyboardBrandLogo(action: state.openSettings)
+                    Spacer(minLength: 0)
+                }
             }
             .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
         }

@@ -58,7 +58,8 @@ public final class LibrimeEngine: RimeEngineBridging {
 
     public func teardown() {
         bridge?.clearComposition()
-        bridge?.stopSession()
+        // Session destroy alone does not flush LevelDB user dictionaries.
+        bridge?.finalizeRuntime()
         bridge = nil
         composition = .empty
         isReady = false

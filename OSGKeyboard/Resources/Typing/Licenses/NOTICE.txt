@@ -28,8 +28,23 @@ rime-ice, rime-double-pinyin, rime-luna-pinyin, rime-essay and KeyboardKit Pro.
 The Apache-2.0 and MIT license texts are available from the source links above;
 all required copyright and permission notices must remain with distributions.
 
+Interface iconography
+---------------------
+Google Material Icons are distributed under the Apache License 2.0.
+Copyright 2014 Google LLC.
+See LICENSE-MATERIAL-ICONS-APACHE.txt for the full attribution and terms.
+
 English typing lexicon
 ----------------------
-english_lexicon.tsv and english_bigrams.tsv are OSG-curated word lists with
-synthetic relative frequency ranks for offline autocomplete / autocorrect /
-next-word ranking. They are not derived from GPL/LGPL dictionaries.
+english_lexicon.bin (from english_lexicon.tsv / english_bigrams.tsv) is an
+OSG-curated mmap ranking table with synthetic relative frequency ranks for
+offline autocomplete / autocorrect / next-word ranking. It is not derived
+from GPL/LGPL dictionaries.
+
+Local speech lexicon
+--------------------
+The bundled custom-language-model phrase list is generated only from the
+project-curated Scripts/lexicon/seeds/ai_tech_brands_seed.tsv. That data
+subset is MIT-licensed by OSGKeyboard contributors. OSGKeyboard itself remains
+source-available under the repository LICENSE and is not MIT-licensed or an
+open-source application.

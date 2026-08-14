@@ -176,6 +176,135 @@
   <p class="empty" id="empty-zh">暂无与当前版本匹配的更新说明。</p>
   <p class="empty" id="empty-en">No release notes match this app version.</p>
 
+  <!-- ========== 1.8.0 ========== -->
+  <article class="version-block" data-version="1.8.0">
+    <div class="version-chip">1.8.0</div>
+
+    <div class="lang-block" data-lang="zh">
+      <section class="section">
+        <h2>新功能</h2>
+
+        <div class="group">
+          <p class="group-title">AI 与语音助手</p>
+          <ul>
+            <li><strong>AI 键盘模式</strong>：新增独立 AI 输入面，可通过语音提问、查看回答，并在确认后插入或发送</li>
+            <li><strong>AI 联网搜索</strong>：支持服务商侧联网搜索，可回答天气、新闻等需要最新资料的问题，搜索失败时自动重试</li>
+            <li><strong>AI 流式回答</strong>：模型生成内容时，回答会实时显示在键盘中，无需等待整段完成</li>
+            <li><strong>AI 空闲建议</strong>：AI 面板会轮播常用提问和热点建议，点选后可直接生成回答</li>
+            <li><strong>回复篇幅设置</strong>：新增简短、中等、详细三档 AI 回复长度，并支持随设置同步</li>
+            <li><strong>编辑上次输入</strong>：长按麦克风即可口述修改要求，预览后替换上次输入或追加新内容</li>
+            <li><strong>问句保护</strong>：润色会保留用户原本的提问语气，不再把「你能听到吗」等问句改写成回答</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <p class="group-title">剪贴板与技能</p>
+          <ul>
+            <li><strong>剪贴板历史</strong>：可选保存最近 15 条纯文本，支持查看、插入和单独清空，默认关闭且仅保存在本机</li>
+            <li><strong>剪贴板建议条</strong>：开启后，最新复制内容会显示在键盘上方，可一键插入</li>
+            <li><strong>粘贴权限引导</strong>：剪贴板设置页可直接打开系统设置，方便将「从其他 App 粘贴」设为允许</li>
+            <li><strong>口述剪贴板请求</strong>：在 AI 模式中说出「回复剪贴板」或「翻译剪贴板」，即可处理已保存的复制内容</li>
+            <li><strong>剪贴板快捷技能</strong>：复制后可直接选择回复、总结或翻译，无需先粘贴到输入框</li>
+            <li><strong>技能中心</strong>：首页新增技能页，可管理最多 8 个键盘技能，并通过长按拖动调整顺序</li>
+            <li><strong>自定义技能</strong>：可自定义名称、图标和提示词，也可连接自己的 iCloud 快捷指令</li>
+            <li><strong>提取待办</strong>：可从复制内容识别待办事项，并通过快捷指令写入提醒事项</li>
+            <li><strong>提取日程</strong>：可识别日期、时间、地点和结束时间，并写入系统日历</li>
+            <li><strong>存入备忘录</strong>：可根据复制内容生成简短标题，并将原文保存到 Apple 备忘录</li>
+            <li><strong>地址导航</strong>：可识别地址或起点终点，并直接打开高德、百度或 Apple 地图开始驾车导航</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>中英文输入</h2>
+        <ul>
+          <li><strong>英文 QuickType 候选栏</strong>：输入英文时同时显示原词、纠错和补全，提交后自动清空</li>
+          <li><strong>英文词汇覆盖扩充</strong>：加入约 4 万词的离线词表，并结合系统词库、通讯录名称和文本替换提供建议</li>
+          <li><strong>英文邻键纠错</strong>：按错相邻按键时，会优先推荐更符合真实键盘位置的单词</li>
+          <li><strong>英文自动更正更克制</strong>：减少对专名、短词和全大写词的误改；拒绝纠错后会学习保留原词</li>
+          <li><strong>拼音简拼改进</strong>：优化 <code>wom</code> 等混合简拼排序，并支持 <code>zh</code>、<code>ch</code>、<code>sh</code> 两键简拼</li>
+          <li><strong>输入习惯学习</strong>：中文候选频率和英文选择偏好会保存在本机，设置中可单独清除，不影响个性词库</li>
+          <li><strong>叠指连打</strong>：支持上一键尚未抬起时按下下一键，并按按下顺序输出文字</li>
+          <li><strong>双空格句号</strong>：英文单词后连续按两次空格，会自动转换为句号和空格，并开启句首大写</li>
+          <li><strong>回车键场景文案</strong>：回车键会根据当前输入框显示前往、搜索、发送、完成、下一项等系统文案</li>
+          <li><strong>iPad 键盘适配</strong>：键盘横竖屏均铺满可用宽度，底行加入逗号、句号和系统地球键，并提供撤销、重做、复制和剪切</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>界面、稳定性与隐私</h2>
+        <ul>
+          <li><strong>统一撤销上次输入</strong>：听写、AI 回答、编辑结果和剪贴板粘贴均可一次撤销</li>
+          <li><strong>首页与导航调整</strong>：历史记录和个性词库改为首页资料卡；技能、风格和设置入口重新整理</li>
+          <li><strong>输入稳定性改进</strong>：修复中文输入初始化失败、跨设备剪贴板导致键盘卡住、切换键盘崩溃、录音取消不及时及 AI 会话结束后麦克风不可用等问题</li>
+          <li><strong>数据控制更新</strong>：默认使用设备端语音识别；AI 使用用户自己的 API Key；剪贴板功能默认关闭，内容仅在用户主动触发时交给所配置的服务商</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="lang-block" data-lang="en">
+      <section class="section">
+        <h2>New Features</h2>
+
+        <div class="group">
+          <p class="group-title">AI and voice assistant</p>
+          <ul>
+            <li><strong>AI keyboard mode</strong>: ask by voice, review the answer on the keyboard, then insert or send it when ready</li>
+            <li><strong>AI web search</strong>: supported providers can search for current information such as weather and news, with automatic fallback when search fails</li>
+            <li><strong>Streaming AI answers</strong>: answers appear on the keyboard as the model writes instead of waiting for the full response</li>
+            <li><strong>AI idle suggestions</strong>: the AI panel rotates useful prompts and current topics that can be sent with one tap</li>
+            <li><strong>Response length</strong>: choose Short, Medium, or Detailed AI answers and sync the preference with settings</li>
+            <li><strong>Edit last input</strong>: hold the microphone, describe the change, preview it, then replace the last input or append the result</li>
+            <li><strong>Question protection</strong>: polish preserves the user's question instead of rewriting prompts such as “Can you hear me?” into answers</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <p class="group-title">Clipboard and Skills</p>
+          <ul>
+            <li><strong>Clipboard history</strong>: optionally keep the latest 15 plain-text copies on this device, with separate view, insert, and clear controls</li>
+            <li><strong>Clipboard suggestion strip</strong>: show the newest copy above the keyboard for one-tap insertion</li>
+            <li><strong>Paste permission guide</strong>: open system Settings directly to set Paste from Other Apps to Allow</li>
+            <li><strong>Spoken clipboard requests</strong>: say “reply to the clipboard” or “translate my clipboard” in AI mode to use the saved copy</li>
+            <li><strong>Clipboard quick skills</strong>: choose Reply, Summarize, or Translate after copying without first pasting into a field</li>
+            <li><strong>Skills center</strong>: manage up to eight keyboard skills and reorder them with a long-press drag</li>
+            <li><strong>Custom skills</strong>: create a name, icon, and prompt, with an optional iCloud Shortcut connection</li>
+            <li><strong>Extract to-dos</strong>: recognize tasks in copied text and add them to Reminders through a companion Shortcut</li>
+            <li><strong>Extract events</strong>: recognize dates, times, locations, and end times, then add them to Calendar</li>
+            <li><strong>Save to Notes</strong>: generate a short title and save the original copied text to Apple Notes</li>
+            <li><strong>Navigate to an address</strong>: recognize an address or route and open driving directions in Amap, Baidu Maps, or Apple Maps</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Chinese and English Typing</h2>
+        <ul>
+          <li><strong>English QuickType bar</strong>: see the typed word, correction, and completion together; the bar clears after commit</li>
+          <li><strong>Broader English vocabulary</strong>: an offline list of about 40,000 words works with the system lexicon, contact names, and text replacements</li>
+          <li><strong>Neighbor-key correction</strong>: mistypes on nearby keys prioritize words that match the physical keyboard layout</li>
+          <li><strong>More conservative autocorrect</strong>: fewer unwanted changes to names, short words, and all-caps text; rejecting a correction teaches the original</li>
+          <li><strong>Pinyin abbreviation improvements</strong>: mixed forms such as <code>wom</code> rank better, with two-key <code>zh</code>, <code>ch</code>, and <code>sh</code> abbreviations</li>
+          <li><strong>Typing habit learning</strong>: Chinese candidate frequency and English boosts stay on device and can be cleared without deleting the personal dictionary</li>
+          <li><strong>Overlapping key presses</strong>: press the next key before lifting the previous finger while characters still commit in press order</li>
+          <li><strong>Double-space period</strong>: a second Space after an English word becomes a period and space, then enables sentence capitalization</li>
+          <li><strong>Contextual Return labels</strong>: the action key shows Go, Search, Send, Done, Next, and other system labels for the current field</li>
+          <li><strong>iPad keyboard layout</strong>: fills portrait and landscape width, adds comma, period, and the system globe key, plus undo, redo, copy, and cut</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Interface, Stability &amp; Privacy</h2>
+        <ul>
+          <li><strong>Unified undo</strong>: roll back dictation, AI answers, edit results, and clipboard pastes in one step</li>
+          <li><strong>Home and navigation updates</strong>: History and Personal Dictionary become Home cards, with reorganized Skills, Styles, and Settings navigation</li>
+          <li><strong>Input stability</strong>: fixes Chinese setup failures, Universal Clipboard keyboard freezes, keyboard-switch crashes, delayed recording cancellation, and a stuck microphone after AI sessions</li>
+          <li><strong>Data controls</strong>: on-device speech recognition remains the default; AI uses your own API key; Clipboard features stay off until enabled and send text only after your action</li>
+        </ul>
+      </section>
+    </div>
+  </article>
+
   <!-- ========== 1.7.5 ========== -->
   <article class="version-block" data-version="1.7.5">
     <div class="version-chip">1.7.5</div>

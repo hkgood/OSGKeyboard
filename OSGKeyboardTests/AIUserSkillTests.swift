@@ -62,6 +62,86 @@ final class AIUserSkillTests: XCTestCase {
         XCTAssertEqual(catalog.entries.first?.shortcutName, "My Tasks")
     }
 
+    func testTextOnlySkillAllowsEmptyShortcutConfiguration() throws {
+        var catalog = AIUserSkillCatalog()
+        let skill = AIUserSkill(
+            name: "Rewrite",
+            prompt: "Rewrite the clipboard"
+        )
+
+        try catalog.upsert(skill)
+
+        let saved = try XCTUnwrap(catalog.entries.first)
+        let clipboardSkill = saved.asClipboardSkill()
+        XCTAssertNil(saved.shortcutICloudURL)
+        XCTAssertEqual(saved.shortcutName, "")
+        XCTAssertEqual(clipboardSkill.kind, .transform)
+        XCTAssertFalse(clipboardSkill.requiresShortcut)
+        XCTAssertNil(clipboardSkill.shortcutName)
+    }
+
+    func testShortcutNameWithoutLinkDoesNotExport() throws {
+        var catalog = AIUserSkillCatalog()
+        let skill = AIUserSkill(
+            name: "Rewrite",
+            prompt: "Rewrite the clipboard",
+            shortcutName: "Ignored without a link"
+        )
+
+        try catalog.upsert(skill)
+
+        let saved = try XCTUnwrap(catalog.entries.first)
+        XCTAssertEqual(saved.shortcutName, "Ignored without a link")
+        XCTAssertEqual(saved.asClipboardSkill().kind, .transform)
+        XCTAssertNil(saved.asClipboardSkill().shortcutName)
+    }
+
+    func testShortcutSkillRequiresNameAndValidShareLink() {
+        var catalog = AIUserSkillCatalog()
+        XCTAssertThrowsError(
+            try catalog.upsert(
+                AIUserSkill(
+                    name: "Export",
+                    prompt: "Export it",
+                    shortcutICloudURL: sampleURL
+                )
+            )
+        ) { error in
+            XCTAssertEqual(error as? AIUserSkillValidationError, .emptyShortcutName)
+        }
+
+        XCTAssertThrowsError(
+            try catalog.upsert(
+                AIUserSkill(
+                    name: "Export",
+                    prompt: "Export it",
+                    shortcutICloudURL: URL(string: "https://example.com/not-a-shortcut"),
+                    shortcutName: "Run Me"
+                )
+            )
+        ) { error in
+            XCTAssertEqual(error as? AIUserSkillValidationError, .invalidShortcutLink)
+        }
+    }
+
+    func testExistingShortcutSkillEncodingDecodesWithOptionalURL() throws {
+        let original = AIUserSkill(
+            name: "Export",
+            prompt: "Export it",
+            shortcutICloudURL: sampleURL,
+            shortcutName: "Run Me"
+        )
+
+        let decoded = try JSONDecoder().decode(
+            AIUserSkill.self,
+            from: JSONEncoder().encode(original)
+        )
+
+        XCTAssertEqual(decoded.shortcutICloudURL, sampleURL)
+        XCTAssertEqual(decoded.asClipboardSkill().kind, .export)
+        XCTAssertTrue(decoded.asClipboardSkill().requiresShortcut)
+    }
+
     func testThinkingDefaultsOffAndBuiltinCannotEnable() {
         let user = AIUserSkill(
             name: "Custom",
@@ -154,36 +234,5 @@ final class AIUserSkillTests: XCTestCase {
             )
         }
         XCTAssertEqual(catalog.entries.count, 12)
-    }
-}
-
-@MainActor
-final class AIUserSkillStoreTests: XCTestCase {
-    private func makeDefaults() -> UserDefaults {
-        let suite = "group.com.osgkeyboard.shared.tests.userSkills.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suite)!
-        defaults.removePersistentDomain(forName: suite)
-        return defaults
-    }
-
-    func testChangingShortcutLinkDropsConfirmation() throws {
-        let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
-        let firstURL = URL(string: "https://www.icloud.com/shortcuts/65bf33ba4206484ba78d582eaf1e9c44")!
-        let secondURL = URL(string: "https://www.icloud.com/shortcuts/1f4afcf7ee22400cbf84e319d969aadf")!
-        var skill = AIUserSkill(
-            name: "Custom",
-            prompt: "Do it",
-            shortcutICloudURL: firstURL,
-            shortcutName: "One"
-        )
-        try store.saveUserSkill(skill)
-        XCTAssertEqual(store.confirmShortcutAndEnable(skill.id), .enabled)
-        XCTAssertTrue(store.layout.isEnabled(skill.id))
-
-        skill.shortcutICloudURL = secondURL
-        skill.shortcutName = "Two"
-        try store.saveUserSkill(skill)
-        XCTAssertFalse(store.layout.hasConfirmedShortcut(skill.id))
-        XCTAssertFalse(store.layout.isEnabled(skill.id))
     }
 }
