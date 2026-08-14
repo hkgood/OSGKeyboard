@@ -143,4 +143,16 @@ final class KeyboardStateTests: XCTestCase {
         XCTAssertNil(state.clipboardSuggestionText)
         XCTAssertEqual(state.clipboardOverlay, .none)
     }
+
+    func testReturnKeyRoleActionFillAndTitles() {
+        XCTAssertFalse(KeyboardState.ReturnKeyRole.newline.usesActionFill)
+        XCTAssertTrue(KeyboardState.ReturnKeyRole.send.usesActionFill)
+        XCTAssertTrue(KeyboardState.ReturnKeyRole.search.usesActionFill)
+        XCTAssertTrue(KeyboardState.ReturnKeyRole.done.usesActionFill)
+        XCTAssertTrue(KeyboardState.ReturnKeyRole.next.usesActionFill)
+        XCTAssertEqual(KeyboardState.ReturnKeyRole.search.titleKey, "keyboard.return.search")
+        XCTAssertEqual(KeyboardState.ReturnKeyRole.next.titleKey, "keyboard.return.next")
+        XCTAssertEqual(KeyboardState.ReturnKeyRole.done.titleKey, "common.done")
+        XCTAssertEqual(KeyboardState.ReturnKeyRole.go.titleKey, "keyboard.return.go")
+    }
 }

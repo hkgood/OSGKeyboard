@@ -36,6 +36,8 @@ struct OSGKeyboardApp: App {
                 EditDemoView()
             } else if ProcessInfo.processInfo.arguments.contains("--ai-demo") {
                 AIKeyboardDemoView()
+            } else if ProcessInfo.processInfo.arguments.contains("--ai-skills-demo") {
+                AIClipboardSkillLayoutDemoView()
             } else if ProcessInfo.processInfo.arguments.contains("--clipboard-demo") {
                 ClipboardHistoryDemoView()
             } else if ProcessInfo.processInfo.arguments.contains("--edit-pager-ui-test") {

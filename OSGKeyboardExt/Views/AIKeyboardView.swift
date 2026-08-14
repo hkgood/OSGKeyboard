@@ -15,8 +15,17 @@ struct AIKeyboardView: View {
         static let actionButtonMaxWidth: CGFloat = 150
         static let statusHeight: CGFloat = 20
         static let carouselInterval: TimeInterval = 4
-        static let skillButtonSize: CGFloat = 52
+        static let skillButtonSize: CGFloat = 48
+        static let skillsPerRow = 4
+        static let skillRowSpacing: CGFloat = 8
+        static let skillCellSpacing: CGFloat = 16
+        static let skillCellWidth: CGFloat = 64
     }
+
+    #if DEBUG
+    /// Layout preview for `--ai-skills-demo`. Nil keeps production clipboard-window gating.
+    static var debugPreviewSkills: [AIClipboardSkill]?
+    #endif
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -55,6 +64,17 @@ struct AIKeyboardView: View {
         }
         .onChange(of: state.clipboardHistoryEnabled) { _, _ in resetCarousel() }
         .onChange(of: clipboardHistory.entries.first?.id) { _, _ in resetCarousel() }
+        .onChange(of: state.enabledClipboardSkillIDs) { _, _ in resetCarousel() }
+        .onChange(of: state.skillTipText) { _, tip in
+            guard let tip, !tip.isEmpty else { return }
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 2_800_000_000)
+                if state.skillTipText == tip {
+                    state.skillTipText = nil
+                }
+            }
+        }
+        .animation(Motion.soft, value: state.skillTipText)
         .onReceive(
             Timer.publish(every: Layout.carouselInterval, on: .main, in: .common).autoconnect()
         ) { _ in
@@ -172,6 +192,19 @@ struct AIKeyboardView: View {
             statusLine
                 .frame(height: Layout.statusHeight)
                 .padding(.horizontal, Spacing.md)
+
+            if let tip = state.skillTipText, !tip.isEmpty {
+                Text(tip)
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .glassEffect(.regular, in: Capsule())
+                    .padding(.bottom, Layout.statusHeight + Spacing.sm)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+            }
         }
     }
 
@@ -212,28 +245,50 @@ struct AIKeyboardView: View {
     }
 
     private var clipboardSkillRow: some View {
-        HStack(spacing: Spacing.lg) {
-            ForEach(AIClipboardSkillCatalog.visible()) { skill in
-                Button {
-                    state.submitAIClipboardSkill(skill)
-                } label: {
-                    VStack(spacing: 6) {
-                        Image(systemName: skill.systemImage)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(palette.textPrimary.opacity(0.85))
-                            .frame(width: Layout.skillButtonSize, height: Layout.skillButtonSize)
-                            .glassEffect(.regular.interactive(), in: Circle())
-                        Text(clipboardSkillTitle(skill))
-                            .font(TypeStyle.caption2)
-                            .foregroundStyle(palette.textSecondary)
+        let rows = skillRows(from: visibleClipboardSkills)
+        return VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            VStack(spacing: Layout.skillRowSpacing) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { _, rowSkills in
+                    HStack(spacing: Layout.skillCellSpacing) {
+                        ForEach(rowSkills) { skill in
+                            skillChip(skill)
+                        }
                     }
                 }
-                .buttonStyle(.plain)
-                .disabled(!state.aiServiceAvailable || state.aiSession.isBusy)
-                .accessibilityLabel(Text(clipboardSkillTitle(skill)))
             }
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func skillRows(from skills: [AIClipboardSkill]) -> [[AIClipboardSkill]] {
+        stride(from: 0, to: skills.count, by: Layout.skillsPerRow).map { start in
+            Array(skills[start ..< min(start + Layout.skillsPerRow, skills.count)])
+        }
+    }
+
+    private func skillChip(_ skill: AIClipboardSkill) -> some View {
+        Button {
+            state.submitAIClipboardSkill(skill)
+        } label: {
+            VStack(spacing: 6) {
+                Image(systemName: skill.systemImage)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(palette.textPrimary.opacity(0.85))
+                    .frame(width: Layout.skillButtonSize, height: Layout.skillButtonSize)
+                    .glassEffect(.regular.interactive(), in: Circle())
+                Text(clipboardSkillTitle(skill))
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(width: Layout.skillCellWidth)
+        }
+        .buttonStyle(.plain)
+        .disabled(!state.aiServiceAvailable || state.aiSession.isBusy)
+        .accessibilityLabel(Text(clipboardSkillTitle(skill)))
     }
 
     /// Translate follows the keyboard target; Reply / Summarize stay static.
@@ -244,15 +299,37 @@ struct AIKeyboardView: View {
                 uiLanguage: AppGroupStore().uiLanguage
             )
         }
+        if let custom = skill.customName?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !custom.isEmpty {
+            return custom
+        }
         return ExtL10n.string(skill.titleKey)
     }
 
     /// Copy-then-30s window: skill chips replace the rotating hint.
     private var showsClipboardSkills: Bool {
+        #if DEBUG
+        if let preview = Self.debugPreviewSkills, !preview.isEmpty {
+            return showsPlaceholder
+        }
+        #endif
         guard showsPlaceholder, state.clipboardHistoryEnabled else { return false }
+        guard !visibleClipboardSkills.isEmpty else { return false }
         return AIHintPool.isClipboardSkillWindowActive(
             clipboardHistoryEnabled: true,
             newestClipboard: clipboardHistory.newestEntry
+        )
+    }
+
+    private var visibleClipboardSkills: [AIClipboardSkill] {
+        #if DEBUG
+        if let preview = Self.debugPreviewSkills, !preview.isEmpty {
+            return preview
+        }
+        #endif
+        return AIClipboardSkillCatalog.visible(
+            enabledIDs: state.enabledClipboardSkillIDs,
+            userCatalog: AppGroupStore().agentUserSkillCatalog
         )
     }
 
@@ -432,6 +509,18 @@ struct AIKeyboardView: View {
             }
             return state.aiSession.transcript
         case .generating:
+            if state.pendingClipboardSkillID == AIClipboardSkillCatalog.extractTodosID {
+                return ExtL10n.string("keyboard.ai.skill.extracting")
+            }
+            if state.pendingClipboardSkillID == AIClipboardSkillCatalog.extractEventsID {
+                return ExtL10n.string("keyboard.ai.skill.extractingEvents")
+            }
+            if state.pendingClipboardSkillID == AIClipboardSkillCatalog.navigateID {
+                return ExtL10n.string("keyboard.ai.skill.extractingAddress")
+            }
+            if state.pendingClipboardSkillID == AIClipboardSkillCatalog.saveToNotesID {
+                return ExtL10n.string("keyboard.ai.skill.namingNote")
+            }
             if let draft = state.aiSession.draftAnswerText, !draft.isEmpty {
                 return ExtL10n.string("keyboard.ai.generating")
             }

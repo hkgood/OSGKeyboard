@@ -140,6 +140,15 @@ public final class KeyboardState: ObservableObject {
     @Published public var clipboardHistoryEnabled: Bool = false
     /// Opt-in clipboard suggestion strip (requires history enabled).
     @Published public var clipboardCandidateBarEnabled: Bool = false
+    /// Skills-tab order for clipboard chips (max 8). Empty → hint carousel.
+    @Published public var enabledClipboardSkillIDs: [String] = AIAgentSkillLayout.defaultEnabledIDs
+    /// Export skill currently waiting on the LLM. Nil for transform skills.
+    @Published public var pendingClipboardSkillID: String?
+    /// Clipboard captured when that export skill was tapped, so the body
+    /// still exists after the 30-second hint window closes.
+    public var pendingClipboardSkillSource: String?
+    /// In-keyboard toast (e.g. no todos). Does not leave the host app.
+    @Published public var skillTipText: String?
     /// Host field is a password / secure entry — never read pasteboard.
     @Published public var isSecureTextEntry: Bool = false
     /// Secure fields hide every clipboard-history entry point.
@@ -213,12 +222,37 @@ public final class KeyboardState: ObservableObject {
     public enum ReturnKeyRole: Equatable {
         case newline
         case send
+        case go
+        case search
+        case join
+        case done
+        case next
+        case `continue`
+        case route
+        case google
+        case yahoo
+        case emergencyCall
 
         public var titleKey: String {
             switch self {
             case .newline: return "common.newline"
-            case .send:    return "common.send"
+            case .send: return "common.send"
+            case .go: return "keyboard.return.go"
+            case .search: return "keyboard.return.search"
+            case .join: return "keyboard.return.join"
+            case .done: return "common.done"
+            case .next: return "keyboard.return.next"
+            case .continue: return "common.continue"
+            case .route: return "keyboard.return.route"
+            case .google: return "keyboard.return.google"
+            case .yahoo: return "keyboard.return.yahoo"
+            case .emergencyCall: return "keyboard.return.emergencyCall"
             }
+        }
+
+        /// Green action chrome (system uses blue for Go / Search / Send / Done).
+        public var usesActionFill: Bool {
+            self != .newline
         }
     }
 
@@ -239,8 +273,10 @@ public final class KeyboardState: ObservableObject {
     public var sendAIAnswer: () -> Void = {}
     /// Sends a tapped idle hint card as the AI question (skip microphone).
     public var submitAIHint: (AIHintCard) -> Void = { _ in }
-    /// Sends a clipboard skill (reply / summarize / translate / future).
+    /// Sends a clipboard skill (reply / summarize / translate / export).
     public var submitAIClipboardSkill: (AIClipboardSkill) -> Void = { _ in }
+    /// Writes extract-todos titles and opens the host to run the Shortcut.
+    public var runClipboardExportSkill: (String, [String]) -> Void = { _, _ in }
     public var openSettings:        () -> Void = {}
     /// Opens the host app straight to input-resource deployment. Used by the
     /// typing surface when Rime resources have not been deployed yet.

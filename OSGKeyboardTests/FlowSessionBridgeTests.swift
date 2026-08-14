@@ -323,6 +323,47 @@ final class FlowSessionBridgeTests: XCTestCase {
 
         XCTAssertEqual(decoded, command)
         XCTAssertEqual(decoded.aiQuestionText, "总结这段剪贴板内容")
+        XCTAssertNil(decoded.aiThinkingEnabled)
+    }
+
+    func testSubmitAIQuestionCommandRoundTripsThinkingOverride() throws {
+        let command = FlowCommand(
+            sessionId: UUID(),
+            utteranceId: UUID(),
+            commandSeq: 45,
+            action: .submitAIQuestion,
+            localeId: "zh-Hans",
+            utteranceMode: .aiQuestion,
+            aiConversationID: UUID(),
+            aiQuestionText: "总结这段剪贴板内容",
+            aiThinkingEnabled: false
+        )
+        let decoded = try JSONDecoder().decode(
+            FlowCommand.self,
+            from: JSONEncoder().encode(command)
+        )
+        XCTAssertEqual(decoded.aiThinkingEnabled, false)
+    }
+
+    func testFlowCommandDecodesLegacyJSONWithoutThinkingKey() throws {
+        let command = FlowCommand(
+            sessionId: UUID(),
+            utteranceId: UUID(),
+            commandSeq: 44,
+            action: .submitAIQuestion,
+            localeId: "zh-Hans",
+            utteranceMode: .aiQuestion,
+            aiConversationID: UUID(),
+            aiQuestionText: "总结这段剪贴板内容"
+        )
+        var object = try JSONSerialization.jsonObject(
+            with: JSONEncoder().encode(command)
+        ) as! [String: Any]
+        object.removeValue(forKey: "aiThinkingEnabled")
+        let data = try JSONSerialization.data(withJSONObject: object)
+        let decoded = try JSONDecoder().decode(FlowCommand.self, from: data)
+        XCTAssertNil(decoded.aiThinkingEnabled)
+        XCTAssertEqual(decoded.aiQuestionText, "总结这段剪贴板内容")
     }
 
     func testSecureFieldContextRedactsText() {

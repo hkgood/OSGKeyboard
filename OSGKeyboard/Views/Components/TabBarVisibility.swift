@@ -52,13 +52,13 @@ extension View {
 }
 
 enum TabBarDockMetrics {
-    static let itemHeight: CGFloat = 52
-    static let iconSize: CGFloat = 24
+    static let itemHeight: CGFloat = 46
+    static let iconSize: CGFloat = 22
     /// Horizontal glass pad is 0: the selected capsule's `selectionInset`
     /// is the only side gap. `Spacing.md` (16) plus that 5 pt was ~3–4×
     /// the 5 pt top/bottom gap.
     static let dockInsetHorizontal: CGFloat = 0
-    static let dockInsetVertical: CGFloat = Spacing.sm
+    static let dockInsetVertical: CGFloat = Spacing.xs
     /// Gap between the selected fill and the glass dock / neighbouring tabs.
     static let selectionInset: CGFloat = 5
     static let bottomPadding: CGFloat = Spacing.xs

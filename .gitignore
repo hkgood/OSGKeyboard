@@ -87,5 +87,6 @@ CHANGES.md
 
 # Local scratch: DerivedData clones, stress logs, QA frames, AI notes, audits
 .tmp/
+.ai-skills-layout-shots/
 .workbuddy-ai/
 reports/

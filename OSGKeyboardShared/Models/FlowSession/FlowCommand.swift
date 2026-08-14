@@ -41,6 +41,8 @@ public struct FlowCommand: Codable, Equatable, Sendable {
     public let aiConversationID: UUID?
     /// Prefilled question used only by `.submitAIQuestion`.
     public let aiQuestionText: String?
+    /// Clipboard-skill thinking override. Nil keeps AI-mode default (on).
+    public let aiThinkingEnabled: Bool?
     /// Absolute wall-clock deadlines survive extension reconstruction.
     public let startDeadlineAt: TimeInterval?
     public let processingDeadlineAt: TimeInterval?
@@ -60,6 +62,7 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         sourceHistoryEntryRevision: Int64? = nil,
         aiConversationID: UUID? = nil,
         aiQuestionText: String? = nil,
+        aiThinkingEnabled: Bool? = nil,
         startDeadlineAt: TimeInterval? = nil,
         processingDeadlineAt: TimeInterval? = nil
     ) {
@@ -77,6 +80,7 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         self.sourceHistoryEntryRevision = sourceHistoryEntryRevision
         self.aiConversationID = aiConversationID
         self.aiQuestionText = aiQuestionText
+        self.aiThinkingEnabled = aiThinkingEnabled
         self.startDeadlineAt = startDeadlineAt
         self.processingDeadlineAt = processingDeadlineAt
     }

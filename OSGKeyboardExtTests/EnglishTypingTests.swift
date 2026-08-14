@@ -300,4 +300,81 @@ final class EnglishTypingTests: XCTestCase {
             XCTAssertEqual(undone.deleteCount, spaced.text.count)
         }
     }
+
+    @MainActor
+    func testPeriodShortcutReplacesDoubleSpace() {
+        let typing = TypingSessionController()
+        _ = typing.setLanguage(.english)
+        typing.enterTypingMode()
+
+        for character in ["h", "e", "l", "l", "o"] {
+            apply(typing, typing.handleKey(character))
+        }
+        let first = typing.handleSpace()
+        XCTAssertTrue(first.text.hasSuffix(" "), "first Space should insert a space")
+        apply(typing, first)
+
+        let second = typing.handleSpace()
+        XCTAssertEqual(second, .replace(deleteCount: 1, with: ". "))
+        apply(typing, second)
+        XCTAssertTrue(typing.shiftActive, "period+space must arm sentence Shift")
+    }
+
+    @MainActor
+    func testPeriodShortcutDoesNotFireAfterAnotherLetter() {
+        let typing = TypingSessionController()
+        _ = typing.setLanguage(.english)
+        typing.enterTypingMode()
+
+        apply(typing, typing.handleKey("h"))
+        apply(typing, typing.handleSpace())
+        apply(typing, typing.handleKey("i"))
+        let second = typing.handleSpace()
+        XCTAssertEqual(second, .insert(" "))
+    }
+
+    @MainActor
+    func testPeriodShortcutDoesNotFireAfterSentenceTerminator() {
+        let typing = TypingSessionController()
+        _ = typing.setLanguage(.english)
+        typing.precedingTextProvider = { "Hello." }
+        typing.enterTypingMode()
+        typing.syncAutocapitalization()
+
+        apply(typing, typing.handleSpace())
+        let second = typing.handleSpace()
+        XCTAssertEqual(second, .insert(" "))
+    }
+
+    @MainActor
+    func testChineseSpaceDoesNotUsePeriodShortcut() {
+        let typing = TypingSessionController()
+        _ = typing.setLanguage(.chinese)
+        let first = typing.handleSpace()
+        let second = typing.handleSpace()
+        XCTAssertEqual(first.text, " ")
+        XCTAssertEqual(second.text, " ")
+        XCTAssertEqual(second.deleteCount, 0)
+    }
+
+    func testPeriodShortcutPredicate() {
+        XCTAssertTrue(PeriodShortcut.shouldReplacePreviousSpace(precedingText: "hello "))
+        XCTAssertTrue(PeriodShortcut.shouldReplacePreviousSpace(precedingText: "你 "))
+        XCTAssertTrue(PeriodShortcut.shouldReplacePreviousSpace(precedingText: "v2 "))
+        XCTAssertFalse(PeriodShortcut.shouldReplacePreviousSpace(precedingText: "hello. "))
+        XCTAssertFalse(PeriodShortcut.shouldReplacePreviousSpace(precedingText: "hello  "))
+        XCTAssertFalse(PeriodShortcut.shouldReplacePreviousSpace(precedingText: "hello"))
+        XCTAssertFalse(PeriodShortcut.shouldReplacePreviousSpace(precedingText: " "))
+        XCTAssertTrue(PeriodShortcut.shouldArm(afterSpaceFollowing: "hello"))
+        XCTAssertFalse(PeriodShortcut.shouldArm(afterSpaceFollowing: "hello."))
+        XCTAssertFalse(PeriodShortcut.shouldArm(afterSpaceFollowing: "hello "))
+    }
+
+    @MainActor
+    private func apply(_ typing: TypingSessionController, _ output: TypingOutput) {
+        typing.syncAutocapitalization(
+            accountingForInsert: output.text,
+            deleteCount: output.deleteCount
+        )
+    }
 }

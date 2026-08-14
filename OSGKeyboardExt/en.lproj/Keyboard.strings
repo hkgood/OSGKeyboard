@@ -26,6 +26,14 @@
 "common.space" = "Space";
 "common.newline" = "Return";
 "common.send" = "Send";
+"keyboard.return.go" = "Go";
+"keyboard.return.search" = "Search";
+"keyboard.return.join" = "Join";
+"keyboard.return.next" = "Next";
+"keyboard.return.route" = "Route";
+"keyboard.return.google" = "Google";
+"keyboard.return.yahoo" = "Yahoo";
+"keyboard.return.emergencyCall" = "Emergency Call";
 
 /* Privacy footnote (onboarding welcome page) */
 "privacy.audio.title" = "On-device transcription";
@@ -297,3 +305,23 @@
 "keyboard.ai.skill.reply" = "Reply";
 "keyboard.ai.skill.summarize" = "Summarize";
 "keyboard.ai.skill.translate" = "Translate";
+"keyboard.ai.skill.extractTodos" = "Tasks";
+"keyboard.ai.skill.extractEvents" = "Events";
+"keyboard.ai.skill.saveToNotes" = "Notes";
+"keyboard.ai.skill.navigate" = "Navigate";
+"keyboard.ai.skill.previewPolish" = "Polish";
+"keyboard.ai.skill.previewIdeas" = "Ideas";
+"keyboard.ai.skill.previewTone" = "Tone";
+"keyboard.ai.skill.noTodos" = "No tasks in the clipboard";
+"keyboard.ai.skill.noEvents" = "No date or time in the clipboard";
+"keyboard.ai.skill.noAddress" = "No address in the clipboard";
+"keyboard.ai.skill.noNote" = "Nothing to save to Notes";
+"keyboard.ai.skill.noExportItems" = "Nothing to send to the Shortcut";
+"keyboard.ai.skill.extracting" = "Finding tasks…";
+"keyboard.ai.skill.extractingEvents" = "Finding events…";
+"keyboard.ai.skill.extractingAddress" = "Finding an address…";
+"keyboard.ai.skill.namingNote" = "Naming the note…";
+"keyboard.ai.skill.runningShortcut" = "Running Shortcut…";
+"keyboard.ai.skill.openingMaps" = "Opening Maps…";
+"keyboard.ai.skill.shortcutMissing" = "Companion Shortcut not found. Reinstall it in Skills";
+"keyboard.ai.skill.handoffFailed" = "Couldn’t open the app to run the Shortcut";

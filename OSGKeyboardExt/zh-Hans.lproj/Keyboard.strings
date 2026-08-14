@@ -26,6 +26,14 @@
 "common.space" = "空格";
 "common.newline" = "回车";
 "common.send" = "发送";
+"keyboard.return.go" = "前往";
+"keyboard.return.search" = "搜索";
+"keyboard.return.join" = "加入";
+"keyboard.return.next" = "下一项";
+"keyboard.return.route" = "路线";
+"keyboard.return.google" = "Google";
+"keyboard.return.yahoo" = "Yahoo";
+"keyboard.return.emergencyCall" = "紧急电话";
 
 /* Privacy footnote (onboarding welcome page) */
 "privacy.audio.title" = "支持本地转写";
@@ -297,3 +305,23 @@
 "keyboard.ai.skill.reply" = "回复";
 "keyboard.ai.skill.summarize" = "总结";
 "keyboard.ai.skill.translate" = "翻译";
+"keyboard.ai.skill.extractTodos" = "待办";
+"keyboard.ai.skill.extractEvents" = "日程";
+"keyboard.ai.skill.saveToNotes" = "备忘录";
+"keyboard.ai.skill.navigate" = "导航";
+"keyboard.ai.skill.previewPolish" = "润色";
+"keyboard.ai.skill.previewIdeas" = "点子";
+"keyboard.ai.skill.previewTone" = "语气";
+"keyboard.ai.skill.noTodos" = "剪贴板内容没有待办事项";
+"keyboard.ai.skill.noEvents" = "剪贴板内容没有日期或时间";
+"keyboard.ai.skill.noAddress" = "剪贴板内容没有可导航的地址";
+"keyboard.ai.skill.noNote" = "剪贴板没有可保存的内容";
+"keyboard.ai.skill.noExportItems" = "没有可发给捷径的内容";
+"keyboard.ai.skill.extracting" = "正在提取待办…";
+"keyboard.ai.skill.extractingEvents" = "正在提取日程…";
+"keyboard.ai.skill.extractingAddress" = "正在识别地址…";
+"keyboard.ai.skill.namingNote" = "正在生成标题…";
+"keyboard.ai.skill.runningShortcut" = "正在运行捷径…";
+"keyboard.ai.skill.openingMaps" = "正在打开地图…";
+"keyboard.ai.skill.shortcutMissing" = "找不到配套捷径，请在技能页重新安装";
+"keyboard.ai.skill.handoffFailed" = "无法打开 App 运行捷径";

@@ -70,16 +70,32 @@ final class AIKeyboardCoordinator {
     func submitClipboardSkill(_ skill: AIClipboardSkill) {
         guard canAcceptIdleSubmit else { return }
         enterIfNeeded()
+        let material = ClipboardHistoryStore.shared.newestAIHintEligibleEntry()?.text
+        if skill.kind == .export {
+            state.pendingClipboardSkillID = skill.id
+            state.pendingClipboardSkillSource = material
+        } else {
+            clearPendingExportSkill()
+        }
         let instruction = AIClipboardSkillCatalog.instruction(
             for: skill,
             locale: AIHintLocaleResolver.packLocale(),
             translationTargetLocaleId: state.translationTargetLocaleId
         )
+        AIAgentShortcutRun.trace("keyboard.submit skill=\(skill.id) kind=\(skill.kind)")
+        if let material {
+            AIAgentShortcutRun.traceBody("keyboard.clipboard", material)
+        } else {
+            AIAgentShortcutRun.trace("keyboard.clipboard missing")
+        }
         let resolution = AIClipboardPrompt.resolve(
             instruction: instruction,
-            material: ClipboardHistoryStore.shared.newestAIHintEligibleEntry()?.text
+            material: material
         )
-        submitResolvedPrompt(resolution)
+        if case .materialUnavailable = resolution {
+            AIAgentShortcutRun.trace("keyboard.submit rejected clipboardUnavailable skill=\(skill.id)")
+        }
+        submitResolvedPrompt(resolution, thinkingEnabled: skill.thinkingEnabled)
     }
 
     /// Tap an idle hint card: resolve its material, skip the mic, ask the host.
@@ -103,27 +119,37 @@ final class AIKeyboardCoordinator {
         }
     }
 
-    private func submitResolvedPrompt(_ resolution: AIClipboardPrompt.Resolution) {
+    private func submitResolvedPrompt(
+        _ resolution: AIClipboardPrompt.Resolution,
+        thinkingEnabled: Bool? = nil
+    ) {
         guard case .ready(let prompt) = resolution else {
             // The clipboard window closed between rendering and this tap.
+            clearPendingExportSkill()
             state.aiSession.fail(
                 ExtL10n.string("keyboard.ai.error.clipboardUnavailable"),
                 utteranceID: nil
             )
             return
         }
-        guard let conversationID = state.aiSession.conversationID else { return }
+        guard let conversationID = state.aiSession.conversationID else {
+            clearPendingExportSkill()
+            return
+        }
         let disposition = flow.submitAIQuestion(
             text: prompt,
-            conversationID: conversationID
+            conversationID: conversationID,
+            thinkingEnabled: thinkingEnabled
         )
         if case .rejected(let rejection) = disposition {
+            clearPendingExportSkill()
             state.aiSession.fail(message(for: rejection), utteranceID: nil)
         }
     }
 
     func cancel() {
         guard state.aiSession.isBusy else { return }
+        clearPendingExportSkill()
         flow.cancelAIRecording()
         state.aiSession.cancelCurrentWork()
     }
@@ -132,7 +158,7 @@ final class AIKeyboardCoordinator {
         if state.aiSession.canInsert, let answer = state.aiSession.answer {
             guard insertAnswer(answer) else { return }
             state.aiSession.markAnswerInserted(
-                offersSend: state.returnKeyRole == .send
+                offersSend: state.returnKeyRole.usesActionFill
             )
         } else if state.aiSession.canSend {
             state.aiSession.markAnswerSent()
@@ -181,11 +207,17 @@ final class AIKeyboardCoordinator {
     }
 
     func receivePartialAnswer(_ draft: String, utteranceID: UUID) {
+        if isPendingExportSkill { return }
         state.aiSession.receivePartialAnswer(draft, utteranceID: utteranceID)
     }
 
     func receive(result: FlowResult) {
         guard result.resolvedUtteranceMode == .aiQuestion else {
+            return
+        }
+        if isPendingExportSkill {
+            guard result.aiConversationID == state.aiSession.conversationID else { return }
+            finishExportSkill(answer: result.text ?? "")
             return
         }
         guard result.aiConversationID == state.aiSession.conversationID,
@@ -201,12 +233,103 @@ final class AIKeyboardCoordinator {
     }
 
     func fail(_ message: String, utteranceID: UUID?) {
+        clearPendingExportSkill()
         state.aiSession.fail(message, utteranceID: utteranceID)
     }
 
     private func endConversationIfNeeded() {
+        clearPendingExportSkill()
         guard let conversationID = state.aiSession.conversationID else { return }
         flow.endAIConversation(conversationID)
+    }
+
+    private func clearPendingExportSkill() {
+        state.pendingClipboardSkillID = nil
+        state.pendingClipboardSkillSource = nil
+    }
+
+    private var isPendingExportSkill: Bool {
+        guard let id = state.pendingClipboardSkillID else { return false }
+        return resolvedSkill(id: id)?.kind == .export
+    }
+
+    private func resolvedSkill(id: String) -> AIClipboardSkill? {
+        AIClipboardSkillCatalog.skill(
+            id: id,
+            userCatalog: AppGroupStore().agentUserSkillCatalog
+        )
+    }
+
+    /// Parse an export skill. Empty → in-keyboard tip, stay in the host app.
+    /// Lines → hand off to the host (Shortcut, Maps, or Didi).
+    private func finishExportSkill(answer: String) {
+        let source = state.pendingClipboardSkillSource
+            ?? ClipboardHistoryStore.shared.newestAIHintEligibleEntry()?.text
+        let skillID = state.pendingClipboardSkillID
+        let items: [String]
+        let emptyTipKey: String
+        switch skillID {
+        case AIClipboardSkillCatalog.extractEventsID:
+            items = AIEventExtraction.lines(from: answer, sourceClipboard: source)
+            emptyTipKey = "keyboard.ai.skill.noEvents"
+        case AIClipboardSkillCatalog.extractTodosID:
+            items = AITodoExtraction.items(from: answer, sourceClipboard: source)
+            emptyTipKey = "keyboard.ai.skill.noTodos"
+        case AIClipboardSkillCatalog.navigateID:
+            items = AIAddressExtraction.lines(from: answer, sourceClipboard: source)
+            emptyTipKey = "keyboard.ai.skill.noAddress"
+        case AIClipboardSkillCatalog.saveToNotesID:
+            items = AINoteExport.items(
+                from: answer,
+                sourceClipboard: source,
+                locale: AIHintLocaleResolver.packLocale()
+            )
+            emptyTipKey = "keyboard.ai.skill.noNote"
+        default:
+            items = AIGenericSkillExport.items(from: answer)
+            emptyTipKey = "keyboard.ai.skill.noExportItems"
+        }
+        AIAgentShortcutRun.traceBody("keyboard.llmRaw", answer)
+        AIAgentShortcutRun.trace(
+            "keyboard.parse items=\(items.count) clipboardChars=\(source?.count ?? 0)"
+        )
+        #if DEBUG
+        if !items.isEmpty {
+            AIAgentShortcutRun.traceBody("keyboard.parsedTitles", items.joined(separator: "\n"))
+        }
+        #endif
+        clearPendingExportSkill()
+        if state.aiSession.isBusy {
+            state.aiSession.cancelCurrentWork()
+        }
+        if state.aiSession.isActive {
+            state.aiSession.resetConversationPreservingAnswer()
+        }
+        guard !items.isEmpty else {
+            AIAgentShortcutRun.trace("keyboard.parse empty — skip Shortcuts")
+            state.skillTipText = ExtL10n.string(emptyTipKey)
+            return
+        }
+        guard let skillID, let skill = resolvedSkill(id: skillID) else {
+            AIAgentShortcutRun.trace("keyboard.parse missingSkill")
+            state.skillTipText = ExtL10n.string("keyboard.ai.skill.shortcutMissing")
+            return
+        }
+        if skill.requiresShortcut, skill.shortcutName == nil {
+            AIAgentShortcutRun.trace("keyboard.parse missingShortcut skill=\(skillID)")
+            state.skillTipText = ExtL10n.string("keyboard.ai.skill.shortcutMissing")
+            return
+        }
+        AIAgentShortcutRun.trace("keyboard.handoffToHost skill=\(skillID) items=\(items.count)")
+        let tipKey: String
+        switch skillID {
+        case AIClipboardSkillCatalog.navigateID:
+            tipKey = "keyboard.ai.skill.openingMaps"
+        default:
+            tipKey = "keyboard.ai.skill.runningShortcut"
+        }
+        state.skillTipText = ExtL10n.string(tipKey)
+        state.runClipboardExportSkill(skillID, items)
     }
 
     private func message(for rejection: FlowUtteranceStartRejection) -> String {

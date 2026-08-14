@@ -110,7 +110,7 @@ private struct WideSidebarRow: View {
 
     var body: some View {
         Button(action: action) {
-            Label(tab.sidebarTitle, systemImage: tab.sidebarSystemImage)
+            Label(tab.sidebarTitle, systemImage: tab.sidebarSystemImage(selected: isSelected))
                 .labelStyle(SidebarIconColumnLabelStyle())
                 // Slightly larger label + taller vertical padding so each
                 // sidebar row hits the Apple HIG 44pt touch target on iPad
@@ -144,7 +144,7 @@ private struct WideSidebarRow: View {
 /// (`house`) — enough to push titles apart by ~5pt. `List` reserves that column
 /// automatically; this hand-rolled `VStack` sidebar has to do it itself.
 private struct SidebarIconColumnLabelStyle: LabelStyle {
-    /// Wider than the widest symbol in `AppTab.sidebarSystemImage`.
+    /// Wider than the widest symbol in `AppTab.sidebarSystemImage(selected:)`.
     private static let iconColumnWidth: CGFloat = 22
 
     func makeBody(configuration: Configuration) -> some View {

@@ -123,7 +123,8 @@ public struct AIQuestionService: Sendable {
 
     public static func configured(
         store: any ConfigurationStore,
-        conversations: AIConversationStore
+        conversations: AIConversationStore,
+        thinkingEnabled: Bool = true
     ) throws -> AIQuestionService {
         // Same provider + baseURL + model resolution as dictation polish so the
         // Settings LLM card is the single source of truth for both modes.
@@ -151,7 +152,8 @@ public struct AIQuestionService: Sendable {
                 baseURL: endpoint.baseURL,
                 apiKey: apiKey,
                 model: endpoint.model,
-                allowWebSearch: true
+                allowWebSearch: true,
+                thinkingEnabled: thinkingEnabled
             ),
             conversations: conversations,
             responseLength: store.aiResponseLength

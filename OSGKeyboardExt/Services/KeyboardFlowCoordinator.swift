@@ -670,12 +670,17 @@ final class KeyboardFlowCoordinator {
 
     func submitAIQuestion(
         text: String,
-        conversationID: UUID
+        conversationID: UUID,
+        thinkingEnabled: Bool? = nil
     ) -> FlowUtteranceStartDisposition {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return .rejected(.pipelineBusy) }
         return startUtterance(
-            .aiQuestion(conversationID: conversationID, prefilledQuestion: trimmed)
+            .aiQuestion(
+                conversationID: conversationID,
+                prefilledQuestion: trimmed,
+                thinkingEnabled: thinkingEnabled
+            )
         )
     }
 
@@ -1868,6 +1873,7 @@ final class KeyboardFlowCoordinator {
             utteranceMode: .aiQuestion,
             aiConversationID: currentUtteranceRequest?.aiConversationID,
             aiQuestionText: text,
+            aiThinkingEnabled: currentUtteranceRequest?.aiThinkingEnabled,
             startDeadlineAt: currentStartDeadlineAt
         )
         FlowSessionBridge.writeCommand(command)

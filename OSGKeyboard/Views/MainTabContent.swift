@@ -14,6 +14,8 @@ struct MainTabContent: View {
         switch tab {
         case .keyboard:
             HomeView()
+        case .skills:
+            AIAgentSkillsView()
         case .styles:
             PolishStylesView()
         case .settings:

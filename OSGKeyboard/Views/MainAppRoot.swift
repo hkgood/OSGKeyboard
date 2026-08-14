@@ -214,6 +214,12 @@ struct MainAppRoot: View {
         switch url.host {
         case "startflow":
             flowManager.startSession(coldStart: true, reason: "url.startflow")
+        case "skill":
+            if url.path.contains("shortcut-result") {
+                AIAgentShortcutRunner.logShortcutCallback(url)
+            } else if url.path.contains("run") {
+                AIAgentShortcutRunner.runPendingIfNeeded()
+            }
         case "deployrime":
             // The keyboard sends the user here precisely because typing
             // resources are missing — deploy without waiting for warmup.

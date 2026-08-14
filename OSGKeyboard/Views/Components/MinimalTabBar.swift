@@ -1,7 +1,7 @@
 // MinimalTabBar.swift
 // OSGKeyboard · Main App
 //
-// Bottom tab bar — icon + label for Home / Styles / Settings.
+// Bottom tab bar — icon + label for Home / Skills / Styles / Settings.
 // The dock capsule is iOS 26 Liquid Glass; the selected tab is a green
 // fill inside that capsule (Photos-style), not a second glass layer.
 // History + dictionary live as Home cards (not dock tabs).
@@ -11,41 +11,41 @@ import OSGKeyboardShared
 
 enum AppTab: Int, CaseIterable {
     case keyboard
+    case skills
     case styles
     case settings
-
-    var icon: MaterialIconName {
-        switch self {
-        case .keyboard: return .keyboard
-        case .styles: return .menuBook // unused — styles uses SF Symbol
-        case .settings: return .settings
-        }
-    }
-
-    /// SF Symbol overrides shared with the Mac and iPad sidebars.
-    var sfSymbol: String? {
-        switch self {
-        case .styles: return "text.badge.star"
-        default: return nil
-        }
-    }
 
     var accessibilityKey: LocalizedStringKey {
         switch self {
         case .keyboard: return "tab.keyboard"
+        case .skills: return "tab.skills"
         case .styles: return "tab.styles"
         case .settings: return "tab.settings"
+        }
+    }
+
+    /// Phone dock: outline when idle, fill when selected (system tab-bar
+    /// convention). `wand.and.sparkles` has no `.fill` pair.
+    func dockSystemImage(selected: Bool) -> String {
+        switch self {
+        case .keyboard: return selected ? "keyboard.fill" : "keyboard"
+        case .skills: return "wand.and.sparkles"
+        case .styles: return selected ? "dial.high.fill" : "dial.high"
+        case .settings: return selected ? "gearshape.fill" : "gearshape"
         }
     }
 
     /// Sidebar label for iPad `NavigationSplitView` (SF Symbol + title).
     var sidebarTitle: LocalizedStringKey { accessibilityKey }
 
-    var sidebarSystemImage: String {
+    /// iPad sidebar. Home stays `house` in both states; other tabs follow
+    /// the same outline / fill pairing as the phone dock.
+    func sidebarSystemImage(selected: Bool) -> String {
         switch self {
         case .keyboard: return "house"
-        case .styles: return "text.badge.star"
-        case .settings: return "gearshape"
+        case .skills: return "wand.and.sparkles"
+        case .styles: return selected ? "dial.high.fill" : "dial.high"
+        case .settings: return selected ? "gearshape.fill" : "gearshape"
         }
     }
 }
@@ -65,14 +65,8 @@ struct MinimalTabBar: View {
                     }
                 } label: {
                     VStack(spacing: 2) {
-                        Group {
-                            if let sfSymbol = tab.sfSymbol {
-                                Image(systemName: sfSymbol)
-                                    .font(.system(size: TabBarDockMetrics.iconSize, weight: .regular))
-                            } else {
-                                MaterialIcon(name: tab.icon, size: TabBarDockMetrics.iconSize)
-                            }
-                        }
+                        Image(systemName: tab.dockSystemImage(selected: selection == tab))
+                            .font(.system(size: TabBarDockMetrics.iconSize, weight: .regular))
                         Text(tab.accessibilityKey)
                             .font(TypeStyle.caption2)
                             .lineLimit(1)
@@ -110,7 +104,7 @@ struct MinimalTabBar: View {
         .padding(.horizontal, TabBarDockMetrics.dockInsetHorizontal)
         .padding(.vertical, TabBarDockMetrics.dockInsetVertical)
         .glassEffect(.regular.interactive(), in: .capsule)
-        .frame(maxWidth: 280)
+        .frame(maxWidth: 360)
         .frame(maxWidth: .infinity, alignment: .center)
         .padding(.bottom, TabBarDockMetrics.bottomPadding)
     }

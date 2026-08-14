@@ -1358,13 +1358,15 @@ final class FlowSessionManager: ObservableObject {
             let utteranceId = command.utteranceId
             let commandSeq = command.commandSeq
             let sessionId = command.sessionId
+            let thinkingEnabled = command.aiThinkingEnabled ?? true
             Task { @MainActor [weak self] in
                 await self?.answerPrefilledAIQuestion(
                     question: question,
                     conversationID: conversationID,
                     sessionId: sessionId,
                     utteranceId: utteranceId,
-                    commandSeq: commandSeq
+                    commandSeq: commandSeq,
+                    thinkingEnabled: thinkingEnabled
                 )
             }
         }
@@ -1385,7 +1387,8 @@ final class FlowSessionManager: ObservableObject {
         conversationID: UUID?,
         sessionId: UUID,
         utteranceId: UUID,
-        commandSeq: Int64
+        commandSeq: Int64,
+        thinkingEnabled: Bool
     ) async {
         // Hint-card / prefilled questions never go through `finalizeUtterance`,
         // so this path must drop the processing gate itself. Leaving it set
@@ -1415,7 +1418,8 @@ final class FlowSessionManager: ObservableObject {
         do {
             let service = try AIQuestionService.configured(
                 store: pipelineStore,
-                conversations: aiConversations
+                conversations: aiConversations,
+                thinkingEnabled: thinkingEnabled
             )
             aiAnswerStreamThrottle = AIAnswerStreamThrottle()
             let answer = try await service.answer(

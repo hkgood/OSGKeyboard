@@ -235,4 +235,45 @@ final class AIClipboardSkillTests: XCTestCase {
         XCTAssertTrue(prompt.contains("概括"))
         XCTAssertTrue(prompt.contains("不要改写成可发送的短消息"))
     }
+
+    func testExtractTodosAsksForNONEWhenEmpty() {
+        let prompt = AIClipboardSkillCatalog.instruction(
+            skillID: AIClipboardSkillCatalog.extractTodosID,
+            locale: "zh",
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
+        )
+        XCTAssertTrue(prompt.contains("NONE"))
+        XCTAssertTrue(prompt.contains("不要把整段原文当成一条待办"))
+    }
+
+    func testExtractEventsAsksForNONEWhenEmpty() {
+        let prompt = AIClipboardSkillCatalog.instruction(
+            skillID: AIClipboardSkillCatalog.extractEventsID,
+            locale: "zh",
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
+        )
+        XCTAssertTrue(prompt.contains("NONE"))
+        XCTAssertTrue(prompt.contains("开始|结束|标题|地点"))
+    }
+
+    func testNavigateAsksForNONEWhenEmpty() {
+        let prompt = AIClipboardSkillCatalog.instruction(
+            skillID: AIClipboardSkillCatalog.navigateID,
+            locale: "zh",
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
+        )
+        XCTAssertTrue(prompt.contains("NONE"))
+        XCTAssertTrue(prompt.contains("起点|终点"))
+    }
+
+    func testSaveToNotesAsksForTitleNotBody() {
+        let prompt = AIClipboardSkillCatalog.instruction(
+            skillID: AIClipboardSkillCatalog.saveToNotesID,
+            locale: "zh",
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
+        )
+        XCTAssertTrue(prompt.contains("标题"))
+        XCTAssertTrue(prompt.contains("不要输出正文"))
+        XCTAssertTrue(prompt.contains("不要输出 NONE"))
+    }
 }

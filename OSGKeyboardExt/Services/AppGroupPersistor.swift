@@ -43,6 +43,7 @@ public struct AppGroupPersistor {
         state.cursorDragNavigationEnabled = store.cursorDragNavigationEnabled
         state.clipboardHistoryEnabled = store.clipboardHistoryEnabled
         state.clipboardCandidateBarEnabled = store.clipboardCandidateBarEnabled
+        state.enabledClipboardSkillIDs = store.agentSkillLayout.enabledIDs
         state.keyboardHapticIntensity = store.keyboardHapticIntensity
         applyAPIKeyAvailability(store: store, into: state)
 
@@ -98,6 +99,7 @@ public struct AppGroupPersistor {
         state.cursorDragNavigationEnabled = store.cursorDragNavigationEnabled
         state.clipboardHistoryEnabled = store.clipboardHistoryEnabled
         state.clipboardCandidateBarEnabled = store.clipboardCandidateBarEnabled
+        state.enabledClipboardSkillIDs = store.agentSkillLayout.enabledIDs
         state.keyboardHapticIntensity = store.keyboardHapticIntensity
         applyAPIKeyAvailability(store: store, into: state)
     }

@@ -49,7 +49,7 @@ settings:
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
     MARKETING_VERSION: "1.7.5"
-    CURRENT_PROJECT_VERSION: "67"
+    CURRENT_PROJECT_VERSION: "71"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -76,6 +76,7 @@ targets:
           # crashes when both are passed. iOS 26 uses Icon Composer only.
           - "Assets.xcassets/AppIcon.appiconset"
           - "Resources/CustomLanguageModel/**"
+          - "Resources/Shortcuts/**"
       # Real keyboard chrome for DEBUG what's-new recording (same UI as Ext).
       - path: OSGKeyboardExt/Utilities/ExtL10n.swift
       - path: OSGKeyboardExt/Views/AIKeyboardView.swift
@@ -86,6 +87,17 @@ targets:
       - path: OSGKeyboardExt/en.lproj/Keyboard.strings
         buildPhase: resources
       - path: OSGKeyboardExt/zh-Hans.lproj/Keyboard.strings
+        buildPhase: resources
+      # `.shortcut` is not a XcodeGen-known resource type; list each file
+      # as an explicit resource source or it never lands in the app bundle.
+      - path: OSGKeyboard/Resources/Shortcuts/OSGExtractTodos.shortcut
+        type: file
+        buildPhase: resources
+      - path: OSGKeyboard/Resources/Shortcuts/OSGExtractEvents.shortcut
+        type: file
+        buildPhase: resources
+      - path: OSGKeyboard/Resources/Shortcuts/OSGSaveToNotes.shortcut
+        type: file
         buildPhase: resources
     entitlements:
       path: OSGKeyboard/OSGKeyboard.entitlements
@@ -194,6 +206,11 @@ targets:
           - zalo
           - skype
           - zoomus
+          - shortcuts
+          - iosamap
+          - amapuri
+          - baidumap
+          - maps
           - things
           - todoist
           - evernote

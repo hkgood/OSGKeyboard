@@ -69,6 +69,10 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             "config.flowInactivityDuration.migratedToFiveMinuteDefault"
         /// Diagnostic switch: when false, local ASR skips the custom language model.
         public static let localASRCustomLanguageModelEnabled = "config.localASR.customLanguageModelEnabled"
+        /// Enabled AI Agent skill IDs (order) + confirmed companion Shortcuts.
+        public static let agentSkillLayout = "config.aiAgentSkills.layout.v1"
+        /// User-created clipboard skills (no cloud sync; App Group only).
+        public static let agentUserSkillCatalog = "config.aiAgentSkills.userCatalog.v1"
     }
 
     // MARK: - Stored fields
@@ -113,8 +117,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var flowSkipAppSwitch: Bool
     /// Idle timeout before the Flow session ends; resets on each utterance.
     public var flowInactivityDuration: FlowInactivityDuration
-    /// Whether local `SpeechAnalyzer` should attach the prepared custom language model.
-    public var localASRCustomLanguageModelEnabled: Bool
+        /// Whether local `SpeechAnalyzer` should attach the prepared custom language model.
+        public var localASRCustomLanguageModelEnabled: Bool
 
     // MARK: - Derived
 

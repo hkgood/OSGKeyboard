@@ -246,28 +246,22 @@ private struct MacPolishStyleCard: View {
             }
             .buttonStyle(.plain)
 
-            // Builtin: eye → view prompt; custom: pencil → edit.
+            // Pencil opens the prompt (built-in, read-only) or the editor (custom).
             Button(action: primaryAction) {
-                Image(systemName: isUserStyle ? "pencil" : "eye")
-                    .font(.system(size: 12, weight: .semibold))
+                Image(systemName: "pencil")
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(palette.textSecondary)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 30, height: 30)
                     .background(palette.background.opacity(isHovering ? 0.9 : 0.72), in: Circle())
             }
             .padding(Spacing.sm)
             .buttonStyle(.plain)
-            .accessibilityLabel(
-                MacL10n.string(
-                    isUserStyle ? "mac.styles.edit" : "mac.styles.viewPrompt",
-                    language: language
-                )
-            )
+            .accessibilityLabel(MacL10n.string("mac.styles.edit", language: language))
 
             if isSelected {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 21, weight: .semibold))
                     .foregroundStyle(palette.accent)
-                    .background(palette.surface, in: Circle())
                     .padding(Spacing.sm)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .allowsHitTesting(false)
