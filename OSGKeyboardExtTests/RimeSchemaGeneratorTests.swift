@@ -41,6 +41,37 @@ final class RimeSchemaGeneratorTests: XCTestCase {
         XCTAssertLessThan(fuzzy.lowerBound, transform.lowerBound)
     }
 
+    func testDialectErasePrecedesFuzzyAndAbbrev() throws {
+        let yaml = RimeSchemaGenerator.schema(for: .fullPinyin, fuzzyPairs: [.nL])
+        let eraseN = try XCTUnwrap(yaml.range(of: "erase/^n$/"))
+        let fuzzy = try XCTUnwrap(yaml.range(of: "derive/^n/l/"))
+        let abbrev = try XCTUnwrap(yaml.range(of: "abbrev/^([a-z]).+$/$1/"))
+        XCTAssertLessThan(eraseN.lowerBound, fuzzy.lowerBound)
+        XCTAssertLessThan(fuzzy.lowerBound, abbrev.lowerBound)
+    }
+
+    func testAllSchemasEraseDialectSyllables() {
+        for schema in TypingInputSchema.allCases {
+            let yaml = RimeSchemaGenerator.schema(for: schema, fuzzyPairs: [])
+            XCTAssertTrue(yaml.contains("erase/^hm$/"), schema.rawValue)
+            XCTAssertTrue(yaml.contains("erase/^m$/"), schema.rawValue)
+            XCTAssertTrue(yaml.contains("erase/^n$/"), schema.rawValue)
+            XCTAssertTrue(yaml.contains("erase/^ng$/"), schema.rawValue)
+        }
+    }
+
+    func testZhAbbrevIsFullPinyinOnly() {
+        let full = RimeSchemaGenerator.schema(for: .fullPinyin, fuzzyPairs: [])
+        XCTAssertTrue(full.contains("abbrev/^([zcs]h).+$/$1/"))
+        for schema in [TypingInputSchema.microsoftDoublePinyin, .sogouDoublePinyin] {
+            let yaml = RimeSchemaGenerator.schema(for: schema, fuzzyPairs: [])
+            XCTAssertFalse(
+                yaml.contains("abbrev/^([zcs]h).+$/$1/"),
+                schema.rawValue
+            )
+        }
+    }
+
     @MainActor
     func testTypingConfigurationDefaultsToFullPinyinWithoutFuzzyPairs() {
         let suiteName = "TypingInputConfigurationTests.\(UUID().uuidString)"

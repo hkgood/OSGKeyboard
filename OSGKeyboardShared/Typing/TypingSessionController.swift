@@ -26,7 +26,13 @@ public final class TypingSessionController: ObservableObject {
     @Published public private(set) var lastErrorNeedsHostDeployment: Bool = false
 
     /// When true, English suggestions / autocorrect stay off (secure fields).
-    @Published public var suggestionsEnabled: Bool = true
+    /// Chinese composition is also skipped so passwords never enter Rime userdb.
+    @Published public var suggestionsEnabled: Bool = true {
+        didSet {
+            guard oldValue, !suggestionsEnabled else { return }
+            abandonChineseComposition()
+        }
+    }
     /// `UITextChecker` completions / guesses. Empty in unit tests.
     public var systemLexicon: EnglishSystemLexiconProviding = EmptyEnglishSystemLexicon()
     /// Names and text replacements from `requestSupplementaryLexicon`.
@@ -317,6 +323,12 @@ public final class TypingSessionController: ObservableObject {
             return handleEnglishCharacter(ch)
         }
 
+        if !suggestionsEnabled {
+            clearOneShotShiftIfNeeded()
+            abandonChineseComposition()
+            return .insert(String(ch))
+        }
+
         // Chinese + Shift: insert Latin directly (iOS-style mix-in), leave Rime
         // composition untouched. Rime's alphabet is lowercase-only, so uppercase
         // keycodes would otherwise be rejected with no output.
@@ -338,6 +350,10 @@ public final class TypingSessionController: ObservableObject {
             return handleEnglishSpace()
         }
         clearPeriodShortcut()
+        if !suggestionsEnabled {
+            abandonChineseComposition()
+            return .insert(" ")
+        }
         let text = engine.processSpace() ?? " "
         composition = engine.composition
         syncCandidatePanelVisibility()
@@ -348,6 +364,10 @@ public final class TypingSessionController: ObservableObject {
         clearPeriodShortcut()
         if language == .english {
             return commitEnglishWord(suffix: "\n")
+        }
+        if !suggestionsEnabled {
+            abandonChineseComposition()
+            return .insert("\n")
         }
         let text = engine.processReturn() ?? "\n"
         composition = engine.composition
@@ -360,6 +380,9 @@ public final class TypingSessionController: ObservableObject {
         if language == .english {
             return selectEnglishCandidate(at: index)
         }
+        if !suggestionsEnabled {
+            return .none
+        }
         guard composition.candidates.indices.contains(index) else { return .none }
         // Display order may put phrases before first-syllable chars; select by engine index.
         let engineIndex = composition.candidates[index].engineIndex
@@ -369,6 +392,13 @@ public final class TypingSessionController: ObservableObject {
         isCandidatePanelExpanded = false
         syncCandidatePanelVisibility()
         return text.isEmpty ? .none : .insert(text)
+    }
+
+    /// Drop in-flight pinyin so secure fields cannot commit into userdb.
+    private func abandonChineseComposition() {
+        engineStorage?.clearComposition()
+        composition = .empty
+        isCandidatePanelExpanded = false
     }
 
     // MARK: - English

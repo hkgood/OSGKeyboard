@@ -404,6 +404,19 @@ final class EnglishTypingTests: XCTestCase {
         XCTAssertFalse(PeriodShortcut.shouldArm(afterSpaceFollowing: "hello "))
     }
 
+    func testLearningStoreClearRemovesBoosts() {
+        let suiteName = "EnglishLearningStore.clear.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let store = EnglishLearningStore(defaults: defaults)
+        store.recordAcceptance(of: "hello")
+        XCTAssertGreaterThan(store.boost(for: "hello"), 0)
+        store.clear()
+        XCTAssertEqual(store.boost(for: "hello"), 0)
+        XCTAssertTrue(store.snapshot().isEmpty)
+    }
+
     @MainActor
     func testEnglishQuickTypePutsVerbatimFirstAndMarksCorrection() {
         let typing = makeIsolatedEnglishSession(suite: "english.quicktype.bar.test")

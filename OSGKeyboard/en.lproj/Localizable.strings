@@ -238,6 +238,11 @@
 "settings.typingInput.resources.ready" = "Ready";
 "settings.typingInput.resources.pending" = "Not initialized";
 "settings.typingInput.resources.redeploy" = "Redeploy Input Resources";
+"settings.typingInput.habits.clear" = "Clear Typing Habits";
+"settings.typingInput.habits.clear.title" = "Clear Typing Habits?";
+"settings.typingInput.habits.clear.confirm" = "Clear";
+"settings.typingInput.habits.clear.message" = "Resets learned word order for Chinese and English. Personal dictionary entries are kept.";
+"settings.typingInput.habits.footer" = "Learned frequency only. Words you added to the personal dictionary stay.";
 "settings.speechRecognition.title" = "Speech Recognition";
 "settings.textPolish.title" = "Text Polish";
 "settings.preferences.title" = "Preferences";
