@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "OSGKeyboard" / "Resources" / "Shortcuts"
 UNSIGNED = OUT_DIR / "OSGExtractEvents.unsigned.shortcut"
 SIGNED = OUT_DIR / "OSGExtractEvents.shortcut"
+SHORTCUT_NAME = "OSGExtractEvents"
 
 OBJECT_REPLACEMENT = "\ufffc"
 
@@ -156,7 +157,7 @@ def workflow() -> dict:
         "WFWorkflowClientRelease": "26.0",
         "WFWorkflowMinimumClientVersion": 900,
         "WFWorkflowMinimumClientVersionString": "900",
-        "WFWorkflowName": "OSG · 提取日程",
+        "WFWorkflowName": SHORTCUT_NAME,
         "WFWorkflowHasShortcutInputVariables": True,
         "WFWorkflowHasOutputFallback": False,
         "WFWorkflowImportQuestions": [],

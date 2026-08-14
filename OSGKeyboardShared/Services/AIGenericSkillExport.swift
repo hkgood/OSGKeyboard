@@ -2,7 +2,7 @@
 // OSGKeyboard · Shared
 //
 // Line-oriented Shortcut input for user-created export skills. Built-in
-// extract-todos / extract-events keep their dedicated parsers.
+// extract-todos / extract-events / save-to-notes keep their dedicated parsers.
 
 import Foundation
 

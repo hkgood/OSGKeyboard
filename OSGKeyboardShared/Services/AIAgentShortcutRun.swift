@@ -25,6 +25,8 @@ public struct AIAgentShortcutRunPayload: Codable, Equatable, Sendable {
 
 public enum AIAgentShortcutRun {
     public static let pendingKey = "config.aiAgentSkills.pendingRun.v1"
+    /// Last skill-handoff lines, readable from the App Group plist on device.
+    public static let recentTracesKey = "diag.skills.recent.v1"
     /// Drop payloads older than this; a leftover write must not fire later.
     public static let payloadTTL: TimeInterval = 60
 
@@ -65,6 +67,19 @@ public enum AIAgentShortcutRun {
     /// Xcode / Console search: `OSGDiag/skills`. DEBUG builds include bodies.
     public static func trace(_ message: String) {
         OSGDiag.log(message, category: "skills")
+        persistTrace(message)
+    }
+
+    /// Keep a short ring so we can copy traces off the phone without root `log collect`.
+    private static func persistTrace(_ message: String) {
+        guard let defaults = AppGroup.defaultsIfAvailable else { return }
+        var lines = defaults.stringArray(forKey: recentTracesKey) ?? []
+        let stamp = ISO8601DateFormatter().string(from: Date())
+        lines.append("\(stamp) \(message)")
+        if lines.count > 60 {
+            lines = Array(lines.suffix(60))
+        }
+        defaults.set(lines, forKey: recentTracesKey)
     }
 
     /// Single-line preview so Console keeps the format (`\\n` for newlines).

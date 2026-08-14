@@ -457,6 +457,8 @@
 "skills.extractTodos.description" = "Extract to-dos from copied text into Reminders.";
 "skills.extractEvents.name" = "Extract events";
 "skills.extractEvents.description" = "Extract events from copied text into Calendar.";
+"skills.saveToNotes.name" = "Save to Notes";
+"skills.saveToNotes.description" = "Create a new note from the copied text. The title comes from the time and content; the body stays as copied.";
 "skills.navigate.name" = "Navigate";
 "skills.navigate.description" = "Find an address in the copied text and start driving directions. Uses Amap if installed, then Baidu Maps, then Apple Maps.";
 "skills.install.lead" = "Add it, then confirm. Don’t rename it.";

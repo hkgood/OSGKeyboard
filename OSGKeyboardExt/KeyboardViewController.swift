@@ -773,10 +773,30 @@ public final class KeyboardViewController: UIInputViewController {
 
     private func returnKeyRole(for returnKeyType: UIReturnKeyType) -> State.ReturnKeyRole {
         switch returnKeyType {
-        case .send, .go, .search, .join, .route, .google, .yahoo, .continue, .emergencyCall:
-            return .send
-        case .default, .next, .done:
+        case .default:
             return .newline
+        case .go:
+            return .go
+        case .google:
+            return .google
+        case .join:
+            return .join
+        case .next:
+            return .next
+        case .route:
+            return .route
+        case .search:
+            return .search
+        case .send:
+            return .send
+        case .yahoo:
+            return .yahoo
+        case .done:
+            return .done
+        case .emergencyCall:
+            return .emergencyCall
+        case .continue:
+            return .continue
         @unknown default:
             return .newline
         }

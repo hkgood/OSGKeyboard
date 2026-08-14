@@ -518,6 +518,9 @@ struct AIKeyboardView: View {
             if state.pendingClipboardSkillID == AIClipboardSkillCatalog.navigateID {
                 return ExtL10n.string("keyboard.ai.skill.extractingAddress")
             }
+            if state.pendingClipboardSkillID == AIClipboardSkillCatalog.saveToNotesID {
+                return ExtL10n.string("keyboard.ai.skill.namingNote")
+            }
             if let draft = state.aiSession.draftAnswerText, !draft.isEmpty {
                 return ExtL10n.string("keyboard.ai.generating")
             }

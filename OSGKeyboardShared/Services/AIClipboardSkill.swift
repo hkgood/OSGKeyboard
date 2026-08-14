@@ -4,7 +4,7 @@
 // Built-in clipboard actions for AI idle. The catalog is an ordered list so
 // Settings / the Skills tab can persist a subset or permutation without
 // changing the view. Transform skills insert into the current field;
-// export skills hand off to a companion Shortcut after the model runs.
+// export skills hand off to the host after the model runs (Shortcut, Maps, or Didi).
 
 import Foundation
 
@@ -39,7 +39,9 @@ public struct AIClipboardSkill: Identifiable, Equatable, Sendable {
     /// Built-in skills are always false. Custom skills default off.
     public let thinkingEnabled: Bool
 
-    public var requiresShortcut: Bool { kind == .export }
+    /// Reminders, Calendar, and Notes exports need a companion Shortcut.
+    /// Navigate and Ride hand off to the host (Maps or Didi). No Shortcut.
+    public var requiresShortcut: Bool { kind == .export && shortcutName != nil }
     public var isUserCreated: Bool { id.hasPrefix("user.") }
 
     public init(
@@ -80,22 +82,18 @@ public enum AIClipboardSkillCatalog: Sendable {
     public static let summarizeID = "summarize"
     public static let translateID = "translate"
     public static let extractTodosID = "extractTodos"
-    public static let extractTodosShortcutName = "OSG · 提取待办"
-    public static let extractTodosShortcutICloudURL = URL(
-        string: "https://www.icloud.com/shortcuts/65bf33ba4206484ba78d582eaf1e9c44"
-    )!
+    public static let extractTodosShortcutName = "OSGExtractTodos"
     public static let extractTodosResourceName = "OSGExtractTodos"
 
     public static let extractEventsID = "extractEvents"
-    public static let extractEventsShortcutName = "OSG · 提取日程"
-    public static let extractEventsShortcutICloudURL = URL(
-        string: "https://www.icloud.com/shortcuts/1f4afcf7ee22400cbf84e319d969aadf"
-    )!
+    public static let extractEventsShortcutName = "OSGExtractEvents"
     public static let extractEventsResourceName = "OSGExtractEvents"
 
+    public static let saveToNotesID = "saveToNotes"
+    public static let saveToNotesShortcutName = "OSGSaveToNotes"
+    public static let saveToNotesResourceName = "OSGSaveToNotes"
+
     public static let navigateID = "navigate"
-    public static let navigateShortcutName = "OSG · 导航"
-    public static let navigateResourceName = "OSGNavigate"
 
     /// Full built-in catalog, in a stable display order for the Skills tab.
     public static let catalog: [AIClipboardSkill] = [
@@ -135,7 +133,6 @@ public enum AIClipboardSkillCatalog: Sendable {
             kind: .export,
             isDefault: false,
             shortcutName: extractTodosShortcutName,
-            shortcutICloudURL: extractTodosShortcutICloudURL,
             shortcutResourceName: extractTodosResourceName
         ),
         AIClipboardSkill(
@@ -147,8 +144,18 @@ public enum AIClipboardSkillCatalog: Sendable {
             kind: .export,
             isDefault: false,
             shortcutName: extractEventsShortcutName,
-            shortcutICloudURL: extractEventsShortcutICloudURL,
             shortcutResourceName: extractEventsResourceName
+        ),
+        AIClipboardSkill(
+            id: saveToNotesID,
+            systemImage: "note.text",
+            titleKey: "keyboard.ai.skill.saveToNotes",
+            cardTitleKey: "skills.saveToNotes.name",
+            descriptionKey: "skills.saveToNotes.description",
+            kind: .export,
+            isDefault: false,
+            shortcutName: saveToNotesShortcutName,
+            shortcutResourceName: saveToNotesResourceName
         ),
         AIClipboardSkill(
             id: navigateID,
@@ -157,9 +164,7 @@ public enum AIClipboardSkillCatalog: Sendable {
             cardTitleKey: "skills.navigate.name",
             descriptionKey: "skills.navigate.description",
             kind: .export,
-            isDefault: false,
-            shortcutName: navigateShortcutName,
-            shortcutResourceName: navigateResourceName
+            isDefault: false
         ),
     ]
 
@@ -263,6 +268,8 @@ public enum AIClipboardSkillCatalog: Sendable {
                 """
         case extractEventsID:
             return eventInstruction(zh: zh, now: now)
+        case saveToNotesID:
+            return noteInstruction(zh: zh, now: now)
         case navigateID:
             return navigateInstruction(zh: zh)
         default:
@@ -270,6 +277,26 @@ public enum AIClipboardSkillCatalog: Sendable {
                 ? "请根据剪贴板内容完成用户选择的操作。"
                 : "Complete the selected action using the clipboard text."
         }
+    }
+
+    /// Title only. The original clipboard is the note body; do not ask the
+    /// model to rewrite it.
+    private static func noteInstruction(zh: Bool, now: Date) -> String {
+        let clock = clockContext(now: now, zh: zh)
+        if zh {
+            return """
+            \(clock)
+            请根据剪贴板正文写一个简短备忘录标题。只要一行标题，不要输出正文，不要编号、不要引号、不要解释。标题中不要出现换行或 |。最多 40 个字。
+            标题应能让人在列表里认出这篇笔记，可结合今天的日期或时间（例如「8月13日周会纪要」）。不要改写或重复正文。
+            即使原文很短也要给一个标题。不要输出 NONE。
+            """
+        }
+        return """
+        \(clock)
+        Write a short Notes title from the clipboard. One line only; do not output the body. No numbering, quotes, or commentary. No newlines or | in the title. Maximum 40 characters.
+        The title should identify the note in a list and may include today's date or time (for example "13 Aug standup notes"). Do not rewrite or repeat the body.
+        Always return a title, even when the clipboard is short. Do not output NONE.
+        """
     }
 
     private static func navigateInstruction(zh: Bool) -> String {

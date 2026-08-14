@@ -49,7 +49,7 @@ settings:
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
     MARKETING_VERSION: "1.7.5"
-    CURRENT_PROJECT_VERSION: "69"
+    CURRENT_PROJECT_VERSION: "71"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -96,7 +96,7 @@ targets:
       - path: OSGKeyboard/Resources/Shortcuts/OSGExtractEvents.shortcut
         type: file
         buildPhase: resources
-      - path: OSGKeyboard/Resources/Shortcuts/OSGNavigate.shortcut
+      - path: OSGKeyboard/Resources/Shortcuts/OSGSaveToNotes.shortcut
         type: file
         buildPhase: resources
     entitlements:

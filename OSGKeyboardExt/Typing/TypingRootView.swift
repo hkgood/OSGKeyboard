@@ -47,8 +47,8 @@ struct TypingRootView: View {
     /// After the first expand, keep the panel tree mounted and only toggle
     /// opacity so subsequent ▼/▲ taps stay cheap.
     @State private var candidatePanelMounted = false
-    /// Key currently under the finger (grid-level touch pad).
-    @State private var highlightedKeyID: String?
+    /// Keys currently under a finger (grid-level touch pad, multi-touch).
+    @State private var highlightedKeyIDs: Set<String> = []
 
     static func totalHeight(isIPad: Bool = false, width: CGFloat = 0) -> CGFloat {
         TypingLayoutMetrics.contentHeight(isIPad: isIPad, width: width)
@@ -398,7 +398,7 @@ struct TypingRootView: View {
                 TypingKeyTouchPad(
                     layout: layout,
                     hapticIntensity: state.keyboardHapticIntensity,
-                    onHighlightChange: { highlightedKeyID = $0 },
+                    onHighlightChange: { highlightedKeyIDs = $0 },
                     onCommit: { commitTypingKey($0) },
                     onDeleteFire: { apply(typing.handleKey("⌫")) },
                     onShiftBegan: { typing.beginShiftHold() },
@@ -448,10 +448,10 @@ struct TypingRootView: View {
         let pageLabel = typing.page == .letters ? "123" : "ABC"
         let spaceLabel = typing.language == .chinese ? "空格" : "space"
         let returnLabel: String = {
-            switch state.returnKeyRole {
-            case .newline: return "return"
-            case .send: return ExtL10n.string(state.returnKeyRole.titleKey)
+            if state.returnKeyRole.usesActionFill {
+                return ExtL10n.string(state.returnKeyRole.titleKey)
             }
+            return "return"
         }()
 
         // iPad spends its extra width on comma / period like the system
@@ -491,7 +491,7 @@ struct TypingRootView: View {
 
     @ViewBuilder
     private func visualTypingKey(_ key: TypingKeyHitTarget) -> some View {
-        let pressed = highlightedKeyID == key.id
+        let pressed = highlightedKeyIDs.contains(key.id)
         let isBottom = key.id.hasPrefix("bottom.")
         let isShift = key.label == "⇧"
         let shiftLit = isShift && typing.isShiftEnabled
@@ -624,13 +624,14 @@ struct TypingRootView: View {
 
     @ViewBuilder
     private var returnKeyLabel: some View {
-        switch state.returnKeyRole {
-        case .newline:
-            Image(systemName: "arrow.turn.down.left")
-                .font(.system(size: 21, weight: .medium))
-        case .send:
+        if state.returnKeyRole.usesActionFill {
             ExtL10n.text(state.returnKeyRole.titleKey)
                 .font(.system(size: 15, weight: .semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        } else {
+            Image(systemName: "arrow.turn.down.left")
+                .font(.system(size: 21, weight: .medium))
         }
     }
 
@@ -684,42 +685,29 @@ struct TypingRootView: View {
     }
 
     private var returnKeyFill: Color {
-        switch state.returnKeyRole {
-        case .newline: return keyFill
-        case .send: return sendKeyFill
-        }
+        state.returnKeyRole.usesActionFill ? sendKeyFill : keyFill
     }
 
     private var returnKeyPressedFill: Color {
-        switch state.returnKeyRole {
-        case .newline: return keyPressedFill
-        case .send: return sendKeyPressedFill
-        }
+        state.returnKeyRole.usesActionFill ? sendKeyPressedFill : keyPressedFill
     }
 
     private var returnKeyBorder: Color {
-        switch state.returnKeyRole {
-        case .newline:
-            return palette.divider
-        case .send:
+        if state.returnKeyRole.usesActionFill {
             return Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08)
         }
+        return palette.divider
     }
 
     private var returnKeyAccessibilityLabel: String {
-        switch state.returnKeyRole {
-        case .newline: return "return"
-        case .send: return ExtL10n.string(state.returnKeyRole.titleKey)
+        if state.returnKeyRole.usesActionFill {
+            return ExtL10n.string(state.returnKeyRole.titleKey)
         }
+        return "return"
     }
 
     private var returnKeyTextColor: Color {
-        switch state.returnKeyRole {
-        case .newline:
-            return keyTextColor
-        case .send:
-            return .white
-        }
+        state.returnKeyRole.usesActionFill ? .white : keyTextColor
     }
 
     /// The send key stays recognizable in both appearances without becoming neon.

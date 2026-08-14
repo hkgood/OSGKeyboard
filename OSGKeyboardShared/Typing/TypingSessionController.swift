@@ -79,6 +79,9 @@ public final class TypingSessionController: ObservableObject {
     /// (common in Notes). Capped; reseeds from the proxy when it looks fresh.
     private var precedingShadow = ""
     private static let precedingShadowLimit = 400
+    /// iOS "." Shortcut: second Space shortly after a Space that followed a word.
+    private var periodShortcutArmed = false
+    private var lastSpaceAt: Date?
 
     public init(
         engine: (@MainActor () -> RimeEngineBridging)? = nil,
@@ -166,6 +169,7 @@ public final class TypingSessionController: ObservableObject {
         page = .letters
         resetShiftState()
         clearEnglishWordState(keepPrevious: false)
+        clearPeriodShortcut()
         // Drop English lexicon pages when leaving typing (jetsam recovery).
         EnglishLexicon.shared.unload()
         englishStorage = nil
@@ -202,6 +206,7 @@ public final class TypingSessionController: ObservableObject {
         engine.setLanguage(newLanguage)
         page = .letters
         isCandidatePanelExpanded = false
+        clearPeriodShortcut()
         if newLanguage == .english {
             clearEnglishWordState(keepPrevious: false)
             refreshPersonalTerms()
@@ -235,6 +240,7 @@ public final class TypingSessionController: ObservableObject {
     public func setPage(_ page: TypingKeyPage) {
         self.page = page
         resetShiftState()
+        clearPeriodShortcut()
         if page == .letters {
             syncAutocapitalization()
         }
@@ -264,6 +270,7 @@ public final class TypingSessionController: ObservableObject {
 
     /// Handle a visible key label.
     public func handleKey(_ label: String) -> TypingOutput {
+        clearPeriodShortcut()
         switch label {
         case "⇧":
             // Tests / non-gesture callers: same as a completed Shift tap.
@@ -317,8 +324,9 @@ public final class TypingSessionController: ObservableObject {
 
     public func handleSpace() -> TypingOutput {
         if language == .english {
-            return commitEnglishWord(suffix: " ")
+            return handleEnglishSpace()
         }
+        clearPeriodShortcut()
         let text = engine.processSpace() ?? " "
         composition = engine.composition
         syncCandidatePanelVisibility()
@@ -326,6 +334,7 @@ public final class TypingSessionController: ObservableObject {
     }
 
     public func handleReturn() -> TypingOutput {
+        clearPeriodShortcut()
         if language == .english {
             return commitEnglishWord(suffix: "\n")
         }
@@ -336,6 +345,7 @@ public final class TypingSessionController: ObservableObject {
     }
 
     public func selectCandidate(at index: Int) -> TypingOutput {
+        clearPeriodShortcut()
         if language == .english {
             return selectEnglishCandidate(at: index)
         }
@@ -351,6 +361,38 @@ public final class TypingSessionController: ObservableObject {
     }
 
     // MARK: - English
+
+    private func handleEnglishSpace() -> TypingOutput {
+        let preceding = precedingTextForShortcut()
+        if periodShortcutArmed,
+           let stamped = lastSpaceAt,
+           Date().timeIntervalSince(stamped) <= PeriodShortcut.doubleTapInterval,
+           PeriodShortcut.shouldReplacePreviousSpace(precedingText: preceding) {
+            clearPeriodShortcut()
+            let wordOut = commitEnglishWord(suffix: "")
+            let deleteCount = wordOut.deleteCount + 1
+            return TypingOutput(deleteCount: deleteCount, text: wordOut.text + ". ")
+        }
+
+        let output = commitEnglishWord(suffix: " ")
+        if PeriodShortcut.shouldArm(afterSpaceFollowing: preceding) {
+            periodShortcutArmed = true
+            lastSpaceAt = Date()
+        } else {
+            clearPeriodShortcut()
+        }
+        return output
+    }
+
+    private func precedingTextForShortcut() -> String {
+        if !precedingShadow.isEmpty { return precedingShadow }
+        return precedingTextProvider?() ?? ""
+    }
+
+    private func clearPeriodShortcut() {
+        periodShortcutArmed = false
+        lastSpaceAt = nil
+    }
 
     private func handleEnglishCharacter(_ ch: Character) -> TypingOutput {
         pendingAutocorrection = nil
@@ -546,6 +588,9 @@ public final class TypingSessionController: ObservableObject {
     /// briefly reports the immediately preceding edit (common in Notes).
     public func synchronizeEnglishDocumentContext(caretMoved: Bool = false) {
         guard language == .english else { return }
+        if caretMoved {
+            clearPeriodShortcut()
+        }
         guard suggestionsEnabled else {
             clearEnglishWordState(keepPrevious: false)
             composition = .empty

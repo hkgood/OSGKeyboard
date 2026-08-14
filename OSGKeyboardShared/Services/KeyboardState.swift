@@ -144,6 +144,9 @@ public final class KeyboardState: ObservableObject {
     @Published public var enabledClipboardSkillIDs: [String] = AIAgentSkillLayout.defaultEnabledIDs
     /// Export skill currently waiting on the LLM. Nil for transform skills.
     @Published public var pendingClipboardSkillID: String?
+    /// Clipboard captured when that export skill was tapped, so the body
+    /// still exists after the 30-second hint window closes.
+    public var pendingClipboardSkillSource: String?
     /// In-keyboard toast (e.g. no todos). Does not leave the host app.
     @Published public var skillTipText: String?
     /// Host field is a password / secure entry — never read pasteboard.
@@ -219,12 +222,37 @@ public final class KeyboardState: ObservableObject {
     public enum ReturnKeyRole: Equatable {
         case newline
         case send
+        case go
+        case search
+        case join
+        case done
+        case next
+        case `continue`
+        case route
+        case google
+        case yahoo
+        case emergencyCall
 
         public var titleKey: String {
             switch self {
             case .newline: return "common.newline"
-            case .send:    return "common.send"
+            case .send: return "common.send"
+            case .go: return "keyboard.return.go"
+            case .search: return "keyboard.return.search"
+            case .join: return "keyboard.return.join"
+            case .done: return "common.done"
+            case .next: return "keyboard.return.next"
+            case .continue: return "common.continue"
+            case .route: return "keyboard.return.route"
+            case .google: return "keyboard.return.google"
+            case .yahoo: return "keyboard.return.yahoo"
+            case .emergencyCall: return "keyboard.return.emergencyCall"
             }
+        }
+
+        /// Green action chrome (system uses blue for Go / Search / Send / Done).
+        public var usesActionFill: Bool {
+            self != .newline
         }
     }
 

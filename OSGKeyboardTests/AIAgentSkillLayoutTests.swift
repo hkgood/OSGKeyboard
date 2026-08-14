@@ -163,12 +163,24 @@ final class AIAgentSkillLayoutTests: XCTestCase {
         XCTAssertNil(AIAgentShortcutRun.decode(data))
     }
 
-    func testShortcutsRunURLEncodesNameAndText() {
-        let url = AIAgentShortcutRun.shortcutsRunURL(name: "OSG · 提取待办", text: "买牛奶\n回邮件")
+    func testShortcutsRunURLPreservesNotesFieldSeparator() {
+        let text = "周会纪要\(AINoteExport.fieldSeparator)第一项\n第二项"
+        let url = AIAgentShortcutRun.shortcutsRunURL(name: "OSGSaveToNotes", text: text)
+        let raw = url?.absoluteString ?? ""
+        XCTAssertFalse(raw.contains("<"), "angle brackets in the URL get stripped by Shortcuts")
+        XCTAssertFalse(raw.contains(">"))
+        let items = URLComponents(url: url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        XCTAssertEqual(items.first { $0.name == "text" }?.value, text)
+        XCTAssertTrue(text.contains("||OSG_NOTE||"))
+    }
+
+    func testShortcutsRunURLIncludesNameAndText() {
+        let shortcutName = AIClipboardSkillCatalog.extractTodosShortcutName
+        let url = AIAgentShortcutRun.shortcutsRunURL(name: shortcutName, text: "买牛奶\n回邮件")
         XCTAssertEqual(url?.scheme, "shortcuts")
         XCTAssertEqual(url?.host, "run-shortcut")
         let items = URLComponents(url: url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
-        XCTAssertEqual(items.first { $0.name == "name" }?.value, "OSG · 提取待办")
+        XCTAssertEqual(items.first { $0.name == "name" }?.value, "OSGExtractTodos")
         XCTAssertEqual(items.first { $0.name == "input" }?.value, "text")
         XCTAssertEqual(items.first { $0.name == "text" }?.value, "买牛奶\n回邮件")
         XCTAssertNil(items.first { $0.name == "x-success" })
@@ -176,7 +188,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
 
     func testXCallbackRunURLUsesCallbackHost() {
         let url = AIAgentShortcutRun.shortcutsRunURL(
-            name: "OSG · 提取待办",
+            name: AIClipboardSkillCatalog.extractTodosShortcutName,
             text: "买牛奶",
             xSuccess: "osgkeyboard://skill/shortcut-result?status=success",
             xError: "osgkeyboard://skill/shortcut-result?status=error",
@@ -197,49 +209,65 @@ final class AIAgentSkillLayoutTests: XCTestCase {
         XCTAssertEqual(AIAgentShortcutRun.preview("买牛奶\n回邮件"), "买牛奶\\n回邮件")
     }
 
-    func testExtractTodosUsesICloudShareLink() {
+    func testExtractTodosUsesBundledShortcut() {
         let skill = AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.extractTodosID)
-        XCTAssertEqual(
-            skill?.shortcutICloudURL,
-            AIClipboardSkillCatalog.extractTodosShortcutICloudURL
-        )
-        XCTAssertEqual(skill?.shortcutICloudURL?.host, "www.icloud.com")
-        XCTAssertEqual(skill?.shortcutName, "OSG · 提取待办")
+        XCTAssertNil(skill?.shortcutICloudURL)
+        XCTAssertEqual(skill?.shortcutName, "OSGExtractTodos")
         XCTAssertEqual(skill?.shortcutResourceName, "OSGExtractTodos")
     }
 
-    func testExtractEventsUsesICloudShareLink() {
+    func testExtractEventsUsesBundledShortcut() {
         let skill = AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.extractEventsID)
-        XCTAssertEqual(
-            skill?.shortcutICloudURL,
-            AIClipboardSkillCatalog.extractEventsShortcutICloudURL
-        )
-        XCTAssertEqual(skill?.shortcutICloudURL?.host, "www.icloud.com")
-        XCTAssertEqual(skill?.shortcutName, "OSG · 提取日程")
+        XCTAssertNil(skill?.shortcutICloudURL)
+        XCTAssertEqual(skill?.shortcutName, "OSGExtractEvents")
         XCTAssertEqual(
             skill?.shortcutResourceName,
             "OSGExtractEvents"
         )
         XCTAssertEqual(skill?.systemImage, "calendar")
         XCTAssertFalse(skill?.isDefault ?? true)
-        XCTAssertEqual(
-            AIAgentShortcutRun.iCloudShareToken(from: skill!.shortcutICloudURL!),
-            "1f4afcf7ee22400cbf84e319d969aadf"
-        )
     }
 
-    func testNavigateUsesBundledShortcut() {
+    func testNavigateDoesNotRequireShortcut() {
         let skill = AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.navigateID)
+        XCTAssertNil(skill?.shortcutName)
         XCTAssertNil(skill?.shortcutICloudURL)
-        XCTAssertEqual(skill?.shortcutName, "OSG · 导航")
-        XCTAssertEqual(skill?.shortcutResourceName, "OSGNavigate")
+        XCTAssertNil(skill?.shortcutResourceName)
         XCTAssertEqual(
             skill?.systemImage,
             "arrow.triangle.turn.up.right.diamond.fill"
         )
         XCTAssertFalse(skill?.isDefault ?? true)
         XCTAssertEqual(skill?.kind, .export)
+        XCTAssertFalse(skill?.requiresShortcut ?? true)
+    }
+
+    func testNavigateEnablesWithoutShortcutConfirmation() {
+        let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
+        XCTAssertEqual(
+            store.enable(AIClipboardSkillCatalog.navigateID),
+            .enabled
+        )
+        XCTAssertTrue(store.layout.isEnabled(AIClipboardSkillCatalog.navigateID))
+    }
+
+    func testSaveToNotesUsesBundledShortcutUntilICloudShareExists() {
+        let skill = AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.saveToNotesID)
+        XCTAssertNil(skill?.shortcutICloudURL)
+        XCTAssertEqual(skill?.shortcutName, "OSGSaveToNotes")
+        XCTAssertEqual(skill?.shortcutResourceName, "OSGSaveToNotes")
+        XCTAssertEqual(skill?.systemImage, "note.text")
+        XCTAssertFalse(skill?.isDefault ?? true)
         XCTAssertTrue(skill?.requiresShortcut ?? false)
+    }
+
+    func testCannotEnableSaveToNotesBeforeShortcutConfirmation() {
+        let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
+        XCTAssertEqual(
+            store.enable(AIClipboardSkillCatalog.saveToNotesID),
+            .needsShortcut
+        )
+        XCTAssertFalse(store.layout.isEnabled(AIClipboardSkillCatalog.saveToNotesID))
     }
 
     func testICloudShareLinkMapsToShortcutsInstallURL() {

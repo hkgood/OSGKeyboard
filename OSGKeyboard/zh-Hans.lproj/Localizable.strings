@@ -456,6 +456,8 @@
 "skills.extractTodos.description" = "从复制内容提取待办，写入提醒事项。";
 "skills.extractEvents.name" = "提取日程";
 "skills.extractEvents.description" = "从复制内容提取日程，写入日历。";
+"skills.saveToNotes.name" = "存入备忘录";
+"skills.saveToNotes.description" = "根据复制内容和当前时间生成标题，写入一条新的备忘录；正文保持原文。";
 "skills.navigate.name" = "导航";
 "skills.navigate.description" = "从复制内容识别地址并开始驾车导航。优先高德，其次百度，最后 Apple 地图。";
 "skills.install.lead" = "添加后点「我已添加」，请勿改名。";

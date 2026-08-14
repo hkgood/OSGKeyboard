@@ -484,7 +484,7 @@ public struct KeyboardRootView: View {
             title: title,
             label: title,
             disabled: disabled,
-            isSend: state.returnKeyRole == .send,
+            isSend: state.returnKeyRole.usesActionFill,
             hapticIntensity: state.keyboardHapticIntensity
         ) {
             state.insertNewline()

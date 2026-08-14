@@ -265,4 +265,15 @@ final class AIClipboardSkillTests: XCTestCase {
         XCTAssertTrue(prompt.contains("NONE"))
         XCTAssertTrue(prompt.contains("起点|终点"))
     }
+
+    func testSaveToNotesAsksForTitleNotBody() {
+        let prompt = AIClipboardSkillCatalog.instruction(
+            skillID: AIClipboardSkillCatalog.saveToNotesID,
+            locale: "zh",
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
+        )
+        XCTAssertTrue(prompt.contains("标题"))
+        XCTAssertTrue(prompt.contains("不要输出正文"))
+        XCTAssertTrue(prompt.contains("不要输出 NONE"))
+    }
 }

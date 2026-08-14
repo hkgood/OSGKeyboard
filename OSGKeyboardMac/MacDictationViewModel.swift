@@ -28,13 +28,14 @@ enum MacSection: String, CaseIterable, Identifiable {
         }
     }
 
-    var systemImage: String {
+    /// Outline when idle, fill when selected — except Home, which stays `house`.
+    func systemImage(selected: Bool) -> String {
         switch self {
         case .dashboard: return "house"
         case .history: return "clock.arrow.circlepath"
         case .dictionary: return "character.book.closed"
-        case .styles: return "text.badge.star"
-        case .settings: return "gearshape"
+        case .styles: return selected ? "dial.high.fill" : "dial.high"
+        case .settings: return selected ? "gearshape.fill" : "gearshape"
         }
     }
 }

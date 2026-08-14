@@ -123,7 +123,7 @@ private struct MacSidebarRow: View {
 
     var body: some View {
         Button(action: action) {
-            Label(section.title(language: language), systemImage: section.systemImage)
+            Label(section.title(language: language), systemImage: section.systemImage(selected: isSelected))
                 .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
                 .foregroundStyle(isSelected ? palette.accent : palette.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)

@@ -2,8 +2,7 @@
 // OSGKeyboard · Shared
 //
 // Builds one turn-by-turn URL. Provider order is Amap (高德) → Baidu →
-// Apple Maps. Shortcuts cannot call `canOpenURL`, so the host injects that
-// check and passes the resulting URL to the companion Shortcut.
+// Apple Maps. The host calls `canOpenURL` and opens the URL itself.
 
 import Foundation
 

@@ -3,7 +3,8 @@
 //
 // Grid-level UIKit touch tracking for the typing surface:
 // Down highlight → Move reselect → Up commit (letters / space / return),
-// delete repeats on down, Shift holds while the gesture owns it.
+// overlapping fingers commit in press order, delete repeats on down,
+// Shift holds while that finger owns it.
 
 import SwiftUI
 import UIKit
@@ -12,7 +13,7 @@ import OSGKeyboardShared
 struct TypingKeyTouchPad: UIViewRepresentable {
     var layout: TypingKeyLayout
     var hapticIntensity: KeyboardHapticIntensity
-    var onHighlightChange: (String?) -> Void
+    var onHighlightChange: (Set<String>) -> Void
     var onCommit: (TypingKeyHitTarget) -> Void
     var onDeleteFire: () -> Void
     var onShiftBegan: () -> Void
@@ -36,8 +37,7 @@ struct TypingKeyTouchPad: UIViewRepresentable {
     @MainActor
     final class Coordinator {
         var parent: TypingKeyTouchPad
-        private var activeKeyID: String?
-        private var gestureOwnsShift = false
+        private let tracker = TypingTouchTracker()
         private var deleteRepeatTask: Task<Void, Never>?
         private var deleteRepeatStartedAt: Date?
         private var isDeleteRepeating = false
@@ -46,71 +46,23 @@ struct TypingKeyTouchPad: UIViewRepresentable {
             self.parent = parent
         }
 
-        func handleBegan(at point: CGPoint) {
-            resetDeleteRepeat()
-            gestureOwnsShift = false
-            guard let key = hit(at: point) else {
-                setHighlight(nil)
-                return
-            }
-            activate(key)
+        func handleBegan(id: ObjectIdentifier, at point: CGPoint) {
+            apply(tracker.began(id: id, key: hit(at: point)))
         }
 
-        func handleMoved(at point: CGPoint) {
-            let key = hit(at: point)
-            if key?.id == activeKeyID { return }
-
-            if activeBehavior == .deleteRepeat {
-                stopDeleteRepeat()
-            }
-
-            if let key {
-                activate(key)
-            } else {
-                // Outside plane: clear highlight; Shift stays held until ended.
-                setHighlight(nil)
-                activeKeyID = nil
-            }
+        func handleMoved(id: ObjectIdentifier, at point: CGPoint) {
+            apply(tracker.moved(id: id, key: hit(at: point)))
         }
 
-        func handleEnded(at point: CGPoint) {
-            // Outside the key plane → cancel (no commit), per accuracy plan.
-            let key = hit(at: point)
-            stopDeleteRepeat()
-
-            defer {
-                setHighlight(nil)
-                activeKeyID = nil
-                finishShiftIfNeeded()
-            }
-
-            guard let key else { return }
-
-            switch key.behavior {
-            case .commitOnRelease:
-                parent.onCommit(key)
-            case .deleteRepeat:
-                // Already fired on down / while held.
-                break
-            case .shiftHold:
-                // endShiftHold decides tap vs hold-with-type.
-                break
-            }
+        func handleEnded(id: ObjectIdentifier, at point: CGPoint) {
+            apply(tracker.ended(id: id, key: hit(at: point)))
         }
 
-        func handleCancelled() {
-            stopDeleteRepeat()
-            setHighlight(nil)
-            activeKeyID = nil
-            finishShiftIfNeeded()
+        func handleCancelled(id: ObjectIdentifier) {
+            apply(tracker.cancelled(id: id))
         }
 
         // MARK: - Internals
-
-        private var activeBehavior: TypingKeyTouchBehavior? {
-            guard let activeKeyID else { return nil }
-            return parent.layout.key(id: activeKeyID)?.behavior
-        }
 
         private func hit(at point: CGPoint) -> TypingKeyHitTarget? {
             let layout = parent.layout
@@ -124,27 +76,29 @@ struct TypingKeyTouchPad: UIViewRepresentable {
             )
         }
 
-        private func activate(_ key: TypingKeyHitTarget) {
-            activeKeyID = key.id
-            setHighlight(key.id)
-            playFeedback(for: key)
-
-            switch key.behavior {
-            case .commitOnRelease:
-                break
-            case .deleteRepeat:
-                parent.onDeleteFire()
-                startDeleteRepeat()
-            case .shiftHold:
-                if !gestureOwnsShift {
-                    gestureOwnsShift = true
-                    parent.onShiftBegan()
-                }
+        private func apply(_ effects: TypingTouchEffects) {
+            if effects.stopDeleteRepeat {
+                stopDeleteRepeat()
             }
-        }
-
-        private func setHighlight(_ id: String?) {
-            parent.onHighlightChange(id)
+            for key in effects.commits {
+                parent.onCommit(key)
+            }
+            if let key = effects.playFeedback {
+                playFeedback(for: key)
+            }
+            if effects.deleteFire {
+                parent.onDeleteFire()
+            }
+            if effects.startDeleteRepeat {
+                startDeleteRepeat()
+            }
+            if effects.beginShift {
+                parent.onShiftBegan()
+            }
+            if effects.endShift {
+                parent.onShiftEnded()
+            }
+            parent.onHighlightChange(tracker.highlightedKeyIDs)
         }
 
         private func playFeedback(for key: TypingKeyHitTarget) {
@@ -207,16 +161,6 @@ struct TypingKeyTouchPad: UIViewRepresentable {
             deleteRepeatTask?.cancel()
             deleteRepeatTask = nil
         }
-
-        private func resetDeleteRepeat() {
-            stopDeleteRepeat()
-        }
-
-        private func finishShiftIfNeeded() {
-            guard gestureOwnsShift else { return }
-            gestureOwnsShift = false
-            parent.onShiftEnded()
-        }
     }
 }
 
@@ -239,7 +183,7 @@ final class TypingKeyTouchPadUIView: UIView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = Self.padTint
-        isMultipleTouchEnabled = false
+        isMultipleTouchEnabled = true
         isExclusiveTouch = true
         isUserInteractionEnabled = true
     }
@@ -250,21 +194,30 @@ final class TypingKeyTouchPadUIView: UIView {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first else { return }
-        coordinator?.handleBegan(at: touch.location(in: self))
+        for touch in Self.sorted(touches) {
+            coordinator?.handleBegan(id: ObjectIdentifier(touch), at: touch.location(in: self))
+        }
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first else { return }
-        coordinator?.handleMoved(at: touch.location(in: self))
+        for touch in Self.sorted(touches) {
+            coordinator?.handleMoved(id: ObjectIdentifier(touch), at: touch.location(in: self))
+        }
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard let touch = touches.first else { return }
-        coordinator?.handleEnded(at: touch.location(in: self))
+        for touch in Self.sorted(touches) {
+            coordinator?.handleEnded(id: ObjectIdentifier(touch), at: touch.location(in: self))
+        }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
-        coordinator?.handleCancelled()
+        for touch in Self.sorted(touches) {
+            coordinator?.handleCancelled(id: ObjectIdentifier(touch))
+        }
+    }
+
+    private static func sorted(_ touches: Set<UITouch>) -> [UITouch] {
+        touches.sorted { $0.timestamp < $1.timestamp }
     }
 }
