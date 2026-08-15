@@ -54,6 +54,7 @@ enum WhatsNewDemoDriver {
                 "WhatsNewDemo start scenario=\(armed.scenario.rawValue) lang=\(armed.language.rawValue)",
                 category: "boot"
             )
+            AIKeyboardView.debugPreviewSkills = nil
             polishDemoChrome(state)
             switch armed.scenario {
             case .edit:
@@ -66,7 +67,19 @@ enum WhatsNewDemoDriver {
             case .ai:
                 await runAI(state: state, host: host, language: armed.language)
             case .clipboard:
-                await runClipboard(state: state, host: host, language: armed.language)
+                await runClipboard(
+                    state: state,
+                    host: host,
+                    language: armed.language,
+                    showsSkills: false
+                )
+            case .clipboardSkills:
+                await runClipboard(
+                    state: state,
+                    host: host,
+                    language: armed.language,
+                    showsSkills: true
+                )
             }
             if !Task.isCancelled {
                 WhatsNewDemoScenario.finishPlaying()
@@ -215,7 +228,8 @@ enum WhatsNewDemoDriver {
     private static func runClipboard(
         state: KeyboardState,
         host: HostHooks,
-        language: WhatsNewDemoScenario.Language
+        language: WhatsNewDemoScenario.Language,
+        showsSkills: Bool
     ) async {
         let samples = language == .en
             ? [
@@ -273,6 +287,18 @@ enum WhatsNewDemoDriver {
             polishDemoChrome(state)
             try? await sleep(0.2)
         }
+
+        guard showsSkills else { return }
+
+        // The 1.8.0 clip continues from clipboard history into the real AI
+        // quick-skill row while the freshly copied item is still actionable.
+        clearClipboardChrome(state)
+        state.surface = .ai
+        state.aiServiceAvailable = true
+        AIKeyboardView.debugPreviewSkills = Array(AIClipboardSkillCatalog.catalog.prefix(5))
+        state.aiSession.enter()
+        polishDemoChrome(state)
+        try? await sleep(2.8)
     }
 
     // MARK: - Host helpers

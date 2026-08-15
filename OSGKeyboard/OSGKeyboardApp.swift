@@ -95,7 +95,7 @@ struct OSGKeyboardApp: App {
                 forKey: AppGroupConfiguration.Keys.uiLanguage
             )
             // Clipboard demo needs history + suggestion strip flags on.
-            if scenario == .clipboard {
+            if scenario == .clipboard || scenario == .clipboardSkills {
                 defaults.set(true, forKey: AppGroupConfiguration.Keys.clipboardHistoryEnabled)
                 defaults.set(
                     true,
@@ -175,6 +175,10 @@ struct OSGKeyboardApp: App {
         case (.clipboard, .zh):
             return "待办："
         case (.clipboard, .en):
+            return "Todo: "
+        case (.clipboardSkills, .zh):
+            return "待办："
+        case (.clipboardSkills, .en):
             return "Todo: "
         }
     }

@@ -11,6 +11,7 @@ public enum WhatsNewDemoScenario: String, Sendable {
     case edit
     case ai
     case clipboard
+    case clipboardSkills
 
     public enum Keys {
         public static let scenario = "debug.whatsNew.demoScenario"

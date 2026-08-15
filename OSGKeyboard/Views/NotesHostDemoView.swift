@@ -20,8 +20,8 @@ struct NotesHostDemoView: View {
         switch (scenario, language) {
         case (.ai, .en): return "Messages"
         case (.ai, .zh): return "信息"
-        case (.edit, .en), (.clipboard, .en): return "Notes"
-        case (.edit, .zh), (.clipboard, .zh): return "备忘录"
+        case (.edit, .en), (.clipboard, .en), (.clipboardSkills, .en): return "Notes"
+        case (.edit, .zh), (.clipboard, .zh), (.clipboardSkills, .zh): return "备忘录"
         }
     }
 
