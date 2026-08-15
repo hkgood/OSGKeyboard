@@ -83,7 +83,7 @@ LocalASRBiasAdapter.adapt(
 | `hardHotwords` | 为具备 hard-hotword capability 的 backend 保留；当前 Qwen3 MLX 不使用 |
 
 个人词优先；`BuiltinLexiconIndex` 从 `phrases.tsv` 选择 `weight >= 4` 的 Top-N，
-代码编辑器/终端前台场景优先项目维护的 `ai_tech_seed`。默认最多考虑 300 个内置 ASR 词，
+代码编辑器/终端前台场景优先 `computer_terms`。默认最多考虑 300 个内置 ASR 词，
 Qwen3 soft prompt 最长 800 字符，润色补充最多 40 个内置词。
 
 ### 2.3 Apple Speech fallback

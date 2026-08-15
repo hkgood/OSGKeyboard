@@ -8,7 +8,7 @@ import Foundation
 
 public enum LocalASRBiasAdapter {
 
-    /// Bundle IDs where the curated AI/technology vocabulary is especially likely.
+    /// Bundle IDs where computer-science vocabulary is especially likely.
     private static let codeEditorBundleIDs: Set<String> = [
         "com.apple.dt.Xcode",
         "com.microsoft.VSCode",
@@ -119,7 +119,7 @@ public enum LocalASRBiasAdapter {
 
     private static func preferredLexiconSources(for bundleId: String?) -> Set<String>? {
         guard let bundleId, codeEditorBundleIDs.contains(bundleId) else { return nil }
-        return ["ai_tech_seed"]
+        return ["computer_terms"]
     }
 
     private static func hardHotwordList(from terms: [String], maxCount: Int) -> [String] {

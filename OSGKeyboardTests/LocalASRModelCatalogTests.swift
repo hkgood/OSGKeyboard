@@ -106,7 +106,7 @@ final class LocalASRModelCatalogTests: XCTestCase {
     func testMLXAdapterProducesPromptBiasNotHardHotwords() throws {
         let fixtureURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("phrases-\(UUID().uuidString).tsv")
-        try "word\tpinyin\tsource\tweight\nSwiftUI\tswift ui\tai_tech_seed\t90\n"
+        try "word\tpinyin\tsource\tweight\nSwiftUI\tswift ui\tcomputer_terms\t5\n"
             .write(to: fixtureURL, atomically: true, encoding: .utf8)
         defer { try? FileManager.default.removeItem(at: fixtureURL) }
 

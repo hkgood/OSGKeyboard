@@ -3,9 +3,7 @@
 // export_clm.swift
 // OSGKeyboard · offline SFCustomLanguageModelData exporter (macOS 14+)
 //
-// Reads the project-curated AI/tech TSV and writes a .bin training asset via
-// Speech framework. The normalized four-column TSV beside the binary also
-// powers the Mac runtime bias index.
+// Reads merged phrase TSVs and writes a .bin training asset via Speech framework.
 // Usage:
 //   swift Scripts/lexicon/export_clm.swift
 //   swift Scripts/lexicon/export_clm.swift --max-entries 30000
@@ -17,6 +15,7 @@ import Speech
 // MARK: - CLI
 
 struct CLIOptions {
+    var domainTSV: URL
     var aiTechTSV: URL
     var outputBin: URL
     var localeID: String
@@ -30,6 +29,9 @@ struct CLIOptions {
             .deletingLastPathComponent()
             .deletingLastPathComponent()
 
+        var domain = repoRoot.appendingPathComponent(
+            "OSGKeyboard/Resources/CustomLanguageModel/v1/phrases.tsv"
+        )
         var aiTech = repoRoot.appendingPathComponent(
             "OSGKeyboard/Resources/CustomLanguageModel/ai-tech-brands/v1/phrases.tsv"
         )
@@ -38,12 +40,14 @@ struct CLIOptions {
         )
         var localeID = "zh_CN"
         var modelID = "com.osgkeyboard.custom-lm.v1"
-        var modelVersion = "1.0.1"
+        var modelVersion = "1.0.0"
         var maxEntries: Int?
 
         var iterator = CommandLine.arguments.dropFirst().makeIterator()
         while let flag = iterator.next() {
             switch flag {
+            case "--domain-tsv", "--sogou-tsv":
+                domain = URL(fileURLWithPath: iterator.next() ?? "")
             case "--ai-tech-tsv":
                 aiTech = URL(fileURLWithPath: iterator.next() ?? "")
             case "--output":
@@ -67,6 +71,7 @@ struct CLIOptions {
         }
 
         return CLIOptions(
+            domainTSV: domain,
             aiTechTSV: aiTech,
             outputBin: output,
             localeID: localeID,
@@ -81,7 +86,8 @@ struct CLIOptions {
         export_clm.swift — build SFCustomLanguageModelData .bin on macOS
 
         Options:
-          --ai-tech-tsv <path>   Project-curated AI/tech phrases TSV
+          --domain-tsv <path>    Domain phrases TSV (computer/IT terms)
+          --ai-tech-tsv <path>   AI/tech seed phrases TSV
           --output <path>        Output .bin path
           --locale <id>          Locale identifier (default: zh_CN)
           --identifier <id>      Custom LM identifier
@@ -96,7 +102,6 @@ struct CLIOptions {
 
 struct PhraseEntry: Hashable {
     let phrase: String
-    let pinyin: String
     let weight: Int
     let source: String
 }
@@ -121,7 +126,7 @@ enum TSVLoader {
             }
 
             // Formats:
-            // normalized: word, pinyin, source, weight
+            // domain: word, pinyin, source, weight
             // ai-tech: word, pinyin, source, category, weight, canonical
             let weight: Int
             if parts.count >= 6, let parsed = Int(parts[4]) {
@@ -132,16 +137,8 @@ enum TSVLoader {
                 weight = 1
             }
 
-            let pinyin = parts.count >= 2 ? parts[1] : ""
             let source = parts.count >= 3 ? parts[2] : sourceLabel
-            entries.append(
-                PhraseEntry(
-                    phrase: word,
-                    pinyin: pinyin,
-                    weight: max(1, weight),
-                    source: source
-                )
-            )
+            entries.append(PhraseEntry(phrase: word, weight: max(1, weight), source: source))
         }
 
         return entries
@@ -174,13 +171,17 @@ enum ExportCLM {
         let options = CLIOptions.parse()
         let fm = FileManager.default
 
+        guard fm.fileExists(atPath: options.domainTSV.path) else {
+            throw ExportError.missingInput(options.domainTSV.path)
+        }
         guard fm.fileExists(atPath: options.aiTechTSV.path) else {
             throw ExportError.missingInput(options.aiTechTSV.path)
         }
 
         fputs("Loading phrases…\n", stderr)
+        let domain = try TSVLoader.load(from: options.domainTSV, sourceLabel: "computer_terms")
         let aiTech = try TSVLoader.load(from: options.aiTechTSV, sourceLabel: "ai_tech_seed")
-        var merged = TSVLoader.merge([aiTech])
+        var merged = TSVLoader.merge([domain, aiTech])
 
         if let cap = options.maxEntries, merged.count > cap {
             merged = Array(merged.prefix(cap))
@@ -188,7 +189,7 @@ enum ExportCLM {
         }
 
         fputs(
-            "Loaded \(merged.count) unique project-curated AI/tech phrases\n",
+            "Merged \(merged.count) unique phrases (domain=\(domain.count), ai-tech=\(aiTech.count))\n",
             stderr
         )
         fputs("Locale=\(options.localeID) identifier=\(options.modelID) version=\(options.modelVersion)\n", stderr)
@@ -217,15 +218,6 @@ enum ExportCLM {
             try fm.removeItem(at: outputURL)
         }
 
-        let phrasesURL = parent.appendingPathComponent("phrases.tsv")
-        let normalizedLines = merged.map { entry in
-            "\(entry.phrase)\t\(entry.pinyin)\t\(entry.source)\t\(entry.weight)"
-        }
-        let normalizedTSV = (["word\tpinyin\tsource\tweight"] + normalizedLines)
-            .joined(separator: "\n") + "\n"
-        try normalizedTSV.write(to: phrasesURL, atomically: true, encoding: .utf8)
-        fputs("Wrote \(phrasesURL.path)\n", stderr)
-
         fputs("Exporting to \(outputURL.path)…\n", stderr)
         try await data.export(to: outputURL)
 
@@ -244,6 +236,7 @@ enum ExportCLM {
             "version": options.modelVersion,
             "phrase_count": merged.count,
             "sources": [
+                "computer_terms": domain.count,
                 "ai_tech_seed": aiTech.count,
             ],
             "bin_file": outputURL.lastPathComponent,
@@ -253,32 +246,6 @@ enum ExportCLM {
         let manifestData = try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys])
         try manifestData.write(to: manifestURL)
         fputs("Wrote \(manifestURL.path)\n", stderr)
-
-        let sourceManifestURL = parent.appendingPathComponent("manifest.json")
-        let sourceManifest: [String: Any] = [
-            "version": "v1",
-            "generated_at": ISO8601DateFormatter().string(from: Date()),
-            "locale": "zh-Hans",
-            "entry_count": merged.count,
-            "sources": [[
-                "key": "ai_tech_seed",
-                "label": "OSGKeyboard curated AI/tech lexicon",
-                "license": "MIT (curated seed; OSGKeyboard contributors)",
-                "raw_count": aiTech.count,
-            ]],
-            "notes": [
-                "Project-curated bilingual AI brands, technology terms, companies, and names.",
-                "No third-party cell dictionaries or Sogou-derived data.",
-                "PhraseCount weights map to SFCustomLanguageModelData relative frequencies.",
-            ],
-            "files": ["phrases": "phrases.tsv"],
-        ]
-        let sourceManifestData = try JSONSerialization.data(
-            withJSONObject: sourceManifest,
-            options: [.prettyPrinted, .sortedKeys]
-        )
-        try sourceManifestData.write(to: sourceManifestURL)
-        fputs("Wrote \(sourceManifestURL.path)\n", stderr)
     }
 }
 

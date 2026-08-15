@@ -1,13 +1,14 @@
 {
-  "bin_bytes" : 41456,
+  "bin_bytes" : 198494,
   "bin_file" : "OSGKeyboardCLM.bin",
-  "export_seconds" : 0.030717015266418457,
-  "generated_at" : "2026-08-14T15:07:23Z",
+  "export_seconds" : 0.035165071487426758,
+  "generated_at" : "2026-07-06T13:16:27Z",
   "identifier" : "com.osgkeyboard.custom-lm.v1",
   "locale" : "zh_CN",
-  "phrase_count" : 3040,
+  "phrase_count" : 13329,
   "sources" : {
-    "ai_tech_seed" : 3040
+    "ai_tech_seed" : 3040,
+    "computer_terms" : 10300
   },
-  "version" : "1.0.1"
+  "version" : "1.0.0"
 }
