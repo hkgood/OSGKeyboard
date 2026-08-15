@@ -17,6 +17,16 @@ final class KeyboardFlowCoordinator {
         }
     }
 
+    private enum VoiceCancellationKind {
+        case dictation
+        case aiQuestion
+    }
+
+    private enum ResultWatchdogPurpose {
+        case delivery
+        case cancellation
+    }
+
     private let state: KeyboardState
     private let textInserter: KeyboardTextInserter
     private let hasFullAccess: () -> Bool
@@ -369,7 +379,7 @@ final class KeyboardFlowCoordinator {
             writeCommand(.abort)
             isFlowRecording = false
             isAwaitingFlowResult = true
-            startFlowResultWatchdog()
+            startFlowResultWatchdog(purpose: .cancellation)
             traceState(
                 "orphanedEdit.failClosed",
                 extra: "utterance=\(busyID.uuidString.prefix(8))"
@@ -692,7 +702,7 @@ final class KeyboardFlowCoordinator {
     func cancelAIRecording() {
         guard currentUtteranceRequest?.isAIQuestion == true else { return }
         prepareLocalCancel()
-        beginAwaitingAbort(tracking: &cancelledAIUtteranceIDs)
+        beginAwaitingAbort(kind: .aiQuestion)
     }
 
     func endAIConversation(_ conversationID: UUID) {
@@ -727,7 +737,7 @@ final class KeyboardFlowCoordinator {
         prepareLocalCancel()
         let hadIssuedTransport = currentUtteranceId != nil
             && (isFlowRecording || isAwaitingFlowResult)
-        beginAwaitingAbort(tracking: &cancelledDictationUtteranceIDs)
+        beginAwaitingAbort(kind: .dictation)
         traceState(
             "dictation.cancelled",
             extra: hadIssuedTransport
@@ -753,24 +763,39 @@ final class KeyboardFlowCoordinator {
     }
 
     /// Keep the cancel chrome (X + white mic) until the host finishes abort.
-    private func beginAwaitingAbort(tracking cancelledIDs: inout Set<UUID>) {
+    private func beginAwaitingAbort(kind: VoiceCancellationKind) {
         guard let utteranceID = currentUtteranceId,
               isFlowRecording || isAwaitingFlowResult else {
             finishLocalCancel()
             return
         }
-        if cancelledIDs.contains(utteranceID), isAwaitingFlowResult {
+        let inserted = registerCancelledUtterance(utteranceID, kind: kind)
+        if !inserted, isAwaitingFlowResult {
             state.phase = .processing
             recomputeMicVoiceAvailability()
             return
         }
-        cancelledIDs.insert(utteranceID)
         writeCommand(.abort)
         isFlowRecording = false
         isAwaitingFlowResult = true
         state.phase = .processing
-        startFlowResultWatchdog()
+        startFlowResultWatchdog(purpose: .cancellation)
         recomputeMicVoiceAvailability()
+    }
+
+    /// Register cancellation before starting the watchdog. Keeping the mutation
+    /// in this leaf method prevents a stored-property `inout` access from
+    /// overlapping watchdog reads and triggering Swift's exclusivity trap.
+    private func registerCancelledUtterance(
+        _ utteranceID: UUID,
+        kind: VoiceCancellationKind
+    ) -> Bool {
+        switch kind {
+        case .dictation:
+            return cancelledDictationUtteranceIDs.insert(utteranceID).inserted
+        case .aiQuestion:
+            return cancelledAIUtteranceIDs.insert(utteranceID).inserted
+        }
     }
 
     private func finishLocalCancel() {
@@ -802,7 +827,7 @@ final class KeyboardFlowCoordinator {
             ExtensionScreenWakeLock.release()
             state.phase = .idle
             state.lastTranscript = ""
-            startFlowResultWatchdog()
+            startFlowResultWatchdog(purpose: .cancellation)
             return
         }
         resetEditTransportState()
@@ -2027,21 +2052,14 @@ final class KeyboardFlowCoordinator {
         }
     }
 
-    private func startFlowResultWatchdog() {
+    private func startFlowResultWatchdog(
+        purpose: ResultWatchdogPurpose = .delivery
+    ) {
         stopFlowWatchdog()
         isAwaitingFlowResult = true
         let startedAt = Date().timeIntervalSince1970
-        let isCancelledEdit = currentUtteranceId.map {
-            cancelledEditUtteranceIDs.contains($0)
-        } ?? false
-        let isCancelledDictation = currentUtteranceId.map {
-            cancelledDictationUtteranceIDs.contains($0)
-        } ?? false
-        let isCancelledAI = currentUtteranceId.map {
-            cancelledAIUtteranceIDs.contains($0)
-        } ?? false
         let resultTimeout: TimeInterval
-        if isCancelledEdit || isCancelledDictation || isCancelledAI {
+        if purpose == .cancellation {
             resultTimeout = FlowSessionKeys.utteranceStartBudget
         } else if currentUtteranceRequest?.isAIQuestion == true {
             resultTimeout = FlowSessionKeys.keyboardAIResultTimeout(
