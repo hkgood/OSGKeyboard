@@ -187,7 +187,6 @@ final class KeyboardTextInserter {
         lastInsertedText = nil
         state.undoAvailable = false
         state.editAvailable = false
-        state.assistantSendAvailable = false
         EditableInputReferenceStore.clear()
         OSGLog.keyboardExt.info("undo length=\(text.count, privacy: .public)")
     }
@@ -532,7 +531,6 @@ final class KeyboardTextInserter {
             )
         )
         state.editAvailable = true
-        state.assistantSendAvailable = state.returnKeyRole.usesActionFill
         state.assistantInsertionSucceeded = true
         successPulseTask?.cancel()
         successPulseTask = Task { @MainActor [weak state] in
@@ -556,7 +554,6 @@ final class KeyboardTextInserter {
         lastInsertedText = nil
         state.undoAvailable = false
         state.editAvailable = false
-        state.assistantSendAvailable = false
         EditableInputReferenceStore.clear()
     }
 }

@@ -13,6 +13,7 @@ struct AssistantKeyboardUITestHarness: View {
         case pending
         case skillFailure
         case skills
+        case search
     }
 
     @StateObject private var state = KeyboardState()
@@ -96,8 +97,8 @@ struct AssistantKeyboardUITestHarness: View {
             keyboardState.aiSession.beginPreparing(utteranceID: utteranceID)
             keyboardState.aiSession.beginListening(utteranceID: utteranceID)
         }
-        state.sendAssistantAction = { [weak keyboardState] in
-            keyboardState?.assistantSendAvailable = false
+        state.performAssistantFieldAction = { [weak keyboardState] in
+            keyboardState?.assistantActionAvailable = false
         }
         state.undoLastInsertion = { [weak keyboardState] in
             keyboardState?.undoAvailable = false
@@ -149,7 +150,7 @@ struct AssistantKeyboardUITestHarness: View {
             AIKeyboardView.debugPreviewSkills = nil
             state.undoAvailable = true
             state.editAvailable = true
-            state.assistantSendAvailable = true
+            state.assistantActionAvailable = true
         case .pending:
             AIKeyboardView.debugPreviewSkills = nil
             let utteranceID = UUID()
@@ -164,7 +165,7 @@ struct AssistantKeyboardUITestHarness: View {
                 keyboardState.aiSession.markAnswerInserted(offersSend: true)
                 keyboardState.undoAvailable = true
                 keyboardState.editAvailable = true
-                keyboardState.assistantSendAvailable = true
+                keyboardState.assistantActionAvailable = true
             }
             state.discardPendingAIAnswer = { [weak keyboardState] in
                 keyboardState?.aiSession.discardReadyAnswer()
@@ -176,6 +177,10 @@ struct AssistantKeyboardUITestHarness: View {
             AIKeyboardView.debugPreviewSkills = AIClipboardSkillCatalog.catalog
             state.undoAvailable = true
             state.editAvailable = true
+        case .search:
+            AIKeyboardView.debugPreviewSkills = nil
+            state.returnKeyRole = .search
+            state.assistantActionAvailable = true
         }
     }
 

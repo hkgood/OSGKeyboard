@@ -63,6 +63,8 @@ public final class KeyboardViewController: UIInputViewController {
     /// changes instead of every pass.
     private var lastLoggedLayoutSnapshot: String?
     private var cancellables = Set<AnyCancellable>()
+    /// Coalesces host-document refreshes after mutations issued by this keyboard.
+    private var assistantFieldActionRefreshTask: Task<Void, Never>?
 
     private var editHintScheduler: EditHintScheduler!
     private var textInserter: KeyboardTextInserter!
@@ -166,6 +168,8 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        assistantFieldActionRefreshTask?.cancel()
+        assistantFieldActionRefreshTask = nil
         clipboardCapture?.keyboardWillDisappear()
         // Presentation-scoped hints must never survive a reused extension
         // controller, including an active Flow handoff.
@@ -274,16 +278,16 @@ public final class KeyboardViewController: UIInputViewController {
             state: state,
             host: WhatsNewDemoDriver.HostHooks(
                 insertText: { [weak self] text in
-                    self?.textDocumentProxy.insertText(text)
+                    self?.insertTextIntoDocument(text)
                 },
                 deleteBackward: { [weak self] in
-                    self?.textDocumentProxy.deleteBackward()
+                    self?.deleteBackwardFromDocument()
                 },
                 contextBeforeInput: { [weak self] in
                     self?.textDocumentProxy.documentContextBeforeInput
                 },
                 performReturn: { [weak self] in
-                    self?.textDocumentProxy.insertText("\n")
+                    self?.performDocumentReturn()
                 }
             )
         )
@@ -304,6 +308,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func selectionDidChange(_ textInput: UITextInput?) {
         super.selectionDidChange(textInput)
+        refreshReturnKeyRole()
         typingSession.synchronizeEnglishDocumentContext(caretMoved: true)
         textInserter?.refreshEditingAvailability()
         lastInputEditCoordinator?.refreshContext()
@@ -357,8 +362,8 @@ public final class KeyboardViewController: UIInputViewController {
         editHintScheduler = EditHintScheduler(state: state)
         textInserter = KeyboardTextInserter(
             state: state,
-            insertText: { [weak self] text in self?.textDocumentProxy.insertText(text) },
-            deleteBackward: { [weak self] in self?.textDocumentProxy.deleteBackward() },
+            insertText: { [weak self] text in self?.insertTextIntoDocument(text) },
+            deleteBackward: { [weak self] in self?.deleteBackwardFromDocument() },
             contextBeforeInput: { [weak self] in self?.textDocumentProxy.documentContextBeforeInput },
             fieldContextProvider: { [weak self] in self?.captureFieldContext() },
             selectedText: { [weak self] in self?.textDocumentProxy.selectedText },
@@ -420,7 +425,7 @@ public final class KeyboardViewController: UIInputViewController {
                 self?.textInserter.insertAIAnswer(answer) ?? false
             },
             performReturn: { [weak self] in
-                self?.textDocumentProxy.insertText("\n")
+                self?.performDocumentReturn()
             },
             captureInsertionFingerprint: { [weak self] in
                 self?.captureFieldContext().deliveryFingerprint
@@ -508,8 +513,8 @@ public final class KeyboardViewController: UIInputViewController {
         state.discardPendingAIAnswer = { [weak self] in
             self?.aiKeyboardCoordinator.discardPendingAnswer()
         }
-        state.sendAssistantAction = { [weak self] in
-            self?.aiKeyboardCoordinator.sendCurrentFieldAction()
+        state.performAssistantFieldAction = { [weak self] in
+            self?.aiKeyboardCoordinator.performCurrentFieldAction()
         }
         state.submitAIHint = { [weak self] card in
             self?.aiKeyboardCoordinator.submitHintCard(card)
@@ -564,9 +569,9 @@ public final class KeyboardViewController: UIInputViewController {
             self?.configSync.persistTranslationTargetLocaleId(id)
             self?.aiKeyboardCoordinator.resetConversationForConfigurationChange()
         }
-        state.insertNewline       = { [weak self] in self?.textDocumentProxy.insertText("\n") }
-        state.insertSpace         = { [weak self] in self?.textDocumentProxy.insertText(" ") }
-        state.deleteBackward      = { [weak self] in self?.textDocumentProxy.deleteBackward() }
+        state.insertNewline       = { [weak self] in self?.insertTextIntoDocument("\n") }
+        state.insertSpace         = { [weak self] in self?.insertTextIntoDocument(" ") }
+        state.deleteBackward      = { [weak self] in self?.deleteBackwardFromDocument() }
         state.undoLastInsertion   = { [weak self] in self?.textInserter.undoLastInsertion() }
         state.redoLastInsertion   = { [weak self] in self?.textInserter.redoLastInsertion() }
         state.copySelection       = { [weak self] in self?.textInserter.copySelection() }
@@ -710,11 +715,49 @@ public final class KeyboardViewController: UIInputViewController {
         )
     }
 
-    private func refreshReturnKeyRole() {
-        state.returnKeyRole = returnKeyRole(for: textDocumentProxy.returnKeyType ?? .default)
-        if !state.returnKeyRole.usesActionFill {
-            state.assistantSendAvailable = false
+    /// Keeps field-action UI current even when a host app does not immediately
+    /// echo this keyboard's own document mutation through `textDidChange`.
+    private func insertTextIntoDocument(_ text: String) {
+        guard !text.isEmpty else { return }
+        textDocumentProxy.insertText(text)
+        // A non-empty insertion makes content actions available immediately.
+        // The next host callback remains the authoritative correction.
+        refreshAssistantFieldAction(hasTextOverride: true)
+    }
+
+    private func deleteBackwardFromDocument() {
+        textDocumentProxy.deleteBackward()
+        refreshAssistantFieldAction()
+        scheduleAssistantFieldActionRefresh()
+    }
+
+    private func performDocumentReturn() {
+        textDocumentProxy.insertText("\n")
+        scheduleAssistantFieldActionRefresh()
+    }
+
+    private func scheduleAssistantFieldActionRefresh() {
+        assistantFieldActionRefreshTask?.cancel()
+        assistantFieldActionRefreshTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(100))
+            guard !Task.isCancelled, let self else { return }
+            self.refreshAssistantFieldAction()
+            self.assistantFieldActionRefreshTask = nil
         }
+    }
+
+    private func refreshAssistantFieldAction(hasTextOverride: Bool? = nil) {
+        let role = returnKeyRole(for: textDocumentProxy.returnKeyType ?? .default)
+        state.returnKeyRole = role
+        state.assistantActionAvailable = role.assistantActionAvailable(
+            hasText: hasTextOverride ?? textDocumentProxy.hasText
+        )
+    }
+
+    private func refreshReturnKeyRole() {
+        assistantFieldActionRefreshTask?.cancel()
+        assistantFieldActionRefreshTask = nil
+        refreshAssistantFieldAction()
         let isSecure = textDocumentProxy.isSecureTextEntry ?? false
         state.setSecureTextEntry(isSecure)
         clipboardCapture?.secureEntryDidChange(isSecure: isSecure)
@@ -883,10 +926,10 @@ public final class KeyboardViewController: UIInputViewController {
             state: state,
             typing: typingSession,
             onInsert: { [weak self] text in
-                self?.textDocumentProxy.insertText(text)
+                self?.insertTextIntoDocument(text)
             },
             onDeleteBackward: { [weak self] in
-                self?.textDocumentProxy.deleteBackward()
+                self?.deleteBackwardFromDocument()
             }
         )
         let host = KeyboardHostingController(rootView: root)

@@ -24,7 +24,7 @@ final class AssistantKeyboardUITests: XCTestCase {
             element("assistant.mic.dictationRecording", in: app)
                 .waitForExistence(timeout: 3)
         )
-        XCTAssertFalse(element("assistant.send", in: app).isHittable)
+        XCTAssertFalse(element("assistant.action.send", in: app).isHittable)
     }
 
     func testIdleHintHasBalancedSpacingAndFullCapsuleHitTarget() {
@@ -84,7 +84,7 @@ final class AssistantKeyboardUITests: XCTestCase {
         let space = requiredElement("assistant.space", in: app)
         let undo = requiredElement("assistant.undo", in: app)
         let edit = requiredElement("assistant.edit", in: app)
-        let send = requiredElement("assistant.send", in: app)
+        let send = requiredElement("assistant.action.send", in: app)
 
         XCTAssertTrue(send.isEnabled)
         assertNoIntersection(delete, mic)
@@ -126,7 +126,7 @@ final class AssistantKeyboardUITests: XCTestCase {
             element("assistant.mic.idle", in: app)
                 .waitForExistence(timeout: 3)
         )
-        XCTAssertTrue(requiredElement("assistant.send", in: app).isEnabled)
+        XCTAssertTrue(requiredElement("assistant.action.send", in: app).isEnabled)
         XCTAssertTrue(element("assistant.undo", in: app).exists)
         XCTAssertTrue(element("assistant.edit", in: app).exists)
     }
@@ -160,6 +160,14 @@ final class AssistantKeyboardUITests: XCTestCase {
         XCTAssertFalse(element("assistant.skills.pager", in: app).exists)
     }
 
+    func testSearchFieldShowsEnabledSearchAction() {
+        let app = launch(scenario: "search")
+        let search = requiredElement("assistant.action.search", in: app)
+
+        XCTAssertTrue(search.isEnabled)
+        XCTAssertTrue(search.isHittable)
+    }
+
     func testActionGeometrySurvivesLandscapeRotation() {
         let app = launch(scenario: "completed")
         _ = requiredElement("assistant.mic.idle", in: app)
@@ -171,7 +179,7 @@ final class AssistantKeyboardUITests: XCTestCase {
         let space = requiredElement("assistant.space", in: app)
         let undo = requiredElement("assistant.undo", in: app)
         let edit = requiredElement("assistant.edit", in: app)
-        let send = requiredElement("assistant.send", in: app)
+        let send = requiredElement("assistant.action.send", in: app)
         assertNoIntersection(delete, mic)
         assertNoIntersection(space, mic)
         assertNoIntersection(undo, send)

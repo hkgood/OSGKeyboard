@@ -186,9 +186,8 @@ final class AIKeyboardCoordinator {
         requestInsertionFingerprint = nil
     }
 
-    func sendCurrentFieldAction() {
-        guard state.assistantSendAvailable else { return }
-        state.assistantSendAvailable = false
+    func performCurrentFieldAction() {
+        guard state.assistantActionAvailable else { return }
         if state.aiSession.canSend {
             state.aiSession.markAnswerSent()
         }

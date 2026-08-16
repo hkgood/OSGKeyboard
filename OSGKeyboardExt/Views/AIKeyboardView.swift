@@ -15,8 +15,8 @@ struct AIKeyboardView: View {
         static let compactPrimaryHeight: CGFloat = 56
         static let compactPrimaryWidth: CGFloat = 148
         static let secondaryHeight: CGFloat = 52
-        static let sendWidth: CGFloat = 132
-        static let compactIPadSendWidth: CGFloat = 112
+        static let fieldActionWidth: CGFloat = 132
+        static let compactIPadFieldActionWidth: CGFloat = 112
         static let circleSize: CGFloat = 48
         static let compactIPadCircleSize: CGFloat = 44
         static let sideButtonEdgeInset: CGFloat = 8
@@ -64,7 +64,7 @@ struct AIKeyboardView: View {
     @State private var debugSkillsDismissed = false
     @State private var micLongPressConsumed = false
     @State private var micIsHoldingForAI = false
-    @State private var sendConfirmationVisible = false
+    @State private var fieldActionConfirmationVisible = false
 
     private var palette: ThemePalette {
         colorScheme == .dark ? Palette.dark : Palette.light
@@ -184,7 +184,7 @@ struct AIKeyboardView: View {
                 Image(systemName: "plus")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(.white)
-                    .frame(width: Layout.sendWidth, height: 44)
+                    .frame(width: Layout.fieldActionWidth, height: 44)
                     .background(palette.accent, in: Capsule())
             }
             .buttonStyle(.plain)
@@ -827,7 +827,7 @@ struct AIKeyboardView: View {
             .allowsHitTesting(sideButtonsVisible)
             .accessibilityHidden(!sideButtonsVisible)
 
-            sendButton
+            fieldActionButton
         }
         .frame(maxWidth: Layout.actionClusterMaxWidth)
         .frame(maxWidth: .infinity)
@@ -891,49 +891,58 @@ struct AIKeyboardView: View {
         }
     }
 
-    private var sendButton: some View {
-        Button(action: performSend) {
-            Image(systemName: sendConfirmationVisible ? "checkmark" : "paperplane.fill")
+    private var fieldActionButton: some View {
+        Button(action: performFieldAction) {
+            Image(systemName: fieldActionSystemImage)
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(sendButtonForeground)
+                .foregroundStyle(fieldActionButtonForeground)
                 .frame(
-                    width: sendButtonWidth,
+                    width: fieldActionButtonWidth,
                     height: KeyboardChromeLayout.assistantActionCapsuleHeight
                 )
-                .background(sendButtonFill, in: Capsule())
+                .background(fieldActionButtonFill, in: Capsule())
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .disabled(!state.assistantSendAvailable)
-        .accessibilityIdentifier("assistant.send")
-        .accessibilityLabel(ExtL10n.text("keyboard.ai.send"))
-        .accessibilityHint(ExtL10n.text("keyboard.assistant.sendHint"))
+        .disabled(!state.assistantActionAvailable)
+        .accessibilityIdentifier(
+            "assistant.action.\(state.returnKeyRole.assistantActionIdentifier)"
+        )
+        .accessibilityLabel(ExtL10n.text(state.returnKeyRole.titleKey))
     }
 
-    private var sendButtonFill: Color {
-        state.assistantSendAvailable
+    private var fieldActionSystemImage: String {
+        fieldActionConfirmationVisible
+            ? "checkmark"
+            : state.returnKeyRole.assistantActionSystemImage
+    }
+
+    private var fieldActionButtonFill: Color {
+        state.assistantActionAvailable
             ? NativeKeyboardKeyColors.fill(for: colorScheme)
             : NativeKeyboardKeyColors.pressedFill(for: colorScheme)
     }
 
-    private var sendButtonForeground: Color {
-        state.assistantSendAvailable
+    private var fieldActionButtonForeground: Color {
+        state.assistantActionAvailable
             ? NativeKeyboardKeyColors.text(for: colorScheme)
             : NativeKeyboardKeyColors.text(for: colorScheme).opacity(0.58)
     }
 
-    private func performSend() {
-        guard state.assistantSendAvailable else { return }
-        state.sendAssistantAction()
-        sendConfirmationVisible = true
+    private func performFieldAction() {
+        guard state.assistantActionAvailable else { return }
+        state.performAssistantFieldAction()
+        fieldActionConfirmationVisible = true
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(550))
-            sendConfirmationVisible = false
+            fieldActionConfirmationVisible = false
         }
     }
 
-    private var sendButtonWidth: CGFloat {
-        compactIPadLayout ? Layout.compactIPadSendWidth : Layout.sendWidth
+    private var fieldActionButtonWidth: CGFloat {
+        compactIPadLayout
+            ? Layout.compactIPadFieldActionWidth
+            : Layout.fieldActionWidth
     }
 
     private var lowerCircleSize: CGFloat {

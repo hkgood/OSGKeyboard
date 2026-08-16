@@ -187,9 +187,9 @@ public final class KeyboardState: ObservableObject {
     @Published public var editSession: EditSessionState = .inactive
     /// AI conversation UI state for the keyboard surface. The host owns the actual messages.
     @Published public var aiSession: AISessionState = .inactive
-    /// The latest generated insertion can be submitted through the host's
-    /// action-style Return key (Send / Search / Done / Go).
-    @Published public var assistantSendAvailable: Bool = false
+    /// Whether the assistant's field action can invoke the host Return key.
+    /// Derived from the focused field's role and `UITextDocumentProxy.hasText`.
+    @Published public var assistantActionAvailable: Bool = false
     /// Brief success pulse rendered on the unified assistant microphone.
     @Published public var assistantInsertionSucceeded: Bool = false
     @Published public var editCanReplaceOriginal: Bool = false
@@ -212,7 +212,6 @@ public final class KeyboardState: ObservableObject {
         clipboardSuggestionText = nil
         clipboardSuggestionChangeCount = nil
         clipboardOverlay = .none
-        assistantSendAvailable = false
     }
 
     // MARK: - Host-app onboarding gate
@@ -257,6 +256,57 @@ public final class KeyboardState: ObservableObject {
         public var usesActionFill: Bool {
             self != .newline
         }
+
+        /// SF Symbol matching the semantic Return action exposed by the host.
+        public var assistantActionSystemImage: String {
+            switch self {
+            case .newline:
+                return "arrow.turn.down.left"
+            case .send:
+                return "paperplane.fill"
+            case .search, .google, .yahoo:
+                return "magnifyingglass"
+            case .go, .route:
+                return "arrow.right.circle.fill"
+            case .join:
+                return "person.badge.plus"
+            case .done:
+                return "checkmark"
+            case .next, .continue:
+                return "arrow.right"
+            case .emergencyCall:
+                return "phone.fill"
+            }
+        }
+
+        /// Stable suffix for UI automation and diagnostics.
+        public var assistantActionIdentifier: String {
+            switch self {
+            case .newline: return "newline"
+            case .send: return "send"
+            case .go: return "go"
+            case .search: return "search"
+            case .join: return "join"
+            case .done: return "done"
+            case .next: return "next"
+            case .continue: return "continue"
+            case .route: return "route"
+            case .google: return "google"
+            case .yahoo: return "yahoo"
+            case .emergencyCall: return "emergencyCall"
+            }
+        }
+
+        /// Text-producing actions need content; navigation actions and newline
+        /// remain useful in an empty field.
+        public func assistantActionAvailable(hasText: Bool) -> Bool {
+            switch self {
+            case .send, .go, .search, .join, .route, .google, .yahoo:
+                return hasText
+            case .newline, .done, .next, .continue, .emergencyCall:
+                return true
+            }
+        }
     }
 
     // Action hooks — injected by the view controller at install time.
@@ -276,8 +326,8 @@ public final class KeyboardState: ObservableObject {
     /// Explicitly inserts a retained AI result after target validation failed.
     public var confirmPendingAIAnswer: () -> Void = {}
     public var discardPendingAIAnswer: () -> Void = {}
-    /// Performs the host's action-style Return after generated text was inserted.
-    public var sendAssistantAction: () -> Void = {}
+    /// Performs the focused field's semantic Return action.
+    public var performAssistantFieldAction: () -> Void = {}
     /// Sends a tapped idle hint card as the AI question (skip microphone).
     public var submitAIHint: (AIHintCard) -> Void = { _ in }
     /// Sends a clipboard skill (reply / summarize / translate / export).
