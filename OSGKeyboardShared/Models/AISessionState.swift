@@ -190,6 +190,18 @@ public struct AISessionState: Equatable, Sendable {
         phase = .sent
     }
 
+    /// Drops a result retained because the insertion target changed.
+    /// The conversation remains active so the user can immediately ask again.
+    public mutating func discardReadyAnswer() {
+        guard phase == .ready else { return }
+        answer = nil
+        activeUtteranceID = nil
+        draftAnswerText = nil
+        transcript = ""
+        errorMessage = nil
+        phase = .idle
+    }
+
     public mutating func cancelCurrentWork() {
         guard isBusy else { return }
         activeUtteranceID = nil

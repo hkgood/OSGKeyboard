@@ -22,6 +22,14 @@ enum AppPermissions {
         case restricted
     }
 
+    enum PasteAccessResult: Equatable {
+        case verified
+        case noTextAvailable
+        case unavailable
+    }
+
+    private static let pasteAccessVerifiedKey = "clipboard.pasteAccessVerified.v1"
+
     static var micStatus: MicStatus {
         switch AVAudioApplication.shared.recordPermission {
         case .granted: return .granted
@@ -44,6 +52,12 @@ enum AppPermissions {
     /// Both permissions required for Flow voice sessions.
     static var flowRequirementsMet: Bool {
         micStatus == .granted && speechStatus == .granted
+    }
+
+    /// iOS does not expose the current "Paste from Other Apps" setting.
+    /// This records the last explicit, successful user-initiated read instead.
+    static var hasVerifiedPasteAccess: Bool {
+        UserDefaults.standard.bool(forKey: pasteAccessVerifiedKey)
     }
 
     /// Show guided permission pages when any Flow permission is not granted.
@@ -82,10 +96,15 @@ enum AppPermissions {
     /// and create the app's "Paste from Other Apps" settings entry.
     @MainActor
     @discardableResult
-    static func requestPasteAccess() -> Bool {
+    static func requestPasteAccess() -> PasteAccessResult {
         let pasteboard = UIPasteboard.general
-        guard pasteboard.hasStrings else { return false }
-        return pasteboard.string != nil
+        guard pasteboard.hasStrings else { return .noTextAvailable }
+        guard pasteboard.string != nil else {
+            UserDefaults.standard.set(false, forKey: pasteAccessVerifiedKey)
+            return .unavailable
+        }
+        UserDefaults.standard.set(true, forKey: pasteAccessVerifiedKey)
+        return .verified
     }
 
     /// Home-screen guidance when Flow permissions are missing after onboarding.

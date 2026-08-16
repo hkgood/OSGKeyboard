@@ -206,6 +206,7 @@ struct RectangularToolbarButton: View {
     let usesCircleGlass: Bool
     /// Settings → General → Haptics; space / return use `.action` role.
     var hapticIntensity: KeyboardHapticIntensity = .off
+    var onPressingChanged: (Bool) -> Void = { _ in }
     let action: () -> Void
 
     init(
@@ -215,6 +216,7 @@ struct RectangularToolbarButton: View {
         usesLiquidGlass: Bool = false,
         usesCircleGlass: Bool = false,
         hapticIntensity: KeyboardHapticIntensity = .off,
+        onPressingChanged: @escaping (Bool) -> Void = { _ in },
         action: @escaping () -> Void
     ) {
         self.systemName = systemName
@@ -226,6 +228,7 @@ struct RectangularToolbarButton: View {
         self.usesLiquidGlass = usesLiquidGlass
         self.usesCircleGlass = usesCircleGlass
         self.hapticIntensity = hapticIntensity
+        self.onPressingChanged = onPressingChanged
         self.action = action
     }
 
@@ -236,6 +239,7 @@ struct RectangularToolbarButton: View {
         isSend: Bool = false,
         usesLiquidGlass: Bool = false,
         hapticIntensity: KeyboardHapticIntensity = .off,
+        onPressingChanged: @escaping (Bool) -> Void = { _ in },
         action: @escaping () -> Void
     ) {
         self.systemName = nil
@@ -246,6 +250,7 @@ struct RectangularToolbarButton: View {
         self.usesLiquidGlass = usesLiquidGlass
         self.usesCircleGlass = false
         self.hapticIntensity = hapticIntensity
+        self.onPressingChanged = onPressingChanged
         self.action = action
         self.title = title
     }
@@ -256,6 +261,7 @@ struct RectangularToolbarButton: View {
         disabled: Bool = false,
         usesLiquidGlass: Bool = false,
         hapticIntensity: KeyboardHapticIntensity = .off,
+        onPressingChanged: @escaping (Bool) -> Void = { _ in },
         action: @escaping () -> Void
     ) {
         self.systemName = nil
@@ -267,6 +273,7 @@ struct RectangularToolbarButton: View {
         self.usesLiquidGlass = usesLiquidGlass
         self.usesCircleGlass = false
         self.hapticIntensity = hapticIntensity
+        self.onPressingChanged = onPressingChanged
         self.action = action
     }
 
@@ -280,6 +287,11 @@ struct RectangularToolbarButton: View {
             .allowsHitTesting(!disabled)
             .accessibilityLabel(Text(label))
             .accessibilityAddTraits(.isButton)
+            .onDisappear {
+                guard isPressing else { return }
+                isPressing = false
+                onPressingChanged(false)
+            }
     }
 
     @ViewBuilder
@@ -337,12 +349,14 @@ struct RectangularToolbarButton: View {
             .onChanged { _ in
                 guard !disabled, !isPressing else { return }
                 isPressing = true
+                onPressingChanged(true)
                 KeyboardSoundFeedback.keyClick()
                 KeyboardHapticFeedback.play(role: .action, intensity: hapticIntensity)
                 action()
             }
             .onEnded { _ in
                 isPressing = false
+                onPressingChanged(false)
             }
     }
 }

@@ -324,7 +324,7 @@ private struct ClipboardHistoryRow: View {
     }
 }
 
-// MARK: - Top clipboard button (replaces translation chip slot)
+// MARK: - Top clipboard button (right of the translation chip)
 
 struct KeyboardClipboardMenuButton: View, Equatable {
     @Environment(\.colorScheme) private var colorScheme
@@ -359,6 +359,7 @@ struct KeyboardClipboardMenuButton: View, Equatable {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("assistant.clipboard")
         .accessibilityLabel(ExtL10n.text("keyboard.clipboard.a11y"))
         .accessibilityHint(ExtL10n.text("keyboard.clipboard.a11yHint"))
     }

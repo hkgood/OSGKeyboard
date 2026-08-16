@@ -77,7 +77,11 @@ public enum AIQuestionPromptComposer {
             languageInstruction = "Reply in the language used by the user's latest question."
         } else {
             let language = TranslationLanguageCatalog.resolve(targetLocaleID)
-            languageInstruction = "Reply in \(language.promptLanguageName)."
+            languageInstruction = """
+            Reply in \(language.promptLanguageName), unless the user's latest
+            request explicitly asks for another output language or asks to
+            preserve the source language.
+            """
         }
 
         return """

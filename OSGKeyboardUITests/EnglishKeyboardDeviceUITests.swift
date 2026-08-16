@@ -1,11 +1,12 @@
 // EnglishKeyboardDeviceUITests.swift
 // OSGKeyboardUITests
 //
-// Physical-device pass: Notes-like host + the real keyboard extension.
-// Skips if OSGKeyboard is not enabled as the current keyboard.
+// Notes-like host + the real keyboard extension on device or simulator.
+// Skips only when OSGKeyboard is not enabled as the current keyboard.
 
 import XCTest
 
+@MainActor
 final class EnglishKeyboardDeviceUITests: XCTestCase {
     func testOSGKeyboardAppearsOnNotesHost() throws {
         let app = XCUIApplication()
@@ -26,9 +27,16 @@ final class EnglishKeyboardDeviceUITests: XCTestCase {
         }
         textView.tap()
 
+        let surfaceInHost = app.descendants(matching: .any)["assistant.surface"]
+        if surfaceInHost.waitForExistence(timeout: 8) {
+            return
+        }
+
         let keyboard = XCUIApplication(bundleIdentifier: "com.osgkeyboard.ios.keyboard")
+        let surfaceInExtension = keyboard.descendants(matching: .any)["assistant.surface"]
         let appeared = keyboard.wait(for: .runningForeground, timeout: 8)
             || keyboard.windows.firstMatch.waitForExistence(timeout: 8)
+            || surfaceInExtension.waitForExistence(timeout: 8)
         if !appeared {
             throw XCTSkip(
                 "OSGKeyboard extension is not the active keyboard on this device. Enable it in Settings ▸ Keyboard, then re-run."
@@ -36,7 +44,7 @@ final class EnglishKeyboardDeviceUITests: XCTestCase {
         }
 
         XCTAssertTrue(
-            keyboard.windows.firstMatch.exists,
+            keyboard.windows.firstMatch.exists || surfaceInExtension.exists,
             "OSGKeyboard extension window should be on screen"
         )
     }

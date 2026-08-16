@@ -8,6 +8,8 @@ import CoreGraphics
 public enum KeyboardChromeLayout {
     public static let totalHeight: CGFloat = 281
     public static let actionKeyHeight: CGFloat = 50
+    /// Shared capsule action height for unified Send and edit-mode controls.
+    public static let assistantActionCapsuleHeight: CGFloat = actionKeyHeight
     public static let actionKeyCornerRadius: CGFloat = 10
     /// Shared spacing for every bottom action row. iPad uses a custom globe
     /// slot; iPhone relies on the system-provided switch below the keyboard.

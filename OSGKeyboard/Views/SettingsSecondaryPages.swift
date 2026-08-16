@@ -259,10 +259,6 @@ struct GeneralSettingsView: View {
                                 set: { config.keyboardHapticIntensity = $0 }
                             )
                         )
-                        Divider().background(palette.divider)
-                        CursorDragNavigationToggleRow(
-                            isOn: $config.cursorDragNavigationEnabled
-                        )
                     }
                     .surfaceCard()
                 }
@@ -310,9 +306,13 @@ struct AIAgentSettingsView: View {
 
 struct ClipboardSettingsView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject var config: ProviderConfig
     @ObservedObject private var history = ClipboardHistoryStore.shared
     @State private var showClearConfirmation = false
+    @State private var pasteAccessVerified = AppPermissions.hasVerifiedPasteAccess
+    @State private var pasteAccessNeedsRecovery = false
+    @State private var showPasteNoTextAlert = false
 
     var body: some View {
         ScrollView {
@@ -356,40 +356,58 @@ struct ClipboardSettingsView: View {
                 // "Paste from Other Apps" permission to Allow.
                 CardSection("settings.clipboard.paste.section") {
                     VStack(spacing: 0) {
-                        Text("settings.clipboard.paste.body")
-                            .font(.footnote)
-                            .foregroundStyle(palette.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-
-                        Divider().background(palette.divider)
-
-                        Button {
-                            AppPermissions.requestPasteAccess()
-                        } label: {
-                            SettingsNavigationRow(
-                                titleText: AppL10n.string(
-                                    "settings.clipboard.paste.request",
-                                    language: config.uiLanguage
+                        HStack(alignment: .center, spacing: Spacing.sm) {
+                            Text("settings.clipboard.paste.body")
+                                .font(.footnote)
+                                .foregroundStyle(palette.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            if pasteAccessVerified {
+                                Label(
+                                    "settings.clipboard.paste.verified",
+                                    systemImage: "checkmark.circle.fill"
                                 )
-                            )
+                                .font(TypeStyle.caption)
+                                .foregroundStyle(palette.accent)
+                                .fixedSize()
+                                .accessibilityIdentifier("settings.clipboard.paste.verified")
+                            }
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
 
-                        Divider().background(palette.divider)
+                        if !pasteAccessVerified {
+                            Divider().background(palette.divider)
 
-                        Button {
-                            AppPermissions.openSystemSettings()
-                        } label: {
-                            SettingsNavigationRow(
-                                titleText: AppL10n.string(
-                                    "settings.clipboard.paste.open",
-                                    language: config.uiLanguage
+                            Button {
+                                verifyPasteAccess()
+                            } label: {
+                                SettingsNavigationRow(
+                                    titleText: AppL10n.string(
+                                        "settings.clipboard.paste.request",
+                                        language: config.uiLanguage
+                                    )
                                 )
-                            )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("settings.clipboard.paste.verify")
+
+                            if pasteAccessNeedsRecovery {
+                                Divider().background(palette.divider)
+
+                                Button {
+                                    AppPermissions.openSystemSettings()
+                                } label: {
+                                    SettingsNavigationRow(
+                                        titleText: AppL10n.string(
+                                            "settings.clipboard.paste.open",
+                                            language: config.uiLanguage
+                                        )
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("settings.clipboard.paste.openSettings")
+                            }
                         }
-                        .buttonStyle(.plain)
                     }
                     .surfaceCard()
                 }
@@ -441,8 +459,22 @@ struct ClipboardSettingsView: View {
         } message: {
             Text("settings.clipboard.clear.message")
         }
+        .alert(
+            AppL10n.string("clipboard.paste.noText.title", language: config.uiLanguage),
+            isPresented: $showPasteNoTextAlert
+        ) {
+            Button("common.done") { showPasteNoTextAlert = false }
+        } message: {
+            Text(AppL10n.string("clipboard.paste.noText.message", language: config.uiLanguage))
+        }
         .onAppear {
             history.reload()
+            refreshPasteAccessState()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            refreshPasteAccessState()
+            pasteAccessNeedsRecovery = false
         }
         .onChange(of: config.clipboardHistoryEnabled) { _, enabled in
             if !enabled {
@@ -456,6 +488,27 @@ struct ClipboardSettingsView: View {
             get: { config.clipboardHistoryEnabled && config.clipboardCandidateBarEnabled },
             set: { config.clipboardCandidateBarEnabled = $0 }
         )
+    }
+
+    private func verifyPasteAccess() {
+        switch AppPermissions.requestPasteAccess() {
+        case .verified:
+            withAnimation(Motion.quick) {
+                pasteAccessVerified = true
+                pasteAccessNeedsRecovery = false
+            }
+        case .noTextAvailable:
+            showPasteNoTextAlert = true
+        case .unavailable:
+            withAnimation(Motion.quick) {
+                pasteAccessVerified = false
+                pasteAccessNeedsRecovery = true
+            }
+        }
+    }
+
+    private func refreshPasteAccessState() {
+        pasteAccessVerified = AppPermissions.hasVerifiedPasteAccess
     }
 }
 

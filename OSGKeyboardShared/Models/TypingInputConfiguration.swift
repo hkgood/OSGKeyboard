@@ -216,15 +216,16 @@ public final class TypingInputConfiguration: ObservableObject {
         let store = defaults ?? AppGroup.defaultsIfAvailable
         guard let store else { return (.voice, nil) }
 
-        // AI is an explicit product surface. Restore it as an empty temporary
-        // conversation even when the general "remember surface" toggle is off.
+        // Older builds persisted a dedicated AI surface. It now migrates to
+        // the unified assistant surface.
         if store.string(forKey: Key.lastSurface) == KeyboardState.Surface.ai.rawValue {
-            return (.ai, nil)
+            return (.voice, nil)
         }
 
         if store.bool(forKey: Key.rememberLastSurface),
            let raw = store.string(forKey: Key.lastSurface),
-           let surface = KeyboardState.Surface(rawValue: raw) {
+           let persistedSurface = KeyboardState.Surface(rawValue: raw) {
+            let surface: KeyboardState.Surface = persistedSurface == .ai ? .voice : persistedSurface
             let language: TypingInputLanguage? = surface == .typing
                 ? persistedTypingLanguage(defaults: store) ?? .chinese
                 : nil

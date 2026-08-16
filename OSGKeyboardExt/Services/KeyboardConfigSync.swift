@@ -64,9 +64,7 @@ final class KeyboardConfigSync {
     func loadPersistedConfig() -> AppGroupLoadResult {
         switch persistor.load(into: state) {
         case .loaded:
-            OSGLog.keyboardExt.info(
-                "config loaded — cursorDragNavigationEnabled=\(self.state.cursorDragNavigationEnabled)"
-            )
+            OSGLog.keyboardExt.info("config loaded")
             syncOnboardingStateFromAppGroup()
             return .loaded
         case .unavailable:

@@ -37,6 +37,7 @@ final class KeyboardTextInserter {
     /// Suppresses availability refresh while we walk `deleteBackward`
     /// for undo, so intermediate contexts don't flicker the button.
     private var isUndoing = false
+    private var successPulseTask: Task<Void, Never>?
 
     init(
         state: KeyboardState,
@@ -155,6 +156,7 @@ final class KeyboardTextInserter {
         // The paste pushed any previous input away from the caret, so the
         // "editable last input" hint no longer applies.
         clearEditHintIfPositive()
+        state.editAvailable = false
         OSGLog.keyboardExt.info("clipboard insert length=\(text.count, privacy: .public)")
     }
 
@@ -184,6 +186,8 @@ final class KeyboardTextInserter {
         redoContextBefore = contextBeforeInput()
         lastInsertedText = nil
         state.undoAvailable = false
+        state.editAvailable = false
+        EditableInputReferenceStore.clear()
         OSGLog.keyboardExt.info("undo length=\(text.count, privacy: .public)")
     }
 
@@ -262,6 +266,10 @@ final class KeyboardTextInserter {
         if state.cutAvailable != hasSelection {
             state.cutAvailable = hasSelection
         }
+        let editAvailable = editableReference() != nil
+        if state.editAvailable != editAvailable {
+            state.editAvailable = editAvailable
+        }
     }
 
     func editableReference() -> EditableInputReference? {
@@ -288,15 +296,25 @@ final class KeyboardTextInserter {
               preceding.hasSuffix(reference.insertedText) else {
             return nil
         }
+        // The current extension instance owns an exact in-memory insertion
+        // record. Prefer it before the cross-process field fingerprint:
+        // UITextDocumentProxy can publish its updated surrounding context one
+        // callback after `insertText`, which otherwise makes a freshly shown
+        // Edit button disappear or reject its first tap.
+        if reference.matchesLiveInsertion(
+            extensionInstanceID: extensionInstanceID,
+            lastInsertedText: lastInsertedText,
+            contextBeforeInput: preceding
+        ) {
+            return reference
+        }
         guard reference.postInsertionFingerprint == nil
                 || reference.postInsertionFingerprint
                     == fieldContextProvider()?.deliveryFingerprint else {
             return nil
         }
-        if reference.extensionInstanceID == extensionInstanceID,
-           lastInsertedText == reference.insertedText {
-            return reference
-        }
+        // Rebuilt extension instances have no trusted in-memory insertion
+        // record, so they continue to require the complete field fingerprint.
         return reference.isFullyVerified(
             contextBeforeInput: preceding,
             fieldFingerprint: fieldContextProvider()?.deliveryFingerprint
@@ -512,6 +530,14 @@ final class KeyboardTextInserter {
                 extensionInstanceID: extensionInstanceID
             )
         )
+        state.editAvailable = true
+        state.assistantInsertionSucceeded = true
+        successPulseTask?.cancel()
+        successPulseTask = Task { @MainActor [weak state] in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard !Task.isCancelled else { return }
+            state?.assistantInsertionSucceeded = false
+        }
         let hint = ExtL10n.string("keyboard.edit.hint.available")
         editHintScheduler.show(
             message: hint,
@@ -527,6 +553,7 @@ final class KeyboardTextInserter {
     private func clearLastInsertion() {
         lastInsertedText = nil
         state.undoAvailable = false
+        state.editAvailable = false
         EditableInputReferenceStore.clear()
     }
 }

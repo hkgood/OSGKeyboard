@@ -94,7 +94,7 @@ public struct SevenDayUsageChart: View {
     // MARK: - Header
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(SharedL10n.string("stat.weekChart.title", language: language).uppercased())
                     .font(TypeStyle.caption2)

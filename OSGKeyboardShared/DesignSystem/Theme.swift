@@ -25,6 +25,8 @@ public struct ThemePalette: Sendable, Equatable {
     public let accent:      Color
     public let accentMuted: Color
     public let accentGlow:  Color
+    /// Distinguishes AI listening / generation from ordinary dictation.
+    public let aiTeal:      Color
 
     public let danger:  Color
     public let success: Color
@@ -54,6 +56,7 @@ public enum Palette {
     public static let accent          = Color(red: 0.227, green: 0.627, blue: 0.353)  // #3AA05A
     public static let accentMuted     = accent.opacity(0.18)
     public static let accentGlow      = accent.opacity(0.42)
+    public static let aiTeal           = Color(red: 0.169, green: 0.686, blue: 0.643)  // #2BAFA4
 
     // Semantic
     public static let danger          = Color(red: 1.000, green: 0.271, blue: 0.227)  // #FF453A
@@ -86,6 +89,7 @@ public enum Palette {
         accent:          accent,
         accentMuted:     accentMuted,
         accentGlow:      accentGlow,
+        aiTeal:          aiTeal,
         danger:          danger,
         success:         success,
         warning:         warning,
@@ -108,6 +112,7 @@ public enum Palette {
         accent:          Color(red: 0.227, green: 0.627, blue: 0.353),  // #3AA05A
         accentMuted:     Color(red: 0.227, green: 0.627, blue: 0.353).opacity(0.14),
         accentGlow:      Color(red: 0.227, green: 0.627, blue: 0.353).opacity(0.32),
+        aiTeal:          Color(red: 0.169, green: 0.686, blue: 0.643),  // #2BAFA4
         danger:          Color(red: 1.000, green: 0.231, blue: 0.188),  // #FF3B30
         success:         Color(red: 0.227, green: 0.627, blue: 0.353),  // same as accent
         warning:         Color(red: 1.000, green: 0.620, blue: 0.094),  // #FF9E18

@@ -2,7 +2,7 @@
 // OSGKeyboard · Keyboard Extension
 //
 // Principal class for the Custom Keyboard Extension. Hosts a single
-// SwiftUI tree (`KeyboardRootView`) and wires Flow voice input:
+// SwiftUI tree (`KeyboardSurfaceRoot`) and wires Flow voice / AI input:
 //
 //     host app Flow session ──► App Group transcript ──► insertText
 //
@@ -63,6 +63,8 @@ public final class KeyboardViewController: UIInputViewController {
     /// changes instead of every pass.
     private var lastLoggedLayoutSnapshot: String?
     private var cancellables = Set<AnyCancellable>()
+    /// Coalesces host-document refreshes after mutations issued by this keyboard.
+    private var assistantFieldActionRefreshTask: Task<Void, Never>?
 
     private var editHintScheduler: EditHintScheduler!
     private var textInserter: KeyboardTextInserter!
@@ -71,10 +73,6 @@ public final class KeyboardViewController: UIInputViewController {
     private var aiKeyboardCoordinator: AIKeyboardCoordinator!
     private var clipboardCapture: ClipboardCaptureCoordinator!
     private var configSync: KeyboardConfigSync!
-    /// UIKit may synchronously lay out the view during `viewDidLoad`.
-    /// Keep this optional so an early layout pass is harmless.
-    private var cursorDrag: CursorDragController?
-
     /// iPad-scale keys require both an iPad host and regular horizontal space.
     /// This keeps compact iPad multitasking on phone metrics and prevents wide
     /// iPhones from being mistaken for iPads.
@@ -170,6 +168,8 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        assistantFieldActionRefreshTask?.cancel()
+        assistantFieldActionRefreshTask = nil
         clipboardCapture?.keyboardWillDisappear()
         // Presentation-scoped hints must never survive a reused extension
         // controller, including an active Flow handoff.
@@ -191,10 +191,8 @@ public final class KeyboardViewController: UIInputViewController {
         if state.surface == .typing {
             TypingInputConfiguration.persistLastTypingLanguage(typingSession.language)
         }
-        if state.surface == .ai {
-            // AI context never survives a keyboard presentation, but the
-            // selected surface itself is restored on the next open.
-            TypingInputConfiguration.persistLastSurface(.ai)
+        if state.aiSession.isActive {
+            // Unified assistant conversations never survive a keyboard presentation.
             aiKeyboardCoordinator.leave()
         }
         if !preserve {
@@ -280,16 +278,16 @@ public final class KeyboardViewController: UIInputViewController {
             state: state,
             host: WhatsNewDemoDriver.HostHooks(
                 insertText: { [weak self] text in
-                    self?.textDocumentProxy.insertText(text)
+                    self?.insertTextIntoDocument(text)
                 },
                 deleteBackward: { [weak self] in
-                    self?.textDocumentProxy.deleteBackward()
+                    self?.deleteBackwardFromDocument()
                 },
                 contextBeforeInput: { [weak self] in
                     self?.textDocumentProxy.documentContextBeforeInput
                 },
                 performReturn: { [weak self] in
-                    self?.textDocumentProxy.insertText("\n")
+                    self?.performDocumentReturn()
                 }
             )
         )
@@ -310,6 +308,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func selectionDidChange(_ textInput: UITextInput?) {
         super.selectionDidChange(textInput)
+        refreshReturnKeyRole()
         typingSession.synchronizeEnglishDocumentContext(caretMoved: true)
         textInserter?.refreshEditingAvailability()
         lastInputEditCoordinator?.refreshContext()
@@ -353,7 +352,6 @@ public final class KeyboardViewController: UIInputViewController {
         // portrait→landscape resize. `refreshLayoutMode` no-ops unless the
         // layout bucket actually changed, so this cannot loop.
         refreshLayoutMode()
-        cursorDrag?.layoutChrome()
         enforcePresentedKeyboardHeightIfNeeded()
         logLayoutSnapshotIfChanged()
     }
@@ -364,8 +362,8 @@ public final class KeyboardViewController: UIInputViewController {
         editHintScheduler = EditHintScheduler(state: state)
         textInserter = KeyboardTextInserter(
             state: state,
-            insertText: { [weak self] text in self?.textDocumentProxy.insertText(text) },
-            deleteBackward: { [weak self] in self?.textDocumentProxy.deleteBackward() },
+            insertText: { [weak self] text in self?.insertTextIntoDocument(text) },
+            deleteBackward: { [weak self] in self?.deleteBackwardFromDocument() },
             contextBeforeInput: { [weak self] in self?.textDocumentProxy.documentContextBeforeInput },
             fieldContextProvider: { [weak self] in self?.captureFieldContext() },
             selectedText: { [weak self] in self?.textDocumentProxy.selectedText },
@@ -427,7 +425,10 @@ public final class KeyboardViewController: UIInputViewController {
                 self?.textInserter.insertAIAnswer(answer) ?? false
             },
             performReturn: { [weak self] in
-                self?.textDocumentProxy.insertText("\n")
+                self?.performDocumentReturn()
+            },
+            captureInsertionFingerprint: { [weak self] in
+                self?.captureFieldContext().deliveryFingerprint
             }
         )
         clipboardCapture = ClipboardCaptureCoordinator(state: state)
@@ -474,13 +475,6 @@ public final class KeyboardViewController: UIInputViewController {
             self?.state.aiSession.cancelCurrentWork()
         }
         _ = textInserter.recoverPendingEditTransactionIfNeeded()
-
-        cursorDrag = CursorDragController(
-            state: state,
-            adjustTextPosition: { [weak self] offset in
-                self?.textDocumentProxy.adjustTextPosition(byCharacterOffset: offset)
-            }
-        )
     }
 
     // MARK: - Wiring
@@ -513,8 +507,14 @@ public final class KeyboardViewController: UIInputViewController {
         state.cancelAIInput = { [weak self] in
             self?.aiKeyboardCoordinator.cancel()
         }
-        state.sendAIAnswer = { [weak self] in
-            self?.aiKeyboardCoordinator.sendLatestAnswer()
+        state.confirmPendingAIAnswer = { [weak self] in
+            self?.aiKeyboardCoordinator.confirmPendingAnswer()
+        }
+        state.discardPendingAIAnswer = { [weak self] in
+            self?.aiKeyboardCoordinator.discardPendingAnswer()
+        }
+        state.performAssistantFieldAction = { [weak self] in
+            self?.aiKeyboardCoordinator.performCurrentFieldAction()
         }
         state.submitAIHint = { [weak self] card in
             self?.aiKeyboardCoordinator.submitHintCard(card)
@@ -567,23 +567,15 @@ public final class KeyboardViewController: UIInputViewController {
         state.setEngineMode       = { [weak self] m in self?.configSync.persistEngineMode(m) }
         state.setTranslationTargetLocaleId = { [weak self] id in
             self?.configSync.persistTranslationTargetLocaleId(id)
+            self?.aiKeyboardCoordinator.resetConversationForConfigurationChange()
         }
-        state.insertNewline       = { [weak self] in self?.textDocumentProxy.insertText("\n") }
-        state.insertSpace         = { [weak self] in self?.textDocumentProxy.insertText(" ") }
-        state.deleteBackward      = { [weak self] in self?.textDocumentProxy.deleteBackward() }
+        state.insertNewline       = { [weak self] in self?.insertTextIntoDocument("\n") }
+        state.insertSpace         = { [weak self] in self?.insertTextIntoDocument(" ") }
+        state.deleteBackward      = { [weak self] in self?.deleteBackwardFromDocument() }
         state.undoLastInsertion   = { [weak self] in self?.textInserter.undoLastInsertion() }
         state.redoLastInsertion   = { [weak self] in self?.textInserter.redoLastInsertion() }
         state.copySelection       = { [weak self] in self?.textInserter.copySelection() }
         state.cutSelection        = { [weak self] in self?.textInserter.cutSelection() }
-        state.moveCursorHorizontal = { [weak self] steps in
-            self?.cursorDrag?.moveCursorHorizontally(by: steps)
-        }
-        state.moveCursorVertical = { [weak self] steps in
-            self?.cursorDrag?.moveCursorVertically(by: steps)
-        }
-        state.setCursorDragActive = { [weak self] active in
-            self?.cursorDrag?.setCursorDragActive(active)
-        }
         state.setSurface = { [weak self] surface in
             self?.applySurface(surface)
         }
@@ -608,7 +600,10 @@ public final class KeyboardViewController: UIInputViewController {
             .store(in: &cancellables)
     }
 
-    private func applySurface(_ surface: State.Surface) {
+    private func applySurface(_ requestedSurface: State.Surface) {
+        // `.ai` is retained only to decode preferences written by older builds.
+        // The product now has one unified assistant surface.
+        let surface: State.Surface = requestedSurface == .ai ? .voice : requestedSurface
         if surface == .typing, state.locksTypingSurface {
             OSGDiag.log("applySurface blocked typing (locksTypingSurface)", category: "boot")
             return
@@ -618,9 +613,6 @@ public final class KeyboardViewController: UIInputViewController {
             return
         }
         guard state.surface != surface else {
-            if surface == .ai {
-                aiKeyboardCoordinator.enterIfNeeded()
-            }
             refreshKeyboardHeight()
             return
         }
@@ -628,19 +620,12 @@ public final class KeyboardViewController: UIInputViewController {
             "applySurface \(state.surface.rawValue) → \(surface.rawValue) \(OSGDiag.memoryTag())",
             category: "boot"
         )
-        let previousSurface = state.surface
-        if previousSurface == .ai, surface != .ai {
-            aiKeyboardCoordinator.leave()
-        }
         state.surface = surface
         if surface == .typing {
             typingSession.enterTypingMode()
             refreshEnglishSupplementaryLexicon()
         } else {
             typingSession.leaveTypingMode()
-        }
-        if surface == .ai {
-            aiKeyboardCoordinator.enterIfNeeded()
         }
         refreshKeyboardHeight()
     }
@@ -661,9 +646,6 @@ public final class KeyboardViewController: UIInputViewController {
         applySurface(resolved)
         if resolved == .typing, let language = preference.typingLanguage {
             _ = typingSession.setLanguage(language)
-        }
-        if resolved == .ai {
-            aiKeyboardCoordinator.beginNewPresentation()
         }
     }
 
@@ -733,8 +715,49 @@ public final class KeyboardViewController: UIInputViewController {
         )
     }
 
+    /// Keeps field-action UI current even when a host app does not immediately
+    /// echo this keyboard's own document mutation through `textDidChange`.
+    private func insertTextIntoDocument(_ text: String) {
+        guard !text.isEmpty else { return }
+        textDocumentProxy.insertText(text)
+        // A non-empty insertion makes content actions available immediately.
+        // The next host callback remains the authoritative correction.
+        refreshAssistantFieldAction(hasTextOverride: true)
+    }
+
+    private func deleteBackwardFromDocument() {
+        textDocumentProxy.deleteBackward()
+        refreshAssistantFieldAction()
+        scheduleAssistantFieldActionRefresh()
+    }
+
+    private func performDocumentReturn() {
+        textDocumentProxy.insertText("\n")
+        scheduleAssistantFieldActionRefresh()
+    }
+
+    private func scheduleAssistantFieldActionRefresh() {
+        assistantFieldActionRefreshTask?.cancel()
+        assistantFieldActionRefreshTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(100))
+            guard !Task.isCancelled, let self else { return }
+            self.refreshAssistantFieldAction()
+            self.assistantFieldActionRefreshTask = nil
+        }
+    }
+
+    private func refreshAssistantFieldAction(hasTextOverride: Bool? = nil) {
+        let role = returnKeyRole(for: textDocumentProxy.returnKeyType ?? .default)
+        state.returnKeyRole = role
+        state.assistantActionAvailable = role.assistantActionAvailable(
+            hasText: hasTextOverride ?? textDocumentProxy.hasText
+        )
+    }
+
     private func refreshReturnKeyRole() {
-        state.returnKeyRole = returnKeyRole(for: textDocumentProxy.returnKeyType ?? .default)
+        assistantFieldActionRefreshTask?.cancel()
+        assistantFieldActionRefreshTask = nil
+        refreshAssistantFieldAction()
         let isSecure = textDocumentProxy.isSecureTextEntry ?? false
         state.setSecureTextEntry(isSecure)
         clipboardCapture?.secureEntryDidChange(isSecure: isSecure)
@@ -903,10 +926,10 @@ public final class KeyboardViewController: UIInputViewController {
             state: state,
             typing: typingSession,
             onInsert: { [weak self] text in
-                self?.textDocumentProxy.insertText(text)
+                self?.insertTextIntoDocument(text)
             },
             onDeleteBackward: { [weak self] in
-                self?.textDocumentProxy.deleteBackward()
+                self?.deleteBackwardFromDocument()
             }
         )
         let host = KeyboardHostingController(rootView: root)
@@ -925,7 +948,6 @@ public final class KeyboardViewController: UIInputViewController {
         ])
         host.didMove(toParent: self)
         hosting = host
-        cursorDrag?.install(on: view)
     }
 
     // MARK: - App context

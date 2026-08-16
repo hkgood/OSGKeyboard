@@ -40,7 +40,6 @@ public struct AppGroupPersistor {
         // the keyboard stays open.
         state.translationTargetLocaleId = store.translationTargetLocaleId
         state.handednessPreference = store.handednessPreference
-        state.cursorDragNavigationEnabled = store.cursorDragNavigationEnabled
         state.clipboardHistoryEnabled = store.clipboardHistoryEnabled
         state.clipboardCandidateBarEnabled = store.clipboardCandidateBarEnabled
         state.enabledClipboardSkillIDs = store.agentSkillLayout.enabledIDs
@@ -96,7 +95,6 @@ public struct AppGroupPersistor {
             state.translationTargetLocaleId = store.translationTargetLocaleId
         }
         state.handednessPreference = store.handednessPreference
-        state.cursorDragNavigationEnabled = store.cursorDragNavigationEnabled
         state.clipboardHistoryEnabled = store.clipboardHistoryEnabled
         state.clipboardCandidateBarEnabled = store.clipboardCandidateBarEnabled
         state.enabledClipboardSkillIDs = store.agentSkillLayout.enabledIDs

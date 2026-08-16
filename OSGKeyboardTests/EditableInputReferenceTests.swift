@@ -42,6 +42,31 @@ final class EditableInputReferenceTests: XCTestCase {
         )
     }
 
+    func testLiveInsertionSurvivesDelayedFieldFingerprintRefresh() {
+        let instanceID = UUID()
+        let reference = EditableInputReference(
+            displayText: "hello",
+            insertedText: " hello",
+            postInsertionFingerprint: "fingerprint-before-refresh",
+            extensionInstanceID: instanceID
+        )
+
+        XCTAssertTrue(
+            reference.matchesLiveInsertion(
+                extensionInstanceID: instanceID,
+                lastInsertedText: " hello",
+                contextBeforeInput: "prefix hello"
+            )
+        )
+        XCTAssertFalse(
+            reference.matchesLiveInsertion(
+                extensionInstanceID: UUID(),
+                lastInsertedText: " hello",
+                contextBeforeInput: "prefix hello"
+            )
+        )
+    }
+
     func testStoreRoundTripAndExpiryCleanup() throws {
         let suite = "EditableInputReferenceTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

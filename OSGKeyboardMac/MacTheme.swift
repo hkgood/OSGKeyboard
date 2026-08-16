@@ -36,6 +36,7 @@ enum MacSystemPalette {
             accent:          Palette.accent,
             accentMuted:     Palette.accent.opacity(dark ? 0.22 : 0.14),
             accentGlow:      Palette.accent.opacity(dark ? 0.40 : 0.32),
+            aiTeal:          Palette.aiTeal,
 
             danger:          resolved(.systemRed, dark: dark),
             success:         Palette.accent,

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Safe AI insertion**: AI answers insert automatically only while the original input field and cursor context still match; otherwise the keyboard retains the answer for explicit insertion or discard. / **安全 AI 上屏**：仅当原输入框和光标上下文仍一致时自动插入 AI 回答；上下文变化时保留回答，由用户明确插入或丢弃。
+
+### Changed
+- **Unified assistant keyboard**: merge Voice and AI into one Assistant tab with tap-to-dictate, hold-to-ask-AI, a liquid-glass capsule microphone, contextual hotwords, one-row paged clipboard skills, and shared Send / undo / edit actions; delete, space, undo, and edit remain available while clipboard skills are visible. / **统一助手键盘**：将语音与 AI 合并为一个助手入口，支持轻点听写、长按问 AI、液态玻璃胶囊麦克风、情境热词、单行分页剪贴板技能，以及共用的发送 / 撤销 / 编辑操作；剪贴板技能出现时仍保留删除、空格、撤销与编辑按钮。
+- **Adaptive field action**: the assistant action now follows the focused field’s current content and Return semantics, refreshes immediately after keyboard-generated edits, and shows Send, Search, Go, Done, Next, newline, and other matching icons. / **自适应输入框动作**：助手动作现根据焦点输入框的当前内容与 Return 语义显示发送、搜索、前往、完成、下一步、换行等对应图标，并在键盘主动编辑后立即刷新。
+- **Clipboard setup guidance**: replace the Skills permission wall with a compact next-step card that enables history inline, verifies paste access, hides completed steps, and shortens Clipboard settings copy. / **剪贴板设置指引**：技能页权限墙改为紧凑的下一步卡片，可直接开启历史、验证粘贴访问并隐藏已完成步骤，同时精简剪贴板设置文案。
+- **AI output language**: apply the global translation target to AI answers while letting an explicit language request override it and preserving source-language structured export data. / **AI 输出语言**：AI 回答遵循全局翻译目标，但明确的语言请求优先，结构化导出数据保留源语言。
+
+### Removed
+- **Cursor drag pads**: remove blank-area cursor sliding and its Settings toggle; legacy synced values remain decode-compatible. / **光标拖动区**：移除空白区域滑动光标及其设置开关；旧版同步值仍保持解码兼容。
+
 ## [1.8.0] - 2026-08-14
 
 ### Added

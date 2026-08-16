@@ -25,8 +25,8 @@ enum KeyboardTopBarMetrics {
     static let nestedHorizontalInset: CGFloat = horizontalInset - KeyboardChromeLayout.horizontalInset
     static let logoHeight: CGFloat = 16
     static let logoWidth: CGFloat = logoHeight * 952 / 291
-    /// Equal hit width for AI / Voice / Chinese / English input tabs.
-    static let inputTabWidth: CGFloat = 42
+    /// Equal hit width for Assistant / Chinese / English input tabs.
+    static let inputTabWidth: CGFloat = 48
     /// Shared footprint for top-trailing chips (clipboard, cancel/X, translation).
     static let trailingChipSize: CGFloat = 34
     static let trailingChipIconSize: CGFloat = 15
@@ -63,6 +63,7 @@ struct KeyboardCancelButton: View {
     let action: () -> Void
     let accessibilityLabel: Text
     let accessibilityHint: Text
+    var accessibilityIdentifier = "keyboard.cancel"
 
     var body: some View {
         // Same 34×34 chip as KeyboardClipboardMenuButton / translation.
@@ -82,21 +83,20 @@ struct KeyboardCancelButton: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityIdentifier)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(accessibilityHint)
     }
 }
 
 private enum KeyboardInputTab: CaseIterable {
-    case ai
-    case voice
+    case assistant
     case chinese
     case english
 
     var title: String {
         switch self {
-        case .ai: return ExtL10n.string("keyboard.tab.ai")
-        case .voice: return ExtL10n.string("keyboard.tab.voice")
+        case .assistant: return ExtL10n.string("keyboard.tab.ai")
         case .chinese: return ExtL10n.string("keyboard.tab.chinese")
         case .english: return ExtL10n.string("keyboard.tab.english")
         }
@@ -117,9 +117,17 @@ struct KeyboardTopControls: View {
     var body: some View {
         ZStack {
             inputTabSwitcher
-            if state.canShowClipboardEntry {
-                HStack {
-                    Spacer(minLength: 0)
+            HStack(spacing: 6) {
+                Spacer(minLength: 0)
+                if state.surface != .typing {
+                    KeyboardTranslationMenuButton(
+                        palette: palette,
+                        targetLocaleId: state.translationTargetLocaleId,
+                        onSelect: state.setTranslationTargetLocaleId
+                    )
+                    .equatable()
+                }
+                if state.canShowClipboardEntry {
                     KeyboardClipboardMenuButton(
                         palette: palette,
                         action: state.openClipboardPanel
@@ -156,8 +164,9 @@ struct KeyboardTopControls: View {
             tabLabel(tab, selected: selected)
         }
         .buttonStyle(TopControlPressStyle(pressedFill: pressedFill))
-        .disabled(tab != .voice && !state.canEnterTypingSurface)
+        .disabled(tab != .assistant && !state.canEnterTypingSurface)
         .opacity(tabOpacity(tab))
+        .accessibilityIdentifier("assistant.tab.\(tabIdentifier(tab))")
         .accessibilityLabel(accessibilityLabel(for: tab))
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
@@ -187,11 +196,8 @@ struct KeyboardTopControls: View {
 
     @ViewBuilder
     private func tabContent(_ tab: KeyboardInputTab, selected: Bool) -> some View {
-        if tab == .ai {
-            Image(systemName: "sparkle")
-                .font(.system(size: 15, weight: selected ? .semibold : .medium))
-        } else if tab == .voice {
-            Image(systemName: "waveform.mid")
+        if tab == .assistant {
+            Image(systemName: "sparkles")
                 .font(.system(size: 15, weight: selected ? .semibold : .medium))
         } else {
             Text(tab.title)
@@ -200,11 +206,19 @@ struct KeyboardTopControls: View {
     }
 
     private func tabOpacity(_ tab: KeyboardInputTab) -> Double {
-        guard tab != .voice, !state.canEnterTypingSurface else { return 1 }
+        guard tab != .assistant, !state.canEnterTypingSurface else { return 1 }
         if case .recording = state.phase {
             return 0
         }
         return 0.42
+    }
+
+    private func tabIdentifier(_ tab: KeyboardInputTab) -> String {
+        switch tab {
+        case .assistant: return "assistant"
+        case .chinese: return "chinese"
+        case .english: return "english"
+        }
     }
 
     private var pressedFill: Color {
@@ -219,10 +233,8 @@ struct KeyboardTopControls: View {
 
     private func isSelected(_ tab: KeyboardInputTab) -> Bool {
         switch tab {
-        case .ai:
-            return state.surface == .ai
-        case .voice:
-            return state.surface == .voice
+        case .assistant:
+            return state.surface == .voice || state.surface == .ai
         case .chinese:
             return state.surface == .typing && typing.language == .chinese
         case .english:
@@ -232,9 +244,7 @@ struct KeyboardTopControls: View {
 
     private func select(_ tab: KeyboardInputTab) {
         switch tab {
-        case .ai:
-            state.setSurface(.ai)
-        case .voice:
+        case .assistant:
             state.setSurface(.voice)
         case .chinese:
             applyTypingOutput(typing.setLanguage(.chinese))
@@ -262,8 +272,7 @@ struct KeyboardTopControls: View {
 
     private func accessibilityLabel(for tab: KeyboardInputTab) -> String {
         switch tab {
-        case .ai: return ExtL10n.string("keyboard.tab.ai.a11y")
-        case .voice: return ExtL10n.string("keyboard.tab.voice.a11y")
+        case .assistant: return ExtL10n.string("keyboard.tab.ai.a11y")
         case .chinese: return ExtL10n.string("keyboard.tab.chinese.a11y")
         case .english: return ExtL10n.string("keyboard.tab.english.a11y")
         }
@@ -271,6 +280,8 @@ struct KeyboardTopControls: View {
 }
 
 struct KeyboardTranslationMenuButton: View, Equatable {
+    @Environment(\.colorScheme) private var colorScheme
+
     let palette: ThemePalette
     let targetLocaleId: String
     let onSelect: (String) -> Void
@@ -310,10 +321,16 @@ struct KeyboardTranslationMenuButton: View, Equatable {
                             : palette.textSecondary
                     )
             }
+            .frame(
+                width: KeyboardTopBarMetrics.trailingChipSize,
+                height: KeyboardTopBarMetrics.trailingChipSize
+            )
+            .background(NativeKeyboardKeyColors.fill(for: colorScheme), in: Circle())
+            .overlay(Circle().stroke(palette.divider, lineWidth: 0.5))
             .contentShape(Circle())
-            .glassEffect(.regular.interactive(), in: Circle())
         }
         .menuStyle(.button)
+        .accessibilityIdentifier("assistant.translation")
         .accessibilityLabel(Text(SharedL10n.string("keyboard.translation.a11y")))
         .accessibilityHint(Text(SharedL10n.string("keyboard.translation.a11yHint")))
     }
