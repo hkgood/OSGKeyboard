@@ -60,6 +60,22 @@ public struct EditableInputReference: Codable, Equatable, Sendable {
         now >= expiresAt
     }
 
+    /// Same-process verification uses the exact insertion kept in memory.
+    /// This path intentionally does not depend on the field fingerprint,
+    /// because UITextDocumentProxy may publish that context one callback after
+    /// the insertion while the in-memory record is already authoritative.
+    public func matchesLiveInsertion(
+        extensionInstanceID currentInstanceID: UUID,
+        lastInsertedText: String?,
+        contextBeforeInput: String?
+    ) -> Bool {
+        !isExpired()
+            && isWithinLengthBudget
+            && extensionInstanceID == currentInstanceID
+            && lastInsertedText == insertedText
+            && contextBeforeInput?.hasSuffix(insertedText) == true
+    }
+
     /// Rebuilt extensions must match the complete inserted string at the caret
     /// and, when captured, the same field fingerprint; a suffix sample is insufficient.
     public func isFullyVerified(

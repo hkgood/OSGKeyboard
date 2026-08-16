@@ -83,6 +83,22 @@ final class AISessionStateTests: XCTestCase {
         XCTAssertEqual(state.answer?.isSent, false)
     }
 
+    func testDiscardReadyAnswerKeepsConversationActive() {
+        var state = AISessionState()
+        let conversationID = UUID()
+        let utteranceID = UUID()
+        state.enter(conversationID: conversationID)
+        state.beginPreparing(utteranceID: utteranceID)
+        state.receiveAnswer("光标变化后保留的回答", utteranceID: utteranceID)
+
+        state.discardReadyAnswer()
+
+        XCTAssertEqual(state.phase, .idle)
+        XCTAssertEqual(state.conversationID, conversationID)
+        XCTAssertNil(state.answer)
+        XCTAssertFalse(state.canInsert)
+    }
+
     func testCancellationRestoresPendingSendState() {
         var state = AISessionState()
         let firstUtteranceID = UUID()

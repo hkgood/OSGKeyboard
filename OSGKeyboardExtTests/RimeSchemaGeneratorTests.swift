@@ -178,7 +178,7 @@ final class RimeSchemaGeneratorTests: XCTestCase {
     }
 
     @MainActor
-    func testAISurfaceRestoresAsEmptyModeWithoutGeneralRememberSetting() {
+    func testLegacyAISurfaceMigratesToUnifiedAssistant() {
         let suiteName = "TypingInputConfigurationTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         defer { defaults.removePersistentDomain(forName: suiteName) }
@@ -187,7 +187,7 @@ final class RimeSchemaGeneratorTests: XCTestCase {
 
         XCTAssertEqual(
             TypingInputConfiguration.preferredSurfaceOnOpen(defaults: defaults),
-            .ai
+            .voice
         )
     }
 }

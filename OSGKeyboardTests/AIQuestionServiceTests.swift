@@ -43,7 +43,9 @@ final class AIQuestionServiceTests: XCTestCase {
         )
 
         XCTAssertEqual(client.lastMessages?.last, .user(rawQuestion))
-        XCTAssertTrue(client.lastMessages?.first?.content.contains("Reply in English.") == true)
+        let systemPrompt = client.lastMessages?.first?.content ?? ""
+        XCTAssertTrue(systemPrompt.contains("Reply in English"))
+        XCTAssertTrue(systemPrompt.contains("explicitly asks for another output language"))
     }
 
     func testAnswerDoesNotEnterContextUntilHostCommitsTerminalResult() async throws {

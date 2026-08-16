@@ -37,7 +37,7 @@ struct KeyboardSurfaceRoot: View {
             Group {
                 switch state.surface {
                 case .voice:
-                    KeyboardRootView(
+                    AIKeyboardView(
                         state: state,
                         typing: typing,
                         onInsert: wrappedInsert
@@ -50,6 +50,8 @@ struct KeyboardSurfaceRoot: View {
                         onDeleteBackward: wrappedDeleteBackward
                     )
                 case .ai:
+                    // Legacy persisted surface; controller canonicalizes it to
+                    // `.voice`, but render the unified assistant defensively.
                     AIKeyboardView(
                         state: state,
                         typing: typing,

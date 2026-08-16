@@ -174,8 +174,7 @@ final class TypingKeyTouchPadUIView: UIView {
         bottomRowMinY: 0
     )
 
-    /// Same trick as CursorDragPad: non-zero alpha so SwiftUI hosting does
-    /// not treat the pad as pass-through.
+    /// Non-zero alpha keeps SwiftUI hosting from treating the pad as pass-through.
     private static let padTint = UIColor { traits in
         UIColor.systemGray4.resolvedColor(with: traits).withAlphaComponent(0.02)
     }

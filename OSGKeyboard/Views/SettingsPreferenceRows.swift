@@ -232,23 +232,6 @@ struct RememberLastSurfaceToggleRow: View {
     }
 }
 
-// MARK: - Cursor drag navigation toggle
-
-struct CursorDragNavigationToggleRow: View {
-    @Environment(\.themePalette) private var palette: ThemePalette
-    @Binding var isOn: Bool
-
-    var body: some View {
-        Toggle(isOn: $isOn) {
-            Text("settings.cursorDragNavigation.title")
-                .font(TypeStyle.body)
-                .foregroundStyle(palette.textPrimary)
-        }
-        .tint(palette.accent)
-        .settingsListRow()
-    }
-}
-
 // MARK: - Menu picker row (generic)
 
 struct SettingsMenuPickerRow: View {

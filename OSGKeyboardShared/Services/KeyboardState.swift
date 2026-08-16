@@ -134,8 +134,6 @@ public final class KeyboardState: ObservableObject {
     /// Mirrors the host field's return-key intent. The action stays a newline
     /// insert; host apps decide whether that submits or creates a line break.
     @Published public var returnKeyRole: ReturnKeyRole = .newline
-    /// Press-and-drag pads beside the mic for four-way caret movement.
-    @Published public var cursorDragNavigationEnabled: Bool = true
     /// Opt-in clipboard history capture (mirrored from App Group).
     @Published public var clipboardHistoryEnabled: Bool = false
     /// Opt-in clipboard suggestion strip (requires history enabled).
@@ -174,12 +172,11 @@ public final class KeyboardState: ObservableObject {
     /// constraint and the SwiftUI key grid pick their metrics from this one
     /// value so they can never disagree and clip the bottom row.
     @Published public var layoutWidth: CGFloat = 0
-    /// `true` while a cursor-drag pad is being pressed — drives the hint
-    /// shown above the mic.
-    @Published public var cursorDragActive: Bool = false
     /// `true` when the last voice insertion is still at the caret and can
     /// be undone (suffix-checked against `documentContextBeforeInput`).
     @Published public var undoAvailable: Bool = false
+    /// A verified OSG-generated insertion can be edited by voice.
+    @Published public var editAvailable: Bool = false
     /// `true` while an undone voice insertion can be re-applied (redo buffer).
     @Published public var redoAvailable: Bool = false
     /// `true` when the host field has a non-empty selection (copy enabled).
@@ -190,6 +187,11 @@ public final class KeyboardState: ObservableObject {
     @Published public var editSession: EditSessionState = .inactive
     /// AI conversation UI state for the keyboard surface. The host owns the actual messages.
     @Published public var aiSession: AISessionState = .inactive
+    /// The latest generated insertion can be submitted through the host's
+    /// action-style Return key (Send / Search / Done / Go).
+    @Published public var assistantSendAvailable: Bool = false
+    /// Brief success pulse rendered on the unified assistant microphone.
+    @Published public var assistantInsertionSucceeded: Bool = false
     @Published public var editCanReplaceOriginal: Bool = false
     /// Short idle feedback (availability, expiry, missing LLM).
     @Published public var editHint: String?
@@ -210,6 +212,7 @@ public final class KeyboardState: ObservableObject {
         clipboardSuggestionText = nil
         clipboardSuggestionChangeCount = nil
         clipboardOverlay = .none
+        assistantSendAvailable = false
     }
 
     // MARK: - Host-app onboarding gate
@@ -270,7 +273,11 @@ public final class KeyboardState: ObservableObject {
     public var closeEditMode: () -> Void = {}
     public var tapAIMic: () -> Void = {}
     public var cancelAIInput: () -> Void = {}
-    public var sendAIAnswer: () -> Void = {}
+    /// Explicitly inserts a retained AI result after target validation failed.
+    public var confirmPendingAIAnswer: () -> Void = {}
+    public var discardPendingAIAnswer: () -> Void = {}
+    /// Performs the host's action-style Return after generated text was inserted.
+    public var sendAssistantAction: () -> Void = {}
     /// Sends a tapped idle hint card as the AI question (skip microphone).
     public var submitAIHint: (AIHintCard) -> Void = { _ in }
     /// Sends a clipboard skill (reply / summarize / translate / export).
@@ -315,11 +322,6 @@ public final class KeyboardState: ObservableObject {
     public var copySelection:       () -> Void = {}
     /// Cut the current text selection (copy + delete).
     public var cutSelection:        () -> Void = {}
-    public var moveCursorHorizontal: (Int) -> Void = { _ in }
-    public var moveCursorVertical:   (Int) -> Void = { _ in }
-    /// Cursor-drag pad press lifecycle — updates `cursorDragActive` and
-    /// lets the view controller reset vertical-navigation stickiness.
-    public var setCursorDragActive:  (Bool) -> Void = { _ in }
     /// Switch voice ↔ typing. No-ops when voice pipeline is active.
     public var setSurface: (Surface) -> Void = { _ in }
 
@@ -338,7 +340,7 @@ public final class KeyboardState: ObservableObject {
     public var canEnterTypingSurface: Bool { !locksTypingSurface }
 
     public var canCancelAIInput: Bool {
-        surface == .ai && aiSession.isBusy
+        aiSession.isBusy
     }
 
     /// Normal dictation can be discarded from microphone startup through

@@ -12,13 +12,17 @@ import OSGKeyboardShared
 
 struct AIAgentSkillsView: View {
     @Environment(\.themePalette) private var palette
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var config = ProviderConfig.shared
     @ObservedObject private var store = AIAgentSkillLayoutStore.shared
 
     @State private var viewingSkill: AIClipboardSkill?
     @State private var editingDraft: SkillEditorDraft?
     @State private var showFullAlert = false
-    @State private var showClipboardSettings = false
+    @State private var pasteAccessVerified = AppPermissions.hasVerifiedPasteAccess
+    @State private var pasteAccessNeedsRecovery = false
+    @State private var showPasteNoTextAlert = false
+    @State private var showPasteAccessSuccess = false
     /// True while a skill card is lifted; locks the page scroll like SpringBoard.
     @State private var isReordering = false
 
@@ -35,8 +39,9 @@ struct AIAgentSkillsView: View {
         NavigationStack {
             ScrollView {
                 CardPageContent(spacing: Spacing.xl) {
-                    if !config.clipboardHistoryEnabled {
-                        clipboardHistoryBanner
+                    if showsClipboardAccessGuide {
+                        clipboardAccessGuide
+                            .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                     enabledSection
                     if !store.availableSkills.isEmpty {
@@ -58,9 +63,6 @@ struct AIAgentSkillsView: View {
                     }
                     .accessibilityLabel(Text("skills.add"))
                 }
-            }
-            .navigationDestination(isPresented: $showClipboardSettings) {
-                ClipboardSettingsView(config: config)
             }
         }
         .sheet(item: $viewingSkill) { skill in
@@ -90,53 +92,62 @@ struct AIAgentSkillsView: View {
         } message: {
             Text(AppL10n.string("skills.full.message", language: config.uiLanguage))
         }
-        .onAppear { store.reload() }
+        .alert(
+            AppL10n.string("clipboard.paste.noText.title", language: config.uiLanguage),
+            isPresented: $showPasteNoTextAlert
+        ) {
+            Button("common.done") { showPasteNoTextAlert = false }
+        } message: {
+            Text(AppL10n.string("clipboard.paste.noText.message", language: config.uiLanguage))
+        }
+        .onAppear {
+            store.reload()
+            refreshPasteAccessState()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            refreshPasteAccessState()
+            pasteAccessNeedsRecovery = false
+        }
     }
 
-    private var clipboardHistoryBanner: some View {
+    private var clipboardAccessGuide: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Label {
-                Text("skills.clipboard.guide.title")
-                    .font(TypeStyle.bodyEmph)
-                    .foregroundStyle(palette.textPrimary)
-            } icon: {
-                Image(systemName: "clipboard")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(palette.warning)
-            }
-            Text("skills.clipboard.guide.body")
-                .font(TypeStyle.caption)
-                .foregroundStyle(palette.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            HStack(alignment: .top, spacing: Spacing.sm) {
+                Image(systemName: clipboardGuideIcon)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(clipboardGuideTint)
+                    .frame(width: 36, height: 36)
+                    .background(clipboardGuideTint.opacity(0.12), in: Circle())
 
-            Button {
-                showClipboardSettings = true
-            } label: {
-                guideRow(
-                    titleKey: "skills.clipboard.guide.openAppSettings",
-                    systemImage: "slider.horizontal.3",
-                    trailing: "chevron.right"
-                )
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(clipboardGuideTitle)
+                        .font(TypeStyle.bodyEmph)
+                        .foregroundStyle(palette.textPrimary)
+                    Text(clipboardGuideBody)
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            .buttonStyle(.plain)
 
-            Divider().background(palette.divider)
-
-            Button {
-                AppPermissions.openSystemSettings()
-            } label: {
-                guideRow(
-                    titleKey: "skills.clipboard.guide.openSystemSettings",
-                    systemImage: "gearshape",
-                    trailing: "arrow.up.right"
-                )
+            if !showPasteAccessSuccess {
+                Button(action: performClipboardGuideAction) {
+                    guideRow(
+                        titleKey: clipboardGuideActionTitle,
+                        systemImage: clipboardGuideActionIcon,
+                        trailing: clipboardGuideActionTrailing
+                    )
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(clipboardGuideActionIdentifier)
             }
-            .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.md)
         .background(palette.surface, in: skillCardShape)
         .overlay(skillCardShape.stroke(palette.divider, lineWidth: 0.5))
+        .accessibilityIdentifier("skills.clipboard.guide")
     }
 
     private func guideRow(
@@ -157,8 +168,127 @@ struct AIAgentSkillsView: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(palette.textTertiary)
         }
-        .padding(.vertical, Spacing.xs)
+        .padding(.horizontal, Spacing.sm)
+        .frame(minHeight: 44)
+        .background(
+            palette.surfaceElevated,
+            in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+        )
         .contentShape(Rectangle())
+    }
+
+    private var showsClipboardAccessGuide: Bool {
+        !config.clipboardHistoryEnabled || !pasteAccessVerified || showPasteAccessSuccess
+    }
+
+    private var clipboardGuideTitle: LocalizedStringKey {
+        if showPasteAccessSuccess {
+            return "skills.clipboard.guide.success.title"
+        }
+        if !config.clipboardHistoryEnabled {
+            return "skills.clipboard.guide.title"
+        }
+        if pasteAccessNeedsRecovery {
+            return "skills.clipboard.guide.recovery.title"
+        }
+        return "skills.clipboard.guide.verify.title"
+    }
+
+    private var clipboardGuideBody: LocalizedStringKey {
+        if showPasteAccessSuccess {
+            return "skills.clipboard.guide.success.body"
+        }
+        if !config.clipboardHistoryEnabled {
+            return "skills.clipboard.guide.body"
+        }
+        if pasteAccessNeedsRecovery {
+            return "skills.clipboard.guide.recovery.body"
+        }
+        return "skills.clipboard.guide.verify.body"
+    }
+
+    private var clipboardGuideIcon: String {
+        if showPasteAccessSuccess {
+            return "checkmark"
+        }
+        return pasteAccessNeedsRecovery ? "exclamationmark" : "clipboard"
+    }
+
+    private var clipboardGuideTint: Color {
+        pasteAccessNeedsRecovery ? palette.warning : palette.accent
+    }
+
+    private var clipboardGuideActionTitle: LocalizedStringKey {
+        if !config.clipboardHistoryEnabled {
+            return "skills.clipboard.guide.enableHistory"
+        }
+        if pasteAccessNeedsRecovery {
+            return "skills.clipboard.guide.openSystemSettings"
+        }
+        return "skills.clipboard.guide.verify.action"
+    }
+
+    private var clipboardGuideActionIcon: String {
+        if !config.clipboardHistoryEnabled {
+            return "clock.arrow.circlepath"
+        }
+        return pasteAccessNeedsRecovery ? "gearshape" : "checkmark.shield"
+    }
+
+    private var clipboardGuideActionTrailing: String {
+        pasteAccessNeedsRecovery ? "arrow.up.right" : "arrow.right"
+    }
+
+    private var clipboardGuideActionIdentifier: String {
+        if !config.clipboardHistoryEnabled {
+            return "skills.clipboard.guide.enableHistory"
+        }
+        if pasteAccessNeedsRecovery {
+            return "skills.clipboard.guide.openSystemSettings"
+        }
+        return "skills.clipboard.guide.verifyPaste"
+    }
+
+    private func performClipboardGuideAction() {
+        if !config.clipboardHistoryEnabled {
+            withAnimation(Motion.soft) {
+                config.clipboardHistoryEnabled = true
+            }
+            return
+        }
+        if pasteAccessNeedsRecovery {
+            AppPermissions.openSystemSettings()
+            return
+        }
+        verifyPasteAccess()
+    }
+
+    private func verifyPasteAccess() {
+        switch AppPermissions.requestPasteAccess() {
+        case .verified:
+            withAnimation(Motion.soft) {
+                pasteAccessVerified = true
+                pasteAccessNeedsRecovery = false
+                showPasteAccessSuccess = true
+            }
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(700))
+                withAnimation(Motion.soft) {
+                    showPasteAccessSuccess = false
+                }
+            }
+        case .noTextAvailable:
+            showPasteNoTextAlert = true
+        case .unavailable:
+            withAnimation(Motion.soft) {
+                pasteAccessVerified = false
+                pasteAccessNeedsRecovery = true
+            }
+        }
+    }
+
+    private func refreshPasteAccessState() {
+        pasteAccessVerified = AppPermissions.hasVerifiedPasteAccess
     }
 
     private var enabledSection: some View {

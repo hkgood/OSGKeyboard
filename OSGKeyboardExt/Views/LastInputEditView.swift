@@ -6,7 +6,7 @@ import OSGKeyboardShared
 
 struct LastInputEditView: View {
     private enum Layout {
-        static let primaryButtonHeight: CGFloat = 50
+        static let primaryButtonHeight = KeyboardChromeLayout.assistantActionCapsuleHeight
         static let primaryButtonWidth: CGFloat = primaryButtonHeight * 3
     }
 
@@ -139,6 +139,7 @@ struct LastInputEditView: View {
             }
             .buttonStyle(.plain)
             .disabled(primaryDisabled)
+            .accessibilityIdentifier(primaryAccessibilityIdentifier)
             .accessibilityLabel(Text(primaryAccessibilityLabel))
             helperText(rightHelper)
         }
@@ -237,6 +238,17 @@ struct LastInputEditView: View {
                 : ExtL10n.string("keyboard.edit.append")
         }
         return ExtL10n.string("keyboard.edit.stop")
+    }
+
+    private var primaryAccessibilityIdentifier: String {
+        switch state.editSession {
+        case .listening:
+            return "assistant.edit.stop"
+        case .review:
+            return "assistant.edit.confirm"
+        default:
+            return "assistant.edit.primary"
+        }
     }
 
     private var reviewSwipeGesture: some Gesture {

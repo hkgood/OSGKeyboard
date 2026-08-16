@@ -14,22 +14,31 @@ final class AIKeyboardCoordinator {
     private let flow: KeyboardFlowCoordinator
     private let insertAnswer: (AIAnswer) -> Bool
     private let performReturn: () -> Void
+    private let captureInsertionFingerprint: () -> String?
+    private var requestInsertionFingerprint: String?
+    private var conversationInsertionFingerprint: String?
+    private var hasConversationInsertionTarget = false
 
     init(
         state: KeyboardState,
         flow: KeyboardFlowCoordinator,
         insertAnswer: @escaping (AIAnswer) -> Bool,
-        performReturn: @escaping () -> Void
+        performReturn: @escaping () -> Void,
+        captureInsertionFingerprint: @escaping () -> String?
     ) {
         self.state = state
         self.flow = flow
         self.insertAnswer = insertAnswer
         self.performReturn = performReturn
+        self.captureInsertionFingerprint = captureInsertionFingerprint
     }
 
     func beginNewPresentation() {
         endConversationIfNeeded()
         state.aiSession.enter()
+        requestInsertionFingerprint = nil
+        conversationInsertionFingerprint = nil
+        hasConversationInsertionTarget = false
     }
 
     func enterIfNeeded() {
@@ -43,6 +52,9 @@ final class AIKeyboardCoordinator {
         }
         endConversationIfNeeded()
         state.aiSession.leave()
+        requestInsertionFingerprint = nil
+        conversationInsertionFingerprint = nil
+        hasConversationInsertionTarget = false
     }
 
     func toggleMicrophone() {
@@ -51,17 +63,17 @@ final class AIKeyboardCoordinator {
             guard let utteranceID = state.aiSession.activeUtteranceID else { return }
             state.aiSession.beginRecognizing(utteranceID: utteranceID)
             flow.stopAIRecording()
-        case .idle, .ready, .awaitingSend, .inserted, .sent, .failed:
-            enterIfNeeded()
+        case .idle, .awaitingSend, .inserted, .sent, .failed:
+            prepareConversationForRequest()
             guard let conversationID = state.aiSession.conversationID else { return }
             let disposition = flow.beginAIRecording(conversationID: conversationID)
             if case .rejected(let rejection) = disposition {
                 state.aiSession.fail(message(for: rejection), utteranceID: nil)
             }
         case .inactive:
-            enterIfNeeded()
+            prepareConversationForRequest()
             toggleMicrophone()
-        case .preparing, .recognizing, .generating:
+        case .preparing, .recognizing, .generating, .ready:
             break
         }
     }
@@ -69,7 +81,7 @@ final class AIKeyboardCoordinator {
     /// Tap a clipboard skill chip: same fail-closed material path as hint cards.
     func submitClipboardSkill(_ skill: AIClipboardSkill) {
         guard canAcceptIdleSubmit else { return }
-        enterIfNeeded()
+        prepareConversationForRequest()
         let material = ClipboardHistoryStore.shared.newestAIHintEligibleEntry()?.text
         if skill.kind == .export {
             state.pendingClipboardSkillID = skill.id
@@ -77,11 +89,14 @@ final class AIKeyboardCoordinator {
         } else {
             clearPendingExportSkill()
         }
-        let instruction = AIClipboardSkillCatalog.instruction(
+        var instruction = AIClipboardSkillCatalog.instruction(
             for: skill,
             locale: AIHintLocaleResolver.packLocale(),
             translationTargetLocaleId: state.translationTargetLocaleId
         )
+        if skill.kind == .export {
+            instruction += "\nPreserve the source language, addresses, names, and proper nouns."
+        }
         AIAgentShortcutRun.trace("keyboard.submit skill=\(skill.id) kind=\(skill.kind)")
         if let material {
             AIAgentShortcutRun.traceBody("keyboard.clipboard", material)
@@ -101,7 +116,7 @@ final class AIKeyboardCoordinator {
     /// Tap an idle hint card: resolve its material, skip the mic, ask the host.
     func submitHintCard(_ card: AIHintCard) {
         guard canAcceptIdleSubmit else { return }
-        enterIfNeeded()
+        prepareConversationForRequest()
         let resolution = AIHintPool.resolvePrompt(
             for: card,
             clipboardText: ClipboardHistoryStore.shared.newestAIHintEligibleEntry()?.text
@@ -111,10 +126,10 @@ final class AIKeyboardCoordinator {
 
     private var canAcceptIdleSubmit: Bool {
         switch state.aiSession.phase {
-        case .inactive, .idle, .failed:
+        case .inactive, .idle, .awaitingSend, .inserted, .sent, .failed:
             return true
         case .preparing, .listening, .recognizing, .generating,
-             .ready, .awaitingSend, .inserted, .sent:
+             .ready:
             return false
         }
     }
@@ -150,23 +165,37 @@ final class AIKeyboardCoordinator {
     func cancel() {
         guard state.aiSession.isBusy else { return }
         clearPendingExportSkill()
+        requestInsertionFingerprint = nil
         flow.cancelAIRecording()
         state.aiSession.cancelCurrentWork()
     }
 
-    func sendLatestAnswer() {
+    func confirmPendingAnswer() {
         if state.aiSession.canInsert, let answer = state.aiSession.answer {
             guard insertAnswer(answer) else { return }
             state.aiSession.markAnswerInserted(
                 offersSend: state.returnKeyRole.usesActionFill
             )
-        } else if state.aiSession.canSend {
+            conversationInsertionFingerprint = captureInsertionFingerprint()
+            hasConversationInsertionTarget = true
+        }
+    }
+
+    func discardPendingAnswer() {
+        state.aiSession.discardReadyAnswer()
+        requestInsertionFingerprint = nil
+    }
+
+    func sendCurrentFieldAction() {
+        guard state.assistantSendAvailable else { return }
+        state.assistantSendAvailable = false
+        if state.aiSession.canSend {
             state.aiSession.markAnswerSent()
-            // Let the host consume the inserted answer before issuing Return.
-            Task { @MainActor [weak self] in
-                await Task.yield()
-                self?.performReturn()
-            }
+        }
+        // Let the host consume the inserted answer before issuing Return.
+        Task { @MainActor [weak self] in
+            await Task.yield()
+            self?.performReturn()
         }
     }
 
@@ -230,11 +259,34 @@ final class AIKeyboardCoordinator {
             return
         }
         state.aiSession.receiveAnswer(answer, utteranceID: result.utteranceId)
+        defer { requestInsertionFingerprint = nil }
+        guard state.aiSession.canInsert,
+              let expected = requestInsertionFingerprint,
+              captureInsertionFingerprint() == expected,
+              let answer = state.aiSession.answer,
+              insertAnswer(answer) else {
+            // Keep `.ready`: the unified UI presents an explicit Insert / Discard
+            // fallback when the field or caret changed during generation.
+            return
+        }
+        state.aiSession.markAnswerInserted(
+            offersSend: state.returnKeyRole.usesActionFill
+        )
+        conversationInsertionFingerprint = captureInsertionFingerprint()
+        hasConversationInsertionTarget = true
     }
 
     func fail(_ message: String, utteranceID: UUID?) {
         clearPendingExportSkill()
+        requestInsertionFingerprint = nil
         state.aiSession.fail(message, utteranceID: utteranceID)
+    }
+
+    /// A global output-language change starts a clean conversation so retained
+    /// turns cannot override the newly selected language policy.
+    func resetConversationForConfigurationChange() {
+        guard state.aiSession.isActive else { return }
+        beginNewPresentation()
     }
 
     private func endConversationIfNeeded() {
@@ -246,6 +298,20 @@ final class AIKeyboardCoordinator {
     private func clearPendingExportSkill() {
         state.pendingClipboardSkillID = nil
         state.pendingClipboardSkillSource = nil
+    }
+
+    private func prepareConversationForRequest() {
+        let currentFingerprint = captureInsertionFingerprint()
+        if state.aiSession.isActive,
+           hasConversationInsertionTarget,
+           conversationInsertionFingerprint != currentFingerprint {
+            beginNewPresentation()
+        } else {
+            enterIfNeeded()
+        }
+        conversationInsertionFingerprint = currentFingerprint
+        hasConversationInsertionTarget = true
+        requestInsertionFingerprint = currentFingerprint
     }
 
     private var isPendingExportSkill: Bool {

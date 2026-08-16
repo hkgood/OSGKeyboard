@@ -1,74 +1,124 @@
 // AIKeyboardView.swift
 // OSGKeyboard · Keyboard Extension
 //
-// Product voice-to-AI conversation surface. The latest answer remains visible
-// while a follow-up runs and is inserted only through the explicit Send action.
+// Unified assistant surface: tap for ordinary dictation, hold for AI, and use
+// the same idle layout for hotwords, clipboard skills, editing, and Send.
 
 import SwiftUI
 import OSGKeyboardShared
 
 struct AIKeyboardView: View {
     private enum Layout {
-        static let contentHeight: CGFloat = 174
-        static let actionRowHeight: CGFloat = 55
-        static let actionButtonHeight: CGFloat = 50
-        static let actionButtonMaxWidth: CGFloat = 150
-        static let statusHeight: CGFloat = 20
+        static let topBarHeight: CGFloat = 44
+        static let primaryHeight: CGFloat = 60
+        static let primaryWidth: CGFloat = 156
+        static let compactPrimaryHeight: CGFloat = 56
+        static let compactPrimaryWidth: CGFloat = 148
+        static let secondaryHeight: CGFloat = 52
+        static let sendWidth: CGFloat = 132
+        static let compactIPadSendWidth: CGFloat = 112
+        static let circleSize: CGFloat = 48
+        static let compactIPadCircleSize: CGFloat = 44
+        static let sideButtonEdgeInset: CGFloat = 8
+        static let actionClusterMaxWidth: CGFloat = 430
+        static let primaryToSecondaryGap: CGFloat = 25
+        static let hotwordHeight: CGFloat = 28
+        static let hotwordMaxWidth: CGFloat = 180
+        static let skillTipMaxWidth: CGFloat = 300
+        /// The 30 pt tab sits inside a 44 pt top bar. Half of its bottom inset
+        /// belongs visually to the label-to-tab gap, so compensate by 3.5 pt.
+        static let contextVisualOffset: CGFloat = -3.5
         static let carouselInterval: TimeInterval = 4
         static let skillButtonSize: CGFloat = 48
-        static let skillsPerRow = 4
-        static let skillRowSpacing: CGFloat = 8
-        static let skillCellSpacing: CGFloat = 16
-        static let skillCellWidth: CGFloat = 64
+        static let skillCellWidth: CGFloat = 60
+        static let skillCellSpacing: CGFloat = 10
+        static let pageDotSize: CGFloat = 5
+        static let skillPaginationBottomInset: CGFloat = 6
     }
 
     #if DEBUG
     /// Layout preview for `--ai-skills-demo`. Nil keeps production clipboard-window gating.
     static var debugPreviewSkills: [AIClipboardSkill]?
+    /// Keeps the deterministic UI harness on the tappable idle hint.
+    static var debugSkipsLongPressCoach = false
+    /// Prevents deterministic feedback previews from expiring mid-assertion.
+    static var debugKeepsSkillTip = false
     #endif
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject var state: KeyboardState
     @ObservedObject var typing: TypingSessionController
-    /// A copy made while the keyboard is visible must reach the carousel
-    /// immediately, not on the next rotation tick.
     @ObservedObject private var clipboardHistory = ClipboardHistoryStore.shared
     let onInsert: (String) -> Void
 
+    @AppStorage("keyboard.assistant.longPressCoachCount")
+    private var longPressCoachCount = 0
+    @State private var showsLongPressCoach = false
     @State private var currentHint: AIHintCard?
     @State private var hintOpacity: Double = 1
     @State private var carouselBag = AIHintCarouselBag()
     @State private var poolCards: [AIHintCard] = []
+    @State private var selectedSkillPage = 0
+    @State private var dismissedClipboardEntryID: UUID?
+    @State private var debugSkillsDismissed = false
+    @State private var micLongPressConsumed = false
+    @State private var micIsHoldingForAI = false
+    @State private var sendConfirmationVisible = false
 
     private var palette: ThemePalette {
         colorScheme == .dark ? Palette.dark : Palette.light
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            topBar.frame(height: KeyboardTopBarMetrics.height)
-            answerArea.frame(height: resolvedAnswerHeight)
-            actionRow.frame(height: Layout.actionRowHeight)
+        Group {
+            if state.editSession.isActive {
+                LastInputEditView(state: state)
+            } else if state.aiSession.canInsert {
+                pendingAnswerSurface
+            } else {
+                assistantSurface
+            }
         }
-        .frame(maxWidth: KeyboardChromeLayout.voiceContentMaxWidth)
-        .padding(.vertical, 4)
-        .padding(.horizontal, KeyboardChromeLayout.horizontalInset)
-        .frame(maxWidth: .infinity)
-        .frame(height: resolvedHeight)
+        .overlay(alignment: .topLeading) {
+            Color.clear
+                .frame(width: 1, height: 1)
+                .accessibilityElement()
+                .accessibilityIdentifier("assistant.surface")
+                .accessibilityLabel(ExtL10n.text("keyboard.tab.ai"))
+                .allowsHitTesting(false)
+        }
         .environment(\.themePalette, palette)
-        .onAppear { resetCarousel() }
-        .onChange(of: state.aiSession.phase) { _, phase in
-            guard phase == .idle || phase == .failed else { return }
+        .onAppear {
             resetCarousel()
+            if shouldShowLongPressCoach, longPressCoachCount < 3 {
+                showsLongPressCoach = true
+                longPressCoachCount += 1
+            }
+        }
+        .onChange(of: state.aiSession.phase) { _, phase in
+            if phase == .idle || phase == .failed || phase == .inserted || phase == .sent {
+                resetCarousel()
+            }
         }
         .onChange(of: state.clipboardHistoryEnabled) { _, _ in resetCarousel() }
-        .onChange(of: clipboardHistory.entries.first?.id) { _, _ in resetCarousel() }
-        .onChange(of: state.enabledClipboardSkillIDs) { _, _ in resetCarousel() }
+        .onChange(of: clipboardHistory.entries.first?.id) { _, _ in
+            dismissedClipboardEntryID = nil
+            debugSkillsDismissed = false
+            selectedSkillPage = 0
+            resetCarousel()
+        }
+        .onChange(of: state.enabledClipboardSkillIDs) { _, _ in
+            selectedSkillPage = 0
+            resetCarousel()
+        }
         .onChange(of: state.skillTipText) { _, tip in
             guard let tip, !tip.isEmpty else { return }
+            #if DEBUG
+            guard !Self.debugKeepsSkillTip else { return }
+            #endif
             Task { @MainActor in
-                try? await Task.sleep(nanoseconds: 2_800_000_000)
+                try? await Task.sleep(for: .milliseconds(2_800))
                 if state.skillTipText == tip {
                     state.skillTipText = nil
                 }
@@ -78,17 +128,75 @@ struct AIKeyboardView: View {
         .onReceive(
             Timer.publish(every: Layout.carouselInterval, on: .main, in: .common).autoconnect()
         ) { _ in
-            guard showsPlaceholder else { return }
-            // Reduce Motion stops the rotation, not the data: a card whose
-            // clipboard window has closed must still leave the carousel.
+            guard assistantIsResting else { return }
             reloadHintPool(resetBag: false)
-            guard !showsClipboardSkills else { return }
+            guard !showsClipboardSkills, !showsLongPressCoach else { return }
             if reduceMotion, let hint = currentHint,
                poolCards.contains(where: { $0.id == hint.id }) {
                 return
             }
             showNextHint(animated: !reduceMotion)
         }
+    }
+
+    private var shouldShowLongPressCoach: Bool {
+        #if DEBUG
+        return !Self.debugSkipsLongPressCoach
+        #else
+        return true
+        #endif
+    }
+
+    private var assistantSurface: some View {
+        VStack(spacing: 0) {
+            topBar.frame(height: Layout.topBarHeight)
+            // This flexible slot is exactly the gap between the top tabs and
+            // microphone. Centering its content guarantees equal whitespace
+            // above and below labels on both phone and iPad heights.
+            contextArea
+                .frame(maxHeight: .infinity)
+                .offset(y: Layout.contextVisualOffset)
+            primaryActionRow.frame(height: Layout.primaryHeight)
+            Color.clear.frame(height: Layout.primaryToSecondaryGap)
+            secondaryActionRow.frame(height: Layout.secondaryHeight)
+        }
+        .padding(.vertical, 4)
+        .padding(.horizontal, KeyboardChromeLayout.horizontalInset)
+        .frame(maxWidth: KeyboardChromeLayout.voiceContentMaxWidth)
+        .frame(maxWidth: .infinity)
+        .frame(height: resolvedHeight)
+    }
+
+    private var pendingAnswerSurface: some View {
+        VStack(spacing: 0) {
+            topBar.frame(height: Layout.topBarHeight)
+            ScrollView(.vertical) {
+                Text(state.aiSession.answer?.text ?? "")
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, Spacing.sm)
+            }
+            .scrollIndicators(.visible)
+
+            Button(action: state.confirmPendingAIAnswer) {
+                Image(systemName: "plus")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: Layout.sendWidth, height: 44)
+                    .background(palette.accent, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("assistant.pending.insert")
+            .frame(height: 55)
+            .accessibilityLabel(ExtL10n.text("keyboard.assistant.insertPending"))
+        }
+        .padding(.vertical, 4)
+        .padding(.horizontal, KeyboardChromeLayout.horizontalInset)
+        .frame(maxWidth: KeyboardChromeLayout.voiceContentMaxWidth)
+        .frame(maxWidth: .infinity)
+        .frame(height: resolvedHeight)
     }
 
     private var resolvedHeight: CGFloat {
@@ -98,39 +206,41 @@ struct AIKeyboardView: View {
         )
     }
 
-    private var resolvedAnswerHeight: CGFloat {
-        max(
-            Layout.contentHeight,
-            resolvedHeight
-                - KeyboardTopBarMetrics.height
-                - Layout.actionRowHeight
-                - 8
-        )
-    }
+    // MARK: - Top bar
 
     @ViewBuilder
     private var topBar: some View {
-        if state.canCancelAIInput {
-            HStack(spacing: Spacing.xs) {
-                KeyboardBrandLogo(action: state.openSettings)
-                Spacer(minLength: 0)
-                KeyboardCancelButton(
-                    action: state.cancelAIInput,
-                    accessibilityLabel: ExtL10n.text("keyboard.ai.cancel"),
-                    accessibilityHint: ExtL10n.text("keyboard.ai.cancelHint")
-                )
-            }
-            .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
-        } else if state.canShowClipboardEntry,
-                  let suggestion = state.clipboardSuggestionText,
-                  !suggestion.isEmpty {
-            // Replaces logo + capsule tabs until dismissed.
+        if state.aiSession.canInsert {
+            cancelTopBar(
+                action: state.discardPendingAIAnswer,
+                labelKey: "keyboard.assistant.discardPending",
+                hintKey: "keyboard.assistant.discardPendingHint"
+            )
+        } else if state.canCancelAIInput {
+            cancelTopBar(
+                action: state.cancelAIInput,
+                labelKey: "keyboard.ai.cancel",
+                hintKey: "keyboard.ai.cancelHint"
+            )
+        } else if state.canCancelVoiceInput {
+            cancelTopBar(
+                action: state.cancelVoiceInput,
+                labelKey: "keyboard.voice.cancel",
+                hintKey: "keyboard.voice.cancelHint"
+            )
+        } else if shouldShowClipboardSuggestion {
             ClipboardSuggestionBar(
-                text: suggestion,
-                onInsert: { state.insertClipboardText(suggestion) },
-                onDismiss: state.dismissClipboardSuggestion
+                text: state.clipboardSuggestionText ?? "",
+                onInsert: insertClipboardSuggestion,
+                onDismiss: dismissClipboardPresentation
             )
             .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
+        } else if showsClipboardSkills {
+            cancelTopBar(
+                action: dismissClipboardPresentation,
+                labelKey: "keyboard.assistant.dismissClipboard",
+                hintKey: "keyboard.assistant.dismissClipboardHint"
+            )
         } else {
             ZStack {
                 KeyboardTopControls(
@@ -148,125 +258,241 @@ struct AIKeyboardView: View {
         }
     }
 
-    private var answerArea: some View {
-        ZStack(alignment: .bottom) {
-            if showsPlaceholder {
-                if showsClipboardSkills {
-                    clipboardSkillRow
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    hintCarousel
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView(.vertical) {
-                        Group {
-                            if let draft = state.aiSession.draftAnswerText,
-                               !draft.isEmpty {
-                                Text(draft)
-                                    .foregroundStyle(palette.textPrimary)
-                                    .id("ai-draft")
-                            } else if let answer = state.aiSession.answer {
-                                Text(answer.text)
-                                    .foregroundStyle(palette.textPrimary)
-                                    .id(answer.id)
-                            }
-                        }
-                        .font(TypeStyle.body)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                        .padding(.horizontal, Spacing.md)
-                        .padding(.top, Spacing.sm)
-                        .padding(.bottom, Layout.statusHeight + Spacing.sm)
-                    }
-                    .scrollIndicators(.visible)
-                    .onChange(of: state.aiSession.answer?.id) { _, answerID in
-                        guard let answerID else { return }
-                        proxy.scrollTo(answerID, anchor: .top)
-                    }
-                    .onChange(of: state.aiSession.draftAnswerText) { _, draft in
-                        guard let draft, !draft.isEmpty else { return }
-                        proxy.scrollTo("ai-draft", anchor: .bottom)
-                    }
-                }
-            }
+    private func cancelTopBar(
+        action: @escaping () -> Void,
+        labelKey: String,
+        hintKey: String
+    ) -> some View {
+        HStack(spacing: Spacing.xs) {
+            KeyboardBrandLogo(action: state.openSettings)
+            Spacer(minLength: 0)
+            KeyboardCancelButton(
+                action: action,
+                accessibilityLabel: ExtL10n.text(labelKey),
+                accessibilityHint: ExtL10n.text(hintKey),
+                accessibilityIdentifier: cancelIdentifier(for: labelKey)
+            )
+        }
+        .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
+    }
 
-            statusLine
-                .frame(height: Layout.statusHeight)
-                .padding(.horizontal, Spacing.md)
+    private func cancelIdentifier(for labelKey: String) -> String {
+        switch labelKey {
+        case "keyboard.assistant.dismissClipboard":
+            return "assistant.clipboard.dismiss"
+        case "keyboard.assistant.discardPending":
+            return "assistant.pending.discard"
+        default:
+            return "assistant.cancel"
+        }
+    }
 
+    // MARK: - Context
+
+    @ViewBuilder
+    private var contextArea: some View {
+        ZStack {
             if let tip = state.skillTipText, !tip.isEmpty {
-                Text(tip)
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textPrimary)
-                    .multilineTextAlignment(.center)
+                IntrinsicWidthCap(maxWidth: Layout.skillTipMaxWidth) {
+                    Text(tip)
+                        .font(TypeStyle.body)
+                        .foregroundStyle(palette.textPrimary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                        .truncationMode(.tail)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .glassEffect(.regular, in: Capsule())
+                }
+                .accessibilityIdentifier("assistant.skillTip")
+            } else if showsClipboardSkills {
+                clipboardSkillPager
+            } else if let status = activeStatus {
+                statusText(status.text, color: status.color)
+            } else if showsLongPressCoach {
+                Text(ExtL10n.string("keyboard.assistant.longPressCoach"))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(palette.textSecondary)
+                    .lineLimit(1)
                     .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .glassEffect(.regular, in: Capsule())
-                    .padding(.bottom, Layout.statusHeight + Spacing.sm)
-                    .transition(.opacity)
-                    .allowsHitTesting(false)
+                    .frame(height: Layout.hotwordHeight)
+                    .overlay(Capsule().stroke(palette.dividerStrong, lineWidth: 1))
+            } else {
+                hintCarousel
             }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Spacing.md)
+    }
+
+    private func statusText(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(TypeStyle.body)
+            .foregroundStyle(color)
+            .lineLimit(2)
+            .multilineTextAlignment(.center)
+            .truncationMode(.tail)
+            .frame(maxWidth: .infinity)
+    }
+
+    private var activeStatus: (text: String, color: Color)? {
+        if let error = state.aiSession.errorMessage,
+           !error.isEmpty,
+           !ordinaryPipelineIsActive {
+            return (error, palette.warning)
+        }
+        switch state.aiSession.phase {
+        case .preparing:
+            return (ExtL10n.string("keyboard.placeholder.preparing"), palette.textSecondary)
+        case .listening:
+            return (
+                state.aiSession.transcript.isEmpty
+                    ? ExtL10n.string("keyboard.ai.listening")
+                    : state.aiSession.transcript,
+                palette.textPrimary
+            )
+        case .recognizing:
+            return (
+                state.aiSession.transcript.isEmpty
+                    ? ExtL10n.string("keyboard.ai.recognizing")
+                    : state.aiSession.transcript,
+                palette.textSecondary
+            )
+        case .generating:
+            return (aiGeneratingStatus, palette.textSecondary)
+        case .inactive, .idle, .ready, .awaitingSend, .inserted, .sent, .failed:
+            break
+        }
+
+        switch state.phase {
+        case .idle:
+            if !state.micDisabledHint.isEmpty {
+                return (state.micDisabledHint, palette.warning)
+            }
+            return nil
+        case .requestingPermissions:
+            return (
+                state.lastTranscript.isEmpty
+                    ? ExtL10n.string("keyboard.placeholder.preparing")
+                    : state.lastTranscript,
+                palette.textSecondary
+            )
+        case .recording:
+            return (state.lastTranscript.isEmpty ? " " : state.lastTranscript, palette.textPrimary)
+        case .processing:
+            return (
+                state.lastTranscript.isEmpty
+                    ? ExtL10n.string("keyboard.placeholder.processing")
+                    : state.lastTranscript,
+                palette.textSecondary
+            )
+        case .error(_, let message):
+            return (message ?? ExtL10n.string("keyboard.placeholder.error"), palette.warning)
+        case .denied(let reason):
+            let key = reason == .mic ? "keyboard.denied.mic" : "keyboard.denied.speech"
+            return (ExtL10n.string(key), palette.warning)
+        }
+    }
+
+    private var aiGeneratingStatus: String {
+        switch state.pendingClipboardSkillID {
+        case AIClipboardSkillCatalog.extractTodosID:
+            return ExtL10n.string("keyboard.ai.skill.extracting")
+        case AIClipboardSkillCatalog.extractEventsID:
+            return ExtL10n.string("keyboard.ai.skill.extractingEvents")
+        case AIClipboardSkillCatalog.navigateID:
+            return ExtL10n.string("keyboard.ai.skill.extractingAddress")
+        case AIClipboardSkillCatalog.saveToNotesID:
+            return ExtL10n.string("keyboard.ai.skill.namingNote")
+        default:
+            if !state.aiSession.transcript.isEmpty,
+               !AIClipboardPrompt.isInternalPrompt(state.aiSession.transcript) {
+                return state.aiSession.transcript
+            }
+            return ExtL10n.string("keyboard.ai.thinking")
         }
     }
 
     private var hintCarousel: some View {
-        Button {
-            guard let hint = currentHint else { return }
-            state.submitAIHint(hint)
-        } label: {
-            HStack(spacing: 6) {
-                if let hint = currentHint {
-                    Image(systemName: hint.visualKind.systemImage)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(palette.textPrimary.opacity(0.55))
+        IntrinsicWidthCap(maxWidth: Layout.hotwordMaxWidth) {
+            Button {
+                guard let hint = currentHint else { return }
+                state.submitAIHint(hint)
+            } label: {
+                HStack(spacing: 6) {
+                    if let hint = currentHint {
+                        Image(systemName: hint.visualKind.systemImage)
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    Text(currentHint.map(\.resolvedDisplayText)
+                        ?? ExtL10n.string("keyboard.ai.placeholder"))
+                        .font(.system(size: 13, weight: .medium))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
-                Text(currentHint.map(\.resolvedDisplayText) ?? ExtL10n.string("keyboard.ai.placeholder"))
-                    .font(TypeStyle.bodyEmph)
-                    .foregroundStyle(palette.textPrimary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                .foregroundStyle(palette.textSecondary)
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity)
+                .frame(height: Layout.hotwordHeight)
+                .contentShape(Capsule())
+                .overlay(Capsule().stroke(palette.dividerStrong, lineWidth: 1))
             }
-            .padding(.horizontal, 16)
-            .frame(height: 44)
-            .opacity(hintOpacity)
-            .glassEffect(.regular.interactive(), in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .fixedSize()
-        // A busy session already owns the surface; the status line explains a
-        // missing LLM. Both keep the hint from being a tap with no outcome.
-        .disabled(currentHint == nil || !state.aiServiceAvailable || state.aiSession.isBusy)
-        .accessibilityLabel(
-            Text(
-                currentHint.map {
-                    "\(ExtL10n.string("keyboard.ai.hintA11yPrefix"))\($0.resolvedDisplayText)"
-                } ?? ExtL10n.string("keyboard.ai.placeholder")
+            .buttonStyle(.plain)
+            .contentShape(Capsule())
+            .disabled(currentHint == nil || !state.aiServiceAvailable || !assistantIsResting)
+            .accessibilityIdentifier("assistant.hint")
+            .accessibilityLabel(
+                Text(currentHint.map(\.resolvedDisplayText)
+                    ?? ExtL10n.string("keyboard.ai.placeholder"))
             )
-        )
+        }
+        .opacity(hintOpacity)
+        .contentShape(Capsule())
     }
 
-    private var clipboardSkillRow: some View {
-        let rows = skillRows(from: visibleClipboardSkills)
-        return VStack(spacing: 0) {
-            Spacer(minLength: 0)
-            VStack(spacing: Layout.skillRowSpacing) {
-                ForEach(Array(rows.enumerated()), id: \.offset) { _, rowSkills in
-                    HStack(spacing: Layout.skillCellSpacing) {
-                        ForEach(rowSkills) { skill in
-                            skillChip(skill)
+    // MARK: - Clipboard skills
+
+    private var clipboardSkillPager: some View {
+        GeometryReader { proxy in
+            let skillsPerPage = proxy.size.width < 352 ? 4 : 5
+            let pages = skillPages(from: visibleClipboardSkills, count: skillsPerPage)
+            VStack(spacing: 5) {
+                TabView(selection: $selectedSkillPage) {
+                    ForEach(Array(pages.enumerated()), id: \.offset) { page, skills in
+                        HStack(spacing: Layout.skillCellSpacing) {
+                            ForEach(skills) { skill in
+                                skillChip(skill)
+                            }
                         }
+                        .frame(maxWidth: .infinity)
+                        .tag(page)
                     }
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .accessibilityIdentifier("assistant.skills.pager")
+
+                HStack(spacing: Layout.pageDotSize) {
+                    ForEach(pages.indices, id: \.self) { page in
+                        Circle()
+                            .fill(page == selectedSkillPage
+                                ? palette.textPrimary
+                                : palette.textTertiary.opacity(0.45))
+                            .frame(width: Layout.pageDotSize, height: Layout.pageDotSize)
+                    }
+                }
+                .opacity(pages.count > 1 ? 1 : 0)
+                .accessibilityHidden(true)
             }
-            Spacer(minLength: 0)
+            .padding(.bottom, Layout.skillPaginationBottomInset)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func skillRows(from skills: [AIClipboardSkill]) -> [[AIClipboardSkill]] {
-        stride(from: 0, to: skills.count, by: Layout.skillsPerRow).map { start in
-            Array(skills[start ..< min(start + Layout.skillsPerRow, skills.count)])
+    private func skillPages(
+        from skills: [AIClipboardSkill],
+        count: Int
+    ) -> [[AIClipboardSkill]] {
+        stride(from: 0, to: skills.count, by: count).map { start in
+            Array(skills[start ..< min(start + count, skills.count)])
         }
     }
 
@@ -281,19 +507,19 @@ struct AIKeyboardView: View {
                     .frame(width: Layout.skillButtonSize, height: Layout.skillButtonSize)
                     .glassEffect(.regular.interactive(), in: Circle())
                 Text(clipboardSkillTitle(skill))
-                    .font(TypeStyle.caption2)
+                    .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.75)
             }
             .frame(width: Layout.skillCellWidth)
         }
         .buttonStyle(.plain)
         .disabled(!state.aiServiceAvailable || state.aiSession.isBusy)
+        .accessibilityIdentifier("assistant.skill.\(skill.id)")
         .accessibilityLabel(Text(clipboardSkillTitle(skill)))
     }
 
-    /// Translate follows the keyboard target; Reply / Summarize stay static.
     private func clipboardSkillTitle(_ skill: AIClipboardSkill) -> String {
         if skill.id == AIClipboardSkillCatalog.translateID {
             return AIClipboardSkillCatalog.translateButtonTitle(
@@ -308,18 +534,23 @@ struct AIKeyboardView: View {
         return ExtL10n.string(skill.titleKey)
     }
 
-    /// Copy-then-30s window: skill chips replace the rotating hint.
     private var showsClipboardSkills: Bool {
         #if DEBUG
-        if let preview = Self.debugPreviewSkills, !preview.isEmpty {
-            return showsPlaceholder
+        if let preview = Self.debugPreviewSkills,
+           !preview.isEmpty,
+           !debugSkillsDismissed {
+            return assistantIsResting
         }
         #endif
-        guard showsPlaceholder, state.clipboardHistoryEnabled else { return false }
-        guard !visibleClipboardSkills.isEmpty else { return false }
+        guard assistantIsResting, state.clipboardHistoryEnabled else { return false }
+        guard !visibleClipboardSkills.isEmpty,
+              let newest = clipboardHistory.newestEntry,
+              newest.id != dismissedClipboardEntryID else {
+            return false
+        }
         return AIHintPool.isClipboardSkillWindowActive(
             clipboardHistoryEnabled: true,
-            newestClipboard: clipboardHistory.newestEntry
+            newestClipboard: newest
         )
     }
 
@@ -335,218 +566,480 @@ struct AIKeyboardView: View {
         )
     }
 
-    /// No draft/answer yet — show the centered hint carousel instead of a scroll body.
-    private var showsPlaceholder: Bool {
-        let hasDraft = !(state.aiSession.draftAnswerText?.isEmpty ?? true)
-        return !hasDraft && state.aiSession.answer == nil
-    }
+    // MARK: - Primary actions
 
-    private var statusLine: some View {
-        // Loading spinner lives on the mic button only — avoid a second
-        // ProgressView beside the status / draft caption.
-        Text(statusText)
-            .font(TypeStyle.caption)
-            .foregroundStyle(
-                state.aiSession.phase == .failed
-                    ? palette.warning
-                    : palette.textSecondary
-            )
-            .lineLimit(1)
-            .truncationMode(.head)
-            .frame(maxWidth: .infinity, alignment: .center)
-    }
+    private var primaryActionRow: some View {
+        ZStack {
+            HStack {
+                primarySideButton(leading: true)
+                    .offset(x: Layout.sideButtonEdgeInset)
+                Spacer(minLength: 0)
+                primarySideButton(leading: false)
+                    .offset(x: -Layout.sideButtonEdgeInset)
+            }
+            .opacity(sideButtonsVisible ? 1 : 0)
+            .allowsHitTesting(sideButtonsVisible)
+            .accessibilityHidden(!sideButtonsVisible)
 
-    private var actionRow: some View {
-        HStack(spacing: Spacing.sm) {
-            aiMicrophoneButton
-            sendButton
+            microphoneButton
         }
+        .frame(maxWidth: Layout.actionClusterMaxWidth)
         .frame(maxWidth: .infinity)
     }
 
-    private var aiMicrophoneButton: some View {
-        Button(action: state.tapAIMic) {
-            ZStack {
-                Color.clear
-                if state.aiSession.phase == .listening {
-                    Capsule()
-                        .stroke(Color.white.opacity(0.28), lineWidth: 1.5)
-                        .scaleEffect(1 + min(max(state.level, 0), 1) * 0.08)
-                        .animation(Motion.soft, value: state.level)
-                }
-                microphoneContent
-            }
-            .frame(
-                maxWidth: Layout.actionButtonMaxWidth,
-                minHeight: Layout.actionButtonHeight,
-                maxHeight: Layout.actionButtonHeight
+    @ViewBuilder
+    private func primarySideButton(leading: Bool) -> some View {
+        let swapped = state.handednessPreference.swapsActionKeys
+        let showsSpace = leading ? swapped : !swapped
+        if showsSpace {
+            circleActionButton(
+                systemName: "space",
+                label: ExtL10n.string("keyboard.assistant.space"),
+                action: state.insertSpace
             )
-            // 实心填充、无外扩阴影：避免玻璃投影被键盘底边裁切。
-            .background(palette.accent, in: Capsule())
-            .contentShape(Capsule())
+            .accessibilityIdentifier("assistant.space")
+        } else {
+            repeatingDeleteButton
         }
-        .buttonStyle(.plain)
-        .disabled(microphoneDisabled)
-        .accessibilityLabel(ExtL10n.text(microphoneAccessibilityKey))
+    }
+
+    private var microphoneButton: some View {
+        ZStack {
+            Capsule()
+                .fill(.clear)
+                .glassEffect(
+                    .regular.tint(microphoneTint).interactive(),
+                    in: Capsule()
+                )
+            microphoneContent
+        }
+        .frame(width: primaryButtonWidth, height: primaryButtonHeight)
+        .contentShape(Capsule())
+        .scaleEffect(microphoneIsPressable ? 1 : 0.99)
+        .onLongPressGesture(
+            minimumDuration: 0.45,
+            maximumDistance: 120,
+            pressing: handleMicrophonePressing,
+            perform: beginAIMicrophone
+        )
+        // Processing is an explicit waiting state: the capsule stays visible
+        // for feedback but must not react to taps or Liquid Glass presses.
+        .allowsHitTesting(microphoneIsPressable)
+        .accessibilityElement()
+        .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier("assistant.mic.\(microphoneStateIdentifier)")
+        .accessibilityLabel(ExtL10n.text("keyboard.assistant.micA11y"))
+        .accessibilityHint(ExtL10n.text("keyboard.assistant.micHint"))
+        .accessibilityAction(named: ExtL10n.text("keyboard.assistant.dictationAction")) {
+            guard microphoneIsPressable else { return }
+            state.tapMic()
+        }
+        .accessibilityAction(named: ExtL10n.text("keyboard.assistant.aiAction")) {
+            guard assistantIsResting else { return }
+            state.tapAIMic()
+        }
+        .disabled(!microphoneIsPressable)
     }
 
     @ViewBuilder
     private var microphoneContent: some View {
+        if state.assistantInsertionSucceeded {
+            Image(systemName: "checkmark")
+                .font(.system(size: 27, weight: .bold))
+                .foregroundStyle(.white)
+        } else {
+            switch state.aiSession.phase {
+            case .listening:
+                waveform(color: .white)
+            case .preparing, .recognizing, .generating:
+                ProgressView().tint(.white)
+            case .inactive, .idle, .ready, .awaitingSend, .inserted, .sent, .failed:
+                ordinaryMicrophoneContent
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var ordinaryMicrophoneContent: some View {
+        switch state.phase {
+        case .recording:
+            waveform(color: Color(red: 1, green: 0.78, blue: 0.78))
+        case .requestingPermissions, .processing:
+            ProgressView().tint(.white)
+        case .error:
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 25, weight: .semibold))
+                .foregroundStyle(.white)
+        case .idle, .denied:
+            Image(systemName: "mic.fill")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(.white)
+                .symbolEffect(.breathe, isActive: micIsHoldingForAI)
+        }
+    }
+
+    private func waveform(color: Color) -> some View {
+        WaveformView(
+            level: state.level,
+            barCount: 7,
+            color: color,
+            active: true
+        )
+        .frame(width: 38, height: 26)
+        .clipped()
+    }
+
+    private var microphoneTint: Color {
+        if state.assistantInsertionSucceeded {
+            return palette.accent
+        }
+        if micIsHoldingForAI {
+            return palette.aiTeal
+        }
         switch state.aiSession.phase {
         case .listening:
-            WaveformView(
-                level: state.level,
-                barCount: 7,
-                color: .white,
-                active: true
-            )
-            .frame(width: 35, height: 22)
-            .clipped()
+            return palette.aiTeal
         case .preparing, .recognizing, .generating:
-            ProgressView().tint(.white)
+            // Match ordinary dictation's non-interactive waiting appearance,
+            // including hint-card requests that start directly in generation.
+            return palette.recordRed.opacity(0.72)
         case .inactive, .idle, .ready, .awaitingSend, .inserted, .sent, .failed:
-            Image(systemName: "mic.fill")
-                .font(.system(size: 21, weight: .semibold))
-                .foregroundStyle(.white)
+            break
+        }
+        switch state.phase {
+        case .recording:
+            return palette.recordRed
+        case .requestingPermissions, .processing:
+            return palette.recordRed.opacity(0.72)
+        case .error, .denied:
+            return palette.warning
+        case .idle:
+            return palette.accent
+        }
+    }
+
+    private var microphoneStateIdentifier: String {
+        switch state.aiSession.phase {
+        case .preparing:
+            return "aiPreparing"
+        case .listening:
+            return "aiListening"
+        case .recognizing:
+            return "aiRecognizing"
+        case .generating:
+            return "aiGenerating"
+        case .inactive, .idle, .ready, .awaitingSend, .inserted, .sent, .failed:
+            break
+        }
+        switch state.phase {
+        case .requestingPermissions:
+            return "dictationPreparing"
+        case .recording:
+            return "dictationRecording"
+        case .processing:
+            return "dictationProcessing"
+        case .error:
+            return "error"
+        case .denied:
+            return "denied"
+        case .idle:
+            return state.assistantInsertionSucceeded ? "success" : "idle"
+        }
+    }
+
+    private var primaryButtonWidth: CGFloat {
+        state.layoutWidth > 0 && state.layoutWidth < 350
+            ? Layout.compactPrimaryWidth
+            : Layout.primaryWidth
+    }
+
+    private var primaryButtonHeight: CGFloat {
+        state.layoutWidth > 0 && state.layoutWidth < 350
+            ? Layout.compactPrimaryHeight
+            : Layout.primaryHeight
+    }
+
+    private func handleMicrophonePressing(_ pressing: Bool) {
+        if pressing {
+            micLongPressConsumed = false
+            guard microphoneIsPressable else { return }
+            state.setMicTouchActive(true)
+            if assistantIsResting {
+                withAnimation(.easeOut(duration: 0.12)) {
+                    micIsHoldingForAI = true
+                }
+            }
+            return
+        }
+        state.setMicTouchActive(false)
+        withAnimation(.easeOut(duration: 0.12)) {
+            micIsHoldingForAI = false
+        }
+        if micLongPressConsumed {
+            micLongPressConsumed = false
+            return
+        }
+        handleMicrophoneTap()
+    }
+
+    private func beginAIMicrophone() {
+        guard assistantIsResting else { return }
+        micLongPressConsumed = true
+        showsLongPressCoach = false
+        KeyboardHapticFeedback.play(
+            role: .action,
+            intensity: state.keyboardHapticIntensity
+        )
+        state.tapAIMic()
+    }
+
+    private func handleMicrophoneTap() {
+        guard microphoneIsPressable else { return }
+        if state.aiSession.phase == .listening {
+            state.tapAIMic()
+        } else {
+            state.tapMic()
+        }
+    }
+
+    private var microphoneIsPressable: Bool {
+        if state.aiSession.isBusy {
+            return state.aiSession.phase == .listening
+        }
+        switch state.phase {
+        case .processing, .requestingPermissions:
+            return false
+        case .idle, .recording, .error, .denied:
+            return !state.micDisabled
+        }
+    }
+
+    // MARK: - Secondary actions
+
+    private var secondaryActionRow: some View {
+        ZStack {
+            HStack(spacing: 0) {
+                lowerActionCluster(leading: true)
+                Spacer(minLength: 0)
+                lowerActionCluster(leading: false)
+            }
+            .opacity(sideButtonsVisible ? 1 : 0)
+            .allowsHitTesting(sideButtonsVisible)
+            .accessibilityHidden(!sideButtonsVisible)
+
+            sendButton
+        }
+        .frame(maxWidth: Layout.actionClusterMaxWidth)
+        .frame(maxWidth: .infinity)
+        .opacity(activePipeline ? 0 : 1)
+        .allowsHitTesting(!activePipeline)
+        .accessibilityHidden(activePipeline)
+    }
+
+    @ViewBuilder
+    private func lowerActionCluster(leading: Bool) -> some View {
+        let button = lowerSideButton(leading: leading)
+            .offset(x: leading
+                ? Layout.sideButtonEdgeInset
+                : -Layout.sideButtonEdgeInset)
+        if state.showsSystemGlobeKey {
+            if leading {
+                HStack(spacing: 8) {
+                    SystemGlobeKey(
+                        state: state,
+                        width: compactIPadLayout ? 40 : 44,
+                        height: lowerCircleSize
+                    )
+                    button
+                }
+            } else {
+                HStack(spacing: 8) {
+                    button
+                    Color.clear.frame(width: compactIPadLayout ? 40 : 44)
+                }
+            }
+        } else {
+            button
+        }
+    }
+
+    @ViewBuilder
+    private func lowerSideButton(leading: Bool) -> some View {
+        let swapped = state.handednessPreference.swapsActionKeys
+        let showsEdit = leading ? swapped : !swapped
+        if showsEdit {
+            circleActionButton(
+                systemName: "pencil.line",
+                label: ExtL10n.string("keyboard.edit.apply"),
+                disabled: !state.editAvailable,
+                onPressingChanged: state.setMicTouchActive,
+                action: state.beginEditLastInput
+            )
+            .accessibilityIdentifier("assistant.edit")
+            .opacity(state.editAvailable ? 1 : 0)
+            .accessibilityHidden(!state.editAvailable)
+        } else {
+            circleActionButton(
+                systemName: "arrow.uturn.backward",
+                label: ExtL10n.string("keyboard.undoA11y"),
+                disabled: !state.undoAvailable,
+                action: state.undoLastInsertion
+            )
+            .accessibilityIdentifier("assistant.undo")
+            .opacity(state.undoAvailable ? 1 : 0)
+            .accessibilityHidden(!state.undoAvailable)
         }
     }
 
     private var sendButton: some View {
-        Button(action: state.sendAIAnswer) {
-            HStack(spacing: Spacing.xs) {
-                Image(systemName: answerActionSystemName)
-                Text(answerActionTitle)
-            }
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(answerActionForeground)
-            .frame(
-                maxWidth: Layout.actionButtonMaxWidth,
-                minHeight: Layout.actionButtonHeight,
-                maxHeight: Layout.actionButtonHeight
-            )
-            // 实心填充、无外扩阴影：避免玻璃投影被键盘底边裁切。
-            .background(answerActionFill, in: Capsule())
-            .contentShape(Capsule())
+        Button(action: performSend) {
+            Image(systemName: sendConfirmationVisible ? "checkmark" : "paperplane.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(sendButtonForeground)
+                .frame(
+                    width: sendButtonWidth,
+                    height: KeyboardChromeLayout.assistantActionCapsuleHeight
+                )
+                .background(sendButtonFill, in: Capsule())
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .disabled(!state.aiSession.canPerformAnswerAction)
-        .accessibilityLabel(Text(answerActionTitle))
-        .accessibilityHint(ExtL10n.text("keyboard.ai.sendA11y"))
+        .disabled(!state.assistantSendAvailable)
+        .accessibilityIdentifier("assistant.send")
+        .accessibilityLabel(ExtL10n.text("keyboard.ai.send"))
+        .accessibilityHint(ExtL10n.text("keyboard.assistant.sendHint"))
     }
 
-    private var answerActionTitle: String {
-        switch state.aiSession.phase {
-        case .awaitingSend:
-            return ExtL10n.string("common.send")
-        case .inserted:
-            return ExtL10n.string("keyboard.ai.inserted")
-        case .sent:
-            return ExtL10n.string("keyboard.ai.sent")
-        case .inactive, .idle, .preparing, .listening, .recognizing,
-             .generating, .ready, .failed:
-            return ExtL10n.string("keyboard.ai.insert")
+    private var sendButtonFill: Color {
+        state.assistantSendAvailable
+            ? NativeKeyboardKeyColors.fill(for: colorScheme)
+            : NativeKeyboardKeyColors.pressedFill(for: colorScheme)
+    }
+
+    private var sendButtonForeground: Color {
+        state.assistantSendAvailable
+            ? NativeKeyboardKeyColors.text(for: colorScheme)
+            : NativeKeyboardKeyColors.text(for: colorScheme).opacity(0.58)
+    }
+
+    private func performSend() {
+        guard state.assistantSendAvailable else { return }
+        state.sendAssistantAction()
+        sendConfirmationVisible = true
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(550))
+            sendConfirmationVisible = false
         }
     }
 
-    private var answerActionSystemName: String {
-        switch state.aiSession.phase {
-        case .awaitingSend:
-            return "paperplane.fill"
-        case .inserted, .sent:
-            return "checkmark"
-        case .inactive, .idle, .preparing, .listening, .recognizing,
-             .generating, .ready, .failed:
-            return "plus"
-        }
+    private var sendButtonWidth: CGFloat {
+        compactIPadLayout ? Layout.compactIPadSendWidth : Layout.sendWidth
     }
 
-    private var answerActionFill: Color {
-        guard state.aiSession.canPerformAnswerAction else {
-            return palette.surfaceElevated.opacity(0.55)
-        }
-        return state.aiSession.canSend
-            ? palette.accent
-            : palette.surfaceElevated
+    private var lowerCircleSize: CGFloat {
+        compactIPadLayout ? Layout.compactIPadCircleSize : Layout.circleSize
     }
 
-    private var answerActionForeground: Color {
-        guard state.aiSession.canPerformAnswerAction else {
-            return palette.textTertiary
-        }
-        return state.aiSession.canSend
-            ? .white
-            : NativeKeyboardKeyColors.text(for: colorScheme)
+    private var compactIPadLayout: Bool {
+        state.usesIPadLayoutMetrics && state.layoutWidth > 0 && state.layoutWidth < 420
     }
 
-    private var microphoneDisabled: Bool {
-        switch state.aiSession.phase {
-        case .preparing, .recognizing, .generating:
+    private func circleActionButton(
+        systemName: String,
+        label: String,
+        disabled: Bool = false,
+        onPressingChanged: @escaping (Bool) -> Void = { _ in },
+        action: @escaping () -> Void
+    ) -> some View {
+        RectangularToolbarButton(
+            systemName: systemName,
+            label: label,
+            disabled: disabled,
+            usesLiquidGlass: true,
+            usesCircleGlass: true,
+            hapticIntensity: state.keyboardHapticIntensity,
+            onPressingChanged: onPressingChanged,
+            action: action
+        )
+        .frame(width: lowerCircleSize, height: lowerCircleSize)
+    }
+
+    private var repeatingDeleteButton: some View {
+        RepeatingPressButton(
+            disabled: false,
+            hapticIntensity: state.keyboardHapticIntensity,
+            action: state.deleteBackward
+        ) { isPressed in
+            ZStack {
+                Color.clear
+                Image(systemName: "delete.left")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(NativeKeyboardKeyColors.text(for: colorScheme))
+            }
+            .frame(width: lowerCircleSize, height: lowerCircleSize)
+            .glassEffect(.regular.interactive(), in: Circle())
+            .scaleEffect(isPressed ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.08), value: isPressed)
+        }
+        .accessibilityIdentifier("assistant.delete")
+        .accessibilityLabel(Text(ExtL10n.string("keyboard.assistant.delete")))
+    }
+
+    // MARK: - Visibility and clipboard
+
+    private var assistantIsResting: Bool {
+        guard !state.aiSession.isBusy, !state.aiSession.canInsert else { return false }
+        switch state.phase {
+        case .idle, .error, .denied:
             return true
-        case .inactive, .idle, .listening, .ready, .awaitingSend,
-             .inserted, .sent, .failed:
-            return state.micDisabled || !state.aiServiceAvailable
+        case .requestingPermissions, .recording, .processing:
+            return false
         }
     }
 
-    private var statusText: String {
-        if let error = state.aiSession.errorMessage, !error.isEmpty {
-            return error
-        }
-        if !state.aiServiceAvailable {
-            return ExtL10n.string("keyboard.ai.error.missingAPIKey")
-        }
-        switch state.aiSession.phase {
-        case .inactive, .idle, .ready, .awaitingSend, .inserted, .sent:
-            return ""
-        case .preparing:
-            return ExtL10n.string("keyboard.placeholder.preparing")
-        case .listening:
-            return state.aiSession.transcript.isEmpty
-                ? ExtL10n.string("keyboard.ai.listening")
-                : state.aiSession.transcript
-        case .recognizing:
-            if state.aiSession.transcript.isEmpty
-                || AIClipboardPrompt.isInternalPrompt(state.aiSession.transcript) {
-                return ExtL10n.string("keyboard.ai.recognizing")
-            }
-            return state.aiSession.transcript
-        case .generating:
-            if state.pendingClipboardSkillID == AIClipboardSkillCatalog.extractTodosID {
-                return ExtL10n.string("keyboard.ai.skill.extracting")
-            }
-            if state.pendingClipboardSkillID == AIClipboardSkillCatalog.extractEventsID {
-                return ExtL10n.string("keyboard.ai.skill.extractingEvents")
-            }
-            if state.pendingClipboardSkillID == AIClipboardSkillCatalog.navigateID {
-                return ExtL10n.string("keyboard.ai.skill.extractingAddress")
-            }
-            if state.pendingClipboardSkillID == AIClipboardSkillCatalog.saveToNotesID {
-                return ExtL10n.string("keyboard.ai.skill.namingNote")
-            }
-            if let draft = state.aiSession.draftAnswerText, !draft.isEmpty {
-                return ExtL10n.string("keyboard.ai.generating")
-            }
-            if state.aiSession.transcript.isEmpty
-                || AIClipboardPrompt.isInternalPrompt(state.aiSession.transcript) {
-                return ExtL10n.string("keyboard.ai.thinking")
-            }
-            return state.aiSession.transcript
-        case .failed:
-            return ExtL10n.string("keyboard.ai.error.requestFailed")
+    private var activePipeline: Bool {
+        if state.aiSession.isBusy { return true }
+        return ordinaryPipelineIsActive
+    }
+
+    private var ordinaryPipelineIsActive: Bool {
+        switch state.phase {
+        case .requestingPermissions, .recording, .processing:
+            return true
+        case .idle, .error, .denied:
+            return false
         }
     }
 
-    private var microphoneAccessibilityKey: String {
-        state.aiSession.phase == .listening
-            ? "keyboard.ai.stopA11y"
-            : "keyboard.ai.startA11y"
+    private var sideButtonsVisible: Bool {
+        assistantIsResting
+    }
+
+    private var shouldShowClipboardSuggestion: Bool {
+        guard state.canShowClipboardEntry else { return false }
+        guard let text = state.clipboardSuggestionText, !text.isEmpty else { return false }
+        return true
+    }
+
+    private func insertClipboardSuggestion() {
+        dismissedClipboardEntryID = clipboardHistory.newestEntry?.id
+        if let text = state.clipboardSuggestionText {
+            state.insertClipboardText(text)
+        }
+    }
+
+    private func dismissClipboardPresentation() {
+        #if DEBUG
+        if Self.debugPreviewSkills != nil {
+            debugSkillsDismissed = true
+        }
+        #endif
+        dismissedClipboardEntryID = clipboardHistory.newestEntry?.id
+        state.dismissClipboardSuggestion()
     }
 
     // MARK: - Carousel
 
-    /// Rebuild the pool and show a card right away, without a fade.
-    /// Skip advancing the chip while clipboard skills own the surface, so a
-    /// leftover clipboard sentence cannot replace the three buttons.
     private func resetCarousel() {
         reloadHintPool(resetBag: true)
         guard !showsClipboardSkills else { return }
@@ -568,14 +1061,50 @@ struct AIKeyboardView: View {
             return
         }
         if animated, !reduceMotion {
-            withAnimation(Motion.soft) { hintOpacity = 0 }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            withAnimation(.easeOut(duration: 0.18)) { hintOpacity = 0 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
                 currentHint = next
-                withAnimation(Motion.soft) { hintOpacity = 1 }
+                withAnimation(.easeIn(duration: 0.18)) { hintOpacity = 1 }
             }
         } else {
             currentHint = next
             hintOpacity = 1
         }
+    }
+}
+
+/// Uses a subview's intrinsic width until it reaches a visual cap. Unlike
+/// `frame(maxWidth:)`, this layout does not expand short labels to the cap,
+/// so each capsule and its complete hit target follow the actual content.
+private struct IntrinsicWidthCap: Layout {
+    let maxWidth: CGFloat
+
+    func sizeThatFits(
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) -> CGSize {
+        guard let subview = subviews.first else { return .zero }
+        let ideal = subview.sizeThatFits(.unspecified)
+        let availableWidth = min(proposal.width ?? maxWidth, maxWidth)
+        let width = min(ideal.width, availableWidth)
+        let fitted = subview.sizeThatFits(
+            ProposedViewSize(width: width, height: proposal.height)
+        )
+        return CGSize(width: width, height: fitted.height)
+    }
+
+    func placeSubviews(
+        in bounds: CGRect,
+        proposal: ProposedViewSize,
+        subviews: Subviews,
+        cache: inout ()
+    ) {
+        guard let subview = subviews.first else { return }
+        subview.place(
+            at: CGPoint(x: bounds.midX, y: bounds.midY),
+            anchor: .center,
+            proposal: ProposedViewSize(width: bounds.width, height: bounds.height)
+        )
     }
 }
