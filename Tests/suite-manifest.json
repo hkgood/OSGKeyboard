@@ -131,7 +131,7 @@
         "OSGKeyboardExtTests/RimeSchemaGeneratorTests",
         "OSGKeyboardExtTests/RimePersonalDictionaryExporterTests",
         "OSGKeyboardExtTests/TypingTouchTrackerTests",
-        "OSGKeyboardTests/CursorNavigationTests",
+        "OSGKeyboardTests/AssistantFieldActionTests",
         "OSGKeyboardTests/KeyboardTranslationConfigProtectionTests",
         "OSGKeyboardTests/AIHintPoolTests",
         "OSGKeyboardTests/AIHintKeywordExtractorTests",
