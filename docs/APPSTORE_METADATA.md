@@ -1,4 +1,4 @@
-# App Store Connect — OSGKeyboard 1.8.0 (build 74)
+# App Store Connect — OSGKeyboard 1.8.0 (build 79)
 
 > Current metadata baseline for the iOS/iPadOS App Store build. Version and build
 > numbers come from `project.yml`. The repository also contains a separate
@@ -11,7 +11,7 @@
 | App name | `OSGKeyboard` | ≤ 30 characters |
 | Subtitle | `Voice input, everywhere` | ≤ 30 characters |
 | Bundle ID | `com.osgkeyboard.ios` | iOS host target |
-| Version / build | `1.8.0` / `74` | `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` |
+| Version / build | `1.8.0` / `79` | `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` |
 | Minimum system | iOS/iPadOS 26 | iPhone and iPad |
 | Primary locale | `en-US` | Simplified Chinese is also bundled |
 | Primary category | Utilities | |
@@ -211,10 +211,10 @@ standard HTTPS. Re-evaluate this answer if non-exempt cryptography is added.
 
 ## Submission checklist
 
-- [ ] Confirm `project.yml` still reads version 1.8.0 / build 74
+- [ ] Confirm `project.yml` still reads version 1.8.0 / build 79
 - [ ] Open the existing Xcode project (do not regenerate unless needed)
 - [ ] Run the release build and test suites on macOS with Xcode 26
 - [ ] Replace screenshots with captures from the submitted build
 - [ ] Verify the privacy answers against the submitted provider features
 - [ ] Confirm the tip product remains optional and unlocks no feature
-- [ ] Upload, select build 74, add review notes, and submit
+- [ ] Upload, select build 79, add review notes, and submit

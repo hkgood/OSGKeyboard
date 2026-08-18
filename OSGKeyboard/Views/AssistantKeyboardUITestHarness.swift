@@ -191,4 +191,54 @@ struct AssistantKeyboardUITestHarness: View {
         state.showsSystemGlobeKey = isIPad
     }
 }
+
+/// Physical-device harness that gives XCUITest a real user tap for PiP.
+///
+/// `devicectl process launch` is not a user interaction, so iOS may silently
+/// ignore a programmatic foreground PiP request even when AVKit reports it as
+/// possible. This harness isolates the production controller behind one tap.
+struct FlowPiPDeviceUITestHarness: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var flowManager = FlowSessionManager()
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Button("Start PiP") {
+                flowManager.startSession(reason: "uiTest.userTap")
+            }
+            .accessibilityIdentifier("pip.start")
+            .disabled(flowManager.isStarting || flowManager.isActive)
+
+            Text(statusIdentifier)
+                .accessibilityIdentifier(statusIdentifier)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            FlowPiPHostView { view in
+                flowManager.attachPiPHostView(view)
+            }
+            .frame(width: 64, height: 36)
+            .opacity(0.02)
+        }
+        .onAppear {
+            flowManager.setAppForeground(scenePhase == .active)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            flowManager.handleScenePhase(phase)
+        }
+    }
+
+    private var statusIdentifier: String {
+        if flowManager.isActive, FlowSessionBridge.isHostReady() {
+            return "pip.status.ready"
+        }
+        if flowManager.sessionWarning != nil {
+            return "pip.status.failed"
+        }
+        if flowManager.isStarting {
+            return "pip.status.starting"
+        }
+        return "pip.status.idle"
+    }
+}
 #endif

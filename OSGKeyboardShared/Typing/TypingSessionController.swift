@@ -131,9 +131,15 @@ public final class TypingSessionController: ObservableObject {
     }
 
     public func enterTypingMode() {
+        let hostHeavy = FlowSessionBridge.isHostHeavy()
+        KeyboardExtensionMemoryTelemetry.record(
+            "typing.enter.begin",
+            details: "language=\(language.rawValue) schema=\(schema.rawValue) "
+                + "hostHeavy=\(hostHeavy ? 1 : 0)"
+        )
         OSGDiag.log(
             "typing.enter begin lang=\(language.rawValue) schema=\(schema.rawValue) "
-                + "hostHeavy=\(FlowSessionBridge.isHostHeavy() ? 1 : 0) \(OSGDiag.memoryTag())",
+                + "hostHeavy=\(hostHeavy ? 1 : 0) \(OSGDiag.memoryTag())",
             category: "boot"
         )
         TypingInputConfiguration.shared.reload()
@@ -142,13 +148,25 @@ public final class TypingSessionController: ObservableObject {
         // already has Rime; loading both on appear is what jetsams the extension.
         if language == .english {
             englishEngine.prepare()
+            KeyboardExtensionMemoryTelemetry.record(
+                "typing.englishPrepare.done",
+                details: "language=\(language.rawValue)"
+            )
             OSGDiag.log("typing.enter after englishPrepare \(OSGDiag.memoryTag())", category: "boot")
         } else {
             EnglishLexicon.shared.unload()
+            KeyboardExtensionMemoryTelemetry.record(
+                "typing.englishPrepare.skipped",
+                details: "language=\(language.rawValue)"
+            )
             OSGDiag.log("typing.enter skip englishPrepare lang=\(language.rawValue) \(OSGDiag.memoryTag())", category: "boot")
         }
         syncAutocapitalization()
-        if FlowSessionBridge.isHostHeavy() {
+        if hostHeavy {
+            KeyboardExtensionMemoryTelemetry.record(
+                "typing.rimePrepare.deferred",
+                details: "hostHeavy=1"
+            )
             OSGDiag.log("typing.enter defer rime hostHeavy=1 — retry scheduled", category: "boot")
             prepareTask?.cancel()
             prepareTask = Task { [weak self] in
@@ -174,6 +192,10 @@ public final class TypingSessionController: ObservableObject {
     }
 
     public func leaveTypingMode() {
+        KeyboardExtensionMemoryTelemetry.record(
+            "typing.leave.begin",
+            details: "language=\(language.rawValue)"
+        )
         OSGDiag.log("typing.leave \(OSGDiag.memoryTag())", category: "boot")
         prepareTask?.cancel()
         prepareTask = nil
@@ -189,6 +211,10 @@ public final class TypingSessionController: ObservableObject {
         // Drop English lexicon pages when leaving typing (jetsam recovery).
         EnglishLexicon.shared.unload()
         englishStorage = nil
+        KeyboardExtensionMemoryTelemetry.record(
+            "typing.leave.done",
+            details: "language=\(language.rawValue)"
+        )
     }
 
     public func toggleCandidatePanelExpanded() {
@@ -907,9 +933,18 @@ public final class TypingSessionController: ObservableObject {
     private func prepareIfNeeded() async {
         guard !prepared else { return }
         if FlowSessionBridge.isHostHeavy() {
+            KeyboardExtensionMemoryTelemetry.record(
+                "typing.rimePrepare.deferred",
+                details: "hostHeavy=1"
+            )
             OSGDiag.log("rime.prepare deferred hostHeavy=1 \(OSGDiag.memoryTag())", category: "boot")
             return
         }
+        KeyboardExtensionMemoryTelemetry.record(
+            "typing.rimePrepare.begin",
+            details: "language=\(language.rawValue) "
+                + "resourcesReady=\(RimeResourceInstaller.isReady ? 1 : 0)"
+        )
         OSGDiag.log(
             "rime.prepare begin ready=\(RimeResourceInstaller.isReady) \(OSGDiag.memoryTag())",
             category: "boot"
@@ -925,6 +960,10 @@ public final class TypingSessionController: ObservableObject {
             if language == .english {
                 refreshEnglishSuggestions()
             }
+            KeyboardExtensionMemoryTelemetry.record(
+                "typing.rimePrepare.done",
+                details: "language=\(language.rawValue) ready=\(engineReady ? 1 : 0)"
+            )
             OSGDiag.log(
                 "rime.prepare done ready=\(engineReady) \(OSGDiag.memoryTag())",
                 category: "boot"
@@ -934,6 +973,10 @@ public final class TypingSessionController: ObservableObject {
             lastErrorNeedsHostDeployment =
                 (error as? RimeResourceError)?.isResolvedByHostDeployment ?? false
             engineReady = false
+            KeyboardExtensionMemoryTelemetry.record(
+                "typing.rimePrepare.failed",
+                details: "language=\(language.rawValue) errorType=\(String(describing: type(of: error)))"
+            )
             OSGDiag.log(
                 "rime.prepare failed error=\(error.localizedDescription) \(OSGDiag.memoryTag())",
                 category: "boot"

@@ -137,8 +137,8 @@ struct MainAppRoot: View {
         releaseNotes.presentIfNeeded(onboardingCompleted: true)
     }
 
-    /// Rime remains startup-owned, but a short delay keeps its CPU and file I/O
-    /// away from SwiftUI's first-frame layout on installs and version updates.
+    /// Rime remains startup-owned, but PiP gets exclusive use of the launch
+    /// critical path before deployment claims CPU, file I/O and memory.
     private func scheduleRimeDeployment(reason: String) {
         rimeStartupTask?.cancel()
         guard !RimeResourceInstaller.isReady else {
@@ -148,11 +148,21 @@ struct MainAppRoot: View {
         }
 
         OSGDiag.log(
-            "rime startup scheduled reason=\(reason) delay=500ms \(OSGDiag.memoryTag())",
+            "rime startup scheduled reason=\(reason) afterFlowStart \(OSGDiag.memoryTag())",
             category: "flow"
         )
         rimeStartupTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled, scenePhase == .active else { return }
+
+            // A normal cold PiP start settles in under one second. Keep a
+            // bounded ceiling so an unavailable PiP never blocks typing
+            // resource installation for the rest of the foreground session.
+            let flowDeadline = Date().addingTimeInterval(12)
+            while flowManager.shouldDeferHostHeavyWork, Date() < flowDeadline {
+                guard !Task.isCancelled, scenePhase == .active else { return }
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
             guard !Task.isCancelled, scenePhase == .active else { return }
             RimeDeploymentController.shared.deployNow(reason: reason)
             rimeStartupTask = nil

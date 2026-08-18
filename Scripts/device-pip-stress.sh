@@ -2,7 +2,7 @@
 # Physical-device PiP / host-wake stress using `devicectl --console` logs.
 #
 # Usage:
-#   ./Scripts/device-pip-stress.sh [UDID] [COUNT=50]
+#   ./Scripts/device-pip-stress.sh [UDID] [COUNT=50] [SUITES=cold,bgfg,hold]
 #
 # Suites:
 #   cold — terminate-existing launch (force-quit / cold start)
@@ -15,6 +15,7 @@ cd "$ROOT"
 
 UDID="${1:-00008130-001C249C0E52001C}"
 COUNT="${2:-50}"
+SUITES="${3:-cold,bgfg,hold}"
 BUNDLE="com.osgkeyboard.ios"
 SAFARI="com.apple.mobilesafari"
 OUT_DIR="${ROOT}/.tmp/device-pip-stress-$(date +%Y%m%d-%H%M%S)"
@@ -51,41 +52,41 @@ classify_file() {
   local f="$1"
   local host="unknown" pip="unknown" mic="unknown"
 
-  if grep -Eq "OSGKeyboardApp\.init|MainAppRoot\.onAppear|activateOnForeground" "$f"; then
+  if rg -q "OSGKeyboardApp\.init|MainAppRoot\.onAppear|activateOnForeground" "$f"; then
     host="success"
-  elif grep -Eq "Launched application with com\.osgkeyboard\.ios" "$f"; then
+  elif rg -q "Launched application with com\.osgkeyboard\.ios" "$f"; then
     host="launch_only"
   fi
 
-  if grep -Eq "onboarding incomplete" "$f"; then
+  if rg -q "onboarding incomplete" "$f"; then
     pip="onboarding"
-  elif grep -Eq "aborted reason=permissions|blocked.*permissions" "$f"; then
+  elif rg -q "aborted reason=permissions|blocked.*permissions" "$f"; then
     pip="permissions"
-  elif grep -Eq "Flow session started \(PiP keep-alive\)|low-profile PiP active|startSessionAsync\.ready" "$f"; then
+  elif rg -q "Flow session started \(PiP keep-alive\)|low-profile PiP active|startSessionAsync\.ready" "$f"; then
     pip="success"
-  elif grep -Eq "failure=unsupported|failed to start: unsupported" "$f"; then
+  elif rg -q "failure=unsupported|failed to start: unsupported" "$f"; then
     pip="unsupported"
-  elif grep -Eq "PiP keep-alive failed to start|startSessionAsync\.failed.*pipUnavailable|startAndWait failed" "$f"; then
+  elif rg -q "PiP keep-alive failed to start|startSessionAsync\.failed.*pipUnavailable|startAndWait failed" "$f"; then
     pip="fail"
-  elif grep -Eq "PiP start attempt failed" "$f"; then
+  elif rg -q "PiP start attempt failed" "$f"; then
     # Retry path — only fail if we never saw success above
     pip="retry_then_unknown"
-  elif grep -Eq "activateOnForeground|autoPiP|startSessionAsync\.begin" "$f"; then
+  elif rg -q "activateOnForeground|autoPiP|startSessionAsync\.begin" "$f"; then
     pip="seen_no_result"
   fi
 
   # Mic keep-alive contract: idle releases mic after PiP proves
-  if grep -Eq "mic released between utterances|released audio session and frame pump" "$f"; then
+  if rg -q "mic released between utterances|released audio session and frame pump" "$f"; then
     mic="released_ok"
-  elif grep -Eq "PiP audio session ready" "$f"; then
+  elif rg -q "PiP audio session ready" "$f"; then
     mic="armed"
   else
     mic="unknown"
   fi
 
-  # Promote retry_then_unknown if success markers appeared (grep order already handled)
+  # Promote retry_then_unknown if success markers appeared (classification order already handled)
   if [[ "$pip" == "retry_then_unknown" ]]; then
-    if grep -Eq "low-profile PiP active|Flow session started \(PiP keep-alive\)" "$f"; then
+    if rg -q "low-profile PiP active|Flow session started \(PiP keep-alive\)" "$f"; then
       pip="success"
     else
       pip="fail"
@@ -144,9 +145,16 @@ run_suite() {
 }
 
 : >"$REPORT"
-run_suite cold
-run_suite bgfg
-run_suite hold
+IFS=',' read -r -a selected_suites <<<"$SUITES"
+for selected_suite in "${selected_suites[@]}"; do
+  case "$selected_suite" in
+    cold|bgfg|hold) run_suite "$selected_suite" ;;
+    *)
+      echo "error: unknown suite '$selected_suite'" >&2
+      exit 1
+      ;;
+  esac
+done
 
 python3 - "$REPORT" "$SUMMARY" "$UDID" "$COUNT" "$OUT_DIR" <<'PY'
 import json, collections, sys
@@ -157,13 +165,14 @@ by = collections.defaultdict(list)
 for r in rows:
     by[r["suite"]].append(r)
 
+selected = [name for name in ("cold", "bgfg", "hold") if by.get(name)]
 lines = [
     "Device PiP / mic keep-alive stress summary",
     f"device=Rocky 15 PM udid={udid} count_per_suite={count}",
     f"total_rows={len(rows)}",
     "",
 ]
-for suite in ("cold", "bgfg", "hold"):
+for suite in selected:
     rs = by.get(suite, [])
     n = max(len(rs), 1)
     host_ok = sum(1 for r in rs if r["host"] in ("success", "launch_only"))

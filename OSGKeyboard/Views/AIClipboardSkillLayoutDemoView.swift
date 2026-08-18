@@ -1,18 +1,25 @@
 // AIClipboardSkillLayoutDemoView.swift
 // OSGKeyboard · Main App (DEBUG-only)
 //
-// Interactive layout preview of AI Agent clipboard skills on the real
-// `AIKeyboardView`. Launch with `--ai-skills-demo` and optional
-// `--skills-count=N` (1...8).
+// Interactive layout preview and What's New recording host for AI Agent
+// clipboard skills on the real unified `AIKeyboardView`. Launch with
+// `--ai-skills-demo`, optional `--skills-count=N` (1...8), and optional
+// `--whats-new-lang=zh|en`.
 
 #if DEBUG
 import SwiftUI
 import OSGKeyboardShared
 
 struct AIClipboardSkillLayoutDemoView: View {
+    @StateObject private var config = ProviderConfig.shared
     @StateObject private var state = KeyboardState()
     @StateObject private var typing = TypingSessionController()
     @State private var count: Int = Self.initialCount
+
+    init() {
+        AIKeyboardView.debugSkipsLongPressCoach = true
+        AIKeyboardView.debugKeepsSkillTip = true
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,10 +33,15 @@ struct AIClipboardSkillLayoutDemoView: View {
             .background(Palette.light.background)
         }
         .background(Color(red: 0.06, green: 0.06, blue: 0.07).ignoresSafeArea())
-        .environment(\.locale, Locale(identifier: "zh-Hans"))
+        .environment(\.locale, language == .en ? Locale(identifier: "en") : Locale(identifier: "zh-Hans"))
         .preferredColorScheme(.light)
-        .onAppear { apply(count) }
-        .onChange(of: count) { _, newValue in apply(newValue) }
+        .task { await runTimeline() }
+        .onChange(of: count) { _, newValue in showSkills(newValue) }
+        .onDisappear {
+            AIKeyboardView.debugPreviewSkills = nil
+            AIKeyboardView.debugSkipsLongPressCoach = false
+            AIKeyboardView.debugKeepsSkillTip = false
+        }
     }
 
     private var controls: some View {
@@ -70,19 +82,53 @@ struct AIClipboardSkillLayoutDemoView: View {
         .padding(.bottom, 16)
     }
 
-    private func apply(_ count: Int) {
-        let clamped = min(max(count, 1), 8)
-        AIKeyboardView.debugPreviewSkills = Self.previewSkills(count: clamped)
-        state.surface = .ai
+    private func prepareState() {
+        config.uiLanguage = language == .en ? .english : .chinese
+        AIKeyboardView.debugPreviewSkills = nil
+        state.surface = .voice
         state.aiServiceAvailable = true
         state.micDisabled = false
         state.layoutWidth = 390
         state.usesIPadLayoutMetrics = false
         state.clipboardHistoryEnabled = true
+        state.undoAvailable = true
+        state.editAvailable = true
+        state.clipboardSuggestionText = language == .en
+            ? "Meeting at 3pm tomorrow"
+            : "明天下午三点开会"
+        state.skillTipText = language == .en
+            ? "Copied text is ready"
+            : "复制内容已就绪"
+        state.aiSession.enter()
+    }
+
+    private func showSkills(_ count: Int) {
+        let clamped = min(max(count, 1), 8)
+        AIKeyboardView.debugPreviewSkills = Self.previewSkills(count: clamped)
         state.enabledClipboardSkillIDs = Array(
             AIClipboardSkillCatalog.catalog.map(\.id).prefix(clamped)
         )
-        state.aiSession.enter()
+    }
+
+    private func runTimeline() async {
+        prepareState()
+        try? await Task.sleep(for: .seconds(3))
+        state.clipboardSuggestionText = nil
+        state.skillTipText = nil
+        showSkills(count)
+        try? await Task.sleep(for: .seconds(8))
+    }
+
+    private var language: WhatsNewDemoScenario.Language {
+        let prefix = "--whats-new-lang="
+        guard let argument = ProcessInfo.processInfo.arguments.first(
+            where: { $0.hasPrefix(prefix) }
+        ) else {
+            return .zh
+        }
+        return WhatsNewDemoScenario.Language(
+            rawValue: String(argument.dropFirst(prefix.count))
+        ) ?? .zh
     }
 
     private static var initialCount: Int {

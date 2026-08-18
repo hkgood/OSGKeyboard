@@ -41,6 +41,8 @@ struct OSGKeyboardApp: App {
                 AIClipboardSkillLayoutDemoView()
             } else if ProcessInfo.processInfo.arguments.contains("--assistant-ui-test") {
                 AssistantKeyboardUITestHarness()
+            } else if ProcessInfo.processInfo.arguments.contains("--pip-device-ui-test") {
+                FlowPiPDeviceUITestHarness()
             } else if ProcessInfo.processInfo.arguments.contains("--clipboard-demo") {
                 ClipboardHistoryDemoView()
             } else if ProcessInfo.processInfo.arguments.contains("--edit-pager-ui-test") {

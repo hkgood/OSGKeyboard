@@ -1,9 +1,10 @@
 // AIKeyboardDemoView.swift
 // OSGKeyboard · Main App (DEBUG-only)
 //
-// What's New 1.7.0 recording host. Uses the **real** AI Agent settings page
-// and the **real** `AIKeyboardView` (compiled into the app target) driven by a
-// scripted `KeyboardState` — no ASR / LLM. Launch with `--ai-demo`.
+// What's New recording host. Uses the **real** AI Agent settings page and the
+// **real** unified `AIKeyboardView` (compiled into the app target), driven by a
+// scripted `KeyboardState` — no ASR / LLM. Launch with `--ai-demo` and optional
+// `--whats-new-lang=zh|en`.
 
 #if DEBUG
 import SwiftUI
@@ -15,16 +16,16 @@ struct AIKeyboardDemoView: View {
         case keyboard
     }
 
-    private static let question = "周末去哪儿玩比较合适？"
-    private static let answer =
-        "可以去近郊走走：上午逛古镇或公园，下午找一家口碑好的咖啡馆休息，傍晚再吃顿当地特色菜。若想轻松一点，选人少的湖边步道也很合适。"
-
     @StateObject private var config = ProviderConfig.shared
     @StateObject private var state = KeyboardState()
     @StateObject private var typing = TypingSessionController()
 
     @State private var scene: Scene = .settings
     @State private var levelTick = 0.35
+
+    init() {
+        AIKeyboardView.debugSkipsLongPressCoach = true
+    }
 
     var body: some View {
         ZStack {
@@ -58,15 +59,18 @@ struct AIKeyboardDemoView: View {
                 }
             }
         }
-        .environment(\.locale, Locale(identifier: "zh-Hans"))
+        .environment(\.locale, language == .en ? Locale(identifier: "en") : Locale(identifier: "zh-Hans"))
         .task { await runTimeline() }
+        .onDisappear {
+            AIKeyboardView.debugSkipsLongPressCoach = false
+        }
     }
 
     // MARK: - Scripted timeline (real view models)
 
     private func runTimeline() async {
         prepareKeyboardState()
-        config.uiLanguage = .chinese
+        config.uiLanguage = language == .en ? .english : .chinese
         config.aiResponseLength = .medium
 
         try? await sleep(2.4)
@@ -86,16 +90,16 @@ struct AIKeyboardDemoView: View {
             try? await sleep(0.2)
             levelTick = Double.random(in: 0.25...0.9)
             state.level = levelTick
-            state.aiSession.updateTranscript(Self.question, utteranceID: utteranceID)
+            state.aiSession.updateTranscript(question, utteranceID: utteranceID)
         }
 
         state.aiSession.beginRecognizing(utteranceID: utteranceID)
         try? await sleep(0.55)
-        state.aiSession.beginGenerating(question: Self.question, utteranceID: utteranceID)
+        state.aiSession.beginGenerating(question: question, utteranceID: utteranceID)
         try? await sleep(0.7)
 
         // Progressive draft so the real answer area updates like production.
-        let chars = Array(Self.answer)
+        let chars = Array(answer)
         var index = 0
         let step = 4
         while index < chars.count {
@@ -106,8 +110,10 @@ struct AIKeyboardDemoView: View {
             )
             try? await sleep(0.05)
         }
-        state.aiSession.receiveAnswer(Self.answer, utteranceID: utteranceID)
-        try? await sleep(1.0)
+        state.aiSession.receiveAnswer(answer, utteranceID: utteranceID)
+        // Hold the explicit-insert review state long enough for screen capture
+        // and for viewers to read the answer before the demo advances.
+        try? await sleep(3.0)
 
         state.aiSession.markAnswerInserted(offersSend: true)
         try? await sleep(1.1)
@@ -116,13 +122,37 @@ struct AIKeyboardDemoView: View {
     }
 
     private func prepareKeyboardState() {
-        state.surface = .ai
+        state.surface = .voice
         state.aiServiceAvailable = true
         state.micDisabled = false
         state.layoutWidth = 390
         state.usesIPadLayoutMetrics = false
         state.micVoiceAvailability = .ready
         state.aiSession.enter()
+    }
+
+    private var language: WhatsNewDemoScenario.Language {
+        let prefix = "--whats-new-lang="
+        guard let argument = ProcessInfo.processInfo.arguments.first(
+            where: { $0.hasPrefix(prefix) }
+        ) else {
+            return .zh
+        }
+        return WhatsNewDemoScenario.Language(
+            rawValue: String(argument.dropFirst(prefix.count))
+        ) ?? .zh
+    }
+
+    private var question: String {
+        language == .en
+            ? "Where should I go this weekend?"
+            : "周末去哪儿玩比较合适？"
+    }
+
+    private var answer: String {
+        language == .en
+            ? "Try a nearby town day trip: walk through a park or old street, stop at a café, then have a local dinner."
+            : "可以去近郊走走：上午逛古镇或公园，下午找一家口碑好的咖啡馆休息，傍晚再吃顿当地特色菜。"
     }
 
     /// Slow-mo for screenshot-sequence recording.

@@ -8,6 +8,39 @@ import XCTest
 
 @MainActor
 final class EnglishKeyboardDeviceUITests: XCTestCase {
+    func testPiPColdStartsFromUserTap() throws {
+        #if targetEnvironment(simulator)
+        throw XCTSkip("PiP is unavailable in the iOS Simulator.")
+        #else
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--pip-device-ui-test"]
+        let requestedCycles = ProcessInfo.processInfo.environment["PIP_STRESS_COUNT"]
+            .flatMap(Int.init) ?? 30
+        let cycles = min(max(requestedCycles, 1), 100)
+
+        for cycle in 1...cycles {
+            app.terminate()
+            app.launch()
+
+            let startButton = app.buttons["pip.start"]
+            XCTAssertTrue(
+                startButton.waitForExistence(timeout: 10),
+                "Cycle \(cycle): PiP start button did not appear after cold launch."
+            )
+            startButton.tap()
+
+            let ready = app.descendants(matching: .any)["pip.status.ready"]
+            XCTAssertTrue(
+                ready.waitForExistence(timeout: 10),
+                "Cycle \(cycle): PiP did not become active after a real user tap."
+            )
+        }
+
+        app.terminate()
+        #endif
+    }
+
     func testOSGKeyboardAppearsOnNotesHost() throws {
         let app = XCUIApplication()
         app.launchArguments = [

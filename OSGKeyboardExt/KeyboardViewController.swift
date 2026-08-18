@@ -66,6 +66,18 @@ public final class KeyboardViewController: UIInputViewController {
     /// Coalesces host-document refreshes after mutations issued by this keyboard.
     private var assistantFieldActionRefreshTask: Task<Void, Never>?
 
+    private var memoryTelemetryContext: String {
+        let language = typingSessionStorage?.language.rawValue ?? "-"
+        return "surface=\(state.surface.rawValue) language=\(language) "
+            + "fullAccess=\(hasFullAccess ? 1 : 0) "
+            + "clipboard=\(state.clipboardHistoryEnabled ? 1 : 0)"
+    }
+
+    private func recordMemory(_ stage: String, details: String? = nil) {
+        KeyboardExtensionMemoryTelemetry.updateContext(memoryTelemetryContext)
+        KeyboardExtensionMemoryTelemetry.record(stage, details: details)
+    }
+
     private var editHintScheduler: EditHintScheduler!
     private var textInserter: KeyboardTextInserter!
     private var flowCoordinator: KeyboardFlowCoordinator!
@@ -104,14 +116,22 @@ public final class KeyboardViewController: UIInputViewController {
     // MARK: - Init
 
     public override init(nibName nibNameOrNil: String?, bundle nibBundleOrNil: Bundle?) {
+        KeyboardExtensionMemoryTelemetry.begin(
+            context: "surface=uninitialized language=- fullAccess=- clipboard=-"
+        )
         OSGDiag.log("KVC.init(nib) begin \(OSGDiag.memoryTag())", category: "boot")
         super.init(nibName: nibNameOrNil, bundle: nibBundleOrNil)
+        recordMemory("KVC.init.done")
         OSGDiag.log("KVC.init(nib) done \(OSGDiag.memoryTag())", category: "boot")
     }
 
     public required init?(coder: NSCoder) {
+        KeyboardExtensionMemoryTelemetry.begin(
+            context: "surface=uninitialized language=- fullAccess=- clipboard=-"
+        )
         OSGDiag.log("KVC.init(coder) begin \(OSGDiag.memoryTag())", category: "boot")
         super.init(coder: coder)
+        recordMemory("KVC.init.done")
         OSGDiag.log("KVC.init(coder) done \(OSGDiag.memoryTag())", category: "boot")
     }
 
@@ -128,6 +148,11 @@ public final class KeyboardViewController: UIInputViewController {
         // Voice-first keyboard — hide the misleading "English" subtitle in Settings.
         primaryLanguage = "mis"
         let preferred = TypingInputConfiguration.preferredSurfaceOnOpen()
+        recordMemory(
+            "KVC.viewDidLoad.begin",
+            details: "preferredSurface=\(preferred.rawValue)"
+        )
+        KeyboardExtensionMemoryTelemetry.startBootSampling()
         OSGDiag.log(
             "KVC.viewDidLoad begin preferredSurface=\(preferred.rawValue) "
                 + "fullAccess=\(hasFullAccess) \(OSGDiag.memoryTag())",
@@ -145,19 +170,31 @@ public final class KeyboardViewController: UIInputViewController {
         installKeyboardHeight()
         configureDictationBehavior()
         installServices()
+        recordMemory("KVC.viewDidLoad.afterInstallServices")
         OSGDiag.log("KVC.viewDidLoad after installServices \(OSGDiag.memoryTag())", category: "boot")
         // Apply open preference before mounting SwiftUI so the first frame is
         // already voice or typing — avoids a visible surface flash.
         applyPreferredSurfaceOnOpen()
+        recordMemory("KVC.viewDidLoad.afterPreferredSurface")
         OSGDiag.log("KVC.viewDidLoad after preferredSurface surface=\(state.surface.rawValue)", category: "boot")
         installTypingContextProviders()
         installStateActions()
         installSurfaceObservers()
         installSwiftUI()
+        recordMemory("KVC.viewDidLoad.afterInstallSwiftUI")
         OSGDiag.log("KVC.viewDidLoad after installSwiftUI \(OSGDiag.memoryTag())", category: "boot")
-        _ = configSync.loadPersistedConfig()
+        let configLoadResult = configSync.loadPersistedConfig()
+        recordMemory(
+            "KVC.viewDidLoad.afterConfigLoad",
+            details: "result=\(configLoadResult)"
+        )
         configSync.installDarwinObservers()
         flowCoordinator.refreshSessionState()
+        recordMemory(
+            "KVC.viewDidLoad.done",
+            details: "sessionActive=\(FlowSessionBridge.isSessionActive() ? 1 : 0) "
+                + "hostReady=\(FlowSessionBridge.isHostReady() ? 1 : 0)"
+        )
         OSGDiag.log(
             "KVC.viewDidLoad done surface=\(state.surface.rawValue) "
                 + "sessionActive=\(FlowSessionBridge.isSessionActive()) "
@@ -178,6 +215,10 @@ public final class KeyboardViewController: UIInputViewController {
             "KVC.viewWillDisappear surface=\(state.surface.rawValue) "
                 + "preserve=\(flowCoordinator.preservesLifecycleOnDisappear) \(OSGDiag.memoryTag())",
             category: "boot"
+        )
+        recordMemory(
+            "KVC.viewWillDisappear",
+            details: "preserve=\(flowCoordinator.preservesLifecycleOnDisappear ? 1 : 0)"
         )
         heightPhase = .idle
         flowCoordinator.stopSessionMonitor()
@@ -215,6 +256,7 @@ public final class KeyboardViewController: UIInputViewController {
                 + "fullAccess=\(hasFullAccess) \(OSGDiag.memoryTag())",
             category: "boot"
         )
+        recordMemory("KVC.viewWillAppear.begin")
         setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
         configureDictationBehavior()
         KeyboardSetupBridge.markExtensionAppearance(hasFullAccess: hasFullAccess)
@@ -229,12 +271,16 @@ public final class KeyboardViewController: UIInputViewController {
         // Re-warm Taptic after host app switches: SwiftUI `onAppear` often
         // skips when the extension process is reused, leaving generators cold.
         KeyboardHapticFeedback.prepare()
+        recordMemory("KVC.viewWillAppear.afterHaptics")
         if state.surface == .typing {
             OSGDiag.log("KVC.viewWillAppear enterTypingMode", category: "boot")
             typingSession.enterTypingMode()
             refreshEnglishSupplementaryLexicon()
+            recordMemory("KVC.viewWillAppear.afterTypingEnter")
         }
         clipboardCapture.keyboardDidAppear()
+        recordMemory("KVC.viewWillAppear.afterClipboard")
+        recordMemory("KVC.viewWillAppear.done")
         OSGDiag.log(
             "KVC.viewWillAppear done surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
             category: "boot"
@@ -263,6 +309,7 @@ public final class KeyboardViewController: UIInputViewController {
             "KVC.viewDidAppear begin surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
             category: "boot"
         )
+        recordMemory("KVC.viewDidAppear.begin")
         disableSystemGestureDelays()
         heightPhase = .presented
         lockPresentedKeyboardHeight()
@@ -296,6 +343,7 @@ public final class KeyboardViewController: UIInputViewController {
             "KVC.viewDidAppear done height=\(targetKeyboardHeight) \(OSGDiag.memoryTag())",
             category: "boot"
         )
+        recordMemory("KVC.viewDidAppear.done")
     }
 
     public override func textDidChange(_ textInput: UITextInput?) {
@@ -332,6 +380,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
+        recordMemory("KVC.didReceiveMemoryWarning")
         OSGDiag.log(
             "KVC.didReceiveMemoryWarning surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
             category: "boot"
@@ -621,6 +670,7 @@ public final class KeyboardViewController: UIInputViewController {
             category: "boot"
         )
         state.surface = surface
+        recordMemory("KVC.applySurface", details: "requested=\(surface.rawValue)")
         if surface == .typing {
             typingSession.enterTypingMode()
             refreshEnglishSupplementaryLexicon()

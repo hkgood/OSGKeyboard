@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.8.0] - 2026-08-14
 
+> **Release highlights**: See the concise [1.8.0 release notes](docs/RELEASE_NOTES_1.8.0.md) for the key changes since 1.6.6. / **版本亮点**：请参阅精简的 [1.8.0 更新说明](docs/RELEASE_NOTES_1.8.0.md)，了解自 1.6.6 以来的关键变化。
+
 ### Added
 - **English QuickType bar**: while typing a word, three equal slots show the verbatim text (quoted when unknown), the unique Space correction, and a completion. The bar stays empty before typing and between committed words. / **英文 QuickType 栏**：输入单词时，三个等宽格显示原文（生词带引号）、空格会采用的唯一纠错和补全；尚未输入及单词提交后保持空白。
 - **System English lexicon**: typing uses `UITextChecker` completions/guesses and `requestSupplementaryLexicon` contact names / text replacements. / **系统英文词库**：打字使用 `UITextChecker` 补全/猜测，以及 `requestSupplementaryLexicon` 的通讯录名与文本替换。

@@ -45,6 +45,34 @@ Record `OSGDiag` `rss=` tags for:
 
 Target: typing peak below the old “voice + eager Librime construct” baseline.
 
+## Extension physical-footprint budget
+
+`phys_footprint` is the primary extension metric because device jetsam follows
+it more closely than RSS. `KeyboardExtensionMemoryTelemetry` records structured
+`[OSGDiag/memory] extMemory` lines at lifecycle and heavy-resource milestones,
+plus 50 ms samples during the first four seconds:
+
+- **Normal:** below 36 MiB
+- **Warning:** 36–40 MiB
+- **High:** 40–48 MiB; 40 MiB is the internal safe peak
+- **Critical:** 48 MiB or above
+
+The approximate 60 MiB device boundary is not a public Apple contract. The
+40 MiB target deliberately reserves room for transient SwiftUI, Rime, and
+system-framework pages. Telemetry is observation-only: crossing a band logs
+`crossed=1` but does not change the selected surface or unload resources.
+
+Each record includes the current and peak footprint, delta from process start,
+elapsed startup time, surface/language, Full Access, clipboard state, and
+operation-specific context. Filter Console by `OSGDiag/memory` and compare:
+
+1. `KVC.viewDidLoad.afterInstallServices`
+2. `KVC.viewDidLoad.afterInstallSwiftUI`
+3. `typing.englishPrepare.done`
+4. `typing.rimePrepare.done`
+5. `clipboard.reload.done`
+6. `KVC.viewDidAppear.done`
+
 ## Structural split
 
 - Extension links **OSGKeyboardShared** only (no Charts / StoreKit / Speech / HostSupport).

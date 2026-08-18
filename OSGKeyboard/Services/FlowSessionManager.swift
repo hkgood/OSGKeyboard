@@ -126,7 +126,8 @@ final class FlowSessionManager: ObservableObject {
     private var isColdStartHandoff = false
     private var coldStartRecoveryTask: Task<Void, Never>?
     var shouldDeferHostHeavyWork: Bool {
-        startingUtteranceId != nil
+        isStarting
+            || startingUtteranceId != nil
             || isUtteranceRecording
             || isUtteranceProcessing
             || hasUnacknowledgedTerminalResult()
@@ -922,6 +923,11 @@ final class FlowSessionManager: ObservableObject {
         coldStartRecoveryTask?.cancel()
         coldStartRecoveryTask = Task { @MainActor [weak self] in
             guard let self else { return }
+            // The failed controller has been fully torn down. Give the app
+            // scene and Pegasus service a short settling interval before the
+            // one bounded cold-start retry creates a new controller generation.
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled, self.isColdStartHandoff else { return }
             let outcome = await self.pipController.startAndWait()
             self.traceState("coldStartRecovery.pip", extra: "outcome=\(outcome)")
             guard !Task.isCancelled, self.isColdStartHandoff else { return }

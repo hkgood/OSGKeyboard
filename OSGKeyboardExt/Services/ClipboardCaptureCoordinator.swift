@@ -65,7 +65,17 @@ final class ClipboardCaptureCoordinator {
 
     func keyboardDidAppear() {
         isKeyboardVisible = true
+        KeyboardExtensionMemoryTelemetry.record(
+            "clipboard.reload.begin",
+            details: "enabled=\(state.clipboardHistoryEnabled ? 1 : 0) "
+                + "entries=\(history.entries.count)"
+        )
         history.reload()
+        KeyboardExtensionMemoryTelemetry.record(
+            "clipboard.reload.done",
+            details: "enabled=\(state.clipboardHistoryEnabled ? 1 : 0) "
+                + "entries=\(history.entries.count)"
+        )
         // A suggestion belongs to one keyboard presentation. Clear any
         // presentation state left behind by a reused extension controller.
         endCurrentSuggestion()

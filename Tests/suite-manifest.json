@@ -142,7 +142,8 @@
         "OSGKeyboardTests/AIAddressExtractionTests",
         "OSGKeyboardTests/AINoteExportTests",
         "OSGKeyboardTests/ClipboardHistoryPolicyTests",
-        "OSGKeyboardTests/ClipboardHistoryStoreTests"
+        "OSGKeyboardTests/ClipboardHistoryStoreTests",
+        "OSGKeyboardTests/KeyboardExtensionMemoryBudgetTests"
       ]
     },
     "host_misc": {
