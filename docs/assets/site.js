@@ -1,7 +1,7 @@
 /*!
  * OSGKeyboard website interactions.
- * The page remains useful without JavaScript; this file adds language, theme,
- * media, and the decorative Three.js hero enhancement.
+ * The page remains useful without JavaScript; this file adds language,
+ * theme, and compact mobile navigation controls.
  */
 (function () {
   "use strict";
@@ -13,10 +13,9 @@
   const menuButton = document.getElementById("menuToggle");
   const menuIcon = menuButton?.querySelector(".material-symbols-rounded");
   const mobileNav = document.getElementById("mobileNav");
-  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const themeColor = document.querySelector('meta[name="theme-color"]');
   const themeMedia = window.matchMedia("(prefers-color-scheme: dark)");
   const supportedLanguages = new Set(["zh", "en"]);
-  let beams = null;
 
   function preferredLanguage() {
     const query = new URLSearchParams(window.location.search).get("lang");
@@ -130,40 +129,15 @@
       themeButton.setAttribute("aria-label", label);
     }
 
-    beams?.setBackground("#0b0d0c");
-    beams?.setLightColor(resolved === "dark" ? "#7faf8a" : "#6eaa7d");
+    themeColor?.setAttribute("content", resolved === "dark" ? "#0c0e0f" : "#eef2f6");
 
     if (persist) localStorage.setItem("osg-site-theme", resolved);
-  }
-
-  function initializeBeams() {
-    const canvas = document.getElementById("heroAuroraCanvas");
-    if (!canvas || !window.OSGBeamsHero || !window.THREE) return;
-
-    try {
-      beams = window.OSGBeamsHero.create(canvas, {
-        beamWidth: 4.5,
-        beamHeight: 6,
-        beamNumber: 26,
-        lightColor: "#7faf8a",
-        speed: 4.5,
-        noiseIntensity: 2.65,
-        scale: 0.62,
-        rotation: 208,
-        background: "#0b0d0c",
-        reduceMotion
-      });
-    } catch (error) {
-      console.warn("OSGKeyboard hero enhancement unavailable.", error);
-      canvas.hidden = true;
-    }
   }
 
   const initialLanguage = preferredLanguage();
   const initialTheme = storedTheme() || (themeMedia.matches ? "dark" : "light");
   applyLanguage(initialLanguage, false);
   applyTheme(initialTheme, false);
-  initializeBeams();
 
   languageButton?.addEventListener("click", () => {
     applyLanguage(root.dataset.lang === "zh" ? "en" : "zh", true);
@@ -188,9 +162,5 @@
 
   themeMedia.addEventListener("change", (event) => {
     if (!storedTheme()) applyTheme(event.matches ? "dark" : "light", false);
-  });
-
-  document.addEventListener("visibilitychange", () => {
-    beams?.setVisible(!document.hidden);
   });
 })();
