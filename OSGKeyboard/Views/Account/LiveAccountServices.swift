@@ -38,7 +38,11 @@ enum LiveAccountDependencyFactory {
             grantStore: grantStore,
             configuration: AppGroupStore()
         )
-        return AccountDependencies(sessionService: service, centerService: service)
+        return AccountDependencies(
+            sessionService: service,
+            centerService: service,
+            referralService: LiveReferralProfileService(apiClient: apiClient)
+        )
     }
 }
 
@@ -55,20 +59,10 @@ actor AccountCenterSnapshotLoader {
     ) async throws -> AccountCenterSnapshot {
         async let account = apiClient.account()
         async let balance = resource(CreditBalanceDTO.self, .creditsBalance)
-        async let profile = optionalResource(
-            ReferralProfileDTO.self,
-            .referralProfile,
-            diagnosticName: "referral-profile"
-        )
         async let referrals = optionalResource(
             [ReferralBindingDTO].self,
             .referrals(limit: 50),
             diagnosticName: "referrals"
-        )
-        async let campaigns = optionalResource(
-            [ReferralCampaignDTO].self,
-            .referralCampaigns,
-            diagnosticName: "referral-campaigns"
         )
 
         let core: (OSGAccount, CreditBalanceDTO)
@@ -81,28 +75,7 @@ actor AccountCenterSnapshotLoader {
             )
             throw error
         }
-        let optionalValues = await (profile, referrals, campaigns)
-        let invitationCode = await resolvedInvitationCode(
-            profile: optionalValues.0,
-            cachedProfile: cachedSnapshot?.referralProfile
-        )
-        let campaign = optionalValues.2?.first {
-            $0.id == optionalValues.0?.code?.campaignId
-        } ?? optionalValues.2?.first
-        let referralProfile = if optionalValues.0 == nil,
-                                 let cachedProfile = cachedSnapshot?.referralProfile {
-            cachedProfile
-        } else {
-            AccountReferralProfile(
-                code: invitationCode,
-                boundCode: cachedSnapshot?.referralProfile.boundCode,
-                inviterRewardCredits: campaign?.inviterRewardCredits
-                    ?? cachedSnapshot?.referralProfile.inviterRewardCredits,
-                inviteeRewardCredits: campaign?.inviteeRewardCredits
-                    ?? cachedSnapshot?.referralProfile.inviteeRewardCredits
-            )
-        }
-        let loadedReferrals = optionalValues.1?.map {
+        let loadedReferrals = await referrals?.map {
             AccountReferral(
                 id: UUID(),
                 status: Self.referralStatus($0.rewardStatus),
@@ -121,7 +94,6 @@ actor AccountCenterSnapshotLoader {
                 balance: core.1.balance,
                 usedCredits: core.1.lifetimeUsed ?? 0
             ),
-            referralProfile: referralProfile,
             referrals: loadedReferrals
         )
     }
@@ -151,26 +123,6 @@ actor AccountCenterSnapshotLoader {
         }
     }
 
-    private func resolvedInvitationCode(
-        profile: ReferralProfileDTO?,
-        cachedProfile: AccountReferralProfile?
-    ) async -> String? {
-        if let code = profile?.code?.code ?? cachedProfile?.code {
-            return code
-        }
-        do {
-            let data = try await apiClient.authorizedResourceData(.createReferralCode)
-            return try decoder.decode(ReferralCodeDTO.self, from: data).code
-        } catch {
-            OSGDiag.log(
-                "account refresh optional=referral-code fallback=cache "
-                    + "error=\(AccountDiagnostic.code(for: error))",
-                category: "account"
-            )
-            return cachedProfile?.code
-        }
-    }
-
     private static func referralStatus(_ value: String) -> AccountReferralStatus {
         switch value.uppercased() {
         case "REWARDED":
@@ -189,6 +141,24 @@ actor AccountCenterSnapshotLoader {
         standard.formatOptions = [.withInternetDateTime]
         let date = fractional.date(from: value) ?? standard.date(from: value)
         return date.map { Int64($0.timeIntervalSince1970) }
+    }
+}
+
+actor LiveReferralProfileService: ReferralProfileServicing {
+    private let apiClient: AccountAPIClient
+    private let decoder = JSONDecoder()
+
+    init(apiClient: AccountAPIClient) {
+        self.apiClient = apiClient
+    }
+
+    func loadReferralProfile() async throws -> ReferralProfile {
+        let data = try await apiClient.authorizedResourceData(.referralProfile)
+        do {
+            return try decoder.decode(ReferralProfile.self, from: data)
+        } catch {
+            throw AccountAPIError.decoding
+        }
     }
 }
 
@@ -354,11 +324,6 @@ private actor LiveAccountService: AccountSessionServicing, AccountCenterServicin
             createdAtEpochSeconds: account.createdAtEpochSeconds,
             displayName: account.displayName
         )
-    }
-
-    func createReferralCode() async throws -> String {
-        let data = try await apiClient.authorizedResourceData(.createReferralCode)
-        return try decoder.decode(ReferralCodeDTO.self, from: data).code
     }
 
     func redeemReferral(code: String) async throws {
@@ -584,21 +549,6 @@ private enum AccountDiagnostic {
 private struct CreditBalanceDTO: Decodable, Sendable {
     let balance: Int64
     let lifetimeUsed: Int64?
-}
-
-private struct ReferralCodeDTO: Decodable, Sendable {
-    let code: String
-    let campaignId: String?
-}
-
-private struct ReferralProfileDTO: Decodable, Sendable {
-    let code: ReferralCodeDTO?
-}
-
-private struct ReferralCampaignDTO: Decodable, Sendable {
-    let id: String
-    let inviterRewardCredits: Int64
-    let inviteeRewardCredits: Int64
 }
 
 private struct ReferralBindingDTO: Decodable, Sendable {

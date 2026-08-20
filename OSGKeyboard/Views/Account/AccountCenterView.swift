@@ -751,10 +751,11 @@ struct AccountInvitationButton: View {
     @Environment(\.themePalette) private var palette
     @State private var showsShareDrawer = false
 
-    let invitationURL: URL
+    let invitationURL: URL?
 
     var body: some View {
         Button {
+            guard invitationURL != nil else { return }
             showsShareDrawer = true
         } label: {
             Label("account.referral.inviteTitle", systemImage: "person.badge.plus")
@@ -771,10 +772,14 @@ struct AccountInvitationButton: View {
                 )
         }
         .buttonStyle(.plain)
+        .disabled(invitationURL == nil)
+        .accessibilityIdentifier("account.referral.share")
         .sheet(isPresented: $showsShareDrawer) {
-            AccountInvitationActivityView(invitationURL: invitationURL)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+            if let invitationURL {
+                AccountInvitationActivityView(invitationURL: invitationURL)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
         }
     }
 }
@@ -850,17 +855,12 @@ struct IAPReviewScreenshotHarness: View {
             displayName: "OSG User"
         ),
         credits: AccountCreditSummary(balance: 1_000, usedCredits: 0),
-        referralProfile: AccountReferralProfile(code: nil, boundCode: nil),
         referrals: []
     )
 }
 
 private struct IAPReviewAccountService: AccountCenterServicing {
     func loadAccountCenter() async throws -> AccountCenterSnapshot {
-        throw AccountIntegrationError.unavailable
-    }
-
-    func createReferralCode() async throws -> String {
         throw AccountIntegrationError.unavailable
     }
 

@@ -43,6 +43,7 @@ final class AccountSessionCoordinator: ObservableObject {
     @Published private(set) var accountRefreshErrorKey: String?
 
     let creditPurchases: AccountCreditPurchaseManager
+    let referralProfile: ReferralProfileViewModel
 
     private let sessionService: any AccountSessionServicing
     private let centerService: any AccountCenterServicing
@@ -60,6 +61,8 @@ final class AccountSessionCoordinator: ObservableObject {
         creditStore: any AccountCreditStore = LiveAccountCreditStore(),
         pendingReferralStore: any PendingReferralCodeStoring =
             UserDefaultsPendingReferralCodeStore(),
+        referralProfileStore: any ReferralProfileStoring =
+            UserDefaultsReferralProfileStore(),
         accountRefreshInterval: TimeInterval = 10 * 60,
         now: @escaping () -> Date = Date.init,
         analyticsClient: any AnalyticsClient = NoopAnalyticsClient(),
@@ -72,6 +75,10 @@ final class AccountSessionCoordinator: ObservableObject {
             service: dependencies.centerService,
             store: creditStore,
             analyticsClient: analyticsClient
+        )
+        referralProfile = ReferralProfileViewModel(
+            service: dependencies.referralService,
+            store: referralProfileStore
         )
         self.pendingReferralStore = pendingReferralStore
         self.analyticsClient = analyticsClient
@@ -107,6 +114,7 @@ final class AccountSessionCoordinator: ObservableObject {
             }
             await onAccountAuthenticated(session.accountID)
             sessionPhase = .signedIn(session)
+            referralProfile.startSession(accountID: session.accountID)
             await redeemPendingReferralIfNeeded()
             await refreshAccountData(force: true)
         } catch {
@@ -153,6 +161,7 @@ final class AccountSessionCoordinator: ObservableObject {
             let session = try await sessionService.signIn(with: payload)
             await onAccountAuthenticated(session.accountID)
             sessionPhase = .signedIn(session)
+            referralProfile.startSession(accountID: session.accountID)
             await redeemPendingReferralIfNeeded()
             await refreshAccountData(force: true)
         } catch {
@@ -210,7 +219,6 @@ final class AccountSessionCoordinator: ObservableObject {
                     AccountCenterSnapshot(
                         account: account,
                         credits: snapshot.credits,
-                        referralProfile: snapshot.referralProfile,
                         referrals: snapshot.referrals
                     )
                 )
@@ -251,11 +259,13 @@ final class AccountSessionCoordinator: ObservableObject {
         operation = .signingOut
         operationErrorKey = nil
         defer { operation = nil }
+        referralProfile.cancelRefresh()
 
         do {
             try await sessionService.signOut()
             creditPurchases.reset()
             clearAccountRefreshState()
+            referralProfile.endSession()
             sessionPhase = .signedOut
             snapshotPhase = .idle
         } catch {
@@ -271,12 +281,14 @@ final class AccountSessionCoordinator: ObservableObject {
         operation = .deletingAccount
         operationErrorKey = nil
         defer { operation = nil }
+        referralProfile.cancelRefresh()
 
         do {
             try await sessionService.deleteAccount(with: payload)
             await onAccountDeleted()
             creditPurchases.reset()
             clearAccountRefreshState()
+            referralProfile.endSession(removeCache: true)
             sessionPhase = .signedOut
             snapshotPhase = .idle
             pendingReferralStore.clear()

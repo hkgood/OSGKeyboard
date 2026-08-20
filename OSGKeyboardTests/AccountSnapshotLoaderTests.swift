@@ -10,7 +10,7 @@ import XCTest
 
 final class AccountSnapshotLoaderTests: XCTestCase {
     @MainActor
-    func testOptionalReferralFailuresUseCachedAccountData() async throws {
+    func testOptionalReferralListFailureUsesCachedAccountData() async throws {
         let account = OSGKeyboard.AccountSession(
             accountID: UUID(),
             createdAtEpochSeconds: 1_700_000_000
@@ -24,12 +24,6 @@ final class AccountSnapshotLoaderTests: XCTestCase {
         let cached = AccountCenterSnapshot(
             account: account,
             credits: AccountCreditSummary(balance: 1_000, usedCredits: 0),
-            referralProfile: AccountReferralProfile(
-                code: "CachedCode_1234567890",
-                boundCode: nil,
-                inviterRewardCredits: 1_000,
-                inviteeRewardCredits: 1_000
-            ),
             referrals: [cachedReferral]
         )
         let transport = AccountCenterRoutingTransport(accountID: account.accountID)
@@ -48,12 +42,15 @@ final class AccountSnapshotLoaderTests: XCTestCase {
             refreshed.credits,
             AccountCreditSummary(balance: 750, usedCredits: 250)
         )
-        XCTAssertEqual(refreshed.referralProfile, cached.referralProfile)
         XCTAssertEqual(refreshed.referrals, cached.referrals)
         let requests = await transport.requests
         XCTAssertEqual(
             requests.count { $0.url?.path == "/v1/referrals/me" },
-            2
+            0
+        )
+        XCTAssertEqual(
+            requests.count { $0.url?.path == "/v1/referrals/code" },
+            0
         )
         XCTAssertEqual(
             requests.count { $0.url?.path == "/v1/referrals" },
@@ -88,7 +85,7 @@ private actor AccountCenterRoutingTransport: AccountHTTPTransport {
                 statusCode: 200,
                 body: Data(#"{"balance":750,"lifetimeUsed":250}"#.utf8)
             )
-        case "/v1/referrals/me", "/v1/referrals":
+        case "/v1/referrals":
             response = .init(
                 statusCode: 503,
                 body: apiErrorData(

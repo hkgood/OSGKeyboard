@@ -200,10 +200,6 @@ private actor CreditServiceStub: AccountCenterServicing {
         throw AccountIntegrationError.unavailable
     }
 
-    func createReferralCode() async throws -> String {
-        throw AccountIntegrationError.unavailable
-    }
-
     func redeemReferral(code: String) async throws {
         throw AccountIntegrationError.unavailable
     }

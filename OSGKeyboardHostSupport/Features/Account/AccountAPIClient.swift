@@ -485,7 +485,7 @@ public actor AccountAPIClient {
         }
         var request = URLRequest(url: url)
         request.httpMethod = resource.method
-        request.timeoutInterval = 30
+        request.timeoutInterval = resource == .referralProfile ? 15 : 30
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         if resource == .creditsBalance {
@@ -504,6 +504,10 @@ public actor AccountAPIClient {
     private func send(_ request: URLRequest) async throws -> (data: Data, response: HTTPURLResponse) {
         do {
             return try await transport.data(for: request)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as URLError where error.code == .cancelled {
+            throw CancellationError()
         } catch let error as AccountAPIError {
             throw error
         } catch {

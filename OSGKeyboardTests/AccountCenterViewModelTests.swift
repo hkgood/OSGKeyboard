@@ -163,10 +163,6 @@ final class AccountCenterViewModelTests: XCTestCase {
         let latest = AccountCenterSnapshot(
             account: account,
             credits: latestCredits,
-            referralProfile: AccountReferralProfile(
-                code: "LatestCode_1234567890",
-                boundCode: nil
-            ),
             referrals: [
                 AccountReferral(
                     id: UUID(),
@@ -213,7 +209,6 @@ final class AccountCenterViewModelTests: XCTestCase {
         let latest = AccountCenterSnapshot(
             account: account,
             credits: AccountCreditSummary(balance: 500, usedCredits: 500),
-            referralProfile: original.referralProfile,
             referrals: original.referrals
         )
         let service = AccountServiceSpy(
@@ -443,7 +438,6 @@ final class AccountCenterViewModelTests: XCTestCase {
                 balance: 9_223_372_036_854_775_000,
                 usedCredits: 1_234
             ),
-            referralProfile: AccountReferralProfile(code: nil, boundCode: nil),
             referrals: []
         )
     }
@@ -549,10 +543,6 @@ private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing
         }
         guard let centerSnapshot else { throw AccountIntegrationError.unavailable }
         return centerSnapshot
-    }
-
-    func createReferralCode() async throws -> String {
-        "CreatedCode_1234567890"
     }
 
     func redeemReferral(code: String) async throws {

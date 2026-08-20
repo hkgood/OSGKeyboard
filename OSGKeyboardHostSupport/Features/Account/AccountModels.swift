@@ -54,7 +54,6 @@ public enum AccountAuthorizedResource: Sendable, Equatable {
     case referralProfile
     case referralCampaigns
     case referrals(limit: Int)
-    case createReferralCode
     case redeemReferral
     case storeKitProducts
     case storeKitTransactions(limit: Int, cursor: String?)
@@ -63,7 +62,7 @@ public enum AccountAuthorizedResource: Sendable, Equatable {
 
     var method: String {
         switch self {
-        case .createReferralCode, .redeemReferral, .submitStoreKitTransaction:
+        case .redeemReferral, .submitStoreKitTransaction:
             return "POST"
         case .revokeGatewayGrant:
             return "DELETE"
@@ -82,8 +81,6 @@ public enum AccountAuthorizedResource: Sendable, Equatable {
             return "/v1/referrals/campaigns"
         case .referrals(let limit):
             return "/v1/referrals?limit=\(min(max(limit, 1), 100))"
-        case .createReferralCode:
-            return "/v1/referrals/code"
         case .redeemReferral:
             return "/v1/referrals/redeem"
         case .storeKitProducts:

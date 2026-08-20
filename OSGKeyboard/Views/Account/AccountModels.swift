@@ -75,29 +75,150 @@ struct AccountReferral: Identifiable, Equatable, Sendable {
     let rewardCredits: Int64?
 }
 
-struct AccountReferralProfile: Equatable, Sendable {
-    let code: String?
-    let boundCode: String?
-    let inviterRewardCredits: Int64?
-    let inviteeRewardCredits: Int64?
+struct ReferralCode: Codable, Equatable, Sendable {
+    let code: String
+    let inviteURL: URL
+    let campaignID: String?
+    let createdAt: Date
 
-    init(
-        code: String?,
-        boundCode: String?,
-        inviterRewardCredits: Int64? = nil,
-        inviteeRewardCredits: Int64? = nil
-    ) {
-        self.code = code
-        self.boundCode = boundCode
-        self.inviterRewardCredits = inviterRewardCredits
-        self.inviteeRewardCredits = inviteeRewardCredits
+    private enum CodingKeys: String, CodingKey {
+        case code
+        case inviteURL = "inviteUrl"
+        case campaignID = "campaignId"
+        case createdAt
     }
+
+    init(code: String, inviteURL: URL, campaignID: String?, createdAt: Date) {
+        self.code = code
+        self.inviteURL = inviteURL
+        self.campaignID = campaignID
+        self.createdAt = createdAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let code = try container.decode(String.self, forKey: .code)
+        let inviteURL = try container.decode(URL.self, forKey: .inviteURL)
+        let createdAtValue = try container.decode(String.self, forKey: .createdAt)
+        guard ReferralUniversalLink.isValid(code: code),
+              inviteURL.scheme?.lowercased() == "https",
+              inviteURL.host != nil,
+              let createdAt = Self.date(from: createdAtValue) else {
+            throw DecodingError.dataCorrupted(
+                .init(
+                    codingPath: container.codingPath,
+                    debugDescription: "Invalid referral code, invite URL, or creation date."
+                )
+            )
+        }
+        self.code = code
+        self.inviteURL = inviteURL
+        campaignID = try container.decodeIfPresent(String.self, forKey: .campaignID)
+        self.createdAt = createdAt
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(code, forKey: .code)
+        try container.encode(inviteURL, forKey: .inviteURL)
+        try container.encodeIfPresent(campaignID, forKey: .campaignID)
+        try container.encode(Self.string(from: createdAt), forKey: .createdAt)
+    }
+
+    private static func date(from value: String) -> Date? {
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let standard = ISO8601DateFormatter()
+        standard.formatOptions = [.withInternetDateTime]
+        return fractional.date(from: value) ?? standard.date(from: value)
+    }
+
+    private static func string(from date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
+}
+
+/// The binding payload can gain server-owned fields without breaking cached
+/// profiles. The client only needs to preserve it; invitation sharing uses code.
+struct ReferralBinding: Codable, Equatable, Sendable {
+    let fields: [String: ReferralJSONValue]
+
+    init(from decoder: Decoder) throws {
+        fields = try decoder.singleValueContainer().decode(
+            [String: ReferralJSONValue].self
+        )
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(fields)
+    }
+}
+
+enum ReferralJSONValue: Codable, Equatable, Sendable {
+    case string(String)
+    case integer(Int64)
+    case number(Double)
+    case boolean(Bool)
+    case object([String: ReferralJSONValue])
+    case array([ReferralJSONValue])
+    case null
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(Bool.self) {
+            self = .boolean(value)
+        } else if let value = try? container.decode(Int64.self) {
+            self = .integer(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .number(value)
+        } else if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode([String: ReferralJSONValue].self) {
+            self = .object(value)
+        } else if let value = try? container.decode([ReferralJSONValue].self) {
+            self = .array(value)
+        } else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Unsupported referral binding value."
+            )
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let value):
+            try container.encode(value)
+        case .integer(let value):
+            try container.encode(value)
+        case .number(let value):
+            try container.encode(value)
+        case .boolean(let value):
+            try container.encode(value)
+        case .object(let value):
+            try container.encode(value)
+        case .array(let value):
+            try container.encode(value)
+        case .null:
+            try container.encodeNil()
+        }
+    }
+}
+
+struct ReferralProfile: Codable, Equatable, Sendable {
+    let code: ReferralCode
+    let binding: ReferralBinding?
 }
 
 struct AccountCenterSnapshot: Equatable, Sendable {
     let account: AccountSession
     let credits: AccountCreditSummary
-    let referralProfile: AccountReferralProfile
     let referrals: [AccountReferral]
 }
 
@@ -158,7 +279,6 @@ protocol AccountCenterServicing: Sendable {
         cachedSnapshot: AccountCenterSnapshot?
     ) async throws -> AccountCenterSnapshot
     func updateDisplayName(_ displayName: String) async throws -> AccountSession
-    func createReferralCode() async throws -> String
     func redeemReferral(code: String) async throws
     func loadCreditProducts() async throws -> [AccountCreditProduct]
     func submitCreditTransaction(_ signedTransaction: String) async throws -> AccountCreditPurchase
@@ -195,13 +315,32 @@ extension AccountCenterServicing {
     }
 }
 
+protocol ReferralProfileServicing: Sendable {
+    func loadReferralProfile() async throws -> ReferralProfile
+}
+
 struct AccountDependencies: Sendable {
     let sessionService: any AccountSessionServicing
     let centerService: any AccountCenterServicing
+    let referralService: any ReferralProfileServicing
+
+    init(
+        sessionService: any AccountSessionServicing,
+        centerService: any AccountCenterServicing,
+        referralService: (any ReferralProfileServicing)? = nil
+    ) {
+        self.sessionService = sessionService
+        self.centerService = centerService
+        self.referralService = referralService ?? UnavailableReferralProfileService()
+    }
 
     static let unavailable: AccountDependencies = {
         let service = UnavailableAccountService()
-        return AccountDependencies(sessionService: service, centerService: service)
+        return AccountDependencies(
+            sessionService: service,
+            centerService: service,
+            referralService: UnavailableReferralProfileService()
+        )
     }()
 }
 
@@ -238,10 +377,6 @@ private struct UnavailableAccountService: AccountSessionServicing, AccountCenter
         throw AccountIntegrationError.unavailable
     }
 
-    func createReferralCode() async throws -> String {
-        throw AccountIntegrationError.unavailable
-    }
-
     func redeemReferral(code: String) async throws {
         throw AccountIntegrationError.unavailable
     }
@@ -251,6 +386,12 @@ private struct UnavailableAccountService: AccountSessionServicing, AccountCenter
     }
 
     func submitCreditTransaction(_ signedTransaction: String) async throws -> AccountCreditPurchase {
+        throw AccountIntegrationError.unavailable
+    }
+}
+
+private struct UnavailableReferralProfileService: ReferralProfileServicing {
+    func loadReferralProfile() async throws -> ReferralProfile {
         throw AccountIntegrationError.unavailable
     }
 }
@@ -285,10 +426,6 @@ enum ReferralUniversalLink {
         }
     }
 
-    static func invitationURL(for code: String) -> URL? {
-        guard isValid(code: code) else { return nil }
-        return URL(string: "https://\(host)/i/\(code)")
-    }
 }
 
 @MainActor
@@ -324,5 +461,45 @@ final class UserDefaultsPendingReferralCodeStore: PendingReferralCodeStoring {
 
     func clear() {
         defaults.removeObject(forKey: Self.storageKey)
+    }
+}
+
+@MainActor
+protocol ReferralProfileStoring: AnyObject {
+    func profile(for accountID: UUID) -> ReferralProfile?
+    func save(_ profile: ReferralProfile, for accountID: UUID)
+    func removeProfile(for accountID: UUID)
+}
+
+@MainActor
+final class UserDefaultsReferralProfileStore: ReferralProfileStoring {
+    private static let storageKeyPrefix = "account.referralProfile.v1."
+
+    private let defaults: UserDefaults
+    private let decoder = JSONDecoder()
+    private let encoder = JSONEncoder()
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    func profile(for accountID: UUID) -> ReferralProfile? {
+        guard let data = defaults.data(forKey: storageKey(for: accountID)) else {
+            return nil
+        }
+        return try? decoder.decode(ReferralProfile.self, from: data)
+    }
+
+    func save(_ profile: ReferralProfile, for accountID: UUID) {
+        guard let data = try? encoder.encode(profile) else { return }
+        defaults.set(data, forKey: storageKey(for: accountID))
+    }
+
+    func removeProfile(for accountID: UUID) {
+        defaults.removeObject(forKey: storageKey(for: accountID))
+    }
+
+    private func storageKey(for accountID: UUID) -> String {
+        Self.storageKeyPrefix + accountID.uuidString.lowercased()
     }
 }

@@ -20,7 +20,8 @@ struct AccountCenterUITestHarness: View {
             wrappedValue: AccountSessionCoordinator(
                 dependencies: AccountDependencies(
                     sessionService: service,
-                    centerService: service
+                    centerService: service,
+                    referralService: service
                 ),
                 creditStore: store
             )
@@ -54,7 +55,8 @@ struct ManagedCloudConsentUITestHarness: View {
             wrappedValue: AccountSessionCoordinator(
                 dependencies: AccountDependencies(
                     sessionService: service,
-                    centerService: service
+                    centerService: service,
+                    referralService: service
                 ),
                 creditStore: AccountCenterUITestCreditStore(
                     accountID: service.account.accountID
@@ -80,7 +82,10 @@ struct ManagedCloudConsentUITestHarness: View {
     }
 }
 
-private actor AccountCenterUITestService: AccountSessionServicing, AccountCenterServicing {
+private actor AccountCenterUITestService:
+    AccountSessionServicing,
+    AccountCenterServicing,
+    ReferralProfileServicing {
     nonisolated let account = AccountSession(
         accountID: UUID(uuidString: "00000000-0000-0000-0000-000000000200")!,
         createdAtEpochSeconds: 1_700_000_000,
@@ -106,7 +111,6 @@ private actor AccountCenterUITestService: AccountSessionServicing, AccountCenter
         AccountCenterSnapshot(
             account: account,
             credits: AccountCreditSummary(balance: 1_500, usedCredits: 500),
-            referralProfile: AccountReferralProfile(code: nil, boundCode: nil),
             referrals: []
         )
     }
@@ -119,12 +123,20 @@ private actor AccountCenterUITestService: AccountSessionServicing, AccountCenter
         )
     }
 
-    func createReferralCode() async throws -> String {
-        "UITestInvite_1234567890"
-    }
-
     func redeemReferral(code: String) async throws {
         _ = code
+    }
+
+    func loadReferralProfile() async throws -> ReferralProfile {
+        ReferralProfile(
+            code: ReferralCode(
+                code: "UITestInvite_123456789",
+                inviteURL: URL(string: "https://osglab.com/i/UITestInvite_123456789")!,
+                campaignID: nil,
+                createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+            ),
+            binding: nil
+        )
     }
 
     func loadCreditProducts() async throws -> [AccountCreditProduct] {

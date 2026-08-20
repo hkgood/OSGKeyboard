@@ -230,55 +230,50 @@ struct SettingsView: View {
     }
 
     private var accountRewardsEntrySection: some View {
-        Group {
+        VStack(spacing: 0) {
             switch accountSession.snapshotPhase {
             case let .loaded(snapshot):
                 let totalCredits = creditTotal(snapshot)
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Button {
-                        path.append(SettingsRoute.account)
-                    } label: {
-                        VStack(alignment: .leading, spacing: Spacing.sm) {
-                            HStack(alignment: .top, spacing: Spacing.md) {
-                                VStack(alignment: .leading, spacing: Spacing.xxs) {
-                                    Text(creditRemainingText(snapshot.credits.balance))
-                                        .font(TypeStyle.title3.monospacedDigit())
-                                        .foregroundStyle(palette.textPrimary)
-                                    Text("account.credits.balance")
-                                        .font(TypeStyle.caption)
-                                        .foregroundStyle(palette.textSecondary)
-                                }
-
-                                Spacer(minLength: Spacing.xs)
-
-                                VStack(alignment: .trailing, spacing: Spacing.xxs) {
-                                    Text(creditUsedText(snapshot.credits.usedCredits))
-                                    Text(creditTotalText(totalCredits))
-                                }
-                                .font(TypeStyle.caption)
-                                .monospacedDigit()
-                                .foregroundStyle(palette.textSecondary)
-
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(palette.textTertiary)
-                                    .frame(minWidth: 32, minHeight: 32)
-                                    .accessibilityHidden(true)
+                Button {
+                    path.append(SettingsRoute.account)
+                } label: {
+                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                        HStack(alignment: .top, spacing: Spacing.md) {
+                            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                                Text(creditRemainingText(snapshot.credits.balance))
+                                    .font(TypeStyle.title3.monospacedDigit())
+                                    .foregroundStyle(palette.textPrimary)
+                                Text("account.credits.balance")
+                                    .font(TypeStyle.caption)
+                                    .foregroundStyle(palette.textSecondary)
                             }
 
-                            AccountCreditProgress(
-                                remaining: snapshot.credits.balance,
-                                used: snapshot.credits.usedCredits,
-                                showsLabels: false
-                            )
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
+                            Spacer(minLength: Spacing.xs)
 
-                    Divider().background(palette.divider)
-                    invitationLink(snapshot.referralProfile)
+                            VStack(alignment: .trailing, spacing: Spacing.xxs) {
+                                Text(creditUsedText(snapshot.credits.usedCredits))
+                                Text(creditTotalText(totalCredits))
+                            }
+                            .font(TypeStyle.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(palette.textSecondary)
+
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(palette.textTertiary)
+                                .frame(minWidth: 32, minHeight: 32)
+                                .accessibilityHidden(true)
+                        }
+
+                        AccountCreditProgress(
+                            remaining: snapshot.credits.balance,
+                            used: snapshot.credits.usedCredits,
+                            showsLabels: false
+                        )
+                    }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
                 .padding(Spacing.md)
             case .failed:
                 VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -302,37 +297,11 @@ struct SettingsView: View {
                 }
                 .settingsListRow()
             }
+
+            Divider().background(palette.divider)
+            AccountReferralLinkView(viewModel: accountSession.referralProfile)
         }
         .surfaceCard()
-    }
-
-    @ViewBuilder
-    private func invitationLink(_ profile: AccountReferralProfile) -> some View {
-        if let code = profile.code,
-           let invitationURL = ReferralUniversalLink.invitationURL(for: code) {
-            HStack(spacing: Spacing.md) {
-                Text(
-                    AppL10n.string(
-                        "account.referral.equalRewardDescription",
-                        language: config.uiLanguage
-                    )
-                )
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: Spacing.xs)
-                AccountInvitationButton(invitationURL: invitationURL)
-            }
-        } else {
-            HStack(spacing: Spacing.sm) {
-                ProgressView()
-                    .controlSize(.small)
-                    .tint(palette.accent)
-                Text("account.referral.preparingLink")
-                    .font(TypeStyle.footnote)
-                    .foregroundStyle(palette.textSecondary)
-            }
-        }
     }
 
     private func creditTotal(_ snapshot: AccountCenterSnapshot) -> Int64 {
@@ -490,6 +459,81 @@ struct SettingsView: View {
 
     private func loadDynamicLocales() async {
         dynamicLocales = await SettingsASRLocales.loadDynamic()
+    }
+}
+
+private struct AccountReferralLinkView: View {
+    @Environment(\.themePalette) private var palette
+    @ObservedObject var viewModel: ReferralProfileViewModel
+
+    var body: some View {
+        Group {
+            switch viewModel.state {
+            case .idle:
+                retryRow(
+                    messageKey: "account.referral.loadLink",
+                    actionKey: "account.referral.loadLink"
+                )
+            case .loading:
+                HStack(spacing: Spacing.sm) {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(palette.accent)
+                    Text("account.referral.loadingLink")
+                        .font(TypeStyle.footnote)
+                        .foregroundStyle(palette.textSecondary)
+                }
+            case .failed(let messageKey):
+                retryRow(messageKey: messageKey, actionKey: "account.retry")
+            case .loaded(let profile):
+                loadedContent(profile)
+            }
+        }
+        .padding(Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityIdentifier("account.referral.profile")
+    }
+
+    private func loadedContent(_ profile: ReferralProfile) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(spacing: Spacing.md) {
+                Text("account.referral.equalRewardDescription")
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: Spacing.xs)
+                AccountInvitationButton(invitationURL: profile.code.inviteURL)
+            }
+
+            if viewModel.isRefreshing {
+                HStack(spacing: Spacing.xs) {
+                    ProgressView()
+                        .controlSize(.mini)
+                    Text("account.referral.refreshingLink")
+                }
+                .font(TypeStyle.caption)
+                .foregroundStyle(palette.textTertiary)
+            } else if let refreshErrorKey = viewModel.refreshErrorKey {
+                retryRow(messageKey: refreshErrorKey, actionKey: "account.retry")
+            }
+        }
+    }
+
+    private func retryRow(
+        messageKey: String,
+        actionKey: LocalizedStringKey
+    ) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Text(LocalizedStringKey(messageKey))
+                .font(TypeStyle.footnote)
+                .foregroundStyle(palette.textSecondary)
+            Spacer(minLength: Spacing.xs)
+            Button(actionKey) {
+                Task { await viewModel.refresh() }
+            }
+            .font(TypeStyle.bodyEmph)
+            .foregroundStyle(palette.accent)
+        }
     }
 }
 
