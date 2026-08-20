@@ -3,8 +3,8 @@
 //
 // Multi-finger overlap: press order commits, Shift hold + type, slide reselect.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class TypingTouchTrackerTests: XCTestCase {
     private final class Token {}

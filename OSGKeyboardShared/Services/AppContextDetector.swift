@@ -93,7 +93,7 @@ public struct AppContextDetector: Sendable {
             "import ", "package ", "namespace ",
             "def ", "var ", "let ", "const ",
             "if (", "if (", "} else", "} catch",
-            "=> {", "-> {",
+            "=> {", "-> {"
         ]
         let hasIndentation = tail.contains("\n    ") || tail.contains("\t")
         let hasCodeKeyword = codeKeywords.contains(where: { tail.contains($0) })

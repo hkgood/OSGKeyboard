@@ -48,8 +48,8 @@ settings:
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "1.8.0"
-    CURRENT_PROJECT_VERSION: "79"
+    MARKETING_VERSION: "2.0.0"
+    CURRENT_PROJECT_VERSION: "83"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -116,6 +116,14 @@ targets:
         # specify kSecAttrAccessGroup explicitly.
         keychain-access-groups:
           - $(AppIdentifierPrefix)com.osgkeyboard.shared
+          # Host-only account sessions use this second group explicitly.
+          # The keyboard extension is intentionally not entitled to it.
+          - $(AppIdentifierPrefix)com.osgkeyboard.ios
+        com.apple.developer.applesignin:
+          - Default
+        com.apple.developer.devicecheck.appattest-environment: $(APP_ATTEST_ENVIRONMENT)
+        com.apple.developer.associated-domains:
+          - applinks:osglab.com
         # iCloud Key-Value Store — personal dictionary sync across
         # iPhone / iPad / Mac (Designed for iPad). Main app only.
         # NOTE: this entitlement is a single STRING, not an array — an
@@ -180,6 +188,12 @@ targets:
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
         ITSAppUsesNonExemptEncryption: false
+        # StoreKit 2 can return finished consumable credit purchases in
+        # Transaction.all so the account center can show purchase history.
+        SKIncludeConsumableInAppPurchaseHistory: true
+        # Runtime-resolved, team-prefixed group used by the host-private
+        # account Keychain store. Never copy this key to the extension plist.
+        OSGPrivateKeychainAccessGroup: $(AppIdentifierPrefix)com.osgkeyboard.ios
         CFBundleURLTypes:
           - CFBundleURLName: com.osgkeyboard.ios.settings
             CFBundleURLSchemes:
@@ -254,6 +268,11 @@ targets:
         # TestFlight upload: Automatic signing picks the right App Store profile.
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: X329MZU23S
+      configs:
+        Debug:
+          APP_ATTEST_ENVIRONMENT: development
+        Release:
+          APP_ATTEST_ENVIRONMENT: production
     dependencies:
       - target: OSGKeyboardShared
         embed: true

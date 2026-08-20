@@ -1,5 +1,5 @@
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class PolishOutputValidatorTests: XCTestCase {
 
@@ -10,7 +10,7 @@ final class PolishOutputValidatorTests: XCTestCase {
                 aliases: ["k8s"],
                 category: .productName,
                 source: .manual
-            ),
+            )
         ])
         let violations = PolishOutputValidator.validate(
             input: "部署 k8s 集群",
@@ -41,7 +41,7 @@ final class PolishOutputValidatorTests: XCTestCase {
             ("在 2025/03/01 之前完成", "在2025年3月1日之前完成"),
             ("价格是 3/4 杯面粉", "价格是四分之三杯面粉"),
             ("我给 3/5 分", "我给五分之三"),
-            ("读一下 and/or 的用法", "读一下 and or 的用法"),
+            ("读一下 and/or 的用法", "读一下 and or 的用法")
         ]
 
         for (input, output) in cases {
@@ -65,7 +65,7 @@ final class PolishOutputValidatorTests: XCTestCase {
             "/usr/local/bin",
             "../Sources/App.swift",
             "Sources/Features/Auth",
-            "src/user_id",
+            "src/user_id"
         ]
         for input in inputs {
             let violations = PolishOutputValidator.validate(

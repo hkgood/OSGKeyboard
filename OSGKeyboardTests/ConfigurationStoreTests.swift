@@ -4,9 +4,9 @@
 // Locks `AppGroupStore` conformance to `ConfigurationStore` and ensures
 // pipeline helpers accept the protocol without changing iOS behavior.
 
-import XCTest
-@testable import OSGKeyboardShared
 @testable import OSGKeyboardHostSupport
+@testable import OSGKeyboardShared
+import XCTest
 
 final class ConfigurationStoreTests: XCTestCase {
     private var suiteName: String!

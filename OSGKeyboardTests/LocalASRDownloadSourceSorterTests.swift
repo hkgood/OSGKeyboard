@@ -1,8 +1,8 @@
 // LocalASRDownloadSourceSorterTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class LocalASRDownloadSourceSorterTests: XCTestCase {
 
@@ -21,7 +21,7 @@ final class LocalASRDownloadSourceSorterTests: XCTestCase {
             source("github"),
             source("huggingface"),
             source("hfmirror"),
-            source("modelscope"),
+            source("modelscope")
         ]
         let sorted = LocalASRDownloadSourceSorter.sorted(sources, region: Locale.Region("CN"))
         XCTAssertEqual(sorted.map(\.type), ["hfmirror", "huggingface", "modelscope", "github"])
@@ -32,7 +32,7 @@ final class LocalASRDownloadSourceSorterTests: XCTestCase {
             source("github"),
             source("huggingface"),
             source("hfmirror"),
-            source("modelscope"),
+            source("modelscope")
         ]
         let sorted = LocalASRDownloadSourceSorter.sorted(sources, region: Locale.Region("US"))
         XCTAssertEqual(sorted.map(\.type), ["huggingface", "hfmirror", "github", "modelscope"])
@@ -58,7 +58,7 @@ final class LocalASRDownloadSourceSorterTests: XCTestCase {
     func testSameTypeUsesPriority() {
         let sources = [
             source("github", priority: 2),
-            source("github", priority: 1),
+            source("github", priority: 1)
         ]
         let sorted = LocalASRDownloadSourceSorter.sorted(sources, region: Locale.Region("US"))
         XCTAssertEqual(sorted.map(\.priority), [1, 2])

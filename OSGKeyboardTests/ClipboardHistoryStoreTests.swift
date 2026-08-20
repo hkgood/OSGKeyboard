@@ -1,8 +1,8 @@
 // ClipboardHistoryStoreTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 @MainActor
 final class ClipboardHistoryStoreTests: XCTestCase {

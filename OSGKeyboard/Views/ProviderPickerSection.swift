@@ -1,8 +1,8 @@
 // ProviderPickerSection.swift
 // OSGKeyboard · Main App
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct ProviderPickerSection: View {
     @Environment(\.themePalette) private var palette: ThemePalette

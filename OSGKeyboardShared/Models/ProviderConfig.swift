@@ -9,8 +9,8 @@
 // inits after upgrade, a legacy plaintext value from UserDefaults is
 // migrated to the Keychain and removed from UserDefaults.
 
-import Foundation
 import Combine
+import Foundation
 
 /// UI-owned ObservableObject; construct and mutate it on the main thread.
 /// `@unchecked Sendable` does not make `@Published` thread-safe. Credential
@@ -122,6 +122,16 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         didSet {
             guard !isApplyingConfiguration, engineMode != configuration.engineMode else { return }
             configuration.engineMode = engineMode
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+    /// Orthogonal to `engineMode`: direct provider credentials or an OSG
+    /// scope-limited grant. Local and BYOK behavior remain the default.
+    @Published public var credentialSource: CredentialSource {
+        didSet {
+            guard !isApplyingConfiguration,
+                  credentialSource != configuration.credentialSource else { return }
+            configuration.credentialSource = credentialSource
             persistConfiguration(postConfigChanged: true)
         }
     }
@@ -331,6 +341,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
     }
 
     public var isPolishConfigured: Bool {
+        if credentialSource == .managed { return true }
         guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return false
         }
@@ -339,6 +350,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
 
     public var isASRConfigured: Bool {
         guard !isLocalEngine else { return true }
+        if credentialSource == .managed { return true }
         let key = asrApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         let hasKey: Bool = {
             if asrProviderId == "volcengine" {
@@ -360,6 +372,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
 
     private let defaults: UserDefaults
     private var configuration: AppGroupConfiguration
+    private var persistedConfigurationSnapshot: AppGroupConfiguration
     /// Suppresses `@Published` observer persistence while a complete snapshot
     /// or preset is applied, preventing reentrant writes of partial state.
     private var isApplyingConfiguration = false
@@ -374,7 +387,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
             )
         }
         self.defaults = resolvedDefaults
-        self.configuration = AppGroupConfiguration.load(fromAvailable: resolvedDefaults)
+        let loadedConfiguration = AppGroupConfiguration.load(fromAvailable: resolvedDefaults)
+        self.configuration = loadedConfiguration
+        self.persistedConfigurationSnapshot = loadedConfiguration
 
         // Fresh app container (reinstall after delete): wipe stale Keychain
         // onboarding so the welcome flow shows again. Reboot races still use
@@ -423,6 +438,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         modeId = configuration.modeId
         localeId = configuration.localeId
         engineMode = configuration.engineMode
+        credentialSource = configuration.credentialSource
         hasCompletedOnboarding = configuration.hasCompletedOnboarding
         onboardingPage = configuration.onboardingPage
         hasAcknowledgedCloudSharing = configuration.hasAcknowledgedCloudSharing
@@ -469,6 +485,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         clipboardHistoryEnabled = false
         clipboardCandidateBarEnabled = false
         hasAcknowledgedCloudSharing = false
+        credentialSource = .byok
         configuration.providerId = polishPreset.id
         configuration.baseURL = polishPreset.defaultBaseURL
         configuration.model = polishPreset.defaultModel
@@ -484,12 +501,14 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         configuration.clipboardHistoryEnabled = false
         configuration.clipboardCandidateBarEnabled = false
         configuration.hasAcknowledgedCloudSharing = false
+        configuration.credentialSource = .byok
         isApplyingConfiguration = false
         persistConfiguration()
     }
 
     private func persistConfiguration(postConfigChanged: Bool = false) {
-        configuration.save(to: defaults)
+        configuration.saveChanges(since: persistedConfigurationSnapshot, to: defaults)
+        persistedConfigurationSnapshot = configuration
         if postConfigChanged {
             AppGroupConfigDarwin.postConfigChanged()
         }
@@ -498,7 +517,8 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
 
     /// Re-read App Group defaults after a cloud pull updates the cache.
     public func reloadFromPersistedStorage() {
-        var fresh = AppGroupConfiguration.load(fromAvailable: defaults)
+        let persisted = AppGroupConfiguration.load(fromAvailable: defaults)
+        var fresh = persisted
         // Keep the reboot-durable onboarding marker authoritative across cloud
         // pulls, matching the resilience applied at init.
         let freshOnboarding = fresh.hasCompletedOnboarding
@@ -514,6 +534,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         }
         isApplyingConfiguration = true
         configuration = fresh
+        persistedConfigurationSnapshot = persisted
         providerId = fresh.providerId
         baseURL = fresh.baseURL
         model = fresh.model
@@ -523,6 +544,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         modeId = fresh.modeId
         localeId = fresh.localeId
         engineMode = fresh.engineMode
+        credentialSource = fresh.credentialSource
         hasCompletedOnboarding = fresh.hasCompletedOnboarding
         onboardingPage = fresh.onboardingPage
         hasAcknowledgedCloudSharing = fresh.hasAcknowledgedCloudSharing
@@ -576,6 +598,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
 
     public func applyAsr(preset: LLMProvider) {
         isApplyingConfiguration = true
+        engineMode = "cloud"
         asrProviderId = preset.id
         if !preset.defaultBaseURL.isEmpty {
             asrBaseURL = preset.defaultBaseURL
@@ -584,10 +607,11 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         configuration.asrProviderId = asrProviderId
         configuration.asrBaseURL = asrBaseURL
         configuration.asrModel = asrModel
+        configuration.engineMode = engineMode
         isSyncingASRProviderAPIKey = true
         asrApiKey = configuration.asrApiKey
         isSyncingASRProviderAPIKey = false
         isApplyingConfiguration = false
-        persistConfiguration()
+        persistConfiguration(postConfigChanged: true)
     }
 }

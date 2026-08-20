@@ -1,8 +1,8 @@
 // UtteranceBatchFallbackPolicyTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class UtteranceBatchFallbackPolicyTests: XCTestCase {
 
@@ -29,6 +29,16 @@ final class UtteranceBatchFallbackPolicyTests: XCTestCase {
             UtteranceBatchFallbackPolicy.shouldRunBatchFallback(
                 stitchedFinal: "今天很好，我们一起去公园吧",
                 partialSnapshot: "今天很好"
+            )
+        )
+    }
+
+    func testShouldRunAfterRecognitionFailureEvenWithRecoveredPartial() {
+        XCTAssertTrue(
+            UtteranceBatchFallbackPolicy.shouldRunBatchFallback(
+                stitchedFinal: "恢复出的局部文本",
+                partialSnapshot: "恢复出的局部文本",
+                recognitionFailed: true
             )
         )
     }

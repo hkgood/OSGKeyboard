@@ -1,8 +1,8 @@
 // UtteranceTranscriptGuardTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class UtteranceTranscriptGuardTests: XCTestCase {
 

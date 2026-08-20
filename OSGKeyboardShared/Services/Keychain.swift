@@ -116,7 +116,7 @@ public enum Keychain: @unchecked Sendable {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account(for: providerId),
-            kSecAttrSynchronizable as String: synchronizable ? kCFBooleanTrue! : kCFBooleanFalse!,
+            kSecAttrSynchronizable as String: synchronizable ? kCFBooleanTrue! : kCFBooleanFalse!
         ]
         #if os(macOS)
         query[kSecUseDataProtectionKeychain as String] = true
@@ -252,7 +252,7 @@ public enum Keychain: @unchecked Sendable {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: asrAccount(for: providerId),
-            kSecAttrSynchronizable as String: synchronizable ? kCFBooleanTrue! : kCFBooleanFalse!,
+            kSecAttrSynchronizable as String: synchronizable ? kCFBooleanTrue! : kCFBooleanFalse!
         ]
         #if os(macOS)
         query[kSecUseDataProtectionKeychain as String] = true
@@ -393,7 +393,7 @@ public enum Keychain: @unchecked Sendable {
             kSecAttrService as String: service,
             kSecAttrAccount as String: legacyAccount,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecMatchLimit as String: kSecMatchLimitOne
         ]
         #if os(macOS)
         query[kSecUseDataProtectionKeychain as String] = true
@@ -513,7 +513,7 @@ public enum Keychain: @unchecked Sendable {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: legacyAccount,
+            kSecAttrAccount as String: legacyAccount
         ]
         #if os(macOS)
         query[kSecUseDataProtectionKeychain as String] = true
@@ -933,7 +933,7 @@ public enum Keychain: @unchecked Sendable {
             kSecAttrService as String: onboardingService,
             kSecAttrAccount as String: onboardingAccount,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecMatchLimit as String: kSecMatchLimitOne
         ]
         #if os(macOS)
         query[kSecUseDataProtectionKeychain as String] = true
@@ -962,7 +962,7 @@ public enum Keychain: @unchecked Sendable {
         var baseQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: onboardingService,
-            kSecAttrAccount as String: onboardingAccount,
+            kSecAttrAccount as String: onboardingAccount
         ]
         #if os(macOS)
         baseQuery[kSecUseDataProtectionKeychain as String] = true

@@ -59,7 +59,7 @@ enum ReleaseNotesStore {
         components.queryItems = [
             URLQueryItem(name: "v", value: version),
             URLQueryItem(name: "lang", value: queryLanguage(for: language)),
-            URLQueryItem(name: "theme", value: queryTheme(for: colorScheme)),
+            URLQueryItem(name: "theme", value: queryTheme(for: colorScheme))
         ]
         return components.url
     }

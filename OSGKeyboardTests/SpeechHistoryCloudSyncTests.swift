@@ -3,8 +3,8 @@
 //
 // Hermetic tests for speech history iCloud merge, tombstones, and caps.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 @MainActor
 final class SpeechHistoryCloudSyncTests: XCTestCase {

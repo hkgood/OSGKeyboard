@@ -3,8 +3,8 @@
 //
 // Flow session start, recording, watchdogs, and result delivery handling.
 
-import UIKit
 import OSGKeyboardShared
+import UIKit
 
 @MainActor
 final class KeyboardFlowCoordinator {
@@ -681,6 +681,7 @@ final class KeyboardFlowCoordinator {
     func submitAIQuestion(
         text: String,
         conversationID: UUID,
+        taskKind: ManagedGatewayTaskKind = .aiQuestion,
         thinkingEnabled: Bool? = nil
     ) -> FlowUtteranceStartDisposition {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -689,6 +690,7 @@ final class KeyboardFlowCoordinator {
             .aiQuestion(
                 conversationID: conversationID,
                 prefilledQuestion: trimmed,
+                taskKind: taskKind,
                 thinkingEnabled: thinkingEnabled
             )
         )
@@ -1191,6 +1193,7 @@ final class KeyboardFlowCoordinator {
             sourceHistoryEntryID: request.sourceHistoryEntryID,
             sourceHistoryEntryRevision: request.sourceHistoryEntryRevision,
             aiConversationID: request.aiConversationID,
+            aiTaskKind: request.aiTaskKind,
             startDeadlineAt: action == .startRecording ? currentStartDeadlineAt : nil,
             processingDeadlineAt: action == .stopRecording && request.isEdit
                 ? Date().timeIntervalSince1970
@@ -1898,6 +1901,7 @@ final class KeyboardFlowCoordinator {
             utteranceMode: .aiQuestion,
             aiConversationID: currentUtteranceRequest?.aiConversationID,
             aiQuestionText: text,
+            aiTaskKind: currentUtteranceRequest?.aiTaskKind,
             aiThinkingEnabled: currentUtteranceRequest?.aiThinkingEnabled,
             startDeadlineAt: currentStartDeadlineAt
         )
@@ -2034,7 +2038,7 @@ final class KeyboardFlowCoordinator {
                 onAIStreamingAnswer(result.text ?? "", result.utteranceId)
                 return
             }
-            if (result.status == .partial || result.status == .rawReady),
+            if result.status == .partial || result.status == .rawReady,
                let partial = result.text,
                !partial.isEmpty {
                 if result.resolvedUtteranceMode == .aiQuestion,

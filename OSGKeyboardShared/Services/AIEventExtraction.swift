@@ -19,7 +19,7 @@ public enum AIEventExtraction: Sendable {
         "无", "没有", "没有日程", "没有事件", "无日程",
         "没有日期", "没有时间", "没有日期或时间", "没有日期和时间",
         "no events", "no event", "no calendar events",
-        "no date", "no time", "no date or time", "no date and time",
+        "no date", "no time", "no date or time", "no date and time"
     ]
 
     /// Lines to send to the companion Shortcut. Empty → do not run it.

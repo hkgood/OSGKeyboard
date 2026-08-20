@@ -3,8 +3,8 @@
 //
 // Minimal add / edit sheet for a single personal-dictionary term.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct PersonalDictionaryEntrySheet: View {
     @Environment(\.dismiss) private var dismiss

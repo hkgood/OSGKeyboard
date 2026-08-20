@@ -4,9 +4,9 @@
 // UIKit grid for the expanded Chinese candidate panel. UILabel cells +
 // UICollectionView recycling stay far cheaper than hundreds of SwiftUI Buttons.
 
+import OSGKeyboardShared
 import SwiftUI
 import UIKit
-import OSGKeyboardShared
 
 struct CandidateExpandGridView: UIViewRepresentable {
     var candidates: [TypingCandidate]

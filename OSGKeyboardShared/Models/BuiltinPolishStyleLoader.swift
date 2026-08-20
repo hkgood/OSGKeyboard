@@ -96,7 +96,7 @@ enum BuiltinPolishStyleLoader {
         // fall back to main / class bundle the same way other Shared resources do.
         var bundles: [Bundle] = [
             Bundle(for: BundleToken.self),
-            Bundle.main,
+            Bundle.main
         ]
         #if !os(macOS)
         if let shared = Bundle(identifier: "com.osgkeyboard.ios.shared") {

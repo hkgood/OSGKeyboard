@@ -20,7 +20,7 @@ public enum AINoteExport: Sendable {
     private static let emptyTokens: Set<String> = [
         "none", "no", "n/a", "na", "nil", "null",
         "无", "没有", "没有标题", "无标题",
-        "no title", "no note", "no notes",
+        "no title", "no note", "no notes"
     ]
 
     /// One string for Shortcuts: `title||OSG_NOTE||body`. Empty → do not run it.
@@ -139,7 +139,7 @@ public enum AINoteExport: Sendable {
             ("「", "」"),
             ("『", "』"),
             ("'", "'"),
-            ("‘", "’"),
+            ("‘", "’")
         ]
         var text = line
         for (open, close) in pairs where text.count >= 2 {

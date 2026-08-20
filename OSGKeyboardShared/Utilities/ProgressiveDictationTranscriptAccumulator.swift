@@ -5,8 +5,8 @@
 // Short-form presets may emit a new time range after ~30 s; treating the
 // latest partial as the full transcript drops earlier segments.
 
-import Foundation
 import CoreMedia
+import Foundation
 
 /// Combines volatile partials and finalized segments from
 /// `DictationTranscriber.results` into a single growing transcript.

@@ -9,8 +9,8 @@
 //   5) Engine / ASR setup
 //   6) Polish LLM setup
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 import UIKit
 
 private enum OnboardingPage: Int, CaseIterable {
@@ -235,10 +235,14 @@ struct OnboardingView: View {
 
     private var pageDots: some View {
         HStack(spacing: 6) {
-            ForEach(0..<OnboardingPage.count, id: \.self) { i in
+            ForEach(0..<OnboardingPage.count, id: \.self) { pageIndex in
                 Capsule()
-                    .fill(i == config.onboardingPage ? palette.accent : palette.textTertiary.opacity(0.28))
-                    .frame(width: i == config.onboardingPage ? 18 : 6, height: 6)
+                    .fill(
+                        pageIndex == config.onboardingPage
+                            ? palette.accent
+                            : palette.textTertiary.opacity(0.28)
+                    )
+                    .frame(width: pageIndex == config.onboardingPage ? 18 : 6, height: 6)
                     .animation(Motion.quick, value: config.onboardingPage)
             }
         }
@@ -347,8 +351,8 @@ private struct OnboardingTitleBlock: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     let title: LocalizedStringKey
-    var subtitle: LocalizedStringKey? = nil
-    var secondarySubtitle: LocalizedStringKey? = nil
+    var subtitle: LocalizedStringKey?
+    var secondarySubtitle: LocalizedStringKey?
 
     var body: some View {
         VStack(spacing: Spacing.xs) {
@@ -557,15 +561,15 @@ private struct PermissionPageLayout: View {
     let icon: String
     let title: LocalizedStringKey
     let detail: LocalizedStringKey
-    var preface: LocalizedStringKey? = nil
+    var preface: LocalizedStringKey?
     let status: LocalizedStringKey
     let statusColor: Color
     let primaryTitle: LocalizedStringKey
     let primaryDisabled: Bool
     let onPrimary: () -> Void
-    var secondaryTitle: LocalizedStringKey? = nil
-    var onSecondary: (() -> Void)? = nil
-    var deniedHint: LocalizedStringKey? = nil
+    var secondaryTitle: LocalizedStringKey?
+    var onSecondary: (() -> Void)?
+    var deniedHint: LocalizedStringKey?
 
     var body: some View {
         ScrollView {
@@ -783,16 +787,24 @@ private struct APISetupPage: View {
                 EnginePickerSection(config: config)
                     .padding(.horizontal, Spacing.lg)
 
-                if config.engineMode == "cloud" {
+                if config.credentialSource == .byok {
                     VStack(spacing: 0) {
-                        ProviderPickerSection(config: config, role: .asr, showsSurface: false)
-                        Divider().background(palette.divider)
-                        ASRSettingsCard(config: config, showsSurface: false)
+                        AppleASRPickerRow(config: config)
+                        if config.engineMode == "cloud" {
+                            Divider().background(palette.divider)
+                            ProviderPickerSection(
+                                config: config,
+                                role: .asr,
+                                showsSurface: false
+                            )
+                            Divider().background(palette.divider)
+                            ASRSettingsCard(config: config, showsSurface: false)
+                        }
                     }
                     .surfaceCard()
                     .padding(.horizontal, Spacing.lg)
                 } else {
-                    Text("onboarding.api.localModels.hint")
+                    Text("settings.aiService.credits.subtitle")
                         .font(TypeStyle.body)
                         .foregroundStyle(palette.textSecondary)
                         .multilineTextAlignment(.center)
@@ -823,7 +835,13 @@ private struct PolishSetupPage: View {
                 )
                 .padding(.horizontal, Spacing.lg)
 
-                if config.isLocalEngine {
+                if config.credentialSource == .managed {
+                    Text("settings.aiService.credits.subtitle")
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, Spacing.xl)
+                } else if config.isLocalEngine {
                     Text("onboarding.polish.localHint")
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
@@ -831,13 +849,15 @@ private struct PolishSetupPage: View {
                         .padding(.horizontal, Spacing.xl)
                 }
 
-                VStack(spacing: 0) {
-                    ProviderPickerSection(config: config, role: .polish, showsSurface: false)
-                    Divider().background(palette.divider)
-                    APISettingsCard(config: config, showsSurface: false)
+                if config.credentialSource == .byok {
+                    VStack(spacing: 0) {
+                        ProviderPickerSection(config: config, role: .polish, showsSurface: false)
+                        Divider().background(palette.divider)
+                        APISettingsCard(config: config, showsSurface: false)
+                    }
+                    .surfaceCard()
+                    .padding(.horizontal, Spacing.lg)
                 }
-                .surfaceCard()
-                .padding(.horizontal, Spacing.lg)
             }
             .padding(.bottom, Spacing.xxxl)
         }

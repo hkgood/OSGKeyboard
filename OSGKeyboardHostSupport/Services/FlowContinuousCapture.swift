@@ -7,8 +7,8 @@
 // the audio thread and read from the main thread (never UserDefaults
 // from the realtime tap — that caused cross-process crashes).
 
-import Foundation
 import AVFoundation
+import Foundation
 import os
 #if canImport(OSGKeyboardShared)
 import OSGKeyboardShared

@@ -192,7 +192,7 @@ struct BailianRealtimeASRClient: CloudASRTranscribing, CloudASRStreamingCapable 
     static func runTaskMessage(taskID: String, model: String, vocabularyID: String?) -> String {
         var parameters: [String: Any] = [
             "sample_rate": 16_000,
-            "format": "pcm",
+            "format": "pcm"
         ]
         if let vocabularyID = vocabularyID?.trimmingCharacters(in: .whitespacesAndNewlines),
            !vocabularyID.isEmpty {
@@ -202,7 +202,7 @@ struct BailianRealtimeASRClient: CloudASRTranscribing, CloudASRStreamingCapable 
             "header": [
                 "action": "run-task",
                 "task_id": taskID,
-                "streaming": "duplex",
+                "streaming": "duplex"
             ],
             "payload": [
                 "task_group": "audio",
@@ -210,8 +210,8 @@ struct BailianRealtimeASRClient: CloudASRTranscribing, CloudASRStreamingCapable 
                 "function": "recognition",
                 "model": model,
                 "parameters": parameters,
-                "input": [:] as [String: Any],
-            ],
+                "input": [:] as [String: Any]
+            ]
         ]
         guard let data = try? JSONSerialization.data(withJSONObject: body),
               let json = String(data: data, encoding: .utf8) else {
@@ -225,9 +225,9 @@ struct BailianRealtimeASRClient: CloudASRTranscribing, CloudASRStreamingCapable 
             "header": [
                 "action": "finish-task",
                 "task_id": taskID,
-                "streaming": "duplex",
+                "streaming": "duplex"
             ],
-            "payload": ["input": [:] as [String: Any]],
+            "payload": ["input": [:] as [String: Any]]
         ]
         guard let data = try? JSONSerialization.data(withJSONObject: body),
               let json = String(data: data, encoding: .utf8) else {

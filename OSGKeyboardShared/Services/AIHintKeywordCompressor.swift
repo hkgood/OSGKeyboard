@@ -37,7 +37,7 @@ public struct AIHintKeywordCompressor: Sendable {
                     "text": $0.displayText,
                     "title": $0.metadata?.title ?? "",
                     "category": $0.category,
-                    "source": $0.source,
+                    "source": $0.source
                 ]
             }
             let json = try JSONSerialization.data(withJSONObject: payload)

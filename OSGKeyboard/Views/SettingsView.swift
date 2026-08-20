@@ -4,9 +4,9 @@
 // Settings home: daily controls + summary navigation into secondary
 // pages for low-frequency configuration.
 
-import SwiftUI
-import OSGKeyboardShared
 import OSGKeyboardHostSupport
+import OSGKeyboardShared
+import SwiftUI
 
 enum SettingsPresentation {
     case tab
@@ -18,6 +18,7 @@ enum SettingsPresentation {
 /// `hidesTabBarWhenPushed()` preferences do not leak onto the home
 /// screen (and so we avoid NavigationLink + `dismiss` freeze cycles).
 private enum SettingsRoute: Hashable {
+    case account
     case speechRecognition
     case textPolish
     case general
@@ -28,6 +29,7 @@ private enum SettingsRoute: Hashable {
 
 struct SettingsView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @EnvironmentObject private var accountSession: AccountSessionCoordinator
 
     @ObservedObject var config = ProviderConfig.shared
 
@@ -48,9 +50,7 @@ struct SettingsView: View {
                 palette.background.ignoresSafeArea()
                 ScrollView {
                     CardPageContent {
-                        if presentation == .tab {
-                            SupportDeveloperSection(language: config.uiLanguage)
-                        }
+                        accountEntrySection
                         dailySection
                         transcriptionAndPolishSection
                         if presentation == .tab {
@@ -97,9 +97,16 @@ struct SettingsView: View {
                 settingsDestination(for: route)
             }
             .task { await loadDynamicLocales() }
-            .onAppear { consumeClipboardDeepLinkIfNeeded() }
+            .onAppear {
+                consumeClipboardDeepLinkIfNeeded()
+                consumeAccountDeepLinkIfNeeded()
+                Task { await accountSession.refreshAccountData() }
+            }
             .onReceive(NotificationCenter.default.publisher(for: .osgOpenSettingsDeepLink)) { _ in
                 consumeClipboardDeepLinkIfNeeded()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .osgOpenAccountDeepLink)) { _ in
+                consumeAccountDeepLinkIfNeeded()
             }
         }
     }
@@ -112,9 +119,19 @@ struct SettingsView: View {
         path.append(SettingsRoute.clipboard)
     }
 
+    private func consumeAccountDeepLinkIfNeeded() {
+        guard accountSession.consumeAccountCenterPresentation() else { return }
+        if !path.isEmpty {
+            path = NavigationPath()
+        }
+        path.append(SettingsRoute.account)
+    }
+
     @ViewBuilder
     private func settingsDestination(for route: SettingsRoute) -> some View {
         switch route {
+        case .account:
+            AccountCenterView()
         case .speechRecognition:
             SpeechRecognitionSettingsView(config: config)
         case .textPolish:
@@ -127,6 +144,236 @@ struct SettingsView: View {
             ClipboardSettingsView(config: config)
         case .about:
             AboutSettingsView(config: config)
+        }
+    }
+
+    // MARK: - Optional account
+
+    private var accountEntrySection: some View {
+        CardSection("account.settings.section") {
+            VStack(spacing: Spacing.sm) {
+                Group {
+                    switch accountSession.sessionPhase {
+                    case .restoring:
+                        HStack(spacing: Spacing.sm) {
+                            ProgressView()
+                                .tint(palette.accent)
+                            Text("account.settings.restoring")
+                                .font(TypeStyle.body)
+                                .foregroundStyle(palette.textSecondary)
+                            Spacer()
+                        }
+                        .settingsListRow()
+                    case .signedOut:
+                        VStack(alignment: .leading, spacing: Spacing.md) {
+                            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                                Text("account.signedOut.title")
+                                    .font(TypeStyle.headline)
+                                    .foregroundStyle(palette.textPrimary)
+                                Text("account.signedOut.body")
+                                    .font(TypeStyle.footnote)
+                                    .foregroundStyle(palette.textSecondary)
+                            }
+                            AccountAppleAuthorizationButton(purpose: .signIn)
+                                .disabled(accountSession.operation != nil)
+                        }
+                        .padding(Spacing.md)
+                    case let .signedIn(session):
+                        Button {
+                            path.append(SettingsRoute.account)
+                        } label: {
+                            HStack(spacing: Spacing.md) {
+                                AccountAvatarView(
+                                    accountID: session.accountID,
+                                    displayName: session.displayName,
+                                    size: 44
+                                )
+
+                                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                                    Text(
+                                        session.displayName
+                                            ?? AppL10n.string(
+                                                "account.profile.fallbackName",
+                                                language: config.uiLanguage
+                                            )
+                                    )
+                                        .font(TypeStyle.bodyEmph)
+                                        .foregroundStyle(palette.textPrimary)
+                                    Text(accountSettingsSubtitle)
+                                        .font(TypeStyle.caption)
+                                        .foregroundStyle(palette.textSecondary)
+                                }
+
+                                Spacer(minLength: Spacing.xs)
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(palette.textTertiary)
+                            }
+                            .settingsListRow()
+                            .contentShape(Rectangle())
+                            .accessibilityLabel(
+                                Text(
+                                    "\(Text("account.settings.signedIn")) \(session.accountID.uuidString)"
+                                )
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .surfaceCard()
+
+                if accountSession.isSignedIn {
+                    accountRewardsEntrySection
+                }
+            }
+        }
+    }
+
+    private var accountRewardsEntrySection: some View {
+        Group {
+            switch accountSession.snapshotPhase {
+            case let .loaded(snapshot):
+                let totalCredits = creditTotal(snapshot)
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Button {
+                        path.append(SettingsRoute.account)
+                    } label: {
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            HStack(alignment: .top, spacing: Spacing.md) {
+                                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                                    Text(creditRemainingText(snapshot.credits.balance))
+                                        .font(TypeStyle.title3.monospacedDigit())
+                                        .foregroundStyle(palette.textPrimary)
+                                    Text("account.credits.balance")
+                                        .font(TypeStyle.caption)
+                                        .foregroundStyle(palette.textSecondary)
+                                }
+
+                                Spacer(minLength: Spacing.xs)
+
+                                VStack(alignment: .trailing, spacing: Spacing.xxs) {
+                                    Text(creditUsedText(snapshot.credits.usedCredits))
+                                    Text(creditTotalText(totalCredits))
+                                }
+                                .font(TypeStyle.caption)
+                                .monospacedDigit()
+                                .foregroundStyle(palette.textSecondary)
+
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(palette.textTertiary)
+                                    .frame(minWidth: 32, minHeight: 32)
+                                    .accessibilityHidden(true)
+                            }
+
+                            AccountCreditProgress(
+                                remaining: snapshot.credits.balance,
+                                used: snapshot.credits.usedCredits,
+                                showsLabels: false
+                            )
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+
+                    Divider().background(palette.divider)
+                    invitationLink(snapshot.referralProfile)
+                }
+                .padding(Spacing.md)
+            case .failed:
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Text("account.error.load")
+                        .font(TypeStyle.body)
+                        .foregroundStyle(palette.textSecondary)
+                    Button("account.retry") {
+                        Task { await accountSession.refreshAccountData(force: true) }
+                    }
+                    .font(TypeStyle.bodyEmph)
+                    .foregroundStyle(palette.accent)
+                }
+                .padding(Spacing.md)
+            case .idle, .loading:
+                HStack(spacing: Spacing.sm) {
+                    ProgressView()
+                        .tint(palette.accent)
+                    Text("account.loading.center")
+                        .font(TypeStyle.body)
+                        .foregroundStyle(palette.textSecondary)
+                }
+                .settingsListRow()
+            }
+        }
+        .surfaceCard()
+    }
+
+    @ViewBuilder
+    private func invitationLink(_ profile: AccountReferralProfile) -> some View {
+        if let code = profile.code,
+           let invitationURL = ReferralUniversalLink.invitationURL(for: code) {
+            HStack(spacing: Spacing.md) {
+                Text(
+                    AppL10n.string(
+                        "account.referral.equalRewardDescription",
+                        language: config.uiLanguage
+                    )
+                )
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: Spacing.xs)
+                AccountInvitationButton(invitationURL: invitationURL)
+            }
+        } else {
+            HStack(spacing: Spacing.sm) {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(palette.accent)
+                Text("account.referral.preparingLink")
+                    .font(TypeStyle.footnote)
+                    .foregroundStyle(palette.textSecondary)
+            }
+        }
+    }
+
+    private func creditTotal(_ snapshot: AccountCenterSnapshot) -> Int64 {
+        let remaining = max(snapshot.credits.balance, 0)
+        let used = max(snapshot.credits.usedCredits, 0)
+        let (total, overflow) = remaining.addingReportingOverflow(used)
+        return overflow ? Int64.max : total
+    }
+
+    private func creditRemainingText(_ remaining: Int64) -> String {
+        AppL10n.format(
+            "account.credits.remainingCompact",
+            language: config.uiLanguage,
+            max(remaining, 0).formatted(.number.grouping(.automatic))
+        )
+    }
+
+    private func creditUsedText(_ used: Int64) -> String {
+        AppL10n.format(
+            "account.credits.usedCompact",
+            language: config.uiLanguage,
+            max(used, 0).formatted(.number.grouping(.automatic))
+        )
+    }
+
+    private func creditTotalText(_ total: Int64) -> String {
+        AppL10n.format(
+            "account.credits.totalValueCompact",
+            language: config.uiLanguage,
+            total.formatted(.number.grouping(.automatic))
+        )
+    }
+
+    private var accountSettingsSubtitle: String {
+        switch accountSession.sessionPhase {
+        case .restoring:
+            return AppL10n.string("account.settings.restoring", language: config.uiLanguage)
+        case .signedOut:
+            return AppL10n.string("account.settings.signedOut", language: config.uiLanguage)
+        case .signedIn:
+            return AppL10n.string("account.settings.signedIn", language: config.uiLanguage)
         }
     }
 

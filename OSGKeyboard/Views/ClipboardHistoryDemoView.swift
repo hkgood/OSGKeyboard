@@ -7,8 +7,8 @@
 // scripted `KeyboardState`. Launch with `--clipboard-demo`.
 
 #if DEBUG
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct ClipboardHistoryDemoView: View {
     private enum Layout {

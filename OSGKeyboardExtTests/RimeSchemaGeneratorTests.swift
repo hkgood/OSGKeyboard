@@ -1,8 +1,8 @@
 // RimeSchemaGeneratorTests.swift
 // OSGKeyboard · Ext unit tests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class RimeSchemaGeneratorTests: XCTestCase {
     func testFuzzyRulesDefaultToOff() {

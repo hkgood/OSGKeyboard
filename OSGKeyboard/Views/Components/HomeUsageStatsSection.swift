@@ -5,9 +5,9 @@
 // `UsageStatsCluster` (phone stacked / iPad split). Optional `header`
 // (e.g. glass preview field) sits on the 7-day chart card.
 
-import SwiftUI
-import OSGKeyboardShared
 import OSGKeyboardHostSupport
+import OSGKeyboardShared
+import SwiftUI
 
 struct HomeUsageStatsSection<Header: View>: View {
     let layout: UsageStatsClusterLayout

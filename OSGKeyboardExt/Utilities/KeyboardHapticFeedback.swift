@@ -4,8 +4,8 @@
 // Role-based typing haptics (no screen-position mapping). Intensity comes
 // from Settings → General → Haptics (off / light / strong).
 
-import UIKit
 import OSGKeyboardShared
+import UIKit
 
 /// Key roles drive distinct Taptic styles — closer to a real keyboard than
 /// a single buzz for every tap.

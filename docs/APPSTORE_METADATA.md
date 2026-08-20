@@ -1,4 +1,4 @@
-# App Store Connect — OSGKeyboard 1.8.0 (build 79)
+# App Store Connect — OSGKeyboard 2.0.0 (build 83)
 
 > Current metadata baseline for the iOS/iPadOS App Store build. Version and build
 > numbers come from `project.yml`. The repository also contains a separate
@@ -11,7 +11,7 @@
 | App name | `OSGKeyboard` | ≤ 30 characters |
 | Subtitle | `Voice input, everywhere` | ≤ 30 characters |
 | Bundle ID | `com.osgkeyboard.ios` | iOS host target |
-| Version / build | `1.8.0` / `79` | `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` |
+| Version / build | `2.0.0` / `83` | `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` |
 | Minimum system | iOS/iPadOS 26 | iPhone and iPad |
 | Primary locale | `en-US` | Simplified Chinese is also bundled |
 | Primary category | Utilities | |
@@ -32,7 +32,7 @@
 | Field | Value |
 |---|---|
 | Price | Free |
-| In-App Purchases | Optional consumable tip `ByRockyACoffee`; unlocks no feature |
+| In-App Purchases | Optional consumables: tip `ByRockyACoffee`; managed-credit packs `500tks`, `1500tks`, `3000tks` |
 | Availability | All configured App Store territories |
 | Pre-order | No |
 
@@ -47,10 +47,10 @@ VOICE INPUT
 
 • On-device by default. iOS 26 SpeechAnalyzer and DictationTranscriber
   transcribe locally.
-• Optional cloud recognition. Audio leaves the device only after you
-  enable a cloud ASR provider and configure its credentials.
-• Optional AI polish and translation. Add your own provider API key;
-  without a key, recognized text can still be inserted.
+• Optional cloud recognition. Use your own provider credentials, or
+  sign in with Apple and choose managed credits.
+• Optional AI polish and translation. Use your own provider API key or
+  managed credits; without either, recognized text can still be inserted.
 • AI keyboard mode. Ask a spoken question, review the generated answer,
   then explicitly insert or send it.
 • Edit the last verified OSGKeyboard insertion by voice before replacing
@@ -73,7 +73,8 @@ PRIVACY
 
 • No advertising, analytics, or tracking SDKs.
 • Local recognition does not upload audio.
-• Cloud ASR and LLM requests go directly to the provider you configure.
+• User-configured cloud requests go directly to that provider. Managed-credit
+  requests go through OSGKeyboard's managed gateway to the managed provider.
 • Provider keys are stored in Keychain.
 • Clipboard history stays device-local, does not iCloud-sync, and is not
   sent to AI automatically. Text you insert may later be included when you
@@ -92,7 +93,7 @@ https://github.com/hkgood/OSGKeyboard
 ## Promotional text (≤ 170 characters)
 
 ```text
-Voice input anywhere, with on-device recognition by default. Add your own AI key for polish, translation, and AI answers. Also types Chinese and English.
+Voice input anywhere, with on-device recognition by default. Use your own AI key or optional managed credits for cloud speech, polish, translation, and AI answers.
 ```
 
 ## Keywords (≤ 100 characters)
@@ -101,31 +102,23 @@ Voice input anywhere, with on-device recognition by default. Add your own AI key
 keyboard,voice,dictation,speech,transcribe,AI,pinyin,Chinese,English,polish,typing,productivity
 ```
 
-## What's new in 1.8.0
+## What's new in 2.0.0
 
 ```text
 NEW
-• Skills center with Reply, Summarize, Translate, custom skills, and
-  exports to Reminders, Calendar, Notes, and Maps.
-• English QuickType-style suggestions with smarter system, contact,
-  text-replacement, and neighbor-key corrections.
-• Improved Pinyin abbreviations and on-device typing-habit learning.
-• Overlapping key presses, double-space period, contextual Return labels,
-  and a full-width iPad keyboard with editing controls.
-• AI keyboard answers stream as they are generated and can use provider
-  web search for current information.
-• Optional on-device clipboard history and one-tap clipboard skills.
+• Optional Sign in with Apple account center with managed credits,
+  App Store credit packs, profile controls, and account deletion.
+• Managed cloud speech and AI access for signed-in users. Local dictation
+  and user-owned provider keys continue to work without an account.
+• Referral support and synchronized server-side credit balances.
 
 CHANGED
-• Hold the microphone to edit the last verified input, then preview,
-  replace, or append the result.
-• Undo now covers dictation, AI answers, edits, and clipboard pastes.
-• Home cards and navigation make History, Personal Dictionary, Skills,
-  Styles, and Settings easier to find.
+• Voice and AI now share one Assistant tab with adaptive field actions,
+  contextual suggestions, and safer answer insertion.
+• Clipboard setup guidance is shorter and shows only unfinished steps.
 
 FIXED
-• Improved Chinese input setup, Universal Clipboard responsiveness,
-  keyboard switching, recording cancellation, and AI session recovery.
+• Account confirmation dialogs now open from the selected account action.
 ```
 
 ## App Review information
@@ -149,11 +142,17 @@ OSGKeyboard is a custom keyboard for iOS/iPadOS 26.
 3. Complete onboarding in the OSGKeyboard host app.
 4. In any editable field, switch to OSGKeyboard and tap the microphone.
    The default local engine uses on-device Apple speech recognition.
-5. AI polish and AI mode require a user-owned provider key in Settings.
-   Without a key, local dictation still inserts recognized text.
-6. Optional tip product `ByRockyACoffee` is consumable and unlocks no
-   feature.
-7. Clipboard history is off by default. To test it, open Settings →
+5. Local dictation and user-configured providers require no OSGKeyboard
+   account. The Account tab offers optional Sign in with Apple.
+6. After signing in, Settings → AI Service → Use Credits enables the managed
+   cloud path. The consumable products are `500tks`, `1500tks`, and `3000tks`.
+   Purchased credits are verified by the account service before StoreKit
+   transactions are finished.
+7. AI polish and AI mode can use either managed credits or a user-owned
+   provider key. Without either, local dictation still inserts recognized text.
+8. Optional tip `ByRockyACoffee` remains a consumable support purchase and
+   does not grant managed credits or unlock features.
+9. Clipboard history is off by default. To test it, open Settings →
    Clipboard, enable History, copy text on this device or through Universal
    Clipboard, then return to the keyboard. Secure fields hide the clipboard
    entry point. Turning History off preserves saved items; use the separate
@@ -179,8 +178,9 @@ polish/translation, and AI mode even though local recognition is the default.
 - Used for tracking: No
 
 Audio is sent off-device only when the user enables cloud recognition. The
-configured provider may associate requests with the user's provider
-credential.
+configured provider may associate requests with the user's credential. In
+managed-credit mode, audio is linked to the OSGKeyboard account for service
+authorization and credit accounting.
 
 ### User Content → Other User Content
 
@@ -198,10 +198,43 @@ Shortcut, while navigation addresses may be opened in the selected map app.
 Device-local clipboard history and typing-learning data by themselves are not
 collected by the developer.
 
+### Contact Info → Name
+
+- Collected: Yes
+- Purpose: App Functionality
+- Linked to the user: Yes
+- Used for tracking: No
+
+The display name supplied by Sign in with Apple is optional and is used only
+for the optional OSGKeyboard account profile.
+
+### Purchases → Purchase History
+
+- Collected: Yes
+- Purpose: App Functionality
+- Linked to the user: Yes
+- Used for tracking: No
+
+StoreKit transaction identifiers, product identifiers, and granted-credit
+results are processed to verify consumable managed-credit purchases, prevent
+replay, and maintain the account credit ledger.
+
+### Identifiers → User ID
+
+- Collected: Yes
+- Purpose: App Functionality
+- Linked to the user: Yes
+- Used for tracking: No
+
+This covers the pseudonymous OSGKeyboard account identifier and scoped
+managed-service grant identifiers. Core use remains available without an
+OSGKeyboard account.
+
 ### Do not select
 
 - Advertising, marketing, analytics, product personalization, or tracking
-- Contact information, location, contacts, photos, browsing/search history
+- Email address, phone number, physical address, location, contacts, photos,
+  browsing history, or search history
 - Usage data or diagnostics stored only locally or in the user's private iCloud
 
 ## Encryption
@@ -211,10 +244,13 @@ standard HTTPS. Re-evaluate this answer if non-exempt cryptography is added.
 
 ## Submission checklist
 
-- [ ] Confirm `project.yml` still reads version 1.8.0 / build 79
+- [ ] Confirm `project.yml` still reads version 2.0.0 / build 83
 - [ ] Open the existing Xcode project (do not regenerate unless needed)
 - [ ] Run the release build and test suites on macOS with Xcode 26
 - [ ] Replace screenshots with captures from the submitted build
 - [ ] Verify the privacy answers against the submitted provider features
-- [ ] Confirm the tip product remains optional and unlocks no feature
-- [ ] Upload, select build 79, add review notes, and submit
+- [ ] Confirm `500tks`, `1500tks`, and `3000tks` are approved, consumable,
+      and mapped to the server credit catalog
+- [ ] Confirm `ByRockyACoffee` remains an optional consumable tip and unlocks
+      no feature
+- [ ] Upload, select build 83, add review notes, and submit

@@ -6,8 +6,8 @@
 
 import Foundation
 import os
-@testable import OSGKeyboardShared
 @testable import OSGKeyboardHostSupport
+@testable import OSGKeyboardShared
 
 /// Wall-clock stage breakdown for one utterance finalize path.
 struct VoicePipelineStageTimings: Sendable, Equatable {
@@ -37,7 +37,7 @@ struct VoicePipelineStageTimings: Sendable, Equatable {
         var list: [(String, TimeInterval)] = [
             ("pcm_feed", pcmFeedSeconds),
             ("chunk_asr", chunkASRSeconds),
-            ("transcript_guard", transcriptGuardSeconds),
+            ("transcript_guard", transcriptGuardSeconds)
         ]
         if didRunBatchFallback {
             list.append(("batch_fallback", batchFallbackSeconds))
@@ -45,7 +45,7 @@ struct VoicePipelineStageTimings: Sendable, Equatable {
         list.append(contentsOf: [
             ("polish", polishSeconds),
             ("bridge_deliver", bridgeDeliverSeconds),
-            ("total_e2e", totalSeconds),
+            ("total_e2e", totalSeconds)
         ])
         return list
     }
@@ -188,8 +188,8 @@ enum VoicePipelinePerfHarness {
         var asrDelayNanoseconds: UInt64 = 0
         var polishDelayNanoseconds: UInt64 = 0
         /// When non-nil and longer than ASR text, forces guard/batch path.
-        var partialSnapshotOverride: String? = nil
-        var batchTranscript: String? = nil
+        var partialSnapshotOverride: String?
+        var batchTranscript: String?
         var runBatchFallbackIfNeeded: Bool = true
     }
 

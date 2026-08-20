@@ -1,8 +1,8 @@
 // AIAgentSkillLayoutTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 @MainActor
 final class AIAgentSkillLayoutTests: XCTestCase {
@@ -96,7 +96,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             [
                 AIClipboardSkillCatalog.translateID,
                 AIClipboardSkillCatalog.replyID,
-                AIClipboardSkillCatalog.summarizeID,
+                AIClipboardSkillCatalog.summarizeID
             ]
         )
     }
@@ -109,7 +109,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             [
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.translateID,
-                AIClipboardSkillCatalog.summarizeID,
+                AIClipboardSkillCatalog.summarizeID
             ]
         )
         store.moveEnabled(id: AIClipboardSkillCatalog.summarizeID, toIndex: 0)
@@ -118,7 +118,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             [
                 AIClipboardSkillCatalog.summarizeID,
                 AIClipboardSkillCatalog.replyID,
-                AIClipboardSkillCatalog.translateID,
+                AIClipboardSkillCatalog.translateID
             ]
         )
     }

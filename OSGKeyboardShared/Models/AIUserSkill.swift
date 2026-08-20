@@ -110,7 +110,7 @@ public enum AIUserSkillLimits {
         "number",
         "at",
         "tray.fill",
-        "quote.bubble.fill",
+        "quote.bubble.fill"
     ]
 }
 

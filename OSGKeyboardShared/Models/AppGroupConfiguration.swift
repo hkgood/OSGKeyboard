@@ -28,6 +28,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let modeId = "config.modeId"
         public static let localeId = "config.localeId"
         public static let engineMode = "config.engineMode"
+        /// Credential ownership is independent from local/cloud ASR selection.
+        public static let credentialSource = "config.credentialSource"
         public static let hasCompletedOnboarding = "config.hasCompletedOnboarding"
         public static let onboardingPage = "config.onboardingPage"
         public static let hasAcknowledgedCloudSharing = "config.hasAcknowledgedCloudSharing"
@@ -87,6 +89,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var modeId: String
     public var localeId: String
     public var engineMode: String
+    public var credentialSource: CredentialSource
     public var hasCompletedOnboarding: Bool
     public var onboardingPage: Int
     public var hasAcknowledgedCloudSharing: Bool
@@ -146,11 +149,13 @@ public struct AppGroupConfiguration: Sendable, Equatable {
 
     public var isCloudLLMKeyMissing: Bool {
         guard engineMode == "cloud" else { return false }
+        guard credentialSource == .byok else { return false }
         return apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     public var isCloudASRKeyMissing: Bool {
         guard engineMode == "cloud" else { return false }
+        guard credentialSource == .byok else { return false }
         let key = asrApiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !key.isEmpty else { return true }
         // Volcengine may store auth_mode JSON before credentials are filled.
@@ -161,7 +166,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     }
 
     public var isPolishKeyMissing: Bool {
-        apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard credentialSource == .byok else { return false }
+        return apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     public var isCloudAPIKeyMissingForVoiceInput: Bool {
@@ -187,8 +193,15 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         )
     }
 
-    public func makeClient() -> LLMClient {
-        OpenAICompatibleClient(
+    public func makeClient(taskKind: ManagedGatewayTaskKind? = nil) -> LLMClient {
+        if credentialSource == .managed {
+            return ManagedLLMClient(
+                capability: .polish,
+                taskKind: taskKind,
+                grants: GatewayGrantCoordinator()
+            )
+        }
+        return OpenAICompatibleClient(
             baseURL: baseURL,
             apiKey: apiKey,
             model: model,
@@ -255,6 +268,9 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             // cloud default would contradict every privacy claim the app
             // makes in its docs, App Store listing, and permission prompts.
             engineMode: defaults.string(forKey: Keys.engineMode) ?? "local",
+            credentialSource: CredentialSource.fromStored(
+                defaults.string(forKey: Keys.credentialSource)
+            ),
             hasCompletedOnboarding: defaults.bool(forKey: Keys.hasCompletedOnboarding),
             onboardingPage: {
                 let saved = defaults.integer(forKey: Keys.onboardingPage)
@@ -387,7 +403,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             // who later choose 30m / 10m again keep that choice.
             let previousDefaults: Set<String> = [
                 FlowInactivityDuration.thirtyMinutes.rawValue,
-                FlowInactivityDuration.tenMinutes.rawValue,
+                FlowInactivityDuration.tenMinutes.rawValue
             ]
             if previousDefaults.contains(config.flowInactivityDuration.rawValue) {
                 config.flowInactivityDuration = .default
@@ -415,6 +431,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(modeId, forKey: Keys.modeId)
         defaults.set(localeId, forKey: Keys.localeId)
         defaults.set(engineMode, forKey: Keys.engineMode)
+        defaults.set(credentialSource.rawValue, forKey: Keys.credentialSource)
         defaults.set(hasCompletedOnboarding, forKey: Keys.hasCompletedOnboarding)
         defaults.set(onboardingPage, forKey: Keys.onboardingPage)
         defaults.set(hasAcknowledgedCloudSharing, forKey: Keys.hasAcknowledgedCloudSharing)
@@ -436,6 +453,123 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(settingsICloudSyncEnabled, forKey: Keys.settingsICloudSyncEnabled)
         Self.encodePersonalDictionary(personalDictionary, to: defaults)
         Self.encodePolishStyleCatalog(polishStyleCatalog, to: defaults)
+    }
+
+    /// Persists only fields changed from the caller's last observed snapshot.
+    ///
+    /// Main app and keyboard extension are separate processes. Rewriting every
+    /// key from a stale snapshot can undo a newer, unrelated setting written by
+    /// the other process. Field-level writes keep unrelated updates intact.
+    public func saveChanges(since baseline: Self, to defaults: UserDefaults) {
+        func set<Value: Equatable>(_ value: Value, previous: Value, key: String) {
+            guard value != previous else { return }
+            defaults.set(value, forKey: key)
+        }
+
+        set(providerId, previous: baseline.providerId, key: Keys.providerId)
+        set(baseURL, previous: baseline.baseURL, key: Keys.baseURL)
+        set(model, previous: baseline.model, key: Keys.model)
+        set(asrProviderId, previous: baseline.asrProviderId, key: Keys.asrProviderId)
+        set(asrBaseURL, previous: baseline.asrBaseURL, key: Keys.asrBaseURL)
+        set(asrModel, previous: baseline.asrModel, key: Keys.asrModel)
+        set(modeId, previous: baseline.modeId, key: Keys.modeId)
+        set(localeId, previous: baseline.localeId, key: Keys.localeId)
+        set(engineMode, previous: baseline.engineMode, key: Keys.engineMode)
+        set(
+            credentialSource.rawValue,
+            previous: baseline.credentialSource.rawValue,
+            key: Keys.credentialSource
+        )
+        set(
+            hasCompletedOnboarding,
+            previous: baseline.hasCompletedOnboarding,
+            key: Keys.hasCompletedOnboarding
+        )
+        set(onboardingPage, previous: baseline.onboardingPage, key: Keys.onboardingPage)
+        set(
+            hasAcknowledgedCloudSharing,
+            previous: baseline.hasAcknowledgedCloudSharing,
+            key: Keys.hasAcknowledgedCloudSharing
+        )
+        set(uiLanguage.rawValue, previous: baseline.uiLanguage.rawValue, key: Keys.uiLanguage)
+        set(
+            translationTargetLocaleId,
+            previous: baseline.translationTargetLocaleId,
+            key: Keys.translationTargetLocaleId
+        )
+        set(
+            handednessPreference.rawValue,
+            previous: baseline.handednessPreference.rawValue,
+            key: Keys.handednessPreference
+        )
+        set(
+            cursorDragNavigationEnabled,
+            previous: baseline.cursorDragNavigationEnabled,
+            key: Keys.cursorDragNavigationEnabled
+        )
+        set(
+            keyboardHapticIntensity.rawValue,
+            previous: baseline.keyboardHapticIntensity.rawValue,
+            key: Keys.keyboardHapticIntensity
+        )
+        set(
+            polishIntensity.rawValue,
+            previous: baseline.polishIntensity.rawValue,
+            key: Keys.polishIntensity
+        )
+        set(
+            aiResponseLength.rawValue,
+            previous: baseline.aiResponseLength.rawValue,
+            key: Keys.aiResponseLength
+        )
+        set(
+            llmThinkingEnabled,
+            previous: baseline.llmThinkingEnabled,
+            key: Keys.llmThinkingEnabled
+        )
+        set(
+            clipboardHistoryEnabled,
+            previous: baseline.clipboardHistoryEnabled,
+            key: Keys.clipboardHistoryEnabled
+        )
+        set(
+            clipboardCandidateBarEnabled,
+            previous: baseline.clipboardCandidateBarEnabled,
+            key: Keys.clipboardCandidateBarEnabled
+        )
+        set(
+            activePolishStyleId,
+            previous: baseline.activePolishStyleId,
+            key: Keys.activePolishStyleId
+        )
+        set(flowSkipAppSwitch, previous: baseline.flowSkipAppSwitch, key: Keys.flowSkipAppSwitch)
+        set(
+            flowInactivityDuration.rawValue,
+            previous: baseline.flowInactivityDuration.rawValue,
+            key: Keys.flowInactivityDuration
+        )
+        set(
+            localASRCustomLanguageModelEnabled,
+            previous: baseline.localASRCustomLanguageModelEnabled,
+            key: Keys.localASRCustomLanguageModelEnabled
+        )
+        set(
+            personalDictionaryICloudSyncEnabled,
+            previous: baseline.personalDictionaryICloudSyncEnabled,
+            key: Keys.personalDictionaryICloudSyncEnabled
+        )
+        set(
+            settingsICloudSyncEnabled,
+            previous: baseline.settingsICloudSyncEnabled,
+            key: Keys.settingsICloudSyncEnabled
+        )
+
+        if personalDictionary != baseline.personalDictionary {
+            Self.encodePersonalDictionary(personalDictionary, to: defaults)
+        }
+        if polishStyleCatalog != baseline.polishStyleCatalog {
+            Self.encodePolishStyleCatalog(polishStyleCatalog, to: defaults)
+        }
     }
 
     // MARK: - Private helpers
@@ -514,7 +648,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             "work": "builtin.formal",
             "document": "builtin.structured",
             "todo": "builtin.structured",
-            "social_lifestyle": "builtin.xhs",
+            "social_lifestyle": "builtin.xhs"
         ]
         if let legacyID = defaults.string(forKey: Keys.legacyPolishScenarioId),
            let mappedID = legacyMappings[legacyID] {

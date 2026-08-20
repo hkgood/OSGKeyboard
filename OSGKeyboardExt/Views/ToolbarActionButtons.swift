@@ -3,8 +3,8 @@
 //
 // Bottom-row action keys: repeating delete, space, and return.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 // MARK: - Layout metrics
 

@@ -7,8 +7,8 @@
 // in OSGKeyboardExt/Views/KeyboardRootView.swift and is what shows up
 // when the user enables the keyboard in iOS Settings.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct KeyboardPreviewStub: View {
     @Environment(\.themePalette) private var palette: ThemePalette

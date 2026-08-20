@@ -1,8 +1,8 @@
 // RimePersonalDictionaryExporterTests.swift
 // OSGKeyboard · Ext unit tests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class RimePersonalDictionaryExporterTests: XCTestCase {
     private let annotator = RimePinyinAnnotator(

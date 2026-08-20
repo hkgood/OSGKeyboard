@@ -6,8 +6,8 @@
 // App-Group-shared `PersonalDictionary` so changes are visible to
 // the keyboard extension on the next LLM call.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 @MainActor
 struct PersonalDictionaryView: View {

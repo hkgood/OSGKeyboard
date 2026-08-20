@@ -4,8 +4,8 @@
 // Unified assistant surface: tap for ordinary dictation, hold for AI, and use
 // the same idle layout for hotwords, clipboard skills, editing, and Send.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct AIKeyboardView: View {
     private enum Layout {

@@ -6,8 +6,8 @@
 // fill inside that capsule (Photos-style), not a second glass layer.
 // History + dictionary live as Home cards (not dock tabs).
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 enum AppTab: Int, CaseIterable {
     case keyboard

@@ -1,7 +1,7 @@
 #if DEBUG
+import OSGKeyboardShared
 import SwiftUI
 import UIKit
-import OSGKeyboardShared
 
 /// Deterministic host for simulator UI tests of the real assistant keyboard.
 /// It exercises gesture routing and closed UI states without requiring a

@@ -1,16 +1,18 @@
 // EnginePickerSection.swift
 // OSGKeyboard · Main App
 //
-// Engine picker — Local (on-device ASR) vs
-// Cloud (ASR + optional LLM polish via the user's API).
+// Global AI service source. ASR locality is selected separately in the
+// speech-recognition provider list when the user supplies credentials.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct EnginePickerSection<ConfigurationRows: View>: View {
     @Environment(\.themePalette) private var palette: ThemePalette
+    @EnvironmentObject private var accountSession: AccountSessionCoordinator
 
     @ObservedObject var config: ProviderConfig
+    @State private var showsManagedCloudConsent = false
     private let configurationRows: ConfigurationRows
 
     init(
@@ -22,38 +24,53 @@ struct EnginePickerSection<ConfigurationRows: View>: View {
     }
 
     var body: some View {
-        CardSection("settings.engine.title") {
+        CardSection("settings.aiService.title") {
             VStack(spacing: 0) {
-                engineOptionRow(
-                    id: "local",
-                    title: AppL10n.string("settings.engine.local.title"),
-                    subtitle: localSubtitle
+                serviceOptionRow(
+                    source: .managed,
+                    title: AppL10n.string("settings.aiService.credits.title"),
+                    subtitle: AppL10n.string(
+                        accountSession.isSignedIn
+                            ? "settings.aiService.credits.subtitle"
+                            : "settings.aiService.credits.signIn"
+                    )
                 )
                 Divider().background(palette.divider)
-                engineOptionRow(
-                    id: "cloud",
-                    title: AppL10n.string("settings.engine.cloud.title"),
-                    subtitle: AppL10n.string("settings.engine.cloud.subtitle")
+                serviceOptionRow(
+                    source: .byok,
+                    title: AppL10n.string("settings.aiService.byok.title"),
+                    subtitle: AppL10n.string("settings.aiService.byok.subtitle")
                 )
-                configurationRows
+                if config.credentialSource == .byok {
+                    configurationRows
+                }
             }
             .surfaceCard()
         }
+        .alert(
+            "settings.aiService.credits.consent.title",
+            isPresented: $showsManagedCloudConsent
+        ) {
+            Button("common.cancel", role: .cancel) {}
+            Button("settings.aiService.credits.consent.accept") {
+                config.hasAcknowledgedCloudSharing = true
+                activateManagedService()
+            }
+            .accessibilityIdentifier("settings.aiService.credits.consent.accept")
+        } message: {
+            Text("settings.aiService.credits.consent.message")
+        }
     }
 
-    private var localSubtitle: String {
-        AppL10n.string("settings.engine.local.legacy")
-    }
-
-    private func engineOptionRow(
-        id: String,
+    private func serviceOptionRow(
+        source: CredentialSource,
         title: String,
         subtitle: String
     ) -> some View {
-        let isSelected = config.engineMode == id
+        let isSelected = config.credentialSource == source
         return Button {
-            guard config.engineMode != id else { return }
-            selectEngine(id)
+            guard config.credentialSource != source else { return }
+            selectSource(source)
         } label: {
             HStack(spacing: Spacing.sm) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -75,17 +92,41 @@ struct EnginePickerSection<ConfigurationRows: View>: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("settings.aiService.\(source.rawValue)")
+        .accessibilityValue(isSelected ? "selected" : "notSelected")
+        .disabled(
+            accountSession.operation != nil
+                || (source == .managed && !accountSession.isSignedIn)
+        )
     }
 
-    private func selectEngine(_ id: String) {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            config.engineMode = id
-            if id == "cloud" {
-                config.modeId = "polish"
+    private func selectSource(_ source: CredentialSource) {
+        switch source {
+        case .managed:
+            if config.hasAcknowledgedCloudSharing {
+                activateManagedService()
+            } else {
+                showsManagedCloudConsent = true
             }
+        case .byok:
+            withAnimation(Motion.quick) {
+                config.credentialSource = .byok
+            }
+            Task { await accountSession.clearManagedGateway() }
         }
     }
 
+    private func activateManagedService() {
+        Task {
+            if await accountSession.prepareManagedGateway() {
+                withAnimation(Motion.quick) {
+                    config.engineMode = "cloud"
+                    config.modeId = "polish"
+                    config.credentialSource = .managed
+                }
+            }
+        }
+    }
 }
 
 extension EnginePickerSection where ConfigurationRows == EmptyView {

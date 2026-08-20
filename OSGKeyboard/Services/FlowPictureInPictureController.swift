@@ -9,8 +9,8 @@
 import AVFoundation
 import AVKit
 import CoreMedia
-import UIKit
 import OSGKeyboardHostSupport
+import UIKit
 
 /// Why `startAndWait` could not prove an active PiP window.
 enum FlowPiPStartFailure: Equatable, Sendable {
@@ -414,7 +414,7 @@ final class FlowPictureInPictureController: NSObject {
         let attrs: [String: Any] = [
             kCVPixelBufferCGImageCompatibilityKey as String: true,
             kCVPixelBufferCGBitmapContextCompatibilityKey as String: true,
-            kCVPixelBufferIOSurfacePropertiesKey as String: [:] as [String: Any],
+            kCVPixelBufferIOSurfacePropertiesKey as String: [:] as [String: Any]
         ]
         let status = CVPixelBufferCreate(
             kCFAllocatorDefault,

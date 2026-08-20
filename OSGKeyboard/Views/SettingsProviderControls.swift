@@ -4,8 +4,8 @@
 // OpenLess-style setting rows for provider credentials and tools. Compact iOS
 // stacks label above control; regular-width iPad keeps label/control in one row.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct SettingsProviderRow<Content: View>: View {
     @Environment(\.themePalette) private var palette: ThemePalette

@@ -1,8 +1,8 @@
 // AIUserSkillTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class AIUserSkillTests: XCTestCase {
     private let sampleURL = URL(
@@ -151,6 +151,7 @@ final class AIUserSkillTests: XCTestCase {
         )
         XCTAssertFalse(user.thinkingEnabled)
         XCTAssertFalse(user.asClipboardSkill().thinkingEnabled)
+        XCTAssertEqual(user.asClipboardSkill().managedGatewayTaskKind, .customSkill)
 
         let withThinking = AIUserSkill(
             name: "Custom",
@@ -163,6 +164,7 @@ final class AIUserSkillTests: XCTestCase {
 
         let builtin = AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.replyID)
         XCTAssertEqual(builtin?.thinkingEnabled, false)
+        XCTAssertEqual(builtin?.managedGatewayTaskKind, .clipboardTransform)
     }
 
     func testInstructionUsesCustomPrompt() {

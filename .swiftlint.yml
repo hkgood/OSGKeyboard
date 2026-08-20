@@ -11,6 +11,14 @@ disabled_rules:
   - cyclomatic_complexity
   - force_cast
   - force_try
+  # Existing code intentionally treats invalid UTF-8 as a recoverable parse
+  # failure rather than replacing bytes with U+FFFD.
+  - non_optional_string_data_conversion
+  # Guard-style loop bodies are clearer than compound `where` clauses in the
+  # text-processing state machines used throughout the project.
+  - for_where
+  # SwiftUI initializers commonly expose two or more closure parameters.
+  - multiple_closures_with_trailing_closure
 
 opt_in_rules:
   - empty_count
@@ -18,7 +26,32 @@ opt_in_rules:
   - explicit_init
   - prefer_self_type_over_type_of_self
   - sorted_imports
-  - redundant_optional_initialization
+  - implicit_optional_initialization
+
+# Algorithmic code uses conventional one- and two-letter local coordinates
+# (`x`, `y`, `dx`, `i`) while public names remain descriptive.
+identifier_name:
+  min_length:
+    warning: 1
+  max_length:
+    warning: 50
+
+# These limits flag genuinely unwieldy declarations without rejecting common
+# SwiftUI geometry tuples, dependency initializers, or nested Codable payloads.
+type_name:
+  max_length:
+    warning: 50
+large_tuple:
+  warning: 7
+  error: 9
+function_parameter_count:
+  warning: 12
+  error: 15
+nesting:
+  type_level:
+    warning: 3
+  function_level:
+    warning: 5
 
 included:
   - OSGKeyboard

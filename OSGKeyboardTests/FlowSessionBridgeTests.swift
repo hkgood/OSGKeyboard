@@ -1,8 +1,8 @@
 // FlowSessionBridgeTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class FlowSessionBridgeTests: XCTestCase {
     private var suiteNames: Set<String> = []
@@ -313,7 +313,8 @@ final class FlowSessionBridgeTests: XCTestCase {
             localeId: "zh-Hans",
             utteranceMode: .aiQuestion,
             aiConversationID: UUID(),
-            aiQuestionText: "总结这段剪贴板内容"
+            aiQuestionText: "总结这段剪贴板内容",
+            aiTaskKind: .clipboardTransform
         )
 
         let decoded = try JSONDecoder().decode(
@@ -323,6 +324,7 @@ final class FlowSessionBridgeTests: XCTestCase {
 
         XCTAssertEqual(decoded, command)
         XCTAssertEqual(decoded.aiQuestionText, "总结这段剪贴板内容")
+        XCTAssertEqual(decoded.aiTaskKind, .clipboardTransform)
         XCTAssertNil(decoded.aiThinkingEnabled)
     }
 
@@ -345,7 +347,19 @@ final class FlowSessionBridgeTests: XCTestCase {
         XCTAssertEqual(decoded.aiThinkingEnabled, false)
     }
 
-    func testFlowCommandDecodesLegacyJSONWithoutThinkingKey() throws {
+    func testAIQuestionRequestCarriesManagedTaskIntent() {
+        let request = FlowUtteranceRequest.aiQuestion(
+            conversationID: UUID(),
+            prefilledQuestion: "整理剪贴板",
+            taskKind: .customSkill,
+            thinkingEnabled: false
+        )
+
+        XCTAssertEqual(request.aiTaskKind, .customSkill)
+        XCTAssertEqual(request.aiThinkingEnabled, false)
+    }
+
+    func testFlowCommandDecodesLegacyJSONWithoutAIIntentKeys() throws {
         let command = FlowCommand(
             sessionId: UUID(),
             utteranceId: UUID(),
@@ -360,9 +374,11 @@ final class FlowSessionBridgeTests: XCTestCase {
             with: JSONEncoder().encode(command)
         ) as! [String: Any]
         object.removeValue(forKey: "aiThinkingEnabled")
+        object.removeValue(forKey: "aiTaskKind")
         let data = try JSONSerialization.data(withJSONObject: object)
         let decoded = try JSONDecoder().decode(FlowCommand.self, from: data)
         XCTAssertNil(decoded.aiThinkingEnabled)
+        XCTAssertNil(decoded.aiTaskKind)
         XCTAssertEqual(decoded.aiQuestionText, "总结这段剪贴板内容")
     }
 
@@ -960,7 +976,7 @@ final class FlowSessionBridgeTests: XCTestCase {
                 FlowSessionKeys.flowAckPayload,
                 FlowSessionKeys.flowStartTransactionPayload,
                 FlowSessionKeys.pendingKeyboardUtteranceId,
-                FlowSessionKeys.flowReadyPayload,
+                FlowSessionKeys.flowReadyPayload
             ],
             in: defaults
         )
@@ -975,7 +991,7 @@ final class FlowSessionBridgeTests: XCTestCase {
                 FlowSessionKeys.lastActivityAt,
                 FlowSessionKeys.hostGeneration,
                 FlowSessionKeys.hostHeavy,
-                FlowSessionKeys.hostHeavyAt,
+                FlowSessionKeys.hostHeavyAt
             ],
             in: defaults
         )
@@ -1012,7 +1028,7 @@ final class FlowSessionBridgeTests: XCTestCase {
                 FlowSessionKeys.flowAckPayload,
                 FlowSessionKeys.flowStartTransactionPayload,
                 FlowSessionKeys.pendingKeyboardUtteranceId,
-                FlowSessionKeys.flowReadyPayload,
+                FlowSessionKeys.flowReadyPayload
             ],
             in: defaults
         )
@@ -1021,7 +1037,7 @@ final class FlowSessionBridgeTests: XCTestCase {
                 FlowSessionKeys.flowSessionActive,
                 FlowSessionKeys.lastPiPArmAttemptAt,
                 FlowSessionKeys.hostGeneration,
-                FlowSessionKeys.hostHeavy,
+                FlowSessionKeys.hostHeavy
             ],
             in: defaults
         )
@@ -1056,7 +1072,7 @@ final class FlowSessionBridgeTests: XCTestCase {
                 FlowSessionKeys.flowAckPayload,
                 FlowSessionKeys.flowStartTransactionPayload,
                 FlowSessionKeys.pendingKeyboardUtteranceId,
-                FlowSessionKeys.flowReadyPayload,
+                FlowSessionKeys.flowReadyPayload
             ],
             in: defaults
         )
@@ -1067,7 +1083,7 @@ final class FlowSessionBridgeTests: XCTestCase {
                 FlowSessionKeys.pendingHostBundleId,
                 FlowSessionKeys.lastPiPArmAttemptAt,
                 FlowSessionKeys.hostGeneration,
-                FlowSessionKeys.hostHeavy,
+                FlowSessionKeys.hostHeavy
             ],
             in: defaults
         )
@@ -1161,7 +1177,7 @@ final class FlowSessionBridgeTests: XCTestCase {
         let defaults = makeDefaults()
         let legacyLevels = [
             NSNumber(value: Float(0.25)),
-            NSNumber(value: Float(0.75)),
+            NSNumber(value: Float(0.75))
         ]
         defaults.set(legacyLevels, forKey: FlowSessionKeys.audioLevels)
 
@@ -1220,7 +1236,7 @@ final class FlowSessionBridgeTests: XCTestCase {
                 FlowSessionKeys.transcriptionPartial,
                 FlowSessionKeys.transcriptionPolishWarning,
                 FlowSessionKeys.transcriptionError,
-                FlowSessionKeys.transcriptionErrorKind,
+                FlowSessionKeys.transcriptionErrorKind
             ],
             in: defaults
         )
@@ -1239,7 +1255,7 @@ final class FlowSessionBridgeTests: XCTestCase {
                 FlowSessionKeys.flowAckPayload,
                 FlowSessionKeys.flowStartTransactionPayload,
                 FlowSessionKeys.pendingKeyboardUtteranceId,
-                FlowSessionKeys.flowReadyPayload,
+                FlowSessionKeys.flowReadyPayload
             ],
             in: defaults
         )
@@ -1326,7 +1342,7 @@ final class FlowSessionBridgeTests: XCTestCase {
             startDeadlineAt: 1_700_000_008.25,
             processingDeadlineAt: 1_700_000_045.25
         )
-        let expected = #"{"action":"startRecording","aiConversationID":"33333333-4444-5555-6666-777777777777","commandSeq":42,"createdAt":1700000000.25,"editSourceText":"draft","fieldContext":{"followingText":"after","isContextAvailable":true,"isEmptyField":false,"isSecureEntry":false,"keyboardType":"default","precedingText":"before","returnKeyType":"send"},"localeId":"en-US","processingDeadlineAt":1700000045.25,"protocolVersion":5,"sessionId":"00112233-4455-6677-8899-AABBCCDDEEFF","sourceHistoryEntryID":"22222222-3333-4444-5555-666666666666","sourceHistoryEntryRevision":7,"startDeadlineAt":1700000008.25,"utteranceId":"11111111-2222-3333-4444-555555555555","utteranceMode":"editLastInput"}"#
+        let expected = #"{"action":"startRecording","aiConversationID":"33333333-4444-5555-6666-777777777777","commandSeq":42,"createdAt":1700000000.25,"editSourceText":"draft","fieldContext":{"followingText":"after","isContextAvailable":true,"isEmptyField":false,"isSecureEntry":false,"keyboardType":"default","precedingText":"before","returnKeyType":"send"},"localeId":"en-US","processingDeadlineAt":1700000045.25,"protocolVersion":6,"sessionId":"00112233-4455-6677-8899-AABBCCDDEEFF","sourceHistoryEntryID":"22222222-3333-4444-5555-666666666666","sourceHistoryEntryRevision":7,"startDeadlineAt":1700000008.25,"utteranceId":"11111111-2222-3333-4444-555555555555","utteranceMode":"editLastInput"}"#
 
         XCTAssertEqual(try sortedJSONString(command), expected)
     }
@@ -1362,7 +1378,7 @@ final class FlowSessionBridgeTests: XCTestCase {
             historyEntryRevision: 9,
             aiConversationID: conversationID
         )
-        let expected = #"{"aiConversationID":"33333333-4444-5555-6666-777777777777","commandSeq":42,"createdAt":1700000050.5,"errorKind":"asrFailed","fieldFingerprint":"default|send|before|after","historyEntryID":"22222222-3333-4444-5555-666666666666","historyEntryRevision":9,"hostGeneration":"generation-1","protocolVersion":5,"rawText":"raw","revision":8,"sessionId":"00112233-4455-6677-8899-AABBCCDDEEFF","status":"final","text":"polished","utteranceId":"11111111-2222-3333-4444-555555555555","utteranceMode":"aiQuestion","warning":"fallback"}"#
+        let expected = #"{"aiConversationID":"33333333-4444-5555-6666-777777777777","commandSeq":42,"createdAt":1700000050.5,"errorKind":"asrFailed","fieldFingerprint":"default|send|before|after","historyEntryID":"22222222-3333-4444-5555-666666666666","historyEntryRevision":9,"hostGeneration":"generation-1","protocolVersion":6,"rawText":"raw","revision":8,"sessionId":"00112233-4455-6677-8899-AABBCCDDEEFF","status":"final","text":"polished","utteranceId":"11111111-2222-3333-4444-555555555555","utteranceMode":"aiQuestion","warning":"fallback"}"#
 
         XCTAssertEqual(try sortedJSONString(result), expected)
     }
@@ -1442,7 +1458,7 @@ final class FlowSessionBridgeTests: XCTestCase {
                 .primeAudio,
                 .cancelPrimeAudio,
                 .endAIConversation,
-                .submitAIQuestion,
+                .submitAIQuestion
             ].map(\.rawValue),
             [
                 "startRecording",
@@ -1452,7 +1468,7 @@ final class FlowSessionBridgeTests: XCTestCase {
                 "primeAudio",
                 "cancelPrimeAudio",
                 "endAIConversation",
-                "submitAIQuestion",
+                "submitAIQuestion"
             ]
         )
         XCTAssertEqual(
@@ -1463,7 +1479,7 @@ final class FlowSessionBridgeTests: XCTestCase {
                 .final,
                 .error,
                 .aborted,
-                .timeout,
+                .timeout
             ].map(\.rawValue),
             ["partial", "rawReady", "streaming", "final", "error", "aborted", "timeout"]
         )
@@ -1471,7 +1487,7 @@ final class FlowSessionBridgeTests: XCTestCase {
             [
                 FlowAck.DeliveryOutcome.replaced,
                 .appended,
-                .rejected,
+                .rejected
             ].map(\.rawValue),
             ["replaced", "appended", "rejected"]
         )
@@ -1480,7 +1496,7 @@ final class FlowSessionBridgeTests: XCTestCase {
                 FlowStartTransaction.Phase.issued,
                 .starting,
                 .recording,
-                .terminal,
+                .terminal
             ].map(\.rawValue),
             ["issued", "starting", "recording", "terminal"]
         )
@@ -1497,7 +1513,7 @@ final class FlowSessionBridgeTests: XCTestCase {
                 .permissionMissing,
                 .appGroupUnavailable,
                 .hostLost,
-                .error,
+                .error
             ].map(\.rawValue),
             [
                 "ready",
@@ -1511,7 +1527,7 @@ final class FlowSessionBridgeTests: XCTestCase {
                 "permissionMissing",
                 "appGroupUnavailable",
                 "hostLost",
-                "error",
+                "error"
             ]
         )
     }

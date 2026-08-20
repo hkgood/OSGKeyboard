@@ -4,8 +4,8 @@
 // Regression coverage for clipboard preservation and captured-app context.
 
 import AppKit
-import XCTest
 @testable import OSGKeyboard
+import XCTest
 
 final class MacTextInsertionServiceTests: XCTestCase {
 

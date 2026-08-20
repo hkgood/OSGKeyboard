@@ -1,8 +1,8 @@
 // AINoteExportTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class AINoteExportTests: XCTestCase {
     private var calendar: Calendar {

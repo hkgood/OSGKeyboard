@@ -5,8 +5,8 @@
 // overhaul: timeout budgets derived from a single source, LWW clock
 // clamping, and mutation-rebase for the speech history store.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class FlowBudgetAndMergeTests: XCTestCase {
 

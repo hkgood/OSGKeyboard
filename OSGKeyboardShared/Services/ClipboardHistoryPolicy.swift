@@ -194,7 +194,7 @@ public enum ClipboardHistoryPolicy: Sendable {
             ("xoxa-", 24, true),
             ("xoxr-", 24, true),
             ("AKIA", 20, true),
-            ("ASIA", 20, true),
+            ("ASIA", 20, true)
         ]
         return credentialCandidates(in: text).contains { candidate in
             guard candidate.allSatisfy(isCredentialCharacter) else { return false }

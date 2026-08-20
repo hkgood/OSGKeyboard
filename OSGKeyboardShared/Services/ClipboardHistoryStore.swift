@@ -3,8 +3,8 @@
 //
 // App Group–backed clipboard history (local only; not iCloud-synced).
 
-import Foundation
 import Combine
+import Foundation
 
 @MainActor
 public final class ClipboardHistoryStore: ObservableObject {

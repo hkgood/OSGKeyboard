@@ -184,7 +184,7 @@ public struct SyncedUsageStatisticsV2: Codable, Equatable, Sendable {
                 dictationCharacterCount: legacy.dictationCharacterCount,
                 translationCharacterCount: legacy.translationCharacterCount,
                 aiCharacterCount: legacy.aiCharacterCount
-            ),
+            )
         ])
     }
 }

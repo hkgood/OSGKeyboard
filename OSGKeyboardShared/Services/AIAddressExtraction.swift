@@ -27,7 +27,7 @@ public enum AIAddressExtraction: Sendable {
         "无", "没有", "没有地址", "没有地点", "无地址", "无地点",
         "没有可导航的地点", "没有可导航的地址",
         "no address", "no addresses", "no location", "no locations",
-        "no place", "no places", "no destination",
+        "no place", "no places", "no destination"
     ]
 
     /// Lines to send to the host. Empty → do not run the companion Shortcut.

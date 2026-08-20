@@ -37,7 +37,7 @@ public struct FlowFieldContext: Codable, Equatable, Sendable {
             keyboardType ?? "",
             returnKeyType ?? "",
             precedingText.map { String($0.suffix(80)) } ?? "",
-            followingText.map { String($0.prefix(40)) } ?? "",
+            followingText.map { String($0.prefix(40)) } ?? ""
         ].joined(separator: "|")
     }
 }

@@ -1,8 +1,8 @@
 // EditHintSchedulerTests.swift
 // OSGKeyboard · Keyboard Extension Tests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 @MainActor
 final class EditHintSchedulerTests: XCTestCase {

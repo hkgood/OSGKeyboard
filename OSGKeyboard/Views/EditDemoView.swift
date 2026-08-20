@@ -7,8 +7,8 @@
 // Launch with `--edit-demo`. Not shipped in Release.
 
 #if DEBUG
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct EditDemoView: View {
     private static let originalText = "明天下午三点开会讨论方案"

@@ -64,7 +64,7 @@ public struct PolishStylePack: Codable, Equatable, Identifiable, Sendable {
             "outranks global R5",
             "may add emojis",
             "allow mood emoji",
-            "allowsAddedEmoji",
+            "allowsAddedEmoji"
         ]
         return markers.contains { prompt.localizedCaseInsensitiveContains($0) }
     }

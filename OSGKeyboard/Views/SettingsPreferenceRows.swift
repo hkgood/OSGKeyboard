@@ -4,9 +4,9 @@
 // Shared preference picker / toggle rows used by Settings home and
 // secondary pages (General, Voice session, Daily).
 
-import SwiftUI
-import Speech
 import OSGKeyboardShared
+import Speech
+import SwiftUI
 
 // MARK: - App language picker row
 
@@ -349,7 +349,7 @@ enum SettingsASRLocales {
         ("zh-Hant", false),
         ("en-US", false),
         ("ja-JP", false),
-        ("ko-KR", false),
+        ("ko-KR", false)
     ]
 
     static func loadDynamic() async -> [(id: String, onDevice: Bool)] {

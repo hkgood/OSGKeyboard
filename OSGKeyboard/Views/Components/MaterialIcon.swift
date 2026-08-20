@@ -4,9 +4,9 @@
 // Google Material Icons (bundled MaterialIcons-Regular.ttf).
 // Resolves the PostScript name at runtime and falls back to SF Symbols.
 
+import CoreText
 import SwiftUI
 import UIKit
-import CoreText
 
 enum MaterialIconName {
     case keyboard

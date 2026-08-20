@@ -26,6 +26,7 @@ public protocol ConfigurationStore: Sendable {
     var asrModel: String { get }
 
     var engineMode: String { get }
+    var credentialSource: CredentialSource { get }
     var polishIntensity: PolishIntensity { get }
     var aiResponseLength: AIResponseLength { get }
     var llmThinkingEnabled: Bool { get }
@@ -39,5 +40,14 @@ public protocol ConfigurationStore: Sendable {
     /// Provider-specific ASR caches (e.g. Alibaba Fun-ASR vocabulary IDs).
     var cloudASRPersistence: UserDefaults { get }
 
-    func makeClient() -> LLMClient
+    func makeClient(taskKind: ManagedGatewayTaskKind?) -> LLMClient
+}
+
+public extension ConfigurationStore {
+    /// Existing stores and test doubles remain BYOK unless they opt in.
+    var credentialSource: CredentialSource { .byok }
+
+    func makeClient() -> LLMClient {
+        makeClient(taskKind: nil)
+    }
 }

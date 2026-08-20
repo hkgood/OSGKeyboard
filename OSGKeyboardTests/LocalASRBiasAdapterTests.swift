@@ -1,8 +1,8 @@
 // LocalASRBiasAdapterTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class LocalASRBiasAdapterTests: XCTestCase {
 
@@ -112,7 +112,7 @@ final class LocalASRBiasAdapterTests: XCTestCase {
 
     func testPolishingServiceMergesDictionarySupplement() {
         let dict = PersonalDictionary(entries: [
-            PersonalDictionary.Entry(term: "Cursor", category: .productName, source: .manual),
+            PersonalDictionary.Entry(term: "Cursor", category: .productName, source: .manual)
         ])
         let merged = PolishingService.mergedDictionaryBlock(
             dictionary: dict,

@@ -48,6 +48,15 @@ public actor PolishingService {
         let qualityDegraded: Bool
     }
 
+    private struct PolishRequest {
+        let raw: String
+        let mode: PolishMode
+        let systemPrompt: String?
+        let providerIdOverride: String?
+        let taskKind: ManagedGatewayTaskKind?
+        let context: PolishContext?
+    }
+
     public enum PolishError: Error, Equatable {
         case noTranscript
         case timeout
@@ -100,14 +109,18 @@ public actor PolishingService {
         mode: PolishMode = .polish,
         systemPrompt: String? = nil,
         providerIdOverride: String? = nil,
+        taskKind: ManagedGatewayTaskKind? = nil,
         context: PolishContext? = nil
     ) async throws -> String {
         try await performPolish(
-            raw,
-            mode: mode,
-            systemPrompt: systemPrompt,
-            providerIdOverride: providerIdOverride,
-            context: context
+            PolishRequest(
+                raw: raw,
+                mode: mode,
+                systemPrompt: systemPrompt,
+                providerIdOverride: providerIdOverride,
+                taskKind: taskKind,
+                context: context
+            )
         ).text
     }
 
@@ -118,28 +131,31 @@ public actor PolishingService {
         mode: PolishMode = .polish,
         systemPrompt: String? = nil,
         providerIdOverride: String? = nil,
+        taskKind: ManagedGatewayTaskKind? = nil,
         context: PolishContext? = nil
     ) async throws -> PolishOutcome {
         try await performPolish(
-            raw,
-            mode: mode,
-            systemPrompt: systemPrompt,
-            providerIdOverride: providerIdOverride,
-            context: context
+            PolishRequest(
+                raw: raw,
+                mode: mode,
+                systemPrompt: systemPrompt,
+                providerIdOverride: providerIdOverride,
+                taskKind: taskKind,
+                context: context
+            )
         )
     }
 
-    private func performPolish(
-        _ raw: String,
-        mode: PolishMode,
-        systemPrompt: String?,
-        providerIdOverride: String?,
-        context: PolishContext?
-    ) async throws -> PolishOutcome {
+    private func performPolish(_ request: PolishRequest) async throws -> PolishOutcome {
+        let raw = request.raw
+        let mode = request.mode
+        let systemPrompt = request.systemPrompt
+        let providerIdOverride = request.providerIdOverride
+        let taskKind = request.taskKind
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw PolishError.noTranscript }
 
-        let resolvedContext = resolveContext(override: context)
+        let resolvedContext = resolveContext(override: request.context)
         let activeStyleID = store.activePolishStyleId
 
         // Two-tier short-circuit: ultra-short always; 5–10 CJK only for
@@ -158,7 +174,7 @@ public actor PolishingService {
             return PolishOutcome(text: TranscriptPostProcessor.localClean(trimmed))
         }
 
-        if injectedClient == nil {
+        if injectedClient == nil, store.credentialSource == .byok {
             let providerId = Self.resolvedProviderId(store: store, providerIdOverride: providerIdOverride)
             let hasPolishKey = Self.hasPolishAPIKey(store: store, providerId: providerId)
             guard hasPolishKey else {
@@ -174,6 +190,7 @@ public actor PolishingService {
             mode: mode,
             systemPrompt: systemPrompt,
             providerIdOverride: providerIdOverride,
+            taskKind: taskKind,
             context: resolvedContext
         )
 
@@ -197,11 +214,21 @@ public actor PolishingService {
         return override
     }
 
+    static func managedGatewayTaskKind(for mode: PolishMode) -> ManagedGatewayTaskKind {
+        switch mode {
+        case .polish:
+            return .dictationPolish
+        case .translate:
+            return .translation
+        }
+    }
+
     private func polishRemote(
         _ trimmed: String,
         mode: PolishMode,
         systemPrompt: String? = nil,
         providerIdOverride: String? = nil,
+        taskKind: ManagedGatewayTaskKind? = nil,
         context: PolishContext
     ) async throws -> RemotePolishResult {
         let effectiveProviderId = Self.resolvedProviderId(
@@ -211,6 +238,10 @@ public actor PolishingService {
         let client: LLMClient
         if let injectedClient {
             client = injectedClient
+        } else if store.credentialSource == .managed {
+            client = store.makeClient(
+                taskKind: taskKind ?? Self.managedGatewayTaskKind(for: mode)
+            )
         } else {
             let preset = LLMProvider.provider(id: effectiveProviderId)
             let (baseURL, model) = Self.resolveLLMEndpoint(
@@ -418,7 +449,7 @@ public actor PolishingService {
     }
 
     internal static let chineseNativeProviderIds: Set<String> = [
-        "zhipu", "moonshot", "qwen", "deepseek", "ark", "minimax", "siliconflow", "mimo",
+        "zhipu", "moonshot", "qwen", "deepseek", "ark", "minimax", "siliconflow", "mimo"
     ]
 
     internal static func shouldUseChineseGuidance(inputText: String, providerId: String) -> Bool {

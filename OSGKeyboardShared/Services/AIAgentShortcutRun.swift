@@ -49,7 +49,7 @@ public enum AIAgentShortcutRun {
         var items = [
             URLQueryItem(name: "name", value: name),
             URLQueryItem(name: "input", value: "text"),
-            URLQueryItem(name: "text", value: text),
+            URLQueryItem(name: "text", value: text)
         ]
         if let xSuccess {
             items.append(URLQueryItem(name: "x-success", value: xSuccess))

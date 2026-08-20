@@ -4,9 +4,9 @@
 // Locks AppGroupStore onboarding flags (host-app OnboardingView),
 // detected app-context accessors, and polish intensity defaults.
 
-import XCTest
 @testable import OSGKeyboard
 @testable import OSGKeyboardShared
+import XCTest
 
 final class AppGroupOnboardingStoreTests: XCTestCase {
 

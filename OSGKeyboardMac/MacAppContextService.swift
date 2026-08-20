@@ -50,7 +50,7 @@ enum MacAppContextService {
         "com.microsoft.Word": .document,
         "com.google.GoogleDocs": .document,
         "com.evernote.Evernote": .document,
-        "com.microsoft.onenote.mac": .document,
+        "com.microsoft.onenote.mac": .document
     ]
 
     /// Chat-style apps from the shared host registry (iOS bundle IDs often

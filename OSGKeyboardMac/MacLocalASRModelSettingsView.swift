@@ -289,7 +289,7 @@ struct MacLocalASRModelSettingsView: View {
                     MacInlinePickerOption(
                         value: LocalASRDownloadSourcePreference.huggingface,
                         label: MacL10n.string("mac.localASR.downloadSource.huggingface", language: lang)
-                    ),
+                    )
                 ],
                 fillsWidth: true
             )

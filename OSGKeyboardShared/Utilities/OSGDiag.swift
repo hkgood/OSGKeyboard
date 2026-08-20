@@ -5,8 +5,8 @@
 // Console without needing an os.Logger subsystem filter (keyboard extension
 // OSLog lines are easy to miss when the host process is selected).
 
-import Foundation
 import Darwin
+import Foundation
 
 public enum OSGDiag {
     public struct MemorySnapshot: Sendable, Equatable {

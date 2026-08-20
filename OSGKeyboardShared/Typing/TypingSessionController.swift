@@ -4,8 +4,8 @@
 // Owns the typing-surface engine + layout provider. Injected into the
 // keyboard extension; torn down when leaving typing mode.
 
-import Foundation
 import Combine
+import Foundation
 
 @MainActor
 public final class TypingSessionController: ObservableObject {

@@ -10,6 +10,8 @@
 "flow.warning.localPolishUnavailable" = "Add an API key in Settings to enable polish. Inserted raw ASR text.";
 "flow.warning.polishDegraded" = "Weak network — inserted raw ASR text without polish.";
 "flow.warning.polishDegradedQuality" = "Polish output failed validation; inserted a conservative version.";
+"flow.warning.managedInsufficientCredits" = "Managed credits are insufficient. Inserted raw ASR text; open the Account tab to add credits.";
+"flow.warning.managedGrantRejected" = "Managed service authorization expired. Inserted raw ASR text; open the main app to reconnect your account.";
 
 /* LLM providers */
 "provider.openai" = "OpenAI";
@@ -63,6 +65,23 @@
 "error.cloudASR.audioTooLong" = "Audio segment is too long for this cloud ASR provider.";
 "error.cloudASR.providerUnsupported" = "This provider does not support cloud speech recognition yet.";
 "error.cloudASR.streamingNotImplemented" = "Streaming ASR failed for this provider. Check your API key and network, or try again.";
+
+/* Managed account gateway */
+"managed.error.grantUnavailable" = "Managed service is not ready. Open the main app and reconnect your account.";
+"managed.error.scopeNotGranted" = "Managed service access is missing for %@. Open the main app and reconnect your account.";
+"managed.error.grantRejected" = "Managed service authorization expired. Open the main app and reconnect your account.";
+"managed.error.insufficientCredits" = "Not enough credits. Open the Account tab in the main app to add credits.";
+"managed.error.timeout" = "Managed service timed out. Check your connection and try again.";
+"managed.error.server" = "Managed service failed (%1$@, HTTP %2$lld). Try again later.";
+"managed.asr.error.invalidConfiguration" = "Managed speech settings are invalid. Open the main app and select the service again.";
+"managed.asr.error.concurrencyLimit" = "Another managed speech session is active. Stop it and try again.";
+"managed.asr.error.sessionCreation" = "Managed speech could not start. Check your connection and try again.";
+"managed.asr.error.transport" = "Managed speech connection failed. Check your network and try again.";
+"managed.asr.error.connectTimeout" = "Managed speech took too long to connect. Check your network and try again.";
+"managed.asr.error.idleTimeout" = "Managed speech stopped because no audio was received. Tap the microphone and try again.";
+"managed.asr.error.streaming" = "Managed speech streaming was interrupted. Check your network and try again.";
+"managed.asr.error.invalidResult" = "Managed speech returned an invalid result. Please try again.";
+"managed.asr.error.batch" = "Managed speech retry failed. Check your network and try again.";
 
 /* Provider tools */
 "providerTools.error.invalidURL" = "Invalid model endpoint.";

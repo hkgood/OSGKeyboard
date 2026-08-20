@@ -1,8 +1,8 @@
 // AppGroupConfigurationTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class AppGroupConfigurationTests: XCTestCase {
 
@@ -23,6 +23,7 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertEqual(config.localeId, "auto")
         // Privacy-critical: the default engine must keep audio on-device.
         XCTAssertEqual(config.engineMode, "local")
+        XCTAssertEqual(config.credentialSource, .byok)
         XCTAssertFalse(config.hasCompletedOnboarding)
         XCTAssertEqual(config.onboardingPage, 0)
         XCTAssertFalse(config.hasAcknowledgedCloudSharing)
@@ -51,6 +52,7 @@ final class AppGroupConfigurationTests: XCTestCase {
         config.localeId = "zh-Hans"
         // Non-default value so the round-trip proves persistence.
         config.engineMode = "cloud"
+        config.credentialSource = .managed
         config.hasCompletedOnboarding = true
         config.onboardingPage = 2
         config.hasAcknowledgedCloudSharing = true
@@ -75,6 +77,7 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertEqual(loaded.asrModel, "glm-asr-2512")
         XCTAssertEqual(loaded.localeId, "zh-Hans")
         XCTAssertEqual(loaded.engineMode, "cloud")
+        XCTAssertEqual(loaded.credentialSource, .managed)
         XCTAssertTrue(loaded.hasCompletedOnboarding)
         XCTAssertEqual(loaded.onboardingPage, 2)
         XCTAssertTrue(loaded.hasAcknowledgedCloudSharing)
@@ -88,6 +91,23 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertEqual(loaded.aiResponseLength, .short)
         XCTAssertFalse(loaded.flowSkipAppSwitch)
         XCTAssertEqual(loaded.flowInactivityDuration, .threeHours)
+    }
+
+    func testFieldLevelSavePreservesNewerUnrelatedProcessChange() {
+        let defaults = makeDefaults()
+        let baseline = AppGroupConfiguration.load(fromAvailable: defaults)
+        var mainAppSnapshot = baseline
+        var extensionSnapshot = baseline
+
+        mainAppSnapshot.uiLanguage = .chinese
+        mainAppSnapshot.saveChanges(since: baseline, to: defaults)
+
+        extensionSnapshot.engineMode = "cloud"
+        extensionSnapshot.saveChanges(since: baseline, to: defaults)
+
+        let loaded = AppGroupConfiguration.load(fromAvailable: defaults)
+        XCTAssertEqual(loaded.uiLanguage, .chinese)
+        XCTAssertEqual(loaded.engineMode, "cloud")
     }
 
     func testRetiredMediumPolishIntensityMigratesToLight() {
@@ -166,6 +186,20 @@ final class AppGroupConfigurationTests: XCTestCase {
         let config = AppGroupConfiguration.load(fromAvailable: defaults)
         XCTAssertEqual(config.providerId, "deepseek")
         XCTAssertEqual(defaults.string(forKey: AppGroupConfiguration.Keys.providerId), "deepseek")
+    }
+
+    func testManagedCredentialsDoNotRequireBYOKKeys() {
+        let defaults = makeDefaults()
+        defaults.set("cloud", forKey: AppGroupConfiguration.Keys.engineMode)
+        defaults.set(CredentialSource.managed.rawValue,
+                     forKey: AppGroupConfiguration.Keys.credentialSource)
+
+        let config = AppGroupConfiguration.load(fromAvailable: defaults)
+
+        XCTAssertFalse(config.isPolishKeyMissing)
+        XCTAssertFalse(config.isCloudLLMKeyMissing)
+        XCTAssertFalse(config.isCloudASRKeyMissing)
+        XCTAssertFalse(config.isCloudAPIKeyMissingForVoiceInput)
     }
 
     func testLoadFromNilUsesAppGroupWhenAvailable() {

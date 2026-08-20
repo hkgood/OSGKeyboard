@@ -13,8 +13,10 @@ public enum UtteranceBatchFallbackPolicy {
     public static func shouldRunBatchFallback(
         stitchedFinal: String,
         partialSnapshot: String,
+        recognitionFailed: Bool = false,
         minimumCharacterAdvantage: Int = defaultCharacterAdvantage
     ) -> Bool {
+        if recognitionFailed { return true }
         let final = stitchedFinal.trimmingCharacters(in: .whitespacesAndNewlines)
         let partial = partialSnapshot.trimmingCharacters(in: .whitespacesAndNewlines)
 

@@ -3,8 +3,8 @@
 //
 // Hermetic tests for iCloud KVS settings sync + preference toggles.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 @MainActor
 final class SettingsCloudSyncTests: XCTestCase {
@@ -120,7 +120,7 @@ final class SettingsCloudSyncTests: XCTestCase {
         object["flowKeepAliveMode"] = [
             "value": "liveActivity",
             "updatedAt": 0,
-            "deviceID": "legacy-device",
+            "deviceID": "legacy-device"
         ]
         let legacyData = try JSONSerialization.data(withJSONObject: object)
 

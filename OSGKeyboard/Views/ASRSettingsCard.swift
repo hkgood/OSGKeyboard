@@ -3,9 +3,9 @@
 //
 // Cloud ASR credentials — independent from the polish LLM card.
 
-import SwiftUI
-import OSGKeyboardShared
 import OSGKeyboardHostSupport
+import OSGKeyboardShared
+import SwiftUI
 
 struct ASRSettingsCard: View {
     @Environment(\.themePalette) private var palette: ThemePalette

@@ -20,8 +20,8 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         case submitAIQuestion
     }
 
-    /// Wire version that includes submitAIQuestion + aiQuestionText.
-    public static let currentProtocolVersion = 5
+    /// Wire version that includes managed-gateway AI task intent.
+    public static let currentProtocolVersion = 6
 
     public let protocolVersion: Int
     public let sessionId: UUID
@@ -41,6 +41,8 @@ public struct FlowCommand: Codable, Equatable, Sendable {
     public let aiConversationID: UUID?
     /// Prefilled question used only by `.submitAIQuestion`.
     public let aiQuestionText: String?
+    /// Fine-grained managed-gateway intent for AI question submissions.
+    public let aiTaskKind: ManagedGatewayTaskKind?
     /// Clipboard-skill thinking override. Nil keeps AI-mode default (on).
     public let aiThinkingEnabled: Bool?
     /// Absolute wall-clock deadlines survive extension reconstruction.
@@ -62,6 +64,7 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         sourceHistoryEntryRevision: Int64? = nil,
         aiConversationID: UUID? = nil,
         aiQuestionText: String? = nil,
+        aiTaskKind: ManagedGatewayTaskKind? = nil,
         aiThinkingEnabled: Bool? = nil,
         startDeadlineAt: TimeInterval? = nil,
         processingDeadlineAt: TimeInterval? = nil
@@ -80,6 +83,7 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         self.sourceHistoryEntryRevision = sourceHistoryEntryRevision
         self.aiConversationID = aiConversationID
         self.aiQuestionText = aiQuestionText
+        self.aiTaskKind = aiTaskKind
         self.aiThinkingEnabled = aiThinkingEnabled
         self.startDeadlineAt = startDeadlineAt
         self.processingDeadlineAt = processingDeadlineAt

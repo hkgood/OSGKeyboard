@@ -1,8 +1,8 @@
 // HistoryView.swift
 // OSGKeyboard · Main App
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct HistoryView: View {
     @Environment(\.themePalette) private var palette: ThemePalette

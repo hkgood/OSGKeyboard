@@ -3,8 +3,8 @@
 //
 // Clipboard suggestion strip, enable-guide sheet, and history panel.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 // MARK: - Suggestion strip (Doubao-style)
 

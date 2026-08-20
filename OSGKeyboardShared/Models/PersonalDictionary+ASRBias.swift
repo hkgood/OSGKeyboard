@@ -4,8 +4,8 @@
 // Formats the user dictionary for cloud ASR bias (hotwords, Alibaba
 // vocabulary entries, or Whisper-style prompt fragments).
 
-import Foundation
 import CryptoKit
+import Foundation
 
 public struct AlibabaHotwordEntry: Codable, Sendable, Equatable {
     public let text: String

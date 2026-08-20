@@ -3,9 +3,9 @@
 //
 // Golden fixtures for Bailian / OpenAI / Volcengine streaming event parsers.
 
-import XCTest
-@testable import OSGKeyboardShared
 @testable import OSGKeyboardHostSupport
+@testable import OSGKeyboardShared
+import XCTest
 
 final class CloudASRStreamingEventParsingTests: XCTestCase {
 

@@ -1,8 +1,8 @@
 // OpenSourceLicenseCatalogTests.swift
 // OSGKeyboard · Unit Tests
 
-import XCTest
 @testable import OSGKeyboard
+import XCTest
 
 final class OpenSourceLicenseCatalogTests: XCTestCase {
     func testIOSCatalogIncludesRimeDictionariesIconsAndCuratedSpeechData() {
@@ -31,7 +31,7 @@ final class OpenSourceLicenseCatalogTests: XCTestCase {
             "osg-ai-tech-lexicon",
             "qwen3-asr-mlx",
             "swift-huggingface",
-            "swift-transformers",
+            "swift-transformers"
         ])
     }
 

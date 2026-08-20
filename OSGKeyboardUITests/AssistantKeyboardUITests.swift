@@ -190,7 +190,7 @@ final class AssistantKeyboardUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = [
             "--assistant-ui-test",
-            "--assistant-state=\(scenario)",
+            "--assistant-state=\(scenario)"
         ]
         app.launch()
         return app

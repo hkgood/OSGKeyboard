@@ -1,9 +1,9 @@
 // OSGKeyboardApp.swift
 // OSGKeyboard · Main App
 
-import SwiftUI
-import OSGKeyboardShared
 import OSGKeyboardHostSupport
+import OSGKeyboardShared
+import SwiftUI
 
 @main
 struct OSGKeyboardApp: App {
@@ -41,6 +41,10 @@ struct OSGKeyboardApp: App {
                 AIClipboardSkillLayoutDemoView()
             } else if ProcessInfo.processInfo.arguments.contains("--assistant-ui-test") {
                 AssistantKeyboardUITestHarness()
+            } else if ProcessInfo.processInfo.arguments.contains("--account-ui-test") {
+                AccountCenterUITestHarness()
+            } else if ProcessInfo.processInfo.arguments.contains("--managed-consent-ui-test") {
+                ManagedCloudConsentUITestHarness()
             } else if ProcessInfo.processInfo.arguments.contains("--pip-device-ui-test") {
                 FlowPiPDeviceUITestHarness()
             } else if ProcessInfo.processInfo.arguments.contains("--clipboard-demo") {
@@ -50,6 +54,11 @@ struct OSGKeyboardApp: App {
                     EditPagerUITestHarness()
                 }
                 .preferredColorScheme(appearance.colorScheme)
+            } else if ProcessInfo.processInfo.arguments.contains("--iap-review-screenshot") {
+                ThemedRoot {
+                    IAPReviewScreenshotHarness()
+                }
+                .preferredColorScheme(.light)
             } else if AppGroup.isAvailable {
                 ThemedRoot {
                     MainAppRoot()
@@ -141,8 +150,7 @@ struct OSGKeyboardApp: App {
             return WhatsNewDemoScenario(rawValue: raw)
         }
         if let idx = args.firstIndex(of: "--whats-new-scenario"),
-           args.index(after: idx) < args.endIndex
-        {
+           args.index(after: idx) < args.endIndex {
             return WhatsNewDemoScenario(rawValue: args[args.index(after: idx)])
         }
         return nil
@@ -154,8 +162,7 @@ struct OSGKeyboardApp: App {
             return WhatsNewDemoScenario.Language(rawValue: raw) ?? .zh
         }
         if let idx = args.firstIndex(of: "--whats-new-lang"),
-           args.index(after: idx) < args.endIndex
-        {
+           args.index(after: idx) < args.endIndex {
             return WhatsNewDemoScenario.Language(
                 rawValue: args[args.index(after: idx)]
             ) ?? .zh

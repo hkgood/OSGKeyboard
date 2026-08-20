@@ -7,9 +7,9 @@
 //
 // Home stats (chart + metric tiles) live in Shared as `UsageStatsCluster`.
 
-import SwiftUI
-import OSGKeyboardShared
 import OSGKeyboardHostSupport
+import OSGKeyboardShared
+import SwiftUI
 
 // MARK: - Layout metrics
 

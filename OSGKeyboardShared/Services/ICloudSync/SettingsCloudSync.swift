@@ -181,9 +181,14 @@ public final class SettingsCloudSync {
         to store: AppGroupStore,
         postNotification: Bool
     ) {
-        var config = store.configurationSnapshot()
+        let baseline = store.configurationSnapshot()
+        var config = baseline
         settings.applying(to: &config)
-        store.saveConfiguration(config, settingsCloudUpdatedAt: settings.latestUpdatedAt)
+        store.saveConfiguration(
+            config,
+            since: baseline,
+            settingsCloudUpdatedAt: settings.latestUpdatedAt
+        )
         saveLocalPayload(settings, to: store.defaults)
         if postNotification {
             AppGroupConfigDarwin.postConfigChanged()
@@ -220,9 +225,12 @@ private extension AppGroupStore {
         AppGroupConfiguration.load(fromAvailable: defaults)
     }
 
-    func saveConfiguration(_ configuration: AppGroupConfiguration, settingsCloudUpdatedAt: Date) {
-        let config = configuration
-        config.save(to: defaults)
+    func saveConfiguration(
+        _ configuration: AppGroupConfiguration,
+        since baseline: AppGroupConfiguration,
+        settingsCloudUpdatedAt: Date
+    ) {
+        configuration.saveChanges(since: baseline, to: defaults)
         defaults.set(
             settingsCloudUpdatedAt.timeIntervalSince1970,
             forKey: AppGroupConfiguration.Keys.settingsCloudUpdatedAt

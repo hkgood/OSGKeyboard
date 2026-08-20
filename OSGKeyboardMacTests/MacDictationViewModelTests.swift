@@ -4,8 +4,8 @@
 // Regression coverage for cancelling an asynchronous recorder start.
 
 import Foundation
-import XCTest
 @testable import OSGKeyboard
+import XCTest
 
 @MainActor
 final class MacDictationViewModelTests: XCTestCase {

@@ -3,8 +3,8 @@
 //
 // Hermetic tests for dictionary tombstone merge semantics.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class PersonalDictionaryMergeTests: XCTestCase {
     func testDeletedEntryDoesNotResurrectFromRemote() {
@@ -21,7 +21,7 @@ final class PersonalDictionaryMergeTests: XCTestCase {
                     term: "OSG",
                     category: .productName,
                     source: .manual
-                ),
+                )
             ]
         )
 
@@ -47,7 +47,7 @@ final class PersonalDictionaryMergeTests: XCTestCase {
                     category: .custom,
                     source: .manual,
                     createdAt: Date(timeIntervalSince1970: 600)
-                ),
+                )
             ]
         )
 

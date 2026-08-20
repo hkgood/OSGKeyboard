@@ -7,9 +7,9 @@
 // a transient `UIEvent`. SwiftUI draws the shared native key chrome while a
 // transparent `UIButton` owns touch delivery.
 
+import OSGKeyboardShared
 import SwiftUI
 import UIKit
-import OSGKeyboardShared
 
 struct GlobeInputModeButton: UIViewRepresentable {
     @ObservedObject var state: KeyboardState

@@ -102,6 +102,10 @@
 	<string>OSGKeyboard uses the microphone for voice dictation, including active Flow sessions while you type in other apps.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>OSGKeyboard uses speech recognition to transcribe your voice. Audio is processed on-device by default, or sent to your configured speech provider only when you enable cloud recognition.</string>
+	<key>OSGPrivateKeychainAccessGroup</key>
+	<string>$(AppIdentifierPrefix)com.osgkeyboard.ios</string>
+	<key>SKIncludeConsumableInAppPurchaseHistory</key>
+	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

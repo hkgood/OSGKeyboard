@@ -3,8 +3,8 @@
 //
 // Hermetic tests for cumulative usage statistics iCloud merge.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 @MainActor
 final class UsageStatisticsCloudSyncTests: XCTestCase {
@@ -41,7 +41,7 @@ final class UsageStatisticsCloudSyncTests: XCTestCase {
                 dictationDurationSeconds: 30,
                 dictationCharacterCount: 120,
                 translationCharacterCount: 10
-            ),
+            )
         ])
         let remote = SyncedUsageStatisticsV2(devices: [
             deviceB: UsageStatisticsDeviceSlice(
@@ -49,7 +49,7 @@ final class UsageStatisticsCloudSyncTests: XCTestCase {
                 dictationDurationSeconds: 45,
                 dictationCharacterCount: 80,
                 translationCharacterCount: 25
-            ),
+            )
         ])
 
         let merged = SyncedUsageStatisticsV2.merge(local: local, remote: remote).aggregated
@@ -66,7 +66,7 @@ final class UsageStatisticsCloudSyncTests: XCTestCase {
                 dictationDurationSeconds: 30,
                 dictationCharacterCount: 120,
                 translationCharacterCount: 10
-            ),
+            )
         ])
         let remote = SyncedUsageStatisticsV2(devices: [
             deviceA: UsageStatisticsDeviceSlice(
@@ -74,7 +74,7 @@ final class UsageStatisticsCloudSyncTests: XCTestCase {
                 dictationDurationSeconds: 45,
                 dictationCharacterCount: 80,
                 translationCharacterCount: 25
-            ),
+            )
         ])
 
         let merged = SyncedUsageStatisticsV2.merge(local: local, remote: remote).aggregated
@@ -91,7 +91,7 @@ final class UsageStatisticsCloudSyncTests: XCTestCase {
                 dictationDurationSeconds: 90,
                 dictationCharacterCount: 500,
                 translationCharacterCount: 40
-            ),
+            )
         ])
         try sync.push(remote)
 
@@ -120,7 +120,7 @@ final class UsageStatisticsCloudSyncTests: XCTestCase {
                 dictationDurationSeconds: 20,
                 dictationCharacterCount: 150,
                 translationCharacterCount: 5
-            ),
+            )
         ])
         try sync.push(remote)
 

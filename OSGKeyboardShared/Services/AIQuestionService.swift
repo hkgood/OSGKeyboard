@@ -58,7 +58,7 @@ public enum AIQuestionPromptComposer {
             .system(systemPrompt(
                 targetLocaleID: targetLocaleID,
                 responseLength: responseLength
-            )),
+            ))
         ]
         for turn in turns.suffix(AIQuestionLimits.retainedConversationRounds) {
             messages.append(.user(turn.question))
@@ -128,8 +128,20 @@ public struct AIQuestionService: Sendable {
     public static func configured(
         store: any ConfigurationStore,
         conversations: AIConversationStore,
+        taskKind: ManagedGatewayTaskKind = .aiQuestion,
         thinkingEnabled: Bool = true
     ) throws -> AIQuestionService {
+        if store.credentialSource == .managed {
+            return AIQuestionService(
+                client: ManagedLLMClient(
+                    capability: .assistant,
+                    taskKind: taskKind,
+                    grants: GatewayGrantCoordinator()
+                ),
+                conversations: conversations,
+                responseLength: store.aiResponseLength
+            )
+        }
         // Same provider + baseURL + model resolution as dictation polish so the
         // Settings LLM card is the single source of truth for both modes.
         let providerID = PolishingService.resolvedProviderId(

@@ -8,9 +8,9 @@
 // Local engine: partial transcripts stream into the text box live.
 // Cloud engine: final transcript is appended when recording stops.
 
-import SwiftUI
-import OSGKeyboardShared
 import OSGKeyboardHostSupport
+import OSGKeyboardShared
+import SwiftUI
 
 struct KeyboardPreviewSheet: View {
     @Environment(\.themePalette) private var palette: ThemePalette

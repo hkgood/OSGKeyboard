@@ -4,8 +4,8 @@
 // Push 进 NavigationStack 子页时隐藏底部自定义 tab 栏（对齐系统 TabView 行为）。
 // MainTabView 读取 `TabBarHiddenPreferenceKey`；子页用 `hidesTabBarWhenPushed()` 声明。
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 // MARK: - Preference
 

@@ -56,9 +56,10 @@ public struct AppGroupStore: @unchecked Sendable {
     }
 
     private func mutateConfiguration(_ transform: (inout AppGroupConfiguration) -> Void) {
-        var config = AppGroupConfiguration.load(fromAvailable: defaults)
+        let baseline = AppGroupConfiguration.load(fromAvailable: defaults)
+        var config = baseline
         transform(&config)
-        config.save(to: defaults)
+        config.saveChanges(since: baseline, to: defaults)
     }
 
     // MARK: - Reads
@@ -74,6 +75,7 @@ public struct AppGroupStore: @unchecked Sendable {
     public var modeId: String { configuration.modeId }
     public var localeId: String { configuration.localeId }
     public var engineMode: String { configuration.engineMode }
+    public var credentialSource: CredentialSource { configuration.credentialSource }
     public var uiLanguage: AppUILanguage { configuration.uiLanguage }
     public var translationEnabled: Bool { configuration.translationEnabled }
     public var translationTargetLocaleId: String { configuration.translationTargetLocaleId }
@@ -118,6 +120,11 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setEngineMode(_ mode: String) {
         mutateConfiguration { $0.engineMode = mode }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setCredentialSource(_ source: CredentialSource) {
+        mutateConfiguration { $0.credentialSource = source }
         AppGroupConfigDarwin.postConfigChanged()
     }
 
@@ -387,7 +394,7 @@ public struct AppGroupStore: @unchecked Sendable {
 
     // MARK: - Client
 
-    public func makeClient() -> LLMClient {
-        configuration.makeClient()
+    public func makeClient(taskKind: ManagedGatewayTaskKind?) -> LLMClient {
+        configuration.makeClient(taskKind: taskKind)
     }
 }

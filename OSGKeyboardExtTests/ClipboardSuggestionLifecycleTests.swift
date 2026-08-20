@@ -5,8 +5,8 @@
 // and one keyboard presentation; clipboard history remains independently usable.
 
 import Combine
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 @MainActor
 final class ClipboardSuggestionLifecycleTests: XCTestCase {

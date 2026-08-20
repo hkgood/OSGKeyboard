@@ -1,5 +1,5 @@
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class AIHistoryAndUsageTests: XCTestCase {
     @MainActor
@@ -40,7 +40,7 @@ final class AIHistoryAndUsageTests: XCTestCase {
             "text": "旧记录",
             "createdAt": Date().timeIntervalSinceReferenceDate,
             "modifiedAt": Date().timeIntervalSinceReferenceDate,
-            "revision": 0,
+            "revision": 0
         ]
         let data = try JSONSerialization.data(withJSONObject: payload)
         let decoder = JSONDecoder()

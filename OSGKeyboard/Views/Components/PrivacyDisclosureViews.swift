@@ -3,8 +3,8 @@
 //
 // Reusable privacy / data-flow disclosure blocks for Settings and Onboarding.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 /// Card-style block for Full Access and similar permission explanations.
 struct PrivacyInfoCard: View {

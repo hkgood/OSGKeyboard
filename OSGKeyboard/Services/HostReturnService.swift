@@ -3,8 +3,8 @@
 //
 // Opens a whitelisted host-app URL after a cold-start Flow handoff.
 
-import UIKit
 import OSGKeyboardShared
+import UIKit
 
 enum HostReturnService {
     /// Attempts to return to the pending host app. Clears the pending bundle id on success.

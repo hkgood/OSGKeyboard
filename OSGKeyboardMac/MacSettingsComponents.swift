@@ -235,7 +235,7 @@ struct MacProviderThinkingRow: View {
     @Environment(\.themePalette) private var palette
 
     let title: String
-    var subtitle: String? = nil
+    var subtitle: String?
     @Binding var isOn: Bool
 
     var body: some View {

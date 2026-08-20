@@ -4,8 +4,8 @@
 // Plays the built-in iOS keyboard click sounds so the custom bottom-row
 // keys (space / return / delete) sound identical to the stock keyboard.
 
-import UIKit
 import AudioToolbox
+import UIKit
 
 /// 让键盘扩展支持系统点击音。`UIDevice.playInputClick()` 只有在「某个
 /// 可见的输入视图遵循本协议且返回 true」时才会发声。键盘扩展的根视图

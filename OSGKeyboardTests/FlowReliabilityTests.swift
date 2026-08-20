@@ -3,12 +3,12 @@
 //
 // Regression coverage for durable cross-process delivery and bounded fallback.
 
-import Foundation
 import AVFoundation
-import XCTest
+import Foundation
 @testable import OSGKeyboard
-@testable import OSGKeyboardShared
 @testable import OSGKeyboardHostSupport
+@testable import OSGKeyboardShared
+import XCTest
 
 final class FlowReliabilityTests: XCTestCase {
     private var defaults: UserDefaults!

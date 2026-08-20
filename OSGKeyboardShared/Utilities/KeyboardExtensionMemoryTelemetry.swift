@@ -5,8 +5,8 @@
 // The host process never starts this monitor, so shared typing code can emit
 // extension-only milestones without duplicating host telemetry.
 
-import Foundation
 import Darwin
+import Foundation
 
 public enum KeyboardExtensionMemoryBudget {
     /// Start preserving evidence before the extension reaches its safe ceiling.

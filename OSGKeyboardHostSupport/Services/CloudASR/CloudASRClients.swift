@@ -42,7 +42,17 @@ extension CloudASRTranscribing {
 }
 
 public enum CloudASRClientFactory {
-    public static func make(store: any ConfigurationStore, session: URLSession = .shared) -> CloudASRTranscribing {
+    public static func make(
+        store: any ConfigurationStore,
+        session: URLSession = .shared,
+        managedGrants: GatewayGrantCoordinator? = nil
+    ) -> CloudASRTranscribing {
+        if store.credentialSource == .managed {
+            return ManagedVolcengineASRClient(
+                grants: managedGrants ?? GatewayGrantCoordinator(),
+                session: session
+            )
+        }
         let providerId = store.asrProviderId
         let strategy = CloudASRModelCatalog.strategy(for: providerId)
         let asrModel = store.asrModel.isEmpty
@@ -229,8 +239,8 @@ struct AlibabaFunASRClient: CloudASRTranscribing {
             messages.append([
                 "role": "user",
                 "content": [
-                    ["type": "input_text", "text": context],
-                ],
+                    ["type": "input_text", "text": context]
+                ]
             ])
         }
         messages.append([
@@ -238,20 +248,20 @@ struct AlibabaFunASRClient: CloudASRTranscribing {
             "content": [
                 [
                     "type": "input_audio",
-                    "input_audio": ["data": dataURI],
-                ],
-            ],
+                    "input_audio": ["data": dataURI]
+                ]
+            ]
         ])
 
         let parameters: [String: Any] = [
             "format": "wav",
-            "sample_rate": "\(sampleRate)",
+            "sample_rate": "\(sampleRate)"
         ]
 
         let body: [String: Any] = [
             "model": model,
             "input": ["messages": messages],
-            "parameters": parameters,
+            "parameters": parameters
         ]
 
         var request = URLRequest(url: url)
@@ -303,22 +313,6 @@ struct PromptCloudASRClient: CloudASRTranscribing {
 
     /// Groq / OpenRouter batch uploads cap around 30 s per request.
     private static let whisperCompatibleMaxDurationSeconds: TimeInterval = 30
-
-    init(
-        providerId: String,
-        baseURL: String,
-        apiKey: String,
-        model: String,
-        session: URLSession,
-        requestFormat: PromptCloudASRRequestFormat = .multipart
-    ) {
-        self.providerId = providerId
-        self.baseURL = baseURL
-        self.apiKey = apiKey
-        self.model = model
-        self.session = session
-        self.requestFormat = requestFormat
-    }
 
     func prepare(dictionary: PersonalDictionary) async throws {}
 
@@ -422,8 +416,8 @@ struct PromptCloudASRClient: CloudASRTranscribing {
             "model": model,
             "input_audio": [
                 "data": wav.base64EncodedString(),
-                "format": "wav",
-            ],
+                "format": "wav"
+            ]
         ]
         let prompt = dictionary.asrPromptBias(maxCharacters: 600)
         if !prompt.isEmpty {
@@ -463,15 +457,15 @@ struct PromptCloudASRClient: CloudASRTranscribing {
         }
         userContent.append([
             "type": "input_audio",
-            "input_audio": ["data": dataURI],
+            "input_audio": ["data": dataURI]
         ])
 
         let body: [String: Any] = [
             "model": model,
             "messages": [
-                ["role": "user", "content": userContent],
+                ["role": "user", "content": userContent]
             ],
-            "asr_options": ["language": "auto"],
+            "asr_options": ["language": "auto"]
         ]
 
         var request = URLRequest(url: url)

@@ -7,8 +7,8 @@
 // `--whats-new-lang=zh|en`.
 
 #if DEBUG
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct AIClipboardSkillLayoutDemoView: View {
     @StateObject private var config = ProviderConfig.shared
@@ -173,7 +173,7 @@ struct AIClipboardSkillLayoutDemoView: View {
                 descriptionKey: "skills.translate.description",
                 kind: .transform,
                 isDefault: false
-            ),
+            )
         ]
         extras = Array(extras.prefix(count - catalog.count))
         return catalog + extras

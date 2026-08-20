@@ -8,9 +8,9 @@
 // the difference between "Speech works" and "Speech crashes" — worth
 // a regression test even though it's only ~3 lines of arithmetic.
 
-import XCTest
-@testable import OSGKeyboardShared
 @testable import OSGKeyboardHostSupport
+@testable import OSGKeyboardShared
+import XCTest
 
 final class ASRConversionTests: XCTestCase {
 

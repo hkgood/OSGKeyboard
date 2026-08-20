@@ -1,8 +1,8 @@
 // PolishStylePackTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class PolishStylePackTests: XCTestCase {
     func testDefaultStyleResolvesWhenActiveIDIsUnknown() {
@@ -49,7 +49,7 @@ final class PolishStylePackTests: XCTestCase {
             "builtin.flex",
             "builtin.corp",
             "builtin.diba",
-            "builtin.xhs",
+            "builtin.xhs"
         ])
 
         for id in PolishStylePackCatalog.BuiltinStyleGroup.fun.ids {
@@ -82,7 +82,7 @@ final class PolishStylePackTests: XCTestCase {
             "builtin.flex": "textformat",
             "builtin.corp": "building.2",
             "builtin.diba": "quote.bubble",
-            "builtin.xhs": "star.bubble",
+            "builtin.xhs": "star.bubble"
         ]
 
         for (id, symbol) in expected {
@@ -407,7 +407,7 @@ final class PolishStylePackTests: XCTestCase {
             ("builtin.flex", "你觉得这个包怎么样"),
             ("builtin.corp", "你觉得这个方案怎么样"),
             ("builtin.xhs", "你觉得这个包怎么样"),
-            ("builtin.chat", "你觉得这个包怎么样"),
+            ("builtin.chat", "你觉得这个包怎么样")
         ]
         for (id, marker) in cases {
             let pack = PolishStylePackCatalog.resolve(id: id, userCatalog: .empty)

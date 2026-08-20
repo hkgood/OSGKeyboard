@@ -60,7 +60,7 @@ public enum AIMapNavigation: Sendable {
             URLQueryItem(name: "sname", value: originName),
             URLQueryItem(name: "dname", value: route.destination),
             URLQueryItem(name: "dev", value: "0"),
-            URLQueryItem(name: "t", value: "0"),
+            URLQueryItem(name: "t", value: "0")
         ]
         if useLegacyScheme {
             return makeURL(scheme: "iosamap", host: "path", path: nil, items: items)
@@ -78,7 +78,7 @@ public enum AIMapNavigation: Sendable {
         var items = [
             URLQueryItem(name: "destination", value: "name:\(route.destination)"),
             URLQueryItem(name: "mode", value: "driving"),
-            URLQueryItem(name: "src", value: baiduSource),
+            URLQueryItem(name: "src", value: baiduSource)
         ]
         if let origin = route.origin {
             items.insert(
@@ -92,7 +92,7 @@ public enum AIMapNavigation: Sendable {
     private static func appleURL(_ route: AIMapRoute) -> URL {
         var items = [
             URLQueryItem(name: "daddr", value: route.destination),
-            URLQueryItem(name: "dirflg", value: "d"),
+            URLQueryItem(name: "dirflg", value: "d")
         ]
         if let origin = route.origin {
             items.insert(URLQueryItem(name: "saddr", value: origin), at: 0)

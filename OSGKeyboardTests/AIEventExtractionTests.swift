@@ -1,8 +1,8 @@
 // AIEventExtractionTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class AIEventExtractionTests: XCTestCase {
     private var calendar: Calendar {

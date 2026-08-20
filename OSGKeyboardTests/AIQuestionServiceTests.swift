@@ -1,5 +1,5 @@
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class AIQuestionServiceTests: XCTestCase {
     func testSuccessfulTurnsAreRetainedAndOldestTurnIsTrimmed() async throws {
@@ -124,7 +124,7 @@ final class AIQuestionServiceTests: XCTestCase {
             .delta("你好"),
             .delta("，世界"),
             .restart,
-            .delta("最终答案"),
+            .delta("最终答案")
         ])
         let service = AIQuestionService(
             client: client,

@@ -7,8 +7,8 @@
 // (`KeyboardViewController`) re-exports the same type as a typealias so
 // existing call sites (`KeyboardViewController.State`) keep compiling.
 
-import Foundation
 import Combine
+import Foundation
 import SwiftUI
 import UIKit
 
@@ -310,13 +310,13 @@ public final class KeyboardState: ObservableObject {
     }
 
     // Action hooks — injected by the view controller at install time.
-    public var beginRecording:      () -> Void = {}
-    public var endRecording:        () -> Void = {}
-    public var tapMic:              () -> Void = {}
+    public var beginRecording: () -> Void = {}
+    public var endRecording: () -> Void = {}
+    public var tapMic: () -> Void = {}
     /// Starts/cancels a bounded host-audio prime from the user's mic touch.
-    public var setMicTouchActive:   (Bool) -> Void = { _ in }
+    public var setMicTouchActive: (Bool) -> Void = { _ in }
     /// Discards the complete normal-dictation round, including late ASR/LLM output.
-    public var cancelVoiceInput:    () -> Void = {}
+    public var cancelVoiceInput: () -> Void = {}
     public var beginEditLastInput: () -> Void = {}
     public var stopEditListening: () -> Void = {}
     public var confirmEditResult: () -> Void = {}
@@ -334,7 +334,7 @@ public final class KeyboardState: ObservableObject {
     public var submitAIClipboardSkill: (AIClipboardSkill) -> Void = { _ in }
     /// Writes extract-todos titles and opens the host to run the Shortcut.
     public var runClipboardExportSkill: (String, [String]) -> Void = { _, _ in }
-    public var openSettings:        () -> Void = {}
+    public var openSettings: () -> Void = {}
     /// Opens the host app straight to input-resource deployment. Used by the
     /// typing surface when Rime resources have not been deployed yet.
     public var openInputMethodSetup: () -> Void = {}
@@ -353,25 +353,25 @@ public final class KeyboardState: ObservableObject {
     /// ownership cycle; UIKit's standard all-touch-events action provides both
     /// tap-to-advance and long-press input-mode selection.
     public weak var inputModeController: UIInputViewController?
-    public var startFlowSession:    () -> Void = {}
-    public var setMode:             (InputMode) -> Void = { _ in }
-    public var setLocale:           (String) -> Void = { _ in }
-    public var setEngineMode:        (String) -> Void = { _ in }
+    public var startFlowSession: () -> Void = {}
+    public var setMode: (InputMode) -> Void = { _ in }
+    public var setLocale: (String) -> Void = { _ in }
+    public var setEngineMode: (String) -> Void = { _ in }
     /// Only the locale picker remains; `enabled`
     /// is derived from the locale id, so there's no separate toggle to
     /// persist. Wired in `KeyboardViewController.installStateActions`.
     public var setTranslationTargetLocaleId: (String) -> Void = { _ in }
-    public var insertNewline:       () -> Void = {}
-    public var insertSpace:         () -> Void = {}
-    public var deleteBackward:      () -> Void = {}
+    public var insertNewline: () -> Void = {}
+    public var insertSpace: () -> Void = {}
+    public var deleteBackward: () -> Void = {}
     /// Undo the last voice insertion when `undoAvailable` is true.
-    public var undoLastInsertion:   () -> Void = {}
+    public var undoLastInsertion: () -> Void = {}
     /// Redo the last undone voice insertion when `redoAvailable` is true.
-    public var redoLastInsertion:   () -> Void = {}
+    public var redoLastInsertion: () -> Void = {}
     /// Copy the current text selection to the pasteboard.
-    public var copySelection:       () -> Void = {}
+    public var copySelection: () -> Void = {}
     /// Cut the current text selection (copy + delete).
-    public var cutSelection:        () -> Void = {}
+    public var cutSelection: () -> Void = {}
     /// Switch voice ↔ typing. No-ops when voice pipeline is active.
     public var setSurface: (Surface) -> Void = { _ in }
 

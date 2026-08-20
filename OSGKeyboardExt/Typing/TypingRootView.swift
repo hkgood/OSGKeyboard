@@ -4,8 +4,8 @@
 // Typing surface: candidate bar + QWERTY / 123 / symbols.
 // Top-leading control returns to the voice surface.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 enum TypingLayoutMetrics {
     // Size decisions live in `TypingSurfaceMetrics` (Shared) so the UIKit

@@ -4,20 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Privacy Policy · OSGKeyboard</title>
-  <meta name="description" content="OSGKeyboard privacy policy: on-device speech recognition by default, optional cloud ASR you configure, text-only LLM polish, no analytics SDKs, no sale of personal data.">
+  <meta name="description" content="OSGKeyboard privacy policy: no account required for core use, on-device speech recognition by default, optional user-configured or managed cloud services, no analytics SDKs, no sale of personal data.">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://hkgood.github.io/OSGKeyboard/privacy/">
   <link rel="icon" href="../assets/app-icon.png" type="image/png">
   <meta property="og:title" content="OSGKeyboard Privacy Policy">
-  <meta property="og:description" content="On-device by default. Audio stays local unless you opt into a cloud engine you configure.">
+  <meta property="og:description" content="No account required for core use. On-device by default, with optional user-configured or managed cloud services.">
   <meta property="og:url" content="https://hkgood.github.io/OSGKeyboard/privacy/">
   <meta property="og:type" content="website">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.6; max-width: 720px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }
+    :root { color-scheme: light dark; --bg: #f7faf8; --ink: #102218; --muted: #5c6c62; --line: rgba(16, 34, 24, 0.12); --green: #238b48; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #06100a; --ink: #f1fff5; --muted: #a6b9ac; --line: rgba(222, 255, 233, 0.14); --green: #72e694; }
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.68; max-width: 760px; margin: 0 auto; padding: 2rem 1.25rem 4rem; color: var(--ink); background: var(--bg); }
     h1, h2 { line-height: 1.3; }
-    a { color: #0a7; }
-    hr { margin: 2rem 0; border: none; border-top: 1px solid #ddd; }
-    .lang { font-size: 0.9rem; color: #666; }
+    h1 { letter-spacing: -0.035em; }
+    h2 { margin-top: 2rem; }
+    a { color: var(--green); }
+    li { margin-bottom: 0.65rem; }
+    code { overflow-wrap: anywhere; }
+    hr { margin: 3rem 0; border: none; border-top: 1px solid var(--line); }
+    .lang { font-size: 0.9rem; color: var(--muted); }
     .top-nav { font-size: 0.9rem; margin-bottom: 1.25rem; }
   </style>
 </head>
@@ -25,18 +33,19 @@
   <p class="top-nav"><a href="../">← OSGKeyboard</a> · <a href="https://apps.apple.com/app/osgkeyboard/id6781553267">App Store</a></p>
   <p class="lang"><a href="#zh">中文</a></p>
   <h1>OSGKeyboard Privacy Policy</h1>
-  <p><strong>Last updated:</strong> August 14, 2026 · <em>v1.3</em></p>
-  <p>OSGKeyboard provides an iOS custom keyboard and a macOS menu-bar dictation app. iOS uses Apple's on-device <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code> by default; macOS can use a downloaded local Qwen3-ASR model. You may instead choose a cloud recognition engine in Settings. After transcription, text may be polished, translated, or used by AI Agent features through a provider you configure. This policy explains what data the apps process and how it is used.</p>
+  <p><strong>Last updated:</strong> August 20, 2026 · <em>v2.0</em></p>
+  <p>OSGKeyboard provides an iOS custom keyboard and a macOS menu-bar dictation app. iOS uses Apple's on-device <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code> by default; macOS can use a downloaded local Qwen3-ASR model. Core local features and user-configured providers do not require an OSGKeyboard account. On iOS, you may optionally sign in with Apple and use managed credits instead of supplying provider credentials. This policy explains all three paths.</p>
 
   <h2>What we collect</h2>
   <ul>
-    <li><strong>Voice audio</strong> — captured only while you actively record. On a <strong>local engine</strong>, audio is transcribed on-device and raw audio is not uploaded. If you actively select a <strong>cloud engine</strong> in Settings, recordings are uploaded directly to the ASR provider you configure (e.g. OpenAI, Qwen DashScope, Zhipu); that provider's privacy policy applies. OSGKeyboard never stores or proxies your audio on its own servers.</li>
-    <li><strong>Transcribed text and cursor context</strong> — after ASR, the transcript (not audio) may be sent for polish when you have configured an LLM API key. To continue naturally at the insertion point, a small amount of text immediately before and after the cursor may be included. Secure fields are never captured; cursor context is not written to logs or voice history. Without an API key, raw ASR text is inserted and no polish request is sent. Polish and optional translation use the OpenAI-compatible (or Anthropic) API you configure (e.g. OpenAI, DeepSeek, Qwen DashScope, Moonshot, Zhipu, Xiaomi MiMo, or your own server).</li>
-    <li><strong>AI mode questions</strong> — in AI keyboard mode, your spoken question text is sent to the same configured LLM provider. When that provider supports server-side web search, it may retrieve public web results for time-sensitive answers. Search queries and snippets are handled by that provider under its privacy policy; OSGKeyboard does not operate a search index or proxy search traffic.</li>
+    <li><strong>Voice audio</strong> — captured only while you actively record. On a <strong>local engine</strong>, audio is transcribed on-device and raw audio is not uploaded. With a user-configured cloud engine, recordings go directly to that provider. If you explicitly select managed credits, recordings go through the OSGKeyboard managed gateway at <code>account.osglab.com</code> to the managed ASR provider. Before the first switch to managed credits, the app explains that audio, text, nearby cursor context, and account data may leave the device and requires explicit agreement. OSGKeyboard does not retain raw recordings after processing.</li>
+    <li><strong>Transcribed text and cursor context</strong> — after ASR, the transcript (not audio) may be sent for polish when you use a configured LLM or managed credits. To continue naturally at the insertion point, a small amount of text immediately before and after the cursor may be included. Secure fields are never captured; cursor context is not written to logs or voice history. User-configured requests go directly to that provider; managed-credit requests go through <code>account.osglab.com</code>. Without either path, raw local ASR text can still be inserted.</li>
+    <li><strong>AI mode questions</strong> — in AI keyboard mode, your spoken question text—or a question you tap from an idle suggestion—is sent to the selected AI service. User-configured requests go directly to that provider; managed-credit requests go through <code>account.osglab.com</code>. When the selected service supports server-side web search, it may retrieve public web results for time-sensitive answers.</li>
     <li><strong>AI suggestions and OSGKeyboard web pages</strong> — the main app may request public suggestion titles from <code>key.osglab.com</code>; no voice, transcript, clipboard body, API key, or ordinary keystroke content is included in that request. Opening the update page requests public content from <code>download.osglab.com</code>. As with ordinary HTTPS sites, those hosts and their infrastructure may process connection metadata such as IP address and request time.</li>
     <li><strong>AI Agent skills, Shortcuts, and maps</strong> — when you deliberately run a skill, the selected or copied text and skill prompt are sent to your configured LLM provider. For Reminders, Calendar, or Notes exports, the generated result is passed on-device to the Apple Shortcut you install; OSGKeyboard does not receive the resulting item. For navigation, an address or route is placed in a URL opened by Apple Maps, Amap, or Baidu Maps, and the selected map provider's policy applies.</li>
-    <li><strong>API credentials</strong> — your cloud-engine LLM API key is stored in the iOS Keychain on your device and is read only when an LLM request is made. It is shared with the main app through a shared Keychain group, never through UserDefaults. When you enable <strong>iCloud settings sync</strong>, API keys replicate through Apple's <strong>iCloud Keychain</strong> to your other signed-in devices — not through iCloud Key-Value Store JSON.</li>
-    <li><strong>App preferences</strong> — engine mode, recognition language, polish intensity, translation target, handedness, cursor-navigation toggle, and keyboard settings are stored in App Group <code>UserDefaults</code> on your device so the main app and keyboard extension stay in sync. Device-local clipboard consent switches are not activated by iCloud settings sync.</li>
+    <li><strong>API credentials</strong> — your user-configured provider keys are stored in the iOS Keychain and shared with the keyboard through a shared Keychain group, never through UserDefaults. When you enable <strong>iCloud settings sync</strong>, API keys replicate through Apple's <strong>iCloud Keychain</strong> to your other signed-in devices — not through iCloud Key-Value Store JSON.</li>
+    <li><strong>Optional OSGKeyboard account and purchases</strong> — no account is required for local transcription or user-configured providers. If you choose Sign in with Apple, the account service processes the Apple identity token, a pseudonymous OSGKeyboard account identifier, optional display name, device-integrity evidence, credit balance, referral state, and StoreKit transaction identifiers needed to verify consumable credit purchases. Account session tokens stay in the main app's private Keychain; the keyboard extension receives only a short-lived, scope-limited managed-service grant. You can sign out or delete the account in the app.</li>
+    <li><strong>App preferences</strong> — engine mode, recognition language, polish intensity, translation target, handedness, and keyboard settings are stored in App Group <code>UserDefaults</code> so the main app and keyboard extension stay in sync. Device-local clipboard consent switches are not activated by iCloud settings sync.</li>
     <li><strong>Optional clipboard history</strong> — off by default. When enabled, the keyboard may read text copied on this device or received through Universal Clipboard; iOS cannot reliably identify which source supplied an item. Up to 15 accepted items are stored only in this device’s App Group for the host app and keyboard extension. Turning history off stops capture, disables the suggestion strip, and keeps existing items. Reset Settings also keeps them; deletion requires the separate confirmed “Clear clipboard history” action. There is no fixed expiry. Secure fields immediately clear the current suggestion, close the history panel, and hide the clipboard entry point. Conservative filters reject common OTP shapes, PEM private-key headers, long three-part JWTs, Bearer tokens, recognizable provider-key prefixes of safe lengths, and common Luhn-valid 16-digit card numbers; they do not claim to detect every password. Normal order numbers, years, and short labeled account numbers remain eligible. Rejected text can still be pasted once through iOS; it is simply not recorded. Clipboard text is never sent to AI on its own. It leaves the device only when you deliberately ask for it — tapping a clipboard suggestion in AI mode, saying “clipboard” in an AI question, or invoking polish after inserting an item — and it is then sent to your configured provider as separate quoted data, never as instructions.</li>
     <li><strong>Personal dictionary</strong> — terms and aliases you add in the Dictionary tab are stored locally on your device. They are included in LLM polish prompts so your vocabulary is preserved. Optional <strong>iCloud dictionary sync</strong> mirrors your dictionary through your private iCloud Key-Value Store; OSGKeyboard does not operate a separate dictionary server.</li>
     <li><strong>On-device typing learning</strong> — Chinese candidate frequencies and English suggestion choices are stored in the local App Group. You can clear this learning separately in typing settings without deleting the personal dictionary. OSGKeyboard does not upload it.</li>
@@ -50,25 +59,26 @@
   <ul>
     <li>We do <strong>not</strong> log or upload ordinary keystrokes. Only the on-device Chinese candidate-learning data described above is retained locally.</li>
     <li>We do <strong>not</strong> operate analytics, crash reporting, or advertising SDKs.</li>
-    <li>We do <strong>not</strong> upload raw audio on a local engine. If you actively select a cloud ASR engine in Settings, recordings go to the ASR provider <em>you</em> configure — never to servers of ours.</li>
+    <li>We do <strong>not</strong> upload raw audio on a local engine. Audio leaves the device only after you select a user-configured cloud engine or managed credits.</li>
     <li>We do <strong>not</strong> sell personal data.</li>
   </ul>
 
   <h2>How the keyboard extension talks to the host app</h2>
-  <p>OSGKeyboard uses a long-lived "Flow session" hosted in the main app. The keyboard extension writes tiny "start / stop" signals and, when available, a short redacted cursor-context snapshot into an App Group. The main app captures the audio, transcribes it (on-device by default; via your configured cloud ASR provider if you opted into the cloud engine), then — when an LLM API key is configured — sends the transcript and that nearby text for polish (and optional translation) before writing the result back. On the default local engine audio never leaves your device; only text is sent to your configured LLM endpoint when polish or AI mode runs.</p>
+  <p>OSGKeyboard uses a long-lived "Flow session" hosted in the main app. The keyboard extension writes tiny "start / stop" signals and, when available, a short redacted cursor-context snapshot into an App Group. The main app captures the audio, transcribes it on-device by default or through the cloud path you selected, then optionally sends the transcript and nearby text for polish before writing the result back. User-configured cloud requests go directly to that provider; managed-credit requests go through <code>account.osglab.com</code>.</p>
 
   <h2>Permissions</h2>
   <ul>
     <li><strong>Microphone</strong> (<code>NSMicrophoneUsageDescription</code>) — required for voice input and the long-lived voice session.</li>
     <li><strong>Speech recognition</strong> (<code>NSSpeechRecognitionUsageDescription</code>) — required for on-device transcription via Apple's APIs.</li>
-    <li><strong>Full Access</strong> — required so the keyboard can reach the microphone, read your API key from the shared Keychain, request the polished transcript from the host app, and—only when clipboard history is enabled—read clipboard text. Full Access does <em>not</em> grant us access to everything you type; we do not exfiltrate keystrokes.</li>
+    <li><strong>Full Access</strong> — required so the keyboard can reach the microphone, communicate with the main app, read your user-configured key from the shared Keychain or use a short-lived managed-service grant, and—only when clipboard history is enabled—read clipboard text. Full Access does <em>not</em> grant us access to everything you type; we do not exfiltrate keystrokes.</li>
   </ul>
 
   <h2>Third parties</h2>
-  <p>Cloud ASR and LLM requests go directly to the provider you configure. AI skills may also hand generated data to Apple Shortcuts or open a route in Apple Maps, Amap, or Baidu Maps. Public suggestions and update pages are served by <code>key.osglab.com</code> and <code>download.osglab.com</code>. Optional Mac models are downloaded from Hugging Face. Each third party's privacy policy applies; OSGKeyboard does not proxy, log, or aggregate your provider requests.</p>
+  <p>User-configured cloud ASR and LLM requests go directly to the provider you configure. Managed-credit requests go through <code>account.osglab.com</code> to the managed ASR or LLM provider. Apple processes Sign in with Apple and StoreKit purchases. AI skills may also hand generated data to Apple Shortcuts or open a route in Apple Maps, Amap, or Baidu Maps. Public suggestions and update pages are served by <code>key.osglab.com</code> and <code>download.osglab.com</code>. Optional Mac models are downloaded from Hugging Face. Each service's privacy policy applies.</p>
 
   <h2>Data retention</h2>
   <p>Settings remain on your device until you delete the app or reset settings. When iCloud settings sync is enabled, API keys replicate through iCloud Keychain and eligible preferences, statistics, dictionary data, and voice history may sync through your private iCloud account. Voice history is capped at 300 entries and can be cleared from History or by resetting settings. Clipboard history remains device-local, is capped at 15 entries, has no fixed expiry, and remains when capture is turned off or settings are reset; use the separate confirmed clear action to delete it. Chinese and English typing-learning data stays local and can be cleared from typing settings without deleting the personal dictionary. Downloaded Mac speech models remain until you remove the model in the app or delete its local files.</p>
+  <p><strong>Optional account</strong> — account profile, credit ledger, StoreKit audit records, and limited anti-abuse records are retained by the account service while the account is active. Account deletion removes the active profile and credentials; pseudonymous ledger, purchase-audit, and time-limited anti-abuse records may remain where required to prevent replay, fraud, or abuse.</p>
 
   <h2>Children's privacy</h2>
   <p>OSGKeyboard is not directed to children under 13 and does not knowingly collect personal data from children.</p>
@@ -83,19 +93,21 @@
   <p>Questions or privacy requests: open an issue at <a href="https://github.com/hkgood/OSGKeyboard">github.com/hkgood/OSGKeyboard</a>, or email <a href="mailto:rocky.hk@gmail.com">rocky.hk@gmail.com</a>.</p>
 
   <hr id="zh">
+  <div lang="zh-Hans">
   <h1>OSGKeyboard 隐私政策</h1>
-  <p><strong>更新日期：</strong>2026 年 8 月 14 日 · <em>v1.3</em></p>
-  <p>OSGKeyboard 包含 iOS 自定义键盘与 macOS 菜单栏听写应用。iOS 默认使用 Apple 端侧的 <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code>；macOS 可使用下载到本机的 Qwen3-ASR 模型。你也可以在设置中主动选择云端识别引擎。转写后，文字可能通过你配置的服务商用于润色、翻译或 AI Agent 功能。本政策说明应用处理哪些数据及用途。</p>
+  <p><strong>更新日期：</strong>2026 年 8 月 20 日 · <em>v2.0</em></p>
+  <p>OSGKeyboard 包含 iOS 自定义键盘与 macOS 菜单栏听写应用。iOS 默认使用 Apple 端侧的 <code>SpeechAnalyzer</code> + <code>DictationTranscriber</code>；macOS 可使用下载到本机的 Qwen3-ASR 模型。本地能力和用户自备服务商能力无需登录 OSGKeyboard 账号。iOS 用户也可以选择 Apple 登录并使用托管积分，无需自行填写服务商凭证。本政策同时说明这三条路径。</p>
 
   <h2>我们处理的数据</h2>
   <ul>
-    <li><strong>语音音频</strong> — 仅在你主动录音时采集。使用<strong>本地引擎</strong>时，音频在设备端完成转写，原始录音不会上传。若你在设置中主动选择<strong>云端引擎</strong>，录音会直接上传到你配置的识别服务商（如 OpenAI、通义 DashScope、智谱），适用该服务商的隐私政策。OSGKeyboard 自身不存储或中转音频。</li>
-    <li><strong>转写文字与光标上下文</strong> — ASR 完成后，若你已配置 LLM API Key，转写文字（非音频）可能发送润色。为了在插入点自然衔接，请求可能同时包含光标前后的少量文字。密码框绝不采集，光标上下文不会写入日志或语音历史。未填写 API Key 时直接插入原始识别结果。润色与可选翻译使用你配置的 OpenAI 兼容（或 Anthropic）API（OpenAI / DeepSeek / 通义 DashScope / Moonshot / 智谱 / 小米 MiMo / 自建服务等）。</li>
-    <li><strong>AI 模式问题</strong> — 在 AI 键盘模式下，语音转写后的问题文字会发送到同一套已配置的 LLM 服务商。若该服务商支持服务端联网搜索，可能为时效性问题检索公开网页结果。搜索词与检索片段由该服务商按其隐私政策处理；OSGKeyboard 不运营搜索索引，也不中转搜索流量。</li>
+    <li><strong>语音音频</strong> — 仅在你主动录音时采集。使用<strong>本地引擎</strong>时，音频在设备端完成转写，原始录音不会上传。使用用户自备云端服务时，录音会直接发送到你配置的识别服务商；若你明确选择「使用积分」，录音会经 <code>account.osglab.com</code> 的 OSGKeyboard 托管网关发送到托管识别服务商。首次切换托管积分前，App 会说明语音、文字、光标附近上下文与账号数据可能离开设备，并要求你明确同意。请求处理完成后，OSGKeyboard 不保留原始录音。</li>
+    <li><strong>转写文字与光标上下文</strong> — 使用已配置的 LLM 或托管积分时，转写文字（非音频）可能发送润色，并可能包含光标附近少量文字以自然衔接。密码框不会采集，光标上下文不会写入日志或语音历史。用户自备请求直达所选服务商；托管积分请求经 <code>account.osglab.com</code> 处理。未选择任一路径时，仍可直接插入本地 ASR 原始文字。</li>
+    <li><strong>AI 模式问题</strong> — 在 AI 键盘模式下，语音转写后的问题文字或你点选的建议会发送到当前选择的 AI 服务。用户自备请求直达所选服务商；托管积分请求经 <code>account.osglab.com</code> 处理。所选服务支持联网搜索时，可能检索公开网页结果回答时效性问题。</li>
     <li><strong>AI 建议与 OSGKeyboard 网页</strong> — 主 App 可能从 <code>key.osglab.com</code> 请求公开建议标题；该请求不包含语音、转写、剪贴板正文、API Key 或普通击键内容。打开更新页时会从 <code>download.osglab.com</code> 请求公开内容。与普通 HTTPS 网站相同，相关主机与基础设施可能处理 IP 地址、请求时间等连接元数据。</li>
     <li><strong>AI Agent 技能、快捷指令与地图</strong> — 仅在你主动运行技能时，所选或复制的文字及技能提示词才会发送到你配置的 LLM 服务商。导出提醒事项、日历或备忘录时，生成结果会在设备端交给你安装的 Apple 快捷指令；OSGKeyboard 不会收到最终创建的项目。导航时，地址或路线会写入 URL 并交给 Apple 地图、高德地图或百度地图，相应地图服务商的政策适用。</li>
-    <li><strong>API 凭证</strong> — 云端引擎的 LLM API Key 保存在设备 Keychain，仅在发起 LLM 请求时读取；通过共享 Keychain 组与主 App 共享，<strong>不会</strong>写入 <code>UserDefaults</code>。开启<strong>iCloud 设置同步</strong>后，API 密钥经 Apple <strong>iCloud 钥匙串</strong>同步到你其他已登录设备，<strong>不会</strong>写入 iCloud 键值存储 JSON。</li>
-    <li><strong>应用偏好</strong> — 引擎模式、识别语言、润色档位、翻译目标、握持偏好、光标导航开关、键盘设置等保存在 App Group <code>UserDefaults</code>，用于主 App 与键盘扩展之间的状态同步。本机剪贴板许可开关不会被 iCloud 设置同步开启。</li>
+    <li><strong>API 凭证</strong> — 用户自备服务商的 API Key 保存在设备 Keychain，通过共享 Keychain 组与键盘扩展共享，<strong>不会</strong>写入 <code>UserDefaults</code>。开启<strong>iCloud 设置同步</strong>后，API 密钥经 Apple <strong>iCloud 钥匙串</strong>同步到你其他已登录设备，<strong>不会</strong>写入 iCloud 键值存储 JSON。</li>
+    <li><strong>可选 OSGKeyboard 账号与购买</strong> — 本地转写和用户自备服务商无需账号。若你选择 Apple 登录，账号服务会处理 Apple 身份令牌、匿名化的 OSGKeyboard 账号标识、可选昵称、设备完整性证明、积分余额、邀请状态，以及核验消耗型积分包所需的 StoreKit 交易标识。账号会话令牌只保存在主 App 私有 Keychain；键盘扩展仅获得短时、限权的托管服务凭证。你可以在 App 内退出或注销账号。</li>
+    <li><strong>应用偏好</strong> — 引擎模式、识别语言、润色档位、翻译目标、握持偏好与键盘设置等保存在 App Group <code>UserDefaults</code>，用于主 App 与键盘扩展之间的状态同步。本机剪贴板许可开关不会被 iCloud 设置同步开启。</li>
     <li><strong>可选剪贴板历史</strong> — 默认关闭。开启后，键盘可能读取本机复制或经通用剪贴板收到的文字；iOS 无法可靠判断具体来源。最多 15 条通过规则的文本仅保存在本机主 App 与键盘扩展共享的 App Group。关闭历史只会停止采集、关闭建议条并保留已有记录；重置设置也会保留，只有单独确认的「清空剪贴板历史」操作会删除。历史没有固定过期时间。进入安全输入框会立即清除当前建议、关闭历史面板并隐藏剪贴板入口。保守过滤会拒绝常见 OTP 形态、PEM 私钥头、三段较长的 JWT、Bearer Token、达到安全长度的明确服务商密钥前缀，以及常见的通过 Luhn 校验的 16 位卡号；不宣称识别所有密码。普通订单号、年份与带标签的短账号仍可进入历史。被拒绝的文本仍可经 iOS 一次性粘贴，只是不被记录。剪贴板正文不会自行发送给 AI。只有你主动要求时它才会离开设备——在 AI 模式点选剪贴板建议、在 AI 提问中明确说出「剪贴板」，或插入后主动使用润色——此时会作为单独引用的数据发送给你配置的服务商，绝不作为指令。</li>
     <li><strong>个性词库</strong> — 你在「词库」Tab 添加的词条与别名保存在本机，润色时会写入 LLM 提示词。可选的<strong>iCloud 词库同步</strong>经私有 iCloud 键值存储在多设备间镜像；OSGKeyboard 不运营独立词库服务器。</li>
     <li><strong>本地输入学习</strong> — 中文候选频率与英文候选选择偏好保存在本机 App Group，可在输入设置中单独清除，不会因此删除个性词库，OSGKeyboard 不会上传这些学习数据。</li>
@@ -109,25 +121,26 @@
   <ul>
     <li>我们<strong>不会</strong>记录或上传你平时在键盘上的击键内容。</li>
     <li>我们<strong>不会</strong>集成分析、崩溃上报或广告 SDK。</li>
-    <li>使用本地引擎时，我们<strong>不会</strong>上传原始录音。若你在设置中主动选择云端 ASR，引擎会将录音发送到<em>你</em>配置的识别服务商，而不是我们的服务器。</li>
+    <li>使用本地引擎时，我们<strong>不会</strong>上传原始录音。只有你选择用户自备云端识别或托管积分后，录音才会离开设备。</li>
     <li>我们<strong>不会</strong>出售个人数据。</li>
   </ul>
 
   <h2>键盘扩展与主 App 的通信方式</h2>
-  <p>OSGKeyboard 采用主 App 维护的「Flow 会话」机制：键盘扩展在 App Group 中写入轻量的「开始 / 停止」信号，以及可用时经过截断的少量光标上下文；主 App 采集音频并完成转写（默认在设备端；若你开启云端引擎则经你配置的识别服务商），在已配置 LLM API Key 时再将转写文字与附近文字发送润色（及可选翻译）后回写结果。默认本地引擎下音频不会离开设备；仅在润色或 AI 模式运行时，文字才会发送到你配置的 LLM 端点。</p>
+  <p>OSGKeyboard 采用主 App 维护的「Flow 会话」机制：键盘扩展在 App Group 中写入轻量的「开始 / 停止」信号，以及可用时经过截断的少量光标上下文；主 App 采集音频，默认在设备端完成转写，也可以按你选择的云端路径处理，再按需发送转写文字与附近文字进行润色后回写结果。用户自备云端请求直达所选服务商；托管积分请求经 <code>account.osglab.com</code> 处理。</p>
 
   <h2>权限说明</h2>
   <ul>
     <li><strong>麦克风</strong>（<code>NSMicrophoneUsageDescription</code>）— 语音输入与长生命周期语音会话所需。</li>
     <li><strong>语音识别</strong>（<code>NSSpeechRecognitionUsageDescription</code>）— 调用 Apple 端侧语音能力进行转写所需。</li>
-    <li><strong>完全访问</strong> — 使键盘能使用麦克风、从共享 Keychain 读取 API Key、从主 App 获取润色结果，并仅在你开启剪贴板历史后读取剪贴板文字。完全访问<strong>不</strong>代表我们会获取你输入的所有内容，绝不外传击键。</li>
+    <li><strong>完全访问</strong> — 使键盘能使用麦克风、与主 App 通信、从共享 Keychain 读取用户自备 API Key 或使用短时托管服务凭证，并仅在你开启剪贴板历史后读取剪贴板文字。完全访问<strong>不</strong>代表我们会获取你输入的所有内容，绝不外传击键。</li>
   </ul>
 
   <h2>第三方</h2>
-  <p>云端 ASR 与 LLM 请求直接发送到你配置的服务商。AI 技能也可能把生成数据交给 Apple 快捷指令，或在 Apple 地图、高德地图、百度地图中打开路线。公开建议与更新页面分别由 <code>key.osglab.com</code>、<code>download.osglab.com</code> 提供；可选 Mac 模型从 Hugging Face 下载。各第三方的隐私政策适用；OSGKeyboard 不代理、记录或聚合你的服务商请求。</p>
+  <p>用户自备的云端 ASR 与 LLM 请求直接发送到你配置的服务商；托管积分请求经 <code>account.osglab.com</code> 发送到托管 ASR 或 LLM 服务商。Apple 处理 Apple 登录与 StoreKit 购买。AI 技能也可能把生成数据交给 Apple 快捷指令，或在 Apple 地图、高德地图、百度地图中打开路线。公开建议与更新页面分别由 <code>key.osglab.com</code>、<code>download.osglab.com</code> 提供；可选 Mac 模型从 Hugging Face 下载。各服务的隐私政策适用。</p>
 
   <h2>数据保留</h2>
   <p>设置保留在设备上，直至卸载或重置。开启 iCloud 设置同步后，API 密钥经 iCloud 钥匙串同步，可同步的偏好、统计、词库和语音历史可能经私有 iCloud 账户同步。语音历史上限 300 条，可在「历史」页清空或通过重置设置清除。剪贴板历史仅保存在本机，上限 15 条，没有固定过期时间；关闭采集或重置设置均会保留，需使用单独确认的清空操作删除。中英文输入学习数据仅留本机，可在输入设置中单独清除且不影响个性词库。下载的 Mac 语音模型会保留到你在应用中移除模型或删除本地文件。</p>
+  <p><strong>可选账号</strong> — 账号有效期间，账号服务会保留资料、积分账本、StoreKit 审计记录及有限的反滥用记录。注销会删除有效资料与凭证；为防止交易重放、欺诈或滥用，匿名账本、购买审计及有时限的反滥用记录可能在必要范围内继续保留。</p>
 
   <h2>儿童隐私</h2>
   <p>OSGKeyboard 不面向 13 岁以下儿童，亦不会明知地从儿童处收集个人信息。</p>
@@ -140,5 +153,6 @@
 
   <h2>联系</h2>
   <p>问题反馈或隐私相关请求：<a href="https://github.com/hkgood/OSGKeyboard">github.com/hkgood/OSGKeyboard</a> 提 Issue，或邮件 <a href="mailto:rocky.hk@gmail.com">rocky.hk@gmail.com</a>。</p>
+  </div>
 </body>
 </html>

@@ -4,8 +4,8 @@
 // Observable facade over the persisted skill layout. The Skills tab mutates
 // this; the keyboard reads the same App Group snapshot on each config poll.
 
-import Foundation
 import Combine
+import Foundation
 
 @MainActor
 public final class AIAgentSkillLayoutStore: ObservableObject {

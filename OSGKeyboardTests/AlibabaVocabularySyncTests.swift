@@ -1,9 +1,9 @@
 // AlibabaVocabularySyncTests.swift
 // OSGKeyboardTests
 
-import XCTest
-@testable import OSGKeyboardShared
 @testable import OSGKeyboardHostSupport
+@testable import OSGKeyboardShared
+import XCTest
 
 final class AlibabaVocabularySyncTests: XCTestCase {
 
@@ -27,7 +27,7 @@ final class AlibabaVocabularySyncTests: XCTestCase {
 
     func testEnsureVocabularyIDUsesCacheWhenFingerprintMatches() async throws {
         let dict = PersonalDictionary(entries: [
-            PersonalDictionary.Entry(term: "热词", category: .custom, source: .manual),
+            PersonalDictionary.Entry(term: "热词", category: .custom, source: .manual)
         ])
         defaults.set("vocab-cached", forKey: AlibabaVocabularySync.Keys.vocabularyId)
         defaults.set(
@@ -51,7 +51,7 @@ final class AlibabaVocabularySyncTests: XCTestCase {
             Data(#"{"output":{"vocabulary_id":"vocab-abc123"}}"#.utf8)
         )
         let dict = PersonalDictionary(entries: [
-            PersonalDictionary.Entry(term: "新词", category: .custom, source: .manual),
+            PersonalDictionary.Entry(term: "新词", category: .custom, source: .manual)
         ])
         let id = try await AlibabaVocabularySync.ensureVocabularyID(
             dictionary: dict,

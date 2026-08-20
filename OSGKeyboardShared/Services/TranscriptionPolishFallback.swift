@@ -35,6 +35,16 @@ public enum TranscriptionPolishFallback: Sendable {
         if error is LLMError {
             return degradedWarning()
         }
+        if let managedError = error as? ManagedGatewayError {
+            switch managedError {
+            case .insufficientCredits:
+                return SharedL10n.string("flow.warning.managedInsufficientCredits")
+            case .missingGrant, .scopeNotGranted, .invalidGrant:
+                return SharedL10n.string("flow.warning.managedGrantRejected")
+            case .timeout, .server:
+                return degradedWarning()
+            }
+        }
         return nil
     }
 

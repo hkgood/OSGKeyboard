@@ -1,8 +1,8 @@
 // KeyboardSurfaceStateTests.swift
 // OSGKeyboard · Ext unit tests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 @MainActor
 final class KeyboardSurfaceStateTests: XCTestCase {

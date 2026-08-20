@@ -5,8 +5,8 @@
 // session, general preferences, and about. Main Settings stays a
 // daily console with summary navigation rows.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 // MARK: - Navigation row (title + optional trailing summary before chevron)
 
@@ -140,6 +140,45 @@ private struct CloudProviderSettingsCard<Content: View>: View {
 
 // MARK: - Speech recognition (ASR / local engine)
 
+struct AppleASRPickerRow: View {
+    @Environment(\.themePalette) private var palette
+    @ObservedObject var config: ProviderConfig
+
+    var body: some View {
+        Toggle(isOn: usesAppleRecognition) {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "apple.logo")
+                    .foregroundStyle(palette.accent)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: Spacing.xxs) {
+                    Text("settings.asr.apple.title")
+                        .font(TypeStyle.body)
+                        .foregroundStyle(palette.textPrimary)
+                    Text("settings.asr.apple.subtitle")
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.textTertiary)
+                }
+            }
+        }
+        .tint(palette.accent)
+        .settingsListRow()
+    }
+
+    private var usesAppleRecognition: Binding<Bool> {
+        Binding(
+            get: { config.engineMode == "local" },
+            set: { isEnabled in
+                withAnimation(Motion.quick) {
+                    config.engineMode = isEnabled ? "local" : "cloud"
+                    if !isEnabled {
+                        config.modeId = "polish"
+                    }
+                }
+            }
+        )
+    }
+}
+
 struct SpeechRecognitionSettingsView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @ObservedObject var config: ProviderConfig
@@ -147,15 +186,24 @@ struct SpeechRecognitionSettingsView: View {
     var body: some View {
         ScrollView {
             CardPageContent {
-                if config.engineMode == "cloud" {
-                    CardSection("settings.asrProvider.title") {
-                        CloudProviderSettingsCard {
-                            ProviderPickerSection(config: config, role: .asr, showsSurface: false)
+                CardSection("settings.asrProvider.title") {
+                    CloudProviderSettingsCard {
+                        AppleASRPickerRow(config: config)
+
+                        if config.engineMode == "cloud" {
+                            Divider().background(palette.divider)
+                            ProviderPickerSection(
+                                config: config,
+                                role: .asr,
+                                showsSurface: false
+                            )
                             Divider().background(palette.divider)
                             ASRSettingsCard(config: config, showsSurface: false)
                         }
                     }
-                } else {
+                }
+
+                if config.engineMode == "local" {
                     CardSection("settings.localEngine.title") {
                         LocalModelsGroup(config: config)
                     }

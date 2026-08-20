@@ -3,8 +3,8 @@
 //
 // Shared edit / selected badges for style and skill cards.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 enum CatalogCardChrome {
     static let badgeSize: CGFloat = 30

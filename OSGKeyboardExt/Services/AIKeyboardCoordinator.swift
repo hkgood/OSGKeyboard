@@ -110,7 +110,11 @@ final class AIKeyboardCoordinator {
         if case .materialUnavailable = resolution {
             AIAgentShortcutRun.trace("keyboard.submit rejected clipboardUnavailable skill=\(skill.id)")
         }
-        submitResolvedPrompt(resolution, thinkingEnabled: skill.thinkingEnabled)
+        submitResolvedPrompt(
+            resolution,
+            taskKind: skill.managedGatewayTaskKind,
+            thinkingEnabled: skill.thinkingEnabled
+        )
     }
 
     /// Tap an idle hint card: resolve its material, skip the mic, ask the host.
@@ -121,7 +125,7 @@ final class AIKeyboardCoordinator {
             for: card,
             clipboardText: ClipboardHistoryStore.shared.newestAIHintEligibleEntry()?.text
         )
-        submitResolvedPrompt(resolution)
+        submitResolvedPrompt(resolution, taskKind: .aiQuestion)
     }
 
     private var canAcceptIdleSubmit: Bool {
@@ -136,6 +140,7 @@ final class AIKeyboardCoordinator {
 
     private func submitResolvedPrompt(
         _ resolution: AIClipboardPrompt.Resolution,
+        taskKind: ManagedGatewayTaskKind,
         thinkingEnabled: Bool? = nil
     ) {
         guard case .ready(let prompt) = resolution else {
@@ -154,6 +159,7 @@ final class AIKeyboardCoordinator {
         let disposition = flow.submitAIQuestion(
             text: prompt,
             conversationID: conversationID,
+            taskKind: taskKind,
             thinkingEnabled: thinkingEnabled
         )
         if case .rejected(let rejection) = disposition {

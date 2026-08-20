@@ -3,9 +3,9 @@
 //
 // Unit tests for the OpenAI-compatible LLM client using URLProtocol stub.
 
-import XCTest
 @testable import OSGKeyboard
 @testable import OSGKeyboardShared
+import XCTest
 
 final class LLMClientTests: XCTestCase {
 

@@ -5,13 +5,13 @@
 // `.playAndRecord` capture for the whole session, utterance gating for
 // ASR and cloud LLM polish, with App Group result delivery.
 
-import Foundation
 import AVFoundation
-import Speech
-import OSGKeyboardShared
-import UIKit
-import SwiftUI
+import Foundation
 import OSGKeyboardHostSupport
+import OSGKeyboardShared
+import Speech
+import SwiftUI
+import UIKit
 
 struct FlowUtteranceStartToken: Equatable, Sendable {
     let generation: UInt64
@@ -33,6 +33,13 @@ enum FlowUtteranceLifecyclePolicy {
 
 @MainActor
 final class FlowSessionManager: ObservableObject {
+    private struct PrefilledAIRequest {
+        let question: String
+        let conversationID: UUID?
+        let taskKind: ManagedGatewayTaskKind
+        let thinkingEnabled: Bool
+    }
+
     @Published private(set) var isActive = false
     @Published private(set) var isStarting = false
     @Published private(set) var sessionExpiresAt: Date?
@@ -1299,7 +1306,7 @@ final class FlowSessionManager: ObservableObject {
             cancelAudioPrime(command)
         case .endAIConversation:
             if currentUtteranceMode == .aiQuestion,
-               (isUtteranceProcessing || isUtteranceRecording) {
+               isUtteranceProcessing || isUtteranceRecording {
                 abortUtterance()
             }
             if let conversationID = command.aiConversationID {
@@ -1364,15 +1371,19 @@ final class FlowSessionManager: ObservableObject {
             let utteranceId = command.utteranceId
             let commandSeq = command.commandSeq
             let sessionId = command.sessionId
+            let taskKind = command.aiTaskKind ?? .aiQuestion
             let thinkingEnabled = command.aiThinkingEnabled ?? true
             Task { @MainActor [weak self] in
                 await self?.answerPrefilledAIQuestion(
-                    question: question,
-                    conversationID: conversationID,
+                    request: PrefilledAIRequest(
+                        question: question,
+                        conversationID: conversationID,
+                        taskKind: taskKind,
+                        thinkingEnabled: thinkingEnabled
+                    ),
                     sessionId: sessionId,
                     utteranceId: utteranceId,
-                    commandSeq: commandSeq,
-                    thinkingEnabled: thinkingEnabled
+                    commandSeq: commandSeq
                 )
             }
         }
@@ -1389,12 +1400,10 @@ final class FlowSessionManager: ObservableObject {
 
     /// Skip ASR and answer a prefilled AI hint / typed question.
     private func answerPrefilledAIQuestion(
-        question: String,
-        conversationID: UUID?,
+        request: PrefilledAIRequest,
         sessionId: UUID,
         utteranceId: UUID,
-        commandSeq: Int64,
-        thinkingEnabled: Bool
+        commandSeq: Int64
     ) async {
         // Hint-card / prefilled questions never go through `finalizeUtterance`,
         // so this path must drop the processing gate itself. Leaving it set
@@ -1405,7 +1414,7 @@ final class FlowSessionManager: ObservableObject {
                 utteranceId: utteranceId
             )
         }
-        guard let conversationID else {
+        guard let conversationID = request.conversationID else {
             claimAndStoreTerminal(utteranceId: utteranceId) {
                 storeFinalizedError(
                     AppL10n.string("flow.error.aiQuestionFailed"),
@@ -1425,11 +1434,12 @@ final class FlowSessionManager: ObservableObject {
             let service = try AIQuestionService.configured(
                 store: pipelineStore,
                 conversations: aiConversations,
-                thinkingEnabled: thinkingEnabled
+                taskKind: request.taskKind,
+                thinkingEnabled: request.thinkingEnabled
             )
             aiAnswerStreamThrottle = AIAnswerStreamThrottle()
             let answer = try await service.answer(
-                question: question,
+                question: request.question,
                 conversationID: conversationID,
                 targetLocaleID: pipelineStore.translationTargetLocaleId
             ) { [weak self] partial in
@@ -1455,7 +1465,7 @@ final class FlowSessionManager: ObservableObject {
                 force: true
             )
             await service.commitSuccessfulTurn(
-                question: question,
+                question: request.question,
                 answer: answer,
                 conversationID: conversationID
             )
@@ -1472,7 +1482,7 @@ final class FlowSessionManager: ObservableObject {
         } catch {
             claimAndStoreTerminal(utteranceId: utteranceId) {
                 storeFinalizedError(
-                    AppL10n.string("flow.error.aiQuestionFailed"),
+                    Self.aiQuestionFailureMessage(for: error),
                     kind: .generic,
                     sessionId: sessionId,
                     utteranceId: utteranceId,
@@ -1850,9 +1860,13 @@ final class FlowSessionManager: ObservableObject {
 
         let locale = SpeechLocaleResolver.resolve(localeId)
         let stream = capture.beginUtterance()
+        let cloudService = asr as? CloudASRService
         let useStreaming =
             store.engineMode == "cloud"
-            && CloudASRModelCatalog.supportsTrueStreamingASR(for: store.asrProviderId)
+            && (
+                cloudService?.supportsUtteranceStreaming
+                    ?? CloudASRModelCatalog.supportsTrueStreamingASR(for: store.asrProviderId)
+            )
         let pipeline: ChunkedUtterancePipeline?
         if useStreaming {
             chunkedPipeline = nil
@@ -1886,7 +1900,7 @@ final class FlowSessionManager: ObservableObject {
             "max=\(Int(FlowSessionKeys.maxUtteranceDuration))s"
         )
 
-        let cloudASRForStreaming = useStreaming ? (asr as? CloudASRService) : nil
+        let cloudASRForStreaming = useStreaming ? cloudService : nil
 
         asrTask = Task.detached(priority: .userInitiated) { [weak manager = self] in
             let outcome: ChunkedUtterancePipelineOutcome
@@ -2303,7 +2317,8 @@ final class FlowSessionManager: ObservableObject {
 
         let wantsBatchFallback = UtteranceBatchFallbackPolicy.shouldRunBatchFallback(
             stitchedFinal: lastFinal,
-            partialSnapshot: bestPartialSnapshot
+            partialSnapshot: bestPartialSnapshot,
+            recognitionFailed: asrFailureMessage != nil
         )
         FlowTrace.pipeline(
             "batchFallback.decision",
@@ -2411,7 +2426,8 @@ final class FlowSessionManager: ObservableObject {
             do {
                 let service = try AIQuestionService.configured(
                     store: pipelineStore,
-                    conversations: aiConversations
+                    conversations: aiConversations,
+                    taskKind: .aiQuestion
                 )
                 aiAnswerStreamThrottle = AIAnswerStreamThrottle()
                 let publishUtteranceId = finalizeUtteranceId
@@ -2463,7 +2479,7 @@ final class FlowSessionManager: ObservableObject {
             } catch {
                 claimAndStoreTerminal(utteranceId: finalizeUtteranceId) {
                     storeFinalizedError(
-                        AppL10n.string("flow.error.aiQuestionFailed"),
+                        Self.aiQuestionFailureMessage(for: error),
                         kind: .generic,
                         sessionId: finalizeSessionId,
                         utteranceId: finalizeUtteranceId,
@@ -2547,6 +2563,7 @@ final class FlowSessionManager: ObservableObject {
                 mode: polishMode,
                 systemPrompt: instructionPrompt?.system,
                 providerIdOverride: pipelineStore.polishProviderIdOverride,
+                taskKind: isEditLastInput ? .editLastInput : nil,
                 context: isInstructionMode ? nil : polishContext,
                 timeoutLimit: processingDeadlineAt.map {
                     max(0.1, $0 - Date().timeIntervalSince1970)
@@ -3012,6 +3029,7 @@ final class FlowSessionManager: ObservableObject {
         mode: PolishingService.PolishMode,
         systemPrompt: String? = nil,
         providerIdOverride: String?,
+        taskKind: ManagedGatewayTaskKind? = nil,
         context: PolishContext?,
         timeoutLimit: TimeInterval? = nil
     ) async throws -> PolishingService.PolishOutcome {
@@ -3023,6 +3041,7 @@ final class FlowSessionManager: ObservableObject {
                 mode: mode,
                 systemPrompt: systemPrompt,
                 providerIdOverride: providerIdOverride,
+                taskKind: taskKind,
                 context: context
             )
         }
@@ -3059,7 +3078,7 @@ final class FlowSessionManager: ObservableObject {
                 guard let self else { break }
                 if self.isActive,
                    !self.capture.engineIsLive,
-                   (self.isUtteranceRecording || self.isUtteranceProcessing) {
+                   self.isUtteranceRecording || self.isUtteranceProcessing {
                     await self.reactivateCaptureIfNeeded()
                 }
                 FlowSessionBridge.writeHeartbeat()
@@ -3077,6 +3096,13 @@ final class FlowSessionManager: ObservableObject {
     private static func safeErrorLogMetadata(_ error: Error) -> String {
         "errorCategory=\(String(reflecting: type(of: error))) "
             + "errorBytes=\(error.localizedDescription.utf8.count)"
+    }
+
+    private static func aiQuestionFailureMessage(for error: Error) -> String {
+        if let managedError = error as? ManagedGatewayError {
+            return managedError.localizedDescription
+        }
+        return AppL10n.string("flow.error.aiQuestionFailed")
     }
 
     private func traceIgnoredCommand(reason: String, command: FlowCommand, detail: String) {
