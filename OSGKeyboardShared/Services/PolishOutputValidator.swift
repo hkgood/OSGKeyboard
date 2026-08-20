@@ -52,7 +52,7 @@ public enum PolishOutputValidator {
             #"https?://[^\s<>"']+"#,
             #"\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+\b"#,
             #"\b[A-Za-z][A-Za-z0-9]*_[A-Za-z0-9_]+\b"#,
-            #"\b[A-Za-z]+[a-z0-9][A-Z][A-Za-z0-9]*\b"#,
+            #"\b[A-Za-z]+[a-z0-9][A-Z][A-Za-z0-9]*\b"#
         ]
         var result = Set<String>()
         for pattern in patterns {

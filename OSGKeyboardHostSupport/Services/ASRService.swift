@@ -9,11 +9,11 @@
 // audio capture and recognition. The keyboard extension receives
 // completed results through the Flow bridge instead of running ASR.
 
-import Foundation
 import AVFoundation
 import CoreMedia
-import Speech
+import Foundation
 import os
+import Speech
 #if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
 #endif

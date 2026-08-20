@@ -1,5 +1,5 @@
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class TranscriptLanguageDetectorTests: XCTestCase {
     func testChineseAndMixedInputPreferChineseGuidance() {

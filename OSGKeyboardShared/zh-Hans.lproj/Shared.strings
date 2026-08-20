@@ -10,6 +10,8 @@
 "flow.warning.localPolishUnavailable" = "请先在设置中填写 API Key 才能润色，本次已插入原始识别结果。";
 "flow.warning.polishDegraded" = "弱网识别，本次未润色，已插入原始识别结果。";
 "flow.warning.polishDegradedQuality" = "本次润色结果未通过校验，已插入保守处理版本。";
+"flow.warning.managedInsufficientCredits" = "积分不足，本次已插入原始识别结果；请打开主 App 的「账户」页充值。";
+"flow.warning.managedGrantRejected" = "托管服务授权已失效，本次已插入原始识别结果；请打开主 App 重新连接账号。";
 
 /* LLM providers */
 "provider.openai" = "OpenAI";
@@ -63,6 +65,23 @@
 "error.cloudASR.audioTooLong" = "音频片段超过该云端识别服务的时长限制。";
 "error.cloudASR.providerUnsupported" = "该服务商暂不支持云端语音识别。";
 "error.cloudASR.streamingNotImplemented" = "该服务商流式 ASR 失败。请检查 API Key 与网络后重试。";
+
+/* 托管账号网关 */
+"managed.error.grantUnavailable" = "托管服务尚未就绪，请打开主 App 重新连接账号。";
+"managed.error.scopeNotGranted" = "托管服务缺少 %@ 权限，请打开主 App 重新连接账号。";
+"managed.error.grantRejected" = "托管服务授权已失效，请打开主 App 重新连接账号。";
+"managed.error.insufficientCredits" = "积分不足，请打开主 App 的「账户」页充值。";
+"managed.error.timeout" = "托管服务请求超时，请检查网络后重试。";
+"managed.error.server" = "托管服务失败（%1$@，HTTP %2$lld），请稍后重试。";
+"managed.asr.error.invalidConfiguration" = "托管语音设置无效，请打开主 App 重新选择服务。";
+"managed.asr.error.concurrencyLimit" = "另一个托管语音会话仍在进行，请结束后重试。";
+"managed.asr.error.sessionCreation" = "无法启动托管语音，请检查网络后重试。";
+"managed.asr.error.transport" = "托管语音连接失败，请检查网络后重试。";
+"managed.asr.error.connectTimeout" = "托管语音连接超时，请检查网络后重试。";
+"managed.asr.error.idleTimeout" = "长时间未收到音频，托管语音已停止，请重新点击麦克风。";
+"managed.asr.error.streaming" = "托管语音流已中断，请检查网络后重试。";
+"managed.asr.error.invalidResult" = "托管语音返回结果无效，请重试。";
+"managed.asr.error.batch" = "托管语音重试失败，请检查网络后重试。";
 
 /* 服务商工具 */
 "providerTools.error.invalidURL" = "模型接口地址无效。";

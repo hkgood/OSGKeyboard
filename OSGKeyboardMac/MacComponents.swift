@@ -202,7 +202,7 @@ struct MacSettingsSection<Content: View>: View {
     @Environment(\.themePalette) private var palette
 
     let title: String
-    var footer: String? = nil
+    var footer: String?
     @ViewBuilder var content: () -> Content
 
     var body: some View {
@@ -238,7 +238,7 @@ struct MacInlineRow<Control: View>: View {
     @Environment(\.themePalette) private var palette
 
     let title: String
-    var subtitle: String? = nil
+    var subtitle: String?
     @ViewBuilder var control: () -> Control
 
     var body: some View {
@@ -306,7 +306,7 @@ struct MacProviderSettingRow<Content: View>: View {
     @Environment(\.themePalette) private var palette
 
     let title: String
-    var subtitle: String? = nil
+    var subtitle: String?
     /// Cross-axis alignment between the label column and the control. Provider
     /// rows keep `.top` (model row grows a status line below its field); single
     /// control rows can pass `.center` to vertically center label and control.
@@ -350,7 +350,7 @@ struct MacSettingsIconButton: View {
     @Environment(\.themePalette) private var palette
 
     let systemName: String
-    var help: String? = nil
+    var help: String?
     var disabled: Bool = false
     let action: () -> Void
 
@@ -378,9 +378,9 @@ struct MacSettingsToolButton: View {
 
     let title: String
     /// Background fill. Defaults to the neutral elevated surface.
-    var fill: Color? = nil
+    var fill: Color?
     /// Text color. Defaults to primary text (tertiary when disabled).
-    var foreground: Color? = nil
+    var foreground: Color?
     /// Hairline divider border — drawn for the neutral variant, hidden for
     /// colored fills (delete / download) so the fill reads as the button.
     var showsBorder: Bool = true

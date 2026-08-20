@@ -4,8 +4,8 @@
 // Schema and opt-in fuzzy-pinyin settings. Changing fuzzy pairs triggers
 // host-side redeployment; the keyboard extension never compiles schemas.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct TypingInputSettingsView: View {
     @Environment(\.themePalette) private var palette: ThemePalette

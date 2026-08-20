@@ -33,6 +33,66 @@
       "productID" : "ByRockyACoffee",
       "referenceName" : "给老刘买杯咖啡",
       "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "8",
+      "familyShareable" : false,
+      "internalID" : "6789921327",
+      "localizations" : [
+        {
+          "description" : "Adds 500 account credits for managed speech recognition and AI services.",
+          "displayName" : "500 OSG Credits",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "为托管语音识别与 AI 服务增加 500 账号积分。",
+          "displayName" : "500 OSG 积分",
+          "locale" : "zh_Hans"
+        }
+      ],
+      "productID" : "500tks",
+      "referenceName" : "500 OSG 积分",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "18",
+      "familyShareable" : false,
+      "internalID" : "6789921329",
+      "localizations" : [
+        {
+          "description" : "Adds 1,500 account credits for managed speech recognition and AI services.",
+          "displayName" : "1,500 OSG Credits",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "为托管语音识别与 AI 服务增加 1,500 账号积分。",
+          "displayName" : "1,500 OSG 积分",
+          "locale" : "zh_Hans"
+        }
+      ],
+      "productID" : "1500tks",
+      "referenceName" : "1,500 OSG 积分",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "28",
+      "familyShareable" : false,
+      "internalID" : "6789921328",
+      "localizations" : [
+        {
+          "description" : "Adds 3,000 account credits for managed speech recognition and AI services.",
+          "displayName" : "3,000 OSG Credits",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "为托管语音识别与 AI 服务增加 3,000 账号积分。",
+          "displayName" : "3,000 OSG 积分",
+          "locale" : "zh_Hans"
+        }
+      ],
+      "productID" : "3000tks",
+      "referenceName" : "3,000 OSG 积分",
+      "type" : "Consumable"
     }
   ],
   "settings" : {

@@ -1,5 +1,5 @@
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class EditLastInputPromptTests: XCTestCase {
     func testPayloadEscapesSourceAndInstruction() {

@@ -73,8 +73,7 @@ public enum PinyinNextKeyResolver {
     private static func collectNext(prefix: String, into result: inout Set<Character>) {
         var canExtend = false
         for syllable in PinyinSyllableTable.syllables
-            where syllable.hasPrefix(prefix) && syllable.count > prefix.count
-        {
+            where syllable.hasPrefix(prefix) && syllable.count > prefix.count {
             let index = syllable.index(syllable.startIndex, offsetBy: prefix.count)
             result.insert(syllable[index])
             canExtend = true

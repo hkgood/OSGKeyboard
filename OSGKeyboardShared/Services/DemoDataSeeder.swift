@@ -84,7 +84,7 @@ public enum DemoDataSeeder {
             ("cloud", "Summarize yesterday's dictation stats for the weekly report."),
             ("local", "词库里加上 Cursor、DeepSeek、Qwen3-ASR，方便识别专有名词。"),
             ("local", "跨设备同步先关掉，演示数据用本地占位，避免被 iCloud 覆盖。"),
-            ("local", "把首页近七天柱状图补齐，看起来更有真实使用痕迹。"),
+            ("local", "把首页近七天柱状图补齐，看起来更有真实使用痕迹。")
         ]
 
         var entries: [SpeechHistoryEntry] = []
@@ -119,7 +119,7 @@ public enum DemoDataSeeder {
             ("SpeechAnalyzer", ["语音分析器"], .technical, 7),
             ("Live Activity", ["灵动岛"], .custom, 5),
             ("StoreKit", ["内购"], .technical, 4),
-            ("Rocky", ["rocky"], .properNoun, 3),
+            ("Rocky", ["rocky"], .properNoun, 3)
         ]
 
         var dictionary = PersonalDictionary()

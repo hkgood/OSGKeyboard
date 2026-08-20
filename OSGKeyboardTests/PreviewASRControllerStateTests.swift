@@ -28,9 +28,9 @@
 // touches the safety-net block, re-introduce a test that mocks
 // the ASR to never yield `.final` and asserts the timeout fires.
 
-import XCTest
-@testable import OSGKeyboardShared
 @testable import OSGKeyboardHostSupport
+@testable import OSGKeyboardShared
+import XCTest
 
 @MainActor
 final class PreviewASRControllerStateTests: XCTestCase {

@@ -6,8 +6,8 @@
 // duplicate Localizable.strings variant groups into the main app target only.
 
 import Foundation
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 enum ExtL10n {
     private static let table = "Keyboard"

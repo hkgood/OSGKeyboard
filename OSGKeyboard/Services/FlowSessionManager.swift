@@ -5,13 +5,13 @@
 // `.playAndRecord` capture for the whole session, utterance gating for
 // ASR and cloud LLM polish, with App Group result delivery.
 
-import Foundation
 import AVFoundation
-import Speech
-import OSGKeyboardShared
-import UIKit
-import SwiftUI
+import Foundation
 import OSGKeyboardHostSupport
+import OSGKeyboardShared
+import Speech
+import SwiftUI
+import UIKit
 
 struct FlowUtteranceStartToken: Equatable, Sendable {
     let generation: UInt64
@@ -31,19 +31,89 @@ enum FlowUtteranceLifecyclePolicy {
     }
 }
 
+enum FlowPiPActivationTrigger: String, Sendable {
+    case coldStart
+    case foreground
+    case existingSession
+    case startupRecovery
+    case unexpectedStop
+    case healthCheck
+    case manualRetry
+}
+
+enum FlowPiPReconciliationDecision: Equatable, Sendable {
+    case noSessionIntent
+    case alreadyActive
+    case waitForForeground
+    case startRecovery
+}
+
+enum FlowPiPRecoveryPolicy {
+    static let maxAttempts = 3
+    static let totalBudget: TimeInterval = 5
+
+    static func reconciliationDecision(
+        wantsActiveSession: Bool,
+        isAppForeground: Bool,
+        isPictureInPictureActive: Bool
+    ) -> FlowPiPReconciliationDecision {
+        guard wantsActiveSession else { return .noSessionIntent }
+        if isPictureInPictureActive { return .alreadyActive }
+        return isAppForeground ? .startRecovery : .waitForForeground
+    }
+
+    static func canContinue(
+        operation: UInt64,
+        currentOperation: UInt64,
+        wantsActiveSession: Bool,
+        isAppForeground: Bool,
+        taskIsCancelled: Bool
+    ) -> Bool {
+        operation == currentOperation
+            && wantsActiveSession
+            && isAppForeground
+            && !taskIsCancelled
+    }
+
+    static func retryDelay(beforeAttempt attempt: Int) -> TimeInterval {
+        switch attempt {
+        case 1: return 0
+        case 2: return 0.25
+        default: return 0.6
+        }
+    }
+
+    static func hostTimeout(attempt: Int, remainingBudget: TimeInterval) -> TimeInterval {
+        min(attempt == 1 ? 1.5 : 0.25, max(0, remainingBudget))
+    }
+
+    static func activeTimeout(remainingBudget: TimeInterval) -> TimeInterval {
+        min(1.4, max(0, remainingBudget))
+    }
+}
+
 @MainActor
 final class FlowSessionManager: ObservableObject {
+    private struct PrefilledAIRequest {
+        let question: String
+        let conversationID: UUID?
+        let taskKind: ManagedGatewayTaskKind
+        let thinkingEnabled: Bool
+    }
+
     @Published private(set) var isActive = false
     @Published private(set) var isStarting = false
     @Published private(set) var sessionExpiresAt: Date?
     /// Non-nil when continuous capture failed or permissions are missing.
     @Published private(set) var sessionWarning: String?
+    @Published private(set) var pipLifecycleState: FlowPiPLifecycleState = .inactive
 
     private let capture = FlowContinuousCapture()
-    private let pipController = FlowPictureInPictureController()
+    private let pipController: any FlowPictureInPictureControlling
     private let store = AppGroupStore()
+    private let analyticsClient: any AnalyticsClient
     /// Cloud / local polish via the user-configured LLM provider.
-    private let polisher = PolishingService()
+    private let polisher: PolishingService
     /// AI-mode turns are intentionally process-local and never persisted.
     private let aiConversations = AIConversationStore()
     /// Cached ASR instance. The only on-device backend is iOS
@@ -91,6 +161,7 @@ final class FlowSessionManager: ObservableObject {
     private var pendingSourceHistoryEntryID: UUID?
     private var pendingSourceHistoryEntryRevision: Int64?
     private var pendingAIConversationID: UUID?
+    private var pendingManagedRequestPurpose: ManagedGatewayRequestPurpose?
     private var pendingProcessingDeadlineAt: TimeInterval?
     private var pendingStopUtteranceId: UUID?
     private var currentCommandSeq: Int64 = 0
@@ -103,6 +174,7 @@ final class FlowSessionManager: ObservableObject {
     @Published private(set) var isUtteranceProcessing = false
     private var finalizeTask: Task<Void, Never>?
     private var asrTask: Task<Void, Never>?
+    private var transcriptionAnalyticsOperation: (any AnalyticsAIOperation)?
     private var utteranceSafetyTask: Task<Void, Never>?
     private var chunkedPipeline: ChunkedUtterancePipeline?
     private var currentPartial = ""
@@ -124,7 +196,10 @@ final class FlowSessionManager: ObservableObject {
     private var isAppForeground = false
     /// True while handling a keyboard-initiated `startflow` cold start.
     private var isColdStartHandoff = false
-    private var coldStartRecoveryTask: Task<Void, Never>?
+    /// User intent outlives a transient PiP loss; only explicit teardown clears it.
+    private var wantsActiveSession = false
+    /// Invalidates late async completions after retry, stop, or process teardown.
+    private var pipRecoveryOperation: UInt64 = 0
     var shouldDeferHostHeavyWork: Bool {
         isStarting
             || startingUtteranceId != nil
@@ -141,7 +216,13 @@ final class FlowSessionManager: ObservableObject {
     /// recreate the `@StateObject`-owned manager within the same process).
     private static var didRunLaunchReconciliation = false
 
-    init() {
+    init(
+        analyticsClient: any AnalyticsClient = NoopAnalyticsClient(),
+        pipController: any FlowPictureInPictureControlling = FlowPictureInPictureController()
+    ) {
+        self.analyticsClient = analyticsClient
+        self.polisher = PolishingService(analyticsClient: analyticsClient)
+        self.pipController = pipController
         // Sessions are (re)started explicitly on app foreground via
         // `activateOnForeground()`. We deliberately do NOT silently reattach a
         // stored session here — after a force-quit that would resurrect capture
@@ -187,10 +268,9 @@ final class FlowSessionManager: ObservableObject {
                 kind: .recognitionInterrupted
             )
         }
-        pipController.onUserDismissed = { [weak self] in
-            guard let self, self.isActive else { return }
-            self.debug("PiP dismissed by user — ending Flow session")
-            self.endSession()
+        pipController.onUnexpectedStop = { [weak self] in
+            guard let self, self.wantsActiveSession else { return }
+            self.handleUnexpectedPiPStop()
         }
         FlowTerminationCoordinator.register(self)
     }
@@ -250,25 +330,25 @@ final class FlowSessionManager: ObservableObject {
         }
 
         if isActive {
+            wantsActiveSession = true
             extendSession(duration: duration)
-            refreshHostReady()
+            if pipController.isPictureInPictureActive {
+                pipLifecycleState = .active
+                refreshHostReady()
+            } else {
+                ensurePiPActive(
+                    trigger: coldStart ? .coldStart : .existingSession,
+                    duration: duration
+                )
+            }
             return
         }
 
-        guard !isStarting else {
-            traceState("startSession.ignored", extra: "reason=alreadyStarting")
-            return
-        }
-        // Claim the flag synchronously: on a cold start the URL router and
-        // `activateOnForeground()` both fire in the same runloop turn, and
-        // setting it inside the async body let two start bodies interleave.
-        isStarting = true
-
-        startTask?.cancel()
-        startTask = Task { @MainActor [weak self] in
-            await self?.startSessionAsync(duration: duration)
-            self?.handleColdStartAfterSessionReady()
-        }
+        wantsActiveSession = true
+        ensurePiPActive(
+            trigger: coldStart ? .coldStart : .foreground,
+            duration: duration
+        )
     }
 
     /// Clears App Group Flow state left behind when the host process was killed
@@ -332,9 +412,19 @@ final class FlowSessionManager: ObservableObject {
         )
     }
 
+    /// User-requested recovery always discards the rejected AVKit generation.
+    func retryPiPRecovery() {
+        guard AppGroup.isAvailable else { return }
+        guard AppPermissions.flowRequirementsMet else {
+            sessionWarning = permissionWarningMessage()
+            FlowSessionBridge.setHostReady(false)
+            return
+        }
+        wantsActiveSession = true
+        ensurePiPActive(trigger: .manualRetry, duration: nil, forceReset: true)
+    }
+
     private func completeColdStartHandoff() {
-        coldStartRecoveryTask?.cancel()
-        coldStartRecoveryTask = nil
         isColdStartHandoff = false
         if isActive {
             refreshHostReady()
@@ -353,9 +443,10 @@ final class FlowSessionManager: ObservableObject {
             )
         }
 
+        wantsActiveSession = false
+        pipRecoveryOperation &+= 1
+        pipLifecycleState = .inactive
         isColdStartHandoff = false
-        coldStartRecoveryTask?.cancel()
-        coldStartRecoveryTask = nil
         startTask?.cancel()
         startTask = nil
         startupAudioHealthTask?.cancel()
@@ -426,7 +517,7 @@ final class FlowSessionManager: ObservableObject {
     }
 
     func endSession() {
-        guard isActive else { return }
+        guard isActive || isStarting || wantsActiveSession else { return }
         debug("Flow session ended")
         if isUtteranceRecording || isUtteranceProcessing,
            claimTerminal(utteranceId: currentUtteranceId) {
@@ -437,9 +528,10 @@ final class FlowSessionManager: ObservableObject {
             )
         }
 
+        wantsActiveSession = false
+        pipRecoveryOperation &+= 1
+        pipLifecycleState = .inactive
         isColdStartHandoff = false
-        coldStartRecoveryTask?.cancel()
-        coldStartRecoveryTask = nil
         startTask?.cancel()
         startTask = nil
         startupAudioHealthTask?.cancel()
@@ -486,6 +578,7 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.markSessionInactive()
         FlowSessionDarwin.postSessionChanged()
         isActive = false
+        isStarting = false
         sessionExpiresAt = nil
         sessionWarning = nil
         currentPartial = ""
@@ -509,19 +602,27 @@ final class FlowSessionManager: ObservableObject {
         case .active:
             setAppForeground(true)
             resumeAfterForeground()
+            if wantsActiveSession, !pipController.isPictureInPictureActive {
+                ensurePiPActive(trigger: .foreground, duration: nil)
+            }
         case .inactive:
+            setAppForeground(false)
             writeHeartbeatIfActive()
-            if isActive {
+            if isActive, pipController.isPictureInPictureActive {
                 Task { @MainActor [weak self] in
                     await self?.pipController.prepareForBackgroundAutoStart()
                 }
+            } else if wantsActiveSession {
+                pausePiPRecoveryUntilForeground()
             }
         case .background:
             setAppForeground(false)
-            if isActive {
+            if isActive, pipController.isPictureInPictureActive {
                 Task { @MainActor [weak self] in
                     await self?.pipController.prepareForBackgroundAutoStart()
                 }
+            } else if wantsActiveSession {
+                pausePiPRecoveryUntilForeground()
             }
             if isColdStartHandoff {
                 completeColdStartHandoff()
@@ -540,6 +641,33 @@ final class FlowSessionManager: ObservableObject {
     private func beginBackgroundKeepAlive() {
         guard isActive else { return }
         FlowSessionBridge.writeHeartbeat()
+    }
+
+    private func handleUnexpectedPiPStop() {
+        guard wantsActiveSession else { return }
+        traceState("pip.unexpectedStop")
+        pipLifecycleState = .waitingForForeground
+        sessionWarning = nil
+        if isUtteranceRecording {
+            failUtterance(
+                message: AppL10n.string("flow.error.recognitionInterrupted"),
+                kind: .recognitionInterrupted
+            )
+        }
+        FlowSessionBridge.setHostReady(false)
+        refreshHostReady()
+        // Do not immediately fight another app for the system-owned PiP slot.
+        // The scene-active path or the existing heartbeat performs reconciliation.
+    }
+
+    private func pausePiPRecoveryUntilForeground() {
+        startTask?.cancel()
+        startTask = nil
+        pipRecoveryOperation &+= 1
+        pipController.resetGeneration()
+        isStarting = false
+        pipLifecycleState = .waitingForForeground
+        refreshHostReady()
     }
 
     private func resumeAfterForeground() {
@@ -716,36 +844,192 @@ final class FlowSessionManager: ObservableObject {
 
     // MARK: - Session start
 
-    private func startSessionAsync(duration: TimeInterval?) async {
-        // `isStarting` was claimed synchronously in `startSession()`.
-        defer { isStarting = false }
+    private func ensurePiPActive(
+        trigger: FlowPiPActivationTrigger,
+        duration: TimeInterval?,
+        forceReset: Bool = false
+    ) {
+        switch FlowPiPRecoveryPolicy.reconciliationDecision(
+            wantsActiveSession: wantsActiveSession,
+            isAppForeground: isAppForeground,
+            isPictureInPictureActive: pipController.isPictureInPictureActive
+        ) {
+        case .noSessionIntent:
+            return
+        case .alreadyActive:
+            pipLifecycleState = .active
+            sessionWarning = nil
+            if isActive {
+                refreshHostReady()
+            } else {
+                activateFlowSessionAfterPiPProof(duration: duration)
+            }
+            handleColdStartAfterSessionReady()
+            return
+        case .waitForForeground:
+            pipLifecycleState = .waitingForForeground
+            FlowSessionBridge.setHostReady(false)
+            refreshHostReady()
+            return
+        case .startRecovery:
+            break
+        }
+
+        guard startTask == nil else {
+            traceState(
+                "pipRecovery.coalesced",
+                extra: "trigger=\(trigger.rawValue)"
+            )
+            return
+        }
+
+        // Claim the flag synchronously: on a cold start the URL router and
+        // `activateOnForeground()` both fire in the same runloop turn, and
+        // setting it inside the async body let two start bodies interleave.
+        isStarting = true
+        pipRecoveryOperation &+= 1
+        let operation = pipRecoveryOperation
+        let recoveringExistingSession = isActive
+        let resetFirstGeneration = forceReset
+            || recoveringExistingSession
+            || pipController.generation > 0
+        pipLifecycleState = recoveringExistingSession
+            ? .recovering(attempt: 1, total: FlowPiPRecoveryPolicy.maxAttempts)
+            : .preparing(attempt: 1, total: FlowPiPRecoveryPolicy.maxAttempts)
+
+        startTask = Task { @MainActor [weak self] in
+            await self?.startSessionAsync(
+                duration: duration,
+                trigger: trigger,
+                operation: operation,
+                resetFirstGeneration: resetFirstGeneration
+            )
+        }
+    }
+
+    private func startSessionAsync(
+        duration: TimeInterval?,
+        trigger: FlowPiPActivationTrigger,
+        operation: UInt64,
+        resetFirstGeneration: Bool
+    ) async {
+        // `isStarting` was claimed synchronously in `ensurePiPActive()`.
+        defer {
+            if operation == pipRecoveryOperation {
+                isStarting = false
+                startTask = nil
+            }
+        }
         guard !Task.isCancelled else { return }
-        traceState("startSessionAsync.begin")
+        traceState("startSessionAsync.begin", extra: "trigger=\(trigger.rawValue)")
         sessionWarning = nil
 
         guard AppPermissions.flowRequirementsMet else {
             sessionWarning = permissionWarningMessage()
+            pipLifecycleState = .failed(.notPossible)
             traceState("startSessionAsync.blocked", extra: "reason=permissions")
             FlowSessionBridge.setHostReady(false)
             isColdStartHandoff = false
             return
         }
 
-        switch await pipController.startAndWait() {
-        case .started:
-            activateFlowSessionAfterPiPProof(duration: duration)
-            traceState("startSessionAsync.ready")
-            debug("Flow session started (PiP keep-alive), mic released between utterances")
-        case .failed(let failure):
-            let message = AppL10n.string(failure.localizationKey)
-            sessionWarning = message
-            traceState("startSessionAsync.failed", extra: "reason=pipUnavailable failure=\(failure)")
-            FlowSessionBridge.setHostReady(false)
-            if isColdStartHandoff {
-                scheduleColdStartRecovery(duration: duration)
+        let deadline = Date().addingTimeInterval(FlowPiPRecoveryPolicy.totalBudget)
+        var lastFailure: FlowPiPStartFailure = .timedOut
+
+        for attempt in 1...FlowPiPRecoveryPolicy.maxAttempts {
+            guard FlowPiPRecoveryPolicy.canContinue(
+                operation: operation,
+                currentOperation: pipRecoveryOperation,
+                wantsActiveSession: wantsActiveSession,
+                isAppForeground: isAppForeground,
+                taskIsCancelled: Task.isCancelled
+            ) else {
+                if operation == pipRecoveryOperation,
+                   wantsActiveSession,
+                   !Task.isCancelled,
+                   !isAppForeground {
+                    pipLifecycleState = .waitingForForeground
+                    FlowSessionBridge.setHostReady(false)
+                }
+                return
             }
-            debug("PiP keep-alive failed to start: \(failure)")
+
+            let delay = FlowPiPRecoveryPolicy.retryDelay(beforeAttempt: attempt)
+            if delay > 0 {
+                try? await Task.sleep(
+                    nanoseconds: UInt64(delay * 1_000_000_000)
+                )
+            }
+            guard FlowPiPRecoveryPolicy.canContinue(
+                operation: operation,
+                currentOperation: pipRecoveryOperation,
+                wantsActiveSession: wantsActiveSession,
+                isAppForeground: isAppForeground,
+                taskIsCancelled: Task.isCancelled
+            ) else { return }
+
+            if resetFirstGeneration || attempt > 1 {
+                pipController.resetGeneration()
+            }
+
+            let remaining = deadline.timeIntervalSinceNow
+            guard remaining > 0 else { break }
+            pipLifecycleState = isActive
+                ? .recovering(attempt: attempt, total: FlowPiPRecoveryPolicy.maxAttempts)
+                : .preparing(attempt: attempt, total: FlowPiPRecoveryPolicy.maxAttempts)
+            traceState(
+                "pipRecovery.attempt",
+                extra: "trigger=\(trigger.rawValue) attempt=\(attempt) generation=\(pipController.generation)"
+            )
+
+            let outcome = await pipController.startAndWait(
+                hostTimeout: FlowPiPRecoveryPolicy.hostTimeout(
+                    attempt: attempt,
+                    remainingBudget: remaining
+                ),
+                activeTimeout: FlowPiPRecoveryPolicy.activeTimeout(
+                    remainingBudget: deadline.timeIntervalSinceNow
+                )
+            )
+            guard FlowPiPRecoveryPolicy.canContinue(
+                operation: operation,
+                currentOperation: pipRecoveryOperation,
+                wantsActiveSession: wantsActiveSession,
+                isAppForeground: isAppForeground,
+                taskIsCancelled: Task.isCancelled
+            ) else { return }
+
+            switch outcome {
+            case .started:
+                sessionWarning = nil
+                pipLifecycleState = .active
+                if isActive {
+                    refreshHostReady()
+                } else {
+                    activateFlowSessionAfterPiPProof(duration: duration)
+                }
+                traceState(
+                    "startSessionAsync.ready",
+                    extra: "trigger=\(trigger.rawValue) attempt=\(attempt) generation=\(pipController.generation)"
+                )
+                handleColdStartAfterSessionReady()
+                debug("Flow session started (PiP keep-alive), mic released between utterances")
+                return
+            case .failed(let failure):
+                lastFailure = failure
+                traceState(
+                    "startSessionAsync.failed",
+                    extra: "reason=pipUnavailable trigger=\(trigger.rawValue) attempt=\(attempt) failure=\(failure)"
+                )
+            }
         }
+
+        pipController.resetGeneration()
+        pipLifecycleState = .failed(lastFailure)
+        sessionWarning = AppL10n.string(lastFailure.localizationKey)
+        FlowSessionBridge.setHostReady(false)
+        refreshHostReady()
+        debug("PiP keep-alive failed after bounded recovery: \(lastFailure)")
     }
 
     private func activateFlowSessionAfterPiPProof(duration: TimeInterval?) {
@@ -755,6 +1039,8 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.markSessionActivePersistent(sessionId: sessionId)
         FlowSessionDarwin.postSessionChanged()
         isActive = true
+        wantsActiveSession = true
+        pipLifecycleState = .active
         // Low-profile PiP is a system-owned keep-alive surface. Keeping the
         // display awake wastes far more power than the static PiP itself.
         ScreenWakeLock.release()
@@ -855,18 +1141,10 @@ final class FlowSessionManager: ObservableObject {
         guard isColdStartHandoff, isActive else { return }
         sessionWarning = nil
         if !pipController.isPictureInPictureActive {
-            switch await pipController.startAndWait() {
-            case .started:
-                break
-            case .failed(let failure):
-                let message = AppL10n.string(failure.localizationKey)
-                sessionWarning = message
-                FlowSessionBridge.setHostReady(false)
-                scheduleColdStartRecovery(duration: nil)
-                debug("existing PiP session failed cold-start restart: \(failure)")
-                return
-            }
+            ensurePiPActive(trigger: .existingSession, duration: nil)
+            return
         }
+        pipLifecycleState = .active
         refreshHostReady()
         handleColdStartAfterSessionReady()
     }
@@ -888,7 +1166,9 @@ final class FlowSessionManager: ObservableObject {
             let message = AppL10n.string("flow.session.error.notPossible")
             sessionWarning = message
             FlowSessionBridge.setHostReady(false)
-            scheduleColdStartRecovery(duration: nil)
+            if !pipController.isPictureInPictureActive {
+                scheduleColdStartRecovery(duration: nil)
+            }
             debug("cold-start blocked: host ready contract not published")
             return
         }
@@ -920,31 +1200,14 @@ final class FlowSessionManager: ObservableObject {
     /// bounce the audio session and rebuild. Force-quit relaunches routinely
     /// inherit stale mediaserverd state that only a rebuild clears.
     private func scheduleColdStartRecovery(duration: TimeInterval?) {
-        coldStartRecoveryTask?.cancel()
-        coldStartRecoveryTask = Task { @MainActor [weak self] in
-            guard let self else { return }
-            // The failed controller has been fully torn down. Give the app
-            // scene and Pegasus service a short settling interval before the
-            // one bounded cold-start retry creates a new controller generation.
-            try? await Task.sleep(nanoseconds: 400_000_000)
-            guard !Task.isCancelled, self.isColdStartHandoff else { return }
-            let outcome = await self.pipController.startAndWait()
-            self.traceState("coldStartRecovery.pip", extra: "outcome=\(outcome)")
-            guard !Task.isCancelled, self.isColdStartHandoff else { return }
-            switch outcome {
-            case .started:
-                if self.isActive {
-                    self.sessionWarning = nil
-                    self.refreshHostReady()
-                    self.handleColdStartAfterSessionReady()
-                } else {
-                    self.activateFlowSessionAfterPiPProof(duration: duration)
-                    self.handleColdStartAfterSessionReady()
-                }
-            case .failed(let failure):
-                self.sessionWarning = AppL10n.string(failure.localizationKey)
-            }
-        }
+        // The failed controller has been fully torn down. Give the app
+        // scene and Pegasus service a short settling interval before the
+        // one bounded cold-start retry creates a new controller generation.
+        ensurePiPActive(
+            trigger: .startupRecovery,
+            duration: duration,
+            forceReset: true
+        )
     }
 
     private func bindSessionASRIfNeeded(force: Bool = false) {
@@ -1238,6 +1501,7 @@ final class FlowSessionManager: ObservableObject {
                 )
             )
             currentUtteranceMode = command.resolvedUtteranceMode
+            pendingManagedRequestPurpose = command.managedRequestPurpose
             pendingAIConversationID = currentUtteranceMode == .aiQuestion
                 ? command.aiConversationID
                 : nil
@@ -1299,7 +1563,7 @@ final class FlowSessionManager: ObservableObject {
             cancelAudioPrime(command)
         case .endAIConversation:
             if currentUtteranceMode == .aiQuestion,
-               (isUtteranceProcessing || isUtteranceRecording) {
+               isUtteranceProcessing || isUtteranceRecording {
                 abortUtterance()
             }
             if let conversationID = command.aiConversationID {
@@ -1350,6 +1614,7 @@ final class FlowSessionManager: ObservableObject {
                 commandSeq: command.commandSeq
             ) else { return }
             currentUtteranceMode = .aiQuestion
+            pendingManagedRequestPurpose = command.managedRequestPurpose
             pendingAIConversationID = command.aiConversationID
             pendingEditSourceText = nil
             pendingSourceHistoryEntryID = nil
@@ -1364,15 +1629,19 @@ final class FlowSessionManager: ObservableObject {
             let utteranceId = command.utteranceId
             let commandSeq = command.commandSeq
             let sessionId = command.sessionId
+            let taskKind = command.aiTaskKind ?? .aiQuestion
             let thinkingEnabled = command.aiThinkingEnabled ?? true
             Task { @MainActor [weak self] in
                 await self?.answerPrefilledAIQuestion(
-                    question: question,
-                    conversationID: conversationID,
+                    request: PrefilledAIRequest(
+                        question: question,
+                        conversationID: conversationID,
+                        taskKind: taskKind,
+                        thinkingEnabled: thinkingEnabled
+                    ),
                     sessionId: sessionId,
                     utteranceId: utteranceId,
-                    commandSeq: commandSeq,
-                    thinkingEnabled: thinkingEnabled
+                    commandSeq: commandSeq
                 )
             }
         }
@@ -1389,12 +1658,10 @@ final class FlowSessionManager: ObservableObject {
 
     /// Skip ASR and answer a prefilled AI hint / typed question.
     private func answerPrefilledAIQuestion(
-        question: String,
-        conversationID: UUID?,
+        request: PrefilledAIRequest,
         sessionId: UUID,
         utteranceId: UUID,
-        commandSeq: Int64,
-        thinkingEnabled: Bool
+        commandSeq: Int64
     ) async {
         // Hint-card / prefilled questions never go through `finalizeUtterance`,
         // so this path must drop the processing gate itself. Leaving it set
@@ -1405,7 +1672,7 @@ final class FlowSessionManager: ObservableObject {
                 utteranceId: utteranceId
             )
         }
-        guard let conversationID else {
+        guard let conversationID = request.conversationID else {
             claimAndStoreTerminal(utteranceId: utteranceId) {
                 storeFinalizedError(
                     AppL10n.string("flow.error.aiQuestionFailed"),
@@ -1425,11 +1692,14 @@ final class FlowSessionManager: ObservableObject {
             let service = try AIQuestionService.configured(
                 store: pipelineStore,
                 conversations: aiConversations,
-                thinkingEnabled: thinkingEnabled
+                taskKind: request.taskKind,
+                thinkingEnabled: request.thinkingEnabled,
+                analyticsClient: analyticsClient,
+                analyticsFeature: Self.analyticsFeature(for: request.taskKind)
             )
             aiAnswerStreamThrottle = AIAnswerStreamThrottle()
             let answer = try await service.answer(
-                question: question,
+                question: request.question,
                 conversationID: conversationID,
                 targetLocaleID: pipelineStore.translationTargetLocaleId
             ) { [weak self] partial in
@@ -1455,7 +1725,7 @@ final class FlowSessionManager: ObservableObject {
                 force: true
             )
             await service.commitSuccessfulTurn(
-                question: question,
+                question: request.question,
                 answer: answer,
                 conversationID: conversationID
             )
@@ -1472,7 +1742,7 @@ final class FlowSessionManager: ObservableObject {
         } catch {
             claimAndStoreTerminal(utteranceId: utteranceId) {
                 storeFinalizedError(
-                    AppL10n.string("flow.error.aiQuestionFailed"),
+                    Self.aiQuestionFailureMessage(for: error),
                     kind: .generic,
                     sessionId: sessionId,
                     utteranceId: utteranceId,
@@ -1600,6 +1870,13 @@ final class FlowSessionManager: ObservableObject {
         kind: FlowSessionKeys.TranscriptionErrorKind = .generic,
         status: FlowResult.Status = .error
     ) {
+        finishTranscriptionAnalytics(
+            success: false,
+            failureCategory: Self.transcriptionFailureCategory(
+                kind: kind,
+                status: status
+            )
+        )
         guard let activeSessionId, let currentUtteranceId else { return }
         FlowSessionBridge.writeResult(
             FlowResult(
@@ -1850,9 +2127,13 @@ final class FlowSessionManager: ObservableObject {
 
         let locale = SpeechLocaleResolver.resolve(localeId)
         let stream = capture.beginUtterance()
+        let cloudService = asr as? CloudASRService
         let useStreaming =
             store.engineMode == "cloud"
-            && CloudASRModelCatalog.supportsTrueStreamingASR(for: store.asrProviderId)
+            && (
+                cloudService?.supportsUtteranceStreaming
+                    ?? CloudASRModelCatalog.supportsTrueStreamingASR(for: store.asrProviderId)
+            )
         let pipeline: ChunkedUtterancePipeline?
         if useStreaming {
             chunkedPipeline = nil
@@ -1886,7 +2167,12 @@ final class FlowSessionManager: ObservableObject {
             "max=\(Int(FlowSessionKeys.maxUtteranceDuration))s"
         )
 
-        let cloudASRForStreaming = useStreaming ? (asr as? CloudASRService) : nil
+        let cloudASRForStreaming = useStreaming ? cloudService : nil
+        transcriptionAnalyticsOperation?.cancel()
+        transcriptionAnalyticsOperation = analyticsClient.startAIFeature(
+            .transcription,
+            executionMode: analyticsExecutionMode
+        )
 
         asrTask = Task.detached(priority: .userInitiated) { [weak manager = self] in
             let outcome: ChunkedUtterancePipelineOutcome
@@ -2206,6 +2492,7 @@ final class FlowSessionManager: ObservableObject {
         pendingSourceHistoryEntryID = nil
         pendingSourceHistoryEntryRevision = nil
         pendingAIConversationID = nil
+        pendingManagedRequestPurpose = nil
         pendingProcessingDeadlineAt = nil
         currentUtteranceMode = .dictation
     }
@@ -2223,6 +2510,7 @@ final class FlowSessionManager: ObservableObject {
         let sourceHistoryEntryID = pendingSourceHistoryEntryID
         let sourceHistoryEntryRevision = pendingSourceHistoryEntryRevision
         let aiConversationID = pendingAIConversationID
+        let managedRequestPurpose = pendingManagedRequestPurpose
         let processingDeadlineAt = pendingProcessingDeadlineAt
         let asrEngineMode = sessionASREngineMode ?? store.engineMode
         // ALWAYS clear the processing gate for this utterance. The previous
@@ -2236,6 +2524,7 @@ final class FlowSessionManager: ObservableObject {
             pendingSourceHistoryEntryID = nil
             pendingSourceHistoryEntryRevision = nil
             pendingAIConversationID = nil
+            pendingManagedRequestPurpose = nil
             pendingProcessingDeadlineAt = nil
             if currentUtteranceMode == utteranceMode {
                 currentUtteranceMode = .dictation
@@ -2303,7 +2592,8 @@ final class FlowSessionManager: ObservableObject {
 
         let wantsBatchFallback = UtteranceBatchFallbackPolicy.shouldRunBatchFallback(
             stitchedFinal: lastFinal,
-            partialSnapshot: bestPartialSnapshot
+            partialSnapshot: bestPartialSnapshot,
+            recognitionFailed: asrFailureMessage != nil
         )
         FlowTrace.pipeline(
             "batchFallback.decision",
@@ -2351,6 +2641,7 @@ final class FlowSessionManager: ObservableObject {
             )
             return
         }
+        finishTranscriptionAnalytics(success: true)
 
         // Re-read App Group at finalize so dictionary and translation changes
         // from the keyboard extension are visible before local correction,
@@ -2411,7 +2702,10 @@ final class FlowSessionManager: ObservableObject {
             do {
                 let service = try AIQuestionService.configured(
                     store: pipelineStore,
-                    conversations: aiConversations
+                    conversations: aiConversations,
+                    taskKind: .aiQuestion,
+                    analyticsClient: analyticsClient,
+                    analyticsFeature: .aiAssistant
                 )
                 aiAnswerStreamThrottle = AIAnswerStreamThrottle()
                 let publishUtteranceId = finalizeUtteranceId
@@ -2463,7 +2757,7 @@ final class FlowSessionManager: ObservableObject {
             } catch {
                 claimAndStoreTerminal(utteranceId: finalizeUtteranceId) {
                     storeFinalizedError(
-                        AppL10n.string("flow.error.aiQuestionFailed"),
+                        Self.aiQuestionFailureMessage(for: error),
                         kind: .generic,
                         sessionId: finalizeSessionId,
                         utteranceId: finalizeUtteranceId,
@@ -2547,6 +2841,8 @@ final class FlowSessionManager: ObservableObject {
                 mode: polishMode,
                 systemPrompt: instructionPrompt?.system,
                 providerIdOverride: pipelineStore.polishProviderIdOverride,
+                taskKind: isEditLastInput ? .editLastInput : nil,
+                requestPurpose: managedRequestPurpose,
                 context: isInstructionMode ? nil : polishContext,
                 timeoutLimit: processingDeadlineAt.map {
                     max(0.1, $0 - Date().timeIntervalSince1970)
@@ -2851,6 +3147,13 @@ final class FlowSessionManager: ObservableObject {
         status: FlowResult.Status = .error,
         aiConversationID: UUID? = nil
     ) {
+        finishTranscriptionAnalytics(
+            success: false,
+            failureCategory: Self.transcriptionFailureCategory(
+                kind: kind,
+                status: status
+            )
+        )
         guard let sessionId, let utteranceId else { return }
         FlowTrace.warn(
             "host.deliveredError",
@@ -2873,6 +3176,59 @@ final class FlowSessionManager: ObservableObject {
                 aiConversationID: aiConversationID ?? pendingAIConversationID
             )
         )
+    }
+
+    private static func analyticsFeature(
+        for taskKind: ManagedGatewayTaskKind
+    ) -> AnalyticsFeature {
+        switch taskKind {
+        case .aiQuestion:
+            return .hotword
+        case .clipboardTransform, .customSkill, .agentPlanning:
+            return .agent
+        case .dictationPolish, .translation, .editLastInput:
+            return .other
+        }
+    }
+
+    private var analyticsExecutionMode: AnalyticsExecutionMode {
+        if store.engineMode == "local" {
+            return .local
+        }
+        return store.credentialSource == .managed ? .managed : .byok
+    }
+
+    private func finishTranscriptionAnalytics(
+        success: Bool,
+        failureCategory: AnalyticsFailureCategory = .unknown
+    ) {
+        guard let operation = transcriptionAnalyticsOperation else { return }
+        transcriptionAnalyticsOperation = nil
+        if success {
+            operation.succeed()
+        } else {
+            operation.fail(category: failureCategory)
+        }
+    }
+
+    private static func transcriptionFailureCategory(
+        kind: FlowSessionKeys.TranscriptionErrorKind,
+        status: FlowResult.Status
+    ) -> AnalyticsFailureCategory {
+        if status == .aborted {
+            return .cancelled
+        }
+        if status == .timeout {
+            return .timeout
+        }
+        switch kind {
+        case .noSpeech, .discardedEmpty:
+            return .validation
+        case .recognitionInterrupted:
+            return .cancelled
+        case .asrFailed, .audioUnavailable, .generic:
+            return .provider
+        }
     }
 
     private static var lastResultRevision: Int64 = 0
@@ -3012,6 +3368,8 @@ final class FlowSessionManager: ObservableObject {
         mode: PolishingService.PolishMode,
         systemPrompt: String? = nil,
         providerIdOverride: String?,
+        taskKind: ManagedGatewayTaskKind? = nil,
+        requestPurpose: ManagedGatewayRequestPurpose? = nil,
         context: PolishContext?,
         timeoutLimit: TimeInterval? = nil
     ) async throws -> PolishingService.PolishOutcome {
@@ -3023,6 +3381,8 @@ final class FlowSessionManager: ObservableObject {
                 mode: mode,
                 systemPrompt: systemPrompt,
                 providerIdOverride: providerIdOverride,
+                taskKind: taskKind,
+                requestPurpose: requestPurpose,
                 context: context
             )
         }
@@ -3059,8 +3419,16 @@ final class FlowSessionManager: ObservableObject {
                 guard let self else { break }
                 if self.isActive,
                    !self.capture.engineIsLive,
-                   (self.isUtteranceRecording || self.isUtteranceProcessing) {
+                   self.isUtteranceRecording || self.isUtteranceProcessing {
                     await self.reactivateCaptureIfNeeded()
+                }
+                if self.wantsActiveSession,
+                   !self.pipController.isPictureInPictureActive {
+                    if self.isAppForeground {
+                        self.ensurePiPActive(trigger: .healthCheck, duration: nil)
+                    } else {
+                        self.pipLifecycleState = .waitingForForeground
+                    }
                 }
                 FlowSessionBridge.writeHeartbeat()
                 self.refreshHostReady()
@@ -3077,6 +3445,13 @@ final class FlowSessionManager: ObservableObject {
     private static func safeErrorLogMetadata(_ error: Error) -> String {
         "errorCategory=\(String(reflecting: type(of: error))) "
             + "errorBytes=\(error.localizedDescription.utf8.count)"
+    }
+
+    private static func aiQuestionFailureMessage(for error: Error) -> String {
+        if let managedError = error as? ManagedGatewayError {
+            return managedError.localizedDescription
+        }
+        return AppL10n.string("flow.error.aiQuestionFailed")
     }
 
     private func traceIgnoredCommand(reason: String, command: FlowCommand, detail: String) {
@@ -3097,6 +3472,9 @@ final class FlowSessionManager: ObservableObject {
             "event=\(event)",
             "active=\(isActive)",
             "starting=\(isStarting)",
+            "wantsActive=\(wantsActiveSession)",
+            "pipState=\(String(describing: pipLifecycleState))",
+            "pipGeneration=\(pipController.generation)",
             "coldStart=\(isColdStartHandoff)",
             "sessionId=\(sessionId)",
             "utteranceId=\(utteranceId)",

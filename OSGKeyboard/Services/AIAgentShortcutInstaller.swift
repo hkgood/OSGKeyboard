@@ -6,8 +6,8 @@
 // opens the Add sheet in Shortcuts directly.
 
 import Foundation
-import UIKit
 import OSGKeyboardShared
+import UIKit
 
 enum AIAgentShortcutInstaller {
     @MainActor

@@ -5,8 +5,8 @@
 // without re-running LLM polish in the extension. Also tracks the last
 // voice insertion so the undo button can roll it back safely.
 
-import UIKit
 import OSGKeyboardShared
+import UIKit
 
 @MainActor
 final class KeyboardTextInserter {
@@ -88,6 +88,7 @@ final class KeyboardTextInserter {
         )
         let inserted = separator + trimmed
         insertText(inserted)
+        KeyboardSetupBridge.markVoiceInsertion()
         state.noteUserDidInputText()
         recordLastInsertion(
             inserted,

@@ -254,7 +254,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             activePolishStyleId.updatedAt,
             llmThinkingEnabled.updatedAt,
             flowSkipAppSwitch.updatedAt,
-            flowInactivityDuration.updatedAt,
+            flowInactivityDuration.updatedAt
         ].max() ?? .distantPast
     }
 

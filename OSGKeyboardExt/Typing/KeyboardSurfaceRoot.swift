@@ -3,8 +3,8 @@
 //
 // Switches between voice and typing surfaces driven by KeyboardState.surface.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct KeyboardSurfaceRoot: View {
     @Environment(\.colorScheme) private var colorScheme

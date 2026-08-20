@@ -88,7 +88,7 @@ public enum TranscriptPostProcessor: Sendable {
         #"^(好的?|嗯)?(收到|谢谢)(你|啦|了|啊)?$"#,
         #"^(没事)?(不用|别)(了|啦)?(谢谢)?$"#,
         #"^(晚安|早安|早上好|拜拜|再见)(啦|了|啊)?$"#,
-        #"^(晚点再说|待会联系|先这样吧|马上到了)$"#,
+        #"^(晚点再说|待会联系|先这样吧|马上到了)$"#
     ]
 
     private static func hasCommunicativeSignal(_ text: String) -> Bool {
@@ -97,7 +97,7 @@ public enum TranscriptPostProcessor: Sendable {
             #"吗|么|怎么|什么|哪|谁|为何|为什么|为啥"#,
             #"能不能|可不可以|要不要|行不行"#,
             #"回他|回她"#,
-            #"约|见面|吃饭|电影"#,
+            #"约|见面|吃饭|电影"#
         ]
         return patterns.contains { text.range(of: $0, options: .regularExpression) != nil }
     }
@@ -112,13 +112,13 @@ public enum TranscriptPostProcessor: Sendable {
             "面膜", "防晒", "口红", "粉底", "洗发", "咖啡", "火锅", "酒店", "餐厅",
             "方案", "接口", "测试", "Key", "老板", "电影", "地铁", "快递", "会议",
             "周报", "加班", "机票", "医院", "课程", "健身", "外卖", "微信", "项目",
-            "发布", "文档", "密码", "充电器", "门卡",
+            "发布", "文档", "密码", "充电器", "门卡"
         ]
         return entities.contains { text.contains($0) }
     }
 
     private static let leadingFillers = [
-        "怎么说呢", "就是说", "然后那个", "嗯那个", "那个", "嗯", "呃",
+        "怎么说呢", "就是说", "然后那个", "嗯那个", "那个", "嗯", "呃"
     ]
 
     private static func stripLeadingFillers(_ text: String) -> String {
@@ -249,7 +249,7 @@ public enum TranscriptPostProcessor: Sendable {
             #"首先|其次|再次|最后|另外|再者|一方面|另一方面"#,
             #"\b(first|second|third|fourth|fifth|finally|next|another)\b"#,
             #"\b(step\s*(one|two|three|four|five|\d+))\b"#,
-            #"point\s*(one|two|three|four|five|\d+)"#,
+            #"point\s*(one|two|three|four|five|\d+)"#
         ]
         for pattern in patterns {
             if text.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil {
@@ -356,7 +356,7 @@ public enum TranscriptPostProcessor: Sendable {
         // Collapse duplicate Chinese / Western punctuation.
         let dupPairs = [
             ("。。", "。"), ("，，", "，"), ("？？", "？"), ("！！", "！"),
-            ("..", "."), (",,", ","), ("??", "?"), ("!!", "!"),
+            ("..", "."), (",,", ","), ("??", "?"), ("!!", "!")
         ]
         for (dup, single) in dupPairs {
             while result.contains(dup) {
@@ -418,7 +418,7 @@ public enum TranscriptPostProcessor: Sendable {
     public static func stripExplanatoryPrefix(from text: String) -> String {
         let prefixes = [
             "以下是", "处理后", "处理后的文本", "输出如下", "结果如下",
-            "Here is", "Here's", "Output:", "Result:", "Processed text:",
+            "Here is", "Here's", "Output:", "Result:", "Processed text:"
         ]
         var result = text
         for prefix in prefixes {
@@ -449,7 +449,7 @@ public enum TranscriptPostProcessor: Sendable {
     private static func endsWithSentenceTerminator(_ text: String) -> Bool {
         guard let last = text.unicodeScalars.last else { return false }
         let terminators: Set<Unicode.Scalar> = [
-            "。", "！", "？", "…", "!", "?", ".", ";", "；", "：", ":",
+            "。", "！", "？", "…", "!", "?", ".", ";", "；", "：", ":"
         ]
         return terminators.contains(last)
     }

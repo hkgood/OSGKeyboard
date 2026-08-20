@@ -14,7 +14,7 @@ enum ASRLocaleLabels {
         "zh-Hant": "locale.zh-Hant",
         "en-US": "locale.en-US",
         "ja-JP": "locale.ja-JP",
-        "ko-KR": "locale.ko-KR",
+        "ko-KR": "locale.ko-KR"
     ]
 
     static func displayName(for localeId: String, language: AppUILanguage) -> String {

@@ -7,8 +7,8 @@
 // `--whats-new-lang=zh|en`.
 
 #if DEBUG
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct AIKeyboardDemoView: View {
     private enum Scene: Equatable {

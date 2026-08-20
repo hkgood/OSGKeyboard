@@ -5,8 +5,8 @@
 // detail screen with the verbatim license text. Reached from
 // Settings → About → "Third-Party Licenses".
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct OpenSourceLicensesView: View {
     @Environment(\.themePalette) private var palette: ThemePalette

@@ -1,8 +1,8 @@
 // FlowSessionPolicyTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class FlowSessionPolicyTests: XCTestCase {
     private func makeDefaults() -> UserDefaults {

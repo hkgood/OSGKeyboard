@@ -3,8 +3,8 @@
 //
 // Bundled privacy policy HTML. Reached from Settings → About.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct PrivacyPolicyView: View {
     @Environment(\.themePalette) private var palette: ThemePalette

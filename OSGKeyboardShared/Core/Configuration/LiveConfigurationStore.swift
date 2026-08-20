@@ -16,6 +16,7 @@ public struct LiveConfigurationSnapshot {
     public let asrApiKey: String
     public let asrModel: String
     public let engineMode: String
+    public let credentialSource: CredentialSource
     public let polishIntensity: PolishIntensity
     public let aiResponseLength: AIResponseLength
     public let llmThinkingEnabled: Bool
@@ -35,6 +36,7 @@ public struct LiveConfigurationSnapshot {
         asrApiKey: String,
         asrModel: String,
         engineMode: String,
+        credentialSource: CredentialSource = .byok,
         polishIntensity: PolishIntensity,
         aiResponseLength: AIResponseLength = .default,
         llmThinkingEnabled: Bool,
@@ -53,6 +55,7 @@ public struct LiveConfigurationSnapshot {
         self.asrApiKey = asrApiKey
         self.asrModel = asrModel
         self.engineMode = engineMode
+        self.credentialSource = credentialSource
         self.polishIntensity = polishIntensity
         self.aiResponseLength = aiResponseLength
         self.llmThinkingEnabled = llmThinkingEnabled
@@ -75,6 +78,7 @@ public struct LiveConfigurationSnapshot {
             asrApiKey: config.asrApiKey,
             asrModel: config.asrModel,
             engineMode: config.engineMode,
+            credentialSource: config.credentialSource,
             polishIntensity: config.polishIntensity,
             aiResponseLength: config.aiResponseLength,
             llmThinkingEnabled: config.llmThinkingEnabled,
@@ -110,6 +114,7 @@ public struct LiveConfigurationStore: ConfigurationStore, @unchecked Sendable {
     public var asrApiKey: String { snapshot.asrApiKey }
     public var asrModel: String { snapshot.asrModel }
     public var engineMode: String { snapshot.engineMode }
+    public var credentialSource: CredentialSource { snapshot.credentialSource }
     public var polishIntensity: PolishIntensity { snapshot.polishIntensity }
     public var aiResponseLength: AIResponseLength { snapshot.aiResponseLength }
     public var llmThinkingEnabled: Bool { snapshot.llmThinkingEnabled }
@@ -119,8 +124,19 @@ public struct LiveConfigurationStore: ConfigurationStore, @unchecked Sendable {
     public var detectedAppContext: (context: AppContext, observedAt: Date)? { snapshot.detectedAppContext }
     public var cloudASRPersistence: UserDefaults { snapshot.cloudASRPersistence }
 
-    public func makeClient() -> LLMClient {
-        LLMClientFactory.make(
+    public func makeClient(
+        taskKind: ManagedGatewayTaskKind?,
+        requestPurpose: ManagedGatewayRequestPurpose?
+    ) -> LLMClient {
+        if credentialSource == .managed {
+            return ManagedLLMClient(
+                capability: .polish,
+                taskKind: taskKind,
+                requestPurpose: requestPurpose,
+                grants: GatewayGrantCoordinator()
+            )
+        }
+        return LLMClientFactory.make(
             providerId: providerId,
             baseURL: baseURL,
             apiKey: apiKey,

@@ -3,8 +3,8 @@
 //
 // Hermetic tests for iCloud KVS dictionary merge + sync service.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 // MARK: - Fake KVS
 
@@ -100,10 +100,10 @@ final class PersonalDictionaryCloudSyncTests: XCTestCase {
 
     func testMergeCombinesDistinctTerms() {
         let local = PersonalDictionary(entries: [
-            PersonalDictionary.Entry(term: "Alpha", category: .custom, source: .manual),
+            PersonalDictionary.Entry(term: "Alpha", category: .custom, source: .manual)
         ])
         let remote = PersonalDictionary(entries: [
-            PersonalDictionary.Entry(term: "Beta", category: .custom, source: .manual),
+            PersonalDictionary.Entry(term: "Beta", category: .custom, source: .manual)
         ])
 
         let merged = PersonalDictionary.merge(local: local, remote: remote)
@@ -152,7 +152,7 @@ final class PersonalDictionaryCloudSyncTests: XCTestCase {
                 category: .custom,
                 source: .manual,
                 updatedAt: Date(timeIntervalSince1970: 400)
-            ),
+            )
         ])
 
         try await sync.enableSync()
@@ -165,7 +165,7 @@ final class PersonalDictionaryCloudSyncTests: XCTestCase {
 
     func testPushLocalIfEnabledSkipsWhenDisabled() async throws {
         store.personalDictionary = PersonalDictionary(entries: [
-            PersonalDictionary.Entry(term: "OnlyLocal", category: .custom, source: .manual),
+            PersonalDictionary.Entry(term: "OnlyLocal", category: .custom, source: .manual)
         ])
         store.setPersonalDictionaryICloudSyncEnabled(false)
 
@@ -177,7 +177,7 @@ final class PersonalDictionaryCloudSyncTests: XCTestCase {
     func testPullAndMergeWritesMergedDictionaryToAppGroup() async {
         store.setPersonalDictionaryICloudSyncEnabled(true)
         store.personalDictionary = PersonalDictionary(entries: [
-            PersonalDictionary.Entry(term: "LocalOnly", category: .custom, source: .manual),
+            PersonalDictionary.Entry(term: "LocalOnly", category: .custom, source: .manual)
         ])
 
         let remote = PersonalDictionary(entries: [
@@ -186,7 +186,7 @@ final class PersonalDictionaryCloudSyncTests: XCTestCase {
                 category: .custom,
                 source: .manual,
                 updatedAt: Date(timeIntervalSince1970: 900)
-            ),
+            )
         ])
         kvs.set(try! sync.encode(remote), forKey: PersonalDictionaryCloudSync.kvsKey)
 
@@ -198,7 +198,7 @@ final class PersonalDictionaryCloudSyncTests: XCTestCase {
     func testEncodeRejectsOversizedPayload() {
         let hugeTerm = String(repeating: "x", count: PersonalDictionaryCloudSync.maxPayloadBytes)
         let dictionary = PersonalDictionary(entries: [
-            PersonalDictionary.Entry(term: hugeTerm, category: .custom, source: .manual),
+            PersonalDictionary.Entry(term: hugeTerm, category: .custom, source: .manual)
         ])
 
         XCTAssertThrowsError(try sync.encode(dictionary)) { error in

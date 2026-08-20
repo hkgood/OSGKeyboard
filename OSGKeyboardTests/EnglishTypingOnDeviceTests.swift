@@ -4,8 +4,8 @@
 // Hosted in the main app so these can run on a physical iPhone.
 // ExtTests stay tool-hosted (simulator-only).
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class EnglishTypingOnDeviceTests: XCTestCase {
     func testLexiconLoadsFortyThousandWords() {

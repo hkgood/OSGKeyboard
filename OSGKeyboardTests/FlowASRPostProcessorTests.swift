@@ -1,9 +1,9 @@
 // FlowASRPostProcessorTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboard
 @testable import OSGKeyboardShared
+import XCTest
 
 final class FlowASRPostProcessorTests: XCTestCase {
     func testLocalASRAppliesDictionaryAliasesToRawAndPolishInputs() throws {

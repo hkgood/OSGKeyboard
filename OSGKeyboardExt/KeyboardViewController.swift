@@ -14,10 +14,10 @@
 //   • `phase` is a real stored property (no derivation) — the previous
 //     "derive from recordStream" shim locked out every press after the first.
 
-import UIKit
-import SwiftUI
 import Combine
 import OSGKeyboardShared
+import SwiftUI
+import UIKit
 
 private final class KeyboardHostingController: UIHostingController<KeyboardSurfaceRoot> {
     override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge {
@@ -205,6 +205,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        AnalyticsExtensionService.shared.keyboardWillDisappear()
         assistantFieldActionRefreshTask?.cancel()
         assistantFieldActionRefreshTask = nil
         clipboardCapture?.keyboardWillDisappear()
@@ -305,6 +306,9 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        AnalyticsExtensionService.shared.recordPresentation(
+            hasFullAccess: hasFullAccess
+        )
         OSGDiag.log(
             "KVC.viewDidAppear begin surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
             category: "boot"
@@ -994,7 +998,7 @@ public final class KeyboardViewController: UIInputViewController {
             host.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             host.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             host.view.topAnchor.constraint(equalTo: view.topAnchor),
-            host.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            host.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         host.didMove(toParent: self)
         hosting = host

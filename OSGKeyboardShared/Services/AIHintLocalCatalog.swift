@@ -88,7 +88,7 @@ public enum AIHintLocalCatalog: Sendable {
             priority: 36,
             source: "local",
             locale: "zh"
-        ),
+        )
     ]
 
     private static let enCards: [AIHintCard] = [
@@ -168,6 +168,6 @@ public enum AIHintLocalCatalog: Sendable {
             priority: 36,
             source: "local",
             locale: "en"
-        ),
+        )
     ]
 }

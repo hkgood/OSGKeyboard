@@ -1,8 +1,8 @@
 // LocalASRModelCatalogTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class LocalASRModelCatalogTests: XCTestCase {
 
@@ -130,7 +130,7 @@ final class LocalASRModelCatalogTests: XCTestCase {
         let legacyIds = [
             "sherpa-qwen3-0.6b-int8",
             "sherpa-qwen3-1.7b-int8",
-            "sherpa-sensevoice-small-int8",
+            "sherpa-sensevoice-small-int8"
         ]
         for id in legacyIds {
             XCTAssertEqual(migrateLegacyModelId(id), "qwen3-mlx-0.6b-4bit")

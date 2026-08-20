@@ -3,8 +3,8 @@
 //
 // Hermetic regression coverage for keyboard↔host Flow decision helpers.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class FlowKeyboardPoliciesTests: XCTestCase {
 

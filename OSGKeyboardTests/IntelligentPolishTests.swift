@@ -6,9 +6,9 @@
 // The tests are deliberately hermetic — no LLMClient, no ASR, no
 // App Group — so they run in <100 ms total.
 
-import XCTest
 @testable import OSGKeyboard
 @testable import OSGKeyboardShared
+import XCTest
 
 final class IntelligentPolishTests: XCTestCase {
 
@@ -30,6 +30,17 @@ final class IntelligentPolishTests: XCTestCase {
     }
 
     // MARK: - PolishingService prompt construction
+
+    func testPolishModesMapToManagedGatewayTaskKinds() {
+        XCTAssertEqual(
+            PolishingService.managedGatewayTaskKind(for: .polish),
+            .dictationPolish
+        )
+        XCTAssertEqual(
+            PolishingService.managedGatewayTaskKind(for: .translate(targetLocaleId: "en")),
+            .translation
+        )
+    }
 
     func testPolishServiceUltraShortTextSkipsLLM() async throws {
         store.setEngineMode("cloud")
@@ -58,7 +69,7 @@ final class IntelligentPolishTests: XCTestCase {
             ("builtin.flex", "这个方案还行", "装腔公式"),
             ("builtin.corp", "这期可能推迟", "黑话公式"),
             ("builtin.diba", "这个结论我不同意", "拆招公式"),
-            ("builtin.xhs", "这家店味道一般", "集美公式"),
+            ("builtin.xhs", "这家店味道一般", "集美公式")
         ]
 
         for (id, input, marker) in cases {
@@ -138,7 +149,7 @@ final class IntelligentPolishTests: XCTestCase {
 
     func testPersonalDictionaryMigratesLegacyHistorySource() {
         let legacy = PersonalDictionary(entries: [
-            PersonalDictionary.Entry(term: "Kubernetes", category: .productName, source: .history),
+            PersonalDictionary.Entry(term: "Kubernetes", category: .productName, source: .history)
         ])
         let data = try! JSONEncoder().encode(legacy)
         defaults.set(data, forKey: "config.personalDictionary.v1")
@@ -194,7 +205,7 @@ final class IntelligentPolishTests: XCTestCase {
         store.personalDictionary = PersonalDictionary(entries: [
             PersonalDictionary.Entry(
                 term: "Kubernetes", category: .productName, source: .manual
-            ),
+            )
         ])
         let captured = CapturingLLMClient()
         let service = PolishingService(store: store, client: captured)
@@ -679,7 +690,7 @@ final class IntelligentPolishTests: XCTestCase {
         let dict = PersonalDictionary(entries: [
             PersonalDictionary.Entry(term: "Kubernetes", category: .productName, source: .manual),
             PersonalDictionary.Entry(term: "iOS", category: .acronym, source: .manual),
-            PersonalDictionary.Entry(term: "Rocky", category: .properNoun, source: .manual),
+            PersonalDictionary.Entry(term: "Rocky", category: .properNoun, source: .manual)
         ])
         let prompt = dict.promptFragment()
         XCTAssertTrue(prompt.contains("OSGKeyboard"))

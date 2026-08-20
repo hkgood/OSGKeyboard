@@ -48,7 +48,7 @@ enum LLMHTTPDiagnostics {
             "x-request-id",
             "request-id",
             "x-correlation-id",
-            "cf-ray",
+            "cf-ray"
         ]
         .compactMap { response.value(forHTTPHeaderField: $0) }
         .compactMap(safeToken)
@@ -240,7 +240,7 @@ public struct OpenAICompatibleClient: LLMClient {
         try await complete(
             messages: [
                 .system(systemPrompt),
-                .user(text),
+                .user(text)
             ],
             timeout: timeout,
             options: options

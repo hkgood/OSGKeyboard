@@ -65,7 +65,7 @@ public enum AIClipboardPrompt: Sendable {
     }
 
     private static let keywords = [
-        "剪贴板", "剪切板", "剪贴版", "粘贴板", "clipboard",
+        "剪贴板", "剪切板", "剪贴版", "粘贴板", "clipboard"
     ]
 
     private static func trimmed(_ text: String) -> String {

@@ -43,6 +43,11 @@ public struct AIClipboardSkill: Identifiable, Equatable, Sendable {
     /// Navigate and Ride hand off to the host (Maps or Didi). No Shortcut.
     public var requiresShortcut: Bool { kind == .export && shortcutName != nil }
     public var isUserCreated: Bool { id.hasPrefix("user.") }
+    /// The server applies the final model policy; this only preserves whether
+    /// the user invoked a built-in transform or a custom skill.
+    public var managedGatewayTaskKind: ManagedGatewayTaskKind {
+        isUserCreated ? .customSkill : .clipboardTransform
+    }
 
     public init(
         id: String,
@@ -165,7 +170,7 @@ public enum AIClipboardSkillCatalog: Sendable {
             descriptionKey: "skills.navigate.description",
             kind: .export,
             isDefault: false
-        ),
+        )
     ]
 
     /// Legacy alias: the three default transform skills used to be the whole list.

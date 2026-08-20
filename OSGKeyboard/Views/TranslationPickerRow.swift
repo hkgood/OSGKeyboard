@@ -17,8 +17,8 @@
 // The pipeline (`PolishingService`) honors `.translate` on both
 // engines when this row is visible — no more "rejected mode" toast.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct TranslationPickerRow: View {
     @Environment(\.themePalette) private var palette: ThemePalette

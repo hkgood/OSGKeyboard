@@ -15,7 +15,7 @@ public enum AITodoExtraction: Sendable {
         "none", "no", "n/a", "na", "nil", "null",
         "无", "没有", "没有待办", "没有待办事项", "无待办", "无待办事项",
         "no tasks", "no task", "no todos", "no to-dos", "no to-do",
-        "no actionable items", "no action items",
+        "no actionable items", "no action items"
     ]
 
     /// Titles to send to the companion Shortcut. Empty → do not run it.

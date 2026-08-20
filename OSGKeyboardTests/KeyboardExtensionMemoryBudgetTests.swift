@@ -1,8 +1,8 @@
 // KeyboardExtensionMemoryBudgetTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class KeyboardExtensionMemoryBudgetTests: XCTestCase {
     func testMemoryLevelsUseDocumentedBoundaries() {

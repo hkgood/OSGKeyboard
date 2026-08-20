@@ -3,8 +3,8 @@
 //
 // Phase 4: legal next-key sets and weighted ambiguous hit resolution.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class PinyinNextKeyResolverTests: XCTestCase {
     func testZhongPrefixAllowsG() {

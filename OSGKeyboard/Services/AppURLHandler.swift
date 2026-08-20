@@ -7,8 +7,8 @@
 // host-return whitelist) is `UIOpenURLContext.options.sourceApplication` from a
 // scene delegate — SwiftUI's `.onOpenURL` does not expose it.
 
-import UIKit
 import OSGKeyboardShared
+import UIKit
 
 /// Buffers launch/open URLs until the SwiftUI root registers a handler.
 ///
@@ -43,6 +43,16 @@ final class AppOpenURLRouter {
 }
 
 final class AppURLHandler: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [
+            UIApplication.LaunchOptionsKey: Any
+        ]? = nil
+    ) -> Bool {
+        AnalyticsHostService.registerBackgroundTask()
+        return true
+    }
+
     /// SwiftUI `@main` apps get no scene delegate by default. Attach ours so
     /// scene-based URL delivery — the only iOS 26 path to `sourceApplication` —
     /// reaches `AppSceneDelegate`. We deliberately do NOT create a window here;
@@ -77,11 +87,17 @@ final class AppSceneDelegate: NSObject, UIWindowSceneDelegate {
         options connectionOptions: UIScene.ConnectionOptions
     ) {
         handle(connectionOptions.urlContexts)
+        handle(connectionOptions.userActivities)
     }
 
     /// Warm open while the app is already running or suspended in memory.
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
         handle(URLContexts)
+    }
+
+    /// Universal Links arrive as browsing-web user activities, not URL contexts.
+    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        handle([userActivity])
     }
 
     private func handle(_ contexts: Set<UIOpenURLContext>) {
@@ -106,6 +122,19 @@ final class AppSceneDelegate: NSObject, UIWindowSceneDelegate {
                 }
                 AppOpenURLRouter.shared.route(item.url)
             }
+        }
+    }
+
+    private func handle(_ activities: Set<NSUserActivity>) {
+        let urls = activities.compactMap { activity -> URL? in
+            guard activity.activityType == NSUserActivityTypeBrowsingWeb else { return nil }
+            return activity.webpageURL
+        }
+        guard !urls.isEmpty else { return }
+
+        // Scene delegate callbacks are delivered on the main thread.
+        MainActor.assumeIsolated {
+            urls.forEach { AppOpenURLRouter.shared.route($0) }
         }
     }
 }

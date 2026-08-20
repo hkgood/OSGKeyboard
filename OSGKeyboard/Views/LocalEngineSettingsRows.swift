@@ -7,8 +7,8 @@
 //   `DictationTranscriber` (nothing to download).
 // - Post-ASR polish uses the LLM provider / API key configured in Settings.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 // MARK: - Local models group
 

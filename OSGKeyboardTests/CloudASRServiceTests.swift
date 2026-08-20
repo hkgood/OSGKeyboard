@@ -1,10 +1,10 @@
 // CloudASRServiceTests.swift
 // OSGKeyboardTests
 
-import XCTest
 import os
-@testable import OSGKeyboardShared
 @testable import OSGKeyboardHostSupport
+@testable import OSGKeyboardShared
+import XCTest
 
 private final class RecordingFallbackASR: ASRService, @unchecked Sendable {
     private let lock = OSAllocatedUnfairLock(initialState: 0)

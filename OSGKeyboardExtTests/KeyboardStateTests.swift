@@ -13,8 +13,8 @@
 // *don't* attempt that here — the State class is what we care about
 // for correctness.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 @MainActor
 final class KeyboardStateTests: XCTestCase {

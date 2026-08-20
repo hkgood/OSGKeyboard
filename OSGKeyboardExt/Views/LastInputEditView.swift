@@ -1,8 +1,8 @@
 // LastInputEditView.swift
 // OSGKeyboard · Keyboard Extension
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct LastInputEditView: View {
     private enum Layout {

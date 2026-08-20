@@ -3,8 +3,8 @@
 //
 // Settings-row toggle for mirroring user preferences through iCloud KVS.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 @MainActor
 struct SettingsICloudSyncRow: View {

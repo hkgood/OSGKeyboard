@@ -4,8 +4,8 @@
 // Consumes the keyboard's pending export-skill payload. Navigate opens a
 // map URL in the host. Other exports open the companion Shortcut.
 
-import UIKit
 import OSGKeyboardShared
+import UIKit
 
 enum AIAgentShortcutRunner {
     @MainActor

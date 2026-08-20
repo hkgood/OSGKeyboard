@@ -5,8 +5,8 @@
 // the in-app UI language override (not only the system language).
 
 import Foundation
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 enum AppL10n {
     static func string(

@@ -1,8 +1,8 @@
 // AIModeLLMClientTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class AIModeLLMClientTests: XCTestCase {
 
@@ -213,8 +213,8 @@ final class AIModeLLMClientTests: XCTestCase {
         let answer = "今天北京多云间晴，最高气温33℃，夜间有分散性雷阵雨，最低气温25℃。"
         let chunkJSON: [String: Any] = [
             "choices": [
-                ["delta": ["content": answer]],
-            ],
+                ["delta": ["content": answer]]
+            ]
         ]
         let chunkData = try JSONSerialization.data(withJSONObject: chunkJSON)
         guard let chunkText = String(data: chunkData, encoding: .utf8) else {

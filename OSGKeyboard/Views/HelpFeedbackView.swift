@@ -3,8 +3,8 @@
 //
 // In-app GitHub Issues page. Reached from Settings → About.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct HelpFeedbackView: View {
     @Environment(\.themePalette) private var palette: ThemePalette

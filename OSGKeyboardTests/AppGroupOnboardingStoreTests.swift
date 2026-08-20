@@ -4,9 +4,9 @@
 // Locks AppGroupStore onboarding flags (host-app OnboardingView),
 // detected app-context accessors, and polish intensity defaults.
 
-import XCTest
 @testable import OSGKeyboard
 @testable import OSGKeyboardShared
+import XCTest
 
 final class AppGroupOnboardingStoreTests: XCTestCase {
 
@@ -60,6 +60,50 @@ final class AppGroupOnboardingStoreTests: XCTestCase {
         let store3 = AppGroupStore(defaults: defaults)
         XCTAssertTrue(store3.hasCompletedOnboarding)
         XCTAssertEqual(store3.onboardingPage, 0)
+    }
+
+    func testOnboardingPracticeWindowExpires() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        KeyboardSetupBridge.setOnboardingPracticeActive(
+            true,
+            duration: 30,
+            defaults: defaults,
+            now: now
+        )
+
+        XCTAssertTrue(
+            KeyboardSetupBridge.onboardingPracticeIsActive(
+                defaults: defaults,
+                now: now.addingTimeInterval(29)
+            )
+        )
+        XCTAssertFalse(
+            KeyboardSetupBridge.onboardingPracticeIsActive(
+                defaults: defaults,
+                now: now.addingTimeInterval(31)
+            )
+        )
+    }
+
+    func testDisablingOnboardingPracticeClearsWindow() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        KeyboardSetupBridge.setOnboardingPracticeActive(
+            true,
+            defaults: defaults,
+            now: now
+        )
+        KeyboardSetupBridge.setOnboardingPracticeActive(
+            false,
+            defaults: defaults,
+            now: now
+        )
+
+        XCTAssertFalse(
+            KeyboardSetupBridge.onboardingPracticeIsActive(
+                defaults: defaults,
+                now: now
+            )
+        )
     }
 
     // MARK: - App context detection round-trip

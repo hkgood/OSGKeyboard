@@ -21,6 +21,38 @@
         "OSGKeyboardTests/ProviderToolRequestCoordinatorTests"
       ]
     },
+    "account": {
+      "description": "Host-private session, Apple integrity protocol, account center, and referral links",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardTests/AccountAPIClientTests",
+        "OSGKeyboardTests/AccountCenterViewModelTests",
+        "OSGKeyboardTests/AccountCreditPurchaseManagerTests",
+        "OSGKeyboardTests/AccountSecurityPrimitiveTests",
+        "OSGKeyboardTests/AccountSignInCoordinatorTests",
+        "OSGKeyboardTests/AccountSnapshotLoaderTests",
+        "OSGKeyboardTests/DeviceIntegrityTests",
+        "OSGKeyboardTests/ReferralProfileTests"
+      ]
+    },
+    "managed_gateway": {
+      "description": "Scope-limited grants and managed LLM transport",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardExtTests/ManagedGatewayTests"
+      ]
+    },
+    "analytics": {
+      "description": "Privacy-safe analytics schema, durable queue, uploader, identity lifecycle, and anonymous extension runtime",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardTests/AnalyticsModelTests",
+        "OSGKeyboardTests/AnalyticsRepositoryTests",
+        "OSGKeyboardTests/AnalyticsUploadCoordinatorTests",
+        "OSGKeyboardTests/AnalyticsAIOperationTests",
+        "OSGKeyboardExtTests/AnalyticsExtensionPrivacyTests"
+      ]
+    },
     "sync": {
       "description": "iCloud KVS merge/sync for settings, local-only clipboard consent, dictionary, speech history, usage stats",
       "platform": "ios",
@@ -104,6 +136,8 @@
       "platform": "ios",
       "tests": [
         "OSGKeyboardTests/FlowHandoffPolicyTests",
+        "OSGKeyboardTests/FlowHomePiPStatusPolicyTests",
+        "OSGKeyboardTests/FlowPiPRecoveryPolicyTests",
         "OSGKeyboardTests/FlowSessionBridgeTests",
         "OSGKeyboardTests/FlowSessionPolicyTests",
         "OSGKeyboardTests/FlowBudgetAndMergeTests",
@@ -186,6 +220,9 @@
       "description": "Full iOS + Ext hermetic suite (includes host_misc + pipeline_perf; excludes mac and live_api)",
       "groups": [
         "config",
+        "account",
+        "managed_gateway",
+        "analytics",
         "sync",
         "polish",
         "edit_last_input",
@@ -202,6 +239,9 @@
       "description": "Default CI / PR gate: critical path without host_misc, pipeline_perf, or mac",
       "groups": [
         "config",
+        "account",
+        "managed_gateway",
+        "analytics",
         "sync",
         "polish",
         "edit_last_input",
@@ -214,7 +254,15 @@
     },
     "api": {
       "description": "Online API contracts + polish/LLM stubs",
-      "groups": ["cloud_asr", "polish"]
+      "groups": ["cloud_asr", "polish", "managed_gateway"]
+    },
+    "account": {
+      "description": "Account, Apple integrity, and referral-link contracts",
+      "groups": ["account"]
+    },
+    "managed": {
+      "description": "Managed gateway grant and provider transports",
+      "groups": ["managed_gateway", "cloud_asr"]
     },
     "asr": {
       "description": "Cloud + local ASR + utterance stitching",

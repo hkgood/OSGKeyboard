@@ -225,7 +225,7 @@ extension PersonalDictionary {
             createdAt: Date(timeIntervalSince1970: 0),
             updatedAt: Date(timeIntervalSince1970: 0),
             usageCount: 0
-        ),
+        )
     ]
 
     /// User entries plus built-in system terms (deduped by term).

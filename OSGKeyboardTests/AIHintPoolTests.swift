@@ -1,8 +1,8 @@
 // AIHintPoolTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class AIHintPoolTests: XCTestCase {
     func testLocaleResolverOnlyZhHansUsesChinesePack() {

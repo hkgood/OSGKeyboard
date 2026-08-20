@@ -1,8 +1,8 @@
 // MainTabView.swift
 // OSGKeyboard · Main App
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct MainTabView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
@@ -27,6 +27,9 @@ struct MainTabView: View {
         .background(palette.background)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onReceive(NotificationCenter.default.publisher(for: .osgOpenSettingsDeepLink)) { _ in
+            tab = .settings
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .osgOpenAccountDeepLink)) { _ in
             tab = .settings
         }
     }

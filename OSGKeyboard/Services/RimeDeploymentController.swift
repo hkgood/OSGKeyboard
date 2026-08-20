@@ -8,8 +8,8 @@
 // observable outcome to onboarding and Settings. The keyboard extension only
 // reads readiness and opens the already-built data.
 
-import Foundation
 import Combine
+import Foundation
 import OSGKeyboardShared
 
 @MainActor

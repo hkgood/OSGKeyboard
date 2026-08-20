@@ -1,8 +1,8 @@
 // ClipboardHistoryPolicyTests.swift
 // OSGKeyboardTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class ClipboardHistoryPolicyTests: XCTestCase {
     func testRejectsEmptyAndWhitespace() {
@@ -60,7 +60,7 @@ final class ClipboardHistoryPolicyTests: XCTestCase {
             ("sk-proj-abcdefghijklmnopqrstuvwxyz0123456789", .providerKey),
             ("sk-ant-abcdefghijklmnopqrstuvwxyz0123456789", .providerKey),
             ("github_pat_abcdefghijklmnopqrstuvwxyz012345", .providerKey),
-            ("4111 1111 1111 1111", .paymentCard),
+            ("4111 1111 1111 1111", .paymentCard)
         ]
 
         for (text, reason) in rejected {
@@ -81,7 +81,7 @@ final class ClipboardHistoryPolicyTests: XCTestCase {
             "年份 2026",
             "账号 123456",
             "4111 1111 1111 1112",
-            "490154203237518",
+            "490154203237518"
         ]
         for text in accepted {
             XCTAssertEqual(ClipboardHistoryPolicy.acceptedText(from: text), text)

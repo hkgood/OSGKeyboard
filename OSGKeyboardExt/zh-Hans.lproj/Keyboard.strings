@@ -14,6 +14,7 @@
 "onboarding.api.subtitle" = "本地识别无需 Key；填写 API Key 后可开启 AI 润色。";
 "onboarding.api.localReady.title" = "本地识别已就绪";
 "onboarding.api.localReady.body" = "识别在端侧完成。请在设置中填写 API Key 以开启 AI 润色。";
+"keyboard.onboarding.practice.mic" = "点按麦克风，说完后再点一次";
 
 /* Common navigation */
 "common.back" = "返回";

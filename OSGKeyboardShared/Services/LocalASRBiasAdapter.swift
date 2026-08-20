@@ -18,7 +18,7 @@ public enum LocalASRBiasAdapter {
         "com.sublimetext.4",
         "com.apple.Terminal",
         "com.googlecode.iterm2",
-        "dev.warp.Warp-Stable",
+        "dev.warp.Warp-Stable"
     ]
 
     public static func adapt(

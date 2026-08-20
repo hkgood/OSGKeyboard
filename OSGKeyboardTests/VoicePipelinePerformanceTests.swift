@@ -5,9 +5,9 @@
 // Stub ASR/LLM + synthetic PCM (no mic / no live network).
 // Run: ./Scripts/run-tests.sh perf
 
-import XCTest
-@testable import OSGKeyboardShared
 @testable import OSGKeyboardHostSupport
+@testable import OSGKeyboardShared
+import XCTest
 
 final class VoicePipelinePerformanceTests: XCTestCase {
 

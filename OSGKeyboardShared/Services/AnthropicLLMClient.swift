@@ -45,7 +45,7 @@ public struct AnthropicMessagesClient: LLMClient {
         try await complete(
             messages: [
                 .system(systemPrompt),
-                .user(text),
+                .user(text)
             ],
             timeout: timeout,
             options: options
@@ -168,13 +168,13 @@ public struct AnthropicMessagesClient: LLMClient {
             // Anthropic requires max_tokens > thinking.budget_tokens.
             "max_tokens": thinkingEnabled ? answerTokens + thinkingBudget : answerTokens,
             "system": systemPrompt,
-            "messages": conversation,
+            "messages": conversation
         ]
         if thinkingEnabled {
             // Extended thinking; sampling knobs are ignored while thinking runs.
             body["thinking"] = [
                 "type": "enabled",
-                "budget_tokens": thinkingBudget,
+                "budget_tokens": thinkingBudget
             ]
         } else {
             if let temperature = options.temperature {
@@ -190,8 +190,8 @@ public struct AnthropicMessagesClient: LLMClient {
                 [
                     "type": "web_search_20250305",
                     "name": "web_search",
-                    "max_uses": 3,
-                ],
+                    "max_uses": 3
+                ]
             ]
         }
         if stream {

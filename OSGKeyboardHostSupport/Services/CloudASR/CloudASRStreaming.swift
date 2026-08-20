@@ -12,6 +12,9 @@ import OSGKeyboardShared
 
 enum CloudASRLogMetadata {
     static func describe(_ error: Error) -> String {
+        if let managedError = error as? ManagedCloudASRError {
+            return "category=\(managedError.stableCode)"
+        }
         if let cloudError = error as? CloudASRError {
             switch cloudError {
             case .noAPIKey:

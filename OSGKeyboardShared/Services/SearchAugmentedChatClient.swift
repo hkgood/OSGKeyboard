@@ -21,15 +21,15 @@ public enum SearchBodyAugmentation: Sendable, Equatable {
             body["tools"] = [
                 [
                     "type": "web_search",
-                    "web_search": ["enable": true],
-                ],
+                    "web_search": ["enable": true]
+                ]
             ]
         case .moonshotBuiltinWebSearch:
             body["tools"] = [
                 [
                     "type": "builtin_function",
-                    "function": ["name": "$web_search"],
-                ],
+                    "function": ["name": "$web_search"]
+                ]
             ]
         }
     }

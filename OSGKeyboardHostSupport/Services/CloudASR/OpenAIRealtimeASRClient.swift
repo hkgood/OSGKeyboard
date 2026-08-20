@@ -168,7 +168,7 @@ private final class OpenAIRealtimeStreamingSession: CloudASRStreamingSession, @u
         let language = OpenAIRealtimeTranscriptReducer.languageHint(from: locale)
         var transcription: [String: Any] = [
             "model": model,
-            "delay": "low",
+            "delay": "low"
         ]
         if let language {
             transcription["language"] = language
@@ -176,9 +176,9 @@ private final class OpenAIRealtimeStreamingSession: CloudASRStreamingSession, @u
         var input: [String: Any] = [
             "format": [
                 "type": "audio/pcm",
-                "rate": 24_000,
+                "rate": 24_000
             ],
-            "transcription": transcription,
+            "transcription": transcription
         ]
         input["turn_detection"] = NSNull()
         let update: [String: Any] = [
@@ -186,9 +186,9 @@ private final class OpenAIRealtimeStreamingSession: CloudASRStreamingSession, @u
             "session": [
                 "type": "transcription",
                 "audio": [
-                    "input": input,
-                ],
-            ],
+                    "input": input
+                ]
+            ]
         ]
         try await sendJSON(update)
         let deadline = Date().addingTimeInterval(8)
@@ -321,7 +321,7 @@ private final class OpenAIRealtimeStreamingSession: CloudASRStreamingSession, @u
         let audio = pcm.base64EncodedString()
         try await sendJSON([
             "type": "input_audio_buffer.append",
-            "audio": audio,
+            "audio": audio
         ])
     }
 

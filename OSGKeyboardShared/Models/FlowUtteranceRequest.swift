@@ -13,6 +13,10 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
     public let aiConversationID: UUID?
     /// When set with `.aiQuestion`, host skips ASR and answers this text.
     public let aiQuestionText: String?
+    /// Fine-grained managed-gateway intent. Regular questions keep the default.
+    public let aiTaskKind: ManagedGatewayTaskKind?
+    /// Optional server-audited purpose for managed gateway billing policy.
+    public let managedRequestPurpose: ManagedGatewayRequestPurpose?
     /// Clipboard-skill thinking override. Nil keeps AI-mode default (on).
     public let aiThinkingEnabled: Bool?
 
@@ -25,6 +29,8 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
         sourceHistoryEntryRevision: Int64? = nil,
         aiConversationID: UUID? = nil,
         aiQuestionText: String? = nil,
+        aiTaskKind: ManagedGatewayTaskKind? = nil,
+        managedRequestPurpose: ManagedGatewayRequestPurpose? = nil,
         aiThinkingEnabled: Bool? = nil
     ) {
         self.mode = mode
@@ -33,6 +39,8 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
         self.sourceHistoryEntryRevision = sourceHistoryEntryRevision
         self.aiConversationID = aiConversationID
         self.aiQuestionText = aiQuestionText
+        self.aiTaskKind = aiTaskKind
+        self.managedRequestPurpose = managedRequestPurpose
         self.aiThinkingEnabled = aiThinkingEnabled
     }
 
@@ -53,12 +61,14 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
     public static func aiQuestion(
         conversationID: UUID,
         prefilledQuestion: String? = nil,
+        taskKind: ManagedGatewayTaskKind = .aiQuestion,
         thinkingEnabled: Bool? = nil
     ) -> FlowUtteranceRequest {
         FlowUtteranceRequest(
             mode: .aiQuestion,
             aiConversationID: conversationID,
             aiQuestionText: prefilledQuestion,
+            aiTaskKind: taskKind,
             aiThinkingEnabled: thinkingEnabled
         )
     }

@@ -108,7 +108,7 @@ struct VolcengineCloudASRClient: CloudASRTranscribing, CloudASRStreamingCapable 
             // VAD sentence for definite polish-ready text (scheme A).
             "enable_nonstream": true,
             "end_window_size": 800,
-            "force_to_speech_time": 1_000,
+            "force_to_speech_time": 1_000
         ]
         if let context = hotwordContext(dictionary: dictionary) {
             request["context"] = context
@@ -121,9 +121,9 @@ struct VolcengineCloudASRClient: CloudASRTranscribing, CloudASRStreamingCapable 
                 "rate": 16_000,
                 "bits": 16,
                 "channel": 1,
-                "codec": "raw",
+                "codec": "raw"
             ],
-            "request": request,
+            "request": request
         ]
         return try JSONSerialization.data(withJSONObject: payload)
     }
@@ -184,7 +184,7 @@ struct VolcengineCloudASRClient: CloudASRTranscribing, CloudASRStreamingCapable 
         if let results = json["result"] as? [[String: Any]] {
             return results.first
         }
-        if json["text"] as? String != nil {
+        if json["text"] is String {
             return json
         }
         return nil

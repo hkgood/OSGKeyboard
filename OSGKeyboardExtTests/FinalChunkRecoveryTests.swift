@@ -1,8 +1,8 @@
 // FinalChunkRecoveryTests.swift
 // OSGKeyboardExtTests
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class FinalChunkRecoveryTests: XCTestCase {
 

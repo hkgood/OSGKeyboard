@@ -32,7 +32,7 @@ struct MacPolishStylesView: View {
                 .adaptive(minimum: MacMetrics.polishStyleCardMinWidth),
                 spacing: Spacing.md,
                 alignment: .top
-            ),
+            )
         ]
     }
 

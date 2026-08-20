@@ -95,8 +95,8 @@ public enum AlibabaVocabularySync {
                 "action": "create_vocabulary",
                 "target_model": targetModel,
                 "prefix": vocabularyPrefix,
-                "vocabulary": vocabulary,
-            ] as [String: Any],
+                "vocabulary": vocabulary
+            ] as [String: Any]
         ]
         let data = try await postJSON(body, to: url, apiKey: apiKey, session: session)
         guard let id = parseVocabularyID(from: data) else {
@@ -122,8 +122,8 @@ public enum AlibabaVocabularySync {
             "input": [
                 "action": "update_vocabulary",
                 "vocabulary_id": id,
-                "vocabulary": vocabulary,
-            ] as [String: Any],
+                "vocabulary": vocabulary
+            ] as [String: Any]
         ]
         _ = try await postJSON(body, to: url, apiKey: apiKey, session: session)
     }

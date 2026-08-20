@@ -3,9 +3,9 @@
 //
 // Hermetic fixtures for Volcengine/Bailian streaming helpers and PCM encode.
 
-import XCTest
-@testable import OSGKeyboardShared
 @testable import OSGKeyboardHostSupport
+@testable import OSGKeyboardShared
+import XCTest
 
 final class CloudASRStreamingHelpersTests: XCTestCase {
 
@@ -55,7 +55,7 @@ final class CloudASRStreamingHelpersTests: XCTestCase {
     func testVolcengineFirstFramePayloadIncludesNonstreamAndHotwords() throws {
         let dict = PersonalDictionary(entries: [
             PersonalDictionary.Entry(term: "OSGKeyboard", category: .productName, source: .manual),
-            PersonalDictionary.Entry(term: "Kubernetes", category: .technical, source: .manual),
+            PersonalDictionary.Entry(term: "Kubernetes", category: .technical, source: .manual)
         ])
         let data = try VolcengineCloudASRClient.firstFramePayload(
             connectID: "conn-1",

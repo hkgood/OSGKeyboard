@@ -4,8 +4,8 @@
 // Main-app editor for complete polish writing personalities. The keyboard
 // reads the selected pack from App Group storage on the next polish request.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 @MainActor
 struct PolishStylesView: View {
@@ -23,7 +23,7 @@ struct PolishStylesView: View {
     private let store = AppGroupStore()
     private let columns = [
         GridItem(.flexible(), spacing: Spacing.sm),
-        GridItem(.flexible(), spacing: Spacing.sm),
+        GridItem(.flexible(), spacing: Spacing.sm)
     ]
 
     var body: some View {

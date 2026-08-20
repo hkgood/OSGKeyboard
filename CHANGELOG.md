@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Privacy-preserving product analytics**: add an optional first-party event queue with cross-process SQLite durability, idempotent retry, fixed privacy-safe dimensions, and a device-local opt-out that clears pending events. / **隐私友好的产品分析**：新增可选的第一方事件队列，通过跨进程 SQLite 持久化、幂等重试与固定隐私安全维度可靠投递，并提供清除待发送事件的本机退出开关。
+- **Managed-cloud consent**: the first switch to OSG credits now explains which audio, text, context, and account data leaves the device and requires explicit agreement before enabling the service. / **托管云确认**：首次切换到 OSG 积分时会说明哪些音频、文字、上下文与账号数据会离开设备，并在用户明确同意后才启用服务。
+- **Free OOBE polish**: the first-run lesson defaults to on-device transcription plus OSG managed polish, sends an authenticated OOBE purpose tag, and uses a server-enforced one-time complimentary request without reserving or settling credits. / **免费 OOBE 润色**：首次教学默认使用端侧转写与 OSG 托管润色，发送经过身份验证的 OOBE 用途标签，并由服务端执行一次性免费资格，不预扣也不结算积分。
+
+### Changed
+- **AI Agent first run**: replace the technical six-step setup with a concise privacy, permission, and keyboard flow that presents OSGKeyboard as an AI Agent voice keyboard, teaches on the real keyboard, and verifies the first voice insertion before completion. / **AI Agent 首次体验**：以简洁的隐私、权限与键盘流程取代技术化的六步配置，突出 AI Agent 语音输入法定位，并在真实键盘中完成教学、验证首次语音上屏后再结束。
+- **Focused skill icons**: remove math, indices, arrows, shapes, commerce, keyboard, media, text-formatting, automotive, device, and variable-rendering categories from the custom-skill symbol picker. / **精简技能图标**：从自定义技能图标选择器中移除数学、索引、箭头、形状、商业、键盘、媒体、文本格式、汽车、设备与可变渲染分类。
+
+### Fixed
+- **Permanent invitation links**: load the account-scoped server invitation profile after sign-in, cache it per account, and keep sharing the exact stable server URL across refreshes and offline failures. / **永久邀请链接**：登录后异步加载账号级服务端邀请资料，按账号缓存，并在刷新或离线失败时持续分享服务端返回的固定链接。
+- **Cross-process settings safety**: App Group updates now write only changed fields so a stale main-app or keyboard-extension snapshot cannot overwrite newer unrelated settings. / **跨进程设置安全**：App Group 更新现在只写入发生变化的字段，避免主 App 或键盘扩展的旧快照覆盖其他较新的设置。
+- **Account-data freshness**: Settings and Account now share one background-refreshed snapshot, preserve cached content on failure, retry transient read errors, and isolate optional referral outages from core account and credit updates. / **账号数据新鲜度**：设置页与账号页现在共用同一份后台刷新快照，刷新失败时保留缓存内容，对瞬时读取错误自动重试，并避免可选邀请接口故障影响账号与积分更新。
+- **Managed AI task routing**: credit-backed requests now preserve dictation, translation, editing, question, clipboard, custom-skill, and agent intent so the gateway can disable costly reasoning for low-latency transforms. / **托管 AI 任务路由**：积分请求现在会保留听写、翻译、编辑、问答、剪贴板、自定义技能与 Agent 意图，让网关可为低延迟转换任务关闭高成本思考。
+
+## [2.0.0] - 2026-08-19
+
+### Added
+- **Optional OSG account**: add Sign in with Apple, managed credits, App Store credit packs, referrals, profile controls, and in-app account deletion while keeping local dictation and user-owned provider keys independent. / **可选 OSG 账号**：新增 Apple 登录、托管积分、App Store 积分包、邀请、资料管理与 App 内账号注销，同时保持本地听写和用户自备 API Key 独立可用。
 - **Safe AI insertion**: AI answers insert automatically only while the original input field and cursor context still match; otherwise the keyboard retains the answer for explicit insertion or discard. / **安全 AI 上屏**：仅当原输入框和光标上下文仍一致时自动插入 AI 回答；上下文变化时保留回答，由用户明确插入或丢弃。
 - **Microphone priority**: iOS and macOS settings now list connected and previously seen microphones, support drag reordering and exclusion, and bind each recording to the first available enabled input. / **麦克风优先级**：iOS 与 macOS 设置现可列出已连接和曾连接的麦克风，支持拖动排序与排除，并在每次录音时绑定首个可用且已启用的输入。
 
@@ -19,6 +37,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - **Cursor drag pads**: remove blank-area cursor sliding and its Settings toggle; legacy synced values remain decode-compatible. / **光标拖动区**：移除空白区域滑动光标及其设置开关；旧版同步值仍保持解码兼容。
+
+### Fixed
+- **Account confirmation anchors**: sign-out and account-deletion confirmations now open from their selected action rows instead of the profile summary card. / **账号确认弹窗锚点**：退出登录与注销账号确认弹窗现在从对应操作行弹出，不再错误指向资料卡。
 
 ## [1.8.0] - 2026-08-14
 

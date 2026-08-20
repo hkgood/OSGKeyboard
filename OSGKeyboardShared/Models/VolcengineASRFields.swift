@@ -55,7 +55,7 @@ public struct VolcengineASRFields: Sendable, Equatable {
     public var encodedAPIKey: String {
         var object: [String: String] = [
             "auth_mode": authMode.rawValue,
-            "resource_id": Self.fixedResourceID,
+            "resource_id": Self.fixedResourceID
         ]
         // Persist both credential sets so toggling auth mode is non-destructive.
         if !appID.isEmpty { object["app_id"] = appID }

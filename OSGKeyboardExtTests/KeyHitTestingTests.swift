@@ -3,8 +3,8 @@
 //
 // Phase 1 / 3: gap fill, nearest-center, intent offset, edge expansion.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class KeyHitTestingTests: XCTestCase {
     private func makePairTargets(

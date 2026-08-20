@@ -23,10 +23,10 @@
 // lifecycle and recording ownership do not belong in the keyboard
 // extension or the platform-neutral Shared target.
 
-import Foundation
 import AVFoundation
-import Speech
+import Foundation
 import os
+import Speech
 #if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
 #endif

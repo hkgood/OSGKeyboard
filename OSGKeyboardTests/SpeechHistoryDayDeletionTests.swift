@@ -3,8 +3,8 @@
 //
 // Day-boundary and tombstone coverage for History's delete-day action.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 @MainActor
 final class SpeechHistoryDayDeletionTests: XCTestCase {

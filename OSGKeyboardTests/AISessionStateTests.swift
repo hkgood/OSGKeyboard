@@ -1,5 +1,5 @@
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class AISessionStateTests: XCTestCase {
     func testSuccessfulAnswerReplacesPreviousOnlyAtTerminalResult() throws {

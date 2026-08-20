@@ -3,8 +3,8 @@
 //
 // Locks tip product identifiers and optional support-count persistence.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class TipProductTests: XCTestCase {
     private var suiteName: String!

@@ -5,8 +5,8 @@
 // Mirrors the macOS `NavigationSplitView` structure while keeping iOS tabs
 // and Flow session behaviour unchanged underneath.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 import UIKit
 
 struct MainSplitView: View {

@@ -17,27 +17,27 @@ import SwiftUI
 /// `Palette` static API so existing call sites (`Palette.background` etc.)
 /// still compile and resolve through the legacy static accessors below.
 public struct ThemePalette: Sendable, Equatable {
-    public let background:      Color
-    public let surface:         Color
+    public let background: Color
+    public let surface: Color
     public let surfaceElevated: Color
-    public let surfaceMuted:    Color
+    public let surfaceMuted: Color
 
-    public let accent:      Color
+    public let accent: Color
     public let accentMuted: Color
-    public let accentGlow:  Color
+    public let accentGlow: Color
     /// Distinguishes AI listening / generation from ordinary dictation.
-    public let aiTeal:      Color
+    public let aiTeal: Color
 
-    public let danger:  Color
+    public let danger: Color
     public let success: Color
     public let warning: Color
 
-    public let textPrimary:   Color
+    public let textPrimary: Color
     public let textSecondary: Color
-    public let textTertiary:  Color
-    public let textOnAccent:  Color
+    public let textTertiary: Color
+    public let textOnAccent: Color
 
-    public let divider:       Color
+    public let divider: Color
     public let dividerStrong: Color
 
     public let recordRed: Color
@@ -82,48 +82,48 @@ public enum Palette {
     /// getting the dark value (important for the keyboard extension, which
     /// deliberately stays dark regardless of system appearance).
     public static let dark = ThemePalette(
-        background:      background,
-        surface:         surface,
+        background: background,
+        surface: surface,
         surfaceElevated: surfaceElevated,
-        surfaceMuted:    surfaceMuted,
-        accent:          accent,
-        accentMuted:     accentMuted,
-        accentGlow:      accentGlow,
-        aiTeal:          aiTeal,
-        danger:          danger,
-        success:         success,
-        warning:         warning,
-        textPrimary:     textPrimary,
-        textSecondary:   textSecondary,
-        textTertiary:    textTertiary,
-        textOnAccent:    textOnAccent,
-        divider:         divider,
-        dividerStrong:   dividerStrong,
-        recordRed:       recordRed,
-        recordBlue:      recordBlue
+        surfaceMuted: surfaceMuted,
+        accent: accent,
+        accentMuted: accentMuted,
+        accentGlow: accentGlow,
+        aiTeal: aiTeal,
+        danger: danger,
+        success: success,
+        warning: warning,
+        textPrimary: textPrimary,
+        textSecondary: textSecondary,
+        textTertiary: textTertiary,
+        textOnAccent: textOnAccent,
+        divider: divider,
+        dividerStrong: dividerStrong,
+        recordRed: recordRed,
+        recordBlue: recordBlue
     )
 
     /// Light palette — warm gray backgrounds for daytime use.
     public static let light = ThemePalette(
-        background:      Color(red: 0.949, green: 0.945, blue: 0.933),  // #F2F1EE warm gray
-        surface:         Color(red: 0.988, green: 0.984, blue: 0.976),  // #FCFBF9
+        background: Color(red: 0.949, green: 0.945, blue: 0.933),  // #F2F1EE warm gray
+        surface: Color(red: 0.988, green: 0.984, blue: 0.976),  // #FCFBF9
         surfaceElevated: Color(red: 0.922, green: 0.918, blue: 0.906),  // #EBEAE7
-        surfaceMuted:    Color(red: 0.933, green: 0.929, blue: 0.918),  // #EEEDE9
-        accent:          Color(red: 0.227, green: 0.627, blue: 0.353),  // #3AA05A
-        accentMuted:     Color(red: 0.227, green: 0.627, blue: 0.353).opacity(0.14),
-        accentGlow:      Color(red: 0.227, green: 0.627, blue: 0.353).opacity(0.32),
-        aiTeal:          Color(red: 0.169, green: 0.686, blue: 0.643),  // #2BAFA4
-        danger:          Color(red: 1.000, green: 0.231, blue: 0.188),  // #FF3B30
-        success:         Color(red: 0.227, green: 0.627, blue: 0.353),  // same as accent
-        warning:         Color(red: 1.000, green: 0.620, blue: 0.094),  // #FF9E18
-        textPrimary:     Color(red: 0.067, green: 0.067, blue: 0.094),  // #111118
-        textSecondary:   Color(red: 0.392, green: 0.392, blue: 0.435),  // #64646F
-        textTertiary:    Color(red: 0.557, green: 0.557, blue: 0.604),  // #8E8E9A
-        textOnAccent:    Color.white,
-        divider:         Color.black.opacity(0.06),
-        dividerStrong:   Color.black.opacity(0.10),
-        recordRed:       Color(red: 1.000, green: 0.231, blue: 0.188),  // #FF3B30
-        recordBlue:      Color(red: 0.000, green: 0.478, blue: 1.000)   // #007AFF
+        surfaceMuted: Color(red: 0.933, green: 0.929, blue: 0.918),  // #EEEDE9
+        accent: Color(red: 0.227, green: 0.627, blue: 0.353),  // #3AA05A
+        accentMuted: Color(red: 0.227, green: 0.627, blue: 0.353).opacity(0.14),
+        accentGlow: Color(red: 0.227, green: 0.627, blue: 0.353).opacity(0.32),
+        aiTeal: Color(red: 0.169, green: 0.686, blue: 0.643),  // #2BAFA4
+        danger: Color(red: 1.000, green: 0.231, blue: 0.188),  // #FF3B30
+        success: Color(red: 0.227, green: 0.627, blue: 0.353),  // same as accent
+        warning: Color(red: 1.000, green: 0.620, blue: 0.094),  // #FF9E18
+        textPrimary: Color(red: 0.067, green: 0.067, blue: 0.094),  // #111118
+        textSecondary: Color(red: 0.392, green: 0.392, blue: 0.435),  // #64646F
+        textTertiary: Color(red: 0.557, green: 0.557, blue: 0.604),  // #8E8E9A
+        textOnAccent: Color.white,
+        divider: Color.black.opacity(0.06),
+        dividerStrong: Color.black.opacity(0.10),
+        recordRed: Color(red: 1.000, green: 0.231, blue: 0.188),  // #FF3B30
+        recordBlue: Color(red: 0.000, green: 0.478, blue: 1.000)   // #007AFF
     )
 }
 
@@ -147,13 +147,13 @@ public extension EnvironmentValues {
 // MARK: - Spacing scale (4 pt grid)
 
 public enum Spacing {
-    public static let xxs:  CGFloat = 4
-    public static let xs:   CGFloat = 8
-    public static let sm:   CGFloat = 12
-    public static let md:   CGFloat = 16
-    public static let lg:   CGFloat = 20
-    public static let xl:   CGFloat = 24
-    public static let xxl:  CGFloat = 32
+    public static let xxs: CGFloat = 4
+    public static let xs: CGFloat = 8
+    public static let sm: CGFloat = 12
+    public static let md: CGFloat = 16
+    public static let lg: CGFloat = 20
+    public static let xl: CGFloat = 24
+    public static let xxl: CGFloat = 32
     public static let xxxl: CGFloat = 40
     public static let hero: CGFloat = 48
 }
@@ -161,12 +161,12 @@ public enum Spacing {
 // MARK: - Corner radius scale
 
 public enum Radius {
-    public static let small:  CGFloat = 8
+    public static let small: CGFloat = 8
     public static let medium: CGFloat = 12
-    public static let large:  CGFloat = 16
-    public static let xl:     CGFloat = 20
-    public static let xxl:    CGFloat = 24
-    public static let pill:   CGFloat = 999
+    public static let large: CGFloat = 16
+    public static let xl: CGFloat = 20
+    public static let xxl: CGFloat = 24
+    public static let pill: CGFloat = 999
 }
 
 // MARK: - Typography

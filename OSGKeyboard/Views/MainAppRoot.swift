@@ -5,9 +5,9 @@
 // Only constructed when `AppGroup.isAvailable` so the error path never
 // touches App Group–backed singletons.
 
-import SwiftUI
-import OSGKeyboardShared
 import OSGKeyboardHostSupport
+import OSGKeyboardShared
+import SwiftUI
 
 struct MainAppRoot: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -16,9 +16,32 @@ struct MainAppRoot: View {
     // `@ObservedObject` keeps subscriptions correct across Settings replay.
     @ObservedObject private var config = ProviderConfig.shared
     @ObservedObject private var releaseNotes = ReleaseNotesController.shared
-    @StateObject private var flowManager = FlowSessionManager()
+    @ObservedObject private var analytics = AnalyticsHostService.shared
+    @StateObject private var flowManager: FlowSessionManager
+    @StateObject private var accountSession: AccountSessionCoordinator
     @State private var clmWarmupTask: Task<Void, Never>?
     @State private var rimeStartupTask: Task<Void, Never>?
+    @State private var firstOpenAcquisitionChannel: AnalyticsAcquisitionChannel = .unknown
+
+    init(accountDependencies: AccountDependencies? = nil) {
+        let resolvedDependencies = accountDependencies ?? LiveAccountDependencyFactory.make()
+        let analytics = AnalyticsHostService.shared
+        _flowManager = StateObject(
+            wrappedValue: FlowSessionManager(analyticsClient: analytics.client)
+        )
+        _accountSession = StateObject(
+            wrappedValue: AccountSessionCoordinator(
+                dependencies: resolvedDependencies,
+                analyticsClient: analytics.client,
+                onAccountAuthenticated: { accountID in
+                    await analytics.observeAuthenticatedAccount(accountID)
+                },
+                onAccountDeleted: {
+                    await analytics.handleAccountDeletion()
+                }
+            )
+        )
+    }
 
     var body: some View {
         Group {
@@ -26,6 +49,8 @@ struct MainAppRoot: View {
         }
         .environment(\.locale, config.uiLanguage.swiftUILocale)
         .environmentObject(flowManager)
+        .environmentObject(accountSession)
+        .environmentObject(analytics)
         .background {
             FlowPiPHostView { view in
                 flowManager.attachPiPHostView(view)
@@ -56,6 +81,9 @@ struct MainAppRoot: View {
             AppOpenURLRouter.shared.register { url in
                 handleIncomingURL(url)
             }
+            analytics.prepare(
+                firstOpenAcquisitionChannel: firstOpenAcquisitionChannel
+            )
             OSGDiag.log(
                 "MainAppRoot.onAppear scene=\(String(describing: scenePhase)) "
                     + "onboarding=\(config.hasCompletedOnboarding) \(OSGDiag.memoryTag())",
@@ -88,6 +116,10 @@ struct MainAppRoot: View {
                 )
             }
         }
+        .task {
+            await accountSession.restoreIfNeeded()
+            config.reloadFromPersistedStorage()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .settingsDidSyncFromCloud)) { _ in
             config.reloadFromPersistedStorage()
         }
@@ -102,10 +134,27 @@ struct MainAppRoot: View {
                     AIHintRefreshService.refreshIfNeeded(reason: "onboardingCompleted")
                     releaseNotes.presentIfNeeded(onboardingCompleted: true)
                 }
+                if accountSession.shouldPresentAccountCenter {
+                    Task { @MainActor in
+                        // Let MainTabView enter the hierarchy before publishing.
+                        await Task.yield()
+                        NotificationCenter.default.post(name: .osgOpenAccountDeepLink, object: nil)
+                    }
+                }
             }
+        }
+        .onChange(of: config.engineMode) { _, _ in
+            guard config.credentialSource == .managed,
+                  accountSession.isSignedIn else { return }
+            Task { _ = await accountSession.prepareManagedGateway() }
         }
         .onChange(of: scenePhase) { _, phase in
             flowManager.handleScenePhase(phase)
+            if phase == .active {
+                analytics.appDidBecomeActive()
+            } else if phase == .background {
+                analytics.appDidEnterBackground()
+            }
             guard phase == .active else {
                 clmWarmupTask?.cancel()
                 clmWarmupTask = nil
@@ -175,7 +224,7 @@ struct MainAppRoot: View {
             MainTabView()
                 .id("main")
         } else {
-            OnboardingView(config: config)
+            OnboardingExperienceView(config: config)
                 .id("onboarding")
         }
     }
@@ -220,6 +269,12 @@ struct MainAppRoot: View {
     }
 
     private func handleIncomingURL(_ url: URL) {
+        if accountSession.handleIncomingURL(url) {
+            firstOpenAcquisitionChannel = .referral
+            NotificationCenter.default.post(name: .osgOpenAccountDeepLink, object: nil)
+            return
+        }
+
         guard url.scheme == "osgkeyboard" else { return }
         switch url.host {
         case "startflow":

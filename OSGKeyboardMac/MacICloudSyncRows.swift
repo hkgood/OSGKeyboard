@@ -70,7 +70,11 @@ struct MacSettingsICloudSyncRow: View {
             get: { isEnabled },
             set: { newValue in
                 guard newValue != isEnabled else { return }
-                newValue ? enableSync() : disableSync()
+                if newValue {
+                    enableSync()
+                } else {
+                    disableSync()
+                }
             }
         )
     }

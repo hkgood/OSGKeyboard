@@ -71,7 +71,7 @@ public enum CloudASRModelCatalog {
         "openrouter",
         "mimo",
         "volcengine",
-        "custom",
+        "custom"
     ]
 
     /// Sync Fun-ASR Flash — base64 upload, ≤ 5 min, supports context + vocabulary.

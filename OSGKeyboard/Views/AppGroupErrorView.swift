@@ -10,8 +10,8 @@
 // running a TestFlight build with a stripped entitlement, and a friendly
 // screen is much better than a crash loop.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct AppGroupErrorView: View {
     @Environment(\.themePalette) private var palette: ThemePalette

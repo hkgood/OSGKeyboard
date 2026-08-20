@@ -152,7 +152,7 @@ public struct ResponsesAPILLMClient: LLMClient {
             "tool_choice": "auto",
             "max_output_tokens": options.maxTokens ?? LLMRequest.outputTokenLimit(
                 for: messages.map(\.content).joined(separator: "\n")
-            ),
+            )
         ]
         if let system, !system.isEmpty {
             body["instructions"] = system

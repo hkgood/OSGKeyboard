@@ -6,9 +6,9 @@
 // overlapping fingers commit in press order, delete repeats on down,
 // Shift holds while that finger owns it.
 
+import OSGKeyboardShared
 import SwiftUI
 import UIKit
-import OSGKeyboardShared
 
 struct TypingKeyTouchPad: UIViewRepresentable {
     var layout: TypingKeyLayout

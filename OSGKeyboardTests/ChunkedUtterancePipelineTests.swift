@@ -4,10 +4,10 @@
 // Hostless Shared-pipeline tests (no OSGKeyboard.app TEST_HOST).
 // Durations are seconds — at sampleRate 1000, 0.01s == 10 samples.
 
-import XCTest
 import os
-@testable import OSGKeyboardShared
 @testable import OSGKeyboardHostSupport
+@testable import OSGKeyboardShared
+import XCTest
 
 private struct StubChunkASR: ASRService, @unchecked Sendable {
     let labels: @Sendable ([Float]) -> String

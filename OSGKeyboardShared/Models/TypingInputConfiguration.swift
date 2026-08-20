@@ -4,8 +4,8 @@
 // App Group-backed Chinese input settings shared by the host app and
 // keyboard extension. Fuzzy pairs are opt-in to avoid noisy candidates.
 
-import Foundation
 import Combine
+import Foundation
 
 public enum TypingInputSchema: String, CaseIterable, Identifiable, Codable, Sendable {
     case fullPinyin = "osg_pinyin"

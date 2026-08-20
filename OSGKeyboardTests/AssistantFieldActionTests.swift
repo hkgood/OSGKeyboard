@@ -1,5 +1,5 @@
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 @MainActor
 final class AssistantFieldActionTests: XCTestCase {

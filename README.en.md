@@ -1,89 +1,139 @@
 # OSGKeyboard
 
-**Speak it. It's typed.**
+**Speak it. It's typed. You can also type, ask, and edit.**
 
-Voice input for iPhone, iPad, and Mac. Speak in any app — polished text lands at your cursor.
+OSGKeyboard is a voice input tool for iPhone, iPad, and Mac. Its iOS keyboard combines on-device dictation, Chinese and English typing, an AI assistant, clipboard skills, and optional managed credits in one input surface. On Mac, hold Option for global dictation.
 
 ![Platform](https://img.shields.io/badge/iOS%20%2F%20iPadOS-26%2B-0078D4?logo=apple)
 ![Platform](https://img.shields.io/badge/macOS-15%2B-555?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
-![Version](https://img.shields.io/badge/version-1.8.0-3aa05a)
+![Version](https://img.shields.io/badge/version-2.0.0-3aa05a)
 ![License](https://img.shields.io/badge/license-Source%20Available-blue)
 
-[Website](https://hkgood.github.io/OSGKeyboard/) · [中文 README](./README.md) · [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/)
+[Website](https://hkgood.github.io/OSGKeyboard/?lang=en) · [中文](./README.md) · [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/) · [Changelog](./CHANGELOG.md)
 
 <p align="center">
   <a href="https://apps.apple.com/app/osgkeyboard/id6781553267">
-    <img src="docs/assets/badges/ios-en.svg" alt="Download now from the App Store" height="40">
+    <img src="docs/assets/badges/ios-en.svg" alt="Download on the App Store" height="44">
   </a>
   &nbsp;
   <a href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg">
-    <img src="docs/assets/badges/macos-en.svg" alt="Download historical macOS version 1.1" height="40">
+    <img src="docs/assets/badges/macos-en.svg" alt="Download historical macOS version 1.1" height="44">
   </a>
 </p>
 
----
+> The public Mac DMG is the signed and notarized historical version 1.1. The macOS target in this repository evolves with the 2.0 codebase; build with Xcode 26 for the latest source capabilities.
 
-## Why OSGKeyboard
+## One keyboard, four ways to input
 
-- **Works everywhere** — Messages, Notes, Notion, Cursor, Mail, WeChat — wherever you type
-- **Speak, don't edit** — tap (iOS) or hold Option (Mac); AI adds punctuation and structure for you
-- **Type in Chinese and English** — iOS keyboard ships full/double pinyin candidates, plus English autocomplete, autocorrect, and next-word prediction
-- **On-device by default** — local recognition on iOS; optional local models on Mac. Cloud upload only when you opt in
-- **Bring your own LLM** — local ASR needs no API key; polish and AI mode use your configured DeepSeek, OpenAI, Anthropic, OpenRouter, or compatible service
-- **Mac global dictation** — menu-bar app, bottom overlay with live feedback, inserts into the frontmost app
+### Voice dictation
 
----
+- iOS 26 uses Apple `SpeechAnalyzer` and `DictationTranscriber` on-device by default
+- Tap the microphone to start or stop; text lands in the current app at the cursor
+- Optional AI polish, punctuation, structure, and post-polish translation
+- Nine built-in polish styles, custom styles, Light / Heavy playful intensity, and optional mood emoji
+- The Mac menu-bar app supports Option-hold global dictation; Apple Silicon Macs can download local Qwen3 MLX models
 
-## Three steps
+### Chinese and English typing
 
-1. **Install & authorize** — add the iOS keyboard with Full Access; grant mic + Accessibility on Mac
-2. **Pick an engine** — local ASR works without a key; add your own API key for polish or AI mode
-3. **Start talking** — switch to OSGKeyboard, or hold Option on Mac
+- Chinese: full pinyin, Microsoft double pinyin, Sogou double pinyin, optional fuzzy pairs, abbreviation ranking, and an expanded candidate panel
+- English: three-slot QuickType, a ~40k-word offline lexicon, completion, correction, and next-word suggestions
+- Touch behavior: proximity correction, overlapping presses, hold-to-delete, double-space period, and system Return semantics
+- One personal dictionary participates in Chinese candidates, English suggestions, speech biasing, and polish protection
 
----
+### Unified AI assistant
 
-## Platforms
+- Tap to dictate or hold to ask AI; voice and AI share one Assistant entry
+- Answers stream into the keyboard and auto-insert only while the original field and cursor context still match
+- Voice-edit the last verified OSGKeyboard insertion, then replace or append
+- Follow the focused field with Send, Search, Go, Done, Next, or newline actions
+- One undo action covers dictation, AI answers, edits, and clipboard pastes
 
-| | iOS / iPadOS | macOS |
+### Clipboard and skills
+
+- Clipboard history is off by default; when enabled, it keeps up to 15 plain-text items in the device-local App Group
+- Reply, Summarize, and Translate appear briefly after a copy
+- Built-in skills extract tasks and events, save to Notes, and open map navigation through Apple Shortcuts or map apps
+- Create custom skills with a name, SF Symbol, prompt, and optional iCloud Shortcut
+- Pin up to eight skills to the keyboard and reorder them by long press
+
+## Three service paths
+
+OSGKeyboard does not make cloud service the only option:
+
+1. **On-device** — the default. Local iOS dictation requires no account or API key and does not upload raw audio.
+2. **Bring your own provider (BYOK)** — configure your own cloud ASR / LLM credentials. Requests go directly to the selected provider, and credentials stay in Keychain.
+3. **OSG managed credits** — optional on iOS / iPadOS. After Sign in with Apple, use managed speech and AI without entering provider credentials. Before first use, the app explains which data leaves the device and asks for explicit consent.
+
+Local dictation and user-owned providers remain independent and never require an OSGKeyboard account.
+
+## Optional account and credits
+
+The iOS / iPadOS account center includes:
+
+- Sign in with Apple, profile controls, sign-out, and in-app account deletion
+- Managed balance, consumable App Store credit packs, and referrals
+- Server verification of purchases and a synchronized credit ledger
+- Short-lived, scope-limited managed-service grants for the keyboard extension
+
+The voluntary `ByRockyACoffee` tip is separate from credit packs and does not unlock core functionality.
+
+## History, statistics, and sync
+
+- Home brings together seven-day dictation statistics, recent history, and the personal dictionary
+- Voice history keeps up to 300 entries and supports day-based deletion
+- Settings, personal dictionary, polish styles, history, and statistics can be selectively synced through private iCloud
+- API keys stay in Keychain by default and replicate through iCloud Keychain only after iCloud settings sync is enabled; clipboard history, account tokens, and typing learning are not carried by settings sync
+
+## Platform capabilities
+
+| Capability | iOS / iPadOS 26+ | macOS 15+ |
 |---|:---:|:---:|
-| Keyboard / global hotkey | ✅ | ✅ hold Option |
-| Chinese typing (full / Microsoft / Sogou double pinyin) | ✅ optional fuzzy pairs | — |
-| English typing (autocomplete / autocorrect / next-word) | ✅ offline lexicon + personal-dictionary boosts | — |
-| Local speech recognition | ✅ SpeechAnalyzer | ✅ Qwen3 MLX streaming (0.6B 4-bit default) + Apple Speech fallback |
-| AI polish | ✅ | ✅ |
-| Voice AI questions (explicit Insert / Send) | ✅ | — |
-| Voice-edit last input | ✅ | — |
-| Post-polish translation | ✅ | ✅ |
-| Personal dictionary | ✅ iCloud sync; protects polish and boosts English suggestions | ✅ |
-| Dictation history | ✅ | ✅ |
-| Live UI | — (silent background keep-alive) | ✅ floating pill |
+| System keyboard / global hotkey | Custom keyboard | Hold Option |
+| On-device speech | Apple SpeechAnalyzer | Qwen3 MLX (Apple Silicon) + Apple Speech fallback |
+| Chinese full / double pinyin | Yes | — |
+| English completion / correction | Yes | — |
+| AI polish and translation | Yes | Yes |
+| Unified assistant and voice questions | Yes | — |
+| Clipboard history and skills | Yes | — |
+| Optional OSG account and managed credits | Yes | — |
+| Personal dictionary, history, and statistics | Yes | Yes |
+| iCloud sync | Optional settings, dictionary, history, statistics, and more | Compatible shared data |
 
----
+## Privacy principles
 
-## Privacy
+- **On-device first** — raw audio stays on-device with local recognition
+- **Cloud by explicit action** — relevant data is sent only after you choose cloud recognition, polish, AI, or a skill
+- **Transparent routing** — user-configured requests go directly to that provider; managed-credit requests go through `account.osglab.com`
+- **No keystroke uploads** — Chinese candidate learning and English preferences remain local; secure fields are not learned
+- **Clipboard control** — history is off by default, capped at 15 items, device-local, and never sends itself to AI
+- **Credential isolation** — user API keys stay in Keychain; account session tokens stay in the main app's private Keychain
+- **No ad tracking** — no advertising, analytics, or tracking SDKs, and no sale of personal data
 
-Speech is transcribed on-device by default. Audio or text leaves the device only when you actively choose a cloud engine, polish, AI, or a skill, and it goes directly to your configured provider. Clipboard history is off by default, capped at 15 local items, and sent only after an explicit clipboard action. Chinese and English typing learning stays local. API keys use Keychain (optionally iCloud Keychain), while downloaded Mac speech models and local inference remain on the Mac. See the [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/).
+See the [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/) for data categories, retention, account deletion, and third-party services.
 
----
+## Quick start
 
-## Get the app
+### iPhone / iPad
 
-**iPhone / iPad (App Store)**
+1. Install OSGKeyboard from the App Store.
+2. Follow onboarding to add the keyboard, enable Full Access, and grant microphone and speech-recognition permissions.
+3. Choose local recognition, your own provider, or optional managed credits.
+4. In any text field, switch to OSGKeyboard: tap to dictate, hold to ask AI, or enter Chinese / English typing.
 
-<a href="https://apps.apple.com/app/osgkeyboard/id6781553267">
-  <img src="docs/assets/badges/ios-en.svg" alt="Download now from the App Store" height="40">
-</a>
+### Mac
 
-**Mac (historical version 1.1, Developer ID signed and notarized)**
-
-<a href="https://github.com/hkgood/OSGKeyboard/releases/download/v1.1-mac/OSGKeyboard-1.1.dmg">
-  <img src="docs/assets/badges/macos-en.svg" alt="Download historical macOS version 1.1" height="40">
-</a>
+1. Download historical DMG 1.1, or build the current `OSGKeyboardMac` target from source.
+2. Grant microphone and Accessibility permissions.
+3. Hold Option in any app, speak, and release to insert.
 
 ## Build from source
 
-Requires macOS with **Xcode 26** and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
+Requirements:
+
+- macOS
+- Xcode 26+
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 
 ```bash
 git clone https://github.com/hkgood/OSGKeyboard.git
@@ -92,58 +142,40 @@ cd OSGKeyboard
 open OSGKeyboard.xcodeproj
 ```
 
-Run tests:
+- iOS / iPadOS: run the `OSGKeyboard` scheme on an iOS 26 simulator or device
+- macOS: build the `OSGKeyboardMac` scheme to produce `OSGKeyboard.app`
+- Tests: use the suite manifest and scripts documented in [docs/TESTING.md](./docs/TESTING.md)
 
-```bash
-xcodebuild test -project OSGKeyboard.xcodeproj -scheme OSGKeyboard \
-  -destination 'platform=iOS Simulator,name=iPhone 17'
+[project.yml](./project.yml) is the XcodeGen source of truth. The generated `.xcodeproj` is not tracked.
+
+## Architecture at a glance
+
+```text
+OSGKeyboard/             iOS / iPadOS host app, Flow session, and settings
+OSGKeyboardExt/          Custom keyboard extension
+OSGKeyboardMac/          macOS menu-bar app and global dictation
+OSGKeyboardShared/       Shared models, typing, sync, AI, and design system
+OSGKeyboardHostSupport/  Host-only ASR, cloud clients, account, and StoreKit
 ```
 
----
+On iOS, the host app owns audio capture and recognition for a Flow session. The keyboard extension sends lightweight commands and receives results through App Group. Managed services use short-lived, scope-limited grants, so the main app's account token is never exposed to the keyboard extension.
 
-## Architecture (brief)
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for development, testing, and contribution guidelines, and [CHANGELOG.md](./CHANGELOG.md) for release history.
 
-```
-OSGKeyboard/          Main iOS app (Flow session host)
-OSGKeyboardExt/       Custom keyboard extension
-OSGKeyboardMac/       macOS menu-bar app
-OSGKeyboardShared/    App/extension shared models, typing, sync, and UI
-OSGKeyboardHostSupport/ Host-only ASR, cloud, CLM, charts, and StoreKit
-```
+## Acknowledgements and notices
 
-**Flow session model (iOS):** the host app keeps a long-lived audio session; the keyboard sends start/stop signals via App Group; polished text is delivered back for insertion.
+Major dependencies and inspirations include Apple Speech, librime, librime-xcframework, rime-pinyin-simp, NanoMouse, Hamster, mlx-audio-swift, Peter Norvig's public-domain n-gram counts, and Google Material Icons.
 
-**Engine modes:**
-
-- `local` — on-device ASR; raw text without a key, optional polish with your configured LLM key
-- `cloud` — uploads audio to your configured ASR provider, then polishes via LLM
-
-See [CHANGELOG.md](./CHANGELOG.md) for release history and [CONTRIBUTING.md](./CONTRIBUTING.md) for PR guidelines.
-
----
-
-## Adding an LLM provider
-
-Append a preset in `OSGKeyboardShared/Models/LLMProvider.swift` — any OpenAI-compatible `/chat/completions` endpoint works out of the box.
-
----
-
-## Acknowledgements
-
-OSGKeyboard's voice and keyboard features build on these projects and platforms:
-
-- [Typeless](https://typeless.com) — product inspiration for voice-first input
-- [Apple SpeechAnalyzer](https://developer.apple.com/documentation/speech) — on-device iOS speech recognition
-- [librime](https://github.com/rime/librime) and [librime-xcframework](https://github.com/ghostflyby/librime-xcframework) — Chinese input engine and static iOS packaging
-- [NanoMouse](https://github.com/xjwhnxjwhn/nanomouse) and [Hamster](https://github.com/imfuxiao/Hamster) — references for iOS Rime lifecycle and architecture
-- [rime-pinyin-simp](https://github.com/rime/rime-pinyin-simp), [Jieba](https://github.com/fxsjy/jieba), [phrase-pinyin-data](https://github.com/mozillazg/phrase-pinyin-data), and [pinyin-data](https://github.com/mozillazg/pinyin-data) — pinyin, phrase, and frequency data
-- [mlx-audio-swift](https://github.com/Blaizzy/mlx-audio-swift) — local Qwen3 MLX streaming ASR on macOS
-- [Google Material Icons](https://github.com/google/material-design-icons) — icon font used by the iOS app
-
-See [Third-Party Notices](./NOTICE-TYPING.md) for exact versions and licenses (Chinese Rime stack plus the OSG-owned English lexicon notice), or open Settings → About → Third-Party Licenses in the app.
-
----
+See [NOTICE-TYPING.md](./NOTICE-TYPING.md) for exact versions, licenses, and the OSG-owned English lexicon notice, or open Settings → About → Third-Party Licenses in the app.
 
 ## License
 
-[Source Available License](./LICENSE) — this is not an open-source license. Personal, non-commercial local use is permitted; redistribution and public derivatives require permission. Commercial licensing: [rocky.hk@gmail.com](mailto:rocky.hk@gmail.com).
+The [OSGKeyboard Source Available License](./LICENSE) is not an open-source or MIT license.
+
+- Permitted: personal learning and non-commercial local building and use
+- Prohibited: unauthorized redistribution, public derivatives, and commercial use
+- Commercial licensing: [rocky.hk@gmail.com](mailto:rocky.hk@gmail.com)
+
+<p align="center">
+  开口即文字 · Speak it. It's typed.
+</p>

@@ -5,9 +5,9 @@
 // Excluded from PR presets because Simulator cannot model Bluetooth HFP.
 
 import AVFoundation
-import XCTest
 @testable import OSGKeyboardHostSupport
 @testable import OSGKeyboardShared
+import XCTest
 
 final class FlowPhysicalAudioStressTests: XCTestCase {
     @MainActor

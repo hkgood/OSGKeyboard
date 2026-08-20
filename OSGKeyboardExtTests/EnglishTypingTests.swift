@@ -3,8 +3,8 @@
 //
 // Lexicon / accent / suggestion ranking for the English typing path.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class EnglishTypingTests: XCTestCase {
     func testLexiconLoadsAndCompletesPrefix() {

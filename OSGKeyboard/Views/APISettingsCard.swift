@@ -4,8 +4,8 @@
 // Editable fields for the three OpenAI-compatible config values:
 // Base URL, API Key, Model.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct APISettingsCard: View {
     @Environment(\.themePalette) private var palette: ThemePalette

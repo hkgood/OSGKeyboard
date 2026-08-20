@@ -3,8 +3,8 @@
 //
 // Flow session start, recording, watchdogs, and result delivery handling.
 
-import UIKit
 import OSGKeyboardShared
+import UIKit
 
 @MainActor
 final class KeyboardFlowCoordinator {
@@ -125,6 +125,10 @@ final class KeyboardFlowCoordinator {
             || currentUtteranceRequest != nil
     }
 
+    private var voiceSetupReady: Bool {
+        state.hasCompletedOnboarding || state.isOnboardingPracticeActive
+    }
+
     var isEditSessionActive: Bool { currentUtteranceRequest?.isEdit == true }
 
     /// Session/transcription changes are pushed in real time by Darwin
@@ -159,7 +163,7 @@ final class KeyboardFlowCoordinator {
     /// noise used to call this again while `ready` briefly lagged).
     func ensurePiPReadyOnKeyboardOpen() {
         guard FlowHandoffPolicy.allowsProactiveHostAutoLaunch,
-              state.hasCompletedOnboarding,
+              voiceSetupReady,
               hasFullAccess(),
               AppGroup.isAvailable,
               !isPendingFlowStart,
@@ -335,7 +339,7 @@ final class KeyboardFlowCoordinator {
             appGroupAvailable: AppGroup.isAvailable,
             hostReady: hostReady,
             isPreparingSession: isPendingFlowStart || hostWarming,
-            hasCompletedOnboarding: state.hasCompletedOnboarding
+            hasCompletedOnboarding: voiceSetupReady
         )
         let signature = [
             "phase=\(String(describing: state.phase))",
@@ -681,6 +685,7 @@ final class KeyboardFlowCoordinator {
     func submitAIQuestion(
         text: String,
         conversationID: UUID,
+        taskKind: ManagedGatewayTaskKind = .aiQuestion,
         thinkingEnabled: Bool? = nil
     ) -> FlowUtteranceStartDisposition {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -689,6 +694,7 @@ final class KeyboardFlowCoordinator {
             .aiQuestion(
                 conversationID: conversationID,
                 prefilledQuestion: trimmed,
+                taskKind: taskKind,
                 thinkingEnabled: thinkingEnabled
             )
         )
@@ -1068,7 +1074,7 @@ final class KeyboardFlowCoordinator {
     }
 
     func beginFlowStart(recordAfterHandoff: Bool = false) {
-        guard state.hasCompletedOnboarding else {
+        guard voiceSetupReady else {
             promptFinishSetupInApp()
             return
         }
@@ -1175,6 +1181,8 @@ final class KeyboardFlowCoordinator {
         let mode: FlowUtteranceMode? = request.mode == .dictation
             ? nil
             : request.mode
+        let managedRequestPurpose = request.managedRequestPurpose
+            ?? (state.isOnboardingPracticeActive && request.mode == .dictation ? .oobe : nil)
         let command = FlowCommand(
             sessionId: activeSessionId,
             utteranceId: currentUtteranceId,
@@ -1191,6 +1199,8 @@ final class KeyboardFlowCoordinator {
             sourceHistoryEntryID: request.sourceHistoryEntryID,
             sourceHistoryEntryRevision: request.sourceHistoryEntryRevision,
             aiConversationID: request.aiConversationID,
+            aiTaskKind: request.aiTaskKind,
+            managedRequestPurpose: managedRequestPurpose,
             startDeadlineAt: action == .startRecording ? currentStartDeadlineAt : nil,
             processingDeadlineAt: action == .stopRecording && request.isEdit
                 ? Date().timeIntervalSince1970
@@ -1898,6 +1908,7 @@ final class KeyboardFlowCoordinator {
             utteranceMode: .aiQuestion,
             aiConversationID: currentUtteranceRequest?.aiConversationID,
             aiQuestionText: text,
+            aiTaskKind: currentUtteranceRequest?.aiTaskKind,
             aiThinkingEnabled: currentUtteranceRequest?.aiThinkingEnabled,
             startDeadlineAt: currentStartDeadlineAt
         )
@@ -2034,7 +2045,7 @@ final class KeyboardFlowCoordinator {
                 onAIStreamingAnswer(result.text ?? "", result.utteranceId)
                 return
             }
-            if (result.status == .partial || result.status == .rawReady),
+            if result.status == .partial || result.status == .rawReady,
                let partial = result.text,
                !partial.isEmpty {
                 if result.resolvedUtteranceMode == .aiQuestion,

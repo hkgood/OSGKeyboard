@@ -14,6 +14,7 @@
 "onboarding.api.subtitle" = "Local ASR needs no key; add an API key to enable AI polish.";
 "onboarding.api.localReady.title" = "Local ASR is ready";
 "onboarding.api.localReady.body" = "Recognition works on-device. Add an API key in Settings for AI polish.";
+"keyboard.onboarding.practice.mic" = "Tap the mic, then tap again when done";
 
 /* Common navigation */
 "common.back" = "Back";

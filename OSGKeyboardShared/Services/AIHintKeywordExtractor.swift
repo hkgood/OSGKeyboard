@@ -88,12 +88,12 @@ public enum AIHintKeywordExtractor: Sendable {
     private static let zhPrefixes = [
         "全网热点：", "全网热点:", "临近节日：", "临近节日:",
         "历史上的今天：", "历史上的今天:", "今日一句：", "今日一句:",
-        "查百科：", "查百科:", "聊聊", "看看",
+        "查百科：", "查百科:", "聊聊", "看看"
     ]
 
     private static let enPrefixes = [
         "Trending: ", "Upcoming: ", "On this day: ",
-        "Chat about ", "Chat ", "Weather in ",
+        "Chat about ", "Chat ", "Weather in "
     ]
 
     // MARK: - Chunks

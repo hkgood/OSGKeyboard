@@ -4,8 +4,8 @@
 // Shared top-right input switcher used by both voice and typing surfaces.
 // The same footprint is replaced by candidates while Chinese is composing.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 private struct KeyboardTabSelectionNamespaceKey: EnvironmentKey {
     static let defaultValue: Namespace.ID? = nil

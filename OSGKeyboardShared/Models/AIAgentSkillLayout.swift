@@ -13,7 +13,7 @@ public struct AIAgentSkillLayout: Codable, Equatable, Sendable {
     public static let defaultEnabledIDs = [
         AIClipboardSkillCatalog.replyID,
         AIClipboardSkillCatalog.summarizeID,
-        AIClipboardSkillCatalog.translateID,
+        AIClipboardSkillCatalog.translateID
     ]
 
     /// Keyboard chip order. Unknown / unconfirmed IDs are dropped on sanitize.

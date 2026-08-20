@@ -28,34 +28,34 @@ enum MacSystemPalette {
 
     private static func makePalette(dark: Bool) -> ThemePalette {
         ThemePalette(
-            background:      resolved(dark ? darkBackground : warmBackground, dark: dark),
-            surface:         resolved(dark ? darkSurface : warmSurface, dark: dark),
+            background: resolved(dark ? darkBackground : warmBackground, dark: dark),
+            surface: resolved(dark ? darkSurface : warmSurface, dark: dark),
             surfaceElevated: resolved(dark ? darkElevated : warmElevated, dark: dark),
-            surfaceMuted:    resolved(dark ? darkMuted : warmMuted, dark: dark),
+            surfaceMuted: resolved(dark ? darkMuted : warmMuted, dark: dark),
 
-            accent:          Palette.accent,
-            accentMuted:     Palette.accent.opacity(dark ? 0.22 : 0.14),
-            accentGlow:      Palette.accent.opacity(dark ? 0.40 : 0.32),
-            aiTeal:          Palette.aiTeal,
+            accent: Palette.accent,
+            accentMuted: Palette.accent.opacity(dark ? 0.22 : 0.14),
+            accentGlow: Palette.accent.opacity(dark ? 0.40 : 0.32),
+            aiTeal: Palette.aiTeal,
 
-            danger:          resolved(.systemRed, dark: dark),
-            success:         Palette.accent,
-            warning:         resolved(.systemOrange, dark: dark),
+            danger: resolved(.systemRed, dark: dark),
+            success: Palette.accent,
+            warning: resolved(.systemOrange, dark: dark),
 
-            textPrimary:     resolved(.labelColor, dark: dark),
-            textSecondary:   resolved(.secondaryLabelColor, dark: dark),
-            textTertiary:    resolved(.tertiaryLabelColor, dark: dark),
-            textOnAccent:    Color.white,
+            textPrimary: resolved(.labelColor, dark: dark),
+            textSecondary: resolved(.secondaryLabelColor, dark: dark),
+            textTertiary: resolved(.tertiaryLabelColor, dark: dark),
+            textOnAccent: Color.white,
 
-            divider:         dark
+            divider: dark
                 ? Color.white.opacity(0.08)
                 : Color.black.opacity(0.06),
-            dividerStrong:   dark
+            dividerStrong: dark
                 ? Color.white.opacity(0.12)
                 : Color.black.opacity(0.10),
 
-            recordRed:       resolved(.systemRed, dark: dark),
-            recordBlue:      resolved(.systemBlue, dark: dark)
+            recordRed: resolved(.systemRed, dark: dark),
+            recordBlue: resolved(.systemBlue, dark: dark)
         )
     }
 

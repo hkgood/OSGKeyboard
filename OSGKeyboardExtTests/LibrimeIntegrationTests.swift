@@ -2,8 +2,8 @@
 // OSGKeyboard · Ext unit tests
 
 import Darwin
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class LibrimeIntegrationTests: XCTestCase {
     func testFullPinyinAndBothDoublePinyinSchemasProducePhraseCandidates() throws {

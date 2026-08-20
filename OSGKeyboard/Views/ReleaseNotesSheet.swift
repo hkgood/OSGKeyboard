@@ -3,8 +3,8 @@
 //
 // Sheet that loads the remote release-notes HTML for the current version.
 
-import SwiftUI
 import OSGKeyboardShared
+import SwiftUI
 
 struct ReleaseNotesSheet: View {
     @Environment(\.dismiss) private var dismiss

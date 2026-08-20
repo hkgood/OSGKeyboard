@@ -5,8 +5,8 @@
 // (changeCount-driven). Writes accepted text into ClipboardHistoryStore.
 
 import Foundation
-import UIKit
 import OSGKeyboardShared
+import UIKit
 
 @MainActor
 protocol ClipboardPasteboardProviding: AnyObject {

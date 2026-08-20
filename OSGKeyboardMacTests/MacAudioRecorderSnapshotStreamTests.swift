@@ -8,8 +8,8 @@
 // same lock, and because the release path runs `stop()` on the main actor the
 // whole app wedged.
 
-import XCTest
 @testable import OSGKeyboard
+import XCTest
 
 final class MacAudioRecorderSnapshotStreamTests: XCTestCase {
 

@@ -19,20 +19,28 @@ public final class CloudASRService: ASRService, @unchecked Sendable {
     private let store: any ConfigurationStore
     private let session: URLSession
     private let localFallback: ASRService
+    /// Optional account-managed path. A nil value preserves existing BYOK and
+    /// provider-specific local-fallback selection unchanged.
+    private let managedClient: (any CloudASRTranscribing)?
+    private let managedGrants: GatewayGrantCoordinator?
     private let lock = OSAllocatedUnfairLock()
     private var client: CloudASRTranscribing?
     private var usesLocalFallback = false
-    private var boundProviderId: String?
+    private var boundClientSelection: String?
     private var cancelled = false
     private var streamingPipeline: StreamingUtterancePipeline?
 
     public init(
         store: any ConfigurationStore = AppGroupStore(),
         session: URLSession = .shared,
-        localFallback: ASRService? = nil
+        localFallback: ASRService? = nil,
+        managedClient: (any CloudASRTranscribing)? = nil,
+        managedGrants: GatewayGrantCoordinator? = nil
     ) {
         self.store = store
         self.session = session
+        self.managedClient = managedClient
+        self.managedGrants = managedGrants
         // `SpeechAnalyzerASR` is internal, so it can't appear in a public
         // default argument value — resolve the fallback in the body instead.
         self.localFallback = localFallback ?? SpeechAnalyzerASR()
@@ -40,7 +48,10 @@ public final class CloudASRService: ASRService, @unchecked Sendable {
 
     /// Whether Flow should prefer utterance-level true streaming for the bound provider.
     public var supportsUtteranceStreaming: Bool {
-        CloudASRModelCatalog.supportsTrueStreamingASR(for: store.asrProviderId)
+        if store.credentialSource == .managed {
+            return managedClient == nil || managedClient is CloudASRStreamingCapable
+        }
+        return CloudASRModelCatalog.supportsTrueStreamingASR(for: store.asrProviderId)
     }
 
     public func resetForNewUtterance() {
@@ -246,9 +257,20 @@ public final class CloudASRService: ASRService, @unchecked Sendable {
     private func bindClientIfNeeded() {
         let providerId = store.asrProviderId
         let strategy = CloudASRModelCatalog.strategy(for: providerId)
+        let credentialSource = store.credentialSource
+        let selection = "\(credentialSource.rawValue):\(providerId)"
         lock.withLock {
-            guard boundProviderId != providerId else { return }
-            boundProviderId = providerId
+            guard boundClientSelection != selection else { return }
+            boundClientSelection = selection
+            if credentialSource == .managed {
+                usesLocalFallback = false
+                client = managedClient ?? CloudASRClientFactory.make(
+                    store: store,
+                    session: session,
+                    managedGrants: managedGrants
+                )
+                return
+            }
             usesLocalFallback = strategy == .localFallback
             client = usesLocalFallback
                 ? nil

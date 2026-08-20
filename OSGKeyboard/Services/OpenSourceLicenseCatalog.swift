@@ -174,7 +174,7 @@ enum OpenSourceLicenseCatalog {
             url: URL(string: "https://huggingface.co/collections/mlx-community/qwen3-asr"),
             licenseText: qwenModelApacheText,
             platforms: [.macOS]
-        ),
+        )
     ]
 
     static func entries(for platform: Platform) -> [Entry] {

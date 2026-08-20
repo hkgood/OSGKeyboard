@@ -9,8 +9,8 @@
 import AVFoundation
 import AVKit
 import CoreMedia
-import UIKit
 import OSGKeyboardHostSupport
+import UIKit
 
 /// Why `startAndWait` could not prove an active PiP window.
 enum FlowPiPStartFailure: Equatable, Sendable {
@@ -36,14 +36,45 @@ enum FlowPiPStartOutcome: Equatable, Sendable {
     case failed(FlowPiPStartFailure)
 }
 
+/// User-facing lifecycle published by `FlowSessionManager`.
+enum FlowPiPLifecycleState: Equatable, Sendable {
+    case inactive
+    case preparing(attempt: Int, total: Int)
+    case recovering(attempt: Int, total: Int)
+    case active
+    case waitingForForeground
+    case failed(FlowPiPStartFailure)
+}
+
 @MainActor
-final class FlowPictureInPictureController: NSObject {
-    /// User closed the PiP window — host should end the Flow session.
-    var onUserDismissed: (() -> Void)?
+protocol FlowPictureInPictureControlling: AnyObject {
+    var onUnexpectedStop: (() -> Void)? { get set }
+    var isPictureInPictureActive: Bool { get }
+    var generation: UInt64 { get }
+
+    func attachHostView(_ view: UIView)
+    func startAndWait(
+        hostTimeout: TimeInterval,
+        activeTimeout: TimeInterval
+    ) async -> FlowPiPStartOutcome
+    func stop()
+    func resetGeneration()
+    func prepareForBackgroundAutoStart() async
+    func reassertKeepAliveAudioSession() async -> Bool
+    func updateWaveformLevels(_ levels: [Float])
+}
+
+@MainActor
+final class FlowPictureInPictureController: NSObject, FlowPictureInPictureControlling {
+    /// PiP disappeared without an in-process teardown. AVKit deliberately does
+    /// not distinguish a user close from a system stop or another app takeover.
+    var onUnexpectedStop: (() -> Void)?
 
     private(set) var isPictureInPictureActive = false
     /// True once a host UIView has been attached (may still be awaiting a window).
     private(set) var hasHostView = false
+    /// Monotonic identity for the currently configured AVKit controller.
+    private(set) var generation: UInt64 = 0
 
     let displayLayer = AVSampleBufferDisplayLayer()
 
@@ -115,29 +146,7 @@ final class FlowPictureInPictureController: NSObject {
 
     @discardableResult
     func start() async -> Bool {
-        lastSystemStartFailure = nil
-        guard AVPictureInPictureController.isPictureInPictureSupported() else {
-            return false
-        }
-        guard hasHostView else { return false }
-
-        // Required before constructing the controller; without an active
-        // session, `isPictureInPicturePossible` stays false forever.
-        guard await activateAudioSessionForPiP() else {
-            return false
-        }
-
-        // If a controller was somehow created before audio activation, rebuild.
-        if pipController != nil, !didActivateAudioSessionBeforeController {
-            pipController = nil
-        }
-        configureControllerIfNeeded()
-        if !usesLowPowerVideoCallPiP {
-            warmLogoCacheIfNeeded()
-            animationStartedAt = CACurrentMediaTime()
-            startFramePump()
-        }
-        guard pipController != nil else { return false }
+        guard await prepareControllerForStart() else { return false }
 
         if pipController?.isPictureInPictureActive == true {
             isPictureInPictureActive = true
@@ -145,6 +154,7 @@ final class FlowPictureInPictureController: NSObject {
             return true
         }
 
+        guard pipController?.isPictureInPicturePossible == true else { return false }
         if !usesLowPowerVideoCallPiP {
             // Prime a few frames before asking the system to start PiP.
             enqueueGuideFrame()
@@ -164,17 +174,23 @@ final class FlowPictureInPictureController: NSObject {
     ) async -> FlowPiPStartOutcome {
         if isPictureInPictureActive { return .started }
 
-        guard AVPictureInPictureController.isPictureInPictureSupported() else {
+        let deadline = Date().addingTimeInterval(activeTimeout)
+        let supportsPiP = await waitForPictureInPictureSupport(
+            timeout: min(max(0, deadline.timeIntervalSinceNow), 0.8)
+        )
+        guard supportsPiP else {
             return .failed(.unsupported)
         }
 
-        let hostReady = await waitForHostInWindow(timeout: hostTimeout)
+        let hostReady = await waitForHostInWindow(
+            timeout: min(hostTimeout, max(0, deadline.timeIntervalSinceNow))
+        )
         guard hostReady else {
             return .failed(.hostNotReady)
         }
 
         lastSystemStartFailure = nil
-        guard await start() else {
+        guard await prepareControllerForStart() else {
             stopFramePump()
             if lastSystemStartFailure != nil {
                 return .failed(.systemRejected)
@@ -182,17 +198,49 @@ final class FlowPictureInPictureController: NSObject {
             return .failed(hasHostView ? .notPossible : .hostNotReady)
         }
 
-        let deadline = Date().addingTimeInterval(activeTimeout)
         while Date() < deadline {
             if isPictureInPictureActive { return .started }
             if pipController?.isPictureInPictureActive == true {
                 isPictureInPictureActive = true
                 return .started
             }
-            if let pipController, pipController.isPictureInPicturePossible {
-                pipController.startPictureInPicture()
-            } else {
+            if pipController?.isPictureInPicturePossible == true {
+                break
+            }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+
+        guard pipController?.isPictureInPicturePossible == true else {
+            FlowDiagnostics.log(
+                "PiP generation \(generation) never became possible"
+            )
+            return .failed(.notPossible)
+        }
+
+        if !usesLowPowerVideoCallPiP {
+            // Prime a few frames before asking the system to start PiP.
+            enqueueGuideFrame()
+            enqueueGuideFrame()
+            pipController?.invalidatePlaybackState()
+        }
+        // Issue immediately when possible. iOS 27 beta can silently ignore a
+        // request without sending either delegate callback, so retry at a
+        // conservative cadence while keeping this controller generation alive.
+        pipController?.startPictureInPicture()
+        var lastStartRequestAt = Date()
+        var startRequestCount = 1
+
+        while Date() < deadline {
+            if isPictureInPictureActive { return .started }
+            if pipController?.isPictureInPictureActive == true {
+                isPictureInPictureActive = true
+                return .started
+            }
+            if pipController?.isPictureInPicturePossible == true,
+               Date().timeIntervalSince(lastStartRequestAt) >= 0.25 {
                 pipController?.startPictureInPicture()
+                lastStartRequestAt = Date()
+                startRequestCount += 1
             }
             try? await Task.sleep(nanoseconds: 50_000_000)
         }
@@ -213,16 +261,24 @@ final class FlowPictureInPictureController: NSObject {
             failure = .timedOut
         }
         FlowDiagnostics.log(
-            "PiP startAndWait failed: \(failure) possible=\(pipController?.isPictureInPicturePossible == true)"
+            "PiP startAndWait failed: \(failure) possible=\(pipController?.isPictureInPicturePossible == true) "
+                + "requests=\(startRequestCount)"
         )
-        stop()
         return .failed(failure)
     }
 
     func stop() {
+        resetGeneration()
+    }
+
+    /// Fully releases the AVKit content source so the next attempt cannot
+    /// inherit a controller that the system has already rejected.
+    func resetGeneration() {
         isStoppingProgrammatically = true
         stopFramePump()
-        pipController?.stopPictureInPicture()
+        let controller = pipController
+        controller?.delegate = nil
+        controller?.stopPictureInPicture()
         if !usesLowPowerVideoCallPiP {
             displayLayer.sampleBufferRenderer.flush(
                 removingDisplayedImage: true,
@@ -232,6 +288,10 @@ final class FlowPictureInPictureController: NSObject {
         isPictureInPictureActive = false
         animationStartedAt = nil
         lastSystemStartFailure = nil
+        pipController = nil
+        videoCallContentController = nil
+        transparentContentView = nil
+        didActivateAudioSessionBeforeController = false
         isStoppingProgrammatically = false
     }
 
@@ -277,6 +337,32 @@ final class FlowPictureInPictureController: NSObject {
     /// Set once we successfully activate audio before building the controller.
     private var didActivateAudioSessionBeforeController = false
 
+    private func prepareControllerForStart() async -> Bool {
+        lastSystemStartFailure = nil
+        guard AVPictureInPictureController.isPictureInPictureSupported() else {
+            return false
+        }
+        guard hasHostView else { return false }
+
+        // Required before constructing the controller; without an active
+        // session, `isPictureInPicturePossible` stays false forever.
+        guard await activateAudioSessionForPiP() else {
+            return false
+        }
+
+        // If a controller was somehow created before audio activation, rebuild.
+        if pipController != nil, !didActivateAudioSessionBeforeController {
+            resetGeneration()
+        }
+        configureControllerIfNeeded()
+        if !usesLowPowerVideoCallPiP {
+            warmLogoCacheIfNeeded()
+            animationStartedAt = CACurrentMediaTime()
+            startFramePump()
+        }
+        return pipController != nil
+    }
+
     @discardableResult
     private func activateAudioSessionForPiP() async -> Bool {
         // The first PiP start uses playback. After capture establishes a
@@ -287,6 +373,24 @@ final class FlowPictureInPictureController: NSObject {
             return true
         }
         return false
+    }
+
+    private func waitForPictureInPictureSupport(timeout: TimeInterval) async -> Bool {
+        if AVPictureInPictureController.isPictureInPictureSupported() {
+            return true
+        }
+#if targetEnvironment(simulator)
+        return false
+#else
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            if AVPictureInPictureController.isPictureInPictureSupported() {
+                return true
+            }
+        }
+        return AVPictureInPictureController.isPictureInPictureSupported()
+#endif
     }
 
     private func waitForHostInWindow(timeout: TimeInterval) async -> Bool {
@@ -341,7 +445,9 @@ final class FlowPictureInPictureController: NSObject {
         controller.canStartPictureInPictureAutomaticallyFromInline = true
         controller.requiresLinearPlayback = true
         pipController = controller
+        generation &+= 1
         didActivateAudioSessionBeforeController = true
+        FlowDiagnostics.log("PiP controller generation \(generation) configured")
     }
 
     private func releaseAudioSessionForLowPowerPiP() {
@@ -414,7 +520,7 @@ final class FlowPictureInPictureController: NSObject {
         let attrs: [String: Any] = [
             kCVPixelBufferCGImageCompatibilityKey as String: true,
             kCVPixelBufferCGBitmapContextCompatibilityKey as String: true,
-            kCVPixelBufferIOSurfacePropertiesKey as String: [:] as [String: Any],
+            kCVPixelBufferIOSurfacePropertiesKey as String: [:] as [String: Any]
         ]
         let status = CVPixelBufferCreate(
             kCFAllocatorDefault,
@@ -642,6 +748,7 @@ extension FlowPictureInPictureController: @preconcurrency AVPictureInPictureCont
     func pictureInPictureControllerDidStartPictureInPicture(
         _ pictureInPictureController: AVPictureInPictureController
     ) {
+        guard pictureInPictureController === pipController else { return }
         isPictureInPictureActive = true
         lastSystemStartFailure = nil
         releaseAudioSessionForLowPowerPiP()
@@ -650,16 +757,18 @@ extension FlowPictureInPictureController: @preconcurrency AVPictureInPictureCont
     func pictureInPictureControllerDidStopPictureInPicture(
         _ pictureInPictureController: AVPictureInPictureController
     ) {
+        guard pictureInPictureController === pipController else { return }
         isPictureInPictureActive = false
         stopFramePump()
         guard !isStoppingProgrammatically else { return }
-        onUserDismissed?()
+        onUnexpectedStop?()
     }
 
     func pictureInPictureController(
         _ pictureInPictureController: AVPictureInPictureController,
         failedToStartPictureInPictureWithError error: Error
     ) {
+        guard pictureInPictureController === pipController else { return }
         // Sample-buffer fallback may need warm-up retries. VideoCall PiP uses
         // the automatic-inline path plus the bounded startAndWait fallback.
         lastSystemStartFailure = error

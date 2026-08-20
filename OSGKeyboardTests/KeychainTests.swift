@@ -5,8 +5,8 @@
 // the legacy UserDefaults slot. The Keychain is process-global in the
 // simulator, so every test cleans up after itself.
 
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class KeychainTests: XCTestCase {
 

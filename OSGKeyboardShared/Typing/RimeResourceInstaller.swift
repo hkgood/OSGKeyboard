@@ -5,8 +5,8 @@
 // an already-built session, keeping expensive maintenance work out of
 // the extension's constrained lifecycle.
 
-import Foundation
 import Darwin
+import Foundation
 
 public enum RimeResourceError: LocalizedError {
     case appGroupUnavailable

@@ -82,16 +82,16 @@ public enum TranslationLanguageCatalog {
     /// "turn off" action is one tap away from any enabled state.
     public static let all: [TranslationLanguage] = [
         TranslationLanguage(id: offLocaleId, promptLanguageName: "", nativeName: ""),
-        TranslationLanguage(id: "en",    promptLanguageName: "English",  nativeName: "English"),
+        TranslationLanguage(id: "en", promptLanguageName: "English", nativeName: "English"),
         TranslationLanguage(id: "zh-Hans", promptLanguageName: "Simplified Chinese", nativeName: "简体中文"),
         TranslationLanguage(id: "zh-Hant", promptLanguageName: "Traditional Chinese", nativeName: "繁體中文"),
-        TranslationLanguage(id: "ja",    promptLanguageName: "Japanese", nativeName: "日本語"),
-        TranslationLanguage(id: "ko",    promptLanguageName: "Korean",   nativeName: "한국어"),
-        TranslationLanguage(id: "fr",    promptLanguageName: "French",   nativeName: "Français"),
-        TranslationLanguage(id: "de",    promptLanguageName: "German",   nativeName: "Deutsch"),
-        TranslationLanguage(id: "es",    promptLanguageName: "Spanish",  nativeName: "Español"),
-        TranslationLanguage(id: "ru",    promptLanguageName: "Russian",  nativeName: "Русский"),
-        TranslationLanguage(id: "pt",    promptLanguageName: "Portuguese", nativeName: "Português"),
+        TranslationLanguage(id: "ja", promptLanguageName: "Japanese", nativeName: "日本語"),
+        TranslationLanguage(id: "ko", promptLanguageName: "Korean", nativeName: "한국어"),
+        TranslationLanguage(id: "fr", promptLanguageName: "French", nativeName: "Français"),
+        TranslationLanguage(id: "de", promptLanguageName: "German", nativeName: "Deutsch"),
+        TranslationLanguage(id: "es", promptLanguageName: "Spanish", nativeName: "Español"),
+        TranslationLanguage(id: "ru", promptLanguageName: "Russian", nativeName: "Русский"),
+        TranslationLanguage(id: "pt", promptLanguageName: "Portuguese", nativeName: "Português")
     ]
 
     /// True when the given id is the "off" sentinel. Used by the picker

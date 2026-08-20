@@ -2,8 +2,8 @@
 // OSGKeyboardTests
 
 import CoreMedia
-import XCTest
 @testable import OSGKeyboardShared
+import XCTest
 
 final class ProgressiveDictationTranscriptAccumulatorTests: XCTestCase {
 

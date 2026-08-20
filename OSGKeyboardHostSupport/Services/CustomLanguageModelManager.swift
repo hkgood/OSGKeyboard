@@ -7,8 +7,8 @@
 // these assets.
 
 import Foundation
-import Speech
 import os
+import Speech
 #if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
 #endif
@@ -26,8 +26,14 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
 
     struct BundledManifest: Decodable {
         let version: String
-        let bin_bytes: Int
+        let binBytes: Int
         let identifier: String
+
+        private enum CodingKeys: String, CodingKey {
+            case version
+            case binBytes = "bin_bytes"
+            case identifier
+        }
     }
 
     private enum Storage {
@@ -165,10 +171,10 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
         )
 
         Self.log(
-            "preparing custom LM (\(manifest.bin_bytes) byte asset)… \(OSGDiag.memoryTag())"
+            "preparing custom LM (\(manifest.binBytes) byte asset)… \(OSGDiag.memoryTag())"
         )
         OSGDiag.log(
-            "clm.prepare.begin bytes=\(manifest.bin_bytes) \(OSGDiag.memoryTag())",
+            "clm.prepare.begin bytes=\(manifest.binBytes) \(OSGDiag.memoryTag())",
             category: "asr"
         )
         try await Self.prepareLanguageModel(assetURL: assetURL, configuration: configuration)
@@ -208,7 +214,7 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
         }
 
         let contentHints = preset.contentHints.union([
-            .customizedLanguage(modelConfiguration: lmConfiguration),
+            .customizedLanguage(modelConfiguration: lmConfiguration)
         ])
         return DictationTranscriber(
             locale: locale,
@@ -268,7 +274,7 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
                 forResource: "OSGKeyboardCLM",
                 withExtension: "bin",
                 subdirectory: Storage.subdirectory
-            ),
+            )
         ]
         return candidates.compactMap { $0 }.first
     }
@@ -285,7 +291,7 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
                 forResource: "compiled-manifest",
                 withExtension: "json",
                 subdirectory: Storage.subdirectory
-            ),
+            )
         ]
         guard let manifestURL = candidates.compactMap({ $0 }).first,
               let data = try? Data(contentsOf: manifestURL),
@@ -348,7 +354,7 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
     }
 
     private static func fingerprint(for manifest: BundledManifest) -> String {
-        "\(manifest.identifier)|\(manifest.version)|\(manifest.bin_bytes)"
+        "\(manifest.identifier)|\(manifest.version)|\(manifest.binBytes)"
     }
 
     private static func storedFingerprint() -> String? {
@@ -366,8 +372,7 @@ public final class CustomLanguageModelManager: @unchecked Sendable {
         assetURL: URL,
         configuration: SFSpeechLanguageModel.Configuration
     ) async throws {
-        try await withCheckedThrowingContinuation {
-            (continuation: CheckedContinuation<Void, Error>) in
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             SFSpeechLanguageModel.prepareCustomLanguageModel(
                 for: assetURL,
                 configuration: configuration

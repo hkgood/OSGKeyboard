@@ -6,9 +6,9 @@
 // Launch with `--whats-new-host` (+ optional `--whats-new-scenario=` / `--whats-new-lang=`).
 
 #if DEBUG
+import OSGKeyboardShared
 import SwiftUI
 import UIKit
-import OSGKeyboardShared
 
 struct NotesHostDemoView: View {
     let scenario: WhatsNewDemoScenario
