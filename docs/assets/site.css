@@ -1276,31 +1276,37 @@ html[data-lang="zh"] .styles-strip h3 {
 }
 
 .privacy-section {
-  background: #121514;
-  color: var(--inverse);
+  --section-ink: var(--ink);
+  --section-secondary: var(--ink-secondary);
+  --section-line: var(--line);
+  background: #e5ebe8;
+  color: var(--section-ink);
 }
 
 html[data-theme="dark"] .privacy-section {
+  --section-ink: var(--inverse);
+  --section-secondary: var(--inverse-secondary);
+  --section-line: var(--inverse-line);
   background: #050706;
 }
 
 .center-heading.inverse .eyebrow,
 .center-heading.inverse > p:last-child {
-  color: var(--inverse-secondary);
+  color: var(--section-secondary);
 }
 
 .service-paths {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  border-top: 1px solid var(--inverse-line);
-  border-bottom: 1px solid var(--inverse-line);
+  border-top: 1px solid var(--section-line);
+  border-bottom: 1px solid var(--section-line);
 }
 
 .service-paths article {
   display: flex;
   min-height: 390px;
   padding: 32px;
-  border-right: 1px solid var(--inverse-line);
+  border-right: 1px solid var(--section-line);
   flex-direction: column;
 }
 
@@ -1314,7 +1320,7 @@ html[data-theme="dark"] .privacy-section {
 }
 
 .path-number {
-  color: var(--inverse-secondary);
+  color: var(--section-secondary);
   font-size: 0.68rem;
   font-weight: 700;
 }
@@ -1324,7 +1330,7 @@ html[data-theme="dark"] .privacy-section {
   width: 34px;
   height: 1px;
   margin: 46px 0 25px;
-  background: var(--inverse-line);
+  background: var(--section-line);
 }
 
 .service-paths h3 {
@@ -1333,14 +1339,14 @@ html[data-theme="dark"] .privacy-section {
 }
 
 .service-paths p {
-  color: var(--inverse-secondary);
+  color: var(--section-secondary);
   line-height: 1.7;
 }
 
 .path-note {
   margin-top: auto;
   padding-top: 24px;
-  color: #d8ddda;
+  color: var(--section-ink);
   font-size: 0.74rem;
 }
 
@@ -1373,14 +1379,14 @@ html[data-theme="dark"] .privacy-section {
   display: inline-flex;
   gap: 8px;
   align-items: center;
-  color: var(--inverse-secondary);
+  color: var(--section-secondary);
   font-size: 0.84rem;
   font-weight: 650;
 }
 
 .inverse-link:hover,
 .inverse-link:focus-visible {
-  color: var(--inverse);
+  color: var(--section-ink);
 }
 
 .platforms-section {
@@ -1622,18 +1628,28 @@ html[data-lang="zh"] .platform-stories h3 {
 }
 
 .download-panel {
+  --panel-ink: var(--ink);
+  --panel-secondary: var(--ink-secondary);
+  --panel-line: var(--line);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 70px;
   align-items: end;
   padding: clamp(44px, 7vw, 80px);
   border-radius: var(--radius-xl);
+  background: #e2e7eb;
+  color: var(--panel-ink);
+}
+
+html[data-theme="dark"] .download-panel {
+  --panel-ink: var(--inverse);
+  --panel-secondary: var(--inverse-secondary);
+  --panel-line: var(--inverse-line);
   background: #151817;
-  color: var(--inverse);
 }
 
 .download-panel .eyebrow {
-  color: var(--inverse-secondary);
+  color: var(--panel-secondary);
 }
 
 .download-panel h2 {
@@ -1653,7 +1669,7 @@ html[data-lang="zh"] .download-panel h2 {
 .download-panel p:last-child {
   max-width: 650px;
   margin-bottom: 0;
-  color: var(--inverse-secondary);
+  color: var(--panel-secondary);
 }
 
 .download-actions {
@@ -1667,17 +1683,17 @@ html[data-lang="zh"] .download-panel h2 {
   align-items: center;
   min-height: 48px;
   padding: 0 16px;
-  border: 1px solid var(--inverse-line);
+  border: 1px solid var(--panel-line);
   border-radius: 10px;
-  color: var(--inverse-secondary);
+  color: var(--panel-secondary);
   font-size: 0.82rem;
   font-weight: 650;
 }
 
 .outline-action:hover,
 .outline-action:focus-visible {
-  border-color: rgba(255, 255, 255, 0.25);
-  color: var(--inverse);
+  border-color: var(--line-strong);
+  color: var(--panel-ink);
 }
 
 .outline-action .material-symbols-rounded {
@@ -1818,7 +1834,7 @@ html[data-lang="zh"] .download-panel h2 {
     min-height: 300px;
     padding: 30px 0;
     border-right: 0;
-    border-bottom: 1px solid var(--inverse-line);
+    border-bottom: 1px solid var(--section-line);
   }
 
   .service-paths article:last-child {
