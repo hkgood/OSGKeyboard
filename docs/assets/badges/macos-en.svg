@@ -7,5 +7,5 @@
     <path d="M17.5 29.5h8M21.5 24v5.5M17.5 20.5h8"/>
   </g>
   <text x="40" y="14" fill="#fff" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="7.2">DOWNLOAD NOW</text>
-  <text x="40" y="29" fill="#fff" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="15.5" font-weight="600">macOS version</text>
+  <text x="40" y="29" fill="#fff" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="14" font-weight="600">macOS version</text>
 </svg>

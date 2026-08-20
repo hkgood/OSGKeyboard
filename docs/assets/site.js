@@ -10,6 +10,9 @@
   const languageButton = document.getElementById("languageToggle");
   const themeButton = document.getElementById("themeToggle");
   const themeIcon = themeButton?.querySelector(".material-symbols-rounded");
+  const menuButton = document.getElementById("menuToggle");
+  const menuIcon = menuButton?.querySelector(".material-symbols-rounded");
+  const mobileNav = document.getElementById("mobileNav");
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const themeMedia = window.matchMedia("(prefers-color-scheme: dark)");
   const supportedLanguages = new Set(["zh", "en"]);
@@ -56,18 +59,6 @@
       element.setAttribute("content", element.dataset[`${lang}Content`] || "");
     });
 
-    document.querySelectorAll("[data-shot]").forEach((image) => {
-      const theme = root.dataset.theme || "light";
-      image.src = `assets/screenshots/${lang}/${theme}/${image.dataset.shot}`;
-    });
-
-    document.querySelectorAll("[data-media-name]").forEach((media) => {
-      const name = media.dataset.mediaName;
-      const extension = media.dataset.mediaExtension || "mp4";
-      media.src = `assets/whats-new/${name}-${lang}.${extension}`;
-      media.load?.();
-    });
-
     document.title = lang === "zh"
       ? "OSGKeyboard — 语音、打字与 AI 助手键盘"
       : "OSGKeyboard — Voice, typing, and an AI assistant keyboard";
@@ -77,6 +68,16 @@
       languageButton.setAttribute(
         "aria-label",
         lang === "zh" ? "Switch to English" : "切换到中文"
+      );
+    }
+
+    if (menuButton) {
+      const isOpen = menuButton.getAttribute("aria-expanded") === "true";
+      menuButton.setAttribute(
+        "aria-label",
+        lang === "zh"
+          ? (isOpen ? "关闭导航" : "打开导航")
+          : (isOpen ? "Close navigation" : "Open navigation")
       );
     }
 
@@ -97,6 +98,21 @@
     return saved === "light" || saved === "dark" ? saved : null;
   }
 
+  function setMenuOpen(isOpen) {
+    if (!menuButton || !mobileNav) return;
+    const open = Boolean(isOpen);
+    menuButton.setAttribute("aria-expanded", String(open));
+    mobileNav.hidden = !open;
+    if (menuIcon) menuIcon.textContent = open ? "close" : "menu";
+    const lang = root.dataset.lang || "zh";
+    menuButton.setAttribute(
+      "aria-label",
+      lang === "zh"
+        ? (open ? "关闭导航" : "打开导航")
+        : (open ? "Close navigation" : "Open navigation")
+    );
+  }
+
   function applyTheme(theme, persist) {
     const resolved = theme === "dark" ? "dark" : "light";
     root.dataset.theme = resolved;
@@ -114,13 +130,8 @@
       themeButton.setAttribute("aria-label", label);
     }
 
-    document.querySelectorAll("[data-shot]").forEach((image) => {
-      const lang = root.dataset.lang || "zh";
-      image.src = `assets/screenshots/${lang}/${resolved}/${image.dataset.shot}`;
-    });
-
-    beams?.setBackground(resolved === "dark" ? "#020805" : "#020805");
-    beams?.setLightColor(resolved === "dark" ? "#72F49D" : "#61E987");
+    beams?.setBackground("#0b0d0c");
+    beams?.setLightColor(resolved === "dark" ? "#7faf8a" : "#6eaa7d");
 
     if (persist) localStorage.setItem("osg-site-theme", resolved);
   }
@@ -134,12 +145,12 @@
         beamWidth: 4.5,
         beamHeight: 6,
         beamNumber: 26,
-        lightColor: "#72F49D",
+        lightColor: "#7faf8a",
         speed: 4.5,
         noiseIntensity: 2.65,
         scale: 0.62,
         rotation: 208,
-        background: "#020805",
+        background: "#0b0d0c",
         reduceMotion
       });
     } catch (error) {
@@ -148,33 +159,11 @@
     }
   }
 
-  function initializeVideos() {
-    document.querySelectorAll("video[autoplay]").forEach((video) => {
-      if (reduceMotion) {
-        video.autoplay = false;
-        video.pause();
-        return;
-      }
-
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            video.play().catch(() => {});
-          } else {
-            video.pause();
-          }
-        });
-      }, { threshold: 0.15 });
-      observer.observe(video);
-    });
-  }
-
   const initialLanguage = preferredLanguage();
   const initialTheme = storedTheme() || (themeMedia.matches ? "dark" : "light");
   applyLanguage(initialLanguage, false);
   applyTheme(initialTheme, false);
   initializeBeams();
-  initializeVideos();
 
   languageButton?.addEventListener("click", () => {
     applyLanguage(root.dataset.lang === "zh" ? "en" : "zh", true);
@@ -183,6 +172,18 @@
 
   themeButton?.addEventListener("click", () => {
     applyTheme(root.dataset.theme === "dark" ? "light" : "dark", true);
+  });
+
+  menuButton?.addEventListener("click", () => {
+    setMenuOpen(menuButton.getAttribute("aria-expanded") !== "true");
+  });
+
+  mobileNav?.querySelectorAll("a").forEach((link) => {
+    link.addEventListener("click", () => setMenuOpen(false));
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setMenuOpen(false);
   });
 
   themeMedia.addEventListener("change", (event) => {

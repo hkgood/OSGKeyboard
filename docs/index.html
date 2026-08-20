@@ -33,8 +33,8 @@
     data-zh-content="一个键盘，完成听写、中英打字、AI 问答与剪贴板技能。默认端侧识别，也支持 BYOK 和可选托管积分。"
     data-en-content="One keyboard for dictation, Chinese and English typing, AI answers, and clipboard skills. On-device by default, with BYOK and optional managed credits."
   >
-  <meta property="og:image" content="https://hkgood.github.io/OSGKeyboard/assets/hero-devices.png">
-  <meta name="twitter:card" content="summary_large_image">
+  <meta property="og:image" content="https://hkgood.github.io/OSGKeyboard/assets/app-icon.png">
+  <meta name="twitter:card" content="summary">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..700,0..1,0&display=swap" rel="stylesheet">
@@ -126,15 +126,25 @@
         <span>OSGKeyboard</span>
       </a>
       <div class="nav-links">
-        <a href="#assistant" data-zh="助手" data-en="Assistant">助手</a>
-        <a href="#typing" data-zh="打字" data-en="Typing">打字</a>
-        <a href="#skills" data-zh="技能" data-en="Skills">技能</a>
-        <a href="#engines" data-zh="服务" data-en="Services">服务</a>
-        <a href="#account" data-zh="账号" data-en="Account">账号</a>
+        <a href="#assistant" data-zh="产品" data-en="Product">产品</a>
+        <a href="#typing" data-zh="能力" data-en="Capabilities">能力</a>
         <a href="#privacy" data-zh="隐私" data-en="Privacy">隐私</a>
-        <a href="#start" data-zh="开始使用" data-en="Get started">开始使用</a>
+        <a href="#platforms" data-zh="平台" data-en="Platforms">平台</a>
+        <a href="#start" data-zh="开始" data-en="Get started">开始</a>
       </div>
       <div class="nav-actions">
+        <button
+          class="icon-button mobile-menu-button"
+          id="menuToggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="mobileNav"
+          aria-label="打开导航"
+          data-zh-label="打开导航"
+          data-en-label="Open navigation"
+        >
+          <span class="material-symbols-rounded" aria-hidden="true">menu</span>
+        </button>
         <button class="language-button" id="languageToggle" type="button" aria-label="Switch to English">EN</button>
         <button
           class="icon-button"
@@ -145,6 +155,13 @@
           <span class="material-symbols-rounded" aria-hidden="true">dark_mode</span>
         </button>
       </div>
+    </nav>
+    <nav class="mobile-nav" id="mobileNav" aria-label="Mobile" hidden>
+      <a href="#assistant" data-zh="产品" data-en="Product">产品</a>
+      <a href="#typing" data-zh="能力" data-en="Capabilities">能力</a>
+      <a href="#privacy" data-zh="隐私" data-en="Privacy">隐私</a>
+      <a href="#platforms" data-zh="平台" data-en="Platforms">平台</a>
+      <a href="#start" data-zh="开始" data-en="Start">开始</a>
     </nav>
   </header>
 
@@ -164,7 +181,7 @@
           </p>
           <h1>
             <span data-zh="不止听写。" data-en="Beyond dictation.">不止听写。</span><br>
-            <span class="gradient-text" data-zh="这是你的输入助手。" data-en="Your input assistant.">这是你的输入助手。</span>
+            <span class="hero-accent" data-zh="你的输入助手。" data-en="Your input assistant.">你的输入助手。</span>
           </h1>
           <p
             class="hero-copy"
@@ -214,37 +231,53 @@
           >iOS / iPadOS 26+ · macOS 15+（公开 DMG 为历史版 1.1）· 核心功能无需 OSG 账号</p>
         </div>
 
-        <div class="hero-visual" aria-label="OSGKeyboard product preview">
-          <div class="floating-chip one">
-            <span class="material-symbols-rounded" aria-hidden="true">graphic_eq</span>
+        <div
+          class="hero-visual"
+          aria-label="OSGKeyboard 功能示意"
+          data-zh-label="OSGKeyboard 功能示意"
+          data-en-label="OSGKeyboard capability illustration"
+        >
+          <div class="illustration-label" data-zh="功能示意" data-en="Product illustration">功能示意</div>
+          <div class="input-console">
+            <div class="console-toolbar">
+              <span class="console-brand">OSG</span>
+              <div class="mode-tabs" aria-hidden="true">
+                <span class="mode-tab is-active" data-zh="助手" data-en="Assistant">助手</span>
+                <span class="mode-tab" data-zh="中文" data-en="中文">中文</span>
+                <span class="mode-tab">EN</span>
+              </div>
+              <span class="material-symbols-rounded console-menu" aria-hidden="true">more_horiz</span>
+            </div>
+            <div class="console-content">
+              <p class="console-kicker" data-zh="当前输入" data-en="Current input">当前输入</p>
+              <p
+                class="console-transcript"
+                data-zh="把刚才的内容整理得更清楚，同时保留我的语气。"
+                data-en="Make that clearer while keeping it in my voice."
+              >把刚才的内容整理得更清楚，同时保留我的语气。</p>
+              <div class="console-result">
+                <span class="result-label" data-zh="准备插入" data-en="Ready to insert">准备插入</span>
+                <span class="result-copy" data-zh="内容已经整理好，并保留了原本的表达方式。" data-en="The text is clearer and still sounds like you.">内容已经整理好，并保留了原本的表达方式。</span>
+              </div>
+            </div>
+            <div class="console-footer">
+              <span class="console-action">
+                <span class="material-symbols-rounded" aria-hidden="true">undo</span>
+              </span>
+              <span class="console-mic">
+                <span class="material-symbols-rounded" aria-hidden="true">mic</span>
+              </span>
+              <span class="console-action">
+                <span class="material-symbols-rounded" aria-hidden="true">arrow_upward</span>
+              </span>
+            </div>
+          </div>
+          <div class="hero-caption">
             <span data-zh="轻点听写" data-en="Tap to dictate">轻点听写</span>
-          </div>
-          <div class="phone-frame">
-            <img
-              src="assets/screenshots/zh/light/iphone-keyboard_idle.png"
-              data-shot="iphone-keyboard_idle.png"
-              data-zh-alt="OSGKeyboard iPhone 助手界面"
-              data-en-alt="OSGKeyboard assistant on iPhone"
-              alt="OSGKeyboard iPhone 助手界面"
-            >
-          </div>
-          <div class="video-card">
-            <video
-              src="assets/whats-new/ai-voice-assistant-zh.mp4"
-              data-media-name="ai-voice-assistant"
-              autoplay
-              muted
-              loop
-              playsinline
-              preload="metadata"
-              aria-label="统一助手键盘演示"
-              data-zh-label="统一助手键盘演示"
-              data-en-label="Unified assistant keyboard demo"
-            ></video>
-          </div>
-          <div class="floating-chip two">
-            <span class="material-symbols-rounded" aria-hidden="true">auto_awesome</span>
-            <span data-zh="长按问 AI" data-en="Hold to ask AI">长按问 AI</span>
+            <span aria-hidden="true">·</span>
+            <span data-zh="长按提问" data-en="Hold to ask">长按提问</span>
+            <span aria-hidden="true">·</span>
+            <span data-zh="安全插入" data-en="Insert safely">安全插入</span>
           </div>
         </div>
       </div>
@@ -303,20 +336,25 @@
               </li>
             </ul>
           </div>
-          <div class="media-shell">
-            <video
-              src="assets/whats-new/edit-last-input-zh.mp4"
-              data-media-name="edit-last-input"
-              autoplay
-              muted
-              loop
-              playsinline
-              preload="metadata"
-              aria-label="编辑上次输入演示"
-              data-zh-label="编辑上次输入演示"
-              data-en-label="Edit last input demo"
-            ></video>
-            <span class="media-label" data-zh="编辑上次输入" data-en="Edit last input">编辑上次输入</span>
+          <div class="workflow-visual" aria-label="Assistant workflow">
+            <div class="workflow-step">
+              <span class="workflow-number">01</span>
+              <span class="material-symbols-rounded" aria-hidden="true">mic</span>
+              <strong data-zh="表达意图" data-en="Express intent">表达意图</strong>
+              <small data-zh="轻点听写，长按提问" data-en="Tap to dictate, hold to ask">轻点听写，长按提问</small>
+            </div>
+            <div class="workflow-step">
+              <span class="workflow-number">02</span>
+              <span class="material-symbols-rounded" aria-hidden="true">auto_fix_high</span>
+              <strong data-zh="理解并处理" data-en="Understand and process">理解并处理</strong>
+              <small data-zh="润色、问答或编辑" data-en="Polish, answer, or edit">润色、问答或编辑</small>
+            </div>
+            <div class="workflow-step">
+              <span class="workflow-number">03</span>
+              <span class="material-symbols-rounded" aria-hidden="true">text_fields</span>
+              <strong data-zh="确认上下文" data-en="Verify context">确认上下文</strong>
+              <small data-zh="安全插入当前输入框" data-en="Insert safely into the field">安全插入当前输入框</small>
+            </div>
           </div>
         </div>
       </div>
@@ -373,20 +411,41 @@
     <section class="section section-dark" id="skills">
       <div class="section-inner">
         <div class="feature-stage">
-          <div class="media-shell">
-            <video
-              src="assets/whats-new/clipboard-skills-zh.mp4"
-              data-media-name="clipboard-skills"
-              autoplay
-              muted
-              loop
-              playsinline
-              preload="metadata"
-              aria-label="剪贴板技能演示"
-              data-zh-label="剪贴板技能演示"
-              data-en-label="Clipboard skills demo"
-            ></video>
-            <span class="media-label" data-zh="剪贴板快捷技能" data-en="Clipboard quick skills">剪贴板快捷技能</span>
+          <div class="clipboard-visual">
+            <div class="clipboard-source">
+              <span class="material-symbols-rounded" aria-hidden="true">content_copy</span>
+              <div>
+                <small data-zh="刚刚复制" data-en="Just copied">刚刚复制</small>
+                <p data-zh="明天下午三点和产品团队确认新版上线计划。" data-en="Confirm the launch plan with the product team tomorrow at 3 PM.">明天下午三点和产品团队确认新版上线计划。</p>
+              </div>
+            </div>
+            <p class="visual-label" data-zh="下一步" data-en="Next actions">下一步</p>
+            <div class="skill-chip-grid">
+              <span class="skill-chip is-primary">
+                <span class="material-symbols-rounded" aria-hidden="true">reply</span>
+                <span data-zh="回复" data-en="Reply">回复</span>
+              </span>
+              <span class="skill-chip">
+                <span class="material-symbols-rounded" aria-hidden="true">summarize</span>
+                <span data-zh="总结" data-en="Summarize">总结</span>
+              </span>
+              <span class="skill-chip">
+                <span class="material-symbols-rounded" aria-hidden="true">translate</span>
+                <span data-zh="翻译" data-en="Translate">翻译</span>
+              </span>
+              <span class="skill-chip">
+                <span class="material-symbols-rounded" aria-hidden="true">task_alt</span>
+                <span data-zh="待办" data-en="Tasks">待办</span>
+              </span>
+              <span class="skill-chip">
+                <span class="material-symbols-rounded" aria-hidden="true">event</span>
+                <span data-zh="日程" data-en="Events">日程</span>
+              </span>
+              <span class="skill-chip">
+                <span class="material-symbols-rounded" aria-hidden="true">near_me</span>
+                <span data-zh="导航" data-en="Navigate">导航</span>
+              </span>
+            </div>
           </div>
           <div class="feature-copy">
             <p class="eyebrow" data-zh="AI Agent 与剪贴板" data-en="AI Agent and clipboard">AI Agent 与剪贴板</p>
@@ -439,16 +498,24 @@
               </li>
             </ul>
           </div>
-          <div class="media-shell">
-            <img
-              src="assets/whats-new/polish-styles-zh.png"
-              data-media-name="polish-styles"
-              data-media-extension="png"
-              data-zh-alt="OSGKeyboard 润色风格"
-              data-en-alt="OSGKeyboard polish styles"
-              alt="OSGKeyboard 润色风格"
-            >
-            <span class="media-label" data-zh="内置与自定义润色风格" data-en="Built-in and custom polish styles">内置与自定义润色风格</span>
+          <div class="styles-visual">
+            <div class="style-selector">
+              <span class="style-option" data-zh="轻度清理" data-en="Light cleanup">轻度清理</span>
+              <span class="style-option is-selected" data-zh="清晰结构" data-en="Clear structure">清晰结构</span>
+              <span class="style-option" data-zh="正式表达" data-en="Formal">正式表达</span>
+              <span class="style-option" data-zh="日常聊天" data-en="Casual chat">日常聊天</span>
+            </div>
+            <div class="style-preview">
+              <small data-zh="润色预览" data-en="Polish preview">润色预览</small>
+              <p
+                data-zh="先明确结论，再补充原因和下一步，让信息更容易理解。"
+                data-en="Lead with the conclusion, then add context and next steps."
+              >先明确结论，再补充原因和下一步，让信息更容易理解。</p>
+              <div class="preview-meta">
+                <span data-zh="保留原意" data-en="Meaning preserved">保留原意</span>
+                <span data-zh="结构更清晰" data-en="Clearer structure">结构更清晰</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -611,13 +678,12 @@
               data-zh="在微信、备忘录、邮件、Notion、Cursor 等任意输入框使用。iPad 提供铺满宽度的工作区、地球键与编辑控制。"
               data-en="Use it in Messages, Notes, Mail, Notion, Cursor, and any other text field. iPad adds a full-width workspace, globe key, and editing controls."
             >在微信、备忘录、邮件、Notion、Cursor 等任意输入框使用。iPad 提供铺满宽度的工作区、地球键与编辑控制。</p>
-            <img
-              src="assets/screenshots/zh/light/ipad-home.png"
-              data-shot="ipad-home.png"
-              data-zh-alt="OSGKeyboard iPad 主界面"
-              data-en-alt="OSGKeyboard home on iPad"
-              alt="OSGKeyboard iPad 主界面"
-            >
+            <div class="platform-specs">
+              <span data-zh="语音助手" data-en="Voice assistant">语音助手</span>
+              <span data-zh="中文全拼 / 双拼" data-en="Full / double pinyin">中文全拼 / 双拼</span>
+              <span data-zh="英文纠错与补全" data-en="English correction and completion">英文纠错与补全</span>
+              <span data-zh="剪贴板与技能" data-en="Clipboard and skills">剪贴板与技能</span>
+            </div>
           </article>
           <article class="platform-card">
             <span class="platform-pill">
@@ -629,13 +695,12 @@
               data-zh="菜单栏 App 以底部胶囊浮层反馈实时转写。Apple Silicon 可下载 Qwen3 MLX 本地模型；也支持 Apple Speech 回退与 AI 润色。"
               data-en="The menu-bar app shows live transcription in a bottom pill. Apple Silicon Macs can download a local Qwen3 MLX model; Apple Speech fallback and optional AI polish are also available."
             >菜单栏 App 以底部胶囊浮层反馈实时转写。Apple Silicon 可下载 Qwen3 MLX 本地模型；也支持 Apple Speech 回退与 AI 润色。</p>
-            <img
-              src="assets/screenshots/zh/light/mac-recording.png"
-              data-shot="mac-recording.png"
-              data-zh-alt="OSGKeyboard Mac 全局听写浮层"
-              data-en-alt="OSGKeyboard global dictation overlay on Mac"
-              alt="OSGKeyboard Mac 全局听写浮层"
-            >
+            <div class="platform-specs">
+              <span data-zh="Option 全局热键" data-en="Option global hotkey">Option 全局热键</span>
+              <span data-zh="Qwen3 MLX 本地识别" data-en="Local Qwen3 MLX">Qwen3 MLX 本地识别</span>
+              <span data-zh="实时听写浮层" data-en="Live dictation overlay">实时听写浮层</span>
+              <span data-zh="润色与翻译" data-en="Polish and translation">润色与翻译</span>
+            </div>
           </article>
         </div>
       </div>
