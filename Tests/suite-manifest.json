@@ -17,6 +17,7 @@
         "OSGKeyboardTests/AppGroupOnboardingStoreTests",
         "OSGKeyboardTests/ConfigurationStoreTests",
         "OSGKeyboardTests/KeychainTests",
+        "OSGKeyboardTests/MicrophonePriorityTests",
         "OSGKeyboardTests/ProviderToolRequestCoordinatorTests"
       ]
     },
