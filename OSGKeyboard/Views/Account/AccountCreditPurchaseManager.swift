@@ -7,6 +7,7 @@
 import Combine
 import Foundation
 import OSGKeyboardHostSupport
+import OSGKeyboardShared
 
 struct AccountCreditPurchaseOption: Identifiable, Equatable {
     var id: String { productID }
@@ -43,6 +44,7 @@ final class AccountCreditPurchaseManager: ObservableObject {
 
     private let service: any AccountCenterServicing
     private let store: any AccountCreditStore
+    private let analyticsClient: any AnalyticsClient
     private var updatesTask: Task<Void, Never>?
     private var activeAccountID: UUID?
     private var configuredProductIDs: Set<String> = []
@@ -50,10 +52,12 @@ final class AccountCreditPurchaseManager: ObservableObject {
 
     init(
         service: any AccountCenterServicing,
-        store: any AccountCreditStore = LiveAccountCreditStore()
+        store: any AccountCreditStore = LiveAccountCreditStore(),
+        analyticsClient: any AnalyticsClient = NoopAnalyticsClient()
     ) {
         self.service = service
         self.store = store
+        self.analyticsClient = analyticsClient
     }
 
     deinit {
@@ -100,6 +104,7 @@ final class AccountCreditPurchaseManager: ObservableObject {
             return false
         }
         state = .purchasing(productID: productID)
+        analyticsClient.recordPurchaseStarted()
         do {
             switch try await store.purchase(productID: productID, accountID: accountID) {
             case .success(let verification):
@@ -109,6 +114,7 @@ final class AccountCreditPurchaseManager: ObservableObject {
                 state = .pending
             case .userCancelled:
                 state = .idle
+                analyticsClient.recordPurchaseCancelled()
             @unknown default:
                 state = .failed(messageKey: "account.storekit.error.unknown")
             }
@@ -116,6 +122,10 @@ final class AccountCreditPurchaseManager: ObservableObject {
             state = .failed(messageKey: Self.messageKey(for: error))
         }
         return false
+    }
+
+    func recordPurchaseViewed() {
+        analyticsClient.recordPurchaseViewed()
     }
 
     func clearTransientState() {

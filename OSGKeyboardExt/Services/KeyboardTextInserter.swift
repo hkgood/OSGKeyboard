@@ -88,6 +88,7 @@ final class KeyboardTextInserter {
         )
         let inserted = separator + trimmed
         insertText(inserted)
+        KeyboardSetupBridge.markVoiceInsertion()
         state.noteUserDidInputText()
         recordLastInsertion(
             inserted,

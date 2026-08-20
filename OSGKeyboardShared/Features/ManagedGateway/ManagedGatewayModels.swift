@@ -24,6 +24,12 @@ public enum ManagedGatewayTaskKind: String, Codable, CaseIterable, Sendable {
     case agentPlanning = "agent_planning"
 }
 
+/// Optional server-audited purpose. A purpose may affect billing only when the
+/// authenticated gateway independently verifies its eligibility.
+public enum ManagedGatewayRequestPurpose: String, Codable, Sendable {
+    case oobe
+}
+
 public struct ManagedGatewayGrantCredentials: Codable, Equatable, Sendable {
     public static let maximumAccessLifetime: TimeInterval = 5 * 60
 
@@ -143,4 +149,5 @@ struct ManagedGatewayTextRequest: Encodable, Sendable {
     let temperature: Double
     let stream: Bool
     let taskKind: ManagedGatewayTaskKind
+    let requestPurpose: ManagedGatewayRequestPurpose?
 }

@@ -54,6 +54,7 @@ public actor PolishingService {
         let systemPrompt: String?
         let providerIdOverride: String?
         let taskKind: ManagedGatewayTaskKind?
+        let requestPurpose: ManagedGatewayRequestPurpose?
         let context: PolishContext?
     }
 
@@ -79,6 +80,7 @@ public actor PolishingService {
 
     private let store: any ConfigurationStore
     private let timeout: TimeInterval
+    private let analyticsClient: any AnalyticsClient
     /// Optional injected client (mostly for testing). When nil we build
     /// one from `store.makeClient()` per call.
     private let injectedClient: LLMClient?
@@ -91,11 +93,13 @@ public actor PolishingService {
     public init(
         store: any ConfigurationStore = AppGroupStore(),
         client: LLMClient? = nil,
-        timeout: TimeInterval? = nil
+        timeout: TimeInterval? = nil,
+        analyticsClient: any AnalyticsClient = NoopAnalyticsClient()
     ) {
         self.store = store
         self.injectedClient = client
         self.timeout = timeout ?? LLMClientFactory.defaultRequestTimeout
+        self.analyticsClient = analyticsClient
     }
 
     /// Context-aware polish entry point. The optional
@@ -110,6 +114,7 @@ public actor PolishingService {
         systemPrompt: String? = nil,
         providerIdOverride: String? = nil,
         taskKind: ManagedGatewayTaskKind? = nil,
+        requestPurpose: ManagedGatewayRequestPurpose? = nil,
         context: PolishContext? = nil
     ) async throws -> String {
         try await performPolish(
@@ -119,6 +124,7 @@ public actor PolishingService {
                 systemPrompt: systemPrompt,
                 providerIdOverride: providerIdOverride,
                 taskKind: taskKind,
+                requestPurpose: requestPurpose,
                 context: context
             )
         ).text
@@ -132,6 +138,7 @@ public actor PolishingService {
         systemPrompt: String? = nil,
         providerIdOverride: String? = nil,
         taskKind: ManagedGatewayTaskKind? = nil,
+        requestPurpose: ManagedGatewayRequestPurpose? = nil,
         context: PolishContext? = nil
     ) async throws -> PolishOutcome {
         try await performPolish(
@@ -141,6 +148,7 @@ public actor PolishingService {
                 systemPrompt: systemPrompt,
                 providerIdOverride: providerIdOverride,
                 taskKind: taskKind,
+                requestPurpose: requestPurpose,
                 context: context
             )
         )
@@ -152,6 +160,7 @@ public actor PolishingService {
         let systemPrompt = request.systemPrompt
         let providerIdOverride = request.providerIdOverride
         let taskKind = request.taskKind
+        let requestPurpose = request.requestPurpose
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw PolishError.noTranscript }
 
@@ -185,14 +194,26 @@ public actor PolishingService {
             }
         }
 
-        let remoteResult = try await polishRemote(
-            trimmed,
-            mode: mode,
-            systemPrompt: systemPrompt,
-            providerIdOverride: providerIdOverride,
-            taskKind: taskKind,
-            context: resolvedContext
+        let operation = analyticsClient.startAIFeature(
+            .polish,
+            executionMode: analyticsExecutionMode
         )
+        let remoteResult: RemotePolishResult
+        do {
+            remoteResult = try await polishRemote(
+                trimmed,
+                mode: mode,
+                systemPrompt: systemPrompt,
+                providerIdOverride: providerIdOverride,
+                taskKind: taskKind,
+                requestPurpose: requestPurpose,
+                context: resolvedContext
+            )
+            operation.succeed()
+        } catch {
+            operation.fail(category: Self.analyticsFailureCategory(for: error))
+            throw error
+        }
 
         // Translation and custom prompts bypass the polish post-processor.
         if mode != .polish || (systemPrompt != nil && !(systemPrompt?.isEmpty ?? true)) {
@@ -214,6 +235,51 @@ public actor PolishingService {
         return override
     }
 
+    private var analyticsExecutionMode: AnalyticsExecutionMode {
+        store.credentialSource == .managed ? .managed : .byok
+    }
+
+    private static func analyticsFailureCategory(
+        for error: Error
+    ) -> AnalyticsFailureCategory {
+        if error is CancellationError {
+            return .cancelled
+        }
+        if let error = error as? PolishError {
+            switch error {
+            case .timeout:
+                return .timeout
+            case .noTranscript, .missingAPIKey, .keychainLocked:
+                return .validation
+            }
+        }
+        if let error = error as? ManagedGatewayError {
+            switch error {
+            case .insufficientCredits:
+                return .insufficientCredits
+            case .timeout:
+                return .timeout
+            case .missingGrant, .scopeNotGranted, .invalidGrant:
+                return .validation
+            case .server:
+                return .provider
+            }
+        }
+        if let error = error as? LLMError {
+            switch error {
+            case .cancelled:
+                return .cancelled
+            case .transport, .rateLimited:
+                return .network
+            case .invalidURL, .noAPIKey, .decoding:
+                return .validation
+            case .http:
+                return .provider
+            }
+        }
+        return .unknown
+    }
+
     static func managedGatewayTaskKind(for mode: PolishMode) -> ManagedGatewayTaskKind {
         switch mode {
         case .polish:
@@ -229,6 +295,7 @@ public actor PolishingService {
         systemPrompt: String? = nil,
         providerIdOverride: String? = nil,
         taskKind: ManagedGatewayTaskKind? = nil,
+        requestPurpose: ManagedGatewayRequestPurpose? = nil,
         context: PolishContext
     ) async throws -> RemotePolishResult {
         let effectiveProviderId = Self.resolvedProviderId(
@@ -240,7 +307,8 @@ public actor PolishingService {
             client = injectedClient
         } else if store.credentialSource == .managed {
             client = store.makeClient(
-                taskKind: taskKind ?? Self.managedGatewayTaskKind(for: mode)
+                taskKind: taskKind ?? Self.managedGatewayTaskKind(for: mode),
+                requestPurpose: requestPurpose
             )
         } else {
             let preset = LLMProvider.provider(id: effectiveProviderId)

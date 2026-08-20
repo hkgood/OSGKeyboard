@@ -50,6 +50,7 @@ public struct ManagedLLMClient: LLMClient {
 
     public let capability: Capability
     public let taskKind: ManagedGatewayTaskKind
+    public let requestPurpose: ManagedGatewayRequestPurpose?
     public let requestTimeout: TimeInterval
 
     private let baseURL: URL
@@ -60,6 +61,7 @@ public struct ManagedLLMClient: LLMClient {
     public init(
         capability: Capability,
         taskKind: ManagedGatewayTaskKind? = nil,
+        requestPurpose: ManagedGatewayRequestPurpose? = nil,
         grants: GatewayGrantCoordinator,
         baseURL: URL = GatewayGrantCoordinator.defaultBaseURL,
         session: URLSession = .shared,
@@ -68,6 +70,7 @@ public struct ManagedLLMClient: LLMClient {
     ) {
         self.capability = capability
         self.taskKind = taskKind ?? capability.defaultTaskKind
+        self.requestPurpose = requestPurpose
         self.grants = grants
         self.baseURL = baseURL
         self.session = session
@@ -287,7 +290,8 @@ public struct ManagedLLMClient: LLMClient {
             maxOutputTokens: min(max(attempt.options.maxTokens ?? 512, 1), 4_096),
             temperature: min(max(attempt.options.temperature ?? 0.2, 0), 1),
             stream: stream,
-            taskKind: taskKind
+            taskKind: taskKind,
+            requestPurpose: requestPurpose
         )
 
         var request = URLRequest(
@@ -419,6 +423,7 @@ public struct ManagedLLMClient: LLMClient {
 public enum ManagedGatewayLLMClientFactory {
     public static func polish(
         taskKind: ManagedGatewayTaskKind = .dictationPolish,
+        requestPurpose: ManagedGatewayRequestPurpose? = nil,
         grants: GatewayGrantCoordinator,
         baseURL: URL = GatewayGrantCoordinator.defaultBaseURL,
         session: URLSession = .shared
@@ -426,6 +431,7 @@ public enum ManagedGatewayLLMClientFactory {
         ManagedLLMClient(
             capability: .polish,
             taskKind: taskKind,
+            requestPurpose: requestPurpose,
             grants: grants,
             baseURL: baseURL,
             session: session

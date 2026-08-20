@@ -1342,7 +1342,7 @@ final class FlowSessionBridgeTests: XCTestCase {
             startDeadlineAt: 1_700_000_008.25,
             processingDeadlineAt: 1_700_000_045.25
         )
-        let expected = #"{"action":"startRecording","aiConversationID":"33333333-4444-5555-6666-777777777777","commandSeq":42,"createdAt":1700000000.25,"editSourceText":"draft","fieldContext":{"followingText":"after","isContextAvailable":true,"isEmptyField":false,"isSecureEntry":false,"keyboardType":"default","precedingText":"before","returnKeyType":"send"},"localeId":"en-US","processingDeadlineAt":1700000045.25,"protocolVersion":6,"sessionId":"00112233-4455-6677-8899-AABBCCDDEEFF","sourceHistoryEntryID":"22222222-3333-4444-5555-666666666666","sourceHistoryEntryRevision":7,"startDeadlineAt":1700000008.25,"utteranceId":"11111111-2222-3333-4444-555555555555","utteranceMode":"editLastInput"}"#
+        let expected = #"{"action":"startRecording","aiConversationID":"33333333-4444-5555-6666-777777777777","commandSeq":42,"createdAt":1700000000.25,"editSourceText":"draft","fieldContext":{"followingText":"after","isContextAvailable":true,"isEmptyField":false,"isSecureEntry":false,"keyboardType":"default","precedingText":"before","returnKeyType":"send"},"localeId":"en-US","processingDeadlineAt":1700000045.25,"protocolVersion":7,"sessionId":"00112233-4455-6677-8899-AABBCCDDEEFF","sourceHistoryEntryID":"22222222-3333-4444-5555-666666666666","sourceHistoryEntryRevision":7,"startDeadlineAt":1700000008.25,"utteranceId":"11111111-2222-3333-4444-555555555555","utteranceMode":"editLastInput"}"#
 
         XCTAssertEqual(try sortedJSONString(command), expected)
     }
@@ -1378,7 +1378,7 @@ final class FlowSessionBridgeTests: XCTestCase {
             historyEntryRevision: 9,
             aiConversationID: conversationID
         )
-        let expected = #"{"aiConversationID":"33333333-4444-5555-6666-777777777777","commandSeq":42,"createdAt":1700000050.5,"errorKind":"asrFailed","fieldFingerprint":"default|send|before|after","historyEntryID":"22222222-3333-4444-5555-666666666666","historyEntryRevision":9,"hostGeneration":"generation-1","protocolVersion":6,"rawText":"raw","revision":8,"sessionId":"00112233-4455-6677-8899-AABBCCDDEEFF","status":"final","text":"polished","utteranceId":"11111111-2222-3333-4444-555555555555","utteranceMode":"aiQuestion","warning":"fallback"}"#
+        let expected = #"{"aiConversationID":"33333333-4444-5555-6666-777777777777","commandSeq":42,"createdAt":1700000050.5,"errorKind":"asrFailed","fieldFingerprint":"default|send|before|after","historyEntryID":"22222222-3333-4444-5555-666666666666","historyEntryRevision":9,"hostGeneration":"generation-1","protocolVersion":7,"rawText":"raw","revision":8,"sessionId":"00112233-4455-6677-8899-AABBCCDDEEFF","status":"final","text":"polished","utteranceId":"11111111-2222-3333-4444-555555555555","utteranceMode":"aiQuestion","warning":"fallback"}"#
 
         XCTAssertEqual(try sortedJSONString(result), expected)
     }

@@ -2,12 +2,13 @@
 # Physical-device PiP / host-wake stress using `devicectl --console` logs.
 #
 # Usage:
-#   ./Scripts/device-pip-stress.sh [UDID] [COUNT=50] [SUITES=cold,bgfg,hold]
+#   ./Scripts/device-pip-stress.sh [UDID] [COUNT=50] [SUITES=cold,bgfg,hold,reclaim]
 #
 # Suites:
 #   cold — terminate-existing launch (force-quit / cold start)
 #   bgfg — open Safari (background) then relaunch OSG (foreground restore)
 #   hold — start PiP, wait 20s in session, relaunch to verify still recoverable
+#   reclaim — foreground another PiP-capable app, then reopen OSG to reclaim
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -15,9 +16,11 @@ cd "$ROOT"
 
 UDID="${1:-00008130-001C249C0E52001C}"
 COUNT="${2:-50}"
-SUITES="${3:-cold,bgfg,hold}"
+SUITES="${3:-cold,bgfg,hold,reclaim}"
 BUNDLE="com.osgkeyboard.ios"
 SAFARI="com.apple.mobilesafari"
+TAKEOVER_BUNDLE="${PIP_TAKEOVER_BUNDLE:-$SAFARI}"
+TAKEOVER_SETTLE_SECONDS="${PIP_TAKEOVER_SETTLE_SECONDS:-5}"
 OUT_DIR="${ROOT}/.tmp/device-pip-stress-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT_DIR"
 REPORT="$OUT_DIR/report.jsonl"
@@ -48,9 +51,18 @@ console_launch() {
     "$BUNDLE" >"$outfile" 2>&1 || true
 }
 
+# Launch without attaching a console. Killing a timed `--console` command also
+# terminates the app, so preparation phases must use a detached launch.
+plain_launch() {
+  xcrun devicectl device process launch \
+    --device "$UDID" \
+    --terminate-existing \
+    "$BUNDLE" >/dev/null 2>&1
+}
+
 classify_file() {
   local f="$1"
-  local host="unknown" pip="unknown" mic="unknown"
+  local host="unknown" pip="unknown" mic="unknown" recovery="none"
 
   if rg -q "OSGKeyboardApp\.init|MainAppRoot\.onAppear|activateOnForeground" "$f"; then
     host="success"
@@ -93,12 +105,23 @@ classify_file() {
     fi
   fi
 
-  echo "$host|$pip|$mic"
+  if rg -q "pip\.unexpectedStop" "$f" \
+      && rg -q "startSessionAsync\.ready.*trigger=(foreground|healthCheck|existingSession)" "$f"; then
+    recovery="reclaimed"
+  elif rg -q "startSessionAsync\.ready.*trigger=(foreground|healthCheck|existingSession|manualRetry)" "$f"; then
+    recovery="reconciled"
+  elif rg -q "failed after bounded recovery|pipState=failed" "$f"; then
+    recovery="exhausted"
+  elif rg -q "pipRecovery\.attempt" "$f"; then
+    recovery="attempted"
+  fi
+
+  echo "$host|$pip|$mic|$recovery"
 }
 
 run_suite() {
   local suite="$1"
-  local i outfile result host pip mic start_ts elapsed flags
+  local i outfile result host pip mic recovery start_ts elapsed flags
   echo "==> Suite: $suite × $COUNT"
   for i in $(seq 1 "$COUNT"); do
     outfile="$OUT_DIR/${suite}-$i.console.log"
@@ -112,7 +135,8 @@ run_suite() {
         ;;
       bgfg)
         # Ensure app running with PiP first
-        console_launch "$OUT_DIR/${suite}-$i.prep.log" 12 "--terminate-existing" >/dev/null || true
+        plain_launch
+        sleep 7
         # Background by opening Safari
         xcrun devicectl device process launch --device "$UDID" "$SAFARI" >/dev/null 2>&1 || true
         sleep 3
@@ -120,13 +144,23 @@ run_suite() {
         console_launch "$outfile" 12 ""
         ;;
       hold)
-        console_launch "$OUT_DIR/${suite}-$i.prep.log" 12 "--terminate-existing" >/dev/null || true
+        plain_launch
+        sleep 7
         # Leave session alive ~20s (PiP should keep host)
         sleep 20
         # Background briefly then resume
         xcrun devicectl device process launch --device "$UDID" "$SAFARI" >/dev/null 2>&1 || true
         sleep 2
         console_launch "$outfile" 12 ""
+        ;;
+      reclaim)
+        plain_launch
+        sleep 7
+        # The target app must already be configured to enter PiP when launched.
+        # Safari is only a foreground/background fallback unless media is playing.
+        xcrun devicectl device process launch --device "$UDID" "$TAKEOVER_BUNDLE" >/dev/null 2>&1 || true
+        sleep "$TAKEOVER_SETTLE_SECONDS"
+        console_launch "$outfile" 14 ""
         ;;
     esac
 
@@ -135,12 +169,14 @@ run_suite() {
     host="${result%%|*}"
     rest="${result#*|}"
     pip="${rest%%|*}"
-    mic="${rest##*|}"
+    rest="${rest#*|}"
+    mic="${rest%%|*}"
+    recovery="${rest##*|}"
 
-    printf '{"suite":"%s","i":%d,"host":"%s","pip":"%s","mic":"%s","elapsed_s":%d}\n' \
-      "$suite" "$i" "$host" "$pip" "$mic" "$elapsed" >>"$REPORT"
-    printf "[%s %3d/%d] host=%-11s pip=%-12s mic=%-12s %2ds\n" \
-      "$suite" "$i" "$COUNT" "$host" "$pip" "$mic" "$elapsed"
+    printf '{"suite":"%s","i":%d,"host":"%s","pip":"%s","mic":"%s","recovery":"%s","elapsed_s":%d}\n' \
+      "$suite" "$i" "$host" "$pip" "$mic" "$recovery" "$elapsed" >>"$REPORT"
+    printf "[%s %3d/%d] host=%-11s pip=%-12s mic=%-12s recovery=%-10s %2ds\n" \
+      "$suite" "$i" "$COUNT" "$host" "$pip" "$mic" "$recovery" "$elapsed"
   done
 }
 
@@ -148,7 +184,7 @@ run_suite() {
 IFS=',' read -r -a selected_suites <<<"$SUITES"
 for selected_suite in "${selected_suites[@]}"; do
   case "$selected_suite" in
-    cold|bgfg|hold) run_suite "$selected_suite" ;;
+    cold|bgfg|hold|reclaim) run_suite "$selected_suite" ;;
     *)
       echo "error: unknown suite '$selected_suite'" >&2
       exit 1
@@ -165,7 +201,7 @@ by = collections.defaultdict(list)
 for r in rows:
     by[r["suite"]].append(r)
 
-selected = [name for name in ("cold", "bgfg", "hold") if by.get(name)]
+selected = [name for name in ("cold", "bgfg", "hold", "reclaim") if by.get(name)]
 lines = [
     "Device PiP / mic keep-alive stress summary",
     f"device=Rocky 15 PM udid={udid} count_per_suite={count}",
@@ -178,12 +214,14 @@ for suite in selected:
     host_ok = sum(1 for r in rs if r["host"] in ("success", "launch_only"))
     pip_c = collections.Counter(r["pip"] for r in rs)
     mic_c = collections.Counter(r["mic"] for r in rs)
+    recovery_c = collections.Counter(r["recovery"] for r in rs)
     pip_ok = pip_c.get("success", 0)
     lines += [
         f"[{suite}]",
         f"  host_ok={host_ok}/{len(rs)} ({host_ok/n*100:.1f}%)",
         f"  pip_success={pip_ok}/{len(rs)} ({pip_ok/n*100:.1f}%)  breakdown={dict(pip_c)}",
         f"  mic={dict(mic_c)}",
+        f"  recovery={dict(recovery_c)}",
         "",
     ]
 lines += [
@@ -192,6 +230,7 @@ lines += [
     "  - cold uses --terminate-existing (force-quit recovery).",
     "  - bgfg backgrounds via Safari then resumes.",
     "  - hold keeps session ~20s then Safari background + resume.",
+    "  - reclaim launches PIP_TAKEOVER_BUNDLE, then verifies OSG foreground reconciliation.",
     "  - Keyboard-extension mic tap is not automated.",
 ]
 text = "\n".join(lines) + "\n"

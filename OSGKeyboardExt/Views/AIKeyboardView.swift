@@ -292,7 +292,15 @@ struct AIKeyboardView: View {
     @ViewBuilder
     private var contextArea: some View {
         ZStack {
-            if let tip = state.skillTipText, !tip.isEmpty {
+            if state.isOnboardingPracticeActive, activeStatus == nil {
+                Text(ExtL10n.string("keyboard.onboarding.practice.mic"))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(palette.textPrimary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 14)
+                    .frame(height: Layout.hotwordHeight)
+                    .background(palette.accentMuted, in: Capsule())
+            } else if let tip = state.skillTipText, !tip.isEmpty {
                 IntrinsicWidthCap(maxWidth: Layout.skillTipMaxWidth) {
                     Text(tip)
                         .font(TypeStyle.body)

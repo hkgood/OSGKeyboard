@@ -6,6 +6,7 @@
 
 import Combine
 import Foundation
+import OSGKeyboardShared
 
 @MainActor
 final class AccountSessionCoordinator: ObservableObject {
@@ -46,6 +47,9 @@ final class AccountSessionCoordinator: ObservableObject {
     private let sessionService: any AccountSessionServicing
     private let centerService: any AccountCenterServicing
     private let pendingReferralStore: any PendingReferralCodeStoring
+    private let analyticsClient: any AnalyticsClient
+    private let onAccountAuthenticated: (UUID) async -> Void
+    private let onAccountDeleted: () async -> Void
     private let accountRefreshInterval: TimeInterval
     private let now: () -> Date
     private var didAttemptRestore = false
@@ -57,15 +61,22 @@ final class AccountSessionCoordinator: ObservableObject {
         pendingReferralStore: any PendingReferralCodeStoring =
             UserDefaultsPendingReferralCodeStore(),
         accountRefreshInterval: TimeInterval = 10 * 60,
-        now: @escaping () -> Date = Date.init
+        now: @escaping () -> Date = Date.init,
+        analyticsClient: any AnalyticsClient = NoopAnalyticsClient(),
+        onAccountAuthenticated: @escaping (UUID) async -> Void = { _ in },
+        onAccountDeleted: @escaping () async -> Void = {}
     ) {
         sessionService = dependencies.sessionService
         centerService = dependencies.centerService
         creditPurchases = AccountCreditPurchaseManager(
             service: dependencies.centerService,
-            store: creditStore
+            store: creditStore,
+            analyticsClient: analyticsClient
         )
         self.pendingReferralStore = pendingReferralStore
+        self.analyticsClient = analyticsClient
+        self.onAccountAuthenticated = onAccountAuthenticated
+        self.onAccountDeleted = onAccountDeleted
         self.accountRefreshInterval = accountRefreshInterval
         self.now = now
         pendingReferralCode = pendingReferralStore.code
@@ -94,6 +105,7 @@ final class AccountSessionCoordinator: ObservableObject {
                 sessionPhase = .signedOut
                 return
             }
+            await onAccountAuthenticated(session.accountID)
             sessionPhase = .signedIn(session)
             await redeemPendingReferralIfNeeded()
             await refreshAccountData(force: true)
@@ -114,6 +126,7 @@ final class AccountSessionCoordinator: ObservableObject {
         pendingReferralCode = code
         shouldPresentAccountCenter = true
         operationErrorKey = nil
+        analyticsClient.recordInviteOpened()
 
         if isSignedIn {
             Task {
@@ -138,6 +151,7 @@ final class AccountSessionCoordinator: ObservableObject {
 
         do {
             let session = try await sessionService.signIn(with: payload)
+            await onAccountAuthenticated(session.accountID)
             sessionPhase = .signedIn(session)
             await redeemPendingReferralIfNeeded()
             await refreshAccountData(force: true)
@@ -260,6 +274,7 @@ final class AccountSessionCoordinator: ObservableObject {
 
         do {
             try await sessionService.deleteAccount(with: payload)
+            await onAccountDeleted()
             creditPurchases.reset()
             clearAccountRefreshState()
             sessionPhase = .signedOut

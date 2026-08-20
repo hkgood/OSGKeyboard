@@ -40,6 +40,17 @@
         "OSGKeyboardExtTests/ManagedGatewayTests"
       ]
     },
+    "analytics": {
+      "description": "Privacy-safe analytics schema, durable queue, uploader, identity lifecycle, and anonymous extension runtime",
+      "platform": "ios",
+      "tests": [
+        "OSGKeyboardTests/AnalyticsModelTests",
+        "OSGKeyboardTests/AnalyticsRepositoryTests",
+        "OSGKeyboardTests/AnalyticsUploadCoordinatorTests",
+        "OSGKeyboardTests/AnalyticsAIOperationTests",
+        "OSGKeyboardExtTests/AnalyticsExtensionPrivacyTests"
+      ]
+    },
     "sync": {
       "description": "iCloud KVS merge/sync for settings, local-only clipboard consent, dictionary, speech history, usage stats",
       "platform": "ios",
@@ -123,6 +134,8 @@
       "platform": "ios",
       "tests": [
         "OSGKeyboardTests/FlowHandoffPolicyTests",
+        "OSGKeyboardTests/FlowHomePiPStatusPolicyTests",
+        "OSGKeyboardTests/FlowPiPRecoveryPolicyTests",
         "OSGKeyboardTests/FlowSessionBridgeTests",
         "OSGKeyboardTests/FlowSessionPolicyTests",
         "OSGKeyboardTests/FlowBudgetAndMergeTests",
@@ -207,6 +220,7 @@
         "config",
         "account",
         "managed_gateway",
+        "analytics",
         "sync",
         "polish",
         "edit_last_input",
@@ -225,6 +239,7 @@
         "config",
         "account",
         "managed_gateway",
+        "analytics",
         "sync",
         "polish",
         "edit_last_input",

@@ -92,6 +92,7 @@ final class KeyboardConfigSync {
         // Keychain fallback: a reboot must not resurrect the mic gate when
         // App Group transiently reads empty.
         state.hasCompletedOnboarding = store.hasCompletedOnboarding || Keychain.hasCompletedOnboarding()
+        state.isOnboardingPracticeActive = KeyboardSetupBridge.isOnboardingPracticeActive
     }
 
     func persistLocale(_ id: String) {

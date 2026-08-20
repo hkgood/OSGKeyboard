@@ -394,7 +394,13 @@ public struct AppGroupStore: @unchecked Sendable {
 
     // MARK: - Client
 
-    public func makeClient(taskKind: ManagedGatewayTaskKind?) -> LLMClient {
-        configuration.makeClient(taskKind: taskKind)
+    public func makeClient(
+        taskKind: ManagedGatewayTaskKind?,
+        requestPurpose: ManagedGatewayRequestPurpose?
+    ) -> LLMClient {
+        configuration.makeClient(
+            taskKind: taskKind,
+            requestPurpose: requestPurpose
+        )
     }
 }

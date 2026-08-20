@@ -125,6 +125,10 @@ final class KeyboardFlowCoordinator {
             || currentUtteranceRequest != nil
     }
 
+    private var voiceSetupReady: Bool {
+        state.hasCompletedOnboarding || state.isOnboardingPracticeActive
+    }
+
     var isEditSessionActive: Bool { currentUtteranceRequest?.isEdit == true }
 
     /// Session/transcription changes are pushed in real time by Darwin
@@ -159,7 +163,7 @@ final class KeyboardFlowCoordinator {
     /// noise used to call this again while `ready` briefly lagged).
     func ensurePiPReadyOnKeyboardOpen() {
         guard FlowHandoffPolicy.allowsProactiveHostAutoLaunch,
-              state.hasCompletedOnboarding,
+              voiceSetupReady,
               hasFullAccess(),
               AppGroup.isAvailable,
               !isPendingFlowStart,
@@ -335,7 +339,7 @@ final class KeyboardFlowCoordinator {
             appGroupAvailable: AppGroup.isAvailable,
             hostReady: hostReady,
             isPreparingSession: isPendingFlowStart || hostWarming,
-            hasCompletedOnboarding: state.hasCompletedOnboarding
+            hasCompletedOnboarding: voiceSetupReady
         )
         let signature = [
             "phase=\(String(describing: state.phase))",
@@ -1070,7 +1074,7 @@ final class KeyboardFlowCoordinator {
     }
 
     func beginFlowStart(recordAfterHandoff: Bool = false) {
-        guard state.hasCompletedOnboarding else {
+        guard voiceSetupReady else {
             promptFinishSetupInApp()
             return
         }
@@ -1177,6 +1181,8 @@ final class KeyboardFlowCoordinator {
         let mode: FlowUtteranceMode? = request.mode == .dictation
             ? nil
             : request.mode
+        let managedRequestPurpose = request.managedRequestPurpose
+            ?? (state.isOnboardingPracticeActive && request.mode == .dictation ? .oobe : nil)
         let command = FlowCommand(
             sessionId: activeSessionId,
             utteranceId: currentUtteranceId,
@@ -1194,6 +1200,7 @@ final class KeyboardFlowCoordinator {
             sourceHistoryEntryRevision: request.sourceHistoryEntryRevision,
             aiConversationID: request.aiConversationID,
             aiTaskKind: request.aiTaskKind,
+            managedRequestPurpose: managedRequestPurpose,
             startDeadlineAt: action == .startRecording ? currentStartDeadlineAt : nil,
             processingDeadlineAt: action == .stopRecording && request.isEdit
                 ? Date().timeIntervalSince1970

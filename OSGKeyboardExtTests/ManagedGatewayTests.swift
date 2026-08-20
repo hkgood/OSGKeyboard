@@ -209,6 +209,27 @@ final class ManagedGatewayTests: XCTestCase {
         XCTAssertEqual(taskKinds, cases.map { $0.1.rawValue })
     }
 
+    func testManagedClientSerializesOOBERequestPurpose() async throws {
+        let now = Date(timeIntervalSince1970: 3_750)
+        let store = MemoryGrantStore(credentials(accessToken: "access", receivedAt: now))
+        GatewayStub.shared.enqueue(200, Data(#"{"output_text":"ok"}"#.utf8))
+        let client = ManagedLLMClient(
+            capability: .polish,
+            taskKind: .dictationPolish,
+            requestPurpose: .oobe,
+            grants: makeCoordinator(store: store, now: { now }),
+            baseURL: baseURL,
+            session: stubSession()
+        )
+
+        _ = try await client.polish("input", systemPrompt: "context")
+
+        let request = try XCTUnwrap(GatewayStub.shared.requests().last)
+        let body = try jsonBody(request)
+        XCTAssertEqual(body["taskKind"] as? String, "dictation_polish")
+        XCTAssertEqual(body["requestPurpose"] as? String, "oobe")
+    }
+
     func testManagedTaskKindWireValuesMatchServerContract() {
         XCTAssertEqual(
             ManagedGatewayTaskKind.allCases.map(\.rawValue),

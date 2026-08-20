@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>OSGKeyboard — 语音、打字与 AI 助手键盘</title>
+  <title>OSGKeyboard — 语音输入、中英打字与 AI 助手</title>
   <meta
     name="description"
-    content="OSGKeyboard 是适用于 iPhone、iPad 和 Mac 的语音输入工具。iOS 键盘集成语音听写、中英打字、AI 助手、剪贴板技能与可选托管积分；默认使用端侧识别。"
-    data-zh-content="OSGKeyboard 是适用于 iPhone、iPad 和 Mac 的语音输入工具。iOS 键盘集成语音听写、中英打字、AI 助手、剪贴板技能与可选托管积分；默认使用端侧识别。"
-    data-en-content="OSGKeyboard brings voice input to iPhone, iPad, and Mac. Its iOS keyboard combines dictation, Chinese and English typing, an AI assistant, clipboard skills, and optional managed credits—with on-device recognition by default."
+    content="OSGKeyboard 是一款适用于 iPhone、iPad 和 Mac 的语音与双语输入工具。iOS、iPadOS 版集成听写、中英输入、AI 助手、剪贴板技能和可选的托管积分服务，并默认使用端侧语音识别。"
+    data-zh-content="OSGKeyboard 是一款适用于 iPhone、iPad 和 Mac 的语音与双语输入工具。iOS、iPadOS 版集成听写、中英输入、AI 助手、剪贴板技能和可选的托管积分服务，并默认使用端侧语音识别。"
+    data-en-content="OSGKeyboard brings voice and bilingual input to iPhone, iPad, and Mac. Its custom keyboard for iOS and iPadOS combines dictation, Chinese and English typing, an AI assistant, clipboard skills, and optional managed credits—with on-device recognition by default."
   >
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#eef2f6">
@@ -25,13 +25,13 @@
     property="og:title"
     content="OSGKeyboard — 开口即文字"
     data-zh-content="OSGKeyboard — 开口即文字"
-    data-en-content="OSGKeyboard — Speak it. It's typed."
+    data-en-content="OSGKeyboard — Say it. It’s typed."
   >
   <meta
     property="og:description"
-    content="一个键盘，完成听写、中英打字、AI 问答与剪贴板技能。默认端侧识别，也支持 BYOK 和可选托管积分。"
-    data-zh-content="一个键盘，完成听写、中英打字、AI 问答与剪贴板技能。默认端侧识别，也支持 BYOK 和可选托管积分。"
-    data-en-content="One keyboard for dictation, Chinese and English typing, AI answers, and clipboard skills. On-device by default, with BYOK and optional managed credits."
+    content="用一把键盘完成听写、中英输入、AI 问答和剪贴板技能。默认使用端侧识别，也可配置自己的 API 密钥或使用托管积分服务。"
+    data-zh-content="用一把键盘完成听写、中英输入、AI 问答和剪贴板技能。默认使用端侧识别，也可配置自己的 API 密钥或使用托管积分服务。"
+    data-en-content="One keyboard for dictation, Chinese and English typing, AI answers, and clipboard skills. On-device by default, with your own API key or optional managed credits."
   >
   <meta property="og:image" content="https://hkgood.github.io/OSGKeyboard/assets/app-icon.png">
   <meta name="twitter:card" content="summary">
@@ -56,7 +56,7 @@
         "operatingSystem": "iOS 26, iPadOS 26, macOS 15",
         "applicationCategory": "UtilitiesApplication",
         "softwareVersion": "2.0.0",
-        "description": "A source-available voice and typing keyboard with on-device speech recognition by default, Chinese and English typing, an AI assistant, clipboard skills, BYOK providers, and optional managed credits.",
+        "description": "A source-available voice and typing keyboard with on-device speech recognition by default, Chinese and English typing, an AI assistant, clipboard skills, providers configured with your own API key, and optional managed credits.",
         "downloadUrl": "https://apps.apple.com/app/osgkeyboard/id6781553267",
         "url": "https://hkgood.github.io/OSGKeyboard/",
         "offers": {
@@ -71,8 +71,8 @@
           "Unified dictation and AI assistant keyboard",
           "Clipboard history and AI skills",
           "Voice editing of the last verified insertion",
-          "Optional Sign in with Apple and managed credits on iOS",
-          "Bring-your-own-key cloud speech and AI",
+          "Optional Sign in with Apple and managed credits on iOS and iPadOS",
+          "Cloud speech and AI with your own API key",
           "Mac Option-key global dictation with local Qwen3 MLX on Apple Silicon",
           "Personal dictionary and optional iCloud sync"
         ],
@@ -86,7 +86,7 @@
             "name": "Does OSGKeyboard require an account?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "No account is required for local dictation or providers you configure yourself. Sign in with Apple is optional and is used for managed credits, purchases, and referrals."
+              "text": "You do not need an OSG account for on-device dictation or when using providers you configure yourself. Sign in with Apple is optional and is used for managed credits, purchases, and referrals."
             }
           },
           {
@@ -94,7 +94,7 @@
             "name": "Does OSGKeyboard upload recordings?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Local recognition keeps audio on the device. Audio leaves the device only after you explicitly choose a user-configured cloud engine or the managed-credit cloud path."
+              "text": "On-device recognition keeps audio on your device. Audio leaves it only when you explicitly choose a cloud speech-recognition provider configured with your own API key or cloud recognition paid for with managed credits."
             }
           },
           {
@@ -102,7 +102,7 @@
             "name": "Is OSGKeyboard open source?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "The code is source available for audit and personal, non-commercial local use. It is not an open-source or MIT license."
+              "text": "The code is source available under a non-open-source license for audit and personal, non-commercial local use; it is not licensed under the MIT License."
             }
           }
         ]
@@ -120,7 +120,7 @@
   >跳到主要内容</a>
 
   <header class="site-nav">
-    <nav class="nav-shell" aria-label="Primary">
+    <nav class="nav-shell" aria-label="主导航" data-zh-label="主导航" data-en-label="Primary navigation">
       <a class="brand" href="#top" aria-label="OSGKeyboard">
         <img src="assets/app-icon.png" width="30" height="30" alt="">
         <span>OSGKeyboard</span>
@@ -144,13 +144,13 @@
         >
           <span class="material-symbols-rounded" aria-hidden="true">menu</span>
         </button>
-        <button class="language-button" id="languageToggle" type="button" aria-label="Switch to English">EN</button>
+        <button class="language-button" id="languageToggle" type="button" aria-label="切换到英文">EN</button>
         <button class="icon-button" id="themeToggle" type="button" aria-label="切换到深色模式">
           <span class="material-symbols-rounded" aria-hidden="true">dark_mode</span>
         </button>
       </div>
     </nav>
-    <nav class="mobile-nav" id="mobileNav" aria-label="Mobile" hidden>
+    <nav class="mobile-nav" id="mobileNav" aria-label="移动端导航" data-zh-label="移动端导航" data-en-label="Mobile navigation" hidden>
       <a href="#assistant" data-zh="体验" data-en="Experience">体验</a>
       <a href="#typing" data-zh="输入" data-en="Typing">输入</a>
       <a href="#privacy" data-zh="隐私" data-en="Privacy">隐私</a>
@@ -165,19 +165,19 @@
       <div class="hero-inner">
         <p class="launch-pill">
           <span class="launch-dot" aria-hidden="true"></span>
-          <span data-zh="OSGKeyboard 2.0 · 为 iOS 26 而生" data-en="OSGKeyboard 2.0 · Built for iOS 26">
-            OSGKeyboard 2.0 · 为 iOS 26 而生
+          <span data-zh="OSGKeyboard 2.0 · 适配 iOS / iPadOS 26" data-en="OSGKeyboard 2.0 · Built for iOS and iPadOS 26">
+            OSGKeyboard 2.0 · 适配 iOS / iPadOS 26
           </span>
         </p>
         <h1>
-          <span data-zh="声音，直达输入框。" data-en="From voice to text.">声音，直达输入框。</span>
-          <span class="hero-muted" data-zh="不用离开正在做的事。" data-en="Right where you type.">不用离开正在做的事。</span>
+          <span data-zh="开口，文字直达输入框。" data-en="From voice to text.">开口，文字直达输入框。</span>
+          <span class="hero-muted" data-zh="无需离开当前 App。" data-en="Without leaving your current app.">无需离开当前 App。</span>
         </h1>
         <p
           class="hero-copy"
-          data-zh="在任意 App 里听写、打字、提问和编辑。OSGKeyboard 把语音识别、中英输入与 AI 助手放进同一个键盘。"
-          data-en="Dictate, type, ask, and edit in any app. OSGKeyboard brings voice recognition, bilingual typing, and an AI assistant into one keyboard."
-        >在任意 App 里听写、打字、提问和编辑。OSGKeyboard 把语音识别、中英输入与 AI 助手放进同一个键盘。</p>
+          data-zh="在支持第三方键盘的输入框里听写、打字、提问和编辑。OSGKeyboard 把语音识别、中英输入与 AI 助手放进同一个键盘。"
+          data-en="Dictate, type, ask, and edit in text fields that support custom keyboards. OSGKeyboard brings voice recognition, bilingual typing, and an AI assistant into one keyboard."
+        >在支持第三方键盘的输入框里听写、打字、提问和编辑。OSGKeyboard 把语音识别、中英输入与 AI 助手放进同一个键盘。</p>
         <div class="hero-actions">
           <a
             class="store-badge"
@@ -190,9 +190,9 @@
               src="assets/badges/ios-zh.svg"
               data-zh-src="assets/badges/ios-zh.svg"
               data-en-src="assets/badges/ios-en.svg"
-              data-zh-alt="立即下载 App Store 版"
+              data-zh-alt="在 App Store 下载 OSGKeyboard"
               data-en-alt="Download on the App Store"
-              alt="立即下载 App Store 版"
+              alt="在 App Store 下载 OSGKeyboard"
               width="171"
               height="48"
             >
@@ -207,10 +207,16 @@
         <p
           class="hero-note"
           data-zh="iOS / iPadOS 26+ · 核心功能无需 OSG 账号 · 默认端侧识别"
-          data-en="iOS / iPadOS 26+ · No OSG account for core features · On-device by default"
+          data-en="iOS and iPadOS 26+ · No OSG account required for core features · On-device recognition by default"
         >iOS / iPadOS 26+ · 核心功能无需 OSG 账号 · 默认端侧识别</p>
       </div>
-      <a class="scroll-cue" href="#assistant" aria-label="Explore">
+      <a
+        class="scroll-cue"
+        href="#assistant"
+        aria-label="看看它如何工作"
+        data-zh-label="看看它如何工作"
+        data-en-label="See how it works"
+      >
         <span data-zh="看看它如何工作" data-en="See how it works">看看它如何工作</span>
         <span class="material-symbols-rounded" aria-hidden="true">south</span>
       </a>
@@ -220,18 +226,18 @@
     <section class="section product-section" id="assistant">
       <div class="section-inner">
         <div class="center-heading">
-          <p class="eyebrow" data-zh="统一助手键盘" data-en="Unified assistant keyboard">统一助手键盘</p>
-          <h2 data-zh="一句话，从想法直接到输入框。" data-en="One thought. Ready to use where you are.">一句话，从想法直接到输入框。</h2>
+          <p class="eyebrow" data-zh="语音与 AI 助手" data-en="Voice and AI assistant">语音与 AI 助手</p>
+          <h2 data-zh="说出想法，预览后再插入。" data-en="Speak your thought, preview the result, then insert it.">说出想法，预览后再插入。</h2>
           <p
-            data-zh="轻点麦克风开始听写，长按直接向 AI 提问。结果先显示、后插入，让每一步都可见、可控。"
-            data-en="Tap the microphone to dictate, or hold it to ask AI. Results appear before insertion, so every step stays visible and under your control."
-          >轻点麦克风开始听写，长按直接向 AI 提问。结果先显示、后插入，让每一步都可见、可控。</p>
+            data-zh="轻点麦克风开始听写，长按直接向 AI 提问。结果会先供你预览，确认后再插入，让每一步都清晰可控。"
+            data-en="Tap the microphone to dictate, or hold it to ask AI. Preview the result before inserting it, so every step stays clear and under your control."
+          >轻点麦克风开始听写，长按直接向 AI 提问。结果会先供你预览，确认后再插入，让每一步都清晰可控。</p>
         </div>
 
         <div class="product-stage">
           <div class="stage-bar">
             <span class="stage-dots" aria-hidden="true"><i></i><i></i><i></i></span>
-            <span data-zh="任意 App · 功能示意" data-en="Any app · Product illustration">任意 App · 功能示意</span>
+            <span data-zh="支持第三方键盘的 App · 交互示意与实机画面" data-en="App with custom-keyboard support · Interaction illustration and real keyboard screenshot">支持第三方键盘的 App · 交互示意与实机画面</span>
             <span class="stage-status" data-zh="本地优先" data-en="Local first">本地优先</span>
           </div>
           <div class="stage-content">
@@ -245,30 +251,27 @@
               <div class="insert-preview">
                 <span class="preview-kicker" data-zh="准备插入" data-en="Ready to insert">准备插入</span>
                 <p
-                  data-zh="内容已经整理得更清楚，同时保留了原本的表达方式。"
+                  data-zh="已理清内容，同时保留原有语气。"
                   data-en="The message is clearer while preserving your original tone."
-                >内容已经整理得更清楚，同时保留了原本的表达方式。</p>
+                >已理清内容，同时保留原有语气。</p>
                 <span class="text-cursor" aria-hidden="true"></span>
               </div>
             </div>
-            <div class="keyboard-demo" aria-hidden="true">
-              <div class="assistant-tabs">
-                <span class="assistant-logo">OSG</span>
-                <span class="assistant-tab active" data-zh="助手" data-en="Assistant">助手</span>
-                <span class="assistant-tab">中文</span>
-                <span class="assistant-tab">EN</span>
-                <span class="material-symbols-rounded">more_horiz</span>
-              </div>
-              <div class="keyboard-keys">
-                <span>Q</span><span>W</span><span>E</span><span>R</span><span>T</span><span>Y</span><span>U</span><span>I</span><span>O</span><span>P</span>
-                <span>A</span><span>S</span><span>D</span><span>F</span><span>G</span><span>H</span><span>J</span><span>K</span><span>L</span>
-              </div>
-              <div class="assistant-controls">
-                <span class="round-control"><span class="material-symbols-rounded">undo</span></span>
-                <span class="mic-control"><span class="material-symbols-rounded">mic</span></span>
-                <span class="round-control"><span class="material-symbols-rounded">arrow_upward</span></span>
-              </div>
-            </div>
+            <figure
+              class="keyboard-capture"
+              aria-label="OSGKeyboard 自定义键盘实机画面"
+              data-zh-label="OSGKeyboard 自定义键盘实机画面"
+              data-en-label="Actual OSGKeyboard custom keyboard"
+            >
+              <img
+                src="assets/screenshots/zh/light/iphone-keyboard_recording.png"
+                data-shot="iphone-keyboard_recording.png"
+                data-zh-alt="OSGKeyboard 在 iPhone 输入框中进行语音输入"
+                data-en-alt="OSGKeyboard dictating into an iPhone text field"
+                alt="OSGKeyboard 在 iPhone 输入框中进行语音输入"
+              >
+              <figcaption data-zh="iPhone 实机键盘画面" data-en="Actual OSGKeyboard on iPhone">iPhone 实机键盘画面</figcaption>
+            </figure>
           </div>
         </div>
 
@@ -276,20 +279,20 @@
           <article>
             <span class="gesture-number">01</span>
             <span class="material-symbols-rounded" aria-hidden="true">mic</span>
-            <h3 data-zh="说出意图" data-en="Express intent">说出意图</h3>
+            <h3 data-zh="说出需求" data-en="Say what you need">说出需求</h3>
             <p data-zh="轻点听写，长按提问。" data-en="Tap to dictate, hold to ask.">轻点听写，长按提问。</p>
           </article>
           <article>
             <span class="gesture-number">02</span>
             <span class="material-symbols-rounded" aria-hidden="true">auto_fix_high</span>
             <h3 data-zh="理解并处理" data-en="Understand and process">理解并处理</h3>
-            <p data-zh="润色、问答或编辑上次输入。" data-en="Polish, answer, or edit the last input.">润色、问答或编辑上次输入。</p>
+            <p data-zh="润色文字、回答问题，或修改上次输入。" data-en="Polish text, answer a question, or revise the last input.">润色文字、回答问题，或修改上次输入。</p>
           </article>
           <article>
             <span class="gesture-number">03</span>
             <span class="material-symbols-rounded" aria-hidden="true">text_fields</span>
             <h3 data-zh="确认后插入" data-en="Preview, then insert">确认后插入</h3>
-            <p data-zh="只有光标和上下文匹配时才自动上屏。" data-en="Auto-insert only when cursor context still matches.">只有光标和上下文匹配时才自动上屏。</p>
+            <p data-zh="仅当光标位置和输入上下文未变化时，才会自动插入。" data-en="Auto-insert only if the cursor position and surrounding context have not changed.">仅当光标位置和输入上下文未变化时，才会自动插入。</p>
           </article>
         </div>
       </div>
@@ -302,29 +305,29 @@
           <p class="eyebrow" data-zh="语音输入" data-en="Voice input">语音输入</p>
           <h2 data-zh="开口即文字，不打断思路。" data-en="Speak naturally. Keep your train of thought.">开口即文字，不打断思路。</h2>
           <p
-            data-zh="本地识别可以直接开始。热词、个人词典与上下文补偿，让名字、术语和常用表达更准确。"
-            data-en="Start immediately with local recognition. Hotwords, a personal dictionary, and context compensation improve names, terminology, and phrases you use often."
-          >本地识别可以直接开始。热词、个人词典与上下文补偿，让名字、术语和常用表达更准确。</p>
+            data-zh="完成系统授权后即可使用端侧识别。个人词典与上下文词语提示有助于提高名字、术语和常用表达的识别准确率。"
+            data-en="Start with on-device recognition—no account or cloud setup required. Hotwords, a personal dictionary, and contextual corrections improve recognition of names, terminology, and phrases you use often."
+          >完成系统授权后即可使用端侧识别。个人词典与上下文词语提示有助于提高名字、术语和常用表达的识别准确率。</p>
           <ul class="quiet-list">
             <li data-zh="默认使用 Apple 端侧语音识别" data-en="Apple on-device recognition by default">默认使用 Apple 端侧语音识别</li>
-            <li data-zh="云端识别和 AI 润色始终由你选择" data-en="Cloud recognition and AI polish are always your choice">云端识别和 AI 润色始终由你选择</li>
-            <li data-zh="可用语音重写上一次已验证输入" data-en="Rewrite the last verified insertion by voice">可用语音重写上一次已验证输入</li>
+            <li data-zh="云端识别与 AI 润色均为可选" data-en="Cloud recognition and AI polishing are always optional">云端识别与 AI 润色均为可选</li>
+            <li data-zh="可用语音修改最近一次由 OSGKeyboard 插入的文字" data-en="Revise the most recent text inserted by OSGKeyboard using your voice">可用语音修改最近一次由 OSGKeyboard 插入的文字</li>
           </ul>
         </div>
         <div class="voice-stage">
           <div class="voice-meta">
-            <span data-zh="本地 · Apple 语音识别" data-en="Local · Apple Speech">本地 · Apple 语音识别</span>
+            <span data-zh="端侧 · Apple 语音识别" data-en="On-device · Apple Speech Recognition">端侧 · Apple 语音识别</span>
             <span class="live-indicator"><i></i><span data-zh="听写中" data-en="Listening">听写中</span></span>
           </div>
           <div class="transcript-card">
-            <span class="transcript-before" data-zh="今天下午把新版本上线计划" data-en="This afternoon, review the launch plan">今天下午把新版本上线计划</span>
-            <strong data-zh="和产品团队确认一下。" data-en="with the product team.">和产品团队确认一下。</strong>
+            <span class="transcript-before" data-zh="今天下午和产品团队确认一下" data-en="This afternoon, review the launch plan">今天下午和产品团队确认一下</span>
+            <strong data-zh="新版本上线计划。" data-en="with the product team.">新版本上线计划。</strong>
           </div>
           <div class="waveform" aria-hidden="true">
             <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
           </div>
           <div class="voice-footer">
-            <span data-zh="已识别 18 个字" data-en="18 words recognized">已识别 18 个字</span>
+            <span data-zh="已识别 20 个字" data-en="10 words recognized">已识别 20 个字</span>
             <span data-zh="完成" data-en="Done">完成</span>
           </div>
         </div>
@@ -336,12 +339,12 @@
       <div class="section-inner">
         <div class="center-heading compact">
           <p class="eyebrow" data-zh="中文与英文输入" data-en="Chinese and English typing">中文与英文输入</p>
-          <h2 data-zh="不想说时，也是一把完整键盘。" data-en="A complete keyboard when you would rather type.">不想说时，也是一把完整键盘。</h2>
+          <h2 data-zh="不方便说话时，也能顺手打字。" data-en="When speaking is not convenient, typing stays effortless.">不方便说话时，也能顺手打字。</h2>
         </div>
         <div class="typing-stories">
           <article class="typing-story">
             <div class="typing-visual chinese-visual">
-              <span class="typing-label" data-zh="全拼 / 双拼" data-en="Full / double pinyin">全拼 / 双拼</span>
+              <span class="typing-label" data-zh="全拼 / 双拼" data-en="Full pinyin / double pinyin">全拼 / 双拼</span>
               <div class="composition-row"><strong>jintian</strong><span class="text-cursor" aria-hidden="true"></span></div>
               <div class="candidate-row">
                 <span class="selected">今天</span><span>今天的</span><span>近天</span><span>金田</span>
@@ -352,11 +355,11 @@
             </div>
             <div class="story-copy">
               <span class="story-index">01</span>
-              <h3 data-zh="中文输入，熟悉而完整。" data-en="Chinese typing that feels complete.">中文输入，熟悉而完整。</h3>
+              <h3 data-zh="全拼、双拼，输入方式由你选。" data-en="Choose full pinyin or double pinyin.">全拼、双拼，输入方式由你选。</h3>
               <p
-                data-zh="全拼、自然码、小鹤、微软与搜狗双拼；候选分页、数字选词、滑动选词与中英混输一并具备。"
-                data-en="Full pinyin plus Natural Code, Xiaohe, Microsoft, and Sogou double pinyin—with candidate paging, number selection, swiping, and mixed Chinese-English input."
-              >全拼、自然码、小鹤、微软与搜狗双拼；候选分页、数字选词、滑动选词与中英混输一并具备。</p>
+                data-zh="支持全拼、自然码、小鹤、微软与搜狗双拼，同时提供候选分页、数字选词、滑动选词与中英混输。"
+                data-en="Full pinyin plus Ziranma, Xiaohe, Microsoft, and Sogou double pinyin—with candidate paging, number selection, swiping, and mixed Chinese-English input."
+              >支持全拼、自然码、小鹤、微软与搜狗双拼，同时提供候选分页、数字选词、滑动选词与中英混输。</p>
             </div>
           </article>
           <article class="typing-story reverse">
@@ -368,11 +371,11 @@
             </div>
             <div class="story-copy">
               <span class="story-index">02</span>
-              <h3 data-zh="英文输入，越用越顺手。" data-en="English typing that gets out of your way.">英文输入，越用越顺手。</h3>
+              <h3 data-zh="英文输入，同样顺手。" data-en="English typing that gets out of your way.">英文输入，同样顺手。</h3>
               <p
-                data-zh="前缀补全、自动纠错、下一词预测、候选撤销与句首大小写，让双语切换保持同样流畅。"
+                data-zh="支持前缀补全、自动纠错、下一词预测、撤销自动纠错和句首自动大写，中英文切换也能保持流畅。"
                 data-en="Prefix completion, autocorrect, next-word prediction, candidate undo, and sentence capitalization keep bilingual typing fluid."
-              >前缀补全、自动纠错、下一词预测、候选撤销与句首大小写，让双语切换保持同样流畅。</p>
+              >支持前缀补全、自动纠错、下一词预测、撤销自动纠错和句首自动大写，中英文切换也能保持流畅。</p>
             </div>
           </article>
         </div>
@@ -405,21 +408,21 @@
           </div>
           <div class="scene-copy">
             <p class="eyebrow" data-zh="剪贴板与快捷技能" data-en="Clipboard and quick skills">剪贴板与快捷技能</p>
-          <h2 data-zh="复制之后，直接行动。" data-en="After copy comes action.">复制之后，直接行动。</h2>
+          <h2 data-zh="复制之后，直接行动。" data-en="Copy, then take action.">复制之后，直接行动。</h2>
             <p
-              data-zh="从剪贴板历史继续工作，把已有文字变成回复、总结、翻译、待办、日程或导航。所有读取都由你主动开启。"
-              data-en="Continue from clipboard history and turn existing text into a reply, summary, translation, task, event, or navigation. Clipboard access remains opt-in."
-            >从剪贴板历史继续工作，把已有文字变成回复、总结、翻译、待办、日程或导航。所有读取都由你主动开启。</p>
+              data-zh="从剪贴板历史中选择内容，生成回复、摘要或译文，也可提取待办、日程和地址并发起导航。剪贴板访问默认关闭，仅在你主动开启后读取。"
+              data-en="Use your clipboard history to draft a reply, summarize or translate text, create a task or event, or get directions. Clipboard access remains opt-in."
+            >从剪贴板历史中选择内容，生成回复、摘要或译文，也可提取待办、日程和地址并发起导航。剪贴板访问默认关闭，仅在你主动开启后读取。</p>
           </div>
         </div>
         <div class="styles-strip">
           <div>
             <p class="eyebrow" data-zh="个性化润色" data-en="Personalized polish">个性化润色</p>
-            <h3 data-zh="整理表达，但不要改掉你的语气。" data-en="Improve the writing without erasing your voice.">整理表达，但不要改掉你的语气。</h3>
+            <h3 data-zh="表达更清楚，语气还是你的。" data-en="Improve the writing without erasing your voice.">表达更清楚，语气还是你的。</h3>
           </div>
           <div class="style-options">
-            <span data-zh="轻度清理" data-en="Light cleanup">轻度清理</span>
-            <span class="selected" data-zh="清晰结构" data-en="Clear structure">清晰结构</span>
+            <span data-zh="轻度润色" data-en="Light polish">轻度润色</span>
+            <span class="selected" data-zh="理清结构" data-en="Clarify structure">理清结构</span>
             <span data-zh="正式表达" data-en="Formal">正式表达</span>
             <span data-zh="日常聊天" data-en="Casual">日常聊天</span>
           </div>
@@ -432,46 +435,46 @@
       <div class="section-inner">
         <div class="center-heading inverse">
           <p class="eyebrow" data-zh="隐私与选择" data-en="Privacy and choice">隐私与选择</p>
-          <h2 data-zh="输入路径，由你决定。" data-en="You choose how your input is processed.">输入路径，由你决定。</h2>
+          <h2 data-zh="数据如何处理，由你决定。" data-en="You choose how your data is processed.">数据如何处理，由你决定。</h2>
           <p
-            data-zh="先使用本地能力。需要更强模型时，再选择自己的 API Key 或可选托管积分。路径透明，决定权始终在你。"
-            data-en="Start locally. When you need a stronger model, choose your own API key or optional managed credits. The path stays explicit, and the decision stays yours."
-          >先使用本地能力。需要更强模型时，再选择自己的 API Key 或可选托管积分。路径透明，决定权始终在你。</p>
+            data-zh="默认优先使用端侧能力。需要云端识别或 AI 功能时，可配置自己的 API 密钥，或选择托管积分服务。每种处理方式都会清晰标示，决定权始终在你。"
+            data-en="On-device processing is the default. For cloud recognition or AI features, provide your own API key or use optional managed credits. The active option is always clearly shown."
+          >默认优先使用端侧能力。需要云端识别或 AI 功能时，可配置自己的 API 密钥，或选择托管积分服务。每种处理方式都会清晰标示，决定权始终在你。</p>
         </div>
         <div class="service-paths">
           <article>
             <span class="path-number">01</span>
             <span class="material-symbols-rounded" aria-hidden="true">memory</span>
             <h3 data-zh="端侧优先" data-en="On-device first">端侧优先</h3>
-            <p data-zh="默认 Apple 本地识别；Mac Apple Silicon 还可使用 Qwen3 MLX。" data-en="Apple local recognition by default; Qwen3 MLX is also available on Apple Silicon Macs.">
-              默认 Apple 本地识别；Mac Apple Silicon 还可使用 Qwen3 MLX。
+            <p data-zh="iOS、iPadOS 默认使用 Apple 设备端语音识别；搭载 Apple 芯片的 Mac 默认使用 Qwen3 MLX，Apple 语音识别作为备用方案。" data-en="iOS and iPadOS use Apple on-device speech recognition by default. Apple Silicon Macs use Qwen3 MLX by default, with Apple Speech Recognition as a fallback.">
+              iOS、iPadOS 默认使用 Apple 设备端语音识别；搭载 Apple 芯片的 Mac 默认使用 Qwen3 MLX，Apple 语音识别作为备用方案。
             </p>
-            <span class="path-note" data-zh="无需账号 · 音频留在设备" data-en="No account · Audio stays on device">无需账号 · 音频留在设备</span>
+            <span class="path-note" data-zh="无需 OSG 账号 · 音频留在设备" data-en="No OSG account required · Audio stays on device">无需 OSG 账号 · 音频留在设备</span>
           </article>
           <article>
             <span class="path-number">02</span>
             <span class="material-symbols-rounded" aria-hidden="true">key</span>
-            <h3 data-zh="自备 API Key" data-en="Bring your own key">自备 API Key</h3>
-            <p data-zh="连接你选择的语音或 AI 服务商。凭证保存在 Keychain。" data-en="Connect the speech or AI provider you choose. Credentials stay in Keychain.">
-              连接你选择的语音或 AI 服务商。凭证保存在 Keychain。
+            <h3 data-zh="使用自己的 API 密钥" data-en="Use your own API key">使用自己的 API 密钥</h3>
+            <p data-zh="配置你选择的语音识别或 AI 服务商；凭证存储在系统钥匙串中。" data-en="Configure the speech-recognition or AI provider you choose. Credentials are securely stored in the system Keychain.">
+              配置你选择的语音识别或 AI 服务商；凭证存储在系统钥匙串中。
             </p>
-            <span class="path-note" data-zh="无需 OSG 账号 · 服务商直接处理" data-en="No OSG account · Provider processes directly">无需 OSG 账号 · 服务商直接处理</span>
+            <span class="path-note" data-zh="无需 OSG 账号 · 请求直达所选服务商" data-en="No OSG account required · Requests go directly to your provider">无需 OSG 账号 · 请求直达所选服务商</span>
           </article>
           <article>
             <span class="path-number">03</span>
             <span class="material-symbols-rounded" aria-hidden="true">toll</span>
             <h3 data-zh="托管积分" data-en="Managed credits">托管积分</h3>
-            <p data-zh="iOS / iPadOS 可选 Apple 登录与积分服务，无需自行管理 Key。" data-en="Optional Sign in with Apple and managed credits on iOS / iPadOS, with no key to manage.">
-              iOS / iPadOS 可选 Apple 登录与积分服务，无需自行管理 Key。
+            <p data-zh="在 iOS、iPadOS 上，可通过 Apple 登录使用托管积分服务，无需自行管理 API 密钥。" data-en="On iOS and iPadOS, you can optionally use Sign in with Apple and managed credits without managing an API key.">
+              在 iOS、iPadOS 上，可通过 Apple 登录使用托管积分服务，无需自行管理 API 密钥。
             </p>
-            <span class="path-note" data-zh="明确同意后使用 · 可注销账号" data-en="Explicit opt-in · Account deletion available">明确同意后使用 · 可注销账号</span>
+            <span class="path-note" data-zh="主动选择后启用 · 可注销账号" data-en="Explicit opt-in · Account deletion available">主动选择后启用 · 可注销账号</span>
           </article>
         </div>
         <div class="privacy-proof">
           <div>
             <span class="material-symbols-rounded" aria-hidden="true">shield_lock</span>
-            <h3 data-zh="普通击键不采集，剪贴板需主动开启。" data-en="No ordinary keystroke collection. Clipboard access is opt-in.">
-              普通击键不采集，剪贴板需主动开启。
+            <h3 data-zh="不会采集日常键入内容；剪贴板访问需由你主动开启。" data-en="We do not collect what you type during normal keyboard use. Clipboard access is opt-in.">
+              不会采集日常键入内容；剪贴板访问需由你主动开启。
             </h3>
           </div>
           <a class="inverse-link" href="privacy/">
@@ -487,16 +490,19 @@
       <div class="section-inner">
         <div class="center-heading compact">
           <p class="eyebrow" data-zh="跨平台" data-en="Across platforms">跨平台</p>
-          <h2 data-zh="在手机上输入，在 Mac 上继续。" data-en="Type on mobile. Keep going on Mac.">在手机上输入，在 Mac 上继续。</h2>
+          <h2 data-zh="在 iPhone、iPad 上输入，在 Mac 上听写。" data-en="Type on iPhone and iPad. Dictate on Mac.">在 iPhone、iPad 上输入，在 Mac 上听写。</h2>
         </div>
         <div class="platform-stories">
           <article>
             <div class="platform-symbol ios-symbol" aria-hidden="true">
-              <span class="material-symbols-rounded">keyboard</span>
+              <svg viewBox="0 0 48 48" focusable="false">
+                <rect x="8" y="5" width="32" height="38" rx="7"></rect>
+                <path d="M15 17h3m5 0h3m5 0h3M15 23h3m5 0h3m5 0h3M15 29h18M20 36h8"></path>
+              </svg>
             </div>
             <div>
               <span class="platform-label">iOS / iPadOS 26+</span>
-              <h3 data-zh="系统键盘里的完整输入工作区" data-en="A complete input workspace in the system keyboard">系统键盘里的完整输入工作区</h3>
+              <h3 data-zh="一把键盘，覆盖完整输入流程" data-en="A complete input workspace in a custom keyboard">一把键盘，覆盖完整输入流程</h3>
               <p data-zh="听写、AI 助手、中文与英文输入、剪贴板技能、个人词典和可选 iCloud 同步。" data-en="Dictation, AI assistant, Chinese and English typing, clipboard skills, personal dictionary, and optional iCloud sync.">
                 听写、AI 助手、中文与英文输入、剪贴板技能、个人词典和可选 iCloud 同步。
               </p>
@@ -504,20 +510,22 @@
           </article>
           <article>
             <div class="platform-symbol mac-symbol" aria-hidden="true">
-              <span class="option-key">⌥</span>
+              <svg viewBox="0 0 48 48" focusable="false">
+                <path d="M7 10h11l17 28h6M26 10h15"></path>
+              </svg>
             </div>
             <div>
               <span class="platform-label">macOS 15+</span>
-              <h3 data-zh="按住 Option，在任何位置开始听写" data-en="Hold Option to dictate anywhere">按住 Option，在任何位置开始听写</h3>
-              <p data-zh="全局热键、底部实时浮层、Apple Speech 回退，以及 Apple Silicon 上的 Qwen3 MLX 本地模型。" data-en="Global hotkey, live bottom overlay, Apple Speech fallback, and a local Qwen3 MLX model on Apple Silicon.">
-                全局热键、底部实时浮层、Apple Speech 回退，以及 Apple Silicon 上的 Qwen3 MLX 本地模型。
+              <h3 data-zh="按住 Option 键，在支持文本输入的位置，开始听写" data-en="Hold Option to start dictation where text input is supported">按住 Option 键，在支持文本输入的位置，开始听写</h3>
+              <p data-zh="支持 Option 全局热键和屏幕底部的实时听写浮窗；搭载 Apple 芯片的 Mac 使用 Qwen3 MLX 本地模型，并以 Apple 语音识别作为备用方案。" data-en="Use the Option hotkey and a live dictation overlay at the bottom of the screen. Apple Silicon Macs use a local Qwen3 MLX model, with Apple Speech Recognition as a fallback.">
+                支持 Option 全局热键和屏幕底部的实时听写浮窗；搭载 Apple 芯片的 Mac 使用 Qwen3 MLX 本地模型，并以 Apple 语音识别作为备用方案。
               </p>
             </div>
           </article>
         </div>
         <p class="platform-footnote">
-          <span data-zh="公开 Mac DMG 仍为历史版 1.1；最新 Mac 2.0 能力可从源码构建。" data-en="The public Mac DMG remains historical version 1.1; build from source for the latest Mac 2.0 capabilities.">
-            公开 Mac DMG 仍为历史版 1.1；最新 Mac 2.0 能力可从源码构建。
+          <span data-zh="目前公开下载的 Mac 安装包（DMG）仍为 1.1 历史版本；如需 Mac 2.0.0 的最新功能，请从源码构建。" data-en="The publicly available Mac DMG is still version 1.1; build from source to use the latest Mac 2.0.0 capabilities.">
+            目前公开下载的 Mac 安装包（DMG）仍为 1.1 历史版本；如需 Mac 2.0.0 的最新功能，请从源码构建。
           </span>
         </p>
       </div>
@@ -529,29 +537,29 @@
         <div class="split-heading">
           <div>
             <p class="eyebrow" data-zh="开始使用" data-en="Get started">开始使用</p>
-            <h2 data-zh="两分钟，让声音进入键盘。" data-en="Put your voice in the keyboard in two minutes.">两分钟，让声音进入键盘。</h2>
+            <h2 data-zh="完成设置，开始语音输入。" data-en="Complete setup and start dictating.">完成设置，开始语音输入。</h2>
           </div>
-          <p data-zh="本地路径可以直接开始。只有在选择云端能力时，才需要进一步配置。" data-en="The local path works immediately. Additional setup is needed only when you choose cloud capabilities.">
-            本地路径可以直接开始。只有在选择云端能力时，才需要进一步配置。
+          <p data-zh="完成系统授权后即可使用端侧识别；只有选择云端识别或 AI 功能时，才需额外配置。" data-en="After granting the required system permissions, you can use on-device recognition. Additional setup is needed only for cloud recognition or AI features.">
+            完成系统授权后即可使用端侧识别；只有选择云端识别或 AI 功能时，才需额外配置。
           </p>
         </div>
         <ol class="setup-steps">
           <li>
             <h3 data-zh="安装并授权" data-en="Install and authorize">安装并授权</h3>
-            <p data-zh="iOS 添加键盘并开启完全访问；Mac 授予麦克风与辅助功能权限。" data-en="Add the keyboard and enable Full Access on iOS; grant microphone and Accessibility permissions on Mac.">
-              iOS 添加键盘并开启完全访问；Mac 授予麦克风与辅助功能权限。
+            <p data-zh="在 iOS、iPadOS 上添加键盘并开启“完全访问”；在 Mac 上授予麦克风和辅助功能权限。" data-en="Add the keyboard and enable Full Access on iOS and iPadOS; grant microphone and Accessibility permissions on Mac.">
+              在 iOS、iPadOS 上添加键盘并开启“完全访问”；在 Mac 上授予麦克风和辅助功能权限。
             </p>
           </li>
           <li>
-            <h3 data-zh="选择服务路径" data-en="Choose a service path">选择服务路径</h3>
-            <p data-zh="直接使用本地识别，或按需添加自己的 Key、登录托管积分。" data-en="Use local recognition, add your own key, or sign in for managed credits as needed.">
-              直接使用本地识别，或按需添加自己的 Key、登录托管积分。
+            <h3 data-zh="选择处理方式" data-en="Choose how input is processed">选择处理方式</h3>
+            <p data-zh="使用端侧识别，或按需添加自己的 API 密钥、登录后使用托管积分。" data-en="Use on-device recognition, add your own API key, or sign in to use managed credits.">
+              使用端侧识别，或按需添加自己的 API 密钥、登录后使用托管积分。
             </p>
           </li>
           <li>
             <h3 data-zh="开口或打字" data-en="Speak or type">开口或打字</h3>
-            <p data-zh="轻点听写、长按提问，或切换到中文 / English 键盘。" data-en="Tap to dictate, hold to ask, or switch to Chinese / English typing.">
-              轻点听写、长按提问，或切换到中文 / English 键盘。
+            <p data-zh="轻点开始听写、长按进行提问，或切换到中文或英文键盘。" data-en="Tap to dictate, hold to ask, or switch between Chinese and English typing.">
+              轻点开始听写、长按进行提问，或切换到中文或英文键盘。
             </p>
           </li>
         </ol>
@@ -559,10 +567,10 @@
         <div class="stable-strip">
           <span data-zh="稳定性同样是功能" data-en="Reliability is a feature">稳定性同样是功能</span>
           <ul>
-            <li data-zh="扩展冷启动保护" data-en="Extension cold-start protection">扩展冷启动保护</li>
-            <li data-zh="内存压力降级" data-en="Memory-pressure fallback">内存压力降级</li>
-            <li data-zh="上下文安全插入" data-en="Context-safe insertion">上下文安全插入</li>
-            <li data-zh="中断后恢复" data-en="Recovery after interruption">中断后恢复</li>
+            <li data-zh="键盘启动保护" data-en="Reliable keyboard startup">键盘启动保护</li>
+            <li data-zh="内存不足时自动降级" data-en="Automatic fallback when memory is low">内存不足时自动降级</li>
+            <li data-zh="确认输入位置后再插入" data-en="Insert only after confirming the input position">确认输入位置后再插入</li>
+            <li data-zh="中断后可恢复" data-en="Recover after interruptions">中断后可恢复</li>
           </ul>
         </div>
       </div>
@@ -573,37 +581,37 @@
       <div class="section-inner faq-layout">
         <div>
           <p class="eyebrow" data-zh="常见问题" data-en="FAQ">常见问题</p>
-          <h2 data-zh="把重要边界说清楚。" data-en="The important boundaries, clearly stated.">把重要边界说清楚。</h2>
+          <h2 data-zh="隐私和产品限制，提前说清楚。" data-en="Clear answers about privacy and product limits.">隐私和产品限制，提前说清楚。</h2>
         </div>
         <div class="faq-list">
           <details class="faq-item">
             <summary data-zh="必须注册 OSG 账号吗？" data-en="Do I need an OSG account?">必须注册 OSG 账号吗？</summary>
-            <p data-zh="不需要。本地听写和自备服务商无需 OSG 账号。Apple 登录仅用于可选托管积分、购买、邀请与资料管理。" data-en="No. Local dictation and providers you configure yourself need no OSG account. Sign in with Apple is only for optional managed credits, purchases, referrals, and profile controls.">
-              不需要。本地听写和自备服务商无需 OSG 账号。Apple 登录仅用于可选托管积分、购买、邀请与资料管理。
+            <p data-zh="不需要。使用端侧听写或自行配置的服务商时，无需 OSG 账号。通过 Apple 登录仅用于托管积分、积分购买、邀请奖励和账号资料管理。" data-en="No. You do not need an OSG account for on-device dictation or when using providers you configure yourself. Sign in with Apple is used only for managed credits, credit purchases, referral rewards, and profile management.">
+              不需要。使用端侧听写或自行配置的服务商时，无需 OSG 账号。通过 Apple 登录仅用于托管积分、积分购买、邀请奖励和账号资料管理。
             </p>
           </details>
           <details class="faq-item">
             <summary data-zh="录音会上传吗？" data-en="Does my audio get uploaded?">录音会上传吗？</summary>
-            <p data-zh="默认本地识别不会上传录音。只有你明确选择自备云端识别或托管积分云端识别时，音频才会发送到对应服务路径。" data-en="Default local recognition does not upload audio. Audio leaves the device only when you explicitly select a user-configured cloud engine or managed-credit cloud recognition.">
-              默认本地识别不会上传录音。只有你明确选择自备云端识别或托管积分云端识别时，音频才会发送到对应服务路径。
+            <p data-zh="使用默认的端侧识别时，录音不会上传。只有你明确选择自行配置的云端识别或托管积分云端识别时，音频才会离开设备，并发送至相应云端服务进行处理。" data-en="On-device recognition does not upload your recordings. Audio leaves the device only when you explicitly choose cloud recognition configured with your own API key or cloud recognition paid for with managed credits.">
+              使用默认的端侧识别时，录音不会上传。只有你明确选择自行配置的云端识别或托管积分云端识别时，音频才会离开设备，并发送至相应云端服务进行处理。
             </p>
           </details>
           <details class="faq-item">
             <summary data-zh="为什么键盘需要“完全访问”？" data-en="Why does the keyboard need Full Access?">为什么键盘需要“完全访问”？</summary>
-            <p data-zh="完全访问让键盘扩展与主 App 通过 App Group 协作、读取共享 Keychain 中的用户凭证，并在你主动开启后访问剪贴板。它不代表我们会收集普通击键。" data-en="Full Access lets the keyboard work with the host app through App Group, read user credentials from the shared Keychain, and access the clipboard only after you opt in. It does not mean ordinary keystrokes are collected.">
-              完全访问让键盘扩展与主 App 通过 App Group 协作、读取共享 Keychain 中的用户凭证，并在你主动开启后访问剪贴板。它不代表我们会收集普通击键。
+            <p data-zh="开启“完全访问”后，键盘才能与主 App 共享设置、读取已保存的服务配置，并在你主动启用后访问剪贴板。此权限不代表 OSGKeyboard 会收集日常键入内容。" data-en="Full Access lets the keyboard share settings with the OSGKeyboard app, read saved provider configurations, and access the clipboard only after you opt in. We do not collect what you type during normal keyboard use.">
+              开启“完全访问”后，键盘才能与主 App 共享设置、读取已保存的服务配置，并在你主动启用后访问剪贴板。此权限不代表 OSGKeyboard 会收集日常键入内容。
             </p>
           </details>
           <details class="faq-item">
             <summary data-zh="OSGKeyboard 是开源软件吗？" data-en="Is OSGKeyboard open source?">OSGKeyboard 是开源软件吗？</summary>
-            <p data-zh="不是。项目采用源码可见许可，允许个人学习与非商用本地使用；再分发、公开衍生版本和商业使用需要获得许可。" data-en="No. It uses a source-available license for personal learning and non-commercial local use. Redistribution, public derivatives, and commercial use require permission.">
+            <p data-zh="不是。项目采用源码可见许可，允许个人学习与非商用本地使用；再分发、公开衍生版本和商业使用需要获得许可。" data-en="No. It uses a source-available license for personal learning and non-commercial local use. Redistribution, public derivative versions, and commercial use require permission.">
               不是。项目采用源码可见许可，允许个人学习与非商用本地使用；再分发、公开衍生版本和商业使用需要获得许可。
             </p>
           </details>
           <details class="faq-item">
             <summary data-zh="Mac 下载为什么是 1.1？" data-en="Why is the Mac download version 1.1?">Mac 下载为什么是 1.1？</summary>
-            <p data-zh="当前公开、已签名并公证的 DMG 是历史版 1.1。仓库中的 Mac target 随整体源码演进到 2.0；需要最新源码能力时可在 macOS 与 Xcode 26 中自行构建。" data-en="The currently public, signed, and notarized DMG is historical version 1.1. The Mac target in source evolves with the 2.0 codebase; build it with macOS and Xcode 26 for the latest source capabilities.">
-              当前公开、已签名并公证的 DMG 是历史版 1.1。仓库中的 Mac target 随整体源码演进到 2.0；需要最新源码能力时可在 macOS 与 Xcode 26 中自行构建。
+            <p data-zh="当前可下载、已签名并公证的 Mac 安装包为 1.1 版。仓库中的 Mac 版源码已更新至 2.0.0；如需最新功能，请在 macOS 上使用 Xcode 26 或更高版本自行构建。" data-en="The signed and notarized Mac installer currently available for download is version 1.1. The Mac source in the repository has been updated to version 2.0.0; build it on macOS with Xcode 26 or later to use the latest capabilities.">
+              当前可下载、已签名并公证的 Mac 安装包为 1.1 版。仓库中的 Mac 版源码已更新至 2.0.0；如需最新功能，请在 macOS 上使用 Xcode 26 或更高版本自行构建。
             </p>
           </details>
         </div>
@@ -615,10 +623,10 @@
       <div class="section-inner">
         <div class="download-panel">
           <div>
-            <p class="eyebrow" data-zh="开口即文字" data-en="Speak it. It's typed.">开口即文字</p>
-            <h2 data-zh="下一段文字，从一句话开始。" data-en="Your next sentence starts with your voice.">下一段文字，从一句话开始。</h2>
-            <p data-zh="先从免费、本地的核心能力开始。需要时，再选择自己的服务商或托管积分。" data-en="Start with the free, local core. Add your own provider or managed credits only when you need them.">
-              先从免费、本地的核心能力开始。需要时，再选择自己的服务商或托管积分。
+            <p class="eyebrow" data-zh="开口即文字" data-en="Say it. It’s typed.">开口即文字</p>
+            <h2 data-zh="下一段文字，开口就能输入。" data-en="Your next sentence starts with your voice.">下一段文字，开口就能输入。</h2>
+            <p data-zh="先使用免费的端侧核心功能；需要时，再配置自己的 API 密钥或选择托管积分服务。" data-en="Start with the free, on-device core. Add your own API key or managed credits only when needed.">
+              先使用免费的端侧核心功能；需要时，再配置自己的 API 密钥或选择托管积分服务。
             </p>
           </div>
           <div class="download-actions">
@@ -633,9 +641,9 @@
                 src="assets/badges/ios-zh.svg"
                 data-zh-src="assets/badges/ios-zh.svg"
                 data-en-src="assets/badges/ios-en.svg"
-                data-zh-alt="立即下载 App Store 版"
+                data-zh-alt="在 App Store 下载 OSGKeyboard"
                 data-en-alt="Download on the App Store"
-                alt="立即下载 App Store 版"
+                alt="在 App Store 下载 OSGKeyboard"
                 width="171"
                 height="48"
               >
@@ -645,9 +653,9 @@
                 src="assets/badges/macos-zh.svg"
                 data-zh-src="assets/badges/macos-zh.svg"
                 data-en-src="assets/badges/macos-en.svg"
-                data-zh-alt="下载 macOS 历史版本 1.1"
-                data-en-alt="Download historical macOS version 1.1"
-                alt="下载 macOS 历史版本 1.1"
+                data-zh-alt="下载 macOS 1.1 旧版本"
+                data-en-alt="Download macOS 1.1 (older version)"
+                alt="下载 macOS 1.1 旧版本"
                 width="171"
                 height="48"
               >
@@ -669,7 +677,7 @@
 
   <footer class="site-footer">
     <div class="footer-inner">
-      <span data-zh="OSGKeyboard 2.0.0 · 源码可见，非开源软件" data-en="OSGKeyboard 2.0.0 · Source available, not open source">
+      <span data-zh="OSGKeyboard 2.0.0 · 源码可见，非开源软件" data-en="OSGKeyboard 2.0.0 · Source-available, not open source">
         OSGKeyboard 2.0.0 · 源码可见，非开源软件
       </span>
       <div class="footer-links">

@@ -22,6 +22,9 @@ enum LiveAccountDependencyFactory {
 
         let sessionVault = HostPrivateAccountKeychain(descriptor: descriptor)
         let apiClient = AccountAPIClient(sessionVault: sessionVault)
+        HostAnalyticsBearerBridge.shared.install(
+            AccountAnalyticsBearerProvider(apiClient: apiClient)
+        )
         let integrity = DeviceIntegrityCoordinator(
             apiClient: apiClient,
             keyStateStore: sessionVault

@@ -6,7 +6,7 @@
   --surface-strong: #e5eaf0;
   --ink: #111416;
   --ink-secondary: #5f676e;
-  --ink-tertiary: #8b949c;
+  --ink-tertiary: #626c74;
   --line: rgba(17, 20, 22, 0.1);
   --line-strong: rgba(17, 20, 22, 0.18);
   --accent: #2d8a57;
@@ -28,7 +28,7 @@ html[data-theme="dark"] {
   --surface-strong: #2b3033;
   --ink: #f2f4f3;
   --ink-secondary: #aab0ac;
-  --ink-tertiary: #737a75;
+  --ink-tertiary: #969e98;
   --line: rgba(255, 255, 255, 0.09);
   --line-strong: rgba(255, 255, 255, 0.16);
   --accent: #6fbd8a;
@@ -95,6 +95,13 @@ h1,
 h2,
 h3 {
   text-wrap: balance;
+}
+
+html[data-lang="zh"] h1,
+html[data-lang="zh"] h2,
+html[data-lang="zh"] h3 {
+  overflow-wrap: normal;
+  word-break: keep-all;
 }
 
 .skip-link {
@@ -300,27 +307,6 @@ html[data-theme="dark"] #themeToggle::before {
   height: 22px;
 }
 
-.assistant-tabs > .material-symbols-rounded::before {
-  content: "•••";
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-}
-
-.round-control:first-child .material-symbols-rounded::before {
-  content: "↶";
-  font-size: 1.15rem;
-}
-
-.round-control:last-child .material-symbols-rounded::before {
-  content: "↑";
-  font-size: 1.05rem;
-}
-
-.mic-control .material-symbols-rounded::before {
-  content: "●";
-  font-size: 0.72rem;
-}
-
 .gesture-grid .material-symbols-rounded,
 .skill-actions .material-symbols-rounded {
   display: none;
@@ -339,16 +325,6 @@ html[data-theme="dark"] #themeToggle::before {
 .privacy-proof > div > .material-symbols-rounded::before {
   content: "◈";
   font-size: 1.55rem;
-}
-
-.ios-symbol .material-symbols-rounded::before {
-  content: "⌨";
-  font-size: 2.25rem;
-}
-
-.ios-symbol .material-symbols-rounded {
-  width: 46px;
-  height: 46px;
 }
 
 .outline-action .material-symbols-rounded::before {
@@ -465,6 +441,14 @@ html[data-lang="zh"] .hero h1 {
 .store-badge img {
   width: auto;
   height: 48px;
+}
+
+html[data-theme="light"] .store-badge img {
+  filter: invert(1);
+}
+
+html[data-theme="dark"] .store-badge img {
+  filter: none;
 }
 
 .store-badge:hover,
@@ -718,103 +702,37 @@ html[data-theme="dark"] .message-bubble {
   bottom: 24px;
 }
 
-.keyboard-demo {
-  display: flex;
+.keyboard-capture {
+  position: relative;
+  align-self: center;
   min-width: 0;
+  aspect-ratio: 1.18;
+  margin: 0;
+  overflow: hidden;
   background: var(--surface-strong);
-  flex-direction: column;
 }
 
-.assistant-tabs {
-  display: grid;
-  grid-template-columns: 46px repeat(3, auto) 1fr;
-  gap: 8px;
-  align-items: center;
-  padding: 16px 18px;
-  border-bottom: 1px solid var(--line);
+.keyboard-capture img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center bottom;
 }
 
-.assistant-logo {
-  display: grid;
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 0.66rem;
-  font-weight: 800;
-  place-items: center;
-}
-
-.assistant-tab {
-  padding: 6px 9px;
+.keyboard-capture figcaption {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 999px;
-  color: var(--ink-tertiary);
-  font-size: 0.72rem;
+  background: rgba(17, 20, 22, 0.68);
+  color: #ffffff;
+  font-size: 0.68rem;
   font-weight: 650;
-}
-
-.assistant-tab.active {
-  background: var(--surface);
-  color: var(--ink);
-}
-
-.assistant-tabs > .material-symbols-rounded {
-  justify-self: end;
-  color: var(--ink-tertiary);
-}
-
-.keyboard-keys {
-  display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: 7px;
-  padding: clamp(42px, 6vw, 80px) 18px 20px;
-}
-
-.keyboard-keys span {
-  display: grid;
-  min-width: 0;
-  height: 42px;
-  border-bottom: 2px solid var(--line-strong);
-  color: var(--ink-secondary);
-  font-size: 0.75rem;
-  place-items: center;
-}
-
-.keyboard-keys span:nth-child(n + 11) {
-  transform: translateX(50%);
-}
-
-.assistant-controls {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  margin-top: auto;
-  padding: 22px 24px 26px;
-  border-top: 1px solid var(--line);
-}
-
-.round-control,
-.mic-control {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--ink-secondary);
-  place-items: center;
-}
-
-.round-control:last-child {
-  justify-self: end;
-}
-
-.mic-control {
-  width: 58px;
-  height: 58px;
-  background: var(--accent);
-  color: #fff;
-  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 26%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .gesture-grid {
@@ -1417,29 +1335,28 @@ html[data-theme="dark"] .privacy-section {
 
 .platform-symbol {
   display: grid;
-  width: 110px;
-  height: 150px;
+  width: 104px;
+  height: 104px;
   align-self: start;
   border: 1px solid var(--line);
-  border-radius: 28px;
+  border-radius: 24px;
   background: var(--surface-soft);
   color: var(--ink-secondary);
   place-items: center;
 }
 
-.platform-symbol .material-symbols-rounded {
-  font-size: 42px;
+.platform-symbol svg {
+  width: 48px;
+  height: 48px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.6;
 }
 
 .mac-symbol {
-  width: 116px;
-  height: 96px;
-  border-radius: 18px;
-}
-
-.option-key {
-  font-size: 2.4rem;
-  font-weight: 500;
+  border-radius: 24px;
 }
 
 .platform-stories h3 {
@@ -1795,10 +1712,6 @@ html[data-lang="zh"] .download-panel h2 {
     border-bottom: 1px solid var(--line);
   }
 
-  .keyboard-demo {
-    min-height: 430px;
-  }
-
   .scene-copy {
     max-width: 690px;
   }
@@ -1926,7 +1839,7 @@ html[data-lang="zh"] .download-panel h2 {
     font-size: clamp(2rem, 9vw, 2.2rem);
   }
 
-  .hero h1 > span {
+  html[data-lang="zh"] .hero h1 > span {
     white-space: nowrap;
   }
 
@@ -1985,30 +1898,6 @@ html[data-lang="zh"] .download-panel h2 {
 
   .insert-preview {
     padding: 18px;
-  }
-
-  .keyboard-demo {
-    min-height: 360px;
-  }
-
-  .assistant-tabs {
-    grid-template-columns: 42px repeat(3, auto) 1fr;
-    gap: 3px;
-    padding: 13px 10px;
-  }
-
-  .assistant-tab {
-    padding: 6px;
-  }
-
-  .keyboard-keys {
-    gap: 4px;
-    padding: 45px 10px 16px;
-  }
-
-  .keyboard-keys span {
-    height: 36px;
-    font-size: 0.65rem;
   }
 
   .gesture-grid {
@@ -2094,14 +1983,18 @@ html[data-lang="zh"] .download-panel h2 {
   }
 
   .platform-symbol {
-    width: 92px;
-    height: 122px;
-    border-radius: 23px;
+    width: 88px;
+    height: 88px;
+    border-radius: 21px;
   }
 
   .mac-symbol {
-    height: 76px;
-    border-radius: 16px;
+    border-radius: 21px;
+  }
+
+  .platform-symbol svg {
+    width: 42px;
+    height: 42px;
   }
 
   .setup-steps {

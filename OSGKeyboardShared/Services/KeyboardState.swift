@@ -106,6 +106,9 @@ public final class KeyboardState: ObservableObject {
     @Published public var flowSessionActive: Bool = false
     /// Unified mic color / tap / hint source for the keyboard extension.
     @Published public var micVoiceAvailability: MicVoiceAvailability = .unavailable(.hostNotReady)
+    /// Short-lived host-owned practice mode. It unlocks real dictation before
+    /// onboarding completion, but only while the onboarding text field is live.
+    @Published public var isOnboardingPracticeActive: Bool = false
     /// When true, the mic is intentionally disabled (e.g. cloud engine
     /// selected but the provider-specific API key is missing).
     @Published public var micDisabled: Bool = false

@@ -8,9 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Privacy-preserving product analytics**: add an optional first-party event queue with cross-process SQLite durability, idempotent retry, fixed privacy-safe dimensions, and a device-local opt-out that clears pending events. / **隐私友好的产品分析**：新增可选的第一方事件队列，通过跨进程 SQLite 持久化、幂等重试与固定隐私安全维度可靠投递，并提供清除待发送事件的本机退出开关。
 - **Managed-cloud consent**: the first switch to OSG credits now explains which audio, text, context, and account data leaves the device and requires explicit agreement before enabling the service. / **托管云确认**：首次切换到 OSG 积分时会说明哪些音频、文字、上下文与账号数据会离开设备，并在用户明确同意后才启用服务。
+- **Free OOBE polish**: the first-run lesson defaults to on-device transcription plus OSG managed polish, sends an authenticated OOBE purpose tag, and uses a server-enforced one-time complimentary request without reserving or settling credits. / **免费 OOBE 润色**：首次教学默认使用端侧转写与 OSG 托管润色，发送经过身份验证的 OOBE 用途标签，并由服务端执行一次性免费资格，不预扣也不结算积分。
 
 ### Changed
+- **AI Agent first run**: replace the technical six-step setup with a concise privacy, permission, and keyboard flow that presents OSGKeyboard as an AI Agent voice keyboard, teaches on the real keyboard, and verifies the first voice insertion before completion. / **AI Agent 首次体验**：以简洁的隐私、权限与键盘流程取代技术化的六步配置，突出 AI Agent 语音输入法定位，并在真实键盘中完成教学、验证首次语音上屏后再结束。
 - **Focused skill icons**: remove math, indices, arrows, shapes, commerce, keyboard, media, text-formatting, automotive, device, and variable-rendering categories from the custom-skill symbol picker. / **精简技能图标**：从自定义技能图标选择器中移除数学、索引、箭头、形状、商业、键盘、媒体、文本格式、汽车、设备与可变渲染分类。
 
 ### Fixed

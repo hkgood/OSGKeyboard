@@ -205,6 +205,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        AnalyticsExtensionService.shared.keyboardWillDisappear()
         assistantFieldActionRefreshTask?.cancel()
         assistantFieldActionRefreshTask = nil
         clipboardCapture?.keyboardWillDisappear()
@@ -305,6 +306,9 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        AnalyticsExtensionService.shared.recordPresentation(
+            hasFullAccess: hasFullAccess
+        )
         OSGDiag.log(
             "KVC.viewDidAppear begin surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
             category: "boot"

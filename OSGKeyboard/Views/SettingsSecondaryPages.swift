@@ -565,11 +565,35 @@ struct ClipboardSettingsView: View {
 struct AboutSettingsView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @Environment(\.openURL) private var openURL
+    @EnvironmentObject private var analytics: AnalyticsHostService
     @ObservedObject var config: ProviderConfig
 
     var body: some View {
         ScrollView {
             CardPageContent {
+                CardSection("settings.analytics.section") {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Toggle(
+                            "settings.analytics.title",
+                            isOn: Binding(
+                                get: { analytics.isEnabled },
+                                set: { analytics.setEnabled($0) }
+                            )
+                        )
+                        .tint(palette.accent)
+                        .settingsListRow()
+
+                        Divider().background(palette.divider)
+
+                        Text("settings.analytics.description")
+                            .font(TypeStyle.caption2)
+                            .foregroundStyle(palette.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .settingsListRow()
+                    }
+                    .surfaceCard()
+                }
+
                 CardSection("settings.about.title") {
                     VStack(spacing: 0) {
                         Button {
@@ -637,5 +661,8 @@ struct AboutSettingsView: View {
         .navigationTitle("settings.about.title")
         .navigationBarTitleDisplayMode(.inline)
         .hidesTabBarWhenPushed()
+        .onAppear {
+            analytics.refreshEnabledState()
+        }
     }
 }

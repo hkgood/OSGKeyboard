@@ -193,11 +193,15 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         )
     }
 
-    public func makeClient(taskKind: ManagedGatewayTaskKind? = nil) -> LLMClient {
+    public func makeClient(
+        taskKind: ManagedGatewayTaskKind? = nil,
+        requestPurpose: ManagedGatewayRequestPurpose? = nil
+    ) -> LLMClient {
         if credentialSource == .managed {
             return ManagedLLMClient(
                 capability: .polish,
                 taskKind: taskKind,
+                requestPurpose: requestPurpose,
                 grants: GatewayGrantCoordinator()
             )
         }

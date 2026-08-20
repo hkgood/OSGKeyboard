@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Privacy Policy · OSGKeyboard</title>
-  <meta name="description" content="OSGKeyboard privacy policy: no account required for core use, on-device speech recognition by default, optional user-configured or managed cloud services, no analytics SDKs, no sale of personal data.">
+  <meta name="description" content="OSGKeyboard privacy policy: no account required for core use, on-device speech recognition by default, optional user-configured or managed cloud services, limited first-party analytics with opt-out, no sale of personal data.">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://hkgood.github.io/OSGKeyboard/privacy/">
   <link rel="icon" href="../assets/app-icon.png" type="image/png">
@@ -52,13 +52,14 @@
     <li><strong>macOS local speech models</strong> — when you choose a Qwen3-ASR local model, the Mac app downloads model files from Hugging Face and stores them in its local application-support directory until you remove them. Local inference does not send your audio to Hugging Face or OSGKeyboard.</li>
     <li><strong>Voice history</strong> — the host app may keep a list of recent successful transcripts in its History tab. History is capped at 300 entries. When iCloud settings sync is enabled, history may also sync through your private iCloud Key-Value Store.</li>
     <li><strong>Usage statistics</strong> — cumulative dictation time, dictation characters, translation characters, and dictionary entry count are computed and stored locally on the home screen stats card.</li>
+    <li><strong>Optional first-party product analytics</strong> — enabled by default and removable at any time in Settings. OSGKeyboard sends only fixed event names and fixed categories about app/keyboard sessions, AI feature outcomes and duration ranges, purchase-page interactions, and invitation actions, together with an app-scoped random installation identifier and safe app/OS version labels. It never includes keyboard input, audio, transcripts, cursor context, prompts, model output, contacts, file or device names, Apple identifiers, email, credentials, advertising identifiers, or free-form properties. Turning analytics off deletes queued events; turning it back on creates a new installation identifier.</li>
   </ul>
   <p>Clipboard sensitive-content filtering is applied to newly captured items. Existing history is retained until you use the confirmed clear action.</p>
 
   <h2>What we do not collect</h2>
   <ul>
     <li>We do <strong>not</strong> log or upload ordinary keystrokes. Only the on-device Chinese candidate-learning data described above is retained locally.</li>
-    <li>We do <strong>not</strong> operate analytics, crash reporting, or advertising SDKs.</li>
+    <li>We do <strong>not</strong> use third-party analytics, crash-reporting, advertising SDKs, ATT, or IDFA.</li>
     <li>We do <strong>not</strong> upload raw audio on a local engine. Audio leaves the device only after you select a user-configured cloud engine or managed credits.</li>
     <li>We do <strong>not</strong> sell personal data.</li>
   </ul>
@@ -79,6 +80,7 @@
   <h2>Data retention</h2>
   <p>Settings remain on your device until you delete the app or reset settings. When iCloud settings sync is enabled, API keys replicate through iCloud Keychain and eligible preferences, statistics, dictionary data, and voice history may sync through your private iCloud account. Voice history is capped at 300 entries and can be cleared from History or by resetting settings. Clipboard history remains device-local, is capped at 15 entries, has no fixed expiry, and remains when capture is turned off or settings are reset; use the separate confirmed clear action to delete it. Chinese and English typing-learning data stays local and can be cleared from typing settings without deleting the personal dictionary. Downloaded Mac speech models remain until you remove the model in the app or delete its local files.</p>
   <p><strong>Optional account</strong> — account profile, credit ledger, StoreKit audit records, and limited anti-abuse records are retained by the account service while the account is active. Account deletion removes the active profile and credentials; pseudonymous ledger, purchase-audit, and time-limited anti-abuse records may remain where required to prevent replay, fraud, or abuse.</p>
+  <p><strong>Product analytics</strong> — queued events expire locally after 34 days and the service accepts events no older than 35 days. Account deletion and analytics opt-out delete the local queue. Analytics identifiers are not used for cross-app tracking or advertising.</p>
 
   <h2>Children's privacy</h2>
   <p>OSGKeyboard is not directed to children under 13 and does not knowingly collect personal data from children.</p>
@@ -114,13 +116,14 @@
     <li><strong>macOS 本地语音模型</strong> — 选择 Qwen3-ASR 本地模型后，Mac App 会从 Hugging Face 下载模型文件，并保存在本机应用支持目录，直到你主动移除。本地推理不会把录音发送到 Hugging Face 或 OSGKeyboard。</li>
     <li><strong>语音历史</strong> — 主 App 可在「历史」页保留近期成功转写，上限 300 条。开启 iCloud 设置同步后，历史也可能经私有 iCloud 键值存储同步。</li>
     <li><strong>用量统计</strong> — 首页统计卡片的累计听写时长、听写字数、翻译字数、词库词条数均在本地计算与保存。</li>
+    <li><strong>可选第一方产品分析</strong> — 默认开启，可随时在设置中关闭。OSGKeyboard 只发送固定事件名和固定分类，用于了解 App/键盘会话、AI 功能结果与耗时区间、购买页交互及邀请操作，并携带 App 范围内随机生成的安装标识和安全的 App/系统版本标识。绝不包含键盘输入、音频、转录、光标上下文、Prompt、模型输出、联系人、文件名、设备名、Apple 标识、邮箱、凭证、广告标识符或自由形式属性。关闭后会删除待发送事件；重新开启会生成新的安装标识。</li>
   </ul>
   <p>剪贴板敏感内容过滤仅在新内容采集时执行；已有历史会继续保留，直到你使用带确认的清空操作。</p>
 
   <h2>我们不收集的内容</h2>
   <ul>
     <li>我们<strong>不会</strong>记录或上传你平时在键盘上的击键内容。</li>
-    <li>我们<strong>不会</strong>集成分析、崩溃上报或广告 SDK。</li>
+    <li>我们<strong>不会</strong>集成第三方分析、崩溃上报或广告 SDK，也不使用 ATT 或 IDFA。</li>
     <li>使用本地引擎时，我们<strong>不会</strong>上传原始录音。只有你选择用户自备云端识别或托管积分后，录音才会离开设备。</li>
     <li>我们<strong>不会</strong>出售个人数据。</li>
   </ul>
@@ -141,6 +144,7 @@
   <h2>数据保留</h2>
   <p>设置保留在设备上，直至卸载或重置。开启 iCloud 设置同步后，API 密钥经 iCloud 钥匙串同步，可同步的偏好、统计、词库和语音历史可能经私有 iCloud 账户同步。语音历史上限 300 条，可在「历史」页清空或通过重置设置清除。剪贴板历史仅保存在本机，上限 15 条，没有固定过期时间；关闭采集或重置设置均会保留，需使用单独确认的清空操作删除。中英文输入学习数据仅留本机，可在输入设置中单独清除且不影响个性词库。下载的 Mac 语音模型会保留到你在应用中移除模型或删除本地文件。</p>
   <p><strong>可选账号</strong> — 账号有效期间，账号服务会保留资料、积分账本、StoreKit 审计记录及有限的反滥用记录。注销会删除有效资料与凭证；为防止交易重放、欺诈或滥用，匿名账本、购买审计及有时限的反滥用记录可能在必要范围内继续保留。</p>
+  <p><strong>产品分析</strong> — 待发送事件会在本地满 34 天后过期，服务端只接受 35 天以内的事件。注销账号或关闭产品分析会删除本地队列。分析标识不会用于跨 App 跟踪或广告。</p>
 
   <h2>儿童隐私</h2>
   <p>OSGKeyboard 不面向 13 岁以下儿童，亦不会明知地从儿童处收集个人信息。</p>

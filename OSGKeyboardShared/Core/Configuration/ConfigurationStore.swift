@@ -40,7 +40,10 @@ public protocol ConfigurationStore: Sendable {
     /// Provider-specific ASR caches (e.g. Alibaba Fun-ASR vocabulary IDs).
     var cloudASRPersistence: UserDefaults { get }
 
-    func makeClient(taskKind: ManagedGatewayTaskKind?) -> LLMClient
+    func makeClient(
+        taskKind: ManagedGatewayTaskKind?,
+        requestPurpose: ManagedGatewayRequestPurpose?
+    ) -> LLMClient
 }
 
 public extension ConfigurationStore {
@@ -48,6 +51,10 @@ public extension ConfigurationStore {
     var credentialSource: CredentialSource { .byok }
 
     func makeClient() -> LLMClient {
-        makeClient(taskKind: nil)
+        makeClient(taskKind: nil, requestPurpose: nil)
+    }
+
+    func makeClient(taskKind: ManagedGatewayTaskKind?) -> LLMClient {
+        makeClient(taskKind: taskKind, requestPurpose: nil)
     }
 }

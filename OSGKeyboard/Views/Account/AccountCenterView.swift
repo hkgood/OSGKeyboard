@@ -505,6 +505,7 @@ private struct AccountCreditsSection: View {
 private struct AccountCreditPurchaseSection: View {
     @Environment(\.themePalette) private var palette
     @ObservedObject var manager: AccountCreditPurchaseManager
+    @State private var didRecordPurchaseView = false
 
     let accountID: UUID
     let onGranted: () -> Void
@@ -539,6 +540,11 @@ private struct AccountCreditPurchaseSection: View {
         .onChange(of: manager.lastGrantedBalance) { previous, current in
             guard current != nil, current != previous else { return }
             onGranted()
+        }
+        .onAppear {
+            guard !didRecordPurchaseView else { return }
+            didRecordPurchaseView = true
+            manager.recordPurchaseViewed()
         }
     }
 
@@ -777,10 +783,17 @@ private struct AccountInvitationActivityView: UIViewControllerRepresentable {
     let invitationURL: URL
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(
+        let controller = UIActivityViewController(
             activityItems: [invitationURL],
             applicationActivities: nil
         )
+        controller.completionWithItemsHandler = { _, completed, _, _ in
+            guard completed else { return }
+            Task { @MainActor in
+                AnalyticsHostService.shared.client.recordReferralShared()
+            }
+        }
+        return controller
     }
 
     func updateUIViewController(

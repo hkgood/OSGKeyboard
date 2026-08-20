@@ -49,7 +49,7 @@ settings:
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
     MARKETING_VERSION: "2.0.0"
-    CURRENT_PROJECT_VERSION: "83"
+    CURRENT_PROJECT_VERSION: "84"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -185,6 +185,8 @@ targets:
         NSSpeechRecognitionUsageDescription: "OSGKeyboard uses speech recognition to transcribe your voice. Audio is processed on-device by default, or sent to your configured speech provider only when you enable cloud recognition."
         UIBackgroundModes:
           - audio
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.osgkeyboard.ios.analytics-sync
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
         ITSAppUsesNonExemptEncryption: false
@@ -404,6 +406,7 @@ targets:
     dependencies:
       - package: Librime
         product: RimeStatic
+      - sdk: libsqlite3.tbd
 
   # Host-only support framework (ASR / CLM / Cloud / Charts / StoreKit).
   # Keyboard extension does NOT link this — keeps Speech/AVFoundation/Charts
@@ -665,6 +668,7 @@ targets:
       - sdk: AVFoundation.framework
       - sdk: Charts.framework
       - sdk: StoreKit.framework
+      - sdk: libsqlite3.tbd
 
 schemes:
   OSGKeyboard:

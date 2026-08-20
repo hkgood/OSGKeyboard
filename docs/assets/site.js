@@ -58,15 +58,20 @@
       element.setAttribute("content", element.dataset[`${lang}Content`] || "");
     });
 
+    document.querySelectorAll("[data-shot]").forEach((image) => {
+      const theme = root.dataset.theme || "light";
+      image.src = `assets/screenshots/${lang}/${theme}/${image.dataset.shot}`;
+    });
+
     document.title = lang === "zh"
-      ? "OSGKeyboard — 语音、打字与 AI 助手键盘"
-      : "OSGKeyboard — Voice, typing, and an AI assistant keyboard";
+      ? "OSGKeyboard — 语音输入、中英打字与 AI 助手"
+      : "OSGKeyboard — Voice input, bilingual typing, and an AI assistant";
 
     if (languageButton) {
       languageButton.textContent = lang === "zh" ? "EN" : "中文";
       languageButton.setAttribute(
         "aria-label",
-        lang === "zh" ? "Switch to English" : "切换到中文"
+        lang === "zh" ? "切换到英文" : "Switch to Chinese"
       );
     }
 
@@ -130,6 +135,11 @@
     }
 
     themeColor?.setAttribute("content", resolved === "dark" ? "#0c0e0f" : "#eef2f6");
+
+    document.querySelectorAll("[data-shot]").forEach((image) => {
+      const lang = root.dataset.lang || "zh";
+      image.src = `assets/screenshots/${lang}/${resolved}/${image.dataset.shot}`;
+    });
 
     if (persist) localStorage.setItem("osg-site-theme", resolved);
   }

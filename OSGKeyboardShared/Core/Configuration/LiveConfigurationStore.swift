@@ -124,11 +124,15 @@ public struct LiveConfigurationStore: ConfigurationStore, @unchecked Sendable {
     public var detectedAppContext: (context: AppContext, observedAt: Date)? { snapshot.detectedAppContext }
     public var cloudASRPersistence: UserDefaults { snapshot.cloudASRPersistence }
 
-    public func makeClient(taskKind: ManagedGatewayTaskKind?) -> LLMClient {
+    public func makeClient(
+        taskKind: ManagedGatewayTaskKind?,
+        requestPurpose: ManagedGatewayRequestPurpose?
+    ) -> LLMClient {
         if credentialSource == .managed {
             return ManagedLLMClient(
                 capability: .polish,
                 taskKind: taskKind,
+                requestPurpose: requestPurpose,
                 grants: GatewayGrantCoordinator()
             )
         }

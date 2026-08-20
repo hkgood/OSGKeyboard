@@ -71,7 +71,11 @@ TYPING
 
 PRIVACY
 
-• No advertising, analytics, or tracking SDKs.
+• Limited first-party product analytics; no third-party analytics,
+  advertising, tracking SDKs, ATT, or IDFA.
+• Product analytics never includes keyboard input, audio, transcripts,
+  prompts, model output, credentials, or personal identifiers. It can be
+  disabled in Settings, which deletes queued events.
 • Local recognition does not upload audio.
 • User-configured cloud requests go directly to that provider. Managed-credit
   requests go through OSGKeyboard's managed gateway to the managed provider.
@@ -157,6 +161,9 @@ OSGKeyboard is a custom keyboard for iOS/iPadOS 26.
    Clipboard, then return to the keyboard. Secure fields hide the clipboard
    entry point. Turning History off preserves saved items; use the separate
    confirmed clear action to delete them.
+10. First-party Product Analytics is enabled by default under Settings →
+    About → Privacy. Turning it off deletes queued events. It does not collect
+    keyboard input, audio, transcripts, prompts, model output, or credentials.
 
 Privacy policy:
 https://hkgood.github.io/OSGKeyboard/privacy/
@@ -230,9 +237,41 @@ This covers the pseudonymous OSGKeyboard account identifier and scoped
 managed-service grant identifiers. Core use remains available without an
 OSGKeyboard account.
 
+### Identifiers → Device ID
+
+- Collected: Yes
+- Purpose: Analytics
+- Linked to the user: Yes
+- Used for tracking: No
+
+This is an app-scoped random installation identifier. It rotates when analytics
+is re-enabled, after account deletion, or when a different account signs in. It
+is not IDFA and is not used across apps.
+
+### Usage Data → Product Interaction
+
+- Collected: Yes
+- Purpose: Analytics
+- Linked to the user: Yes
+- Used for tracking: No
+
+This covers fixed event names for app and keyboard sessions, purchase-page
+interactions, and invitation actions. It contains no free-form properties.
+
+### Usage Data → Other Usage Data
+
+- Collected: Yes
+- Purpose: Analytics
+- Linked to the user: Yes
+- Used for tracking: No
+
+This covers fixed AI feature categories, execution modes, outcome categories,
+and coarse duration buckets. It does not include prompts, transcripts, model
+output, audio, or keyboard content.
+
 ### Do not select
 
-- Advertising, marketing, analytics, product personalization, or tracking
+- Advertising, marketing, product personalization, or tracking
 - Email address, phone number, physical address, location, contacts, photos,
   browsing history, or search history
 - Usage data or diagnostics stored only locally or in the user's private iCloud
@@ -249,6 +288,8 @@ standard HTTPS. Re-evaluate this answer if non-exempt cryptography is added.
 - [ ] Run the release build and test suites on macOS with Xcode 26
 - [ ] Replace screenshots with captures from the submitted build
 - [ ] Verify the privacy answers against the submitted provider features
+- [ ] In App Store Connect, add Device ID, Product Interaction, and Other
+      Usage Data for Analytics; linked to the user, not used for tracking
 - [ ] Confirm `500tks`, `1500tks`, and `3000tks` are approved, consumable,
       and mapped to the server credit catalog
 - [ ] Confirm `ByRockyACoffee` remains an optional consumable tip and unlocks

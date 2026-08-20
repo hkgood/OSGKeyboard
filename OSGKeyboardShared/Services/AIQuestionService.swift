@@ -114,22 +114,33 @@ public struct AIQuestionService: Sendable {
     private let client: any LLMClient
     private let conversations: AIConversationStore
     private let responseLength: AIResponseLength
+    private let analyticsClient: any AnalyticsClient
+    private let analyticsFeature: AnalyticsFeature
+    private let analyticsExecutionMode: AnalyticsExecutionMode
 
     public init(
         client: any LLMClient,
         conversations: AIConversationStore,
-        responseLength: AIResponseLength = .default
+        responseLength: AIResponseLength = .default,
+        analyticsClient: any AnalyticsClient = NoopAnalyticsClient(),
+        analyticsFeature: AnalyticsFeature = .aiAssistant,
+        analyticsExecutionMode: AnalyticsExecutionMode = .byok
     ) {
         self.client = client
         self.conversations = conversations
         self.responseLength = responseLength
+        self.analyticsClient = analyticsClient
+        self.analyticsFeature = analyticsFeature
+        self.analyticsExecutionMode = analyticsExecutionMode
     }
 
     public static func configured(
         store: any ConfigurationStore,
         conversations: AIConversationStore,
         taskKind: ManagedGatewayTaskKind = .aiQuestion,
-        thinkingEnabled: Bool = true
+        thinkingEnabled: Bool = true,
+        analyticsClient: any AnalyticsClient = NoopAnalyticsClient(),
+        analyticsFeature: AnalyticsFeature = .aiAssistant
     ) throws -> AIQuestionService {
         if store.credentialSource == .managed {
             return AIQuestionService(
@@ -139,7 +150,10 @@ public struct AIQuestionService: Sendable {
                     grants: GatewayGrantCoordinator()
                 ),
                 conversations: conversations,
-                responseLength: store.aiResponseLength
+                responseLength: store.aiResponseLength,
+                analyticsClient: analyticsClient,
+                analyticsFeature: analyticsFeature,
+                analyticsExecutionMode: .managed
             )
         }
         // Same provider + baseURL + model resolution as dictation polish so the
@@ -172,7 +186,10 @@ public struct AIQuestionService: Sendable {
                 thinkingEnabled: thinkingEnabled
             ),
             conversations: conversations,
-            responseLength: store.aiResponseLength
+            responseLength: store.aiResponseLength,
+            analyticsClient: analyticsClient,
+            analyticsFeature: analyticsFeature,
+            analyticsExecutionMode: .byok
         )
     }
 
@@ -199,28 +216,38 @@ public struct AIQuestionService: Sendable {
             maxTokens: Self.outputTokenLimit
         )
 
-        var accumulated = ""
-        for try await event in client.completeStreaming(
-            messages: messages,
-            timeout: Self.requestTimeout,
-            options: options
-        ) {
-            try Task.checkCancellation()
-            switch event {
-            case .delta(let chunk):
-                accumulated += chunk
-                let preview = Self.streamingPreview(accumulated)
-                onPartial?(preview)
-            case .restart:
-                accumulated = ""
-                onPartial?("")
+        let operation = analyticsClient.startAIFeature(
+            analyticsFeature,
+            executionMode: analyticsExecutionMode
+        )
+        do {
+            var accumulated = ""
+            for try await event in client.completeStreaming(
+                messages: messages,
+                timeout: Self.requestTimeout,
+                options: options
+            ) {
+                try Task.checkCancellation()
+                switch event {
+                case .delta(let chunk):
+                    accumulated += chunk
+                    let preview = Self.streamingPreview(accumulated)
+                    onPartial?(preview)
+                case .restart:
+                    accumulated = ""
+                    onPartial?("")
+                }
             }
-        }
-        try Task.checkCancellation()
+            try Task.checkCancellation()
 
-        let answer = Self.boundedAnswer(accumulated)
-        guard !answer.isEmpty else { throw ServiceError.emptyAnswer }
-        return answer
+            let answer = Self.boundedAnswer(accumulated)
+            guard !answer.isEmpty else { throw ServiceError.emptyAnswer }
+            operation.succeed()
+            return answer
+        } catch {
+            operation.fail(category: Self.analyticsFailureCategory(for: error))
+            throw error
+        }
     }
 
     /// Commit only after the host wins the utterance terminal claim. Keeping
@@ -252,6 +279,42 @@ public struct AIQuestionService: Sendable {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         }
         return String(prefix.dropLast()) + "…"
+    }
+
+    private static func analyticsFailureCategory(
+        for error: Error
+    ) -> AnalyticsFailureCategory {
+        if error is CancellationError {
+            return .cancelled
+        }
+        if error is ServiceError {
+            return .validation
+        }
+        if let error = error as? ManagedGatewayError {
+            switch error {
+            case .insufficientCredits:
+                return .insufficientCredits
+            case .timeout:
+                return .timeout
+            case .missingGrant, .scopeNotGranted, .invalidGrant:
+                return .validation
+            case .server:
+                return .provider
+            }
+        }
+        if let error = error as? LLMError {
+            switch error {
+            case .cancelled:
+                return .cancelled
+            case .transport, .rateLimited:
+                return .network
+            case .invalidURL, .noAPIKey, .decoding:
+                return .validation
+            case .http:
+                return .provider
+            }
+        }
+        return .unknown
     }
 
     /// Soft cap for live drafts — no ellipsis mid-stream.

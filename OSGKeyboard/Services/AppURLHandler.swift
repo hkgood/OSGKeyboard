@@ -43,6 +43,16 @@ final class AppOpenURLRouter {
 }
 
 final class AppURLHandler: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [
+            UIApplication.LaunchOptionsKey: Any
+        ]? = nil
+    ) -> Bool {
+        AnalyticsHostService.registerBackgroundTask()
+        return true
+    }
+
     /// SwiftUI `@main` apps get no scene delegate by default. Attach ours so
     /// scene-based URL delivery — the only iOS 26 path to `sourceApplication` —
     /// reaches `AppSceneDelegate`. We deliberately do NOT create a window here;

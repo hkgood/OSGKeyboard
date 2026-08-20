@@ -14,6 +14,68 @@ private enum HomeRoute: Hashable {
     case dictionary
 }
 
+enum FlowHomePiPStatusDescriptor: Equatable {
+    case text(localizationKey: String)
+    case progress(localizationKey: String, attempt: Int, total: Int)
+}
+
+enum FlowHomePiPStatusPolicy {
+    static func descriptor(
+        lifecycle: FlowPiPLifecycleState,
+        isStarting: Bool,
+        isRecording: Bool,
+        isProcessing: Bool,
+        isActive: Bool,
+        isHostReady: Bool
+    ) -> FlowHomePiPStatusDescriptor {
+        switch lifecycle {
+        case .preparing(let attempt, let total):
+            return .progress(
+                localizationKey: "home.flow.preparingProgress",
+                attempt: attempt,
+                total: total
+            )
+        case .recovering(let attempt, let total):
+            return .progress(
+                localizationKey: "home.flow.recoveringProgress",
+                attempt: attempt,
+                total: total
+            )
+        case .waitingForForeground:
+            return .text(localizationKey: "home.flow.waitingForForeground")
+        case .failed:
+            return .text(localizationKey: "home.flow.recoveryFailed")
+        case .inactive, .active:
+            break
+        }
+        if isStarting {
+            return .text(localizationKey: "home.flow.starting")
+        }
+        if isRecording {
+            return .text(localizationKey: "home.flow.recording")
+        }
+        if isProcessing {
+            return .text(localizationKey: "home.flow.processing")
+        }
+        if isActive, isHostReady {
+            return .text(localizationKey: "home.flow.label")
+        }
+        if isActive {
+            // Session flag is up but the ready contract is not — do not lie.
+            return .text(localizationKey: "home.flow.notReady")
+        }
+        return .text(localizationKey: "home.flow.inactive")
+    }
+
+    static func canRetry(
+        lifecycle: FlowPiPLifecycleState,
+        needsPermissionSetup: Bool
+    ) -> Bool {
+        guard case .failed = lifecycle else { return false }
+        return !needsPermissionSetup
+    }
+}
+
 struct HomeView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @Environment(\.scenePhase) private var scenePhase
@@ -53,6 +115,23 @@ struct HomeView: View {
     /// the permission guidance card is the correct call to action).
     private var canManuallyStartSession: Bool {
         !sessionIsLive && !needsPermissionSetup
+    }
+
+    private var canRetryPiP: Bool {
+        FlowHomePiPStatusPolicy.canRetry(
+            lifecycle: flowManager.pipLifecycleState,
+            needsPermissionSetup: needsPermissionSetup
+        )
+    }
+
+    private var canEndFlowSession: Bool {
+        if flowManager.isActive || flowManager.isStarting { return true }
+        switch flowManager.pipLifecycleState {
+        case .waitingForForeground, .failed:
+            return true
+        case .inactive, .preparing, .recovering, .active:
+            return false
+        }
     }
 
     private var shouldShowKeyboardHint: Bool {
@@ -125,11 +204,11 @@ struct HomeView: View {
                             .padding(.top, logoTopPadding)
                             .padding(.bottom, logoBottomPadding)
 
-                        if showsFlowSessionExtras {
-                            flowSessionExtras
-                                .padding(.horizontal, Spacing.lg)
-                                .padding(.bottom, extrasBottomPadding)
-                        }
+                        // Engine + Flow status now stays directly below the
+                        // logo so startup and recovery are always visible.
+                        scrollStatusFooter
+                            .padding(.horizontal, Spacing.lg)
+                            .padding(.bottom, extrasBottomPadding)
 
                         HomeUsageStatsSection(layout: .stacked, compact: isCompact)
                             .padding(.horizontal, Spacing.lg)
@@ -138,11 +217,6 @@ struct HomeView: View {
                         homeLibrarySection
                             .padding(.horizontal, Spacing.lg)
                             .padding(.bottom, Spacing.xl)
-
-                        // Scrolls with the page (not pinned); clearance comes from
-                        // `tabBarScrollBottomPadding` so the dock never covers it.
-                        scrollStatusFooter
-                            .padding(.horizontal, Spacing.lg)
                     }
                     .frame(maxWidth: .infinity)
                     .tabBarScrollBottomPadding()
@@ -152,14 +226,14 @@ struct HomeView: View {
         }
     }
 
-    /// Engine + Flow status — last content in the scroll stack.
+    /// Engine + Flow status — visible near the logo instead of at scroll bottom.
     private var scrollStatusFooter: some View {
-        VStack(spacing: Spacing.xs) {
+        setupGuidanceCard {
             engineStatusLine
             flowStatusFooter
+            Divider()
+            flowSessionExtras
         }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .multilineTextAlignment(.center)
     }
 
     // MARK: - Wide layout (iPad / regular width)
@@ -169,16 +243,11 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 wideHeroHeader
 
-                if showsFlowSessionExtras {
-                    flowSessionExtras
-                }
+                scrollStatusFooter
 
                 HomeUsageStatsSection(layout: .split)
 
                 homeLibrarySection
-
-                scrollStatusFooter
-                    .frame(maxWidth: .infinity)
             }
             .padding(.horizontal, WideLayoutMetrics.pageHorizontalInset)
             .padding(.top, Spacing.sm)
@@ -466,7 +535,26 @@ struct HomeView: View {
             if needsAPIKeySetup {
                 // 无按钮：引导卡片已提示去设置填 API Key。
                 EmptyView()
-            } else if flowManager.isActive {
+            } else if canRetryPiP {
+                Button {
+                    flowManager.retryPiPRecovery()
+                } label: {
+                    Text("home.flow.retry")
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.accent)
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, Spacing.xs)
+                Button {
+                    flowManager.endSession()
+                } label: {
+                    Text("home.flow.endShort")
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, Spacing.xs)
+            } else if canEndFlowSession {
                 Button {
                     flowManager.endSession()
                 } label: {
@@ -477,8 +565,8 @@ struct HomeView: View {
                 .buttonStyle(.plain)
                 .padding(.leading, Spacing.xs)
             } else if canManuallyStartSession {
-                // Sessions no longer auto-start on foreground (keyboard survival).
-                // After a manual stop / expiry, Start is the explicit re-entry.
+                // Foreground activation is automatic. After an explicit stop
+                // while staying on this screen, Start is the explicit re-entry.
                 Button {
                     flowManager.activateOnForeground(
                         reason: "HomeView.startButton",
@@ -498,18 +586,10 @@ struct HomeView: View {
 
     // MARK: - Flow extras (warnings / hints)
 
-    private var showsFlowSessionExtras: Bool {
-        needsPermissionSetup
-            || flowManager.sessionWarning != nil
-            || needsAPIKeySetup
-            || shouldShowKeyboardHint
-            || !flowManager.isActive
-    }
-
     @ViewBuilder
     private var flowSessionExtras: some View {
         if needsPermissionSetup {
-            setupGuidanceCard {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text(AppPermissions.homePermissionGuidanceMessage)
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.warning)
@@ -526,14 +606,14 @@ struct HomeView: View {
                 .buttonStyle(.plain)
             }
         } else if let warning = flowManager.sessionWarning {
-            setupGuidanceCard {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text(warning)
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.warning)
                     .fixedSize(horizontal: false, vertical: true)
             }
         } else if needsAPIKeySetup {
-            setupGuidanceCard {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text(config.isLocalEngine
                     ? "home.setup.polishKeyMissing"
                     : "home.setup.cloudIncomplete")
@@ -542,7 +622,7 @@ struct HomeView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         } else if shouldShowKeyboardHint {
-            setupGuidanceCard {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("home.setup.keyboardHint")
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textSecondary)
@@ -584,6 +664,8 @@ struct HomeView: View {
         if needsAPIKeySetup { return palette.warning }
         if flowManager.isUtteranceRecording { return palette.accent }
         if flowManager.isUtteranceProcessing { return palette.accent }
+        if case .failed = flowManager.pipLifecycleState { return palette.warning }
+        if case .waitingForForeground = flowManager.pipLifecycleState { return palette.warning }
         if flowManager.isActive, FlowSessionBridge.isHostReady() { return palette.accent }
         if flowManager.isStarting { return palette.accent }
         if needsPermissionSetup { return palette.warning }
@@ -598,23 +680,20 @@ struct HomeView: View {
     /// with the OS), so the previous downloading / warming / failed
     /// states collapse into the cloud-engine branch.
     private var flowCapsuleStatusMessage: String {
-        if flowManager.isStarting {
-            return AppL10n.string("home.flow.starting")
+        let descriptor = FlowHomePiPStatusPolicy.descriptor(
+            lifecycle: flowManager.pipLifecycleState,
+            isStarting: flowManager.isStarting,
+            isRecording: flowManager.isUtteranceRecording,
+            isProcessing: flowManager.isUtteranceProcessing,
+            isActive: flowManager.isActive,
+            isHostReady: FlowSessionBridge.isHostReady()
+        )
+        switch descriptor {
+        case .text(let localizationKey):
+            return AppL10n.string(localizationKey)
+        case .progress(let localizationKey, let attempt, let total):
+            return AppL10n.format(localizationKey, attempt, total)
         }
-        if flowManager.isUtteranceRecording {
-            return AppL10n.string("home.flow.recording")
-        }
-        if flowManager.isUtteranceProcessing {
-            return AppL10n.string("home.flow.processing")
-        }
-        if flowManager.isActive, FlowSessionBridge.isHostReady() {
-            return AppL10n.string("home.flow.label")
-        }
-        if flowManager.isActive {
-            // Session flag is up but the ready contract is not — do not lie.
-            return AppL10n.string("home.flow.notReady")
-        }
-        return AppL10n.string("home.flow.inactive")
     }
 
     private var engineStatusLine: some View {

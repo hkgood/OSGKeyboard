@@ -62,6 +62,50 @@ final class AppGroupOnboardingStoreTests: XCTestCase {
         XCTAssertEqual(store3.onboardingPage, 0)
     }
 
+    func testOnboardingPracticeWindowExpires() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        KeyboardSetupBridge.setOnboardingPracticeActive(
+            true,
+            duration: 30,
+            defaults: defaults,
+            now: now
+        )
+
+        XCTAssertTrue(
+            KeyboardSetupBridge.onboardingPracticeIsActive(
+                defaults: defaults,
+                now: now.addingTimeInterval(29)
+            )
+        )
+        XCTAssertFalse(
+            KeyboardSetupBridge.onboardingPracticeIsActive(
+                defaults: defaults,
+                now: now.addingTimeInterval(31)
+            )
+        )
+    }
+
+    func testDisablingOnboardingPracticeClearsWindow() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        KeyboardSetupBridge.setOnboardingPracticeActive(
+            true,
+            defaults: defaults,
+            now: now
+        )
+        KeyboardSetupBridge.setOnboardingPracticeActive(
+            false,
+            defaults: defaults,
+            now: now
+        )
+
+        XCTAssertFalse(
+            KeyboardSetupBridge.onboardingPracticeIsActive(
+                defaults: defaults,
+                now: now
+            )
+        )
+    }
+
     // MARK: - App context detection round-trip
 
     func testDetectedAppContextRoundTrip() throws {
