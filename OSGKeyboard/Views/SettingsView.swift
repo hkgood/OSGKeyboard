@@ -19,6 +19,7 @@ enum SettingsPresentation {
 /// screen (and so we avoid NavigationLink + `dismiss` freeze cycles).
 private enum SettingsRoute: Hashable {
     case speechRecognition
+    case microphonePriority
     case textPolish
     case general
     case aiAgent
@@ -117,6 +118,8 @@ struct SettingsView: View {
         switch route {
         case .speechRecognition:
             SpeechRecognitionSettingsView(config: config)
+        case .microphonePriority:
+            MicrophonePrioritySettingsView()
         case .textPolish:
             TextPolishSettingsView(config: config)
         case .general:
@@ -188,6 +191,17 @@ struct SettingsView: View {
                 .speechRecognition,
                 title: "settings.speechRecognition.title",
                 subtitle: SettingsConfigSummary.speechRecognition(config: config)
+            )
+
+            Divider().background(palette.divider)
+
+            settingsRouteButton(
+                .microphonePriority,
+                title: "settings.microphonePriority.title",
+                subtitle: AppL10n.string(
+                    "settings.microphonePriority.subtitle",
+                    language: config.uiLanguage
+                )
             )
 
             Divider().background(palette.divider)

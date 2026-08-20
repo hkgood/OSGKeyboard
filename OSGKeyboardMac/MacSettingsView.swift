@@ -51,6 +51,7 @@ struct MacSettingsView: View {
                                 .transition(.opacity)
                         }
                         polishProviderSection
+                        microphonePrioritySection
                         inputSection
                         legalSection
                     }
@@ -289,6 +290,15 @@ struct MacSettingsView: View {
     }
 
     // MARK: - Hotkey / paste
+
+    private var microphonePrioritySection: some View {
+        MacSettingsSection(
+            title: MacL10n.string("microphonePriority.title", language: lang),
+            footer: MacL10n.string("microphonePriority.footer", language: lang)
+        ) {
+            MacMicrophonePrioritySettingsView(defaults: viewModel.defaults, language: lang)
+        }
+    }
 
     private var inputSection: some View {
         MacSettingsSection(title: MacL10n.string("mac.settings.input", language: lang)) {
