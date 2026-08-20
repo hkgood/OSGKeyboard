@@ -664,6 +664,18 @@
 "settings.personalDictionary.iCloudSync.error.tooLarge" = "Dictionary is too large to sync via iCloud. Remove some entries and try again.";
 "settings.personalDictionary.iCloudSync.error.generic" = "Could not sync your dictionary with iCloud. Try again later.";
 
+/* Device-local microphone routing */
+"settings.microphonePriority.title" = "Microphone Priority";
+"settings.microphonePriority.subtitle" = "Choose which connected microphone dictation uses first";
+"settings.microphonePriority.enabled" = "Priority order";
+"settings.microphonePriority.excluded" = "Excluded microphones";
+"settings.microphonePriority.connected" = "Connected";
+"settings.microphonePriority.disconnected" = "Not connected";
+"settings.microphonePriority.restore" = "Add";
+"settings.microphonePriority.refresh" = "Refresh microphones";
+"settings.microphonePriority.empty" = "No enabled microphones. Restore one below or connect a new microphone.";
+"settings.microphonePriority.footer" = "Drag to reorder. The first connected microphone is used for the next recording. Swipe left to exclude a microphone; excluded microphones are never used as a fallback.";
+
 "settings.iCloudSync.title" = "Cross-Device iCloud Sync";
 "settings.appSettings.iCloudSync.title" = "Cross-Device iCloud Sync";
 "settings.appSettings.iCloudSync.subtitle" = "Sync settings, history, and API keys across devices via iCloud.";

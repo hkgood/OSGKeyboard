@@ -501,6 +501,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         configuration.clipboardHistoryEnabled = false
         configuration.clipboardCandidateBarEnabled = false
         configuration.hasAcknowledgedCloudSharing = false
+        defaults.removeObject(forKey: AppGroupConfiguration.Keys.microphonePriority)
         configuration.credentialSource = .byok
         isApplyingConfiguration = false
         persistConfiguration()

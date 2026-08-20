@@ -17,6 +17,7 @@
         "OSGKeyboardTests/AppGroupOnboardingStoreTests",
         "OSGKeyboardTests/ConfigurationStoreTests",
         "OSGKeyboardTests/KeychainTests",
+        "OSGKeyboardTests/MicrophonePriorityTests",
         "OSGKeyboardTests/ProviderToolRequestCoordinatorTests"
       ]
     },
@@ -30,7 +31,8 @@
         "OSGKeyboardTests/AccountSecurityPrimitiveTests",
         "OSGKeyboardTests/AccountSignInCoordinatorTests",
         "OSGKeyboardTests/AccountSnapshotLoaderTests",
-        "OSGKeyboardTests/DeviceIntegrityTests"
+        "OSGKeyboardTests/DeviceIntegrityTests",
+        "OSGKeyboardTests/ReferralProfileTests"
       ]
     },
     "managed_gateway": {

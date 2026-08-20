@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Optional OSG account**: add Sign in with Apple, managed credits, App Store credit packs, referrals, profile controls, and in-app account deletion while keeping local dictation and user-owned provider keys independent. / **可选 OSG 账号**：新增 Apple 登录、托管积分、App Store 积分包、邀请、资料管理与 App 内账号注销，同时保持本地听写和用户自备 API Key 独立可用。
 - **Safe AI insertion**: AI answers insert automatically only while the original input field and cursor context still match; otherwise the keyboard retains the answer for explicit insertion or discard. / **安全 AI 上屏**：仅当原输入框和光标上下文仍一致时自动插入 AI 回答；上下文变化时保留回答，由用户明确插入或丢弃。
+- **Microphone priority**: iOS and macOS settings now list connected and previously seen microphones, support drag reordering and exclusion, and bind each recording to the first available enabled input. / **麦克风优先级**：iOS 与 macOS 设置现可列出已连接和曾连接的麦克风，支持拖动排序与排除，并在每次录音时绑定首个可用且已启用的输入。
 
 ### Changed
 - **Unified assistant keyboard**: merge Voice and AI into one Assistant tab with tap-to-dictate, hold-to-ask-AI, a liquid-glass capsule microphone, contextual hotwords, one-row paged clipboard skills, and shared Send / undo / edit actions; delete, space, undo, and edit remain available while clipboard skills are visible. / **统一助手键盘**：将语音与 AI 合并为一个助手入口，支持轻点听写、长按问 AI、液态玻璃胶囊麦克风、情境热词、单行分页剪贴板技能，以及共用的发送 / 撤销 / 编辑操作；剪贴板技能出现时仍保留删除、空格、撤销与编辑按钮。

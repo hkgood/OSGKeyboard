@@ -182,9 +182,6 @@ public final class LiveDictationController: ObservableObject {
                 )
                 #endif
                 try session.setActive(true, options: .notifyOthersOnDeactivation)
-                #if !targetEnvironment(simulator)
-                FlowCaptureVoiceProcessing.preferNearTalkBuiltInMic(on: session)
-                #endif
                 didConfigureAudioSession = true
             } catch {
                 debug("audio session failed: \(error.localizedDescription)")
@@ -195,6 +192,29 @@ public final class LiveDictationController: ObservableObject {
                 return
             }
         }
+        #if !targetEnvironment(simulator)
+        do {
+            let session = AVAudioSession.sharedInstance()
+            let preferredInputUID = try FlowCaptureVoiceProcessing.selectPreferredInput(
+                on: session
+            )
+            let deadline = Date().addingTimeInterval(1.5)
+            while session.currentRoute.inputs.first?.uid != preferredInputUID,
+                  Date() < deadline {
+                try? await Task.sleep(nanoseconds: 50_000_000)
+            }
+            guard session.currentRoute.inputs.first?.uid == preferredInputUID else {
+                throw FlowCaptureVoiceProcessing.PreferredMicrophoneError.routeDidNotActivate
+            }
+        } catch {
+            debug("preferred microphone failed: \(error.localizedDescription)")
+            phase = .error(String.localizedStringWithFormat(
+                NSLocalizedString("preview.error.audioSession", comment: ""),
+                error.localizedDescription
+            ))
+            return
+        }
+        #endif
         // The route may have changed while the preview was closed. A fresh
         // engine created after session activation avoids a stale input node.
         audioEngine = AVAudioEngine()

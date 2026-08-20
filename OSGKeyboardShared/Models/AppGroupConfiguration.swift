@@ -75,6 +75,9 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let agentSkillLayout = "config.aiAgentSkills.layout.v1"
         /// User-created clipboard skills (no cloud sync; App Group only).
         public static let agentUserSkillCatalog = "config.aiAgentSkills.userCatalog.v1"
+        /// Device-local ordered microphone preferences. UIDs are hardware-specific,
+        /// so this intentionally stays outside the iCloud settings payload.
+        public static let microphonePriority = "config.microphonePriority.v1"
     }
 
     // MARK: - Stored fields

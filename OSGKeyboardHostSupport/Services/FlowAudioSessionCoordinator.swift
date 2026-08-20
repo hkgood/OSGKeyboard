@@ -49,7 +49,7 @@ public final class FlowAudioEngineHandle: @unchecked Sendable {
 public final class FlowAudioSessionCoordinator: @unchecked Sendable {
     private struct CaptureActivation: Sendable {
         let snapshot: FlowAudioSessionSnapshot
-        let preferredInputUID: String?
+        let preferredInputUID: String
     }
 
     public enum Mode: Sendable, Equatable {
@@ -86,37 +86,26 @@ public final class FlowAudioSessionCoordinator: @unchecked Sendable {
                 try self.session.setActive(true, options: .notifyOthersOnDeactivation)
                 self.active = true
             }
-            // When an HFP device is already connected, iOS can initially
-            // report the built-in mic and switch to HFP after recording has
-            // begun. Select the route before building AVAudioEngine so short
-            // utterances do not land entirely inside that negotiation window.
-            let hfp = self.session.availableInputs?.first(where: {
-                $0.portType == .bluetoothHFP
-            })
-            if self.session.currentRoute.inputs.first?.portType != .bluetoothHFP,
-               let hfp {
-                do {
-                    try self.session.setPreferredInput(hfp)
-                } catch {
-                    OSGDiag.log(
-                        "preferred HFP input failed: \(error.localizedDescription)",
-                        category: "flow"
-                    )
-                }
-            } else {
-                // Built-in near-talk preference (cardioid when available).
-                FlowCaptureVoiceProcessing.preferNearTalkBuiltInMic(on: self.session)
-            }
+            // Resolve the route before building AVAudioEngine so short
+            // utterances do not land inside a Bluetooth/USB negotiation
+            // window. Excluded inputs never become an implicit fallback.
+            let preferredInputUID = try FlowCaptureVoiceProcessing.selectPreferredInput(
+                on: self.session
+            )
             self.mode = .capture
             return CaptureActivation(
                 snapshot: self.makeSnapshot(),
-                preferredInputUID: hfp?.uid
+                preferredInputUID: preferredInputUID
             )
         }
-        return await waitForStableRoute(
+        let stableRoute = await waitForStableRoute(
             initial: activation.snapshot,
             preferredInputUID: activation.preferredInputUID
         )
+        guard stableRoute.inputPortUID == activation.preferredInputUID else {
+            throw FlowCaptureVoiceProcessing.PreferredMicrophoneError.routeDidNotActivate
+        }
+        return stableRoute
     }
 
     public func activatePlayback() async -> Bool {
@@ -151,6 +140,59 @@ public final class FlowAudioSessionCoordinator: @unchecked Sendable {
                 category: "flow"
             )
             return false
+        }
+    }
+
+    /// Discovers iOS input ports without permanently changing the current
+    /// capture/playback state. `availableInputs` is complete only while an
+    /// input-capable category is configured.
+    public func discoverMicrophones() async throws -> [MicrophonePriorityDevice] {
+        try await perform {
+            let previousCategory = self.session.category
+            let previousMode = self.session.mode
+            let previousOptions = self.session.categoryOptions
+            let wasActive = self.active
+            let previousCoordinatorMode = self.mode
+
+            guard previousCoordinatorMode != .capture else {
+                return FlowCaptureVoiceProcessing.availableMicrophones(on: self.session)
+            }
+
+            let restorePreviousState = {
+                if !wasActive, self.active {
+                    try self.session.setActive(
+                        false,
+                        options: .notifyOthersOnDeactivation
+                    )
+                    self.active = false
+                }
+                try self.session.setCategory(
+                    previousCategory,
+                    mode: previousMode,
+                    options: previousOptions
+                )
+                self.mode = previousCoordinatorMode
+            }
+
+            do {
+                try self.session.setCategory(
+                    .playAndRecord,
+                    mode: .default,
+                    options: FlowCaptureVoiceProcessing.captureOptions
+                )
+                if !self.active {
+                    try self.session.setActive(true)
+                    self.active = true
+                }
+                let devices = FlowCaptureVoiceProcessing.availableMicrophones(
+                    on: self.session
+                )
+                try restorePreviousState()
+                return devices
+            } catch {
+                try? restorePreviousState()
+                throw error
+            }
         }
     }
 
@@ -199,7 +241,7 @@ public final class FlowAudioSessionCoordinator: @unchecked Sendable {
 
     private func waitForStableRoute(
         initial: FlowAudioSessionSnapshot,
-        preferredInputUID: String?,
+        preferredInputUID: String,
         timeout: TimeInterval = 1.5
     ) async -> FlowAudioSessionSnapshot {
         let deadline = Date().addingTimeInterval(timeout)
@@ -208,8 +250,7 @@ public final class FlowAudioSessionCoordinator: @unchecked Sendable {
         while Date() < deadline {
             try? await Task.sleep(nanoseconds: 50_000_000)
             let current = await snapshot()
-            let preferredRouteReached = preferredInputUID == nil
-                || current.inputPortUID == preferredInputUID
+            let preferredRouteReached = current.inputPortUID == preferredInputUID
             if current == previous, current.sampleRate > 0,
                current.inputChannels > 0, preferredRouteReached {
                 stableReadCount += 1

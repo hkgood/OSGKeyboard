@@ -107,12 +107,12 @@ final class MacDictationViewModel: ObservableObject {
 
     init(
         defaults: UserDefaults = .standard,
-        recorder: any MacAudioRecording = MacAudioRecorder(),
+        recorder: (any MacAudioRecording)? = nil,
         hotkeyService: MacHotkeyService = MacHotkeyService(),
         startHotkeyService: Bool = true
     ) {
         self.defaults = defaults
-        self.recorder = recorder
+        self.recorder = recorder ?? MacAudioRecorder(defaults: defaults)
         self.hotkeyService = hotkeyService
         self.config = ProviderConfig(defaults: defaults)
         self.usageStatistics = UsageStatisticsStore(defaults: defaults)

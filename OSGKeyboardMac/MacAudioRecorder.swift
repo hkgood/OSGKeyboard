@@ -19,6 +19,7 @@ final class MacAudioRecorder: MacAudioRecording, @unchecked Sendable {
     enum RecorderError: Error, LocalizedError {
         case converterUnavailable
         case microphoneAccessDenied
+        case noAvailablePreferredMicrophone
 
         var errorDescription: String? {
             switch self {
@@ -28,11 +29,14 @@ final class MacAudioRecorder: MacAudioRecording, @unchecked Sendable {
                 return "麦克风权限被拒绝——请在「系统设置 → 隐私与安全性 → 麦克风」中启用"
                     + " / Microphone access denied — enable it in System Settings"
                     + " → Privacy & Security → Microphone"
+            case .noAvailablePreferredMicrophone:
+                return SharedL10n.string("microphonePriority.error.noneAvailable")
             }
         }
     }
 
-    private let engine = AVAudioEngine()
+    private var engine = AVAudioEngine()
+    private let microphoneStore: MicrophonePriorityStore
     private let targetFormat = AVAudioFormat(
         commonFormat: .pcmFormatFloat32,
         sampleRate: 16_000,
@@ -66,6 +70,10 @@ final class MacAudioRecorder: MacAudioRecording, @unchecked Sendable {
     /// One-shot flag for the converter pull block. Taps are serialized per
     /// bus, so a plain instance property (not a captured local) is safe here.
     private var didProvideInput = false
+
+    init(defaults: UserDefaults = .standard) {
+        microphoneStore = MicrophonePriorityStore(defaults: defaults)
+    }
 
     /// Normalised input level (0…1), smoothed for a calm waveform.
     /// Read from the main thread by a polling timer while recording.
@@ -159,6 +167,26 @@ final class MacAudioRecorder: MacAudioRecording, @unchecked Sendable {
         let stale = detachSnapshotSink()
         lock.withLock { samples.removeAll(keepingCapacity: true) }
         stale?.finish()
+
+        // Build a fresh graph for the selected device. Reusing an input node
+        // across USB/Bluetooth sample-rate changes can leave its bus format
+        // attached to the previous Core Audio device even after a successful
+        // CurrentDevice update.
+        engine = AVAudioEngine()
+
+        let availableDevices = try MacAudioInputDevices.available()
+        let availablePriorities = availableDevices.map(\.priorityDevice)
+        let configuration = microphoneStore.mergeAndSave(available: availablePriorities)
+        guard
+            let preferred = configuration.preferredDevice(available: availablePriorities),
+            let selectedDevice = availableDevices.first(where: { $0.id == preferred.id })
+        else {
+            throw RecorderError.noAvailablePreferredMicrophone
+        }
+        try MacAudioInputDevices.bind(selectedDevice, to: engine)
+        OSGLog.asr.info(
+            "mac microphone selected name=\(preferred.name, privacy: .public)"
+        )
 
         let input = engine.inputNode
         let inputFormat = input.outputFormat(forBus: 0)

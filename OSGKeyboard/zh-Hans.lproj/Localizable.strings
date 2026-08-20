@@ -663,6 +663,18 @@
 "settings.personalDictionary.iCloudSync.error.tooLarge" = "词库过大，无法通过 iCloud 同步。请删除部分词条后重试。";
 "settings.personalDictionary.iCloudSync.error.generic" = "无法与 iCloud 同步词库，请稍后重试。";
 
+/* 仅存储在本机的麦克风路由 */
+"settings.microphonePriority.title" = "麦克风优先级";
+"settings.microphonePriority.subtitle" = "选择语音输入优先使用的已连接麦克风";
+"settings.microphonePriority.enabled" = "优先顺序";
+"settings.microphonePriority.excluded" = "已排除的麦克风";
+"settings.microphonePriority.connected" = "已连接";
+"settings.microphonePriority.disconnected" = "未连接";
+"settings.microphonePriority.restore" = "添加";
+"settings.microphonePriority.refresh" = "刷新麦克风";
+"settings.microphonePriority.empty" = "没有已启用的麦克风。请从下方恢复一个，或连接新的麦克风。";
+"settings.microphonePriority.footer" = "拖动可调整顺序。下次录音会使用第一个已连接的麦克风。向左轻扫可排除麦克风；被排除的麦克风不会作为备用输入。";
+
 "settings.iCloudSync.title" = "跨设备iCloud 同步";
 "settings.appSettings.iCloudSync.title" = "跨设备iCloud 同步";
 "settings.appSettings.iCloudSync.subtitle" = "通过 iCloud 跨设备同步设置、历史记录、API Key";
