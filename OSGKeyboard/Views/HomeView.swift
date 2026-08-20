@@ -1,8 +1,8 @@
 // HomeView.swift
 // OSGKeyboard · Main App
 //
-// Home: logo, flow hints, usage stats, history + dictionary entry card,
-// then engine / session status at the scroll bottom. History/dictionary
+// Home: logo, transient Flow connection status, usage stats, history +
+// dictionary entry card. History/dictionary
 // open via push (system back) rather than bottom-tab destinations.
 
 import OSGKeyboardShared
@@ -74,6 +74,27 @@ enum FlowHomePiPStatusPolicy {
         guard case .failed = lifecycle else { return false }
         return !needsPermissionSetup
     }
+
+    static func shouldShowConnectionCard(
+        lifecycle: FlowPiPLifecycleState,
+        needsPermissionSetup: Bool,
+        needsAPIKeySetup: Bool,
+        hasSessionWarning: Bool,
+        isRecording: Bool,
+        isProcessing: Bool,
+        isHostReady: Bool
+    ) -> Bool {
+        if needsPermissionSetup || needsAPIKeySetup || hasSessionWarning {
+            return true
+        }
+        if isRecording || isProcessing {
+            return false
+        }
+        if case .active = lifecycle {
+            return !isHostReady
+        }
+        return true
+    }
 }
 
 struct HomeView: View {
@@ -84,7 +105,6 @@ struct HomeView: View {
     @ObservedObject private var config = ProviderConfig.shared
     @ObservedObject private var speechHistory = SpeechHistoryStore.shared
     @EnvironmentObject private var flowManager: FlowSessionManager
-    @State private var keyboardHintDismissed = HomeGuideState.isKeyboardHintDismissed
     @State private var micStatus = AppPermissions.micStatus
     @State private var speechStatus = AppPermissions.speechStatus
     @State private var path = NavigationPath()
@@ -134,12 +154,18 @@ struct HomeView: View {
         }
     }
 
-    private var shouldShowKeyboardHint: Bool {
-        !keyboardHintDismissed
-            && !KeyboardSetupBridge.isReadyForOnboardingSkip
-            && !needsPermissionSetup
-            && flowManager.sessionWarning == nil
-            && !needsAPIKeySetup
+    /// Healthy sessions need no persistent chrome. Keep the connection card
+    /// only for setup, startup, recovery, or a genuinely unavailable session.
+    private var showsFlowConnectionCard: Bool {
+        FlowHomePiPStatusPolicy.shouldShowConnectionCard(
+            lifecycle: flowManager.pipLifecycleState,
+            needsPermissionSetup: needsPermissionSetup,
+            needsAPIKeySetup: needsAPIKeySetup,
+            hasSessionWarning: flowManager.sessionWarning != nil,
+            isRecording: flowManager.isUtteranceRecording,
+            isProcessing: flowManager.isUtteranceProcessing,
+            isHostReady: FlowSessionBridge.isHostReady()
+        )
     }
 
     var body: some View {
@@ -204,11 +230,13 @@ struct HomeView: View {
                             .padding(.top, logoTopPadding)
                             .padding(.bottom, logoBottomPadding)
 
-                        // Engine + Flow status now stays directly below the
-                        // logo so startup and recovery are always visible.
-                        scrollStatusFooter
-                            .padding(.horizontal, Spacing.lg)
-                            .padding(.bottom, extrasBottomPadding)
+                        // Connection status is transient: once Flow is ready,
+                        // content moves up and the card disappears completely.
+                        if showsFlowConnectionCard {
+                            scrollStatusFooter
+                                .padding(.horizontal, Spacing.lg)
+                                .padding(.bottom, extrasBottomPadding)
+                        }
 
                         HomeUsageStatsSection(layout: .stacked, compact: isCompact)
                             .padding(.horizontal, Spacing.lg)
@@ -226,13 +254,10 @@ struct HomeView: View {
         }
     }
 
-    /// Engine + Flow status — visible near the logo instead of at scroll bottom.
+    /// Compact Flow connection status — no engine/model details.
     private var scrollStatusFooter: some View {
         setupGuidanceCard {
-            engineStatusLine
             flowStatusFooter
-            Divider()
-            flowSessionExtras
         }
     }
 
@@ -243,7 +268,9 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: Spacing.lg) {
                 wideHeroHeader
 
-                scrollStatusFooter
+                if showsFlowConnectionCard {
+                    scrollStatusFooter
+                }
 
                 HomeUsageStatsSection(layout: .split)
 
@@ -494,8 +521,7 @@ struct HomeView: View {
                 .fill(flowStatusColor)
                 .frame(width: 6, height: 6)
 
-            if needsAPIKeySetup {
-                // 无按钮：引导卡片已提示去设置填 API Key。
+            if needsPermissionSetup || needsAPIKeySetup {
                 Text("home.flow.notReady")
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.warning)
@@ -532,8 +558,19 @@ struct HomeView: View {
                     .minimumScaleFactor(0.85)
             }
 
-            if needsAPIKeySetup {
-                // 无按钮：引导卡片已提示去设置填 API Key。
+            if needsPermissionSetup {
+                Button(action: handlePermissionGuidanceAction) {
+                    Text(
+                        AppPermissions.canRequestPermissionsInApp
+                            ? "home.setup.permission.request"
+                            : "home.flow.openSettings"
+                    )
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.accent)
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, Spacing.xs)
+            } else if needsAPIKeySetup {
                 EmptyView()
             } else if canRetryPiP {
                 Button {
@@ -582,69 +619,6 @@ struct HomeView: View {
             }
         }
         .animation(Motion.soft, value: flowManager.isActive)
-    }
-
-    // MARK: - Flow extras (warnings / hints)
-
-    @ViewBuilder
-    private var flowSessionExtras: some View {
-        if needsPermissionSetup {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                Text(AppPermissions.homePermissionGuidanceMessage)
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.warning)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button(action: handlePermissionGuidanceAction) {
-                    Text(
-                        AppPermissions.canRequestPermissionsInApp
-                            ? "home.setup.permission.request"
-                            : "home.flow.openSettings"
-                    )
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.accent)
-                }
-                .buttonStyle(.plain)
-            }
-        } else if let warning = flowManager.sessionWarning {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                Text(warning)
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.warning)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        } else if needsAPIKeySetup {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                Text(config.isLocalEngine
-                    ? "home.setup.polishKeyMissing"
-                    : "home.setup.cloudIncomplete")
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.warning)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        } else if shouldShowKeyboardHint {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                Text("home.setup.keyboardHint")
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(palette.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button {
-                    keyboardHintDismissed = true
-                    HomeGuideState.dismissKeyboardHint()
-                } label: {
-                    Text("home.setup.keyboardHint.dismiss")
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.accent)
-                }
-                .buttonStyle(.plain)
-            }
-        } else {
-            Text("home.flow.hint")
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textTertiary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, Spacing.sm)
-        }
     }
 
     private func setupGuidanceCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
@@ -696,22 +670,6 @@ struct HomeView: View {
         }
     }
 
-    private var engineStatusLine: some View {
-        Text(
-            EngineServiceLabel.summary(
-                engineMode: config.engineMode,
-                providerId: config.providerId,
-                model: config.model,
-                asrProviderId: config.asrProviderId,
-                asrModel: config.asrModel
-            )
-        )
-        .font(TypeStyle.caption2)
-        .foregroundStyle(palette.textSecondary)
-        .multilineTextAlignment(.center)
-        .fixedSize(horizontal: false, vertical: true)
-    }
-
     /// Rows shown inside the history / dictionary preview cards.
     private static let libraryPreviewLimit = 3
 
@@ -721,20 +679,4 @@ struct HomeView: View {
         formatter.timeStyle = .short
         return formatter
     }()
-}
-
-// MARK: - Home guidance persistence
-
-private enum HomeGuideState {
-    private static let keyboardHintDismissedKey = "home.keyboardHintDismissed"
-
-    static var isKeyboardHintDismissed: Bool {
-        guard AppGroup.isAvailable else { return false }
-        return AppGroup.defaults.bool(forKey: keyboardHintDismissedKey)
-    }
-
-    static func dismissKeyboardHint() {
-        guard AppGroup.isAvailable else { return }
-        AppGroup.defaults.set(true, forKey: keyboardHintDismissedKey)
-    }
 }

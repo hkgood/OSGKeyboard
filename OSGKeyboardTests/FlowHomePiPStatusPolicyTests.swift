@@ -82,6 +82,40 @@ final class FlowHomePiPStatusPolicyTests: XCTestCase {
         )
     }
 
+    func testConnectionCardDisappearsWhenSessionIsHealthy() {
+        XCTAssertFalse(
+            shouldShowConnectionCard(
+                lifecycle: .active,
+                isHostReady: true
+            )
+        )
+    }
+
+    func testConnectionCardRemainsVisibleWhilePreparingOrFailed() {
+        XCTAssertTrue(
+            shouldShowConnectionCard(
+                lifecycle: .preparing(attempt: 1, total: 3),
+                isHostReady: false
+            )
+        )
+        XCTAssertTrue(
+            shouldShowConnectionCard(
+                lifecycle: .failed(.timedOut),
+                isHostReady: false
+            )
+        )
+    }
+
+    func testNormalRecordingDoesNotBringConnectionCardBack() {
+        XCTAssertFalse(
+            shouldShowConnectionCard(
+                lifecycle: .active,
+                isRecording: true,
+                isHostReady: false
+            )
+        )
+    }
+
     private func descriptor(
         for lifecycle: FlowPiPLifecycleState
     ) -> FlowHomePiPStatusDescriptor {
@@ -92,6 +126,22 @@ final class FlowHomePiPStatusPolicyTests: XCTestCase {
             isProcessing: false,
             isActive: false,
             isHostReady: false
+        )
+    }
+
+    private func shouldShowConnectionCard(
+        lifecycle: FlowPiPLifecycleState,
+        isRecording: Bool = false,
+        isHostReady: Bool
+    ) -> Bool {
+        FlowHomePiPStatusPolicy.shouldShowConnectionCard(
+            lifecycle: lifecycle,
+            needsPermissionSetup: false,
+            needsAPIKeySetup: false,
+            hasSessionWarning: false,
+            isRecording: isRecording,
+            isProcessing: false,
+            isHostReady: isHostReady
         )
     }
 }
