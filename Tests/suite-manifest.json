@@ -47,6 +47,7 @@
         "OSGKeyboardTests/AnalyticsModelTests",
         "OSGKeyboardTests/AnalyticsRepositoryTests",
         "OSGKeyboardTests/AnalyticsUploadCoordinatorTests",
+        "OSGKeyboardTests/AnalyticsUploadSchedulingTests",
         "OSGKeyboardTests/AnalyticsAIOperationTests",
         "OSGKeyboardExtTests/AnalyticsExtensionPrivacyTests"
       ]

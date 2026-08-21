@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Focused skill icons**: remove math, indices, arrows, shapes, commerce, keyboard, media, text-formatting, automotive, device, and variable-rendering categories from the custom-skill symbol picker. / **精简技能图标**：从自定义技能图标选择器中移除数学、索引、箭头、形状、商业、键盘、媒体、文本格式、汽车、设备与可变渲染分类。
 
 ### Fixed
+- **Suspension-safe analytics**: batch uploads in the foreground or a system-granted refresh task, close SQLite outside authorized execution windows, and keep keyboard extensions recording-only to prevent system termination from database locks. / **安全挂起埋点**：仅在前台或系统授权的刷新任务中批量上传，在授权执行窗口之外关闭 SQLite，同时让键盘扩展仅负责记录，避免数据库锁触发系统终止。
 - **Permanent invitation links**: load the account-scoped server invitation profile after sign-in, cache it per account, and keep sharing the exact stable server URL across refreshes and offline failures. / **永久邀请链接**：登录后异步加载账号级服务端邀请资料，按账号缓存，并在刷新或离线失败时持续分享服务端返回的固定链接。
 - **Cross-process settings safety**: App Group updates now write only changed fields so a stale main-app or keyboard-extension snapshot cannot overwrite newer unrelated settings. / **跨进程设置安全**：App Group 更新现在只写入发生变化的字段，避免主 App 或键盘扩展的旧快照覆盖其他较新的设置。
 - **Account-data freshness**: Settings and Account now share one background-refreshed snapshot, preserve cached content on failure, retry transient read errors, and isolate optional referral outages from core account and credit updates. / **账号数据新鲜度**：设置页与账号页现在共用同一份后台刷新快照，刷新失败时保留缓存内容，对瞬时读取错误自动重试，并避免可选邀请接口故障影响账号与积分更新。

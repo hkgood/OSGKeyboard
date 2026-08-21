@@ -174,7 +174,7 @@ public struct AnalyticsRepositoryConfiguration: Sendable {
         maximumEventCount: Int = 10_000,
         maximumStoredBytes: Int = 5 * 1_024 * 1_024,
         eventRetention: TimeInterval = 34 * 24 * 60 * 60,
-        busyTimeoutMilliseconds: Int32 = 2_000
+        busyTimeoutMilliseconds: Int32 = 250
     ) {
         self.databaseURL = databaseURL
         self.maximumEventCount = max(1, maximumEventCount)

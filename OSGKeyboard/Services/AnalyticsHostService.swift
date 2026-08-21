@@ -12,40 +12,6 @@ import OSGKeyboardShared
 import OSLog
 import UIKit
 
-actor AnalyticsUploadSignal: AnalyticsUploadTriggering {
-    typealias Action = @Sendable () async -> Void
-
-    private var action: Action?
-    private var isScheduled = false
-    private let debounce: Duration
-
-    init(debounce: Duration = .milliseconds(250)) {
-        self.debounce = debounce
-    }
-
-    func install(_ action: @escaping Action) {
-        self.action = action
-    }
-
-    func requestUpload() {
-        guard !isScheduled, let action else { return }
-        isScheduled = true
-        Task {
-            try? await Task.sleep(for: debounce)
-            guard !Task.isCancelled else {
-                uploadFinished()
-                return
-            }
-            await action()
-            uploadFinished()
-        }
-    }
-
-    private func uploadFinished() {
-        isScheduled = false
-    }
-}
-
 final class HostAnalyticsBearerBridge: AnalyticsBearerProviding, @unchecked Sendable {
     static let shared = HostAnalyticsBearerBridge()
 
@@ -112,6 +78,12 @@ struct HostAnalyticsLogger: AnalyticsLogging {
 
 @MainActor
 final class AnalyticsHostService: ObservableObject {
+    private enum RequestedDatabaseAccess {
+        case uninitialized
+        case foreground
+        case suspended
+    }
+
     static let shared = AnalyticsHostService()
     static let backgroundTaskIdentifier = "com.osgkeyboard.ios.analytics-sync"
 
@@ -127,16 +99,24 @@ final class AnalyticsHostService: ObservableObject {
         qos: .utility
     )
     private var isMonitoringNetwork = false
-    private var foregroundUploadTask: Task<Void, Never>?
+    private var requestedDatabaseAccess = RequestedDatabaseAccess.uninitialized
+    private var databaseTransitionTask: Task<Void, Never>?
+    private var databaseTransitionGeneration = 0
+    private var firstOpenAcquisitionChannel = AnalyticsAcquisitionChannel.unknown
+    private var pendingAuthenticatedAccountID: UUID?
+    private var hasPendingAccountDeletion = false
+    private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier = .invalid
 
     init(
         bearerProvider: any AnalyticsBearerProviding = HostAnalyticsBearerBridge.shared,
-        network: any AnalyticsNetworking = URLSessionAnalyticsNetwork()
+        network: any AnalyticsNetworking = URLSessionAnalyticsNetwork(),
+        uploadPolicy: AnalyticsUploadPolicy = .mobileDefault
     ) {
-        let signal = AnalyticsUploadSignal()
+        let signal = AnalyticsUploadSignal(policy: uploadPolicy)
         uploadSignal = signal
+        let environment = Self.environment
         let runtime = AnalyticsRuntime.mainApp(
-            environment: Self.environment,
+            environment: environment,
             uploadConfiguration: AnalyticsUploadConfiguration(endpoint: Self.endpoint),
             network: network,
             bearerProvider: bearerProvider,
@@ -148,53 +128,64 @@ final class AnalyticsHostService: ObservableObject {
 
         Task {
             await signal.install {
-                await runtime.uploadCoordinator.uploadAvailableEvents(maximumBatches: 4)
+                guard !Task.isCancelled else { return }
+                await runtime.uploadCoordinator.uploadAvailableEvents(
+                    maximumBatches: uploadPolicy.maximumBatches
+                )
             }
         }
     }
 
     func prepare(firstOpenAcquisitionChannel: AnalyticsAcquisitionChannel) {
+        self.firstOpenAcquisitionChannel = firstOpenAcquisitionChannel
         startNetworkMonitoringIfNeeded()
-        Task {
-            await runtime.prepare(
-                firstOpenAcquisitionChannel: firstOpenAcquisitionChannel
-            )
-            let enabled = await runtime.isEnabled()
-            await MainActor.run {
-                self.isEnabled = enabled
-            }
-            client.recordSessionActivity()
-            await runtime.uploadCoordinator.uploadAvailableEvents(maximumBatches: 8)
-        }
     }
 
     func appDidBecomeActive() {
-        client.recordSessionActivity()
-        requestImmediateUpload(maximumBatches: 8)
+        requestForegroundDatabaseAccess()
+    }
+
+    func appWillResignActive() {
+        requestSuspendedDatabaseAccess()
     }
 
     func appDidEnterBackground() {
         Self.scheduleBackgroundRefresh()
-        let identifier = UIApplication.shared.beginBackgroundTask(
-            withName: "analytics-sync"
-        )
-        guard identifier != .invalid else { return }
-        let task = Task {
-            await runtime.uploadCoordinator.uploadAvailableEvents(maximumBatches: 2)
-            await MainActor.run {
-                UIApplication.shared.endBackgroundTask(identifier)
+        requestSuspendedDatabaseAccess()
+        guard backgroundTaskIdentifier == .invalid else { return }
+
+        var identifier: UIBackgroundTaskIdentifier = .invalid
+        identifier = UIApplication.shared.beginBackgroundTask(
+            withName: "analytics-quiescence"
+        ) { [weak self] in
+            Task { @MainActor in
+                self?.finishBackgroundTask(identifier)
             }
         }
-        foregroundUploadTask = task
+        guard identifier != .invalid else { return }
+        backgroundTaskIdentifier = identifier
+
+        let transitionTask = databaseTransitionTask
+        Task { [weak self] in
+            await transitionTask?.value
+            await MainActor.run {
+                self?.finishBackgroundTask(identifier)
+            }
+        }
     }
 
     func observeAuthenticatedAccount(_ accountID: UUID) async {
-        _ = await runtime.observeAccount(stableIdentifier: accountID.uuidString)
-        await runtime.uploadCoordinator.uploadAvailableEvents(maximumBatches: 8)
+        pendingAuthenticatedAccountID = accountID
+        let transitionTask = databaseTransitionTask
+        await transitionTask?.value
+        await processDeferredAccountWork()
     }
 
     func handleAccountDeletion() async {
-        await runtime.handleAccountDeletion()
+        hasPendingAccountDeletion = true
+        let transitionTask = databaseTransitionTask
+        await transitionTask?.value
+        await processDeferredAccountWork()
     }
 
     func setEnabled(_ enabled: Bool) {
@@ -205,7 +196,7 @@ final class AnalyticsHostService: ObservableObject {
                 self.isEnabled = current
             }
             if current {
-                await runtime.uploadCoordinator.uploadAvailableEvents(maximumBatches: 4)
+                await uploadSignal.requestActivationUpload()
             }
         }
     }
@@ -219,15 +210,6 @@ final class AnalyticsHostService: ObservableObject {
         }
     }
 
-    func requestImmediateUpload(maximumBatches: Int = 4) {
-        foregroundUploadTask?.cancel()
-        foregroundUploadTask = Task {
-            await runtime.uploadCoordinator.uploadAvailableEvents(
-                maximumBatches: maximumBatches
-            )
-        }
-    }
-
     static func registerBackgroundTask() {
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: backgroundTaskIdentifier,
@@ -238,10 +220,12 @@ final class AnalyticsHostService: ObservableObject {
                 return
             }
             let operation = Task {
-                await AnalyticsHostService.shared.runtime.uploadCoordinator
-                    .uploadAvailableEvents(maximumBatches: 4)
-                refreshTask.setTaskCompleted(success: !Task.isCancelled)
-                scheduleBackgroundRefresh()
+                let success = await AnalyticsHostService.shared
+                    .performBackgroundRefresh()
+                refreshTask.setTaskCompleted(success: success)
+                if success {
+                    scheduleBackgroundRefresh()
+                }
             }
             refreshTask.expirationHandler = {
                 operation.cancel()
@@ -260,11 +244,116 @@ final class AnalyticsHostService: ObservableObject {
         isMonitoringNetwork = true
         pathMonitor.pathUpdateHandler = { path in
             guard path.status == .satisfied else { return }
-            Task { @MainActor in
-                AnalyticsHostService.shared.requestImmediateUpload(maximumBatches: 8)
+            Task {
+                await AnalyticsHostService.shared.uploadSignal
+                    .requestActivationUpload()
             }
         }
         pathMonitor.start(queue: monitorQueue)
+    }
+
+    private func requestForegroundDatabaseAccess() {
+        guard requestedDatabaseAccess != .foreground else { return }
+        requestedDatabaseAccess = .foreground
+        databaseTransitionGeneration += 1
+        let generation = databaseTransitionGeneration
+        let previous = databaseTransitionTask
+        let runtime = runtime
+        let signal = uploadSignal
+        let client = client
+        let acquisitionChannel = firstOpenAcquisitionChannel
+        let task = Task { [weak self] in
+            await previous?.value
+            await runtime.repository.resumeDatabaseAccess()
+            await runtime.prepare(
+                firstOpenAcquisitionChannel: acquisitionChannel
+            )
+            let enabled = await runtime.isEnabled()
+            await self?.processDeferredAccountWork()
+            await signal.setActive(true)
+            client.recordSessionActivity()
+            await signal.requestActivationUpload()
+            await MainActor.run {
+                guard let self else { return }
+                self.isEnabled = enabled
+                self.finishDatabaseTransition(generation: generation)
+            }
+        }
+        databaseTransitionTask = task
+    }
+
+    private func requestSuspendedDatabaseAccess() {
+        guard requestedDatabaseAccess != .suspended else { return }
+        requestedDatabaseAccess = .suspended
+        databaseTransitionGeneration += 1
+        let generation = databaseTransitionGeneration
+        let previous = databaseTransitionTask
+        let runtime = runtime
+        let signal = uploadSignal
+        let task = Task { [weak self] in
+            await previous?.value
+            await signal.pauseAndWait()
+            await runtime.repository.suspendDatabaseAccess()
+            await MainActor.run {
+                self?.finishDatabaseTransition(generation: generation)
+            }
+        }
+        databaseTransitionTask = task
+    }
+
+    private func processDeferredAccountWork() async {
+        guard requestedDatabaseAccess == .foreground else { return }
+
+        if hasPendingAccountDeletion {
+            await runtime.handleAccountDeletion()
+            hasPendingAccountDeletion = false
+        }
+
+        guard let accountID = pendingAuthenticatedAccountID else { return }
+        let observation = await runtime.observeAccount(
+            stableIdentifier: accountID.uuidString
+        )
+        guard requestedDatabaseAccess == .foreground else { return }
+        if case .unavailable = observation {
+            return
+        }
+        pendingAuthenticatedAccountID = nil
+        await uploadSignal.requestActivationUpload()
+    }
+
+    private func performBackgroundRefresh() async -> Bool {
+        let transitionTask = databaseTransitionTask
+        await transitionTask?.value
+        guard !Task.isCancelled else { return false }
+
+        await runtime.repository.resumeDatabaseAccess()
+
+        await runtime.uploadCoordinator.uploadAvailableEvents(maximumBatches: 1)
+        let success = !Task.isCancelled
+
+        if requestedDatabaseAccess != .foreground {
+            await runtime.repository.suspendDatabaseAccess()
+            // A foreground transition may race the final close while this
+            // actor is re-entrant. Re-open if it won during the suspension.
+            if requestedDatabaseAccess == .foreground {
+                await runtime.repository.resumeDatabaseAccess()
+            }
+        }
+        return success
+    }
+
+    private func finishDatabaseTransition(generation: Int) {
+        guard databaseTransitionGeneration == generation else { return }
+        databaseTransitionTask = nil
+    }
+
+    private func finishBackgroundTask(_ identifier: UIBackgroundTaskIdentifier) {
+        guard identifier != .invalid,
+              backgroundTaskIdentifier == identifier else {
+            return
+        }
+        UIApplication.shared.endBackgroundTask(identifier)
+        backgroundTaskIdentifier = .invalid
     }
 
     private static let endpoint = URL(

@@ -8,6 +8,38 @@ import Foundation
 import XCTest
 
 final class AnalyticsExtensionPrivacyTests: XCTestCase {
+    func testKeyboardRuntimeRecordsWithoutAutomaticallyUploading() async throws {
+        let network = ExtensionAnalyticsNetwork()
+        let runtime = AnalyticsRuntime.keyboardExtension(
+            environment: AnalyticsEnvironment(appVersion: "2.0.0", osVersion: "26.0"),
+            repositoryConfiguration: AnalyticsRepositoryConfiguration(
+                databaseURL: try temporaryDatabaseURL()
+            ),
+            uploadConfiguration: AnalyticsUploadConfiguration(
+                endpoint: URL(string: "https://analytics.test/v1/events")!
+            ),
+            network: network,
+            wallClock: ExtensionAnalyticsClock(),
+            monotonicClock: ExtensionAnalyticsMonotonicClock(),
+            uuidGenerator: ExtensionAnalyticsUUIDGenerator(),
+            random: ExtensionAnalyticsRandomGenerator()
+        )
+
+        runtime.client.recordKeyboardActivated()
+        for _ in 0..<200 {
+            if await runtime.repository.debugSnapshot().pendingEvents.count == 1 {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        try await Task.sleep(for: .milliseconds(50))
+
+        let pendingSnapshot = await runtime.repository.debugSnapshot()
+        let requests = await network.requests()
+        XCTAssertEqual(pendingSnapshot.pendingEvents.count, 1)
+        XCTAssertTrue(requests.isEmpty)
+    }
+
     func testKeyboardRuntimeUploadsWithoutAuthorizationOrSensitiveInputFields() async throws {
         let databaseURL = try temporaryDatabaseURL()
         let network = ExtensionAnalyticsNetwork()

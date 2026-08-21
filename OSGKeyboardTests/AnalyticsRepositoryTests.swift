@@ -452,6 +452,37 @@ final class AnalyticsRepositoryTests: XCTestCase {
         eventTypes = await repository.debugSnapshot().pendingEvents.compactMap(\.eventType)
         XCTAssertEqual(Set(eventTypes), [.firstOpen, .aiFeatureSucceeded])
     }
+
+    func testSuspendedDatabaseDropsRecordsUntilExplicitResume() async throws {
+        let repository = AnalyticsRepository(
+            configuration: AnalyticsRepositoryConfiguration(
+                databaseURL: try analyticsTemporaryDatabaseURL()
+            ),
+            clock: AnalyticsTestWallClock(),
+            uuidGenerator: AnalyticsTestUUIDGenerator()
+        )
+        await repository.record(
+            eventType: .keyboardActivated,
+            context: analyticsTestContext
+        )
+
+        await repository.suspendDatabaseAccess()
+        await repository.record(
+            eventType: .keyboardActivated,
+            context: analyticsTestContext
+        )
+        let suspendedSnapshot = await repository.debugSnapshot()
+        XCTAssertFalse(suspendedSnapshot.isAvailable)
+
+        await repository.resumeDatabaseAccess()
+        await repository.record(
+            eventType: .keyboardActivated,
+            context: analyticsTestContext
+        )
+        let resumedSnapshot = await repository.debugSnapshot()
+        XCTAssertTrue(resumedSnapshot.isAvailable)
+        XCTAssertEqual(resumedSnapshot.pendingEvents.count, 2)
+    }
 }
 
 private extension Array {

@@ -96,6 +96,7 @@ public actor AnalyticsRepository {
     private let clock: any AnalyticsWallClock
     private let uuidGenerator: any AnalyticsUUIDGenerating
     private var database: SQLiteDatabase?
+    private var isDatabaseAccessSuspended = false
 
     public init(
         configuration: AnalyticsRepositoryConfiguration = .appGroupDefault(),
@@ -105,6 +106,19 @@ public actor AnalyticsRepository {
         self.configuration = configuration
         self.clock = clock
         self.uuidGenerator = uuidGenerator
+    }
+
+    /// Re-enables process-local access before foreground or BGTask work.
+    public func resumeDatabaseAccess() {
+        isDatabaseAccessSuspended = false
+    }
+
+    /// Runs after earlier actor operations, then closes the process-local
+    /// connection. Later fire-and-forget records become best-effort no-ops
+    /// until an explicitly authorized execution window resumes access.
+    public func suspendDatabaseAccess() {
+        isDatabaseAccessSuspended = true
+        database = nil
     }
 
     /// The host calls this only after cold-start attribution has been resolved.
@@ -926,6 +940,7 @@ public actor AnalyticsRepository {
     // MARK: - Metadata and setup
 
     private func openDatabaseIfNeeded() -> SQLiteDatabase? {
+        guard !isDatabaseAccessSuspended else { return nil }
         if let database {
             return database
         }

@@ -84,6 +84,9 @@ struct MainAppRoot: View {
             analytics.prepare(
                 firstOpenAcquisitionChannel: firstOpenAcquisitionChannel
             )
+            if scenePhase == .active {
+                analytics.appDidBecomeActive()
+            }
             OSGDiag.log(
                 "MainAppRoot.onAppear scene=\(String(describing: scenePhase)) "
                     + "onboarding=\(config.hasCompletedOnboarding) \(OSGDiag.memoryTag())",
@@ -152,6 +155,8 @@ struct MainAppRoot: View {
             flowManager.handleScenePhase(phase)
             if phase == .active {
                 analytics.appDidBecomeActive()
+            } else if phase == .inactive {
+                analytics.appWillResignActive()
             } else if phase == .background {
                 analytics.appDidEnterBackground()
             }
