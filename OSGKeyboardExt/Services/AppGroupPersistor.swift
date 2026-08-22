@@ -119,6 +119,11 @@ public struct AppGroupPersistor {
             userCatalog: store.agentUserSkillCatalog,
             uiLanguage: language
         )
+        state.clipboardSkillCatalog = AIClipboardSkillCatalog.all(
+            officialCatalog: store.officialSkillCatalog,
+            userCatalog: store.agentUserSkillCatalog,
+            uiLanguage: language
+        )
     }
 
     /// Cloud without ASR/LLM keys blocks the mic. Local ASR still works when

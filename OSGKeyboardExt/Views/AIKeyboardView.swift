@@ -34,6 +34,7 @@ struct AIKeyboardView: View {
         static let skillCellSpacing: CGFloat = 10
         static let pageDotSize: CGFloat = 5
         static let skillPaginationBottomInset: CGFloat = 6
+        static let maximumSemanticSkills = 5
     }
 
     #if DEBUG
@@ -109,7 +110,7 @@ struct AIKeyboardView: View {
             selectedSkillPage = 0
             resetCarousel()
         }
-        .onChange(of: state.enabledClipboardSkills) { _, _ in
+        .onChange(of: state.clipboardSkillCatalog) { _, _ in
             selectedSkillPage = 0
             resetCarousel()
         }
@@ -583,13 +584,14 @@ struct AIKeyboardView: View {
         guard let newest = clipboardHistory.newestEntry,
               let snapshot = semanticRanking.snapshot,
               snapshot.entryID == newest.id else {
-            return state.enabledClipboardSkills
+            return []
         }
-        return ClipboardSkillSemanticRanker.ranked(
-            skills: state.enabledClipboardSkills,
+        return ClipboardSkillSemanticRanker.recommended(
+            skills: state.clipboardSkillCatalog,
             sourceText: newest.text,
             analysis: snapshot.analysis,
-            uiLanguage: state.uiLanguage
+            uiLanguage: state.uiLanguage,
+            limit: Layout.maximumSemanticSkills
         )
     }
 

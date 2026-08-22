@@ -119,6 +119,32 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         XCTAssertEqual(ranked, baseline)
     }
 
+    func testRecommendationsSelectOnlySemanticallyRelevantSkills() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "北京市朝阳区望京街 10 号，到了给我电话。",
+            analysis: analysis(hasAddress: true),
+            uiLanguage: .chinese,
+            limit: 5
+        ).map(\.id)
+
+        XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.navigateID])
+        XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.summarizeID))
+        XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.translateID))
+    }
+
+    func testRecommendationsStayEmptyWhenNoSemanticLabelMatches() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "知道了",
+            analysis: analysis(),
+            uiLanguage: .chinese,
+            limit: 5
+        ).map(\.id)
+
+        XCTAssertTrue(recommendations.isEmpty)
+    }
+
     private func rank(
         text: String,
         analysis: ClipboardSemanticAnalysis

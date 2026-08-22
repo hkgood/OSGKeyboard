@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Local clipboard semantics**: add reproducible bilingual Create ML training, self-contained on-device classifiers for tasks, questions, invitations, complaints, and sentiment, plus deterministic language, date, address, phone, URL, person, and organization labels without uploading clipboard text. / **本地剪贴板语义**：新增可复现的中英语料与 Create ML 训练流程，以及任务、问句、邀约、投诉和情感的端侧自包含分类器，并结合确定性的语言、日期、地址、电话、URL、人名和组织名标签，全程不上传剪贴板原文。
-- **Contextual clipboard skills**: install the complete built-in skill catalog by default, add source-language, invitation, task, clarification, empathy, business, conclusion, and list actions, remove the eight-skill cap, and rank keyboard skills ephemerally from local clipboard labels while preserving the user's saved order. / **情境化剪贴板技能**：默认安装完整内置技能目录，新增原语言回复、邀约、任务、澄清、共情、商务、结论与清单操作，移除八个技能上限，并根据本地剪贴板标签临时智能排序，同时保留用户保存的长期顺序。
+- **Contextual clipboard skills**: add source-language, invitation, task, clarification, empathy, business, conclusion, and list actions, then select up to five relevant keyboard skills from the complete catalog using ephemeral local clipboard labels, independent of installation state or user-managed ordering. / **情境化剪贴板技能**：新增原语言回复、邀约、任务、澄清、共情、商务、结论与清单操作，并通过本地临时剪贴板标签从完整目录中自动选出最多五个相关技能，不再依赖安装状态或用户管理的固定顺序。
 - **Learned speaking styles**: unlock user-initiated style generation after 5,000 effective dictation characters, prioritize recurring native speech and explicit user edits, use historical polish prompts only to subtract AI-added style, and require review before saving. / **学习说话风格**：累积 5,000 个有效听写字符后，可优先根据反复出现的原生口述与用户明确编辑生成个人风格，历史润色 Prompt 仅用于排除 AI 附加风格，并在保存前强制检查。
 
 ### Changed

@@ -402,7 +402,7 @@ final class AIKeyboardCoordinator {
     }
 
     private func resolvedSkill(id: String) -> AIClipboardSkill? {
-        state.enabledClipboardSkills.first { $0.id == id }
+        state.clipboardSkillCatalog.first { $0.id == id }
     }
 
     /// Parse an export skill. Empty → in-keyboard tip, stay in the host app.

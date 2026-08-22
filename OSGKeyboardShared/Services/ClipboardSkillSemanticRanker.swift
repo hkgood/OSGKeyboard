@@ -1,9 +1,9 @@
 // ClipboardSkillSemanticRanker.swift
 // OSGKeyboard · Shared
 //
-// Keeps the user's saved skill order as the stable fallback, then temporarily
-// promotes relevant skills for the newest accepted clipboard entry. Analysis
-// is local and ephemeral; neither labels nor reordered IDs are persisted.
+// Selects skills from the complete catalog for the newest accepted clipboard
+// entry. Analysis is local and ephemeral; installation state, user-managed
+// ordering, labels, and recommendations are never persisted.
 
 import Combine
 import Foundation
@@ -19,7 +19,40 @@ public enum ClipboardSkillSemanticRanker {
         uiLanguage: AppUILanguage
     ) -> [AIClipboardSkill] {
         guard skills.count > 1 else { return skills }
+        return sorted(
+            skills,
+            scores: relevanceScores(
+                sourceText: sourceText,
+                analysis: analysis,
+                uiLanguage: uiLanguage
+            )
+        )
+    }
 
+    /// Returns only skills supported by current semantic evidence. No matching
+    /// label produces no recommendation instead of a fixed fallback row.
+    public static func recommended(
+        skills: [AIClipboardSkill],
+        sourceText: String,
+        analysis: ClipboardSemanticAnalysis,
+        uiLanguage: AppUILanguage,
+        limit: Int
+    ) -> [AIClipboardSkill] {
+        guard limit > 0 else { return [] }
+        let scores = relevanceScores(
+            sourceText: sourceText,
+            analysis: analysis,
+            uiLanguage: uiLanguage
+        )
+        let relevant = skills.filter { scores[$0.id, default: 0] > 0 }
+        return Array(sorted(relevant, scores: scores).prefix(limit))
+    }
+
+    private static func relevanceScores(
+        sourceText: String,
+        analysis: ClipboardSemanticAnalysis,
+        uiLanguage: AppUILanguage
+    ) -> [String: Int] {
         var scores: [String: Int] = [:]
         func boost(_ id: String, _ value: Int) {
             scores[id, default: 0] += value
@@ -71,6 +104,8 @@ public enum ClipboardSkillSemanticRanker {
         if analysis.hasOrganizationName,
            analysis.task.isDetected || analysis.question.isDetected || analysis.invitation.isDetected {
             boost(AIClipboardSkillCatalog.businessReplyID, 125)
+        } else if analysis.hasOrganizationName {
+            boost(AIClipboardSkillCatalog.businessReplyID, 70)
         }
 
         if isListLike(sourceText) {
@@ -84,7 +119,16 @@ public enum ClipboardSkillSemanticRanker {
             boost(AIClipboardSkillCatalog.extractConclusionsID, 125)
             boost(AIClipboardSkillCatalog.saveToNotesID, 85)
         }
+        if analysis.sentiment == .positive {
+            boost(AIClipboardSkillCatalog.replyID, 45)
+        }
+        return scores
+    }
 
+    private static func sorted(
+        _ skills: [AIClipboardSkill],
+        scores: [String: Int]
+    ) -> [AIClipboardSkill] {
         let baseline = Dictionary(
             uniqueKeysWithValues: skills.enumerated().map { ($0.element.id, $0.offset) }
         )
