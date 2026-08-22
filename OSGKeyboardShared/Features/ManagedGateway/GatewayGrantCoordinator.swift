@@ -14,18 +14,25 @@ public actor GatewayGrantCoordinator {
     private let store: any GatewayGrantCredentialStore
     private let session: URLSession
     private let now: @Sendable () -> Date
+    private let refreshPath: String
+    private let accountAccessPolicy: any ManagedGatewayAccountAccessAuthorizing
     private var refreshTask: Task<ManagedGatewayGrantCredentials, Error>?
 
     public init(
         baseURL: URL = GatewayGrantCoordinator.defaultBaseURL,
         store: any GatewayGrantCredentialStore = GatewayGrantKeychainStore(),
         session: URLSession = .shared,
-        now: @escaping @Sendable () -> Date = Date.init
+        refreshPath: String = "v1/gateway/grants/refresh",
+        now: @escaping @Sendable () -> Date = Date.init,
+        accountAccessPolicy: any ManagedGatewayAccountAccessAuthorizing =
+            AppGroupManagedGatewayAccountAccessPolicy()
     ) {
         self.baseURL = baseURL
         self.store = store
         self.session = session
+        self.refreshPath = refreshPath
         self.now = now
+        self.accountAccessPolicy = accountAccessPolicy
     }
 
     /// Host-only integration point. The account access token authorizes grant
@@ -73,6 +80,12 @@ public actor GatewayGrantCoordinator {
         for scope: ManagedGatewayCapability,
         forceRefresh: Bool = false
     ) async throws -> String {
+        // A valid cached grant is not proof of a current account session.
+        // Check this before loading or refreshing credentials so signed-out
+        // callers cannot consume credits through stale Keychain state.
+        guard accountAccessPolicy.allowsAccountManagedAccess() else {
+            throw ManagedGatewayError.missingGrant
+        }
         guard let credentials = try await store.load() else {
             throw ManagedGatewayError.missingGrant
         }
@@ -123,7 +136,7 @@ public actor GatewayGrantCoordinator {
             let refreshToken: String
         }
 
-        var request = URLRequest(url: endpoint("v1/gateway/grants/refresh"))
+        var request = URLRequest(url: endpoint(refreshPath))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(
@@ -230,6 +243,8 @@ enum ManagedGatewayHTTP {
         switch code.lowercased() {
         case "insufficient_credits", "insufficient_balance", "credit_balance_insufficient":
             return .insufficientCredits
+        case "oobe_feature_already_used":
+            return .oobeFeatureAlreadyUsed
         case "unauthorized", "invalid_gateway_refresh", "gateway_grant_denied", "invalid_grant":
             return .invalidGrant
         default:

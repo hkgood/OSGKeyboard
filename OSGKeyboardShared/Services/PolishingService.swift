@@ -36,10 +36,21 @@ public actor PolishingService {
     public struct PolishOutcome: Sendable, Equatable {
         public let text: String
         public let qualityDegraded: Bool
+        /// Exact personality snapshot used by a normal polish request.
+        /// Translation and caller-supplied system prompts leave these nil.
+        public let polishStyleID: String?
+        public let polishStylePrompt: String?
 
-        public init(text: String, qualityDegraded: Bool = false) {
+        public init(
+            text: String,
+            qualityDegraded: Bool = false,
+            polishStyleID: String? = nil,
+            polishStylePrompt: String? = nil
+        ) {
             self.text = text
             self.qualityDegraded = qualityDegraded
+            self.polishStyleID = polishStyleID
+            self.polishStylePrompt = polishStylePrompt
         }
     }
 
@@ -55,6 +66,7 @@ public actor PolishingService {
         let providerIdOverride: String?
         let taskKind: ManagedGatewayTaskKind?
         let requestPurpose: ManagedGatewayRequestPurpose?
+        let oobeFeature: ManagedGatewayOOBEFeature?
         let context: PolishContext?
     }
 
@@ -115,6 +127,7 @@ public actor PolishingService {
         providerIdOverride: String? = nil,
         taskKind: ManagedGatewayTaskKind? = nil,
         requestPurpose: ManagedGatewayRequestPurpose? = nil,
+        oobeFeature: ManagedGatewayOOBEFeature? = nil,
         context: PolishContext? = nil
     ) async throws -> String {
         try await performPolish(
@@ -125,6 +138,7 @@ public actor PolishingService {
                 providerIdOverride: providerIdOverride,
                 taskKind: taskKind,
                 requestPurpose: requestPurpose,
+                oobeFeature: oobeFeature,
                 context: context
             )
         ).text
@@ -139,6 +153,7 @@ public actor PolishingService {
         providerIdOverride: String? = nil,
         taskKind: ManagedGatewayTaskKind? = nil,
         requestPurpose: ManagedGatewayRequestPurpose? = nil,
+        oobeFeature: ManagedGatewayOOBEFeature? = nil,
         context: PolishContext? = nil
     ) async throws -> PolishOutcome {
         try await performPolish(
@@ -149,6 +164,7 @@ public actor PolishingService {
                 providerIdOverride: providerIdOverride,
                 taskKind: taskKind,
                 requestPurpose: requestPurpose,
+                oobeFeature: oobeFeature,
                 context: context
             )
         )
@@ -161,29 +177,39 @@ public actor PolishingService {
         let providerIdOverride = request.providerIdOverride
         let taskKind = request.taskKind
         let requestPurpose = request.requestPurpose
+        let oobeFeature = request.oobeFeature
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw PolishError.noTranscript }
 
         let resolvedContext = resolveContext(override: request.context)
-        let activeStyleID = store.activePolishStyleId
+        // Resolve once so prompt construction, output validation, and history
+        // metadata all describe the same immutable style even if settings change
+        // while the request is in flight.
+        let activeStyle = PolishStylePackCatalog.resolve(
+            id: store.activePolishStyleId,
+            userCatalog: store.polishStyleCatalog
+        )
 
         // Two-tier short-circuit: ultra-short always; 5–10 CJK only for
         // low-value acks/closings (see TranscriptPostProcessor).
         if mode == .polish,
+           requestPurpose != .oobe,
            systemPrompt == nil || systemPrompt?.isEmpty == true,
            TranscriptPostProcessor.shouldSkipLLM(
                for: trimmed,
-               styleID: activeStyleID
+               styleID: activeStyle.id
            ) {
             FlowTrace.polish(
                 "skippedLLM",
-                "style=\(activeStyleID) intensity=\(store.polishIntensity.rawValue) "
+                "style=\(activeStyle.id) intensity=\(store.polishIntensity.rawValue) "
                     + "inputLen=\(trimmed.count)"
             )
             return PolishOutcome(text: TranscriptPostProcessor.localClean(trimmed))
         }
 
-        if injectedClient == nil, store.credentialSource == .byok {
+        if injectedClient == nil,
+           store.credentialSource == .byok,
+           requestPurpose != .oobe {
             let providerId = Self.resolvedProviderId(store: store, providerIdOverride: providerIdOverride)
             let hasPolishKey = Self.hasPolishAPIKey(store: store, providerId: providerId)
             guard hasPolishKey else {
@@ -207,7 +233,9 @@ public actor PolishingService {
                 providerIdOverride: providerIdOverride,
                 taskKind: taskKind,
                 requestPurpose: requestPurpose,
-                context: resolvedContext
+                oobeFeature: oobeFeature,
+                context: resolvedContext,
+                activeStyle: activeStyle
             )
             operation.succeed()
         } catch {
@@ -222,7 +250,11 @@ public actor PolishingService {
 
         return PolishOutcome(
             text: remoteResult.text,
-            qualityDegraded: remoteResult.qualityDegraded
+            qualityDegraded: remoteResult.qualityDegraded,
+            polishStyleID: remoteResult.qualityDegraded ? nil : activeStyle.id,
+            polishStylePrompt: remoteResult.qualityDegraded
+                ? nil
+                : PolishStylePackCatalog.runtimePersonality(for: activeStyle)
         )
     }
 
@@ -259,7 +291,7 @@ public actor PolishingService {
                 return .insufficientCredits
             case .timeout:
                 return .timeout
-            case .missingGrant, .scopeNotGranted, .invalidGrant:
+            case .missingGrant, .scopeNotGranted, .invalidGrant, .oobeFeatureAlreadyUsed:
                 return .validation
             case .server:
                 return .provider
@@ -296,7 +328,9 @@ public actor PolishingService {
         providerIdOverride: String? = nil,
         taskKind: ManagedGatewayTaskKind? = nil,
         requestPurpose: ManagedGatewayRequestPurpose? = nil,
-        context: PolishContext
+        oobeFeature: ManagedGatewayOOBEFeature? = nil,
+        context: PolishContext,
+        activeStyle: PolishStylePack
     ) async throws -> RemotePolishResult {
         let effectiveProviderId = Self.resolvedProviderId(
             store: store,
@@ -305,10 +339,11 @@ public actor PolishingService {
         let client: LLMClient
         if let injectedClient {
             client = injectedClient
-        } else if store.credentialSource == .managed {
+        } else if store.credentialSource == .managed || requestPurpose == .oobe {
             client = store.makeClient(
                 taskKind: taskKind ?? Self.managedGatewayTaskKind(for: mode),
-                requestPurpose: requestPurpose
+                requestPurpose: requestPurpose,
+                oobeFeature: oobeFeature
             )
         } else {
             let preset = LLMProvider.provider(id: effectiveProviderId)
@@ -340,7 +375,8 @@ public actor PolishingService {
                 prompt = buildPrompt(
                     for: trimmed,
                     context: context,
-                    providerId: effectiveProviderId
+                    providerId: effectiveProviderId,
+                    style: activeStyle
                 )
             case .translate(let targetLocaleId):
                 let target = TranslationLanguageCatalog.resolve(targetLocaleId)
@@ -356,7 +392,7 @@ public actor PolishingService {
         let usesHeavyFunPersonality = mode == .polish
             && (systemPrompt == nil || systemPrompt?.isEmpty == true)
             && PolishStylePackCatalog.usesFormattingOnlyPipeline(
-                id: store.activePolishStyleId,
+                id: activeStyle.id,
                 intensity: store.polishIntensity
             )
         let firstOptions: LLMGenerationOptions = usesHeavyFunPersonality
@@ -369,7 +405,8 @@ public actor PolishingService {
             usesHeavyFunPersonality: usesHeavyFunPersonality,
             options: firstOptions,
             context: context,
-            inputLength: trimmed.count
+            inputLength: trimmed.count,
+            styleID: activeStyle.id
         )
         let userPayload: String
         if mode == .polish, systemPrompt == nil || systemPrompt?.isEmpty == true {
@@ -391,10 +428,6 @@ public actor PolishingService {
 
         // One prompt, one model request. Deterministic validation may reject a
         // result locally, but it never starts a second polish request.
-        let activeStyle = PolishStylePackCatalog.resolve(
-            id: store.activePolishStyleId,
-            userCatalog: store.polishStyleCatalog
-        )
         let firstCandidate = TranscriptPostProcessor.process(
             original: trimmed,
             llmOutput: first,
@@ -451,14 +484,15 @@ public actor PolishingService {
         usesHeavyFunPersonality: Bool,
         options: LLMGenerationOptions,
         context: PolishContext,
-        inputLength: Int
+        inputLength: Int,
+        styleID: String
     ) {
         let hasOverride = !(systemPromptOverride ?? "").isEmpty
         let fingerprint = PolishPromptComposer.fingerprint(of: prompt)
         let temperature = options.temperature.map { String(format: "%.2f", $0) } ?? "nil"
         FlowTrace.polish(
             "config",
-            "style=\(store.activePolishStyleId) intensity=\(store.polishIntensity.rawValue) "
+            "style=\(styleID) intensity=\(store.polishIntensity.rawValue) "
                 + "mode=\(Self.polishModeLabel(mode)) heavyFun=\(usesHeavyFunPersonality ? 1 : 0) "
                 + "override=\(hasOverride ? 1 : 0) temp=\(temperature) "
                 + "inputLen=\(inputLength) beforeLen=\(context.precedingForPrompt?.count ?? 0) "
@@ -486,15 +520,29 @@ public actor PolishingService {
         context: PolishContext,
         providerId: String
     ) -> String {
+        let style = PolishStylePackCatalog.resolve(
+            id: store.activePolishStyleId,
+            userCatalog: store.polishStyleCatalog
+        )
+        return buildPrompt(
+            for: text,
+            context: context,
+            providerId: providerId,
+            style: style
+        )
+    }
+
+    private func buildPrompt(
+        for text: String,
+        context: PolishContext,
+        providerId: String,
+        style: PolishStylePack
+    ) -> String {
         let dictionaryBlock = Self.mergedDictionaryBlock(
             dictionary: store.personalDictionary,
             supplement: context.dictionarySupplement
         )
         let useChinese = Self.shouldUseChineseGuidance(inputText: text, providerId: providerId)
-        let style = PolishStylePackCatalog.resolve(
-            id: store.activePolishStyleId,
-            userCatalog: store.polishStyleCatalog
-        )
         return PolishPromptComposer.compose(
             text: text,
             style: style,

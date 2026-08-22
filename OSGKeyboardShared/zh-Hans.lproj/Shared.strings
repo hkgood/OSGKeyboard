@@ -12,6 +12,7 @@
 "flow.warning.polishDegradedQuality" = "本次润色结果未通过校验，已插入保守处理版本。";
 "flow.warning.managedInsufficientCredits" = "积分不足，本次已插入原始识别结果；请打开主 App 的「账户」页充值。";
 "flow.warning.managedGrantRejected" = "托管服务授权已失效，本次已插入原始识别结果；请打开主 App 重新连接账号。";
+"flow.warning.oobeFeatureAlreadyUsed" = "当前体验页面已经完成，请返回 App 继续。";
 
 /* LLM providers */
 "provider.openai" = "OpenAI";
@@ -71,6 +72,7 @@
 "managed.error.scopeNotGranted" = "托管服务缺少 %@ 权限，请打开主 App 重新连接账号。";
 "managed.error.grantRejected" = "托管服务授权已失效，请打开主 App 重新连接账号。";
 "managed.error.insufficientCredits" = "积分不足，请打开主 App 的「账户」页充值。";
+"managed.error.oobeFeatureAlreadyUsed" = "当前体验页面已经完成，请返回 App 继续。";
 "managed.error.timeout" = "托管服务请求超时，请检查网络后重试。";
 "managed.error.server" = "托管服务失败（%1$@，HTTP %2$lld），请稍后重试。";
 "managed.asr.error.invalidConfiguration" = "托管语音设置无效，请打开主 App 重新选择服务。";
@@ -185,6 +187,20 @@
 "mac.styles.allowsAddedEmoji.hint" = "开启后，润色可按原文情绪点缀少量 emoji，并保留上屏。默认关闭。";
 "mac.styles.prompt" = "完整提示词";
 "mac.styles.hint" = "使用 {{DICTIONARY}} 指定个人词典位置；系统规则会自动追加。";
+"mac.styles.learn.title" = "学习并生成我的说话风格";
+"mac.styles.learn.body" = "学习你反复出现的说话习惯；历史润色 Prompt 只用于排除 AI 附加的风格。";
+"mac.styles.learn.progress" = "%lld / %lld 个有效字符";
+"mac.styles.learn.remaining" = "还需 %lld 个";
+"mac.styles.learn.ready" = "可以开始生成";
+"mac.styles.learn.action" = "生成我的风格";
+"mac.styles.learn.generating" = "正在学习…";
+"mac.styles.learn.privacy" = "只有点击生成后，符合条件的文本和历史风格 Prompt 才会发送给你配置的 AI；保存前可以先检查。";
+"mac.styles.learn.limit" = "请先删除一个自定义风格，再生成新风格。";
+"mac.styles.learn.error.insufficient" = "请继续听写，累积到 5,000 个有效字符后再生成。";
+"mac.styles.learn.error.invalidResponse" = "AI 没有返回有效的润色风格，请重试。";
+"mac.styles.learn.error.promptTooLong" = "生成的 Prompt 超过 6,000 个字符，请重试。";
+"mac.styles.learn.error.requestTooLarge" = "学习语料超过当前 AI 服务的请求上限，请缩短异常过长的历史记录后重试。";
+"mac.styles.learn.error.request" = "无法通过当前配置的 AI 服务生成风格，请检查网络和 AI 设置后重试。";
 "mac.section.settings" = "设置";
 "mac.brand.subtitle" = "AI 听写";
 "mac.brand.tagline" = "开口即文字。";

@@ -25,9 +25,8 @@ struct MainSplitView: View {
         }
         .navigationSplitViewStyle(.balanced)
         .background(palette.background)
-        // No floating dock in split mode — child scroll views should not
-        // reserve bottom clearance for the phone tab bar.
-        .environment(\.isTabBarVisible, false)
+        // No floating tab bar in split mode; shared footer spacing remains
+        // useful for the final rows in each scroll view.
     }
 
     // MARK: - Sidebar

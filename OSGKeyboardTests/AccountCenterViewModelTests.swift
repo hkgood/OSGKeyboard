@@ -422,6 +422,46 @@ final class AccountCenterViewModelTests: XCTestCase {
         XCTAssertEqual(deleteCount, 1)
     }
 
+    @MainActor
+    func testExpiredSessionEventClearsSignedInAccountState() async {
+        let account = AccountSession(
+            accountID: UUID(),
+            createdAtEpochSeconds: 1_700_000_000
+        )
+        let service = AccountServiceSpy(
+            restoredSession: account,
+            snapshot: makeSnapshot(account: account)
+        )
+        let eventSource = AccountSessionEventSourceStub()
+        var signedOutCallbackCount = 0
+        let coordinator = AccountSessionCoordinator(
+            dependencies: AccountDependencies(
+                sessionService: service,
+                sessionEventSource: eventSource,
+                centerService: service
+            ),
+            pendingReferralStore: InMemoryPendingReferralStore(),
+            onAccountSignedOut: {
+                signedOutCallbackCount += 1
+            }
+        )
+        await coordinator.restoreIfNeeded()
+        XCTAssertTrue(coordinator.isSignedIn)
+
+        eventSource.expire()
+        for _ in 0..<100 where coordinator.isSignedIn {
+            await Task.yield()
+        }
+
+        XCTAssertEqual(coordinator.sessionPhase, .signedOut)
+        XCTAssertEqual(coordinator.snapshotPhase, .idle)
+        XCTAssertEqual(coordinator.operationErrorKey, "account.error.sessionExpired")
+        XCTAssertEqual(coordinator.creditPurchases.catalogPhase, .idle)
+        XCTAssertEqual(signedOutCallbackCount, 1)
+        let managedGatewayClearCount = await service.managedGatewayClearCount()
+        XCTAssertEqual(managedGatewayClearCount, 1)
+    }
+
     private func makeReferral(status: AccountReferralStatus) -> AccountReferral {
         AccountReferral(
             id: UUID(),
@@ -469,6 +509,24 @@ private final class MutableAccountClock {
     }
 }
 
+@MainActor
+private final class AccountSessionEventSourceStub: AccountSessionEventSourcing {
+    private let stream: AsyncStream<AccountSessionEvent>
+    private let continuation: AsyncStream<AccountSessionEvent>.Continuation
+
+    init() {
+        (stream, continuation) = AsyncStream.makeStream()
+    }
+
+    func events() async -> AsyncStream<AccountSessionEvent> {
+        stream
+    }
+
+    func expire() {
+        continuation.yield(.expired)
+    }
+}
+
 private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing {
     private let restored: AccountSession?
     private let centerSnapshot: AccountCenterSnapshot?
@@ -482,6 +540,7 @@ private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing
     private var logoutCount = 0
     private var accountDeleteCount = 0
     private var sessionRestoreCount = 0
+    private var gatewayClearCount = 0
     private var receivedCachedSnapshot: AccountCenterSnapshot?
 
     init(
@@ -521,6 +580,10 @@ private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing
 
     func deleteAccount(with payload: AppleAuthorizationPayload) async throws {
         accountDeleteCount += 1
+    }
+
+    func clearManagedGateway() async {
+        gatewayClearCount += 1
     }
 
     func loadAccountCenter() async throws -> AccountCenterSnapshot {
@@ -574,6 +637,10 @@ private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing
 
     func deleteCount() -> Int {
         accountDeleteCount
+    }
+
+    func managedGatewayClearCount() -> Int {
+        gatewayClearCount
     }
 }
 

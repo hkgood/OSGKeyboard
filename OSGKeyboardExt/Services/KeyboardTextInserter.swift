@@ -15,7 +15,7 @@ final class KeyboardTextInserter {
     private static let caretVerificationLimit = 80
 
     private let state: KeyboardState
-    private let insertText: (String) -> Void
+    private let insertText: (String, KeyboardTextInsertionSource) -> Void
     private let deleteBackward: () -> Void
     private let contextBeforeInput: () -> String?
     private let fieldContextProvider: () -> FlowFieldContext?
@@ -41,7 +41,7 @@ final class KeyboardTextInserter {
 
     init(
         state: KeyboardState,
-        insertText: @escaping (String) -> Void,
+        insertText: @escaping (String, KeyboardTextInsertionSource) -> Void,
         deleteBackward: @escaping () -> Void,
         contextBeforeInput: @escaping () -> String?,
         fieldContextProvider: @escaping () -> FlowFieldContext?,
@@ -87,8 +87,16 @@ final class KeyboardTextInserter {
             insertion: trimmed
         )
         let inserted = separator + trimmed
-        insertText(inserted)
+        insertText(inserted, .voiceTranscription)
         KeyboardSetupBridge.markVoiceInsertion()
+        if delivery.polishWarning == nil,
+           let practice = state.oobePracticeSession,
+           practice.expectedFeature == .voiceInput {
+            _ = KeyboardSetupBridge.markOOBEPracticeCompleted(
+                sessionID: practice.sessionID,
+                feature: .voiceInput
+            )
+        }
         state.noteUserDidInputText()
         recordLastInsertion(
             inserted,
@@ -120,7 +128,7 @@ final class KeyboardTextInserter {
             insertion: trimmed
         )
         let inserted = separator + trimmed
-        insertText(inserted)
+        insertText(inserted, .aiGenerated)
         state.noteUserDidInputText()
 
         let mutation = HistoryMutation(
@@ -152,7 +160,7 @@ final class KeyboardTextInserter {
         guard !text.isEmpty else { return }
         // Verbatim on purpose — paste must reproduce exactly what was copied,
         // unlike dictation which needs word-boundary hygiene.
-        insertText(text)
+        insertText(text, .pasteboard)
         recordUndoableInsertion(text)
         // The paste pushed any previous input away from the caret, so the
         // "editable last input" hint no longer applies.
@@ -207,7 +215,7 @@ final class KeyboardTextInserter {
             state.redoAvailable = false
             return
         }
-        insertText(text)
+        insertText(text, .redo)
         recordUndoableInsertion(text)
         OSGLog.keyboardExt.info("redo length=\(text.count, privacy: .public)")
     }
@@ -375,7 +383,7 @@ final class KeyboardTextInserter {
         let inserted = separator + result
         transaction.appliedInsertedText = inserted
         PendingTextEditTransactionStore.save(transaction)
-        insertText(inserted)
+        insertText(inserted, .editGenerated)
         let verificationSuffix = String(inserted.suffix(80))
         guard contextBeforeInput()?.hasSuffix(verificationSuffix) == true else {
             // Never blindly delete after a partial/opaque host insertion. The
@@ -448,7 +456,7 @@ final class KeyboardTextInserter {
 
         switch transaction.deliveryMode {
         case .replace:
-            insertText(transaction.beforeText)
+            insertText(transaction.beforeText, .editGenerated)
             let restore = HistoryMutation(
                 action: transaction.historyMutation.action == .append ? .delete : .restore,
                 entryID: transaction.historyMutation.entryID,

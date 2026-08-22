@@ -3,7 +3,7 @@
 //
 // Interactive layout preview and What's New recording host for AI Agent
 // clipboard skills on the real unified `AIKeyboardView`. Launch with
-// `--ai-skills-demo`, optional `--skills-count=N` (1...8), and optional
+// `--ai-skills-demo`, optional `--skills-count=N`, and optional
 // `--whats-new-lang=zh|en`.
 
 #if DEBUG
@@ -61,7 +61,7 @@ struct AIClipboardSkillLayoutDemoView: View {
                     .foregroundStyle(.white)
                     .frame(minWidth: 72)
                 Button {
-                    count = min(8, count + 1)
+                    count = min(AIClipboardSkillCatalog.catalog.count, count + 1)
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 28))
@@ -69,7 +69,7 @@ struct AIClipboardSkillLayoutDemoView: View {
             }
             .foregroundStyle(.green)
             HStack(spacing: 8) {
-                ForEach([3, 5, 8], id: \.self) { n in
+                ForEach([3, 8, AIClipboardSkillCatalog.catalog.count], id: \.self) { n in
                     Button("\(n)") {
                         count = n
                     }
@@ -103,7 +103,7 @@ struct AIClipboardSkillLayoutDemoView: View {
     }
 
     private func showSkills(_ count: Int) {
-        let clamped = min(max(count, 1), 8)
+        let clamped = min(max(count, 1), AIClipboardSkillCatalog.catalog.count)
         AIKeyboardView.debugPreviewSkills = Self.previewSkills(count: clamped)
         state.enabledClipboardSkillIDs = Array(
             AIClipboardSkillCatalog.catalog.map(\.id).prefix(clamped)
@@ -135,7 +135,7 @@ struct AIClipboardSkillLayoutDemoView: View {
         let prefix = "--skills-count="
         if let arg = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix(prefix) }),
            let value = Int(arg.dropFirst(prefix.count)),
-           (1...8).contains(value) {
+           (1...AIClipboardSkillCatalog.catalog.count).contains(value) {
             return value
         }
         return 5

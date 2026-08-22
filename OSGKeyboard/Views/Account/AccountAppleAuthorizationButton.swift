@@ -19,6 +19,7 @@ struct AccountAppleAuthorizationButton: View {
     @EnvironmentObject private var coordinator: AccountSessionCoordinator
 
     let purpose: AccountAppleAuthorizationPurpose
+    var onSignedIn: () -> Void = {}
     var onDeleted: () -> Void = {}
 
     @State private var rawNonce: String?
@@ -30,7 +31,8 @@ struct AccountAppleAuthorizationButton: View {
             onCompletion: completeAuthorization
         )
         .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-        .frame(maxWidth: .infinity, minHeight: 50)
+        .frame(maxWidth: .infinity)
+        .frame(height: 50)
         .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
         .accessibilityLabel(
             purpose == .signIn
@@ -85,6 +87,7 @@ struct AccountAppleAuthorizationButton: View {
                     await coordinator.signIn(with: payload)
                     if coordinator.isSignedIn {
                         ProviderConfig.shared.reloadFromPersistedStorage()
+                        onSignedIn()
                     }
                 case .deleteAccount:
                     await coordinator.deleteAccount(with: payload)

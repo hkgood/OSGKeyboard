@@ -50,6 +50,7 @@ struct AIKeyboardView: View {
     @ObservedObject var state: KeyboardState
     @ObservedObject var typing: TypingSessionController
     @ObservedObject private var clipboardHistory = ClipboardHistoryStore.shared
+    @ObservedObject private var semanticRanking = ClipboardSemanticRankingStore.shared
     let onInsert: (String) -> Void
 
     @AppStorage("keyboard.assistant.longPressCoachCount")
@@ -108,9 +109,12 @@ struct AIKeyboardView: View {
             selectedSkillPage = 0
             resetCarousel()
         }
-        .onChange(of: state.enabledClipboardSkillIDs) { _, _ in
+        .onChange(of: state.enabledClipboardSkills) { _, _ in
             selectedSkillPage = 0
             resetCarousel()
+        }
+        .onChange(of: semanticRanking.snapshot) { _, _ in
+            selectedSkillPage = 0
         }
         .onChange(of: state.skillTipText) { _, tip in
             guard let tip, !tip.isEmpty else { return }
@@ -292,8 +296,10 @@ struct AIKeyboardView: View {
     @ViewBuilder
     private var contextArea: some View {
         ZStack {
-            if state.isOnboardingPracticeActive, activeStatus == nil {
-                Text(ExtL10n.string("keyboard.onboarding.practice.mic"))
+            if showsOOBEClipboardSkill, activeStatus == nil {
+                clipboardSkillPager
+            } else if let onboardingPracticeHint, activeStatus == nil {
+                Text(onboardingPracticeHint)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
@@ -532,7 +538,7 @@ struct AIKeyboardView: View {
         if skill.id == AIClipboardSkillCatalog.translateID {
             return AIClipboardSkillCatalog.translateButtonTitle(
                 translationTargetLocaleId: state.translationTargetLocaleId,
-                uiLanguage: AppGroupStore().uiLanguage
+                uiLanguage: state.uiLanguage
             )
         }
         if let custom = skill.customName?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -550,6 +556,9 @@ struct AIKeyboardView: View {
             return assistantIsResting
         }
         #endif
+        if showsOOBEClipboardSkill {
+            return assistantIsResting
+        }
         guard assistantIsResting, state.clipboardHistoryEnabled else { return false }
         guard !visibleClipboardSkills.isEmpty,
               let newest = clipboardHistory.newestEntry,
@@ -568,10 +577,52 @@ struct AIKeyboardView: View {
             return preview
         }
         #endif
-        return AIClipboardSkillCatalog.visible(
-            enabledIDs: state.enabledClipboardSkillIDs,
-            userCatalog: AppGroupStore().agentUserSkillCatalog
+        if let expectedSkillID = oobeExpectedSkillID {
+            return AIClipboardSkillCatalog.catalog.filter { $0.id == expectedSkillID }
+        }
+        guard let newest = clipboardHistory.newestEntry,
+              let snapshot = semanticRanking.snapshot,
+              snapshot.entryID == newest.id else {
+            return state.enabledClipboardSkills
+        }
+        return ClipboardSkillSemanticRanker.ranked(
+            skills: state.enabledClipboardSkills,
+            sourceText: newest.text,
+            analysis: snapshot.analysis,
+            uiLanguage: state.uiLanguage
         )
+    }
+
+    private var showsOOBEClipboardSkill: Bool {
+        oobeExpectedSkillID != nil
+    }
+
+    private var oobeExpectedSkillID: String? {
+        switch state.oobePracticeSession?.expectedFeature {
+        case .clipboardTranslate:
+            return AIClipboardSkillCatalog.translateID
+        case .clipboardReply:
+            return AIClipboardSkillCatalog.replyID
+        case .voiceInput, .askAI, nil:
+            return nil
+        }
+    }
+
+    private var onboardingPracticeHint: String? {
+        switch state.oobePracticeSession?.expectedFeature {
+        case .voiceInput:
+            return ExtL10n.string("keyboard.onboarding.practice.mic")
+        case .clipboardTranslate:
+            return ExtL10n.string("keyboard.onboarding.practice.translate")
+        case .clipboardReply:
+            return ExtL10n.string("keyboard.onboarding.practice.reply")
+        case .askAI:
+            return ExtL10n.string("keyboard.onboarding.practice.askAI")
+        case nil:
+            return state.isOnboardingPracticeActive
+                ? ExtL10n.string("keyboard.onboarding.practice.mic")
+                : nil
+        }
     }
 
     // MARK: - Primary actions

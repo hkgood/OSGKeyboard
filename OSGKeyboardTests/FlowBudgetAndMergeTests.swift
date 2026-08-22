@@ -136,6 +136,46 @@ final class FlowBudgetAndMergeTests: XCTestCase {
         XCTAssertFalse(decoded.entries.contains { $0.text.hasSuffix("#299") })
     }
 
+    @MainActor
+    func testHistoryBudgetTrimDropsUnreferencedPromptSnapshots() throws {
+        let sync = SpeechHistoryCloudSync(
+            kvs: FakeUbiquitousKeyValueStore(),
+            makeStore: { AppGroupStore(defaults: self.makeDefaults()) },
+            historyDefaults: { self.makeDefaults() }
+        )
+        let now = Date()
+        let entryText = String(repeating: "长听写内容 long dictation ", count: 180)
+        var snapshots: [String: String] = [:]
+        let entries = (0..<100).map { index in
+            let prompt = String(repeating: "风格\(index)", count: 250)
+            let fingerprint = SyncedSpeechHistory.polishStylePromptFingerprint(
+                for: prompt
+            )
+            snapshots[fingerprint] = prompt
+            return SpeechHistoryEntry(
+                text: "\(entryText)#\(index)",
+                polishStylePromptFingerprint: fingerprint,
+                createdAt: now.addingTimeInterval(TimeInterval(-index))
+            )
+        }
+        let history = SyncedSpeechHistory(
+            entries: entries,
+            polishStylePromptSnapshots: snapshots
+        )
+
+        let data = try sync.encodeFittingBudget(history)
+        let decoded = try sync.decode(data)
+        let referenced = Set(
+            decoded.entries.compactMap(\.polishStylePromptFingerprint)
+        )
+
+        XCTAssertLessThan(decoded.entries.count, entries.count)
+        XCTAssertLessThan(decoded.polishStylePromptSnapshots.count, snapshots.count)
+        XCTAssertTrue(
+            Set(decoded.polishStylePromptSnapshots.keys).isSubset(of: referenced)
+        )
+    }
+
     // MARK: - Insertion word-boundary hygiene
 
     func testInsertionSeparatorAddsSpaceBetweenLatinWords() {

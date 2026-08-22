@@ -4,6 +4,7 @@
 // Hermetic tests for session rotation, retry limits, and stable API errors.
 
 @testable import OSGKeyboardHostSupport
+import OSGKeyboardShared
 import XCTest
 
 final class AccountAPIClientTests: XCTestCase {
@@ -35,6 +36,58 @@ final class AccountAPIClientTests: XCTestCase {
         let requests = await transport.requests
         XCTAssertEqual(requests.single?.url?.path, "/v1/auth/apple")
         XCTAssertNil(requests.single?.value(forHTTPHeaderField: "Authorization"))
+    }
+
+    func testOOBEGrantUsesAnonymousEndpointAndExactAttestedBody() async throws {
+        let installationID = UUID(uuidString: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")!
+        let challengeID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
+        let transport = QueueAccountTransport([
+            .init(
+                statusCode: 201,
+                body: Data(
+                    """
+                    {"grantId":"oobe-grant","scopes":["polish","ai"],
+                     "accessToken":"oobe-access","accessExpiresAt":"2030-01-01T00:05:00Z",
+                     "refreshToken":"oobe-refresh","refreshExpiresAt":"2030-01-01T01:00:00Z"}
+                    """.utf8
+                )
+            )
+        ])
+        let store = InMemoryAccountSecurityStore()
+        let client = AccountAPIClient(
+            baseURL: URL(string: "https://account.test")!,
+            transport: transport,
+            sessionVault: store,
+            now: { Date(timeIntervalSince1970: 1_000) }
+        )
+        let requestBody = OOBEGrantRequest(
+            installationId: installationID,
+            keyId: "app-attest-key",
+            challengeId: challengeID,
+            challenge: "AQID",
+            assertion: "BAUG"
+        )
+
+        let credentials = try await client.requestOOBEGrant(requestBody)
+
+        XCTAssertEqual(credentials.grantId, "oobe-grant")
+        XCTAssertEqual(credentials.scopes, [.polish, .assistant])
+        let requests = await transport.requests
+        let request = try XCTUnwrap(requests.single)
+        XCTAssertEqual(request.url?.path, "/v1/oobe/grants")
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+        let json = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: try XCTUnwrap(request.httpBody)
+            ) as? [String: Any]
+        )
+        XCTAssertEqual(
+            Set(json.keys),
+            ["installationId", "keyId", "challengeId", "challenge", "assertion"]
+        )
+        XCTAssertEqual(json["installationId"] as? String, installationID.uuidString)
+        XCTAssertEqual(json["keyId"] as? String, "app-attest-key")
     }
 
     func testNicknameUpdateUsesAuthenticatedPatch() async throws {
@@ -80,6 +133,11 @@ final class AccountAPIClientTests: XCTestCase {
             transport: transport,
             sessionVault: store
         )
+        let invalidations = await client.sessionInvalidations()
+        let invalidationTask = Task {
+            var iterator = invalidations.makeAsyncIterator()
+            return await iterator.next()
+        }
 
         do {
             _ = try await client.account()
@@ -102,6 +160,14 @@ final class AccountAPIClientTests: XCTestCase {
         let clearCount = await store.clearSessionCount
         XCTAssertNil(stored)
         XCTAssertEqual(clearCount, 1)
+        let invalidation = await invalidationTask.value
+        guard let invalidation else {
+            return XCTFail("Expected a session invalidation event")
+        }
+        switch invalidation {
+        case .expired:
+            break
+        }
     }
 
     func testAuthorizedAccessTokenRefreshesAnExpiringCachedSession() async throws {

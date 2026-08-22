@@ -89,8 +89,10 @@ final class AnalyticsExtensionPrivacyTests: XCTestCase {
         let root = try XCTUnwrap(
             JSONSerialization.jsonObject(with: request.body) as? [String: Any]
         )
+        XCTAssertEqual(Set(root.keys), ["installationId", "events"])
         let eventObjects = try XCTUnwrap(root["events"] as? [[String: Any]])
         let event = try XCTUnwrap(eventObjects.first)
+        XCTAssertFalse(event.keys.contains("installationId"))
         XCTAssertFalse(event.keys.contains("properties"))
         XCTAssertFalse(event.keys.contains("text"))
         XCTAssertFalse(event.keys.contains("prompt"))

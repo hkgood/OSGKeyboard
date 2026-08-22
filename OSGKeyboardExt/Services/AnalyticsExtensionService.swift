@@ -11,6 +11,7 @@ final class AnalyticsExtensionService: Sendable {
     static let shared = AnalyticsExtensionService()
 
     let client: any AnalyticsClient
+    let keyboardUsageRecorder: any KeyboardUsageRecording
 
     private init() {
         let environment = Self.environment
@@ -18,7 +19,15 @@ final class AnalyticsExtensionService: Sendable {
             environment: environment,
             uploadConfiguration: AnalyticsUploadConfiguration(endpoint: Self.endpoint)
         )
+        let keyboardUsageRuntime = KeyboardUsageRuntime(
+            environment: environment,
+            analyticsRepository: runtime.repository,
+            uploadConfiguration: KeyboardUsageUploadConfiguration(
+                endpoint: Self.keyboardUsageEndpoint
+            )
+        )
         client = runtime.client
+        keyboardUsageRecorder = keyboardUsageRuntime.recorder
     }
 
     func recordPresentation(hasFullAccess _: Bool) {
@@ -30,6 +39,10 @@ final class AnalyticsExtensionService: Sendable {
 
     private static let endpoint = URL(
         string: "https://account.osglab.com/v1/analytics/events"
+    )!
+
+    private static let keyboardUsageEndpoint = URL(
+        string: "https://account.osglab.com/v1/analytics/keyboard-usage"
     )!
 
     private static var environment: AnalyticsEnvironment {

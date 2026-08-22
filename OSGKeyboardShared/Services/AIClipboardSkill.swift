@@ -8,7 +8,7 @@
 
 import Foundation
 
-public enum AIClipboardSkillKind: String, Sendable {
+public enum AIClipboardSkillKind: String, Codable, Sendable {
     /// LLM output is reviewed and inserted into the current text field.
     case transform
     /// LLM output is parsed and sent to a companion Shortcut. Never inserted.
@@ -36,13 +36,14 @@ public struct AIClipboardSkill: Identifiable, Equatable, Sendable {
     public let customName: String?
     public let customSummary: String?
     public let customPrompt: String?
-    /// Built-in skills are always false. Custom skills default off.
+    /// Built-in skills are always false. Official/user skills preserve their policy.
     public let thinkingEnabled: Bool
 
     /// Reminders, Calendar, and Notes exports need a companion Shortcut.
     /// Navigate and Ride hand off to the host (Maps or Didi). No Shortcut.
     public var requiresShortcut: Bool { kind == .export && shortcutName != nil }
     public var isUserCreated: Bool { id.hasPrefix("user.") }
+    public var isOfficial: Bool { id.hasPrefix("official.") }
     /// The server applies the final model policy; this only preserves whether
     /// the user invoked a built-in transform or a custom skill.
     public var managedGatewayTaskKind: ManagedGatewayTaskKind {
@@ -78,14 +79,26 @@ public struct AIClipboardSkill: Identifiable, Equatable, Sendable {
         self.customName = customName
         self.customSummary = customSummary
         self.customPrompt = customPrompt
-        self.thinkingEnabled = id.hasPrefix("user.") ? thinkingEnabled : false
+        self.thinkingEnabled = (id.hasPrefix("user.") || id.hasPrefix("official."))
+            ? thinkingEnabled
+            : false
     }
 }
 
 public enum AIClipboardSkillCatalog: Sendable {
     public static let replyID = "reply"
+    public static let replyInSourceLanguageID = "replyInSourceLanguage"
     public static let summarizeID = "summarize"
+    public static let extractConclusionsID = "extractConclusions"
     public static let translateID = "translate"
+    public static let acceptInvitationID = "acceptInvitation"
+    public static let declineInvitationID = "declineInvitation"
+    public static let acceptTaskID = "acceptTask"
+    public static let clarifyRequestID = "clarifyRequest"
+    public static let empathyReplyID = "empathyReply"
+    public static let askForDetailsID = "askForDetails"
+    public static let businessReplyID = "businessReply"
+    public static let organizeListID = "organizeList"
     public static let extractTodosID = "extractTodos"
     public static let extractTodosShortcutName = "OSGExtractTodos"
     public static let extractTodosResourceName = "OSGExtractTodos"
@@ -112,11 +125,11 @@ public enum AIClipboardSkillCatalog: Sendable {
             isDefault: true
         ),
         AIClipboardSkill(
-            id: summarizeID,
-            systemImage: "doc.text.magnifyingglass",
-            titleKey: "keyboard.ai.skill.summarize",
-            cardTitleKey: "skills.summarize.name",
-            descriptionKey: "skills.summarize.description",
+            id: replyInSourceLanguageID,
+            systemImage: "globe",
+            titleKey: "keyboard.ai.skill.replyInSourceLanguage",
+            cardTitleKey: "skills.replyInSourceLanguage.name",
+            descriptionKey: "skills.replyInSourceLanguage.description",
             kind: .transform,
             isDefault: true
         ),
@@ -130,13 +143,103 @@ public enum AIClipboardSkillCatalog: Sendable {
             isDefault: true
         ),
         AIClipboardSkill(
+            id: summarizeID,
+            systemImage: "doc.text.magnifyingglass",
+            titleKey: "keyboard.ai.skill.summarize",
+            cardTitleKey: "skills.summarize.name",
+            descriptionKey: "skills.summarize.description",
+            kind: .transform,
+            isDefault: true
+        ),
+        AIClipboardSkill(
+            id: extractConclusionsID,
+            systemImage: "text.badge.checkmark",
+            titleKey: "keyboard.ai.skill.extractConclusions",
+            cardTitleKey: "skills.extractConclusions.name",
+            descriptionKey: "skills.extractConclusions.description",
+            kind: .transform,
+            isDefault: true
+        ),
+        AIClipboardSkill(
+            id: acceptInvitationID,
+            systemImage: "checkmark.bubble.fill",
+            titleKey: "keyboard.ai.skill.acceptInvitation",
+            cardTitleKey: "skills.acceptInvitation.name",
+            descriptionKey: "skills.acceptInvitation.description",
+            kind: .transform,
+            isDefault: true
+        ),
+        AIClipboardSkill(
+            id: declineInvitationID,
+            systemImage: "hand.raised.fill",
+            titleKey: "keyboard.ai.skill.declineInvitation",
+            cardTitleKey: "skills.declineInvitation.name",
+            descriptionKey: "skills.declineInvitation.description",
+            kind: .transform,
+            isDefault: true
+        ),
+        AIClipboardSkill(
+            id: acceptTaskID,
+            systemImage: "checkmark.circle.fill",
+            titleKey: "keyboard.ai.skill.acceptTask",
+            cardTitleKey: "skills.acceptTask.name",
+            descriptionKey: "skills.acceptTask.description",
+            kind: .transform,
+            isDefault: true
+        ),
+        AIClipboardSkill(
+            id: clarifyRequestID,
+            systemImage: "questionmark.bubble.fill",
+            titleKey: "keyboard.ai.skill.clarifyRequest",
+            cardTitleKey: "skills.clarifyRequest.name",
+            descriptionKey: "skills.clarifyRequest.description",
+            kind: .transform,
+            isDefault: true
+        ),
+        AIClipboardSkill(
+            id: empathyReplyID,
+            systemImage: "heart.fill",
+            titleKey: "keyboard.ai.skill.empathyReply",
+            cardTitleKey: "skills.empathyReply.name",
+            descriptionKey: "skills.empathyReply.description",
+            kind: .transform,
+            isDefault: true
+        ),
+        AIClipboardSkill(
+            id: askForDetailsID,
+            systemImage: "ellipsis.bubble.fill",
+            titleKey: "keyboard.ai.skill.askForDetails",
+            cardTitleKey: "skills.askForDetails.name",
+            descriptionKey: "skills.askForDetails.description",
+            kind: .transform,
+            isDefault: true
+        ),
+        AIClipboardSkill(
+            id: businessReplyID,
+            systemImage: "briefcase.fill",
+            titleKey: "keyboard.ai.skill.businessReply",
+            cardTitleKey: "skills.businessReply.name",
+            descriptionKey: "skills.businessReply.description",
+            kind: .transform,
+            isDefault: true
+        ),
+        AIClipboardSkill(
+            id: organizeListID,
+            systemImage: "list.bullet.rectangle",
+            titleKey: "keyboard.ai.skill.organizeList",
+            cardTitleKey: "skills.organizeList.name",
+            descriptionKey: "skills.organizeList.description",
+            kind: .transform,
+            isDefault: true
+        ),
+        AIClipboardSkill(
             id: extractTodosID,
             systemImage: "checklist",
             titleKey: "keyboard.ai.skill.extractTodos",
             cardTitleKey: "skills.extractTodos.name",
             descriptionKey: "skills.extractTodos.description",
             kind: .export,
-            isDefault: false,
+            isDefault: true,
             shortcutName: extractTodosShortcutName,
             shortcutResourceName: extractTodosResourceName
         ),
@@ -147,7 +250,7 @@ public enum AIClipboardSkillCatalog: Sendable {
             cardTitleKey: "skills.extractEvents.name",
             descriptionKey: "skills.extractEvents.description",
             kind: .export,
-            isDefault: false,
+            isDefault: true,
             shortcutName: extractEventsShortcutName,
             shortcutResourceName: extractEventsResourceName
         ),
@@ -158,7 +261,7 @@ public enum AIClipboardSkillCatalog: Sendable {
             cardTitleKey: "skills.saveToNotes.name",
             descriptionKey: "skills.saveToNotes.description",
             kind: .export,
-            isDefault: false,
+            isDefault: true,
             shortcutName: saveToNotesShortcutName,
             shortcutResourceName: saveToNotesResourceName
         ),
@@ -169,33 +272,68 @@ public enum AIClipboardSkillCatalog: Sendable {
             cardTitleKey: "skills.navigate.name",
             descriptionKey: "skills.navigate.description",
             kind: .export,
-            isDefault: false
+            isDefault: true
         )
     ]
 
     /// Legacy alias: the three default transform skills used to be the whole list.
     public static let builtIn: [AIClipboardSkill] = catalog
 
-    public static func all(userCatalog: AIUserSkillCatalog = .empty) -> [AIClipboardSkill] {
-        catalog + userCatalog.entries.map { $0.asClipboardSkill() }
+    public static func all(
+        officialCatalog: OfficialSkillCatalog = .empty,
+        userCatalog: AIUserSkillCatalog = .empty,
+        uiLanguage: AppUILanguage = .auto,
+        preferredLanguages: [String] = Locale.preferredLanguages
+    ) -> [AIClipboardSkill] {
+        var ids = Set(catalog.map(\.id))
+        var merged = catalog
+        for skill in officialCatalog.resolvedSkills(
+            language: uiLanguage,
+            preferredLanguages: preferredLanguages
+        ) where ids.insert(skill.id).inserted {
+            merged.append(skill)
+        }
+        for skill in userCatalog.entries.map({ $0.asClipboardSkill() })
+            where ids.insert(skill.id).inserted {
+            merged.append(skill)
+        }
+        return merged
     }
 
     public static func skill(
         id: String,
-        userCatalog: AIUserSkillCatalog = .empty
+        officialCatalog: OfficialSkillCatalog = .empty,
+        userCatalog: AIUserSkillCatalog = .empty,
+        uiLanguage: AppUILanguage = .auto,
+        preferredLanguages: [String] = Locale.preferredLanguages
     ) -> AIClipboardSkill? {
-        catalog.first { $0.id == id } ?? userCatalog.skill(id: id)?.asClipboardSkill()
+        all(
+            officialCatalog: officialCatalog,
+            userCatalog: userCatalog,
+            uiLanguage: uiLanguage,
+            preferredLanguages: preferredLanguages
+        ).first { $0.id == id }
     }
 
     /// `enabledIDs` is the Skills-tab order. `nil` keeps the default three.
     /// An explicit empty array shows no chips (carousel fallback).
     public static func visible(
         enabledIDs: [String]? = nil,
-        userCatalog: AIUserSkillCatalog = .empty
+        officialCatalog: OfficialSkillCatalog = .empty,
+        userCatalog: AIUserSkillCatalog = .empty,
+        uiLanguage: AppUILanguage = .auto,
+        preferredLanguages: [String] = Locale.preferredLanguages
     ) -> [AIClipboardSkill] {
         let ids = enabledIDs ?? AIAgentSkillLayout.defaultEnabledIDs
         guard !ids.isEmpty else { return [] }
-        let byID = Dictionary(uniqueKeysWithValues: all(userCatalog: userCatalog).map { ($0.id, $0) })
+        let byID = Dictionary(
+            uniqueKeysWithValues: all(
+                officialCatalog: officialCatalog,
+                userCatalog: userCatalog,
+                uiLanguage: uiLanguage,
+                preferredLanguages: preferredLanguages
+            ).map { ($0.id, $0) }
+        )
         return ids.compactMap { byID[$0] }
     }
 
@@ -248,17 +386,57 @@ public enum AIClipboardSkillCatalog: Sendable {
         switch skillID {
         case replyID:
             return zh
-                ? "请根据剪贴板内容起草一段礼貌、简洁的回复，语气自然，可直接发送。"
-                : "Draft a concise, polite reply the user can send, based on the clipboard text."
+                ? "请根据剪贴板内容起草一段礼貌、简洁的回复，使用原文的主要语言，语气自然，可直接发送。"
+                : "Draft a concise, polite reply in the clipboard text's primary language that the user can send."
+        case replyInSourceLanguageID:
+            return zh
+                ? "请理解剪贴板内容，并严格使用原文的主要语言起草自然、简洁、可直接发送的回复。不要翻译，不要解释。"
+                : "Understand the clipboard text and draft a natural, concise, sendable reply strictly in its primary language. Do not translate or explain."
         case summarizeID:
             return zh
                 ? "请概括剪贴板内容的核心意思，保留关键事实与结论，不要改写成可发送的短消息。"
                 : "Summarize the clipboard text: keep the key facts and conclusions; do not rewrite it as a sendable short message."
+        case extractConclusionsID:
+            return zh
+                ? "请只提取剪贴板内容中最重要的结论、决定和下一步。使用简短要点，不重复背景，不补充原文没有的信息。"
+                : "Extract only the most important conclusions, decisions, and next steps from the clipboard. Use concise bullets; do not repeat background or add facts."
         case translateID:
             return translateInstruction(
                 locale: locale,
                 translationTargetLocaleId: translationTargetLocaleId
             )
+        case acceptInvitationID:
+            return zh
+                ? "请根据剪贴板中的邀约，起草一段自然、简洁的接受回复，复述必要的时间或地点以便确认。不要虚构用户没有表达的安排。"
+                : "Draft a natural, concise acceptance of the invitation. Confirm any necessary time or place, without inventing the user's plans."
+        case declineInvitationID:
+            return zh
+                ? "请根据剪贴板中的邀约，起草一段礼貌、真诚的婉拒回复；表达感谢但不过度解释，也不要虚构理由。"
+                : "Draft a polite, sincere decline to the invitation. Express appreciation without overexplaining or inventing a reason."
+        case acceptTaskID:
+            return zh
+                ? "请对剪贴板中的任务或行动请求起草确认回复，明确已理解的事项和截止时间；不要承诺原文未要求或用户无法确认的结果。"
+                : "Draft an acknowledgement of the task or action request, confirming the understood deliverable and deadline. Do not invent commitments."
+        case clarifyRequestID:
+            return zh
+                ? "请找出剪贴板内容中阻碍执行或回答的关键信息缺口，并起草一段简洁回复，最多提出两个最必要的澄清问题。"
+                : "Identify the key missing information needed to act or answer, then draft a concise reply with at most two essential clarifying questions."
+        case empathyReplyID:
+            return zh
+                ? "请针对剪贴板中的不满、投诉或负面反馈起草回复：先表达理解，再确认核心问题，最后给出稳妥的下一步；不要推诿或过度承诺。"
+                : "Reply to the complaint or negative feedback with empathy, acknowledgement of the core issue, and a safe next step. Do not deflect or overpromise."
+        case askForDetailsID:
+            return zh
+                ? "请针对剪贴板描述的问题起草一段追问回复，只询问定位或处理问题所必需的细节，问题清晰且不重复。"
+                : "Draft a follow-up that asks only for the details necessary to diagnose or resolve the issue. Keep questions clear and non-repetitive."
+        case businessReplyID:
+            return zh
+                ? "请根据剪贴板内容起草一段专业、克制、清晰的商务回复，保留人名、组织名、时间和承诺边界，可直接发送。"
+                : "Draft a professional, measured, clear business reply. Preserve names, organizations, dates, and commitment boundaries; make it sendable."
+        case organizeListID:
+            return zh
+                ? "请把剪贴板中的清单、议程或步骤整理成结构清晰、顺序合理的列表。合并重复项，保留原意，不新增任务。"
+                : "Organize the clipboard's list, agenda, or steps into a clear logical order. Merge duplicates, preserve meaning, and add no new tasks."
         case extractTodosID:
             return zh
                 ? """

@@ -128,6 +128,35 @@ public enum AppAttestCanonicalPayload {
         return data
     }
 
+    /// Matches the server's anonymous OOBE grant assertion payload byte for
+    /// byte. The final line feed is part of the signed UTF-8 value.
+    public static func oobeGrant(
+        challenge: String,
+        installationID: UUID,
+        keyID: String
+    ) throws -> Data {
+        guard let challengeBytes = Data(base64URLEncoded: challenge) else {
+            throw AccountAPIError.invalidResponse
+        }
+        let canonicalChallenge = challengeBytes.base64URLEncodedString()
+        let payload = """
+        osg-app-attest-v1
+        purpose=oobe-gateway-grant
+        challenge=\(canonicalChallenge)
+        key_id=\(keyID)
+        installation_id=\(installationID.uuidString.lowercased())
+        scopes=ai,polish
+        features=ask_ai,clipboard_reply,clipboard_translate,voice_input
+        grant_ttl_seconds=1800
+        access_ttl_seconds=300
+
+        """
+        guard let data = payload.data(using: .utf8) else {
+            throw AccountAPIError.invalidResponse
+        }
+        return data
+    }
+
     static func challengeHash(_ challenge: String) throws -> Data {
         guard let challengeBytes = Data(base64URLEncoded: challenge) else {
             throw AccountAPIError.invalidResponse
@@ -187,6 +216,15 @@ public actor DeviceIntegrityCoordinator {
         try? await keyStateStore.clearAppAttestKeyState()
     }
 
+    public func makeOOBEGrantRequest(
+        installationID: UUID
+    ) async throws -> OOBEGrantRequest {
+        try await makeOOBEGrantRequest(
+            installationID: installationID,
+            allowsKeyRecovery: true
+        )
+    }
+
     private func optionalDeviceCheckToken() async -> String? {
         try? await makeDeviceCheckToken()
     }
@@ -244,6 +282,47 @@ public actor DeviceIntegrityCoordinator {
         }
         return AppAttestAssertion(
             keyId: keyId,
+            challengeId: challenge.challengeId,
+            challenge: challenge.challenge,
+            assertion: assertion.base64EncodedString()
+        )
+    }
+
+    private func makeOOBEGrantRequest(
+        installationID: UUID,
+        allowsKeyRecovery: Bool
+    ) async throws -> OOBEGrantRequest {
+        guard appAttest.isSupported else {
+            throw AccountAPIError.integrityUnavailable
+        }
+        let keyID = try await registeredKeyId()
+        let challenge = try await apiClient.issueAppAttestChallenge(
+            purpose: .assertion,
+            keyId: keyID
+        )
+        let payload = try AppAttestCanonicalPayload.oobeGrant(
+            challenge: challenge.challenge,
+            installationID: installationID,
+            keyID: keyID
+        )
+        let assertion: Data
+        do {
+            assertion = try await appAttest.generateAssertion(
+                keyID,
+                clientDataHash: AppAttestCanonicalPayload.sha256(payload)
+            )
+        } catch where allowsKeyRecovery {
+            try? await keyStateStore.clearAppAttestKeyState()
+            return try await makeOOBEGrantRequest(
+                installationID: installationID,
+                allowsKeyRecovery: false
+            )
+        } catch {
+            throw AccountAPIError.integrityUnavailable
+        }
+        return OOBEGrantRequest(
+            installationId: installationID,
+            keyId: keyID,
             challengeId: challenge.challengeId,
             challenge: challenge.challenge,
             assertion: assertion.base64EncodedString()

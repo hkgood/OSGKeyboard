@@ -31,10 +31,70 @@ public enum AIHintStore: Sendable {
         guard let data = try? JSONEncoder().encode(copy) else { return }
         defaults.set(data, forKey: AIHintAppGroupKeys.readyPackKey(locale: pack.locale))
         defaults.set(
-            Date().timeIntervalSince1970,
+            (copy.refreshedAt ?? Date()).timeIntervalSince1970,
             forKey: AIHintAppGroupKeys.lastSuccessKey(locale: pack.locale)
         )
         defaults.synchronize()
+    }
+
+    public static func loadManifest(
+        defaults: UserDefaults? = AppGroup.defaultsIfAvailable
+    ) -> AIHintManifest? {
+        guard let data = defaults?.data(forKey: AIHintAppGroupKeys.manifest) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(AIHintManifest.self, from: data)
+    }
+
+    public static func saveManifest(
+        _ manifest: AIHintManifest,
+        etag: String?,
+        defaults: UserDefaults? = AppGroup.defaultsIfAvailable
+    ) {
+        guard let defaults,
+              let data = try? JSONEncoder().encode(manifest) else { return }
+        defaults.set(data, forKey: AIHintAppGroupKeys.manifest)
+        setManifestETag(etag, defaults: defaults)
+        defaults.synchronize()
+    }
+
+    public static func manifestETag(
+        defaults: UserDefaults? = AppGroup.defaultsIfAvailable
+    ) -> String? {
+        defaults?.string(forKey: AIHintAppGroupKeys.manifestETag)
+    }
+
+    public static func setManifestETag(
+        _ etag: String?,
+        defaults: UserDefaults? = AppGroup.defaultsIfAvailable
+    ) {
+        guard let defaults else { return }
+        if let etag, !etag.isEmpty {
+            defaults.set(etag, forKey: AIHintAppGroupKeys.manifestETag)
+        } else {
+            defaults.removeObject(forKey: AIHintAppGroupKeys.manifestETag)
+        }
+    }
+
+    public static func packETag(
+        locale: String,
+        defaults: UserDefaults? = AppGroup.defaultsIfAvailable
+    ) -> String? {
+        defaults?.string(forKey: AIHintAppGroupKeys.packETagKey(locale: locale))
+    }
+
+    public static func setPackETag(
+        _ etag: String?,
+        locale: String,
+        defaults: UserDefaults? = AppGroup.defaultsIfAvailable
+    ) {
+        guard let defaults else { return }
+        let key = AIHintAppGroupKeys.packETagKey(locale: locale)
+        if let etag, !etag.isEmpty {
+            defaults.set(etag, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
     }
 
     public static func lastSuccessAt(

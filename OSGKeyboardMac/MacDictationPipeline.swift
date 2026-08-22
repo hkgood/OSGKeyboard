@@ -262,6 +262,9 @@ enum MacDictationPipeline {
             }
             return MacDictationResult(
                 text: polished,
+                prePolishText: postASR,
+                polishStyleID: outcome.polishStyleID,
+                polishStylePrompt: outcome.polishStylePrompt,
                 polishWarning: outcome.qualityDegraded
                     ? MacL10n.string("flow.warning.polishDegradedQuality")
                     : nil,
@@ -276,6 +279,9 @@ enum MacDictationPipeline {
             )
             return MacDictationResult(
                 text: delivery.text,
+                prePolishText: postASR,
+                polishStyleID: nil,
+                polishStylePrompt: nil,
                 polishWarning: delivery.polishWarning,
                 chunkWarning: nil
             )

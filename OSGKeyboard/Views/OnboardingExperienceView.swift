@@ -5,19 +5,80 @@
 //   1) Explain the product and its data boundaries.
 //   2) Request the two permissions needed by Flow.
 //   3) Guide keyboard installation with a visual system-settings preview.
-//   4) Teach on the real keyboard inside a real host text field.
-//   5) Celebrate the first verified voice insertion.
+//   4) Activate and verify the real keyboard in a host text field.
+//   5) Teach four real features without requiring an account or API key.
+//   6) Offer optional sign-in for the existing signup reward.
+//   7) Celebrate the verified onboarding outcomes.
 
 import OSGKeyboardShared
 import SwiftUI
 import UIKit
 
 private enum OnboardingExperienceStep: Int, CaseIterable {
-    case introduction
-    case permissions
-    case keyboard
-    case practice
-    case complete
+    case introduction = 0
+    case permissions = 1
+    case keyboard = 2
+    // Keep existing persisted raw values stable while inserting this step
+    // between keyboard setup and practice.
+    case keyboardSwitch = 5
+    case practice = 3
+    case complete = 4
+    // Appended so all existing persisted values keep their original meaning.
+    case loginReward = 6
+}
+
+private extension ManagedGatewayOOBEFeature {
+    var progressKey: LocalizedStringKey {
+        switch self {
+        case .voiceInput:
+            return "onboarding.experience.practice.progress.voice"
+        case .clipboardTranslate:
+            return "onboarding.experience.practice.progress.translate"
+        case .clipboardReply:
+            return "onboarding.experience.practice.progress.reply"
+        case .askAI:
+            return "onboarding.experience.practice.progress.askAI"
+        }
+    }
+
+    var titleKey: LocalizedStringKey {
+        switch self {
+        case .voiceInput:
+            return "onboarding.experience.practice.speakTitle"
+        case .clipboardTranslate:
+            return "onboarding.experience.practice.translateTitle"
+        case .clipboardReply:
+            return "onboarding.experience.practice.replyTitle"
+        case .askAI:
+            return "onboarding.experience.practice.askAITitle"
+        }
+    }
+
+    var subtitleKey: LocalizedStringKey {
+        switch self {
+        case .voiceInput:
+            return "onboarding.experience.practice.speakSubtitle"
+        case .clipboardTranslate:
+            return "onboarding.experience.practice.translateSubtitle"
+        case .clipboardReply:
+            return "onboarding.experience.practice.replySubtitle"
+        case .askAI:
+            return "onboarding.experience.practice.askAISubtitle"
+        }
+    }
+
+    var next: ManagedGatewayOOBEFeature? {
+        switch self {
+        case .voiceInput:
+            return .clipboardTranslate
+        case .clipboardTranslate:
+            return .clipboardReply
+        case .clipboardReply:
+            return .askAI
+        case .askAI:
+            return nil
+        }
+    }
 }
 
 struct OnboardingExperienceView: View {
@@ -28,6 +89,7 @@ struct OnboardingExperienceView: View {
 
     @ObservedObject var config: ProviderConfig
     @ObservedObject private var deployment = RimeDeploymentController.shared
+    private let oobeClient = OOBEClientInfrastructure.shared
 
     @State private var micStatus = AppPermissions.micStatus
     @State private var speechStatus = AppPermissions.speechStatus
@@ -35,15 +97,24 @@ struct OnboardingExperienceView: View {
     @State private var keyboardReady = KeyboardSetupBridge.isReadyForOnboardingSkip
     @State private var hasOpenedKeyboardSettings = false
     @State private var isRequestingPermissions = false
+    @State private var keyboardSwitchText = ""
+    @State private var keyboardVerificationTimedOut = false
     @State private var practiceText = ""
     @State private var practiceStartedAt: Date?
-    @State private var didVerifyVoiceInsertion = false
     @State private var isPreparingManagedPractice = false
     @State private var managedPracticeReady = false
     @State private var managedPracticeFailed = false
+    @State private var practiceFeature: ManagedGatewayOOBEFeature = .voiceInput
+    @State private var practiceSessionID: UUID?
+    @State private var completedPracticeFeatures: Set<ManagedGatewayOOBEFeature> = []
+    @State private var didCopyPracticeSample = false
+    @State private var didRefreshLoginReward = false
+    @FocusState private var keyboardSwitchFieldFocused: Bool
     @FocusState private var practiceFieldFocused: Bool
 
     private static let migrationKey = "onboarding.experience.v2.migrated"
+    private static let completedPracticeFeaturesKey =
+        "onboarding.experience.oobe.completedFeatures.v1"
 
     private var currentStep: OnboardingExperienceStep {
         OnboardingExperienceStep(rawValue: config.onboardingPage) ?? .introduction
@@ -60,11 +131,9 @@ struct OnboardingExperienceView: View {
                     .id(currentStep)
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
 
-                if currentStep != .practice {
-                    bottomAction
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.bottom, Spacing.lg)
-                }
+                bottomAction
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.bottom, Spacing.lg)
             }
         }
         .onAppear {
@@ -73,6 +142,8 @@ struct OnboardingExperienceView: View {
             refreshState()
             if currentStep == .practice {
                 beginPractice()
+            } else if currentStep == .loginReward {
+                refreshLoginRewardIfNeeded()
             }
         }
         .onDisappear {
@@ -81,31 +152,53 @@ struct OnboardingExperienceView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             refreshState()
+            if currentStep == .keyboard, hasOpenedKeyboardSettings {
+                goForward()
+                return
+            }
+            if currentStep == .keyboardSwitch, !keyboardReady {
+                focusKeyboardSwitchField()
+            }
             if currentStep == .practice {
                 beginPracticeIfNeeded()
             }
         }
         .onChange(of: currentStep) { previous, current in
+            if previous == .keyboardSwitch {
+                keyboardSwitchFieldFocused = false
+            }
             if previous == .practice {
                 endPractice()
+            }
+            if current == .keyboardSwitch {
+                keyboardVerificationTimedOut = false
+                focusKeyboardSwitchField()
             }
             if current == .practice {
                 beginPractice()
             }
+            if current == .loginReward {
+                refreshLoginRewardIfNeeded()
+            }
         }
         .onChange(of: accountSession.isSignedIn) { _, isSignedIn in
-            guard isSignedIn, currentStep == .practice,
-                  config.hasAcknowledgedCloudSharing else { return }
-            prepareManagedPractice()
+            guard isSignedIn, currentStep == .loginReward else { return }
+            didRefreshLoginReward = false
+            refreshLoginRewardIfNeeded()
         }
         .onChange(of: config.hasAcknowledgedCloudSharing) { _, acknowledged in
-            guard acknowledged, currentStep == .practice,
-                  accountSession.isSignedIn else { return }
+            guard acknowledged, currentStep == .practice else { return }
             prepareManagedPractice()
         }
         .task(id: currentStep) {
-            guard currentStep == .practice else { return }
-            await monitorPractice()
+            switch currentStep {
+            case .keyboardSwitch:
+                await monitorKeyboardVerification()
+            case .practice:
+                await monitorPractice()
+            default:
+                break
+            }
         }
     }
 
@@ -118,8 +211,12 @@ struct OnboardingExperienceView: View {
             permissionsPage
         case .keyboard:
             keyboardPage
+        case .keyboardSwitch:
+            keyboardSwitchPage
         case .practice:
             practicePage
+        case .loginReward:
+            loginRewardPage
         case .complete:
             completePage
         }
@@ -333,7 +430,7 @@ struct OnboardingExperienceView: View {
             subtitle: "onboarding.experience.keyboard.subtitle",
             onBack: goBack
         ) {
-            KeyboardSettingsPreview(isReady: keyboardReady || hasOpenedKeyboardSettings)
+            KeyboardSettingsPreview(isReady: keyboardReady)
                 .padding(.top, Spacing.xxl)
 
             HStack(spacing: Spacing.xs) {
@@ -364,6 +461,107 @@ struct OnboardingExperienceView: View {
         .onAppear {
             deployment.deployNow(reason: "onboarding.experience.keyboard")
         }
+    }
+
+    // MARK: - Keyboard activation and verification
+
+    private var keyboardSwitchPage: some View {
+        OnboardingExperienceShell(
+            title: "onboarding.experience.keyboardSwitch.title",
+            subtitle: "onboarding.experience.keyboardSwitch.subtitle",
+            onBack: goBack
+        ) {
+            VStack(spacing: Spacing.md) {
+                Image(systemName: "globe")
+                    .font(.system(size: 34, weight: .semibold))
+                    .foregroundStyle(palette.accent)
+                    .accessibilityHidden(true)
+
+                Text("onboarding.experience.keyboardSwitch.instruction")
+                    .font(TypeStyle.bodyEmph)
+                    .foregroundStyle(palette.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(Spacing.lg)
+            .background(
+                palette.surface,
+                in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                    .stroke(palette.divider, lineWidth: 0.5)
+            )
+            .padding(.top, Spacing.xxl)
+
+            TextField(
+                "onboarding.experience.keyboardSwitch.placeholder",
+                text: $keyboardSwitchText,
+                axis: .vertical
+            )
+            .font(TypeStyle.body)
+            .foregroundStyle(palette.textPrimary)
+            .focused($keyboardSwitchFieldFocused)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .submitLabel(.done)
+            .padding(Spacing.md)
+            .frame(maxWidth: .infinity, minHeight: 72, alignment: .topLeading)
+            .background(
+                palette.surface,
+                in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                    .stroke(
+                        keyboardReady ? palette.accent : palette.dividerStrong,
+                        lineWidth: keyboardReady ? 1.5 : 0.5
+                    )
+            )
+            .accessibilityIdentifier("onboarding.keyboardSwitch.textField")
+            .padding(.top, Spacing.lg)
+
+            HStack(spacing: Spacing.xs) {
+                if keyboardReady {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(palette.accent)
+                } else if keyboardAppeared || keyboardVerificationTimedOut {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(palette.warning)
+                } else {
+                    ProgressView()
+                        .tint(palette.accent)
+                }
+
+                Text(keyboardVerificationStatus)
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+            }
+            .padding(.top, Spacing.md)
+
+            if !keyboardReady, keyboardAppeared || keyboardVerificationTimedOut {
+                Button("onboarding.experience.keyboardSwitch.checkSettings") {
+                    openKeyboardSettings()
+                }
+                .font(TypeStyle.footnote)
+                .foregroundStyle(palette.accent)
+                .padding(.top, Spacing.sm)
+            }
+        }
+    }
+
+    private var keyboardVerificationStatus: LocalizedStringKey {
+        if keyboardReady {
+            return "onboarding.experience.keyboardSwitch.ready"
+        }
+        if keyboardAppeared {
+            return "onboarding.experience.keyboardSwitch.fullAccessMissing"
+        }
+        if keyboardVerificationTimedOut {
+            return "onboarding.experience.keyboardSwitch.timeout"
+        }
+        return "onboarding.experience.keyboardSwitch.waiting"
     }
 
     @ViewBuilder
@@ -404,12 +602,6 @@ struct OnboardingExperienceView: View {
                 .accessibilityLabel(Text("common.back"))
 
                 Spacer()
-
-                Button("onboarding.experience.practice.skip") {
-                    goToComplete()
-                }
-                .font(TypeStyle.footnote)
-                .foregroundStyle(palette.textSecondary)
             }
             .padding(.horizontal, Spacing.sm)
 
@@ -424,13 +616,6 @@ struct OnboardingExperienceView: View {
                     .foregroundStyle(palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if managedPracticeReady, keyboardReady {
-                    Text("onboarding.experience.practice.sample")
-                        .font(.system(size: 20, weight: .medium, design: .rounded))
-                        .foregroundStyle(palette.textPrimary)
-                        .italic()
-                        .padding(.top, Spacing.sm)
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Spacing.xl)
@@ -440,6 +625,7 @@ struct OnboardingExperienceView: View {
                 .padding(.horizontal, Spacing.lg)
                 .padding(.top, Spacing.lg)
                 .padding(.bottom, Spacing.sm)
+                .frame(maxHeight: .infinity, alignment: .top)
 
             if managedPracticeReady, keyboardAppeared, !keyboardReady {
                 Button {
@@ -460,24 +646,7 @@ struct OnboardingExperienceView: View {
 
     @ViewBuilder
     private var practiceContent: some View {
-        if !accountSession.isSignedIn {
-            VStack(spacing: Spacing.md) {
-                Image(systemName: "person.crop.circle.badge.checkmark")
-                    .font(.system(size: 34, weight: .semibold))
-                    .foregroundStyle(palette.accent)
-
-                Text("onboarding.experience.practice.signInBody")
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.textSecondary)
-                    .multilineTextAlignment(.center)
-
-                AccountAppleAuthorizationButton(purpose: .signIn)
-                    .disabled(accountSession.operation != nil)
-
-                accountOperationError
-            }
-            .practiceSetupCard(palette: palette)
-        } else if !config.hasAcknowledgedCloudSharing {
+        if !config.hasAcknowledgedCloudSharing {
             VStack(spacing: Spacing.md) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 34, weight: .semibold))
@@ -487,6 +656,7 @@ struct OnboardingExperienceView: View {
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Button {
                     config.hasAcknowledgedCloudSharing = true
@@ -515,16 +685,45 @@ struct OnboardingExperienceView: View {
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
                     .multilineTextAlignment(.center)
-                Button("onboarding.enable.resources.retry") {
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("onboarding.experience.practice.retry") {
                     prepareManagedPractice()
                 }
                 .font(TypeStyle.bodyEmph)
                 .foregroundStyle(palette.accent)
-                accountOperationError
+                Button("onboarding.experience.practice.skip") {
+                    goToLoginReward()
+                }
+                .font(TypeStyle.footnote)
+                .foregroundStyle(palette.textSecondary)
             }
             .practiceSetupCard(palette: palette)
         } else {
-            practiceEditor
+            VStack(spacing: Spacing.md) {
+                if practiceFeature == .voiceInput {
+                    practiceVoiceSample
+                } else if practiceFeature == .clipboardTranslate
+                    || practiceFeature == .clipboardReply {
+                    practiceClipboardSample
+                }
+                practiceEditor
+                HStack(spacing: Spacing.xs) {
+                    if managedPracticeReady {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(palette.accent)
+                    }
+                    Text("onboarding.experience.practice.waiting")
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textSecondary)
+                }
+
+                Button("onboarding.experience.practice.skip") {
+                    goToLoginReward()
+                }
+                .font(TypeStyle.caption)
+                .foregroundStyle(palette.textTertiary)
+            }
         }
     }
 
@@ -541,9 +740,9 @@ struct OnboardingExperienceView: View {
     private var practiceEditor: some View {
         VStack(spacing: 0) {
             HStack(spacing: Spacing.xs) {
-                Image(systemName: "message.fill")
+                Image(systemName: practiceFeature == .askAI ? "sparkles" : "message.fill")
                     .foregroundStyle(palette.accent)
-                Text("onboarding.experience.practice.editorTitle")
+                Text(practiceFeature.progressKey)
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
                 Spacer()
@@ -569,12 +768,69 @@ struct OnboardingExperienceView: View {
         )
     }
 
+    private var practiceVoiceSample: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text("onboarding.experience.practice.readAloud")
+                .font(TypeStyle.caption)
+                .foregroundStyle(palette.textSecondary)
+
+            Text("onboarding.experience.practice.voiceSample")
+                .font(TypeStyle.bodyEmph)
+                .foregroundStyle(palette.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.md)
+        .background(palette.accentMuted, in: RoundedRectangle(cornerRadius: Radius.large))
+        .accessibilityIdentifier("onboarding.practice.voiceSample")
+    }
+
+    private var practiceClipboardSample: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text("onboarding.experience.practice.sample")
+                .font(TypeStyle.bodyEmph)
+                .foregroundStyle(palette.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                copyPracticeSample()
+            } label: {
+                Label {
+                    Text(
+                        didCopyPracticeSample
+                            ? "onboarding.experience.practice.copied"
+                            : "onboarding.experience.practice.copyAction"
+                    )
+                } icon: {
+                    Image(
+                        systemName: didCopyPracticeSample
+                            ? "checkmark.circle.fill"
+                            : "doc.on.doc"
+                    )
+                }
+                .font(TypeStyle.footnote)
+                .foregroundStyle(didCopyPracticeSample ? palette.accent : palette.textPrimary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 42)
+                .background(
+                    didCopyPracticeSample ? palette.accentMuted : palette.surfaceElevated,
+                    in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("onboarding.practice.copySample")
+        }
+        .padding(Spacing.md)
+        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                .stroke(palette.divider, lineWidth: 0.5)
+        )
+    }
+
     private var practiceTitle: LocalizedStringKey {
         if !permissionsReady {
             return "onboarding.experience.practice.permissionsTitle"
-        }
-        if !accountSession.isSignedIn {
-            return "onboarding.experience.practice.signInTitle"
         }
         if !config.hasAcknowledgedCloudSharing {
             return "onboarding.experience.practice.cloudTitle"
@@ -588,15 +844,12 @@ struct OnboardingExperienceView: View {
         if !keyboardReady {
             return "onboarding.experience.practice.fullAccessTitle"
         }
-        return "onboarding.experience.practice.speakTitle"
+        return practiceFeature.titleKey
     }
 
     private var practiceSubtitle: LocalizedStringKey {
         if !permissionsReady {
             return "onboarding.experience.practice.permissionsSubtitle"
-        }
-        if !accountSession.isSignedIn {
-            return "onboarding.experience.practice.signInSubtitle"
         }
         if !config.hasAcknowledgedCloudSharing {
             return "onboarding.experience.practice.cloudSubtitle"
@@ -610,7 +863,84 @@ struct OnboardingExperienceView: View {
         if !keyboardReady {
             return "onboarding.experience.practice.fullAccessSubtitle"
         }
-        return "onboarding.experience.practice.speakSubtitle"
+        return practiceFeature.subtitleKey
+    }
+
+    // MARK: - Optional account reward
+
+    private var loginRewardPage: some View {
+        OnboardingExperienceShell(
+            title: "onboarding.experience.login.title",
+            subtitle: "onboarding.experience.login.subtitle",
+            onBack: goBack
+        ) {
+            VStack(spacing: Spacing.lg) {
+                Image(systemName: accountSession.isSignedIn ? "checkmark.seal.fill" : "gift.fill")
+                    .font(.system(size: 42, weight: .semibold))
+                    .foregroundStyle(palette.accent)
+                    .accessibilityHidden(true)
+
+                Text(
+                    accountSession.isSignedIn
+                        ? "onboarding.experience.login.signedIn"
+                        : "onboarding.experience.login.body"
+                )
+                .font(TypeStyle.body)
+                .foregroundStyle(palette.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+                if accountSession.isSignedIn {
+                    if let balance = loginRewardBalance {
+                        Text("onboarding.experience.login.balance \(balance)")
+                            .font(TypeStyle.title)
+                            .foregroundStyle(palette.textPrimary)
+                    } else {
+                        ProgressView()
+                            .tint(palette.accent)
+                    }
+                } else {
+                    AccountAppleAuthorizationButton(
+                        purpose: .signIn,
+                        onSignedIn: {
+                            didRefreshLoginReward = false
+                            refreshLoginRewardIfNeeded()
+                        }
+                    )
+                    .disabled(accountSession.operation != nil)
+
+                    accountOperationError
+                }
+
+                Button("onboarding.experience.login.skip") {
+                    goToComplete()
+                }
+                .font(TypeStyle.footnote)
+                .foregroundStyle(palette.textSecondary)
+                .opacity(accountSession.isSignedIn ? 0 : 1)
+                .disabled(accountSession.isSignedIn)
+                .accessibilityHidden(accountSession.isSignedIn)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(Spacing.xl)
+            .background(
+                palette.surface,
+                in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+                    .stroke(palette.divider, lineWidth: 0.5)
+            )
+            .padding(.top, Spacing.xxl)
+            .accessibilityIdentifier("onboarding.loginReward.card")
+        }
+    }
+
+    private var loginRewardBalance: Int64? {
+        guard case let .loaded(snapshot) = accountSession.snapshotPhase else {
+            return nil
+        }
+        return snapshot.credits.balance
     }
 
     // MARK: - Complete
@@ -624,13 +954,13 @@ struct OnboardingExperienceView: View {
                     Circle()
                         .fill(palette.accentMuted)
                         .frame(width: 108, height: 108)
-                    Image(systemName: didVerifyVoiceInsertion ? "checkmark" : "sparkles")
+                    Image(systemName: completedAllPracticeFeatures ? "checkmark" : "sparkles")
                         .font(.system(size: 44, weight: .semibold))
                         .foregroundStyle(palette.accent)
                 }
 
                 Text(
-                    didVerifyVoiceInsertion
+                    completedAllPracticeFeatures
                         ? "onboarding.experience.complete.verifiedTitle"
                         : "onboarding.experience.complete.title"
                 )
@@ -645,27 +975,17 @@ struct OnboardingExperienceView: View {
                     .multilineTextAlignment(.center)
                     .padding(.top, Spacing.sm)
 
-                if !practiceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text(practiceText)
-                        .font(TypeStyle.body)
-                        .foregroundStyle(palette.textPrimary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(Spacing.md)
-                        .background(
-                            palette.surface,
-                            in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                                .stroke(palette.divider, lineWidth: 0.5)
-                        )
-                        .padding(.top, Spacing.xl)
-                }
-
-                HStack(spacing: Spacing.xs) {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: Spacing.xs),
+                        GridItem(.flexible(), spacing: Spacing.xs)
+                    ],
+                    spacing: Spacing.xs
+                ) {
                     capability("mic.fill", "onboarding.experience.complete.dictate")
                     capability("sparkles", "onboarding.experience.complete.agent")
-                    capability("wand.and.stars", "onboarding.experience.complete.edit")
+                    capability("translate", "onboarding.experience.complete.translate")
+                    capability("arrowshape.turn.up.left.fill", "onboarding.experience.complete.reply")
                 }
                 .padding(.top, Spacing.xxl)
             }
@@ -695,7 +1015,7 @@ struct OnboardingExperienceView: View {
     private var bottomAction: some View {
         Button(action: performPrimaryAction) {
             HStack(spacing: Spacing.xs) {
-                if isRequestingPermissions {
+                if isRequestingPermissions || (currentStep == .keyboardSwitch && !keyboardReady) {
                     ProgressView()
                         .tint(palette.textOnAccent)
                 }
@@ -704,7 +1024,21 @@ struct OnboardingExperienceView: View {
             .primaryButton()
         }
         .buttonStyle(.plain)
-        .disabled(isRequestingPermissions)
+        .disabled(primaryActionDisabled)
+        .opacity(primaryActionDisabled ? 0.55 : 1)
+    }
+
+    private var primaryActionDisabled: Bool {
+        if isRequestingPermissions || (currentStep == .keyboardSwitch && !keyboardReady) {
+            return true
+        }
+        if currentStep == .practice {
+            return !completedAllPracticeFeatures
+        }
+        if currentStep == .loginReward, accountSession.isSignedIn {
+            return loginRewardBalance == nil
+        }
+        return false
     }
 
     private var primaryActionTitle: LocalizedStringKey {
@@ -718,12 +1052,20 @@ struct OnboardingExperienceView: View {
             }
             return "common.continue"
         case .keyboard:
-            if keyboardReady { return "onboarding.experience.keyboard.practiceAction" }
+            if keyboardReady { return "common.continue" }
             return hasOpenedKeyboardSettings
                 ? "common.continue"
                 : "onboarding.enable.openSettings"
+        case .keyboardSwitch:
+            return keyboardReady
+                ? "common.continue"
+                : "onboarding.experience.keyboardSwitch.waitingAction"
         case .practice:
             return "common.continue"
+        case .loginReward:
+            return accountSession.isSignedIn
+                ? "common.continue"
+                : "onboarding.experience.login.skip"
         case .complete:
             return "onboarding.experience.complete.action"
         }
@@ -741,8 +1083,14 @@ struct OnboardingExperienceView: View {
             } else {
                 openKeyboardSettings()
             }
+        case .keyboardSwitch:
+            guard keyboardReady else { return }
+            goForward()
         case .practice:
-            break
+            guard completedAllPracticeFeatures else { return }
+            goToLoginReward()
+        case .loginReward:
+            goToComplete()
         case .complete:
             finishOnboarding()
         }
@@ -788,10 +1136,9 @@ struct OnboardingExperienceView: View {
         if practiceStartedAt == nil {
             beginPractice()
         } else if managedPracticeReady, permissionsReady {
-            KeyboardSetupBridge.setOnboardingPracticeActive(true)
             flowManager.activateOnForeground(reason: "onboarding.practice.resume")
             focusPracticeField()
-        } else if accountSession.isSignedIn, config.hasAcknowledgedCloudSharing {
+        } else if config.hasAcknowledgedCloudSharing {
             prepareManagedPractice()
         }
     }
@@ -799,18 +1146,22 @@ struct OnboardingExperienceView: View {
     private func beginPractice() {
         refreshState()
         practiceStartedAt = nil
-        didVerifyVoiceInsertion = false
+        completedPracticeFeatures = loadCompletedPracticeFeatures()
+        practiceFeature = firstIncompletePracticeFeature ?? .askAI
+        practiceSessionID = nil
+        didCopyPracticeSample = false
         managedPracticeReady = false
         managedPracticeFailed = false
         KeyboardSetupBridge.setOnboardingPracticeActive(false)
-        if accountSession.isSignedIn, config.hasAcknowledgedCloudSharing {
+        if completedAllPracticeFeatures {
+            goToLoginReward()
+        } else if config.hasAcknowledgedCloudSharing {
             prepareManagedPractice()
         }
     }
 
     private func prepareManagedPractice() {
         guard currentStep == .practice,
-              accountSession.isSignedIn,
               config.hasAcknowledgedCloudSharing,
               !isPreparingManagedPractice else { return }
         isPreparingManagedPractice = true
@@ -824,22 +1175,33 @@ struct OnboardingExperienceView: View {
         config.modeId = "polish"
 
         Task { @MainActor in
-            let ready = await accountSession.prepareManagedGateway()
-            guard currentStep == .practice else { return }
-            isPreparingManagedPractice = false
-            guard ready else {
+            let session: OOBEPracticeSession
+            do {
+                session = try await oobeClient.beginPractice(feature: practiceFeature)
+            } catch {
+                guard currentStep == .practice else { return }
+                isPreparingManagedPractice = false
                 managedPracticeFailed = true
                 return
             }
-
+            guard currentStep == .practice else { return }
+            isPreparingManagedPractice = false
             config.credentialSource = .managed
             managedPracticeReady = true
             practiceStartedAt = Date()
-            KeyboardSetupBridge.setOnboardingPracticeActive(true)
+            practiceSessionID = session.sessionID
             if permissionsReady {
                 flowManager.activateOnForeground(reason: "onboarding.practice.managed")
             }
             focusPracticeField()
+        }
+    }
+
+    private func focusKeyboardSwitchField() {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard currentStep == .keyboardSwitch, !keyboardReady else { return }
+            keyboardSwitchFieldFocused = true
         }
     }
 
@@ -855,24 +1217,132 @@ struct OnboardingExperienceView: View {
         practiceFieldFocused = false
         isPreparingManagedPractice = false
         managedPracticeReady = false
+        practiceSessionID = nil
         KeyboardSetupBridge.setOnboardingPracticeActive(false)
+        Task {
+            await oobeClient.endPractice()
+        }
+    }
+
+    @MainActor
+    private func monitorKeyboardVerification() async {
+        let startedAt = Date()
+        refreshState()
+        guard !keyboardReady else { return }
+        focusKeyboardSwitchField()
+
+        while !Task.isCancelled, currentStep == .keyboardSwitch {
+            refreshState()
+            if keyboardReady {
+                keyboardVerificationTimedOut = false
+                keyboardSwitchFieldFocused = false
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                return
+            }
+            if !keyboardVerificationTimedOut,
+               Date().timeIntervalSince(startedAt) >= 12 {
+                keyboardVerificationTimedOut = true
+            }
+            try? await Task.sleep(for: .milliseconds(350))
+        }
     }
 
     @MainActor
     private func monitorPractice() async {
         while !Task.isCancelled, currentStep == .practice {
             refreshState()
-            if let startedAt = practiceStartedAt,
-               let insertedAt = KeyboardSetupBridge.lastVoiceInsertionAt,
-               insertedAt >= startedAt {
-                didVerifyVoiceInsertion = true
+            if let sessionID = practiceSessionID,
+               KeyboardSetupBridge.oobePracticeCompletion(
+                   sessionID: sessionID,
+                   feature: practiceFeature
+               ) != nil {
+                let completedFeature = practiceFeature
+                completedPracticeFeatures.insert(completedFeature)
+                persistCompletedPracticeFeatures()
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
                 try? await Task.sleep(for: .milliseconds(650))
                 guard !Task.isCancelled, currentStep == .practice else { return }
-                goToComplete()
-                return
+                if let next = completedFeature.next {
+                    advancePractice(to: next)
+                } else {
+                    goToLoginReward()
+                    return
+                }
             }
             try? await Task.sleep(for: .milliseconds(350))
+        }
+    }
+
+    private func advancePractice(to feature: ManagedGatewayOOBEFeature) {
+        guard let sessionID = practiceSessionID,
+              KeyboardSetupBridge.updateOOBEExpectedFeature(
+                  feature,
+                  sessionID: sessionID
+              ) != nil else {
+            managedPracticeReady = false
+            managedPracticeFailed = true
+            return
+        }
+        withAnimation(Motion.soft) {
+            practiceFeature = feature
+            didCopyPracticeSample = false
+        }
+        focusPracticeField()
+    }
+
+    private func copyPracticeSample() {
+        guard let sessionID = practiceSessionID else { return }
+        let sample = AppL10n.string("onboarding.experience.practice.sample")
+        guard KeyboardSetupBridge.seedOOBEClipboardMaterial(
+            sample,
+            sessionID: sessionID
+        ) != nil else {
+            managedPracticeFailed = true
+            return
+        }
+        // This is a direct response to the user's button tap. The keyboard
+        // still reads only the session-bound sample from App Group storage.
+        UIPasteboard.general.string = sample
+        didCopyPracticeSample = true
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        focusPracticeField()
+    }
+
+    private var completedAllPracticeFeatures: Bool {
+        Set(ManagedGatewayOOBEFeature.allCases).isSubset(of: completedPracticeFeatures)
+    }
+
+    private var firstIncompletePracticeFeature: ManagedGatewayOOBEFeature? {
+        ManagedGatewayOOBEFeature.allCases.first {
+            !completedPracticeFeatures.contains($0)
+        }
+    }
+
+    private func loadCompletedPracticeFeatures() -> Set<ManagedGatewayOOBEFeature> {
+        let values = UserDefaults.standard.stringArray(
+            forKey: Self.completedPracticeFeaturesKey
+        ) ?? []
+        return Set(values.compactMap(ManagedGatewayOOBEFeature.init(rawValue:)))
+    }
+
+    private func persistCompletedPracticeFeatures() {
+        UserDefaults.standard.set(
+            completedPracticeFeatures.map(\.rawValue).sorted(),
+            forKey: Self.completedPracticeFeaturesKey
+        )
+    }
+
+    private func refreshLoginRewardIfNeeded() {
+        guard currentStep == .loginReward,
+              accountSession.isSignedIn,
+              !didRefreshLoginReward else { return }
+        didRefreshLoginReward = true
+        Task { @MainActor in
+            await oobeClient.endPractice()
+            if await accountSession.prepareManagedGateway() {
+                config.credentialSource = .managed
+            }
+            await accountSession.refreshAccountData(force: true)
         }
     }
 
@@ -884,32 +1354,89 @@ struct OnboardingExperienceView: View {
     }
 
     private func goForward() {
-        let next = min(currentStep.rawValue + 1, OnboardingExperienceStep.complete.rawValue)
+        let next: OnboardingExperienceStep
+        switch currentStep {
+        case .introduction:
+            next = .permissions
+        case .permissions:
+            next = .keyboard
+        case .keyboard:
+            next = keyboardReady ? .practice : .keyboardSwitch
+        case .keyboardSwitch:
+            next = .practice
+        case .practice:
+            next = .loginReward
+        case .loginReward, .complete:
+            next = .complete
+        }
+        if next == .practice {
+            resetPracticeRun()
+        }
         withAnimation(Motion.soft) {
-            config.onboardingPage = next
+            config.onboardingPage = next.rawValue
         }
     }
 
     private func goBack() {
-        let previous = max(currentStep.rawValue - 1, OnboardingExperienceStep.introduction.rawValue)
+        let previous: OnboardingExperienceStep
+        switch currentStep {
+        case .introduction, .permissions:
+            previous = .introduction
+        case .keyboard:
+            previous = .permissions
+        case .keyboardSwitch:
+            previous = .keyboard
+        case .practice:
+            previous = .keyboardSwitch
+        case .loginReward:
+            previous = .practice
+        case .complete:
+            previous = .loginReward
+        }
+        if previous == .practice {
+            resetPracticeRun()
+        }
         withAnimation(Motion.soft) {
-            config.onboardingPage = previous
+            config.onboardingPage = previous.rawValue
         }
     }
 
     private func goToComplete() {
+        config.engineMode = "local"
+        if !accountSession.isSignedIn {
+            // Skipping the optional account offer leaves a fully usable local
+            // voice keyboard instead of a managed mode with no credential.
+            config.credentialSource = .byok
+        }
         withAnimation(Motion.soft) {
             config.onboardingPage = OnboardingExperienceStep.complete.rawValue
         }
     }
 
+    private func goToLoginReward() {
+        endPractice()
+        withAnimation(Motion.soft) {
+            config.onboardingPage = OnboardingExperienceStep.loginReward.rawValue
+        }
+    }
+
     private func finishOnboarding() {
         endPractice()
+        UserDefaults.standard.removeObject(forKey: Self.completedPracticeFeaturesKey)
         var transaction = Transaction()
         transaction.disablesAnimations = true
         withTransaction(transaction) {
             config.hasCompletedOnboarding = true
         }
+    }
+
+    private func resetPracticeRun() {
+        UserDefaults.standard.removeObject(forKey: Self.completedPracticeFeaturesKey)
+        completedPracticeFeatures.removeAll()
+        practiceFeature = .voiceInput
+        practiceText = ""
+        practiceStartedAt = nil
+        didCopyPracticeSample = false
     }
 
     private func applyPrivacySafeDefaultsIfNeeded() {

@@ -13,6 +13,7 @@
 // *don't* attempt that here — the State class is what we care about
 // for correctness.
 
+import Combine
 @testable import OSGKeyboardShared
 import XCTest
 
@@ -142,6 +143,50 @@ final class KeyboardStateTests: XCTestCase {
         XCTAssertTrue(state.canShowClipboardEntry)
         XCTAssertNil(state.clipboardSuggestionText)
         XCTAssertEqual(state.clipboardOverlay, .none)
+    }
+
+    func testResolvedSkillCopyPublishesWhenIDsStayStable() {
+        let state = KeyboardState()
+        state.enabledClipboardSkillIDs = ["official.rewrite"]
+        let first = AIClipboardSkill(
+            id: "official.rewrite",
+            systemImage: "wand.and.stars",
+            titleKey: "",
+            cardTitleKey: "",
+            descriptionKey: "",
+            kind: .transform,
+            isDefault: false,
+            customName: "Rewrite",
+            customSummary: "Summary",
+            customPrompt: "First prompt"
+        )
+        let second = AIClipboardSkill(
+            id: "official.rewrite",
+            systemImage: "wand.and.stars",
+            titleKey: "",
+            cardTitleKey: "",
+            descriptionKey: "",
+            kind: .transform,
+            isDefault: false,
+            customName: "Rewrite updated",
+            customSummary: "Summary",
+            customPrompt: "Second prompt"
+        )
+        state.enabledClipboardSkills = [first]
+        let published = expectation(description: "resolved skill snapshot published")
+        var cancellable: AnyCancellable?
+        cancellable = state.$enabledClipboardSkills
+            .dropFirst()
+            .sink { skills in
+                XCTAssertEqual(skills.first?.customPrompt, "Second prompt")
+                published.fulfill()
+            }
+
+        state.enabledClipboardSkills = [second]
+
+        wait(for: [published], timeout: 1)
+        XCTAssertEqual(state.enabledClipboardSkillIDs, ["official.rewrite"])
+        withExtendedLifetime(cancellable) {}
     }
 
     func testReturnKeyRoleActionFillAndTitles() {

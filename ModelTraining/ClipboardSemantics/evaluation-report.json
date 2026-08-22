@@ -1,0 +1,1424 @@
+{
+  "classifiers" : [
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 1440,
+          "balancedValidationCount" : 360,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9556,
+              "f1" : 0.8462,
+              "falseNegative" : 24,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.7333,
+              "total" : 540,
+              "trueNegative" : 450,
+              "truePositive" : 66
+            },
+            "zh-Hans" : {
+              "accuracy" : 1,
+              "f1" : 1,
+              "falseNegative" : 0,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 1,
+              "total" : 540,
+              "trueNegative" : 450,
+              "truePositive" : 90
+            }
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9054,
+            "f1" : 0.6667,
+            "falseNegative" : 7,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.5,
+            "total" : 74,
+            "trueNegative" : 60,
+            "truePositive" : 7
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] Remember to correct the invoice name and submit it again. (score=0.3454)",
+            "[en] First confirm the delivery address with the client, then update the order. (score=0.5791)",
+            "[en] Would you book a meeting room for Wednesday afternoon? (score=0.3767)",
+            "[zh-Hans] 记得把发票抬头改好以后重新提交。 (score=0.4906)",
+            "[zh-Hans] 下一步先联系客户确认交付地址，再更新订单。 (score=0.3144)",
+            "[zh-Hans] 方便帮我约一下周三下午的会议室吗？ (score=0.1636)",
+            "[zh-Hans] 这些材料可以在月底前准备好吗？ (score=0.3953)"
+          ],
+          "goldenFalsePositiveExamples" : [
+
+          ],
+          "modelBytes" : 15241,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.9778,
+            "f1" : 0.9286,
+            "falseNegative" : 24,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.8667,
+            "total" : 1080,
+            "trueNegative" : 900,
+            "truePositive" : 156
+          },
+          "testFalseNegativeExamples" : [
+            "[en] The deadline is before the next meeting; make sure you check the invoice details. (score=0.3145)",
+            "[en] The deadline is by Friday; make sure you check the invoice details. (score=0.355)",
+            "[en] The deadline is before the next meeting; make sure you send the meeting notes. (score=0.3101)",
+            "[en] The deadline is before the next meeting; make sure you book the meeting room. (score=0.3458)",
+            "[en] The deadline is this week; make sure you send the meeting notes. (score=0.3362)",
+            "[en] The deadline is by the end of the month; make sure you summarize the test results. (score=0.34)",
+            "[en] The deadline is before the next meeting; make sure you prepare the presentation deck. (score=0.3238)",
+            "[en] The deadline is by Friday; make sure you summarize the test results. (score=0.3951)",
+            "[en] The deadline is before 3 PM; make sure you submit the contract attachment. (score=0.406)",
+            "[en] The deadline is before 3 PM; make sure you check the invoice details. (score=0.3848)",
+            "[en] The deadline is tomorrow morning; make sure you prepare the revised PRD. (score=0.3971)",
+            "[en] The deadline is before 3 PM; make sure you prepare the presentation deck. (score=0.3949)"
+          ],
+          "testFalsePositiveExamples" : [
+
+          ],
+          "threshold" : 0.6,
+          "validationBinary" : {
+            "accuracy" : 0.9907,
+            "f1" : 0.9714,
+            "falseNegative" : 10,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.9444,
+            "total" : 1080,
+            "trueNegative" : 900,
+            "truePositive" : 170
+          }
+        },
+        {
+          "acceptedForAutomaticRouting" : false,
+          "algorithm" : "bert",
+          "balancedTrainingCount" : 1440,
+          "balancedValidationCount" : 360,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9852,
+              "f1" : 0.9574,
+              "falseNegative" : 0,
+              "falsePositive" : 8,
+              "precision" : 0.9184,
+              "recall" : 1,
+              "total" : 540,
+              "trueNegative" : 442,
+              "truePositive" : 90
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.987,
+              "f1" : 0.9605,
+              "falseNegative" : 5,
+              "falsePositive" : 2,
+              "precision" : 0.977,
+              "recall" : 0.9444,
+              "total" : 540,
+              "trueNegative" : 448,
+              "truePositive" : 85
+            }
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.8649,
+            "f1" : 0.5833,
+            "falseNegative" : 7,
+            "falsePositive" : 3,
+            "precision" : 0.7,
+            "recall" : 0.5,
+            "total" : 74,
+            "trueNegative" : 57,
+            "truePositive" : 7
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] Alex owns the meeting notes and should post them in the project channel today. (score=0.0001)",
+            "[en] First confirm the delivery address with the client, then update the order. (score=0.0614)",
+            "[en] Would you book a meeting room for Wednesday afternoon? (score=0.0186)",
+            "[en] Could these documents be ready by the end of the month? (score=0.1961)",
+            "[zh-Hans] 小王负责整理会议纪要，今天发到项目群。 (score=0.0)",
+            "[zh-Hans] 记得把发票抬头改好以后重新提交。 (score=0.0091)",
+            "[zh-Hans] 下一步先联系客户确认交付地址，再更新订单。 (score=0.0)"
+          ],
+          "goldenFalsePositiveExamples" : [
+            "[zh-Hans] 想请你参加下周一的项目启动会，有时间吗？ (score=0.9984)",
+            "[zh-Hans] 账号无故被锁了，能请你们今天恢复吗？ (score=0.9223)",
+            "[zh-Hans] 明天我要去财务核对发票，不用你帮忙。 (score=0.9759)"
+          ],
+          "modelBytes" : 1356553,
+          "runtimeAssetIndependent" : false,
+          "testBinary" : {
+            "accuracy" : 0.9861,
+            "f1" : 0.9589,
+            "falseNegative" : 5,
+            "falsePositive" : 10,
+            "precision" : 0.9459,
+            "recall" : 0.9722,
+            "total" : 1080,
+            "trueNegative" : 890,
+            "truePositive" : 175
+          },
+          "testFalseNegativeExamples" : [
+            "[zh-Hans] 我想确认一下，你可以月底以前补充风险清单吗？ (score=0.7796)",
+            "[zh-Hans] 我想确认一下，你可以本周内预约会议室吗？ (score=0.687)",
+            "[zh-Hans] 我想确认一下，你可以月底以前预约会议室吗？ (score=0.2195)",
+            "[zh-Hans] 我想确认一下，你可以今天下班前预约会议室吗？ (score=0.6257)",
+            "[zh-Hans] 我想确认一下，你可以明天上午分享交付计划吗？ (score=0.8588)"
+          ],
+          "testFalsePositiveExamples" : [
+            "[en] Not sure if you are free before the end of the month, but would you like to join a meeting at the campus cafe? (score=0.999)",
+            "[en] Not sure if you are free Wednesday evening, but would you like to meet this weekend at the usual place? (score=0.9921)",
+            "[en] Not sure if you are free Friday morning, but would you like to watch a movie at the usual place? (score=0.9966)",
+            "[en] Not sure if you are free before the end of the month, but would you like to have dinner at the client office? (score=0.978)",
+            "[en] Not sure if you are free after work, but would you like to visit the client at the client office? (score=0.9991)",
+            "[en] Not sure if you are free after work, but would you like to meet this weekend at the online meeting room? (score=0.9929)",
+            "[en] Not sure if you are free Friday morning, but would you like to visit the client at the Wangjing branch? (score=1.0)",
+            "[en] Not sure if you are free before the end of the month, but would you like to have a quick call at the client office? (score=0.9999)",
+            "[zh-Hans] 给你留了位置，月底前来望京店吃饭怎么样？ (score=0.9308)",
+            "[zh-Hans] 给你留了位置，月底前来五号会议室吃饭怎么样？ (score=0.9409)"
+          ],
+          "threshold" : 0.9,
+          "validationBinary" : {
+            "accuracy" : 0.9565,
+            "f1" : 0.8614,
+            "falseNegative" : 34,
+            "falsePositive" : 13,
+            "precision" : 0.9182,
+            "recall" : 0.8111,
+            "total" : 1080,
+            "trueNegative" : 887,
+            "truePositive" : 146
+          }
+        }
+      ],
+      "id" : "task",
+      "labels" : [
+        "notTask",
+        "task"
+      ],
+      "positiveLabel" : "task",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "TaskIntentClassifier.mlmodel"
+    },
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 2880,
+          "balancedValidationCount" : 720,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 1,
+              "f1" : 1,
+              "falseNegative" : 0,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 1,
+              "total" : 540,
+              "trueNegative" : 360,
+              "truePositive" : 180
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9759,
+              "f1" : 0.9632,
+              "falseNegative" : 10,
+              "falsePositive" : 3,
+              "precision" : 0.9827,
+              "recall" : 0.9444,
+              "total" : 540,
+              "trueNegative" : 357,
+              "truePositive" : 170
+            }
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9865,
+            "f1" : 0.9767,
+            "falseNegative" : 1,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.9545,
+            "total" : 74,
+            "trueNegative" : 52,
+            "truePositive" : 21
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] Support has not replied for three days. When will this be handled? (score=0.5235)"
+          ],
+          "goldenFalsePositiveExamples" : [
+
+          ],
+          "modelBytes" : 17567,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.988,
+            "f1" : 0.9818,
+            "falseNegative" : 10,
+            "falsePositive" : 3,
+            "precision" : 0.9915,
+            "recall" : 0.9722,
+            "total" : 1080,
+            "trueNegative" : 717,
+            "truePositive" : 350
+          },
+          "testFalseNegativeExamples" : [
+            "[zh-Hans] 我需要明确答复：账号突然被锁定，你们准备如何解决？ (score=0.4535)",
+            "[zh-Hans] 我需要明确答复：数据同步失败，你们准备如何解决？ (score=0.4224)",
+            "[zh-Hans] 我需要明确答复：收到的商品有破损，你们准备如何解决？ (score=0.4396)",
+            "[zh-Hans] 我需要明确答复：应用一直闪退，你们准备如何解决？ (score=0.4659)",
+            "[zh-Hans] 我需要明确答复：发票信息写错了，你们准备如何解决？ (score=0.3527)",
+            "[zh-Hans] 我需要明确答复：订单被重复扣款，你们准备如何解决？ (score=0.4298)",
+            "[zh-Hans] 我需要明确答复：消息始终发不出去，你们准备如何解决？ (score=0.4903)",
+            "[zh-Hans] 我需要明确答复：页面加载特别慢，你们准备如何解决？ (score=0.4616)",
+            "[zh-Hans] 我需要明确答复：预约记录消失了，你们准备如何解决？ (score=0.2729)",
+            "[zh-Hans] 我需要明确答复：文件无法打开，你们准备如何解决？ (score=0.4602)"
+          ],
+          "testFalsePositiveExamples" : [
+            "[zh-Hans] 报告转述了客户的话：“退款流程处理好了吗？” (score=0.6952)",
+            "[zh-Hans] 会议纪要转述了客户的话：“退款流程处理好了吗？” (score=0.6807)",
+            "[zh-Hans] 报告转述了客户的话：“请假制度处理好了吗？” (score=0.6348)"
+          ],
+          "threshold" : 0.62,
+          "validationBinary" : {
+            "accuracy" : 0.9769,
+            "f1" : 0.9642,
+            "falseNegative" : 23,
+            "falsePositive" : 2,
+            "precision" : 0.9941,
+            "recall" : 0.9361,
+            "total" : 1080,
+            "trueNegative" : 718,
+            "truePositive" : 337
+          }
+        },
+        {
+          "acceptedForAutomaticRouting" : false,
+          "algorithm" : "bert",
+          "balancedTrainingCount" : 2880,
+          "balancedValidationCount" : 720,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 1,
+              "f1" : 1,
+              "falseNegative" : 0,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 1,
+              "total" : 540,
+              "trueNegative" : 360,
+              "truePositive" : 180
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.7019,
+              "f1" : 0.4542,
+              "falseNegative" : 113,
+              "falsePositive" : 48,
+              "precision" : 0.5826,
+              "recall" : 0.3722,
+              "total" : 540,
+              "trueNegative" : 312,
+              "truePositive" : 67
+            }
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.8514,
+            "f1" : 0.7027,
+            "falseNegative" : 9,
+            "falsePositive" : 2,
+            "precision" : 0.8667,
+            "recall" : 0.5909,
+            "total" : 74,
+            "trueNegative" : 50,
+            "truePositive" : 13
+          },
+          "goldenFalseNegativeExamples" : [
+            "[zh-Hans] 你能明天上午把报价单核对一遍吗？ (score=0.3129)",
+            "[zh-Hans] 方便帮我约一下周三下午的会议室吗？ (score=0.3129)",
+            "[zh-Hans] 这些材料可以在月底前准备好吗？ (score=0.4716)",
+            "[zh-Hans] 这个退款流程需要提供哪些材料？ (score=0.0685)",
+            "[zh-Hans] 订单为什么一直显示审核中？ (score=0.0203)",
+            "[zh-Hans] 今晚七点老地方吃饭，你能来吗？ (score=0.3129)",
+            "[zh-Hans] 周末一起去爬山怎么样？早上九点地铁站见。 (score=0.6069)",
+            "[zh-Hans] 下班后要不要一起喝杯咖啡？ (score=0.104)",
+            "[zh-Hans] 账号无故被锁了，能请你们今天恢复吗？ (score=0.6069)"
+          ],
+          "goldenFalsePositiveExamples" : [
+            "[en] The meeting notes preserve the client's question: “When can you deliver?” (score=0.9979)",
+            "[zh-Hans] 同一笔订单扣了两次款，到现在都没有退回。 (score=0.7071)"
+          ],
+          "modelBytes" : 1356565,
+          "runtimeAssetIndependent" : false,
+          "testBinary" : {
+            "accuracy" : 0.8509,
+            "f1" : 0.7542,
+            "falseNegative" : 113,
+            "falsePositive" : 48,
+            "precision" : 0.8373,
+            "recall" : 0.6861,
+            "total" : 1080,
+            "trueNegative" : 672,
+            "truePositive" : 247
+          },
+          "testFalseNegativeExamples" : [
+            "[zh-Hans] 文件无法打开导致现在完全没法使用，请告诉我今天能不能处理好？ (score=0.552)",
+            "[zh-Hans] 消息始终发不出去导致导致今天无法交付，请告诉我今天能不能处理好？ (score=0.568)",
+            "[zh-Hans] 账号突然被锁定导致还产生了额外费用，请告诉我今天能不能处理好？ (score=0.5683)",
+            "[zh-Hans] 订单被重复扣款导致重要记录找不到了，请告诉我今天能不能处理好？ (score=0.5679)",
+            "[zh-Hans] 收到的商品有破损导致还产生了额外费用，请告诉我今天能不能处理好？ (score=0.5683)",
+            "[zh-Hans] 数据同步失败导致客服一直没有处理，请告诉我今天能不能处理好？ (score=0.5756)",
+            "[zh-Hans] 页面加载特别慢导致还产生了额外费用，请告诉我今天能不能处理好？ (score=0.5679)",
+            "[zh-Hans] 应用一直闪退导致还产生了额外费用，请告诉我今天能不能处理好？ (score=0.568)",
+            "[zh-Hans] 我需要明确答复：数据同步失败，你们准备如何解决？ (score=0.6069)",
+            "[zh-Hans] 页面加载特别慢导致导致今天无法交付，请告诉我今天能不能处理好？ (score=0.5683)",
+            "[zh-Hans] 应用一直闪退导致客服一直没有处理，请告诉我今天能不能处理好？ (score=0.568)",
+            "[zh-Hans] 订单被重复扣款导致导致今天无法交付，请告诉我今天能不能处理好？ (score=0.568)"
+          ],
+          "testFalsePositiveExamples" : [
+            "[zh-Hans] 文档记载的开会定于明天下午三点在火车站进行。 (score=0.7071)",
+            "[zh-Hans] 文档记载的吃饭定于今晚七点在望京店进行。 (score=0.7071)",
+            "[zh-Hans] 文档记载的周末聚会定于下周一中午在客户办公室进行。 (score=0.6472)",
+            "[zh-Hans] 这里仅说明开会的时间地点：周三晚上，五号会议室。 (score=0.6472)",
+            "[zh-Hans] 这里仅说明开会的时间地点：下周一中午，公司楼下。 (score=0.7071)",
+            "[zh-Hans] 这里仅说明看电影的时间地点：周五上午，望京店。 (score=0.6472)",
+            "[zh-Hans] 文档记载的吃饭定于下周一中午在园区咖啡厅进行。 (score=0.7071)",
+            "[zh-Hans] 文档记载的看电影定于月底前在线上会议室进行。 (score=0.6472)",
+            "[zh-Hans] 这里仅说明喝咖啡的时间地点：这个周末，望京店。 (score=0.6472)",
+            "[zh-Hans] 文档记载的看电影定于周三晚上在望京店进行。 (score=0.7071)",
+            "[zh-Hans] 文档记载的吃饭定于今晚七点在园区咖啡厅进行。 (score=0.7071)",
+            "[zh-Hans] 文档记载的喝咖啡定于周三晚上在客户办公室进行。 (score=0.7071)"
+          ],
+          "threshold" : 0.61,
+          "validationBinary" : {
+            "accuracy" : 0.8083,
+            "f1" : 0.6878,
+            "falseNegative" : 132,
+            "falsePositive" : 75,
+            "precision" : 0.7525,
+            "recall" : 0.6333,
+            "total" : 1080,
+            "trueNegative" : 645,
+            "truePositive" : 228
+          }
+        }
+      ],
+      "id" : "question",
+      "labels" : [
+        "notQuestion",
+        "question"
+      ],
+      "positiveLabel" : "question",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "QuestionIntentClassifier.mlmodel"
+    },
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 720,
+          "balancedValidationCount" : 180,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9593,
+              "f1" : 0.6765,
+              "falseNegative" : 22,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.5111,
+              "total" : 540,
+              "trueNegative" : 495,
+              "truePositive" : 23
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.987,
+              "f1" : 0.9157,
+              "falseNegative" : 7,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.8444,
+              "total" : 540,
+              "trueNegative" : 495,
+              "truePositive" : 38
+            }
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9189,
+            "f1" : 0.4,
+            "falseNegative" : 6,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.25,
+            "total" : 74,
+            "trueNegative" : 66,
+            "truePositive" : 2
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] How about hiking together this weekend? Let's meet at the station at nine. (score=0.8679)",
+            "[en] I'd like to invite you to Monday's project kickoff. Are you available? (score=0.2212)",
+            "[en] Would you like to get coffee after work? (score=0.8703)",
+            "[zh-Hans] 周末一起去爬山怎么样？早上九点地铁站见。 (score=0.7975)",
+            "[zh-Hans] 想请你参加下周一的项目启动会，有时间吗？ (score=0.7995)",
+            "[zh-Hans] 下班后要不要一起喝杯咖啡？ (score=0.7515)"
+          ],
+          "goldenFalsePositiveExamples" : [
+
+          ],
+          "modelBytes" : 13851,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.9731,
+            "f1" : 0.8079,
+            "falseNegative" : 29,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.6778,
+            "total" : 1080,
+            "trueNegative" : 990,
+            "truePositive" : 61
+          },
+          "testFalseNegativeExamples" : [
+            "[en] I saved you a spot to watch a movie Friday morning at the online meeting room. How does that sound? (score=0.3936)",
+            "[en] I saved you a spot to have a quick call next Monday at noon at the usual place. How does that sound? (score=0.7807)",
+            "[en] I saved you a spot to watch a movie before the end of the month at the campus cafe. How does that sound? (score=0.3802)",
+            "[en] I saved you a spot to join a meeting this weekend at the client office. How does that sound? (score=0.5821)",
+            "[en] I saved you a spot to watch a movie after work at the Wangjing branch. How does that sound? (score=0.5528)",
+            "[en] I saved you a spot to watch a movie Wednesday evening at the client office. How does that sound? (score=0.5931)",
+            "[en] I saved you a spot to visit the client at seven tonight at Meeting Room 5. How does that sound? (score=0.7272)",
+            "[en] I saved you a spot to join a meeting Friday morning at the usual place. How does that sound? (score=0.4569)",
+            "[en] I saved you a spot to visit the client Friday morning at the Wangjing branch. How does that sound? (score=0.5501)",
+            "[en] I saved you a spot to attend the design review after work at the client office. How does that sound? (score=0.4696)",
+            "[en] I saved you a spot to attend the design review this weekend at the usual place. How does that sound? (score=0.5052)",
+            "[en] I saved you a spot to have a quick call this weekend at the client office. How does that sound? (score=0.6452)"
+          ],
+          "testFalsePositiveExamples" : [
+
+          ],
+          "threshold" : 0.89,
+          "validationBinary" : {
+            "accuracy" : 0.975,
+            "f1" : 0.828,
+            "falseNegative" : 25,
+            "falsePositive" : 2,
+            "precision" : 0.9701,
+            "recall" : 0.7222,
+            "total" : 1080,
+            "trueNegative" : 988,
+            "truePositive" : 65
+          }
+        },
+        {
+          "acceptedForAutomaticRouting" : false,
+          "algorithm" : "bert",
+          "balancedTrainingCount" : 720,
+          "balancedValidationCount" : 180,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9963,
+              "f1" : 0.9773,
+              "falseNegative" : 2,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.9556,
+              "total" : 540,
+              "trueNegative" : 495,
+              "truePositive" : 43
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.987,
+              "f1" : 0.9176,
+              "falseNegative" : 6,
+              "falsePositive" : 1,
+              "precision" : 0.975,
+              "recall" : 0.8667,
+              "total" : 540,
+              "trueNegative" : 494,
+              "truePositive" : 39
+            }
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9459,
+            "f1" : 0.75,
+            "falseNegative" : 2,
+            "falsePositive" : 2,
+            "precision" : 0.75,
+            "recall" : 0.75,
+            "total" : 74,
+            "trueNegative" : 64,
+            "truePositive" : 6
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] I'd like to invite you to Monday's project kickoff. Are you available? (score=0.9738)",
+            "[en] Would you like to get coffee after work? (score=0.5457)"
+          ],
+          "goldenFalsePositiveExamples" : [
+            "[en] My account was locked for no reason. Can you restore it today? (score=0.9911)",
+            "[en] The team dinner is at the usual place at seven tonight; this is an event notice. (score=0.9929)"
+          ],
+          "modelBytes" : 1356587,
+          "runtimeAssetIndependent" : false,
+          "testBinary" : {
+            "accuracy" : 0.9917,
+            "f1" : 0.948,
+            "falseNegative" : 8,
+            "falsePositive" : 1,
+            "precision" : 0.988,
+            "recall" : 0.9111,
+            "total" : 1080,
+            "trueNegative" : 989,
+            "truePositive" : 82
+          },
+          "testFalseNegativeExamples" : [
+            "[en] I saved you a spot to join a meeting Friday morning at the usual place. How does that sound? (score=0.9898)",
+            "[en] I saved you a spot to attend the design review this weekend at the usual place. How does that sound? (score=0.9868)",
+            "[zh-Hans] 给你留了位置，周五上午来客户办公室开会怎么样？ (score=0.7156)",
+            "[zh-Hans] 给你留了位置，下周一中午来客户办公室吃饭怎么样？ (score=0.9893)",
+            "[zh-Hans] 给你留了位置，周五上午来客户办公室周末聚会怎么样？ (score=0.9881)",
+            "[zh-Hans] 给你留了位置，月底前来五号会议室吃饭怎么样？ (score=0.9791)",
+            "[zh-Hans] 给你留了位置，月底前来公司楼下项目评审怎么样？ (score=0.0321)",
+            "[zh-Hans] 给你留了位置，下班以后来望京店项目评审怎么样？ (score=0.0009)"
+          ],
+          "testFalsePositiveExamples" : [
+            "[zh-Hans] 我想确认一下，你可以今天下班前预约会议室吗？ (score=0.9945)"
+          ],
+          "threshold" : 0.99,
+          "validationBinary" : {
+            "accuracy" : 0.9741,
+            "f1" : 0.86,
+            "falseNegative" : 4,
+            "falsePositive" : 24,
+            "precision" : 0.7818,
+            "recall" : 0.9556,
+            "total" : 1080,
+            "trueNegative" : 966,
+            "truePositive" : 86
+          }
+        }
+      ],
+      "id" : "invitation",
+      "labels" : [
+        "notInvitation",
+        "invitation"
+      ],
+      "positiveLabel" : "invitation",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "InvitationIntentClassifier.mlmodel"
+    },
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : false,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 1440,
+          "balancedValidationCount" : 360,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9778,
+              "f1" : 0.9286,
+              "falseNegative" : 12,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.8667,
+              "total" : 540,
+              "trueNegative" : 450,
+              "truePositive" : 78
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9796,
+              "f1" : 0.9357,
+              "falseNegative" : 10,
+              "falsePositive" : 1,
+              "precision" : 0.9877,
+              "recall" : 0.8889,
+              "total" : 540,
+              "trueNegative" : 449,
+              "truePositive" : 80
+            }
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9324,
+            "f1" : 0.7619,
+            "falseNegative" : 4,
+            "falsePositive" : 1,
+            "precision" : 0.8889,
+            "recall" : 0.6667,
+            "total" : 74,
+            "trueNegative" : 61,
+            "truePositive" : 8
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] The package arrived damaged and the cup inside was broken. (score=0.4601)",
+            "[en] My account was locked for no reason. Can you restore it today? (score=0.4138)",
+            "[en] Support has not replied for three days. When will this be handled? (score=0.3334)",
+            "[zh-Hans] 收到的商品外包装破损，里面的杯子也碎了。 (score=0.5499)"
+          ],
+          "goldenFalsePositiveExamples" : [
+            "[zh-Hans] 客服很快解决了问题，整个过程很专业。 (score=0.6306)"
+          ],
+          "modelBytes" : 14880,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.9787,
+            "f1" : 0.9322,
+            "falseNegative" : 22,
+            "falsePositive" : 1,
+            "precision" : 0.9937,
+            "recall" : 0.8778,
+            "total" : 1080,
+            "trueNegative" : 899,
+            "truePositive" : 158
+          },
+          "testFalseNegativeExamples" : [
+            "[en] I need a clear answer: the invoice information is wrong. How are you going to resolve it? (score=0.4301)",
+            "[en] I need a clear answer: messages never send. How are you going to resolve it? (score=0.4339)",
+            "[en] I need a clear answer: the page loads extremely slowly. How are you going to resolve it? (score=0.4417)",
+            "[en] I need a clear answer: data synchronization fails. How are you going to resolve it? (score=0.4883)",
+            "[en] I need a clear answer: my reservation disappeared. How are you going to resolve it? (score=0.472)",
+            "[en] I need a clear answer: the order was charged twice. How are you going to resolve it? (score=0.4573)",
+            "[en] I need a clear answer: the app keeps crashing. How are you going to resolve it? (score=0.4258)",
+            "[en] I need a clear answer: the file will not open. How are you going to resolve it? (score=0.3983)",
+            "[en] I need a clear answer: the item arrived damaged. How are you going to resolve it? (score=0.4316)",
+            "[en] I need a clear answer: my account was suddenly locked. How are you going to resolve it? (score=0.5614)",
+            "[en] This is not the first time that the file will not open; now today's delivery is now at risk. (score=0.5964)",
+            "[en] This is not the first time that the invoice information is wrong; now today's delivery is now at risk. (score=0.5979)"
+          ],
+          "testFalsePositiveExamples" : [
+            "[zh-Hans] 对于交付日期，目前有没有明确答案？ (score=0.6766)"
+          ],
+          "threshold" : 0.6,
+          "validationBinary" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 1080,
+            "trueNegative" : 900,
+            "truePositive" : 180
+          }
+        },
+        {
+          "acceptedForAutomaticRouting" : false,
+          "algorithm" : "bert",
+          "balancedTrainingCount" : 1440,
+          "balancedValidationCount" : 360,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.987,
+              "f1" : 0.96,
+              "falseNegative" : 6,
+              "falsePositive" : 1,
+              "precision" : 0.9882,
+              "recall" : 0.9333,
+              "total" : 540,
+              "trueNegative" : 449,
+              "truePositive" : 84
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9278,
+              "f1" : 0.731,
+              "falseNegative" : 37,
+              "falsePositive" : 2,
+              "precision" : 0.9636,
+              "recall" : 0.5889,
+              "total" : 540,
+              "trueNegative" : 448,
+              "truePositive" : 53
+            }
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9054,
+            "f1" : 0.5882,
+            "falseNegative" : 7,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.4167,
+            "total" : 74,
+            "trueNegative" : 62,
+            "truePositive" : 5
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] I was charged twice for the same order and still have not received a refund. (score=0.5515)",
+            "[zh-Hans] 这个版本升级后一直闪退，数据还丢了，真的很失望。 (score=0.6394)",
+            "[zh-Hans] 同一笔订单扣了两次款，到现在都没有退回。 (score=0.1655)",
+            "[zh-Hans] 收到的商品外包装破损，里面的杯子也碎了。 (score=0.07)",
+            "[zh-Hans] 账号无故被锁了，能请你们今天恢复吗？ (score=0.07)",
+            "[zh-Hans] 消息一直发送失败，请尽快给我一个解决方案。 (score=0.07)",
+            "[zh-Hans] 客服已经三天没有回复了，请问什么时候能处理？ (score=0.1655)"
+          ],
+          "goldenFalsePositiveExamples" : [
+
+          ],
+          "modelBytes" : 1356568,
+          "runtimeAssetIndependent" : false,
+          "testBinary" : {
+            "accuracy" : 0.9574,
+            "f1" : 0.8562,
+            "falseNegative" : 43,
+            "falsePositive" : 3,
+            "precision" : 0.9786,
+            "recall" : 0.7611,
+            "total" : 1080,
+            "trueNegative" : 897,
+            "truePositive" : 137
+          },
+          "testFalseNegativeExamples" : [
+            "[en] This is not the first time that data synchronization fails; now it is blocking normal work. (score=0.7809)",
+            "[en] This is not the first time that the file will not open; now some data was lost. (score=0.8078)",
+            "[en] This is not the first time that data synchronization fails; now important records are missing. (score=0.7356)",
+            "[en] This is not the first time that the invoice information is wrong; now important records are missing. (score=0.5991)",
+            "[en] This is not the first time that the file will not open; now important records are missing. (score=0.6728)",
+            "[en] This is not the first time that the invoice information is wrong; now the issue remains after several attempts. (score=0.5732)",
+            "[zh-Hans] 文件无法打开导致现在完全没法使用，请告诉我今天能不能处理好？ (score=0.8662)",
+            "[zh-Hans] 我需要明确答复：账号突然被锁定，你们准备如何解决？ (score=0.4896)",
+            "[zh-Hans] 我需要明确答复：数据同步失败，你们准备如何解决？ (score=0.07)",
+            "[zh-Hans] 我需要明确答复：收到的商品有破损，你们准备如何解决？ (score=0.4896)",
+            "[zh-Hans] 我需要明确答复：应用一直闪退，你们准备如何解决？ (score=0.1655)",
+            "[zh-Hans] 我需要明确答复：发票信息写错了，你们准备如何解决？ (score=0.4896)"
+          ],
+          "testFalsePositiveExamples" : [
+            "[en] I will complete the risk register myself, not assign it to someone else. (score=0.8829)",
+            "[zh-Hans] 给你留了位置，明天下午三点来五号会议室看电影怎么样？ (score=0.8852)",
+            "[zh-Hans] 接下来需要你确认项目排期，最晚下午三点前给到项目群。 (score=0.8852)"
+          ],
+          "threshold" : 0.87,
+          "validationBinary" : {
+            "accuracy" : 0.9417,
+            "f1" : 0.7907,
+            "falseNegative" : 61,
+            "falsePositive" : 2,
+            "precision" : 0.9835,
+            "recall" : 0.6611,
+            "total" : 1080,
+            "trueNegative" : 898,
+            "truePositive" : 119
+          }
+        }
+      ],
+      "id" : "complaint",
+      "labels" : [
+        "notComplaint",
+        "complaint"
+      ],
+      "positiveLabel" : "complaint",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "ComplaintIntentClassifier.mlmodel"
+    },
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 1080,
+          "balancedValidationCount" : 270,
+          "goldenMulticlass" : {
+            "accuracy" : 0.9054,
+            "confusion" : {
+              "negative" : {
+                "negative" : 15,
+                "neutral" : 2,
+                "positive" : 1
+              },
+              "neutral" : {
+                "negative" : 3,
+                "neutral" : 47,
+                "positive" : 0
+              },
+              "positive" : {
+                "negative" : 1,
+                "neutral" : 0,
+                "positive" : 5
+              }
+            },
+            "macroF1" : 0.8645,
+            "perLabel" : {
+              "negative" : {
+                "accuracy" : 0.9054,
+                "f1" : 0.8108,
+                "falseNegative" : 3,
+                "falsePositive" : 4,
+                "precision" : 0.7895,
+                "recall" : 0.8333,
+                "total" : 74,
+                "trueNegative" : 52,
+                "truePositive" : 15
+              },
+              "neutral" : {
+                "accuracy" : 0.9324,
+                "f1" : 0.9495,
+                "falseNegative" : 3,
+                "falsePositive" : 2,
+                "precision" : 0.9592,
+                "recall" : 0.94,
+                "total" : 74,
+                "trueNegative" : 22,
+                "truePositive" : 47
+              },
+              "positive" : {
+                "accuracy" : 0.973,
+                "f1" : 0.8333,
+                "falseNegative" : 1,
+                "falsePositive" : 1,
+                "precision" : 0.8333,
+                "recall" : 0.8333,
+                "total" : 74,
+                "trueNegative" : 67,
+                "truePositive" : 5
+              }
+            },
+            "total" : 74
+          },
+          "modelBytes" : 14860,
+          "multiclassByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9685,
+              "confusion" : {
+                "negative" : {
+                  "negative" : 135,
+                  "neutral" : 0,
+                  "positive" : 0
+                },
+                "neutral" : {
+                  "negative" : 2,
+                  "neutral" : 343,
+                  "positive" : 15
+                },
+                "positive" : {
+                  "negative" : 0,
+                  "neutral" : 0,
+                  "positive" : 45
+                }
+              },
+              "macroF1" : 0.9418,
+              "perLabel" : {
+                "negative" : {
+                  "accuracy" : 0.9963,
+                  "f1" : 0.9926,
+                  "falseNegative" : 0,
+                  "falsePositive" : 2,
+                  "precision" : 0.9854,
+                  "recall" : 1,
+                  "total" : 540,
+                  "trueNegative" : 403,
+                  "truePositive" : 135
+                },
+                "neutral" : {
+                  "accuracy" : 0.9685,
+                  "f1" : 0.9758,
+                  "falseNegative" : 17,
+                  "falsePositive" : 0,
+                  "precision" : 1,
+                  "recall" : 0.9528,
+                  "total" : 540,
+                  "trueNegative" : 180,
+                  "truePositive" : 343
+                },
+                "positive" : {
+                  "accuracy" : 0.9722,
+                  "f1" : 0.8571,
+                  "falseNegative" : 0,
+                  "falsePositive" : 15,
+                  "precision" : 0.75,
+                  "recall" : 1,
+                  "total" : 540,
+                  "trueNegative" : 480,
+                  "truePositive" : 45
+                }
+              },
+              "total" : 540
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9593,
+              "confusion" : {
+                "negative" : {
+                  "negative" : 125,
+                  "neutral" : 10,
+                  "positive" : 0
+                },
+                "neutral" : {
+                  "negative" : 12,
+                  "neutral" : 348,
+                  "positive" : 0
+                },
+                "positive" : {
+                  "negative" : 0,
+                  "neutral" : 0,
+                  "positive" : 45
+                }
+              },
+              "macroF1" : 0.9628,
+              "perLabel" : {
+                "negative" : {
+                  "accuracy" : 0.9593,
+                  "f1" : 0.9191,
+                  "falseNegative" : 10,
+                  "falsePositive" : 12,
+                  "precision" : 0.9124,
+                  "recall" : 0.9259,
+                  "total" : 540,
+                  "trueNegative" : 393,
+                  "truePositive" : 125
+                },
+                "neutral" : {
+                  "accuracy" : 0.9593,
+                  "f1" : 0.9694,
+                  "falseNegative" : 12,
+                  "falsePositive" : 10,
+                  "precision" : 0.9721,
+                  "recall" : 0.9667,
+                  "total" : 540,
+                  "trueNegative" : 170,
+                  "truePositive" : 348
+                },
+                "positive" : {
+                  "accuracy" : 1,
+                  "f1" : 1,
+                  "falseNegative" : 0,
+                  "falsePositive" : 0,
+                  "precision" : 1,
+                  "recall" : 1,
+                  "total" : 540,
+                  "trueNegative" : 495,
+                  "truePositive" : 45
+                }
+              },
+              "total" : 540
+            }
+          },
+          "runtimeAssetIndependent" : true,
+          "testMulticlass" : {
+            "accuracy" : 0.9639,
+            "confusion" : {
+              "negative" : {
+                "negative" : 260,
+                "neutral" : 10,
+                "positive" : 0
+              },
+              "neutral" : {
+                "negative" : 14,
+                "neutral" : 691,
+                "positive" : 15
+              },
+              "positive" : {
+                "negative" : 0,
+                "neutral" : 0,
+                "positive" : 90
+              }
+            },
+            "macroF1" : 0.9505,
+            "perLabel" : {
+              "negative" : {
+                "accuracy" : 0.9778,
+                "f1" : 0.9559,
+                "falseNegative" : 10,
+                "falsePositive" : 14,
+                "precision" : 0.9489,
+                "recall" : 0.963,
+                "total" : 1080,
+                "trueNegative" : 796,
+                "truePositive" : 260
+              },
+              "neutral" : {
+                "accuracy" : 0.9639,
+                "f1" : 0.9726,
+                "falseNegative" : 29,
+                "falsePositive" : 10,
+                "precision" : 0.9857,
+                "recall" : 0.9597,
+                "total" : 1080,
+                "trueNegative" : 350,
+                "truePositive" : 691
+              },
+              "positive" : {
+                "accuracy" : 0.9861,
+                "f1" : 0.9231,
+                "falseNegative" : 0,
+                "falsePositive" : 15,
+                "precision" : 0.8571,
+                "recall" : 1,
+                "total" : 1080,
+                "trueNegative" : 975,
+                "truePositive" : 90
+              }
+            },
+            "total" : 1080
+          },
+          "validationMulticlass" : {
+            "accuracy" : 0.9917,
+            "confusion" : {
+              "negative" : {
+                "negative" : 270,
+                "neutral" : 0,
+                "positive" : 0
+              },
+              "neutral" : {
+                "negative" : 7,
+                "neutral" : 711,
+                "positive" : 2
+              },
+              "positive" : {
+                "negative" : 0,
+                "neutral" : 0,
+                "positive" : 90
+              }
+            },
+            "macroF1" : 0.99,
+            "perLabel" : {
+              "negative" : {
+                "accuracy" : 0.9935,
+                "f1" : 0.9872,
+                "falseNegative" : 0,
+                "falsePositive" : 7,
+                "precision" : 0.9747,
+                "recall" : 1,
+                "total" : 1080,
+                "trueNegative" : 803,
+                "truePositive" : 270
+              },
+              "neutral" : {
+                "accuracy" : 0.9917,
+                "f1" : 0.9937,
+                "falseNegative" : 9,
+                "falsePositive" : 0,
+                "precision" : 1,
+                "recall" : 0.9875,
+                "total" : 1080,
+                "trueNegative" : 360,
+                "truePositive" : 711
+              },
+              "positive" : {
+                "accuracy" : 0.9981,
+                "f1" : 0.989,
+                "falseNegative" : 0,
+                "falsePositive" : 2,
+                "precision" : 0.9783,
+                "recall" : 1,
+                "total" : 1080,
+                "trueNegative" : 988,
+                "truePositive" : 90
+              }
+            },
+            "total" : 1080
+          }
+        },
+        {
+          "acceptedForAutomaticRouting" : false,
+          "algorithm" : "bert",
+          "balancedTrainingCount" : 1080,
+          "balancedValidationCount" : 270,
+          "goldenMulticlass" : {
+            "accuracy" : 0.5676,
+            "confusion" : {
+              "negative" : {
+                "negative" : 7,
+                "neutral" : 4,
+                "positive" : 7
+              },
+              "neutral" : {
+                "negative" : 1,
+                "neutral" : 29,
+                "positive" : 20
+              },
+              "positive" : {
+                "negative" : 0,
+                "neutral" : 0,
+                "positive" : 6
+              }
+            },
+            "macroF1" : 0.515,
+            "perLabel" : {
+              "negative" : {
+                "accuracy" : 0.8378,
+                "f1" : 0.5385,
+                "falseNegative" : 11,
+                "falsePositive" : 1,
+                "precision" : 0.875,
+                "recall" : 0.3889,
+                "total" : 74,
+                "trueNegative" : 55,
+                "truePositive" : 7
+              },
+              "neutral" : {
+                "accuracy" : 0.6622,
+                "f1" : 0.6988,
+                "falseNegative" : 21,
+                "falsePositive" : 4,
+                "precision" : 0.8788,
+                "recall" : 0.58,
+                "total" : 74,
+                "trueNegative" : 20,
+                "truePositive" : 29
+              },
+              "positive" : {
+                "accuracy" : 0.6351,
+                "f1" : 0.3077,
+                "falseNegative" : 0,
+                "falsePositive" : 27,
+                "precision" : 0.1818,
+                "recall" : 1,
+                "total" : 74,
+                "trueNegative" : 41,
+                "truePositive" : 6
+              }
+            },
+            "total" : 74
+          },
+          "modelBytes" : 1356844,
+          "multiclassByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9648,
+              "confusion" : {
+                "negative" : {
+                  "negative" : 127,
+                  "neutral" : 2,
+                  "positive" : 6
+                },
+                "neutral" : {
+                  "negative" : 5,
+                  "neutral" : 349,
+                  "positive" : 6
+                },
+                "positive" : {
+                  "negative" : 0,
+                  "neutral" : 0,
+                  "positive" : 45
+                }
+              },
+              "macroF1" : 0.9385,
+              "perLabel" : {
+                "negative" : {
+                  "accuracy" : 0.9759,
+                  "f1" : 0.9513,
+                  "falseNegative" : 8,
+                  "falsePositive" : 5,
+                  "precision" : 0.9621,
+                  "recall" : 0.9407,
+                  "total" : 540,
+                  "trueNegative" : 400,
+                  "truePositive" : 127
+                },
+                "neutral" : {
+                  "accuracy" : 0.9759,
+                  "f1" : 0.9817,
+                  "falseNegative" : 11,
+                  "falsePositive" : 2,
+                  "precision" : 0.9943,
+                  "recall" : 0.9694,
+                  "total" : 540,
+                  "trueNegative" : 178,
+                  "truePositive" : 349
+                },
+                "positive" : {
+                  "accuracy" : 0.9778,
+                  "f1" : 0.8824,
+                  "falseNegative" : 0,
+                  "falsePositive" : 12,
+                  "precision" : 0.7895,
+                  "recall" : 1,
+                  "total" : 540,
+                  "trueNegative" : 483,
+                  "truePositive" : 45
+                }
+              },
+              "total" : 540
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.4907,
+              "confusion" : {
+                "negative" : {
+                  "negative" : 81,
+                  "neutral" : 7,
+                  "positive" : 47
+                },
+                "neutral" : {
+                  "negative" : 71,
+                  "neutral" : 152,
+                  "positive" : 137
+                },
+                "positive" : {
+                  "negative" : 2,
+                  "neutral" : 11,
+                  "positive" : 32
+                }
+              },
+              "macroF1" : 0.4598,
+              "perLabel" : {
+                "negative" : {
+                  "accuracy" : 0.7648,
+                  "f1" : 0.5606,
+                  "falseNegative" : 54,
+                  "falsePositive" : 73,
+                  "precision" : 0.526,
+                  "recall" : 0.6,
+                  "total" : 540,
+                  "trueNegative" : 332,
+                  "truePositive" : 81
+                },
+                "neutral" : {
+                  "accuracy" : 0.5815,
+                  "f1" : 0.5736,
+                  "falseNegative" : 208,
+                  "falsePositive" : 18,
+                  "precision" : 0.8941,
+                  "recall" : 0.4222,
+                  "total" : 540,
+                  "trueNegative" : 162,
+                  "truePositive" : 152
+                },
+                "positive" : {
+                  "accuracy" : 0.6352,
+                  "f1" : 0.2452,
+                  "falseNegative" : 13,
+                  "falsePositive" : 184,
+                  "precision" : 0.1481,
+                  "recall" : 0.7111,
+                  "total" : 540,
+                  "trueNegative" : 311,
+                  "truePositive" : 32
+                }
+              },
+              "total" : 540
+            }
+          },
+          "runtimeAssetIndependent" : false,
+          "testMulticlass" : {
+            "accuracy" : 0.7278,
+            "confusion" : {
+              "negative" : {
+                "negative" : 208,
+                "neutral" : 9,
+                "positive" : 53
+              },
+              "neutral" : {
+                "negative" : 76,
+                "neutral" : 501,
+                "positive" : 143
+              },
+              "positive" : {
+                "negative" : 2,
+                "neutral" : 11,
+                "positive" : 77
+              }
+            },
+            "macroF1" : 0.6599,
+            "perLabel" : {
+              "negative" : {
+                "accuracy" : 0.8704,
+                "f1" : 0.7482,
+                "falseNegative" : 62,
+                "falsePositive" : 78,
+                "precision" : 0.7273,
+                "recall" : 0.7704,
+                "total" : 1080,
+                "trueNegative" : 732,
+                "truePositive" : 208
+              },
+              "neutral" : {
+                "accuracy" : 0.7787,
+                "f1" : 0.8074,
+                "falseNegative" : 219,
+                "falsePositive" : 20,
+                "precision" : 0.9616,
+                "recall" : 0.6958,
+                "total" : 1080,
+                "trueNegative" : 340,
+                "truePositive" : 501
+              },
+              "positive" : {
+                "accuracy" : 0.8065,
+                "f1" : 0.4242,
+                "falseNegative" : 13,
+                "falsePositive" : 196,
+                "precision" : 0.2821,
+                "recall" : 0.8556,
+                "total" : 1080,
+                "trueNegative" : 794,
+                "truePositive" : 77
+              }
+            },
+            "total" : 1080
+          },
+          "validationMulticlass" : {
+            "accuracy" : 0.7509,
+            "confusion" : {
+              "negative" : {
+                "negative" : 207,
+                "neutral" : 21,
+                "positive" : 42
+              },
+              "neutral" : {
+                "negative" : 105,
+                "neutral" : 517,
+                "positive" : 98
+              },
+              "positive" : {
+                "negative" : 0,
+                "neutral" : 3,
+                "positive" : 87
+              }
+            },
+            "macroF1" : 0.6934,
+            "perLabel" : {
+              "negative" : {
+                "accuracy" : 0.8444,
+                "f1" : 0.7113,
+                "falseNegative" : 63,
+                "falsePositive" : 105,
+                "precision" : 0.6635,
+                "recall" : 0.7667,
+                "total" : 1080,
+                "trueNegative" : 705,
+                "truePositive" : 207
+              },
+              "neutral" : {
+                "accuracy" : 0.7898,
+                "f1" : 0.82,
+                "falseNegative" : 203,
+                "falsePositive" : 24,
+                "precision" : 0.9556,
+                "recall" : 0.7181,
+                "total" : 1080,
+                "trueNegative" : 336,
+                "truePositive" : 517
+              },
+              "positive" : {
+                "accuracy" : 0.8676,
+                "f1" : 0.5489,
+                "falseNegative" : 3,
+                "falsePositive" : 140,
+                "precision" : 0.3833,
+                "recall" : 0.9667,
+                "total" : 1080,
+                "trueNegative" : 850,
+                "truePositive" : 87
+              }
+            },
+            "total" : 1080
+          }
+        }
+      ],
+      "id" : "sentiment",
+      "labels" : [
+        "negative",
+        "neutral",
+        "positive"
+      ],
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "SentimentClassifier.mlmodel"
+    }
+  ],
+  "corpusCount" : 6334,
+  "corpusPath" : "ModelTraining/ClipboardSemantics/clipboard_semantic_corpus.jsonl",
+  "generatedAt" : "2026-08-21T15:28:40Z",
+  "goldenCount" : 74,
+  "selectionPolicy" : "Validation only: binary models require precision >= 0.97, then maximize recall; sentiment prioritizes macro-F1. Automatic routing also requires a self-contained maxEnt model because BERT embedding assets are not guaranteed in extensions. Test and golden data gate deployment but never tune model weights.",
+  "testCount" : 1080,
+  "trainingCount" : 4100,
+  "validationCount" : 1080
+}

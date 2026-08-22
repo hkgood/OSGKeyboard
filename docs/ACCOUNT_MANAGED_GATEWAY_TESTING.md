@@ -38,6 +38,8 @@ production credentials.
 - `https://osglab.com/.well-known/apple-app-site-association` returns HTTP 200
   without a redirect and includes `X329MZU23S.com.osgkeyboard.ios` for `/i/*`.
 - The production account service is ready at `https://account.osglab.com`.
+- The production service temporarily enables `ALLOW_DEVELOPMENT_APP_ATTEST=true`
+  for the test window; disable it again after physical-device testing.
 - OSGKeyboard is installed and enabled with Full Access for managed requests.
 - The test account has enough non-production credits for the requested checks.
 

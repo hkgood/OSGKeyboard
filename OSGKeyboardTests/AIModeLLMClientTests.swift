@@ -241,4 +241,48 @@ final class AIModeLLMClientTests: XCTestCase {
         XCTAssertTrue(throttle.shouldPublish(accumulatedCount: 16, now: 101.5))
         XCTAssertTrue(throttle.shouldPublish(accumulatedCount: 0, now: 101.6, force: true))
     }
+
+    func testManagedQuestionRouterRequiresSearchForCurrentHotspots() {
+        XCTAssertEqual(
+            ManagedGatewayQuestionRouter.taskKind(for: "告诉我今天的热点"),
+            .currentInformationQuestion
+        )
+        XCTAssertEqual(
+            ManagedGatewayQuestionRouter.taskKind(for: "What is the latest news today?"),
+            .currentInformationQuestion
+        )
+        XCTAssertEqual(
+            ManagedGatewayQuestionRouter.taskKind(for: "明天北京天气怎么样"),
+            .currentInformationQuestion
+        )
+        XCTAssertEqual(
+            ManagedGatewayQuestionRouter.taskKind(for: "刚刚发生了什么"),
+            .currentInformationQuestion
+        )
+    }
+
+    func testManagedQuestionRouterLeavesStableKnowledgeAsOrdinaryAI() {
+        XCTAssertEqual(
+            ManagedGatewayQuestionRouter.taskKind(for: "解释一下什么是光合作用"),
+            .aiQuestion
+        )
+        XCTAssertEqual(
+            ManagedGatewayQuestionRouter.taskKind(for: "Help me summarize this paragraph now"),
+            .aiQuestion
+        )
+        XCTAssertEqual(
+            ManagedGatewayQuestionRouter.taskKind(for: "今天心情不好怎么办"),
+            .aiQuestion
+        )
+    }
+
+    func testManagedQuestionRouterDoesNotOverrideClipboardSkillIntent() {
+        XCTAssertEqual(
+            ManagedGatewayQuestionRouter.taskKind(
+                for: "总结今天的新闻",
+                requestedTaskKind: .customSkill
+            ),
+            .customSkill
+        )
+    }
 }

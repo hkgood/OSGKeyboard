@@ -11,11 +11,21 @@ extension SpeechHistoryStore {
     @discardableResult
     func recordUtterance(
         text: String,
+        prePolishText: String,
+        polishStyleID: String,
+        polishStylePrompt: String?,
         engineMode: String,
         duration: TimeInterval,
         wasTranslation: Bool
     ) -> SpeechHistoryEntry? {
-        let entry = append(text: text, engineMode: engineMode)
+        let entry = append(
+            text: text,
+            prePolishText: prePolishText,
+            wasTranslation: wasTranslation,
+            polishStyleID: polishStyleID,
+            polishStylePrompt: polishStylePrompt,
+            engineMode: engineMode
+        )
         UsageStatisticsStore.shared.recordUtterance(
             text: text,
             duration: duration,

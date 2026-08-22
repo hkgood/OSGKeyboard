@@ -138,15 +138,19 @@ public struct AIQuestionService: Sendable {
         store: any ConfigurationStore,
         conversations: AIConversationStore,
         taskKind: ManagedGatewayTaskKind = .aiQuestion,
+        requestPurpose: ManagedGatewayRequestPurpose? = nil,
+        oobeFeature: ManagedGatewayOOBEFeature? = nil,
         thinkingEnabled: Bool = true,
         analyticsClient: any AnalyticsClient = NoopAnalyticsClient(),
         analyticsFeature: AnalyticsFeature = .aiAssistant
     ) throws -> AIQuestionService {
-        if store.credentialSource == .managed {
+        if store.credentialSource == .managed || requestPurpose == .oobe {
             return AIQuestionService(
                 client: ManagedLLMClient(
                     capability: .assistant,
                     taskKind: taskKind,
+                    requestPurpose: requestPurpose,
+                    oobeFeature: oobeFeature,
                     grants: GatewayGrantCoordinator()
                 ),
                 conversations: conversations,
@@ -197,9 +201,13 @@ public struct AIQuestionService: Sendable {
         question: String,
         conversationID: UUID,
         targetLocaleID: String,
+        analyticsOperation: (any AnalyticsAIOperation)? = nil,
         onPartial: (@Sendable (String) -> Void)? = nil
     ) async throws -> String {
         guard !question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            // A voice-assistant operation may have started before ASR. If its
+            // transcript cannot form a question, close that existing task.
+            analyticsOperation?.fail(category: .validation)
             throw ServiceError.emptyQuestion
         }
 
@@ -216,7 +224,7 @@ public struct AIQuestionService: Sendable {
             maxTokens: Self.outputTokenLimit
         )
 
-        let operation = analyticsClient.startAIFeature(
+        let operation = analyticsOperation ?? analyticsClient.startAIFeature(
             analyticsFeature,
             executionMode: analyticsExecutionMode
         )
@@ -296,7 +304,7 @@ public struct AIQuestionService: Sendable {
                 return .insufficientCredits
             case .timeout:
                 return .timeout
-            case .missingGrant, .scopeNotGranted, .invalidGrant:
+            case .missingGrant, .scopeNotGranted, .invalidGrant, .oobeFeatureAlreadyUsed:
                 return .validation
             case .server:
                 return .provider

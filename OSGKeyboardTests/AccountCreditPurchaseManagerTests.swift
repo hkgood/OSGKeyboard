@@ -6,6 +6,27 @@ import XCTest
 
 @MainActor
 final class AccountCreditPurchaseManagerTests: XCTestCase {
+    func testConcurrentPrepareRequestsShareOneCatalogLoad() async {
+        let accountID = UUID()
+        let service = CreditServiceStub(
+            purchase: nil,
+            productLoadDelayNanoseconds: 20_000_000
+        )
+        let manager = AccountCreditPurchaseManager(
+            service: service,
+            store: CreditStoreStub(outcome: .pending)
+        )
+
+        async let first: Void = manager.prepare(accountID: accountID)
+        async let second: Void = manager.prepare(accountID: accountID)
+        _ = await (first, second)
+
+        XCTAssertEqual(manager.catalogPhase, .loaded)
+        XCTAssertEqual(manager.options.count, 3)
+        let loadCount = await service.productLoadCount()
+        XCTAssertEqual(loadCount, 1)
+    }
+
     func testVerifiedPurchaseFinishesOnlyAfterServerAcknowledgement() async {
         let accountID = UUID()
         let service = CreditServiceStub(
@@ -60,6 +81,67 @@ final class AccountCreditPurchaseManagerTests: XCTestCase {
         XCTAssertEqual(finishedCount, 1)
 
         manager.dismissSuccessMessage()
+        XCTAssertEqual(manager.state, .idle)
+        XCTAssertEqual(manager.lastGrantedBalance, 4_000)
+    }
+
+    func testSuccessMessageAutomaticallyExpires() async {
+        let accountID = UUID()
+        let purchase = AccountCreditPurchase(
+            transactionID: "2000000000001",
+            productID: productID,
+            creditsGranted: 3_000,
+            balanceAfter: 4_000,
+            replayed: false
+        )
+        let transaction = AccountStoreTransaction(
+            id: 2_000_000_000_001,
+            productID: productID,
+            appAccountToken: accountID,
+            signedTransaction: signedTransaction,
+            finishOperation: {}
+        )
+        let manager = AccountCreditPurchaseManager(
+            service: CreditServiceStub(purchase: purchase),
+            store: CreditStoreStub(outcome: .success(.verified(transaction))),
+            successMessageDuration: .milliseconds(10)
+        )
+
+        await manager.prepare(accountID: accountID)
+        let purchased = await manager.purchase(productID: productID, accountID: accountID)
+
+        XCTAssertTrue(purchased)
+        XCTAssertEqual(manager.state, .succeeded(credits: 3_000))
+        try? await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(manager.state, .idle)
+    }
+
+    func testUnfinishedHistoricalTransactionDoesNotRestoreSuccessMessage() async {
+        let accountID = UUID()
+        let purchase = AccountCreditPurchase(
+            transactionID: "2000000000001",
+            productID: productID,
+            creditsGranted: 3_000,
+            balanceAfter: 4_000,
+            replayed: true
+        )
+        let transaction = AccountStoreTransaction(
+            id: 2_000_000_000_001,
+            productID: productID,
+            appAccountToken: accountID,
+            signedTransaction: signedTransaction,
+            finishOperation: {}
+        )
+        let manager = AccountCreditPurchaseManager(
+            service: CreditServiceStub(purchase: purchase),
+            store: CreditStoreStub(
+                outcome: .pending,
+                unfinishedTransactions: [.verified(transaction)]
+            )
+        )
+
+        await manager.prepare(accountID: accountID)
+
         XCTAssertEqual(manager.state, .idle)
         XCTAssertEqual(manager.lastGrantedBalance, 4_000)
     }
@@ -184,16 +266,20 @@ final class AccountCreditPurchaseManagerTests: XCTestCase {
 private actor CreditServiceStub: AccountCenterServicing {
     private let purchase: AccountCreditPurchase?
     private let historyPages: [AccountCreditPurchaseHistoryPage]
+    private let productLoadDelayNanoseconds: UInt64
     private var submissions: [String] = []
     private var historyPageIndex = 0
     private var recordedHistoryRequests: [String] = []
+    private var recordedProductLoadCount = 0
 
     init(
         purchase: AccountCreditPurchase?,
-        historyPages: [AccountCreditPurchaseHistoryPage] = []
+        historyPages: [AccountCreditPurchaseHistoryPage] = [],
+        productLoadDelayNanoseconds: UInt64 = 0
     ) {
         self.purchase = purchase
         self.historyPages = historyPages
+        self.productLoadDelayNanoseconds = productLoadDelayNanoseconds
     }
 
     func loadAccountCenter() async throws -> AccountCenterSnapshot {
@@ -205,7 +291,11 @@ private actor CreditServiceStub: AccountCenterServicing {
     }
 
     func loadCreditProducts() async throws -> [AccountCreditProduct] {
-        [
+        recordedProductLoadCount += 1
+        if productLoadDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: productLoadDelayNanoseconds)
+        }
+        return [
             AccountCreditProduct(productID: "3000tks", credits: 3_000),
             AccountCreditProduct(productID: "1500tks", credits: 1_500),
             AccountCreditProduct(productID: "500tks", credits: 500)
@@ -237,14 +327,23 @@ private actor CreditServiceStub: AccountCenterServicing {
     func historyRequests() -> [String] {
         recordedHistoryRequests
     }
+
+    func productLoadCount() -> Int {
+        recordedProductLoadCount
+    }
 }
 
 @MainActor
 private final class CreditStoreStub: AccountCreditStore {
     private let outcome: AccountStorePurchaseOutcome
+    private let unfinishedTransactionValues: [AccountStoreVerification]
 
-    init(outcome: AccountStorePurchaseOutcome) {
+    init(
+        outcome: AccountStorePurchaseOutcome,
+        unfinishedTransactions: [AccountStoreVerification] = []
+    ) {
         self.outcome = outcome
+        unfinishedTransactionValues = unfinishedTransactions
     }
 
     func product(for productID: String) async throws -> AccountStoreProduct? {
@@ -268,7 +367,11 @@ private final class CreditStoreStub: AccountCreditStore {
     }
 
     func unfinishedTransactions() -> AsyncStream<AccountStoreVerification> {
-        AsyncStream { $0.finish() }
+        let values = unfinishedTransactionValues
+        return AsyncStream { continuation in
+            values.forEach { continuation.yield($0) }
+            continuation.finish()
+        }
     }
 
     func transactionUpdates() -> AsyncStream<AccountStoreVerification> {

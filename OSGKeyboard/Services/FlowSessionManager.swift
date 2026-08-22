@@ -98,6 +98,8 @@ final class FlowSessionManager: ObservableObject {
         let question: String
         let conversationID: UUID?
         let taskKind: ManagedGatewayTaskKind
+        let requestPurpose: ManagedGatewayRequestPurpose?
+        let oobeFeature: ManagedGatewayOOBEFeature?
         let thinkingEnabled: Bool
     }
 
@@ -162,6 +164,7 @@ final class FlowSessionManager: ObservableObject {
     private var pendingSourceHistoryEntryRevision: Int64?
     private var pendingAIConversationID: UUID?
     private var pendingManagedRequestPurpose: ManagedGatewayRequestPurpose?
+    private var pendingManagedOOBEFeature: ManagedGatewayOOBEFeature?
     private var pendingProcessingDeadlineAt: TimeInterval?
     private var pendingStopUtteranceId: UUID?
     private var currentCommandSeq: Int64 = 0
@@ -174,7 +177,7 @@ final class FlowSessionManager: ObservableObject {
     @Published private(set) var isUtteranceProcessing = false
     private var finalizeTask: Task<Void, Never>?
     private var asrTask: Task<Void, Never>?
-    private var transcriptionAnalyticsOperation: (any AnalyticsAIOperation)?
+    private let analyticsOperations = FlowAnalyticsOperationRegistry()
     private var utteranceSafetyTask: Task<Void, Never>?
     private var chunkedPipeline: ChunkedUtterancePipeline?
     private var currentPartial = ""
@@ -442,6 +445,7 @@ final class FlowSessionManager: ObservableObject {
                 status: .aborted
             )
         }
+        analyticsOperations.cancelAll()
 
         wantsActiveSession = false
         pipRecoveryOperation &+= 1
@@ -527,6 +531,7 @@ final class FlowSessionManager: ObservableObject {
                 status: .aborted
             )
         }
+        analyticsOperations.cancelAll()
 
         wantsActiveSession = false
         pipRecoveryOperation &+= 1
@@ -1502,6 +1507,7 @@ final class FlowSessionManager: ObservableObject {
             )
             currentUtteranceMode = command.resolvedUtteranceMode
             pendingManagedRequestPurpose = command.managedRequestPurpose
+            pendingManagedOOBEFeature = command.managedOOBEFeature
             pendingAIConversationID = currentUtteranceMode == .aiQuestion
                 ? command.aiConversationID
                 : nil
@@ -1615,6 +1621,7 @@ final class FlowSessionManager: ObservableObject {
             ) else { return }
             currentUtteranceMode = .aiQuestion
             pendingManagedRequestPurpose = command.managedRequestPurpose
+            pendingManagedOOBEFeature = command.managedOOBEFeature
             pendingAIConversationID = command.aiConversationID
             pendingEditSourceText = nil
             pendingSourceHistoryEntryID = nil
@@ -1637,6 +1644,8 @@ final class FlowSessionManager: ObservableObject {
                         question: question,
                         conversationID: conversationID,
                         taskKind: taskKind,
+                        requestPurpose: command.managedRequestPurpose,
+                        oobeFeature: command.managedOOBEFeature,
                         thinkingEnabled: thinkingEnabled
                     ),
                     sessionId: sessionId,
@@ -1689,10 +1698,21 @@ final class FlowSessionManager: ObservableObject {
         // send an XML envelope that must never appear above the mic.
         let pipelineStore = AppGroupStore()
         do {
+            let taskKind = if pipelineStore.credentialSource == .managed,
+                              request.requestPurpose == nil {
+                ManagedGatewayQuestionRouter.taskKind(
+                    for: request.question,
+                    requestedTaskKind: request.taskKind
+                )
+            } else {
+                request.taskKind
+            }
             let service = try AIQuestionService.configured(
                 store: pipelineStore,
                 conversations: aiConversations,
-                taskKind: request.taskKind,
+                taskKind: taskKind,
+                requestPurpose: request.requestPurpose,
+                oobeFeature: request.oobeFeature,
                 thinkingEnabled: request.thinkingEnabled,
                 analyticsClient: analyticsClient,
                 analyticsFeature: Self.analyticsFeature(for: request.taskKind)
@@ -1870,7 +1890,8 @@ final class FlowSessionManager: ObservableObject {
         kind: FlowSessionKeys.TranscriptionErrorKind = .generic,
         status: FlowResult.Status = .error
     ) {
-        finishTranscriptionAnalytics(
+        finishUtteranceAnalytics(
+            utteranceID: currentUtteranceId,
             success: false,
             failureCategory: Self.transcriptionFailureCategory(
                 kind: kind,
@@ -2168,11 +2189,19 @@ final class FlowSessionManager: ObservableObject {
         )
 
         let cloudASRForStreaming = useStreaming ? cloudService : nil
-        transcriptionAnalyticsOperation?.cancel()
-        transcriptionAnalyticsOperation = analyticsClient.startAIFeature(
-            .transcription,
-            executionMode: analyticsExecutionMode
-        )
+        if let taskUtteranceId {
+            // A healed delivery gate may allow a replacement utterance before
+            // an old finalize task unwinds. Close any old value task first.
+            analyticsOperations.cancelAll()
+            analyticsOperations.start(
+                utteranceID: taskUtteranceId,
+                feature: FlowAnalyticsFeatureMapping.recordingFeature(
+                    for: currentUtteranceMode
+                ),
+                executionMode: analyticsExecutionMode,
+                client: analyticsClient
+            )
+        }
 
         asrTask = Task.detached(priority: .userInitiated) { [weak manager = self] in
             let outcome: ChunkedUtterancePipelineOutcome
@@ -2262,7 +2291,21 @@ final class FlowSessionManager: ObservableObject {
                         manager.failUtterance(message: message, kind: .asrFailed)
                     }
                 case .cancelled:
-                    break
+                    // A provider-side cancellation while the mic is still open
+                    // has no later successful finalize path. Close the
+                    // utterance now so its analytics STARTED cannot be orphaned.
+                    let hasRecoverableText = !manager.currentPartial
+                        .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        || !manager.bestPartialSnapshot
+                        .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    if manager.isUtteranceRecording, !hasRecoverableText {
+                        manager.failUtterance(
+                            message: AppL10n.string(
+                                "flow.error.recognitionInterrupted"
+                            ),
+                            kind: .recognitionInterrupted
+                        )
+                    }
                 }
             }
         }
@@ -2393,6 +2436,7 @@ final class FlowSessionManager: ObservableObject {
                 status: .aborted
             )
         }
+        analyticsOperations.cancel(utteranceID: utteranceId)
         isUtteranceRecording = false
         isUtteranceProcessing = false
         startingUtteranceId = nil
@@ -2493,6 +2537,7 @@ final class FlowSessionManager: ObservableObject {
         pendingSourceHistoryEntryRevision = nil
         pendingAIConversationID = nil
         pendingManagedRequestPurpose = nil
+        pendingManagedOOBEFeature = nil
         pendingProcessingDeadlineAt = nil
         currentUtteranceMode = .dictation
     }
@@ -2511,6 +2556,7 @@ final class FlowSessionManager: ObservableObject {
         let sourceHistoryEntryRevision = pendingSourceHistoryEntryRevision
         let aiConversationID = pendingAIConversationID
         let managedRequestPurpose = pendingManagedRequestPurpose
+        let managedOOBEFeature = pendingManagedOOBEFeature
         let processingDeadlineAt = pendingProcessingDeadlineAt
         let asrEngineMode = sessionASREngineMode ?? store.engineMode
         // ALWAYS clear the processing gate for this utterance. The previous
@@ -2519,12 +2565,17 @@ final class FlowSessionManager: ObservableObject {
         // and then skip refreshHostReady — keyboard stayed white forever
         // while host logs still said "utterance finalized".
         defer {
+            // Any path that returns without an explicit terminal event is a
+            // cancellation from the user's perspective. The registry is keyed
+            // by utterance ID, so this cannot finish a newer recording.
+            analyticsOperations.cancel(utteranceID: finalizeUtteranceId)
             pendingFieldContext = nil
             pendingEditSourceText = nil
             pendingSourceHistoryEntryID = nil
             pendingSourceHistoryEntryRevision = nil
             pendingAIConversationID = nil
             pendingManagedRequestPurpose = nil
+            pendingManagedOOBEFeature = nil
             pendingProcessingDeadlineAt = nil
             if currentUtteranceMode == utteranceMode {
                 currentUtteranceMode = .dictation
@@ -2641,7 +2692,12 @@ final class FlowSessionManager: ObservableObject {
             )
             return
         }
-        finishTranscriptionAnalytics(success: true)
+        if utteranceMode != .aiQuestion {
+            finishUtteranceAnalytics(
+                utteranceID: finalizeUtteranceId,
+                success: true
+            )
+        }
 
         // Re-read App Group at finalize so dictionary and translation changes
         // from the keyboard extension are visible before local correction,
@@ -2700,10 +2756,20 @@ final class FlowSessionManager: ObservableObject {
             }
 
             do {
+                let taskKind = if pipelineStore.credentialSource == .managed,
+                                  managedRequestPurpose == nil {
+                    // Classify the post-ASR spoken text before clipboard
+                    // resolution can wrap it in an internal prompt envelope.
+                    ManagedGatewayQuestionRouter.taskKind(for: text)
+                } else {
+                    ManagedGatewayTaskKind.aiQuestion
+                }
                 let service = try AIQuestionService.configured(
                     store: pipelineStore,
                     conversations: aiConversations,
-                    taskKind: .aiQuestion,
+                    taskKind: taskKind,
+                    requestPurpose: managedRequestPurpose,
+                    oobeFeature: managedOOBEFeature,
                     analyticsClient: analyticsClient,
                     analyticsFeature: .aiAssistant
                 )
@@ -2715,7 +2781,10 @@ final class FlowSessionManager: ObservableObject {
                 let answer = try await service.answer(
                     question: question,
                     conversationID: aiConversationID,
-                    targetLocaleID: pipelineStore.translationTargetLocaleId
+                    targetLocaleID: pipelineStore.translationTargetLocaleId,
+                    analyticsOperation: analyticsOperations.operation(
+                        for: finalizeUtteranceId
+                    )
                 ) { [weak self] partial in
                     Task { @MainActor in
                         self?.publishStreamingAIAnswerIfNeeded(
@@ -2843,6 +2912,7 @@ final class FlowSessionManager: ObservableObject {
                 providerIdOverride: pipelineStore.polishProviderIdOverride,
                 taskKind: isEditLastInput ? .editLastInput : nil,
                 requestPurpose: managedRequestPurpose,
+                oobeFeature: managedOOBEFeature,
                 context: isInstructionMode ? nil : polishContext,
                 timeoutLimit: processingDeadlineAt.map {
                     max(0.1, $0 - Date().timeIntervalSince1970)
@@ -2872,6 +2942,10 @@ final class FlowSessionManager: ObservableObject {
                 ? nil
                 : SpeechHistoryStore.shared.recordUtterance(
                     text: delivered,
+                    prePolishText: text,
+                    polishStyleID: outcome.polishStyleID
+                        ?? pipelineStore.activePolishStyleId,
+                    polishStylePrompt: outcome.polishStylePrompt,
                     engineMode: engineMode,
                     duration: recordingDuration,
                     wasTranslation: isInstructionMode
@@ -2951,6 +3025,11 @@ final class FlowSessionManager: ObservableObject {
                 guard claimTerminal(utteranceId: finalizeUtteranceId) else { return }
                 let historyEntry = SpeechHistoryStore.shared.recordUtterance(
                     text: delivered,
+                    prePolishText: text,
+                    polishStyleID: pipelineStore.activePolishStyleId,
+                    // The provider failed, so this fallback was not produced by
+                    // the style Prompt and must not become Prompt-learning evidence.
+                    polishStylePrompt: nil,
                     engineMode: engineMode,
                     duration: recordingDuration,
                     wasTranslation: pipelineStore.isTranslationEffective
@@ -3147,7 +3226,8 @@ final class FlowSessionManager: ObservableObject {
         status: FlowResult.Status = .error,
         aiConversationID: UUID? = nil
     ) {
-        finishTranscriptionAnalytics(
+        finishUtteranceAnalytics(
+            utteranceID: utteranceId,
             success: false,
             failureCategory: Self.transcriptionFailureCategory(
                 kind: kind,
@@ -3181,14 +3261,7 @@ final class FlowSessionManager: ObservableObject {
     private static func analyticsFeature(
         for taskKind: ManagedGatewayTaskKind
     ) -> AnalyticsFeature {
-        switch taskKind {
-        case .aiQuestion:
-            return .hotword
-        case .clipboardTransform, .customSkill, .agentPlanning:
-            return .agent
-        case .dictationPolish, .translation, .editLastInput:
-            return .other
-        }
+        FlowAnalyticsFeatureMapping.feature(for: taskKind)
     }
 
     private var analyticsExecutionMode: AnalyticsExecutionMode {
@@ -3198,16 +3271,18 @@ final class FlowSessionManager: ObservableObject {
         return store.credentialSource == .managed ? .managed : .byok
     }
 
-    private func finishTranscriptionAnalytics(
+    private func finishUtteranceAnalytics(
+        utteranceID: UUID?,
         success: Bool,
         failureCategory: AnalyticsFailureCategory = .unknown
     ) {
-        guard let operation = transcriptionAnalyticsOperation else { return }
-        transcriptionAnalyticsOperation = nil
         if success {
-            operation.succeed()
+            analyticsOperations.succeed(utteranceID: utteranceID)
         } else {
-            operation.fail(category: failureCategory)
+            analyticsOperations.fail(
+                utteranceID: utteranceID,
+                category: failureCategory
+            )
         }
     }
 
@@ -3370,6 +3445,7 @@ final class FlowSessionManager: ObservableObject {
         providerIdOverride: String?,
         taskKind: ManagedGatewayTaskKind? = nil,
         requestPurpose: ManagedGatewayRequestPurpose? = nil,
+        oobeFeature: ManagedGatewayOOBEFeature? = nil,
         context: PolishContext?,
         timeoutLimit: TimeInterval? = nil
     ) async throws -> PolishingService.PolishOutcome {
@@ -3383,6 +3459,7 @@ final class FlowSessionManager: ObservableObject {
                 providerIdOverride: providerIdOverride,
                 taskKind: taskKind,
                 requestPurpose: requestPurpose,
+                oobeFeature: oobeFeature,
                 context: context
             )
         }

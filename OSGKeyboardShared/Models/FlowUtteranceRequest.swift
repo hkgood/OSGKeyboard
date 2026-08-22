@@ -17,6 +17,8 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
     public let aiTaskKind: ManagedGatewayTaskKind?
     /// Optional server-audited purpose for managed gateway billing policy.
     public let managedRequestPurpose: ManagedGatewayRequestPurpose?
+    /// Required feature discriminator when `managedRequestPurpose == .oobe`.
+    public let managedOOBEFeature: ManagedGatewayOOBEFeature?
     /// Clipboard-skill thinking override. Nil keeps AI-mode default (on).
     public let aiThinkingEnabled: Bool?
 
@@ -31,6 +33,7 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
         aiQuestionText: String? = nil,
         aiTaskKind: ManagedGatewayTaskKind? = nil,
         managedRequestPurpose: ManagedGatewayRequestPurpose? = nil,
+        managedOOBEFeature: ManagedGatewayOOBEFeature? = nil,
         aiThinkingEnabled: Bool? = nil
     ) {
         self.mode = mode
@@ -41,6 +44,7 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
         self.aiQuestionText = aiQuestionText
         self.aiTaskKind = aiTaskKind
         self.managedRequestPurpose = managedRequestPurpose
+        self.managedOOBEFeature = managedOOBEFeature
         self.aiThinkingEnabled = aiThinkingEnabled
     }
 
@@ -62,6 +66,7 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
         conversationID: UUID,
         prefilledQuestion: String? = nil,
         taskKind: ManagedGatewayTaskKind = .aiQuestion,
+        oobeFeature: ManagedGatewayOOBEFeature? = nil,
         thinkingEnabled: Bool? = nil
     ) -> FlowUtteranceRequest {
         FlowUtteranceRequest(
@@ -69,6 +74,8 @@ public struct FlowUtteranceRequest: Equatable, Sendable {
             aiConversationID: conversationID,
             aiQuestionText: prefilledQuestion,
             aiTaskKind: taskKind,
+            managedRequestPurpose: oobeFeature == nil ? nil : .oobe,
+            managedOOBEFeature: oobeFeature,
             aiThinkingEnabled: thinkingEnabled
         )
     }

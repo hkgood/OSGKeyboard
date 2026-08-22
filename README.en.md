@@ -7,7 +7,7 @@ OSGKeyboard is a voice input tool for iPhone, iPad, and Mac. Its iOS keyboard co
 ![Platform](https://img.shields.io/badge/iOS%20%2F%20iPadOS-26%2B-0078D4?logo=apple)
 ![Platform](https://img.shields.io/badge/macOS-15%2B-555?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
-![Version](https://img.shields.io/badge/version-2.0.0-3aa05a)
+![Version](https://img.shields.io/badge/version-2.0.1-3aa05a)
 ![License](https://img.shields.io/badge/license-Source%20Available-blue)
 
 [Website](https://hkgood.github.io/OSGKeyboard/?lang=en) · [中文](./README.md) · [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/) · [Changelog](./CHANGELOG.md)
@@ -66,6 +66,8 @@ OSGKeyboard does not make cloud service the only option:
 3. **OSG managed credits** — optional on iOS / iPadOS. After Sign in with Apple, use managed speech and AI without entering provider credentials. Before first use, the app explains which data leaves the device and asks for explicit consent.
 
 Local dictation and user-owned providers remain independent and never require an OSGKeyboard account.
+
+First-run onboarding uses a short-lived anonymous credential issued after App Attest verification so users can try voice input, translation, smart reply, and hold-to-ask AI once each. These four lessons create no account, require no API key, and consume no credits. Afterward, users may skip sign-in or use Sign in with Apple to claim the eligible 1,000-credit signup reward.
 
 ## Optional account and credits
 

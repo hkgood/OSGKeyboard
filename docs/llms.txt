@@ -2,7 +2,7 @@
 
 > OSGKeyboard is a source-available voice and typing tool for iPhone, iPad, and Mac. The iOS keyboard combines on-device dictation, Chinese and English typing, a unified AI assistant, clipboard skills, and optional managed credits. On Mac, hold Option for global dictation.
 
-Current repository version: 2.0.0 (build 83), plus implemented changes listed under CHANGELOG [Unreleased].
+Current repository version: 2.0.1 (build 87). Later work is listed under CHANGELOG [Unreleased].
 
 ## Product facts
 

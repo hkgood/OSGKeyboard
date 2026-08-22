@@ -14,18 +14,25 @@ public protocol GatewayGrantCredentialStore: Sendable {
 }
 
 public struct GatewayGrantKeychainStore: GatewayGrantCredentialStore, @unchecked Sendable {
+    public enum Slot: String, Sendable {
+        case account = "scope-limited.active"
+        case oobe = "scope-limited.oobe"
+    }
+
     public enum StoreError: Error, Equatable, Sendable {
         case unexpectedStatus(OSStatus)
         case invalidStoredValue
     }
 
     private static let service = "com.osgkeyboard.gateway-grant"
-    private static let account = "scope-limited.active"
+    private let slot: Slot
 
-    public init() {}
+    public init(slot: Slot = .account) {
+        self.slot = slot
+    }
 
     public func load() async throws -> ManagedGatewayGrantCredentials? {
-        var query = Self.baseQuery
+        var query = baseQuery
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
 
@@ -51,14 +58,14 @@ public struct GatewayGrantKeychainStore: GatewayGrantCredentialStore, @unchecked
     public func save(_ credentials: ManagedGatewayGrantCredentials) async throws {
         let data = try Self.encoder.encode(credentials)
         let updateStatus = SecItemUpdate(
-            Self.baseQuery as CFDictionary,
+            baseQuery as CFDictionary,
             [kSecValueData as String: data] as CFDictionary
         )
         switch updateStatus {
         case errSecSuccess:
             return
         case errSecItemNotFound:
-            var query = Self.baseQuery
+            var query = baseQuery
             query[kSecValueData as String] = data
             // The extension can refresh after reboot without making account
             // credentials readable; this item contains only the limited grant.
@@ -73,17 +80,17 @@ public struct GatewayGrantKeychainStore: GatewayGrantCredentialStore, @unchecked
     }
 
     public func delete() async throws {
-        let status = SecItemDelete(Self.baseQuery as CFDictionary)
+        let status = SecItemDelete(baseQuery as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw StoreError.unexpectedStatus(status)
         }
     }
 
-    private static var baseQuery: [String: Any] {
+    private var baseQuery: [String: Any] {
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
+            kSecAttrService as String: Self.service,
+            kSecAttrAccount as String: slot.rawValue,
             kSecAttrSynchronizable as String: kCFBooleanFalse!
         ]
         #if os(macOS)
@@ -102,5 +109,25 @@ public struct GatewayGrantKeychainStore: GatewayGrantCredentialStore, @unchecked
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return decoder
+    }
+}
+
+/// Dedicated extension-readable slot for anonymous onboarding grants. It can
+/// never overwrite or load the signed-in account's normal managed grant.
+public struct OOBEGatewayGrantKeychainStore: GatewayGrantCredentialStore, Sendable {
+    private let storage = GatewayGrantKeychainStore(slot: .oobe)
+
+    public init() {}
+
+    public func load() async throws -> ManagedGatewayGrantCredentials? {
+        try await storage.load()
+    }
+
+    public func save(_ credentials: ManagedGatewayGrantCredentials) async throws {
+        try await storage.save(credentials)
+    }
+
+    public func delete() async throws {
+        try await storage.delete()
     }
 }

@@ -116,10 +116,10 @@ final class AIHintKeywordExtractorTests: XCTestCase {
 }
 
 final class AIClipboardSkillTests: XCTestCase {
-    func testVisibleDefaultsAreReplySummarizeTranslate() {
+    func testVisibleDefaultsContainEveryBuiltInSkill() {
         XCTAssertEqual(
             AIClipboardSkillCatalog.visible().map(\.id),
-            ["reply", "summarize", "translate"]
+            AIClipboardSkillCatalog.catalog.map(\.id)
         )
     }
 
@@ -234,6 +234,30 @@ final class AIClipboardSkillTests: XCTestCase {
         )
         XCTAssertTrue(prompt.contains("概括"))
         XCTAssertTrue(prompt.contains("不要改写成可发送的短消息"))
+    }
+
+    func testSemanticReplySkillsHaveDistinctInstructions() {
+        let ids = [
+            AIClipboardSkillCatalog.replyInSourceLanguageID,
+            AIClipboardSkillCatalog.acceptInvitationID,
+            AIClipboardSkillCatalog.declineInvitationID,
+            AIClipboardSkillCatalog.acceptTaskID,
+            AIClipboardSkillCatalog.clarifyRequestID,
+            AIClipboardSkillCatalog.empathyReplyID,
+            AIClipboardSkillCatalog.askForDetailsID,
+            AIClipboardSkillCatalog.businessReplyID,
+            AIClipboardSkillCatalog.extractConclusionsID,
+            AIClipboardSkillCatalog.organizeListID
+        ]
+        let prompts = ids.map {
+            AIClipboardSkillCatalog.instruction(
+                skillID: $0,
+                locale: "zh",
+                translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
+            )
+        }
+        XCTAssertEqual(Set(prompts).count, ids.count)
+        XCTAssertFalse(prompts.contains { $0.contains("用户选择的操作") })
     }
 
     func testExtractTodosAsksForNONEWhenEmpty() {

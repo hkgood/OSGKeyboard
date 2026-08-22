@@ -51,10 +51,12 @@ public struct ManagedLLMClient: LLMClient {
     public let capability: Capability
     public let taskKind: ManagedGatewayTaskKind
     public let requestPurpose: ManagedGatewayRequestPurpose?
+    public let oobeFeature: ManagedGatewayOOBEFeature?
     public let requestTimeout: TimeInterval
 
     private let baseURL: URL
     private let grants: GatewayGrantCoordinator
+    private let oobeGrants: OOBEGatewayGrantCoordinator
     private let session: URLSession
     private let requestId: @Sendable () -> String
 
@@ -62,7 +64,9 @@ public struct ManagedLLMClient: LLMClient {
         capability: Capability,
         taskKind: ManagedGatewayTaskKind? = nil,
         requestPurpose: ManagedGatewayRequestPurpose? = nil,
+        oobeFeature: ManagedGatewayOOBEFeature? = nil,
         grants: GatewayGrantCoordinator,
+        oobeGrants: OOBEGatewayGrantCoordinator? = nil,
         baseURL: URL = GatewayGrantCoordinator.defaultBaseURL,
         session: URLSession = .shared,
         requestTimeout: TimeInterval = 15,
@@ -71,7 +75,12 @@ public struct ManagedLLMClient: LLMClient {
         self.capability = capability
         self.taskKind = taskKind ?? capability.defaultTaskKind
         self.requestPurpose = requestPurpose
+        self.oobeFeature = oobeFeature
         self.grants = grants
+        self.oobeGrants = oobeGrants ?? OOBEGatewayGrantCoordinator(
+            baseURL: baseURL,
+            session: session
+        )
         self.baseURL = baseURL
         self.session = session
         self.requestTimeout = requestTimeout
@@ -189,7 +198,7 @@ public struct ManagedLLMClient: LLMClient {
             do {
                 return try await bufferedAttempt(attempt.forcingRefresh())
             } catch ManagedGatewayError.invalidGrant {
-                try? await grants.clearGrant()
+                try? await clearSelectedGrant()
                 throw ManagedGatewayError.invalidGrant
             }
         }
@@ -280,10 +289,34 @@ public struct ManagedLLMClient: LLMClient {
             )
         }
 
-        let token = try await grants.accessToken(
-            for: capability.grantScope,
-            forceRefresh: attempt.forceRefresh
-        )
+        let token: String
+        switch requestPurpose {
+        case .oobe:
+            guard let oobeFeature else {
+                throw ManagedGatewayError.server(
+                    code: "missing_oobe_feature",
+                    status: 400,
+                    requestId: attempt.requestId
+                )
+            }
+            token = try await oobeGrants.accessToken(
+                for: capability.grantScope,
+                feature: oobeFeature,
+                forceRefresh: attempt.forceRefresh
+            )
+        case nil:
+            guard oobeFeature == nil else {
+                throw ManagedGatewayError.server(
+                    code: "unexpected_oobe_feature",
+                    status: 400,
+                    requestId: attempt.requestId
+                )
+            }
+            token = try await grants.accessToken(
+                for: capability.grantScope,
+                forceRefresh: attempt.forceRefresh
+            )
+        }
         let body = ManagedGatewayTextRequest(
             input: trimmedInput,
             context: boundedContext,
@@ -291,7 +324,8 @@ public struct ManagedLLMClient: LLMClient {
             temperature: min(max(attempt.options.temperature ?? 0.2, 0), 1),
             stream: stream,
             taskKind: taskKind,
-            requestPurpose: requestPurpose
+            requestPurpose: requestPurpose,
+            oobeFeature: oobeFeature
         )
 
         var request = URLRequest(
@@ -305,6 +339,14 @@ public struct ManagedLLMClient: LLMClient {
         request.timeoutInterval = attempt.timeout ?? requestTimeout
         request.httpBody = try JSONEncoder().encode(body)
         return request
+    }
+
+    private func clearSelectedGrant() async throws {
+        if requestPurpose == .oobe {
+            try await oobeGrants.clearGrant()
+        } else {
+            try await grants.clearGrant()
+        }
     }
 
     static func payload(
@@ -413,6 +455,9 @@ public struct ManagedLLMClient: LLMClient {
         if ["insufficient_credits", "insufficient_balance"].contains(code) {
             return .insufficientCredits
         }
+        if code == "oobe_feature_already_used" {
+            return .oobeFeatureAlreadyUsed
+        }
         if ["unauthorized", "gateway_grant_denied", "invalid_grant"].contains(code) {
             return .invalidGrant
         }
@@ -424,6 +469,7 @@ public enum ManagedGatewayLLMClientFactory {
     public static func polish(
         taskKind: ManagedGatewayTaskKind = .dictationPolish,
         requestPurpose: ManagedGatewayRequestPurpose? = nil,
+        oobeFeature: ManagedGatewayOOBEFeature? = nil,
         grants: GatewayGrantCoordinator,
         baseURL: URL = GatewayGrantCoordinator.defaultBaseURL,
         session: URLSession = .shared
@@ -432,6 +478,7 @@ public enum ManagedGatewayLLMClientFactory {
             capability: .polish,
             taskKind: taskKind,
             requestPurpose: requestPurpose,
+            oobeFeature: oobeFeature,
             grants: grants,
             baseURL: baseURL,
             session: session
@@ -440,6 +487,8 @@ public enum ManagedGatewayLLMClientFactory {
 
     public static func ai(
         taskKind: ManagedGatewayTaskKind = .aiQuestion,
+        requestPurpose: ManagedGatewayRequestPurpose? = nil,
+        oobeFeature: ManagedGatewayOOBEFeature? = nil,
         grants: GatewayGrantCoordinator,
         baseURL: URL = GatewayGrantCoordinator.defaultBaseURL,
         session: URLSession = .shared
@@ -447,6 +496,8 @@ public enum ManagedGatewayLLMClientFactory {
         ManagedLLMClient(
             capability: .assistant,
             taskKind: taskKind,
+            requestPurpose: requestPurpose,
+            oobeFeature: oobeFeature,
             grants: grants,
             baseURL: baseURL,
             session: session

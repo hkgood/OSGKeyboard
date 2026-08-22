@@ -677,15 +677,22 @@ final class KeyboardFlowCoordinator {
     }
 
     func beginAIRecording(
-        conversationID: UUID
+        conversationID: UUID,
+        oobeFeature: ManagedGatewayOOBEFeature? = nil
     ) -> FlowUtteranceStartDisposition {
-        startUtterance(.aiQuestion(conversationID: conversationID))
+        startUtterance(
+            .aiQuestion(
+                conversationID: conversationID,
+                oobeFeature: oobeFeature
+            )
+        )
     }
 
     func submitAIQuestion(
         text: String,
         conversationID: UUID,
         taskKind: ManagedGatewayTaskKind = .aiQuestion,
+        oobeFeature: ManagedGatewayOOBEFeature? = nil,
         thinkingEnabled: Bool? = nil
     ) -> FlowUtteranceStartDisposition {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -695,6 +702,7 @@ final class KeyboardFlowCoordinator {
                 conversationID: conversationID,
                 prefilledQuestion: trimmed,
                 taskKind: taskKind,
+                oobeFeature: oobeFeature,
                 thinkingEnabled: thinkingEnabled
             )
         )
@@ -1181,8 +1189,14 @@ final class KeyboardFlowCoordinator {
         let mode: FlowUtteranceMode? = request.mode == .dictation
             ? nil
             : request.mode
+        let implicitOOBEFeature: ManagedGatewayOOBEFeature? =
+            state.oobePracticeSession?.expectedFeature == .voiceInput
+                && request.mode == .dictation
+                ? .voiceInput
+                : nil
+        let managedOOBEFeature = request.managedOOBEFeature ?? implicitOOBEFeature
         let managedRequestPurpose = request.managedRequestPurpose
-            ?? (state.isOnboardingPracticeActive && request.mode == .dictation ? .oobe : nil)
+            ?? (managedOOBEFeature == nil ? nil : .oobe)
         let command = FlowCommand(
             sessionId: activeSessionId,
             utteranceId: currentUtteranceId,
@@ -1201,6 +1215,7 @@ final class KeyboardFlowCoordinator {
             aiConversationID: request.aiConversationID,
             aiTaskKind: request.aiTaskKind,
             managedRequestPurpose: managedRequestPurpose,
+            managedOOBEFeature: managedOOBEFeature,
             startDeadlineAt: action == .startRecording ? currentStartDeadlineAt : nil,
             processingDeadlineAt: action == .stopRecording && request.isEdit
                 ? Date().timeIntervalSince1970
@@ -1909,6 +1924,8 @@ final class KeyboardFlowCoordinator {
             aiConversationID: currentUtteranceRequest?.aiConversationID,
             aiQuestionText: text,
             aiTaskKind: currentUtteranceRequest?.aiTaskKind,
+            managedRequestPurpose: currentUtteranceRequest?.managedRequestPurpose,
+            managedOOBEFeature: currentUtteranceRequest?.managedOOBEFeature,
             aiThinkingEnabled: currentUtteranceRequest?.aiThinkingEnabled,
             startDeadlineAt: currentStartDeadlineAt
         )

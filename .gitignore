@@ -62,6 +62,9 @@ Signing.local.xcconfig
 # Custom LM compile output (Mac-only; device-side prepare uses .bin from bundle)
 OSGKeyboard/Resources/CustomLanguageModel/v1/compiled/
 
+# Reproducible Create ML candidates (selected models live in Shared resources)
+ModelTraining/ClipboardSemantics/Candidates/
+
 # Python bytecode
 __pycache__/
 *.pyc

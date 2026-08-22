@@ -15,6 +15,9 @@
 "onboarding.api.localReady.title" = "Local ASR is ready";
 "onboarding.api.localReady.body" = "Recognition works on-device. Add an API key in Settings for AI polish.";
 "keyboard.onboarding.practice.mic" = "Tap the mic, then tap again when done";
+"keyboard.onboarding.practice.translate" = "Tap Translate, then insert the generated text";
+"keyboard.onboarding.practice.reply" = "Tap Reply and let AI draft a response";
+"keyboard.onboarding.practice.askAI" = "Hold the mic and ask your question";
 
 /* Common navigation */
 "common.back" = "Back";
@@ -317,8 +320,18 @@
 "keyboard.ai.error.requestFailed" = "AI response failed. Try again";
 "keyboard.ai.error.clipboardUnavailable" = "This clipboard suggestion expired. Copy the text again";
 "keyboard.ai.skill.reply" = "Reply";
+"keyboard.ai.skill.replyInSourceLanguage" = "Same language";
 "keyboard.ai.skill.summarize" = "Summarize";
+"keyboard.ai.skill.extractConclusions" = "Conclusions";
 "keyboard.ai.skill.translate" = "Translate";
+"keyboard.ai.skill.acceptInvitation" = "Accept";
+"keyboard.ai.skill.declineInvitation" = "Decline";
+"keyboard.ai.skill.acceptTask" = "Acknowledge";
+"keyboard.ai.skill.clarifyRequest" = "Clarify";
+"keyboard.ai.skill.empathyReply" = "Empathize";
+"keyboard.ai.skill.askForDetails" = "Ask details";
+"keyboard.ai.skill.businessReply" = "Business";
+"keyboard.ai.skill.organizeList" = "Organize";
 "keyboard.ai.skill.extractTodos" = "Tasks";
 "keyboard.ai.skill.extractEvents" = "Events";
 "keyboard.ai.skill.saveToNotes" = "Notes";

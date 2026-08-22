@@ -1,0 +1,66 @@
+{
+  "classifiers" : [
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.6,
+      "id" : "task",
+      "labels" : [
+        "notTask",
+        "task"
+      ],
+      "modelFile" : "TaskIntentClassifier.mlmodel",
+      "positiveLabel" : "task"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.62,
+      "id" : "question",
+      "labels" : [
+        "notQuestion",
+        "question"
+      ],
+      "modelFile" : "QuestionIntentClassifier.mlmodel",
+      "positiveLabel" : "question"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.89,
+      "id" : "invitation",
+      "labels" : [
+        "notInvitation",
+        "invitation"
+      ],
+      "modelFile" : "InvitationIntentClassifier.mlmodel",
+      "positiveLabel" : "invitation"
+    },
+    {
+      "acceptedForAutomaticRouting" : false,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.6,
+      "id" : "complaint",
+      "labels" : [
+        "notComplaint",
+        "complaint"
+      ],
+      "modelFile" : "ComplaintIntentClassifier.mlmodel",
+      "positiveLabel" : "complaint"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "id" : "sentiment",
+      "labels" : [
+        "negative",
+        "neutral",
+        "positive"
+      ],
+      "modelFile" : "SentimentClassifier.mlmodel"
+    }
+  ],
+  "corpusRecordCount" : 6334,
+  "generatedAt" : "2026-08-21T15:28:40Z",
+  "schemaVersion" : 1
+}

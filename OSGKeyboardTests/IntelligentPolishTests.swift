@@ -419,7 +419,34 @@ final class IntelligentPolishTests: XCTestCase {
         )
         XCTAssertEqual(outcome.text, "please keep user_id in this technical message")
         XCTAssertTrue(outcome.qualityDegraded)
+        XCTAssertNil(outcome.polishStyleID)
+        XCTAssertNil(outcome.polishStylePrompt)
         XCTAssertEqual(client.temperatures.compactMap { $0 }, [0.1])
+    }
+
+    func testSuccessfulPolishReturnsExactStyleSnapshotForHistory() async throws {
+        var catalog = PolishStyleCatalog()
+        let style = PolishStylePack(
+            id: "user.snapshot",
+            name: "Snapshot",
+            prompt: "# 角色\n自然表达\n# 风格边界\n保持原意\n# 示例\n输入 → 输出"
+        )
+        try catalog.upsert(style)
+        store.setPolishStyleCatalog(catalog)
+        store.setActivePolishStyleId(style.id)
+        let service = PolishingService(
+            store: store,
+            client: FixedResponseLLMClient(response: "今天的部署已经完成。")
+        )
+
+        let outcome = try await service.polishWithOutcome(
+            "今天的部署已经完成",
+            context: PolishContext()
+        )
+
+        XCTAssertFalse(outcome.qualityDegraded)
+        XCTAssertEqual(outcome.polishStyleID, style.id)
+        XCTAssertEqual(outcome.polishStylePrompt, style.prompt)
     }
 
     func testValidatorFallsBackToMinimalPolishAfterHardFailure() async throws {
@@ -583,6 +610,18 @@ final class IntelligentPolishTests: XCTestCase {
         XCTAssertEqual(delivery.text, "你是不是已经解决了这个问题？")
         XCTAssertFalse(delivery.text.contains("未润色"))
         XCTAssertEqual(delivery.polishWarning, SharedL10n.string("flow.warning.polishDegraded"))
+    }
+
+    func testCompletedOOBEPageDoesNotReportWeakNetworkOrBlockProgress() {
+        let delivery = TranscriptionPolishFallback.makeDelivery(
+            rawText: "今天 是 礼拜四",
+            error: ManagedGatewayError.oobeFeatureAlreadyUsed,
+            engineMode: "local",
+            chunkWarning: nil
+        )
+
+        XCTAssertEqual(delivery.text, "今天是礼拜四")
+        XCTAssertNil(delivery.polishWarning)
     }
 
     func testTranscriptionPolishFallbackLocalMissingKeyWarning() {

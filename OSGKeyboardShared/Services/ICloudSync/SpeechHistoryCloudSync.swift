@@ -122,6 +122,7 @@ public final class SpeechHistoryCloudSync {
                 let sorted = payload.entries.sorted { $0.createdAt > $1.createdAt }
                 let keep = max(1, sorted.count - max(1, sorted.count / 10))
                 payload.entries = Array(sorted.prefix(keep))
+                payload.prunePolishStylePromptSnapshots()
             }
         }
     }

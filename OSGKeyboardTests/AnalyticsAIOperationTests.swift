@@ -81,4 +81,29 @@ final class AnalyticsAIOperationTests: XCTestCase {
         XCTAssertEqual(terminalEvents.first?.executionMode, .local)
         XCTAssertEqual(terminalEvents.first?.durationBucket, .oneToThreeSeconds)
     }
+
+    func testCancelPersistsFailedWithCancelledCategory() async throws {
+        let repository = AnalyticsRepository(
+            configuration: AnalyticsRepositoryConfiguration(
+                databaseURL: try analyticsTemporaryDatabaseURL()
+            ),
+            clock: AnalyticsTestWallClock(),
+            uuidGenerator: AnalyticsTestUUIDGenerator()
+        )
+        let client = LiveAnalyticsClient(
+            repository: repository,
+            context: analyticsTestContext,
+            monotonicClock: AnalyticsTestMonotonicClock()
+        )
+
+        client.startAIFeature(
+            .transcription,
+            executionMode: .managed
+        ).cancel()
+
+        _ = await analyticsWaitForPendingEventCount(2, repository: repository)
+        let events = try await analyticsDecodePendingEvents(repository: repository)
+        XCTAssertEqual(events.map(\.eventType), [.aiFeatureStarted, .aiFeatureFailed])
+        XCTAssertEqual(events.last?.failureCategory, .cancelled)
+    }
 }

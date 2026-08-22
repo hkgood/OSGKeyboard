@@ -1,7 +1,7 @@
 // AIAgentSkillsView.swift
 // OSGKeyboard · Main App
 //
-// Catalog of AI Agent clipboard skills. Enabled cards (max 8) appear on
+// Catalog of AI Agent clipboard skills. Enabled cards appear on
 // the keyboard after a copy; long-press drag rearranges that row live,
 // like Home Screen icons. Export skills confirm a companion Shortcut
 // before they can occupy a slot. Users can add custom export skills.
@@ -18,18 +18,12 @@ struct AIAgentSkillsView: View {
 
     @State private var viewingSkill: AIClipboardSkill?
     @State private var editingDraft: SkillEditorDraft?
-    @State private var showFullAlert = false
     @State private var pasteAccessVerified = AppPermissions.hasVerifiedPasteAccess
     @State private var pasteAccessNeedsRecovery = false
     @State private var showPasteNoTextAlert = false
     @State private var showPasteAccessSuccess = false
     /// True while a skill card is lifted; locks the page scroll like SpringBoard.
     @State private var isReordering = false
-
-    private let columns = [
-        GridItem(.flexible(), spacing: Spacing.sm),
-        GridItem(.flexible(), spacing: Spacing.sm)
-    ]
 
     private var skillCardShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
@@ -85,14 +79,6 @@ struct AIAgentSkillsView: View {
             )
         }
         .alert(
-            AppL10n.string("skills.full.title", language: config.uiLanguage),
-            isPresented: $showFullAlert
-        ) {
-            Button("common.done") { showFullAlert = false }
-        } message: {
-            Text(AppL10n.string("skills.full.message", language: config.uiLanguage))
-        }
-        .alert(
             AppL10n.string("clipboard.paste.noText.title", language: config.uiLanguage),
             isPresented: $showPasteNoTextAlert
         ) {
@@ -102,10 +88,19 @@ struct AIAgentSkillsView: View {
         }
         .onAppear {
             store.reload()
+            refreshOfficialSkillCatalog(
+                reason: "AIAgentSkillsView.onAppear",
+                force: true
+            )
             refreshPasteAccessState()
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
+            store.reload()
+            refreshOfficialSkillCatalog(
+                reason: "AIAgentSkillsView.active",
+                force: true
+            )
             refreshPasteAccessState()
             pasteAccessNeedsRecovery = false
         }
@@ -291,13 +286,24 @@ struct AIAgentSkillsView: View {
         pasteAccessVerified = AppPermissions.hasVerifiedPasteAccess
     }
 
+    private func refreshOfficialSkillCatalog(reason: String, force: Bool) {
+        Task {
+            let outcome = await OfficialSkillCatalogRefreshService.shared.refreshIfNeeded(
+                reason: reason,
+                force: force
+            )
+            if outcome.didUpdateCache {
+                store.reload()
+            }
+        }
+    }
+
     private var enabledSection: some View {
         CardSection(
             title: AppL10n.format(
                 "skills.enabled.section",
                 language: config.uiLanguage,
-                store.enabledSkills.count,
-                AIAgentSkillLayout.maximumEnabled
+                store.enabledSkills.count
             )
         ) {
             if store.enabledSkills.isEmpty {
@@ -318,17 +324,23 @@ struct AIAgentSkillsView: View {
                         skillCardVisual(skill, isEnabled: true)
                     }
                 )
+                .background(palette.surface, in: skillCardShape)
+                .overlay(skillCardShape.stroke(palette.divider, lineWidth: 0.5))
+                .clipShape(skillCardShape)
             }
         }
     }
 
     private var availableSection: some View {
         CardSection("skills.available.section") {
-            LazyVGrid(columns: columns, spacing: Spacing.sm) {
+            LazyVStack(spacing: 0) {
                 ForEach(store.availableSkills) { skill in
                     skillCardInteractive(skill, isEnabled: false)
                 }
             }
+            .background(palette.surface, in: skillCardShape)
+            .overlay(skillCardShape.stroke(palette.divider, lineWidth: 0.5))
+            .clipShape(skillCardShape)
         }
     }
 
@@ -364,44 +376,50 @@ struct AIAgentSkillsView: View {
     }
 
     private func skillCardVisual(_ skill: AIClipboardSkill, isEnabled: Bool) -> some View {
-        ZStack(alignment: .topTrailing) {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                Image(systemName: skill.systemImage)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(palette.accent)
+        HStack(spacing: Spacing.md) {
+            Image(systemName: skill.systemImage)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(palette.accent)
+                .frame(width: 38, height: 38)
+                .background(palette.accentMuted, in: RoundedRectangle(
+                    cornerRadius: Radius.medium,
+                    style: .continuous
+                ))
+
+            VStack(alignment: .leading, spacing: 3) {
                 Text(skillTitle(skill))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
-                    .padding(.trailing, 32)
                 Text(skillDescription(skill))
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textTertiary)
                     .lineLimit(2)
-                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
-            .padding(Spacing.md)
-
-            CatalogCardChrome.editIcon(palette: palette)
-                .padding(Spacing.sm)
-                .allowsHitTesting(false)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if isEnabled {
-                CatalogCardChrome.checkIcon(palette: palette)
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(palette.accent)
             }
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(palette.textTertiary)
+                .frame(width: 18)
         }
-        .background(
-            isEnabled ? palette.accentMuted : palette.surface,
-            in: skillCardShape
-        )
-        .overlay(skillCardShape.stroke(
-            isEnabled ? palette.accent : palette.divider,
-            lineWidth: isEnabled ? 1.5 : 0.5
-        ))
-        .clipShape(skillCardShape)
-        .contentShape(skillCardShape)
-        .containerShape(skillCardShape)
+        .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.xs)
+        .background(palette.surface)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(palette.divider)
+                .frame(height: 0.5)
+                .padding(.leading, 38 + Spacing.md * 2)
+        }
+        .contentShape(Rectangle())
     }
 
     private func skillTitle(_ skill: AIClipboardSkill) -> String {
@@ -413,24 +431,24 @@ struct AIAgentSkillsView: View {
     }
 
     private func skillDescription(_ skill: AIClipboardSkill) -> String {
+        let summary = skill.customSummary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !summary.isEmpty { return summary }
         if skill.isUserCreated {
-            let summary = skill.customSummary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if !summary.isEmpty { return summary }
             return AppL10n.string("skills.custom.description", language: config.uiLanguage)
         }
         return AppL10n.string(skill.descriptionKey, language: config.uiLanguage)
     }
 
     private func handleCardTap(_ skill: AIClipboardSkill) {
+        if store.layout.isEnabled(skill.id) {
+            store.disable(skill.id)
+            return
+        }
         if skill.requiresShortcut, !store.layout.hasConfirmedShortcut(skill.id) {
             viewingSkill = skill
             return
         }
-        if store.layout.isEnabled(skill.id) {
-            store.disable(skill.id)
-        } else {
-            addOrWarn(skill)
-        }
+        addOrWarn(skill)
     }
 
     private func handleEdit(_ skill: AIClipboardSkill) {
@@ -445,8 +463,6 @@ struct AIAgentSkillsView: View {
         switch store.enable(skill.id) {
         case .enabled, .alreadyEnabled:
             viewingSkill = nil
-        case .full:
-            showFullAlert = true
         case .needsShortcut, .unknown:
             break
         }
@@ -456,8 +472,6 @@ struct AIAgentSkillsView: View {
         switch store.confirmShortcutAndEnable(skill.id) {
         case .enabled, .alreadyEnabled:
             viewingSkill = nil
-        case .full:
-            showFullAlert = true
         case .needsShortcut, .unknown:
             break
         }
@@ -491,8 +505,8 @@ struct AIAgentSkillsView: View {
     }
 }
 
-/// Home-screen style reorder: long-press lifts the card, other cells slide
-/// into the gap as the finger crosses midpoints, drop settles in place.
+/// List-style reorder: long-press lifts the row, other rows slide into the
+/// gap as the finger crosses midpoints, and drop settles in place.
 private struct EnabledSkillsReorderGrid<Card: View>: View {
     let skills: [AIClipboardSkill]
     @Binding var isReordering: Bool
@@ -509,13 +523,12 @@ private struct EnabledSkillsReorderGrid<Card: View>: View {
 
     private static var spaceName: String { "enabledSkillsGrid" }
     private let columns = [
-        GridItem(.flexible(), spacing: Spacing.sm),
-        GridItem(.flexible(), spacing: Spacing.sm)
+        GridItem(.flexible(), spacing: 0)
     ]
 
     var body: some View {
         ZStack(alignment: .topLeading) {
-            LazyVGrid(columns: columns, spacing: Spacing.sm) {
+            LazyVGrid(columns: columns, spacing: 0) {
                 ForEach(skills) { skill in
                     gridCell(skill)
                 }
@@ -775,9 +788,9 @@ private struct SkillDetailSheet: View {
     }
 
     private var skillDescription: String {
+        let summary = skill.customSummary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !summary.isEmpty { return summary }
         if skill.isUserCreated {
-            let summary = skill.customSummary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if !summary.isEmpty { return summary }
             return AppL10n.string("skills.custom.description", language: config.uiLanguage)
         }
         if skill.requiresShortcut, !store.layout.hasConfirmedShortcut(skill.id) {

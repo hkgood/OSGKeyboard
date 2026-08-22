@@ -42,7 +42,7 @@ public struct AppGroupPersistor {
         state.handednessPreference = store.handednessPreference
         state.clipboardHistoryEnabled = store.clipboardHistoryEnabled
         state.clipboardCandidateBarEnabled = store.clipboardCandidateBarEnabled
-        state.enabledClipboardSkillIDs = store.agentSkillLayout.enabledIDs
+        applySkillSnapshot(store: store, into: state)
         state.keyboardHapticIntensity = store.keyboardHapticIntensity
         applyAPIKeyAvailability(store: store, into: state)
 
@@ -97,9 +97,28 @@ public struct AppGroupPersistor {
         state.handednessPreference = store.handednessPreference
         state.clipboardHistoryEnabled = store.clipboardHistoryEnabled
         state.clipboardCandidateBarEnabled = store.clipboardCandidateBarEnabled
-        state.enabledClipboardSkillIDs = store.agentSkillLayout.enabledIDs
+        applySkillSnapshot(store: store, into: state)
         state.keyboardHapticIntensity = store.keyboardHapticIntensity
         applyAPIKeyAvailability(store: store, into: state)
+    }
+
+    /// Resolve once outside SwiftUI body evaluation. Assigning the complete
+    /// value snapshot publishes remote copy changes even when slot IDs are stable.
+    private func applySkillSnapshot(
+        store: AppGroupStore,
+        into state: KeyboardViewController.State
+    ) {
+        let layout = store.agentSkillLayout
+        let language = store.uiLanguage
+        state.uiLanguage = language
+        state.enabledClipboardSkillIDs = layout.enabledIDs
+        state.confirmedClipboardShortcutIDs = layout.confirmedShortcutIDs
+        state.enabledClipboardSkills = AIClipboardSkillCatalog.visible(
+            enabledIDs: layout.enabledIDs,
+            officialCatalog: store.officialSkillCatalog,
+            userCatalog: store.agentUserSkillCatalog,
+            uiLanguage: language
+        )
     }
 
     /// Cloud without ASR/LLM keys blocks the mic. Local ASR still works when

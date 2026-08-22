@@ -166,6 +166,31 @@ public struct AppAttestAssertion: Codable, Equatable, Sendable {
     }
 }
 
+/// Anonymous OOBE grant request. It intentionally contains no account session,
+/// requested scopes, or mutable feature claim; the server fixes policy to
+/// `polish` + `ai` after validating App Attest.
+public struct OOBEGrantRequest: Codable, Equatable, Sendable {
+    public let installationId: UUID
+    public let keyId: String
+    public let challengeId: UUID
+    public let challenge: String
+    public let assertion: String
+
+    public init(
+        installationId: UUID,
+        keyId: String,
+        challengeId: UUID,
+        challenge: String,
+        assertion: String
+    ) {
+        self.installationId = installationId
+        self.keyId = keyId
+        self.challengeId = challengeId
+        self.challenge = challenge
+        self.assertion = assertion
+    }
+}
+
 public enum AppAttestChallengePurpose: String, Codable, Sendable {
     case attestation
     case assertion
@@ -205,6 +230,10 @@ public protocol AppAttestKeyStateStoring: Sendable {
     func clearAppAttestKeyState() async throws
 }
 
+public protocol OOBEInstallationIDStoring: Sendable {
+    func oobeInstallationID() async throws -> UUID
+}
+
 public enum AccountAPIError: Error, Equatable, Sendable {
     case invalidRequest(String)
     case unauthorized(String)
@@ -220,6 +249,10 @@ public enum AccountAPIError: Error, Equatable, Sendable {
     case sessionUnavailable
     case appleAuthorization
     case integrityUnavailable
+}
+
+public enum AccountSessionInvalidation: Sendable {
+    case expired
 }
 
 extension AccountAPIError: LocalizedError {

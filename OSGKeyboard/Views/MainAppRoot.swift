@@ -9,6 +9,14 @@ import OSGKeyboardHostSupport
 import OSGKeyboardShared
 import SwiftUI
 
+enum AnalyticsFirstOpenAttribution {
+    static let ordinaryLaunch: AnalyticsAcquisitionChannel = .appStoreOrganic
+
+    static func trustedChannel(for url: URL) -> AnalyticsAcquisitionChannel? {
+        ReferralUniversalLink.code(from: url) == nil ? nil : .referral
+    }
+}
+
 struct MainAppRoot: View {
     @Environment(\.scenePhase) private var scenePhase
 
@@ -21,7 +29,8 @@ struct MainAppRoot: View {
     @StateObject private var accountSession: AccountSessionCoordinator
     @State private var clmWarmupTask: Task<Void, Never>?
     @State private var rimeStartupTask: Task<Void, Never>?
-    @State private var firstOpenAcquisitionChannel: AnalyticsAcquisitionChannel = .unknown
+    @State private var firstOpenAcquisitionChannel =
+        AnalyticsFirstOpenAttribution.ordinaryLaunch
 
     init(accountDependencies: AccountDependencies? = nil) {
         let resolvedDependencies = accountDependencies ?? LiveAccountDependencyFactory.make()
@@ -34,7 +43,17 @@ struct MainAppRoot: View {
                 dependencies: resolvedDependencies,
                 analyticsClient: analytics.client,
                 onAccountAuthenticated: { accountID in
+                    AppGroupStore().setManagedGatewayAccountSessionAvailable(true)
                     await analytics.observeAuthenticatedAccount(accountID)
+                },
+                onAccountSignedOut: {
+                    // Revoke the local choice before exposing signed-out UI.
+                    // BYOK then remains the only possible AI execution path.
+                    AppGroupStore().setManagedGatewayAccountSessionAvailable(false)
+                    let config = ProviderConfig.shared
+                    if config.credentialSource != .byok {
+                        config.credentialSource = .byok
+                    }
                 },
                 onAccountDeleted: {
                     await analytics.handleAccountDeletion()
@@ -93,6 +112,9 @@ struct MainAppRoot: View {
                 category: "flow"
             )
             AppCloudSync.shared.startObservingExternalChanges()
+            if scenePhase == .active {
+                refreshOfficialSkillCatalog(reason: "MainAppRoot.onAppear")
+            }
 
             // Heavy work (Flow / CLM / Rime) only after onboarding. Doing it
             // earlier jetsams the host (~150 MB+) and the keyboard dies with it.
@@ -168,6 +190,7 @@ struct MainAppRoot: View {
                 FlowSessionBridge.setHostHeavy(false)
                 return
             }
+            refreshOfficialSkillCatalog(reason: "scenePhase.active")
             if config.hasCompletedOnboarding {
                 activateForegroundServices(reason: "scenePhase.active")
                 AIHintRefreshService.refreshIfNeeded(reason: "scenePhase.active")
@@ -175,6 +198,17 @@ struct MainAppRoot: View {
             }
             Task {
                 await AppCloudSync.shared.pullAllIfEnabled()
+            }
+        }
+    }
+
+    private func refreshOfficialSkillCatalog(reason: String) {
+        Task {
+            let outcome = await OfficialSkillCatalogRefreshService.shared.refreshIfNeeded(
+                reason: reason
+            )
+            if outcome.didUpdateCache {
+                AIAgentSkillLayoutStore.shared.reload()
             }
         }
     }
@@ -275,7 +309,9 @@ struct MainAppRoot: View {
 
     private func handleIncomingURL(_ url: URL) {
         if accountSession.handleIncomingURL(url) {
-            firstOpenAcquisitionChannel = .referral
+            firstOpenAcquisitionChannel =
+                AnalyticsFirstOpenAttribution.trustedChannel(for: url)
+                ?? AnalyticsFirstOpenAttribution.ordinaryLaunch
             NotificationCenter.default.post(name: .osgOpenAccountDeepLink, object: nil)
             return
         }

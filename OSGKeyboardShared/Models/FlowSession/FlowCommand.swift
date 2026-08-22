@@ -20,8 +20,8 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         case submitAIQuestion
     }
 
-    /// Wire version that includes managed-gateway request purpose.
-    public static let currentProtocolVersion = 7
+    /// Wire version that includes a strongly typed OOBE feature.
+    public static let currentProtocolVersion = 8
 
     public let protocolVersion: Int
     public let sessionId: UUID
@@ -45,6 +45,8 @@ public struct FlowCommand: Codable, Equatable, Sendable {
     public let aiTaskKind: ManagedGatewayTaskKind?
     /// Optional server-audited purpose for managed gateway billing policy.
     public let managedRequestPurpose: ManagedGatewayRequestPurpose?
+    /// Required feature discriminator when `managedRequestPurpose == .oobe`.
+    public let managedOOBEFeature: ManagedGatewayOOBEFeature?
     /// Clipboard-skill thinking override. Nil keeps AI-mode default (on).
     public let aiThinkingEnabled: Bool?
     /// Absolute wall-clock deadlines survive extension reconstruction.
@@ -68,6 +70,7 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         aiQuestionText: String? = nil,
         aiTaskKind: ManagedGatewayTaskKind? = nil,
         managedRequestPurpose: ManagedGatewayRequestPurpose? = nil,
+        managedOOBEFeature: ManagedGatewayOOBEFeature? = nil,
         aiThinkingEnabled: Bool? = nil,
         startDeadlineAt: TimeInterval? = nil,
         processingDeadlineAt: TimeInterval? = nil
@@ -88,6 +91,7 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         self.aiQuestionText = aiQuestionText
         self.aiTaskKind = aiTaskKind
         self.managedRequestPurpose = managedRequestPurpose
+        self.managedOOBEFeature = managedOOBEFeature
         self.aiThinkingEnabled = aiThinkingEnabled
         self.startDeadlineAt = startDeadlineAt
         self.processingDeadlineAt = processingDeadlineAt

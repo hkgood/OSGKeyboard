@@ -1,4 +1,4 @@
-# App Store Connect — OSGKeyboard 2.0.0 (build 86)
+# App Store Connect — OSGKeyboard 2.0.1 (build 87)
 
 > Current metadata baseline for the iOS/iPadOS App Store build. Version and build
 > numbers come from `project.yml`. The repository also contains a separate
@@ -11,7 +11,7 @@
 | App name | `OSGKeyboard` | ≤ 30 characters |
 | Subtitle | `Voice input, everywhere` | ≤ 30 characters |
 | Bundle ID | `com.osgkeyboard.ios` | iOS host target |
-| Version / build | `2.0.0` / `86` | `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` |
+| Version / build | `2.0.1` / `87` | `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` |
 | Minimum system | iOS/iPadOS 26 | iPhone and iPad |
 | Primary locale | `en-US` | Simplified Chinese is also bundled |
 | Primary category | Utilities | |
@@ -106,23 +106,25 @@ Voice input anywhere, with on-device recognition by default. Use your own AI key
 keyboard,voice,dictation,speech,transcribe,AI,pinyin,Chinese,English,polish,typing,productivity
 ```
 
-## What's new in 2.0.0
+## What's new in 2.0.1
 
 ```text
 NEW
-• Optional Sign in with Apple account center with managed credits,
-  App Store credit packs, profile controls, and account deletion.
-• Managed cloud speech and AI access for signed-in users. Local dictation
-  and user-owned provider keys continue to work without an account.
-• Referral support and synchronized server-side credit balances.
+• A shorter first-run guide teaches dictation, translation, smart reply,
+  and voice questions before the optional account step.
+• Official AI skills can refresh without an App Store update.
+• Private typing summaries and local Rime term suggestions improve insights
+  without retaining typed text.
 
 CHANGED
-• Voice and AI now share one Assistant tab with adaptive field actions,
-  contextual suggestions, and safer answer insertion.
-• Clipboard setup guidance is shorter and shows only unfinished steps.
+• iPhone navigation now uses the native iOS 26 Liquid Glass tab bar.
+• Voice history retains private paired metadata for future style learning.
 
 FIXED
-• Account confirmation dialogs now open from the selected account action.
+• Signing out or losing a session now switches every AI path back to BYOK
+  and blocks cached managed grants from consuming credits.
+• Analytics uploads are safer during suspension, purchase confirmations no
+  longer reappear, and account/settings refreshes are more reliable.
 ```
 
 ## App Review information
@@ -283,7 +285,7 @@ standard HTTPS. Re-evaluate this answer if non-exempt cryptography is added.
 
 ## Submission checklist
 
-- [ ] Confirm `project.yml` still reads version 2.0.0 / build 86
+- [ ] Confirm `project.yml` still reads version 2.0.1 / build 87
 - [ ] Open the existing Xcode project (do not regenerate unless needed)
 - [ ] Run the release build and test suites on macOS with Xcode 26
 - [ ] Replace screenshots with captures from the submitted build
@@ -294,4 +296,4 @@ standard HTTPS. Re-evaluate this answer if non-exempt cryptography is added.
       and mapped to the server credit catalog
 - [ ] Confirm `ByRockyACoffee` remains an optional consumable tip and unlocks
       no feature
-- [ ] Upload, select build 86, add review notes, and submit
+- [ ] Upload, select build 87, add review notes, and submit

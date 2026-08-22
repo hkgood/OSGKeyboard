@@ -38,6 +38,16 @@ final class ManagedGatewayTests: XCTestCase {
         XCTAssertEqual(cloudScopes, [.polish, .assistant, .agent, .asr])
     }
 
+    func testOOBEFeatureConflictIsNotMappedToNetworkFailure() {
+        let error = ManagedGatewayHTTP.error(
+            data: errorJSON("oobe_feature_already_used"),
+            status: 409,
+            requestId: "oobe-conflict"
+        )
+
+        XCTAssertEqual(error, .oobeFeatureAlreadyUsed)
+    }
+
     func testCreateGrantSendsAccountTokenButStoresOnlyGrant() async throws {
         GatewayStub.shared.enqueue(
             201,
@@ -128,6 +138,40 @@ final class ManagedGatewayTests: XCTestCase {
         XCTAssertEqual(try jsonBody(request)["refreshToken"] as? String, oldRefresh)
     }
 
+    func testSignedOutPolicyRejectsCachedAccountGrant() async throws {
+        let suiteName = "ManagedGatewayTests.signedOut.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let now = Date(timeIntervalSince1970: 3_000)
+        let store = MemoryGrantStore(
+            credentials(
+                accessToken: "cached-account-access",
+                accessExpiresAt: now.addingTimeInterval(240),
+                refreshExpiresAt: now.addingTimeInterval(3_600),
+                receivedAt: now
+            )
+        )
+        let accountState = AppGroupStore(defaults: defaults)
+        let coordinator = GatewayGrantCoordinator(
+            baseURL: baseURL,
+            store: store,
+            session: stubSession(),
+            now: { now },
+            accountAccessPolicy: AppGroupManagedGatewayAccountAccessPolicy(
+                defaults: defaults
+            )
+        )
+
+        await XCTAssertThrowsManaged(.missingGrant) {
+            _ = try await coordinator.accessToken(for: .polish)
+        }
+        XCTAssertTrue(GatewayStub.shared.requests().isEmpty)
+
+        accountState.setManagedGatewayAccountSessionAvailable(true)
+        let token = try await coordinator.accessToken(for: .polish)
+        XCTAssertEqual(token, "cached-account-access")
+    }
+
     func testManagedClientMapsAllCapabilitiesHeadersBodyAndRequestIds() async throws {
         let now = Date(timeIntervalSince1970: 3_000)
         let store = MemoryGrantStore(credentials(accessToken: "access", receivedAt: now))
@@ -187,6 +231,7 @@ final class ManagedGatewayTests: XCTestCase {
         let cases: [(ManagedLLMClient.Capability, ManagedGatewayTaskKind)] = [
             (.polish, .translation),
             (.polish, .editLastInput),
+            (.assistant, .currentInformationQuestion),
             (.assistant, .clipboardTransform),
             (.assistant, .customSkill)
         ]
@@ -211,13 +256,39 @@ final class ManagedGatewayTests: XCTestCase {
 
     func testManagedClientSerializesOOBERequestPurpose() async throws {
         let now = Date(timeIntervalSince1970: 3_750)
-        let store = MemoryGrantStore(credentials(accessToken: "access", receivedAt: now))
+        let store = MemoryGrantStore(credentials(accessToken: "account-access", receivedAt: now))
+        let oobeStore = MemoryGrantStore(
+            credentials(
+                accessToken: "oobe-access",
+                receivedAt: now,
+                scopes: [.polish, .assistant]
+            )
+        )
+        let suite = "managed.oobe.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let practice = try XCTUnwrap(
+            KeyboardSetupBridge.beginOOBEPracticeSession(
+                expectedFeature: .voiceInput,
+                defaults: defaults,
+                now: now
+            )
+        )
+        XCTAssertEqual(practice.expectedFeature, .voiceInput)
         GatewayStub.shared.enqueue(200, Data(#"{"output_text":"ok"}"#.utf8))
         let client = ManagedLLMClient(
             capability: .polish,
             taskKind: .dictationPolish,
             requestPurpose: .oobe,
+            oobeFeature: .voiceInput,
             grants: makeCoordinator(store: store, now: { now }),
+            oobeGrants: OOBEGatewayGrantCoordinator(
+                baseURL: baseURL,
+                store: oobeStore,
+                session: stubSession(),
+                now: { now },
+                practiceSession: { practice }
+            ),
             baseURL: baseURL,
             session: stubSession()
         )
@@ -228,6 +299,107 @@ final class ManagedGatewayTests: XCTestCase {
         let body = try jsonBody(request)
         XCTAssertEqual(body["taskKind"] as? String, "dictation_polish")
         XCTAssertEqual(body["requestPurpose"] as? String, "oobe")
+        XCTAssertEqual(body["oobeFeature"] as? String, "voice_input")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer oobe-access")
+        let accountCredentials = await store.value()
+        XCTAssertEqual(accountCredentials?.accessToken, "account-access")
+    }
+
+    func testOOBEGrantRejectsAgentOrASRScopes() async {
+        let now = Date(timeIntervalSince1970: 3_775)
+        let coordinator = OOBEGatewayGrantCoordinator(
+            baseURL: baseURL,
+            store: MemoryGrantStore(),
+            session: stubSession(),
+            now: { now }
+        )
+
+        await XCTAssertThrowsManaged(.invalidGrant) {
+            try await coordinator.install(
+                self.credentials(
+                    receivedAt: now,
+                    scopes: [.polish, .assistant, .agent]
+                )
+            )
+        }
+        await XCTAssertThrowsManaged(.invalidGrant) {
+            try await coordinator.install(
+                self.credentials(
+                    receivedAt: now,
+                    scopes: [.polish, .assistant, .asr]
+                )
+            )
+        }
+    }
+
+    func testOOBERefreshUsesDedicatedEndpoint() async throws {
+        let now = Date(timeIntervalSince1970: 3_790)
+        let practice = OOBEPracticeSession(
+            sessionID: UUID(),
+            expectedFeature: .voiceInput,
+            startedAt: now.addingTimeInterval(-10),
+            expiresAt: now.addingTimeInterval(300)
+        )
+        let store = MemoryGrantStore(
+            credentials(
+                accessToken: "expired",
+                accessExpiresAt: now.addingTimeInterval(-1),
+                receivedAt: now.addingTimeInterval(-600),
+                scopes: [.polish, .assistant]
+            )
+        )
+        GatewayStub.shared.enqueue(
+            200,
+            grantJSON(
+                access: "refreshed",
+                refresh: "rotated",
+                scopes: ["polish", "ai"]
+            )
+        )
+        let coordinator = OOBEGatewayGrantCoordinator(
+            baseURL: baseURL,
+            store: store,
+            session: stubSession(),
+            now: { now },
+            practiceSession: { practice }
+        )
+
+        let token = try await coordinator.accessToken(
+            for: .polish,
+            feature: .voiceInput
+        )
+
+        XCTAssertEqual(token, "refreshed")
+        XCTAssertEqual(
+            GatewayStub.shared.requests().first?.url?.path,
+            "/v1/oobe/grants/refresh"
+        )
+    }
+
+    func testOOBEClientRejectsMissingFeatureWithoutUsingAccountGrant() async {
+        let now = Date(timeIntervalSince1970: 3_800)
+        let store = MemoryGrantStore(credentials(accessToken: "account-access", receivedAt: now))
+        let client = ManagedLLMClient(
+            capability: .polish,
+            requestPurpose: .oobe,
+            grants: makeCoordinator(store: store, now: { now }),
+            baseURL: baseURL,
+            session: stubSession()
+        )
+
+        await XCTAssertThrowsManaged(
+            .server(code: "missing_oobe_feature", status: 400, requestId: "fixed")
+        ) {
+            _ = try await ManagedLLMClient(
+                capability: client.capability,
+                requestPurpose: client.requestPurpose,
+                grants: makeCoordinator(store: store, now: { now }),
+                baseURL: self.baseURL,
+                session: self.stubSession(),
+                requestId: { "fixed" }
+            ).polish("input", systemPrompt: "context")
+        }
+        XCTAssertTrue(GatewayStub.shared.requests().isEmpty)
     }
 
     func testManagedTaskKindWireValuesMatchServerContract() {
@@ -238,6 +410,7 @@ final class ManagedGatewayTests: XCTestCase {
                 "translation",
                 "edit_last_input",
                 "ai_question",
+                "current_information_question",
                 "clipboard_transform",
                 "custom_skill",
                 "agent_planning"
@@ -412,7 +585,13 @@ final class ManagedGatewayTests: XCTestCase {
         store: MemoryGrantStore,
         now: @escaping @Sendable () -> Date = Date.init
     ) -> GatewayGrantCoordinator {
-        GatewayGrantCoordinator(baseURL: baseURL, store: store, session: stubSession(), now: now)
+        GatewayGrantCoordinator(
+            baseURL: baseURL,
+            store: store,
+            session: stubSession(),
+            now: now,
+            accountAccessPolicy: UnrestrictedManagedGatewayAccountAccessPolicy()
+        )
     }
 
     private func stubSession() -> URLSession {
@@ -426,11 +605,12 @@ final class ManagedGatewayTests: XCTestCase {
         refreshToken: String = "refresh-token-value-12345678901234567890",
         accessExpiresAt: Date = Date(timeIntervalSince1970: 20_000),
         refreshExpiresAt: Date = Date(timeIntervalSince1970: 40_000),
-        receivedAt: Date = Date(timeIntervalSince1970: 10_000)
+        receivedAt: Date = Date(timeIntervalSince1970: 10_000),
+        scopes: Set<ManagedGatewayCapability> = [.polish, .assistant, .agent]
     ) -> ManagedGatewayGrantCredentials {
         ManagedGatewayGrantCredentials(
             grantId: "11111111-1111-1111-1111-111111111111",
-            scopes: [.polish, .assistant, .agent],
+            scopes: scopes,
             accessToken: accessToken,
             accessExpiresAt: accessExpiresAt,
             refreshToken: refreshToken,

@@ -48,16 +48,33 @@ struct AccountAnalyticsBearerProvider: AnalyticsBearerProviding {
 
     func bearerToken() async throws -> String? {
         guard try await apiClient.currentSession() != nil else { return nil }
-        return try await apiClient.accessTokenForAuthorizedRequest()
+        do {
+            return try await apiClient.accessTokenForAuthorizedRequest()
+        } catch let error as AccountAPIError where Self.isInvalidSession(error) {
+            return nil
+        }
     }
 
     func refreshBearerToken(
         afterUnauthorizedAccessToken failedToken: String?
     ) async throws -> String? {
         guard let failedToken, !failedToken.isEmpty else { return nil }
-        return try await apiClient.refreshAccessToken(
-            afterUnauthorizedAccessToken: failedToken
-        )
+        do {
+            return try await apiClient.refreshAccessToken(
+                afterUnauthorizedAccessToken: failedToken
+            )
+        } catch let error as AccountAPIError where Self.isInvalidSession(error) {
+            return nil
+        }
+    }
+
+    private static func isInvalidSession(_ error: AccountAPIError) -> Bool {
+        switch error {
+        case .sessionUnavailable, .unauthorized, .refreshTokenReuse:
+            return true
+        default:
+            return false
+        }
     }
 }
 
@@ -92,6 +109,7 @@ final class AnalyticsHostService: ObservableObject {
     let client: any AnalyticsClient
 
     private let runtime: AnalyticsRuntime
+    private let keyboardUsageRuntime: KeyboardUsageRuntime
     private let uploadSignal: AnalyticsUploadSignal
     private let pathMonitor = NWPathMonitor()
     private let monitorQueue = DispatchQueue(
@@ -123,7 +141,19 @@ final class AnalyticsHostService: ObservableObject {
             trigger: signal,
             logger: HostAnalyticsLogger()
         )
+        let keyboardUsageRuntime = KeyboardUsageRuntime(
+            environment: environment,
+            analyticsRepository: runtime.repository,
+            uploadConfiguration: KeyboardUsageUploadConfiguration(
+                endpoint: Self.keyboardUsageEndpoint
+            ),
+            network: network,
+            bearerProvider: bearerProvider,
+            trigger: signal,
+            logger: HostAnalyticsLogger()
+        )
         self.runtime = runtime
+        self.keyboardUsageRuntime = keyboardUsageRuntime
         client = runtime.client
 
         Task {
@@ -132,6 +162,11 @@ final class AnalyticsHostService: ObservableObject {
                 await runtime.uploadCoordinator.uploadAvailableEvents(
                     maximumBatches: uploadPolicy.maximumBatches
                 )
+                guard !Task.isCancelled else { return }
+                await keyboardUsageRuntime.uploadCoordinator
+                    .uploadAvailableSummaries(
+                        maximumBatches: uploadPolicy.maximumBatches
+                    )
             }
         }
     }
@@ -195,7 +230,9 @@ final class AnalyticsHostService: ObservableObject {
             await MainActor.run {
                 self.isEnabled = current
             }
-            if current {
+            if !current {
+                await keyboardUsageRuntime.repository.clearAll()
+            } else {
                 await uploadSignal.requestActivationUpload()
             }
         }
@@ -259,12 +296,14 @@ final class AnalyticsHostService: ObservableObject {
         let generation = databaseTransitionGeneration
         let previous = databaseTransitionTask
         let runtime = runtime
+        let keyboardUsageRuntime = keyboardUsageRuntime
         let signal = uploadSignal
         let client = client
         let acquisitionChannel = firstOpenAcquisitionChannel
         let task = Task { [weak self] in
             await previous?.value
             await runtime.repository.resumeDatabaseAccess()
+            await keyboardUsageRuntime.repository.resumeDatabaseAccess()
             await runtime.prepare(
                 firstOpenAcquisitionChannel: acquisitionChannel
             )
@@ -289,11 +328,13 @@ final class AnalyticsHostService: ObservableObject {
         let generation = databaseTransitionGeneration
         let previous = databaseTransitionTask
         let runtime = runtime
+        let keyboardUsageRuntime = keyboardUsageRuntime
         let signal = uploadSignal
         let task = Task { [weak self] in
             await previous?.value
             await signal.pauseAndWait()
             await runtime.repository.suspendDatabaseAccess()
+            await keyboardUsageRuntime.repository.suspendDatabaseAccess()
             await MainActor.run {
                 self?.finishDatabaseTransition(generation: generation)
             }
@@ -306,6 +347,7 @@ final class AnalyticsHostService: ObservableObject {
 
         if hasPendingAccountDeletion {
             await runtime.handleAccountDeletion()
+            await keyboardUsageRuntime.repository.clearAll()
             hasPendingAccountDeletion = false
         }
 
@@ -314,6 +356,9 @@ final class AnalyticsHostService: ObservableObject {
             stableIdentifier: accountID.uuidString
         )
         guard requestedDatabaseAccess == .foreground else { return }
+        if case .switchedAccount = observation {
+            await keyboardUsageRuntime.repository.clearAll()
+        }
         if case .unavailable = observation {
             return
         }
@@ -327,16 +372,24 @@ final class AnalyticsHostService: ObservableObject {
         guard !Task.isCancelled else { return false }
 
         await runtime.repository.resumeDatabaseAccess()
+        await keyboardUsageRuntime.repository.resumeDatabaseAccess()
 
         await runtime.uploadCoordinator.uploadAvailableEvents(maximumBatches: 1)
-        let success = !Task.isCancelled
+        var success = !Task.isCancelled
+        if success {
+            await keyboardUsageRuntime.uploadCoordinator
+                .uploadAvailableSummaries(maximumBatches: 1)
+            success = !Task.isCancelled
+        }
 
         if requestedDatabaseAccess != .foreground {
             await runtime.repository.suspendDatabaseAccess()
+            await keyboardUsageRuntime.repository.suspendDatabaseAccess()
             // A foreground transition may race the final close while this
             // actor is re-entrant. Re-open if it won during the suspension.
             if requestedDatabaseAccess == .foreground {
                 await runtime.repository.resumeDatabaseAccess()
+                await keyboardUsageRuntime.repository.resumeDatabaseAccess()
             }
         }
         return success
@@ -358,6 +411,10 @@ final class AnalyticsHostService: ObservableObject {
 
     private static let endpoint = URL(
         string: "https://account.osglab.com/v1/analytics/events"
+    )!
+
+    private static let keyboardUsageEndpoint = URL(
+        string: "https://account.osglab.com/v1/analytics/keyboard-usage"
     )!
 
     private static var environment: AnalyticsEnvironment {

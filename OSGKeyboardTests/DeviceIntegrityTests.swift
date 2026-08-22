@@ -295,6 +295,71 @@ final class DeviceIntegrityTests: XCTestCase {
         )
         XCTAssertEqual(json["assertion"] as? String, "AQI=")
     }
+
+    func testOOBEGrantRequestReusesRegisteredKeyAndSignsCanonicalPayload() async throws {
+        let installationID = UUID(
+            uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"
+        )!
+        let challengeID = UUID(
+            uuidString: "16161616-1616-1616-1616-161616161616"
+        )!
+        let transport = QueueAccountTransport([
+            .init(
+                statusCode: 201,
+                body: challengeData(id: challengeID, challenge: "AQID")
+            )
+        ])
+        let store = InMemoryAccountSecurityStore(
+            keyState: AppAttestKeyState(keyId: "key-id", isRegistered: true)
+        )
+        let client = AccountAPIClient(
+            baseURL: URL(string: "https://account.test")!,
+            transport: transport,
+            sessionVault: store
+        )
+        let appAttestState = FakeAppAttestState()
+        let coordinator = DeviceIntegrityCoordinator(
+            apiClient: client,
+            deviceCheck: FakeDeviceCheckProvider(isSupported: false, token: Data()),
+            appAttest: FakeAppAttestProvider(
+                isSupported: true,
+                state: appAttestState,
+                keyId: "unused",
+                attestationObject: Data(),
+                assertion: Data([0xAA])
+            ),
+            keyStateStore: store
+        )
+
+        let request = try await coordinator.makeOOBEGrantRequest(
+            installationID: installationID
+        )
+
+        XCTAssertEqual(
+            request,
+            OOBEGrantRequest(
+                installationId: installationID,
+                keyId: "key-id",
+                challengeId: challengeID,
+                challenge: "AQID",
+                assertion: "qg=="
+            )
+        )
+        let payload = """
+        osg-app-attest-v1
+        purpose=oobe-gateway-grant
+        challenge=AQID
+        key_id=key-id
+        installation_id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+        scopes=ai,polish
+        features=ask_ai,clipboard_reply,clipboard_translate,voice_input
+        grant_ttl_seconds=1800
+        access_ttl_seconds=300
+
+        """
+        let hashes = await appAttestState.assertionHashes
+        XCTAssertEqual(hashes, [Data(SHA256.hash(data: Data(payload.utf8)))])
+    }
 }
 
 private enum TestIntegrityFailure: Error {

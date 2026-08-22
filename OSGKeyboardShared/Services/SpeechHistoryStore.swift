@@ -34,6 +34,10 @@ public final class SpeechHistoryStore: ObservableObject {
     public func append(
         id: UUID = UUID(),
         text: String,
+        prePolishText: String? = nil,
+        wasTranslation: Bool = false,
+        polishStyleID: String? = nil,
+        polishStylePrompt: String? = nil,
         engineMode: String? = nil,
         source: SpeechHistoryEntry.Source = .dictation
     ) -> SpeechHistoryEntry? {
@@ -41,9 +45,22 @@ public final class SpeechHistoryStore: ObservableObject {
         guard !trimmed.isEmpty else { return nil }
 
         rebaseOnPersistedStateBeforeMutation()
+        let promptSnapshot = wasTranslation
+            ? nil
+            : normalizedPolishStylePrompt(polishStylePrompt)
+        let promptFingerprint = promptSnapshot.map {
+            SyncedSpeechHistory.polishStylePromptFingerprint(for: $0)
+        }
+        if let promptSnapshot, let promptFingerprint {
+            payload.polishStylePromptSnapshots[promptFingerprint] = promptSnapshot
+        }
         let entry = SpeechHistoryEntry(
             id: id,
             text: trimmed,
+            prePolishText: prePolishText,
+            wasTranslation: wasTranslation,
+            polishStyleID: polishStyleID,
+            polishStylePromptFingerprint: promptFingerprint,
             engineMode: engineMode,
             source: source
         )
@@ -104,6 +121,10 @@ public final class SpeechHistoryStore: ObservableObject {
                 // as a new row instead.
                 let conflictCopy = SpeechHistoryEntry(
                     text: text,
+                    prePolishText: existing.prePolishText,
+                    wasTranslation: existing.wasTranslation,
+                    polishStyleID: existing.polishStyleID,
+                    polishStylePromptFingerprint: existing.polishStylePromptFingerprint,
                     engineMode: mutation.engineMode,
                     source: mutation.source ?? existing.source
                 )
@@ -114,6 +135,10 @@ public final class SpeechHistoryStore: ObservableObject {
             let updated = SpeechHistoryEntry(
                 id: existing.id,
                 text: text,
+                prePolishText: existing.prePolishText,
+                wasTranslation: existing.wasTranslation,
+                polishStyleID: existing.polishStyleID,
+                polishStylePromptFingerprint: existing.polishStylePromptFingerprint,
                 createdAt: existing.createdAt,
                 modifiedAt: Date(),
                 revision: existing.revision + 1,
@@ -130,6 +155,7 @@ public final class SpeechHistoryStore: ObservableObject {
             }
             payload.deletedEntryIDs[mutation.entryID] = Date()
             payload.entries.removeAll { $0.id == mutation.entryID }
+            payload.prunePolishStylePromptSnapshots()
             finishMutation(mutationID: mutation.id)
             return nil
         }
@@ -140,6 +166,7 @@ public final class SpeechHistoryStore: ObservableObject {
         guard payload.entries.contains(where: { $0.id == id }) else { return }
         payload.deletedEntryIDs[id] = Date()
         payload.entries.removeAll { $0.id == id }
+        payload.prunePolishStylePromptSnapshots()
         payload.updatedAt = Date()
         payload.pruneTombstonesIfNeeded()
         applyPayload(postCloudPush: true)
@@ -160,6 +187,7 @@ public final class SpeechHistoryStore: ObservableObject {
             payload.deletedEntryIDs[entry.id] = now
         }
         payload.entries.removeAll { $0.createdAt >= start && $0.createdAt < end }
+        payload.prunePolishStylePromptSnapshots()
         payload.updatedAt = now
         payload.pruneTombstonesIfNeeded()
         applyPayload(postCloudPush: true)
@@ -218,6 +246,16 @@ public final class SpeechHistoryStore: ObservableObject {
         return buckets.keys.sorted(by: >).map { day in
             (day, buckets[day]!.sorted { $0.createdAt > $1.createdAt })
         }
+    }
+
+    private func normalizedPolishStylePrompt(_ prompt: String?) -> String? {
+        guard let prompt else { return nil }
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              trimmed.count <= PolishStyleLimits.maximumPromptCharacters else {
+            return nil
+        }
+        return trimmed
     }
 
     private func applyPayload(postCloudPush: Bool) {

@@ -56,6 +56,35 @@ final class AccountSecurityPrimitiveTests: XCTestCase {
         XCTAssertEqual(payload.last, 0x0A, "The server contract includes the final line feed")
     }
 
+    func testOOBEGrantCanonicalPayloadMatchesServerByteForByte() throws {
+        let installationID = UUID(
+            uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE"
+        )!
+
+        let payload = try AppAttestCanonicalPayload.oobeGrant(
+            challenge: "AQID",
+            installationID: installationID,
+            keyID: "app-attest-key"
+        )
+
+        XCTAssertEqual(
+            String(data: payload, encoding: .utf8),
+            """
+            osg-app-attest-v1
+            purpose=oobe-gateway-grant
+            challenge=AQID
+            key_id=app-attest-key
+            installation_id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+            scopes=ai,polish
+            features=ask_ai,clipboard_reply,clipboard_translate,voice_input
+            grant_ttl_seconds=1800
+            access_ttl_seconds=300
+
+            """
+        )
+        XCTAssertEqual(payload.last, 0x0A)
+    }
+
     func testHostPrivateKeychainDescriptorRejectsSharedAccessGroup() throws {
         XCTAssertThrowsError(
             try HostPrivateAccountKeychainDescriptor(

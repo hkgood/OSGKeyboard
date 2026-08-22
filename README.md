@@ -7,7 +7,7 @@ OSGKeyboard 是面向 iPhone、iPad 与 Mac 的语音输入工具。iOS 键盘�
 ![Platform](https://img.shields.io/badge/iOS%20%2F%20iPadOS-26%2B-0078D4?logo=apple)
 ![Platform](https://img.shields.io/badge/macOS-15%2B-555?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
-![Version](https://img.shields.io/badge/version-2.0.0-3aa05a)
+![Version](https://img.shields.io/badge/version-2.0.1-3aa05a)
 ![License](https://img.shields.io/badge/license-Source%20Available-blue)
 
 [官网](https://hkgood.github.io/OSGKeyboard/) · [English](./README.en.md) · [隐私政策](https://hkgood.github.io/OSGKeyboard/privacy/) · [更新记录](./CHANGELOG.md)
@@ -66,6 +66,8 @@ OSGKeyboard 不把云端服务绑定为唯一选择：
 3. **OSG 托管积分** — iOS / iPadOS 可选。Apple 登录后可使用托管语音与 AI，无需填写服务商凭证；首次启用前会明确说明离开设备的数据并征求同意。
 
 本地听写和自备服务商始终可以独立使用，不要求 OSGKeyboard 账号。
+
+首次引导会先使用 App Attest 签发的短时匿名凭证，让用户各体验一次语音输入、翻译、智能回复与长按询问 AI；这四次教学不创建账号、不需要 API Key，也不消耗积分。体验后可跳过登录，或使用 Apple 登录领取符合条件的 1000 积分注册奖励。
 
 ## 可选账号与积分
 

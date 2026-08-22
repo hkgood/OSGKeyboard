@@ -76,6 +76,12 @@ public struct AppGroupStore: @unchecked Sendable {
     public var localeId: String { configuration.localeId }
     public var engineMode: String { configuration.engineMode }
     public var credentialSource: CredentialSource { configuration.credentialSource }
+    /// Non-secret host-authentication marker used to gate account-funded grants.
+    public var isManagedGatewayAccountSessionAvailable: Bool {
+        defaults.bool(
+            forKey: AppGroupConfiguration.Keys.managedGatewayAccountSessionAvailable
+        )
+    }
     public var uiLanguage: AppUILanguage { configuration.uiLanguage }
     public var translationEnabled: Bool { configuration.translationEnabled }
     public var translationTargetLocaleId: String { configuration.translationTargetLocaleId }
@@ -101,11 +107,29 @@ public struct AppGroupStore: @unchecked Sendable {
     public var localASRCustomLanguageModelEnabled: Bool { configuration.localASRCustomLanguageModelEnabled }
     /// Kept off `AppGroupConfiguration.save()` so other settings writes cannot clobber it.
     public var agentSkillLayout: AIAgentSkillLayout {
-        Self.decodeAgentSkillLayout(from: defaults, userCatalog: agentUserSkillCatalog)
+        Self.decodeAgentSkillLayout(
+            from: defaults,
+            userCatalog: agentUserSkillCatalog,
+            officialCatalog: officialSkillCatalog,
+            uiLanguage: uiLanguage
+        )
     }
 
     public var agentUserSkillCatalog: AIUserSkillCatalog {
         Self.decodeUserSkillCatalog(from: defaults)
+    }
+
+    /// Last-known-good host-fetched catalog. The extension only reads this snapshot.
+    public var officialSkillCatalog: OfficialSkillCatalog {
+        Self.decodeOfficialSkillCatalog(from: defaults)
+    }
+
+    public var resolvedAgentSkillCatalog: [AIClipboardSkill] {
+        AIClipboardSkillCatalog.all(
+            officialCatalog: officialSkillCatalog,
+            userCatalog: agentUserSkillCatalog,
+            uiLanguage: uiLanguage
+        )
     }
 
     // MARK: - Writes
@@ -125,6 +149,14 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setCredentialSource(_ source: CredentialSource) {
         mutateConfiguration { $0.credentialSource = source }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setManagedGatewayAccountSessionAvailable(_ available: Bool) {
+        defaults.set(
+            available,
+            forKey: AppGroupConfiguration.Keys.managedGatewayAccountSessionAvailable
+        )
         AppGroupConfigDarwin.postConfigChanged()
     }
 
@@ -217,12 +249,26 @@ public struct AppGroupStore: @unchecked Sendable {
     public func setAgentSkillLayout(_ layout: AIAgentSkillLayout) {
         do {
             let data = try JSONEncoder().encode(
-                layout.sanitized(catalog: AIClipboardSkillCatalog.all(userCatalog: agentUserSkillCatalog))
+                layout.sanitized(catalog: resolvedAgentSkillCatalog)
             )
             defaults.set(data, forKey: AppGroupConfiguration.Keys.agentSkillLayout)
+            defaults.set(
+                Self.currentAgentSkillDefaultsMigrationVersion,
+                forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+            )
         } catch {
             OSGLog.config.warning("agentSkillLayout encode failed: \(error.localizedDescription, privacy: .public)")
         }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    /// Stores one encoded value so readers observe either the old or new
+    /// complete snapshot, never partially updated catalog metadata.
+    public func setOfficialSkillCatalog(_ catalog: OfficialSkillCatalog) throws {
+        let validated = try catalog.validated()
+        let data = try JSONEncoder().encode(validated)
+        defaults.set(data, forKey: AppGroupConfiguration.Keys.officialSkillCatalog)
+        defaults.synchronize()
         AppGroupConfigDarwin.postConfigChanged()
     }
 
@@ -273,20 +319,65 @@ public struct AppGroupStore: @unchecked Sendable {
 
     private static func decodeAgentSkillLayout(
         from defaults: UserDefaults,
-        userCatalog: AIUserSkillCatalog
+        userCatalog: AIUserSkillCatalog,
+        officialCatalog: OfficialSkillCatalog,
+        uiLanguage: AppUILanguage
     ) -> AIAgentSkillLayout {
-        let catalog = AIClipboardSkillCatalog.all(userCatalog: userCatalog)
+        let catalog = AIClipboardSkillCatalog.all(
+            officialCatalog: officialCatalog,
+            userCatalog: userCatalog,
+            uiLanguage: uiLanguage
+        )
         guard let data = defaults.data(forKey: AppGroupConfiguration.Keys.agentSkillLayout) else {
+            defaults.set(
+                currentAgentSkillDefaultsMigrationVersion,
+                forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+            )
             return .default
         }
         do {
-            return try JSONDecoder().decode(AIAgentSkillLayout.self, from: data)
+            let decoded = try JSONDecoder().decode(AIAgentSkillLayout.self, from: data)
                 .sanitized(catalog: catalog)
+            guard defaults.integer(
+                forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+            ) < currentAgentSkillDefaultsMigrationVersion else {
+                return decoded
+            }
+
+            // Preserve any legacy default the user explicitly turned off.
+            // Export skills and semantic skills were not previously defaults,
+            // so append them once without disturbing the user's saved order.
+            let legacyDefaults = Set([
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.summarizeID,
+                AIClipboardSkillCatalog.translateID
+            ])
+            let additions = AIAgentSkillLayout.defaultEnabledIDs.filter {
+                !legacyDefaults.contains($0) && !decoded.enabledIDs.contains($0)
+            }
+            let migrated = AIAgentSkillLayout(
+                enabledIDs: decoded.enabledIDs + additions,
+                confirmedShortcutIDs: decoded.confirmedShortcutIDs
+            ).sanitized(catalog: catalog)
+            if let migratedData = try? JSONEncoder().encode(migrated) {
+                defaults.set(migratedData, forKey: AppGroupConfiguration.Keys.agentSkillLayout)
+            }
+            defaults.set(
+                currentAgentSkillDefaultsMigrationVersion,
+                forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+            )
+            return migrated
         } catch {
             OSGLog.config.warning("agentSkillLayout decode failed: \(error.localizedDescription, privacy: .public)")
+            defaults.set(
+                currentAgentSkillDefaultsMigrationVersion,
+                forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+            )
             return .default
         }
     }
+
+    private static let currentAgentSkillDefaultsMigrationVersion = 1
 
     private static func decodeUserSkillCatalog(from defaults: UserDefaults) -> AIUserSkillCatalog {
         guard let data = defaults.data(forKey: AppGroupConfiguration.Keys.agentUserSkillCatalog) else {
@@ -297,6 +388,20 @@ public struct AppGroupStore: @unchecked Sendable {
         } catch {
             OSGLog.config.warning(
                 "agentUserSkillCatalog decode failed: \(error.localizedDescription, privacy: .public)"
+            )
+            return .empty
+        }
+    }
+
+    private static func decodeOfficialSkillCatalog(from defaults: UserDefaults) -> OfficialSkillCatalog {
+        guard let data = defaults.data(forKey: AppGroupConfiguration.Keys.officialSkillCatalog) else {
+            return .empty
+        }
+        do {
+            return try JSONDecoder().decode(OfficialSkillCatalog.self, from: data).validated()
+        } catch {
+            OSGLog.config.warning(
+                "officialSkillCatalog decode failed: \(error.localizedDescription, privacy: .public)"
             )
             return .empty
         }
@@ -396,11 +501,13 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func makeClient(
         taskKind: ManagedGatewayTaskKind?,
-        requestPurpose: ManagedGatewayRequestPurpose?
+        requestPurpose: ManagedGatewayRequestPurpose?,
+        oobeFeature: ManagedGatewayOOBEFeature?
     ) -> LLMClient {
         configuration.makeClient(
             taskKind: taskKind,
-            requestPurpose: requestPurpose
+            requestPurpose: requestPurpose,
+            oobeFeature: oobeFeature
         )
     }
 }

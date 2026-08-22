@@ -12,7 +12,18 @@ public struct SpeechHistoryEntry: Codable, Identifiable, Equatable, Sendable {
     }
 
     public let id: UUID
+    /// Final text delivered to the host app and shown in history.
     public let text: String
+    /// ASR transcript after deterministic correction but before LLM polishing.
+    /// Stored for future speaking-style learning and intentionally not shown.
+    public let prePolishText: String?
+    /// Translation outputs must not be treated as same-language style examples.
+    public let wasTranslation: Bool
+    /// Style active when the final text was produced; nil for legacy or AI rows.
+    public let polishStyleID: String?
+    /// SHA-256 key into `SyncedSpeechHistory.polishStylePromptSnapshots`.
+    /// Deduplication preserves the exact prompt without repeating it per row.
+    public let polishStylePromptFingerprint: String?
     public let createdAt: Date
     /// Last content mutation. Legacy rows default to `createdAt`.
     public let modifiedAt: Date
@@ -26,6 +37,10 @@ public struct SpeechHistoryEntry: Codable, Identifiable, Equatable, Sendable {
     public init(
         id: UUID = UUID(),
         text: String,
+        prePolishText: String? = nil,
+        wasTranslation: Bool = false,
+        polishStyleID: String? = nil,
+        polishStylePromptFingerprint: String? = nil,
         createdAt: Date = Date(),
         modifiedAt: Date? = nil,
         revision: Int64 = 0,
@@ -34,6 +49,14 @@ public struct SpeechHistoryEntry: Codable, Identifiable, Equatable, Sendable {
     ) {
         self.id = id
         self.text = text
+        let trimmedPrePolishText = prePolishText?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        self.prePolishText = trimmedPrePolishText?.isEmpty == false
+            ? trimmedPrePolishText
+            : nil
+        self.wasTranslation = wasTranslation
+        self.polishStyleID = polishStyleID
+        self.polishStylePromptFingerprint = polishStylePromptFingerprint
         self.createdAt = createdAt
         self.modifiedAt = modifiedAt ?? createdAt
         self.revision = revision
@@ -45,6 +68,13 @@ public struct SpeechHistoryEntry: Codable, Identifiable, Equatable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         text = try container.decode(String.self, forKey: .text)
+        prePolishText = try container.decodeIfPresent(String.self, forKey: .prePolishText)
+        wasTranslation = try container.decodeIfPresent(Bool.self, forKey: .wasTranslation) ?? false
+        polishStyleID = try container.decodeIfPresent(String.self, forKey: .polishStyleID)
+        polishStylePromptFingerprint = try container.decodeIfPresent(
+            String.self,
+            forKey: .polishStylePromptFingerprint
+        )
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         modifiedAt = try container.decodeIfPresent(Date.self, forKey: .modifiedAt) ?? createdAt
         revision = try container.decodeIfPresent(Int64.self, forKey: .revision) ?? 0
