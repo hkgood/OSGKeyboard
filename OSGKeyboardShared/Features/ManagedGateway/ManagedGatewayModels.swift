@@ -19,6 +19,7 @@ public enum ManagedGatewayTaskKind: String, Codable, CaseIterable, Sendable {
     case translation
     case editLastInput = "edit_last_input"
     case aiQuestion = "ai_question"
+    case currentInformationQuestion = "current_information_question"
     case clipboardTransform = "clipboard_transform"
     case customSkill = "custom_skill"
     case agentPlanning = "agent_planning"
@@ -28,6 +29,25 @@ public enum ManagedGatewayTaskKind: String, Codable, CaseIterable, Sendable {
 /// authenticated gateway independently verifies its eligibility.
 public enum ManagedGatewayRequestPurpose: String, Codable, Sendable {
     case oobe
+}
+
+/// Server-audited onboarding capability. This value is carried independently
+/// from `taskKind` so billing and abuse policy never infer OOBE eligibility
+/// from a generic clipboard or AI operation.
+public enum ManagedGatewayOOBEFeature: String, Codable, CaseIterable, Sendable {
+    case voiceInput = "voice_input"
+    case clipboardTranslate = "clipboard_translate"
+    case clipboardReply = "clipboard_reply"
+    case askAI = "ask_ai"
+
+    public var requiredCapability: ManagedGatewayCapability {
+        switch self {
+        case .voiceInput:
+            return .polish
+        case .clipboardTranslate, .clipboardReply, .askAI:
+            return .assistant
+        }
+    }
 }
 
 public struct ManagedGatewayGrantCredentials: Codable, Equatable, Sendable {
@@ -85,6 +105,7 @@ public enum ManagedGatewayError: Error, LocalizedError, Equatable, Sendable {
     case scopeNotGranted(ManagedGatewayCapability)
     case invalidGrant
     case insufficientCredits
+    case oobeFeatureAlreadyUsed
     case timeout
     case server(code: String, status: Int, requestId: String?)
 
@@ -102,6 +123,8 @@ public enum ManagedGatewayError: Error, LocalizedError, Equatable, Sendable {
             return SharedL10n.string("managed.error.grantRejected")
         case .insufficientCredits:
             return SharedL10n.string("managed.error.insufficientCredits")
+        case .oobeFeatureAlreadyUsed:
+            return SharedL10n.string("managed.error.oobeFeatureAlreadyUsed")
         case .timeout:
             return SharedL10n.string("managed.error.timeout")
         case .server(let code, let status, _):
@@ -115,15 +138,15 @@ public enum ManagedGatewayError: Error, LocalizedError, Equatable, Sendable {
     }
 }
 
-struct ManagedGatewayGrantTokenResponse: Decodable {
-    let grantId: String
-    let scopes: Set<ManagedGatewayCapability>
-    let accessToken: String
-    let accessExpiresAt: Date
-    let refreshToken: String
-    let refreshExpiresAt: Date
+public struct ManagedGatewayGrantTokenResponse: Decodable, Sendable {
+    public let grantId: String
+    public let scopes: Set<ManagedGatewayCapability>
+    public let accessToken: String
+    public let accessExpiresAt: Date
+    public let refreshToken: String
+    public let refreshExpiresAt: Date
 
-    func credentials(receivedAt: Date) -> ManagedGatewayGrantCredentials {
+    public func credentials(receivedAt: Date) -> ManagedGatewayGrantCredentials {
         ManagedGatewayGrantCredentials(
             grantId: grantId,
             scopes: scopes,
@@ -150,4 +173,5 @@ struct ManagedGatewayTextRequest: Encodable, Sendable {
     let stream: Bool
     let taskKind: ManagedGatewayTaskKind
     let requestPurpose: ManagedGatewayRequestPurpose?
+    let oobeFeature: ManagedGatewayOOBEFeature?
 }

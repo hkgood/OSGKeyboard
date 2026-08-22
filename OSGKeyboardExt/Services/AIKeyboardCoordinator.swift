@@ -18,6 +18,7 @@ final class AIKeyboardCoordinator {
     private var requestInsertionFingerprint: String?
     private var conversationInsertionFingerprint: String?
     private var hasConversationInsertionTarget = false
+    private var requestOOBEFeature: ManagedGatewayOOBEFeature?
 
     init(
         state: KeyboardState,
@@ -37,6 +38,7 @@ final class AIKeyboardCoordinator {
         endConversationIfNeeded()
         state.aiSession.enter()
         requestInsertionFingerprint = nil
+        requestOOBEFeature = nil
         conversationInsertionFingerprint = nil
         hasConversationInsertionTarget = false
     }
@@ -53,6 +55,7 @@ final class AIKeyboardCoordinator {
         endConversationIfNeeded()
         state.aiSession.leave()
         requestInsertionFingerprint = nil
+        requestOOBEFeature = nil
         conversationInsertionFingerprint = nil
         hasConversationInsertionTarget = false
     }
@@ -66,7 +69,12 @@ final class AIKeyboardCoordinator {
         case .idle, .awaitingSend, .inserted, .sent, .failed:
             prepareConversationForRequest()
             guard let conversationID = state.aiSession.conversationID else { return }
-            let disposition = flow.beginAIRecording(conversationID: conversationID)
+            let oobeFeature = expectedOOBEFeature(.askAI)
+            requestOOBEFeature = oobeFeature
+            let disposition = flow.beginAIRecording(
+                conversationID: conversationID,
+                oobeFeature: oobeFeature
+            )
             if case .rejected(let rejection) = disposition {
                 state.aiSession.fail(message(for: rejection), utteranceID: nil)
             }
@@ -81,8 +89,23 @@ final class AIKeyboardCoordinator {
     /// Tap a clipboard skill chip: same fail-closed material path as hint cards.
     func submitClipboardSkill(_ skill: AIClipboardSkill) {
         guard canAcceptIdleSubmit else { return }
+        guard !skill.requiresShortcut
+                || state.confirmedClipboardShortcutIDs.contains(skill.id) else {
+            state.skillTipText = ExtL10n.string("keyboard.ai.skill.shortcutMissing")
+            return
+        }
         prepareConversationForRequest()
-        let material = ClipboardHistoryStore.shared.newestAIHintEligibleEntry()?.text
+        let oobeFeature = oobeFeature(for: skill)
+        let material: String?
+        if let oobeFeature {
+            // OOBE clipboard lessons are intentionally isolated from the
+            // user's real clipboard history.
+            material = oobeMaterial(for: oobeFeature)
+        } else if state.oobePracticeSession != nil {
+            material = nil
+        } else {
+            material = ClipboardHistoryStore.shared.newestAIHintEligibleEntry()?.text
+        }
         if skill.kind == .export {
             state.pendingClipboardSkillID = skill.id
             state.pendingClipboardSkillSource = material
@@ -92,7 +115,8 @@ final class AIKeyboardCoordinator {
         var instruction = AIClipboardSkillCatalog.instruction(
             for: skill,
             locale: AIHintLocaleResolver.packLocale(),
-            translationTargetLocaleId: state.translationTargetLocaleId
+            translationTargetLocaleId: state.translationTargetLocaleId,
+            replyStyle: state.clipboardReplyStyle
         )
         if skill.kind == .export {
             instruction += "\nPreserve the source language, addresses, names, and proper nouns."
@@ -113,6 +137,7 @@ final class AIKeyboardCoordinator {
         submitResolvedPrompt(
             resolution,
             taskKind: skill.managedGatewayTaskKind,
+            oobeFeature: oobeFeature,
             thinkingEnabled: skill.thinkingEnabled
         )
     }
@@ -120,12 +145,19 @@ final class AIKeyboardCoordinator {
     /// Tap an idle hint card: resolve its material, skip the mic, ask the host.
     func submitHintCard(_ card: AIHintCard) {
         guard canAcceptIdleSubmit else { return }
+        // The OOBE ask-AI lesson must use the explicit hold-to-talk path. Idle
+        // cards can otherwise pull unrelated clipboard material into a request.
+        guard state.oobePracticeSession == nil else { return }
         prepareConversationForRequest()
         let resolution = AIHintPool.resolvePrompt(
             for: card,
             clipboardText: ClipboardHistoryStore.shared.newestAIHintEligibleEntry()?.text
         )
-        submitResolvedPrompt(resolution, taskKind: .aiQuestion)
+        submitResolvedPrompt(
+            resolution,
+            taskKind: .aiQuestion,
+            oobeFeature: nil
+        )
     }
 
     private var canAcceptIdleSubmit: Bool {
@@ -141,6 +173,7 @@ final class AIKeyboardCoordinator {
     private func submitResolvedPrompt(
         _ resolution: AIClipboardPrompt.Resolution,
         taskKind: ManagedGatewayTaskKind,
+        oobeFeature: ManagedGatewayOOBEFeature? = nil,
         thinkingEnabled: Bool? = nil
     ) {
         guard case .ready(let prompt) = resolution else {
@@ -156,10 +189,12 @@ final class AIKeyboardCoordinator {
             clearPendingExportSkill()
             return
         }
+        requestOOBEFeature = oobeFeature
         let disposition = flow.submitAIQuestion(
             text: prompt,
             conversationID: conversationID,
             taskKind: taskKind,
+            oobeFeature: oobeFeature,
             thinkingEnabled: thinkingEnabled
         )
         if case .rejected(let rejection) = disposition {
@@ -172,6 +207,7 @@ final class AIKeyboardCoordinator {
         guard state.aiSession.isBusy else { return }
         clearPendingExportSkill()
         requestInsertionFingerprint = nil
+        requestOOBEFeature = nil
         flow.cancelAIRecording()
         state.aiSession.cancelCurrentWork()
     }
@@ -179,6 +215,7 @@ final class AIKeyboardCoordinator {
     func confirmPendingAnswer() {
         if state.aiSession.canInsert, let answer = state.aiSession.answer {
             guard insertAnswer(answer) else { return }
+            markOOBECompletedAfterInsertion()
             state.aiSession.markAnswerInserted(
                 offersSend: state.returnKeyRole.usesActionFill
             )
@@ -190,6 +227,7 @@ final class AIKeyboardCoordinator {
     func discardPendingAnswer() {
         state.aiSession.discardReadyAnswer()
         requestInsertionFingerprint = nil
+        requestOOBEFeature = nil
     }
 
     func performCurrentFieldAction() {
@@ -274,6 +312,7 @@ final class AIKeyboardCoordinator {
             // fallback when the field or caret changed during generation.
             return
         }
+        markOOBECompletedAfterInsertion()
         state.aiSession.markAnswerInserted(
             offersSend: state.returnKeyRole.usesActionFill
         )
@@ -284,6 +323,7 @@ final class AIKeyboardCoordinator {
     func fail(_ message: String, utteranceID: UUID?) {
         clearPendingExportSkill()
         requestInsertionFingerprint = nil
+        requestOOBEFeature = nil
         state.aiSession.fail(message, utteranceID: utteranceID)
     }
 
@@ -319,16 +359,51 @@ final class AIKeyboardCoordinator {
         requestInsertionFingerprint = currentFingerprint
     }
 
+    private func oobeFeature(for skill: AIClipboardSkill) -> ManagedGatewayOOBEFeature? {
+        switch skill.id {
+        case AIClipboardSkillCatalog.replyID:
+            return expectedOOBEFeature(.clipboardReply)
+        case AIClipboardSkillCatalog.translateID:
+            return expectedOOBEFeature(.clipboardTranslate)
+        default:
+            return nil
+        }
+    }
+
+    private func expectedOOBEFeature(
+        _ feature: ManagedGatewayOOBEFeature
+    ) -> ManagedGatewayOOBEFeature? {
+        guard state.oobePracticeSession?.expectedFeature == feature else { return nil }
+        return feature
+    }
+
+    private func oobeMaterial(for feature: ManagedGatewayOOBEFeature?) -> String? {
+        guard let feature,
+              feature == .clipboardReply || feature == .clipboardTranslate,
+              let session = state.oobePracticeSession else {
+            return nil
+        }
+        return KeyboardSetupBridge.oobeClipboardMaterial(sessionID: session.sessionID)
+    }
+
+    private func markOOBECompletedAfterInsertion() {
+        guard let feature = requestOOBEFeature,
+              let session = state.oobePracticeSession else {
+            return
+        }
+        _ = KeyboardSetupBridge.markOOBEPracticeCompleted(
+            sessionID: session.sessionID,
+            feature: feature
+        )
+    }
+
     private var isPendingExportSkill: Bool {
         guard let id = state.pendingClipboardSkillID else { return false }
         return resolvedSkill(id: id)?.kind == .export
     }
 
     private func resolvedSkill(id: String) -> AIClipboardSkill? {
-        AIClipboardSkillCatalog.skill(
-            id: id,
-            userCatalog: AppGroupStore().agentUserSkillCatalog
-        )
+        state.clipboardSkillCatalog.first { $0.id == id }
     }
 
     /// Parse an export skill. Empty → in-keyboard tip, stay in the host app.

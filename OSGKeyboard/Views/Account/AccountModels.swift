@@ -268,6 +268,14 @@ protocol AccountSessionServicing: Sendable {
     func clearManagedGateway() async
 }
 
+enum AccountSessionEvent: Sendable {
+    case expired
+}
+
+protocol AccountSessionEventSourcing: Sendable {
+    func events() async -> AsyncStream<AccountSessionEvent>
+}
+
 extension AccountSessionServicing {
     func prepareManagedGateway() async throws {}
     func clearManagedGateway() async {}
@@ -321,15 +329,18 @@ protocol ReferralProfileServicing: Sendable {
 
 struct AccountDependencies: Sendable {
     let sessionService: any AccountSessionServicing
+    let sessionEventSource: any AccountSessionEventSourcing
     let centerService: any AccountCenterServicing
     let referralService: any ReferralProfileServicing
 
     init(
         sessionService: any AccountSessionServicing,
+        sessionEventSource: (any AccountSessionEventSourcing)? = nil,
         centerService: any AccountCenterServicing,
         referralService: (any ReferralProfileServicing)? = nil
     ) {
         self.sessionService = sessionService
+        self.sessionEventSource = sessionEventSource ?? UnavailableAccountSessionEventSource()
         self.centerService = centerService
         self.referralService = referralService ?? UnavailableReferralProfileService()
     }
@@ -338,6 +349,7 @@ struct AccountDependencies: Sendable {
         let service = UnavailableAccountService()
         return AccountDependencies(
             sessionService: service,
+            sessionEventSource: UnavailableAccountSessionEventSource(),
             centerService: service,
             referralService: UnavailableReferralProfileService()
         )
@@ -393,6 +405,12 @@ private struct UnavailableAccountService: AccountSessionServicing, AccountCenter
 private struct UnavailableReferralProfileService: ReferralProfileServicing {
     func loadReferralProfile() async throws -> ReferralProfile {
         throw AccountIntegrationError.unavailable
+    }
+}
+
+private struct UnavailableAccountSessionEventSource: AccountSessionEventSourcing {
+    func events() async -> AsyncStream<AccountSessionEvent> {
+        AsyncStream { $0.finish() }
     }
 }
 

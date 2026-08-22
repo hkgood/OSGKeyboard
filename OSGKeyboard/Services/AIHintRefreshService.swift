@@ -8,42 +8,71 @@
 import Foundation
 import OSGKeyboardShared
 
+enum AIHintRefreshOutcome: Equatable {
+    case skippedFresh
+    case completed(updatedLocales: [String])
+}
+
 @MainActor
-enum AIHintRefreshService {
-    private static var inFlight: Task<Void, Never>?
+final class AIHintRefreshService {
+    static let shared = AIHintRefreshService()
+
+    private let transport: any PublicContentHTTPTransport
+    private let defaults: UserDefaults?
+    private let baseURL: URL
+    private var inFlight: Task<AIHintRefreshOutcome, Never>?
+
+    init(
+        transport: any PublicContentHTTPTransport = URLSessionPublicContentHTTPTransport(),
+        defaults: UserDefaults? = AppGroup.defaultsIfAvailable,
+        baseURL: URL = AIHintFeedEndpoints.baseURL
+    ) {
+        self.transport = transport
+        self.defaults = defaults
+        self.baseURL = baseURL
+    }
 
     static func refreshIfNeeded(reason: String) {
-        guard AIHintStore.shouldRefresh() else {
-            OSGDiag.log("AIHintRefresh skip (fresh) reason=\(reason)", category: "hints")
-            return
-        }
+        shared.scheduleRefreshIfNeeded(reason: reason)
+    }
+
+    func scheduleRefreshIfNeeded(reason: String) {
         guard inFlight == nil else {
             OSGDiag.log("AIHintRefresh skip (inFlight) reason=\(reason)", category: "hints")
             return
         }
         inFlight = Task {
             defer { inFlight = nil }
-            await runRefresh(reason: reason)
+            return await refreshNowIfNeeded(reason: reason)
         }
     }
 
-    private static func runRefresh(reason: String) async {
-        AIHintStore.markAttempt()
+    func refreshNowIfNeeded(
+        reason: String,
+        now: Date = Date(),
+        force: Bool = false
+    ) async -> AIHintRefreshOutcome {
+        if !force, !AIHintStore.shouldRefresh(now: now, defaults: defaults) {
+            OSGDiag.log("AIHintRefresh skip (fresh) reason=\(reason)", category: "hints")
+            return .skippedFresh
+        }
+
+        AIHintStore.markAttempt(defaults: defaults)
         OSGDiag.log("AIHintRefresh start reason=\(reason)", category: "hints")
 
         // The manifest only supplies fallback dates, so a manifest failure must
         // not stop the packs, and one locale's failure must not stop the other.
-        let manifest = try? await fetchManifest()
+        let manifest = (try? await fetchManifest()) ?? AIHintStore.loadManifest(defaults: defaults)
+        var updatedLocales: [String] = []
         for locale in AIHintFeedEndpoints.supportedLocales {
-            if Task.isCancelled { return }
-            guard AIHintStore.shouldRefresh(locale: locale) else { continue }
+            if Task.isCancelled { break }
+            if !force,
+               !AIHintStore.shouldRefresh(locale: locale, now: now, defaults: defaults) {
+                continue
+            }
             do {
-                let pack = try await readyPack(locale: locale, manifest: manifest)
-                AIHintStore.saveReadyPack(pack)
-                OSGDiag.log(
-                    "AIHintRefresh wrote locale=\(locale) cards=\(pack.cards.count)",
-                    category: "hints"
-                )
+                try await refreshPack(locale: locale, manifest: manifest, now: now)
+                updatedLocales.append(locale)
             } catch {
                 // Strategy B: keep this locale's previous successful ready pack.
                 OSGDiag.log(
@@ -53,31 +82,67 @@ enum AIHintRefreshService {
                 )
             }
         }
+        return .completed(updatedLocales: updatedLocales)
     }
 
-    private static func readyPack(
+    private func refreshPack(
         locale: String,
-        manifest: AIHintManifest?
-    ) async throws -> AIHintPack {
-        let remote = try await fetchPack(locale: locale)
+        manifest: AIHintManifest?,
+        now: Date
+    ) async throws {
+        var request = URLRequest(url: baseURL.appendingPathComponent(locale))
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let etag = AIHintStore.packETag(locale: locale, defaults: defaults) {
+            request.setValue(etag, forHTTPHeaderField: "If-None-Match")
+        }
+        let (data, response) = try await transport.data(for: request)
+
+        if response.statusCode == 304 {
+            guard var existing = AIHintStore.loadReadyPack(locale: locale, defaults: defaults) else {
+                throw PublicContentHTTPError.notModifiedWithoutCache
+            }
+            existing.refreshedAt = now
+            AIHintStore.saveReadyPack(existing, defaults: defaults)
+            if let etag = response.value(forHTTPHeaderField: "ETag") {
+                AIHintStore.setPackETag(etag, locale: locale, defaults: defaults)
+            }
+            OSGDiag.log("AIHintRefresh kept locale=\(locale) (304)", category: "hints")
+            return
+        }
+        guard response.statusCode == 200 else {
+            throw PublicContentHTTPError.unexpectedStatus(response.statusCode)
+        }
+
+        let remote = try JSONDecoder().decode(AIHintPack.self, from: data)
         let filtered = remote.cards.filter { card in
             let hay = card.displayText + card.prompt
             return !hay.contains("历史上的今天")
                 && !hay.localizedCaseInsensitiveContains("on this day")
         }
         // Prefer remote clipboard cards when present; always keep local evergreen.
-        let merged = merge(remote: filtered, locale: locale)
+        let merged = Self.merge(remote: filtered, locale: locale)
         let compressed = await AIHintKeywordCompressor().compress(
             cards: merged,
             locale: locale
         )
-        return AIHintPack(
+        let ready = AIHintPack(
             locale: locale,
             generatedAt: remote.generatedAt ?? manifest?.generatedAt,
             expiresAt: remote.expiresAt ?? manifest?.expiresAt,
             version: max(remote.version, 1),
             cards: compressed,
-            refreshedAt: Date()
+            refreshedAt: now
+        )
+        AIHintStore.saveReadyPack(ready, defaults: defaults)
+        AIHintStore.setPackETag(
+            response.value(forHTTPHeaderField: "ETag"),
+            locale: locale,
+            defaults: defaults
+        )
+        OSGDiag.log(
+            "AIHintRefresh wrote locale=\(locale) cards=\(ready.cards.count)",
+            category: "hints"
         )
     }
 
@@ -103,25 +168,26 @@ enum AIHintRefreshService {
         return Array(byID.values).sorted { $0.priority > $1.priority }
     }
 
-    private static func fetchManifest() async throws -> AIHintManifest {
-        let (data, response) = try await URLSession.shared.data(from: AIHintFeedEndpoints.manifestURL)
-        try validateHTTP(response)
-        return try JSONDecoder().decode(AIHintManifest.self, from: data)
-    }
-
-    private static func fetchPack(locale: String) async throws -> AIHintPack {
-        let url = AIHintFeedEndpoints.packURL(locale: locale)
-        let (data, response) = try await URLSession.shared.data(from: url)
-        try validateHTTP(response)
-        return try JSONDecoder().decode(AIHintPack.self, from: data)
-    }
-
-    private static func validateHTTP(_ response: URLResponse) throws {
-        guard let http = response as? HTTPURLResponse else {
-            throw URLError(.badServerResponse)
+    private func fetchManifest() async throws -> AIHintManifest? {
+        var request = URLRequest(url: baseURL.appendingPathComponent("manifest"))
+        request.httpMethod = "GET"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let etag = AIHintStore.manifestETag(defaults: defaults) {
+            request.setValue(etag, forHTTPHeaderField: "If-None-Match")
         }
-        guard (200..<300).contains(http.statusCode) else {
-            throw URLError(.badServerResponse)
+        let (data, response) = try await transport.data(for: request)
+        if response.statusCode == 304 {
+            return AIHintStore.loadManifest(defaults: defaults)
         }
+        guard response.statusCode == 200 else {
+            throw PublicContentHTTPError.unexpectedStatus(response.statusCode)
+        }
+        let manifest = try JSONDecoder().decode(AIHintManifest.self, from: data)
+        AIHintStore.saveManifest(
+            manifest,
+            etag: response.value(forHTTPHeaderField: "ETag"),
+            defaults: defaults
+        )
+        return manifest
     }
 }

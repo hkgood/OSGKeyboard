@@ -12,6 +12,7 @@
 "flow.warning.polishDegradedQuality" = "Polish output failed validation; inserted a conservative version.";
 "flow.warning.managedInsufficientCredits" = "Managed credits are insufficient. Inserted raw ASR text; open the Account tab to add credits.";
 "flow.warning.managedGrantRejected" = "Managed service authorization expired. Inserted raw ASR text; open the main app to reconnect your account.";
+"flow.warning.oobeFeatureAlreadyUsed" = "This guided page is already complete. Return to the app to continue.";
 
 /* LLM providers */
 "provider.openai" = "OpenAI";
@@ -71,6 +72,7 @@
 "managed.error.scopeNotGranted" = "Managed service access is missing for %@. Open the main app and reconnect your account.";
 "managed.error.grantRejected" = "Managed service authorization expired. Open the main app and reconnect your account.";
 "managed.error.insufficientCredits" = "Not enough credits. Open the Account tab in the main app to add credits.";
+"managed.error.oobeFeatureAlreadyUsed" = "This guided page is already complete. Return to the app to continue.";
 "managed.error.timeout" = "Managed service timed out. Check your connection and try again.";
 "managed.error.server" = "Managed service failed (%1$@, HTTP %2$lld). Try again later.";
 "managed.asr.error.invalidConfiguration" = "Managed speech settings are invalid. Open the main app and select the service again.";
@@ -186,6 +188,20 @@
 "mac.styles.allowsAddedEmoji.hint" = "When on, polish may add a few emojis that match the draft’s emotion, and keeps them on screen. Off by default.";
 "mac.styles.prompt" = "Complete prompt";
 "mac.styles.hint" = "Use {{DICTIONARY}} to place the personal dictionary. System rules are appended automatically.";
+"mac.styles.learn.title" = "Generate Your Style";
+"mac.styles.learn.body" = "Learn how you naturally express yourself from past dictation.";
+"mac.styles.learn.progress" = "%lld / %lld characters";
+"mac.styles.learn.remaining" = "%lld to go";
+"mac.styles.learn.ready" = "Ready";
+"mac.styles.learn.action" = "Generate Style";
+"mac.styles.learn.generating" = "Generating…";
+"mac.styles.learn.privacy" = "Sent to your configured AI only when you generate. Review and edit before saving.";
+"mac.styles.learn.limit" = "Delete a custom style before generating another one.";
+"mac.styles.learn.error.insufficient" = "Keep dictating until 5,000 effective characters are available.";
+"mac.styles.learn.error.invalidResponse" = "The AI did not return a valid writing style. Please try again.";
+"mac.styles.learn.error.promptTooLong" = "The generated prompt exceeded 6,000 characters. Please try again.";
+"mac.styles.learn.error.requestTooLarge" = "The learning sample is too large for the configured AI service. Shorten unusually long history entries and try again.";
+"mac.styles.learn.error.request" = "Couldn’t generate a style with the configured AI service. Check your connection and AI settings, then try again.";
 "mac.section.settings" = "Settings";
 "mac.brand.subtitle" = "AI DICTATION";
 "mac.brand.tagline" = "Speak it. It’s typed.";

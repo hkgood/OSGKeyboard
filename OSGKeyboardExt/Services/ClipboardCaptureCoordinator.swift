@@ -34,6 +34,7 @@ final class ClipboardCaptureCoordinator {
 
     private let state: KeyboardState
     private let history: ClipboardHistoryStore
+    private let semanticRanking: ClipboardSemanticRankingStore
     private let pasteboard: ClipboardPasteboardProviding
     private var pollTimer: Timer?
     private var isSecureProvider: () -> Bool = { false }
@@ -48,10 +49,12 @@ final class ClipboardCaptureCoordinator {
     init(
         state: KeyboardState,
         history: ClipboardHistoryStore = .shared,
+        semanticRanking: ClipboardSemanticRankingStore = .shared,
         pasteboard: ClipboardPasteboardProviding = SystemClipboardPasteboard()
     ) {
         self.state = state
         self.history = history
+        self.semanticRanking = semanticRanking
         self.pasteboard = pasteboard
     }
 
@@ -79,6 +82,9 @@ final class ClipboardCaptureCoordinator {
         // A suggestion belongs to one keyboard presentation. Clear any
         // presentation state left behind by a reused extension controller.
         endCurrentSuggestion()
+        if let newest = history.newestAIHintEligibleEntry() {
+            semanticRanking.analyze(newest)
+        }
         forcesNextSample = true
         // Delay the system pasteboard read until the first poll tick. A
         // Universal Clipboard fetch or paste alert during the appear sequence
@@ -94,6 +100,7 @@ final class ClipboardCaptureCoordinator {
         stopPolling()
         // A1 policy: closing the keyboard ends this generation's suggestion.
         endCurrentSuggestion()
+        semanticRanking.clear()
     }
 
     func refreshFlagsFromStore() {
@@ -101,6 +108,9 @@ final class ClipboardCaptureCoordinator {
         // strip must wait for a new pasteboard generation.
         if !state.clipboardHistoryEnabled || !state.clipboardCandidateBarEnabled {
             endCurrentSuggestion()
+        }
+        if !state.clipboardHistoryEnabled {
+            semanticRanking.clear()
         }
     }
 
@@ -117,6 +127,7 @@ final class ClipboardCaptureCoordinator {
             return
         }
         endCurrentSuggestion()
+        semanticRanking.clear()
         state.clipboardOverlay = .none
     }
 
@@ -153,12 +164,16 @@ final class ClipboardCaptureCoordinator {
 
     func clearHistory() {
         endCurrentSuggestion()
+        semanticRanking.clear()
         history.clearAll()
     }
 
     func deleteEntry(id: UUID) {
         let deletedChangeCount = history.entries.first(where: { $0.id == id })?.changeCount
         history.remove(id: id)
+        if semanticRanking.snapshot?.entryID == id {
+            semanticRanking.clear()
+        }
         if deletedChangeCount == state.clipboardSuggestionChangeCount {
             endCurrentSuggestion()
         }
@@ -233,6 +248,7 @@ final class ClipboardCaptureCoordinator {
 
         // Prefer hasStrings peek before reading body (reduces empty reads).
         guard pasteboard.hasStrings else {
+            semanticRanking.clear()
             history.lastObservedChangeCount = changeCount
             return
         }
@@ -243,7 +259,9 @@ final class ClipboardCaptureCoordinator {
         if isCurrentGeneration {
             return
         }
+        semanticRanking.clear()
         if let entry = history.ingest(rawText: raw, changeCount: changeCount) {
+            semanticRanking.analyze(entry)
             updateSuggestion(with: entry, changeCount: changeCount)
         } else {
             history.lastObservedChangeCount = changeCount
@@ -306,6 +324,7 @@ final class ClipboardCaptureCoordinator {
         // including generations that contain no acceptable text.
         clearSuggestion()
         guard sample.hasStrings else {
+            semanticRanking.clear()
             history.lastObservedChangeCount = changeCount
             return
         }
@@ -313,7 +332,9 @@ final class ClipboardCaptureCoordinator {
         // republish content from an already observed generation.
         guard !isCurrentGeneration else { return }
 
+        semanticRanking.clear()
         if let entry = history.ingest(rawText: sample.text, changeCount: changeCount) {
+            semanticRanking.analyze(entry)
             updateSuggestion(with: entry, changeCount: changeCount)
         } else {
             history.lastObservedChangeCount = changeCount

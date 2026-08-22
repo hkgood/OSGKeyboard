@@ -116,10 +116,10 @@ final class AIHintKeywordExtractorTests: XCTestCase {
 }
 
 final class AIClipboardSkillTests: XCTestCase {
-    func testVisibleDefaultsAreReplySummarizeTranslate() {
+    func testVisibleDefaultsContainEveryBuiltInSkill() {
         XCTAssertEqual(
             AIClipboardSkillCatalog.visible().map(\.id),
-            ["reply", "summarize", "translate"]
+            AIClipboardSkillCatalog.catalog.map(\.id)
         )
     }
 
@@ -234,6 +234,89 @@ final class AIClipboardSkillTests: XCTestCase {
         )
         XCTAssertTrue(prompt.contains("概括"))
         XCTAssertTrue(prompt.contains("不要改写成可发送的短消息"))
+    }
+
+    func testSemanticReplySkillsHaveDistinctInstructions() {
+        let ids = [
+            AIClipboardSkillCatalog.replyInSourceLanguageID,
+            AIClipboardSkillCatalog.acceptInvitationID,
+            AIClipboardSkillCatalog.declineInvitationID,
+            AIClipboardSkillCatalog.acceptTaskID,
+            AIClipboardSkillCatalog.clarifyRequestID,
+            AIClipboardSkillCatalog.empathyReplyID,
+            AIClipboardSkillCatalog.askForDetailsID,
+            AIClipboardSkillCatalog.businessReplyID,
+            AIClipboardSkillCatalog.extractConclusionsID,
+            AIClipboardSkillCatalog.organizeListID
+        ]
+        let prompts = ids.map {
+            AIClipboardSkillCatalog.instruction(
+                skillID: $0,
+                locale: "zh",
+                translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
+            )
+        }
+        XCTAssertEqual(Set(prompts).count, ids.count)
+        XCTAssertFalse(prompts.contains { $0.contains("用户选择的操作") })
+    }
+
+    func testReplyUsesConversationalBaselineAndOptionalLearnedStyle() throws {
+        let skill = try XCTUnwrap(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.replyID)
+        )
+        let instruction = AIClipboardSkillCatalog.instruction(
+            for: skill,
+            locale: "zh",
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId,
+            replyStyle: AIClipboardReplyStyleContext(
+                styleID: "user.learned",
+                prompt: "喜欢短句，常用“行”“可以”，不说客套话。"
+            )
+        )
+
+        XCTAssertTrue(instruction.contains("真实的人在聊天软件里"))
+        XCTAssertTrue(instruction.contains("<user_reply_style"))
+        XCTAssertTrue(instruction.contains("喜欢短句"))
+        XCTAssertTrue(instruction.contains("不能改变当前技能的意图"))
+    }
+
+    func testReplyStyleIsNotInjectedIntoNonReplySkill() throws {
+        let skill = try XCTUnwrap(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.summarizeID)
+        )
+        let instruction = AIClipboardSkillCatalog.instruction(
+            for: skill,
+            locale: "zh",
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId,
+            replyStyle: AIClipboardReplyStyleContext(
+                styleID: "user.learned",
+                prompt: "这是个人回复风格"
+            )
+        )
+
+        XCTAssertFalse(instruction.contains("user_reply_style"))
+        XCTAssertFalse(instruction.contains("这是个人回复风格"))
+    }
+
+    func testReplyStyleResolverAcceptsOnlyUserOwnedStyle() {
+        let user = PolishStylePack(
+            id: "user.learned",
+            name: "我的风格",
+            prompt: "喜欢短句",
+            kind: .user
+        )
+        let builtIn = PolishStylePack(
+            id: "builtin.formal",
+            name: "正式",
+            prompt: "使用正式表达",
+            kind: .builtin
+        )
+
+        XCTAssertEqual(
+            AIClipboardReplyStyleContext.resolve(activeStyle: user)?.prompt,
+            "喜欢短句"
+        )
+        XCTAssertNil(AIClipboardReplyStyleContext.resolve(activeStyle: builtIn))
     }
 
     func testExtractTodosAsksForNONEWhenEmpty() {

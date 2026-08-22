@@ -65,6 +65,9 @@ public final class KeyboardViewController: UIInputViewController {
     private var cancellables = Set<AnyCancellable>()
     /// Coalesces host-document refreshes after mutations issued by this keyboard.
     private var assistantFieldActionRefreshTask: Task<Void, Never>?
+    /// One random ID per keyboard presentation. The repository splits this ID
+    /// into independent UTC-day fragments when a presentation crosses midnight.
+    private var keyboardUsageSessionID = UUID()
 
     private var memoryTelemetryContext: String {
         let language = typingSessionStorage?.language.rawValue ?? "-"
@@ -306,6 +309,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        keyboardUsageSessionID = UUID()
         AnalyticsExtensionService.shared.recordPresentation(
             hasFullAccess: hasFullAccess
         )
@@ -329,7 +333,7 @@ public final class KeyboardViewController: UIInputViewController {
             state: state,
             host: WhatsNewDemoDriver.HostHooks(
                 insertText: { [weak self] text in
-                    self?.insertTextIntoDocument(text)
+                    self?.insertTextIntoDocument(text, source: .debugDemo)
                 },
                 deleteBackward: { [weak self] in
                     self?.deleteBackwardFromDocument()
@@ -415,7 +419,9 @@ public final class KeyboardViewController: UIInputViewController {
         editHintScheduler = EditHintScheduler(state: state)
         textInserter = KeyboardTextInserter(
             state: state,
-            insertText: { [weak self] text in self?.insertTextIntoDocument(text) },
+            insertText: { [weak self] text, source in
+                self?.insertTextIntoDocument(text, source: source)
+            },
             deleteBackward: { [weak self] in self?.deleteBackwardFromDocument() },
             contextBeforeInput: { [weak self] in self?.textDocumentProxy.documentContextBeforeInput },
             fieldContextProvider: { [weak self] in self?.captureFieldContext() },
@@ -622,8 +628,12 @@ public final class KeyboardViewController: UIInputViewController {
             self?.configSync.persistTranslationTargetLocaleId(id)
             self?.aiKeyboardCoordinator.resetConversationForConfigurationChange()
         }
-        state.insertNewline       = { [weak self] in self?.insertTextIntoDocument("\n") }
-        state.insertSpace         = { [weak self] in self?.insertTextIntoDocument(" ") }
+        state.insertNewline = { [weak self] in
+            self?.insertTextIntoDocument("\n", source: .manualKeyboard)
+        }
+        state.insertSpace = { [weak self] in
+            self?.insertTextIntoDocument(" ", source: .manualKeyboard)
+        }
         state.deleteBackward      = { [weak self] in self?.deleteBackwardFromDocument() }
         state.undoLastInsertion   = { [weak self] in self?.textInserter.undoLastInsertion() }
         state.redoLastInsertion   = { [weak self] in self?.textInserter.redoLastInsertion() }
@@ -771,9 +781,20 @@ public final class KeyboardViewController: UIInputViewController {
 
     /// Keeps field-action UI current even when a host app does not immediately
     /// echo this keyboard's own document mutation through `textDidChange`.
-    private func insertTextIntoDocument(_ text: String) {
+    private func insertTextIntoDocument(
+        _ text: String,
+        source: KeyboardTextInsertionSource
+    ) {
         guard !text.isEmpty else { return }
         textDocumentProxy.insertText(text)
+        if source.contributesToKeyboardUsage {
+            let counts = KeyboardUsageCharacterClassifier.classify(text)
+            AnalyticsExtensionService.shared.keyboardUsageRecorder
+                .recordManualKeyboardCounts(
+                    counts,
+                    sessionID: keyboardUsageSessionID
+                )
+        }
         // A non-empty insertion makes content actions available immediately.
         // The next host callback remains the authoritative correction.
         refreshAssistantFieldAction(hasTextOverride: true)
@@ -786,7 +807,7 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     private func performDocumentReturn() {
-        textDocumentProxy.insertText("\n")
+        insertTextIntoDocument("\n", source: .assistantAction)
         scheduleAssistantFieldActionRefresh()
     }
 
@@ -980,7 +1001,7 @@ public final class KeyboardViewController: UIInputViewController {
             state: state,
             typing: typingSession,
             onInsert: { [weak self] text in
-                self?.insertTextIntoDocument(text)
+                self?.insertTextIntoDocument(text, source: .manualKeyboard)
             },
             onDeleteBackward: { [weak self] in
                 self?.deleteBackwardFromDocument()

@@ -109,6 +109,9 @@ public final class KeyboardState: ObservableObject {
     /// Short-lived host-owned practice mode. It unlocks real dictation before
     /// onboarding completion, but only while the onboarding text field is live.
     @Published public var isOnboardingPracticeActive: Bool = false
+    /// Current strict OOBE contract used to render feature-specific extension
+    /// state and bind completion to the host-owned session ID.
+    @Published public var oobePracticeSession: OOBEPracticeSession?
     /// When true, the mic is intentionally disabled (e.g. cloud engine
     /// selected but the provider-specific API key is missing).
     @Published public var micDisabled: Bool = false
@@ -141,8 +144,23 @@ public final class KeyboardState: ObservableObject {
     @Published public var clipboardHistoryEnabled: Bool = false
     /// Opt-in clipboard suggestion strip (requires history enabled).
     @Published public var clipboardCandidateBarEnabled: Bool = false
-    /// Skills-tab order for clipboard chips (max 8). Empty → hint carousel.
+    /// Skills-tab order for clipboard chips. Empty → hint carousel.
     @Published public var enabledClipboardSkillIDs: [String] = AIAgentSkillLayout.defaultEnabledIDs
+    /// Fully resolved enabled skills. Mirroring value-semantic content here
+    /// ensures Darwin updates publish prompt/name changes even when IDs stay unchanged.
+    @Published public var enabledClipboardSkills: [AIClipboardSkill] =
+        AIClipboardSkillCatalog.visible()
+    /// Complete resolved catalog used for semantic recommendations. Keyboard
+    /// visibility is independent from the Skills page installation state.
+    @Published public var clipboardSkillCatalog: [AIClipboardSkill] =
+        AIClipboardSkillCatalog.catalog
+    /// User-owned speaking style injected only into conversational reply skills.
+    /// Built-in polish personalities intentionally leave this nil.
+    @Published public var clipboardReplyStyle: AIClipboardReplyStyleContext?
+    /// Export skills whose companion Shortcut setup the user confirmed.
+    @Published public var confirmedClipboardShortcutIDs: [String] = []
+    /// App language captured with the same App Group snapshot as skill copy.
+    @Published public var uiLanguage: AppUILanguage = .auto
     /// Export skill currently waiting on the LLM. Nil for transform skills.
     @Published public var pendingClipboardSkillID: String?
     /// Clipboard captured when that export skill was tapped, so the body

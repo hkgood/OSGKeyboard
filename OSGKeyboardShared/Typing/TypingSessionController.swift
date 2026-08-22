@@ -55,6 +55,7 @@ public final class TypingSessionController: ObservableObject {
     private let engineFactory: @MainActor () -> RimeEngineBridging
     private let englishFactory: @MainActor () -> EnglishSuggestionEngine
     private let learningStore: EnglishLearningStore
+    private let rimeFrequentTermStore: RimeFrequentTermStore
     private var engineStorage: RimeEngineBridging?
     private var englishStorage: EnglishSuggestionEngine?
     private var prepared = false
@@ -97,12 +98,14 @@ public final class TypingSessionController: ObservableObject {
         engine: (@MainActor () -> RimeEngineBridging)? = nil,
         layout: TypingLayoutProviding = StandardTypingLayout(),
         englishEngine: (@MainActor () -> EnglishSuggestionEngine)? = nil,
-        learningStore: EnglishLearningStore = EnglishLearningStore()
+        learningStore: EnglishLearningStore = EnglishLearningStore(),
+        rimeFrequentTermStore: RimeFrequentTermStore = RimeFrequentTermStore()
     ) {
         self.engineFactory = engine ?? { LibrimeEngine() }
         self.layout = layout
         self.englishFactory = englishEngine ?? { EnglishSuggestionEngine() }
         self.learningStore = learningStore
+        self.rimeFrequentTermStore = rimeFrequentTermStore
         // Avoid constructing librime until the first Chinese keystroke / prepare.
         schema = TypingInputConfiguration.shared.schema
     }
@@ -368,6 +371,7 @@ public final class TypingSessionController: ObservableObject {
         composition = engine.composition
         syncCandidatePanelVisibility()
         clearOneShotShiftIfNeeded()
+        recordRimeCommit(committed)
         return committed.isEmpty ? .none : .insert(committed)
     }
 
@@ -383,6 +387,7 @@ public final class TypingSessionController: ObservableObject {
         let text = engine.processSpace() ?? " "
         composition = engine.composition
         syncCandidatePanelVisibility()
+        recordRimeCommit(text)
         return .insert(text)
     }
 
@@ -398,6 +403,7 @@ public final class TypingSessionController: ObservableObject {
         let text = engine.processReturn() ?? "\n"
         composition = engine.composition
         syncCandidatePanelVisibility()
+        recordRimeCommit(text)
         return .insert(text)
     }
 
@@ -417,7 +423,13 @@ public final class TypingSessionController: ObservableObject {
         // Selecting always collapses; follow-up composition may reopen ▼.
         isCandidatePanelExpanded = false
         syncCandidatePanelVisibility()
+        recordRimeCommit(text)
         return text.isEmpty ? .none : .insert(text)
+    }
+
+    private func recordRimeCommit(_ text: String) {
+        guard language == .chinese, suggestionsEnabled, !text.isEmpty else { return }
+        rimeFrequentTermStore.recordCommittedText(text)
     }
 
     /// Drop in-flight pinyin so secure fields cannot commit into userdb.

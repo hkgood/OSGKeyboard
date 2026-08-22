@@ -11,9 +11,9 @@ enum AIAgentShortcutRunner {
     @MainActor
     static func runPendingIfNeeded() {
         AIAgentShortcutRun.trace("host.runPending begin")
-        guard let payload = AppGroupStore().consumePendingShortcutRun() else { return }
-        let catalog = AppGroupStore().agentUserSkillCatalog
-        guard let skill = AIClipboardSkillCatalog.skill(id: payload.skillID, userCatalog: catalog) else {
+        let store = AppGroupStore()
+        guard let payload = store.consumePendingShortcutRun() else { return }
+        guard let skill = store.resolvedAgentSkillCatalog.first(where: { $0.id == payload.skillID }) else {
             AIAgentShortcutRun.trace(
                 "host.runPending skip unknownSkill=\(payload.skillID)"
             )

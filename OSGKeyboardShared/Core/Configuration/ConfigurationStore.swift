@@ -42,7 +42,8 @@ public protocol ConfigurationStore: Sendable {
 
     func makeClient(
         taskKind: ManagedGatewayTaskKind?,
-        requestPurpose: ManagedGatewayRequestPurpose?
+        requestPurpose: ManagedGatewayRequestPurpose?,
+        oobeFeature: ManagedGatewayOOBEFeature?
     ) -> LLMClient
 }
 
@@ -51,10 +52,21 @@ public extension ConfigurationStore {
     var credentialSource: CredentialSource { .byok }
 
     func makeClient() -> LLMClient {
-        makeClient(taskKind: nil, requestPurpose: nil)
+        makeClient(taskKind: nil, requestPurpose: nil, oobeFeature: nil)
     }
 
     func makeClient(taskKind: ManagedGatewayTaskKind?) -> LLMClient {
-        makeClient(taskKind: taskKind, requestPurpose: nil)
+        makeClient(taskKind: taskKind, requestPurpose: nil, oobeFeature: nil)
+    }
+
+    func makeClient(
+        taskKind: ManagedGatewayTaskKind?,
+        requestPurpose: ManagedGatewayRequestPurpose?
+    ) -> LLMClient {
+        makeClient(
+            taskKind: taskKind,
+            requestPurpose: requestPurpose,
+            oobeFeature: nil
+        )
     }
 }

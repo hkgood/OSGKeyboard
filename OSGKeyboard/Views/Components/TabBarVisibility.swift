@@ -1,91 +1,30 @@
 // TabBarVisibility.swift
 // OSGKeyboard · Main App
 //
-// Push 进 NavigationStack 子页时隐藏底部自定义 tab 栏（对齐系统 TabView 行为）。
-// MainTabView 读取 `TabBarHiddenPreferenceKey`；子页用 `hidesTabBarWhenPushed()` 声明。
+// Push 进 NavigationStack 子页时隐藏底部系统 tab 栏。
+// 子页用 `hidesTabBarWhenPushed()` 声明，根页面保持原生 TabView 导航可见。
 
 import OSGKeyboardShared
 import SwiftUI
 
-// MARK: - Preference
-
-enum TabBarHiddenPreferenceKey: PreferenceKey {
-    static let defaultValue = false
-
-    static func reduce(value: inout Bool, nextValue: () -> Bool) {
-        value = value || nextValue()
-    }
-}
-
-// MARK: - Environment
-
-private enum TabBarVisibleEnvironmentKey: EnvironmentKey {
-    static let defaultValue = true
-}
-
-extension EnvironmentValues {
-    /// `false` when the custom dock is hidden (detail push / sheet over tab content).
-    var isTabBarVisible: Bool {
-        get { self[TabBarVisibleEnvironmentKey.self] }
-        set { self[TabBarVisibleEnvironmentKey.self] = newValue }
-    }
-}
-
 // MARK: - Modifiers
 
 extension View {
-    /// Marks this view as a pushed detail screen so `MainTabView` hides the dock.
+    /// Marks this view as a pushed detail screen so the native tab bar hides.
     func hidesTabBarWhenPushed() -> some View {
-        preference(key: TabBarHiddenPreferenceKey.self, value: true)
+        toolbar(.hidden, for: .tabBar)
     }
 
-    /// Bottom inset for scroll *content* above the floating dock (ScrollView inner stacks).
+    /// Adds ordinary footer breathing room; native TabView owns tab-bar clearance.
     func tabBarScrollBottomPadding() -> some View {
-        modifier(TabBarScrollBottomPaddingModifier())
+        padding(.bottom, Spacing.lg)
     }
 
-    /// Bottom scroll-content margin for `List` tab roots. Unlike padding on the list
-    /// container, this extends the scrollable area so rows can scroll above the dock.
+    /// Adds a scrollable footer margin to `List` content above the system tab bar.
     func tabBarListScrollBottomMargin() -> some View {
-        modifier(TabBarListScrollBottomMarginModifier())
-    }
-}
-
-enum TabBarDockMetrics {
-    static let itemHeight: CGFloat = 46
-    static let iconSize: CGFloat = 22
-    /// Horizontal glass pad is 0: the selected capsule's `selectionInset`
-    /// is the only side gap. `Spacing.md` (16) plus that 5 pt was ~3–4×
-    /// the 5 pt top/bottom gap.
-    static let dockInsetHorizontal: CGFloat = 0
-    static let dockInsetVertical: CGFloat = Spacing.xs
-    /// Gap between the selected fill and the glass dock / neighbouring tabs.
-    static let selectionInset: CGFloat = 5
-    static let bottomPadding: CGFloat = Spacing.xs
-    /// Clearance above the floating dock (bar + home-indicator slack).
-    static var scrollClearance: CGFloat {
-        itemHeight + dockInsetVertical * 2 + bottomPadding + 20
-    }
-}
-
-private struct TabBarScrollBottomPaddingModifier: ViewModifier {
-    @Environment(\.isTabBarVisible) private var isTabBarVisible
-
-    func body(content: Content) -> some View {
-        content.padding(
+        contentMargins(
             .bottom,
-            isTabBarVisible ? TabBarDockMetrics.scrollClearance : Spacing.lg
-        )
-    }
-}
-
-private struct TabBarListScrollBottomMarginModifier: ViewModifier {
-    @Environment(\.isTabBarVisible) private var isTabBarVisible
-
-    func body(content: Content) -> some View {
-        content.contentMargins(
-            .bottom,
-            isTabBarVisible ? TabBarDockMetrics.scrollClearance : Spacing.lg,
+            Spacing.lg,
             for: .scrollContent
         )
     }

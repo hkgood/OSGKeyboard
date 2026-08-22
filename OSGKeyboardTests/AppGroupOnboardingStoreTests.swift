@@ -62,6 +62,28 @@ final class AppGroupOnboardingStoreTests: XCTestCase {
         XCTAssertEqual(store3.onboardingPage, 0)
     }
 
+    func testKeyboardAppearancePersistsFullAccessForHostVerification() {
+        let appearedAt = Date(timeIntervalSince1970: 1_000)
+
+        KeyboardSetupBridge.markExtensionAppearance(
+            hasFullAccess: true,
+            defaults: defaults,
+            now: appearedAt
+        )
+
+        XCTAssertTrue(KeyboardSetupBridge.hasAppeared(defaults: defaults))
+        XCTAssertTrue(KeyboardSetupBridge.isReadyForOnboardingSkip(defaults: defaults))
+
+        KeyboardSetupBridge.markExtensionAppearance(
+            hasFullAccess: false,
+            defaults: defaults,
+            now: appearedAt.addingTimeInterval(1)
+        )
+
+        XCTAssertTrue(KeyboardSetupBridge.hasAppeared(defaults: defaults))
+        XCTAssertFalse(KeyboardSetupBridge.isReadyForOnboardingSkip(defaults: defaults))
+    }
+
     func testOnboardingPracticeWindowExpires() {
         let now = Date(timeIntervalSince1970: 1_000)
         KeyboardSetupBridge.setOnboardingPracticeActive(
@@ -100,6 +122,119 @@ final class AppGroupOnboardingStoreTests: XCTestCase {
 
         XCTAssertFalse(
             KeyboardSetupBridge.onboardingPracticeIsActive(
+                defaults: defaults,
+                now: now
+            )
+        )
+    }
+
+    func testStrictOOBECompletionRequiresMatchingSessionAndFeature() throws {
+        let now = Date(timeIntervalSince1970: 2_000)
+        let sessionID = UUID()
+        let session = try XCTUnwrap(
+            KeyboardSetupBridge.beginOOBEPracticeSession(
+                sessionID: sessionID,
+                expectedFeature: .clipboardReply,
+                duration: 60,
+                defaults: defaults,
+                now: now
+            )
+        )
+        XCTAssertEqual(session.sessionID, sessionID)
+        XCTAssertFalse(
+            KeyboardSetupBridge.markOOBEPracticeCompleted(
+                sessionID: UUID(),
+                feature: .clipboardReply,
+                defaults: defaults,
+                now: now.addingTimeInterval(1)
+            )
+        )
+        XCTAssertFalse(
+            KeyboardSetupBridge.markOOBEPracticeCompleted(
+                sessionID: sessionID,
+                feature: .clipboardTranslate,
+                defaults: defaults,
+                now: now.addingTimeInterval(1)
+            )
+        )
+        XCTAssertTrue(
+            KeyboardSetupBridge.markOOBEPracticeCompleted(
+                sessionID: sessionID,
+                feature: .clipboardReply,
+                defaults: defaults,
+                now: now.addingTimeInterval(2)
+            )
+        )
+        XCTAssertNotNil(
+            KeyboardSetupBridge.oobePracticeCompletion(
+                sessionID: sessionID,
+                feature: .clipboardReply,
+                defaults: defaults,
+                now: now.addingTimeInterval(3)
+            )
+        )
+    }
+
+    func testOOBEClipboardMaterialIsExplicitScopedAndExpires() throws {
+        let now = Date(timeIntervalSince1970: 3_000)
+        let session = try XCTUnwrap(
+            KeyboardSetupBridge.beginOOBEPracticeSession(
+                expectedFeature: .clipboardTranslate,
+                duration: 60,
+                defaults: defaults,
+                now: now
+            )
+        )
+
+        XCTAssertFalse(store.clipboardHistoryEnabled)
+        XCTAssertNotNil(
+            KeyboardSetupBridge.seedOOBEClipboardMaterial(
+                "Host sample only",
+                sessionID: session.sessionID,
+                duration: 10,
+                defaults: defaults,
+                now: now
+            )
+        )
+        XCTAssertEqual(
+            KeyboardSetupBridge.oobeClipboardMaterial(
+                sessionID: session.sessionID,
+                defaults: defaults,
+                now: now.addingTimeInterval(9)
+            ),
+            "Host sample only"
+        )
+        XCTAssertNil(
+            KeyboardSetupBridge.oobeClipboardMaterial(
+                sessionID: session.sessionID,
+                defaults: defaults,
+                now: now.addingTimeInterval(11)
+            )
+        )
+        XCTAssertFalse(store.clipboardHistoryEnabled)
+    }
+
+    func testOOBEClipboardMaterialRejectsAskAIAndForeignSession() throws {
+        let now = Date(timeIntervalSince1970: 4_000)
+        let session = try XCTUnwrap(
+            KeyboardSetupBridge.beginOOBEPracticeSession(
+                expectedFeature: .askAI,
+                defaults: defaults,
+                now: now
+            )
+        )
+
+        XCTAssertNil(
+            KeyboardSetupBridge.seedOOBEClipboardMaterial(
+                "Must not persist",
+                sessionID: session.sessionID,
+                defaults: defaults,
+                now: now
+            )
+        )
+        XCTAssertNil(
+            KeyboardSetupBridge.oobeClipboardMaterial(
+                sessionID: UUID(),
                 defaults: defaults,
                 now: now
             )

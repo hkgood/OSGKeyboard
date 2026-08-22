@@ -4,10 +4,11 @@
 // iCloud KVS payload for speech history. Tombstones and `clearedAt`
 // propagate single-entry deletes and "clear all" across devices.
 
+import CryptoKit
 import Foundation
 
 public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
-    public static let schemaVersion = 3
+    public static let schemaVersion = 5
     public static let kvsKey = "speechHistory.v2"
     public static let legacyKVSKey = "speechHistory.v1"
     public static let maxEntries = 300
@@ -26,17 +27,24 @@ public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
     public var schemaVersion: Int
     public var updatedAt: Date
     public var entries: [SpeechHistoryEntry]
+    /// Deduplicated historical style prompts keyed by SHA-256. Keeping prompt
+    /// snapshots outside rows avoids multiplying a 6,000-character prompt by
+    /// every dictation while still preserving the prompt used at that moment.
+    public var polishStylePromptSnapshots: [String: String]
     /// Entry IDs deleted on any device, with deletion timestamps.
     public var deletedEntryIDs: [UUID: Date]
     /// Recent idempotency keys for keyboard-originated history mutations.
     public var appliedMutationIDs: [UUID]
     /// When set, entries created at or before this instant are excluded.
     public var clearedAt: Date?
+    public static let maxPolishStylePromptSnapshots = 32
+    public static let maxPolishStylePromptSnapshotCharacters = 96_000
 
     public init(
         schemaVersion: Int = Self.schemaVersion,
         updatedAt: Date = Date(),
         entries: [SpeechHistoryEntry] = [],
+        polishStylePromptSnapshots: [String: String] = [:],
         deletedEntryIDs: [UUID: Date] = [:],
         appliedMutationIDs: [UUID] = [],
         clearedAt: Date? = nil
@@ -44,6 +52,7 @@ public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
         self.schemaVersion = schemaVersion
         self.updatedAt = updatedAt
         self.entries = entries
+        self.polishStylePromptSnapshots = polishStylePromptSnapshots
         self.deletedEntryIDs = deletedEntryIDs
         self.appliedMutationIDs = appliedMutationIDs
         self.clearedAt = clearedAt
@@ -54,6 +63,10 @@ public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
         schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
         entries = try container.decodeIfPresent([SpeechHistoryEntry].self, forKey: .entries) ?? []
+        polishStylePromptSnapshots = try container.decodeIfPresent(
+            [String: String].self,
+            forKey: .polishStylePromptSnapshots
+        ) ?? [:]
         if let map = try container.decodeIfPresent([UUID: Date].self, forKey: .deletedEntryIDs) {
             deletedEntryIDs = map
         } else if let legacyIDs = try container.decodeIfPresent([UUID].self, forKey: .deletedEntryIDs) {
@@ -105,20 +118,30 @@ public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
             entries = Array(entries.prefix(maxEntries))
         }
 
-        return SyncedSpeechHistory(
+        var snapshots = local.polishStylePromptSnapshots
+        for (fingerprint, prompt) in remote.polishStylePromptSnapshots {
+            snapshots[fingerprint] = snapshots[fingerprint] ?? prompt
+        }
+
+        var merged = SyncedSpeechHistory(
             updatedAt: max(local.updatedAt, remote.updatedAt),
             entries: entries,
+            polishStylePromptSnapshots: snapshots,
             deletedEntryIDs: deletedIDs,
             appliedMutationIDs: appliedMutationIDs,
             clearedAt: clearedAt
         )
+        merged.prunePolishStylePromptSnapshots()
+        return merged
     }
 
     /// Trim to the newest `maxEntries` rows (call after local-only appends).
     public mutating func trimEntries() {
-        guard entries.count > Self.maxEntries else { return }
-        entries = Array(entries.sorted { $0.createdAt > $1.createdAt }.prefix(Self.maxEntries))
-        updatedAt = Date()
+        if entries.count > Self.maxEntries {
+            entries = Array(entries.sorted { $0.createdAt > $1.createdAt }.prefix(Self.maxEntries))
+            updatedAt = Date()
+        }
+        prunePolishStylePromptSnapshots()
     }
 
     public mutating func pruneTombstonesIfNeeded() {
@@ -162,19 +185,93 @@ public struct SyncedSpeechHistory: Codable, Equatable, Sendable {
         _ candidate: SpeechHistoryEntry,
         over existing: SpeechHistoryEntry
     ) -> SpeechHistoryEntry {
+        let winner: SpeechHistoryEntry
+        let fallback: SpeechHistoryEntry
         if candidate.revision != existing.revision {
-            return candidate.revision > existing.revision ? candidate : existing
+            (winner, fallback) = candidate.revision > existing.revision
+                ? (candidate, existing)
+                : (existing, candidate)
+        } else if candidate.modifiedAt != existing.modifiedAt {
+            (winner, fallback) = candidate.modifiedAt > existing.modifiedAt
+                ? (candidate, existing)
+                : (existing, candidate)
+        } else {
+            (winner, fallback) = candidate.createdAt >= existing.createdAt
+                ? (candidate, existing)
+                : (existing, candidate)
         }
-        if candidate.modifiedAt != existing.modifiedAt {
-            return candidate.modifiedAt > existing.modifiedAt ? candidate : existing
+        return preservingCorpusMetadata(of: winner, fallback: fallback)
+    }
+
+    /// Older app versions decode and re-encode history without the v4/v5 corpus
+    /// fields. A newer visible-text revision must win without erasing the only
+    /// retained pre-polish sample.
+    private static func preservingCorpusMetadata(
+        of winner: SpeechHistoryEntry,
+        fallback: SpeechHistoryEntry
+    ) -> SpeechHistoryEntry {
+        let usesFallbackTranscript = winner.prePolishText == nil
+            && fallback.prePolishText != nil
+        let prePolishText = winner.prePolishText ?? fallback.prePolishText
+        let polishStyleID = winner.polishStyleID ?? fallback.polishStyleID
+        let polishStylePromptFingerprint = winner.polishStylePromptFingerprint
+            ?? fallback.polishStylePromptFingerprint
+        guard prePolishText != winner.prePolishText
+                || polishStyleID != winner.polishStyleID
+                || polishStylePromptFingerprint
+                    != winner.polishStylePromptFingerprint else {
+            return winner
         }
-        return candidate.createdAt >= existing.createdAt ? candidate : existing
+        return SpeechHistoryEntry(
+            id: winner.id,
+            text: winner.text,
+            prePolishText: prePolishText,
+            wasTranslation: usesFallbackTranscript
+                ? fallback.wasTranslation
+                : winner.wasTranslation,
+            polishStyleID: polishStyleID,
+            polishStylePromptFingerprint: polishStylePromptFingerprint,
+            createdAt: winner.createdAt,
+            modifiedAt: winner.modifiedAt,
+            revision: winner.revision,
+            engineMode: winner.engineMode,
+            source: winner.source
+        )
+    }
+
+    public static func polishStylePromptFingerprint(for prompt: String) -> String {
+        SHA256.hash(data: Data(prompt.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
+    }
+
+    mutating func prunePolishStylePromptSnapshots() {
+        var retained: [String: String] = [:]
+        var retainedCharacters = 0
+        let newestEntries = entries.sorted { $0.createdAt > $1.createdAt }
+
+        for entry in newestEntries {
+            guard retained.count < Self.maxPolishStylePromptSnapshots,
+                  let fingerprint = entry.polishStylePromptFingerprint,
+                  retained[fingerprint] == nil,
+                  let prompt = polishStylePromptSnapshots[fingerprint] else {
+                continue
+            }
+            guard retainedCharacters + prompt.count
+                    <= Self.maxPolishStylePromptSnapshotCharacters else {
+                continue
+            }
+            retained[fingerprint] = prompt
+            retainedCharacters += prompt.count
+        }
+        polishStylePromptSnapshots = retained
     }
 }
 
 extension SyncedSpeechHistory {
     mutating func recordClearAll(at date: Date = Date()) {
         entries.removeAll()
+        polishStylePromptSnapshots.removeAll()
         clearedAt = date
     }
 }

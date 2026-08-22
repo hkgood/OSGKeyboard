@@ -30,6 +30,10 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let engineMode = "config.engineMode"
         /// Credential ownership is independent from local/cloud ASR selection.
         public static let credentialSource = "config.credentialSource"
+        /// Device-local, non-secret gate for account-funded managed requests.
+        /// This key is deliberately excluded from iCloud settings payloads.
+        public static let managedGatewayAccountSessionAvailable =
+            "account.managedGateway.sessionAvailable.v1"
         public static let hasCompletedOnboarding = "config.hasCompletedOnboarding"
         public static let onboardingPage = "config.onboardingPage"
         public static let hasAcknowledgedCloudSharing = "config.hasAcknowledgedCloudSharing"
@@ -73,8 +77,13 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let localASRCustomLanguageModelEnabled = "config.localASR.customLanguageModelEnabled"
         /// Enabled AI Agent skill IDs (order) + confirmed companion Shortcuts.
         public static let agentSkillLayout = "config.aiAgentSkills.layout.v1"
+        /// One-shot: append semantic built-ins introduced with the unlimited layout.
+        public static let agentSkillDefaultsMigrationVersion =
+            "config.aiAgentSkills.defaultsMigrationVersion"
         /// User-created clipboard skills (no cloud sync; App Group only).
         public static let agentUserSkillCatalog = "config.aiAgentSkills.userCatalog.v1"
+        /// Last-known-good official catalog plus revision, freshness, and ETag metadata.
+        public static let officialSkillCatalog = "content.officialSkills.snapshot.v1"
     }
 
     // MARK: - Stored fields
@@ -195,13 +204,15 @@ public struct AppGroupConfiguration: Sendable, Equatable {
 
     public func makeClient(
         taskKind: ManagedGatewayTaskKind? = nil,
-        requestPurpose: ManagedGatewayRequestPurpose? = nil
+        requestPurpose: ManagedGatewayRequestPurpose? = nil,
+        oobeFeature: ManagedGatewayOOBEFeature? = nil
     ) -> LLMClient {
-        if credentialSource == .managed {
+        if credentialSource == .managed || requestPurpose == .oobe {
             return ManagedLLMClient(
                 capability: .polish,
                 taskKind: taskKind,
                 requestPurpose: requestPurpose,
+                oobeFeature: oobeFeature,
                 grants: GatewayGrantCoordinator()
             )
         }

@@ -32,8 +32,10 @@ struct AccountCenterView: View {
                 coordinator.creditPurchases.reset()
                 return
             }
-            await coordinator.refreshAccountData()
-            await coordinator.creditPurchases.prepare(accountID: accountID)
+            async let accountRefresh: Void = coordinator.refreshAccountData()
+            async let purchasePreparation: Void =
+                coordinator.creditPurchases.prepare(accountID: accountID)
+            _ = await (accountRefresh, purchasePreparation)
             if case let .signedIn(session) = coordinator.sessionPhase {
                 displayNameDraft = session.displayName ?? ""
             }
@@ -148,7 +150,10 @@ struct AccountCenterView: View {
             .padding(.bottom, Spacing.lg)
         }
         .refreshable {
-            await coordinator.refreshAccountData(force: true)
+            async let accountRefresh: Void = coordinator.refreshAccountData(force: true)
+            async let catalogRefresh: Void =
+                coordinator.creditPurchases.refreshCatalog(accountID: session.accountID)
+            _ = await (accountRefresh, catalogRefresh)
         }
         .accessibilityIdentifier("account.center.signedIn")
     }
@@ -171,17 +176,19 @@ struct AccountCenterView: View {
                 Task { await coordinator.refreshAccountData(force: true) }
             }
         case .loaded:
-            CardSection("account.storekit.section") {
-                VStack(spacing: Spacing.sm) {
-                    AccountCreditPurchaseSection(
-                        manager: coordinator.creditPurchases,
-                        accountID: session.accountID,
-                        onGranted: {
-                            Task { await coordinator.refreshAccountData(force: true) }
-                        }
-                    )
-                    purchaseHistoryLink(accountID: session.accountID)
-                }
+            EmptyView()
+        }
+
+        CardSection("account.storekit.section") {
+            VStack(spacing: Spacing.sm) {
+                AccountCreditPurchaseSection(
+                    manager: coordinator.creditPurchases,
+                    accountID: session.accountID,
+                    onGranted: {
+                        Task { await coordinator.refreshAccountData(force: true) }
+                    }
+                )
+                purchaseHistoryLink(accountID: session.accountID)
             }
         }
     }
@@ -522,7 +529,7 @@ private struct AccountCreditPurchaseSection: View {
                     }
                 }
                 .surfaceCard()
-            } else if manager.state == .loading {
+            } else if manager.catalogPhase == .loading {
                 HStack(spacing: Spacing.sm) {
                     ProgressView()
                         .controlSize(.small)
@@ -535,6 +542,7 @@ private struct AccountCreditPurchaseSection: View {
                 .surfaceCard()
             }
 
+            catalogStateMessage
             stateMessage
         }
         .onChange(of: manager.lastGrantedBalance) { previous, current in
@@ -614,6 +622,37 @@ private struct AccountCreditPurchaseSection: View {
     }
 
     @ViewBuilder
+    private var catalogStateMessage: some View {
+        switch manager.catalogPhase {
+        case .idle:
+            catalogRetryMessage(messageKey: "account.storekit.error.productUnavailable")
+        case .loading, .loaded:
+            if let messageKey = manager.catalogRefreshErrorKey {
+                catalogRetryMessage(messageKey: messageKey)
+            }
+        case .failed(let messageKey):
+            catalogRetryMessage(messageKey: messageKey)
+        }
+    }
+
+    private func catalogRetryMessage(messageKey: String) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Label(
+                LocalizedStringKey(messageKey),
+                systemImage: "exclamationmark.triangle.fill"
+            )
+            .font(TypeStyle.footnote)
+            .foregroundStyle(palette.danger)
+            Spacer(minLength: Spacing.xs)
+            Button("account.retry") {
+                Task { await manager.refreshCatalog(accountID: accountID) }
+            }
+            .font(TypeStyle.bodyEmph)
+            .foregroundStyle(palette.accent)
+        }
+    }
+
+    @ViewBuilder
     private var stateMessage: some View {
         Group {
             switch manager.state {
@@ -646,11 +685,6 @@ private struct AccountCreditPurchaseSection: View {
                     .font(TypeStyle.footnote)
                     .foregroundStyle(palette.danger)
                     Spacer(minLength: Spacing.xs)
-                    Button("account.retry") {
-                        Task { await manager.prepare(accountID: accountID) }
-                    }
-                    .font(TypeStyle.bodyEmph)
-                    .foregroundStyle(palette.accent)
                 }
             default:
                 EmptyView()

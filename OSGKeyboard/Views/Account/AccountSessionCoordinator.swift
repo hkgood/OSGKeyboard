@@ -50,11 +50,14 @@ final class AccountSessionCoordinator: ObservableObject {
     private let pendingReferralStore: any PendingReferralCodeStoring
     private let analyticsClient: any AnalyticsClient
     private let onAccountAuthenticated: (UUID) async -> Void
+    private let onAccountSignedOut: () async -> Void
     private let onAccountDeleted: () async -> Void
     private let accountRefreshInterval: TimeInterval
     private let now: () -> Date
     private var didAttemptRestore = false
     private var accountRefreshTask: Task<Void, Never>?
+    private var accountRefreshRequestID: UUID?
+    private var sessionEventsTask: Task<Void, Never>?
 
     init(
         dependencies: AccountDependencies,
@@ -67,6 +70,7 @@ final class AccountSessionCoordinator: ObservableObject {
         now: @escaping () -> Date = Date.init,
         analyticsClient: any AnalyticsClient = NoopAnalyticsClient(),
         onAccountAuthenticated: @escaping (UUID) async -> Void = { _ in },
+        onAccountSignedOut: @escaping () async -> Void = {},
         onAccountDeleted: @escaping () async -> Void = {}
     ) {
         sessionService = dependencies.sessionService
@@ -83,10 +87,24 @@ final class AccountSessionCoordinator: ObservableObject {
         self.pendingReferralStore = pendingReferralStore
         self.analyticsClient = analyticsClient
         self.onAccountAuthenticated = onAccountAuthenticated
+        self.onAccountSignedOut = onAccountSignedOut
         self.onAccountDeleted = onAccountDeleted
         self.accountRefreshInterval = accountRefreshInterval
         self.now = now
         pendingReferralCode = pendingReferralStore.code
+        let sessionEventSource = dependencies.sessionEventSource
+        sessionEventsTask = Task { @MainActor [weak self] in
+            let events = await sessionEventSource.events()
+            for await event in events {
+                guard !Task.isCancelled else { return }
+                await self?.handleSessionEvent(event)
+            }
+        }
+    }
+
+    deinit {
+        accountRefreshTask?.cancel()
+        sessionEventsTask?.cancel()
     }
 
     var isSignedIn: Bool {
@@ -109,15 +127,20 @@ final class AccountSessionCoordinator: ObservableObject {
 
         do {
             guard let session = try await sessionService.restoreSession() else {
+                await sessionService.clearManagedGateway()
+                await onAccountSignedOut()
                 sessionPhase = .signedOut
                 return
             }
             await onAccountAuthenticated(session.accountID)
             sessionPhase = .signedIn(session)
+            creditPurchases.startSession(accountID: session.accountID)
             referralProfile.startSession(accountID: session.accountID)
             await redeemPendingReferralIfNeeded()
             await refreshAccountData(force: true)
         } catch {
+            await sessionService.clearManagedGateway()
+            await onAccountSignedOut()
             sessionPhase = .signedOut
             operationErrorKey = errorMessageKey(
                 for: error,
@@ -161,6 +184,7 @@ final class AccountSessionCoordinator: ObservableObject {
             let session = try await sessionService.signIn(with: payload)
             await onAccountAuthenticated(session.accountID)
             sessionPhase = .signedIn(session)
+            creditPurchases.startSession(accountID: session.accountID)
             referralProfile.startSession(accountID: session.accountID)
             await redeemPendingReferralIfNeeded()
             await refreshAccountData(force: true)
@@ -196,13 +220,18 @@ final class AccountSessionCoordinator: ObservableObject {
             snapshotPhase = .loading
         }
 
+        let requestID = UUID()
+        accountRefreshRequestID = requestID
         let task = Task { @MainActor [weak self] in
             guard let self else { return }
-            await self.performAccountRefresh(for: accountID)
+            await self.performAccountRefresh(
+                for: accountID,
+                requestID: requestID
+            )
         }
         accountRefreshTask = task
         await task.value
-        accountRefreshTask = nil
+        finishAccountRefresh(requestID: requestID)
     }
 
     func updateDisplayName(_ displayName: String) async -> Bool {
@@ -263,7 +292,8 @@ final class AccountSessionCoordinator: ObservableObject {
 
         do {
             try await sessionService.signOut()
-            creditPurchases.reset()
+            await onAccountSignedOut()
+            creditPurchases.endSession()
             clearAccountRefreshState()
             referralProfile.endSession()
             sessionPhase = .signedOut
@@ -286,7 +316,8 @@ final class AccountSessionCoordinator: ObservableObject {
         do {
             try await sessionService.deleteAccount(with: payload)
             await onAccountDeleted()
-            creditPurchases.reset()
+            await onAccountSignedOut()
+            creditPurchases.endSession()
             clearAccountRefreshState()
             referralProfile.endSession(removeCache: true)
             sessionPhase = .signedOut
@@ -309,12 +340,12 @@ final class AccountSessionCoordinator: ObservableObject {
         operationErrorKey = nil
     }
 
-    private func performAccountRefresh(for accountID: UUID) async {
+    private func performAccountRefresh(for accountID: UUID, requestID: UUID) async {
         isRefreshingAccountData = true
         accountRefreshErrorKey = nil
-        defer { isRefreshingAccountData = false }
 
         do {
+            try Task.checkCancellation()
             let cachedSnapshot: AccountCenterSnapshot?
             if case let .loaded(snapshot) = snapshotPhase {
                 cachedSnapshot = snapshot
@@ -324,15 +355,22 @@ final class AccountSessionCoordinator: ObservableObject {
             let snapshot = try await centerService.loadAccountCenter(
                 cachedSnapshot: cachedSnapshot
             )
+            try Task.checkCancellation()
             guard self.accountID == accountID,
+                  accountRefreshRequestID == requestID,
                   snapshot.account.accountID == accountID else {
                 return
             }
             snapshotPhase = .loaded(snapshot)
             sessionPhase = .signedIn(snapshot.account)
             lastAccountRefreshAt = now()
+        } catch is CancellationError {
+            return
         } catch {
-            guard self.accountID == accountID else { return }
+            guard self.accountID == accountID,
+                  accountRefreshRequestID == requestID else {
+                return
+            }
             let messageKey = errorMessageKey(
                 for: error,
                 fallback: "account.error.load"
@@ -348,9 +386,32 @@ final class AccountSessionCoordinator: ObservableObject {
     private func clearAccountRefreshState() {
         accountRefreshTask?.cancel()
         accountRefreshTask = nil
+        accountRefreshRequestID = nil
         lastAccountRefreshAt = nil
         isRefreshingAccountData = false
         accountRefreshErrorKey = nil
+    }
+
+    private func finishAccountRefresh(requestID: UUID) {
+        guard accountRefreshRequestID == requestID else { return }
+        accountRefreshTask = nil
+        accountRefreshRequestID = nil
+        isRefreshingAccountData = false
+    }
+
+    private func handleSessionEvent(_ event: AccountSessionEvent) async {
+        switch event {
+        case .expired:
+            guard isSignedIn else { return }
+            await sessionService.clearManagedGateway()
+            await onAccountSignedOut()
+            creditPurchases.endSession()
+            clearAccountRefreshState()
+            referralProfile.endSession()
+            sessionPhase = .signedOut
+            snapshotPhase = .idle
+            operationErrorKey = "account.error.sessionExpired"
+        }
     }
 
     private func redeemPendingReferralIfNeeded() async {

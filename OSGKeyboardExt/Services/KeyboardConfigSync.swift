@@ -92,7 +92,21 @@ final class KeyboardConfigSync {
         // Keychain fallback: a reboot must not resurrect the mic gate when
         // App Group transiently reads empty.
         state.hasCompletedOnboarding = store.hasCompletedOnboarding || Keychain.hasCompletedOnboarding()
-        state.isOnboardingPracticeActive = KeyboardSetupBridge.isOnboardingPracticeActive
+        let practice = KeyboardSetupBridge.activeOOBEPracticeSession
+        state.oobePracticeSession = practice
+        state.isOnboardingPracticeActive = practice != nil
+            || KeyboardSetupBridge.isOnboardingPracticeActive
+        switch practice?.expectedFeature {
+        case .voiceInput, .askAI:
+            state.surface = .voice
+        case .clipboardTranslate, .clipboardReply:
+            state.surface = .ai
+            if !state.aiSession.isActive {
+                state.aiSession.enter()
+            }
+        case nil:
+            break
+        }
     }
 
     func persistLocale(_ id: String) {

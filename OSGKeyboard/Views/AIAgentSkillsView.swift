@@ -1,14 +1,13 @@
 // AIAgentSkillsView.swift
 // OSGKeyboard · Main App
 //
-// Catalog of AI Agent clipboard skills. Enabled cards (max 8) appear on
-// the keyboard after a copy; long-press drag rearranges that row live,
-// like Home Screen icons. Export skills confirm a companion Shortcut
-// before they can occupy a slot. Users can add custom export skills.
+// Catalog of installed and available AI Agent clipboard skills. Selecting a
+// row opens its detail page; installation state is managed there. Export
+// skills confirm a companion Shortcut before installation completes.
 
+import Foundation
 import OSGKeyboardShared
 import SwiftUI
-import UIKit
 
 struct AIAgentSkillsView: View {
     @Environment(\.themePalette) private var palette
@@ -16,21 +15,11 @@ struct AIAgentSkillsView: View {
     @ObservedObject private var config = ProviderConfig.shared
     @ObservedObject private var store = AIAgentSkillLayoutStore.shared
 
-    @State private var viewingSkill: AIClipboardSkill?
     @State private var editingDraft: SkillEditorDraft?
-    @State private var showFullAlert = false
     @State private var pasteAccessVerified = AppPermissions.hasVerifiedPasteAccess
     @State private var pasteAccessNeedsRecovery = false
     @State private var showPasteNoTextAlert = false
     @State private var showPasteAccessSuccess = false
-    /// True while a skill card is lifted; locks the page scroll like SpringBoard.
-    @State private var isReordering = false
-
-    private let columns = [
-        GridItem(.flexible(), spacing: Spacing.sm),
-        GridItem(.flexible(), spacing: Spacing.sm)
-    ]
-
     private var skillCardShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
     }
@@ -43,14 +32,13 @@ struct AIAgentSkillsView: View {
                         clipboardAccessGuide
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
-                    enabledSection
+                    installedSection
                     if !store.availableSkills.isEmpty {
-                        availableSection
+                        uninstalledSection
                     }
                 }
                 .tabBarScrollBottomPadding()
             }
-            .scrollDisabled(isReordering)
             .background(palette.background)
             .navigationTitle("skills.title")
             .navigationBarTitleDisplayMode(.large)
@@ -65,15 +53,6 @@ struct AIAgentSkillsView: View {
                 }
             }
         }
-        .sheet(item: $viewingSkill) { skill in
-            SkillDetailSheet(
-                store: store,
-                skill: skill,
-                onDismiss: { viewingSkill = nil },
-                onAddOrWarn: addOrWarn,
-                onConfirmInstall: confirmShortcutInstall
-            )
-        }
         .sheet(item: $editingDraft) { draft in
             SkillEditorSheet(
                 draft: draft,
@@ -85,14 +64,6 @@ struct AIAgentSkillsView: View {
             )
         }
         .alert(
-            AppL10n.string("skills.full.title", language: config.uiLanguage),
-            isPresented: $showFullAlert
-        ) {
-            Button("common.done") { showFullAlert = false }
-        } message: {
-            Text(AppL10n.string("skills.full.message", language: config.uiLanguage))
-        }
-        .alert(
             AppL10n.string("clipboard.paste.noText.title", language: config.uiLanguage),
             isPresented: $showPasteNoTextAlert
         ) {
@@ -102,10 +73,19 @@ struct AIAgentSkillsView: View {
         }
         .onAppear {
             store.reload()
+            refreshOfficialSkillCatalog(
+                reason: "AIAgentSkillsView.onAppear",
+                force: true
+            )
             refreshPasteAccessState()
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
+            store.reload()
+            refreshOfficialSkillCatalog(
+                reason: "AIAgentSkillsView.active",
+                force: true
+            )
             refreshPasteAccessState()
             pasteAccessNeedsRecovery = false
         }
@@ -291,69 +271,73 @@ struct AIAgentSkillsView: View {
         pasteAccessVerified = AppPermissions.hasVerifiedPasteAccess
     }
 
-    private var enabledSection: some View {
+    private func refreshOfficialSkillCatalog(reason: String, force: Bool) {
+        Task {
+            let outcome = await OfficialSkillCatalogRefreshService.shared.refreshIfNeeded(
+                reason: reason,
+                force: force
+            )
+            if outcome.didUpdateCache {
+                store.reload()
+            }
+        }
+    }
+
+    private var installedSection: some View {
         CardSection(
             title: AppL10n.format(
-                "skills.enabled.section",
+                "skills.installed.section",
                 language: config.uiLanguage,
-                store.enabledSkills.count,
-                AIAgentSkillLayout.maximumEnabled
+                store.enabledSkills.count
             )
         ) {
             if store.enabledSkills.isEmpty {
-                Text("skills.enabled.empty")
+                Text("skills.installed.empty")
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                EnabledSkillsReorderGrid(
-                    skills: store.enabledSkills,
-                    isReordering: $isReordering,
-                    onTap: handleCardTap,
-                    onEdit: handleEdit,
-                    onMoveToIndex: { id, index in
-                        store.moveEnabled(id: id, toIndex: index)
-                    },
-                    card: { skill in
-                        skillCardVisual(skill, isEnabled: true)
+                LazyVStack(spacing: 0) {
+                    ForEach(store.enabledSkills) { skill in
+                        skillListItem(skill)
                     }
-                )
+                }
+                .background(palette.surface, in: skillCardShape)
+                .overlay(skillCardShape.stroke(palette.divider, lineWidth: 0.5))
+                .clipShape(skillCardShape)
             }
         }
     }
 
-    private var availableSection: some View {
-        CardSection("skills.available.section") {
-            LazyVGrid(columns: columns, spacing: Spacing.sm) {
+    private var uninstalledSection: some View {
+        CardSection("skills.uninstalled.section") {
+            LazyVStack(spacing: 0) {
                 ForEach(store.availableSkills) { skill in
-                    skillCardInteractive(skill, isEnabled: false)
+                    skillListItem(skill)
                 }
             }
+            .background(palette.surface, in: skillCardShape)
+            .overlay(skillCardShape.stroke(palette.divider, lineWidth: 0.5))
+            .clipShape(skillCardShape)
         }
     }
 
-    private func skillCardInteractive(_ skill: AIClipboardSkill, isEnabled: Bool) -> some View {
-        ZStack(alignment: .topTrailing) {
-            Button {
-                handleCardTap(skill)
-            } label: {
-                skillCardVisual(skill, isEnabled: isEnabled)
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                handleEdit(skill)
-            } label: {
-                Color.clear
-                    .frame(
-                        width: CatalogCardChrome.editHitSize,
-                        height: CatalogCardChrome.editHitSize
-                    )
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("skills.edit"))
+    private func skillListItem(_ skill: AIClipboardSkill) -> some View {
+        NavigationLink {
+            SkillDetailView(
+                store: store,
+                skill: skill,
+                onInstall: addOrWarn,
+                onConfirmInstall: confirmShortcutInstall,
+                onEdit: {
+                    guard let user = store.userSkill(id: skill.id) else { return }
+                    editingDraft = .from(user)
+                }
+            )
+        } label: {
+            skillListRow(skill)
         }
+        .buttonStyle(.plain)
         .contextMenu {
             if skill.isUserCreated {
                 Button("common.delete", role: .destructive) {
@@ -363,45 +347,45 @@ struct AIAgentSkillsView: View {
         }
     }
 
-    private func skillCardVisual(_ skill: AIClipboardSkill, isEnabled: Bool) -> some View {
-        ZStack(alignment: .topTrailing) {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                Image(systemName: skill.systemImage)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(palette.accent)
+    private func skillListRow(_ skill: AIClipboardSkill) -> some View {
+        HStack(spacing: Spacing.md) {
+            Image(systemName: skill.systemImage)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(palette.accent)
+                .frame(width: 38, height: 38)
+                .background(palette.accentMuted, in: RoundedRectangle(
+                    cornerRadius: Radius.medium,
+                    style: .continuous
+                ))
+
+            VStack(alignment: .leading, spacing: 3) {
                 Text(skillTitle(skill))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
-                    .padding(.trailing, 32)
                 Text(skillDescription(skill))
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textTertiary)
                     .lineLimit(2)
-                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
-            .padding(Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            CatalogCardChrome.editIcon(palette: palette)
-                .padding(Spacing.sm)
-                .allowsHitTesting(false)
-
-            if isEnabled {
-                CatalogCardChrome.checkIcon(palette: palette)
-            }
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(palette.textTertiary)
+                .frame(width: 18)
         }
-        .background(
-            isEnabled ? palette.accentMuted : palette.surface,
-            in: skillCardShape
-        )
-        .overlay(skillCardShape.stroke(
-            isEnabled ? palette.accent : palette.divider,
-            lineWidth: isEnabled ? 1.5 : 0.5
-        ))
-        .clipShape(skillCardShape)
-        .contentShape(skillCardShape)
-        .containerShape(skillCardShape)
+        .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.xs)
+        .background(palette.surface)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(palette.divider)
+                .frame(height: 0.5)
+                .padding(.leading, 38 + Spacing.md * 2)
+        }
+        .contentShape(Rectangle())
     }
 
     private func skillTitle(_ skill: AIClipboardSkill) -> String {
@@ -413,40 +397,18 @@ struct AIAgentSkillsView: View {
     }
 
     private func skillDescription(_ skill: AIClipboardSkill) -> String {
+        let summary = skill.customSummary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !summary.isEmpty { return summary }
         if skill.isUserCreated {
-            let summary = skill.customSummary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if !summary.isEmpty { return summary }
             return AppL10n.string("skills.custom.description", language: config.uiLanguage)
         }
         return AppL10n.string(skill.descriptionKey, language: config.uiLanguage)
     }
 
-    private func handleCardTap(_ skill: AIClipboardSkill) {
-        if skill.requiresShortcut, !store.layout.hasConfirmedShortcut(skill.id) {
-            viewingSkill = skill
-            return
-        }
-        if store.layout.isEnabled(skill.id) {
-            store.disable(skill.id)
-        } else {
-            addOrWarn(skill)
-        }
-    }
-
-    private func handleEdit(_ skill: AIClipboardSkill) {
-        if skill.isUserCreated, let user = store.userSkill(id: skill.id) {
-            editingDraft = .from(user)
-        } else {
-            viewingSkill = skill
-        }
-    }
-
     private func addOrWarn(_ skill: AIClipboardSkill) {
         switch store.enable(skill.id) {
         case .enabled, .alreadyEnabled:
-            viewingSkill = nil
-        case .full:
-            showFullAlert = true
+            break
         case .needsShortcut, .unknown:
             break
         }
@@ -455,9 +417,7 @@ struct AIAgentSkillsView: View {
     private func confirmShortcutInstall(_ skill: AIClipboardSkill) {
         switch store.confirmShortcutAndEnable(skill.id) {
         case .enabled, .alreadyEnabled:
-            viewingSkill = nil
-        case .full:
-            showFullAlert = true
+            break
         case .needsShortcut, .unknown:
             break
         }
@@ -488,186 +448,6 @@ struct AIAgentSkillsView: View {
         )
         try store.saveUserSkill(skill)
         editingDraft = nil
-    }
-}
-
-/// Home-screen style reorder: long-press lifts the card, other cells slide
-/// into the gap as the finger crosses midpoints, drop settles in place.
-private struct EnabledSkillsReorderGrid<Card: View>: View {
-    let skills: [AIClipboardSkill]
-    @Binding var isReordering: Bool
-    let onTap: (AIClipboardSkill) -> Void
-    let onEdit: (AIClipboardSkill) -> Void
-    let onMoveToIndex: (String, Int) -> Void
-    let card: (AIClipboardSkill) -> Card
-
-    @State private var draggingID: String?
-    @State private var dragTranslation: CGSize = .zero
-    @State private var originFrame: CGRect = .zero
-    @State private var cellFrames: [String: CGRect] = [:]
-    @State private var ignoreTap = false
-
-    private static var spaceName: String { "enabledSkillsGrid" }
-    private let columns = [
-        GridItem(.flexible(), spacing: Spacing.sm),
-        GridItem(.flexible(), spacing: Spacing.sm)
-    ]
-
-    var body: some View {
-        ZStack(alignment: .topLeading) {
-            LazyVGrid(columns: columns, spacing: Spacing.sm) {
-                ForEach(skills) { skill in
-                    gridCell(skill)
-                }
-            }
-            .animation(
-                .interactiveSpring(response: 0.28, dampingFraction: 0.86),
-                value: skills.map(\.id)
-            )
-
-            if let draggingID, let skill = skills.first(where: { $0.id == draggingID }) {
-                card(skill)
-                    .frame(width: originFrame.width, height: originFrame.height)
-                    .scaleEffect(1.07)
-                    .shadow(color: .black.opacity(0.28), radius: 16, y: 10)
-                    .offset(
-                        x: originFrame.minX + dragTranslation.width,
-                        y: originFrame.minY + dragTranslation.height
-                    )
-                    .allowsHitTesting(false)
-            }
-        }
-        .coordinateSpace(.named(Self.spaceName))
-        .onPreferenceChange(SkillCellFrameKey.self) { cellFrames = $0 }
-    }
-
-    private func gridCell(_ skill: AIClipboardSkill) -> some View {
-        ZStack(alignment: .topTrailing) {
-            Button {
-                guard draggingID == nil, !ignoreTap else { return }
-                onTap(skill)
-            } label: {
-                card(skill)
-                    .opacity(draggingID == skill.id ? 0 : 1)
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                guard draggingID == nil, !ignoreTap else { return }
-                onEdit(skill)
-            } label: {
-                Color.clear
-                    .frame(
-                        width: CatalogCardChrome.editHitSize,
-                        height: CatalogCardChrome.editHitSize
-                    )
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("skills.edit"))
-            .opacity(draggingID == skill.id ? 0 : 1)
-        }
-        .background {
-            GeometryReader { proxy in
-                Color.clear.preference(
-                    key: SkillCellFrameKey.self,
-                    value: [skill.id: proxy.frame(in: .named(Self.spaceName))]
-                )
-            }
-        }
-        .simultaneousGesture(reorderGesture(for: skill))
-    }
-
-    private func reorderGesture(for skill: AIClipboardSkill) -> some Gesture {
-        LongPressGesture(minimumDuration: 0.22)
-            .sequenced(
-                before: DragGesture(
-                    minimumDistance: 0,
-                    coordinateSpace: .named(Self.spaceName)
-                )
-            )
-            .onChanged { value in
-                switch value {
-                case .second(_, let drag):
-                    liftIfNeeded(skill)
-                    guard let drag else { return }
-                    dragTranslation = drag.translation
-                    moveSlotIfNeeded(at: drag.location)
-                default:
-                    break
-                }
-            }
-            .onEnded { _ in
-                endDrag()
-            }
-    }
-
-    private func liftIfNeeded(_ skill: AIClipboardSkill) {
-        guard draggingID == nil else { return }
-        originFrame = cellFrames[skill.id] ?? .zero
-        draggingID = skill.id
-        isReordering = true
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred(intensity: 0.9)
-    }
-
-    private func moveSlotIfNeeded(at point: CGPoint) {
-        guard let draggingID else { return }
-        guard let target = nearestIndex(to: point) else { return }
-        guard skills[target].id != draggingID else { return }
-        UISelectionFeedbackGenerator().selectionChanged()
-        onMoveToIndex(draggingID, target)
-    }
-
-    private func nearestIndex(to point: CGPoint) -> Int? {
-        guard !skills.isEmpty else { return nil }
-        var bestIndex: Int?
-        var bestDistance = CGFloat.greatestFiniteMagnitude
-        for (index, skill) in skills.enumerated() {
-            guard let frame = cellFrames[skill.id] else { continue }
-            let dx = point.x - frame.midX
-            let dy = point.y - frame.midY
-            let distance = dx * dx + dy * dy
-            if distance < bestDistance {
-                bestDistance = distance
-                bestIndex = index
-            }
-        }
-        return bestIndex
-    }
-
-    private func endDrag() {
-        let wasDragging = draggingID != nil
-        if let draggingID, let slot = cellFrames[draggingID], originFrame.width > 0 {
-            withAnimation(.snappy(duration: 0.2)) {
-                dragTranslation = CGSize(
-                    width: slot.minX - originFrame.minX,
-                    height: slot.minY - originFrame.minY
-                )
-            } completion: {
-                clearDragState()
-            }
-        } else {
-            clearDragState()
-        }
-        guard wasDragging else { return }
-        ignoreTap = true
-        DispatchQueue.main.async {
-            ignoreTap = false
-        }
-    }
-
-    private func clearDragState() {
-        draggingID = nil
-        dragTranslation = .zero
-        isReordering = false
-    }
-}
-
-private struct SkillCellFrameKey: PreferenceKey {
-    static let defaultValue: [String: CGRect] = [:]
-
-    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
-        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
     }
 }
 
@@ -711,80 +491,54 @@ private struct SkillEditorDraft: Identifiable, Equatable {
     }
 }
 
-private struct SkillDetailSheet: View {
+private struct SkillDetailView: View {
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.themePalette) private var palette
     @ObservedObject var store: AIAgentSkillLayoutStore
     @ObservedObject private var config = ProviderConfig.shared
 
     let skill: AIClipboardSkill
-    let onDismiss: () -> Void
-    let onAddOrWarn: (AIClipboardSkill) -> Void
+    let onInstall: (AIClipboardSkill) -> Void
     let onConfirmInstall: (AIClipboardSkill) -> Void
-
-    /// Inner stack height; nav chrome + home indicator are added for the detent.
-    @State private var contentHeight: CGFloat = 280
-    private let navigationChrome: CGFloat = 72
+    let onEdit: () -> Void
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                CardPageContent(
-                    spacing: Spacing.md,
-                    topPadding: Spacing.md,
-                    bottomPadding: Spacing.xl
-                ) {
-                    header
-                    Text(skillDescription)
-                        .font(TypeStyle.body)
-                        .foregroundStyle(palette.textSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    promptBlock
-                    thinkingRow
-                    skillActions
-                }
-                .fixedSize(horizontal: false, vertical: true)
-                .onGeometryChange(for: CGFloat.self) { proxy in
-                    proxy.size.height
-                } action: { newHeight in
-                    let next = newHeight + navigationChrome
-                    if abs(contentHeight - next) > 1 {
-                        contentHeight = next
-                    }
-                }
+        ScrollView {
+            CardPageContent(
+                spacing: Spacing.md,
+                topPadding: Spacing.md,
+                bottomPadding: Spacing.xl
+            ) {
+                header
+                Text(skillDescription)
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                promptBlock
+                thinkingRow
+                skillActions
             }
-            .scrollBounceBehavior(.basedOnSize)
-            .background(palette.background)
-            .navigationTitle("skills.detail.title")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("common.done", action: onDismiss)
+        }
+        .background(palette.background)
+        .navigationTitle("skills.detail.title")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if skill.isUserCreated {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("skills.edit", action: onEdit)
                 }
             }
         }
-        .presentationDetents([.height(clampedSheetHeight)])
-        .presentationDragIndicator(.visible)
-        .presentationContentInteraction(.resizes)
-        .animation(.easeInOut(duration: 0.2), value: clampedSheetHeight)
-    }
-
-    private var clampedSheetHeight: CGFloat {
-        let screen = UIScreen.main.bounds.height
-        let maximum = screen * 0.92
-        return min(max(contentHeight, 280), maximum)
     }
 
     private var skillDescription: String {
+        let summary = skill.customSummary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !summary.isEmpty { return summary }
         if skill.isUserCreated {
-            let summary = skill.customSummary?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if !summary.isEmpty { return summary }
             return AppL10n.string("skills.custom.description", language: config.uiLanguage)
         }
         if skill.requiresShortcut, !store.layout.hasConfirmedShortcut(skill.id) {
             return AppL10n.string("skills.install.lead", language: config.uiLanguage)
-        }
-        if skill.requiresShortcut, store.layout.isEnabled(skill.id) {
-            return AppL10n.string("skills.action.turnOffHint", language: config.uiLanguage)
         }
         return AppL10n.string(skill.descriptionKey, language: config.uiLanguage)
     }
@@ -849,35 +603,38 @@ private struct SkillDetailSheet: View {
 
     @ViewBuilder
     private var skillActions: some View {
-        let enabled = store.layout.isEnabled(skill.id)
         if skill.requiresShortcut {
             if !store.layout.hasConfirmedShortcut(skill.id) {
                 shortcutInstallBlock
             } else {
-                if enabled {
-                    fullWidthButton("skills.action.turnOff", prominent: false) {
+                if isInstalled {
+                    fullWidthButton("skills.action.uninstall", prominent: false) {
                         store.disable(skill.id)
-                        onDismiss()
+                        dismiss()
                     }
                 } else {
-                    fullWidthButton("skills.action.addToKeyboard", prominent: true) {
-                        onAddOrWarn(skill)
+                    fullWidthButton("skills.action.install", prominent: true) {
+                        onInstall(skill)
                     }
                 }
                 fullWidthButton("skills.action.reinstallShortcut", prominent: false) {
                     openShortcutInstall()
                 }
             }
-        } else if enabled {
-            fullWidthButton("skills.action.turnOff", prominent: false) {
+        } else if isInstalled {
+            fullWidthButton("skills.action.uninstall", prominent: false) {
                 store.disable(skill.id)
-                onDismiss()
+                dismiss()
             }
         } else {
-            fullWidthButton("skills.action.addToKeyboard", prominent: true) {
-                onAddOrWarn(skill)
+            fullWidthButton("skills.action.install", prominent: true) {
+                onInstall(skill)
             }
         }
+    }
+
+    private var isInstalled: Bool {
+        store.layout.isEnabled(skill.id)
     }
 
     private var shortcutInstallBlock: some View {
@@ -887,6 +644,12 @@ private struct SkillDetailSheet: View {
             }
             fullWidthButton("skills.install.confirmAdded", prominent: false) {
                 onConfirmInstall(skill)
+            }
+            if store.layout.isEnabled(skill.id) {
+                fullWidthButton("skills.action.uninstall", prominent: false) {
+                    store.disable(skill.id)
+                    dismiss()
+                }
             }
         }
     }

@@ -72,6 +72,7 @@ struct AnalyticsLeasedEvent: Sendable {
 
 struct AnalyticsLeasedBatch: Sendable {
     let leaseID: String
+    let installationID: UUID
     let events: [AnalyticsLeasedEvent]
     let body: Data
 }
@@ -96,6 +97,7 @@ public actor AnalyticsRepository {
     private let clock: any AnalyticsWallClock
     private let uuidGenerator: any AnalyticsUUIDGenerating
     private var database: SQLiteDatabase?
+    private var isDatabaseAccessSuspended = false
 
     public init(
         configuration: AnalyticsRepositoryConfiguration = .appGroupDefault(),
@@ -105,6 +107,19 @@ public actor AnalyticsRepository {
         self.configuration = configuration
         self.clock = clock
         self.uuidGenerator = uuidGenerator
+    }
+
+    /// Re-enables process-local access before foreground or BGTask work.
+    public func resumeDatabaseAccess() {
+        isDatabaseAccessSuspended = false
+    }
+
+    /// Runs after earlier actor operations, then closes the process-local
+    /// connection. Later fire-and-forget records become best-effort no-ops
+    /// until an explicitly authorized execution window resumes access.
+    public func suspendDatabaseAccess() {
+        isDatabaseAccessSuspended = true
+        database = nil
     }
 
     /// The host calls this only after cold-start attribution has been resolved.
@@ -127,7 +142,6 @@ public actor AnalyticsRepository {
                     return
                 }
                 let event = try AnalyticsEvent(
-                    installationId: installationID,
                     clientEventId: uuidGenerator.makeUUID(),
                     eventType: .firstOpen,
                     occurredAt: clock.now(),
@@ -136,7 +150,11 @@ public actor AnalyticsRepository {
                     osVersion: context.environment.osVersion,
                     acquisitionChannel: firstOpenAcquisitionChannel
                 )
-                try insert(event, database: database)
+                try insert(
+                    event,
+                    installationID: installationID,
+                    database: database
+                )
                 try setMetadata(
                     "1",
                     for: MetadataKey.firstOpenRecorded,
@@ -155,6 +173,21 @@ public actor AnalyticsRepository {
             }
         } catch {
             return true
+        }
+    }
+
+    /// Returns the existing App Group installation UUID, creating it only while
+    /// analytics is enabled. Aggregate keyboard usage reuses this identity.
+    public func installationIdentifierIfEnabled() -> UUID? {
+        guard let database = openDatabaseIfNeeded() else { return nil }
+        do {
+            return try database.immediateTransaction {
+                _ = try ensureEnabled(database)
+                guard try isEnabled(database) else { return nil }
+                return try ensureInstallation(database)
+            }
+        } catch {
+            return nil
         }
     }
 
@@ -341,7 +374,6 @@ public actor AnalyticsRepository {
                 guard try isEnabled(database) else { return }
                 let installationID = try ensureInstallation(database)
                 let event = try AnalyticsEvent(
-                    installationId: installationID,
                     clientEventId: uuidGenerator.makeUUID(),
                     eventType: eventType,
                     occurredAt: clock.now(),
@@ -354,7 +386,11 @@ public actor AnalyticsRepository {
                     failureCategory: dimensions.failureCategory,
                     durationBucket: dimensions.durationBucket
                 )
-                try insert(event, database: database)
+                try insert(
+                    event,
+                    installationID: installationID,
+                    database: database
+                )
                 try enforceStoragePolicy(database)
             }
         }
@@ -388,7 +424,6 @@ public actor AnalyticsRepository {
 
                 let installationID = try ensureInstallation(database)
                 let event = try AnalyticsEvent(
-                    installationId: installationID,
                     clientEventId: uuidGenerator.makeUUID(),
                     eventType: .sessionStarted,
                     occurredAt: now,
@@ -396,7 +431,11 @@ public actor AnalyticsRepository {
                     appVersion: context.environment.appVersion,
                     osVersion: context.environment.osVersion
                 )
-                try insert(event, database: database)
+                try insert(
+                    event,
+                    installationID: installationID,
+                    database: database
+                )
                 try setMetadata(
                     String(now.timeIntervalSince1970),
                     for: key,
@@ -427,19 +466,42 @@ public actor AnalyticsRepository {
                 try releaseExpiredEventLeases(now: now, database: database)
                 try deleteExpiredEvents(now: now, database: database)
 
+                guard let installationText = try database.query(
+                    """
+                    SELECT installation_id
+                    FROM pending_events
+                    WHERE next_attempt_at <= ? AND lease_id IS NULL
+                    ORDER BY priority DESC, created_at ASC
+                    LIMIT 1
+                    """,
+                    bindings: [.double(now)]
+                ).first?.text(at: 0),
+                let installationID = UUID(uuidString: installationText) else {
+                    try clearUploadLease(database)
+                    return nil
+                }
+
                 let candidates = try database.query(
                     """
                     SELECT id, payload, attempt_count
                     FROM pending_events
-                    WHERE next_attempt_at <= ? AND lease_id IS NULL
+                    WHERE installation_id = ?
+                      AND next_attempt_at <= ?
+                      AND lease_id IS NULL
                     ORDER BY priority DESC, created_at ASC
                     LIMIT ?
                     """,
-                    bindings: [.double(now), .int64(Int64(upload.maximumBatchCount))]
+                    bindings: [
+                        .text(installationText),
+                        .double(now),
+                        .int64(Int64(upload.maximumBatchCount))
+                    ]
                 )
 
                 var selected: [AnalyticsLeasedEvent] = []
-                var bodySize = Self.emptyRequestBody.count
+                var bodySize = Self.emptyRequestBody(
+                    installationID: installationID
+                ).count
                 for row in candidates {
                     guard let rowID = row.int64(at: 0),
                           let payload = row.data(at: 1),
@@ -490,8 +552,12 @@ public actor AnalyticsRepository {
                 }
                 return AnalyticsLeasedBatch(
                     leaseID: leaseID,
+                    installationID: installationID,
                     events: selected,
-                    body: Self.requestBody(for: selected)
+                    body: Self.requestBody(
+                        for: selected,
+                        installationID: installationID
+                    )
                 )
             }
         } catch {
@@ -682,18 +748,20 @@ public actor AnalyticsRepository {
 
     private func insert(
         _ event: AnalyticsEvent,
+        installationID: UUID,
         database: SQLiteDatabase
     ) throws {
         let payload = try AnalyticsCanonicalJSON.encode(event)
         try database.execute(
             """
             INSERT OR IGNORE INTO pending_events (
-                client_event_id, event_type, occurred_at, surface, payload,
-                payload_size, priority, lease_id, lease_expires_at,
+                installation_id, client_event_id, event_type, occurred_at,
+                surface, payload, payload_size, priority, lease_id, lease_expires_at,
                 attempt_count, next_attempt_at, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, 0, 0, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, 0, 0, ?)
             """,
             bindings: [
+                .text(installationID.uuidString.lowercased()),
                 .text(event.clientEventId.uuidString.lowercased()),
                 .text(event.eventType.rawValue),
                 .double(event.occurredAt.timeIntervalSince1970),
@@ -873,11 +941,12 @@ public actor AnalyticsRepository {
             try database.execute(
                 """
                 INSERT INTO quarantined_events (
-                    client_event_id, event_type, occurred_at, surface, payload,
-                    payload_size, attempt_count, reason, quarantined_at
+                    installation_id, client_event_id, event_type, occurred_at,
+                    surface, payload, payload_size, attempt_count, reason,
+                    quarantined_at
                 )
-                SELECT client_event_id, event_type, occurred_at, surface, payload,
-                       payload_size, attempt_count, ?, ?
+                SELECT installation_id, client_event_id, event_type, occurred_at,
+                       surface, payload, payload_size, attempt_count, ?, ?
                 FROM pending_events
                 WHERE id = ?\(leaseClause)
                 """,
@@ -893,10 +962,18 @@ public actor AnalyticsRepository {
         try enforceStoragePolicy(database)
     }
 
-    private static let emptyRequestBody = Data(#"{"events":[]}"#.utf8)
+    private static func emptyRequestBody(installationID: UUID) -> Data {
+        requestBody(for: [], installationID: installationID)
+    }
 
-    private static func requestBody(for events: [AnalyticsLeasedEvent]) -> Data {
-        var body = Data(#"{"events":["#.utf8)
+    private static func requestBody(
+        for events: [AnalyticsLeasedEvent],
+        installationID: UUID
+    ) -> Data {
+        var body = Data(
+            #"{"installationId":"\#(installationID.uuidString.lowercased())","events":["#
+                .utf8
+        )
         for index in events.indices {
             if index > 0 {
                 body.append(UInt8(ascii: ","))
@@ -926,6 +1003,7 @@ public actor AnalyticsRepository {
     // MARK: - Metadata and setup
 
     private func openDatabaseIfNeeded() -> SQLiteDatabase? {
+        guard !isDatabaseAccessSuspended else { return nil }
         if let database {
             return database
         }
@@ -952,7 +1030,7 @@ public actor AnalyticsRepository {
 
     private func migrate(_ database: SQLiteDatabase) throws {
         let version = try database.scalarInt64("PRAGMA user_version") ?? 0
-        guard version <= 1 else {
+        guard version <= 2 else {
             throw SQLiteStoreError(
                 code: SQLITE_MISMATCH,
                 category: .schema,
@@ -969,56 +1047,88 @@ public actor AnalyticsRepository {
                     ) WITHOUT ROWID
                     """
                 )
+                try createCurrentQueueSchema(database)
+                try database.execute("PRAGMA user_version = 2")
+            }
+        } else if version == 1 {
+            try database.immediateTransaction {
+                // Another process may have completed the migration while this
+                // connection waited for BEGIN IMMEDIATE.
+                guard try database.scalarInt64("PRAGMA user_version") == 1 else {
+                    return
+                }
+                // v1 payloads contain installationId inside each event and are
+                // incompatible with the server's strict v2 envelope. Drop them
+                // without decoding so neither old content nor identifiers can
+                // escape through logs or a partially migrated retry.
+                try database.execute("DROP TABLE IF EXISTS pending_events")
+                try database.execute("DROP TABLE IF EXISTS quarantined_events")
+                try createCurrentQueueSchema(database)
                 try database.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS pending_events (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        client_event_id TEXT UNIQUE NOT NULL,
-                        event_type TEXT NOT NULL,
-                        occurred_at REAL NOT NULL,
-                        surface TEXT NOT NULL,
-                        payload BLOB NOT NULL,
-                        payload_size INTEGER NOT NULL CHECK(payload_size >= 0),
-                        priority INTEGER NOT NULL,
-                        lease_id TEXT,
-                        lease_expires_at REAL,
-                        attempt_count INTEGER NOT NULL DEFAULT 0,
-                        next_attempt_at REAL NOT NULL DEFAULT 0,
-                        created_at REAL NOT NULL
-                    )
-                    """
+                    "DELETE FROM metadata WHERE key IN (?, ?, ?)",
+                    bindings: [
+                        .text(MetadataKey.firstOpenRecorded),
+                        .text(MetadataKey.uploadLeaseOwner),
+                        .text(MetadataKey.uploadLeaseExpiresAt)
+                    ]
                 )
-                try database.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS pending_events_ready
-                    ON pending_events(next_attempt_at, lease_id, priority, created_at)
-                    """
-                )
-                try database.execute(
-                    """
-                    CREATE INDEX IF NOT EXISTS pending_events_expiry
-                    ON pending_events(occurred_at)
-                    """
-                )
-                try database.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS quarantined_events (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        client_event_id TEXT UNIQUE NOT NULL,
-                        event_type TEXT NOT NULL,
-                        occurred_at REAL NOT NULL,
-                        surface TEXT NOT NULL,
-                        payload BLOB NOT NULL,
-                        payload_size INTEGER NOT NULL,
-                        attempt_count INTEGER NOT NULL,
-                        reason TEXT NOT NULL,
-                        quarantined_at REAL NOT NULL
-                    )
-                    """
-                )
-                try database.execute("PRAGMA user_version = 1")
+                try database.execute("PRAGMA user_version = 2")
             }
         }
+    }
+
+    private func createCurrentQueueSchema(_ database: SQLiteDatabase) throws {
+        try database.execute(
+            """
+            CREATE TABLE IF NOT EXISTS pending_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                installation_id TEXT NOT NULL,
+                client_event_id TEXT UNIQUE NOT NULL,
+                event_type TEXT NOT NULL,
+                occurred_at REAL NOT NULL,
+                surface TEXT NOT NULL,
+                payload BLOB NOT NULL,
+                payload_size INTEGER NOT NULL CHECK(payload_size >= 0),
+                priority INTEGER NOT NULL,
+                lease_id TEXT,
+                lease_expires_at REAL,
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                next_attempt_at REAL NOT NULL DEFAULT 0,
+                created_at REAL NOT NULL
+            )
+            """
+        )
+        try database.execute(
+            """
+            CREATE INDEX IF NOT EXISTS pending_events_ready
+            ON pending_events(
+                installation_id, next_attempt_at, lease_id, priority, created_at
+            )
+            """
+        )
+        try database.execute(
+            """
+            CREATE INDEX IF NOT EXISTS pending_events_expiry
+            ON pending_events(occurred_at)
+            """
+        )
+        try database.execute(
+            """
+            CREATE TABLE IF NOT EXISTS quarantined_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                installation_id TEXT NOT NULL,
+                client_event_id TEXT UNIQUE NOT NULL,
+                event_type TEXT NOT NULL,
+                occurred_at REAL NOT NULL,
+                surface TEXT NOT NULL,
+                payload BLOB NOT NULL,
+                payload_size INTEGER NOT NULL,
+                attempt_count INTEGER NOT NULL,
+                reason TEXT NOT NULL,
+                quarantined_at REAL NOT NULL
+            )
+            """
+        )
     }
 
     private func applyFileProtection(to databaseURL: URL) {
@@ -1146,7 +1256,7 @@ private struct SQLiteStoreError: Error, Sendable {
     let operation: String
 }
 
-private enum SQLiteBinding {
+enum SQLiteBinding {
     case null
     case int64(Int64)
     case double(Double)
@@ -1154,7 +1264,7 @@ private enum SQLiteBinding {
     case blob(Data)
 }
 
-private struct SQLiteRow {
+struct SQLiteRow {
     private let values: [SQLiteValue]
 
     init(statement: OpaquePointer) {
@@ -1228,7 +1338,7 @@ private enum SQLiteValue {
     case blob(Data)
 }
 
-private final class SQLiteDatabase {
+final class SQLiteDatabase {
     private static let transient = unsafeBitCast(
         -1,
         to: sqlite3_destructor_type.self

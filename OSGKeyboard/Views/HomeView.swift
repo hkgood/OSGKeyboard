@@ -108,7 +108,11 @@ struct HomeView: View {
     @State private var micStatus = AppPermissions.micStatus
     @State private var speechStatus = AppPermissions.speechStatus
     @State private var path = NavigationPath()
-    @State private var dictionaryPreviewEntries: [PersonalDictionary.Entry] = []
+    @State private var dictionarySuggestions: [RimeFrequentTerm] = []
+    @State private var pendingDictionarySuggestion: RimeFrequentTerm?
+
+    private let appGroupStore = AppGroupStore()
+    private let rimeFrequentTermStore = RimeFrequentTermStore()
 
     private var usesWideLayout: Bool {
         horizontalSizeClass == .regular
@@ -189,23 +193,49 @@ struct HomeView: View {
         }
         .onAppear {
             refreshPermissionStatuses()
-            refreshDictionaryPreview()
+            refreshDictionarySuggestions()
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             refreshPermissionStatuses()
-            refreshDictionaryPreview()
+            refreshDictionarySuggestions()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             refreshPermissionStatuses()
-            refreshDictionaryPreview()
+            refreshDictionarySuggestions()
         }
         .onReceive(NotificationCenter.default.publisher(for: .personalDictionaryDidSyncFromCloud)) { _ in
-            refreshDictionaryPreview()
+            refreshDictionarySuggestions()
         }
         .onChange(of: path.count) { _, count in
             guard count == 0 else { return }
-            refreshDictionaryPreview()
+            refreshDictionarySuggestions()
+        }
+        .alert(
+            pendingDictionarySuggestion.map {
+                AppL10n.format("home.card.dictionary.confirm.title", $0.term)
+            } ?? "",
+            isPresented: Binding(
+                get: { pendingDictionarySuggestion != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        pendingDictionarySuggestion = nil
+                    }
+                }
+            ),
+            presenting: pendingDictionarySuggestion
+        ) { suggestion in
+            Button("home.card.dictionary.confirm.add") {
+                addSuggestedTerm(suggestion)
+            }
+            Button("common.cancel", role: .cancel) {}
+        } message: { suggestion in
+            Text(
+                AppL10n.format(
+                    "home.card.dictionary.confirm.message",
+                    suggestion.commitCount
+                )
+            )
         }
     }
 
@@ -305,8 +335,8 @@ struct HomeView: View {
     /// and the body grows with its rows.
     private var homeLibrarySection: some View {
         VStack(spacing: Spacing.md) {
-            historyCard
             dictionaryCard
+            historyCard
         }
     }
 
@@ -344,33 +374,84 @@ struct HomeView: View {
     }
 
     private var dictionaryCard: some View {
-        homeLibraryCard(
-            titleKey: "settings.personalDictionary.title",
-            systemImage: "character.book.closed",
-            route: .dictionary
-        ) {
-            if dictionaryPreviewEntries.isEmpty {
-                libraryEmptyLine("home.card.dictionary.empty")
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Button {
+                path.append(HomeRoute.dictionary)
+            } label: {
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(palette.accent)
+                        .symbolRenderingMode(.hierarchical)
+                    Text("settings.personalDictionary.title")
+                        .font(.system(size: 13, weight: .semibold))
+                        .tracking(0.6)
+                        .textCase(.uppercase)
+                        .foregroundStyle(palette.textTertiary)
+                    Spacer(minLength: Spacing.xs)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(palette.textTertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Text("home.card.dictionary.smart.subtitle")
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textSecondary)
+
+            if dictionarySuggestions.isEmpty {
+                libraryEmptyLine("home.card.dictionary.smart.empty")
             } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(dictionaryPreviewEntries.enumerated()), id: \.element.id) { index, entry in
-                        if index > 0 { libraryRowDivider }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(entry.term)
-                                .font(TypeStyle.body)
-                                .foregroundStyle(palette.textPrimary)
+                LazyVGrid(
+                    columns: [
+                        GridItem(.adaptive(minimum: 88, maximum: 160), spacing: Spacing.sm)
+                    ],
+                    alignment: .leading,
+                    spacing: Spacing.sm
+                ) {
+                    ForEach(dictionarySuggestions) { suggestion in
+                        Button {
+                            pendingDictionarySuggestion = suggestion
+                        } label: {
+                            Text(suggestion.term)
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(palette.accent)
                                 .lineLimit(1)
-                            Text(dictionaryDetailLine(for: entry))
-                                .font(TypeStyle.caption2)
-                                .foregroundStyle(palette.textTertiary)
-                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                                .padding(.horizontal, Spacing.sm)
+                                .frame(maxWidth: .infinity, minHeight: 38)
+                                .background(
+                                    LinearGradient(
+                                        colors: [
+                                            palette.accent.opacity(0.16),
+                                            palette.accent.opacity(0.07)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    in: Capsule()
+                                )
+                                .overlay {
+                                    Capsule()
+                                        .stroke(palette.accent.opacity(0.22), lineWidth: 0.5)
+                                }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, Spacing.sm)
+                        .buttonStyle(.plain)
+                        .accessibilityHint(
+                            AppL10n.format(
+                                "home.card.dictionary.smart.accessibilityHint",
+                                suggestion.commitCount
+                            )
+                        )
                     }
                 }
             }
         }
+        .padding(Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .surfaceCard()
     }
 
     /// Card shell: accent icon + label top-left, chevron trailing, custom body.
@@ -424,37 +505,40 @@ struct HomeView: View {
             .padding(.vertical, Spacing.xs)
     }
 
-    /// Source · uses · aliases — same secondary line as the dictionary page rows.
-    private func dictionaryDetailLine(for entry: PersonalDictionary.Entry) -> String {
-        var parts = [SharedL10n.string(entry.source.labelKey, language: config.uiLanguage)]
-        if entry.usageCount > 1 {
-            let format = AppL10n.string(
-                "settings.personalDictionary.usageCount",
-                language: config.uiLanguage
-            )
-            parts.append(String(format: format, entry.usageCount))
-        }
-        if !entry.aliases.isEmpty {
-            parts.append(entry.aliases.joined(separator: " / "))
-        }
-        return parts.joined(separator: " · ")
-    }
-
     private func refreshPermissionStatuses() {
         micStatus = AppPermissions.micStatus
         speechStatus = AppPermissions.speechStatus
     }
 
-    private func refreshDictionaryPreview() {
-        dictionaryPreviewEntries = AppGroupStore().personalDictionary.entries
-            .sorted { lhs, rhs in
-                if lhs.updatedAt != rhs.updatedAt {
-                    return lhs.updatedAt > rhs.updatedAt
-                }
-                return lhs.usageCount > rhs.usageCount
-            }
-            .prefix(Self.libraryPreviewLimit)
-            .map { $0 }
+    private func refreshDictionarySuggestions() {
+        let dictionary = appGroupStore.personalDictionary
+        let suggestions = rimeFrequentTermStore.suggestions(
+            excludingPersonalTerms: Set(dictionary.entries.map(\.term)),
+            limit: Self.dictionarySuggestionLimit
+        )
+        dictionarySuggestions = suggestions.count >= Self.minimumDictionarySuggestionCount
+            ? suggestions
+            : []
+    }
+
+    private func addSuggestedTerm(_ suggestion: RimeFrequentTerm) {
+        var dictionary = appGroupStore.personalDictionary
+        guard let saved = dictionary.upsertManual(term: suggestion.term),
+              let index = dictionary.entries.firstIndex(where: { $0.id == saved.id }) else {
+            return
+        }
+        dictionary.entries[index].usageCount = max(
+            dictionary.entries[index].usageCount,
+            suggestion.commitCount
+        )
+        dictionary.version += 1
+        appGroupStore.setPersonalDictionary(dictionary)
+        pendingDictionarySuggestion = nil
+        refreshDictionarySuggestions()
+
+        Task {
+            try? await PersonalDictionaryCloudSync.shared.pushLocalIfEnabled(dictionary)
+        }
     }
 
     private func handlePermissionGuidanceAction() {
@@ -672,6 +756,8 @@ struct HomeView: View {
 
     /// Rows shown inside the history / dictionary preview cards.
     private static let libraryPreviewLimit = 3
+    private static let minimumDictionarySuggestionCount = 3
+    private static let dictionarySuggestionLimit = 5
 
     private static let previewTimeFormatter: DateFormatter = {
         let formatter = DateFormatter()

@@ -15,6 +15,11 @@ public enum TranscriptionPolishFallback: Sendable {
         chunkWarning: String?
     ) -> TranscriptionDelivery {
         let fallbackText = TranscriptPostProcessor.cleanRawASRFallback(rawText)
+        if error as? ManagedGatewayError == .oobeFeatureAlreadyUsed {
+            // The server confirms this page already succeeded in the current
+            // OOBE session. Preserve the raw text without misreporting a weak network.
+            return TranscriptionDelivery(text: fallbackText, polishWarning: nil)
+        }
         let warning = warning(for: error, engineMode: engineMode)
             ?? degradedWarning()
             ?? chunkWarning
@@ -41,6 +46,8 @@ public enum TranscriptionPolishFallback: Sendable {
                 return SharedL10n.string("flow.warning.managedInsufficientCredits")
             case .missingGrant, .scopeNotGranted, .invalidGrant:
                 return SharedL10n.string("flow.warning.managedGrantRejected")
+            case .oobeFeatureAlreadyUsed:
+                return SharedL10n.string("flow.warning.oobeFeatureAlreadyUsed")
             case .timeout, .server:
                 return degradedWarning()
             }

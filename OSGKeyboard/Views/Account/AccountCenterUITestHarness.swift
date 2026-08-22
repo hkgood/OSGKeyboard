@@ -14,7 +14,11 @@ struct AccountCenterUITestHarness: View {
     @StateObject private var coordinator: AccountSessionCoordinator
 
     init() {
-        let service = AccountCenterUITestService()
+        let service = AccountCenterUITestService(
+            shouldFailSnapshot: ProcessInfo.processInfo.arguments.contains(
+                "--account-snapshot-failure"
+            )
+        )
         let store = AccountCenterUITestCreditStore(accountID: service.account.accountID)
         _coordinator = StateObject(
             wrappedValue: AccountSessionCoordinator(
@@ -91,6 +95,11 @@ private actor AccountCenterUITestService:
         createdAtEpochSeconds: 1_700_000_000,
         displayName: "UI Test Account"
     )
+    private let shouldFailSnapshot: Bool
+
+    init(shouldFailSnapshot: Bool = false) {
+        self.shouldFailSnapshot = shouldFailSnapshot
+    }
 
     func restoreSession() async throws -> AccountSession? {
         account
@@ -108,7 +117,10 @@ private actor AccountCenterUITestService:
     }
 
     func loadAccountCenter() async throws -> AccountCenterSnapshot {
-        AccountCenterSnapshot(
+        if shouldFailSnapshot {
+            throw AccountCenterUITestError.snapshotUnavailable
+        }
+        return AccountCenterSnapshot(
             account: account,
             credits: AccountCreditSummary(balance: 1_500, usedCredits: 500),
             referrals: []
@@ -178,6 +190,10 @@ private actor AccountCenterUITestService:
             nextCursor: nil
         )
     }
+}
+
+private enum AccountCenterUITestError: Error {
+    case snapshotUnavailable
 }
 
 @MainActor

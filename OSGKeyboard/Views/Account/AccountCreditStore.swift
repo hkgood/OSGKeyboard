@@ -55,10 +55,23 @@ enum AccountStorePurchaseOutcome: Sendable {
 @MainActor
 protocol AccountCreditStore {
     func product(for productID: String) async throws -> AccountStoreProduct?
+    func products(for productIDs: [String]) async throws -> [AccountStoreProduct]
     func purchase(productID: String, accountID: UUID) async throws -> AccountStorePurchaseOutcome
     func unfinishedTransactions() -> AsyncStream<AccountStoreVerification>
     func transactionUpdates() -> AsyncStream<AccountStoreVerification>
     func allTransactions() -> AsyncStream<AccountStoreVerification>
+}
+
+extension AccountCreditStore {
+    func products(for productIDs: [String]) async throws -> [AccountStoreProduct] {
+        var loadedProducts: [AccountStoreProduct] = []
+        for productID in productIDs {
+            if let product = try await product(for: productID) {
+                loadedProducts.append(product)
+            }
+        }
+        return loadedProducts
+    }
 }
 
 @MainActor
@@ -68,6 +81,20 @@ final class LiveAccountCreditStore: AccountCreditStore {
     func product(for productID: String) async throws -> AccountStoreProduct? {
         guard let product = try await loadProduct(for: productID) else { return nil }
         return AccountStoreProduct(id: product.id, displayPrice: product.displayPrice)
+    }
+
+    func products(for productIDs: [String]) async throws -> [AccountStoreProduct] {
+        var seenIDs: Set<String> = []
+        let orderedIDs = productIDs.filter { seenIDs.insert($0).inserted }
+        let missingIDs = orderedIDs.filter { productsByID[$0] == nil }
+        if !missingIDs.isEmpty {
+            let loadedProducts = try await Product.products(for: missingIDs)
+            loadedProducts.forEach { productsByID[$0.id] = $0 }
+        }
+        return orderedIDs.compactMap { productID in
+            guard let product = productsByID[productID] else { return nil }
+            return AccountStoreProduct(id: product.id, displayPrice: product.displayPrice)
+        }
     }
 
     func purchase(productID: String, accountID: UUID) async throws -> AccountStorePurchaseOutcome {
@@ -102,10 +129,8 @@ final class LiveAccountCreditStore: AccountCreditStore {
         if let product = productsByID[productID] {
             return product
         }
-        let loaded = try await Product.products(for: [productID])
-        guard let product = loaded.first(where: { $0.id == productID }) else { return nil }
-        productsByID[productID] = product
-        return product
+        _ = try await products(for: [productID])
+        return productsByID[productID]
     }
 
     private static func map(_ verification: VerificationResult<Transaction>) -> AccountStoreVerification {

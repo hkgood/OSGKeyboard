@@ -31,9 +31,18 @@ final class AnalyticsRepositoryTests: XCTestCase {
         XCTAssertEqual(firstSnapshot.pendingEvents.map(\.eventType), [.firstOpen])
         let decodedEvents = try await analyticsDecodePendingEvents(repository: repository)
         let event = try XCTUnwrap(decodedEvents.first)
-        XCTAssertEqual(event.installationId, analyticsTestUUID(1))
         XCTAssertEqual(event.clientEventId, analyticsTestUUID(2))
         XCTAssertEqual(event.acquisitionChannel, .referral)
+        let firstLeasedBatch = await repository.leaseBatch(
+            ownerID: "first-open",
+            configuration: AnalyticsUploadConfiguration(
+                endpoint: URL(string: "https://analytics.test/events")!
+            )
+        )
+        let firstLease = try XCTUnwrap(firstLeasedBatch)
+        XCTAssertEqual(firstLease.installationID, analyticsTestUUID(1))
+        await repository.releaseEvents(firstLease.events, leaseID: firstLease.leaseID)
+        await repository.releaseGlobalLease(ownerID: "first-open")
 
         let restarted = AnalyticsRepository(
             configuration: AnalyticsRepositoryConfiguration(databaseURL: url),
@@ -317,6 +326,72 @@ final class AnalyticsRepositoryTests: XCTestCase {
         XCTAssertTrue(completedSnapshot.pendingEvents.isEmpty)
     }
 
+    func testLeaseNeverMixesInstallationsInOneBatch() async throws {
+        let url = try analyticsTemporaryDatabaseURL()
+        let clock = AnalyticsTestWallClock()
+        let repository = AnalyticsRepository(
+            configuration: AnalyticsRepositoryConfiguration(databaseURL: url),
+            clock: clock,
+            uuidGenerator: AnalyticsTestUUIDGenerator()
+        )
+        await analyticsRecordKeyboardEvents(count: 1, repository: repository)
+
+        let secondEvent = try AnalyticsEvent(
+            clientEventId: analyticsTestUUID(99),
+            eventType: .keyboardActivated,
+            occurredAt: clock.now(),
+            surface: .keyboard,
+            appVersion: "2.0.0",
+            osVersion: "26.0"
+        )
+        let secondPayload = try AnalyticsCanonicalJSON.encode(secondEvent)
+        let database = try SQLiteDatabase(url: url, busyTimeoutMilliseconds: 2_000)
+        try database.execute(
+            """
+            INSERT INTO pending_events (
+                installation_id, client_event_id, event_type, occurred_at,
+                surface, payload, payload_size, priority, attempt_count,
+                next_attempt_at, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, ?)
+            """,
+            bindings: [
+                .text(analyticsTestUUID(2_000).uuidString.lowercased()),
+                .text(secondEvent.clientEventId.uuidString.lowercased()),
+                .text(secondEvent.eventType.rawValue),
+                .double(secondEvent.occurredAt.timeIntervalSince1970),
+                .text(secondEvent.surface.rawValue),
+                .blob(secondPayload),
+                .int64(Int64(secondPayload.count)),
+                .double(clock.now().timeIntervalSince1970 + 1)
+            ]
+        )
+
+        let upload = AnalyticsUploadConfiguration(
+            endpoint: URL(string: "https://analytics.test/events")!
+        )
+        let firstLeasedBatch = await repository.leaseBatch(
+            ownerID: "first-installation",
+            configuration: upload
+        )
+        let firstBatch = try XCTUnwrap(firstLeasedBatch)
+        XCTAssertEqual(firstBatch.events.count, 1)
+        let firstInstallation = firstBatch.installationID
+        let completed = await repository.complete(
+            rowIDs: firstBatch.events.map(\.rowID),
+            leaseID: firstBatch.leaseID
+        )
+        XCTAssertTrue(completed)
+        await repository.releaseGlobalLease(ownerID: "first-installation")
+
+        let secondLeasedBatch = await repository.leaseBatch(
+            ownerID: "second-installation",
+            configuration: upload
+        )
+        let secondBatch = try XCTUnwrap(secondLeasedBatch)
+        XCTAssertEqual(secondBatch.events.count, 1)
+        XCTAssertNotEqual(secondBatch.installationID, firstInstallation)
+    }
+
     func testBatchHonorsFiftyEventAndDynamicBodyByteLimits() async throws {
         let repository = AnalyticsRepository(
             configuration: AnalyticsRepositoryConfiguration(
@@ -452,10 +527,185 @@ final class AnalyticsRepositoryTests: XCTestCase {
         eventTypes = await repository.debugSnapshot().pendingEvents.compactMap(\.eventType)
         XCTAssertEqual(Set(eventTypes), [.firstOpen, .aiFeatureSucceeded])
     }
+
+    func testV1MigrationDropsIncompatibleQueuesAndRecreatesFirstOpen() async throws {
+        let url = try analyticsTemporaryDatabaseURL()
+        let installationID = analyticsTestUUID(42)
+        try createAnalyticsV1Fixture(
+            at: url,
+            installationID: installationID
+        )
+
+        let repository = AnalyticsRepository(
+            configuration: AnalyticsRepositoryConfiguration(databaseURL: url),
+            clock: AnalyticsTestWallClock(),
+            uuidGenerator: AnalyticsTestUUIDGenerator(startingAt: 100)
+        )
+        let migrated = await repository.debugSnapshot()
+        XCTAssertTrue(migrated.isAvailable)
+        XCTAssertEqual(migrated.installationID, installationID)
+        XCTAssertFalse(migrated.firstOpenRecorded)
+        XCTAssertTrue(migrated.pendingEvents.isEmpty)
+        XCTAssertTrue(migrated.quarantinedEvents.isEmpty)
+
+        await repository.prepare(
+            using: analyticsTestContext,
+            firstOpenAcquisitionChannel: .appStoreOrganic
+        )
+        let prepared = await repository.debugSnapshot()
+        XCTAssertTrue(prepared.firstOpenRecorded)
+        XCTAssertEqual(prepared.pendingEvents.map(\.eventType), [.firstOpen])
+        let events = try await analyticsDecodePendingEvents(repository: repository)
+        XCTAssertEqual(events.single?.acquisitionChannel, .appStoreOrganic)
+
+        let database = try SQLiteDatabase(url: url, busyTimeoutMilliseconds: 2_000)
+        XCTAssertEqual(try database.scalarInt64("PRAGMA user_version"), 2)
+        let pendingColumns = try database.query("PRAGMA table_info(pending_events)")
+            .compactMap { $0.text(at: 1) }
+        let quarantinedColumns = try database.query("PRAGMA table_info(quarantined_events)")
+            .compactMap { $0.text(at: 1) }
+        XCTAssertTrue(pendingColumns.contains("installation_id"))
+        XCTAssertTrue(quarantinedColumns.contains("installation_id"))
+    }
+
+    func testSuspendedDatabaseDropsRecordsUntilExplicitResume() async throws {
+        let repository = AnalyticsRepository(
+            configuration: AnalyticsRepositoryConfiguration(
+                databaseURL: try analyticsTemporaryDatabaseURL()
+            ),
+            clock: AnalyticsTestWallClock(),
+            uuidGenerator: AnalyticsTestUUIDGenerator()
+        )
+        await repository.record(
+            eventType: .keyboardActivated,
+            context: analyticsTestContext
+        )
+
+        await repository.suspendDatabaseAccess()
+        await repository.record(
+            eventType: .keyboardActivated,
+            context: analyticsTestContext
+        )
+        let suspendedSnapshot = await repository.debugSnapshot()
+        XCTAssertFalse(suspendedSnapshot.isAvailable)
+
+        await repository.resumeDatabaseAccess()
+        await repository.record(
+            eventType: .keyboardActivated,
+            context: analyticsTestContext
+        )
+        let resumedSnapshot = await repository.debugSnapshot()
+        XCTAssertTrue(resumedSnapshot.isAvailable)
+        XCTAssertEqual(resumedSnapshot.pendingEvents.count, 2)
+    }
 }
 
 private extension Array {
     var single: Element? {
         count == 1 ? first : nil
+    }
+}
+
+private func createAnalyticsV1Fixture(
+    at url: URL,
+    installationID: UUID
+) throws {
+    let database = try SQLiteDatabase(url: url, busyTimeoutMilliseconds: 2_000)
+    try database.immediateTransaction {
+        try database.execute(
+            """
+            CREATE TABLE metadata (
+                key TEXT PRIMARY KEY NOT NULL,
+                value BLOB NOT NULL
+            ) WITHOUT ROWID
+            """
+        )
+        try database.execute(
+            """
+            CREATE TABLE pending_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_event_id TEXT UNIQUE NOT NULL,
+                event_type TEXT NOT NULL,
+                occurred_at REAL NOT NULL,
+                surface TEXT NOT NULL,
+                payload BLOB NOT NULL,
+                payload_size INTEGER NOT NULL,
+                priority INTEGER NOT NULL,
+                lease_id TEXT,
+                lease_expires_at REAL,
+                attempt_count INTEGER NOT NULL DEFAULT 0,
+                next_attempt_at REAL NOT NULL DEFAULT 0,
+                created_at REAL NOT NULL
+            )
+            """
+        )
+        try database.execute(
+            """
+            CREATE TABLE quarantined_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_event_id TEXT UNIQUE NOT NULL,
+                event_type TEXT NOT NULL,
+                occurred_at REAL NOT NULL,
+                surface TEXT NOT NULL,
+                payload BLOB NOT NULL,
+                payload_size INTEGER NOT NULL,
+                attempt_count INTEGER NOT NULL,
+                reason TEXT NOT NULL,
+                quarantined_at REAL NOT NULL
+            )
+            """
+        )
+        for (key, value) in [
+            ("enabled", "1"),
+            ("installationId", installationID.uuidString.lowercased()),
+            ("firstOpenRecorded", "1"),
+            ("uploadLeaseOwner", "legacy-owner"),
+            ("uploadLeaseExpiresAt", "9999999999")
+        ] {
+            try database.execute(
+                "INSERT INTO metadata(key, value) VALUES(?, ?)",
+                bindings: [.text(key), .text(value)]
+            )
+        }
+        let legacyPayload = Data(
+            #"{"installationId":"legacy-must-not-upload","clientEventId":"old"}"#.utf8
+        )
+        try database.execute(
+            """
+            INSERT INTO pending_events (
+                client_event_id, event_type, occurred_at, surface, payload,
+                payload_size, priority, attempt_count, next_attempt_at, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?)
+            """,
+            bindings: [
+                .text(analyticsTestUUID(1).uuidString.lowercased()),
+                .text(AnalyticsEventType.firstOpen.rawValue),
+                .double(1_700_000_000),
+                .text(AnalyticsSurface.app.rawValue),
+                .blob(legacyPayload),
+                .int64(Int64(legacyPayload.count)),
+                .int64(2),
+                .double(1_700_000_000)
+            ]
+        )
+        try database.execute(
+            """
+            INSERT INTO quarantined_events (
+                client_event_id, event_type, occurred_at, surface, payload,
+                payload_size, attempt_count, reason, quarantined_at
+            ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)
+            """,
+            bindings: [
+                .text(analyticsTestUUID(2).uuidString.lowercased()),
+                .text(AnalyticsEventType.keyboardActivated.rawValue),
+                .double(1_700_000_000),
+                .text(AnalyticsSurface.keyboard.rawValue),
+                .blob(legacyPayload),
+                .int64(Int64(legacyPayload.count)),
+                .text("legacy"),
+                .double(1_700_000_001)
+            ]
+        )
+        try database.execute("PRAGMA user_version = 1")
     }
 }

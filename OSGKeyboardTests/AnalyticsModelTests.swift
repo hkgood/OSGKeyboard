@@ -10,7 +10,6 @@ import XCTest
 final class AnalyticsModelTests: XCTestCase {
     func testEventEncodingContainsOnlyAllowlistedKeysAndNoFreeTextContainer() throws {
         let event = try AnalyticsEvent(
-            installationId: analyticsTestUUID(1),
             clientEventId: analyticsTestUUID(2),
             eventType: .aiFeatureFailed,
             occurredAt: Date(timeIntervalSince1970: 1_700_000_000.125),
@@ -31,7 +30,6 @@ final class AnalyticsModelTests: XCTestCase {
         XCTAssertEqual(
             Set(object.keys),
             [
-                "installationId",
                 "clientEventId",
                 "eventType",
                 "occurredAt",
@@ -54,7 +52,6 @@ final class AnalyticsModelTests: XCTestCase {
 
     func testUnknownFieldsAreRejectedAtEveryWireEnvelope() throws {
         let event = try AnalyticsEvent(
-            installationId: analyticsTestUUID(1),
             clientEventId: analyticsTestUUID(2),
             eventType: .sessionStarted,
             occurredAt: Date(timeIntervalSince1970: 1_700_000_000),
@@ -88,6 +85,49 @@ final class AnalyticsModelTests: XCTestCase {
         )
     }
 
+    func testUploadRequestMatchesStrictKtorOpenAPIFixture() throws {
+        let fixture = Data(
+            """
+            {
+              "installationId": "00000000-0000-0000-0000-000000000001",
+              "events": [
+                {
+                  "clientEventId": "00000000-0000-0000-0000-000000000002",
+                  "eventType": "FIRST_OPEN",
+                  "occurredAt": "2023-11-14T22:13:20.000Z",
+                  "surface": "APP",
+                  "appVersion": "2.0.0",
+                  "osVersion": "26.0"
+                }
+              ]
+            }
+            """.utf8
+        )
+
+        let request = try JSONDecoder().decode(AnalyticsUploadRequest.self, from: fixture)
+        XCTAssertEqual(request.installationId, analyticsTestUUID(1))
+        XCTAssertEqual(request.events.single?.clientEventId, analyticsTestUUID(2))
+
+        let encoded = try AnalyticsCanonicalJSON.encode(request)
+        let object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: encoded) as? [String: Any]
+        )
+        XCTAssertEqual(Set(object.keys), ["installationId", "events"])
+        let event = try XCTUnwrap((object["events"] as? [[String: Any]])?.single)
+        XCTAssertEqual(
+            Set(event.keys),
+            [
+                "clientEventId",
+                "eventType",
+                "occurredAt",
+                "surface",
+                "appVersion",
+                "osVersion"
+            ]
+        )
+        XCTAssertNil(event["installationId"])
+    }
+
     func testEnvironmentFiltersAndTruncatesVersionsToSafeBound() {
         let environment = AnalyticsEnvironment(
             appVersion: String(repeating: "a", count: 40) + "/private",
@@ -106,7 +146,6 @@ final class AnalyticsModelTests: XCTestCase {
     func testPurchaseCancelledRequiresCancelledFailureCategory() throws {
         XCTAssertNoThrow(
             try AnalyticsEvent(
-                installationId: analyticsTestUUID(1),
                 clientEventId: analyticsTestUUID(2),
                 eventType: .purchaseCancelled,
                 occurredAt: Date(timeIntervalSince1970: 1_700_000_000),
@@ -119,7 +158,6 @@ final class AnalyticsModelTests: XCTestCase {
 
         XCTAssertThrowsError(
             try AnalyticsEvent(
-                installationId: analyticsTestUUID(1),
                 clientEventId: analyticsTestUUID(3),
                 eventType: .purchaseCancelled,
                 occurredAt: Date(timeIntervalSince1970: 1_700_000_000),
@@ -161,5 +199,11 @@ final class AnalyticsModelTests: XCTestCase {
             }
             XCTAssertEqual(field, expected, file: file, line: line)
         }
+    }
+}
+
+private extension Array {
+    var single: Element? {
+        count == 1 ? first : nil
     }
 }

@@ -38,10 +38,14 @@ public struct HostPrivateAccountKeychainDescriptor: Equatable, Sendable {
     }
 }
 
-public actor HostPrivateAccountKeychain: AccountSessionVault, AppAttestKeyStateStoring {
+public actor HostPrivateAccountKeychain:
+    AccountSessionVault,
+    AppAttestKeyStateStoring,
+    OOBEInstallationIDStoring {
     private enum Account {
         static let session = "account.session"
         static let appAttestKeyState = "integrity.app-attest-key-state"
+        static let oobeInstallationID = "oobe.installation-id"
     }
 
     let descriptor: HostPrivateAccountKeychainDescriptor
@@ -76,6 +80,15 @@ public actor HostPrivateAccountKeychain: AccountSessionVault, AppAttestKeyStateS
 
     public func clearAppAttestKeyState() async throws {
         try delete(account: Account.appAttestKeyState)
+    }
+
+    public func oobeInstallationID() async throws -> UUID {
+        if let existing = try read(UUID.self, account: Account.oobeInstallationID) {
+            return existing
+        }
+        let created = UUID()
+        try write(created, account: Account.oobeInstallationID)
+        return created
     }
 
     private func read<Value: Decodable>(_ type: Value.Type, account: String) throws -> Value? {

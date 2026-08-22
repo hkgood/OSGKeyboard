@@ -2,7 +2,8 @@
 // OSGKeyboard · Main App
 //
 // Adapts the host-private account protocol to the account-center UI. Account
-// sessions never enter App Group storage; only scope-limited gateway grants do.
+// session credentials never enter App Group storage; only a non-secret local
+// eligibility marker and scope-limited gateway grants are shared.
 
 import Foundation
 import OSGKeyboardHostSupport
@@ -40,6 +41,7 @@ enum LiveAccountDependencyFactory {
         )
         return AccountDependencies(
             sessionService: service,
+            sessionEventSource: service,
             centerService: service,
             referralService: LiveReferralProfileService(apiClient: apiClient)
         )
@@ -162,7 +164,10 @@ actor LiveReferralProfileService: ReferralProfileServicing {
     }
 }
 
-private actor LiveAccountService: AccountSessionServicing, AccountCenterServicing {
+private actor LiveAccountService:
+    AccountSessionServicing,
+    AccountSessionEventSourcing,
+    AccountCenterServicing {
     private let apiClient: AccountAPIClient
     private let accountCenterLoader: AccountCenterSnapshotLoader
     private let integrity: DeviceIntegrityCoordinator
@@ -187,14 +192,37 @@ private actor LiveAccountService: AccountSessionServicing, AccountCenterServicin
         self.configuration = configuration
     }
 
+    func events() async -> AsyncStream<AccountSessionEvent> {
+        let invalidations = await apiClient.sessionInvalidations()
+        return AsyncStream { continuation in
+            let task = Task {
+                for await invalidation in invalidations {
+                    switch invalidation {
+                    case .expired:
+                        await self.invalidateManagedGatewaySession()
+                        continuation.yield(.expired)
+                    }
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in
+                task.cancel()
+            }
+        }
+    }
+
     func restoreSession() async throws -> AccountSession? {
-        guard let cachedSession = try await apiClient.currentSession() else { return nil }
+        guard let cachedSession = try await apiClient.currentSession() else {
+            await invalidateManagedGatewaySession()
+            return nil
+        }
         let account: OSGAccount?
         do {
             account = try await apiClient.account()
         } catch let error as AccountAPIError {
             switch error {
             case .sessionUnavailable, .unauthorized, .refreshTokenReuse:
+                await invalidateManagedGatewaySession()
                 return nil
             default:
                 account = nil
@@ -203,6 +231,7 @@ private actor LiveAccountService: AccountSessionServicing, AccountCenterServicin
             account = nil
         }
         let session = try await apiClient.currentSession() ?? cachedSession
+        configuration.setManagedGatewayAccountSessionAvailable(true)
         await synchronizeManagedGrant()
         return uiSession(
             session,
@@ -253,7 +282,6 @@ private actor LiveAccountService: AccountSessionServicing, AccountCenterServicin
             )
             throw error
         }
-        await synchronizeManagedGrant()
         let account: OSGAccount
         do {
             account = try await apiClient.account()
@@ -264,6 +292,8 @@ private actor LiveAccountService: AccountSessionServicing, AccountCenterServicin
             )
             throw error
         }
+        configuration.setManagedGatewayAccountSessionAvailable(true)
+        await synchronizeManagedGrant()
         OSGDiag.log("signIn completed", category: "account")
         return uiSession(
             session,
@@ -273,16 +303,16 @@ private actor LiveAccountService: AccountSessionServicing, AccountCenterServicin
     }
 
     func signOut() async throws {
+        configuration.setManagedGatewayAccountSessionAvailable(false)
+        configuration.setCredentialSource(.byok)
         await revokeManagedGrantIfPossible()
         do {
             try await apiClient.logout()
         } catch {
             try? await grants.clearGrant()
-            configuration.setCredentialSource(.byok)
             throw error
         }
         try? await grants.clearGrant()
-        configuration.setCredentialSource(.byok)
     }
 
     func deleteAccount(with payload: AppleAuthorizationPayload) async throws {
@@ -293,13 +323,16 @@ private actor LiveAccountService: AccountSessionServicing, AccountCenterServicin
         )
         try? await grants.clearGrant()
         await integrity.clearLocalKeyState()
+        configuration.setManagedGatewayAccountSessionAvailable(false)
         configuration.setCredentialSource(.byok)
     }
 
     func prepareManagedGateway() async throws {
         guard try await apiClient.currentSession() != nil else {
+            await invalidateManagedGatewaySession()
             throw AccountAPIError.sessionUnavailable
         }
+        configuration.setManagedGatewayAccountSessionAvailable(true)
         try await ensureManagedGrant()
     }
 
@@ -459,6 +492,14 @@ private actor LiveAccountService: AccountSessionServicing, AccountCenterServicin
                 .revokeGatewayGrant(grantId)
             )
         }
+        try? await grants.clearGrant()
+    }
+
+    private func invalidateManagedGatewaySession() async {
+        // Flip the local gate before any await so the extension immediately
+        // loses access to cached account grants.
+        configuration.setManagedGatewayAccountSessionAvailable(false)
+        configuration.setCredentialSource(.byok)
         try? await grants.clearGrant()
     }
 

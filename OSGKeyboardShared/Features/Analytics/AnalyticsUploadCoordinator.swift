@@ -77,7 +77,7 @@ public actor AnalyticsUploadCoordinator {
     /// Performs a bounded drain. The default keeps extension execution time and
     /// memory predictable while allowing a host app to request more batches.
     public func uploadAvailableEvents(maximumBatches: Int = 1) async {
-        guard !uploadInProgress else { return }
+        guard !uploadInProgress, !Task.isCancelled else { return }
         uploadInProgress = true
         defer { uploadInProgress = false }
 
@@ -95,10 +95,19 @@ public actor AnalyticsUploadCoordinator {
         let ownerID = uuidGenerator.makeUUID().uuidString.lowercased()
         let batchLimit = max(1, maximumBatches)
         for _ in 0..<batchLimit {
+            guard !Task.isCancelled else { return }
             guard let batch = await repository.leaseBatch(
                 ownerID: ownerID,
                 configuration: configuration
             ) else {
+                return
+            }
+            guard !Task.isCancelled else {
+                await releaseForCancellation(
+                    events: batch.events,
+                    leaseID: batch.leaseID,
+                    ownerID: ownerID
+                )
                 return
             }
 
@@ -107,6 +116,14 @@ public actor AnalyticsUploadCoordinator {
                 do {
                     authorization.token = try await bearerProvider.bearerToken()
                 } catch {
+                    if Task.isCancelled {
+                        await releaseForCancellation(
+                            events: batch.events,
+                            leaseID: batch.leaseID,
+                            ownerID: ownerID
+                        )
+                        return
+                    }
                     await scheduleRetry(
                         events: batch.events,
                         leaseID: batch.leaseID,
@@ -120,21 +137,28 @@ public actor AnalyticsUploadCoordinator {
 
             await process(
                 events: batch.events,
+                installationID: batch.installationID,
                 leaseID: batch.leaseID,
                 ownerID: ownerID,
                 authorization: &authorization
             )
             await repository.releaseGlobalLease(ownerID: ownerID)
+            guard !Task.isCancelled else { return }
         }
     }
 
     private func process(
         events: [AnalyticsLeasedEvent],
+        installationID: UUID,
         leaseID: String,
         ownerID: String,
         authorization: inout AuthorizationState
     ) async {
         guard !events.isEmpty else { return }
+        guard !Task.isCancelled else {
+            await repository.releaseEvents(events, leaseID: leaseID)
+            return
+        }
         guard await renewLease(
             events: events,
             leaseID: leaseID,
@@ -142,11 +166,23 @@ public actor AnalyticsUploadCoordinator {
         ) else {
             return
         }
+        guard !Task.isCancelled else {
+            await repository.releaseEvents(events, leaseID: leaseID)
+            return
+        }
 
         let response: AnalyticsHTTPResponse
         do {
-            response = try await send(events: events, token: authorization.token)
+            response = try await send(
+                events: events,
+                installationID: installationID,
+                token: authorization.token
+            )
         } catch {
+            if Task.isCancelled {
+                await repository.releaseEvents(events, leaseID: leaseID)
+                return
+            }
             await scheduleRetry(
                 events: events,
                 leaseID: leaseID,
@@ -172,15 +208,24 @@ public actor AnalyticsUploadCoordinator {
                 ) else {
                     return
                 }
-                let refreshed = try await send(events: events, token: authorization.token)
+                let refreshed = try await send(
+                    events: events,
+                    installationID: installationID,
+                    token: authorization.token
+                )
                 await processResponse(
                     refreshed,
                     events: events,
+                    installationID: installationID,
                     leaseID: leaseID,
                     ownerID: ownerID,
                     authorization: &authorization
                 )
             } catch {
+                if Task.isCancelled {
+                    await repository.releaseEvents(events, leaseID: leaseID)
+                    return
+                }
                 await scheduleRetry(
                     events: events,
                     leaseID: leaseID,
@@ -195,6 +240,7 @@ public actor AnalyticsUploadCoordinator {
         await processResponse(
             response,
             events: events,
+            installationID: installationID,
             leaseID: leaseID,
             ownerID: ownerID,
             authorization: &authorization
@@ -204,10 +250,15 @@ public actor AnalyticsUploadCoordinator {
     private func processResponse(
         _ response: AnalyticsHTTPResponse,
         events: [AnalyticsLeasedEvent],
+        installationID: UUID,
         leaseID: String,
         ownerID: String,
         authorization: inout AuthorizationState
     ) async {
+        guard !Task.isCancelled else {
+            await repository.releaseEvents(events, leaseID: leaseID)
+            return
+        }
         switch response.statusCode {
         case 200:
             let decoded: AnalyticsUploadResponse
@@ -270,12 +321,14 @@ public actor AnalyticsUploadCoordinator {
             let midpoint = events.count / 2
             await process(
                 events: Array(events[..<midpoint]),
+                installationID: installationID,
                 leaseID: leaseID,
                 ownerID: ownerID,
                 authorization: &authorization
             )
             await process(
                 events: Array(events[midpoint...]),
+                installationID: installationID,
                 leaseID: leaseID,
                 ownerID: ownerID,
                 authorization: &authorization
@@ -340,8 +393,18 @@ public actor AnalyticsUploadCoordinator {
         }
     }
 
+    private func releaseForCancellation(
+        events: [AnalyticsLeasedEvent],
+        leaseID: String,
+        ownerID: String
+    ) async {
+        await repository.releaseEvents(events, leaseID: leaseID)
+        await repository.releaseGlobalLease(ownerID: ownerID)
+    }
+
     private func send(
         events: [AnalyticsLeasedEvent],
+        installationID: UUID,
         token: String?
     ) async throws -> AnalyticsHTTPResponse {
         var headers = [
@@ -355,7 +418,10 @@ public actor AnalyticsUploadCoordinator {
             AnalyticsHTTPRequest(
                 url: configuration.endpoint,
                 headers: headers,
-                body: Self.requestBody(for: events)
+                body: Self.requestBody(
+                    for: events,
+                    installationID: installationID
+                )
             )
         )
     }
@@ -445,8 +511,14 @@ public actor AnalyticsUploadCoordinator {
         events.map(\.attemptCount).max() ?? 0
     }
 
-    private static func requestBody(for events: [AnalyticsLeasedEvent]) -> Data {
-        var body = Data(#"{"events":["#.utf8)
+    private static func requestBody(
+        for events: [AnalyticsLeasedEvent],
+        installationID: UUID
+    ) -> Data {
+        var body = Data(
+            #"{"installationId":"\#(installationID.uuidString.lowercased())","events":["#
+                .utf8
+        )
         for index in events.indices {
             if index > 0 {
                 body.append(UInt8(ascii: ","))

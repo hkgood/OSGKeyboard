@@ -13,11 +13,14 @@ public final class AIAgentSkillLayoutStore: ObservableObject {
 
     @Published public private(set) var layout: AIAgentSkillLayout
     @Published public private(set) var userCatalog: AIUserSkillCatalog
+    @Published public private(set) var officialCatalog: OfficialSkillCatalog
 
     private let persistLayout: (AIAgentSkillLayout) -> Void
     private let persistUserCatalog: (AIUserSkillCatalog) -> Void
     private let loadLayout: () -> AIAgentSkillLayout
     private let loadUserCatalog: () -> AIUserSkillCatalog
+    private let loadOfficialCatalog: () -> OfficialSkillCatalog
+    private let loadUILanguage: () -> AppUILanguage
 
     public init(defaults: UserDefaults? = nil) {
         if let defaults {
@@ -25,29 +28,41 @@ public final class AIAgentSkillLayoutStore: ObservableObject {
             self.persistUserCatalog = { AppGroupStore(defaults: defaults).setAgentUserSkillCatalog($0) }
             self.loadLayout = { AppGroupStore(defaults: defaults).agentSkillLayout }
             self.persistLayout = { AppGroupStore(defaults: defaults).setAgentSkillLayout($0) }
+            self.loadOfficialCatalog = { AppGroupStore(defaults: defaults).officialSkillCatalog }
+            self.loadUILanguage = { AppGroupStore(defaults: defaults).uiLanguage }
         } else {
             self.loadUserCatalog = { AppGroupStore().agentUserSkillCatalog }
             self.persistUserCatalog = { AppGroupStore().setAgentUserSkillCatalog($0) }
             self.loadLayout = { AppGroupStore().agentSkillLayout }
             self.persistLayout = { AppGroupStore().setAgentSkillLayout($0) }
+            self.loadOfficialCatalog = { AppGroupStore().officialSkillCatalog }
+            self.loadUILanguage = { AppGroupStore().uiLanguage }
         }
         self.userCatalog = self.loadUserCatalog()
+        self.officialCatalog = self.loadOfficialCatalog()
         self.layout = self.loadLayout()
     }
 
     public func reload() {
         userCatalog = loadUserCatalog()
+        officialCatalog = loadOfficialCatalog()
         layout = loadLayout()
     }
 
     public var mergedCatalog: [AIClipboardSkill] {
-        AIClipboardSkillCatalog.all(userCatalog: userCatalog)
+        AIClipboardSkillCatalog.all(
+            officialCatalog: officialCatalog,
+            userCatalog: userCatalog,
+            uiLanguage: loadUILanguage()
+        )
     }
 
     public var enabledSkills: [AIClipboardSkill] {
         AIClipboardSkillCatalog.visible(
             enabledIDs: layout.enabledIDs,
-            userCatalog: userCatalog
+            officialCatalog: officialCatalog,
+            userCatalog: userCatalog,
+            uiLanguage: loadUILanguage()
         )
     }
 
@@ -62,14 +77,13 @@ public final class AIAgentSkillLayoutStore: ObservableObject {
     @discardableResult
     public func enable(_ id: String) -> AIAgentSkillEnableResult {
         let current = layout.sanitized(catalog: mergedCatalog)
-        guard let skill = AIClipboardSkillCatalog.skill(id: id, userCatalog: userCatalog) else {
+        guard let skill = mergedCatalog.first(where: { $0.id == id }) else {
             return .unknown
         }
         if current.isEnabled(id) { return .alreadyEnabled }
         if skill.requiresShortcut, !current.hasConfirmedShortcut(id) {
             return .needsShortcut
         }
-        if current.isFull { return .full }
         commitLayout(
             AIAgentSkillLayout(
                 enabledIDs: current.enabledIDs + [id],
@@ -94,7 +108,7 @@ public final class AIAgentSkillLayoutStore: ObservableObject {
     /// Marks the companion Shortcut as added, then tries to occupy a slot.
     @discardableResult
     public func confirmShortcutAndEnable(_ id: String) -> AIAgentSkillEnableResult {
-        guard let skill = AIClipboardSkillCatalog.skill(id: id, userCatalog: userCatalog),
+        guard let skill = mergedCatalog.first(where: { $0.id == id }),
               skill.requiresShortcut else {
             return .unknown
         }

@@ -15,6 +15,9 @@
 "onboarding.api.localReady.title" = "本地识别已就绪";
 "onboarding.api.localReady.body" = "识别在端侧完成。请在设置中填写 API Key 以开启 AI 润色。";
 "keyboard.onboarding.practice.mic" = "点按麦克风，说完后再点一次";
+"keyboard.onboarding.practice.translate" = "点击「翻译」，再插入生成的文字";
+"keyboard.onboarding.practice.reply" = "点击「回复」，让 AI 起草可发送的回复";
+"keyboard.onboarding.practice.askAI" = "长按麦克风，说出你想问的问题";
 
 /* Common navigation */
 "common.back" = "返回";
@@ -317,8 +320,18 @@
 "keyboard.ai.error.requestFailed" = "AI 回答失败，请重试";
 "keyboard.ai.error.clipboardUnavailable" = "剪贴板建议已过期，请重新复制文本";
 "keyboard.ai.skill.reply" = "回复";
+"keyboard.ai.skill.replyInSourceLanguage" = "原语言回复";
 "keyboard.ai.skill.summarize" = "总结";
+"keyboard.ai.skill.extractConclusions" = "提取结论";
 "keyboard.ai.skill.translate" = "翻译";
+"keyboard.ai.skill.acceptInvitation" = "接受邀约";
+"keyboard.ai.skill.declineInvitation" = "委婉拒绝";
+"keyboard.ai.skill.acceptTask" = "确认任务";
+"keyboard.ai.skill.clarifyRequest" = "澄清要求";
+"keyboard.ai.skill.empathyReply" = "共情回复";
+"keyboard.ai.skill.askForDetails" = "询问细节";
+"keyboard.ai.skill.businessReply" = "商务回复";
+"keyboard.ai.skill.organizeList" = "整理清单";
 "keyboard.ai.skill.extractTodos" = "待办";
 "keyboard.ai.skill.extractEvents" = "日程";
 "keyboard.ai.skill.saveToNotes" = "备忘录";

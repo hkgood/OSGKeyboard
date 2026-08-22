@@ -38,8 +38,11 @@ final class AnalyticsUploadCoordinatorTests: XCTestCase {
         let topLevel = try XCTUnwrap(
             JSONSerialization.jsonObject(with: request.body) as? [String: Any]
         )
-        XCTAssertEqual(Set(topLevel.keys), ["events"])
-        XCTAssertEqual((topLevel["events"] as? [Any])?.count, 2)
+        XCTAssertEqual(Set(topLevel.keys), ["installationId", "events"])
+        XCTAssertEqual(topLevel["installationId"] as? String, analyticsTestUUID(1).uuidString.lowercased())
+        let eventObjects = try XCTUnwrap(topLevel["events"] as? [[String: Any]])
+        XCTAssertEqual(eventObjects.count, 2)
+        XCTAssertTrue(eventObjects.allSatisfy { !$0.keys.contains("installationId") })
     }
 
     func testCountMismatchRetriesWithoutMutatingPayloadOrEventID() async throws {
@@ -262,6 +265,39 @@ final class AnalyticsUploadCoordinatorTests: XCTestCase {
         XCTAssertEqual(requests.count, 1)
     }
 
+    func testCancellationReleasesLeasesWithoutSchedulingRetry() async throws {
+        let clock = AnalyticsTestWallClock()
+        let repository = try await makeRepository(clock: clock, eventCount: 1)
+        let network = CancellableAnalyticsNetwork()
+        let coordinator = makeCoordinator(
+            repository: repository,
+            network: network,
+            clock: clock
+        )
+        let upload = Task {
+            await coordinator.uploadAvailableEvents()
+        }
+        for _ in 0..<100 {
+            if await network.didStart() {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        let didStart = await network.didStart()
+        XCTAssertTrue(didStart)
+
+        upload.cancel()
+        await upload.value
+
+        let snapshot = await repository.debugSnapshot()
+        XCTAssertEqual(snapshot.pendingEvents.first?.attemptCount, 0)
+        let recovered = await repository.leaseBatch(
+            ownerID: "after-cancellation",
+            configuration: uploadConfiguration()
+        )
+        XCTAssertEqual(recovered?.events.count, 1)
+    }
+
     private func makeRepository(
         clock: AnalyticsTestWallClock,
         eventCount: Int,
@@ -304,5 +340,20 @@ final class AnalyticsUploadCoordinatorTests: XCTestCase {
             uuidGenerator: AnalyticsTestUUIDGenerator(startingAt: 5_000),
             random: random
         )
+    }
+}
+
+private actor CancellableAnalyticsNetwork: AnalyticsNetworking {
+    private var started = false
+
+    func send(_ request: AnalyticsHTTPRequest) async throws -> AnalyticsHTTPResponse {
+        _ = request
+        started = true
+        try await Task.sleep(for: .seconds(30))
+        return analyticsSuccessResponse(accepted: 1)
+    }
+
+    func didStart() -> Bool {
+        started
     }
 }

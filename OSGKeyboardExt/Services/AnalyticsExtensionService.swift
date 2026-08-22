@@ -1,100 +1,48 @@
 // AnalyticsExtensionService.swift
 // OSGKeyboard · Keyboard Extension
 //
-// The extension records into the shared SQLite queue and only attempts one
-// short anonymous batch when Full Access permits network use.
+// The extension only records into durable queues. The host app is the sole
+// network uploader, avoiding extension-lifecycle and cross-process lock races.
 
 import Foundation
 import OSGKeyboardShared
-import OSLog
-
-private actor ExtensionAnalyticsUploadSignal: AnalyticsUploadTriggering {
-    typealias Action = @Sendable () async -> Void
-
-    private var action: Action?
-    private var canUpload = false
-    private var isUploading = false
-
-    func install(_ action: @escaping Action) {
-        self.action = action
-    }
-
-    func setCanUpload(_ canUpload: Bool) {
-        self.canUpload = canUpload
-    }
-
-    func requestUpload() {
-        guard canUpload, !isUploading, let action else { return }
-        isUploading = true
-        Task {
-            await action()
-            uploadFinished()
-        }
-    }
-
-    private func uploadFinished() {
-        isUploading = false
-    }
-}
-
-private struct ExtensionAnalyticsLogger: AnalyticsLogging {
-    private let logger = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "com.osgkeyboard.ios.keyboard",
-        category: "analytics"
-    )
-
-    func log(_ entry: AnalyticsUploadLogEntry) {
-        let statusCode = entry.statusCode ?? 0
-        let errorCategory = entry.errorCategory?.rawValue ?? "none"
-        logger.info(
-            "outcome=\(entry.outcome.rawValue, privacy: .public) count=\(entry.eventCount, privacy: .public) status=\(statusCode, privacy: .public) attempt=\(entry.attempt, privacy: .public) error=\(errorCategory, privacy: .public)"
-        )
-    }
-}
 
 final class AnalyticsExtensionService: Sendable {
     static let shared = AnalyticsExtensionService()
 
     let client: any AnalyticsClient
-
-    private let runtime: AnalyticsRuntime
-    private let uploadSignal: ExtensionAnalyticsUploadSignal
+    let keyboardUsageRecorder: any KeyboardUsageRecording
 
     private init() {
-        let signal = ExtensionAnalyticsUploadSignal()
-        uploadSignal = signal
+        let environment = Self.environment
         let runtime = AnalyticsRuntime.keyboardExtension(
-            environment: Self.environment,
-            uploadConfiguration: AnalyticsUploadConfiguration(endpoint: Self.endpoint),
-            trigger: signal,
-            logger: ExtensionAnalyticsLogger()
+            environment: environment,
+            uploadConfiguration: AnalyticsUploadConfiguration(endpoint: Self.endpoint)
         )
-        self.runtime = runtime
+        let keyboardUsageRuntime = KeyboardUsageRuntime(
+            environment: environment,
+            analyticsRepository: runtime.repository,
+            uploadConfiguration: KeyboardUsageUploadConfiguration(
+                endpoint: Self.keyboardUsageEndpoint
+            )
+        )
         client = runtime.client
-
-        Task {
-            await signal.install {
-                await runtime.uploadCoordinator.uploadAvailableEvents(maximumBatches: 1)
-            }
-        }
+        keyboardUsageRecorder = keyboardUsageRuntime.recorder
     }
 
-    func recordPresentation(hasFullAccess: Bool) {
-        Task {
-            await uploadSignal.setCanUpload(hasFullAccess)
-            client.recordSessionActivity()
-            client.recordKeyboardActivated()
-        }
+    func recordPresentation(hasFullAccess _: Bool) {
+        client.recordSessionActivity()
+        client.recordKeyboardActivated()
     }
 
-    func keyboardWillDisappear() {
-        Task {
-            await uploadSignal.setCanUpload(false)
-        }
-    }
+    func keyboardWillDisappear() {}
 
     private static let endpoint = URL(
         string: "https://account.osglab.com/v1/analytics/events"
+    )!
+
+    private static let keyboardUsageEndpoint = URL(
+        string: "https://account.osglab.com/v1/analytics/keyboard-usage"
     )!
 
     private static var environment: AnalyticsEnvironment {

@@ -423,7 +423,15 @@ final class MacDictationViewModel: ObservableObject {
                     targetApplication: targetApplication
                 )
                 self.recordUsage(for: result.text)
-                self.speechHistory.append(text: result.text)
+                self.speechHistory.append(
+                    text: result.text,
+                    prePolishText: result.prePolishText,
+                    wasTranslation: store.isTranslationEffective,
+                    polishStyleID: result.polishStyleID
+                        ?? store.activePolishStyleId,
+                    polishStylePrompt: result.polishStylePrompt,
+                    engineMode: store.engineMode
+                )
                 self.appendToOverview(result.text)
                 self.statusMessage = self.statusAfterDelivery(
                     pasted: pasted,

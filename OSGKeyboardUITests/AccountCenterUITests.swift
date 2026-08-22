@@ -23,6 +23,18 @@ final class AccountCenterUITests: XCTestCase {
         XCTAssertTrue(element("account.purchaseHistory.link", in: app).exists)
     }
 
+    func testCreditProductsRemainVisibleWhenAccountSnapshotFails() {
+        let app = launch(arguments: [
+            "--account-ui-test",
+            "--account-snapshot-failure"
+        ])
+
+        XCTAssertTrue(element("account.center.signedIn", in: app).waitForExistence(timeout: 10))
+        XCTAssertTrue(element("account.purchase.500tks", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(element("account.purchase.1500tks", in: app).exists)
+        XCTAssertTrue(element("account.purchase.3000tks", in: app).exists)
+    }
+
     func testVerifiedCreditPurchaseShowsSuccessState() {
         let app = launch()
         let purchase = element("account.purchase.500tks", in: app)
@@ -33,6 +45,7 @@ final class AccountCenterUITests: XCTestCase {
         let status = element("account.purchase.status", in: app)
         XCTAssertTrue(status.waitForExistence(timeout: 5))
         XCTAssertTrue(status.label.contains("500"))
+        XCTAssertTrue(status.waitForNonExistence(timeout: 6))
     }
 
     func testPurchaseHistoryOpensVerifiedTransactions() {

@@ -16,12 +16,12 @@ public enum AppGroup {
     /// The suite alone can appear to open while the container is still `(null)`
     /// when provisioning is misconfigured — that case produces the
     /// `CFPrefsPlistSource … Container: (null)` console warning.
-    public static let isAvailable: Bool = {
+    public static var isAvailable: Bool {
         guard UserDefaults(suiteName: identifier) != nil else { return false }
         return FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: identifier
         ) != nil
-    }()
+    }
 
     /// On-disk container path (or `"nil"`) for diagnostics. When this reads
     /// `nil` in a process, that process cannot share App Group state — the

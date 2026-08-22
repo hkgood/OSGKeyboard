@@ -238,8 +238,14 @@ func analyticsDecodePendingEvents(
     return try payloads.map { try JSONDecoder().decode(AnalyticsEvent.self, from: $0) }
 }
 
-func analyticsRequestBody(payloads: [Data]) -> Data {
-    var body = Data(#"{"events":["#.utf8)
+func analyticsRequestBody(
+    payloads: [Data],
+    installationID: UUID = analyticsTestUUID(1)
+) -> Data {
+    var body = Data(
+        #"{"installationId":"\#(installationID.uuidString.lowercased())","events":["#
+            .utf8
+    )
     for index in payloads.indices {
         if index > 0 {
             body.append(UInt8(ascii: ","))

@@ -4,6 +4,9 @@
 // The single HTTP exit for account, auth, and integrity traffic.
 
 import Foundation
+#if canImport(OSGKeyboardShared)
+import OSGKeyboardShared
+#endif
 
 public protocol AccountHTTPTransport: Sendable {
     func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse)
@@ -36,6 +39,7 @@ public actor AccountAPIClient {
         case integrityChallenge
         case attest
         case assert
+        case oobeGrant
 
         var method: String {
             switch self {
@@ -66,12 +70,15 @@ public actor AccountAPIClient {
                 return "/v1/integrity/attest"
             case .assert:
                 return "/v1/integrity/assert"
+            case .oobeGrant:
+                return "/v1/oobe/grants"
             }
         }
     }
 
     private struct RefreshOperation {
         let id: UUID
+        let failedAccessToken: String
         let task: Task<AccountSession, Error>
     }
 
@@ -85,6 +92,9 @@ public actor AccountAPIClient {
     private var cachedSession: AccountSession?
     private var didLoadSession = false
     private var refreshOperation: RefreshOperation?
+    private var invalidationContinuations: [
+        UUID: AsyncStream<AccountSessionInvalidation>.Continuation
+    ] = [:]
 
     public init(
         baseURL: URL = URL(string: "https://account.osglab.com")!,
@@ -115,6 +125,18 @@ public actor AccountAPIClient {
 
     public func currentSession() async throws -> AccountSession? {
         try await loadSessionIfNeeded()
+    }
+
+    public func sessionInvalidations() -> AsyncStream<AccountSessionInvalidation> {
+        let id = UUID()
+        return AsyncStream { continuation in
+            invalidationContinuations[id] = continuation
+            continuation.onTermination = { [weak self] _ in
+                Task {
+                    await self?.removeInvalidationContinuation(id: id)
+                }
+            }
+        }
     }
 
     public func accessTokenForAuthorizedRequest() async throws -> String {
@@ -184,7 +206,9 @@ public actor AccountAPIClient {
             )
             let retryResponse = try await send(retryRequest)
             if retryResponse.response.statusCode == 401 {
-                try await clearSession()
+                try await invalidateSession(
+                    ifAccessTokenMatches: replacement.accessToken
+                )
             }
             return try validatedData(retryResponse)
         }
@@ -273,6 +297,25 @@ public actor AccountAPIClient {
         return try decode(AppAssertionResponse.self, from: data).counter
     }
 
+    public func requestOOBEGrant(
+        _ request: OOBEGrantRequest
+    ) async throws -> ManagedGatewayGrantCredentials {
+        let data = try await perform(
+            endpoint: .oobeGrant,
+            body: try encode(request),
+            requiresSession: false
+        )
+        do {
+            let response = try Self.gatewayDecoder().decode(
+                ManagedGatewayGrantTokenResponse.self,
+                from: data
+            )
+            return response.credentials(receivedAt: now())
+        } catch {
+            throw AccountAPIError.decoding
+        }
+    }
+
     private func perform(
         endpoint: Endpoint,
         body: Data?,
@@ -319,7 +362,9 @@ public actor AccountAPIClient {
             )
             let retryResponse = try await send(retryRequest)
             if retryResponse.response.statusCode == 401 {
-                try await clearSession()
+                try await invalidateSession(
+                    ifAccessTokenMatches: replacement.accessToken
+                )
             }
             return try validatedData(retryResponse)
         }
@@ -345,7 +390,9 @@ public actor AccountAPIClient {
         }
         let nowSeconds = Int64(now().timeIntervalSince1970)
         guard session.refreshTokenExpiresAtEpochSeconds > nowSeconds else {
-            try await clearSession()
+            try await invalidateSession(
+                ifAccessTokenMatches: session.accessToken
+            )
             throw AccountAPIError.unauthorized("The refresh token has expired.")
         }
         if session.accessTokenExpiresAtEpochSeconds <= nowSeconds + 30 {
@@ -367,6 +414,7 @@ public actor AccountAPIClient {
 
         let operation = RefreshOperation(
             id: UUID(),
+            failedAccessToken: current.accessToken,
             task: Task {
                 try await self.requestRefresh(using: current.refreshToken)
             }
@@ -378,6 +426,18 @@ public actor AccountAPIClient {
     private func finishRefresh(_ operation: RefreshOperation) async throws -> AccountSession {
         do {
             let replacement = try await operation.task.value
+            guard let current = try await loadSessionIfNeeded() else {
+                if refreshOperation?.id == operation.id {
+                    refreshOperation = nil
+                }
+                throw AccountAPIError.sessionUnavailable
+            }
+            if current.accessToken != operation.failedAccessToken {
+                if refreshOperation?.id == operation.id {
+                    refreshOperation = nil
+                }
+                return current
+            }
             try await replaceSession(with: replacement)
             if refreshOperation?.id == operation.id {
                 refreshOperation = nil
@@ -387,8 +447,14 @@ public actor AccountAPIClient {
             if refreshOperation?.id == operation.id {
                 refreshOperation = nil
             }
+            if let current = try? await loadSessionIfNeeded(),
+               current.accessToken != operation.failedAccessToken {
+                return current
+            }
             if shouldClearSession(afterRefreshError: error) {
-                try? await clearSession()
+                try? await invalidateSession(
+                    ifAccessTokenMatches: operation.failedAccessToken
+                )
             }
             throw error
         }
@@ -449,6 +515,30 @@ public actor AccountAPIClient {
         } catch {
             throw AccountAPIError.secureStorage
         }
+    }
+
+    private func invalidateSession(ifAccessTokenMatches expectedAccessToken: String) async throws {
+        guard let current = try await loadSessionIfNeeded(),
+              current.accessToken == expectedAccessToken else {
+            return
+        }
+        do {
+            try await clearSession()
+        } catch {
+            publishSessionInvalidation()
+            throw error
+        }
+        publishSessionInvalidation()
+    }
+
+    private func publishSessionInvalidation() {
+        invalidationContinuations.values.forEach {
+            $0.yield(.expired)
+        }
+    }
+
+    private func removeInvalidationContinuation(id: UUID) {
+        invalidationContinuations[id] = nil
     }
 
     private func makeRequest(
@@ -563,6 +653,29 @@ public actor AccountAPIClient {
         } catch {
             throw AccountAPIError.decoding
         }
+    }
+
+    private static func gatewayDecoder() -> JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            let fractional = ISO8601DateFormatter()
+            fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = fractional.date(from: value) {
+                return date
+            }
+            let standard = ISO8601DateFormatter()
+            standard.formatOptions = [.withInternetDateTime]
+            guard let date = standard.date(from: value) else {
+                throw DecodingError.dataCorruptedError(
+                    in: container,
+                    debugDescription: "Invalid ISO-8601 date"
+                )
+            }
+            return date
+        }
+        return decoder
     }
 }
 

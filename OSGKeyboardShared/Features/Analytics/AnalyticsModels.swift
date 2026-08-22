@@ -89,7 +89,6 @@ public enum AnalyticsModelError: Error, Sendable {
 }
 
 public struct AnalyticsEvent: Codable, Equatable, Sendable {
-    public let installationId: UUID
     public let clientEventId: UUID
     public let eventType: AnalyticsEventType
     public let occurredAt: Date
@@ -103,7 +102,6 @@ public struct AnalyticsEvent: Codable, Equatable, Sendable {
     public let durationBucket: AnalyticsDurationBucket?
 
     public init(
-        installationId: UUID,
         clientEventId: UUID,
         eventType: AnalyticsEventType,
         occurredAt: Date,
@@ -121,7 +119,6 @@ public struct AnalyticsEvent: Codable, Equatable, Sendable {
             throw AnalyticsModelError.invalidVersion
         }
 
-        self.installationId = installationId
         self.clientEventId = clientEventId
         self.eventType = eventType
         self.occurredAt = occurredAt
@@ -140,7 +137,6 @@ public struct AnalyticsEvent: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey, CaseIterable {
-        case installationId
         case clientEventId
         case eventType
         case occurredAt
@@ -160,7 +156,6 @@ public struct AnalyticsEvent: Codable, Equatable, Sendable {
             allowed: Set(CodingKeys.allCases.map(\.rawValue))
         )
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        let installationId = try container.decode(UUID.self, forKey: .installationId)
         let clientEventId = try container.decode(UUID.self, forKey: .clientEventId)
         let eventType = try container.decode(AnalyticsEventType.self, forKey: .eventType)
         let occurredAtText = try container.decode(String.self, forKey: .occurredAt)
@@ -172,7 +167,6 @@ public struct AnalyticsEvent: Codable, Equatable, Sendable {
             )
         }
         try self.init(
-            installationId: installationId,
             clientEventId: clientEventId,
             eventType: eventType,
             occurredAt: occurredAt,
@@ -204,7 +198,6 @@ public struct AnalyticsEvent: Codable, Equatable, Sendable {
             throw AnalyticsModelError.invalidDimensions(eventType)
         }
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(installationId, forKey: .installationId)
         try container.encode(clientEventId, forKey: .clientEventId)
         try container.encode(eventType, forKey: .eventType)
         try container.encode(AnalyticsWireDate.string(from: occurredAt), forKey: .occurredAt)
@@ -237,13 +230,16 @@ public struct AnalyticsEvent: Codable, Equatable, Sendable {
 }
 
 public struct AnalyticsUploadRequest: Codable, Equatable, Sendable {
+    public let installationId: UUID
     public let events: [AnalyticsEvent]
 
-    public init(events: [AnalyticsEvent]) {
+    public init(installationId: UUID, events: [AnalyticsEvent]) {
+        self.installationId = installationId
         self.events = events
     }
 
     private enum CodingKeys: String, CodingKey, CaseIterable {
+        case installationId
         case events
     }
 
@@ -253,6 +249,7 @@ public struct AnalyticsUploadRequest: Codable, Equatable, Sendable {
             allowed: Set(CodingKeys.allCases.map(\.rawValue))
         )
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        installationId = try container.decode(UUID.self, forKey: .installationId)
         events = try container.decode([AnalyticsEvent].self, forKey: .events)
     }
 }
@@ -335,6 +332,7 @@ private extension AnalyticsEventType {
         switch self {
         case .firstOpen, .inviteOpened:
             return [
+                .none,
                 DimensionSet(
                     acquisitionChannel: true,
                     feature: false,

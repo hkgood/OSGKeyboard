@@ -7,10 +7,8 @@ import SwiftUI
 struct MainTabView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @EnvironmentObject private var flowManager: FlowSessionManager
 
     @State private var tab: AppTab = .keyboard
-    @State private var isTabBarHidden = false
 
     private var usesSplitLayout: Bool {
         horizontalSizeClass == .regular
@@ -37,29 +35,45 @@ struct MainTabView: View {
     // MARK: - Phone layout
 
     private var phoneTabLayout: some View {
-        ZStack(alignment: .bottom) {
-            palette.background.ignoresSafeArea()
+        TabView(selection: $tab) {
+            Tab(value: AppTab.keyboard) {
+                HomeView()
+            } label: {
+                tabLabel(for: .keyboard)
+            }
 
-            MainTabContent(tab: tab)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .environment(\.isTabBarVisible, !isTabBarHidden)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    if !isTabBarHidden {
-                        // Match floating dock + home-indicator clearance so
-                        // page footers / scroll ends sit above MinimalTabBar.
-                        Color.clear.frame(height: TabBarDockMetrics.scrollClearance)
-                    }
-                }
-                .onPreferenceChange(TabBarHiddenPreferenceKey.self) { hidden in
-                    withAnimation(Motion.quick) {
-                        isTabBarHidden = hidden
-                    }
-                }
+            Tab(value: AppTab.skills) {
+                AIAgentSkillsView()
+            } label: {
+                tabLabel(for: .skills)
+            }
 
-            if !isTabBarHidden {
-                MinimalTabBar(selection: $tab)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            Tab(value: AppTab.styles) {
+                PolishStylesView()
+            } label: {
+                tabLabel(for: .styles)
+            }
+
+            Tab(value: AppTab.settings) {
+                SettingsView(presentation: .tab)
+            } label: {
+                tabLabel(for: .settings)
             }
         }
+        .tint(palette.accent)
+        .tabBarMinimizeBehavior(.never)
+        // Native TabView owns the floating dock + home-indicator clearance so
+        // page footers / scroll ends only need their ordinary bottom spacing.
+    }
+
+    private func tabLabel(for item: AppTab) -> some View {
+        Label {
+            Text(item.accessibilityKey)
+        } icon: {
+            Image(systemName: item.dockSystemImage(selected: tab == item))
+        }
+        // TabView applies `.fill` to every SF Symbol by default. Opt out so
+        // unselected tabs keep their outline while the selected tab uses fill.
+        .environment(\.symbolVariants, .none)
     }
 }

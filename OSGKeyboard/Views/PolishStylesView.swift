@@ -11,6 +11,7 @@ import SwiftUI
 struct PolishStylesView: View {
     @Environment(\.themePalette) private var palette
     @ObservedObject private var config = ProviderConfig.shared
+    @ObservedObject private var history = SpeechHistoryStore.shared
 
     @State private var catalog = AppGroupStore().polishStyleCatalog
     @State private var activeID = AppGroupStore().activePolishStyleId
@@ -19,6 +20,7 @@ struct PolishStylesView: View {
     @State private var editingPack: PolishStylePack?
     @State private var viewingPack: PolishStylePack?
     @State private var errorMessage: String?
+    @State private var isGeneratingLearnedStyle = false
 
     private let store = AppGroupStore()
     private let columns = [
@@ -30,6 +32,7 @@ struct PolishStylesView: View {
         NavigationStack {
             ScrollView {
                 CardPageContent(spacing: Spacing.xl) {
+                    styleLearningCard
                     packGridSection(
                         title: "polishStyles.builtin.section",
                         packs: PolishStylePackCatalog.BuiltinStyleGroup.practical.packs
@@ -96,6 +99,121 @@ struct PolishStylesView: View {
         .onReceive(NotificationCenter.default.publisher(for: .settingsDidSyncFromCloud)) { _ in
             reload()
         }
+    }
+
+    private var styleLearningCorpus: PolishStyleLearningCorpus {
+        PolishStyleLearningCorpusBuilder.build(from: history.snapshot())
+    }
+
+    private var styleLearningCard: some View {
+        let corpus = styleLearningCorpus
+        let required = PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount
+        let reachedLimit = catalog.entries.count >= PolishStyleLimits.maximumUserPacks
+        let isActionAvailable = corpus.isReady && !reachedLimit
+        let canGenerate = isActionAvailable && !isGeneratingLearnedStyle
+
+        return VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack(alignment: .top, spacing: Spacing.md) {
+                Image(systemName: "waveform")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(palette.accent)
+                    .frame(width: 42, height: 42)
+                    .background(
+                        palette.accentMuted,
+                        in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+                    )
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("polishStyles.learn.title")
+                        .font(TypeStyle.bodyEmph)
+                        .foregroundStyle(palette.textPrimary)
+                    Text("polishStyles.learn.body")
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            ProgressView(
+                value: Double(min(corpus.effectiveCharacterCount, required)),
+                total: Double(required)
+            )
+            .tint(palette.accent)
+
+            HStack {
+                Text(
+                    AppL10n.format(
+                        "polishStyles.learn.progress",
+                        Int64(corpus.effectiveCharacterCount),
+                        Int64(required)
+                    )
+                )
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textTertiary)
+
+                Spacer()
+
+                Text(
+                    corpus.isReady
+                        ? AppL10n.string("polishStyles.learn.ready")
+                        : AppL10n.format(
+                            "polishStyles.learn.remaining",
+                            Int64(corpus.remainingCharacterCount)
+                        )
+                )
+                .font(TypeStyle.caption2)
+                .foregroundStyle(corpus.isReady ? palette.accent : palette.textTertiary)
+            }
+
+            Button {
+                generateLearnedStyle(from: corpus)
+            } label: {
+                HStack(spacing: Spacing.sm) {
+                    if isGeneratingLearnedStyle {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(isActionAvailable ? palette.textOnAccent : palette.textSecondary)
+                    } else {
+                        Image(systemName: "sparkles")
+                    }
+                    Text(
+                        isGeneratingLearnedStyle
+                            ? AppL10n.string("polishStyles.learn.generating")
+                            : AppL10n.string("polishStyles.learn.action")
+                    )
+                }
+                .font(TypeStyle.bodyEmph)
+                .foregroundStyle(
+                    isActionAvailable ? palette.textOnAccent : palette.textSecondary
+                )
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(
+                    isActionAvailable ? palette.accent : palette.surfaceElevated,
+                    in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                        .stroke(
+                            isActionAvailable ? Color.clear : palette.dividerStrong,
+                            lineWidth: 0.5
+                        )
+                )
+                .contentShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(!canGenerate)
+
+            Text(
+                reachedLimit
+                    ? AppL10n.string("polishStyles.learn.limit")
+                    : AppL10n.string("polishStyles.learn.privacy")
+            )
+            .font(TypeStyle.caption2)
+            .foregroundStyle(palette.textTertiary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(Spacing.lg)
+        .surfaceCard()
     }
 
     private func packGridSection(
@@ -176,6 +294,26 @@ struct PolishStylesView: View {
         }
     }
 
+    private func generateLearnedStyle(from corpus: PolishStyleLearningCorpus) {
+        guard corpus.isReady, !isGeneratingLearnedStyle else { return }
+        isGeneratingLearnedStyle = true
+        Task {
+            defer { isGeneratingLearnedStyle = false }
+            do {
+                let generated = try await PolishStyleLearningService(store: store)
+                    .generateStyle(
+                        from: corpus,
+                        outputLanguage: config.uiLanguage
+                    )
+                // Always let the user inspect and edit the learned prompt before
+                // it is saved, synced, or made active.
+                editingPack = generated
+            } catch {
+                errorMessage = localizedLearningError(error)
+            }
+        }
+    }
+
     private func descriptionKey(for pack: PolishStylePack) -> LocalizedStringKey {
         guard pack.kind == .builtin else { return "polishStyles.custom.description" }
         switch pack.id {
@@ -252,6 +390,21 @@ struct PolishStylesView: View {
         Task {
             try? await PolishStyleCloudSync.shared.pushLocalIfEnabled(catalog)
             try? await AppCloudSync.shared.settingsSyncService.pushLocalIfEnabled()
+        }
+    }
+
+    private func localizedLearningError(_ error: Error) -> String {
+        switch error as? PolishStyleLearningError {
+        case .insufficientCorpus:
+            return AppL10n.string("polishStyles.learn.error.insufficient")
+        case .invalidResponse:
+            return AppL10n.string("polishStyles.learn.error.invalidResponse")
+        case .promptTooLong:
+            return AppL10n.string("polishStyles.learn.error.promptTooLong")
+        case .requestTooLarge:
+            return AppL10n.string("polishStyles.learn.error.requestTooLarge")
+        case nil:
+            return AppL10n.string("polishStyles.learn.error.request")
         }
     }
 

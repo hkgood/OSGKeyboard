@@ -167,13 +167,13 @@ public struct AIHintManifest: Codable, Equatable, Sendable {
 }
 
 public enum AIHintFeedEndpoints {
-    public static let baseURL = URL(string: "https://key.osglab.com/hints")!
-    public static let manifestURL = baseURL.appendingPathComponent("manifest.json")
+    public static let baseURL = URL(string: "https://account.osglab.com/v1/content/hints")!
+    public static let manifestURL = baseURL.appendingPathComponent("manifest")
     /// Packs the app fetches and the keyboard can resolve.
     public static let supportedLocales = ["zh", "en"]
 
     public static func packURL(locale: String) -> URL {
-        baseURL.appendingPathComponent("hints-\(locale).json")
+        baseURL.appendingPathComponent(locale)
     }
 }
 
@@ -194,6 +194,9 @@ public enum AIHintAppGroupKeys {
     public static let readyPackPrefix = "hints.ready."
     public static let lastSuccessPrefix = "hints.meta.lastSuccessAt."
     public static let lastAttemptAt = "hints.meta.lastAttemptAt"
+    public static let manifest = "hints.meta.manifest.v1"
+    public static let manifestETag = "hints.meta.manifestETag.v1"
+    public static let packETagPrefix = "hints.meta.packETag."
 
     public static func readyPackKey(locale: String) -> String {
         readyPackPrefix + locale
@@ -202,5 +205,9 @@ public enum AIHintAppGroupKeys {
     /// Freshness is tracked per locale so a zh success cannot mask an en failure.
     public static func lastSuccessKey(locale: String) -> String {
         lastSuccessPrefix + locale
+    }
+
+    public static func packETagKey(locale: String) -> String {
+        packETagPrefix + locale
     }
 }

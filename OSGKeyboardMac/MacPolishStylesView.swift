@@ -8,11 +8,13 @@ import SwiftUI
 
 struct MacPolishStylesView: View {
     @ObservedObject var viewModel: MacDictationViewModel
+    @ObservedObject private var history = SpeechHistoryStore.shared
     @Environment(\.themePalette) private var palette
 
     @State private var editingPack: PolishStylePack?
     @State private var viewingPack: PolishStylePack?
     @State private var errorMessage: String?
+    @State private var isGeneratingLearnedStyle = false
 
     private var lang: AppUILanguage { viewModel.config.uiLanguage }
     private var store: AppGroupStore { AppGroupStore(defaults: viewModel.defaults) }
@@ -59,6 +61,7 @@ struct MacPolishStylesView: View {
 
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: Spacing.xl) {
+                    styleLearningCard
                     styleSection(
                         title: MacL10n.string("mac.styles.builtin", language: lang),
                         packs: PolishStylePackCatalog.BuiltinStyleGroup.practical.packs
@@ -114,6 +117,103 @@ struct MacPolishStylesView: View {
         }
     }
 
+    private var styleLearningCorpus: PolishStyleLearningCorpus {
+        PolishStyleLearningCorpusBuilder.build(from: history.snapshot())
+    }
+
+    private var styleLearningCard: some View {
+        let corpus = styleLearningCorpus
+        let required = PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount
+        let reachedLimit = catalog.entries.count >= PolishStyleLimits.maximumUserPacks
+
+        return VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack(alignment: .top, spacing: Spacing.md) {
+                Image(systemName: "waveform")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(palette.accent)
+                    .frame(width: 42, height: 42)
+                    .background(
+                        palette.accentMuted,
+                        in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+                    )
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(MacL10n.string("mac.styles.learn.title", language: lang))
+                        .font(TypeStyle.bodyEmph)
+                        .foregroundStyle(palette.textPrimary)
+                    Text(MacL10n.string("mac.styles.learn.body", language: lang))
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.textSecondary)
+                }
+            }
+
+            ProgressView(
+                value: Double(min(corpus.effectiveCharacterCount, required)),
+                total: Double(required)
+            )
+            .tint(palette.accent)
+
+            HStack {
+                Text(
+                    MacL10n.format(
+                        "mac.styles.learn.progress",
+                        language: lang,
+                        Int64(corpus.effectiveCharacterCount),
+                        Int64(required)
+                    )
+                )
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textTertiary)
+                Spacer()
+                Text(
+                    corpus.isReady
+                        ? MacL10n.string("mac.styles.learn.ready", language: lang)
+                        : MacL10n.format(
+                            "mac.styles.learn.remaining",
+                            language: lang,
+                            Int64(corpus.remainingCharacterCount)
+                        )
+                )
+                .font(TypeStyle.caption2)
+                .foregroundStyle(corpus.isReady ? palette.accent : palette.textTertiary)
+            }
+
+            HStack {
+                Text(
+                    MacL10n.string(
+                        reachedLimit
+                            ? "mac.styles.learn.limit"
+                            : "mac.styles.learn.privacy",
+                        language: lang
+                    )
+                )
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textTertiary)
+                Spacer()
+                Button {
+                    generateLearnedStyle(from: corpus)
+                } label: {
+                    if isGeneratingLearnedStyle {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                    Text(
+                        MacL10n.string(
+                            isGeneratingLearnedStyle
+                                ? "mac.styles.learn.generating"
+                                : "mac.styles.learn.action",
+                            language: lang
+                        )
+                    )
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(palette.accent)
+                .disabled(!corpus.isReady || isGeneratingLearnedStyle || reachedLimit)
+            }
+        }
+        .padding(Spacing.lg)
+        .surfaceCard()
+    }
+
     private func styleSection(title: String, packs: [PolishStylePack]) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Text(title)
@@ -158,6 +258,38 @@ struct MacPolishStylesView: View {
                 delete(pack)
             }
         )
+    }
+
+    private func generateLearnedStyle(from corpus: PolishStyleLearningCorpus) {
+        guard corpus.isReady, !isGeneratingLearnedStyle else { return }
+        isGeneratingLearnedStyle = true
+        Task {
+            defer { isGeneratingLearnedStyle = false }
+            do {
+                let generated = try await PolishStyleLearningService(store: store)
+                    .generateStyle(from: corpus, outputLanguage: lang)
+                // Review is mandatory before the learned prompt enters sync or
+                // becomes the active dictation personality.
+                editingPack = generated
+            } catch {
+                errorMessage = localizedLearningError(error)
+            }
+        }
+    }
+
+    private func localizedLearningError(_ error: Error) -> String {
+        switch error as? PolishStyleLearningError {
+        case .insufficientCorpus:
+            return MacL10n.string("mac.styles.learn.error.insufficient", language: lang)
+        case .invalidResponse:
+            return MacL10n.string("mac.styles.learn.error.invalidResponse", language: lang)
+        case .promptTooLong:
+            return MacL10n.string("mac.styles.learn.error.promptTooLong", language: lang)
+        case .requestTooLarge:
+            return MacL10n.string("mac.styles.learn.error.requestTooLarge", language: lang)
+        case nil:
+            return MacL10n.string("mac.styles.learn.error.request", language: lang)
+        }
     }
 
     private func subtitle(for pack: PolishStylePack) -> String {

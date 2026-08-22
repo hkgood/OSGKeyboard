@@ -126,13 +126,15 @@ public struct LiveConfigurationStore: ConfigurationStore, @unchecked Sendable {
 
     public func makeClient(
         taskKind: ManagedGatewayTaskKind?,
-        requestPurpose: ManagedGatewayRequestPurpose?
+        requestPurpose: ManagedGatewayRequestPurpose?,
+        oobeFeature: ManagedGatewayOOBEFeature?
     ) -> LLMClient {
-        if credentialSource == .managed {
+        if credentialSource == .managed || requestPurpose == .oobe {
             return ManagedLLMClient(
                 capability: .polish,
                 taskKind: taskKind,
                 requestPurpose: requestPurpose,
+                oobeFeature: oobeFeature,
                 grants: GatewayGrantCoordinator()
             )
         }
