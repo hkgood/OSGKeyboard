@@ -128,7 +128,7 @@ struct MacPolishStylesView: View {
 
         return VStack(alignment: .leading, spacing: Spacing.md) {
             HStack(alignment: .top, spacing: Spacing.md) {
-                Image(systemName: "waveform.badge.sparkles")
+                Image(systemName: "waveform")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(palette.accent)
                     .frame(width: 42, height: 42)

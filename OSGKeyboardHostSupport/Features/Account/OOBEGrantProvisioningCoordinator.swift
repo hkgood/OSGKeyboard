@@ -5,7 +5,9 @@
 // mutating an AccountSession.
 
 import Foundation
+#if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
+#endif
 
 public actor OOBEGrantProvisioningCoordinator {
     private let apiClient: AccountAPIClient

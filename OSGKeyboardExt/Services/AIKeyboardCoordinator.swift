@@ -115,7 +115,8 @@ final class AIKeyboardCoordinator {
         var instruction = AIClipboardSkillCatalog.instruction(
             for: skill,
             locale: AIHintLocaleResolver.packLocale(),
-            translationTargetLocaleId: state.translationTargetLocaleId
+            translationTargetLocaleId: state.translationTargetLocaleId,
+            replyStyle: state.clipboardReplyStyle
         )
         if skill.kind == .export {
             instruction += "\nPreserve the source language, addresses, names, and proper nouns."

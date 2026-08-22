@@ -124,6 +124,12 @@ public struct AppGroupPersistor {
             userCatalog: store.agentUserSkillCatalog,
             uiLanguage: language
         )
+        let activeStyle = store.activePolishStyle
+        // Built-in formal/corporate personalities must not make ordinary
+        // clipboard replies sound less like the user.
+        state.clipboardReplyStyle = AIClipboardReplyStyleContext.resolve(
+            activeStyle: activeStyle
+        )
     }
 
     /// Cloud without ASR/LLM keys blocks the mic. Local ASR still works when

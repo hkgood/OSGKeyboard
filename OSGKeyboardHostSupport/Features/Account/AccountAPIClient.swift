@@ -4,7 +4,9 @@
 // The single HTTP exit for account, auth, and integrity traffic.
 
 import Foundation
+#if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
+#endif
 
 public protocol AccountHTTPTransport: Sendable {
     func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse)

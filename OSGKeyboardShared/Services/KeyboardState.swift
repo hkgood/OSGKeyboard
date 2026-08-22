@@ -154,6 +154,9 @@ public final class KeyboardState: ObservableObject {
     /// visibility is independent from the Skills page installation state.
     @Published public var clipboardSkillCatalog: [AIClipboardSkill] =
         AIClipboardSkillCatalog.catalog
+    /// User-owned speaking style injected only into conversational reply skills.
+    /// Built-in polish personalities intentionally leave this nil.
+    @Published public var clipboardReplyStyle: AIClipboardReplyStyleContext?
     /// Export skills whose companion Shortcut setup the user confirmed.
     @Published public var confirmedClipboardShortcutIDs: [String] = []
     /// App language captured with the same App Group snapshot as skill copy.

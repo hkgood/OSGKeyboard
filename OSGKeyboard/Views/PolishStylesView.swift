@@ -109,10 +109,12 @@ struct PolishStylesView: View {
         let corpus = styleLearningCorpus
         let required = PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount
         let reachedLimit = catalog.entries.count >= PolishStyleLimits.maximumUserPacks
+        let isActionAvailable = corpus.isReady && !reachedLimit
+        let canGenerate = isActionAvailable && !isGeneratingLearnedStyle
 
         return VStack(alignment: .leading, spacing: Spacing.md) {
             HStack(alignment: .top, spacing: Spacing.md) {
-                Image(systemName: "waveform.badge.sparkles")
+                Image(systemName: "waveform")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(palette.accent)
                     .frame(width: 42, height: 42)
@@ -170,6 +172,7 @@ struct PolishStylesView: View {
                     if isGeneratingLearnedStyle {
                         ProgressView()
                             .controlSize(.small)
+                            .tint(isActionAvailable ? palette.textOnAccent : palette.textSecondary)
                     } else {
                         Image(systemName: "sparkles")
                     }
@@ -179,11 +182,26 @@ struct PolishStylesView: View {
                             : AppL10n.string("polishStyles.learn.action")
                     )
                 }
-                .frame(maxWidth: .infinity)
+                .font(TypeStyle.bodyEmph)
+                .foregroundStyle(
+                    isActionAvailable ? palette.textOnAccent : palette.textSecondary
+                )
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .background(
+                    isActionAvailable ? palette.accent : palette.surfaceElevated,
+                    in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                        .stroke(
+                            isActionAvailable ? Color.clear : palette.dividerStrong,
+                            lineWidth: 0.5
+                        )
+                )
+                .contentShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             }
-            .buttonStyle(.borderedProminent)
-            .tint(palette.accent)
-            .disabled(!corpus.isReady || isGeneratingLearnedStyle || reachedLimit)
+            .buttonStyle(.plain)
+            .disabled(!canGenerate)
 
             Text(
                 reachedLimit

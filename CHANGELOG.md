@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Skill catalog layout**: replace the two-column cards with scroll-safe installed and uninstalled lists; selecting a row now opens a full detail page where installation, Shortcut setup, and custom-skill editing are managed. / **技能目录布局**：将双列卡片改为可稳定滚动的已安装与未安装列表；点击列表项进入完整详情页，并统一管理安装、捷径配置与自定义技能编辑。
+- **Conversational skill replies**: make every built-in reply action favor short everyday chat language over formal email or support templates, and apply the active user-owned learned style only as a bounded wording-and-rhythm layer. / **口语化技能回复**：所有内置回复操作优先使用简短日常聊天表达，避免正式邮件与客服模板；当前用户自有的学习风格仅作为受限的用词与节奏层应用。
 
 ### Fixed
 - **Repeatable OOBE practice**: scope each free feature to one use per short-lived guided session, so returning to OOBE starts a fresh four-page experience without misreporting consumed-page conflicts as weak network; also simplify lesson titles, add a voice sample to read aloud, and streamline the completion page. / **可重复的 OOBE 体验**：将每项免费功能限制为每个短期引导会话使用一次，让用户重新进入 OOBE 时可以重新体验四个页面，并避免把页面已完成冲突误报为弱网；同时精简各环节标题，加入语音朗读示例，并简化完成页。
