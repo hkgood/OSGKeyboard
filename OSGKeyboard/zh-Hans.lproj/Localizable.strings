@@ -542,9 +542,9 @@
 
 /* AI Agent 技能 */
 "skills.title" = "技能";
-"skills.enabled.section" = "使用中（%d）";
-"skills.enabled.empty" = "键盘上还没有技能。从下方列表打开一个即可。";
-"skills.available.section" = "可添加";
+"skills.installed.section" = "已安装（%d）";
+"skills.installed.empty" = "暂无已安装技能。";
+"skills.uninstalled.section" = "未安装";
 "skills.clipboard.guide.title" = "启用剪贴板技能";
 "skills.clipboard.guide.body" = "复制文字后，可直接总结、翻译或提取事项。";
 "skills.clipboard.guide.enableHistory" = "开启历史记录";
@@ -558,9 +558,8 @@
 "skills.clipboard.guide.openSystemSettings" = "打开系统设置";
 "skills.detail.title" = "技能";
 "skills.badge.default" = "默认技能";
-"skills.action.turnOff" = "关闭";
-"skills.action.turnOffHint" = "只从键盘拿掉，不会删除捷径。";
-"skills.action.addToKeyboard" = "添加到键盘";
+"skills.action.install" = "安装";
+"skills.action.uninstall" = "卸载";
 "skills.action.reinstallShortcut" = "重新安装捷径";
 "skills.reply.name" = "回复";
 "skills.reply.description" = "根据复制的内容起草一段礼貌回复，可插入当前输入框。";

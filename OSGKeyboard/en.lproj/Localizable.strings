@@ -543,9 +543,9 @@
 
 /* AI Agent skills */
 "skills.title" = "Skills";
-"skills.enabled.section" = "In use (%d)";
-"skills.enabled.empty" = "No skills on the keyboard. Turn one on from the list below.";
-"skills.available.section" = "Available";
+"skills.installed.section" = "Installed (%d)";
+"skills.installed.empty" = "No installed skills.";
+"skills.uninstalled.section" = "Not installed";
 "skills.clipboard.guide.title" = "Enable clipboard skills";
 "skills.clipboard.guide.body" = "Copy text to summarize, translate, or extract actions from it.";
 "skills.clipboard.guide.enableHistory" = "Turn On Clipboard History";
@@ -559,9 +559,8 @@
 "skills.clipboard.guide.openSystemSettings" = "Open iOS Settings";
 "skills.detail.title" = "Skill";
 "skills.badge.default" = "Default skill";
-"skills.action.turnOff" = "Turn off";
-"skills.action.turnOffHint" = "Removes it from the keyboard only.";
-"skills.action.addToKeyboard" = "Add to keyboard";
+"skills.action.install" = "Install";
+"skills.action.uninstall" = "Uninstall";
 "skills.action.reinstallShortcut" = "Reinstall Shortcut";
 "skills.reply.name" = "Reply";
 "skills.reply.description" = "Draft a polite reply from the copied text, ready to insert.";
