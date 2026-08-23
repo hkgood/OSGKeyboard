@@ -130,7 +130,14 @@ final class OfficialSkillCatalogTests: XCTestCase {
 
         XCTAssertEqual(
             migrated.enabledIDs,
-            [AIClipboardSkillCatalog.replyID, "official.rewrite"]
+            [
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.openLinkID,
+                AIClipboardSkillCatalog.summarizeWebPageID,
+                AIClipboardSkillCatalog.callPhoneID,
+                AIClipboardSkillCatalog.createContactID,
+                "official.rewrite"
+            ]
         )
     }
 

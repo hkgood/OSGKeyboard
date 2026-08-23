@@ -65,8 +65,15 @@ final class AIClipboardPromptTests: XCTestCase {
     }
 
     func testClipboardCardFailsClosedAfterEligibilityWindow() {
-        let card = AIHintLocalCatalog.cards(locale: "zh")
-            .first { $0.requiresClipboard30s }!
+        let card = AIHintCard(
+            id: "remote-clipboard-reply",
+            displayText: "回复剪贴板",
+            prompt: "请回复剪贴板内容",
+            category: "clipboard",
+            source: "remote",
+            locale: "zh",
+            conditions: ["clipboard_30s"]
+        )
         XCTAssertEqual(
             AIHintPool.resolvePrompt(for: card, clipboardText: nil),
             .materialUnavailable
