@@ -488,6 +488,15 @@ public final class KeyboardViewController: UIInputViewController {
             },
             captureInsertionFingerprint: { [weak self] in
                 self?.captureFieldContext().deliveryFingerprint
+            },
+            openWebURL: { [weak self] url in
+                self?.openWebURL(url)
+            },
+            callPhone: { [weak self] phoneNumber in
+                self?.callPhone(phoneNumber)
+            },
+            createContact: { [weak self] phoneNumber in
+                self?.createContact(phoneNumber)
             }
         )
         clipboardCapture = ClipboardCaptureCoordinator(state: state)
@@ -1093,6 +1102,47 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     // MARK: - Open host app
+
+    private func openWebURL(_ url: URL) {
+        guard hasFullAccess else {
+            state.skillTipText = ExtL10n.string("keyboard.error.fullAccessForJump")
+            return
+        }
+        HostAppLauncher.open(url: url, from: self) { [weak self] success in
+            guard !success else { return }
+            self?.state.skillTipText = ExtL10n.string("keyboard.ai.skill.openLinkFailed")
+        }
+    }
+
+    private func callPhone(_ phoneNumber: String) {
+        guard hasFullAccess else {
+            state.skillTipText = ExtL10n.string("keyboard.error.fullAccessForJump")
+            return
+        }
+        guard let url = AIPhoneNumberResolver.telephoneURL(for: phoneNumber) else {
+            state.skillTipText = ExtL10n.string("keyboard.ai.skill.callPhoneFailed")
+            return
+        }
+        HostAppLauncher.open(url: url, from: self) { [weak self] success in
+            guard !success else { return }
+            self?.state.skillTipText = ExtL10n.string("keyboard.ai.skill.callPhoneFailed")
+        }
+    }
+
+    private func createContact(_ phoneNumber: String) {
+        guard hasFullAccess else {
+            state.skillTipText = ExtL10n.string("keyboard.error.fullAccessForJump")
+            return
+        }
+        AppGroupStore().setPendingContactCreation(phoneNumber: phoneNumber)
+        guard let url = URL(string: "osgkeyboard://contact/new") else { return }
+        HostAppLauncher.open(url: url, from: self) { [weak self] success in
+            guard !success else { return }
+            self?.state.skillTipText = ExtL10n.string(
+                "keyboard.ai.skill.createContactFailed"
+            )
+        }
+    }
 
     private func openSkillShortcutRun() {
         guard hasFullAccess else {

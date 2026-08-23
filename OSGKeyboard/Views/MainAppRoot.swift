@@ -31,6 +31,7 @@ struct MainAppRoot: View {
     @State private var rimeStartupTask: Task<Void, Never>?
     @State private var firstOpenAcquisitionChannel =
         AnalyticsFirstOpenAttribution.ordinaryLaunch
+    @State private var newContactDraft: NewContactDraft?
 
     init(accountDependencies: AccountDependencies? = nil) {
         let resolvedDependencies = accountDependencies ?? LiveAccountDependencyFactory.make()
@@ -88,6 +89,11 @@ struct MainAppRoot: View {
             ReleaseNotesSheet(language: config.uiLanguage)
                 .environment(\.locale, config.uiLanguage.swiftUILocale)
         }
+        .sheet(item: $newContactDraft) { draft in
+            NewContactSheet(phoneNumber: draft.phoneNumber) {
+                newContactDraft = nil
+            }
+        }
         .onAppear {
             flowManager.setAppForeground(scenePhase == .active)
             // Register the URL handler BEFORE the foreground auto-start.
@@ -126,7 +132,9 @@ struct MainAppRoot: View {
                 if scenePhase == .active {
                     activateForegroundServices(reason: "MainAppRoot.onAppear")
                     AIHintRefreshService.refreshIfNeeded(reason: "MainAppRoot.onAppear")
-                    releaseNotes.presentIfNeeded(onboardingCompleted: true)
+                    if newContactDraft == nil {
+                        releaseNotes.presentIfNeeded(onboardingCompleted: true)
+                    }
                 } else {
                     OSGDiag.log(
                         "MainAppRoot.onAppear defer foreground services scene="
@@ -157,7 +165,9 @@ struct MainAppRoot: View {
                 if scenePhase == .active {
                     activateForegroundServices(reason: "onboardingCompleted")
                     AIHintRefreshService.refreshIfNeeded(reason: "onboardingCompleted")
-                    releaseNotes.presentIfNeeded(onboardingCompleted: true)
+                    if newContactDraft == nil {
+                        releaseNotes.presentIfNeeded(onboardingCompleted: true)
+                    }
                 }
                 if accountSession.shouldPresentAccountCenter {
                     Task { @MainActor in
@@ -194,7 +204,9 @@ struct MainAppRoot: View {
             if config.hasCompletedOnboarding {
                 activateForegroundServices(reason: "scenePhase.active")
                 AIHintRefreshService.refreshIfNeeded(reason: "scenePhase.active")
-                releaseNotes.presentIfNeeded(onboardingCompleted: true)
+                if newContactDraft == nil {
+                    releaseNotes.presentIfNeeded(onboardingCompleted: true)
+                }
             }
             Task {
                 await AppCloudSync.shared.pullAllIfEnabled()
@@ -336,6 +348,16 @@ struct MainAppRoot: View {
                 SettingsDeepLink.setPending(.clipboard)
             }
             NotificationCenter.default.post(name: .osgOpenSettingsDeepLink, object: nil)
+        case "contact":
+            guard url.path.contains("new"),
+                  let payload = AppGroupStore().consumePendingContactCreation() else {
+                return
+            }
+            releaseNotes.isPresented = false
+            Task { @MainActor in
+                await Task.yield()
+                newContactDraft = NewContactDraft(phoneNumber: payload.phoneNumber)
+            }
         #if DEBUG
         case "seed-demo":
             DemoDataSeeder.seedRichPlaceholderData()

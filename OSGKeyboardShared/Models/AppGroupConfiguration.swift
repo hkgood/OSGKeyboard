@@ -77,7 +77,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let localASRCustomLanguageModelEnabled = "config.localASR.customLanguageModelEnabled"
         /// Enabled AI Agent skill IDs (order) + confirmed companion Shortcuts.
         public static let agentSkillLayout = "config.aiAgentSkills.layout.v1"
-        /// One-shot: append semantic built-ins introduced with the unlimited layout.
+        /// One-shot migrations for newly default-installed built-in and official skills.
         public static let agentSkillDefaultsMigrationVersion =
             "config.aiAgentSkills.defaultsMigrationVersion"
         /// User-created clipboard skills (no cloud sync; App Group only).

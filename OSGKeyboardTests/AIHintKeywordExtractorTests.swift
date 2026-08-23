@@ -134,95 +134,45 @@ final class AIClipboardSkillTests: XCTestCase {
         )
     }
 
-    func testTranslateFollowsUserTargetLanguage() {
-        let ja = AIClipboardSkillCatalog.instruction(
+    func testTranslateUsesPrimarySystemLanguage() {
+        let prompt = AIClipboardSkillCatalog.instruction(
             skillID: AIClipboardSkillCatalog.translateID,
             locale: "zh",
-            translationTargetLocaleId: "ja"
+            translationTargetLocaleId: "ja",
+            preferredLanguages: ["de-DE"]
         )
-        XCTAssertTrue(ja.contains("Japanese"))
-        XCTAssertFalse(ja.contains("互译"))
+        XCTAssertTrue(prompt.contains("German"))
+        XCTAssertFalse(prompt.contains("Japanese"))
+        XCTAssertTrue(prompt.contains("原样输出"))
     }
 
-    func testTranslateFallsBackToChineseEnglishWhenUnset() {
-        let zh = AIClipboardSkillCatalog.instruction(
-            skillID: AIClipboardSkillCatalog.translateID,
-            locale: "zh",
-            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
-        )
-        XCTAssertTrue(zh.contains("中文与英文"))
-        let en = AIClipboardSkillCatalog.instruction(
+    func testTranslateUsesSystemLanguageWhenPostTranslationIsOff() {
+        let prompt = AIClipboardSkillCatalog.instruction(
             skillID: AIClipboardSkillCatalog.translateID,
             locale: "en",
-            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId,
+            preferredLanguages: ["ja-JP"]
         )
-        XCTAssertTrue(en.lowercased().contains("chinese"))
-        XCTAssertTrue(en.lowercased().contains("english"))
+        XCTAssertTrue(prompt.contains("Japanese"))
+        XCTAssertTrue(prompt.contains("system language"))
     }
 
-    func testTranslateButtonTitleUsesDirectionPairsAndTargetShortNames() {
-        XCTAssertEqual(
-            AIClipboardSkillCatalog.translateButtonTitle(
-                translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId,
-                uiLanguage: .chinese
-            ),
-            "中↔英"
-        )
-        XCTAssertEqual(
-            AIClipboardSkillCatalog.translateButtonTitle(
-                translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId,
-                uiLanguage: .english
-            ),
-            "CN↔EN"
-        )
-        XCTAssertEqual(
-            AIClipboardSkillCatalog.translateButtonTitle(
-                translationTargetLocaleId: "en",
-                uiLanguage: .chinese
-            ),
-            "中译英"
-        )
+    func testTranslateButtonTitleUsesSystemLanguage() {
         XCTAssertEqual(
             AIClipboardSkillCatalog.translateButtonTitle(
                 translationTargetLocaleId: "de",
-                uiLanguage: .chinese
+                uiLanguage: .chinese,
+                preferredLanguages: ["en-US"]
             ),
-            "中译德"
+            "译为英语"
         )
         XCTAssertEqual(
             AIClipboardSkillCatalog.translateButtonTitle(
-                translationTargetLocaleId: "ja",
-                uiLanguage: .english
+                translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId,
+                uiLanguage: .english,
+                preferredLanguages: ["ja-JP"]
             ),
-            "To JP"
-        )
-        XCTAssertEqual(
-            AIClipboardSkillCatalog.translateButtonTitle(
-                translationTargetLocaleId: "zh-Hans",
-                uiLanguage: .english
-            ),
-            "To CN"
-        )
-        XCTAssertEqual(
-            AIClipboardSkillCatalog.translateButtonTitle(
-                translationTargetLocaleId: "zh-Hant",
-                uiLanguage: .english
-            ),
-            "To TW"
-        )
-        XCTAssertEqual(
-            AIClipboardSkillCatalog.translateButtonTitle(
-                translationTargetLocaleId: "zh-Hans",
-                uiLanguage: .chinese
-            ),
-            "简↔繁"
-        )
-        XCTAssertEqual(
-            AIClipboardSkillCatalog.translateButtonTitle(
-                translationTargetLocaleId: "zh-Hant",
-                uiLanguage: .chinese
-            ),
-            "简↔繁"
+            "To Japanese"
         )
     }
 
@@ -232,21 +182,20 @@ final class AIClipboardSkillTests: XCTestCase {
             locale: "zh",
             translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
         )
-        XCTAssertTrue(prompt.contains("概括"))
-        XCTAssertTrue(prompt.contains("不要改写成可发送的短消息"))
+        XCTAssertTrue(prompt.contains("总结"))
+        XCTAssertTrue(prompt.contains("决定、结论和下一步"))
     }
 
     func testSemanticReplySkillsHaveDistinctInstructions() {
         let ids = [
-            AIClipboardSkillCatalog.replyInSourceLanguageID,
+            AIClipboardSkillCatalog.playfulReplyID,
             AIClipboardSkillCatalog.acceptInvitationID,
             AIClipboardSkillCatalog.declineInvitationID,
             AIClipboardSkillCatalog.acceptTaskID,
             AIClipboardSkillCatalog.clarifyRequestID,
             AIClipboardSkillCatalog.empathyReplyID,
-            AIClipboardSkillCatalog.askForDetailsID,
             AIClipboardSkillCatalog.businessReplyID,
-            AIClipboardSkillCatalog.extractConclusionsID,
+            AIClipboardSkillCatalog.summarizeID,
             AIClipboardSkillCatalog.organizeListID
         ]
         let prompts = ids.map {
@@ -258,6 +207,23 @@ final class AIClipboardSkillTests: XCTestCase {
         }
         XCTAssertEqual(Set(prompts).count, ids.count)
         XCTAssertFalse(prompts.contains { $0.contains("用户选择的操作") })
+    }
+
+    func testPlayfulReplyIsWittyButKeepsSafetyBoundaries() throws {
+        let skill = try XCTUnwrap(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.playfulReplyID)
+        )
+        let instruction = AIClipboardSkillCatalog.instruction(
+            for: skill,
+            locale: "zh",
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
+        )
+
+        XCTAssertTrue(skill.supportsReplyStyle)
+        XCTAssertTrue(instruction.contains("脱口秀演员"))
+        XCTAssertTrue(instruction.contains("不攻击对方"))
+        XCTAssertTrue(instruction.contains("严肃或敏感内容时收住幽默"))
+        XCTAssertTrue(instruction.contains("普通人在和朋友、好友或同事聊天"))
     }
 
     func testReplyUsesConversationalBaselineAndOptionalLearnedStyle() throws {
@@ -274,7 +240,8 @@ final class AIClipboardSkillTests: XCTestCase {
             )
         )
 
-        XCTAssertTrue(instruction.contains("真实的人在聊天软件里"))
+        XCTAssertTrue(instruction.contains("普通人在和朋友、好友或同事聊天"))
+        XCTAssertTrue(instruction.contains("1 个合适的表情或 Emoji"))
         XCTAssertTrue(instruction.contains("<user_reply_style"))
         XCTAssertTrue(instruction.contains("喜欢短句"))
         XCTAssertTrue(instruction.contains("不能改变当前技能的意图"))
@@ -317,6 +284,21 @@ final class AIClipboardSkillTests: XCTestCase {
             "喜欢短句"
         )
         XCTAssertNil(AIClipboardReplyStyleContext.resolve(activeStyle: builtIn))
+    }
+
+    func testBusinessReplyKeepsProfessionalBaselineWithoutFriendEmojiGuidance() throws {
+        let skill = try XCTUnwrap(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.businessReplyID)
+        )
+        let instruction = AIClipboardSkillCatalog.instruction(
+            for: skill,
+            locale: "zh",
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
+        )
+
+        XCTAssertTrue(instruction.contains("同事之间正常沟通"))
+        XCTAssertFalse(instruction.contains("朋友、好友"))
+        XCTAssertFalse(instruction.contains("表情或 Emoji"))
     }
 
     func testExtractTodosAsksForNONEWhenEmpty() {

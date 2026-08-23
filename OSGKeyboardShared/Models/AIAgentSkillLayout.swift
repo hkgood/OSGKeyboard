@@ -43,8 +43,12 @@ public struct AIAgentSkillLayout: Codable, Equatable, Sendable {
     ) -> AIAgentSkillLayout {
         let known = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
         var seenEnabled = Set<String>()
-        let enabled = enabledIDs.filter { id in
-            known[id] != nil && seenEnabled.insert(id).inserted
+        let enabled = enabledIDs.compactMap { id -> String? in
+            let canonical = AIClipboardSkillCatalog.canonicalID(for: id)
+            guard known[canonical] != nil, seenEnabled.insert(canonical).inserted else {
+                return nil
+            }
+            return canonical
         }
 
         var seenConfirmed = Set<String>()

@@ -46,6 +46,9 @@ public struct AIHintCard: Codable, Equatable, Identifiable, Sendable {
     public var locale: String
     public var conditions: [String]
     public var metadata: AIHintMetadata?
+    /// Server policy intent. Ordinary cards match hold-to-talk AI; current
+    /// information cards additionally require online search.
+    public var taskKind: ManagedGatewayTaskKind
 
     public init(
         id: String,
@@ -56,7 +59,8 @@ public struct AIHintCard: Codable, Equatable, Identifiable, Sendable {
         source: String = "local",
         locale: String = "zh",
         conditions: [String] = [],
-        metadata: AIHintMetadata? = nil
+        metadata: AIHintMetadata? = nil,
+        taskKind: ManagedGatewayTaskKind = .aiQuestion
     ) {
         self.id = id
         self.displayText = displayText
@@ -67,6 +71,7 @@ public struct AIHintCard: Codable, Equatable, Identifiable, Sendable {
         self.locale = locale
         self.conditions = conditions
         self.metadata = metadata
+        self.taskKind = taskKind
     }
 
     public var requiresClipboard30s: Bool {
@@ -83,7 +88,7 @@ public struct AIHintCard: Codable, Equatable, Identifiable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, displayText, text, prompt, category, priority, source, locale, conditions, metadata
+        case id, displayText, text, prompt, category, priority, source, locale, conditions, metadata, taskKind
     }
 
     public init(from decoder: Decoder) throws {
@@ -96,6 +101,10 @@ public struct AIHintCard: Codable, Equatable, Identifiable, Sendable {
         locale = try container.decodeIfPresent(String.self, forKey: .locale) ?? "zh"
         conditions = try container.decodeIfPresent([String].self, forKey: .conditions) ?? []
         metadata = try container.decodeIfPresent(AIHintMetadata.self, forKey: .metadata)
+        taskKind = try container.decodeIfPresent(
+            ManagedGatewayTaskKind.self,
+            forKey: .taskKind
+        ) ?? .aiQuestion
         if let display = try container.decodeIfPresent(String.self, forKey: .displayText),
            !display.isEmpty {
             displayText = display
@@ -115,6 +124,7 @@ public struct AIHintCard: Codable, Equatable, Identifiable, Sendable {
         try container.encode(locale, forKey: .locale)
         try container.encode(conditions, forKey: .conditions)
         try container.encodeIfPresent(metadata, forKey: .metadata)
+        try container.encode(taskKind, forKey: .taskKind)
     }
 }
 

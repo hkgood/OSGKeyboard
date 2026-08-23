@@ -25,6 +25,12 @@ public enum ManagedGatewayTaskKind: String, Codable, CaseIterable, Sendable {
     case agentPlanning = "agent_planning"
 }
 
+/// Audited product entry point. It affects usage attribution, never provider
+/// selection or billing authority.
+public enum ManagedGatewayRequestSource: String, Codable, Sendable {
+    case hotword
+}
+
 /// Optional server-audited purpose. A purpose may affect billing only when the
 /// authenticated gateway independently verifies its eligibility.
 public enum ManagedGatewayRequestPurpose: String, Codable, Sendable {
@@ -107,6 +113,11 @@ public enum ManagedGatewayError: Error, LocalizedError, Equatable, Sendable {
     case insufficientCredits
     case oobeFeatureAlreadyUsed
     case timeout
+    case providerUnavailable(requestId: String?)
+    case providerRateLimited(requestId: String?)
+    case providerTimeout(requestId: String?)
+    case providerFailure(requestId: String?)
+    case internalFailure(requestId: String?)
     case server(code: String, status: Int, requestId: String?)
 
     public var errorDescription: String? {
@@ -127,6 +138,16 @@ public enum ManagedGatewayError: Error, LocalizedError, Equatable, Sendable {
             return SharedL10n.string("managed.error.oobeFeatureAlreadyUsed")
         case .timeout:
             return SharedL10n.string("managed.error.timeout")
+        case .providerUnavailable:
+            return SharedL10n.string("managed.error.providerUnavailable")
+        case .providerRateLimited:
+            return SharedL10n.string("managed.error.providerRateLimited")
+        case .providerTimeout:
+            return SharedL10n.string("managed.error.providerTimeout")
+        case .providerFailure:
+            return SharedL10n.string("managed.error.providerFailure")
+        case .internalFailure:
+            return SharedL10n.string("managed.error.internalFailure")
         case .server(let code, let status, _):
             return SharedL10n.format(
                 "managed.error.server",
@@ -172,6 +193,7 @@ struct ManagedGatewayTextRequest: Encodable, Sendable {
     let temperature: Double
     let stream: Bool
     let taskKind: ManagedGatewayTaskKind
+    let requestSource: ManagedGatewayRequestSource?
     let requestPurpose: ManagedGatewayRequestPurpose?
     let oobeFeature: ManagedGatewayOOBEFeature?
 }

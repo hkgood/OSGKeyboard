@@ -20,8 +20,8 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         case submitAIQuestion
     }
 
-    /// Wire version that includes a strongly typed OOBE feature.
-    public static let currentProtocolVersion = 8
+    /// Wire version that includes host-side webpage summary extraction.
+    public static let currentProtocolVersion = 10
 
     public let protocolVersion: Int
     public let sessionId: UUID
@@ -41,8 +41,12 @@ public struct FlowCommand: Codable, Equatable, Sendable {
     public let aiConversationID: UUID?
     /// Prefilled question used only by `.submitAIQuestion`.
     public let aiQuestionText: String?
+    /// Public webpage fetched by the host for an explicit summary skill.
+    public let aiWebPageURL: URL?
     /// Fine-grained managed-gateway intent for AI question submissions.
     public let aiTaskKind: ManagedGatewayTaskKind?
+    /// Audited product entry point for managed usage attribution.
+    public let managedRequestSource: ManagedGatewayRequestSource?
     /// Optional server-audited purpose for managed gateway billing policy.
     public let managedRequestPurpose: ManagedGatewayRequestPurpose?
     /// Required feature discriminator when `managedRequestPurpose == .oobe`.
@@ -68,7 +72,9 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         sourceHistoryEntryRevision: Int64? = nil,
         aiConversationID: UUID? = nil,
         aiQuestionText: String? = nil,
+        aiWebPageURL: URL? = nil,
         aiTaskKind: ManagedGatewayTaskKind? = nil,
+        managedRequestSource: ManagedGatewayRequestSource? = nil,
         managedRequestPurpose: ManagedGatewayRequestPurpose? = nil,
         managedOOBEFeature: ManagedGatewayOOBEFeature? = nil,
         aiThinkingEnabled: Bool? = nil,
@@ -89,7 +95,9 @@ public struct FlowCommand: Codable, Equatable, Sendable {
         self.sourceHistoryEntryRevision = sourceHistoryEntryRevision
         self.aiConversationID = aiConversationID
         self.aiQuestionText = aiQuestionText
+        self.aiWebPageURL = aiWebPageURL
         self.aiTaskKind = aiTaskKind
+        self.managedRequestSource = managedRequestSource
         self.managedRequestPurpose = managedRequestPurpose
         self.managedOOBEFeature = managedOOBEFeature
         self.aiThinkingEnabled = aiThinkingEnabled

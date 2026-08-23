@@ -114,3 +114,76 @@ public enum TranslationLanguageCatalog {
         return all.first { $0.id == offLocaleId } ?? all[0]
     }
 }
+
+/// Resolves the device's first preferred language for clipboard translation.
+/// This intentionally ignores the optional post-dictation translation target.
+public enum SystemLanguageResolver {
+    public static func primaryIdentifier(
+        preferredLanguages: [String] = Locale.preferredLanguages
+    ) -> String {
+        normalizedIdentifier(
+            preferredLanguages.first ?? Locale.autoupdatingCurrent.identifier
+        )
+    }
+
+    public static func promptLanguageName(
+        preferredLanguages: [String] = Locale.preferredLanguages
+    ) -> String {
+        let identifier = primaryIdentifier(preferredLanguages: preferredLanguages)
+        if let known = TranslationLanguageCatalog.all.first(where: { $0.id == identifier }) {
+            return known.promptLanguageName
+        }
+        return Locale(identifier: "en").localizedString(forIdentifier: identifier)
+            ?? identifier
+    }
+
+    public static func displayLanguageName(
+        uiLanguage: AppUILanguage,
+        preferredLanguages: [String] = Locale.preferredLanguages
+    ) -> String {
+        let identifier = primaryIdentifier(preferredLanguages: preferredLanguages)
+        let displayLocale = Locale(identifier: uiLanguage.resolvedLanguageCode())
+        return displayLocale.localizedString(forIdentifier: identifier)
+            ?? promptLanguageName(preferredLanguages: preferredLanguages)
+    }
+
+    public static func isSameLanguage(
+        sourceIdentifier: String,
+        targetIdentifier: String
+    ) -> Bool {
+        let source = normalizedIdentifier(sourceIdentifier)
+        let target = normalizedIdentifier(targetIdentifier)
+        if source.hasPrefix("zh"), target.hasPrefix("zh") {
+            let sourceScript = chineseScript(in: source)
+            let targetScript = chineseScript(in: target)
+            return sourceScript == nil || targetScript == nil || sourceScript == targetScript
+        }
+        return source == target
+    }
+
+    private static func normalizedIdentifier(_ identifier: String) -> String {
+        let language = Locale.Language(identifier: identifier)
+        guard let rawCode = language.languageCode?.identifier else {
+            return identifier.lowercased()
+        }
+        let code = rawCode.lowercased()
+        guard code == "zh" || code == "yue" else { return code }
+
+        let script = language.script?.identifier.lowercased()
+        let region = Locale(identifier: identifier).region?.identifier.uppercased()
+        if script == "hant" || ["HK", "MO", "TW"].contains(region) {
+            return "zh-Hant"
+        }
+        if script == "hans" || ["CN", "MY", "SG"].contains(region) {
+            return "zh-Hans"
+        }
+        return "zh"
+    }
+
+    private static func chineseScript(in identifier: String) -> String? {
+        let normalized = identifier.lowercased()
+        if normalized.contains("hant") { return "Hant" }
+        if normalized.contains("hans") { return "Hans" }
+        return nil
+    }
+}

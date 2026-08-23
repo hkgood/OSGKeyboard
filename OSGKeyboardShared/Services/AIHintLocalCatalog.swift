@@ -59,7 +59,8 @@ public enum AIHintLocalCatalog: Sendable {
             category: "economy",
             priority: 42,
             source: "local",
-            locale: "zh"
+            locale: "zh",
+            taskKind: .currentInformationQuestion
         ),
         AIHintCard(
             id: "local-zh-daily-brief",
@@ -69,7 +70,8 @@ public enum AIHintLocalCatalog: Sendable {
             category: "daily",
             priority: 45,
             source: "local",
-            locale: "zh"
+            locale: "zh",
+            taskKind: .currentInformationQuestion
         ),
         AIHintCard(
             id: "local-zh-quote",
@@ -139,7 +141,8 @@ public enum AIHintLocalCatalog: Sendable {
             category: "economy",
             priority: 42,
             source: "local",
-            locale: "en"
+            locale: "en",
+            taskKind: .currentInformationQuestion
         ),
         AIHintCard(
             id: "local-en-daily-brief",
@@ -149,7 +152,8 @@ public enum AIHintLocalCatalog: Sendable {
             category: "daily",
             priority: 45,
             source: "local",
-            locale: "en"
+            locale: "en",
+            taskKind: .currentInformationQuestion
         ),
         AIHintCard(
             id: "local-en-quote",

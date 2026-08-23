@@ -1148,6 +1148,7 @@ struct OnboardingExperienceView: View {
         practiceStartedAt = nil
         completedPracticeFeatures = loadCompletedPracticeFeatures()
         practiceFeature = firstIncompletePracticeFeature ?? .askAI
+        practiceText = ""
         practiceSessionID = nil
         didCopyPracticeSample = false
         managedPracticeReady = false
@@ -1285,6 +1286,7 @@ struct OnboardingExperienceView: View {
         }
         withAnimation(Motion.soft) {
             practiceFeature = feature
+            practiceText = ""
             didCopyPracticeSample = false
         }
         focusPracticeField()

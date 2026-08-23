@@ -85,7 +85,7 @@ public struct OfficialSkillDefinition: Codable, Equatable, Identifiable, Sendabl
             cardTitleKey: "",
             descriptionKey: "",
             kind: kind,
-            isDefault: false,
+            isDefault: true,
             customName: localization.name,
             customSummary: localization.summary,
             customPrompt: localization.prompt,

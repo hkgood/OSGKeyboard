@@ -15,7 +15,7 @@
     {
       "acceptedForAutomaticRouting" : true,
       "algorithm" : "maxEnt",
-      "confidenceThreshold" : 0.62,
+      "confidenceThreshold" : 0.6,
       "id" : "question",
       "labels" : [
         "notQuestion",
@@ -27,7 +27,7 @@
     {
       "acceptedForAutomaticRouting" : true,
       "algorithm" : "maxEnt",
-      "confidenceThreshold" : 0.89,
+      "confidenceThreshold" : 0.77,
       "id" : "invitation",
       "labels" : [
         "notInvitation",
@@ -37,9 +37,9 @@
       "positiveLabel" : "invitation"
     },
     {
-      "acceptedForAutomaticRouting" : false,
+      "acceptedForAutomaticRouting" : true,
       "algorithm" : "maxEnt",
-      "confidenceThreshold" : 0.6,
+      "confidenceThreshold" : 0.68,
       "id" : "complaint",
       "labels" : [
         "notComplaint",
@@ -47,6 +47,18 @@
       ],
       "modelFile" : "ComplaintIntentClassifier.mlmodel",
       "positiveLabel" : "complaint"
+    },
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.6,
+      "id" : "replyableMessage",
+      "labels" : [
+        "notReplyableMessage",
+        "replyableMessage"
+      ],
+      "modelFile" : "ConversationalReplyIntentClassifier.mlmodel",
+      "positiveLabel" : "replyableMessage"
     },
     {
       "acceptedForAutomaticRouting" : true,
@@ -60,7 +72,7 @@
       "modelFile" : "SentimentClassifier.mlmodel"
     }
   ],
-  "corpusRecordCount" : 6334,
-  "generatedAt" : "2026-08-21T15:28:40Z",
+  "corpusRecordCount" : 7272,
+  "generatedAt" : "2026-08-22T09:30:13Z",
   "schemaVersion" : 1
 }

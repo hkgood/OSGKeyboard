@@ -15,6 +15,9 @@ final class AIKeyboardCoordinator {
     private let insertAnswer: (AIAnswer) -> Bool
     private let performReturn: () -> Void
     private let captureInsertionFingerprint: () -> String?
+    private let openWebURL: (URL) -> Void
+    private let callPhone: (String) -> Void
+    private let createContact: (String) -> Void
     private var requestInsertionFingerprint: String?
     private var conversationInsertionFingerprint: String?
     private var hasConversationInsertionTarget = false
@@ -25,13 +28,19 @@ final class AIKeyboardCoordinator {
         flow: KeyboardFlowCoordinator,
         insertAnswer: @escaping (AIAnswer) -> Bool,
         performReturn: @escaping () -> Void,
-        captureInsertionFingerprint: @escaping () -> String?
+        captureInsertionFingerprint: @escaping () -> String?,
+        openWebURL: @escaping (URL) -> Void,
+        callPhone: @escaping (String) -> Void,
+        createContact: @escaping (String) -> Void
     ) {
         self.state = state
         self.flow = flow
         self.insertAnswer = insertAnswer
         self.performReturn = performReturn
         self.captureInsertionFingerprint = captureInsertionFingerprint
+        self.openWebURL = openWebURL
+        self.callPhone = callPhone
+        self.createContact = createContact
     }
 
     func beginNewPresentation() {
@@ -94,7 +103,6 @@ final class AIKeyboardCoordinator {
             state.skillTipText = ExtL10n.string("keyboard.ai.skill.shortcutMissing")
             return
         }
-        prepareConversationForRequest()
         let oobeFeature = oobeFeature(for: skill)
         let material: String?
         if let oobeFeature {
@@ -106,6 +114,35 @@ final class AIKeyboardCoordinator {
         } else {
             material = ClipboardHistoryStore.shared.newestAIHintEligibleEntry()?.text
         }
+        if skill.id == AIClipboardSkillCatalog.openLinkID {
+            guard let material,
+                  let url = ClipboardWebLinkResolver.singleWebURL(in: material) else {
+                state.skillTipText = ExtL10n.string("keyboard.ai.error.clipboardUnavailable")
+                return
+            }
+            openWebURL(url)
+            return
+        }
+        if skill.id == AIClipboardSkillCatalog.callPhoneID {
+            guard let material,
+                  let phoneNumber = AIPhoneNumberResolver.singlePhoneNumber(in: material) else {
+                state.skillTipText = ExtL10n.string("keyboard.ai.error.clipboardUnavailable")
+                return
+            }
+            callPhone(phoneNumber)
+            return
+        }
+        if skill.id == AIClipboardSkillCatalog.createContactID {
+            guard let material,
+                  let phoneNumber = AIPhoneNumberResolver.singlePhoneNumber(in: material) else {
+                state.skillTipText = ExtL10n.string("keyboard.ai.error.clipboardUnavailable")
+                return
+            }
+            createContact(phoneNumber)
+            return
+        }
+
+        prepareConversationForRequest()
         if skill.kind == .export {
             state.pendingClipboardSkillID = skill.id
             state.pendingClipboardSkillSource = material
@@ -134,6 +171,27 @@ final class AIKeyboardCoordinator {
         if case .materialUnavailable = resolution {
             AIAgentShortcutRun.trace("keyboard.submit rejected clipboardUnavailable skill=\(skill.id)")
         }
+        if skill.id == AIClipboardSkillCatalog.summarizeWebPageID,
+           let material,
+           let url = ClipboardWebLinkResolver.singleWebURL(in: material) {
+            submitResolvedPrompt(
+                .ready(instruction),
+                taskKind: skill.managedGatewayTaskKind,
+                oobeFeature: oobeFeature,
+                thinkingEnabled: skill.thinkingEnabled,
+                webPageURL: url
+            )
+            return
+        }
+        if skill.id == AIClipboardSkillCatalog.summarizeWebPageID {
+            submitResolvedPrompt(
+                .materialUnavailable,
+                taskKind: skill.managedGatewayTaskKind,
+                oobeFeature: oobeFeature,
+                thinkingEnabled: skill.thinkingEnabled
+            )
+            return
+        }
         submitResolvedPrompt(
             resolution,
             taskKind: skill.managedGatewayTaskKind,
@@ -155,8 +213,10 @@ final class AIKeyboardCoordinator {
         )
         submitResolvedPrompt(
             resolution,
-            taskKind: .aiQuestion,
-            oobeFeature: nil
+            taskKind: card.taskKind,
+            requestSource: .hotword,
+            oobeFeature: nil,
+            thinkingEnabled: true
         )
     }
 
@@ -173,8 +233,10 @@ final class AIKeyboardCoordinator {
     private func submitResolvedPrompt(
         _ resolution: AIClipboardPrompt.Resolution,
         taskKind: ManagedGatewayTaskKind,
+        requestSource: ManagedGatewayRequestSource? = nil,
         oobeFeature: ManagedGatewayOOBEFeature? = nil,
-        thinkingEnabled: Bool? = nil
+        thinkingEnabled: Bool? = nil,
+        webPageURL: URL? = nil
     ) {
         guard case .ready(let prompt) = resolution else {
             // The clipboard window closed between rendering and this tap.
@@ -194,8 +256,10 @@ final class AIKeyboardCoordinator {
             text: prompt,
             conversationID: conversationID,
             taskKind: taskKind,
+            requestSource: requestSource,
             oobeFeature: oobeFeature,
-            thinkingEnabled: thinkingEnabled
+            thinkingEnabled: thinkingEnabled,
+            webPageURL: webPageURL
         )
         if case .rejected(let rejection) = disposition {
             clearPendingExportSkill()

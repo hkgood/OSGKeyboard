@@ -254,6 +254,27 @@ final class ManagedGatewayTests: XCTestCase {
         XCTAssertEqual(taskKinds, cases.map { $0.1.rawValue })
     }
 
+    func testManagedHotwordSerializesSourceAndCurrentInformationIntent() async throws {
+        let now = Date(timeIntervalSince1970: 3_600)
+        let store = MemoryGrantStore(credentials(accessToken: "access", receivedAt: now))
+        GatewayStub.shared.enqueue(200, Data(#"{"output_text":"ok"}"#.utf8))
+        let client = ManagedLLMClient(
+            capability: .assistant,
+            taskKind: .currentInformationQuestion,
+            requestSource: .hotword,
+            grants: makeCoordinator(store: store, now: { now }),
+            baseURL: baseURL,
+            session: stubSession()
+        )
+
+        _ = try await client.polish("today's news", systemPrompt: "context")
+
+        let request = try XCTUnwrap(GatewayStub.shared.requests().first)
+        let body = try jsonBody(request)
+        XCTAssertEqual(body["taskKind"] as? String, "current_information_question")
+        XCTAssertEqual(body["requestSource"] as? String, "hotword")
+    }
+
     func testManagedClientSerializesOOBERequestPurpose() async throws {
         let now = Date(timeIntervalSince1970: 3_750)
         let store = MemoryGrantStore(credentials(accessToken: "account-access", receivedAt: now))
@@ -508,6 +529,49 @@ final class ManagedGatewayTests: XCTestCase {
         }
         let remaining = await expiredStore.value()
         XCTAssertNil(remaining)
+    }
+
+    func testProviderFailuresAreMappedToDistinctManagedErrors() {
+        XCTAssertEqual(
+            ManagedGatewayHTTP.error(
+                data: errorJSON("provider_unavailable"),
+                status: 503,
+                requestId: "provider-unavailable"
+            ),
+            .providerUnavailable(requestId: "request-id")
+        )
+        XCTAssertEqual(
+            ManagedGatewayHTTP.error(
+                data: errorJSON("provider_rate_limited"),
+                status: 503,
+                requestId: "provider-rate-limited"
+            ),
+            .providerRateLimited(requestId: "request-id")
+        )
+        XCTAssertEqual(
+            ManagedGatewayHTTP.error(
+                data: errorJSON("provider_timeout"),
+                status: 504,
+                requestId: "provider-timeout"
+            ),
+            .providerTimeout(requestId: "request-id")
+        )
+        XCTAssertEqual(
+            ManagedGatewayHTTP.error(
+                data: errorJSON("provider_invalid_response"),
+                status: 502,
+                requestId: "provider-invalid"
+            ),
+            .providerFailure(requestId: "request-id")
+        )
+        XCTAssertEqual(
+            ManagedGatewayHTTP.error(
+                data: errorJSON("internal_failure"),
+                status: 500,
+                requestId: "internal-failure"
+            ),
+            .internalFailure(requestId: "request-id")
+        )
     }
 
     func testTransportTimeoutMapsToManagedTimeout() async {

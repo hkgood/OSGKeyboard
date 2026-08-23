@@ -50,6 +50,7 @@ public struct ManagedLLMClient: LLMClient {
 
     public let capability: Capability
     public let taskKind: ManagedGatewayTaskKind
+    public let requestSource: ManagedGatewayRequestSource?
     public let requestPurpose: ManagedGatewayRequestPurpose?
     public let oobeFeature: ManagedGatewayOOBEFeature?
     public let requestTimeout: TimeInterval
@@ -63,6 +64,7 @@ public struct ManagedLLMClient: LLMClient {
     public init(
         capability: Capability,
         taskKind: ManagedGatewayTaskKind? = nil,
+        requestSource: ManagedGatewayRequestSource? = nil,
         requestPurpose: ManagedGatewayRequestPurpose? = nil,
         oobeFeature: ManagedGatewayOOBEFeature? = nil,
         grants: GatewayGrantCoordinator,
@@ -74,6 +76,7 @@ public struct ManagedLLMClient: LLMClient {
     ) {
         self.capability = capability
         self.taskKind = taskKind ?? capability.defaultTaskKind
+        self.requestSource = requestSource
         self.requestPurpose = requestPurpose
         self.oobeFeature = oobeFeature
         self.grants = grants
@@ -324,6 +327,7 @@ public struct ManagedLLMClient: LLMClient {
             temperature: min(max(attempt.options.temperature ?? 0.2, 0), 1),
             stream: stream,
             taskKind: taskKind,
+            requestSource: requestSource,
             requestPurpose: requestPurpose,
             oobeFeature: oobeFeature
         )
@@ -452,16 +456,11 @@ public struct ManagedLLMClient: LLMClient {
               object["message"] != nil || code.hasSuffix("_error") else {
             return nil
         }
-        if ["insufficient_credits", "insufficient_balance"].contains(code) {
-            return .insufficientCredits
-        }
-        if code == "oobe_feature_already_used" {
-            return .oobeFeatureAlreadyUsed
-        }
-        if ["unauthorized", "gateway_grant_denied", "invalid_grant"].contains(code) {
-            return .invalidGrant
-        }
-        return .server(code: code, status: 200, requestId: requestId)
+        return ManagedGatewayHTTP.error(
+            code: code,
+            status: 200,
+            requestId: object["requestId"] as? String ?? requestId
+        )
     }
 }
 

@@ -1,8 +1,10 @@
 {
   "containsUserClipboardData": false,
   "families": {
+    "acknowledgment": 388,
     "complaint_request": 546,
     "complaint_statement": 546,
+    "conversational_message": 550,
     "event_statement": 544,
     "information_question": 544,
     "invitation_question": 548,
@@ -15,26 +17,27 @@
     "task_statement": 548
   },
   "languages": {
-    "en": 3167,
-    "zh-Hans": 3167
+    "en": 3636,
+    "zh-Hans": 3636
   },
   "positiveIntentLabels": {
     "complaint": 1092,
     "invitation": 548,
     "question": 2182,
+    "replyable": 4374,
     "task": 1094
   },
   "seed": 20260821,
   "sentiments": {
     "negative": 1578,
-    "neutral": 4210,
+    "neutral": 5148,
     "positive": 546
   },
   "splits": {
-    "golden": 74,
-    "test": 1080,
-    "train": 4100,
-    "validation": 1080
+    "golden": 92,
+    "test": 1260,
+    "train": 4660,
+    "validation": 1260
   },
-  "total": 6334
+  "total": 7272
 }

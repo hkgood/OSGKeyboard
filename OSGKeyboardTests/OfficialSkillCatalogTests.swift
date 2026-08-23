@@ -63,6 +63,75 @@ final class OfficialSkillCatalogTests: XCTestCase {
             "Rewrite the clipboard clearly."
         )
         XCTAssertTrue(catalog.resolvedSkills(language: .english).first?.thinkingEnabled ?? false)
+        XCTAssertTrue(catalog.resolvedSkills(language: .english).first?.isDefault ?? false)
+    }
+
+    func testNewOfficialTextSkillsAreInstalledWithoutRestoringDisabledSkills() throws {
+        let defaults = makeDefaults()
+        let store = AppGroupStore(defaults: defaults)
+        let first = OfficialSkillCatalog(
+            revision: 1,
+            skills: [definition(id: "official.rewrite", sortOrder: 10)]
+        )
+
+        try store.setOfficialSkillCatalog(
+            first,
+            installingNewDefaultSkills: true
+        )
+        XCTAssertTrue(store.agentSkillLayout.isEnabled("official.rewrite"))
+
+        store.setAgentSkillLayout(
+            AIAgentSkillLayout(
+                enabledIDs: AIAgentSkillLayout.defaultEnabledIDs,
+                confirmedShortcutIDs: []
+            )
+        )
+        let second = OfficialSkillCatalog(
+            revision: 2,
+            skills: [
+                definition(id: "official.rewrite", sortOrder: 10),
+                definition(id: "official.second", sortOrder: 20)
+            ]
+        )
+
+        try store.setOfficialSkillCatalog(
+            second,
+            installingNewDefaultSkills: true
+        )
+
+        XCTAssertFalse(store.agentSkillLayout.isEnabled("official.rewrite"))
+        XCTAssertTrue(store.agentSkillLayout.isEnabled("official.second"))
+        XCTAssertEqual(store.agentSkillLayout.enabledIDs.last, "official.second")
+    }
+
+    func testVersionTwoLayoutInstallsCachedOfficialTextSkillsOnce() throws {
+        let defaults = makeDefaults()
+        let store = AppGroupStore(defaults: defaults)
+        try store.setOfficialSkillCatalog(
+            OfficialSkillCatalog(
+                revision: 1,
+                skills: [definition(id: "official.rewrite")]
+            )
+        )
+        let layout = AIAgentSkillLayout(
+            enabledIDs: [AIClipboardSkillCatalog.replyID],
+            confirmedShortcutIDs: []
+        )
+        defaults.set(
+            try JSONEncoder().encode(layout),
+            forKey: AppGroupConfiguration.Keys.agentSkillLayout
+        )
+        defaults.set(
+            2,
+            forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+        )
+
+        let migrated = store.agentSkillLayout
+
+        XCTAssertEqual(
+            migrated.enabledIDs,
+            [AIClipboardSkillCatalog.replyID, "official.rewrite"]
+        )
     }
 
     func testValidationRejectsWholeInvalidSnapshot() {

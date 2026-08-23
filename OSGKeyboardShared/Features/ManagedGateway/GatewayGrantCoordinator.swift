@@ -240,6 +240,14 @@ enum ManagedGatewayHTTP {
         let code = decoded?.code ?? HTTPURLResponse.localizedString(forStatusCode: status)
         let resolvedRequestId = decoded?.requestId ?? requestId
 
+        return error(code: code, status: status, requestId: resolvedRequestId)
+    }
+
+    static func error(
+        code: String,
+        status: Int,
+        requestId: String?
+    ) -> ManagedGatewayError {
         switch code.lowercased() {
         case "insufficient_credits", "insufficient_balance", "credit_balance_insufficient":
             return .insufficientCredits
@@ -247,8 +255,29 @@ enum ManagedGatewayHTTP {
             return .oobeFeatureAlreadyUsed
         case "unauthorized", "invalid_gateway_refresh", "gateway_grant_denied", "invalid_grant":
             return .invalidGrant
+        case "provider_unavailable":
+            return .providerUnavailable(requestId: requestId)
+        case "provider_rate_limited":
+            return .providerRateLimited(requestId: requestId)
+        case "provider_timeout":
+            return .providerTimeout(requestId: requestId)
+        case "provider_failure", "provider_invalid_response", "provider_error", "gateway_failure":
+            return .providerFailure(requestId: requestId)
+        case "internal_failure":
+            return .internalFailure(requestId: requestId)
         default:
-            return .server(code: code, status: status, requestId: resolvedRequestId)
+            switch status {
+            case 429:
+                return .providerRateLimited(requestId: requestId)
+            case 502:
+                return .providerFailure(requestId: requestId)
+            case 503:
+                return .providerUnavailable(requestId: requestId)
+            case 504:
+                return .providerTimeout(requestId: requestId)
+            default:
+                return .server(code: code, status: status, requestId: requestId)
+            }
         }
     }
 

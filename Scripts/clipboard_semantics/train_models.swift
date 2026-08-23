@@ -14,6 +14,7 @@ private struct CorpusRecord: Codable {
     let invitation: Bool
     let complaint: Bool
     let sentiment: String
+    let replyable: Bool
 }
 
 private struct BinaryMetrics: Codable {
@@ -122,6 +123,7 @@ private enum ClassifierID: String, CaseIterable {
     case question
     case invitation
     case complaint
+    case replyableMessage
     case sentiment
 
     var resourceName: String {
@@ -130,6 +132,7 @@ private enum ClassifierID: String, CaseIterable {
         case .question: "QuestionIntentClassifier"
         case .invitation: "InvitationIntentClassifier"
         case .complaint: "ComplaintIntentClassifier"
+        case .replyableMessage: "ConversationalReplyIntentClassifier"
         case .sentiment: "SentimentClassifier"
         }
     }
@@ -140,6 +143,7 @@ private enum ClassifierID: String, CaseIterable {
         case .question: ["notQuestion", "question"]
         case .invitation: ["notInvitation", "invitation"]
         case .complaint: ["notComplaint", "complaint"]
+        case .replyableMessage: ["notReplyableMessage", "replyableMessage"]
         case .sentiment: ["negative", "neutral", "positive"]
         }
     }
@@ -150,6 +154,7 @@ private enum ClassifierID: String, CaseIterable {
         case .question: "question"
         case .invitation: "invitation"
         case .complaint: "complaint"
+        case .replyableMessage: "replyableMessage"
         case .sentiment: nil
         }
     }
@@ -160,6 +165,7 @@ private enum ClassifierID: String, CaseIterable {
         case .question: record.question ? "question" : "notQuestion"
         case .invitation: record.invitation ? "invitation" : "notInvitation"
         case .complaint: record.complaint ? "complaint" : "notComplaint"
+        case .replyableMessage: record.replyable ? "replyableMessage" : "notReplyableMessage"
         case .sentiment: record.sentiment
         }
     }

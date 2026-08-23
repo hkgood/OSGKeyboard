@@ -52,13 +52,89 @@ public struct ClipboardSemanticAnalysis: Equatable, Sendable {
     public let question: ClipboardIntentLabel
     public let invitation: ClipboardIntentLabel
     public let complaint: ClipboardIntentLabel
+    public let replyableMessage: ClipboardIntentLabel
 
     public var hasDateOrTime: Bool { !dates.isEmpty }
     public var hasAddress: Bool { !addresses.isEmpty }
     public var hasPhoneNumber: Bool { !phoneNumbers.isEmpty }
+    public var singlePhoneNumber: String? {
+        AIPhoneNumberResolver.singlePhoneNumber(from: phoneNumbers)
+    }
     public var hasURL: Bool { !urls.isEmpty }
+    public var singleWebURL: URL? {
+        ClipboardWebLinkResolver.singleWebURL(from: urls)
+    }
     public var hasPersonName: Bool { !personNames.isEmpty }
     public var hasOrganizationName: Bool { !organizationNames.isEmpty }
+}
+
+/// Deterministic HTTP(S) extraction shared by analysis and direct URL skills.
+/// Bare domains are upgraded to HTTPS; explicit HTTP links preserve their scheme.
+public enum ClipboardWebLinkResolver: Sendable {
+    public static func webURLs(in text: String) -> [URL] {
+        guard let detector = try? NSDataDetector(
+            types: NSTextCheckingResult.CheckingType.link.rawValue
+        ) else {
+            return []
+        }
+        let range = NSRange(text.startIndex..., in: text)
+        let urls: [URL] = detector.matches(
+            in: text,
+            options: [],
+            range: range
+        ).compactMap { match -> URL? in
+            guard let swiftRange = Range(match.range, in: text),
+                  let url = match.url else {
+                return nil
+            }
+            return normalizedWebURL(
+                url,
+                sourceText: String(text[swiftRange])
+            )
+        }
+        return deduplicated(urls)
+    }
+
+    public static func singleWebURL(in text: String) -> URL? {
+        singleWebURL(from: webURLs(in: text))
+    }
+
+    public static func singleWebURL(from urls: [URL]) -> URL? {
+        let webURLs = deduplicated(urls.compactMap {
+            normalizedWebURL($0, sourceText: $0.absoluteString)
+        })
+        return webURLs.count == 1 ? webURLs[0] : nil
+    }
+
+    static func normalizedWebURL(_ url: URL, sourceText: String) -> URL? {
+        guard var components = URLComponents(
+            url: url,
+            resolvingAgainstBaseURL: false
+        ) else {
+            return nil
+        }
+        let source = sourceText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let scheme = components.scheme?.lowercased()
+        guard scheme == "http" || scheme == "https",
+              components.host?.isEmpty == false else {
+            return nil
+        }
+        if scheme == "http",
+           !source.hasPrefix("http://"),
+           !source.contains("://") {
+            components.scheme = "https"
+        }
+        return components.url
+    }
+
+    private static func deduplicated(_ urls: [URL]) -> [URL] {
+        var seen = Set<String>()
+        return urls.filter {
+            seen.insert($0.absoluteString).inserted
+        }
+    }
 }
 
 public actor ClipboardSemanticAnalyzer {
@@ -85,6 +161,7 @@ public actor ClipboardSemanticAnalyzer {
         case question
         case invitation
         case complaint
+        case replyableMessage
     }
 
     private static let resourceDirectory = "ClipboardSemantics"
@@ -124,6 +201,7 @@ public actor ClipboardSemanticAnalyzer {
         let question = intentLabel(.question, segments: segments)
         let invitation = intentLabel(.invitation, segments: segments)
         let complaint = intentLabel(.complaint, segments: segments)
+        let replyableMessage = intentLabel(.replyableMessage, segments: segments)
         let sentiment = sentimentLabel(segments: segments)
 
         return ClipboardSemanticAnalysis(
@@ -139,7 +217,8 @@ public actor ClipboardSemanticAnalyzer {
             task: task,
             question: question,
             invitation: invitation,
-            complaint: complaint
+            complaint: complaint,
+            replyableMessage: replyableMessage
         )
     }
 
@@ -163,7 +242,8 @@ public actor ClipboardSemanticAnalyzer {
             task: emptyIntent,
             question: emptyIntent,
             invitation: emptyIntent,
-            complaint: emptyIntent
+            complaint: emptyIntent,
+            replyableMessage: emptyIntent
         )
     }
 
@@ -223,7 +303,11 @@ public actor ClipboardSemanticAnalyzer {
                     ClipboardTextLabel(sourceText: match.phoneNumber ?? source)
                 )
             case .link:
-                if let url = match.url {
+                if let url = match.url,
+                   let url = ClipboardWebLinkResolver.normalizedWebURL(
+                       url,
+                       sourceText: source
+                   ) {
                     urls.append(url)
                 }
             default:

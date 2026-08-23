@@ -55,6 +55,129 @@ final class AIAgentSkillLayoutTests: XCTestCase {
         XCTAssertTrue(migrated.enabledIDs.contains(AIClipboardSkillCatalog.extractEventsID))
     }
 
+    func testVersionOneLayoutAddsLaterBuiltInDefaults() throws {
+        let defaults = makeDefaults()
+        let layout = AIAgentSkillLayout(
+            enabledIDs: [AIClipboardSkillCatalog.replyID],
+            confirmedShortcutIDs: []
+        )
+        defaults.set(
+            try JSONEncoder().encode(layout),
+            forKey: AppGroupConfiguration.Keys.agentSkillLayout
+        )
+        defaults.set(
+            1,
+            forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+        )
+
+        let migrated = AppGroupStore(defaults: defaults).agentSkillLayout
+
+        XCTAssertEqual(
+            migrated.enabledIDs,
+            [
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.playfulReplyID,
+                AIClipboardSkillCatalog.openLinkID,
+                AIClipboardSkillCatalog.summarizeWebPageID,
+                AIClipboardSkillCatalog.callPhoneID,
+                AIClipboardSkillCatalog.createContactID
+            ]
+        )
+    }
+
+    func testVersionThreeLayoutAddsLinkAndPhoneSkills() throws {
+        let defaults = makeDefaults()
+        let layout = AIAgentSkillLayout(
+            enabledIDs: [AIClipboardSkillCatalog.replyID],
+            confirmedShortcutIDs: []
+        )
+        defaults.set(
+            try JSONEncoder().encode(layout),
+            forKey: AppGroupConfiguration.Keys.agentSkillLayout
+        )
+        defaults.set(
+            3,
+            forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+        )
+
+        let migrated = AppGroupStore(defaults: defaults).agentSkillLayout
+
+        XCTAssertEqual(
+            migrated.enabledIDs,
+            [
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.openLinkID,
+                AIClipboardSkillCatalog.summarizeWebPageID,
+                AIClipboardSkillCatalog.callPhoneID,
+                AIClipboardSkillCatalog.createContactID
+            ]
+        )
+    }
+
+    func testVersionFourLayoutAddsPhoneSkills() throws {
+        let defaults = makeDefaults()
+        let layout = AIAgentSkillLayout(
+            enabledIDs: [AIClipboardSkillCatalog.replyID],
+            confirmedShortcutIDs: []
+        )
+        defaults.set(
+            try JSONEncoder().encode(layout),
+            forKey: AppGroupConfiguration.Keys.agentSkillLayout
+        )
+        defaults.set(
+            4,
+            forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+        )
+
+        let migrated = AppGroupStore(defaults: defaults).agentSkillLayout
+
+        XCTAssertEqual(
+            migrated.enabledIDs,
+            [
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.callPhoneID,
+                AIClipboardSkillCatalog.createContactID
+            ]
+        )
+    }
+
+    func testVersionFiveLayoutConsolidatesLegacySkillIDs() throws {
+        let defaults = makeDefaults()
+        let layout = AIAgentSkillLayout(
+            enabledIDs: [
+                AIClipboardSkillCatalog.replyInSourceLanguageID,
+                AIClipboardSkillCatalog.extractConclusionsID,
+                AIClipboardSkillCatalog.askForDetailsID
+            ],
+            confirmedShortcutIDs: []
+        )
+        defaults.set(
+            try JSONEncoder().encode(layout),
+            forKey: AppGroupConfiguration.Keys.agentSkillLayout
+        )
+        defaults.set(
+            5,
+            forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+        )
+
+        let migrated = AppGroupStore(defaults: defaults).agentSkillLayout
+
+        XCTAssertEqual(
+            migrated.enabledIDs,
+            [
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.summarizeID,
+                AIClipboardSkillCatalog.clarifyRequestID
+            ]
+        )
+        XCTAssertEqual(
+            defaults.integer(
+                forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+            ),
+            6
+        )
+    }
+
     func testCannotEnableExportSkillBeforeShortcutConfirmation() {
         let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
         store.disable(AIClipboardSkillCatalog.extractTodosID)
@@ -95,6 +218,27 @@ final class AIAgentSkillLayoutTests: XCTestCase {
         XCTAssertEqual(layout.enabledIDs, ["reply", "extractTodos"])
     }
 
+    func testSanitizedConsolidatesLegacySkillIDsWithoutDuplicates() {
+        let layout = AIAgentSkillLayout(
+            enabledIDs: [
+                AIClipboardSkillCatalog.replyInSourceLanguageID,
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.extractConclusionsID,
+                AIClipboardSkillCatalog.askForDetailsID
+            ],
+            confirmedShortcutIDs: []
+        ).sanitized()
+
+        XCTAssertEqual(
+            layout.enabledIDs,
+            [
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.summarizeID,
+                AIClipboardSkillCatalog.clarifyRequestID
+            ]
+        )
+    }
+
     func testSanitizedDoesNotCapEnabledSkillCount() {
         let catalog = (0..<20).map { index in
             AIClipboardSkill(
@@ -130,13 +274,12 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             id: AIClipboardSkillCatalog.translateID,
             onto: AIClipboardSkillCatalog.replyID
         )
+        var expected = AIAgentSkillLayout.defaultEnabledIDs
+        expected.removeAll { $0 == AIClipboardSkillCatalog.translateID }
+        expected.insert(AIClipboardSkillCatalog.translateID, at: 0)
         XCTAssertEqual(
             store.layout.enabledIDs,
-            [
-                AIClipboardSkillCatalog.translateID,
-                AIClipboardSkillCatalog.replyID,
-                AIClipboardSkillCatalog.replyInSourceLanguageID
-            ] + Array(AIAgentSkillLayout.defaultEnabledIDs.dropFirst(3))
+            expected
         )
     }
 
@@ -147,7 +290,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             Array(store.layout.enabledIDs.prefix(3)),
             [
                 AIClipboardSkillCatalog.replyID,
-                AIClipboardSkillCatalog.replyInSourceLanguageID,
+                AIClipboardSkillCatalog.playfulReplyID,
                 AIClipboardSkillCatalog.summarizeID
             ]
         )
@@ -157,7 +300,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             [
                 AIClipboardSkillCatalog.summarizeID,
                 AIClipboardSkillCatalog.replyID,
-                AIClipboardSkillCatalog.replyInSourceLanguageID
+                AIClipboardSkillCatalog.playfulReplyID
             ]
         )
     }
@@ -200,6 +343,37 @@ final class AIAgentSkillLayoutTests: XCTestCase {
         )
         let data = AIAgentShortcutRun.encode(old)!
         XCTAssertNil(AIAgentShortcutRun.decode(data))
+    }
+
+    func testPendingContactCreationIsNormalizedAndConsumedOnce() {
+        let defaults = makeDefaults()
+        let store = AppGroupStore(defaults: defaults)
+
+        store.setPendingContactCreation(phoneNumber: "+1 (408) 996-1010")
+
+        XCTAssertEqual(
+            store.consumePendingContactCreation()?.phoneNumber,
+            "+14089961010"
+        )
+        XCTAssertNil(store.consumePendingContactCreation())
+    }
+
+    func testPendingContactCreationExpires() throws {
+        let defaults = makeDefaults()
+        let store = AppGroupStore(defaults: defaults)
+        let now = Date()
+        let payload = AIContactCreationPayload(
+            phoneNumber: "400-666-8800",
+            createdAt: now.addingTimeInterval(
+                -AIContactCreationHandoff.maximumAge - 1
+            )
+        )
+        defaults.set(
+            try XCTUnwrap(AIContactCreationHandoff.encode(payload)),
+            forKey: AIContactCreationHandoff.pendingKey
+        )
+
+        XCTAssertNil(store.consumePendingContactCreation(now: now))
     }
 
     func testShortcutsRunURLPreservesNotesFieldSeparator() {

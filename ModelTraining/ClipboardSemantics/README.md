@@ -5,17 +5,19 @@ for OSGKeyboard's fully local clipboard analyzer.
 
 ## Scope
 
-The model suite predicts four independent intents (`task`, `question`,
-`invitation`, and `complaint`) plus three-way sentiment. Apple data detectors
-remain responsible for dates, addresses, phone numbers, and URLs; `NLTagger`
-provides best-effort person and organization names.
+The model suite predicts five independent intents (`task`, `question`,
+`invitation`, `complaint`, and `replyableMessage`) plus three-way sentiment.
+`replyableMessage` distinguishes messages that invite a response from terminal
+acknowledgments, personal notes, quoted questions, and factual notices. Apple
+data detectors remain responsible for dates, addresses, phone numbers, and
+URLs; `NLTagger` provides best-effort person and organization names.
 
-The corpus contains 6,334 Chinese and English records:
+The corpus contains 7,272 Chinese and English records:
 
-- 4,100 generated training records
-- 1,080 generated validation records
-- 1,080 template-held-out test records
-- 74 manually authored golden records
+- 4,660 generated training records
+- 1,260 generated validation records
+- 1,260 template-held-out test records
+- 92 manually authored golden records
 
 No user clipboard content is included.
 
@@ -38,11 +40,12 @@ transfer models depend on `NLContextualEmbedding` assets that are not guaranteed
 to exist in a simulator or keyboard-extension runtime, so they remain evaluation
 candidates only.
 
-The selected task, question, and invitation models passed the automatic-routing
-precision gates. The complaint model is packaged for further evaluation but its
-automatic-routing flag remains disabled because golden-set precision is 88.89%,
-below the 90% release gate. Sentiment returns `unknown` unless confidence and
-top-two margin checks both pass.
+The selected intent models passed the automatic-routing precision gates. The
+replyable-message model reached 100% test precision and 97.96% golden precision;
+its measured recall remains part of release monitoring. The complaint model is
+also high precision but remains conservative because golden recall is limited.
+Sentiment returns `unknown` unless confidence and top-two margin checks both
+pass.
 
 Synthetic results are not treated as production truth. Real opt-in, anonymized
 or manually reviewed examples are still required before widening labels or

@@ -48,7 +48,8 @@ public enum TranscriptionPolishFallback: Sendable {
                 return SharedL10n.string("flow.warning.managedGrantRejected")
             case .oobeFeatureAlreadyUsed:
                 return SharedL10n.string("flow.warning.oobeFeatureAlreadyUsed")
-            case .timeout, .server:
+            case .timeout, .providerUnavailable, .providerRateLimited,
+                 .providerTimeout, .providerFailure, .internalFailure, .server:
                 return degradedWarning()
             }
         }

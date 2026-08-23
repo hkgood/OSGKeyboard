@@ -14,7 +14,7 @@ writing commit messages that will ship to users.
 
 ### Version format
 
-The current source-of-truth version is **2.0.1 (build 87)**. Releases use stable SemVer:
+The current source-of-truth version is **2.0.1 (build 89)**. Releases use stable SemVer:
 
 | Field | File | Rule |
 |-------|------|------|

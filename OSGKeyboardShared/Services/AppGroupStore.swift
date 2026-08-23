@@ -262,12 +262,47 @@ public struct AppGroupStore: @unchecked Sendable {
         AppGroupConfigDarwin.postConfigChanged()
     }
 
-    /// Stores one encoded value so readers observe either the old or new
-    /// complete snapshot, never partially updated catalog metadata.
-    public func setOfficialSkillCatalog(_ catalog: OfficialSkillCatalog) throws {
+    /// Stores one encoded catalog snapshot. A successful 200 refresh can also
+    /// append newly published text skills without restoring previously disabled ones.
+    public func setOfficialSkillCatalog(
+        _ catalog: OfficialSkillCatalog,
+        installingNewDefaultSkills: Bool = false
+    ) throws {
         let validated = try catalog.validated()
-        let data = try JSONEncoder().encode(validated)
-        defaults.set(data, forKey: AppGroupConfiguration.Keys.officialSkillCatalog)
+        let encoder = JSONEncoder()
+        let catalogData = try encoder.encode(validated)
+        var layoutData: Data?
+
+        if installingNewDefaultSkills {
+            let cachedIDs = Set(officialSkillCatalog.skills.map(\.id))
+            let addedIDs = validated.skills
+                .filter { $0.kind == .transform && !cachedIDs.contains($0.id) }
+                .map(\.id)
+            if !addedIDs.isEmpty {
+                let current = agentSkillLayout
+                let resolvedCatalog = AIClipboardSkillCatalog.all(
+                    officialCatalog: validated,
+                    userCatalog: agentUserSkillCatalog,
+                    uiLanguage: uiLanguage
+                )
+                let updated = AIAgentSkillLayout(
+                    enabledIDs: current.enabledIDs + addedIDs.filter {
+                        !current.enabledIDs.contains($0)
+                    },
+                    confirmedShortcutIDs: current.confirmedShortcutIDs
+                ).sanitized(catalog: resolvedCatalog)
+                layoutData = try encoder.encode(updated)
+            }
+        }
+
+        defaults.set(catalogData, forKey: AppGroupConfiguration.Keys.officialSkillCatalog)
+        if let layoutData {
+            defaults.set(layoutData, forKey: AppGroupConfiguration.Keys.agentSkillLayout)
+            defaults.set(
+                Self.currentAgentSkillDefaultsMigrationVersion,
+                forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+            )
+        }
         defaults.synchronize()
         AppGroupConfigDarwin.postConfigChanged()
     }
@@ -317,6 +352,26 @@ public struct AppGroupStore: @unchecked Sendable {
         return payload
     }
 
+    public func setPendingContactCreation(phoneNumber: String) {
+        guard let normalized = AIPhoneNumberResolver.normalized(phoneNumber),
+              let data = AIContactCreationHandoff.encode(
+                  AIContactCreationPayload(phoneNumber: normalized)
+              ) else {
+            defaults.removeObject(forKey: AIContactCreationHandoff.pendingKey)
+            return
+        }
+        defaults.set(data, forKey: AIContactCreationHandoff.pendingKey)
+    }
+
+    public func consumePendingContactCreation(
+        now: Date = Date()
+    ) -> AIContactCreationPayload? {
+        let data = defaults.data(forKey: AIContactCreationHandoff.pendingKey)
+        defaults.removeObject(forKey: AIContactCreationHandoff.pendingKey)
+        guard let data else { return nil }
+        return AIContactCreationHandoff.decode(data, now: now)
+    }
+
     private static func decodeAgentSkillLayout(
         from defaults: UserDefaults,
         userCatalog: AIUserSkillCatalog,
@@ -333,27 +388,58 @@ public struct AppGroupStore: @unchecked Sendable {
                 currentAgentSkillDefaultsMigrationVersion,
                 forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
             )
-            return .default
+            return AIAgentSkillLayout(
+                enabledIDs: catalog.filter(\.isDefault).map(\.id),
+                confirmedShortcutIDs: []
+            )
         }
         do {
             let decoded = try JSONDecoder().decode(AIAgentSkillLayout.self, from: data)
                 .sanitized(catalog: catalog)
-            guard defaults.integer(
+            let storedMigrationVersion = defaults.integer(
                 forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
-            ) < currentAgentSkillDefaultsMigrationVersion else {
+            )
+            guard storedMigrationVersion < currentAgentSkillDefaultsMigrationVersion else {
                 return decoded
             }
 
-            // Preserve any legacy default the user explicitly turned off.
-            // Export skills and semantic skills were not previously defaults,
-            // so append them once without disturbing the user's saved order.
             let legacyDefaults = Set([
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.summarizeID,
                 AIClipboardSkillCatalog.translateID
             ])
-            let additions = AIAgentSkillLayout.defaultEnabledIDs.filter {
-                !legacyDefaults.contains($0) && !decoded.enabledIDs.contains($0)
+            var additionIDs = Set<String>()
+            if storedMigrationVersion < 1 {
+                // Preserve any legacy default the user explicitly turned off.
+                // Export and semantic skills first became defaults in v1.
+                additionIDs.formUnion(
+                    AIAgentSkillLayout.defaultEnabledIDs.filter {
+                        !legacyDefaults.contains($0)
+                    }
+                )
+            }
+            if storedMigrationVersion < 2 {
+                additionIDs.insert(AIClipboardSkillCatalog.playfulReplyID)
+            }
+            if storedMigrationVersion < 3 {
+                additionIDs.formUnion(
+                    officialCatalog.skills
+                        .filter { $0.kind == .transform }
+                        .map(\.id)
+                )
+            }
+            if storedMigrationVersion < 4 {
+                additionIDs.insert(AIClipboardSkillCatalog.openLinkID)
+                additionIDs.insert(AIClipboardSkillCatalog.summarizeWebPageID)
+            }
+            if storedMigrationVersion < 5 {
+                additionIDs.insert(AIClipboardSkillCatalog.callPhoneID)
+                additionIDs.insert(AIClipboardSkillCatalog.createContactID)
+            }
+            // v6 persists canonical IDs for the consolidated reply, summary,
+            // and clarification skills. `sanitized` performs the mapping.
+            let additions = catalog.map(\.id).filter {
+                additionIDs.contains($0) && !decoded.enabledIDs.contains($0)
             }
             let migrated = AIAgentSkillLayout(
                 enabledIDs: decoded.enabledIDs + additions,
@@ -377,7 +463,7 @@ public struct AppGroupStore: @unchecked Sendable {
         }
     }
 
-    private static let currentAgentSkillDefaultsMigrationVersion = 1
+    private static let currentAgentSkillDefaultsMigrationVersion = 6
 
     private static func decodeUserSkillCatalog(from defaults: UserDefaults) -> AIUserSkillCatalog {
         guard let data = defaults.data(forKey: AppGroupConfiguration.Keys.agentUserSkillCatalog) else {

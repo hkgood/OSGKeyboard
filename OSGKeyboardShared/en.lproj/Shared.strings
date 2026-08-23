@@ -74,6 +74,11 @@
 "managed.error.insufficientCredits" = "Not enough credits. Open the Account tab in the main app to add credits.";
 "managed.error.oobeFeatureAlreadyUsed" = "This guided page is already complete. Return to the app to continue.";
 "managed.error.timeout" = "Managed service timed out. Check your connection and try again.";
+"managed.error.providerUnavailable" = "Credits AI service is temporarily unavailable. Try again later.";
+"managed.error.providerRateLimited" = "Credits AI service is busy. Try again shortly.";
+"managed.error.providerTimeout" = "The AI provider timed out. Try again.";
+"managed.error.providerFailure" = "The AI provider returned an invalid result. Try again.";
+"managed.error.internalFailure" = "Credits service encountered an internal error. Try again later.";
 "managed.error.server" = "Managed service failed (%1$@, HTTP %2$lld). Try again later.";
 "managed.asr.error.invalidConfiguration" = "Managed speech settings are invalid. Open the main app and select the service again.";
 "managed.asr.error.concurrencyLimit" = "Another managed speech session is active. Stop it and try again.";

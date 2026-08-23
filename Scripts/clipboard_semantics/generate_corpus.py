@@ -23,6 +23,7 @@ TARGETS = {"train": 180, "validation": 45, "test": 45}
 FAMILY_TARGETS = {
     "quoted_question": {"train": 100, "validation": 45, "test": 45},
     "negative_news": {"train": 150, "validation": 45, "test": 45},
+    "acknowledgment": {"train": 100, "validation": 45, "test": 45},
 }
 
 
@@ -33,6 +34,18 @@ class Labels:
     invitation: bool = False
     complaint: bool = False
     sentiment: str = "neutral"
+    replyable: bool | None = None
+
+    def __post_init__(self) -> None:
+        if self.replyable is None:
+            inferred = (
+                self.task
+                or self.question
+                or self.invitation
+                or self.complaint
+                or self.sentiment == "positive"
+            )
+            object.__setattr__(self, "replyable", inferred)
 
 
 @dataclass(frozen=True)
@@ -47,6 +60,7 @@ class Record:
     invitation: bool
     complaint: bool
     sentiment: str
+    replyable: bool
 
 
 ZH_SLOTS = {
@@ -147,6 +161,12 @@ ZH_SLOTS = {
     "news_subject": ["行业报告", "新闻文章", "研究材料", "会议记录", "历史资料", "市场分析"],
     "negative_event": ["销量有所下降", "部分地区出现延误", "成本比去年增加", "项目曾经暂停", "结果未达到预期", "天气造成航班取消", "调查发现明显风险", "供应出现短期波动"],
     "quote_speaker": ["文章", "会议纪要", "报告", "客服记录", "培训材料", "新闻"],
+    "chat_update": ["我刚到家", "我已经出门了", "我这边刚忙完", "今天提前下班了", "路上有点堵", "我刚看到消息", "事情总算处理完了", "明天我可能晚一点", "我到公司了", "刚吃完饭"],
+    "chat_detail": ["今天真的累坏了", "现在终于能歇会儿", "整体还挺顺利的", "比预想中快一点", "差点没赶上", "刚才笑死我了", "心情一下好多了", "晚点再和你细说", "这下可以放心了", "感觉还挺有意思"],
+    "chat_opener": ["跟你说一声", "对了", "刚想起来", "顺便告诉你", "你绝对想不到", "说真的", "太巧了", "刚刚发生个事"],
+    "chat_reaction": ["你也太夸张了", "这个真的有点好笑", "我一开始还不信", "结果居然成了", "这也太巧了吧", "我当场就愣住了", "听起来还不错", "这次确实挺惊喜", "我现在还有点懵", "你说得还真准"],
+    "ack_phrase": ["好的", "收到", "知道了", "明白", "行", "可以", "没问题", "嗯嗯", "好嘞", "OK", "记下了", "了解"],
+    "ack_closer": ["谢谢", "辛苦了", "我会处理", "晚点看", "先这样", "回头再说", "我记住了", "不用再回复"],
 }
 
 
@@ -249,6 +269,12 @@ EN_SLOTS = {
     "news_subject": ["The industry report", "The news article", "The research paper", "The meeting record", "The historical document", "The market analysis"],
     "negative_event": ["reports lower sales", "mentions delays in some regions", "shows higher costs than last year", "describes a project pause", "says the results missed expectations", "covers weather-related flight cancellations", "identifies a material risk", "notes a short-term supply disruption"],
     "quote_speaker": ["The article", "The meeting notes", "The report", "The support transcript", "The training material", "The news story"],
+    "chat_update": ["I just got home", "I have already left", "I just finished up here", "I got off work early today", "Traffic is a little slow", "I just saw your message", "That is finally sorted out", "I may be a little late tomorrow", "I made it to the office", "I just finished dinner"],
+    "chat_detail": ["I am completely exhausted today", "I can finally take a break", "Everything went pretty smoothly", "It was quicker than expected", "I almost missed it", "That made me laugh so hard", "I feel much better now", "I will tell you the rest later", "That is a relief", "It was actually pretty interesting"],
+    "chat_opener": ["Just letting you know", "By the way", "I just remembered", "Quick update", "You will never guess this", "Honestly", "What a coincidence", "Something just happened"],
+    "chat_reaction": ["You are being so dramatic", "That was genuinely funny", "I did not believe it at first", "It somehow worked out", "What are the odds", "I just stood there stunned", "That actually sounds good", "This was a nice surprise", "I am still processing it", "You were completely right"],
+    "ack_phrase": ["Okay", "Got it", "Understood", "Sure", "Sounds good", "No problem", "All right", "Yep", "Noted", "OK", "Will do", "I see"],
+    "ack_closer": ["thanks", "appreciate it", "I will handle it", "I will check later", "that is all", "talk later", "I have noted it", "no need to reply"],
 }
 
 
@@ -600,6 +626,80 @@ FAMILIES = {
             },
         },
     },
+    "conversational_message": {
+        "labels": Labels(replyable=True),
+        "templates": {
+            "zh-Hans": {
+                "train": [
+                    "{chat_update}，{chat_detail}。",
+                    "{chat_opener}，{chat_update}。",
+                    "{chat_opener}，{chat_reaction}。",
+                    "{chat_update}，{chat_reaction}。",
+                ],
+                "validation": [
+                    "{chat_detail}，所以{chat_opener}。",
+                    "刚刚还在想这件事，{chat_reaction}，{chat_update}。",
+                ],
+                "test": [
+                    "跟你分享一下，{chat_update}，{chat_detail}。",
+                    "说起来也巧，{chat_reaction}，而且{chat_detail}。",
+                ],
+            },
+            "en": {
+                "train": [
+                    "{chat_update}, and {chat_detail}.",
+                    "{chat_opener}: {chat_update}.",
+                    "{chat_opener}: {chat_reaction}.",
+                    "{chat_update}, and {chat_reaction}.",
+                ],
+                "validation": [
+                    "{chat_detail}, so {chat_opener}.",
+                    "I was just thinking about it: {chat_reaction}, and {chat_update}.",
+                ],
+                "test": [
+                    "A quick thing to share: {chat_update}, and {chat_detail}.",
+                    "Funny how things work out; {chat_reaction}, and {chat_detail}.",
+                ],
+            },
+        },
+    },
+    "acknowledgment": {
+        "labels": Labels(replyable=False),
+        "templates": {
+            "zh-Hans": {
+                "train": [
+                    "{ack_phrase}。",
+                    "我已经看到了，{ack_phrase}。",
+                    "回复确认：{ack_phrase}。",
+                    "{ack_phrase}，这边{ack_closer}。",
+                ],
+                "validation": [
+                    "嗯，{ack_phrase}。",
+                    "{ack_phrase}，{ack_closer}。",
+                ],
+                "test": [
+                    "好，{ack_phrase}。",
+                    "简单确认一下：{ack_phrase}，{ack_closer}。",
+                ],
+            },
+            "en": {
+                "train": [
+                    "{ack_phrase}.",
+                    "I have seen it. {ack_phrase}.",
+                    "Confirming: {ack_phrase}.",
+                    "{ack_phrase}; {ack_closer}.",
+                ],
+                "validation": [
+                    "Yep, {ack_phrase}.",
+                    "{ack_phrase}, and {ack_closer}.",
+                ],
+                "test": [
+                    "All right, {ack_phrase}.",
+                    "Just confirming: {ack_phrase}; {ack_closer}.",
+                ],
+            },
+        },
+    },
     "positive_feedback": {
         "labels": Labels(sentiment="positive"),
         "templates": {
@@ -752,6 +852,15 @@ GOLDEN_EXAMPLES = [
     ("zh-Hans", "negative_news", "报告显示本季度销量下降了百分之十二。", Labels(sentiment="negative")),
     ("zh-Hans", "negative_news", "新闻提到暴雨导致多个航班取消。", Labels(sentiment="negative")),
     ("zh-Hans", "negative_news", "研究发现该方案存在明显的供应链风险。", Labels(sentiment="negative")),
+    ("zh-Hans", "conversational_message", "我刚到家，今天真是累坏了。", Labels(replyable=True)),
+    ("zh-Hans", "conversational_message", "哈哈，你刚才那个说法也太好笑了。", Labels(replyable=True)),
+    ("zh-Hans", "conversational_message", "事情终于解决了，我现在轻松多了。", Labels(replyable=True)),
+    ("zh-Hans", "conversational_message", "今天路上特别堵，我差点没赶上。", Labels(replyable=True)),
+    ("zh-Hans", "conversational_message", "你推荐的那家店真不错，我很喜欢。", Labels(replyable=True)),
+    ("zh-Hans", "acknowledgment", "好，我知道了。", Labels(replyable=False)),
+    ("zh-Hans", "acknowledgment", "收到，谢谢。", Labels(replyable=False)),
+    ("zh-Hans", "acknowledgment", "没问题，就这样吧。", Labels(replyable=False)),
+    ("zh-Hans", "acknowledgment", "嗯嗯，我记下了。", Labels(replyable=False)),
     # English: independently phrased holdout rather than translations of templates.
     ("en", "task_statement", "Please send me the revised product brief by Friday, including the risks and timeline.", Labels(task=True)),
     ("en", "task_statement", "Alex owns the meeting notes and should post them in the project channel today.", Labels(task=True)),
@@ -790,6 +899,15 @@ GOLDEN_EXAMPLES = [
     ("en", "negative_news", "The report shows that quarterly sales fell by twelve percent.", Labels(sentiment="negative")),
     ("en", "negative_news", "The news says heavy rain caused several flight cancellations.", Labels(sentiment="negative")),
     ("en", "negative_news", "The study identifies a significant supply-chain risk.", Labels(sentiment="negative")),
+    ("en", "conversational_message", "I just got home, and today completely wore me out.", Labels(replyable=True)),
+    ("en", "conversational_message", "That thing you said earlier was genuinely hilarious.", Labels(replyable=True)),
+    ("en", "conversational_message", "It finally worked out, and I feel so much better now.", Labels(replyable=True)),
+    ("en", "conversational_message", "Traffic was awful today and I nearly missed it.", Labels(replyable=True)),
+    ("en", "conversational_message", "The place you recommended was great. I loved it.", Labels(replyable=True)),
+    ("en", "acknowledgment", "Okay, I understand.", Labels(replyable=False)),
+    ("en", "acknowledgment", "Got it, thanks.", Labels(replyable=False)),
+    ("en", "acknowledgment", "No problem. That is all.", Labels(replyable=False)),
+    ("en", "acknowledgment", "Yep, I have noted it.", Labels(replyable=False)),
 ]
 
 
@@ -843,6 +961,7 @@ def generate_family(
             invitation=labels.invitation,
             complaint=labels.complaint,
             sentiment=labels.sentiment,
+            replyable=bool(labels.replyable),
         )
 
     if produced != target:
@@ -892,6 +1011,7 @@ def generate_records() -> list[Record]:
                 invitation=labels.invitation,
                 complaint=labels.complaint,
                 sentiment=labels.sentiment,
+                replyable=bool(labels.replyable),
             )
         )
 
@@ -919,7 +1039,7 @@ def summary(records: list[Record]) -> dict[str, object]:
     family_counts = Counter(record.family for record in records)
     intent_counts = {
         intent: sum(bool(getattr(record, intent)) for record in records)
-        for intent in ("task", "question", "invitation", "complaint")
+        for intent in ("task", "question", "invitation", "complaint", "replyable")
     }
     sentiment_counts = Counter(record.sentiment for record in records)
     return {

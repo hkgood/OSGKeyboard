@@ -97,7 +97,9 @@ final class FlowSessionManager: ObservableObject {
     private struct PrefilledAIRequest {
         let question: String
         let conversationID: UUID?
+        let webPageURL: URL?
         let taskKind: ManagedGatewayTaskKind
+        let requestSource: ManagedGatewayRequestSource?
         let requestPurpose: ManagedGatewayRequestPurpose?
         let oobeFeature: ManagedGatewayOOBEFeature?
         let thinkingEnabled: Bool
@@ -118,6 +120,7 @@ final class FlowSessionManager: ObservableObject {
     private let polisher: PolishingService
     /// AI-mode turns are intentionally process-local and never persisted.
     private let aiConversations = AIConversationStore()
+    private let webPageContentService: WebPageContentService
     /// Cached ASR instance. The only on-device backend is iOS
     /// `SpeechAnalyzer`, which has no warm-up step — we can hand the
     /// factory-built service straight back without going through the
@@ -221,11 +224,13 @@ final class FlowSessionManager: ObservableObject {
 
     init(
         analyticsClient: any AnalyticsClient = NoopAnalyticsClient(),
-        pipController: any FlowPictureInPictureControlling = FlowPictureInPictureController()
+        pipController: any FlowPictureInPictureControlling = FlowPictureInPictureController(),
+        webPageContentService: WebPageContentService = .shared
     ) {
         self.analyticsClient = analyticsClient
         self.polisher = PolishingService(analyticsClient: analyticsClient)
         self.pipController = pipController
+        self.webPageContentService = webPageContentService
         // Sessions are (re)started explicitly on app foreground via
         // `activateOnForeground()`. We deliberately do NOT silently reattach a
         // stored session here — after a force-quit that would resurrect capture
@@ -1643,7 +1648,9 @@ final class FlowSessionManager: ObservableObject {
                     request: PrefilledAIRequest(
                         question: question,
                         conversationID: conversationID,
+                        webPageURL: command.aiWebPageURL,
                         taskKind: taskKind,
+                        requestSource: command.managedRequestSource,
                         requestPurpose: command.managedRequestPurpose,
                         oobeFeature: command.managedOOBEFeature,
                         thinkingEnabled: thinkingEnabled
@@ -1698,10 +1705,11 @@ final class FlowSessionManager: ObservableObject {
         // send an XML envelope that must never appear above the mic.
         let pipelineStore = AppGroupStore()
         do {
+            let resolvedQuestion = try await resolvedQuestion(for: request)
             let taskKind = if pipelineStore.credentialSource == .managed,
                               request.requestPurpose == nil {
                 ManagedGatewayQuestionRouter.taskKind(
-                    for: request.question,
+                    for: resolvedQuestion,
                     requestedTaskKind: request.taskKind
                 )
             } else {
@@ -1711,6 +1719,7 @@ final class FlowSessionManager: ObservableObject {
                 store: pipelineStore,
                 conversations: aiConversations,
                 taskKind: taskKind,
+                requestSource: request.requestSource,
                 requestPurpose: request.requestPurpose,
                 oobeFeature: request.oobeFeature,
                 thinkingEnabled: request.thinkingEnabled,
@@ -1719,7 +1728,7 @@ final class FlowSessionManager: ObservableObject {
             )
             aiAnswerStreamThrottle = AIAnswerStreamThrottle()
             let answer = try await service.answer(
-                question: request.question,
+                question: resolvedQuestion,
                 conversationID: conversationID,
                 targetLocaleID: pipelineStore.translationTargetLocaleId
             ) { [weak self] partial in
@@ -1745,7 +1754,7 @@ final class FlowSessionManager: ObservableObject {
                 force: true
             )
             await service.commitSuccessfulTurn(
-                question: request.question,
+                question: resolvedQuestion,
                 answer: answer,
                 conversationID: conversationID
             )
@@ -1771,6 +1780,17 @@ final class FlowSessionManager: ObservableObject {
                 )
             }
         }
+    }
+
+    private func resolvedQuestion(
+        for request: PrefilledAIRequest
+    ) async throws -> String {
+        guard let url = request.webPageURL else { return request.question }
+        let webpage = try await webPageContentService.fetchSummarySource(from: url)
+        return AIClipboardPrompt.compose(
+            instruction: request.question,
+            material: webpage.summaryMaterial
+        )
     }
 
     private func beginAudioPrime(_ command: FlowCommand) {
@@ -3525,6 +3545,17 @@ final class FlowSessionManager: ObservableObject {
     }
 
     private static func aiQuestionFailureMessage(for error: Error) -> String {
+        if let webPageError = error as? WebPageContentError {
+            switch webPageError {
+            case .invalidURL:
+                return AppL10n.string("flow.error.webPageInvalid")
+            case .unsupportedContentType, .undecodableText, .emptyContent:
+                return AppL10n.string("flow.error.webPageEmpty")
+            case .tooManyRedirects, .invalidResponse, .httpStatus,
+                 .responseTooLarge, .transport:
+                return AppL10n.string("flow.error.webPageUnavailable")
+            }
+        }
         if let managedError = error as? ManagedGatewayError {
             return managedError.localizedDescription
         }

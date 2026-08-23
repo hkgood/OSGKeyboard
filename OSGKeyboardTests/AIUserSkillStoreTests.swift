@@ -13,6 +13,45 @@ final class AIUserSkillStoreTests: XCTestCase {
         return defaults
     }
 
+    func testNewTextSkillIsInstalledByDefault() throws {
+        let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
+        let skill = AIUserSkill(name: "Custom", prompt: "Do it")
+
+        try store.saveUserSkill(skill)
+
+        XCTAssertTrue(store.layout.isEnabled(skill.id))
+        XCTAssertEqual(store.layout.enabledIDs.last, skill.id)
+    }
+
+    func testNewShortcutSkillWaitsForConfirmation() throws {
+        let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
+        let skill = AIUserSkill(
+            name: "Custom",
+            prompt: "Do it",
+            shortcutICloudURL: URL(
+                string: "https://www.icloud.com/shortcuts/65bf33ba4206484ba78d582eaf1e9c44"
+            ),
+            shortcutName: "Run Me"
+        )
+
+        try store.saveUserSkill(skill)
+
+        XCTAssertFalse(store.layout.isEnabled(skill.id))
+        XCTAssertEqual(store.enable(skill.id), .needsShortcut)
+    }
+
+    func testEditingDisabledTextSkillDoesNotReinstallIt() throws {
+        let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
+        var skill = AIUserSkill(name: "Custom", prompt: "Do it")
+        try store.saveUserSkill(skill)
+        store.disable(skill.id)
+
+        skill.prompt = "Do it differently"
+        try store.saveUserSkill(skill)
+
+        XCTAssertFalse(store.layout.isEnabled(skill.id))
+    }
+
     func testChangingShortcutLinkDropsConfirmation() throws {
         let store = AIAgentSkillLayoutStore(defaults: makeDefaults())
         let firstURL = URL(string: "https://www.icloud.com/shortcuts/65bf33ba4206484ba78d582eaf1e9c44")!
@@ -62,7 +101,7 @@ final class AIUserSkillStoreTests: XCTestCase {
             prompt: "Do it"
         )
         try store.saveUserSkill(skill)
-        XCTAssertEqual(store.enable(skill.id), .enabled)
+        XCTAssertEqual(store.enable(skill.id), .alreadyEnabled)
 
         skill.shortcutICloudURL = URL(
             string: "https://www.icloud.com/shortcuts/65bf33ba4206484ba78d582eaf1e9c44"

@@ -319,9 +319,14 @@
 "keyboard.ai.error.requestTimeout" = "AI response timed out. Try again";
 "keyboard.ai.error.requestFailed" = "AI response failed. Try again";
 "keyboard.ai.error.clipboardUnavailable" = "This clipboard suggestion expired. Copy the text again";
-"keyboard.ai.skill.reply" = "Reply";
+"keyboard.ai.skill.reply" = "Same-language reply";
+"keyboard.ai.skill.playfulReply" = "Playful";
 "keyboard.ai.skill.replyInSourceLanguage" = "Same language";
-"keyboard.ai.skill.summarize" = "Summarize";
+"keyboard.ai.skill.summarize" = "Key points";
+"keyboard.ai.skill.openLink" = "Open";
+"keyboard.ai.skill.summarizeWebPage" = "Web summary";
+"keyboard.ai.skill.callPhone" = "Call";
+"keyboard.ai.skill.createContact" = "New contact";
 "keyboard.ai.skill.extractConclusions" = "Conclusions";
 "keyboard.ai.skill.translate" = "Translate";
 "keyboard.ai.skill.acceptInvitation" = "Accept";
@@ -352,3 +357,6 @@
 "keyboard.ai.skill.openingMaps" = "Opening Maps…";
 "keyboard.ai.skill.shortcutMissing" = "Companion Shortcut not found. Reinstall it in Skills";
 "keyboard.ai.skill.handoffFailed" = "Couldn’t open the app to run the Shortcut";
+"keyboard.ai.skill.openLinkFailed" = "Couldn’t open this link";
+"keyboard.ai.skill.callPhoneFailed" = "Couldn’t start this call";
+"keyboard.ai.skill.createContactFailed" = "Couldn’t open the new contact form";

@@ -138,6 +138,7 @@ public struct AIQuestionService: Sendable {
         store: any ConfigurationStore,
         conversations: AIConversationStore,
         taskKind: ManagedGatewayTaskKind = .aiQuestion,
+        requestSource: ManagedGatewayRequestSource? = nil,
         requestPurpose: ManagedGatewayRequestPurpose? = nil,
         oobeFeature: ManagedGatewayOOBEFeature? = nil,
         thinkingEnabled: Bool = true,
@@ -149,6 +150,7 @@ public struct AIQuestionService: Sendable {
                 client: ManagedLLMClient(
                     capability: .assistant,
                     taskKind: taskKind,
+                    requestSource: requestSource,
                     requestPurpose: requestPurpose,
                     oobeFeature: oobeFeature,
                     grants: GatewayGrantCoordinator()
@@ -302,11 +304,13 @@ public struct AIQuestionService: Sendable {
             switch error {
             case .insufficientCredits:
                 return .insufficientCredits
-            case .timeout:
+            case .timeout, .providerTimeout:
                 return .timeout
             case .missingGrant, .scopeNotGranted, .invalidGrant, .oobeFeatureAlreadyUsed:
                 return .validation
-            case .server:
+            case .providerRateLimited:
+                return .network
+            case .providerUnavailable, .providerFailure, .internalFailure, .server:
                 return .provider
             }
         }

@@ -289,11 +289,13 @@ public actor PolishingService {
             switch error {
             case .insufficientCredits:
                 return .insufficientCredits
-            case .timeout:
+            case .timeout, .providerTimeout:
                 return .timeout
             case .missingGrant, .scopeNotGranted, .invalidGrant, .oobeFeatureAlreadyUsed:
                 return .validation
-            case .server:
+            case .providerRateLimited:
+                return .network
+            case .providerUnavailable, .providerFailure, .internalFailure, .server:
                 return .provider
             }
         }

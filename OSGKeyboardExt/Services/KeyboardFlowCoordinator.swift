@@ -692,8 +692,10 @@ final class KeyboardFlowCoordinator {
         text: String,
         conversationID: UUID,
         taskKind: ManagedGatewayTaskKind = .aiQuestion,
+        requestSource: ManagedGatewayRequestSource? = nil,
         oobeFeature: ManagedGatewayOOBEFeature? = nil,
-        thinkingEnabled: Bool? = nil
+        thinkingEnabled: Bool? = nil,
+        webPageURL: URL? = nil
     ) -> FlowUtteranceStartDisposition {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return .rejected(.pipelineBusy) }
@@ -702,8 +704,10 @@ final class KeyboardFlowCoordinator {
                 conversationID: conversationID,
                 prefilledQuestion: trimmed,
                 taskKind: taskKind,
+                requestSource: requestSource,
                 oobeFeature: oobeFeature,
-                thinkingEnabled: thinkingEnabled
+                thinkingEnabled: thinkingEnabled,
+                webPageURL: webPageURL
             )
         )
     }
@@ -1214,6 +1218,7 @@ final class KeyboardFlowCoordinator {
             sourceHistoryEntryRevision: request.sourceHistoryEntryRevision,
             aiConversationID: request.aiConversationID,
             aiTaskKind: request.aiTaskKind,
+            managedRequestSource: request.managedRequestSource,
             managedRequestPurpose: managedRequestPurpose,
             managedOOBEFeature: managedOOBEFeature,
             startDeadlineAt: action == .startRecording ? currentStartDeadlineAt : nil,
@@ -1923,7 +1928,9 @@ final class KeyboardFlowCoordinator {
             utteranceMode: .aiQuestion,
             aiConversationID: currentUtteranceRequest?.aiConversationID,
             aiQuestionText: text,
+            aiWebPageURL: currentUtteranceRequest?.aiWebPageURL,
             aiTaskKind: currentUtteranceRequest?.aiTaskKind,
+            managedRequestSource: currentUtteranceRequest?.managedRequestSource,
             managedRequestPurpose: currentUtteranceRequest?.managedRequestPurpose,
             managedOOBEFeature: currentUtteranceRequest?.managedOOBEFeature,
             aiThinkingEnabled: currentUtteranceRequest?.aiThinkingEnabled,

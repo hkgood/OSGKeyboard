@@ -74,6 +74,11 @@
 "managed.error.insufficientCredits" = "积分不足，请打开主 App 的「账户」页充值。";
 "managed.error.oobeFeatureAlreadyUsed" = "当前体验页面已经完成，请返回 App 继续。";
 "managed.error.timeout" = "托管服务请求超时，请检查网络后重试。";
+"managed.error.providerUnavailable" = "积分 AI 服务暂时不可用，请稍后重试。";
+"managed.error.providerRateLimited" = "积分 AI 服务当前请求较多，请稍后重试。";
+"managed.error.providerTimeout" = "AI 服务响应超时，请稍后重试。";
+"managed.error.providerFailure" = "AI 服务返回异常，请稍后重试。";
+"managed.error.internalFailure" = "积分服务内部异常，请稍后重试。";
 "managed.error.server" = "托管服务失败（%1$@，HTTP %2$lld），请稍后重试。";
 "managed.asr.error.invalidConfiguration" = "托管语音设置无效，请打开主 App 重新选择服务。";
 "managed.asr.error.concurrencyLimit" = "另一个托管语音会话仍在进行，请结束后重试。";

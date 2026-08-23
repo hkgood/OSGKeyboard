@@ -11,12 +11,14 @@ import Foundation
 public enum ClipboardSkillSemanticRanker {
     private static let longTextCharacterThreshold = 360
     private static let languageConfidenceThreshold = 0.75
+    private static let maximumReplyRecommendations = 2
 
     public static func ranked(
         skills: [AIClipboardSkill],
         sourceText: String,
         analysis: ClipboardSemanticAnalysis,
-        uiLanguage: AppUILanguage
+        uiLanguage _: AppUILanguage,
+        preferredLanguages: [String] = Locale.preferredLanguages
     ) -> [AIClipboardSkill] {
         guard skills.count > 1 else { return skills }
         return sorted(
@@ -24,7 +26,7 @@ public enum ClipboardSkillSemanticRanker {
             scores: relevanceScores(
                 sourceText: sourceText,
                 analysis: analysis,
-                uiLanguage: uiLanguage
+                preferredLanguages: preferredLanguages
             )
         )
     }
@@ -35,32 +37,59 @@ public enum ClipboardSkillSemanticRanker {
         skills: [AIClipboardSkill],
         sourceText: String,
         analysis: ClipboardSemanticAnalysis,
-        uiLanguage: AppUILanguage,
-        limit: Int
+        uiLanguage _: AppUILanguage,
+        limit: Int,
+        preferredLanguages: [String] = Locale.preferredLanguages
     ) -> [AIClipboardSkill] {
         guard limit > 0 else { return [] }
         let scores = relevanceScores(
             sourceText: sourceText,
             analysis: analysis,
-            uiLanguage: uiLanguage
+            preferredLanguages: preferredLanguages
         )
         let relevant = skills.filter { scores[$0.id, default: 0] > 0 }
-        return Array(sorted(relevant, scores: scores).prefix(limit))
+        var selected: [AIClipboardSkill] = []
+        var replyCount = 0
+        for skill in sorted(relevant, scores: scores) {
+            guard selected.count < limit else { break }
+            if skill.supportsReplyStyle {
+                guard replyCount < maximumReplyRecommendations else { continue }
+                replyCount += 1
+            }
+            selected.append(skill)
+        }
+        return selected
     }
 
     private static func relevanceScores(
         sourceText: String,
         analysis: ClipboardSemanticAnalysis,
-        uiLanguage: AppUILanguage
+        preferredLanguages: [String]
     ) -> [String: Int] {
         var scores: [String: Int] = [:]
         func boost(_ id: String, _ value: Int) {
             scores[id, default: 0] += value
         }
 
-        if isLanguageMismatch(analysis.language, uiLanguage: uiLanguage) {
+        if let webURL = analysis.singleWebURL {
+            boost(AIClipboardSkillCatalog.openLinkID, 320)
+            if webURL.scheme?.lowercased() == "https" {
+                boost(AIClipboardSkillCatalog.summarizeWebPageID, 310)
+            }
+            return scores
+        }
+
+        if analysis.singlePhoneNumber != nil {
+            boost(AIClipboardSkillCatalog.callPhoneID, 320)
+            boost(AIClipboardSkillCatalog.createContactID, 310)
+            return scores
+        }
+
+        if isLanguageMismatch(
+            analysis.language,
+            preferredLanguages: preferredLanguages
+        ) {
             boost(AIClipboardSkillCatalog.translateID, 230)
-            boost(AIClipboardSkillCatalog.replyInSourceLanguageID, 220)
         }
 
         if analysis.hasAddress {
@@ -89,16 +118,16 @@ public enum ClipboardSkillSemanticRanker {
             boost(AIClipboardSkillCatalog.clarifyRequestID, 110)
         }
 
-        // Complaint remains advisory because its model has not passed the
-        // automatic-routing release gate. Ranking a chip is reversible and
-        // user-initiated, but it still receives less weight than approved labels.
+        // A threshold-crossing complaint can still be used as advisory evidence
+        // if a future model loses automatic-routing approval. Ranking a chip is
+        // reversible and remains user-initiated.
         if isAdvisoryComplaint(analysis.complaint) {
             boost(AIClipboardSkillCatalog.empathyReplyID, 105)
-            boost(AIClipboardSkillCatalog.askForDetailsID, 90)
+            boost(AIClipboardSkillCatalog.clarifyRequestID, 90)
             boost(AIClipboardSkillCatalog.replyID, 55)
         } else if analysis.sentiment == .negative, analysis.question.isDetected {
             boost(AIClipboardSkillCatalog.empathyReplyID, 85)
-            boost(AIClipboardSkillCatalog.askForDetailsID, 65)
+            boost(AIClipboardSkillCatalog.clarifyRequestID, 65)
         }
 
         if analysis.hasOrganizationName,
@@ -115,9 +144,23 @@ public enum ClipboardSkillSemanticRanker {
         }
 
         if sourceText.count >= longTextCharacterThreshold {
-            boost(AIClipboardSkillCatalog.summarizeID, 135)
-            boost(AIClipboardSkillCatalog.extractConclusionsID, 125)
+            boost(AIClipboardSkillCatalog.summarizeID, 145)
             boost(AIClipboardSkillCatalog.saveToNotesID, 85)
+        }
+
+        let hasSpecializedReplyIntent = analysis.task.isDetected
+            || analysis.question.isDetected
+            || analysis.invitation.isDetected
+            || isAdvisoryComplaint(analysis.complaint)
+        if analysis.replyableMessage.isDetected,
+           !hasSpecializedReplyIntent,
+           sourceText.count < longTextCharacterThreshold,
+           !isListLike(sourceText) {
+            boost(AIClipboardSkillCatalog.replyID, 160)
+            if analysis.sentiment != .negative,
+               !isAdvisoryComplaint(analysis.complaint) {
+                boost(AIClipboardSkillCatalog.playfulReplyID, 145)
+            }
         }
         if analysis.sentiment == .positive {
             boost(AIClipboardSkillCatalog.replyID, 45)
@@ -144,21 +187,17 @@ public enum ClipboardSkillSemanticRanker {
 
     private static func isLanguageMismatch(
         _ language: ClipboardLanguageLabel?,
-        uiLanguage: AppUILanguage
+        preferredLanguages: [String]
     ) -> Bool {
         guard let language, language.confidence >= languageConfidenceThreshold else {
             return false
         }
-        return languageFamily(language.identifier)
-            != languageFamily(uiLanguage.resolvedLanguageCode())
-    }
-
-    private static func languageFamily(_ identifier: String) -> String {
-        let normalized = identifier.lowercased()
-        if normalized.hasPrefix("zh") || normalized.hasPrefix("yue") {
-            return "zh"
-        }
-        return normalized.split(separator: "-").first.map(String.init) ?? normalized
+        return !SystemLanguageResolver.isSameLanguage(
+            sourceIdentifier: language.identifier,
+            targetIdentifier: SystemLanguageResolver.primaryIdentifier(
+                preferredLanguages: preferredLanguages
+            )
+        )
     }
 
     private static func isAdvisoryComplaint(_ label: ClipboardIntentLabel) -> Bool {

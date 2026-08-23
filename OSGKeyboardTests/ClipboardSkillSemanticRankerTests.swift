@@ -5,7 +5,7 @@
 import XCTest
 
 final class ClipboardSkillSemanticRankerTests: XCTestCase {
-    func testForeignQuestionPromotesTranslationAndSourceLanguageReply() {
+    func testForeignQuestionPromotesSystemTranslationAndSourceLanguageReply() {
         let ranked = rank(
             text: "Could you send me the final proposal by Friday?",
             analysis: analysis(language: "en", question: detected())
@@ -15,10 +15,37 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             Array(ranked.prefix(3)),
             [
                 AIClipboardSkillCatalog.translateID,
-                AIClipboardSkillCatalog.replyInSourceLanguageID,
-                AIClipboardSkillCatalog.replyID
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.clarifyRequestID
             ]
         )
+    }
+
+    func testTranslationIsNotRecommendedForSystemLanguage() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "Could you send me the final proposal?",
+            analysis: analysis(language: "en", question: detected()),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["en-US"]
+        ).map(\.id)
+
+        XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.translateID))
+        XCTAssertTrue(recommendations.contains(AIClipboardSkillCatalog.replyID))
+    }
+
+    func testChineseScriptMismatchPromotesTranslation() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "這是一段繁體中文。",
+            analysis: analysis(language: "zh-Hant"),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["zh-Hans"]
+        ).map(\.id)
+
+        XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.translateID])
     }
 
     func testInvitationWithDatePromotesCalendarAndBothReplyChoices() {
@@ -49,6 +76,120 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         )
 
         XCTAssertEqual(ranked.first, AIClipboardSkillCatalog.navigateID)
+    }
+
+    func testSingleHTTPSLinkOffersOpenAndWebpageSummary() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "https://example.com/article",
+            analysis: analysis(urls: [URL(string: "https://example.com/article")!]),
+            uiLanguage: .chinese,
+            limit: 5
+        ).map(\.id)
+
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.openLinkID,
+                AIClipboardSkillCatalog.summarizeWebPageID
+            ]
+        )
+    }
+
+    func testRealStandaloneURLAnalysisOnlyOffersLinkSkills() async {
+        let text = "https://www.apple.com/newsroom/"
+        let detected = await ClipboardSemanticAnalyzer().analyze(text)
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: text,
+            analysis: detected,
+            uiLanguage: .chinese,
+            limit: 5
+        ).map(\.id)
+
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.openLinkID,
+                AIClipboardSkillCatalog.summarizeWebPageID
+            ]
+        )
+    }
+
+    func testMultipleLinksDoNotChooseAnAmbiguousTarget() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "https://example.com/a https://example.com/b",
+            analysis: analysis(urls: [
+                URL(string: "https://example.com/a")!,
+                URL(string: "https://example.com/b")!
+            ]),
+            uiLanguage: .chinese,
+            limit: 5
+        ).map(\.id)
+
+        XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.openLinkID))
+        XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.summarizeWebPageID))
+    }
+
+    func testSinglePhoneNumberOffersCallAndCreateContact() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "请拨打 +1 408-996-1010",
+            analysis: analysis(
+                phoneNumbers: [
+                    ClipboardTextLabel(sourceText: "+1 408-996-1010")
+                ]
+            ),
+            uiLanguage: .chinese,
+            limit: 5
+        ).map(\.id)
+
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.callPhoneID,
+                AIClipboardSkillCatalog.createContactID
+            ]
+        )
+    }
+
+    func testRealPhoneAnalysisOnlyOffersPhoneActions() async {
+        let text = "联系电话：+1 408-996-1010"
+        let detected = await ClipboardSemanticAnalyzer().analyze(text)
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: text,
+            analysis: detected,
+            uiLanguage: .chinese,
+            limit: 5
+        ).map(\.id)
+
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.callPhoneID,
+                AIClipboardSkillCatalog.createContactID
+            ]
+        )
+    }
+
+    func testMultiplePhoneNumbersDoNotChooseAnAmbiguousTarget() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "+1 408-996-1010 / 400-666-8800",
+            analysis: analysis(
+                phoneNumbers: [
+                    ClipboardTextLabel(sourceText: "+1 408-996-1010"),
+                    ClipboardTextLabel(sourceText: "400-666-8800")
+                ]
+            ),
+            uiLanguage: .chinese,
+            limit: 5
+        ).map(\.id)
+
+        XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.callPhoneID))
+        XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.createContactID))
     }
 
     func testTaskListPromotesTodoAndOrganizationSkills() {
@@ -84,20 +225,19 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         )
 
         XCTAssertEqual(ranked.first, AIClipboardSkillCatalog.empathyReplyID)
-        XCTAssertEqual(ranked.dropFirst().first, AIClipboardSkillCatalog.askForDetailsID)
+        XCTAssertEqual(ranked.dropFirst().first, AIClipboardSkillCatalog.clarifyRequestID)
     }
 
-    func testLongTextPromotesSummaryConclusionsAndNotes() {
+    func testLongTextPromotesIntegratedSummaryAndNotes() {
         let ranked = rank(
             text: String(repeating: "这是需要阅读和整理的长文内容。", count: 40),
             analysis: analysis()
         )
 
         XCTAssertEqual(
-            Array(ranked.prefix(3)),
+            Array(ranked.prefix(2)),
             [
                 AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.extractConclusionsID,
                 AIClipboardSkillCatalog.saveToNotesID
             ]
         )
@@ -145,6 +285,71 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         XCTAssertTrue(recommendations.isEmpty)
     }
 
+    func testNegativeReplyableMessageDoesNotOfferPlayfulReply() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "我刚到家，今天真是累坏了。",
+            analysis: analysis(
+                sentiment: .negative,
+                replyableMessage: detected()
+            ),
+            uiLanguage: .chinese,
+            limit: 5
+        ).map(\.id)
+
+        XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.replyID])
+    }
+
+    func testInvitationKeepsTwoSpecificRepliesWithoutGenericReplies() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "今晚七点老地方吃饭，你能来吗？",
+            analysis: analysis(
+                hasDate: true,
+                question: detected(),
+                invitation: detected(),
+                replyableMessage: detected()
+            ),
+            uiLanguage: .chinese,
+            limit: 5
+        ).map(\.id)
+
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.extractEventsID,
+                AIClipboardSkillCatalog.acceptInvitationID,
+                AIClipboardSkillCatalog.declineInvitationID
+            ]
+        )
+    }
+
+    func testRecommendationsNeverContainMoreThanTwoReplySkills() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "Could you send the final proposal by Friday?",
+            analysis: analysis(
+                language: "en",
+                question: detected(),
+                replyableMessage: detected()
+            ),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["zh-Hans"]
+        )
+        let replyCount = recommendations.filter(\.supportsReplyStyle).count
+
+        XCTAssertLessThanOrEqual(replyCount, 2)
+        XCTAssertEqual(
+            recommendations.map(\.id),
+            [
+                AIClipboardSkillCatalog.translateID,
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.clarifyRequestID
+            ]
+        )
+    }
+
     private func rank(
         text: String,
         analysis: ClipboardSemanticAnalysis
@@ -153,7 +358,8 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             skills: AIClipboardSkillCatalog.catalog,
             sourceText: text,
             analysis: analysis,
-            uiLanguage: .chinese
+            uiLanguage: .chinese,
+            preferredLanguages: ["zh-Hans"]
         ).map(\.id)
     }
 
@@ -187,11 +393,14 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         language: String? = nil,
         hasDate: Bool = false,
         hasAddress: Bool = false,
+        urls: [URL] = [],
+        phoneNumbers: [ClipboardTextLabel] = [],
         sentiment: ClipboardSentimentLabel = .unknown,
         task: ClipboardIntentLabel? = nil,
         question: ClipboardIntentLabel? = nil,
         invitation: ClipboardIntentLabel? = nil,
-        complaint: ClipboardIntentLabel? = nil
+        complaint: ClipboardIntentLabel? = nil,
+        replyableMessage: ClipboardIntentLabel? = nil
     ) -> ClipboardSemanticAnalysis {
         ClipboardSemanticAnalysis(
             language: language.map {
@@ -208,8 +417,8 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             addresses: hasAddress
                 ? [ClipboardTextLabel(sourceText: "望京街 10 号")]
                 : [],
-            phoneNumbers: [],
-            urls: [],
+            phoneNumbers: phoneNumbers,
+            urls: urls,
             personNames: [],
             organizationNames: [],
             sentiment: sentiment,
@@ -217,7 +426,8 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             task: task ?? absent(),
             question: question ?? absent(),
             invitation: invitation ?? absent(),
-            complaint: complaint ?? absent()
+            complaint: complaint ?? absent(),
+            replyableMessage: replyableMessage ?? absent()
         )
     }
 }

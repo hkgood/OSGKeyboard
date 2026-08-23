@@ -397,10 +397,6 @@ struct HomeView: View {
             }
             .buttonStyle(.plain)
 
-            Text("home.card.dictionary.smart.subtitle")
-                .font(TypeStyle.caption2)
-                .foregroundStyle(palette.textSecondary)
-
             if dictionarySuggestions.isEmpty {
                 libraryEmptyLine("home.card.dictionary.smart.empty")
             } else {

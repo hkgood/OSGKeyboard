@@ -150,7 +150,22 @@ public final class AIAgentSkillLayoutStore: ObservableObject {
         var catalog = userCatalog
         try catalog.upsert(skill)
         commitUserCatalog(catalog)
-        guard previousSkill != nil, previousURL != skill.shortcutICloudURL else {
+
+        if previousSkill == nil {
+            // Pure-text skills are immediately usable. Shortcut-backed skills
+            // still wait for the explicit companion Shortcut confirmation.
+            guard skill.shortcutICloudURL == nil else { return }
+            let current = layout.sanitized(catalog: mergedCatalog)
+            commitLayout(
+                AIAgentSkillLayout(
+                    enabledIDs: current.enabledIDs + [skill.id],
+                    confirmedShortcutIDs: current.confirmedShortcutIDs
+                )
+            )
+            return
+        }
+
+        guard previousURL != skill.shortcutICloudURL else {
             return
         }
         let keepsKeyboardSlot = skill.shortcutICloudURL == nil

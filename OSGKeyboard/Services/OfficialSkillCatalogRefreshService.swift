@@ -128,7 +128,10 @@ actor OfficialSkillCatalogRefreshService {
                     received: received.revision
                 )
             }
-            try store.setOfficialSkillCatalog(received)
+            try store.setOfficialSkillCatalog(
+                received,
+                installingNewDefaultSkills: true
+            )
             return .updated(revision: received.revision)
         default:
             throw PublicContentHTTPError.unexpectedStatus(response.statusCode)

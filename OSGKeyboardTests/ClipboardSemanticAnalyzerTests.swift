@@ -14,6 +14,7 @@ final class ClipboardSemanticAnalyzerTests: XCTestCase {
         XCTAssertFalse(analysis.question.isDetected)
         XCTAssertFalse(analysis.invitation.isDetected)
         XCTAssertFalse(analysis.complaint.isDetected)
+        XCTAssertFalse(analysis.replyableMessage.isDetected)
     }
 
     func testDetectsLanguageAndStructuredDataLocally() async {
@@ -29,6 +30,58 @@ final class ClipboardSemanticAnalyzerTests: XCTestCase {
         XCTAssertTrue(analysis.hasAddress)
         XCTAssertTrue(analysis.hasPhoneNumber)
         XCTAssertTrue(analysis.hasURL)
+    }
+
+    func testStandaloneHTTPSLinkBecomesSingleWebURL() async {
+        let analysis = await ClipboardSemanticAnalyzer().analyze(
+            "https://www.apple.com/newsroom/"
+        )
+
+        XCTAssertEqual(
+            analysis.singleWebURL?.absoluteString,
+            "https://www.apple.com/newsroom/"
+        )
+    }
+
+    func testBareDomainIsNormalizedToHTTPS() {
+        let url = ClipboardWebLinkResolver.singleWebURL(
+            in: "详情见 www.apple.com/newsroom/"
+        )
+
+        XCTAssertEqual(
+            url?.absoluteString,
+            "https://www.apple.com/newsroom/"
+        )
+    }
+
+    func testMultipleLinksHaveNoSingleActionTarget() {
+        XCTAssertNil(
+            ClipboardWebLinkResolver.singleWebURL(
+                in: "https://example.com/a 和 https://example.com/b"
+            )
+        )
+    }
+
+    func testStandalonePhoneNumberBecomesSingleActionTarget() async throws {
+        let analysis = await ClipboardSemanticAnalyzer().analyze(
+            "请拨打 +1 (408) 996-1010"
+        )
+
+        XCTAssertEqual(analysis.singlePhoneNumber, "+14089961010")
+        XCTAssertEqual(
+            AIPhoneNumberResolver.telephoneURL(
+                for: try XCTUnwrap(analysis.singlePhoneNumber)
+            )?.absoluteString,
+            "tel:+14089961010"
+        )
+    }
+
+    func testMultiplePhoneNumbersHaveNoSingleActionTarget() {
+        let labels = [
+            ClipboardTextLabel(sourceText: "+1 408-996-1010"),
+            ClipboardTextLabel(sourceText: "400-666-8800")
+        ]
+        XCTAssertNil(AIPhoneNumberResolver.singlePhoneNumber(from: labels))
     }
 
     func testApprovedModelsDetectHighConfidenceIntents() async {
@@ -53,10 +106,24 @@ final class ClipboardSemanticAnalyzerTests: XCTestCase {
         XCTAssertTrue(question.question.isDetected)
         XCTAssertTrue(invitation.invitation.isApprovedForAutomaticRouting)
         XCTAssertTrue(invitation.invitation.isDetected)
-        // The current self-contained complaint model remains advisory until
-        // its manually authored holdout precision reaches the release gate.
-        XCTAssertFalse(complaint.complaint.isApprovedForAutomaticRouting)
-        XCTAssertGreaterThan(complaint.complaint.confidence, 0)
+        XCTAssertTrue(complaint.complaint.isApprovedForAutomaticRouting)
+        XCTAssertTrue(complaint.complaint.isDetected)
+    }
+
+    func testReplyableModelDistinguishesConversationFromAcknowledgment() async {
+        let analyzer = ClipboardSemanticAnalyzer()
+
+        let conversation = await analyzer.analyze(
+            "我刚到家，今天真是累坏了。"
+        )
+        let acknowledgment = await analyzer.analyze(
+            "收到，谢谢。"
+        )
+
+        XCTAssertTrue(conversation.replyableMessage.isApprovedForAutomaticRouting)
+        XCTAssertTrue(conversation.replyableMessage.isDetected)
+        XCTAssertTrue(acknowledgment.replyableMessage.isApprovedForAutomaticRouting)
+        XCTAssertFalse(acknowledgment.replyableMessage.isDetected)
     }
 
     func testPersonalPlanDoesNotBecomeAutomaticTask() async {
@@ -66,5 +133,6 @@ final class ClipboardSemanticAnalyzerTests: XCTestCase {
 
         XCTAssertTrue(analysis.task.isApprovedForAutomaticRouting)
         XCTAssertFalse(analysis.task.isDetected)
+        XCTAssertFalse(analysis.replyableMessage.isDetected)
     }
 }

@@ -115,6 +115,15 @@ final class PublicContentRefreshServiceTests: XCTestCase {
         XCTAssertEqual(first, .updated(revision: 12))
         XCTAssertEqual(store.officialSkillCatalog.etag, "\"skills-12\"")
         XCTAssertEqual(store.officialSkillCatalog.refreshedAt, firstDate)
+        XCTAssertTrue(store.agentSkillLayout.isEnabled("official.rewrite"))
+        store.setAgentSkillLayout(
+            AIAgentSkillLayout(
+                enabledIDs: store.agentSkillLayout.enabledIDs.filter {
+                    $0 != "official.rewrite"
+                },
+                confirmedShortcutIDs: store.agentSkillLayout.confirmedShortcutIDs
+            )
+        )
 
         await transport.append(
             PublicContentStubResponse(
@@ -135,6 +144,7 @@ final class PublicContentRefreshServiceTests: XCTestCase {
         XCTAssertEqual(second, .notModified(revision: 12))
         XCTAssertEqual(store.officialSkillCatalog.refreshedAt, secondDate)
         XCTAssertEqual(store.officialSkillCatalog.skills.first?.id, "official.rewrite")
+        XCTAssertFalse(store.agentSkillLayout.isEnabled("official.rewrite"))
         let requests = await transport.recordedRequests()
         XCTAssertEqual(requests.count, 2)
         XCTAssertEqual(

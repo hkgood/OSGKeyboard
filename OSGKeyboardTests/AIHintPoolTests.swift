@@ -121,5 +121,27 @@ final class AIHintPoolTests: XCTestCase {
         """
         let pack = try JSONDecoder().decode(AIHintPack.self, from: Data(json.utf8))
         XCTAssertEqual(pack.cards.first?.displayText, "全网热点：很长")
+        XCTAssertEqual(pack.cards.first?.taskKind, .aiQuestion)
+    }
+
+    func testCurrentInformationHintDecodesExplicitSearchIntent() throws {
+        let json = """
+        {"id":"hot","text":"今日热点","prompt":"请概括今日热点","category":"society","locale":"zh","taskKind":"current_information_question"}
+        """
+
+        let card = try JSONDecoder().decode(AIHintCard.self, from: Data(json.utf8))
+
+        XCTAssertEqual(card.taskKind, .currentInformationQuestion)
+    }
+
+    func testLocalTimeSensitiveHintsRequireCurrentInformation() throws {
+        let cards = AIHintLocalCatalog.cards(locale: "zh")
+        let stocks = try XCTUnwrap(cards.first { $0.id == "local-zh-stocks" })
+        let brief = try XCTUnwrap(cards.first { $0.id == "local-zh-daily-brief" })
+        let concept = try XCTUnwrap(cards.first { $0.id == "local-zh-encyclopedia" })
+
+        XCTAssertEqual(stocks.taskKind, .currentInformationQuestion)
+        XCTAssertEqual(brief.taskKind, .currentInformationQuestion)
+        XCTAssertEqual(concept.taskKind, .aiQuestion)
     }
 }
