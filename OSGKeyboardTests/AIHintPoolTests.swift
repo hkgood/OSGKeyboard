@@ -13,9 +13,18 @@ final class AIHintPoolTests: XCTestCase {
     }
 
     func testClipboardWindowNeverPutsClipboardCardsInCarousel() {
+        let clipboardCard = AIHintCard(
+            id: "remote-clipboard-reply",
+            displayText: "回复剪贴板",
+            prompt: "请回复剪贴板内容",
+            category: "clipboard",
+            source: "remote",
+            locale: "zh",
+            conditions: ["clipboard_30s"]
+        )
         let pack = AIHintPack(
             locale: "zh",
-            cards: AIHintLocalCatalog.cards(locale: "zh")
+            cards: AIHintLocalCatalog.cards(locale: "zh") + [clipboardCard]
         )
         let recent = ClipboardHistoryEntry(text: "hello", createdAt: Date())
         XCTAssertTrue(
@@ -29,19 +38,52 @@ final class AIHintPoolTests: XCTestCase {
         XCTAssertTrue(cards.allSatisfy { !$0.requiresClipboard30s })
     }
 
-    func testClipboardDisabledDropsClipboardCards() {
-        let pack = AIHintPack(
-            locale: "zh",
-            cards: AIHintLocalCatalog.cards(locale: "zh")
+    func testLocalCatalogDoesNotDuplicateClipboardSkills() {
+        for locale in ["zh", "en"] {
+            let cards = AIHintLocalCatalog.cards(locale: locale)
+            XCTAssertEqual(cards.count, 4)
+            XCTAssertTrue(cards.allSatisfy { !$0.requiresClipboard30s })
+            XCTAssertFalse(cards.contains { $0.category == "capability" })
+        }
+    }
+
+    func testRetiredHintsDoNotResurfaceFromAnOlderReadyPack() {
+        let retired = AIHintCard(
+            id: "local-zh-quote",
+            displayText: "今日金句",
+            prompt: "旧版本缓存",
+            category: "capability",
+            source: "local",
+            locale: "zh"
         )
-        let cards = AIHintPool.activeCards(pack: pack)
-        XCTAssertFalse(cards.isEmpty)
-        XCTAssertTrue(cards.allSatisfy { !$0.requiresClipboard30s })
+        let retiredRemoteQuote = AIHintCard(
+            id: "tophub-daily-soul-old",
+            displayText: "今日一句",
+            prompt: "旧版本云端缓存",
+            category: "daily",
+            source: "tophub-daily",
+            locale: "zh",
+            metadata: AIHintMetadata(soul: "旧金句")
+        )
+        let cards = AIHintPool.activeCards(
+            pack: AIHintPack(locale: "zh", cards: [retired, retiredRemoteQuote])
+        )
+
+        XCTAssertFalse(cards.contains { $0.id == retired.id })
+        XCTAssertFalse(cards.contains { $0.id == retiredRemoteQuote.id })
+        XCTAssertEqual(Set(cards.map(\.id)), Set(AIHintLocalCatalog.cards(locale: "zh").map(\.id)))
     }
 
     func testResolvePromptEmbedsClipboardMaterialAsData() throws {
-        let card = AIHintLocalCatalog.cards(locale: "zh")
-            .first { $0.id == "local-zh-clipboard-reply" }!
+        let card = AIHintCard(
+            id: "remote-clipboard-reply",
+            displayText: "回复剪贴板",
+            prompt: "请回复剪贴板内容",
+            category: "clipboard",
+            source: "remote",
+            locale: "zh",
+            conditions: ["clipboard_30s"]
+        )
         guard case .ready(let prompt) = AIHintPool.resolvePrompt(
             for: card,
             clipboardText: "你好"
@@ -134,14 +176,17 @@ final class AIHintPoolTests: XCTestCase {
         XCTAssertEqual(card.taskKind, .currentInformationQuestion)
     }
 
-    func testLocalTimeSensitiveHintsRequireCurrentInformation() throws {
+    func testLocalTimeSensitiveHintsRequireCurrentInformation() {
         let cards = AIHintLocalCatalog.cards(locale: "zh")
-        let stocks = try XCTUnwrap(cards.first { $0.id == "local-zh-stocks" })
-        let brief = try XCTUnwrap(cards.first { $0.id == "local-zh-daily-brief" })
-        let concept = try XCTUnwrap(cards.first { $0.id == "local-zh-encyclopedia" })
-
-        XCTAssertEqual(stocks.taskKind, .currentInformationQuestion)
-        XCTAssertEqual(brief.taskKind, .currentInformationQuestion)
-        XCTAssertEqual(concept.taskKind, .aiQuestion)
+        XCTAssertEqual(
+            cards.map(\.id),
+            [
+                "local-zh-daily-brief",
+                "local-zh-stocks-cn",
+                "local-zh-stocks-hk",
+                "local-zh-stocks-us"
+            ]
+        )
+        XCTAssertTrue(cards.allSatisfy { $0.taskKind == .currentInformationQuestion })
     }
 }

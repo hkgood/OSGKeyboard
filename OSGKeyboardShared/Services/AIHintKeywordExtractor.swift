@@ -53,7 +53,7 @@ public enum AIHintKeywordExtractor: Sendable {
         case .news:
             return locale == "zh" ? "今日早报" : "Today's briefing"
         case .stocks:
-            return locale == "zh" ? "今日大盘" : "Markets"
+            return card.displayText
         case .calendar:
             if locale != "zh", let name = trimmed(card.metadata?.name) {
                 return name

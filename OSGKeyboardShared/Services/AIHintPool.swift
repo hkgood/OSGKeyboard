@@ -10,7 +10,10 @@ public enum AIHintPool: Sendable {
     public static func activeCards(
         pack: AIHintPack
     ) -> [AIHintCard] {
-        let regularCards = pack.cards.filter { !$0.requiresClipboard30s }
+        let regularCards = pack.cards
+            .filter { !AIHintLocalCatalog.isRetired(cardID: $0.id) }
+            .filter { !$0.requiresClipboard30s }
+            .filter { $0.metadata?.soul == nil }
             .filter { !isHistoricalToday($0) }
 
         // Clipboard-conditioned sentences no longer rotate in the carousel;

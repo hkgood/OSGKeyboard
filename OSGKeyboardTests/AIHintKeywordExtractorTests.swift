@@ -100,18 +100,20 @@ final class AIHintKeywordExtractorTests: XCTestCase {
         XCTAssertEqual(soul.resolvedDisplayText, "今日金句")
     }
 
-    func testCapabilityMapsToSearch() {
-        let card = AIHintLocalCatalog.cards(locale: "zh")
-            .first { $0.id == "local-zh-encyclopedia" }!
-        XCTAssertEqual(card.visualKind, .search)
-        XCTAssertEqual(card.resolvedDisplayText, "有趣概念")
-    }
+    func testStockHintsKeepDistinctMarketLabelsAndChartIcon() {
+        let expectedLabels = [
+            "local-zh-stocks-cn": "今日A股",
+            "local-zh-stocks-hk": "今日港股",
+            "local-zh-stocks-us": "今日美股"
+        ]
+        let cards = AIHintLocalCatalog.cards(locale: "zh")
+            .filter { expectedLabels[$0.id] != nil }
 
-    func testStocksMapsToChartIcon() {
-        let card = AIHintLocalCatalog.cards(locale: "zh")
-            .first { $0.id == "local-zh-stocks" }!
-        XCTAssertEqual(card.visualKind, .stocks)
-        XCTAssertEqual(card.resolvedDisplayText, "今日大盘")
+        XCTAssertEqual(cards.count, expectedLabels.count)
+        for card in cards {
+            XCTAssertEqual(card.visualKind, .stocks)
+            XCTAssertEqual(card.resolvedDisplayText, expectedLabels[card.id])
+        }
     }
 }
 

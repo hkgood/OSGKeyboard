@@ -1,8 +1,8 @@
 // AIHintLocalCatalog.swift
 // OSGKeyboard · Shared
 //
-// Built-in, non-time-sensitive AI idle hints (clipboard + evergreen). Always
-// available as a fallback when the remote pack is missing or stale.
+// Built-in current-information fallbacks for AI idle. Always available when
+// the remote pack is missing or stale; clipboard actions live in Skills.
 
 import Foundation
 
@@ -11,57 +11,13 @@ public enum AIHintLocalCatalog: Sendable {
         locale == "zh" ? zhCards : enCards
     }
 
+    /// Prevent removed built-ins from resurfacing from a ready pack written by
+    /// an older app version before the next successful cloud refresh.
+    public static func isRetired(cardID: String) -> Bool {
+        retiredCardIDs.contains(cardID)
+    }
+
     private static let zhCards: [AIHintCard] = [
-        AIHintCard(
-            id: "local-zh-clipboard-reply",
-            displayText: "帮我回复剪贴板",
-            prompt: "请根据剪贴板内容起草一段礼貌、简洁的回复，语气自然，可直接发送。",
-            category: "clipboard",
-            priority: 90,
-            source: "local",
-            locale: "zh",
-            conditions: ["clipboard_30s"]
-        ),
-        AIHintCard(
-            id: "local-zh-clipboard-translate",
-            displayText: "把剪贴板译成英文",
-            prompt: "请将剪贴板内容翻译成自然、地道的英文，保留原意与语气。",
-            category: "clipboard",
-            priority: 88,
-            source: "local",
-            locale: "zh",
-            conditions: ["clipboard_30s"]
-        ),
-        AIHintCard(
-            id: "local-zh-clipboard-summarize",
-            displayText: "帮我精简剪贴板",
-            prompt: "请将剪贴板内容精简为更短、更清晰的版本，保留关键信息与语气。",
-            category: "clipboard",
-            priority: 86,
-            source: "local",
-            locale: "zh",
-            conditions: ["clipboard_30s"]
-        ),
-        AIHintCard(
-            id: "local-zh-encyclopedia",
-            displayText: "有趣概念",
-            prompt: "用通俗易懂的中文解释一个有趣但常见的概念，并给一个生活里的例子（4-6 句）。",
-            category: "capability",
-            priority: 40,
-            source: "local",
-            locale: "zh"
-        ),
-        AIHintCard(
-            id: "local-zh-stocks",
-            displayText: "今日大盘",
-            prompt: "请用非专业口吻概括今天 A 股/港股/美股中至少一个市场的整体表现、"
-                + "可能驱动因素，并提醒这并非投资建议（4-6 句）。",
-            category: "economy",
-            priority: 42,
-            source: "local",
-            locale: "zh",
-            taskKind: .currentInformationQuestion
-        ),
         AIHintCard(
             id: "local-zh-daily-brief",
             displayText: "今日早报",
@@ -74,76 +30,41 @@ public enum AIHintLocalCatalog: Sendable {
             taskKind: .currentInformationQuestion
         ),
         AIHintCard(
-            id: "local-zh-quote",
-            displayText: "今日金句",
-            prompt: "请给一句适合今天分享的中文金句，并附上一两句简短解释。",
-            category: "capability",
-            priority: 38,
+            id: "local-zh-stocks-cn",
+            displayText: "今日A股",
+            prompt: "请用非专业口吻概括今天 A 股的整体表现，说明上证指数、深证成指或创业板的主要变化、"
+                + "可能驱动因素，并提醒这并非投资建议（4-6 句）。",
+            category: "economy",
+            priority: 44,
             source: "local",
-            locale: "zh"
+            locale: "zh",
+            taskKind: .currentInformationQuestion
         ),
         AIHintCard(
-            id: "local-zh-howto",
-            displayText: "生活技巧",
-            prompt: "分享一个实用的生活或工作效率小技巧，用中文说清步骤与适用场景（4-6 句）。",
-            category: "capability",
-            priority: 36,
+            id: "local-zh-stocks-hk",
+            displayText: "今日港股",
+            prompt: "请用非专业口吻概括今天港股的整体表现，说明恒生指数、恒生科技指数的主要变化、"
+                + "可能驱动因素，并提醒这并非投资建议（4-6 句）。",
+            category: "economy",
+            priority: 43,
             source: "local",
-            locale: "zh"
+            locale: "zh",
+            taskKind: .currentInformationQuestion
+        ),
+        AIHintCard(
+            id: "local-zh-stocks-us",
+            displayText: "今日美股",
+            prompt: "请用非专业口吻概括今天或最近一个交易日美股的整体表现，说明道琼斯指数、标普 500、"
+                + "纳斯达克指数的主要变化、可能驱动因素，并提醒这并非投资建议（4-6 句）。",
+            category: "economy",
+            priority: 42,
+            source: "local",
+            locale: "zh",
+            taskKind: .currentInformationQuestion
         )
     ]
 
     private static let enCards: [AIHintCard] = [
-        AIHintCard(
-            id: "local-en-clipboard-reply",
-            displayText: "Reply to clipboard",
-            prompt: "Draft a concise, polite reply the user can send, based on the clipboard text.",
-            category: "clipboard",
-            priority: 90,
-            source: "local",
-            locale: "en",
-            conditions: ["clipboard_30s"]
-        ),
-        AIHintCard(
-            id: "local-en-clipboard-translate",
-            displayText: "Translate clipboard",
-            prompt: "Translate the clipboard text into natural English, preserving meaning and tone.",
-            category: "clipboard",
-            priority: 88,
-            source: "local",
-            locale: "en",
-            conditions: ["clipboard_30s"]
-        ),
-        AIHintCard(
-            id: "local-en-clipboard-summarize",
-            displayText: "Shorten clipboard",
-            prompt: "Shorten the clipboard text into a clearer, shorter version while keeping the key points.",
-            category: "clipboard",
-            priority: 86,
-            source: "local",
-            locale: "en",
-            conditions: ["clipboard_30s"]
-        ),
-        AIHintCard(
-            id: "local-en-encyclopedia",
-            displayText: "A concept",
-            prompt: "Explain an interesting everyday concept in plain English with one real-life example (4-6 sentences).",
-            category: "capability",
-            priority: 40,
-            source: "local",
-            locale: "en"
-        ),
-        AIHintCard(
-            id: "local-en-stocks",
-            displayText: "Markets",
-            prompt: "Summarize today's broad market mood (US or global) in plain English, "
-                + "note possible drivers, and add this is not financial advice (4-6 sentences).",
-            category: "economy",
-            priority: 42,
-            source: "local",
-            locale: "en",
-            taskKind: .currentInformationQuestion
-        ),
         AIHintCard(
             id: "local-en-daily-brief",
             displayText: "Today's briefing",
@@ -156,22 +77,57 @@ public enum AIHintLocalCatalog: Sendable {
             taskKind: .currentInformationQuestion
         ),
         AIHintCard(
-            id: "local-en-quote",
-            displayText: "A quote",
-            prompt: "Share one short quote worth sending today, plus one or two sentences of context.",
-            category: "capability",
-            priority: 38,
+            id: "local-en-stocks-cn",
+            displayText: "China A-shares",
+            prompt: "Summarize today's China A-share market in plain English, including the main move in the "
+                + "Shanghai Composite, Shenzhen Component, or ChiNext, likely drivers, and a reminder that "
+                + "this is not financial advice (4-6 sentences).",
+            category: "economy",
+            priority: 44,
             source: "local",
-            locale: "en"
+            locale: "en",
+            taskKind: .currentInformationQuestion
         ),
         AIHintCard(
-            id: "local-en-howto",
-            displayText: "A tip",
-            prompt: "Share one practical life or productivity tip in English, with steps and when it helps (4-6 sentences).",
-            category: "capability",
-            priority: 36,
+            id: "local-en-stocks-hk",
+            displayText: "Hong Kong stocks",
+            prompt: "Summarize today's Hong Kong stock market in plain English, including the main moves in "
+                + "the Hang Seng Index and Hang Seng TECH Index, likely drivers, and a reminder that this is "
+                + "not financial advice (4-6 sentences).",
+            category: "economy",
+            priority: 43,
             source: "local",
-            locale: "en"
+            locale: "en",
+            taskKind: .currentInformationQuestion
+        ),
+        AIHintCard(
+            id: "local-en-stocks-us",
+            displayText: "US stocks",
+            prompt: "Summarize today's or the latest US stock-market session in plain English, including the "
+                + "main moves in the Dow, S&P 500, and Nasdaq, likely drivers, and a reminder that this is not "
+                + "financial advice (4-6 sentences).",
+            category: "economy",
+            priority: 42,
+            source: "local",
+            locale: "en",
+            taskKind: .currentInformationQuestion
         )
+    ]
+
+    private static let retiredCardIDs: Set<String> = [
+        "local-zh-clipboard-reply",
+        "local-zh-clipboard-translate",
+        "local-zh-clipboard-summarize",
+        "local-zh-encyclopedia",
+        "local-zh-stocks",
+        "local-zh-quote",
+        "local-zh-howto",
+        "local-en-clipboard-reply",
+        "local-en-clipboard-translate",
+        "local-en-clipboard-summarize",
+        "local-en-encyclopedia",
+        "local-en-stocks",
+        "local-en-quote",
+        "local-en-howto"
     ]
 }
