@@ -178,6 +178,7 @@
         "OSGKeyboardTests/KeyboardTranslationConfigProtectionTests",
         "OSGKeyboardTests/AIHintPoolTests",
         "OSGKeyboardTests/AIHintKeywordExtractorTests",
+        "OSGKeyboardTests/WebPageContentServiceTests",
         "OSGKeyboardTests/AIAgentSkillLayoutTests",
         "OSGKeyboardTests/AIUserSkillTests",
         "OSGKeyboardTests/AIUserSkillStoreTests",
