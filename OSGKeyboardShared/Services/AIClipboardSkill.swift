@@ -146,6 +146,17 @@ public enum AIClipboardSkillCatalog: Sendable {
         empathyReplyID,
         businessReplyID
     ]
+    /// Contextual system actions remain available to semantic ranking but are
+    /// not user-managed entries in the host app's Skills catalog.
+    public static let hiddenFromSkillManagementIDs: Set<String> = [
+        replyID,
+        declineInvitationID,
+        empathyReplyID,
+        acceptInvitationID,
+        callPhoneID,
+        createContactID,
+        clarifyRequestID
+    ]
     public static let extractTodosID = "extractTodos"
     public static let extractTodosShortcutName = "OSGExtractTodos"
     public static let extractTodosResourceName = "OSGExtractTodos"

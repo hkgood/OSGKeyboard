@@ -1,7 +1,7 @@
 // PolishStyleLearningServiceTests.swift
 // OSGKeyboard · Tests
 //
-// Verifies corpus eligibility, the 5,000-character gate, and that style
+// Verifies corpus eligibility, the 2,500-character gate, and that style
 // generation receives both paired examples and the prompts that produced them.
 
 @testable import OSGKeyboardShared
@@ -54,7 +54,7 @@ final class PolishStyleLearningServiceTests: XCTestCase {
         XCTAssertEqual(corpus.examples.count, 1)
         XCTAssertEqual(corpus.examples.first?.polishStyleID, "builtin.light")
         XCTAssertEqual(corpus.effectiveCharacterCount, 7)
-        XCTAssertEqual(corpus.remainingCharacterCount, 4_993)
+        XCTAssertEqual(corpus.remainingCharacterCount, 2_493)
         XCTAssertFalse(corpus.isReady)
     }
 
@@ -74,8 +74,8 @@ final class PolishStyleLearningServiceTests: XCTestCase {
         XCTAssertEqual(corpus.effectiveCharacterCount, 7)
     }
 
-    func testCorpusUnlocksAtFiveThousandEffectiveCharacters() {
-        let text = String(repeating: "字", count: 5_000)
+    func testCorpusUnlocksAtTwoThousandFiveHundredEffectiveCharacters() {
+        let text = String(repeating: "字", count: 2_500)
         let corpus = PolishStyleLearningCorpusBuilder.build(
             from: [
                 SpeechHistoryEntry(
@@ -86,7 +86,7 @@ final class PolishStyleLearningServiceTests: XCTestCase {
             ]
         )
 
-        XCTAssertEqual(corpus.effectiveCharacterCount, 5_000)
+        XCTAssertEqual(corpus.effectiveCharacterCount, 2_500)
         XCTAssertEqual(corpus.remainingCharacterCount, 0)
         XCTAssertTrue(corpus.isReady)
     }
@@ -108,7 +108,7 @@ final class PolishStyleLearningServiceTests: XCTestCase {
         store.setPolishStyleCatalog(catalog)
         store.setActivePolishStyleId(activeStyle.id)
 
-        let source = String(repeating: "测试语料", count: 1_250)
+        let source = String(repeating: "测试语料", count: 625)
         let corpus = PolishStyleLearningCorpus(
             examples: [
                 PolishStyleLearningExample(
@@ -120,7 +120,7 @@ final class PolishStyleLearningServiceTests: XCTestCase {
                     createdAt: Date()
                 )
             ],
-            effectiveCharacterCount: 5_000
+            effectiveCharacterCount: 2_500
         )
         let client = StyleLearningCapturingClient(
             response: ##"{"name":"我的说话风格","prompt":"# 角色\n自然直接\n# 风格边界\n不改变原意\n# 示例\n输入 → 输出","allowsAddedEmoji":false}"##
@@ -156,7 +156,7 @@ final class PolishStyleLearningServiceTests: XCTestCase {
                     createdAt: Date()
                 )
             ],
-            effectiveCharacterCount: 5_000
+            effectiveCharacterCount: 2_500
         )
         let service = PolishStyleLearningService(
             store: store,
@@ -169,7 +169,7 @@ final class PolishStyleLearningServiceTests: XCTestCase {
         } catch let error as PolishStyleLearningError {
             XCTAssertEqual(
                 error,
-                .insufficientCorpus(required: 5_000, actual: 5)
+                .insufficientCorpus(required: 2_500, actual: 5)
             )
         } catch {
             XCTFail("Unexpected error: \(error)")

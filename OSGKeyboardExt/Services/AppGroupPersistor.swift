@@ -88,6 +88,7 @@ public struct AppGroupPersistor {
         guard AppGroup.isAvailable else { return }
         let store = AppGroupStore()
         state.engineMode = store.engineMode
+        state.localeId = store.localeId
         let shouldProtectTranslation = KeyboardTranslationConfigProtection.shouldProtect(
             until: protectTranslationUntil
         )

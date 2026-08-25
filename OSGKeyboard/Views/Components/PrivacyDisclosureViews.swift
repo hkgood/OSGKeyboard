@@ -26,9 +26,5 @@ struct PrivacyInfoCard: View {
         .padding(Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                .stroke(palette.divider, lineWidth: 0.5)
-        )
     }
 }

@@ -68,6 +68,11 @@ public final class KeyboardViewController: UIInputViewController {
     /// One random ID per keyboard presentation. The repository splits this ID
     /// into independent UTC-day fragments when a presentation crosses midnight.
     private var keyboardUsageSessionID = UUID()
+    /// UIKit can reuse this controller across host apps. Keep document-scoped
+    /// candidate state separate from the heavy typing-engine lifetime.
+    private var isKeyboardPresentationActive = false
+    private var isTypingSurfaceActive = false
+    private var typingDocumentPresentationID: UInt64?
 
     private var memoryTelemetryContext: String {
         let language = typingSessionStorage?.language.rawValue ?? "-"
@@ -208,6 +213,9 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        isKeyboardPresentationActive = false
+        typingDocumentPresentationID = nil
+        typingSessionStorage?.endDocumentPresentation()
         AnalyticsExtensionService.shared.keyboardWillDisappear()
         assistantFieldActionRefreshTask?.cancel()
         assistantFieldActionRefreshTask = nil
@@ -243,8 +251,8 @@ public final class KeyboardViewController: UIInputViewController {
         if !preserve {
             prepareSurfaceForNextPresentation()
         }
-        if state.surface == .typing {
-            typingSession.leaveTypingMode()
+        if state.surface != .typing {
+            deactivateTypingSurface()
         }
         if preserve {
             return
@@ -255,6 +263,7 @@ public final class KeyboardViewController: UIInputViewController {
 
     public override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        isKeyboardPresentationActive = true
         OSGDiag.log(
             "KVC.viewWillAppear begin surface=\(state.surface.rawValue) "
                 + "fullAccess=\(hasFullAccess) \(OSGDiag.memoryTag())",
@@ -263,6 +272,7 @@ public final class KeyboardViewController: UIInputViewController {
         recordMemory("KVC.viewWillAppear.begin")
         setNeedsUpdateOfScreenEdgesDeferringSystemGestures()
         configureDictationBehavior()
+        state.hasFullAccess = hasFullAccess
         KeyboardSetupBridge.markExtensionAppearance(hasFullAccess: hasFullAccess)
         // Refresh only Flow/config state; edit targets come from verified OSG insertions.
         flowCoordinator.refreshSessionState()
@@ -278,8 +288,7 @@ public final class KeyboardViewController: UIInputViewController {
         recordMemory("KVC.viewWillAppear.afterHaptics")
         if state.surface == .typing {
             OSGDiag.log("KVC.viewWillAppear enterTypingMode", category: "boot")
-            typingSession.enterTypingMode()
-            refreshEnglishSupplementaryLexicon()
+            activateTypingPresentationIfNeeded()
             recordMemory("KVC.viewWillAppear.afterTypingEnter")
         }
         clipboardCapture.keyboardDidAppear()
@@ -322,6 +331,7 @@ public final class KeyboardViewController: UIInputViewController {
         heightPhase = .presented
         lockPresentedKeyboardHeight()
         refreshReturnKeyRole()
+        scheduleTypingDocumentSynchronization()
         // Presentation math is locked before arming the PiP handoff.
         DispatchQueue.main.async { [weak self] in
             guard let self, self.heightPhase == .presented else { return }
@@ -357,7 +367,7 @@ public final class KeyboardViewController: UIInputViewController {
     public override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
         refreshReturnKeyRole()
-        typingSession.synchronizeEnglishDocumentContext()
+        synchronizeTypingDocumentContext()
         textInserter?.refreshEditingAvailability()
         lastInputEditCoordinator?.refreshContext()
     }
@@ -365,7 +375,7 @@ public final class KeyboardViewController: UIInputViewController {
     public override func selectionDidChange(_ textInput: UITextInput?) {
         super.selectionDidChange(textInput)
         refreshReturnKeyRole()
-        typingSession.synchronizeEnglishDocumentContext(caretMoved: true)
+        synchronizeTypingDocumentContext(caretMoved: true)
         textInserter?.refreshEditingAvailability()
         lastInputEditCoordinator?.refreshContext()
     }
@@ -395,10 +405,9 @@ public final class KeyboardViewController: UIInputViewController {
         )
         flowCoordinator.cancelPipelineUnlessAwaitingResult()
         if state.surface == .typing {
-            typingSession.leaveTypingMode()
             applySurface(.voice)
         } else {
-            typingSession.leaveTypingMode()
+            deactivateTypingSurface()
         }
     }
 
@@ -423,9 +432,15 @@ public final class KeyboardViewController: UIInputViewController {
                 self?.insertTextIntoDocument(text, source: source)
             },
             deleteBackward: { [weak self] in self?.deleteBackwardFromDocument() },
-            contextBeforeInput: { [weak self] in self?.textDocumentProxy.documentContextBeforeInput },
+            contextBeforeInput: { [weak self] in
+                guard let self, self.textDocumentProxy.isSecureTextEntry == false else { return nil }
+                return self.textDocumentProxy.documentContextBeforeInput
+            },
             fieldContextProvider: { [weak self] in self?.captureFieldContext() },
-            selectedText: { [weak self] in self?.textDocumentProxy.selectedText },
+            selectedText: { [weak self] in
+                guard let self, self.textDocumentProxy.isSecureTextEntry == false else { return nil }
+                return self.textDocumentProxy.selectedText
+            },
             scheduleAutoClearError: { [weak self] in self?.scheduleAutoClearError() },
             editHintScheduler: editHintScheduler
         )
@@ -439,6 +454,7 @@ public final class KeyboardViewController: UIInputViewController {
             onConfigChanged: { [weak self] in
                 // Only an already-live typing session can be showing the setup
                 // error; never force-create one just to retry.
+                self?.typingSessionStorage?.reloadPersonalDictionaryTerms()
                 self?.typingSessionStorage?.retryPrepareAfterResourceDeployment()
             }
         )
@@ -502,7 +518,7 @@ public final class KeyboardViewController: UIInputViewController {
         clipboardCapture = ClipboardCaptureCoordinator(state: state)
         clipboardCapture.configure(
             isSecure: { [weak self] in
-                self?.textDocumentProxy.isSecureTextEntry ?? false
+                self?.textDocumentProxy.isSecureTextEntry ?? true
             },
             hasFullAccess: { [weak self] in
                 self?.hasFullAccess ?? false
@@ -666,8 +682,14 @@ public final class KeyboardViewController: UIInputViewController {
 
         state.$surface
             .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.refreshKeyboardHeight()
+            .sink { [weak self] surface in
+                guard let self else { return }
+                if surface == .typing {
+                    self.activateTypingPresentationIfNeeded()
+                } else {
+                    self.deactivateTypingSurface()
+                }
+                self.refreshKeyboardHeight()
             }
             .store(in: &cancellables)
     }
@@ -685,6 +707,9 @@ public final class KeyboardViewController: UIInputViewController {
             return
         }
         guard state.surface != surface else {
+            if surface == .typing {
+                activateTypingPresentationIfNeeded()
+            }
             refreshKeyboardHeight()
             return
         }
@@ -695,12 +720,66 @@ public final class KeyboardViewController: UIInputViewController {
         state.surface = surface
         recordMemory("KVC.applySurface", details: "requested=\(surface.rawValue)")
         if surface == .typing {
-            typingSession.enterTypingMode()
-            refreshEnglishSupplementaryLexicon()
+            activateTypingPresentationIfNeeded()
         } else {
-            typingSession.leaveTypingMode()
+            deactivateTypingSurface()
         }
         refreshKeyboardHeight()
+    }
+
+    private func activateTypingPresentationIfNeeded() {
+        guard isKeyboardPresentationActive,
+              state.surface == .typing,
+              typingDocumentPresentationID == nil else {
+            return
+        }
+        if !isTypingSurfaceActive {
+            typingSession.enterTypingMode()
+            isTypingSurfaceActive = true
+        }
+        typingDocumentPresentationID = typingSession.beginDocumentPresentation()
+        refreshEnglishSupplementaryLexicon()
+        if heightPhase == .presented {
+            refreshReturnKeyRole()
+            scheduleTypingDocumentSynchronization()
+        }
+    }
+
+    private func deactivateTypingSurface() {
+        guard isTypingSurfaceActive || typingDocumentPresentationID != nil else { return }
+        typingDocumentPresentationID = nil
+        typingSessionStorage?.leaveTypingMode()
+        isTypingSurfaceActive = false
+    }
+
+    private func scheduleTypingDocumentSynchronization() {
+        guard let presentationID = typingDocumentPresentationID else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self,
+                  self.isKeyboardPresentationActive,
+                  self.state.surface == .typing,
+                  self.typingDocumentPresentationID == presentationID else {
+                return
+            }
+            self.synchronizeTypingDocumentContext(
+                caretMoved: true,
+                presentationID: presentationID
+            )
+        }
+    }
+
+    private func synchronizeTypingDocumentContext(
+        caretMoved: Bool = false,
+        presentationID: UInt64? = nil
+    ) {
+        guard let activeID = presentationID ?? typingDocumentPresentationID,
+              typingDocumentPresentationID == activeID else {
+            return
+        }
+        typingSessionStorage?.synchronizeEnglishDocumentContext(
+            caretMoved: caretMoved,
+            presentationID: activeID
+        )
     }
 
     private func applyPreferredSurfaceOnOpen() {
@@ -716,10 +795,10 @@ public final class KeyboardViewController: UIInputViewController {
                 + "locksTyping=\(state.locksTypingSurface ? 1 : 0)",
             category: "boot"
         )
-        applySurface(resolved)
         if resolved == .typing, let language = preference.typingLanguage {
             _ = typingSession.setLanguage(language)
         }
+        applySurface(resolved)
     }
 
     /// When not remembering, snap to the static open preference while hidden
@@ -842,24 +921,31 @@ public final class KeyboardViewController: UIInputViewController {
         assistantFieldActionRefreshTask?.cancel()
         assistantFieldActionRefreshTask = nil
         refreshAssistantFieldAction()
-        let isSecure = textDocumentProxy.isSecureTextEntry ?? false
+        // An unavailable trait is not proof that the new host field is safe.
+        // Fail closed until UIKit supplies an explicit non-secure value.
+        let isSecure = textDocumentProxy.isSecureTextEntry ?? true
         state.setSecureTextEntry(isSecure)
         clipboardCapture?.secureEntryDidChange(isSecure: isSecure)
         // Secure fields must not run English autocomplete / autocorrect / learning.
-        typingSession.suggestionsEnabled = !isSecure
-        typingSession.syncAutocapitalization()
+        typingSessionStorage?.suggestionsEnabled = !isSecure
+        if !isSecure {
+            typingSessionStorage?.syncAutocapitalization()
+        }
     }
 
     private func installTypingContextProviders() {
         typingSession.precedingTextProvider = { [weak self] in
-            self?.textDocumentProxy.documentContextBeforeInput
+            guard let self, self.textDocumentProxy.isSecureTextEntry == false else { return nil }
+            return self.textDocumentProxy.documentContextBeforeInput
         }
         typingSession.followingTextProvider = { [weak self] in
-            self?.textDocumentProxy.documentContextAfterInput
+            guard let self, self.textDocumentProxy.isSecureTextEntry == false else { return nil }
+            return self.textDocumentProxy.documentContextAfterInput
         }
         typingSession.autocapitalizationModeProvider = { [weak self] in
-            Self.typingAutocapitalizationMode(
-                for: self?.textDocumentProxy.autocapitalizationType ?? .sentences
+            guard let self, self.textDocumentProxy.isSecureTextEntry == false else { return .none }
+            return Self.typingAutocapitalizationMode(
+                for: self.textDocumentProxy.autocapitalizationType ?? .sentences
             )
         }
     }
@@ -1037,6 +1123,7 @@ public final class KeyboardViewController: UIInputViewController {
     // MARK: - App context
 
     private func detectAndStoreAppContext() {
+        guard textDocumentProxy.isSecureTextEntry == false else { return }
         let preceding = textDocumentProxy.documentContextBeforeInput
         let store = AppGroupStore()
         let detector = AppContextDetector()
@@ -1048,9 +1135,9 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     private func captureFieldContext() -> FlowFieldContext {
-        let isSecure = textDocumentProxy.isSecureTextEntry ?? false
-        let preceding = textDocumentProxy.documentContextBeforeInput
-        let following = textDocumentProxy.documentContextAfterInput
+        let isSecure = textDocumentProxy.isSecureTextEntry ?? true
+        let preceding = isSecure ? nil : textDocumentProxy.documentContextBeforeInput
+        let following = isSecure ? nil : textDocumentProxy.documentContextAfterInput
         let isAvailable = preceding != nil || following != nil
         let isEmpty = isAvailable && (preceding ?? "").isEmpty && (following ?? "").isEmpty
 

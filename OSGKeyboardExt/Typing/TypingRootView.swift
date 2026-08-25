@@ -70,8 +70,8 @@ struct TypingRootView: View {
                 typingKeySurface
                     .padding(.top, TypingLayoutMetrics.verticalKeySpacing)
                     .opacity(expanded ? 0 : 1)
-                    .allowsHitTesting(!expanded)
-                    .accessibilityHidden(expanded)
+                    .allowsHitTesting(!expanded && canAcceptTypingKeys)
+                    .accessibilityHidden(expanded || !canAcceptTypingKeys)
 
                 if expanded || candidatePanelMounted {
                     expandedCandidatePanel
@@ -141,6 +141,14 @@ struct TypingRootView: View {
         !typing.composition.preedit.isEmpty || !typing.composition.candidates.isEmpty
     }
 
+    private var isChineseEnginePreparing: Bool {
+        typing.language == .chinese && typing.isPreparingEngine
+    }
+
+    private var canAcceptTypingKeys: Bool {
+        typing.language == .english || typing.engineReady
+    }
+
     private var idleTopBar: some View {
         ZStack {
             KeyboardTopControls(
@@ -157,6 +165,10 @@ struct TypingRootView: View {
 
                 if let err = typing.lastError {
                     typingErrorLabel(err)
+                } else if isChineseEnginePreparing {
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityLabel(ExtL10n.text("keyboard.typing.preparingA11y"))
                 }
 
                 // iOS-style editing cluster (undo / redo / copy / cut) — iPad only,
@@ -238,16 +250,17 @@ struct TypingRootView: View {
                         .fill(palette.dividerStrong)
                         .frame(width: 1, height: 18)
                 }
-                englishQuickTypeSlot(candidate, index: index)
+                englishQuickTypeSlot(candidate)
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.leading, KeyboardTopBarMetrics.nestedHorizontalInset)
     }
 
-    private func englishQuickTypeSlot(_ candidate: TypingCandidate, index: Int) -> some View {
+    private func englishQuickTypeSlot(_ candidate: TypingCandidate) -> some View {
         let label = candidate.isQuoted ? "\"\(candidate.text)\"" : candidate.text
         let weight: Font.Weight = candidate.role == .correction ? .semibold : .regular
+        let candidateRevision = typing.candidateRevision
         return Text(label)
             .font(.system(size: 17, weight: weight))
             .foregroundStyle(palette.textPrimary)
@@ -256,20 +269,32 @@ struct TypingRootView: View {
             .frame(maxWidth: .infinity, minHeight: 40)
             .contentShape(Rectangle())
             .onTapGesture {
-                apply(typing.selectCandidate(at: index))
+                apply(
+                    typing.selectCandidate(
+                        id: candidate.id,
+                        candidateRevision: candidateRevision
+                    )
+                )
             }
             .accessibilityAddTraits(.isButton)
             .accessibilityLabel(candidate.text)
     }
 
     private var chineseCandidateStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        let candidateRevision = typing.candidateRevision
+        return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Spacing.xs) {
                 if typing.composition.candidates.isEmpty {
                     selectedCandidateLabel(text: typing.composition.preedit)
-                } else if typing.isCandidatePanelExpanded {
-                    candidateChip(text: typing.composition.candidates[0].text) {
-                        apply(typing.selectCandidate(at: 0))
+                } else if typing.isCandidatePanelExpanded,
+                          let candidate = typing.composition.candidates.first {
+                    candidateChip(text: candidate.text) {
+                        apply(
+                            typing.selectCandidate(
+                                id: candidate.id,
+                                candidateRevision: candidateRevision
+                            )
+                        )
                     }
                 } else {
                     ForEach(
@@ -282,7 +307,12 @@ struct TypingRootView: View {
                     ) { index, candidate in
                         if index == 0 {
                             candidateChip(text: candidate.text) {
-                                apply(typing.selectCandidate(at: index))
+                                apply(
+                                    typing.selectCandidate(
+                                        id: candidate.id,
+                                        candidateRevision: candidateRevision
+                                    )
+                                )
                             }
                         } else {
                             Text(candidate.text)
@@ -292,7 +322,12 @@ struct TypingRootView: View {
                                 .frame(height: 40)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
-                                    apply(typing.selectCandidate(at: index))
+                                    apply(
+                                        typing.selectCandidate(
+                                            id: candidate.id,
+                                            candidateRevision: candidateRevision
+                                        )
+                                    )
                                 }
                                 .accessibilityAddTraits(.isButton)
                                 .accessibilityLabel(candidate.text)
@@ -393,15 +428,21 @@ struct TypingRootView: View {
 
     /// UIKit-recycled labels — no SwiftUI Button per candidate.
     private var expandedCandidatePanel: some View {
-        CandidateExpandGridView(
+        let candidateRevision = typing.candidateRevision
+        return CandidateExpandGridView(
             candidates: typing.composition.candidates,
             textColor: UIColor(keyTextColor),
             dividerColor: UIColor(palette.dividerStrong),
-            onSelect: { index in
+            onSelect: { candidate in
                 var transaction = Transaction()
                 transaction.disablesAnimations = true
                 withTransaction(transaction) {
-                    apply(typing.selectCandidate(at: index))
+                    apply(
+                        typing.selectCandidate(
+                            id: candidate.id,
+                            candidateRevision: candidateRevision
+                        )
+                    )
                 }
             }
         )
@@ -646,6 +687,7 @@ struct TypingRootView: View {
     }
 
     private func commitTypingKey(_ key: TypingKeyHitTarget) {
+        guard canAcceptTypingKeys else { return }
         switch key.id {
         case TypingKeyLayoutBuilder.BottomKeyID.pageSwitch.rawValue:
             typing.setPage(typing.page == .letters ? .numbers : .letters)

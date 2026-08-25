@@ -19,11 +19,11 @@ public final class UsageStatisticsStore: ObservableObject {
         dictationCharacterCount + translationCharacterCount + aiCharacterCount
     }
     /// Cross-device dictation characters per local day (`yyyy-MM-dd`), used by
-    /// the home page's 7-day chart.
+    /// the home page and dashboard usage visualizations.
     @Published public private(set) var dailyDictationCharacters: [String: Int] = [:]
 
-    /// How many days of daily buckets to retain on disk. Well beyond the 7-day
-    /// chart window so a device that syncs in late still contributes recent days.
+    /// How many days of daily buckets to retain on disk. This preserves several
+    /// complete monthly views when a device syncs late.
     private static let dailyRetentionDays = 90
 
     public let defaults: UserDefaults
@@ -121,13 +121,18 @@ public final class UsageStatisticsStore: ObservableObject {
         dailyDictationCharacters = payload.aggregatedDailyDictationCharacters
     }
 
-    // MARK: - 7-day chart data
+    // MARK: - Daily chart data
 
-    /// One day's dictation total for the home page chart.
+    /// One day's dictation total for home and dashboard visualizations.
     public struct DailyUsagePoint: Identifiable, Equatable, Sendable {
         public let date: Date
         public let value: Int
         public var id: Date { date }
+
+        public init(date: Date, value: Int) {
+            self.date = date
+            self.value = value
+        }
     }
 
     /// The trailing 7 local days (oldest → newest), zero-filled for days with no
@@ -149,6 +154,34 @@ public final class UsageStatisticsStore: ObservableObject {
             points.append(DailyUsagePoint(date: day, value: daily[key] ?? 0))
         }
         return points
+    }
+
+    /// Every local-calendar day in the current month, including future days.
+    /// Missing buckets are zero-filled so the UI can always render a complete
+    /// calendar instead of changing shape as usage accumulates.
+    public var currentMonth: [DailyUsagePoint] {
+        Self.currentMonth(from: dailyDictationCharacters)
+    }
+
+    public static func currentMonth(
+        from daily: [String: Int],
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> [DailyUsagePoint] {
+        let monthComponents = calendar.dateComponents([.year, .month], from: now)
+        guard let monthStart = calendar.date(from: monthComponents),
+              let dayRange = calendar.range(of: .day, in: .month, for: monthStart)
+        else { return [] }
+
+        return dayRange.compactMap { day in
+            guard let date = calendar.date(
+                byAdding: .day,
+                value: day - 1,
+                to: monthStart
+            ) else { return nil }
+            let key = UsageStatisticsDayKey.key(for: date, calendar: calendar)
+            return DailyUsagePoint(date: date, value: daily[key] ?? 0)
+        }
     }
 
     /// One-time cleanup: the pre-fix code overwrote a device slice with the

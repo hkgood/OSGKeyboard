@@ -142,6 +142,12 @@ public final class KeyboardState: ObservableObject {
     @Published public var returnKeyRole: ReturnKeyRole = .newline
     /// Opt-in clipboard history capture (mirrored from App Group).
     @Published public var clipboardHistoryEnabled: Bool = false
+    /// Current extension permission state. Clipboard history remains readable
+    /// without Full Access, but new system pasteboard entries cannot be captured.
+    @Published public var hasFullAccess: Bool = false
+    public var needsClipboardFullAccessHint: Bool {
+        clipboardHistoryEnabled && !hasFullAccess
+    }
     /// Opt-in clipboard suggestion strip (requires history enabled).
     @Published public var clipboardCandidateBarEnabled: Bool = false
     /// Skills-tab order for clipboard chips. Empty → hint carousel.

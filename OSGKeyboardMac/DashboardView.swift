@@ -88,13 +88,13 @@ struct DashboardView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Stats (7-day chart + cumulative grid — shared cluster)
+    // MARK: - Stats (monthly calendar + cumulative grid — shared cluster)
 
     private var statCluster: some View {
         UsageStatsCluster(
             layout: .split,
             language: lang,
-            points: stats.last7Days,
+            points: stats.currentMonth,
             dictationCharacterCount: stats.dictationCharacterCount,
             dictationDurationSeconds: stats.dictationDurationSeconds,
             translationCharacterCount: stats.translationCharacterCount,
@@ -224,10 +224,6 @@ struct BottomDictationBar: View {
             .background(
                 palette.surfaceElevated,
                 in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
             )
         }
         .menuStyle(.borderlessButton)

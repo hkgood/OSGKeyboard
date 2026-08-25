@@ -350,7 +350,6 @@
 "settings.keyboardHaptic.off" = "Off";
 "settings.keyboardHaptic.light" = "Light";
 "settings.keyboardHaptic.strong" = "Strong";
-"settings.cursorDragNavigation.title" = "Drag empty area to move cursor";
 "settings.systemPrompt.reset" = "Reset";
 "settings.asrLocale" = "ASR locale";
 "settings.engineBadge.ios26" = "SpeechAnalyzer — always on-device";
@@ -495,8 +494,11 @@
 "home.setup.permission.speech" = "Speech recognition is off — voice input won't work.";
 "home.setup.permission.both" = "Microphone and speech recognition are off — voice input won't work.";
 "home.setup.permission.request" = "Next";
-"home.setup.cloudIncomplete" = "Cloud engine needs an API key. Open the Settings tab.";
-"home.setup.polishKeyMissing" = "Add an API key in Settings to enable AI polish. Without it, raw ASR text is inserted.";
+"home.setup.cloudIncomplete" = "Cloud recognition and AI polish need API keys.";
+"home.setup.polishKeyMissing" = "Add an API key to enable AI polish. Without it, local dictation still inserts raw recognized text.";
+"home.setup.byok.configure" = "Configure API Key";
+"home.setup.credits.alternative" = "Or use OSG credits for transcription and AI without managing API keys.";
+"home.setup.credits.open" = "Use Credits";
 "home.setup.keyboardHint" = "Don't see OSGKeyboard? Add it in iOS Settings.";
 "home.setup.keyboardHint.dismiss" = "Got it";
 "home.flow.starting" = "Starting voice session…";
@@ -514,11 +516,12 @@
 "home.preview.placeholder" = "Tap to type and test…";
 "home.card.history.empty" = "No voice transcripts yet";
 "home.card.dictionary.empty" = "No words yet";
-"home.card.dictionary.smart.subtitle" = "Frequently used new terms discovered from your Rime typing";
-"home.card.dictionary.smart.empty" = "No suggestions yet";
+"home.card.dictionary.smart.subtitle" = "Frequently used new terms discovered from your typing";
+"home.card.dictionary.smart.empty" = "No recommended terms yet";
+"home.card.dictionary.smart.addHint" = "Tap to add frequently used terms to your personal dictionary";
 "home.card.dictionary.smart.accessibilityHint" = "Used %lld times. Double-tap to add it to your personal dictionary.";
 "home.card.dictionary.confirm.title" = "Add “%@” to your personal dictionary?";
-"home.card.dictionary.confirm.message" = "Rime has recorded this term %lld times. Once added, it will also improve speech recognition and AI polishing.";
+"home.card.dictionary.confirm.message" = "You’ve used this term %lld times. Once added, it will also improve speech recognition and AI polishing.";
 "home.card.dictionary.confirm.add" = "Add to dictionary";
 "home.wide.tagline.subtitle" = "Switch to any app and tap the keyboard mic to dictate.";
 "home.wide.mode.cloud" = "Cloud";
@@ -562,11 +565,11 @@
 "skills.action.install" = "Install";
 "skills.action.uninstall" = "Uninstall";
 "skills.action.reinstallShortcut" = "Reinstall Shortcut";
-"skills.reply.name" = "Reply in source language";
+"skills.reply.name" = "Reply";
 "skills.reply.description" = "Understand the copied text and reply naturally in its primary language.";
 "skills.playfulReply.name" = "Playful reply";
 "skills.playfulReply.description" = "Reply with a short, witty joke that stays kind and appropriate.";
-"skills.replyInSourceLanguage.name" = "Reply in source language";
+"skills.replyInSourceLanguage.name" = "Reply";
 "skills.replyInSourceLanguage.description" = "Understand the copied text and reply naturally in the same language.";
 "skills.summarize.name" = "Summarize key points";
 "skills.summarize.description" = "Summarize the content and extract facts, decisions, conclusions, and next steps when present.";
@@ -660,7 +663,7 @@
 "polishStyles.learn.generating" = "Generating…";
 "polishStyles.learn.privacy" = "Sent to your configured AI only when you generate. Review and edit before saving.";
 "polishStyles.learn.limit" = "Delete a custom style before generating another one.";
-"polishStyles.learn.error.insufficient" = "Keep dictating until 5,000 effective characters are available.";
+"polishStyles.learn.error.insufficient" = "Keep dictating until 2,500 effective characters are available.";
 "polishStyles.learn.error.invalidResponse" = "The AI did not return a valid writing style. Please try again.";
 "polishStyles.learn.error.promptTooLong" = "The generated prompt exceeded 6,000 characters. Please try again.";
 "polishStyles.learn.error.requestTooLarge" = "The learning sample is too large for the configured AI service. Shorten unusually long history entries and try again.";
@@ -724,7 +727,6 @@
 "settings.personalDictionary.empty.title" = "No words yet";
 "settings.personalDictionary.empty.body" = "Add your personal dictionary to improve recognition accuracy\nSyncs across devices via iCloud";
 "settings.personalDictionary.search.prompt" = "Search words";
-"settings.personalDictionary.usageCount" = "%lld uses";
 "settings.personalDictionary.add.title" = "Add word";
 "settings.personalDictionary.edit.title" = "Edit word";
 "settings.personalDictionary.add.field" = "Word";
@@ -830,6 +832,8 @@
 "account.signedOut.title" = "Your OSG account";
 "account.signedOut.body" = "Sign in to use managed credits and referrals.";
 "account.signedOut.localUnaffected" = "On-device features and your own API keys work without an account.";
+"home.accountRewards.signedOut.title" = "Sign in for free credits";
+"home.accountRewards.signedOut.summary" = "Eligible new users receive 1,000 credits; after an invited friend completes qualifying usage, you both receive 1,000 credits.";
 "account.signIn.apple" = "Sign in with Apple";
 "account.signIn.hint" = "Creates or opens your optional OSG account.";
 "account.signIn.loading" = "Signing in…";

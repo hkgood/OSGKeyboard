@@ -63,6 +63,7 @@
       "tests": [
         "OSGKeyboardTests/SettingsCloudSyncTests",
         "OSGKeyboardTests/PersonalDictionaryCloudSyncTests",
+        "OSGKeyboardTests/PersonalDictionaryEntryServiceTests",
         "OSGKeyboardTests/PersonalDictionaryMergeTests",
         "OSGKeyboardTests/SpeechHistoryCloudSyncTests",
         "OSGKeyboardTests/SpeechHistoryDayDeletionTests",
@@ -178,12 +179,14 @@
         "OSGKeyboardTests/KeyboardTranslationConfigProtectionTests",
         "OSGKeyboardTests/AIHintPoolTests",
         "OSGKeyboardTests/AIHintKeywordExtractorTests",
+        "OSGKeyboardTests/AIClipboardSkillTests",
         "OSGKeyboardTests/WebPageContentServiceTests",
         "OSGKeyboardTests/AIAgentSkillLayoutTests",
         "OSGKeyboardTests/AIUserSkillTests",
         "OSGKeyboardTests/AIUserSkillStoreTests",
         "OSGKeyboardTests/AIEventExtractionTests",
         "OSGKeyboardTests/AIAddressExtractionTests",
+        "OSGKeyboardTests/AIMapNavigationTests",
         "OSGKeyboardTests/AINoteExportTests",
         "OSGKeyboardTests/ClipboardSemanticAnalyzerTests",
         "OSGKeyboardTests/ClipboardSkillSemanticRankerTests",
@@ -191,7 +194,7 @@
         "OSGKeyboardTests/ClipboardHistoryStoreTests",
         "OSGKeyboardTests/KeyboardExtensionMemoryBudgetTests",
         "OSGKeyboardTests/OfficialSkillCatalogTests",
-        "OSGKeyboardTests/RimeFrequentTermStoreTests"
+        "OSGKeyboardTests/FrequentTermStoreTests"
       ]
     },
     "host_misc": {

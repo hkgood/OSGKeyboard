@@ -21,7 +21,7 @@ struct SettingsICloudSyncRow: View {
     private let store = AppGroupStore()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
+        VStack(spacing: 0) {
             Toggle(isOn: toggleBinding) {
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
                     Text("settings.appSettings.iCloudSync.title")
@@ -35,43 +35,50 @@ struct SettingsICloudSyncRow: View {
             }
             .tint(palette.accent)
             .disabled(isApplyingToggle)
+            .settingsListRow(alignment: .leading)
 
             if isEnabled {
+                Divider().background(palette.divider)
+
                 Button {
                     syncNow()
                 } label: {
-                    HStack(spacing: Spacing.xs) {
-                        Text(syncButtonTitleKey)
-                            .font(TypeStyle.caption)
-                        Spacer(minLength: 0)
-                        if isSyncingNow {
-                            ProgressView()
-                                .controlSize(.mini)
-                        } else if showSyncedConfirmation {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 11, weight: .semibold))
+                    VStack(alignment: .leading, spacing: Spacing.xxs) {
+                        HStack(spacing: Spacing.sm) {
+                            Text(syncButtonTitleKey)
+                                .font(TypeStyle.body)
+                            Spacer(minLength: Spacing.xs)
+                            if isSyncingNow {
+                                ProgressView()
+                                    .controlSize(.small)
+                            } else {
+                                Image(
+                                    systemName: showSyncedConfirmation
+                                        ? "checkmark"
+                                        : "arrow.triangle.2.circlepath"
+                                )
+                                .font(.system(size: 14, weight: .semibold))
+                            }
+                        }
+
+                        if let syncErrorMessage {
+                            Text(syncErrorMessage)
+                                .font(TypeStyle.caption2)
+                                .foregroundStyle(palette.danger)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     // Fill the row so the whole strip is tappable, not just
                     // the caption glyphs (previously easy to miss).
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .settingsListRow(alignment: .leading)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(palette.accent)
                 .disabled(isSyncingNow || isApplyingToggle)
-                .padding(.top, Spacing.xxs)
-            }
-
-            if let syncErrorMessage {
-                Text(syncErrorMessage)
-                    .font(TypeStyle.caption2)
-                    .foregroundStyle(.red)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, Spacing.xxs)
             }
         }
-        .settingsListRow(alignment: .leading)
         .onAppear { reloadFromStore() }
         .onReceive(
             NotificationCenter.default.publisher(for: .settingsDidSyncFromCloud)

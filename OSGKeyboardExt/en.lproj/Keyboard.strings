@@ -152,11 +152,10 @@
 "keyboard.redoA11y" = "Redo";
 "keyboard.copyA11y" = "Copy";
 "keyboard.cutA11y" = "Cut";
-"keyboard.cursorDrag.hint" = "Hold and drag to move the cursor";
-"keyboard.cursorDrag.centerHint" = "Drag to move the cursor";
 "keyboard.nextKeyboardA11y" = "Next keyboard";
 "keyboard.nextKeyboardA11yHint" = "Tap to switch to the next keyboard. Touch and hold to see all keyboards.";
 "keyboard.typing.setupA11yHint" = "Open OSGKeyboard to finish input method setup.";
+"keyboard.typing.preparingA11y" = "Preparing Chinese input";
 
 /* Flow session (keyboard) */
 "keyboard.flow.sessionInactive" = "Voice session off";
@@ -211,6 +210,7 @@
 "keyboard.clipboard.guide.cta" = "Open Settings";
 "keyboard.clipboard.panel.title" = "Clipboard";
 "keyboard.clipboard.panel.empty" = "No history yet";
+"keyboard.clipboard.panel.fullAccessHint" = "New copies are paused because Allow Full Access is off. Existing history remains available.";
 "keyboard.clipboard.panel.delete" = "Delete";
 "keyboard.clipboard.panel.close" = "Close clipboard";
 "keyboard.clipboard.panel.closeHint" = "Return to the keyboard.";
@@ -319,9 +319,9 @@
 "keyboard.ai.error.requestTimeout" = "AI response timed out. Try again";
 "keyboard.ai.error.requestFailed" = "AI response failed. Try again";
 "keyboard.ai.error.clipboardUnavailable" = "This clipboard suggestion expired. Copy the text again";
-"keyboard.ai.skill.reply" = "Same-language reply";
+"keyboard.ai.skill.reply" = "Reply";
 "keyboard.ai.skill.playfulReply" = "Playful";
-"keyboard.ai.skill.replyInSourceLanguage" = "Same language";
+"keyboard.ai.skill.replyInSourceLanguage" = "Reply";
 "keyboard.ai.skill.summarize" = "Key points";
 "keyboard.ai.skill.openLink" = "Open";
 "keyboard.ai.skill.summarizeWebPage" = "Web summary";

@@ -15,8 +15,16 @@ public final class TypingSessionController: ObservableObject {
     @Published public private(set) var capsLock: Bool = false
     /// Finger is down on Shift (iOS: hold for continuous uppercase; release ends).
     @Published public private(set) var shiftHeld: Bool = false
-    @Published public private(set) var composition: TypingComposition = .empty
+    @Published public private(set) var candidateRevision: UInt64 = 0
+    @Published public private(set) var composition: TypingComposition = .empty {
+        didSet {
+            if oldValue != composition {
+                candidateRevision &+= 1
+            }
+        }
+    }
     @Published public private(set) var engineReady: Bool = false
+    @Published public private(set) var isPreparingEngine: Bool = false
     @Published public private(set) var schema: TypingInputSchema
     /// Chinese-only: key grid replaced by a same-height candidate grid.
     @Published public private(set) var isCandidatePanelExpanded: Bool = false
@@ -29,8 +37,10 @@ public final class TypingSessionController: ObservableObject {
     /// Chinese composition is also skipped so passwords never enter Rime userdb.
     @Published public var suggestionsEnabled: Bool = true {
         didSet {
-            guard oldValue, !suggestionsEnabled else { return }
-            abandonChineseComposition()
+            guard oldValue != suggestionsEnabled else { return }
+            if !suggestionsEnabled {
+                clearDocumentScopedState()
+            }
         }
     }
     /// `UITextChecker` completions / guesses. Empty in unit tests.
@@ -54,12 +64,16 @@ public final class TypingSessionController: ObservableObject {
     public let layout: TypingLayoutProviding
     private let engineFactory: @MainActor () -> RimeEngineBridging
     private let englishFactory: @MainActor () -> EnglishSuggestionEngine
+    private let hostHeavyProvider: @MainActor () -> Bool
     private let learningStore: EnglishLearningStore
-    private let rimeFrequentTermStore: RimeFrequentTermStore
+    private let frequentTermStore: FrequentTermStore
     private var engineStorage: RimeEngineBridging?
     private var englishStorage: EnglishSuggestionEngine?
     private var prepared = false
     private var prepareTask: Task<Void, Never>?
+    private var engineEpoch: UInt64 = 0
+    private var documentPresentationCounter: UInt64 = 0
+    private var activeDocumentPresentationID: UInt64?
 
     private var engine: RimeEngineBridging {
         if let engineStorage { return engineStorage }
@@ -99,13 +113,17 @@ public final class TypingSessionController: ObservableObject {
         layout: TypingLayoutProviding = StandardTypingLayout(),
         englishEngine: (@MainActor () -> EnglishSuggestionEngine)? = nil,
         learningStore: EnglishLearningStore = EnglishLearningStore(),
-        rimeFrequentTermStore: RimeFrequentTermStore = RimeFrequentTermStore()
+        frequentTermStore: FrequentTermStore = FrequentTermStore(),
+        hostHeavyProvider: @escaping @MainActor () -> Bool = {
+            FlowSessionBridge.isHostHeavy()
+        }
     ) {
         self.engineFactory = engine ?? { LibrimeEngine() }
         self.layout = layout
         self.englishFactory = englishEngine ?? { EnglishSuggestionEngine() }
+        self.hostHeavyProvider = hostHeavyProvider
         self.learningStore = learningStore
-        self.rimeFrequentTermStore = rimeFrequentTermStore
+        self.frequentTermStore = frequentTermStore
         // Avoid constructing librime until the first Chinese keystroke / prepare.
         schema = TypingInputConfiguration.shared.schema
     }
@@ -134,7 +152,7 @@ public final class TypingSessionController: ObservableObject {
     }
 
     public func enterTypingMode() {
-        let hostHeavy = FlowSessionBridge.isHostHeavy()
+        let hostHeavy = hostHeavyProvider()
         KeyboardExtensionMemoryTelemetry.record(
             "typing.enter.begin",
             details: "language=\(language.rawValue) schema=\(schema.rawValue) "
@@ -165,6 +183,7 @@ public final class TypingSessionController: ObservableObject {
             OSGDiag.log("typing.enter skip englishPrepare lang=\(language.rawValue) \(OSGDiag.memoryTag())", category: "boot")
         }
         syncAutocapitalization()
+        isPreparingEngine = !prepared
         if hostHeavy {
             KeyboardExtensionMemoryTelemetry.record(
                 "typing.rimePrepare.deferred",
@@ -172,24 +191,28 @@ public final class TypingSessionController: ObservableObject {
             )
             OSGDiag.log("typing.enter defer rime hostHeavy=1 — retry scheduled", category: "boot")
             prepareTask?.cancel()
+            engineEpoch &+= 1
+            let epoch = engineEpoch
             prepareTask = Task { [weak self] in
-                for _ in 0..<40 {
+                while self?.hostHeavyProvider() == true {
                     try? await Task.sleep(nanoseconds: 250_000_000)
-                    guard let self, !Task.isCancelled else { return }
-                    if !FlowSessionBridge.isHostHeavy() {
-                        await self.prepareIfNeeded()
-                        self.prepareTask = nil
-                        return
-                    }
+                    guard !Task.isCancelled else { return }
                 }
-                self?.prepareTask = nil
+                guard let self, self.engineEpoch == epoch, !Task.isCancelled else { return }
+                await self.prepareIfNeeded(engineEpoch: epoch)
+                if self.engineEpoch == epoch {
+                    self.prepareTask = nil
+                }
             }
             return
         }
         if prepareTask == nil, !prepared {
+            engineEpoch &+= 1
+            let epoch = engineEpoch
             prepareTask = Task { [weak self] in
-                await self?.prepareIfNeeded()
-                self?.prepareTask = nil
+                await self?.prepareIfNeeded(engineEpoch: epoch)
+                guard let self, self.engineEpoch == epoch else { return }
+                self.prepareTask = nil
             }
         }
     }
@@ -200,17 +223,14 @@ public final class TypingSessionController: ObservableObject {
             details: "language=\(language.rawValue)"
         )
         OSGDiag.log("typing.leave \(OSGDiag.memoryTag())", category: "boot")
+        engineEpoch &+= 1
         prepareTask?.cancel()
         prepareTask = nil
+        endDocumentPresentation()
         engineStorage?.teardown()
         prepared = false
         engineReady = false
-        composition = .empty
-        isCandidatePanelExpanded = false
-        page = .letters
-        resetShiftState()
-        clearEnglishWordState(keepPrevious: false)
-        clearPeriodShortcut()
+        isPreparingEngine = false
         // Drop English lexicon pages when leaving typing (jetsam recovery).
         EnglishLexicon.shared.unload()
         englishStorage = nil
@@ -218,6 +238,32 @@ public final class TypingSessionController: ObservableObject {
             "typing.leave.done",
             details: "language=\(language.rawValue)"
         )
+    }
+
+    /// Starts a new host-document scope without tearing down dictionaries or
+    /// the Rime runtime. A keyboard presentation can move between apps while
+    /// the extension process and controller remain alive.
+    @discardableResult
+    public func beginDocumentPresentation() -> UInt64 {
+        documentPresentationCounter &+= 1
+        let presentationID = documentPresentationCounter
+        activeDocumentPresentationID = presentationID
+        candidateRevision &+= 1
+        clearDocumentScopedState()
+        return presentationID
+    }
+
+    /// Invalidates all candidates and input shadows owned by the outgoing
+    /// document. Heavy engines stay warm until typing mode itself is left.
+    public func endDocumentPresentation() {
+        documentPresentationCounter &+= 1
+        activeDocumentPresentationID = nil
+        candidateRevision &+= 1
+        clearDocumentScopedState()
+    }
+
+    public func isCurrentDocumentPresentation(_ presentationID: UInt64) -> Bool {
+        activeDocumentPresentationID == presentationID
     }
 
     public func toggleCandidatePanelExpanded() {
@@ -248,7 +294,7 @@ public final class TypingSessionController: ObservableObject {
             if !raw.isEmpty { output = .insert(raw) }
         }
         language = newLanguage
-        engine.setLanguage(newLanguage)
+        engineStorage?.setLanguage(newLanguage)
         page = .letters
         isCandidatePanelExpanded = false
         clearPeriodShortcut()
@@ -258,13 +304,23 @@ public final class TypingSessionController: ObservableObject {
             englishEngine.prepare()
             refreshEnglishSuggestions()
             syncAutocapitalization()
-            synchronizeEnglishDocumentContext(caretMoved: true)
+            if activeDocumentPresentationID != nil {
+                synchronizeEnglishDocumentContext(caretMoved: true)
+            }
         } else {
             clearEnglishWordState(keepPrevious: false)
             EnglishLexicon.shared.unload()
             composition = engine.composition
         }
         return output
+    }
+
+    /// Reloads host-curated terms after App Group configuration changes.
+    public func reloadPersonalDictionaryTerms() {
+        refreshPersonalTerms()
+        if language == .english {
+            refreshEnglishSuggestions()
+        }
     }
 
     /// Flushes raw preedit, selects the next built-in scheme, and returns the
@@ -371,7 +427,7 @@ public final class TypingSessionController: ObservableObject {
         composition = engine.composition
         syncCandidatePanelVisibility()
         clearOneShotShiftIfNeeded()
-        recordRimeCommit(committed)
+        recordChineseCommit(committed)
         return committed.isEmpty ? .none : .insert(committed)
     }
 
@@ -387,7 +443,7 @@ public final class TypingSessionController: ObservableObject {
         let text = engine.processSpace() ?? " "
         composition = engine.composition
         syncCandidatePanelVisibility()
-        recordRimeCommit(text)
+        recordChineseCommit(text)
         return .insert(text)
     }
 
@@ -403,7 +459,7 @@ public final class TypingSessionController: ObservableObject {
         let text = engine.processReturn() ?? "\n"
         composition = engine.composition
         syncCandidatePanelVisibility()
-        recordRimeCommit(text)
+        recordChineseCommit(text)
         return .insert(text)
     }
 
@@ -423,13 +479,28 @@ public final class TypingSessionController: ObservableObject {
         // Selecting always collapses; follow-up composition may reopen ▼.
         isCandidatePanelExpanded = false
         syncCandidatePanelVisibility()
-        recordRimeCommit(text)
+        recordChineseCommit(text)
         return text.isEmpty ? .none : .insert(text)
     }
 
-    private func recordRimeCommit(_ text: String) {
+    /// Candidate taps originate from a rendered snapshot. Reject the tap when
+    /// that snapshot has already been replaced by a newer composition.
+    public func selectCandidate(
+        id candidateID: String,
+        candidateRevision expectedRevision: UInt64? = nil
+    ) -> TypingOutput {
+        if let expectedRevision, expectedRevision != candidateRevision {
+            return .none
+        }
+        guard let index = composition.candidates.firstIndex(where: { $0.id == candidateID }) else {
+            return .none
+        }
+        return selectCandidate(at: index)
+    }
+
+    private func recordChineseCommit(_ text: String) {
         guard language == .chinese, suggestionsEnabled, !text.isEmpty else { return }
-        rimeFrequentTermStore.recordCommittedText(text)
+        frequentTermStore.recordCommittedText(text)
     }
 
     /// Drop in-flight pinyin so secure fields cannot commit into userdb.
@@ -575,6 +646,7 @@ public final class TypingSessionController: ObservableObject {
             UIKitEnglishSystemLexicon.learnWord(word)
             #endif
         }
+        recordEnglishCommit(word)
         refreshEnglishSuggestions(afterCommittedWord: word)
         return suffix.isEmpty ? .none : .insert(suffix)
     }
@@ -597,6 +669,7 @@ public final class TypingSessionController: ObservableObject {
             #if canImport(UIKit)
             UIKitEnglishSystemLexicon.learnWord(pending.original)
             #endif
+            recordEnglishCommit(pending.original)
             refreshEnglishSuggestions(afterCommittedWord: pending.original)
             return .replace(deleteCount: deleteCount, with: pending.original + " ")
         }
@@ -609,6 +682,7 @@ public final class TypingSessionController: ObservableObject {
         } else {
             learningStore.recordAcceptance(of: chosen)
         }
+        recordEnglishCommit(chosen)
 
         if !englishCurrentWord.isEmpty {
             let deleteCount = englishCurrentWord.count
@@ -625,6 +699,19 @@ public final class TypingSessionController: ObservableObject {
         pendingAutocorrection = nil
         refreshEnglishSuggestions(afterCommittedWord: chosen)
         return .insert(chosen + " ")
+    }
+
+    private func recordEnglishCommit(_ text: String) {
+        guard language == .english,
+              suggestionsEnabled,
+              englishEngine.isPersonalTermCandidate(
+                  text,
+                  personalTerms: personalTermsCache,
+                  systemWords: supplementaryWords
+              ) else {
+            return
+        }
+        frequentTermStore.recordCommittedText(text)
     }
 
     private func commitEnglishWordIfNeededBeforeNonLetter() -> TypingOutput {
@@ -696,8 +783,15 @@ public final class TypingSessionController: ObservableObject {
     /// Rebuilds English suggestion state from the real caret context.
     /// At the document end, callbacks keep the local shadow when a host
     /// briefly reports the immediately preceding edit (common in Notes).
-    public func synchronizeEnglishDocumentContext(caretMoved: Bool = false) {
+    public func synchronizeEnglishDocumentContext(
+        caretMoved: Bool = false,
+        presentationID: UInt64? = nil
+    ) {
         guard language == .english else { return }
+        if let presentationID,
+           activeDocumentPresentationID != presentationID {
+            return
+        }
         if caretMoved {
             clearPeriodShortcut()
         }
@@ -843,6 +937,16 @@ public final class TypingSessionController: ObservableObject {
         pendingAutocorrection = nil
     }
 
+    private func clearDocumentScopedState() {
+        engineStorage?.clearComposition()
+        composition = .empty
+        isCandidatePanelExpanded = false
+        page = .letters
+        resetShiftState()
+        clearEnglishWordState(keepPrevious: false)
+        clearPeriodShortcut()
+    }
+
     private func synchronizeEnglishWordState(
         precedingText: String,
         followingText: String?
@@ -942,15 +1046,19 @@ public final class TypingSessionController: ObservableObject {
         }
     }
 
-    private func prepareIfNeeded() async {
+    private func prepareIfNeeded(engineEpoch expectedEpoch: UInt64) async {
         guard !prepared else { return }
-        if FlowSessionBridge.isHostHeavy() {
+        guard engineEpoch == expectedEpoch, !Task.isCancelled else { return }
+        if hostHeavyProvider() {
             KeyboardExtensionMemoryTelemetry.record(
                 "typing.rimePrepare.deferred",
                 details: "hostHeavy=1"
             )
             OSGDiag.log("rime.prepare deferred hostHeavy=1 \(OSGDiag.memoryTag())", category: "boot")
-            return
+            while hostHeavyProvider() {
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                guard engineEpoch == expectedEpoch, !Task.isCancelled else { return }
+            }
         }
         KeyboardExtensionMemoryTelemetry.record(
             "typing.rimePrepare.begin",
@@ -963,9 +1071,11 @@ public final class TypingSessionController: ObservableObject {
         )
         do {
             try await engine.prepare()
+            guard engineEpoch == expectedEpoch, !Task.isCancelled else { return }
             engine.setLanguage(language)
             prepared = true
             engineReady = engine.isReady
+            isPreparingEngine = false
             schema = engine.schema
             lastError = nil
             lastErrorNeedsHostDeployment = false
@@ -981,10 +1091,12 @@ public final class TypingSessionController: ObservableObject {
                 category: "boot"
             )
         } catch {
+            guard engineEpoch == expectedEpoch, !Task.isCancelled else { return }
             lastError = error.localizedDescription
             lastErrorNeedsHostDeployment =
                 (error as? RimeResourceError)?.isResolvedByHostDeployment ?? false
             engineReady = false
+            isPreparingEngine = false
             KeyboardExtensionMemoryTelemetry.record(
                 "typing.rimePrepare.failed",
                 details: "language=\(language.rawValue) errorType=\(String(describing: type(of: error)))"
@@ -1005,9 +1117,13 @@ public final class TypingSessionController: ObservableObject {
         guard prepareTask == nil else { return }
         guard RimeResourceInstaller.isReady else { return }
         OSGDiag.log("rime.prepare retry after deployment", category: "boot")
+        engineEpoch &+= 1
+        let epoch = engineEpoch
+        isPreparingEngine = true
         prepareTask = Task { [weak self] in
-            await self?.prepareIfNeeded()
-            self?.prepareTask = nil
+            await self?.prepareIfNeeded(engineEpoch: epoch)
+            guard let self, self.engineEpoch == epoch else { return }
+            self.prepareTask = nil
         }
     }
 }

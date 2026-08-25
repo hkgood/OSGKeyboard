@@ -9,6 +9,10 @@ import Foundation
 import OSGKeyboardShared
 import SwiftUI
 
+private enum SkillRoute: Hashable {
+    case detail(String)
+}
+
 struct AIAgentSkillsView: View {
     @Environment(\.themePalette) private var palette
     @Environment(\.scenePhase) private var scenePhase
@@ -20,20 +24,21 @@ struct AIAgentSkillsView: View {
     @State private var pasteAccessNeedsRecovery = false
     @State private var showPasteNoTextAlert = false
     @State private var showPasteAccessSuccess = false
+    @State private var path = NavigationPath()
     private var skillCardShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
-                CardPageContent(spacing: Spacing.xl) {
+                CardPageContent {
                     if showsClipboardAccessGuide {
                         clipboardAccessGuide
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                     installedSection
-                    if !store.availableSkills.isEmpty {
+                    if !store.skillManagementAvailableSkills.isEmpty {
                         uninstalledSection
                     }
                 }
@@ -42,6 +47,19 @@ struct AIAgentSkillsView: View {
             .background(palette.background)
             .navigationTitle("skills.title")
             .navigationBarTitleDisplayMode(.large)
+            .navigationDestination(for: SkillRoute.self) { route in
+                switch route {
+                case .detail(let skillID):
+                    if let skill = store.mergedCatalog.first(where: { $0.id == skillID }) {
+                        skillDetailView(skill)
+                    } else {
+                        ContentUnavailableView(
+                            "skills.installed.empty",
+                            systemImage: "wand.and.sparkles"
+                        )
+                    }
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -53,6 +71,7 @@ struct AIAgentSkillsView: View {
                 }
             }
         }
+        .navigationStackTabBarVisibility(isRoot: path.isEmpty)
         .sheet(item: $editingDraft) { draft in
             SkillEditorSheet(
                 draft: draft,
@@ -94,11 +113,7 @@ struct AIAgentSkillsView: View {
     private var clipboardAccessGuide: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack(alignment: .top, spacing: Spacing.sm) {
-                Image(systemName: clipboardGuideIcon)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(clipboardGuideTint)
-                    .frame(width: 36, height: 36)
-                    .background(clipboardGuideTint.opacity(0.12), in: Circle())
+                skillIcon(systemImage: clipboardGuideIcon)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(clipboardGuideTitle)
@@ -126,7 +141,6 @@ struct AIAgentSkillsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.md)
         .background(palette.surface, in: skillCardShape)
-        .overlay(skillCardShape.stroke(palette.divider, lineWidth: 0.5))
         .accessibilityIdentifier("skills.clipboard.guide")
     }
 
@@ -138,7 +152,8 @@ struct AIAgentSkillsView: View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: systemImage)
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(palette.accent)
+                .foregroundStyle(palette.textPrimary)
+                .symbolRenderingMode(.monochrome)
                 .frame(width: 22)
             Text(titleKey)
                 .font(TypeStyle.body)
@@ -192,10 +207,6 @@ struct AIAgentSkillsView: View {
             return "checkmark"
         }
         return pasteAccessNeedsRecovery ? "exclamationmark" : "clipboard"
-    }
-
-    private var clipboardGuideTint: Color {
-        pasteAccessNeedsRecovery ? palette.warning : palette.accent
     }
 
     private var clipboardGuideActionTitle: LocalizedStringKey {
@@ -288,53 +299,36 @@ struct AIAgentSkillsView: View {
             title: AppL10n.format(
                 "skills.installed.section",
                 language: config.uiLanguage,
-                store.enabledSkills.count
+                store.skillManagementEnabledSkills.count
             )
         ) {
-            if store.enabledSkills.isEmpty {
+            if store.skillManagementEnabledSkills.isEmpty {
                 Text("skills.installed.empty")
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                LazyVStack(spacing: 0) {
-                    ForEach(store.enabledSkills) { skill in
+                LazyVStack(spacing: CardLayoutMetrics.compactItemSpacing) {
+                    ForEach(store.skillManagementEnabledSkills) { skill in
                         skillListItem(skill)
                     }
                 }
-                .background(palette.surface, in: skillCardShape)
-                .overlay(skillCardShape.stroke(palette.divider, lineWidth: 0.5))
-                .clipShape(skillCardShape)
             }
         }
     }
 
     private var uninstalledSection: some View {
         CardSection("skills.uninstalled.section") {
-            LazyVStack(spacing: 0) {
-                ForEach(store.availableSkills) { skill in
+            LazyVStack(spacing: CardLayoutMetrics.compactItemSpacing) {
+                ForEach(store.skillManagementAvailableSkills) { skill in
                     skillListItem(skill)
                 }
             }
-            .background(palette.surface, in: skillCardShape)
-            .overlay(skillCardShape.stroke(palette.divider, lineWidth: 0.5))
-            .clipShape(skillCardShape)
         }
     }
 
     private func skillListItem(_ skill: AIClipboardSkill) -> some View {
-        NavigationLink {
-            SkillDetailView(
-                store: store,
-                skill: skill,
-                onInstall: addOrWarn,
-                onConfirmInstall: confirmShortcutInstall,
-                onEdit: {
-                    guard let user = store.userSkill(id: skill.id) else { return }
-                    editingDraft = .from(user)
-                }
-            )
-        } label: {
+        NavigationLink(value: SkillRoute.detail(skill.id)) {
             skillListRow(skill)
         }
         .buttonStyle(.plain)
@@ -349,14 +343,7 @@ struct AIAgentSkillsView: View {
 
     private func skillListRow(_ skill: AIClipboardSkill) -> some View {
         HStack(spacing: Spacing.md) {
-            Image(systemName: skill.systemImage)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(palette.accent)
-                .frame(width: 38, height: 38)
-                .background(palette.accentMuted, in: RoundedRectangle(
-                    cornerRadius: Radius.medium,
-                    style: .continuous
-                ))
+            skillIcon(systemImage: skill.systemImage)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(skillTitle(skill))
@@ -378,14 +365,34 @@ struct AIAgentSkillsView: View {
         .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.xs)
-        .background(palette.surface)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(palette.divider)
-                .frame(height: 0.5)
-                .padding(.leading, 38 + Spacing.md * 2)
-        }
+        .background(palette.surface, in: skillCardShape)
+        .clipShape(skillCardShape)
         .contentShape(Rectangle())
+    }
+
+    private func skillIcon(systemImage: String) -> some View {
+        Image(systemName: systemImage)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(palette.textPrimary)
+            .symbolRenderingMode(.monochrome)
+            .frame(width: 38, height: 38)
+            .background(
+                palette.textPrimary.opacity(0.08),
+                in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+            )
+    }
+
+    private func skillDetailView(_ skill: AIClipboardSkill) -> some View {
+        SkillDetailView(
+            store: store,
+            skill: skill,
+            onInstall: addOrWarn,
+            onConfirmInstall: confirmShortcutInstall,
+            onEdit: {
+                guard let user = store.userSkill(id: skill.id) else { return }
+                editingDraft = .from(user)
+            }
+        )
     }
 
     private func skillTitle(_ skill: AIClipboardSkill) -> String {
@@ -505,7 +512,6 @@ private struct SkillDetailView: View {
     var body: some View {
         ScrollView {
             CardPageContent(
-                spacing: Spacing.md,
                 topPadding: Spacing.md,
                 bottomPadding: Spacing.xl
             ) {
@@ -555,9 +561,12 @@ private struct SkillDetailView: View {
         HStack(alignment: .center, spacing: Spacing.md) {
             Image(systemName: skill.systemImage)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(palette.accent)
-                .frame(width: 36, height: 36)
-                .background(palette.accentMuted, in: Circle())
+                .foregroundStyle(palette.textPrimary)
+                .frame(width: 38, height: 38)
+                .background(
+                    palette.textPrimary.opacity(0.08),
+                    in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+                )
             VStack(alignment: .leading, spacing: 2) {
                 Text(headerTitle)
                     .font(TypeStyle.title3)
@@ -660,6 +669,7 @@ private struct SkillDetailView: View {
         prominent: Bool,
         action: @escaping () -> Void
     ) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
         Button(action: action) {
             Text(titleKey)
                 .font(TypeStyle.bodyEmph)
@@ -667,11 +677,7 @@ private struct SkillDetailView: View {
                 .foregroundStyle(prominent ? palette.textOnAccent : palette.textPrimary)
                 .background(
                     prominent ? palette.accent : palette.surfaceElevated,
-                    in: Capsule()
-                )
-                .overlay(
-                    Capsule()
-                        .stroke(prominent ? Color.clear : palette.dividerStrong, lineWidth: 0.5)
+                    in: shape
                 )
         }
         .buttonStyle(.plain)

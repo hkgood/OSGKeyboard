@@ -5,7 +5,10 @@
 
 import Foundation
 
-public enum SettingsDeepLink: String, Sendable {
+public enum SettingsDeepLink: String, Sendable, Equatable {
+    case aiService
+    case speechRecognition
+    case textPolish
     case clipboard
 
     private static let pendingKey = "settings.pendingDeepLink"

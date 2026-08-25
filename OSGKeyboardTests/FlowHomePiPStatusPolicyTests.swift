@@ -116,6 +116,47 @@ final class FlowHomePiPStatusPolicyTests: XCTestCase {
         )
     }
 
+    func testLocalAndPolishOnlySetupLinksToTextPolish() {
+        XCTAssertEqual(
+            HomeServiceSetupPolicy.apiKeyDeepLink(
+                isLocalEngine: true,
+                isASRConfigured: true
+            ),
+            .textPolish
+        )
+        XCTAssertEqual(
+            HomeServiceSetupPolicy.apiKeyDeepLink(
+                isLocalEngine: false,
+                isASRConfigured: true
+            ),
+            .textPolish
+        )
+        XCTAssertEqual(
+            HomeServiceSetupPolicy.apiKeyMessageKey(
+                isLocalEngine: false,
+                isASRConfigured: true
+            ),
+            "home.setup.polishKeyMissing"
+        )
+    }
+
+    func testCloudSetupLinksToSpeechRecognitionWhenASRIsMissing() {
+        XCTAssertEqual(
+            HomeServiceSetupPolicy.apiKeyDeepLink(
+                isLocalEngine: false,
+                isASRConfigured: false
+            ),
+            .speechRecognition
+        )
+        XCTAssertEqual(
+            HomeServiceSetupPolicy.apiKeyMessageKey(
+                isLocalEngine: false,
+                isASRConfigured: false
+            ),
+            "home.setup.cloudIncomplete"
+        )
+    }
+
     private func descriptor(
         for lifecycle: FlowPiPLifecycleState
     ) -> FlowHomePiPStatusDescriptor {

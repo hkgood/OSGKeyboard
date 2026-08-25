@@ -35,6 +35,19 @@ final class AccountCenterUITests: XCTestCase {
         XCTAssertTrue(element("account.purchase.3000tks", in: app).exists)
     }
 
+    func testAppleSignInShowsLoadingStateUntilAuthenticationCompletes() {
+        let app = launch(arguments: [
+            "--account-ui-test",
+            "--account-signin-loading"
+        ])
+
+        XCTAssertTrue(
+            element("account.signIn.loading", in: app)
+                .waitForExistence(timeout: 3)
+        )
+        XCTAssertFalse(element("account.signIn.apple", in: app).exists)
+    }
+
     func testVerifiedCreditPurchaseShowsSuccessState() {
         let app = launch()
         let purchase = element("account.purchase.500tks", in: app)
@@ -59,6 +72,12 @@ final class AccountCenterUITests: XCTestCase {
             element("account.purchaseHistory.list", in: app)
                 .waitForExistence(timeout: 5)
         )
+        let purchaseRow = element(
+            "account.purchaseHistory.row.2000000000199",
+            in: app
+        )
+        XCTAssertTrue(purchaseRow.waitForExistence(timeout: 5))
+        XCTAssertGreaterThanOrEqual(purchaseRow.frame.height, 64)
     }
 
     func testManagedCreditsRequireFirstUseCloudConsent() {

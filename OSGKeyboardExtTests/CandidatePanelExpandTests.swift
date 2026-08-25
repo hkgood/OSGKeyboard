@@ -84,6 +84,69 @@ final class CandidatePanelExpandTests: XCTestCase {
         XCTAssertFalse(typing.isCandidatePanelExpanded)
         XCTAssertTrue(typing.composition.candidates.isEmpty)
     }
+
+    func testEndingDocumentPresentationClearsChineseStateWithoutTeardown() {
+        let engine = StubRimeEngine()
+        let typing = TypingSessionController(engine: { engine })
+        _ = typing.beginDocumentPresentation()
+        _ = typing.handleKey("n")
+        XCTAssertFalse(typing.composition.candidates.isEmpty)
+
+        typing.endDocumentPresentation()
+
+        XCTAssertTrue(typing.composition.candidates.isEmpty)
+        XCTAssertEqual(engine.teardownCallCount, 0)
+        XCTAssertEqual(engine.clearCompositionCallCount, 1)
+    }
+
+    func testCandidateSelectionRejectsReplacedSnapshot() {
+        let engine = StubRimeEngine()
+        let typing = TypingSessionController(engine: { engine })
+        _ = typing.handleKey("n")
+        guard let staleCandidateID = typing.composition.candidates.first?.id else {
+            return XCTFail("expected candidate")
+        }
+        let staleRevision = typing.candidateRevision
+
+        _ = typing.handleKey("i")
+        let output = typing.selectCandidate(
+            id: staleCandidateID,
+            candidateRevision: staleRevision
+        )
+
+        XCTAssertEqual(output, .none)
+        XCTAssertFalse(typing.composition.candidates.isEmpty)
+    }
+
+    func testPrepareContinuesWhenHostBecomesHeavyBeforeTaskStarts() async {
+        let hostState = HostHeavyState()
+        let engine = StubRimeEngine()
+        let prepared = expectation(description: "engine prepared")
+        engine.onPrepare = { prepared.fulfill() }
+        let typing = TypingSessionController(
+            engine: { engine },
+            hostHeavyProvider: { hostState.isHeavy }
+        )
+
+        typing.enterTypingMode()
+        hostState.isHeavy = true
+        await Task.yield()
+        XCTAssertTrue(typing.isPreparingEngine)
+        XCTAssertEqual(engine.prepareCallCount, 0)
+
+        hostState.isHeavy = false
+        await fulfillment(of: [prepared], timeout: 1)
+        await Task.yield()
+
+        XCTAssertEqual(engine.prepareCallCount, 1)
+        XCTAssertTrue(typing.engineReady)
+        XCTAssertFalse(typing.isPreparingEngine)
+    }
+}
+
+@MainActor
+private final class HostHeavyState {
+    var isHeavy = false
 }
 
 // Minimal engine that returns a two-candidate snapshot after any letter.
@@ -94,9 +157,17 @@ private final class StubRimeEngine: RimeEngineBridging {
     var schema: TypingInputSchema = .fullPinyin
     /// Optional override applied on the next processBackspace.
     var nextComposition: TypingComposition?
+    var teardownCallCount = 0
+    var clearCompositionCallCount = 0
+    var prepareCallCount = 0
+    var onPrepare: (() -> Void)?
 
-    func prepare() async throws {}
+    func prepare() async throws {
+        prepareCallCount += 1
+        onPrepare?()
+    }
     func teardown() {
+        teardownCallCount += 1
         composition = .empty
     }
 
@@ -116,8 +187,8 @@ private final class StubRimeEngine: RimeEngineBridging {
         composition = TypingComposition(
             preedit: String(character),
             candidates: [
-                TypingCandidate(text: "你"),
-                TypingCandidate(text: "泥")
+                TypingCandidate(id: "first", text: "你"),
+                TypingCandidate(id: "second", text: "泥")
             ]
         )
         return nil
@@ -158,6 +229,7 @@ private final class StubRimeEngine: RimeEngineBridging {
     }
 
     func clearComposition() {
+        clearCompositionCallCount += 1
         composition = .empty
     }
 }

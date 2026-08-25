@@ -60,6 +60,7 @@ final class AccountCenterViewModelTests: XCTestCase {
         )
 
         await coordinator.restoreIfNeeded()
+        XCTAssertEqual(coordinator.sessionPhase, .signedOut)
         let handled = coordinator.handleIncomingURL(
             URL(string: "https://osglab.com/i/\(validCode)")!
         )
@@ -121,6 +122,83 @@ final class AccountCenterViewModelTests: XCTestCase {
 
         let restoreCount = await service.restoreCount()
         XCTAssertEqual(restoreCount, 1)
+    }
+
+    @MainActor
+    func testTransientRestoreFailureCanRetryWithoutSigningOut() async {
+        let account = AccountSession(
+            accountID: UUID(),
+            createdAtEpochSeconds: 1_700_000_000
+        )
+        let service = AccountServiceSpy(
+            restoredSession: account,
+            snapshot: makeSnapshot(account: account),
+            restoreFailureCount: 1
+        )
+        let coordinator = AccountSessionCoordinator(
+            dependencies: AccountDependencies(
+                sessionService: service,
+                centerService: service
+            ),
+            pendingReferralStore: InMemoryPendingReferralStore()
+        )
+
+        await coordinator.restoreIfNeeded()
+
+        XCTAssertEqual(coordinator.sessionPhase, .restoring)
+        XCTAssertEqual(coordinator.operationErrorKey, "account.error.restore")
+        let firstClearCount = await service.managedGatewayClearCount()
+        XCTAssertEqual(firstClearCount, 0)
+
+        await coordinator.restoreIfNeeded()
+
+        XCTAssertEqual(coordinator.sessionPhase, .signedIn(account))
+        XCTAssertNil(coordinator.operationErrorKey)
+        let restoreCount = await service.restoreCount()
+        XCTAssertEqual(restoreCount, 2)
+    }
+
+    @MainActor
+    func testSignInOperationRemainsVisibleUntilAuthenticationCompletes() async {
+        let account = AccountSession(
+            accountID: UUID(),
+            createdAtEpochSeconds: 1_700_000_000
+        )
+        let service = AccountServiceSpy(
+            restoredSession: nil,
+            signInSession: account,
+            snapshot: makeSnapshot(account: account),
+            signInDelayNanoseconds: 20_000_000
+        )
+        let coordinator = AccountSessionCoordinator(
+            dependencies: AccountDependencies(
+                sessionService: service,
+                centerService: service
+            ),
+            pendingReferralStore: InMemoryPendingReferralStore()
+        )
+        await coordinator.restoreIfNeeded()
+
+        let signIn = Task {
+            await coordinator.signIn(
+                with: AppleAuthorizationPayload(
+                    identityToken: "identity",
+                    authorizationCode: "authorization",
+                    nonce: "nonce"
+                )
+            )
+        }
+        while coordinator.operation != .signingIn {
+            await Task.yield()
+        }
+
+        XCTAssertEqual(coordinator.operation, .signingIn)
+        XCTAssertEqual(coordinator.sessionPhase, .signedOut)
+
+        await signIn.value
+
+        XCTAssertNil(coordinator.operation)
+        XCTAssertEqual(coordinator.sessionPhase, .signedIn(account))
     }
 
     @MainActor
@@ -529,12 +607,15 @@ private final class AccountSessionEventSourceStub: AccountSessionEventSourcing {
 
 private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing {
     private let restored: AccountSession?
+    private let signedInAccount: AccountSession?
     private let centerSnapshot: AccountCenterSnapshot?
     private let refreshedSnapshot: AccountCenterSnapshot?
     private let shouldFailRedemption: Bool
     private let shouldFailAccountRefresh: Bool
     private let signOutDelayNanoseconds: UInt64
+    private let signInDelayNanoseconds: UInt64
     private let accountLoadDelayNanoseconds: UInt64
+    private var remainingRestoreFailures: Int
     private var redeemed: [String] = []
     private var centerLoadCount = 0
     private var logoutCount = 0
@@ -545,30 +626,43 @@ private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing
 
     init(
         restoredSession: AccountSession?,
+        signInSession: AccountSession? = nil,
         snapshot: AccountCenterSnapshot? = nil,
         refreshedSnapshot: AccountCenterSnapshot? = nil,
         shouldFailRedemption: Bool = false,
         shouldFailAccountRefresh: Bool = false,
         signOutDelayNanoseconds: UInt64 = 0,
+        signInDelayNanoseconds: UInt64 = 0,
+        restoreFailureCount: Int = 0,
         accountLoadDelayNanoseconds: UInt64 = 0
     ) {
         restored = restoredSession
+        signedInAccount = signInSession ?? restoredSession
         centerSnapshot = snapshot
         self.refreshedSnapshot = refreshedSnapshot
         self.shouldFailRedemption = shouldFailRedemption
         self.shouldFailAccountRefresh = shouldFailAccountRefresh
         self.signOutDelayNanoseconds = signOutDelayNanoseconds
+        self.signInDelayNanoseconds = signInDelayNanoseconds
+        remainingRestoreFailures = restoreFailureCount
         self.accountLoadDelayNanoseconds = accountLoadDelayNanoseconds
     }
 
     func restoreSession() async throws -> AccountSession? {
         sessionRestoreCount += 1
+        if remainingRestoreFailures > 0 {
+            remainingRestoreFailures -= 1
+            throw AccountServiceSpyError.failed
+        }
         return restored
     }
 
     func signIn(with payload: AppleAuthorizationPayload) async throws -> AccountSession {
-        guard let restored else { throw AccountIntegrationError.unavailable }
-        return restored
+        if signInDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: signInDelayNanoseconds)
+        }
+        guard let signedInAccount else { throw AccountIntegrationError.unavailable }
+        return signedInAccount
     }
 
     func signOut() async throws {

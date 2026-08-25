@@ -350,7 +350,6 @@
 "settings.keyboardHaptic.off" = "关";
 "settings.keyboardHaptic.light" = "轻";
 "settings.keyboardHaptic.strong" = "强";
-"settings.cursorDragNavigation.title" = "触摸空白区域移动光标";
 "settings.systemPrompt.reset" = "重置";
 "settings.asrLocale" = "识别语言";
 "settings.engineBadge.ios26" = "SpeechAnalyzer — 始终端侧";
@@ -494,8 +493,11 @@
 "home.setup.permission.speech" = "语音识别还没授权，语音输入用不了。";
 "home.setup.permission.both" = "麦克风和语音识别还没授权，语音输入用不了。";
 "home.setup.permission.request" = "下一步";
-"home.setup.cloudIncomplete" = "选了云端引擎，先去「设置」填 API Key。";
-"home.setup.polishKeyMissing" = "请先在「设置」填写 API Key 才能润色；未填写时会直接插入原始识别结果。";
+"home.setup.cloudIncomplete" = "云端识别和 AI 润色需要配置 API Key。";
+"home.setup.polishKeyMissing" = "配置 API Key 后可启用 AI 润色；未配置时，本地听写仍会插入原始识别文本。";
+"home.setup.byok.configure" = "配置 API Key";
+"home.setup.credits.alternative" = "也可以使用 OSG 积分完成语音转写和 AI，无需管理 API Key。";
+"home.setup.credits.open" = "使用积分";
 "home.setup.keyboardHint" = "列表里没有？去系统设置里添加键盘。";
 "home.setup.keyboardHint.dismiss" = "知道了";
 "home.flow.starting" = "正在启动语音会话…";
@@ -513,11 +515,12 @@
 "home.preview.placeholder" = "点这里试试键盘";
 "home.card.history.empty" = "还没有语音识别记录";
 "home.card.dictionary.empty" = "还没有词条";
-"home.card.dictionary.smart.subtitle" = "从 Rime 输入习惯中发现的高频新词";
-"home.card.dictionary.smart.empty" = "暂无推荐词";
+"home.card.dictionary.smart.subtitle" = "从中英文输入习惯中发现的高频新词";
+"home.card.dictionary.smart.empty" = "暂无推荐热词";
+"home.card.dictionary.smart.addHint" = "点击添加常用词到个性词库";
 "home.card.dictionary.smart.accessibilityHint" = "已使用 %lld 次，轻点两次加入个性词库。";
 "home.card.dictionary.confirm.title" = "将“%@”加入个性词库？";
-"home.card.dictionary.confirm.message" = "Rime 已记录这个词 %lld 次。加入后也会用于提升语音识别和 AI 润色效果。";
+"home.card.dictionary.confirm.message" = "这个词已使用 %lld 次。加入后也会用于提升语音识别和 AI 润色效果。";
 "home.card.dictionary.confirm.add" = "加入词库";
 "home.wide.tagline.subtitle" = "切换到任意 App，点键盘麦克风即可听写。";
 "home.wide.mode.cloud" = "云端";
@@ -561,11 +564,11 @@
 "skills.action.install" = "安装";
 "skills.action.uninstall" = "卸载";
 "skills.action.reinstallShortcut" = "重新安装捷径";
-"skills.reply.name" = "原语言回复";
+"skills.reply.name" = "回复";
 "skills.reply.description" = "理解复制内容，并使用原文的主要语言自然回复。";
 "skills.playfulReply.name" = "俏皮回复";
 "skills.playfulReply.description" = "用简短、有梗但不冒犯的方式接住这句话。";
-"skills.replyInSourceLanguage.name" = "用原语言回复";
+"skills.replyInSourceLanguage.name" = "回复";
 "skills.replyInSourceLanguage.description" = "理解复制内容，并使用相同语言自然回复。";
 "skills.summarize.name" = "总结要点";
 "skills.summarize.description" = "总结核心内容，并按需提炼事实、决定、结论和下一步。";
@@ -659,7 +662,7 @@
 "polishStyles.learn.generating" = "生成中…";
 "polishStyles.learn.privacy" = "仅在生成时发送给你配置的 AI，保存前可预览和修改。";
 "polishStyles.learn.limit" = "请先删除一个自定义风格，再生成新风格。";
-"polishStyles.learn.error.insufficient" = "请继续听写，累积到 5,000 个有效字符后再生成。";
+"polishStyles.learn.error.insufficient" = "请继续听写，累积到 2,500 个有效字符后再生成。";
 "polishStyles.learn.error.invalidResponse" = "AI 没有返回有效的润色风格，请重试。";
 "polishStyles.learn.error.promptTooLong" = "生成的 Prompt 超过 6,000 个字符，请重试。";
 "polishStyles.learn.error.requestTooLarge" = "学习语料超过当前 AI 服务的请求上限，请缩短异常过长的历史记录后重试。";
@@ -723,7 +726,6 @@
 "settings.personalDictionary.empty.title" = "还没有词条";
 "settings.personalDictionary.empty.body" = "添加个性化词库，提升识别准确性\n词库将通过 iCloud 实现跨设备同步";
 "settings.personalDictionary.search.prompt" = "搜索词条";
-"settings.personalDictionary.usageCount" = "使用 %lld 次";
 "settings.personalDictionary.add.title" = "添加词条";
 "settings.personalDictionary.edit.title" = "编辑词条";
 "settings.personalDictionary.add.field" = "词条";
@@ -829,6 +831,8 @@
 "account.signedOut.title" = "OSG 账号";
 "account.signedOut.body" = "登录后可使用托管积分与邀请功能。";
 "account.signedOut.localUnaffected" = "本地功能与自有 API Key 无需账号也可继续使用。";
+"home.accountRewards.signedOut.title" = "登录领免费积分";
+"home.accountRewards.signedOut.summary" = "符合资格的新用户可领 1,000 积分；邀请好友完成首次有效使用，双方各得 1,000 积分。";
 "account.signIn.apple" = "通过 Apple 登录";
 "account.signIn.hint" = "创建或打开可选的 OSG 账号。";
 "account.signIn.loading" = "正在登录…";

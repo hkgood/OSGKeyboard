@@ -3,7 +3,7 @@
 //
 // Observes usage + dictionary counts and feeds the shared
 // `UsageStatsCluster` (phone stacked / iPad split). Optional `header`
-// (e.g. glass preview field) sits on the 7-day chart card.
+// (e.g. glass preview field) sits on the monthly calendar card.
 
 import OSGKeyboardHostSupport
 import OSGKeyboardShared
@@ -12,6 +12,9 @@ import SwiftUI
 struct HomeUsageStatsSection<Header: View>: View {
     let layout: UsageStatsClusterLayout
     var compact: Bool = false
+    var content: UsageStatsClusterContent = .all
+    var onOpenHistory: (() -> Void)?
+    var onOpenDictionary: (() -> Void)?
     @ViewBuilder var header: () -> Header
 
     @ObservedObject private var stats = UsageStatisticsStore.shared
@@ -23,12 +26,15 @@ struct HomeUsageStatsSection<Header: View>: View {
         UsageStatsCluster(
             layout: layout,
             language: config.uiLanguage,
-            points: stats.last7Days,
+            points: stats.currentMonth,
             dictationCharacterCount: stats.dictationCharacterCount,
             dictationDurationSeconds: stats.dictationDurationSeconds,
             translationCharacterCount: stats.translationCharacterCount,
             dictionaryTermCount: dictionaryCount,
             compact: compact,
+            content: content,
+            onOpenHistory: onOpenHistory,
+            onOpenDictionary: onOpenDictionary,
             header: header
         )
         .onAppear(perform: refreshDictionaryCount)
@@ -49,8 +55,21 @@ struct HomeUsageStatsSection<Header: View>: View {
 }
 
 extension HomeUsageStatsSection where Header == EmptyView {
-    init(layout: UsageStatsClusterLayout, compact: Bool = false) {
-        self.init(layout: layout, compact: compact, header: { EmptyView() })
+    init(
+        layout: UsageStatsClusterLayout,
+        compact: Bool = false,
+        content: UsageStatsClusterContent = .all,
+        onOpenHistory: (() -> Void)? = nil,
+        onOpenDictionary: (() -> Void)? = nil
+    ) {
+        self.init(
+            layout: layout,
+            compact: compact,
+            content: content,
+            onOpenHistory: onOpenHistory,
+            onOpenDictionary: onOpenDictionary,
+            header: { EmptyView() }
+        )
     }
 }
 

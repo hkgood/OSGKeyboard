@@ -2,7 +2,7 @@
 // OSGKeyboard · Shared
 //
 // Flat semantic surface used by home / dashboard stats on every platform.
-// Deliberately shadowless — hierarchy comes from fill + hairline border.
+// Deliberately shadowless — hierarchy comes from the semantic surface fill.
 
 import SwiftUI
 
@@ -30,8 +30,5 @@ public struct UsageSurfaceCard<Content: View>: View {
             .padding(padding)
             .background(palette.surface, in: shape)
             .clipShape(shape)
-            .overlay(
-                shape.stroke(palette.divider, lineWidth: 0.5)
-            )
     }
 }

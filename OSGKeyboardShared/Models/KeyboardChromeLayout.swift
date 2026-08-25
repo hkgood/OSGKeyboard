@@ -39,12 +39,11 @@ public enum KeyboardChromeLayout {
     public static let horizontalInset: CGFloat = 8
     /// Voice-surface content column cap.
     ///
-    /// The voice surface is a sparse cluster — two cursor-drag pads flanking a
-    /// fixed 121 pt mic — over a transparent background, so filling an iPad's
-    /// width buys no visual width; it only parks delete/return at the screen
-    /// edges and turns each drag pad into a ~450 pt runway. The typing surface
-    /// has the opposite need (a key grid must fill the width to match the
-    /// system keyboard), which is why it no longer shares this constant.
+    /// The voice surface is a sparse control cluster over a transparent
+    /// background, so filling an iPad's width buys no visual width and only
+    /// parks delete/return at the screen edges. The typing surface has the
+    /// opposite need (a key grid must fill the width to match the system
+    /// keyboard), which is why it no longer shares this constant.
     public static let voiceContentMaxWidth: CGFloat = 700
 
     /// Width at or above which the typing surface switches to wide-iPad

@@ -66,7 +66,6 @@ struct KeyboardPreviewStub: View {
                     .foregroundStyle(palette.textSecondary)
                     .frame(width: 28, height: 28)
                     .background(palette.surface, in: Circle())
-                    .overlay(Circle().stroke(palette.divider, lineWidth: 0.5))
             }
             .buttonStyle(.plain)
         }
@@ -84,7 +83,6 @@ struct KeyboardPreviewStub: View {
             .foregroundStyle(palette.textPrimary)
             .padding(.horizontal, Spacing.xs + 2).padding(.vertical, 4)
             .background(palette.surfaceElevated, in: Capsule())
-            .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("preview.modeChip.cycle"))
@@ -101,7 +99,6 @@ struct KeyboardPreviewStub: View {
             .foregroundStyle(palette.textPrimary)
             .padding(.horizontal, Spacing.xs + 2).padding(.vertical, 4)
             .background(palette.surfaceElevated, in: Capsule())
-            .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("preview.localeChip.cycle"))

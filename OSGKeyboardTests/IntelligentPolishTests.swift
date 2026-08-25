@@ -147,15 +147,15 @@ final class IntelligentPolishTests: XCTestCase {
         XCTAssertEqual(PersonalDictionary.Entry.inferCategory(for: "LLM"), .acronym)
     }
 
-    func testPersonalDictionaryMigratesLegacyHistorySource() {
-        let legacy = PersonalDictionary(entries: [
+    func testPersonalDictionaryPreservesRecommendedHistorySource() {
+        let dictionary = PersonalDictionary(entries: [
             PersonalDictionary.Entry(term: "Kubernetes", category: .productName, source: .history)
         ])
-        let data = try! JSONEncoder().encode(legacy)
+        let data = try! JSONEncoder().encode(dictionary)
         defaults.set(data, forKey: "config.personalDictionary.v1")
 
         let loaded = store.personalDictionary
-        XCTAssertEqual(loaded.entries.first?.source, .manual)
+        XCTAssertEqual(loaded.entries.first?.source, .history)
         XCTAssertEqual(loaded.entries.first?.term, "Kubernetes")
     }
 

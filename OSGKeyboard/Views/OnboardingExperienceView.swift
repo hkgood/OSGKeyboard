@@ -334,10 +334,6 @@ struct OnboardingExperienceView: View {
         }
         .padding(Spacing.md)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                .stroke(palette.divider, lineWidth: 0.5)
-        )
     }
 
     // MARK: - Permissions
@@ -416,10 +412,6 @@ struct OnboardingExperienceView: View {
         }
         .padding(Spacing.md)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                .stroke(palette.divider, lineWidth: 0.5)
-        )
     }
 
     // MARK: - Keyboard setup
@@ -488,10 +480,6 @@ struct OnboardingExperienceView: View {
             .background(
                 palette.surface,
                 in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
             )
             .padding(.top, Spacing.xxl)
 
@@ -762,10 +750,6 @@ struct OnboardingExperienceView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 172, maxHeight: 240)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                .stroke(keyboardReady ? palette.accent.opacity(0.42) : palette.divider, lineWidth: 1)
-        )
     }
 
     private var practiceVoiceSample: some View {
@@ -822,10 +806,6 @@ struct OnboardingExperienceView: View {
         }
         .padding(Spacing.md)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                .stroke(palette.divider, lineWidth: 0.5)
-        )
     }
 
     private var practiceTitle: LocalizedStringKey {
@@ -918,7 +898,7 @@ struct OnboardingExperienceView: View {
                 .font(TypeStyle.footnote)
                 .foregroundStyle(palette.textSecondary)
                 .opacity(accountSession.isSignedIn ? 0 : 1)
-                .disabled(accountSession.isSignedIn)
+                .disabled(accountSession.isSignedIn || accountSession.operation != nil)
                 .accessibilityHidden(accountSession.isSignedIn)
             }
             .frame(maxWidth: .infinity)
@@ -926,10 +906,6 @@ struct OnboardingExperienceView: View {
             .background(
                 palette.surface,
                 in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
             )
             .padding(.top, Spacing.xxl)
             .accessibilityIdentifier("onboarding.loginReward.card")
@@ -1483,10 +1459,6 @@ private extension View {
                 palette.surface,
                 in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
     }
 }
 
@@ -1584,9 +1556,5 @@ private struct KeyboardSettingsPreview: View {
             .padding(Spacing.md)
         }
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                .stroke(palette.dividerStrong, lineWidth: 0.5)
-        )
     }
 }

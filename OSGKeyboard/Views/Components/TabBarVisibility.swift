@@ -1,18 +1,37 @@
 // TabBarVisibility.swift
 // OSGKeyboard · Main App
 //
-// Push 进 NavigationStack 子页时隐藏底部系统 tab 栏。
-// 子页用 `hidesTabBarWhenPushed()` 声明，根页面保持原生 TabView 导航可见。
+// NavigationStack 根路径统一驱动底部系统 tab 栏显隐。
+// 显隐状态在 push / pop 开始时更新，使原生 Dock 与页面过渡同步。
 
 import OSGKeyboardShared
 import SwiftUI
 
 // MARK: - Modifiers
 
+private struct NavigationStackTabBarVisibilityModifier: ViewModifier {
+    let isRoot: Bool
+
+    @State private var visibility: Visibility = .visible
+
+    func body(content: Content) -> some View {
+        content
+            .toolbarVisibility(visibility, for: .tabBar)
+            .onAppear {
+                visibility = isRoot ? .visible : .hidden
+            }
+            .onChange(of: isRoot) { _, newValue in
+                withAnimation(Motion.soft) {
+                    visibility = newValue ? .visible : .hidden
+                }
+            }
+    }
+}
+
 extension View {
-    /// Marks this view as a pushed detail screen so the native tab bar hides.
-    func hidesTabBarWhenPushed() -> some View {
-        toolbar(.hidden, for: .tabBar)
+    /// Keeps the native tab dock visible only at a NavigationStack root.
+    func navigationStackTabBarVisibility(isRoot: Bool) -> some View {
+        modifier(NavigationStackTabBarVisibilityModifier(isRoot: isRoot))
     }
 
     /// Adds ordinary footer breathing room; native TabView owns tab-bar clearance.

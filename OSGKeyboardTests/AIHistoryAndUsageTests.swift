@@ -34,6 +34,33 @@ final class AIHistoryAndUsageTests: XCTestCase {
         XCTAssertEqual(store.totalInputCharacterCount, 4)
     }
 
+    @MainActor
+    func testCurrentMonthBuildsCompleteLeapMonthAndZeroFillsMissingDays() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
+        let now = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2024, month: 2, day: 14))
+        )
+
+        let points = UsageStatisticsStore.currentMonth(
+            from: [
+                "2024-02-01": 120,
+                "2024-02-29": 480
+            ],
+            now: now,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(points.count, 29)
+        XCTAssertEqual(points.first?.value, 120)
+        XCTAssertEqual(points[13].value, 0)
+        XCTAssertEqual(points.last?.value, 480)
+        XCTAssertEqual(
+            points.map { calendar.component(.day, from: $0.date) },
+            Array(1...29)
+        )
+    }
+
     func testLegacyHistoryEntryDefaultsToDictationSource() throws {
         let payload: [String: Any] = [
             "id": UUID().uuidString,

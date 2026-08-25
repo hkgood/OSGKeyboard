@@ -13,7 +13,7 @@ public struct CardPageContent<Content: View>: View {
     private let content: Content
 
     public init(
-        spacing: CGFloat = Spacing.md,
+        spacing: CGFloat = CardLayoutMetrics.sectionSpacing,
         topPadding: CGFloat = Spacing.md,
         bottomPadding: CGFloat = Spacing.md,
         @ViewBuilder content: () -> Content
@@ -95,12 +95,8 @@ public struct SurfaceCardModifier: ViewModifier {
                     in: shape
                 )
                 // Clip child backgrounds as well as the card surface. Without
-                // this, a full-width child can visually square off a corner
-                // even though the shared background and border use Radius.xl.
+                // this, a full-width child can visually square off a corner.
                 .clipShape(shape)
-                .overlay(
-                    shape.stroke(palette.divider, lineWidth: 0.5)
-                )
         } else {
             content
         }

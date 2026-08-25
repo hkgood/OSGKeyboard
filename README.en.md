@@ -7,7 +7,7 @@ OSGKeyboard is a voice input tool for iPhone, iPad, and Mac. Its iOS keyboard co
 ![Platform](https://img.shields.io/badge/iOS%20%2F%20iPadOS-26%2B-0078D4?logo=apple)
 ![Platform](https://img.shields.io/badge/macOS-15%2B-555?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
-![Version](https://img.shields.io/badge/version-2.0.1-3aa05a)
+![Version](https://img.shields.io/badge/version-2.0.3-3aa05a)
 ![License](https://img.shields.io/badge/license-Source%20Available-blue)
 
 [Website](https://hkgood.github.io/OSGKeyboard/?lang=en) · [中文](./README.md) · [Privacy Policy](https://hkgood.github.io/OSGKeyboard/privacy/) · [Changelog](./CHANGELOG.md)
@@ -52,10 +52,10 @@ OSGKeyboard is a voice input tool for iPhone, iPad, and Mac. Its iOS keyboard co
 ### Clipboard and skills
 
 - Clipboard history is off by default; when enabled, it keeps up to 15 plain-text items in the device-local App Group
-- Reply, Summarize, and Translate appear briefly after a copy
+- On-device semantic analysis recommends up to five relevant actions from the complete skill catalog after a copy
 - Built-in skills extract tasks and events, save to Notes, and open map navigation through Apple Shortcuts or map apps
 - Create custom skills with a name, SF Symbol, prompt, and optional iCloud Shortcut
-- Pin up to eight skills to the keyboard and reorder them by long press
+- Install any number of skills; manage and reorder them in the Skills tab while the keyboard dynamically shows relevant actions for the current clipboard text
 
 ## Three service paths
 

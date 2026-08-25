@@ -60,6 +60,9 @@ public struct EnglishSuggestionEngine: Sendable {
     public static let slotCount = 3
     /// In-vocabulary words only yield to a much more common transposition / neighbor.
     public static let inVocabularyFrequencyGap = 250
+    /// Rare words benefit from explicit personal-dictionary treatment; common
+    /// words are already covered well by the bundled lexicon.
+    public static let personalTermFrequencyCeiling = 680
 
     private let lexicon: EnglishLexicon
 
@@ -148,6 +151,36 @@ public struct EnglishSuggestionEngine: Sendable {
         if personalTerms.contains(where: { $0.lowercased() == lower }) { return true }
         if systemWords.contains(where: { $0.lowercased() == lower }) { return true }
         return false
+    }
+
+    /// Whether repeated use of this word would add value to PersonalDictionary.
+    /// Existing personal/system terms and common lexicon words need no prompt.
+    func isPersonalTermCandidate(
+        _ word: String,
+        personalTerms: [String],
+        systemWords: [String]
+    ) -> Bool {
+        guard FrequentTermStore.normalizedCandidate(from: word) != nil,
+              PersonalDictionary.isEnglishTypingHotword(word) else {
+            return false
+        }
+
+        let lower = word.lowercased()
+        guard !personalTerms.contains(where: { $0.lowercased() == lower }),
+              !systemWords.contains(where: { $0.lowercased() == lower }) else {
+            return false
+        }
+
+        // Preserve intentional product spelling even when the base word is
+        // common enough to exist in the bundled lexicon (OpenAI, iOS26, GPT-5).
+        let hasDistinctiveShape = word.dropFirst().contains(where: \.isUppercase)
+            || word.contains(where: \.isNumber)
+            || word.contains(where: { "-.+#".contains($0) })
+        if hasDistinctiveShape {
+            return true
+        }
+
+        return lexicon.frequency(of: lower) <= Self.personalTermFrequencyCeiling
     }
 
     // MARK: - Board
@@ -304,9 +337,11 @@ public struct EnglishSuggestionEngine: Sendable {
     private func isProtectedToken(_ typed: String) -> Bool {
         if typed.count <= 2 { return true }
         if typed.allSatisfy(\.isUppercase) { return true }
+        if typed.dropFirst().contains(where: \.isUppercase) { return true }
         if typed.contains(where: \.isNumber) { return true }
         if typed.contains("@") || typed.contains(".") || typed.contains("/") { return true }
         if typed.contains("-") || typed.contains("_") { return true }
+        if typed.contains("'") || typed.contains("+") || typed.contains("#") { return true }
         return false
     }
 

@@ -14,8 +14,6 @@ struct MacDictionaryView: View {
     @State private var showEntryEditor = false
     @State private var generatingAliasEntryIDs: Set<UUID> = []
 
-    private let aliasGenerator = DictionaryAliasGenerator()
-
     private var lang: AppUILanguage { viewModel.config.uiLanguage }
 
     private var entries: [PersonalDictionary.Entry] {
@@ -235,29 +233,22 @@ struct MacDictionaryView: View {
 
     private func saveManualEntry(term: String) {
         let store = AppGroupStore(defaults: viewModel.defaults)
-        var dictionary = store.personalDictionary
-        guard let saved = dictionary.upsertManual(term: term) else { return }
-        dictionary.version += 1
-        store.setPersonalDictionary(dictionary)
+        let service = PersonalDictionaryEntryService(
+            store: store,
+            cloudPush: { dictionary in
+                try? await MacICloudSyncBootstrap.dictionarySync.pushLocalIfEnabled(dictionary)
+            }
+        )
+        guard let saved = service.saveEntry(term: term, source: .manual) else { return }
         viewModel.refreshDictionaryFromCloud()
-        generatingAliasEntryIDs.insert(saved.id)
+        if saved.shouldGenerateAliases {
+            generatingAliasEntryIDs.insert(saved.entryID)
+        }
 
         Task {
-            try? await MacICloudSyncBootstrap.dictionarySync.pushLocalIfEnabled(dictionary)
-            let aliases = await aliasGenerator.generateAliases(for: saved.term)
-
-            generatingAliasEntryIDs.remove(saved.id)
-            guard !aliases.isEmpty else { return }
-
-            var latest = store.personalDictionary
-            guard latest.entries.contains(where: {
-                $0.id == saved.id && $0.term == saved.term
-            }) else { return }
-            latest.updateAliases(for: saved.id, aliases: aliases)
-            latest.version += 1
-            store.setPersonalDictionary(latest)
+            await service.finishSaving(saved)
+            generatingAliasEntryIDs.remove(saved.entryID)
             viewModel.refreshDictionaryFromCloud()
-            try? await MacICloudSyncBootstrap.dictionarySync.pushLocalIfEnabled(latest)
         }
     }
 }

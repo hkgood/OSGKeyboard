@@ -22,7 +22,7 @@ struct PersonalDictionaryView: View {
     @State private var generatingAliasEntryIDs: Set<UUID> = []
 
     private let store = AppGroupStore()
-    private let aliasGenerator = DictionaryAliasGenerator()
+    private let dictionaryEntryService = PersonalDictionaryEntryService()
 
     var body: some View {
         ZStack {
@@ -37,7 +37,6 @@ struct PersonalDictionaryView: View {
         .background(palette.background)
         .navigationTitle("settings.personalDictionary.title")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesTabBarWhenPushed()
         .toolbar {
             if !dictionary.entries.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -76,7 +75,11 @@ struct PersonalDictionaryView: View {
                 initialTerm: editingEntry?.term ?? "",
                 isEditing: editingEntry != nil
             ) { term in
-                saveManualEntry(term: term, editingID: editingEntry?.id)
+                saveEntry(
+                    term: term,
+                    editingID: editingEntry?.id,
+                    source: editingEntry?.source ?? .manual
+                )
             }
         }
         .task {
@@ -110,7 +113,7 @@ struct PersonalDictionaryView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .listSectionSpacing(Spacing.lg)
+        .listSectionSpacing(CardLayoutMetrics.sectionSpacing)
         .scrollContentBackground(.hidden)
         .background(palette.background)
         // 让搜索栏与首个词条之间留出呼吸空间，视觉更透气。
@@ -138,14 +141,6 @@ struct PersonalDictionaryView: View {
                         Text(SharedL10n.string(entry.source.labelKey, language: config.uiLanguage))
                             .font(TypeStyle.caption2)
                             .foregroundStyle(palette.textTertiary)
-                        if entry.usageCount > 1 {
-                            Text("·")
-                                .font(TypeStyle.caption2)
-                                .foregroundStyle(palette.textTertiary)
-                            Text("settings.personalDictionary.usageCount \(entry.usageCount)")
-                                .font(TypeStyle.caption2)
-                                .foregroundStyle(palette.textTertiary)
-                        }
                         if generatingAliasEntryIDs.contains(entry.id) {
                             Text("·")
                                 .font(TypeStyle.caption2)
@@ -231,32 +226,25 @@ struct PersonalDictionaryView: View {
 
     // MARK: - Mutations
 
-    private func saveManualEntry(term: String, editingID: UUID?) {
-        let previousTerm = editingID.flatMap { id in
-            dictionary.entries.first(where: { $0.id == id })?.term
+    private func saveEntry(
+        term: String,
+        editingID: UUID?,
+        source: PersonalDictionary.Entry.Source
+    ) {
+        guard let saved = dictionaryEntryService.saveEntry(
+            term: term,
+            existingID: editingID,
+            source: source
+        ) else {
+            return
         }
-        let termChanged = previousTerm.map {
-            $0.caseInsensitiveCompare(term) != .orderedSame
-        } ?? true
-
-        guard dictionary.upsertManual(term: term, existingID: editingID) != nil else { return }
-        persist()
-
-        guard let saved = dictionary.entry(matchingTerm: term) else { return }
-        let shouldGenerate = saved.source == .manual && (editingID == nil || termChanged)
-        if shouldGenerate {
-            generateAliases(for: saved.id, term: saved.term)
+        dictionary = saved.dictionary
+        if saved.shouldGenerateAliases {
+            generatingAliasEntryIDs.insert(saved.entryID)
         }
-    }
-
-    private func generateAliases(for entryID: UUID, term: String) {
-        generatingAliasEntryIDs.insert(entryID)
         Task {
-            let aliases = await aliasGenerator.generateAliases(for: term)
-            generatingAliasEntryIDs.remove(entryID)
-            guard !aliases.isEmpty else { return }
-            dictionary.updateAliases(for: entryID, aliases: aliases)
-            persist()
+            dictionary = await dictionaryEntryService.finishSaving(saved)
+            generatingAliasEntryIDs.remove(saved.entryID)
         }
     }
 

@@ -194,6 +194,51 @@ final class AccountAPIClientTests: XCTestCase {
         XCTAssertEqual(requests.single?.url?.path, "/v1/auth/refresh")
     }
 
+    func testRecreatedClientRestoresRetainedSessionAndRefreshesIt() async throws {
+        let retained = makeAccountSession(accessExpiry: 1_020)
+        let replacement = makeAccountSession(
+            accessToken: "access-after-reinstall",
+            refreshToken: "refresh-after-reinstall"
+        )
+        let transport = QueueAccountTransport([
+            .init(statusCode: 200, body: try sessionEnvelopeData(retained)),
+            .init(statusCode: 200, body: try sessionEnvelopeData(replacement))
+        ])
+        let store = InMemoryAccountSecurityStore()
+        let originalClient = AccountAPIClient(
+            baseURL: URL(string: "https://account.test")!,
+            transport: transport,
+            sessionVault: store,
+            now: { Date(timeIntervalSince1970: 1_000) }
+        )
+        _ = try await originalClient.signInWithApple(
+            AppleSignInRequest(
+                identityToken: "identity",
+                authorizationCode: "authorization",
+                nonce: "raw-nonce",
+                deviceCheckToken: "device-token",
+                appAttest: nil
+            )
+        )
+
+        let recreatedClient = AccountAPIClient(
+            baseURL: URL(string: "https://account.test")!,
+            transport: transport,
+            sessionVault: store,
+            now: { Date(timeIntervalSince1970: 1_000) }
+        )
+        let accessToken = try await recreatedClient.accessTokenForAuthorizedRequest()
+
+        XCTAssertEqual(accessToken, replacement.accessToken)
+        let stored = await store.session
+        XCTAssertEqual(stored, replacement)
+        let requests = await transport.requests
+        XCTAssertEqual(requests.map(\.url?.path), [
+            "/v1/auth/apple",
+            "/v1/auth/refresh"
+        ])
+    }
+
     func testConcurrentUnauthorizedRequestsMergeRefreshRotation() async throws {
         let old = makeAccountSession()
         let replacement = makeAccountSession(

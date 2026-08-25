@@ -30,7 +30,8 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertEqual(config.translationTargetLocaleId, TranslationLanguageCatalog.offLocaleId)
         XCTAssertFalse(config.translationEnabled)
         XCTAssertEqual(config.handednessPreference, .left)
-        XCTAssertTrue(config.cursorDragNavigationEnabled)
+        // Legacy field remains decode-compatible after the UI feature was removed.
+        XCTAssertFalse(config.cursorDragNavigationEnabled)
         XCTAssertEqual(config.keyboardHapticIntensity, .light)
         XCTAssertEqual(config.polishIntensity, .light)
         XCTAssertEqual(config.aiResponseLength, .medium)
@@ -91,6 +92,24 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertEqual(loaded.aiResponseLength, .short)
         XCTAssertFalse(loaded.flowSkipAppSwitch)
         XCTAssertEqual(loaded.flowInactivityDuration, .threeHours)
+    }
+
+    func testAppGroupStorePersistsLocaleChanges() {
+        let defaults = makeDefaults()
+        let store = AppGroupStore(defaults: defaults)
+
+        store.setLocaleId("en-US")
+
+        XCTAssertEqual(store.localeId, "en-US")
+    }
+
+    func testRemovedCursorDragSettingStillDecodesLegacyValue() {
+        let defaults = makeDefaults()
+        defaults.set(true, forKey: AppGroupConfiguration.Keys.cursorDragNavigationEnabled)
+
+        let loaded = AppGroupConfiguration.load(fromAvailable: defaults)
+
+        XCTAssertTrue(loaded.cursorDragNavigationEnabled)
     }
 
     func testFieldLevelSavePreservesNewerUnrelatedProcessChange() {

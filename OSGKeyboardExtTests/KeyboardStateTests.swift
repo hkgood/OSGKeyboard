@@ -36,6 +36,7 @@ final class KeyboardStateTests: XCTestCase {
         XCTAssertEqual(s.level, 0)
         XCTAssertFalse(s.onDeviceSupported)
         XCTAssertFalse(s.undoAvailable)
+        XCTAssertFalse(s.hasFullAccess)
     }
 
     func testPhaseTransitionsIdleToRequestingPermissionsAndBack() {
@@ -143,6 +144,20 @@ final class KeyboardStateTests: XCTestCase {
         XCTAssertTrue(state.canShowClipboardEntry)
         XCTAssertNil(state.clipboardSuggestionText)
         XCTAssertEqual(state.clipboardOverlay, .none)
+    }
+
+    func testClipboardFullAccessHintTracksCaptureAvailability() {
+        let state = KeyboardState()
+        state.clipboardHistoryEnabled = true
+
+        XCTAssertTrue(state.needsClipboardFullAccessHint)
+
+        state.hasFullAccess = true
+        XCTAssertFalse(state.needsClipboardFullAccessHint)
+
+        state.hasFullAccess = false
+        state.clipboardHistoryEnabled = false
+        XCTAssertFalse(state.needsClipboardFullAccessHint)
     }
 
     func testResolvedSkillCopyPublishesWhenIDsStayStable() {

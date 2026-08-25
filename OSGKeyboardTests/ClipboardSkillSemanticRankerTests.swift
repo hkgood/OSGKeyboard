@@ -45,7 +45,13 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             preferredLanguages: ["zh-Hans"]
         ).map(\.id)
 
-        XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.translateID])
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.translateID,
+                AIClipboardSkillCatalog.replyID
+            ]
+        )
     }
 
     func testInvitationWithDatePromotesCalendarAndBothReplyChoices() {
@@ -91,7 +97,8 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             recommendations,
             [
                 AIClipboardSkillCatalog.openLinkID,
-                AIClipboardSkillCatalog.summarizeWebPageID
+                AIClipboardSkillCatalog.summarizeWebPageID,
+                AIClipboardSkillCatalog.replyID
             ]
         )
     }
@@ -111,7 +118,8 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             recommendations,
             [
                 AIClipboardSkillCatalog.openLinkID,
-                AIClipboardSkillCatalog.summarizeWebPageID
+                AIClipboardSkillCatalog.summarizeWebPageID,
+                AIClipboardSkillCatalog.replyID
             ]
         )
     }
@@ -130,6 +138,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
         XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.openLinkID))
         XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.summarizeWebPageID))
+        XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.replyID])
     }
 
     func testSinglePhoneNumberOffersCallAndCreateContact() {
@@ -149,7 +158,8 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             recommendations,
             [
                 AIClipboardSkillCatalog.callPhoneID,
-                AIClipboardSkillCatalog.createContactID
+                AIClipboardSkillCatalog.createContactID,
+                AIClipboardSkillCatalog.replyID
             ]
         )
     }
@@ -169,7 +179,8 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             recommendations,
             [
                 AIClipboardSkillCatalog.callPhoneID,
-                AIClipboardSkillCatalog.createContactID
+                AIClipboardSkillCatalog.createContactID,
+                AIClipboardSkillCatalog.replyID
             ]
         )
     }
@@ -190,6 +201,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
         XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.callPhoneID))
         XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.createContactID))
+        XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.replyID])
     }
 
     func testTaskListPromotesTodoAndOrganizationSkills() {
@@ -259,7 +271,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         XCTAssertEqual(ranked, baseline)
     }
 
-    func testRecommendationsSelectOnlySemanticallyRelevantSkills() {
+    func testRecommendationsAddReplyToSemanticallyRelevantSkills() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
             skills: AIClipboardSkillCatalog.catalog,
             sourceText: "北京市朝阳区望京街 10 号，到了给我电话。",
@@ -268,12 +280,18 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             limit: 5
         ).map(\.id)
 
-        XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.navigateID])
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.navigateID,
+                AIClipboardSkillCatalog.replyID
+            ]
+        )
         XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.summarizeID))
         XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.translateID))
     }
 
-    func testRecommendationsStayEmptyWhenNoSemanticLabelMatches() {
+    func testRecommendationsFallBackToReplyWhenNoSemanticLabelMatches() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
             skills: AIClipboardSkillCatalog.catalog,
             sourceText: "知道了",
@@ -282,7 +300,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             limit: 5
         ).map(\.id)
 
-        XCTAssertTrue(recommendations.isEmpty)
+        XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.replyID])
     }
 
     func testNegativeReplyableMessageDoesNotOfferPlayfulReply() {
@@ -300,7 +318,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.replyID])
     }
 
-    func testInvitationKeepsTwoSpecificRepliesWithoutGenericReplies() {
+    func testInvitationKeepsSpecificRepliesAndGenericReply() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
             skills: AIClipboardSkillCatalog.catalog,
             sourceText: "今晚七点老地方吃饭，你能来吗？",
@@ -319,12 +337,13 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             [
                 AIClipboardSkillCatalog.extractEventsID,
                 AIClipboardSkillCatalog.acceptInvitationID,
-                AIClipboardSkillCatalog.declineInvitationID
+                AIClipboardSkillCatalog.declineInvitationID,
+                AIClipboardSkillCatalog.replyID
             ]
         )
     }
 
-    func testRecommendationsNeverContainMoreThanTwoReplySkills() {
+    func testForeignQuestionKeepsReplyAndOneSpecializedFollowUp() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
             skills: AIClipboardSkillCatalog.catalog,
             sourceText: "Could you send the final proposal by Friday?",

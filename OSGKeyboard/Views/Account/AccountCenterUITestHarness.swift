@@ -12,13 +12,20 @@ import SwiftUI
 @MainActor
 struct AccountCenterUITestHarness: View {
     @StateObject private var coordinator: AccountSessionCoordinator
+    private let startsSignIn: Bool
 
     init() {
+        let startsSignIn = ProcessInfo.processInfo.arguments.contains(
+            "--account-signin-loading"
+        )
         let service = AccountCenterUITestService(
             shouldFailSnapshot: ProcessInfo.processInfo.arguments.contains(
                 "--account-snapshot-failure"
-            )
+            ),
+            startsSignedOut: startsSignIn,
+            signInDelay: startsSignIn ? .seconds(5) : .zero
         )
+        self.startsSignIn = startsSignIn
         let store = AccountCenterUITestCreditStore(accountID: service.account.accountID)
         _coordinator = StateObject(
             wrappedValue: AccountSessionCoordinator(
@@ -41,6 +48,15 @@ struct AccountCenterUITestHarness: View {
         }
         .task {
             await coordinator.restoreIfNeeded()
+            if startsSignIn {
+                await coordinator.signIn(
+                    with: AppleAuthorizationPayload(
+                        identityToken: "ui-test-identity",
+                        authorizationCode: "ui-test-authorization",
+                        nonce: "ui-test-nonce"
+                    )
+                )
+            }
         }
     }
 }
@@ -96,17 +112,28 @@ private actor AccountCenterUITestService:
         displayName: "UI Test Account"
     )
     private let shouldFailSnapshot: Bool
+    private let startsSignedOut: Bool
+    private let signInDelay: Duration
 
-    init(shouldFailSnapshot: Bool = false) {
+    init(
+        shouldFailSnapshot: Bool = false,
+        startsSignedOut: Bool = false,
+        signInDelay: Duration = .zero
+    ) {
         self.shouldFailSnapshot = shouldFailSnapshot
+        self.startsSignedOut = startsSignedOut
+        self.signInDelay = signInDelay
     }
 
     func restoreSession() async throws -> AccountSession? {
-        account
+        startsSignedOut ? nil : account
     }
 
     func signIn(with payload: AppleAuthorizationPayload) async throws -> AccountSession {
         _ = payload
+        if signInDelay > .zero {
+            try await Task.sleep(for: signInDelay)
+        }
         return account
     }
 

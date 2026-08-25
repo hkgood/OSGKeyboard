@@ -86,7 +86,6 @@ public struct AppGroupStore: @unchecked Sendable {
     public var translationEnabled: Bool { configuration.translationEnabled }
     public var translationTargetLocaleId: String { configuration.translationTargetLocaleId }
     public var handednessPreference: HandednessPreference { configuration.handednessPreference }
-    public var cursorDragNavigationEnabled: Bool { configuration.cursorDragNavigationEnabled }
     public var keyboardHapticIntensity: KeyboardHapticIntensity { configuration.keyboardHapticIntensity }
     public var polishIntensity: PolishIntensity { configuration.polishIntensity }
     public var aiResponseLength: AIResponseLength { configuration.aiResponseLength }
@@ -140,6 +139,7 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setLocaleId(_ id: String) {
         mutateConfiguration { $0.localeId = id }
+        AppGroupConfigDarwin.postConfigChanged()
     }
 
     public func setEngineMode(_ mode: String) {
@@ -177,11 +177,6 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setHandednessPreference(_ preference: HandednessPreference) {
         mutateConfiguration { $0.handednessPreference = preference }
-        AppGroupConfigDarwin.postConfigChanged()
-    }
-
-    public func setCursorDragNavigationEnabled(_ enabled: Bool) {
-        mutateConfiguration { $0.cursorDragNavigationEnabled = enabled }
         AppGroupConfigDarwin.postConfigChanged()
     }
 
@@ -438,6 +433,19 @@ public struct AppGroupStore: @unchecked Sendable {
             }
             // v6 persists canonical IDs for the consolidated reply, summary,
             // and clarification skills. `sanitized` performs the mapping.
+            if storedMigrationVersion < 7 {
+                // Product baseline: install these text skills once for existing
+                // layouts. Skill-management visibility is a separate policy.
+                additionIDs.formUnion([
+                    AIClipboardSkillCatalog.replyID,
+                    AIClipboardSkillCatalog.translateID,
+                    AIClipboardSkillCatalog.summarizeID,
+                    AIClipboardSkillCatalog.declineInvitationID,
+                    AIClipboardSkillCatalog.clarifyRequestID,
+                    AIClipboardSkillCatalog.empathyReplyID,
+                    AIClipboardSkillCatalog.organizeListID
+                ])
+            }
             let additions = catalog.map(\.id).filter {
                 additionIDs.contains($0) && !decoded.enabledIDs.contains($0)
             }
@@ -463,7 +471,7 @@ public struct AppGroupStore: @unchecked Sendable {
         }
     }
 
-    private static let currentAgentSkillDefaultsMigrationVersion = 6
+    private static let currentAgentSkillDefaultsMigrationVersion = 7
 
     private static func decodeUserSkillCatalog(from defaults: UserDefaults) -> AIUserSkillCatalog {
         guard let data = defaults.data(forKey: AppGroupConfiguration.Keys.agentUserSkillCatalog) else {
@@ -545,6 +553,28 @@ public struct AppGroupStore: @unchecked Sendable {
         // Host redeploys Rime sidecar; extension picks it up next typing open.
         PersonalDictionaryRimeSync.scheduleAfterDictionaryChange()
         #endif
+    }
+
+    /// Applies a read-modify-write operation to the latest persisted dictionary.
+    ///
+    /// Returning `nil` cancels the write. Callers must not mutate the dictionary
+    /// before returning `nil`.
+    @discardableResult
+    public func updatePersonalDictionary<Result>(
+        _ transform: (inout PersonalDictionary) -> Result?
+    ) -> (dictionary: PersonalDictionary, result: Result)? {
+        var output: (dictionary: PersonalDictionary, result: Result)?
+        mutateConfiguration { config in
+            guard let result = transform(&config.personalDictionary) else { return }
+            output = (config.personalDictionary, result)
+        }
+        guard let output else { return nil }
+
+        AppGroupConfigDarwin.postConfigChanged()
+        #if os(iOS)
+        PersonalDictionaryRimeSync.scheduleAfterDictionaryChange()
+        #endif
+        return output
     }
 
     public func deletePersonalDictionaryEntry(id: UUID, at date: Date = Date()) {

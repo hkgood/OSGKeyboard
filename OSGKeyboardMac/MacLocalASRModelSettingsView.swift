@@ -377,8 +377,7 @@ struct MacLocalASRModelSettingsView: View {
             MacSettingsToolButton(
                 title: MacL10n.string("mac.localASR.delete", language: lang),
                 fill: palette.danger.opacity(0.15),
-                foreground: palette.danger,
-                showsBorder: false
+                foreground: palette.danger
             ) {
                 modelVM.deleteModel(model)
             }
@@ -386,8 +385,7 @@ struct MacLocalASRModelSettingsView: View {
             MacSettingsToolButton(
                 title: MacL10n.string("mac.localASR.download", language: lang),
                 fill: palette.accent,
-                foreground: .white,
-                showsBorder: false
+                foreground: .white
             ) {
                 modelVM.installModel(model)
             }

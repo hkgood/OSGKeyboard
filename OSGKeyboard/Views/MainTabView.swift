@@ -15,14 +15,18 @@ struct MainTabView: View {
     }
 
     var body: some View {
-        Group {
-            if usesSplitLayout {
-                MainSplitView(selection: $tab)
-            } else {
-                phoneTabLayout
+        ZStack {
+            palette.background
+                .ignoresSafeArea()
+
+            Group {
+                if usesSplitLayout {
+                    MainSplitView(selection: $tab)
+                } else {
+                    phoneTabLayout
+                }
             }
         }
-        .background(palette.background)
         .ignoresSafeArea(.keyboard, edges: .bottom)
         .onReceive(NotificationCenter.default.publisher(for: .osgOpenSettingsDeepLink)) { _ in
             tab = .settings

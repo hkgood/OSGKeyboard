@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Monthly usage calendar**: replace the seven-day Home and Mac Dashboard chart with a full current-month calendar whose date-circle opacity reflects each day's dictation characters, placing the Home calendar between its four metrics and Personal Dictionary. / **月度用量日历**：以完整的当月日历替换首页与 Mac 总览的近七天图表，并通过日期圆形背景透明度表示每天的听写字数；首页日历位于四项统计指标与个性词库之间。
+- **Home credits and navigation**: move the credit and invitation card from Settings to Home above the usage metrics, explain free signup and referral rewards before sign-in, and open History or Personal Dictionary directly from their metric cards. / **首页积分与导航**：将积分与邀请卡片从设置迁移到首页统计指标上方，登录前明确说明免费注册与邀请奖励，并支持从听写字数和词库指标卡片直接进入历史记录或个性词库。
+- **Personal style threshold**: allow generating a learned speaking style after 2,500 effective dictation characters instead of 5,000. / **专属风格门槛**：生成学习型说话风格所需的有效听写字符由 5,000 降至 2,500。
+
+### Fixed
+- **Recommended hotword details**: label Home recommendations by their actual source, render suggestion chips in adaptive monochrome, remove internal usage counts from dictionary rows, and anchor the iPhone confirmation popover to the selected hotword. / **推荐热词详情**：按真实来源标记首页推荐词，以自适应黑白配色显示推荐标签，移除词库列表中的内部使用次数，并让 iPhone 确认弹窗指向所选热词。
+
+## [2.0.3] - 2026-08-24
+
+### Changed
+- **English personal-term suggestions**: learn repeated rare English words alongside Chinese typing habits, preserve existing Rime history, and ask before adding either language to the Personal Dictionary. / **英文个性词推荐**：在中文输入习惯之外学习重复使用的英文低频词，保留现有 Rime 历史，并在将任一语言加入个性词库前由用户确认。
+- **Interface consistency**: standardize borderless card spacing, compact settings typography, native menu alignment, account and purchase-history rows, and tab-bar transitions between primary and detail pages. / **界面一致性**：统一无描边卡片间距、紧凑设置字体、原生菜单对齐、账号与购买记录行，以及一级与详情页面之间的标签栏过渡。
+
+### Fixed
+- **Apple account continuity**: retry transient secure-session restoration after reinstall or foreground activation, and show a consistent loading state while Apple sign-in finishes. / **Apple 账号连续性**：在重装或重新进入前台后重试瞬时失败的安全会话恢复，并在 Apple 登录完成期间统一显示加载状态。
+- **Cross-app typing candidates**: isolate document-scoped candidate state from the reusable keyboard engine so English and Chinese candidates recover reliably after switching apps without leaking the previous field. / **跨 App 输入候选词**：将文档级候选状态与可复用键盘引擎分离，使中英文候选词在切换 App 后可靠恢复，且不会泄漏上一个输入框的状态。
+
+## [2.0.2] - 2026-08-24
+
 ### Added
 - **Phone-number clipboard actions**: recognize a single copied phone number locally, then offer system calling or a new-contact form with the number prefilled. / **电话号码剪贴板操作**：在本地识别复制内容中的唯一电话号码，并提供系统拨号或预填号码的新建联系人表单。
 - **Link-aware clipboard skills**: recognize a single copied web link locally, offer direct opening in the default browser, and securely extract bounded public webpage text in the host app before generating a summary. / **链接感知剪贴板技能**：在本地识别复制内容中的唯一网页链接，提供默认浏览器直接打开入口，并由主 App 安全、限量提取公开网页正文后生成总结。
@@ -15,6 +35,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Learned speaking styles**: unlock user-initiated style generation after 5,000 effective dictation characters, prioritize recurring native speech and explicit user edits, use historical polish prompts only to subtract AI-added style, and require review before saving. / **学习说话风格**：累积 5,000 个有效听写字符后，可优先根据反复出现的原生口述与用户明确编辑生成个人风格，历史润色 Prompt 仅用于排除 AI 附加风格，并在保存前强制检查。
 
 ### Changed
+- **System semantic skills**: hide Reply, Decline Invitation, Empathy Reply, Accept Invitation, Call, Create Contact, and Clarify from the host Skills catalog while keeping them available for automatic keyboard recommendations. / **系统语义技能**：在主 App 技能目录中隐藏“回复、委婉拒绝、共情回复、接受邀约、拨打电话、新建联系人、澄清与追问”，同时保留键盘按语义自动推荐这些操作的能力。
+- **Required default clipboard skills**: install Reply, Translate, Summarize, Decline Invitation, Clarify, Empathy Reply, and Organize List once for existing layouts, with system-action management visibility handled separately. / **必备默认剪贴板技能**：为现有布局一次性补装“回复、翻译、总结要点、委婉拒绝、澄清与追问、共情回复、整理清单”，系统动作是否显示在技能管理中由独立策略控制。
 - **Focused clipboard actions**: translate foreign clipboard text into the device's primary system language, consolidate overlapping reply, summary, and clarification skills with legacy-layout migration, distinguish webpage summaries, and avoid playful suggestions for negative messages. / **聚焦剪贴板操作**：将外语剪贴板文本翻译为设备首选系统语言，兼容迁移并整合重复的回复、总结与澄清技能，区分网页总结，并避免为负面消息推荐俏皮回复。
 - **Personal dictionary empty state**: remove the Rime explanation from the Home card and shorten its empty message to “No suggestions yet.” / **个性词库空状态**：移除首页卡片中的 Rime 说明，并将空状态精简为“暂无推荐词”。
 - **Skill catalog layout**: replace the two-column cards with scroll-safe installed and uninstalled lists; selecting a row now opens a full detail page where installation, Shortcut setup, and custom-skill editing are managed. / **技能目录布局**：将双列卡片改为可稳定滚动的已安装与未安装列表；点击列表项进入完整详情页，并统一管理安装、捷径配置与自定义技能编辑。
@@ -22,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Conversational skill replies**: make non-business replies sound like an ordinary person talking with friends or colleagues, allow one fitting emoji when emotion clearly calls for it, keep business replies naturally professional, and apply the active user-owned learned style only as a bounded wording-and-rhythm layer. / **口语化技能回复**：非商务回复采用普通人与朋友、好友或同事交谈的自然口吻，情绪明确时可合理使用一个表情；商务回复保持自然专业，当前用户自有的学习风格仅作为受限的用词与节奏层应用。
 
 ### Fixed
+- **Personal dictionary aliases**: generate common speech-recognition mistakes for Home term suggestions through the same concurrency-safe save path used by manual entries. / **个性词库易错词**：首页推荐词现在与手动词条共用并发安全的保存流程，并自动生成常见语音误识别写法。
+- **Home service setup guidance**: explain whether user-owned API keys are missing, link directly to the relevant provider settings, and offer OSG credits as the no-key alternative. / **首页服务配置引导**：明确说明缺少哪类自备 API Key，直接跳转到对应服务商设置，并提供无需填写 Key 的 OSG 积分方案。
+- **Live keyboard configuration guidance**: apply speech-language changes to an already open keyboard and explain when clipboard capture is paused because Full Access is off. / **键盘实时配置引导**：识别语言变更会同步到已打开的键盘，并在“允许完全访问”关闭导致剪贴板采集暂停时给出说明。
+- **Clipboard skill fallback**: keep Reply available for every accepted clipboard text, including while local semantic analysis is still running or finds no specialized action. / **剪贴板技能兜底**：任何已接收的剪贴板文本都会保留“回复”，包括本地语义分析尚未完成或没有识别出专用操作时。
 - **Repeatable OOBE practice**: scope each free feature to one use per short-lived guided session, so returning to OOBE starts a fresh four-page experience without misreporting consumed-page conflicts as weak network; also simplify lesson titles, add a voice sample to read aloud, and streamline the completion page. / **可重复的 OOBE 体验**：将每项免费功能限制为每个短期引导会话使用一次，让用户重新进入 OOBE 时可以重新体验四个页面，并避免把页面已完成冲突误报为弱网；同时精简各环节标题，加入语音朗读示例，并简化完成页。
 - **Managed hotword answers**: run keyboard hotwords with the same DeepSeek thinking policy as hold-to-ask AI, require online search for time-sensitive cards, preserve hotword usage attribution, and distinguish credit, provider, timeout, and gateway failures. / **积分热词回答**：键盘热词现在采用与长按问 AI 相同的 DeepSeek 思考策略，时效内容强制在线搜索，保留热词用量归因，并区分积分、服务商、超时与网关故障。
 

@@ -1,11 +1,11 @@
 // UsageStatsCluster.swift
 // OSGKeyboard · HostSupport
 //
-// Cross-platform home / dashboard stats: 7-day chart + cumulative metrics.
+// Cross-platform home / dashboard stats: monthly calendar + cumulative metrics.
 // Callers observe their store and pass plain values — Shared stays unbound
 // from platform singletons.
 //
-// Optional `header` sits above the 7-day chart inside the same surface card
+// Optional `header` sits above the monthly calendar inside the same surface card
 // (iOS Home glass preview field). Mac / plain call sites keep `EmptyView`.
 
 import SwiftUI
@@ -14,13 +14,19 @@ import OSGKeyboardShared
 #endif
 
 public enum UsageStatsClusterLayout: Sendable, Equatable {
-    /// Chart left, 2×2 `UsageStatCard` grid right (Mac / iPad).
+    /// Monthly calendar left, 2×2 `UsageStatCard` grid right (Mac / iPad).
     case split
-    /// Chart above a compact single-card 2×2 grid (iPhone).
+    /// Monthly calendar above a compact single-card 2×2 grid (iPhone).
     case stacked
 
     /// 手机端 2×2 统计网格的紧凑固定高度（沿用旧版 HomeStatsCard 数值）。
     public static let compactGridHeight: CGFloat = 166
+}
+
+public enum UsageStatsClusterContent: Sendable, Equatable {
+    case all
+    case calendar
+    case metrics
 }
 
 public struct UsageStatsCluster<Header: View>: View {
@@ -33,9 +39,12 @@ public struct UsageStatsCluster<Header: View>: View {
     public let dictationDurationSeconds: TimeInterval
     public let translationCharacterCount: Int
     public let dictionaryTermCount: Int
-    /// 小屏（如 iPhone SE）收紧 stacked 图表高度，把空间让给下方的输入框。
+    /// 小屏（如 iPhone SE）收紧日期圆形尺寸，把空间让给下方内容。
     public let compact: Bool
+    public let content: UsageStatsClusterContent
     private let header: Header
+    private let onOpenHistory: (() -> Void)?
+    private let onOpenDictionary: (() -> Void)?
 
     public init(
         layout: UsageStatsClusterLayout,
@@ -46,6 +55,9 @@ public struct UsageStatsCluster<Header: View>: View {
         translationCharacterCount: Int,
         dictionaryTermCount: Int,
         compact: Bool = false,
+        content: UsageStatsClusterContent = .all,
+        onOpenHistory: (() -> Void)? = nil,
+        onOpenDictionary: (() -> Void)? = nil,
         @ViewBuilder header: () -> Header
     ) {
         self.layout = layout
@@ -56,22 +68,33 @@ public struct UsageStatsCluster<Header: View>: View {
         self.translationCharacterCount = translationCharacterCount
         self.dictionaryTermCount = dictionaryTermCount
         self.compact = compact
+        self.content = content
+        self.onOpenHistory = onOpenHistory
+        self.onOpenDictionary = onOpenDictionary
         self.header = header()
     }
 
+    @ViewBuilder
     public var body: some View {
-        switch layout {
-        case .split:
-            splitBody
-        case .stacked:
-            stackedBody
+        switch content {
+        case .all:
+            switch layout {
+            case .split:
+                splitBody
+            case .stacked:
+                stackedBody
+            }
+        case .calendar:
+            chartCard
+        case .metrics:
+            metricsBody
         }
     }
 
     // MARK: - Split (Mac / iPad)
 
     private var splitBody: some View {
-        HStack(alignment: .top, spacing: Spacing.md) {
+        HStack(alignment: .top, spacing: splitSectionSpacing) {
             chartCard
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             splitStatGrid
@@ -81,126 +104,200 @@ public struct UsageStatsCluster<Header: View>: View {
     }
 
     private var splitStatGrid: some View {
-        VStack(spacing: Spacing.md) {
-            HStack(spacing: Spacing.md) {
-                UsageStatCard(
+        VStack(spacing: splitItemSpacing) {
+            HStack(spacing: splitItemSpacing) {
+                splitCell(
                     title: SharedL10n.string("stat.words", language: language),
                     value: UsageStatisticsStore.formatCount(dictationCharacterCount, language: language),
                     caption: SharedL10n.string("stat.transcribed", language: language),
                     systemImage: "text.alignleft",
-                    accent: true
+                    accent: true,
+                    action: onOpenHistory
                 )
-                UsageStatCard(
+                splitCell(
                     title: SharedL10n.string("stat.dictationTime", language: language),
                     value: UsageStatisticsStore.formatDuration(dictationDurationSeconds, language: language),
                     caption: SharedL10n.string("stat.cumulativeDuration", language: language),
                     systemImage: "waveform"
                 )
             }
-            HStack(spacing: Spacing.md) {
-                UsageStatCard(
+            HStack(spacing: splitItemSpacing) {
+                splitCell(
                     title: SharedL10n.string("stat.translation", language: language),
                     value: UsageStatisticsStore.formatCount(translationCharacterCount, language: language),
                     caption: SharedL10n.string("stat.cumulativeTranslation", language: language),
                     systemImage: "character.bubble"
                 )
-                UsageStatCard(
+                splitCell(
                     title: SharedL10n.string("stat.dictionary", language: language),
                     value: UsageStatisticsStore.formatCount(dictionaryTermCount, language: language),
                     caption: SharedL10n.string("stat.customTerms", language: language),
-                    systemImage: "character.book.closed"
+                    systemImage: "character.book.closed",
+                    action: onOpenDictionary
                 )
             }
+        }
+    }
+
+    @ViewBuilder
+    private var metricsBody: some View {
+        switch layout {
+        case .split:
+            splitStatGrid
+        case .stacked:
+            compactStatGrid
+        }
+    }
+
+    @ViewBuilder
+    private func splitCell(
+        title: String,
+        value: String,
+        caption: String,
+        systemImage: String,
+        accent: Bool = false,
+        action: (() -> Void)? = nil
+    ) -> some View {
+        if let action {
+            Button(action: action) {
+                UsageStatCard(
+                    title: title,
+                    value: value,
+                    caption: caption,
+                    accent: accent
+                )
+                .overlay(alignment: .topTrailing) {
+                    disclosureIndicator
+                        .padding(Spacing.md)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
+        } else {
+            UsageStatCard(
+                title: title,
+                value: value,
+                caption: caption,
+                systemImage: systemImage,
+                accent: accent
+            )
         }
     }
 
     // MARK: - Stacked (iPhone)
 
     private var stackedBody: some View {
-        VStack(spacing: compact ? Spacing.sm : Spacing.md) {
+        VStack(spacing: CardLayoutMetrics.sectionSpacing) {
             chartCard
             compactStatGrid
         }
     }
 
-    /// Chart surface; when `header` is present it sits above the bars in the same card.
+    /// Calendar surface; when `header` is present it sits above the dates in the same card.
     @ViewBuilder
     private var chartCard: some View {
         if Header.self == EmptyView.self {
-            SevenDayUsageChart(
+            MonthlyUsageCalendar(
                 points: points,
                 language: language,
-                chartMinHeight: compact ? 72 : 96,
-                expands: layout == .split
+                compact: compact
             )
         } else {
             UsageSurfaceCard(padding: Spacing.md) {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     header
-                    SevenDayUsageChart(
+                    MonthlyUsageCalendar(
                         points: points,
                         language: language,
-                        chartMinHeight: compact ? 72 : 96,
-                        embedsInCard: false,
-                        expands: layout == .split
+                        compact: compact,
+                        embedsInCard: false
                     )
                 }
             }
         }
     }
 
-    /// Phone-friendly 2×2: value + label only, single card with hairline dividers.
+    /// Phone-friendly 2×2: each metric has its own compact surface card.
     private var compactStatGrid: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
+        VStack(spacing: CardLayoutMetrics.compactItemSpacing) {
+            HStack(spacing: CardLayoutMetrics.compactItemSpacing) {
                 compactCell(
-                    systemImage: "waveform",
+                    systemImage: "waveform.badge.microphone",
                     value: UsageStatisticsStore.formatDuration(dictationDurationSeconds, language: language),
                     label: SharedL10n.string("stat.dictationTime", language: language)
                 )
-                compactDivider
                 compactCell(
-                    systemImage: "text.alignleft",
+                    systemImage: "text.quote",
                     value: UsageStatisticsStore.formatCount(dictationCharacterCount, language: language),
-                    label: SharedL10n.string("stat.words", language: language)
+                    label: SharedL10n.string("stat.words", language: language),
+                    action: onOpenHistory
                 )
             }
-            Rectangle()
-                .fill(palette.divider)
-                .frame(height: 0.5)
-            HStack(spacing: 0) {
+            .frame(maxHeight: .infinity)
+            HStack(spacing: CardLayoutMetrics.compactItemSpacing) {
                 compactCell(
-                    systemImage: "character.bubble",
+                    systemImage: "translate",
                     value: UsageStatisticsStore.formatCount(translationCharacterCount, language: language),
                     label: SharedL10n.string("stat.translation", language: language)
                 )
-                compactDivider
                 compactCell(
-                    systemImage: "character.book.closed",
+                    systemImage: "books.vertical",
                     value: UsageStatisticsStore.formatCount(dictionaryTermCount, language: language),
-                    label: SharedL10n.string("stat.dictionary", language: language)
+                    label: SharedL10n.string("stat.dictionary", language: language),
+                    action: onOpenDictionary
                 )
             }
+            .frame(maxHeight: .infinity)
         }
         // 锁定紧凑固定高度（对齐旧版 HomeStatsCard 的 166pt），避免格子按内容撑高。
         .frame(height: UsageStatsClusterLayout.compactGridHeight)
-        .background(palette.surface)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                .stroke(palette.divider, lineWidth: 0.5)
-        )
     }
 
-    private var compactDivider: some View {
-        Rectangle()
-            .fill(palette.divider)
-            .frame(width: 0.5)
+    @ViewBuilder
+    private func compactCell(
+        systemImage: String,
+        value: String,
+        label: String,
+        action: (() -> Void)? = nil
+    ) -> some View {
+        if let action {
+            Button(action: action) {
+                compactCellContent(
+                    systemImage: systemImage,
+                    value: value,
+                    label: label,
+                    showsDisclosure: true
+                )
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else {
+            compactCellContent(
+                systemImage: systemImage,
+                value: value,
+                label: label,
+                showsDisclosure: false
+            )
+        }
     }
 
-    private func compactCell(systemImage: String, value: String, label: String) -> some View {
-        HStack(alignment: .top, spacing: Spacing.xs) {
-            VStack(alignment: .leading, spacing: Spacing.xs) {
+    private func compactCellContent(
+        systemImage: String,
+        value: String,
+        label: String,
+        showsDisclosure: Bool
+    ) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+        return ZStack(alignment: .bottomTrailing) {
+            // Subtle watermark stays fully visible within the card edges.
+            Image(systemName: systemImage)
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(palette.textPrimary.opacity(0.06))
+                .frame(width: 32, height: 32, alignment: .center)
+                .offset(x: Spacing.xs, y: Spacing.xs)
+
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
                 Text(value)
                     .font(.system(size: 24, weight: .semibold, design: .rounded))
                     .foregroundStyle(palette.textPrimary)
@@ -214,14 +311,41 @@ public struct UsageStatsCluster<Header: View>: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
             }
-            Spacer(minLength: Spacing.xs)
-            Image(systemName: systemImage)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(palette.accent)
-                .padding(.top, 2)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(Spacing.md)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(Spacing.sm)
+        .background(palette.surface, in: shape)
+        .overlay(alignment: .topTrailing) {
+            if showsDisclosure {
+                disclosureIndicator
+                    .padding(Spacing.sm)
+            }
+        }
+        .clipShape(shape)
+    }
+
+    private var disclosureIndicator: some View {
+        Image(systemName: "chevron.right")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(palette.textTertiary)
+            .accessibilityHidden(true)
+    }
+
+    private var splitSectionSpacing: CGFloat {
+        #if os(macOS)
+        Spacing.md
+        #else
+        CardLayoutMetrics.sectionSpacing
+        #endif
+    }
+
+    private var splitItemSpacing: CGFloat {
+        #if os(macOS)
+        Spacing.md
+        #else
+        CardLayoutMetrics.compactItemSpacing
+        #endif
     }
 }
 
@@ -234,7 +358,10 @@ extension UsageStatsCluster where Header == EmptyView {
         dictationDurationSeconds: TimeInterval,
         translationCharacterCount: Int,
         dictionaryTermCount: Int,
-        compact: Bool = false
+        compact: Bool = false,
+        content: UsageStatsClusterContent = .all,
+        onOpenHistory: (() -> Void)? = nil,
+        onOpenDictionary: (() -> Void)? = nil
     ) {
         self.init(
             layout: layout,
@@ -245,6 +372,9 @@ extension UsageStatsCluster where Header == EmptyView {
             translationCharacterCount: translationCharacterCount,
             dictionaryTermCount: dictionaryTermCount,
             compact: compact,
+            content: content,
+            onOpenHistory: onOpenHistory,
+            onOpenDictionary: onOpenDictionary,
             header: { EmptyView() }
         )
     }

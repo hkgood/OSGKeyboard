@@ -82,11 +82,6 @@ struct KeyboardSurfaceRoot: View {
         // lingers (a slow Universal Clipboard read, a system alert).
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .animation(.easeInOut(duration: 0.15), value: state.surface)
-        .onChange(of: state.surface) { _, newSurface in
-            if newSurface != .typing {
-                typing.leaveTypingMode()
-            }
-        }
     }
 
     private func wrappedInsert(_ text: String) {
@@ -124,7 +119,9 @@ struct KeyboardSurfaceRoot: View {
                     onClear: state.clearClipboardHistory,
                     onInsert: { state.insertClipboardText($0) },
                     onDelete: { state.deleteClipboardHistoryEntry($0) },
-                    pastePermissionHint: nil
+                    pastePermissionHint: state.needsClipboardFullAccessHint
+                        ? ExtL10n.string("keyboard.clipboard.panel.fullAccessHint")
+                        : nil
                 )
             }
         }

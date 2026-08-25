@@ -158,6 +158,14 @@ public enum Spacing {
     public static let hero: CGFloat = 48
 }
 
+/// Semantic spacing for sibling card surfaces.
+public enum CardLayoutMetrics {
+    /// Vertical gap between page-level cards or card sections.
+    public static let sectionSpacing: CGFloat = 18
+    /// Horizontal and vertical gap between compact cards or list-item cards.
+    public static let compactItemSpacing: CGFloat = Spacing.xs
+}
+
 // MARK: - Corner radius scale
 
 public enum Radius {
@@ -227,10 +235,6 @@ private struct CardSurfaceModifier: ViewModifier {
         content
             .padding(padding)
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
     }
 }
 
@@ -267,10 +271,6 @@ private struct SecondaryButtonModifier: ViewModifier {
             .font(TypeStyle.headline)
             .frame(maxWidth: .infinity, minHeight: 50)
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(palette.dividerStrong, lineWidth: 0.5)
-            )
             .foregroundStyle(palette.textPrimary)
     }
 }

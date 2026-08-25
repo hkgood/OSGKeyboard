@@ -213,26 +213,47 @@ private actor LiveAccountService:
 
     func restoreSession() async throws -> AccountSession? {
         guard let cachedSession = try await apiClient.currentSession() else {
+            OSGDiag.log("session restore status=not-found", category: "account")
             await invalidateManagedGatewaySession()
             return nil
         }
+        OSGDiag.log("session restore status=keychain-found", category: "account")
         let account: OSGAccount?
         do {
             account = try await apiClient.account()
         } catch let error as AccountAPIError {
             switch error {
             case .sessionUnavailable, .unauthorized, .refreshTokenReuse:
+                OSGDiag.log(
+                    "session restore status=rejected "
+                        + "error=\(AccountDiagnostic.code(for: error))",
+                    category: "account"
+                )
                 await invalidateManagedGatewaySession()
                 return nil
             default:
+                OSGDiag.log(
+                    "session restore status=cached-fallback "
+                        + "error=\(AccountDiagnostic.code(for: error))",
+                    category: "account"
+                )
                 account = nil
             }
         } catch {
+            OSGDiag.log(
+                "session restore status=cached-fallback "
+                    + "error=\(AccountDiagnostic.code(for: error))",
+                category: "account"
+            )
             account = nil
         }
         let session = try await apiClient.currentSession() ?? cachedSession
         configuration.setManagedGatewayAccountSessionAvailable(true)
         await synchronizeManagedGrant()
+        OSGDiag.log(
+            "session restore status=restored accountValidated=\(account == nil ? 0 : 1)",
+            category: "account"
+        )
         return uiSession(
             session,
             createdAtEpochSeconds: account?.createdAtEpochSeconds ?? 0,

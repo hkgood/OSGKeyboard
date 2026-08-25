@@ -39,7 +39,6 @@ struct HistoryView: View {
         .background(palette.background)
         .navigationTitle("history.title")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesTabBarWhenPushed()
         .toolbar {
             if !store.entries.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -105,7 +104,7 @@ struct HistoryView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .listSectionSpacing(Spacing.lg)
+        .listSectionSpacing(CardLayoutMetrics.sectionSpacing)
         .scrollContentBackground(.hidden)
         .background(palette.background)
         .contentMargins(.top, Spacing.md, for: .scrollContent)

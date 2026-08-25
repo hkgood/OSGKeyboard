@@ -7,7 +7,7 @@ OSGKeyboard 是面向 iPhone、iPad 与 Mac 的语音输入工具。iOS 键盘�
 ![Platform](https://img.shields.io/badge/iOS%20%2F%20iPadOS-26%2B-0078D4?logo=apple)
 ![Platform](https://img.shields.io/badge/macOS-15%2B-555?logo=apple)
 ![Swift](https://img.shields.io/badge/Swift-6.0-FA7343?logo=swift)
-![Version](https://img.shields.io/badge/version-2.0.1-3aa05a)
+![Version](https://img.shields.io/badge/version-2.0.3-3aa05a)
 ![License](https://img.shields.io/badge/license-Source%20Available-blue)
 
 [官网](https://hkgood.github.io/OSGKeyboard/) · [English](./README.en.md) · [隐私政策](https://hkgood.github.io/OSGKeyboard/privacy/) · [更新记录](./CHANGELOG.md)
@@ -52,10 +52,10 @@ OSGKeyboard 是面向 iPhone、iPad 与 Mac 的语音输入工具。iOS 键盘�
 ### 剪贴板与技能
 
 - 剪贴板历史默认关闭，开启后最多保存 15 条纯文本，仅存于本机 App Group
-- 复制后短时间显示回复、总结、翻译等快捷技能
+- 复制后由本地语义分析从完整技能目录中推荐最多 5 个相关操作
 - 内置待办、日程与备忘录可通过 Apple 快捷指令导出；地图导航直接打开高德、百度或 Apple 地图
 - 可创建自定义技能：名称、SF Symbol、提示词和可选 iCloud 快捷指令
-- 最多将 8 个技能放到键盘，支持长按拖动排序
+- 技能安装数量不限；技能页可安装、卸载和排序，键盘按当前剪贴板内容动态展示相关技能
 
 ## 三种服务路径
 

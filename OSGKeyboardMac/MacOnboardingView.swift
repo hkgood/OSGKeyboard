@@ -350,7 +350,6 @@ struct MacOnboardingView: View {
         .padding(.horizontal, Spacing.md)
         .frame(maxWidth: .infinity)
         .background(cardShape.fill(palette.surface))
-        .overlay(cardShape.stroke(palette.divider, lineWidth: 0.5))
     }
 
     private func permissionCard(isGranted: Bool, grantedText: String, neededText: String) -> some View {
@@ -368,7 +367,6 @@ struct MacOnboardingView: View {
         .padding(Spacing.md)
         .frame(maxWidth: .infinity)
         .background(cardShape.fill(palette.surface))
-        .overlay(cardShape.stroke((isGranted ? palette.accent : palette.warning).opacity(0.25), lineWidth: 1))
     }
 
     private var enginePicker: some View {
@@ -423,7 +421,6 @@ struct MacOnboardingView: View {
             .padding(Spacing.md)
             .frame(maxWidth: .infinity)
             .background(cardShape.fill(selected ? palette.accentMuted : palette.surface))
-            .overlay(cardShape.stroke(selected ? palette.accent.opacity(0.5) : palette.divider, lineWidth: selected ? 1 : 0.5))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -461,7 +458,6 @@ struct MacOnboardingView: View {
         .padding(Spacing.md)
         .frame(maxWidth: .infinity)
         .background(cardShape.fill(palette.surface))
-        .overlay(cardShape.stroke(palette.divider, lineWidth: 0.5))
     }
 
     private var localModelPanel: some View {
@@ -513,7 +509,6 @@ struct MacOnboardingView: View {
         .padding(Spacing.md)
         .frame(maxWidth: .infinity)
         .background(cardShape.fill(palette.surface))
-        .overlay(cardShape.stroke(palette.divider, lineWidth: 0.5))
     }
 
     // MARK: Progress dots
@@ -577,8 +572,8 @@ struct MacOnboardingView: View {
                 .padding(.horizontal, Spacing.lg)
                 .frame(minHeight: 44)
                 .background(
-                    RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                        .stroke(palette.dividerStrong, lineWidth: 0.5)
+                    palette.surfaceElevated,
+                    in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
                 )
         }
         .buttonStyle(.plain)

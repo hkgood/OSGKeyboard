@@ -31,8 +31,8 @@ public enum ClipboardSkillSemanticRanker {
         )
     }
 
-    /// Returns only skills supported by current semantic evidence. No matching
-    /// label produces no recommendation instead of a fixed fallback row.
+    /// Returns semantically relevant skills and always keeps the generic Reply
+    /// action available as a safe fallback for accepted clipboard text.
     public static func recommended(
         skills: [AIClipboardSkill],
         sourceText: String,
@@ -42,21 +42,41 @@ public enum ClipboardSkillSemanticRanker {
         preferredLanguages: [String] = Locale.preferredLanguages
     ) -> [AIClipboardSkill] {
         guard limit > 0 else { return [] }
-        let scores = relevanceScores(
+        var scores = relevanceScores(
             sourceText: sourceText,
             analysis: analysis,
             preferredLanguages: preferredLanguages
         )
+        let genericReply = skills.first { $0.id == AIClipboardSkillCatalog.replyID }
+        if genericReply != nil {
+            scores[AIClipboardSkillCatalog.replyID, default: 0] = max(
+                1,
+                scores[AIClipboardSkillCatalog.replyID, default: 0]
+            )
+        }
         let relevant = skills.filter { scores[$0.id, default: 0] > 0 }
         var selected: [AIClipboardSkill] = []
-        var replyCount = 0
+        var specializedReplyCount = 0
         for skill in sorted(relevant, scores: scores) {
-            guard selected.count < limit else { break }
+            let mustReserveGenericReply = genericReply != nil
+                && !selected.contains(where: { $0.id == AIClipboardSkillCatalog.replyID })
+                && skill.id != AIClipboardSkillCatalog.replyID
+            let availableCount = limit - (mustReserveGenericReply ? 1 : 0)
+            guard selected.count < availableCount else { continue }
+            if skill.id == AIClipboardSkillCatalog.replyID {
+                selected.append(skill)
+                continue
+            }
             if skill.supportsReplyStyle {
-                guard replyCount < maximumReplyRecommendations else { continue }
-                replyCount += 1
+                guard specializedReplyCount < maximumReplyRecommendations else { continue }
+                specializedReplyCount += 1
             }
             selected.append(skill)
+        }
+        if let genericReply,
+           selected.count < limit,
+           !selected.contains(where: { $0.id == genericReply.id }) {
+            selected.append(genericReply)
         }
         return selected
     }

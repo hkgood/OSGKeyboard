@@ -62,7 +62,7 @@ public struct PolishStyleLearningCorpus: Equatable, Sendable {
 }
 
 public enum PolishStyleLearningCorpusBuilder {
-    public static let requiredEffectiveCharacterCount = 5_000
+    public static let requiredEffectiveCharacterCount = 2_500
 
     public static func build(
         from entries: [SpeechHistoryEntry]

@@ -42,7 +42,6 @@ struct OpenSourceLicensesView: View {
         .background(palette.background.ignoresSafeArea())
         .navigationTitle("settings.licenses.title")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesTabBarWhenPushed()
     }
 
     private func licenseRow(_ entry: OpenSourceLicenseCatalog.Entry) -> some View {
@@ -105,6 +104,5 @@ private struct OpenSourceLicenseDetailView: View {
         .background(palette.background.ignoresSafeArea())
         .navigationTitle(entry.name)
         .navigationBarTitleDisplayMode(.inline)
-        .hidesTabBarWhenPushed()
     }
 }

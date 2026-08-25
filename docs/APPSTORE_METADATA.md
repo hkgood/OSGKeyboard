@@ -1,4 +1,4 @@
-# App Store Connect — OSGKeyboard 2.0.1 (build 89)
+# App Store Connect — OSGKeyboard 2.0.3 (build 94)
 
 > Current metadata baseline for the iOS/iPadOS App Store build. Version and build
 > numbers come from `project.yml`. The repository also contains a separate
@@ -11,7 +11,7 @@
 | App name | `OSGKeyboard` | ≤ 30 characters |
 | Subtitle | `Voice input, everywhere` | ≤ 30 characters |
 | Bundle ID | `com.osgkeyboard.ios` | iOS host target |
-| Version / build | `2.0.1` / `88` | `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` |
+| Version / build | `2.0.3` / `94` | `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` |
 | Minimum system | iOS/iPadOS 26 | iPhone and iPad |
 | Primary locale | `en-US` | Simplified Chinese is also bundled |
 | Primary category | Utilities | |
@@ -106,25 +106,22 @@ Voice input anywhere, with on-device recognition by default. Use your own AI key
 keyboard,voice,dictation,speech,transcribe,AI,pinyin,Chinese,English,polish,typing,productivity
 ```
 
-## What's new in 2.0.1
+## What's new in 2.0.3
 
 ```text
 NEW
-• A shorter first-run guide teaches dictation, translation, smart reply,
-  and voice questions before the optional account step.
-• Official AI skills can refresh without an App Store update.
-• Private typing summaries and local Rime term suggestions improve insights
-  without retaining typed text.
+• Home can now suggest repeated rare English terms alongside Chinese terms
+  for explicit review before adding them to the Personal Dictionary.
 
 CHANGED
-• iPhone navigation now uses the native iOS 26 Liquid Glass tab bar.
-• Voice history retains private paired metadata for future style learning.
+• Cards, settings typography, native selection menus, account rows, and
+  primary-to-detail navigation transitions now follow one visual system.
 
 FIXED
-• Signing out or losing a session now switches every AI path back to BYOK
-  and blocks cached managed grants from consuming credits.
-• Analytics uploads are safer during suspension, purchase confirmations no
-  longer reappear, and account/settings refreshes are more reliable.
+• Apple account restoration now retries transient secure-session failures and
+  keeps sign-in loading feedback consistent.
+• English and Chinese candidates now recover reliably after switching apps
+  without carrying state from the previous input field.
 ```
 
 ## App Review information
@@ -285,7 +282,7 @@ standard HTTPS. Re-evaluate this answer if non-exempt cryptography is added.
 
 ## Submission checklist
 
-- [ ] Confirm `project.yml` still reads version 2.0.1 / build 89
+- [ ] Confirm `project.yml` still reads version 2.0.3 / build 94
 - [ ] Open the existing Xcode project (do not regenerate unless needed)
 - [ ] Run the release build and test suites on macOS with Xcode 26
 - [ ] Replace screenshots with captures from the submitted build
@@ -296,4 +293,4 @@ standard HTTPS. Re-evaluate this answer if non-exempt cryptography is added.
       and mapped to the server credit catalog
 - [ ] Confirm `ByRockyACoffee` remains an optional consumable tip and unlocks
       no feature
-- [ ] Upload, select build 89, add review notes, and submit
+- [ ] Upload, select build 94, add review notes, and submit

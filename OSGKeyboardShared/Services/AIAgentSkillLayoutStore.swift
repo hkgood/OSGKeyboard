@@ -70,6 +70,18 @@ public final class AIAgentSkillLayoutStore: ObservableObject {
         mergedCatalog.filter { !layout.isEnabled($0.id) }
     }
 
+    public var skillManagementEnabledSkills: [AIClipboardSkill] {
+        enabledSkills.filter {
+            !AIClipboardSkillCatalog.hiddenFromSkillManagementIDs.contains($0.id)
+        }
+    }
+
+    public var skillManagementAvailableSkills: [AIClipboardSkill] {
+        availableSkills.filter {
+            !AIClipboardSkillCatalog.hiddenFromSkillManagementIDs.contains($0.id)
+        }
+    }
+
     public func userSkill(id: String) -> AIUserSkill? {
         userCatalog.skill(id: id)
     }

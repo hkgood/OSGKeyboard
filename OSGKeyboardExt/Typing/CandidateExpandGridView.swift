@@ -12,7 +12,7 @@ struct CandidateExpandGridView: UIViewRepresentable {
     var candidates: [TypingCandidate]
     var textColor: UIColor
     var dividerColor: UIColor
-    var onSelect: (Int) -> Void
+    var onSelect: (TypingCandidate) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(onSelect: onSelect)
@@ -73,10 +73,10 @@ struct CandidateExpandGridView: UIViewRepresentable {
         var candidates: [TypingCandidate] = []
         var textColor: UIColor = .label
         var dividerColor: UIColor = .separator
-        var onSelect: (Int) -> Void
+        var onSelect: (TypingCandidate) -> Void
         weak var collectionView: UICollectionView?
 
-        init(onSelect: @escaping (Int) -> Void) {
+        init(onSelect: @escaping (TypingCandidate) -> Void) {
             self.onSelect = onSelect
         }
 
@@ -105,7 +105,8 @@ struct CandidateExpandGridView: UIViewRepresentable {
 
         func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
             collectionView.deselectItem(at: indexPath, animated: false)
-            onSelect(indexPath.item)
+            guard candidates.indices.contains(indexPath.item) else { return }
+            onSelect(candidates[indexPath.item])
         }
 
         private func isLastRow(index: Int) -> Bool {

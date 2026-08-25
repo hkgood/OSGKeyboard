@@ -37,8 +37,5 @@ struct WideCard<Content: View>: View {
         content()
             .padding(padding)
             .background(palette.surface, in: shape)
-            .overlay(
-                shape.stroke(palette.divider, lineWidth: 0.5)
-            )
     }
 }

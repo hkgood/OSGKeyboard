@@ -180,17 +180,13 @@ struct DefaultInputModePickerRow: View {
             Spacer(minLength: 8)
 
             Menu {
-                ForEach(options, id: \.id) { option in
-                    Button {
-                        selection = DefaultInputMode(rawValue: option.id) ?? .voice
-                    } label: {
-                        if option.id == selection.rawValue {
-                            Label(option.label, systemImage: "checkmark")
-                        } else {
-                            Text(option.label)
-                        }
+                Picker("", selection: defaultInputModeSelection) {
+                    ForEach(options, id: \.id) { option in
+                        Text(option.label)
+                            .tag(option.id)
                     }
                 }
+                .labelsHidden()
             } label: {
                 HStack(spacing: 4) {
                     Text(currentLabel)
@@ -203,6 +199,13 @@ struct DefaultInputModePickerRow: View {
             }
         }
         .settingsListRow()
+    }
+
+    private var defaultInputModeSelection: Binding<String> {
+        Binding(
+            get: { selection.rawValue },
+            set: { selection = DefaultInputMode(rawValue: $0) ?? .voice }
+        )
     }
 
     private var currentLabel: String {
@@ -248,17 +251,13 @@ struct SettingsMenuPickerRow: View {
                 .foregroundStyle(palette.textPrimary)
             Spacer()
             Menu {
-                ForEach(options, id: \.id) { o in
-                    Button {
-                        selection = o.id
-                    } label: {
-                        if o.id == selection {
-                            Label(o.label, systemImage: "checkmark")
-                        } else {
-                            Text(o.label)
-                        }
+                Picker("", selection: $selection) {
+                    ForEach(options, id: \.id) { option in
+                        Text(option.label)
+                            .tag(option.id)
                     }
                 }
+                .labelsHidden()
             } label: {
                 HStack(spacing: 4) {
                     Text(currentLabel)
@@ -294,22 +293,13 @@ struct LocalePickerRow: View {
                 .foregroundStyle(palette.textPrimary)
             Spacer()
             Menu {
-                ForEach(locales, id: \.id) { locale in
-                    Button {
-                        selection = locale.id
-                    } label: {
-                        // iOS Menu converts SwiftUI Label to UIAction (title + image).
-                        // Using Label keeps checkmark + on-device icon both visible.
-                        let name = label(for: locale.id)
-                        if locale.id == selection {
-                            Label(name, systemImage: "checkmark")
-                        } else if locale.onDevice {
-                            Label(name, systemImage: "iphone")
-                        } else {
-                            Text(name)
-                        }
+                Picker("", selection: $selection) {
+                    ForEach(locales, id: \.id) { locale in
+                        Text(label(for: locale.id))
+                            .tag(locale.id)
                     }
                 }
+                .labelsHidden()
             } label: {
                 HStack(spacing: 6) {
                     // On-device badge for the currently selected locale.

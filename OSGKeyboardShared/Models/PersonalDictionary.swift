@@ -8,7 +8,7 @@
 //
 // Sources (mutually exclusive per entry):
 //   - `.manual`     user typed it in by hand
-//   - `.history`    legacy auto-learned entries (migrated to `.manual`)
+//   - `.history`    user-confirmed recommendations from typing history
 //   - `.contacts`   imported from the iOS Contacts framework
 //   - `.recentEdit` extracted from edits the user made to a
 //                   polished transcript before sending
@@ -274,11 +274,27 @@ extension PersonalDictionary {
         return entries.first { $0.term.lowercased() == key }
     }
 
-    /// Insert or update a manual entry. Returns the saved entry.
+    /// Insert or update a manual entry. Kept as a convenience for existing callers.
     @discardableResult
     public mutating func upsertManual(
         term: String,
         existingID: UUID? = nil,
+        regenerateAliases: Bool = false
+    ) -> Entry? {
+        upsert(
+            term: term,
+            existingID: existingID,
+            source: .manual,
+            regenerateAliases: regenerateAliases
+        )
+    }
+
+    /// Insert or update an entry while preserving its user-visible origin.
+    @discardableResult
+    public mutating func upsert(
+        term: String,
+        existingID: UUID? = nil,
+        source: Entry.Source,
         regenerateAliases: Bool = false
     ) -> Entry? {
         let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -292,7 +308,7 @@ extension PersonalDictionary {
             let termChanged = entry.term.caseInsensitiveCompare(trimmed) != .orderedSame
             entry.term = trimmed
             entry.category = category
-            entry.source = .manual
+            entry.source = source
             if termChanged || regenerateAliases {
                 entry.aliases = []
             }
@@ -307,7 +323,7 @@ extension PersonalDictionary {
             var entry = entries[idx]
             entry.term = trimmed
             entry.category = category
-            entry.source = .manual
+            entry.source = source
             entry.updatedAt = Date()
             entries[idx] = entry
             return entry
@@ -318,7 +334,7 @@ extension PersonalDictionary {
             term: trimmed,
             aliases: [],
             category: category,
-            source: .manual,
+            source: source,
             createdAt: now,
             updatedAt: now
         )

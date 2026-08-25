@@ -113,7 +113,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         didSet {
             guard !isApplyingConfiguration, localeId != configuration.localeId else { return }
             configuration.localeId = localeId
-            persistConfiguration()
+            persistConfiguration(postConfigChanged: true)
         }
     }
     /// "local" → on-device ASR + user's LLM polish (requires user API key).
@@ -216,16 +216,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
             guard !isApplyingConfiguration,
                   handednessPreference != configuration.handednessPreference else { return }
             configuration.handednessPreference = handednessPreference
-            persistConfiguration(postConfigChanged: true)
-        }
-    }
-
-    /// Press-and-drag pads beside the mic for four-way caret movement.
-    @Published public var cursorDragNavigationEnabled: Bool {
-        didSet {
-            guard !isApplyingConfiguration,
-                  cursorDragNavigationEnabled != configuration.cursorDragNavigationEnabled else { return }
-            configuration.cursorDragNavigationEnabled = cursorDragNavigationEnabled
             persistConfiguration(postConfigChanged: true)
         }
     }
@@ -445,7 +435,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         uiLanguage = configuration.uiLanguage
         translationTargetLocaleId = configuration.translationTargetLocaleId
         handednessPreference = configuration.handednessPreference
-        cursorDragNavigationEnabled = configuration.cursorDragNavigationEnabled
         keyboardHapticIntensity = configuration.keyboardHapticIntensity
         polishIntensity = configuration.polishIntensity
         aiResponseLength = configuration.aiResponseLength
@@ -551,7 +540,6 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         uiLanguage = fresh.uiLanguage
         translationTargetLocaleId = fresh.translationTargetLocaleId
         handednessPreference = fresh.handednessPreference
-        cursorDragNavigationEnabled = fresh.cursorDragNavigationEnabled
         keyboardHapticIntensity = fresh.keyboardHapticIntensity
         polishIntensity = fresh.polishIntensity
         aiResponseLength = fresh.aiResponseLength

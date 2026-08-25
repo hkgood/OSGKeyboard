@@ -48,8 +48,8 @@ settings:
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "2.0.1"
-    CURRENT_PROJECT_VERSION: "89"
+    MARKETING_VERSION: "2.0.3"
+    CURRENT_PROJECT_VERSION: "94"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -484,10 +484,10 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
 
   # =========================================================
-  # 实机 UI 测试
+  # UI 测试：确定性宿主在模拟器运行，PiP/真实键盘链路保留实机验收
   # =========================================================
-  # XCUITest 是 Apple 唯一开放的物理设备触摸注入通道，模拟器无法复现
-  # PiP 语音会话（isPictureInPictureSupported 恒为 false）。
+  # XCUITest 是 Apple 唯一开放的物理设备触摸注入通道；模拟器可运行
+  # 内嵌宿主回归，但无法复现 PiP（isPictureInPictureSupported 恒为 false）。
   OSGKeyboardUITests:
     type: bundle.ui-testing
     platform: iOS

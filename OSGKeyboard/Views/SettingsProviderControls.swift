@@ -106,10 +106,6 @@ struct SettingsCredentialRow: View {
                 .foregroundStyle(palette.textSecondary)
                 .frame(width: 38, height: 38)
                 .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                        .stroke(palette.divider, lineWidth: 0.5)
-                )
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
@@ -184,20 +180,13 @@ struct SettingsModelPickerRow: View {
                     Button(AppL10n.string("settings.provider.modelsEmptyHint")) {}
                         .disabled(true)
                 } else {
-                    ForEach(models, id: \.self) { modelId in
-                        Button {
-                            invalidateRequest()
-                            model = modelId
-                            message = AppL10n.format("settings.provider.modelSelected", modelId)
-                            failed = false
-                        } label: {
-                            if modelId == model {
-                                Label(modelId, systemImage: "checkmark")
-                            } else {
-                                Text(modelId)
-                            }
+                    Picker("", selection: modelSelection) {
+                        ForEach(models, id: \.self) { modelID in
+                            Text(modelID)
+                                .tag(modelID)
                         }
                     }
+                    .labelsHidden()
                 }
             } label: {
                 Image(systemName: "chevron.up.chevron.down")
@@ -209,6 +198,18 @@ struct SettingsModelPickerRow: View {
             .padding(.trailing, Spacing.sm)
             .accessibilityLabel(AppL10n.string("settings.provider.selectModel"))
         }
+    }
+
+    private var modelSelection: Binding<String> {
+        Binding(
+            get: { model },
+            set: { modelID in
+                invalidateRequest()
+                model = modelID
+                message = AppL10n.format("settings.provider.modelSelected", modelID)
+                failed = false
+            }
+        )
     }
 
     private var refreshButton: some View {
@@ -227,10 +228,6 @@ struct SettingsModelPickerRow: View {
             }
             .frame(width: controlHeight, height: controlHeight)
             .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
         }
         .buttonStyle(.plain)
         .disabled(isRunning)
@@ -345,10 +342,9 @@ struct SettingsProviderToolsRow: View {
                     .foregroundStyle(palette.textPrimary)
                     .padding(.horizontal, Spacing.md)
                     .frame(minHeight: 34)
-                    .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.medium)
-                            .stroke(palette.divider, lineWidth: 0.5)
+                    .background(
+                        palette.surfaceElevated,
+                        in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
                     )
             }
             .buttonStyle(.plain)

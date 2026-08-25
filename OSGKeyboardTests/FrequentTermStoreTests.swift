@@ -1,15 +1,15 @@
-// RimeFrequentTermStoreTests.swift
+// FrequentTermStoreTests.swift
 // OSGKeyboardTests
 
 @testable import OSGKeyboardShared
 import XCTest
 
-final class RimeFrequentTermStoreTests: XCTestCase {
+final class FrequentTermStoreTests: XCTestCase {
     private var defaults: UserDefaults!
     private var suiteName: String!
 
     override func setUpWithError() throws {
-        suiteName = "RimeFrequentTermStoreTests.\(UUID().uuidString)"
+        suiteName = "FrequentTermStoreTests.\(UUID().uuidString)"
         defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
     }
 
@@ -19,8 +19,8 @@ final class RimeFrequentTermStoreTests: XCTestCase {
         suiteName = nil
     }
 
-    func testRepeatedRimeCommitBecomesSuggestion() {
-        let store = RimeFrequentTermStore(defaults: defaults)
+    func testRepeatedCommitBecomesSuggestion() {
+        let store = FrequentTermStore(defaults: defaults)
         store.recordCommittedText("少数派")
         XCTAssertTrue(store.suggestions(excludingPersonalTerms: []).isEmpty)
 
@@ -32,7 +32,7 @@ final class RimeFrequentTermStoreTests: XCTestCase {
     }
 
     func testSuggestionsExcludeExistingDictionaryTermsAndCommonWords() {
-        let store = RimeFrequentTermStore(defaults: defaults)
+        let store = FrequentTermStore(defaults: defaults)
         for _ in 0..<4 {
             store.recordCommittedText("我们")
             store.recordCommittedText("飞书文档")
@@ -47,7 +47,7 @@ final class RimeFrequentTermStoreTests: XCTestCase {
     }
 
     func testSuggestionsRankFrequencyBeforeRecency() {
-        let store = RimeFrequentTermStore(defaults: defaults)
+        let store = FrequentTermStore(defaults: defaults)
         let earlier = Date(timeIntervalSince1970: 100)
         let later = Date(timeIntervalSince1970: 200)
         for _ in 0..<3 {
@@ -64,7 +64,7 @@ final class RimeFrequentTermStoreTests: XCTestCase {
     }
 
     func testPunctuationAndSingleCharactersAreIgnored() {
-        let store = RimeFrequentTermStore(defaults: defaults)
+        let store = FrequentTermStore(defaults: defaults)
         for _ in 0..<3 {
             store.recordCommittedText("我")
             store.recordCommittedText("你好！")
@@ -75,7 +75,7 @@ final class RimeFrequentTermStoreTests: XCTestCase {
     }
 
     func testClearRemovesLearnedSuggestions() {
-        let store = RimeFrequentTermStore(defaults: defaults)
+        let store = FrequentTermStore(defaults: defaults)
         store.recordCommittedText("少数派")
         store.recordCommittedText("少数派")
         XCTAssertFalse(store.suggestions(excludingPersonalTerms: []).isEmpty)
@@ -83,5 +83,49 @@ final class RimeFrequentTermStoreTests: XCTestCase {
         store.clear()
 
         XCTAssertTrue(store.suggestions(excludingPersonalTerms: []).isEmpty)
+    }
+
+    func testEnglishTermsAreCaseInsensitiveAndCommonWordsAreIgnored() {
+        let store = FrequentTermStore(defaults: defaults)
+        for term in ["OpenAI", "openAI", "the", "the"] {
+            store.recordCommittedText(term)
+        }
+
+        let suggestion = store.suggestions(excludingPersonalTerms: []).first
+
+        XCTAssertEqual(suggestion?.term, "openAI")
+        XCTAssertEqual(suggestion?.commitCount, 2)
+    }
+
+    func testEnglishNamesAndProductSeparatorsAreAccepted() {
+        let store = FrequentTermStore(defaults: defaults)
+        for term in ["O'Connor", "O'Connor", "GPT-5", "GPT-5"] {
+            store.recordCommittedText(term)
+        }
+
+        XCTAssertEqual(
+            Set(store.suggestions(excludingPersonalTerms: []).map(\.term)),
+            ["O'Connor", "GPT-5"]
+        )
+    }
+
+    func testLegacyRimeTermsMigrateWithoutLosingHistory() throws {
+        let legacyTerm = FrequentTerm(
+            term: "少数派",
+            commitCount: 3,
+            firstSeenAt: Date(timeIntervalSince1970: 100),
+            lastSeenAt: Date(timeIntervalSince1970: 200)
+        )
+        defaults.set(
+            try JSONEncoder().encode([legacyTerm]),
+            forKey: FrequentTermStore.legacyRimeDefaultsKey
+        )
+
+        let store = FrequentTermStore(defaults: defaults)
+        let suggestions = store.suggestions(excludingPersonalTerms: [])
+
+        XCTAssertEqual(suggestions.first, legacyTerm)
+        XCTAssertNotNil(defaults.data(forKey: FrequentTermStore.defaultsKey))
+        XCTAssertNil(defaults.data(forKey: FrequentTermStore.legacyRimeDefaultsKey))
     }
 }

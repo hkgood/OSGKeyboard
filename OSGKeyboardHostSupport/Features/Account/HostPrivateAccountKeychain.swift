@@ -4,6 +4,7 @@
 // Main-app-only storage for OSG account sessions and App Attest key state.
 
 import Foundation
+import OSLog
 import Security
 
 public struct HostPrivateAccountKeychainDescriptor: Equatable, Sendable {
@@ -42,6 +43,11 @@ public actor HostPrivateAccountKeychain:
     AccountSessionVault,
     AppAttestKeyStateStoring,
     OOBEInstallationIDStoring {
+    private static let logger = Logger(
+        subsystem: HostPrivateAccountKeychainDescriptor.hostBundleIdentifier,
+        category: "account"
+    )
+
     private enum Account {
         static let session = "account.session"
         static let appAttestKeyState = "integrity.app-attest-key-state"
@@ -59,7 +65,16 @@ public actor HostPrivateAccountKeychain:
     }
 
     public func loadSession() async throws -> AccountSession? {
-        try read(AccountSession.self, account: Account.session)
+        do {
+            let session = try read(AccountSession.self, account: Account.session)
+            Self.logger.info(
+                "session keychain restore status=\(session == nil ? "not-found" : "found", privacy: .public)"
+            )
+            return session
+        } catch {
+            Self.logger.error("session keychain restore status=unavailable")
+            throw error
+        }
     }
 
     public func saveSession(_ session: AccountSession) async throws {
@@ -111,6 +126,9 @@ public actor HostPrivateAccountKeychain:
         case errSecItemNotFound:
             return nil
         default:
+            Self.logger.error(
+                "keychain read failed account=\(account, privacy: .public) status=\(status, privacy: .public)"
+            )
             throw AccountAPIError.secureStorage
         }
     }

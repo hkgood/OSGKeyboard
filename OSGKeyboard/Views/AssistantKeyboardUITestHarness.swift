@@ -174,7 +174,20 @@ struct AssistantKeyboardUITestHarness: View {
             AIKeyboardView.debugPreviewSkills = nil
             state.skillTipText = "Skill failed"
         case .skills:
-            AIKeyboardView.debugPreviewSkills = AIClipboardSkillCatalog.catalog
+            // Keep the pagination assertion independent from production catalog
+            // ordering: Navigate is guaranteed to appear after one swipe on both
+            // four- and five-item pages.
+            let navigate = AIClipboardSkillCatalog.catalog.first {
+                $0.id == AIClipboardSkillCatalog.navigateID
+            }
+            let leading = AIClipboardSkillCatalog.catalog
+                .filter { $0.id != AIClipboardSkillCatalog.navigateID }
+                .prefix(5)
+            var previewSkills = Array(leading)
+            if let navigate {
+                previewSkills.append(navigate)
+            }
+            AIKeyboardView.debugPreviewSkills = previewSkills
             state.undoAvailable = true
             state.editAvailable = true
         case .search:

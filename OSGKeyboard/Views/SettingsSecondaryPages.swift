@@ -146,18 +146,13 @@ struct AppleASRPickerRow: View {
 
     var body: some View {
         Toggle(isOn: usesAppleRecognition) {
-            HStack(spacing: Spacing.sm) {
-                Image(systemName: "apple.logo")
-                    .foregroundStyle(palette.accent)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text("settings.asr.apple.title")
-                        .font(TypeStyle.body)
-                        .foregroundStyle(palette.textPrimary)
-                    Text("settings.asr.apple.subtitle")
-                        .font(TypeStyle.caption2)
-                        .foregroundStyle(palette.textTertiary)
-                }
+            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                Text("settings.asr.apple.title")
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
+                Text("settings.asr.apple.subtitle")
+                    .font(TypeStyle.caption2)
+                    .foregroundStyle(palette.textTertiary)
             }
         }
         .tint(palette.accent)
@@ -213,7 +208,6 @@ struct SpeechRecognitionSettingsView: View {
         .background(palette.background.ignoresSafeArea())
         .navigationTitle("settings.speechRecognition.title")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesTabBarWhenPushed()
     }
 }
 
@@ -238,7 +232,6 @@ struct TextPolishSettingsView: View {
         .background(palette.background.ignoresSafeArea())
         .navigationTitle("settings.textPolish.title")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesTabBarWhenPushed()
     }
 }
 
@@ -322,7 +315,6 @@ struct GeneralSettingsView: View {
         .background(palette.background.ignoresSafeArea())
         .navigationTitle("settings.general.title")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesTabBarWhenPushed()
     }
 }
 
@@ -346,7 +338,6 @@ struct AIAgentSettingsView: View {
         .background(palette.background.ignoresSafeArea())
         .navigationTitle(AppL10n.string("settings.aiAgent.title", language: config.uiLanguage))
         .navigationBarTitleDisplayMode(.inline)
-        .hidesTabBarWhenPushed()
     }
 }
 
@@ -368,34 +359,34 @@ struct ClipboardSettingsView: View {
                 CardSection("settings.clipboard.section") {
                     VStack(spacing: 0) {
                         Toggle(isOn: $config.clipboardHistoryEnabled) {
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: Spacing.xxs) {
                                 Text("settings.clipboard.history.title")
+                                    .font(TypeStyle.body)
                                     .foregroundStyle(palette.textPrimary)
                                 Text("settings.clipboard.history.footer")
-                                    .font(.footnote)
-                                    .foregroundStyle(palette.textSecondary)
+                                    .font(TypeStyle.caption2)
+                                    .foregroundStyle(palette.textTertiary)
                             }
                         }
                         .tint(palette.accent)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
+                        .settingsListRow()
 
                         Divider().background(palette.divider)
 
                         Toggle(isOn: clipboardCandidateBinding) {
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: Spacing.xxs) {
                                 Text("settings.clipboard.candidate.title")
+                                    .font(TypeStyle.body)
                                     .foregroundStyle(palette.textPrimary)
                                 Text("settings.clipboard.candidate.footer")
-                                    .font(.footnote)
-                                    .foregroundStyle(palette.textSecondary)
+                                    .font(TypeStyle.caption2)
+                                    .foregroundStyle(palette.textTertiary)
                             }
                         }
                         .tint(palette.accent)
                         .disabled(!config.clipboardHistoryEnabled)
                         .opacity(config.clipboardHistoryEnabled ? 1 : 0.45)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
+                        .settingsListRow()
                     }
                     .surfaceCard()
                 }
@@ -406,7 +397,7 @@ struct ClipboardSettingsView: View {
                     VStack(spacing: 0) {
                         HStack(alignment: .center, spacing: Spacing.sm) {
                             Text("settings.clipboard.paste.body")
-                                .font(.footnote)
+                                .font(TypeStyle.caption2)
                                 .foregroundStyle(palette.textSecondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             if pasteAccessVerified {
@@ -420,8 +411,7 @@ struct ClipboardSettingsView: View {
                                 .accessibilityIdentifier("settings.clipboard.paste.verified")
                             }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
+                        .settingsListRow()
 
                         if !pasteAccessVerified {
                             Divider().background(palette.divider)
@@ -463,24 +453,25 @@ struct ClipboardSettingsView: View {
                 CardSection("settings.clipboard.storage.section") {
                     VStack(spacing: 0) {
                         Text("settings.clipboard.storage.body")
-                            .font(.footnote)
+                            .font(TypeStyle.caption2)
                             .foregroundStyle(palette.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
+                            .settingsListRow()
 
                         Divider().background(palette.divider)
 
                         Button(role: .destructive) {
                             showClearConfirmation = true
                         } label: {
-                            HStack {
+                            HStack(spacing: Spacing.sm) {
                                 Text("settings.clipboard.clear.button")
-                                Spacer()
+                                    .font(TypeStyle.body)
+                                Spacer(minLength: Spacing.xs)
                                 Image(systemName: "trash")
+                                    .font(.system(size: 14, weight: .semibold))
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
+                            .foregroundStyle(palette.danger)
+                            .settingsListRow()
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -494,7 +485,6 @@ struct ClipboardSettingsView: View {
         .background(palette.background.ignoresSafeArea())
         .navigationTitle(AppL10n.string("settings.clipboard.title", language: config.uiLanguage))
         .navigationBarTitleDisplayMode(.inline)
-        .hidesTabBarWhenPushed()
         .confirmationDialog(
             "settings.clipboard.clear.title",
             isPresented: $showClearConfirmation,
@@ -574,12 +564,15 @@ struct AboutSettingsView: View {
                 CardSection("settings.analytics.section") {
                     VStack(alignment: .leading, spacing: 0) {
                         Toggle(
-                            "settings.analytics.title",
                             isOn: Binding(
                                 get: { analytics.isEnabled },
                                 set: { analytics.setEnabled($0) }
                             )
-                        )
+                        ) {
+                            Text("settings.analytics.title")
+                                .font(TypeStyle.body)
+                                .foregroundStyle(palette.textPrimary)
+                        }
                         .tint(palette.accent)
                         .settingsListRow()
 
@@ -660,7 +653,6 @@ struct AboutSettingsView: View {
         .background(palette.background.ignoresSafeArea())
         .navigationTitle("settings.about.title")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesTabBarWhenPushed()
         .onAppear {
             analytics.refreshEnabledState()
         }

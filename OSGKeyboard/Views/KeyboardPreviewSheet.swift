@@ -97,10 +97,6 @@ struct KeyboardPreviewSheet: View {
         }
         .padding(Spacing.md)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.medium))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.medium)
-                .stroke(palette.divider, lineWidth: 0.5)
-        )
     }
 
     private var controls: some View {

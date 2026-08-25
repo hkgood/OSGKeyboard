@@ -295,10 +295,6 @@ struct OnboardingView: View {
                         .font(TypeStyle.headline)
                         .frame(maxWidth: .infinity, minHeight: 50)
                         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                                .stroke(palette.dividerStrong, lineWidth: 0.5)
-                        )
                         .foregroundStyle(palette.textPrimary)
                 }
                 .buttonStyle(.plain)

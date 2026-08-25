@@ -30,26 +30,41 @@ struct ProviderPickerSection: View {
     var body: some View {
         // 只有右侧芯片是 Menu 的 label；标题留在行外，避免菜单弹出时
         // 把整行 label 一起隐藏，导致左侧「供应商」文字消失。
-        SettingsProviderRow(title: AppL10n.string("settings.provider.supplier")) {
+        HStack(spacing: Spacing.lg) {
+            Text(AppL10n.string("settings.provider.supplier"))
+                .font(TypeStyle.body)
+                .foregroundStyle(palette.textPrimary)
+                .fixedSize(horizontal: true, vertical: false)
+
+            Spacer(minLength: Spacing.sm)
+
             Menu {
-                ForEach(visiblePresets, id: \.id) { provider in
-                    Button {
-                        select(provider)
-                    } label: {
-                        let name = ProviderDisplayName.name(for: provider.id)
-                        if provider.id == selectedProviderId {
-                            Label(name, systemImage: "checkmark")
-                        } else {
-                            Text(name)
-                        }
+                Picker("", selection: providerSelection) {
+                    ForEach(visiblePresets, id: \.id) { provider in
+                        Text(ProviderDisplayName.name(for: provider.id))
+                            .tag(provider.id)
                     }
                 }
+                .labelsHidden()
             } label: {
                 providerChip
             }
             .buttonStyle(.plain)
         }
+        .settingsListRow()
         .surfaceCard(enabled: showsSurface)
+    }
+
+    private var providerSelection: Binding<String> {
+        Binding(
+            get: { selectedProviderId },
+            set: { providerID in
+                guard let provider = visiblePresets.first(where: { $0.id == providerID }) else {
+                    return
+                }
+                select(provider)
+            }
+        )
     }
 
     private func select(_ provider: LLMProvider) {
@@ -63,14 +78,13 @@ struct ProviderPickerSection: View {
         }
     }
 
-    /// 收起状态展示：当前所选供应商 logo + 名称 + 展开箭头。
+    /// 收起状态展示：当前所选供应商名称、能力标记与展开箭头。
     private var providerChip: some View {
         HStack(spacing: Spacing.sm) {
-            providerMark(selectedProvider)
-
             Text(ProviderDisplayName.name(for: selectedProvider.id))
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textPrimary)
+                .lineLimit(1)
 
             if selectedProvider.supportsPersonalDictionaryCloudASR {
                 personalDictionaryBadge
@@ -79,34 +93,12 @@ struct ProviderPickerSection: View {
                 streamingBadge
             }
 
-            Spacer(minLength: Spacing.xs)
-
             Image(systemName: "chevron.up.chevron.down")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(palette.textTertiary)
+                .accessibilityHidden(true)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
-    }
-
-    @ViewBuilder
-    private func providerMark(_ provider: LLMProvider) -> some View {
-        ZStack {
-            Circle()
-                .fill(palette.accentMuted)
-                .frame(width: 32, height: 32)
-            if let asset = ProviderLogo.assetName(for: provider.id) {
-                Image(asset)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 18, height: 18)
-                    .foregroundStyle(palette.accent)
-            } else {
-                Text(String(provider.name.prefix(1)))
-                    .font(TypeStyle.caption)
-                    .foregroundStyle(palette.accent)
-            }
-        }
     }
 
     /// 通义千问 / 智谱 GLM 等支持云端 ASR 热词 API 的提供商。
@@ -117,6 +109,7 @@ struct ProviderPickerSection: View {
             .padding(.horizontal, Spacing.sm)
             .padding(.vertical, 4)
             .background(palette.accentMuted, in: Capsule())
+            .lineLimit(1)
     }
 
     /// Bailian / Volcengine / OpenAI Realtime — utterance-level true streaming.
@@ -127,5 +120,6 @@ struct ProviderPickerSection: View {
             .padding(.horizontal, Spacing.sm)
             .padding(.vertical, 4)
             .background(palette.accentMuted, in: Capsule())
+            .lineLimit(1)
     }
 }

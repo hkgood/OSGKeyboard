@@ -133,7 +133,7 @@ private struct MacGlassSurface<S: Shape>: ViewModifier {
         // Flat, shadowless surface fill. We deliberately avoid `glassEffect`
         // here: on macOS 26 Liquid Glass adds a raised drop shadow to every
         // card, which reads as visual noise for content containers. Hierarchy
-        // is carried by the surface colour + hairline border instead.
+        // is carried by the semantic surface colour instead.
         content
             .background(palette.surface.opacity(fillOpacity), in: shape)
     }
@@ -361,10 +361,6 @@ struct MacSettingsIconButton: View {
                 .foregroundStyle(disabled ? palette.textTertiary : palette.textSecondary)
                 .frame(width: MacMetrics.settingsControlHeight, height: MacMetrics.settingsControlHeight)
                 .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                        .stroke(palette.divider, lineWidth: 0.5)
-                )
         }
         .buttonStyle(.plain)
         .disabled(disabled)
@@ -381,9 +377,6 @@ struct MacSettingsToolButton: View {
     var fill: Color?
     /// Text color. Defaults to primary text (tertiary when disabled).
     var foreground: Color?
-    /// Hairline divider border — drawn for the neutral variant, hidden for
-    /// colored fills (delete / download) so the fill reads as the button.
-    var showsBorder: Bool = true
     var disabled: Bool = false
     let action: () -> Void
 
@@ -396,11 +389,6 @@ struct MacSettingsToolButton: View {
                 .padding(.horizontal, Spacing.md)
                 .frame(minHeight: 34)
                 .background(fill ?? palette.surfaceElevated, in: shape)
-                .overlay {
-                    if showsBorder {
-                        shape.stroke(palette.divider, lineWidth: 0.5)
-                    }
-                }
         }
         .buttonStyle(.plain)
         .disabled(disabled)
@@ -485,7 +473,6 @@ extension MacPageHeader where Trailing == EmptyView {
 
 /// Elevated surface used for stat tiles and the dictation canvas.
 struct MacCard<Content: View>: View {
-    @Environment(\.themePalette) private var palette
     var padding: CGFloat = Spacing.md
     var cornerRadius: CGFloat = Radius.medium
     @ViewBuilder var content: () -> Content
@@ -496,10 +483,6 @@ struct MacCard<Content: View>: View {
         content()
             .padding(padding)
             .macGlassSurface(in: shape, fillOpacity: 1)
-            .overlay(
-                shape
-                    .stroke(palette.divider, lineWidth: 0.5)
-            )
     }
 }
 

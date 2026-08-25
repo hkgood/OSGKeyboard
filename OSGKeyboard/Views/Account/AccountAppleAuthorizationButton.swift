@@ -25,25 +25,56 @@ struct AccountAppleAuthorizationButton: View {
     @State private var rawNonce: String?
 
     var body: some View {
-        SignInWithAppleButton(
-            purpose == .signIn ? .signIn : .continue,
-            onRequest: prepareRequest,
-            onCompletion: completeAuthorization
-        )
-        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-        .frame(maxWidth: .infinity)
-        .frame(height: 50)
-        .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-        .accessibilityLabel(
-            purpose == .signIn
-                ? Text("account.signIn.apple")
-                : Text("account.delete.reauthenticate")
-        )
-        .accessibilityHint(
-            purpose == .signIn
-                ? Text("account.signIn.hint")
-                : Text("account.delete.reauthenticateHint")
-        )
+        Group {
+            if purpose == .signIn, coordinator.operation == .signingIn {
+                HStack(spacing: Spacing.sm) {
+                    ProgressView()
+                        .tint(authorizationButtonForeground)
+                    Text("account.signIn.loading")
+                        .font(TypeStyle.bodyEmph)
+                }
+                .foregroundStyle(authorizationButtonForeground)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(authorizationButtonBackground)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("account.signIn.loading")
+            } else {
+                SignInWithAppleButton(
+                    purpose == .signIn ? .signIn : .continue,
+                    onRequest: prepareRequest,
+                    onCompletion: completeAuthorization
+                )
+                .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+                .accessibilityLabel(
+                    purpose == .signIn
+                        ? Text("account.signIn.apple")
+                        : Text("account.delete.reauthenticate")
+                )
+                .accessibilityHint(
+                    purpose == .signIn
+                        ? Text("account.signIn.hint")
+                        : Text("account.delete.reauthenticateHint")
+                )
+                .accessibilityIdentifier(
+                    purpose == .signIn
+                        ? "account.signIn.apple"
+                        : "account.delete.reauthenticate"
+                )
+            }
+        }
+    }
+
+    private var authorizationButtonBackground: Color {
+        colorScheme == .dark ? .white : .black
+    }
+
+    private var authorizationButtonForeground: Color {
+        colorScheme == .dark ? .black : .white
     }
 
     private func prepareRequest(_ request: ASAuthorizationAppleIDRequest) {

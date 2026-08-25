@@ -581,10 +581,12 @@ struct AIKeyboardView: View {
         if let expectedSkillID = oobeExpectedSkillID {
             return AIClipboardSkillCatalog.catalog.filter { $0.id == expectedSkillID }
         }
-        guard let newest = clipboardHistory.newestEntry,
-              let snapshot = semanticRanking.snapshot,
+        guard let newest = clipboardHistory.newestEntry else { return [] }
+        guard let snapshot = semanticRanking.snapshot,
               snapshot.entryID == newest.id else {
-            return []
+            return state.clipboardSkillCatalog.filter {
+                $0.id == AIClipboardSkillCatalog.replyID
+            }
         }
         return ClipboardSkillSemanticRanker.recommended(
             skills: state.clipboardSkillCatalog,

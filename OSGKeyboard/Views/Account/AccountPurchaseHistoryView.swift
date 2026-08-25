@@ -8,6 +8,10 @@ import OSGKeyboardShared
 import SwiftUI
 
 struct AccountPurchaseHistoryView: View {
+    private enum Layout {
+        static let purchaseRowMinHeight: CGFloat = 64
+    }
+
     @Environment(\.themePalette) private var palette
     @ObservedObject private var config = ProviderConfig.shared
     @ObservedObject var manager: AccountCreditPurchaseManager
@@ -56,7 +60,6 @@ struct AccountPurchaseHistoryView: View {
         .background(palette.background.ignoresSafeArea())
         .navigationTitle("account.purchaseHistory.title")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesTabBarWhenPushed()
         .task {
             await manager.loadPurchaseHistory(accountID: accountID)
         }
@@ -69,6 +72,14 @@ struct AccountPurchaseHistoryView: View {
             ForEach(records) { record in
                 purchaseRow(record)
                     .listRowBackground(palette.surface)
+                    .listRowInsets(
+                        EdgeInsets(
+                            top: 0,
+                            leading: Spacing.md,
+                            bottom: 0,
+                            trailing: Spacing.md
+                        )
+                    )
                     .listRowSeparatorTint(palette.divider)
                     .task {
                         guard record.id == records.last?.id else { return }
@@ -111,8 +122,8 @@ struct AccountPurchaseHistoryView: View {
     private func purchaseRow(
         _ record: AccountCreditPurchaseRecord
     ) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: Spacing.md) {
-            VStack(alignment: .leading, spacing: Spacing.xxs) {
+        HStack(alignment: .center, spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: Spacing.xxs) {
                     Text("+")
                         .font(TypeStyle.bodyEmph)
@@ -121,27 +132,32 @@ struct AccountPurchaseHistoryView: View {
                         .font(TypeStyle.bodyEmph.monospacedDigit())
                         .foregroundStyle(palette.textPrimary)
                     Text("account.storekit.credits")
-                        .font(TypeStyle.caption)
+                        .font(TypeStyle.body)
                         .foregroundStyle(palette.textSecondary)
                 }
                 Text(purchaseDateText(record.purchasedAt))
-                    .font(TypeStyle.caption)
+                    .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textSecondary)
             }
 
             Spacer(minLength: Spacing.xs)
 
-            VStack(alignment: .trailing, spacing: Spacing.xxs) {
+            VStack(alignment: .trailing, spacing: 2) {
                 Text(balanceAfterText(record.balanceAfter))
-                    .font(TypeStyle.caption.monospacedDigit())
+                    .font(TypeStyle.body.monospacedDigit())
                     .foregroundStyle(palette.textSecondary)
                 Text("account.purchaseHistory.status.credited")
-                    .font(TypeStyle.caption.weight(.semibold))
+                    .font(TypeStyle.caption2.weight(.semibold))
                     .foregroundStyle(palette.success)
             }
         }
-        .padding(.vertical, Spacing.xs)
+        .frame(
+            maxWidth: .infinity,
+            minHeight: Layout.purchaseRowMinHeight,
+            alignment: .center
+        )
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("account.purchaseHistory.row.\(record.transactionID)")
     }
 
     private func purchaseDateText(_ date: Date) -> String {

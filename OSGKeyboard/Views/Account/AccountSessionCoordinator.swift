@@ -139,13 +139,21 @@ final class AccountSessionCoordinator: ObservableObject {
             await redeemPendingReferralIfNeeded()
             await refreshAccountData(force: true)
         } catch {
-            await sessionService.clearManagedGateway()
-            await onAccountSignedOut()
-            sessionPhase = .signedOut
             operationErrorKey = errorMessageKey(
                 for: error,
                 fallback: "account.error.restore"
             )
+            if error as? AccountIntegrationError == .unavailable {
+                await sessionService.clearManagedGateway()
+                await onAccountSignedOut()
+                sessionPhase = .signedOut
+            } else {
+                // Keychain protection and transport availability can be
+                // transient during launch. Keep the restoring state and allow
+                // the next foreground activation to retry instead of turning
+                // a retained, valid session into a signed-out session.
+                didAttemptRestore = false
+            }
         }
     }
 

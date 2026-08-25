@@ -179,6 +179,79 @@ final class EnglishTypingTests: XCTestCase {
         XCTAssertEqual(typing.composition.preedit, "h")
     }
 
+    @MainActor
+    func testNewDocumentPresentationRehydratesEnglishContext() {
+        var preceding = "hel"
+        let typing = makeTypingSession()
+        typing.precedingTextProvider = { preceding }
+        typing.followingTextProvider = { "" }
+        typing.enterTypingMode()
+
+        let firstPresentation = typing.beginDocumentPresentation()
+        typing.synchronizeEnglishDocumentContext(
+            caretMoved: true,
+            presentationID: firstPresentation
+        )
+        XCTAssertEqual(typing.composition.preedit.lowercased(), "hel")
+        XCTAssertFalse(typing.composition.candidates.isEmpty)
+
+        typing.endDocumentPresentation()
+        XCTAssertTrue(typing.composition.preedit.isEmpty)
+        XCTAssertTrue(typing.composition.candidates.isEmpty)
+
+        preceding = "wor"
+        let secondPresentation = typing.beginDocumentPresentation()
+        typing.synchronizeEnglishDocumentContext(
+            caretMoved: true,
+            presentationID: firstPresentation
+        )
+        XCTAssertTrue(typing.composition.preedit.isEmpty)
+        XCTAssertTrue(typing.composition.candidates.isEmpty)
+
+        typing.synchronizeEnglishDocumentContext(
+            caretMoved: true,
+            presentationID: secondPresentation
+        )
+        XCTAssertEqual(typing.composition.preedit.lowercased(), "wor")
+        XCTAssertFalse(typing.composition.candidates.isEmpty)
+    }
+
+    @MainActor
+    func testEndingDocumentPresentationClearsLocalEnglishShadow() {
+        var preceding = ""
+        let typing = makeTypingSession()
+        typing.precedingTextProvider = { preceding }
+        typing.followingTextProvider = { "" }
+        typing.enterTypingMode()
+        _ = typing.beginDocumentPresentation()
+
+        _ = typing.handleKey("h")
+        XCTAssertEqual(typing.composition.preedit.lowercased(), "h")
+
+        typing.endDocumentPresentation()
+        preceding = "new"
+        let nextPresentation = typing.beginDocumentPresentation()
+        typing.synchronizeEnglishDocumentContext(
+            caretMoved: true,
+            presentationID: nextPresentation
+        )
+
+        XCTAssertEqual(typing.composition.preedit.lowercased(), "new")
+    }
+
+    @MainActor
+    func testDisablingSuggestionsImmediatelyClearsEnglishCandidates() {
+        let typing = makeTypingSession()
+        typing.enterTypingMode()
+        _ = typing.handleKey("h")
+        XCTAssertFalse(typing.composition.candidates.isEmpty)
+
+        typing.suggestionsEnabled = false
+
+        XCTAssertTrue(typing.composition.preedit.isEmpty)
+        XCTAssertTrue(typing.composition.candidates.isEmpty)
+    }
+
     func testEnglishTypingHotwordsFilterOutChineseTerms() {
         var dictionary = PersonalDictionary()
         _ = dictionary.upsertManual(term: "张三")
@@ -541,6 +614,70 @@ final class EnglishTypingTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testRepeatedRareEnglishCommitBecomesDictionarySuggestion() {
+        let suite = "english.frequent.term.test.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        let frequentStore = FrequentTermStore(defaults: defaults)
+        let typing = makeTypingSession(frequentTermStore: frequentStore)
+        typing.enterTypingMode()
+
+        for _ in 0..<2 {
+            for character in "OpenAI" {
+                _ = typing.handleKey(String(character))
+            }
+            let output = typing.handleSpace()
+            XCTAssertEqual(output.deleteCount, 0)
+        }
+
+        let storedData = defaults.data(forKey: FrequentTermStore.defaultsKey)
+        let storedTerms = storedData.flatMap { try? JSONDecoder().decode([FrequentTerm].self, from: $0) }
+        XCTAssertEqual(storedTerms?.first?.commitCount, 2)
+        let suggestion = frequentStore.suggestions(excludingPersonalTerms: []).first
+        XCTAssertEqual(suggestion?.term, "OpenAI")
+        XCTAssertEqual(suggestion?.commitCount, 2)
+    }
+
+    @MainActor
+    func testCommonEnglishCommitDoesNotBecomeDictionarySuggestion() {
+        let suite = "english.frequent.common.test.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        let frequentStore = FrequentTermStore(defaults: defaults)
+        let typing = makeTypingSession(frequentTermStore: frequentStore)
+        typing.enterTypingMode()
+
+        for _ in 0..<2 {
+            for character in "the" {
+                _ = typing.handleKey(String(character))
+            }
+            _ = typing.handleSpace()
+        }
+
+        XCTAssertTrue(frequentStore.suggestions(excludingPersonalTerms: []).isEmpty)
+    }
+
+    @MainActor
+    func testSecureEnglishCommitDoesNotBecomeDictionarySuggestion() {
+        let suite = "english.frequent.secure.test.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defaults.removePersistentDomain(forName: suite)
+        let frequentStore = FrequentTermStore(defaults: defaults)
+        let typing = makeTypingSession(frequentTermStore: frequentStore)
+        typing.enterTypingMode()
+        typing.suggestionsEnabled = false
+
+        for _ in 0..<2 {
+            for character in "OpenAI" {
+                _ = typing.handleKey(String(character))
+            }
+            _ = typing.handleSpace()
+        }
+
+        XCTAssertTrue(frequentStore.suggestions(excludingPersonalTerms: []).isEmpty)
+    }
+
     func testQWERTYNeighborsIncludeDiagonals() {
         let aroundG = EnglishQWERTYProximity.neighbors(of: "g", includingSelf: true)
         XCTAssertTrue(aroundG.contains("t"))
@@ -570,6 +707,7 @@ final class EnglishTypingTests: XCTestCase {
     @MainActor
     private func makeTypingSession(
         learningStore: EnglishLearningStore? = nil,
+        frequentTermStore: FrequentTermStore? = nil,
         language: TypingInputLanguage = .english
     ) -> TypingSessionController {
         let store = learningStore ?? EnglishLearningStore(
@@ -577,7 +715,10 @@ final class EnglishTypingTests: XCTestCase {
         )
         let typing = TypingSessionController(
             engine: { NoopRimeEngine() },
-            learningStore: store
+            learningStore: store,
+            frequentTermStore: frequentTermStore ?? FrequentTermStore(
+                defaults: UserDefaults(suiteName: "frequent.tests.\(UUID().uuidString)")!
+            )
         )
         typing.suggestionsEnabled = true
         _ = typing.setLanguage(language)

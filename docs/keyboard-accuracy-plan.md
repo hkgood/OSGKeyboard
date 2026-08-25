@@ -194,7 +194,7 @@
 **工程注意（规划级）**
 
 - 宜收敛为网格/行级触摸跟踪，而非继续堆 per-key `Button`
-- 可复用 `RepeatingPressButton` / `CursorDragPad` 的 UIKit 触控经验，但字母键生命周期以 Up 确认为准
+- 可复用 `RepeatingPressButton` 与现有 UIKit 触控跟踪经验，但字母键生命周期以 Up 确认为准
 - 需单列与候选栏、Shift、123 切换的手势边界用例
 
 ---

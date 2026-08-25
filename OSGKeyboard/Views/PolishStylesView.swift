@@ -24,14 +24,14 @@ struct PolishStylesView: View {
 
     private let store = AppGroupStore()
     private let columns = [
-        GridItem(.flexible(), spacing: Spacing.sm),
-        GridItem(.flexible(), spacing: Spacing.sm)
+        GridItem(.flexible(), spacing: CardLayoutMetrics.compactItemSpacing),
+        GridItem(.flexible(), spacing: CardLayoutMetrics.compactItemSpacing)
     ]
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                CardPageContent(spacing: Spacing.xl) {
+                CardPageContent {
                     styleLearningCard
                     packGridSection(
                         title: "polishStyles.builtin.section",
@@ -114,12 +114,12 @@ struct PolishStylesView: View {
 
         return VStack(alignment: .leading, spacing: Spacing.md) {
             HStack(alignment: .top, spacing: Spacing.md) {
-                Image(systemName: "waveform")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(palette.accent)
-                    .frame(width: 42, height: 42)
+                Image(systemName: "brain")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(palette.textPrimary)
+                    .frame(width: 38, height: 38)
                     .background(
-                        palette.accentMuted,
+                        palette.textPrimary.opacity(0.08),
                         in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
                     )
 
@@ -191,13 +191,6 @@ struct PolishStylesView: View {
                     isActionAvailable ? palette.accent : palette.surfaceElevated,
                     in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                        .stroke(
-                            isActionAvailable ? Color.clear : palette.dividerStrong,
-                            lineWidth: 0.5
-                        )
-                )
                 .contentShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
             }
             .buttonStyle(.plain)
@@ -221,7 +214,7 @@ struct PolishStylesView: View {
         packs: [PolishStylePack]
     ) -> some View {
         CardSection(title) {
-            LazyVGrid(columns: columns, spacing: Spacing.sm) {
+            LazyVGrid(columns: columns, spacing: CardLayoutMetrics.compactItemSpacing) {
                 ForEach(packs) { pack in
                     packCard(pack)
                 }
@@ -273,13 +266,6 @@ struct PolishStylesView: View {
         .background(
             isSelected ? palette.accentMuted : palette.surface,
             in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                .stroke(
-                    isSelected ? palette.accent : palette.divider,
-                    lineWidth: isSelected ? 1.5 : 0.5
-                )
         )
         .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
         .contextMenu {

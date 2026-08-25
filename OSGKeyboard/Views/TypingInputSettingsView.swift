@@ -18,23 +18,28 @@ struct TypingInputSettingsView: View {
 
     var body: some View {
         List {
-            Section(AppL10n.string("settings.typingInput.schema.section", language: config.uiLanguage)) {
+            Section {
                 Picker(
-                    AppL10n.string("settings.typingInput.schema.picker", language: config.uiLanguage),
                     selection: $configuration.schema
                 ) {
                     ForEach(TypingInputSchema.allCases) { schema in
                         Text(AppL10n.string(schema.labelKey, language: config.uiLanguage))
+                            .font(TypeStyle.body)
                             .tag(schema)
                     }
+                } label: {
+                    Text(AppL10n.string("settings.typingInput.schema.picker", language: config.uiLanguage))
+                        .font(TypeStyle.body)
                 }
                 .pickerStyle(.inline)
+            } header: {
+                Text(AppL10n.string("settings.typingInput.schema.section", language: config.uiLanguage))
+                    .font(TypeStyle.caption2)
             }
 
             Section {
                 ForEach(PinyinFuzzyPair.allCases) { pair in
                     Toggle(
-                        pair.displayName,
                         isOn: Binding(
                             get: { configuration.fuzzyPairs.contains(pair) },
                             set: { enabled in
@@ -42,23 +47,30 @@ struct TypingInputSettingsView: View {
                                 deployUpdatedSchemas()
                             }
                         )
-                    )
+                    ) {
+                        Text(pair.displayName)
+                            .font(TypeStyle.body)
+                    }
                 }
             } header: {
                 Text(AppL10n.string("settings.typingInput.fuzzy.section", language: config.uiLanguage))
+                    .font(TypeStyle.caption2)
             } footer: {
                 Text(AppL10n.string("settings.typingInput.fuzzy.footer", language: config.uiLanguage))
+                    .font(TypeStyle.caption2)
             }
 
-            Section(AppL10n.string("settings.typingInput.resources.section", language: config.uiLanguage)) {
+            Section {
                 HStack {
                     Text(AppL10n.string("settings.typingInput.resources.status", language: config.uiLanguage))
+                        .font(TypeStyle.body)
                     Spacer()
                     if isDeploying {
                         ProgressView()
                             .controlSize(.small)
                     } else {
                         Text(statusText)
+                            .font(TypeStyle.body)
                             .foregroundStyle(
                                 hasDeploymentError ? palette.danger : palette.textSecondary
                             )
@@ -68,19 +80,26 @@ struct TypingInputSettingsView: View {
                 Button(AppL10n.string("settings.typingInput.resources.redeploy", language: config.uiLanguage)) {
                     deployUpdatedSchemas()
                 }
+                .font(TypeStyle.body)
                 .disabled(isDeploying)
+            } header: {
+                Text(AppL10n.string("settings.typingInput.resources.section", language: config.uiLanguage))
+                    .font(TypeStyle.caption2)
             }
 
             Section {
                 Button(AppL10n.string("settings.typingInput.habits.clear", language: config.uiLanguage)) {
                     showClearHabitsConfirmation = true
                 }
+                .font(TypeStyle.body)
                 .disabled(isDeploying)
                 .foregroundStyle(palette.danger)
             } footer: {
                 Text(AppL10n.string("settings.typingInput.habits.footer", language: config.uiLanguage))
+                    .font(TypeStyle.caption2)
             }
         }
+        .listSectionSpacing(CardLayoutMetrics.sectionSpacing)
         .scrollContentBackground(.hidden)
         .background(palette.background)
         .navigationTitle(AppL10n.string("settings.typingInput.title", language: config.uiLanguage))

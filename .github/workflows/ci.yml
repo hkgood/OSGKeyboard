@@ -63,7 +63,7 @@ jobs:
         run: ./Scripts/generate-xcodeproj.sh
       - name: Run PR test preset
         run: SKIP_GENERATE=1 ./Scripts/run-tests.sh pr
-      - name: Run account and purchase UI regression
+      - name: Run simulator-stable UI regressions
         run: |
           set -euo pipefail
           xcodebuild \
@@ -71,6 +71,8 @@ jobs:
             -scheme OSGKeyboardUITests \
             -destination 'platform=iOS Simulator,name=iPhone 17' \
             -only-testing:OSGKeyboardUITests/AccountCenterUITests \
+            -only-testing:OSGKeyboardUITests/AssistantKeyboardUITests \
+            -only-testing:OSGKeyboardUITests/EditPagerUITests \
             -onlyUsePackageVersionsFromResolvedFile \
             test
       - name: Build Release

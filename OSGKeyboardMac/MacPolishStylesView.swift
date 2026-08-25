@@ -403,12 +403,6 @@ private struct MacPolishStyleCard: View {
             isSelected ? palette.accentMuted : palette.surface,
             in: shape
         )
-        .overlay(
-            shape.stroke(
-                isSelected ? palette.accent : hoverBorder,
-                lineWidth: isSelected ? 1.5 : 0.5
-            )
-        )
         .clipShape(shape)
         .scaleEffect(isHovering ? 1.01 : 1)
         .animation(Motion.quick, value: isHovering)
@@ -420,10 +414,6 @@ private struct MacPolishStyleCard: View {
                 Button(MacL10n.string("mac.delete", language: language), role: .destructive, action: delete)
             }
         }
-    }
-
-    private var hoverBorder: Color {
-        isHovering ? palette.dividerStrong : palette.divider
     }
 }
 

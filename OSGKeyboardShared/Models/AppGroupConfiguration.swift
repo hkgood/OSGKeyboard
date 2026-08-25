@@ -105,6 +105,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var uiLanguage: AppUILanguage
     public var translationTargetLocaleId: String
     public var handednessPreference: HandednessPreference
+    /// Decode-only compatibility field for cursor drag pads removed in 2.0.0.
     public var cursorDragNavigationEnabled: Bool
     /// Typing-grid haptic strength (off / light / strong).
     public var keyboardHapticIntensity: KeyboardHapticIntensity
@@ -300,7 +301,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             ),
             cursorDragNavigationEnabled: {
                 if defaults.object(forKey: Keys.cursorDragNavigationEnabled) == nil {
-                    return true
+                    return false
                 }
                 return defaults.bool(forKey: Keys.cursorDragNavigationEnabled)
             }(),
@@ -594,17 +595,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             return .empty
         }
         do {
-            var dictionary = try JSONDecoder().decode(PersonalDictionary.self, from: data)
-            if dictionary.entries.contains(where: { $0.source == .history }) {
-                for index in dictionary.entries.indices where dictionary.entries[index].source == .history {
-                    dictionary.entries[index].source = .manual
-                }
-                dictionary.version += 1
-                if let migrated = try? JSONEncoder().encode(dictionary) {
-                    defaults.set(migrated, forKey: Keys.personalDictionary)
-                }
-            }
-            return dictionary
+            return try JSONDecoder().decode(PersonalDictionary.self, from: data)
         } catch {
             OSGLog.config.warning("personalDictionary decode failed: \(error.localizedDescription, privacy: .public)")
             return .empty

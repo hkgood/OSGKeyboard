@@ -1,10 +1,11 @@
 // HomeView.swift
 // OSGKeyboard · Main App
 //
-// Home: logo, transient Flow connection status, usage stats, history +
-// dictionary entry card. History/dictionary
-// open via push (system back) rather than bottom-tab destinations.
+// Home: logo, transient Flow connection status, usage stats, account rewards,
+// and dictionary suggestions. History/dictionary/account destinations open
+// via push (system back) rather than bottom-tab destinations.
 
+import OSGKeyboardHostSupport
 import OSGKeyboardShared
 import SwiftUI
 import UIKit
@@ -12,6 +13,7 @@ import UIKit
 private enum HomeRoute: Hashable {
     case history
     case dictionary
+    case account
 }
 
 enum FlowHomePiPStatusDescriptor: Equatable {
@@ -97,22 +99,44 @@ enum FlowHomePiPStatusPolicy {
     }
 }
 
+enum HomeServiceSetupPolicy {
+    static func apiKeyMessageKey(
+        isLocalEngine: Bool,
+        isASRConfigured: Bool
+    ) -> String {
+        if isLocalEngine || isASRConfigured {
+            return "home.setup.polishKeyMissing"
+        }
+        return "home.setup.cloudIncomplete"
+    }
+
+    static func apiKeyDeepLink(
+        isLocalEngine: Bool,
+        isASRConfigured: Bool
+    ) -> SettingsDeepLink {
+        if isLocalEngine || isASRConfigured {
+            return .textPolish
+        }
+        return .speechRecognition
+    }
+}
+
 struct HomeView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @ObservedObject private var config = ProviderConfig.shared
-    @ObservedObject private var speechHistory = SpeechHistoryStore.shared
     @EnvironmentObject private var flowManager: FlowSessionManager
     @State private var micStatus = AppPermissions.micStatus
     @State private var speechStatus = AppPermissions.speechStatus
     @State private var path = NavigationPath()
-    @State private var dictionarySuggestions: [RimeFrequentTerm] = []
-    @State private var pendingDictionarySuggestion: RimeFrequentTerm?
+    @State private var dictionarySuggestions: [FrequentTerm] = []
+    @State private var pendingDictionarySuggestion: FrequentTerm?
 
     private let appGroupStore = AppGroupStore()
-    private let rimeFrequentTermStore = RimeFrequentTermStore()
+    private let dictionaryEntryService = PersonalDictionaryEntryService()
+    private let frequentTermStore = FrequentTermStore()
 
     private var usesWideLayout: Bool {
         horizontalSizeClass == .regular
@@ -128,6 +152,22 @@ struct HomeView: View {
             return !config.isPolishConfigured
         }
         return !config.isConfigured
+    }
+
+    private var apiKeySetupMessageKey: LocalizedStringKey {
+        LocalizedStringKey(
+            HomeServiceSetupPolicy.apiKeyMessageKey(
+                isLocalEngine: config.isLocalEngine,
+                isASRConfigured: config.isASRConfigured
+            )
+        )
+    }
+
+    private var apiKeySettingsDeepLink: SettingsDeepLink {
+        HomeServiceSetupPolicy.apiKeyDeepLink(
+            isLocalEngine: config.isLocalEngine,
+            isASRConfigured: config.isASRConfigured
+        )
     }
 
     private var needsPermissionSetup: Bool {
@@ -188,9 +228,12 @@ struct HomeView: View {
                     HistoryView()
                 case .dictionary:
                     PersonalDictionaryView()
+                case .account:
+                    AccountCenterView()
                 }
             }
         }
+        .navigationStackTabBarVisibility(isRoot: path.isEmpty)
         .onAppear {
             refreshPermissionStatuses()
             refreshDictionarySuggestions()
@@ -211,32 +254,6 @@ struct HomeView: View {
             guard count == 0 else { return }
             refreshDictionarySuggestions()
         }
-        .alert(
-            pendingDictionarySuggestion.map {
-                AppL10n.format("home.card.dictionary.confirm.title", $0.term)
-            } ?? "",
-            isPresented: Binding(
-                get: { pendingDictionarySuggestion != nil },
-                set: { isPresented in
-                    if !isPresented {
-                        pendingDictionarySuggestion = nil
-                    }
-                }
-            ),
-            presenting: pendingDictionarySuggestion
-        ) { suggestion in
-            Button("home.card.dictionary.confirm.add") {
-                addSuggestedTerm(suggestion)
-            }
-            Button("common.cancel", role: .cancel) {}
-        } message: { suggestion in
-            Text(
-                AppL10n.format(
-                    "home.card.dictionary.confirm.message",
-                    suggestion.commitCount
-                )
-            )
-        }
     }
 
     // MARK: - Phone layout
@@ -247,7 +264,6 @@ struct HomeView: View {
             let isCompact = geo.size.height < 700
             let logoTopPadding = isCompact ? Spacing.lg : Spacing.xxl
             let logoBottomPadding = isCompact ? Spacing.lg : Spacing.xxl
-            let extrasBottomPadding = isCompact ? Spacing.sm : Spacing.lg
 
             ZStack(alignment: .top) {
                 sessionHeaderGradient(height: gradientHeight)
@@ -265,14 +281,10 @@ struct HomeView: View {
                         if showsFlowConnectionCard {
                             scrollStatusFooter
                                 .padding(.horizontal, Spacing.lg)
-                                .padding(.bottom, extrasBottomPadding)
+                                .padding(.bottom, CardLayoutMetrics.sectionSpacing)
                         }
 
-                        HomeUsageStatsSection(layout: .stacked, compact: isCompact)
-                            .padding(.horizontal, Spacing.lg)
-                            .padding(.bottom, Spacing.md)
-
-                        homeLibrarySection
+                        homeContentSections(layout: .stacked, compact: isCompact)
                             .padding(.horizontal, Spacing.lg)
                             .padding(.bottom, Spacing.xl)
                     }
@@ -288,6 +300,9 @@ struct HomeView: View {
     private var scrollStatusFooter: some View {
         setupGuidanceCard {
             flowStatusFooter
+            if needsAPIKeySetup {
+                apiKeySetupGuidance
+            }
         }
     }
 
@@ -295,16 +310,14 @@ struct HomeView: View {
 
     private var wideBody: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Spacing.lg) {
+            VStack(alignment: .leading, spacing: CardLayoutMetrics.sectionSpacing) {
                 wideHeroHeader
 
                 if showsFlowConnectionCard {
                     scrollStatusFooter
                 }
 
-                HomeUsageStatsSection(layout: .split)
-
-                homeLibrarySection
+                homeContentSections(layout: .split)
             }
             .padding(.horizontal, WideLayoutMetrics.pageHorizontalInset)
             .padding(.top, Spacing.sm)
@@ -329,47 +342,38 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - History / dictionary cards
+    // MARK: - Usage, account, and dictionary
 
-    /// Two independent cards; each header is an accent icon + uppercase label
-    /// and the body grows with its rows.
-    private var homeLibrarySection: some View {
-        VStack(spacing: Spacing.md) {
-            dictionaryCard
-            historyCard
-        }
-    }
-
-    private var historyCard: some View {
-        let entries = Array(speechHistory.entries.prefix(Self.libraryPreviewLimit))
-        return homeLibraryCard(
-            titleKey: "history.title",
-            systemImage: "clock.arrow.circlepath",
-            route: .history
-        ) {
-            if entries.isEmpty {
-                libraryEmptyLine("home.card.history.empty")
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                        if index > 0 { libraryRowDivider }
-                        HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
-                            Text(entry.text)
-                                .font(TypeStyle.footnote)
-                                .foregroundStyle(palette.textSecondary)
-                                .lineLimit(2)
-                                .multilineTextAlignment(.leading)
-                            Spacer(minLength: Spacing.xs)
-                            Text(Self.previewTimeFormatter.string(from: entry.createdAt))
-                                .font(TypeStyle.caption2)
-                                .foregroundStyle(palette.textTertiary)
-                                .monospacedDigit()
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, Spacing.sm)
-                    }
-                }
+    /// Keep the Home information hierarchy stable on both phone and iPad:
+    /// account rewards → four metrics → calendar → personal dictionary.
+    private func homeContentSections(
+        layout: UsageStatsClusterLayout,
+        compact: Bool = false
+    ) -> some View {
+        VStack(spacing: CardLayoutMetrics.sectionSpacing) {
+            AccountRewardsCard {
+                path.append(HomeRoute.account)
             }
+
+            HomeUsageStatsSection(
+                layout: layout,
+                compact: compact,
+                content: .metrics,
+                onOpenHistory: {
+                    path.append(HomeRoute.history)
+                },
+                onOpenDictionary: {
+                    path.append(HomeRoute.dictionary)
+                }
+            )
+
+            HomeUsageStatsSection(
+                layout: layout,
+                compact: compact,
+                content: .calendar
+            )
+
+            dictionaryCard
         }
     }
 
@@ -381,8 +385,8 @@ struct HomeView: View {
                 HStack(spacing: Spacing.xs) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(palette.accent)
-                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(palette.textPrimary)
+                        .symbolRenderingMode(.monochrome)
                     Text("settings.personalDictionary.title")
                         .font(.system(size: 13, weight: .semibold))
                         .tracking(0.6)
@@ -398,50 +402,71 @@ struct HomeView: View {
             .buttonStyle(.plain)
 
             if dictionarySuggestions.isEmpty {
-                libraryEmptyLine("home.card.dictionary.smart.empty")
+                Text("home.card.dictionary.smart.empty")
+                    .font(TypeStyle.footnote)
+                    .foregroundStyle(palette.textTertiary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity, minHeight: 54, alignment: .center)
             } else {
-                LazyVGrid(
-                    columns: [
-                        GridItem(.adaptive(minimum: 88, maximum: 160), spacing: Spacing.sm)
-                    ],
-                    alignment: .leading,
-                    spacing: Spacing.sm
-                ) {
-                    ForEach(dictionarySuggestions) { suggestion in
-                        Button {
-                            pendingDictionarySuggestion = suggestion
-                        } label: {
-                            Text(suggestion.term)
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(palette.accent)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                                .padding(.horizontal, Spacing.sm)
-                                .frame(maxWidth: .infinity, minHeight: 38)
-                                .background(
-                                    LinearGradient(
-                                        colors: [
-                                            palette.accent.opacity(0.16),
-                                            palette.accent.opacity(0.07)
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    in: Capsule()
-                                )
-                                .overlay {
-                                    Capsule()
-                                        .stroke(palette.accent.opacity(0.22), lineWidth: 0.5)
-                                }
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityHint(
-                            AppL10n.format(
-                                "home.card.dictionary.smart.accessibilityHint",
-                                suggestion.commitCount
+                VStack(spacing: Spacing.sm) {
+                    LazyVGrid(
+                        columns: [
+                            GridItem(
+                                .adaptive(minimum: 88, maximum: 160),
+                                spacing: CardLayoutMetrics.compactItemSpacing
                             )
-                        )
+                        ],
+                        alignment: .leading,
+                        spacing: CardLayoutMetrics.compactItemSpacing
+                    ) {
+                        ForEach(dictionarySuggestions) { suggestion in
+                            Button {
+                                pendingDictionarySuggestion = suggestion
+                            } label: {
+                                Text(suggestion.term)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(palette.textPrimary)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                    .padding(.horizontal, Spacing.sm)
+                                    .frame(maxWidth: .infinity, minHeight: 38)
+                                    .background(
+                                        palette.textPrimary.opacity(0.08),
+                                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .popover(
+                                isPresented: Binding(
+                                    get: {
+                                        pendingDictionarySuggestion?.id == suggestion.id
+                                    },
+                                    set: { isPresented in
+                                        if !isPresented,
+                                           pendingDictionarySuggestion?.id == suggestion.id {
+                                            pendingDictionarySuggestion = nil
+                                        }
+                                    }
+                                ),
+                                attachmentAnchor: .rect(.bounds),
+                                arrowEdge: .bottom
+                            ) {
+                                dictionarySuggestionConfirmation(suggestion)
+                                    .presentationCompactAdaptation(.popover)
+                            }
+                            .accessibilityHint(
+                                AppL10n.format(
+                                    "home.card.dictionary.smart.accessibilityHint",
+                                    suggestion.commitCount
+                                )
+                            )
+                        }
                     }
+
+                    Text("home.card.dictionary.smart.addHint")
+                        .font(TypeStyle.caption2)
+                        .foregroundStyle(palette.textTertiary)
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
             }
         }
@@ -450,55 +475,39 @@ struct HomeView: View {
         .surfaceCard()
     }
 
-    /// Card shell: accent icon + label top-left, chevron trailing, custom body.
-    private func homeLibraryCard<Content: View>(
-        titleKey: LocalizedStringKey,
-        systemImage: String,
-        route: HomeRoute,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        Button {
-            path.append(route)
-        } label: {
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                HStack(spacing: Spacing.xs) {
-                    Image(systemName: systemImage)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(palette.accent)
-                        .symbolRenderingMode(.hierarchical)
-                    Text(titleKey)
-                        .font(.system(size: 13, weight: .semibold))
-                        .tracking(0.6)
-                        .textCase(.uppercase)
-                        .foregroundStyle(palette.textTertiary)
-                    Spacer(minLength: Spacing.xs)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(palette.textTertiary)
-                }
-                content()
-            }
-            .padding(Spacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .surfaceCard()
-        .accessibilityElement(children: .combine)
-    }
+    private func dictionarySuggestionConfirmation(_ suggestion: FrequentTerm) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text(AppL10n.format("home.card.dictionary.confirm.title", suggestion.term))
+                .font(TypeStyle.headline)
+                .foregroundStyle(palette.textPrimary)
 
-    private var libraryRowDivider: some View {
-        Rectangle()
-            .fill(palette.divider)
-            .frame(height: 0.5)
-    }
-
-    private func libraryEmptyLine(_ key: LocalizedStringKey) -> some View {
-        Text(key)
+            Text(
+                AppL10n.format(
+                    "home.card.dictionary.confirm.message",
+                    suggestion.commitCount
+                )
+            )
             .font(TypeStyle.footnote)
-            .foregroundStyle(palette.textTertiary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, Spacing.xs)
+            .foregroundStyle(palette.textSecondary)
+
+            HStack(spacing: Spacing.sm) {
+                Button("common.cancel") {
+                    pendingDictionarySuggestion = nil
+                }
+                .buttonStyle(.bordered)
+
+                Spacer(minLength: 0)
+
+                Button("home.card.dictionary.confirm.add") {
+                    addSuggestedTerm(suggestion)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(palette.accent)
+            }
+        }
+        .padding(Spacing.lg)
+        .frame(width: 300)
+        .background(palette.surface)
     }
 
     private func refreshPermissionStatuses() {
@@ -508,32 +517,29 @@ struct HomeView: View {
 
     private func refreshDictionarySuggestions() {
         let dictionary = appGroupStore.personalDictionary
-        let suggestions = rimeFrequentTermStore.suggestions(
+        let suggestions = frequentTermStore.suggestions(
             excludingPersonalTerms: Set(dictionary.entries.map(\.term)),
             limit: Self.dictionarySuggestionLimit
         )
-        dictionarySuggestions = suggestions.count >= Self.minimumDictionarySuggestionCount
-            ? suggestions
+        let visibleSuggestions = Array(suggestions.prefix(Self.dictionarySuggestionLimit))
+        dictionarySuggestions = visibleSuggestions.count >= Self.minimumDictionarySuggestionCount
+            ? visibleSuggestions
             : []
     }
 
-    private func addSuggestedTerm(_ suggestion: RimeFrequentTerm) {
-        var dictionary = appGroupStore.personalDictionary
-        guard let saved = dictionary.upsertManual(term: suggestion.term),
-              let index = dictionary.entries.firstIndex(where: { $0.id == saved.id }) else {
+    private func addSuggestedTerm(_ suggestion: FrequentTerm) {
+        guard let saved = dictionaryEntryService.saveEntry(
+            term: suggestion.term,
+            source: .history,
+            minimumUsageCount: suggestion.commitCount
+        ) else {
             return
         }
-        dictionary.entries[index].usageCount = max(
-            dictionary.entries[index].usageCount,
-            suggestion.commitCount
-        )
-        dictionary.version += 1
-        appGroupStore.setPersonalDictionary(dictionary)
         pendingDictionarySuggestion = nil
         refreshDictionarySuggestions()
 
         Task {
-            try? await PersonalDictionaryCloudSync.shared.pushLocalIfEnabled(dictionary)
+            await dictionaryEntryService.finishSaving(saved)
         }
     }
 
@@ -546,6 +552,11 @@ struct HomeView: View {
         } else {
             AppPermissions.openSystemSettings()
         }
+    }
+
+    private func openSettings(_ deepLink: SettingsDeepLink) {
+        SettingsDeepLink.setPending(deepLink)
+        NotificationCenter.default.post(name: .osgOpenSettingsDeepLink, object: nil)
     }
 
     // MARK: - Top gradient
@@ -651,6 +662,8 @@ struct HomeView: View {
                 .buttonStyle(.plain)
                 .padding(.leading, Spacing.xs)
             } else if needsAPIKeySetup {
+                // The explanatory copy and both setup paths sit below this
+                // compact status row so they remain readable on narrow phones.
                 EmptyView()
             } else if canRetryPiP {
                 Button {
@@ -701,6 +714,51 @@ struct HomeView: View {
         .animation(Motion.soft, value: flowManager.isActive)
     }
 
+    private var apiKeySetupGuidance: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text(apiKeySetupMessageKey)
+                .font(TypeStyle.footnote)
+                .foregroundStyle(palette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("home.setup.credits.alternative")
+                .font(TypeStyle.caption2)
+                .foregroundStyle(palette.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: Spacing.sm) {
+                Button {
+                    openSettings(apiKeySettingsDeepLink)
+                } label: {
+                    Label("home.setup.byok.configure", systemImage: "key")
+                        .foregroundStyle(palette.textPrimary)
+                        .padding(.horizontal, Spacing.sm)
+                        .frame(minHeight: 34)
+                        .background(
+                            palette.surfaceElevated,
+                            in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    openSettings(.aiService)
+                } label: {
+                    Label("home.setup.credits.open", systemImage: "sparkles")
+                        .foregroundStyle(palette.textOnAccent)
+                        .padding(.horizontal, Spacing.sm)
+                        .frame(minHeight: 34)
+                        .background(
+                            palette.accent,
+                            in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+            .font(TypeStyle.body)
+        }
+    }
+
     private func setupGuidanceCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             content()
@@ -708,10 +766,6 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.md)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-                .stroke(palette.divider, lineWidth: 0.5)
-        )
     }
 
     private var flowStatusColor: Color {
@@ -750,15 +804,6 @@ struct HomeView: View {
         }
     }
 
-    /// Rows shown inside the history / dictionary preview cards.
-    private static let libraryPreviewLimit = 3
     private static let minimumDictionarySuggestionCount = 3
-    private static let dictionarySuggestionLimit = 5
-
-    private static let previewTimeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
-        return formatter
-    }()
+    private static let dictionarySuggestionLimit = 6
 }

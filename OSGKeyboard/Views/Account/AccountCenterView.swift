@@ -26,7 +26,6 @@ struct AccountCenterView: View {
         }
         .navigationTitle("account.title")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesTabBarWhenPushed()
         .task(id: coordinator.accountID) {
             guard let accountID = coordinator.accountID else {
                 coordinator.creditPurchases.reset()
@@ -115,11 +114,6 @@ struct AccountCenterView: View {
 
                     AccountAppleAuthorizationButton(purpose: .signIn)
                         .disabled(coordinator.operation != nil)
-
-                    if coordinator.operation == .signingIn {
-                        ProgressView("account.signIn.loading")
-                            .tint(palette.accent)
-                    }
 
                     if coordinator.pendingReferralCode != nil {
                         Label("account.referral.pendingAfterSignIn", systemImage: "link")
@@ -273,7 +267,6 @@ struct AccountCenterView: View {
         }
         .padding(Spacing.lg)
         .background(palette.surface, in: shape)
-        .overlay(shape.stroke(palette.divider, lineWidth: 0.5))
         .accessibilityIdentifier("account.summary")
     }
 
@@ -954,9 +947,12 @@ private struct AccountActionRow: View {
     let showsProgress: Bool
 
     var body: some View {
-        HStack(spacing: Spacing.sm) {
-            Label(titleKey, systemImage: systemImage)
-                .font(.body)
+        HStack(spacing: Spacing.xs) {
+            Image(systemName: systemImage)
+                .font(.system(size: 16, weight: .regular))
+                .frame(width: 20)
+            Text(titleKey)
+                .font(TypeStyle.body)
             Spacer(minLength: Spacing.xs)
             if showsProgress {
                 ProgressView()

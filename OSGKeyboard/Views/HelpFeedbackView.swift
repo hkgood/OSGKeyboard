@@ -31,6 +31,5 @@ struct HelpFeedbackView: View {
         .background(palette.background.ignoresSafeArea())
         .navigationTitle("settings.link.support")
         .navigationBarTitleDisplayMode(.inline)
-        .hidesTabBarWhenPushed()
     }
 }

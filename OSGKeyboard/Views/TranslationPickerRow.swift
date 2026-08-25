@@ -38,17 +38,13 @@ struct TranslationPickerRow: View {
                     .foregroundStyle(palette.textPrimary)
                 Spacer()
                 Menu {
-                    ForEach(TranslationLanguageCatalog.all) { language in
-                        Button {
-                            apply(language)
-                        } label: {
-                            if currentSelectionId == language.id {
-                                Label(displayLabel(for: language), systemImage: "checkmark")
-                            } else {
-                                Text(displayLabel(for: language))
-                            }
+                    Picker("", selection: translationSelection) {
+                        ForEach(TranslationLanguageCatalog.all) { language in
+                            Text(displayLabel(for: language))
+                                .tag(language.id)
                         }
                     }
+                    .labelsHidden()
                 } label: {
                     HStack(spacing: 6) {
                         Text(currentLabel)
@@ -77,6 +73,15 @@ struct TranslationPickerRow: View {
 
     private var currentIsOff: Bool {
         TranslationLanguageCatalog.isOff(currentSelectionId)
+    }
+
+    private var translationSelection: Binding<String> {
+        Binding(
+            get: { currentSelectionId },
+            set: { selectionID in
+                apply(TranslationLanguageCatalog.resolve(selectionID))
+            }
+        )
     }
 
     private func displayLabel(for language: TranslationLanguage) -> String {

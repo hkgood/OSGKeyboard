@@ -152,11 +152,10 @@
 "keyboard.redoA11y" = "重做";
 "keyboard.copyA11y" = "拷贝";
 "keyboard.cutA11y" = "剪切";
-"keyboard.cursorDrag.hint" = "按住并拖动以移动光标";
-"keyboard.cursorDrag.centerHint" = "拖动移动光标";
 "keyboard.nextKeyboardA11y" = "切换键盘";
 "keyboard.nextKeyboardA11yHint" = "轻点切换到下一个键盘；长按查看全部键盘。";
 "keyboard.typing.setupA11yHint" = "打开 OSGKeyboard 完成输入法初始化。";
+"keyboard.typing.preparingA11y" = "正在准备中文输入";
 
 /* Flow session (keyboard) */
 "keyboard.flow.sessionInactive" = "语音会话未启动";
@@ -211,6 +210,7 @@
 "keyboard.clipboard.guide.cta" = "去设置开启";
 "keyboard.clipboard.panel.title" = "剪贴板";
 "keyboard.clipboard.panel.empty" = "暂无历史记录";
+"keyboard.clipboard.panel.fullAccessHint" = "「允许完全访问」已关闭，新复制内容将暂停采集，已有历史仍可使用。";
 "keyboard.clipboard.panel.delete" = "删除";
 "keyboard.clipboard.panel.close" = "关闭剪贴板";
 "keyboard.clipboard.panel.closeHint" = "返回键盘输入界面。";
@@ -319,9 +319,9 @@
 "keyboard.ai.error.requestTimeout" = "AI 回答超时，请重试";
 "keyboard.ai.error.requestFailed" = "AI 回答失败，请重试";
 "keyboard.ai.error.clipboardUnavailable" = "剪贴板建议已过期，请重新复制文本";
-"keyboard.ai.skill.reply" = "原语言回复";
+"keyboard.ai.skill.reply" = "回复";
 "keyboard.ai.skill.playfulReply" = "俏皮回复";
-"keyboard.ai.skill.replyInSourceLanguage" = "原语言回复";
+"keyboard.ai.skill.replyInSourceLanguage" = "回复";
 "keyboard.ai.skill.summarize" = "总结要点";
 "keyboard.ai.skill.openLink" = "打开";
 "keyboard.ai.skill.summarizeWebPage" = "总结网页";

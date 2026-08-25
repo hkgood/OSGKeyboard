@@ -201,6 +201,12 @@ struct MainAppRoot: View {
                 return
             }
             refreshOfficialSkillCatalog(reason: "scenePhase.active")
+            Task {
+                // A protected Keychain can be temporarily unavailable during
+                // launch. The coordinator no-ops after a terminal restore, so
+                // this only retries a previously interrupted attempt.
+                await accountSession.restoreIfNeeded()
+            }
             if config.hasCompletedOnboarding {
                 activateForegroundServices(reason: "scenePhase.active")
                 AIHintRefreshService.refreshIfNeeded(reason: "scenePhase.active")

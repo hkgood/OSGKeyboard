@@ -7,14 +7,14 @@
 import Foundation
 
 public enum TypingHabitStore {
-    /// Clears English boosts and Chinese Rime user dictionaries.
+    /// Clears English boosts, cross-language frequent terms, and Rime user dictionaries.
     /// Does not touch PersonalDictionary / osg_personal.
     public static func clearAll(
         englishStore: EnglishLearningStore = EnglishLearningStore(),
-        rimeFrequentTermStore: RimeFrequentTermStore = RimeFrequentTermStore()
+        frequentTermStore: FrequentTermStore = FrequentTermStore()
     ) async throws {
         englishStore.clear()
-        rimeFrequentTermStore.clear()
+        frequentTermStore.clear()
         try await RimeResourceInstaller.shared.clearUserDictionary()
     }
 }

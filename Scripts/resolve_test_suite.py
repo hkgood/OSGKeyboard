@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -25,6 +26,12 @@ TEST_ROOTS = [
 ]
 SHARED_TEST_ROOT = ROOT / "Tests"
 SHARED_TEST_TARGETS = ["OSGKeyboardTests", "OSGKeyboardMacTests"]
+XCTEST_CLASS_PATTERN = re.compile(
+    r"^[ \t]*(?:(?:@\w+(?:\([^)]*\))?)[ \t]+)*"
+    r"(?:final[ \t]+)?class[ \t]+([A-Za-z_]\w*)"
+    r"[ \t]*:[ \t]*XCTestCase\b",
+    re.MULTILINE,
+)
 
 
 def load_manifest() -> dict:
@@ -77,6 +84,11 @@ def collect_tests(manifest: dict, group_ids: list[str]) -> list[str]:
     return tests
 
 
+def discover_xctest_classes(path: Path) -> list[str]:
+    """Return every XCTestCase class declared in a Swift test source file."""
+    return XCTEST_CLASS_PATTERN.findall(path.read_text(encoding="utf-8"))
+
+
 def discover_on_disk_test_classes() -> dict[str, Path]:
     """Map Target/ClassName -> swift path for *Tests.swift files (exclude helpers)."""
     found: dict[str, Path] = {}
@@ -86,14 +98,15 @@ def discover_on_disk_test_classes() -> dict[str, Path]:
         target = root.name
         for path in sorted(root.glob("*Tests.swift")):
             # Skip non-XCTest helpers that happen to end with Tests (none today).
-            class_name = path.stem
-            test_id = f"{target}/{class_name}"
-            found[test_id] = path
+            for class_name in discover_xctest_classes(path):
+                test_id = f"{target}/{class_name}"
+                found[test_id] = path
     if SHARED_TEST_ROOT.is_dir():
         for path in sorted(SHARED_TEST_ROOT.glob("*Tests.swift")):
-            for target in SHARED_TEST_TARGETS:
-                test_id = f"{target}/{path.stem}"
-                found[test_id] = path
+            for class_name in discover_xctest_classes(path):
+                for target in SHARED_TEST_TARGETS:
+                    test_id = f"{target}/{class_name}"
+                    found[test_id] = path
     return found
 
 
