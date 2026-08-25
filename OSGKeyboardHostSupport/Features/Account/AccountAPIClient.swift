@@ -3,6 +3,7 @@
 //
 // The single HTTP exit for account, auth, and integrity traffic.
 
+import CryptoKit
 import Foundation
 #if canImport(OSGKeyboardShared)
 import OSGKeyboardShared
@@ -120,6 +121,7 @@ public actor AccountAPIClient {
         )
         let session = try decode(APIDataEnvelope<AccountSession>.self, from: data).data
         try await replaceSession(with: session)
+        try? await sessionVault.clearRefreshTransaction()
         return session
     }
 
@@ -402,7 +404,9 @@ public actor AccountAPIClient {
     }
 
     private func refreshSession(afterUnauthorizedAccessToken failedToken: String) async throws -> AccountSession {
-        guard let current = try await loadSessionIfNeeded() else {
+        // Refresh always re-reads Keychain so another client instance cannot
+        // rotate a stale in-memory session with a new operation identifier.
+        guard let current = try await reloadSessionFromVault() else {
             throw AccountAPIError.sessionUnavailable
         }
         if current.accessToken != failedToken {
@@ -412,11 +416,22 @@ public actor AccountAPIClient {
             return try await finishRefresh(refreshOperation)
         }
 
+        let transaction: AccountRefreshTransaction
+        do {
+            transaction = try await sessionVault.beginRefreshTransaction(
+                refreshTokenDigest: Self.refreshTokenDigest(current.refreshToken)
+            )
+        } catch {
+            throw AccountAPIError.secureStorage
+        }
         let operation = RefreshOperation(
-            id: UUID(),
+            id: transaction.operationId,
             failedAccessToken: current.accessToken,
             task: Task {
-                try await self.requestRefresh(using: current.refreshToken)
+                try await self.requestRefresh(
+                    using: current.refreshToken,
+                    operationId: transaction.operationId
+                )
             }
         )
         refreshOperation = operation
@@ -426,7 +441,7 @@ public actor AccountAPIClient {
     private func finishRefresh(_ operation: RefreshOperation) async throws -> AccountSession {
         do {
             let replacement = try await operation.task.value
-            guard let current = try await loadSessionIfNeeded() else {
+            guard let current = try await reloadSessionFromVault() else {
                 if refreshOperation?.id == operation.id {
                     refreshOperation = nil
                 }
@@ -447,7 +462,7 @@ public actor AccountAPIClient {
             if refreshOperation?.id == operation.id {
                 refreshOperation = nil
             }
-            if let current = try? await loadSessionIfNeeded(),
+            if let current = try? await reloadSessionFromVault(),
                current.accessToken != operation.failedAccessToken {
                 return current
             }
@@ -460,10 +475,18 @@ public actor AccountAPIClient {
         }
     }
 
-    private func requestRefresh(using refreshToken: String) async throws -> AccountSession {
+    private func requestRefresh(
+        using refreshToken: String,
+        operationId: UUID
+    ) async throws -> AccountSession {
         let request = try makeRequest(
             endpoint: .refresh,
-            body: try encode(RefreshSessionRequest(refreshToken: refreshToken)),
+            body: try encode(
+                RefreshSessionRequest(
+                    refreshToken: refreshToken,
+                    refreshOperationId: operationId
+                )
+            ),
             accessToken: nil
         )
         let response = try await send(request)
@@ -494,15 +517,23 @@ public actor AccountAPIClient {
         }
     }
 
+    private func reloadSessionFromVault() async throws -> AccountSession? {
+        do {
+            let session = try await sessionVault.loadSession()
+            cachedSession = session
+            didLoadSession = true
+            return session
+        } catch {
+            throw AccountAPIError.secureStorage
+        }
+    }
+
     private func replaceSession(with session: AccountSession) async throws {
         do {
             try await sessionVault.saveSession(session)
             cachedSession = session
             didLoadSession = true
         } catch {
-            cachedSession = nil
-            didLoadSession = true
-            try? await sessionVault.clearSession()
             throw AccountAPIError.secureStorage
         }
     }
@@ -510,9 +541,18 @@ public actor AccountAPIClient {
     private func clearSession() async throws {
         cachedSession = nil
         didLoadSession = true
+        var storageFailed = false
         do {
             try await sessionVault.clearSession()
         } catch {
+            storageFailed = true
+        }
+        do {
+            try await sessionVault.clearRefreshTransaction()
+        } catch {
+            storageFailed = true
+        }
+        if storageFailed {
             throw AccountAPIError.secureStorage
         }
     }
@@ -539,6 +579,12 @@ public actor AccountAPIClient {
 
     private func removeInvalidationContinuation(id: UUID) {
         invalidationContinuations[id] = nil
+    }
+
+    private static func refreshTokenDigest(_ refreshToken: String) -> String {
+        SHA256.hash(data: Data(refreshToken.utf8))
+            .map { String(format: "%02x", $0) }
+            .joined()
     }
 
     private func makeRequest(

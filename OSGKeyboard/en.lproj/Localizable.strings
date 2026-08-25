@@ -830,7 +830,7 @@
 "account.loading.session" = "Checking account status…";
 "account.loading.center" = "Loading account…";
 "account.signedOut.title" = "Your OSG account";
-"account.signedOut.body" = "Sign in to use managed credits and referrals.";
+"account.signedOut.body" = "Register and invite friends to earn credits.";
 "account.signedOut.localUnaffected" = "On-device features and your own API keys work without an account.";
 "home.accountRewards.signedOut.title" = "Sign in for free credits";
 "home.accountRewards.signedOut.summary" = "Eligible new users receive 1,000 credits; after an invited friend completes qualifying usage, you both receive 1,000 credits.";

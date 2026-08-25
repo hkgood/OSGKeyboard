@@ -151,6 +151,9 @@ struct MainAppRoot: View {
         }
         .task {
             await accountSession.restoreIfNeeded()
+            if scenePhase == .active {
+                await accountSession.validateAppleCredentialState()
+            }
             config.reloadFromPersistedStorage()
         }
         .onReceive(NotificationCenter.default.publisher(for: .settingsDidSyncFromCloud)) { _ in
@@ -215,6 +218,7 @@ struct MainAppRoot: View {
                 }
             }
             Task {
+                await accountSession.validateAppleCredentialState()
                 await AppCloudSync.shared.pullAllIfEnabled()
             }
         }

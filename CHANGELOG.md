@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Conversational skill replies**: make non-business replies sound like an ordinary person talking with friends or colleagues, allow one fitting emoji when emotion clearly calls for it, keep business replies naturally professional, and apply the active user-owned learned style only as a bounded wording-and-rhythm layer. / **口语化技能回复**：非商务回复采用普通人与朋友、好友或同事交谈的自然口吻，情绪明确时可合理使用一个表情；商务回复保持自然专业，当前用户自有的学习风格仅作为受限的用词与节奏层应用。
 
 ### Fixed
+- **Durable account sessions**: persist refresh operation identifiers before network rotation, recover safely after crashes or Keychain write failures, and sign out when Apple reports revoked credentials. / **可靠账号会话**：在网络轮换前持久化刷新操作标识，在崩溃或 Keychain 写入失败后安全恢复，并在 Apple 凭据被撤销时退出登录。
 - **Personal dictionary aliases**: generate common speech-recognition mistakes for Home term suggestions through the same concurrency-safe save path used by manual entries. / **个性词库易错词**：首页推荐词现在与手动词条共用并发安全的保存流程，并自动生成常见语音误识别写法。
 - **Home service setup guidance**: explain whether user-owned API keys are missing, link directly to the relevant provider settings, and offer OSG credits as the no-key alternative. / **首页服务配置引导**：明确说明缺少哪类自备 API Key，直接跳转到对应服务商设置，并提供无需填写 Key 的 OSG 积分方案。
 - **Live keyboard configuration guidance**: apply speech-language changes to an already open keyboard and explain when clipboard capture is paused because Full Access is off. / **键盘实时配置引导**：识别语言变更会同步到已打开的键盘，并在“允许完全访问”关闭导致剪贴板采集暂停时给出说明。

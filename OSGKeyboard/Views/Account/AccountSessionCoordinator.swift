@@ -4,6 +4,7 @@
 // Main-actor state machine for optional account features. Local and BYOK
 // features never consult this coordinator and remain available when signed out.
 
+import AuthenticationServices
 import Combine
 import Foundation
 import OSGKeyboardShared
@@ -58,6 +59,7 @@ final class AccountSessionCoordinator: ObservableObject {
     private var accountRefreshTask: Task<Void, Never>?
     private var accountRefreshRequestID: UUID?
     private var sessionEventsTask: Task<Void, Never>?
+    private var appleCredentialRevocationCancellable: AnyCancellable?
 
     init(
         dependencies: AccountDependencies,
@@ -100,6 +102,13 @@ final class AccountSessionCoordinator: ObservableObject {
                 await self?.handleSessionEvent(event)
             }
         }
+        appleCredentialRevocationCancellable = NotificationCenter.default
+            .publisher(for: ASAuthorizationAppleIDProvider.credentialRevokedNotification)
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    await self?.handleAppleCredentialRevocation()
+                }
+            }
     }
 
     deinit {
@@ -155,6 +164,14 @@ final class AccountSessionCoordinator: ObservableObject {
                 didAttemptRestore = false
             }
         }
+    }
+
+    func validateAppleCredentialState() async {
+        guard isSignedIn,
+              await sessionService.appleCredentialState() == .revoked else {
+            return
+        }
+        await handleAppleCredentialRevocation()
     }
 
     @discardableResult
@@ -410,16 +427,26 @@ final class AccountSessionCoordinator: ObservableObject {
     private func handleSessionEvent(_ event: AccountSessionEvent) async {
         switch event {
         case .expired:
-            guard isSignedIn else { return }
-            await sessionService.clearManagedGateway()
-            await onAccountSignedOut()
-            creditPurchases.endSession()
-            clearAccountRefreshState()
-            referralProfile.endSession()
-            sessionPhase = .signedOut
-            snapshotPhase = .idle
-            operationErrorKey = "account.error.sessionExpired"
+            await transitionToExpiredSession()
         }
+    }
+
+    private func handleAppleCredentialRevocation() async {
+        guard isSignedIn else { return }
+        try? await sessionService.signOut()
+        await transitionToExpiredSession()
+    }
+
+    private func transitionToExpiredSession() async {
+        guard isSignedIn else { return }
+        await sessionService.clearManagedGateway()
+        await onAccountSignedOut()
+        creditPurchases.endSession()
+        clearAccountRefreshState()
+        referralProfile.endSession()
+        sessionPhase = .signedOut
+        snapshotPhase = .idle
+        operationErrorKey = "account.error.sessionExpired"
     }
 
     private func redeemPendingReferralIfNeeded() async {

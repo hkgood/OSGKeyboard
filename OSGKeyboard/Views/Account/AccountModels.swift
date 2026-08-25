@@ -245,18 +245,27 @@ struct AppleAuthorizationPayload: Equatable, Sendable {
     let authorizationCode: String
     let nonce: String
     let displayName: String?
+    let userIdentifier: String?
 
     init(
         identityToken: String,
         authorizationCode: String,
         nonce: String,
-        displayName: String? = nil
+        displayName: String? = nil,
+        userIdentifier: String? = nil
     ) {
         self.identityToken = identityToken
         self.authorizationCode = authorizationCode
         self.nonce = nonce
         self.displayName = displayName
+        self.userIdentifier = userIdentifier
     }
+}
+
+enum AccountAppleCredentialState: Equatable, Sendable {
+    case authorized
+    case revoked
+    case unknown
 }
 
 protocol AccountSessionServicing: Sendable {
@@ -264,6 +273,7 @@ protocol AccountSessionServicing: Sendable {
     func signIn(with payload: AppleAuthorizationPayload) async throws -> AccountSession
     func signOut() async throws
     func deleteAccount(with payload: AppleAuthorizationPayload) async throws
+    func appleCredentialState() async -> AccountAppleCredentialState
     func prepareManagedGateway() async throws
     func clearManagedGateway() async
 }
@@ -277,6 +287,10 @@ protocol AccountSessionEventSourcing: Sendable {
 }
 
 extension AccountSessionServicing {
+    func appleCredentialState() async -> AccountAppleCredentialState {
+        .unknown
+    }
+
     func prepareManagedGateway() async throws {}
     func clearManagedGateway() async {}
 }
