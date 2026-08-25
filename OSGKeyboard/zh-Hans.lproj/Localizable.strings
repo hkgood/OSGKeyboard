@@ -827,7 +827,7 @@
 "account.loading.session" = "正在检查账号状态…";
 "account.loading.center" = "正在加载账号…";
 "account.signedOut.title" = "OSG 账号";
-"account.signedOut.body" = "登录后可使用托管积分与邀请功能。";
+"account.signedOut.body" = "注册和邀请好友，都可获赠积分";
 "account.signedOut.localUnaffected" = "本地功能与自有 API Key 无需账号也可继续使用。";
 "account.signIn.apple" = "通过 Apple 登录";
 "account.signIn.hint" = "创建或打开可选的 OSG 账号。";

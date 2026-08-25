@@ -40,10 +40,13 @@ public struct HostPrivateAccountKeychainDescriptor: Equatable, Sendable {
 
 public actor HostPrivateAccountKeychain:
     AccountSessionVault,
+    AppleUserIdentifierStoring,
     AppAttestKeyStateStoring,
     OOBEInstallationIDStoring {
     private enum Account {
         static let session = "account.session"
+        static let refreshTransaction = "account.refresh-transaction"
+        static let appleUserIdentifier = "account.apple-user-identifier"
         static let appAttestKeyState = "integrity.app-attest-key-state"
         static let oobeInstallationID = "oobe.installation-id"
     }
@@ -68,6 +71,39 @@ public actor HostPrivateAccountKeychain:
 
     public func clearSession() async throws {
         try delete(account: Account.session)
+    }
+
+    public func beginRefreshTransaction(
+        refreshTokenDigest: String
+    ) async throws -> AccountRefreshTransaction {
+        if let existing = try read(
+            AccountRefreshTransaction.self,
+            account: Account.refreshTransaction
+        ), existing.refreshTokenDigest == refreshTokenDigest {
+            return existing
+        }
+        let transaction = AccountRefreshTransaction(
+            refreshTokenDigest: refreshTokenDigest,
+            operationId: UUID()
+        )
+        try write(transaction, account: Account.refreshTransaction)
+        return transaction
+    }
+
+    public func clearRefreshTransaction() async throws {
+        try delete(account: Account.refreshTransaction)
+    }
+
+    public func loadAppleUserIdentifier() async throws -> String? {
+        try read(String.self, account: Account.appleUserIdentifier)
+    }
+
+    public func saveAppleUserIdentifier(_ userIdentifier: String) async throws {
+        try write(userIdentifier, account: Account.appleUserIdentifier)
+    }
+
+    public func clearAppleUserIdentifier() async throws {
+        try delete(account: Account.appleUserIdentifier)
     }
 
     public func loadAppAttestKeyState() async throws -> AppAttestKeyState? {

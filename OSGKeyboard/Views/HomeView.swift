@@ -101,6 +101,7 @@ struct HomeView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.colorScheme) private var colorScheme
 
     @ObservedObject private var config = ProviderConfig.shared
     @ObservedObject private var speechHistory = SpeechHistoryStore.shared
@@ -579,15 +580,17 @@ struct HomeView: View {
 
     // MARK: - Header
 
-    // logo 尺寸保持 144:41 比例；小屏进一步缩小，给下方内容让空间。
+    // Logo 保持 144:41 比例，并使用随系统深浅色切换的黑白单色。
     private func logoHeader(compact: Bool) -> some View {
-        let logoWidth: CGFloat = compact ? 104 : 124
+        let logoWidth: CGFloat = compact ? 88 : 108
         let logoHeight = logoWidth * (41.0 / 144.0)
         return VStack(spacing: Spacing.xxl) {
             Image("osglogo")
                 .resizable()
+                .renderingMode(.template)
                 .scaledToFit()
                 .frame(width: logoWidth, height: logoHeight)
+                .foregroundStyle(colorScheme == .dark ? Color.white : Color.black)
                 .accessibilityHidden(true)
         }
         .frame(maxWidth: .infinity)

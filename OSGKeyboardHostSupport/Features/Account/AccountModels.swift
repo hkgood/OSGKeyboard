@@ -218,16 +218,36 @@ public struct AppAttestKeyState: Codable, Equatable, Sendable {
     }
 }
 
+public struct AccountRefreshTransaction: Codable, Equatable, Sendable {
+    public let refreshTokenDigest: String
+    public let operationId: UUID
+
+    public init(refreshTokenDigest: String, operationId: UUID) {
+        self.refreshTokenDigest = refreshTokenDigest
+        self.operationId = operationId
+    }
+}
+
 public protocol AccountSessionVault: Sendable {
     func loadSession() async throws -> AccountSession?
     func saveSession(_ session: AccountSession) async throws
     func clearSession() async throws
+    func beginRefreshTransaction(
+        refreshTokenDigest: String
+    ) async throws -> AccountRefreshTransaction
+    func clearRefreshTransaction() async throws
 }
 
 public protocol AppAttestKeyStateStoring: Sendable {
     func loadAppAttestKeyState() async throws -> AppAttestKeyState?
     func saveAppAttestKeyState(_ state: AppAttestKeyState) async throws
     func clearAppAttestKeyState() async throws
+}
+
+public protocol AppleUserIdentifierStoring: Sendable {
+    func loadAppleUserIdentifier() async throws -> String?
+    func saveAppleUserIdentifier(_ userIdentifier: String) async throws
+    func clearAppleUserIdentifier() async throws
 }
 
 public protocol OOBEInstallationIDStoring: Sendable {
@@ -305,6 +325,7 @@ struct LegacyAPIErrorEnvelope: Codable, Sendable {
 
 struct RefreshSessionRequest: Codable, Sendable {
     let refreshToken: String
+    let refreshOperationId: UUID
 }
 
 struct DeleteAccountRequest: Codable, Sendable {

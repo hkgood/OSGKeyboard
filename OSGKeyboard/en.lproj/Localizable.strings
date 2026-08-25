@@ -828,7 +828,7 @@
 "account.loading.session" = "Checking account status…";
 "account.loading.center" = "Loading account…";
 "account.signedOut.title" = "Your OSG account";
-"account.signedOut.body" = "Sign in to use managed credits and referrals.";
+"account.signedOut.body" = "Register and invite friends to earn credits.";
 "account.signedOut.localUnaffected" = "On-device features and your own API keys work without an account.";
 "account.signIn.apple" = "Sign in with Apple";
 "account.signIn.hint" = "Creates or opens your optional OSG account.";

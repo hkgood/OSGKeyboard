@@ -462,6 +462,36 @@ final class AccountCenterViewModelTests: XCTestCase {
         XCTAssertEqual(managedGatewayClearCount, 1)
     }
 
+    @MainActor
+    func testRevokedAppleCredentialClearsSignedInAccountState() async {
+        let account = AccountSession(
+            accountID: UUID(),
+            createdAtEpochSeconds: 1_700_000_000
+        )
+        let service = AccountServiceSpy(
+            restoredSession: account,
+            snapshot: makeSnapshot(account: account),
+            appleCredentialState: .revoked
+        )
+        let coordinator = AccountSessionCoordinator(
+            dependencies: AccountDependencies(
+                sessionService: service,
+                centerService: service
+            ),
+            pendingReferralStore: InMemoryPendingReferralStore()
+        )
+        await coordinator.restoreIfNeeded()
+        XCTAssertTrue(coordinator.isSignedIn)
+
+        await coordinator.validateAppleCredentialState()
+
+        XCTAssertEqual(coordinator.sessionPhase, .signedOut)
+        XCTAssertEqual(coordinator.snapshotPhase, .idle)
+        XCTAssertEqual(coordinator.operationErrorKey, "account.error.sessionExpired")
+        let signOutCount = await service.signOutCount()
+        XCTAssertEqual(signOutCount, 1)
+    }
+
     private func makeReferral(status: AccountReferralStatus) -> AccountReferral {
         AccountReferral(
             id: UUID(),
@@ -535,6 +565,7 @@ private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing
     private let shouldFailAccountRefresh: Bool
     private let signOutDelayNanoseconds: UInt64
     private let accountLoadDelayNanoseconds: UInt64
+    private let storedAppleCredentialState: AccountAppleCredentialState
     private var redeemed: [String] = []
     private var centerLoadCount = 0
     private var logoutCount = 0
@@ -550,7 +581,8 @@ private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing
         shouldFailRedemption: Bool = false,
         shouldFailAccountRefresh: Bool = false,
         signOutDelayNanoseconds: UInt64 = 0,
-        accountLoadDelayNanoseconds: UInt64 = 0
+        accountLoadDelayNanoseconds: UInt64 = 0,
+        appleCredentialState: AccountAppleCredentialState = .unknown
     ) {
         restored = restoredSession
         centerSnapshot = snapshot
@@ -559,6 +591,7 @@ private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing
         self.shouldFailAccountRefresh = shouldFailAccountRefresh
         self.signOutDelayNanoseconds = signOutDelayNanoseconds
         self.accountLoadDelayNanoseconds = accountLoadDelayNanoseconds
+        self.storedAppleCredentialState = appleCredentialState
     }
 
     func restoreSession() async throws -> AccountSession? {
@@ -580,6 +613,10 @@ private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing
 
     func deleteAccount(with payload: AppleAuthorizationPayload) async throws {
         accountDeleteCount += 1
+    }
+
+    func appleCredentialState() async -> AccountAppleCredentialState {
+        storedAppleCredentialState
     }
 
     func clearManagedGateway() async {

@@ -8,12 +8,22 @@ import Foundation
 
 actor InMemoryAccountSecurityStore: AccountSessionVault, AppAttestKeyStateStoring {
     private(set) var session: AccountSession?
+    private(set) var refreshTransaction: AccountRefreshTransaction?
     private(set) var keyState: AppAttestKeyState?
     private(set) var clearSessionCount = 0
+    private(set) var clearRefreshTransactionCount = 0
+    private var remainingSessionSaveFailures: Int
 
-    init(session: AccountSession? = nil, keyState: AppAttestKeyState? = nil) {
+    init(
+        session: AccountSession? = nil,
+        refreshTransaction: AccountRefreshTransaction? = nil,
+        keyState: AppAttestKeyState? = nil,
+        sessionSaveFailures: Int = 0
+    ) {
         self.session = session
+        self.refreshTransaction = refreshTransaction
         self.keyState = keyState
+        self.remainingSessionSaveFailures = sessionSaveFailures
     }
 
     func loadSession() async throws -> AccountSession? {
@@ -21,12 +31,36 @@ actor InMemoryAccountSecurityStore: AccountSessionVault, AppAttestKeyStateStorin
     }
 
     func saveSession(_ session: AccountSession) async throws {
+        if remainingSessionSaveFailures > 0 {
+            remainingSessionSaveFailures -= 1
+            throw AccountAPIError.secureStorage
+        }
         self.session = session
     }
 
     func clearSession() async throws {
         session = nil
         clearSessionCount += 1
+    }
+
+    func beginRefreshTransaction(
+        refreshTokenDigest: String
+    ) async throws -> AccountRefreshTransaction {
+        if let refreshTransaction,
+           refreshTransaction.refreshTokenDigest == refreshTokenDigest {
+            return refreshTransaction
+        }
+        let created = AccountRefreshTransaction(
+            refreshTokenDigest: refreshTokenDigest,
+            operationId: UUID()
+        )
+        refreshTransaction = created
+        return created
+    }
+
+    func clearRefreshTransaction() async throws {
+        refreshTransaction = nil
+        clearRefreshTransactionCount += 1
     }
 
     func loadAppAttestKeyState() async throws -> AppAttestKeyState? {

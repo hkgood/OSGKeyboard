@@ -130,7 +130,8 @@ private enum AccountAppleAuthorizationPayload {
             identityToken: identityToken,
             authorizationCode: authorizationCode,
             nonce: rawNonce,
-            displayName: displayName(from: credential.fullName)
+            displayName: displayName(from: credential.fullName),
+            userIdentifier: credential.user
         )
     }
 

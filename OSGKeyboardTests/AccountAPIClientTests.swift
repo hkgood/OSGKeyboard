@@ -13,7 +13,12 @@ final class AccountAPIClientTests: XCTestCase {
         let transport = QueueAccountTransport([
             .init(statusCode: 200, body: try sessionEnvelopeData(expected))
         ])
-        let store = InMemoryAccountSecurityStore()
+        let store = InMemoryAccountSecurityStore(
+            refreshTransaction: AccountRefreshTransaction(
+                refreshTokenDigest: "stale",
+                operationId: UUID()
+            )
+        )
         let client = AccountAPIClient(
             baseURL: URL(string: "https://account.test")!,
             transport: transport,
@@ -32,7 +37,9 @@ final class AccountAPIClientTests: XCTestCase {
 
         XCTAssertEqual(result, expected)
         let stored = await store.session
+        let refreshTransaction = await store.refreshTransaction
         XCTAssertEqual(stored, expected)
+        XCTAssertNil(refreshTransaction)
         let requests = await transport.requests
         XCTAssertEqual(requests.single?.url?.path, "/v1/auth/apple")
         XCTAssertNil(requests.single?.value(forHTTPHeaderField: "Authorization"))
@@ -156,6 +163,10 @@ final class AccountAPIClientTests: XCTestCase {
             requests.last?.value(forHTTPHeaderField: "Authorization"),
             "Bearer access-new"
         )
+        let refreshRequest = try XCTUnwrap(
+            requests.first { $0.url?.path == "/v1/auth/refresh" }
+        )
+        XCTAssertNotNil(try refreshOperationID(from: refreshRequest))
         let stored = await store.session
         let clearCount = await store.clearSessionCount
         XCTAssertNil(stored)
@@ -191,7 +202,66 @@ final class AccountAPIClientTests: XCTestCase {
 
         XCTAssertEqual(token, "access-fresh")
         let requests = await transport.requests
-        XCTAssertEqual(requests.single?.url?.path, "/v1/auth/refresh")
+        let refreshRequest = try XCTUnwrap(requests.single)
+        XCTAssertEqual(refreshRequest.url?.path, "/v1/auth/refresh")
+        XCTAssertNotNil(try refreshOperationID(from: refreshRequest))
+        let transaction = await store.refreshTransaction
+        XCTAssertNotNil(transaction)
+    }
+
+    func testRefreshSaveFailureRetainsOldSessionAndReusesPersistedOperationID() async throws {
+        let old = makeAccountSession(accessExpiry: 1_020)
+        let replacement = makeAccountSession(
+            accessToken: "access-recovered",
+            refreshToken: "refresh-recovered"
+        )
+        let transport = QueueAccountTransport([
+            .init(statusCode: 200, body: try sessionEnvelopeData(replacement)),
+            .init(statusCode: 200, body: try sessionEnvelopeData(replacement))
+        ])
+        let store = InMemoryAccountSecurityStore(
+            session: old,
+            sessionSaveFailures: 1
+        )
+        let firstClient = AccountAPIClient(
+            baseURL: URL(string: "https://account.test")!,
+            transport: transport,
+            sessionVault: store,
+            now: { Date(timeIntervalSince1970: 1_000) }
+        )
+
+        do {
+            _ = try await firstClient.accessTokenForAuthorizedRequest()
+            XCTFail("Expected the first Keychain commit to fail")
+        } catch let error as AccountAPIError {
+            XCTAssertEqual(error, .secureStorage)
+        }
+
+        let retainedSession = await store.session
+        let retainedTransaction = await store.refreshTransaction
+        let clearCount = await store.clearSessionCount
+        XCTAssertEqual(retainedSession, old)
+        XCTAssertNotNil(retainedTransaction)
+        XCTAssertEqual(clearCount, 0)
+
+        let recreatedClient = AccountAPIClient(
+            baseURL: URL(string: "https://account.test")!,
+            transport: transport,
+            sessionVault: store,
+            now: { Date(timeIntervalSince1970: 1_000) }
+        )
+        let recoveredToken = try await recreatedClient.accessTokenForAuthorizedRequest()
+
+        XCTAssertEqual(recoveredToken, replacement.accessToken)
+        let storedReplacement = await store.session
+        XCTAssertEqual(storedReplacement, replacement)
+        let requests = await transport.requests
+        let refreshRequests = requests.filter { $0.url?.path == "/v1/auth/refresh" }
+        XCTAssertEqual(refreshRequests.count, 2)
+        let firstOperationID = try refreshOperationID(from: refreshRequests[0])
+        let retryOperationID = try refreshOperationID(from: refreshRequests[1])
+        XCTAssertEqual(firstOperationID, retryOperationID)
+        XCTAssertEqual(firstOperationID, retainedTransaction?.operationId)
     }
 
     func testConcurrentUnauthorizedRequestsMergeRefreshRotation() async throws {
@@ -226,6 +296,40 @@ final class AccountAPIClientTests: XCTestCase {
         XCTAssertEqual(stored, replacement)
     }
 
+    func testConcurrentClientInstancesSharePersistedRefreshOperationID() async throws {
+        let old = makeAccountSession()
+        let replacement = makeAccountSession(
+            accessToken: "access-shared",
+            refreshToken: "refresh-shared"
+        )
+        let transport = RefreshMergingTransport(replacementSession: replacement)
+        let store = InMemoryAccountSecurityStore(session: old)
+        let firstClient = AccountAPIClient(
+            baseURL: URL(string: "https://account.test")!,
+            transport: transport,
+            sessionVault: store
+        )
+        let secondClient = AccountAPIClient(
+            baseURL: URL(string: "https://account.test")!,
+            transport: transport,
+            sessionVault: store
+        )
+
+        async let first = firstClient.account()
+        async let second = secondClient.account()
+        _ = try await (first, second)
+
+        let requests = await transport.requests
+        let refreshRequests = requests.filter { $0.url?.path == "/v1/auth/refresh" }
+        XCTAssertEqual(refreshRequests.count, 2)
+        let operationIDs = try refreshRequests.map {
+            try refreshOperationID(from: $0)
+        }
+        XCTAssertEqual(Set(operationIDs).count, 1)
+        let stored = await store.session
+        XCTAssertEqual(stored, replacement)
+    }
+
     func testRefreshTokenReuseClearsPrivateSession() async throws {
         let old = makeAccountSession()
         let replacement = makeAccountSession(accessToken: "unused", refreshToken: "unused")
@@ -255,12 +359,20 @@ final class AccountAPIClientTests: XCTestCase {
 
         let stored = await store.session
         let clearCount = await store.clearSessionCount
+        let refreshTransaction = await store.refreshTransaction
         XCTAssertNil(stored)
         XCTAssertEqual(clearCount, 1)
+        XCTAssertNil(refreshTransaction)
     }
 
     func testLogoutClearsPrivateSessionWhenRevocationIsUnavailable() async throws {
-        let store = InMemoryAccountSecurityStore(session: makeAccountSession())
+        let store = InMemoryAccountSecurityStore(
+            session: makeAccountSession(),
+            refreshTransaction: AccountRefreshTransaction(
+                refreshTokenDigest: "pending",
+                operationId: UUID()
+            )
+        )
         let transport = QueueAccountTransport([])
         let client = AccountAPIClient(
             baseURL: URL(string: "https://account.test")!,
@@ -272,9 +384,11 @@ final class AccountAPIClientTests: XCTestCase {
 
         let stored = await store.session
         let clearCount = await store.clearSessionCount
+        let refreshTransaction = await store.refreshTransaction
         let requests = await transport.requests
         XCTAssertNil(stored)
         XCTAssertEqual(clearCount, 1)
+        XCTAssertNil(refreshTransaction)
         XCTAssertEqual(requests.single?.url?.path, "/v1/auth/logout")
     }
 
@@ -486,6 +600,16 @@ final class AccountAPIClientTests: XCTestCase {
         let requests = await transport.requests
         XCTAssertEqual(requests.count, 2)
         XCTAssertTrue(requests.allSatisfy { $0.url?.path == "/v1/account" })
+    }
+
+    private func refreshOperationID(from request: URLRequest) throws -> UUID {
+        let body = try XCTUnwrap(request.httpBody)
+        let json = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: body) as? [String: Any]
+        )
+        XCTAssertEqual(json["refreshToken"] as? String, "refresh-old")
+        let rawValue = try XCTUnwrap(json["refreshOperationId"] as? String)
+        return try XCTUnwrap(UUID(uuidString: rawValue))
     }
 }
 

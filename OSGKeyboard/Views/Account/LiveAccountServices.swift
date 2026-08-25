@@ -5,6 +5,7 @@
 // session credentials never enter App Group storage; only a non-secret local
 // eligibility marker and scope-limited gateway grants are shared.
 
+import AuthenticationServices
 import Foundation
 import OSGKeyboardHostSupport
 import OSGKeyboardShared
@@ -37,7 +38,8 @@ enum LiveAccountDependencyFactory {
             integrity: integrity,
             grants: grants,
             grantStore: grantStore,
-            configuration: AppGroupStore()
+            configuration: AppGroupStore(),
+            appleUserIdentifiers: sessionVault
         )
         return AccountDependencies(
             sessionService: service,
@@ -164,6 +166,35 @@ actor LiveReferralProfileService: ReferralProfileServicing {
     }
 }
 
+private protocol AppleCredentialStateChecking: Sendable {
+    func state(for userIdentifier: String) async -> AccountAppleCredentialState
+}
+
+private struct SystemAppleCredentialStateChecker: AppleCredentialStateChecking {
+    func state(for userIdentifier: String) async -> AccountAppleCredentialState {
+        await withCheckedContinuation { continuation in
+            ASAuthorizationAppleIDProvider().getCredentialState(
+                forUserID: userIdentifier
+            ) { state, error in
+                guard error == nil else {
+                    continuation.resume(returning: .unknown)
+                    return
+                }
+                switch state {
+                case .authorized:
+                    continuation.resume(returning: .authorized)
+                case .revoked, .notFound:
+                    continuation.resume(returning: .revoked)
+                case .transferred:
+                    continuation.resume(returning: .unknown)
+                @unknown default:
+                    continuation.resume(returning: .unknown)
+                }
+            }
+        }
+    }
+}
+
 private actor LiveAccountService:
     AccountSessionServicing,
     AccountSessionEventSourcing,
@@ -174,6 +205,8 @@ private actor LiveAccountService:
     private let grants: GatewayGrantCoordinator
     private let grantStore: any GatewayGrantCredentialStore
     private let configuration: AppGroupStore
+    private let appleUserIdentifiers: any AppleUserIdentifierStoring
+    private let appleCredentialChecker: any AppleCredentialStateChecking
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
 
@@ -182,7 +215,10 @@ private actor LiveAccountService:
         integrity: DeviceIntegrityCoordinator,
         grants: GatewayGrantCoordinator,
         grantStore: any GatewayGrantCredentialStore,
-        configuration: AppGroupStore
+        configuration: AppGroupStore,
+        appleUserIdentifiers: any AppleUserIdentifierStoring,
+        appleCredentialChecker: any AppleCredentialStateChecking =
+            SystemAppleCredentialStateChecker()
     ) {
         self.apiClient = apiClient
         accountCenterLoader = AccountCenterSnapshotLoader(apiClient: apiClient)
@@ -190,6 +226,8 @@ private actor LiveAccountService:
         self.grants = grants
         self.grantStore = grantStore
         self.configuration = configuration
+        self.appleUserIdentifiers = appleUserIdentifiers
+        self.appleCredentialChecker = appleCredentialChecker
     }
 
     func events() async -> AsyncStream<AccountSessionEvent> {
@@ -213,6 +251,7 @@ private actor LiveAccountService:
 
     func restoreSession() async throws -> AccountSession? {
         guard let cachedSession = try await apiClient.currentSession() else {
+            try? await appleUserIdentifiers.clearAppleUserIdentifier()
             await invalidateManagedGatewaySession()
             return nil
         }
@@ -222,6 +261,7 @@ private actor LiveAccountService:
         } catch let error as AccountAPIError {
             switch error {
             case .sessionUnavailable, .unauthorized, .refreshTokenReuse:
+                try? await appleUserIdentifiers.clearAppleUserIdentifier()
                 await invalidateManagedGatewaySession()
                 return nil
             default:
@@ -282,6 +322,10 @@ private actor LiveAccountService:
             )
             throw error
         }
+        if let userIdentifier = payload.userIdentifier,
+           !userIdentifier.isEmpty {
+            try? await appleUserIdentifiers.saveAppleUserIdentifier(userIdentifier)
+        }
         let account: OSGAccount
         do {
             account = try await apiClient.account()
@@ -310,9 +354,11 @@ private actor LiveAccountService:
             try await apiClient.logout()
         } catch {
             try? await grants.clearGrant()
+            try? await appleUserIdentifiers.clearAppleUserIdentifier()
             throw error
         }
         try? await grants.clearGrant()
+        try? await appleUserIdentifiers.clearAppleUserIdentifier()
     }
 
     func deleteAccount(with payload: AppleAuthorizationPayload) async throws {
@@ -322,9 +368,18 @@ private actor LiveAccountService:
             nonce: payload.nonce
         )
         try? await grants.clearGrant()
+        try? await appleUserIdentifiers.clearAppleUserIdentifier()
         await integrity.clearLocalKeyState()
         configuration.setManagedGatewayAccountSessionAvailable(false)
         configuration.setCredentialSource(.byok)
+    }
+
+    func appleCredentialState() async -> AccountAppleCredentialState {
+        guard let userIdentifier = try? await appleUserIdentifiers.loadAppleUserIdentifier(),
+              !userIdentifier.isEmpty else {
+            return .unknown
+        }
+        return await appleCredentialChecker.state(for: userIdentifier)
     }
 
     func prepareManagedGateway() async throws {

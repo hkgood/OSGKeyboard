@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Conversational skill replies**: make non-business replies sound like an ordinary person talking with friends or colleagues, allow one fitting emoji when emotion clearly calls for it, keep business replies naturally professional, and apply the active user-owned learned style only as a bounded wording-and-rhythm layer. / **口语化技能回复**：非商务回复采用普通人与朋友、好友或同事交谈的自然口吻，情绪明确时可合理使用一个表情；商务回复保持自然专业，当前用户自有的学习风格仅作为受限的用词与节奏层应用。
 
 ### Fixed
+- **Durable account sessions**: persist refresh operation identifiers before network rotation, recover safely after crashes or Keychain write failures, and sign out when Apple reports revoked credentials. / **可靠账号会话**：在网络轮换前持久化刷新操作标识，在崩溃或 Keychain 写入失败后安全恢复，并在 Apple 凭据被撤销时退出登录。
 - **Repeatable OOBE practice**: scope each free feature to one use per short-lived guided session, so returning to OOBE starts a fresh four-page experience without misreporting consumed-page conflicts as weak network; also simplify lesson titles, add a voice sample to read aloud, and streamline the completion page. / **可重复的 OOBE 体验**：将每项免费功能限制为每个短期引导会话使用一次，让用户重新进入 OOBE 时可以重新体验四个页面，并避免把页面已完成冲突误报为弱网；同时精简各环节标题，加入语音朗读示例，并简化完成页。
 - **Managed hotword answers**: run keyboard hotwords with the same DeepSeek thinking policy as hold-to-ask AI, require online search for time-sensitive cards, preserve hotword usage attribution, and distinguish credit, provider, timeout, and gateway failures. / **积分热词回答**：键盘热词现在采用与长按问 AI 相同的 DeepSeek 思考策略，时效内容强制在线搜索，保留热词用量归因，并区分积分、服务商、超时与网关故障。
 
