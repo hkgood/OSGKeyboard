@@ -13,17 +13,20 @@ actor InMemoryAccountSecurityStore: AccountSessionVault, AppAttestKeyStateStorin
     private(set) var clearSessionCount = 0
     private(set) var clearRefreshTransactionCount = 0
     private var remainingSessionSaveFailures: Int
+    private var remainingSessionClearFailures: Int
 
     init(
         session: AccountSession? = nil,
         refreshTransaction: AccountRefreshTransaction? = nil,
         keyState: AppAttestKeyState? = nil,
-        sessionSaveFailures: Int = 0
+        sessionSaveFailures: Int = 0,
+        sessionClearFailures: Int = 0
     ) {
         self.session = session
         self.refreshTransaction = refreshTransaction
         self.keyState = keyState
         self.remainingSessionSaveFailures = sessionSaveFailures
+        self.remainingSessionClearFailures = sessionClearFailures
     }
 
     func loadSession() async throws -> AccountSession? {
@@ -39,6 +42,10 @@ actor InMemoryAccountSecurityStore: AccountSessionVault, AppAttestKeyStateStorin
     }
 
     func clearSession() async throws {
+        if remainingSessionClearFailures > 0 {
+            remainingSessionClearFailures -= 1
+            throw AccountAPIError.secureStorage
+        }
         session = nil
         clearSessionCount += 1
     }

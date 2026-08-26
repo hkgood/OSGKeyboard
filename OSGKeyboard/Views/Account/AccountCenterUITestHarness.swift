@@ -13,16 +13,22 @@ import SwiftUI
 struct AccountCenterUITestHarness: View {
     @StateObject private var coordinator: AccountSessionCoordinator
     private let startsSignIn: Bool
+    private let screenshotLanguage: AppUILanguage?
 
     init() {
+        let arguments = ProcessInfo.processInfo.arguments
         let startsSignIn = ProcessInfo.processInfo.arguments.contains(
             "--account-signin-loading"
         )
+        let staysSignedOut = arguments.contains("--account-signed-out")
+        screenshotLanguage = arguments.contains("--screenshot-lang=en")
+            ? .english
+            : arguments.contains("--screenshot-lang=zh") ? .chinese : nil
         let service = AccountCenterUITestService(
-            shouldFailSnapshot: ProcessInfo.processInfo.arguments.contains(
+            shouldFailSnapshot: arguments.contains(
                 "--account-snapshot-failure"
             ),
-            startsSignedOut: startsSignIn,
+            startsSignedOut: startsSignIn || staysSignedOut,
             signInDelay: startsSignIn ? .seconds(5) : .zero
         )
         self.startsSignIn = startsSignIn
@@ -46,6 +52,7 @@ struct AccountCenterUITestHarness: View {
                     .environmentObject(coordinator)
             }
         }
+        .environment(\.locale, screenshotLanguage?.swiftUILocale ?? Locale.current)
         .task {
             await coordinator.restoreIfNeeded()
             if startsSignIn {
@@ -53,7 +60,8 @@ struct AccountCenterUITestHarness: View {
                     with: AppleAuthorizationPayload(
                         identityToken: "ui-test-identity",
                         authorizationCode: "ui-test-authorization",
-                        nonce: "ui-test-nonce"
+                        nonce: "ui-test-nonce",
+                        userIdentifier: "ui-test-apple-user"
                     )
                 )
             }

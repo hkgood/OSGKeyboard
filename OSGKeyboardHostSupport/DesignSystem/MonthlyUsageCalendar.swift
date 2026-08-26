@@ -1,7 +1,7 @@
 // MonthlyUsageCalendar.swift
 // OSGKeyboard · HostSupport
 //
-// Current-month dictation heat map. Every date remains visible; the accent
+// Current-month dictation heat map. Every date remains visible; the monochrome
 // circle's opacity communicates that day's character count relative to the
 // busiest day in the same month.
 
@@ -158,21 +158,21 @@ public struct MonthlyUsageCalendar: View {
         let isToday = calendar.isDateInToday(point.date)
         let isFuture = calendar.startOfDay(for: point.date) > calendar.startOfDay(for: Date())
         let opacity = fillOpacity(for: point.value, isFuture: isFuture)
-        let usesLightText = opacity >= 0.48
+        let usesContrastingText = opacity >= 0.48
 
         return Text(day.formatted())
             .font(.system(size: compact ? 12 : 13, weight: isToday ? .semibold : .medium, design: .rounded))
             .foregroundStyle(
                 isFuture
                     ? palette.textTertiary.opacity(0.45)
-                    : (usesLightText ? palette.textOnAccent : palette.textPrimary)
+                    : (usesContrastingText ? palette.background : palette.textPrimary)
             )
             .frame(width: cellDiameter, height: cellDiameter)
-            .background(palette.accent.opacity(opacity), in: Circle())
+            .background(palette.textPrimary.opacity(opacity), in: Circle())
             .overlay {
                 if isToday {
                     Circle()
-                        .stroke(palette.accent, lineWidth: 1.5)
+                        .stroke(palette.textPrimary, lineWidth: 1.5)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -188,7 +188,7 @@ public struct MonthlyUsageCalendar: View {
     private func fillOpacity(for value: Int, isFuture: Bool) -> Double {
         guard value > 0, !isFuture else { return 0 }
         let ratio = min(max(Double(value) / Double(maximumValue), 0), 1)
-        return 0.14 + sqrt(ratio) * 0.62
+        return 0.05 + pow(ratio, 1.15) * 0.73
     }
 }
 

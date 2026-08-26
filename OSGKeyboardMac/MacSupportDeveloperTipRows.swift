@@ -56,6 +56,7 @@ struct MacSupportDeveloperTipRows: View {
             Button(SharedL10n.string("tip.alert.dismiss", language: language)) {
                 tipManager.acknowledgePurchaseState()
             }
+            .tint(palette.textPrimary)
         } message: {
             Text(SharedL10n.string("tip.thankYou.message", language: language))
         }
@@ -66,6 +67,7 @@ struct MacSupportDeveloperTipRows: View {
             Button(SharedL10n.string("tip.alert.dismiss", language: language)) {
                 tipManager.acknowledgePurchaseState()
             }
+            .tint(palette.textPrimary)
         } message: {
             Text(errorMessage)
         }

@@ -1,8 +1,8 @@
 // UsageSurfaceCard.swift
 // OSGKeyboard · Shared
 //
-// Flat semantic surface used by home / dashboard stats on every platform.
-// Deliberately shadowless — hierarchy comes from the semantic surface fill.
+// Semantic surface used by home / dashboard stats on every platform.
+// Shared card elevation keeps its depth consistent with the rest of the app.
 
 import SwiftUI
 
@@ -30,5 +30,6 @@ public struct UsageSurfaceCard<Content: View>: View {
             .padding(padding)
             .background(palette.surface, in: shape)
             .clipShape(shape)
+            .cardElevation()
     }
 }

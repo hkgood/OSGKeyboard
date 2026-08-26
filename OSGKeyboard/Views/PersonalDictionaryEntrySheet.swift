@@ -26,15 +26,14 @@ struct PersonalDictionaryEntrySheet: View {
                 TextField("settings.personalDictionary.add.field", text: $term)
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
-                    .tint(palette.accent)
+                    .tint(palette.textPrimary)
                     .focused($termFocused)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .settingsListRow()
-                    .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                            .stroke(termFocused ? palette.accent : palette.divider, lineWidth: termFocused ? 1 : 0.5)
+                    .background(
+                        palette.formSurface,
+                        in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
                     )
 
                 Text("settings.personalDictionary.add.footer")
@@ -56,11 +55,12 @@ struct PersonalDictionaryEntrySheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("common.cancel") { dismiss() }
+                        .tint(palette.textPrimary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("common.save") { save() }
                         .disabled(trimmedTerm.isEmpty)
-                        .tint(palette.accent)
+                        .tint(palette.textPrimary)
                 }
             }
             .onAppear {

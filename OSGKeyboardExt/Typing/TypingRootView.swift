@@ -371,7 +371,9 @@ struct TypingRootView: View {
     }
 
     private var expandChevronFill: Color {
-        colorScheme == .dark ? Color(white: 0.30) : .white
+        colorScheme == .dark
+            ? OSGColor.keyboardDarkInputFill
+            : OSGColor.fixedLightContent
     }
 
     // MARK: - Editing toolbar (iPad)
@@ -423,7 +425,9 @@ struct TypingRootView: View {
     }
 
     private var editingToolbarButtonFill: Color {
-        colorScheme == .dark ? Color(white: 0.30) : .white
+        colorScheme == .dark
+            ? OSGColor.keyboardDarkInputFill
+            : OSGColor.fixedLightContent
     }
 
     /// UIKit-recycled labels — no SwiftUI Button per candidate.
@@ -773,7 +777,9 @@ struct TypingRootView: View {
     }
 
     private var selectedCandidateFill: Color {
-        colorScheme == .dark ? Color(white: 0.36) : .white
+        colorScheme == .dark
+            ? OSGColor.keyboardDarkInputFillRaised
+            : OSGColor.fixedLightContent
     }
 
     private var returnKeyFill: Color {
@@ -786,7 +792,9 @@ struct TypingRootView: View {
 
     private var returnKeyBorder: Color {
         if state.returnKeyRole.usesActionFill {
-            return Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08)
+            return colorScheme == .dark
+                ? OSGColor.keyboardActionBorderDark
+                : OSGColor.keyboardActionBorderLight
         }
         return palette.divider
     }
@@ -799,7 +807,7 @@ struct TypingRootView: View {
     }
 
     private var returnKeyTextColor: Color {
-        state.returnKeyRole.usesActionFill ? .white : keyTextColor
+        state.returnKeyRole.usesActionFill ? OSGColor.fixedLightContent : keyTextColor
     }
 
     /// The send key stays recognizable in both appearances without becoming neon.

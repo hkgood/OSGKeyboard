@@ -4,6 +4,7 @@
 import OSGKeyboardHostSupport
 import OSGKeyboardShared
 import SwiftUI
+import UIKit
 
 @main
 struct OSGKeyboardApp: App {
@@ -19,6 +20,11 @@ struct OSGKeyboardApp: App {
 
     init() {
         MaterialIconsFont.registerIfNeeded()
+        // Keep system alert and confirmation actions neutral instead of
+        // inheriting the app's green AccentColor.
+        UIView.appearance(
+            whenContainedInInstancesOf: [UIAlertController.self]
+        ).tintColor = .label
         // Deliberately do NOT prepare Custom LM here. App launch already sits
         // near ~150 MB RSS in Debug; compiling CLM during onboarding races the
         // keyboard extension and gets the host jetsammed (signal 9). Warmup
@@ -29,7 +35,10 @@ struct OSGKeyboardApp: App {
     var body: some Scene {
         WindowGroup {
             #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("--whats-new-host") {
+            if OnboardingExperienceView.isPreviewEnabled {
+                OOBEPreviewHarness()
+                    .preferredColorScheme(appearance.colorScheme)
+            } else if ProcessInfo.processInfo.arguments.contains("--whats-new-host") {
                 // Approach A: Notes-like host only; real keyboard extension overlays it.
                 // Also used by `--keyboard-appear-stress=` (pass both flags).
                 Self.makeWhatsNewHostView()
@@ -43,6 +52,10 @@ struct OSGKeyboardApp: App {
                 AssistantKeyboardUITestHarness()
             } else if ProcessInfo.processInfo.arguments.contains("--account-ui-test") {
                 AccountCenterUITestHarness()
+            } else if ProcessInfo.processInfo.arguments.contains("--polish-styles-screenshot") {
+                PolishStylesScreenshotHarness()
+            } else if ProcessInfo.processInfo.arguments.contains("--home-dictionary-screenshot") {
+                HomeDictionaryScreenshotHarness()
             } else if ProcessInfo.processInfo.arguments.contains("--managed-consent-ui-test") {
                 ManagedCloudConsentUITestHarness()
             } else if ProcessInfo.processInfo.arguments.contains("--pip-device-ui-test") {

@@ -217,7 +217,7 @@ struct KeyboardPreviewStub: View {
                 case .idle:
                     Image(systemName: "mic.fill")
                         .font(.system(size: 32, weight: .medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(OSGColor.fixedLightContent)
                 case .recording:
                     HStack(spacing: 3) {
                         ForEach(0..<12, id: \.self) { i in

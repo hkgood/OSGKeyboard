@@ -43,7 +43,11 @@ struct KeyboardBrandLogo: View {
                 .resizable()
                 .renderingMode(.template)
                 .scaledToFit()
-                .foregroundStyle(colorScheme == .dark ? Color.white : Color.black)
+                .foregroundStyle(
+                    colorScheme == .dark
+                        ? OSGColor.fixedLightContent
+                        : OSGColor.fixedDarkContent
+                )
                 .frame(
                     width: KeyboardTopBarMetrics.logoWidth,
                     height: KeyboardTopBarMetrics.logoHeight
@@ -222,13 +226,17 @@ struct KeyboardTopControls: View {
     }
 
     private var pressedFill: Color {
-        colorScheme == .dark ? Color(white: 0.22) : Color(white: 0.84)
+        colorScheme == .dark
+            ? OSGColor.keyboardDarkControlFill
+            : OSGColor.keyboardLightKeyPressed
     }
 
     /// 分段轨道底色与选中键面（NativeKeyboardKeyColors.fill）拉开明度；
     /// 浅色模式叠加半透明黑色，在不同宿主键盘底色上维持可见对比。
     private var tabTrackFill: Color {
-        colorScheme == .dark ? Color(white: 0.12) : Color.black.opacity(0.12)
+        colorScheme == .dark
+            ? OSGColor.keyboardDarkControlBorder
+            : OSGColor.keyboardLightControlBorder
     }
 
     private func isSelected(_ tab: KeyboardInputTab) -> Bool {

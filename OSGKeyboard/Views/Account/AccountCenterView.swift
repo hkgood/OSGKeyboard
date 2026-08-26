@@ -21,11 +21,17 @@ struct AccountCenterView: View {
 
     var body: some View {
         ZStack {
+            // AuthenticationServices uses translucent system chrome on
+            // iOS 26. Keep its underlying surface uniform without covering
+            // the account content that remains visible below the system sheet.
             palette.background.ignoresSafeArea()
             sessionContent
         }
+        .background(palette.background)
         .navigationTitle("account.title")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(palette.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .task(id: coordinator.accountID) {
             guard let accountID = coordinator.accountID else {
                 coordinator.creditPurchases.reset()
@@ -43,18 +49,6 @@ struct AccountCenterView: View {
             coordinator.creditPurchases.dismissSuccessMessage()
         }
         .alert(
-            "account.error.title",
-            isPresented: operationErrorBinding
-        ) {
-            Button("common.done") {
-                coordinator.dismissOperationError()
-            }
-        } message: {
-            if let key = coordinator.operationErrorKey {
-                Text(LocalizedStringKey(key))
-            }
-        }
-        .alert(
             "account.profile.editTitle",
             isPresented: $showProfileEditor
         ) {
@@ -62,12 +56,14 @@ struct AccountCenterView: View {
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
             Button("common.cancel", role: .cancel) {}
+                .tint(palette.textPrimary)
             Button("account.profile.save") {
                 if case let .signedIn(session) = coordinator.sessionPhase {
                     saveDisplayName(session: session)
                 }
             }
             .disabled(!canSaveCurrentDisplayName)
+            .tint(palette.textPrimary)
         } message: {
             Text("account.profile.editMessage")
         }
@@ -132,6 +128,8 @@ struct AccountCenterView: View {
                 .surfaceCard()
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(palette.background)
     }
 
     private func signedInContent(session: AccountSession) -> some View {
@@ -143,6 +141,8 @@ struct AccountCenterView: View {
             }
             .padding(.bottom, Spacing.lg)
         }
+        .scrollContentBackground(.hidden)
+        .background(palette.background)
         .refreshable {
             async let accountRefresh: Void = coordinator.refreshAccountData(force: true)
             async let catalogRefresh: Void =
@@ -171,6 +171,16 @@ struct AccountCenterView: View {
             }
         case .loaded:
             EmptyView()
+        }
+
+        if let errorKey = coordinator.accountRefreshErrorKey {
+            AccountStateCard(
+                systemImage: "exclamationmark.triangle",
+                titleKey: errorKey,
+                actionKey: "account.retry"
+            ) {
+                Task { await coordinator.refreshAccountData(force: true) }
+            }
         }
 
         CardSection("account.storekit.section") {
@@ -257,7 +267,7 @@ struct AccountCenterView: View {
                             .font(.system(size: 16, weight: .semibold))
                     }
                 }
-                .foregroundStyle(palette.accent)
+                .foregroundStyle(palette.textPrimary)
                 .frame(width: 40, height: 40)
                 .background(palette.surfaceElevated, in: Circle())
             }
@@ -267,6 +277,7 @@ struct AccountCenterView: View {
         }
         .padding(Spacing.lg)
         .background(palette.surface, in: shape)
+        .cardElevation()
         .accessibilityIdentifier("account.summary")
     }
 
@@ -378,7 +389,7 @@ struct AccountCenterView: View {
 
                 if coordinator.operation == .deletingAccount {
                     ProgressView("account.delete.loading")
-                        .tint(palette.accent)
+                        .tint(palette.textPrimary)
                         .frame(maxWidth: .infinity)
                 }
 
@@ -393,22 +404,16 @@ struct AccountCenterView: View {
                     Button("common.cancel") {
                         showDeleteReauthentication = false
                     }
+                    .tint(palette.textPrimary)
                 }
             }
         }
+        .toolbarBackground(palette.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .presentationDetents([.medium])
+        .presentationBackground(palette.background)
     }
 
-    private var operationErrorBinding: Binding<Bool> {
-        Binding(
-            get: { coordinator.operationErrorKey != nil },
-            set: { isPresented in
-                if !isPresented {
-                    coordinator.dismissOperationError()
-                }
-            }
-        )
-    }
 }
 
 struct AccountAvatarView: View {
@@ -416,28 +421,20 @@ struct AccountAvatarView: View {
     let displayName: String?
     let size: CGFloat
 
-    private static let gradients: [[Color]] = [
-        [.indigo, .blue],
-        [.purple, .pink],
-        [.teal, .cyan],
-        [.orange, .red],
-        [.mint, .green]
-    ]
-
     var body: some View {
         Text(initials)
             .font(.system(size: size * 0.34, weight: .bold, design: .rounded))
-            .foregroundStyle(.white)
+            .foregroundStyle(OSGColor.fixedLightContent)
             .frame(width: size, height: size)
             .background(
                 LinearGradient(
-                    colors: Self.gradients[gradientIndex],
+                    colors: OSGColor.accountAvatarGradients[gradientIndex],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ),
                 in: Circle()
             )
-            .overlay(Circle().stroke(.white.opacity(0.2), lineWidth: 0.5))
+            .overlay(Circle().stroke(OSGColor.accountAvatarOutline, lineWidth: 0.5))
             .accessibilityHidden(true)
     }
 
@@ -453,7 +450,7 @@ struct AccountAvatarView: View {
         let hash = accountID.uuidString.unicodeScalars.reduce(UInt32(2_166_136_261)) {
             ($0 ^ $1.value) &* 16_777_619
         }
-        return Int(hash % UInt32(Self.gradients.count))
+        return Int(hash % UInt32(OSGColor.accountAvatarGradients.count))
     }
 }
 
@@ -578,13 +575,13 @@ private struct AccountCreditPurchaseSection: View {
                     if purchasingProductID == option.productID {
                         ProgressView()
                             .controlSize(.small)
-                            .tint(.white)
+                            .tint(OSGColor.fixedLightContent)
                     } else {
                         Text("account.storekit.purchase")
                             .font(TypeStyle.caption.weight(.semibold))
                     }
                 }
-                .foregroundStyle(.white)
+                .foregroundStyle(OSGColor.fixedLightContent)
                 .padding(.horizontal, Spacing.sm)
                 .frame(minWidth: 54, minHeight: 34)
                 .background(
@@ -717,22 +714,18 @@ struct AccountCreditProgress: View {
 
     var body: some View {
         VStack(spacing: Spacing.xs) {
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(palette.surfaceElevated)
-                    HStack(spacing: 0) {
-                        Rectangle()
-                            .fill(palette.success)
-                            .frame(width: proxy.size.width * remainingFraction)
-                        Rectangle()
-                            .fill(palette.textTertiary.opacity(0.55))
-                            .frame(width: proxy.size.width * usedFraction)
-                    }
-                    .clipShape(Capsule())
-                }
-            }
-            .frame(height: 8)
+            ProgressTrack(
+                segments: [
+                    ProgressTrackSegment(
+                        fraction: remainingFraction,
+                        color: palette.success
+                    ),
+                    ProgressTrackSegment(
+                        fraction: usedFraction,
+                        color: palette.textTertiary.opacity(0.32)
+                    )
+                ]
+            )
 
             if showsLabels {
                 HStack(spacing: Spacing.sm) {
@@ -787,7 +780,7 @@ struct AccountInvitationButton: View {
         } label: {
             Label("account.referral.inviteTitle", systemImage: "person.badge.plus")
                 .font(TypeStyle.bodyEmph)
-                .foregroundStyle(.white)
+                .foregroundStyle(OSGColor.fixedLightContent)
                 .padding(.horizontal, Spacing.sm)
                 .frame(minHeight: 38)
                 .background(

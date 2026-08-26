@@ -37,5 +37,6 @@ struct WideCard<Content: View>: View {
         content()
             .padding(padding)
             .background(palette.surface, in: shape)
+            .cardElevation()
     }
 }

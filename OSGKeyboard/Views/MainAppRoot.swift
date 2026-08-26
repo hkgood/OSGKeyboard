@@ -19,6 +19,7 @@ enum AnalyticsFirstOpenAttribution {
 
 struct MainAppRoot: View {
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.themePalette) private var palette: ThemePalette
 
     // Singleton is owned by `ProviderConfig.shared`, not by this view —
     // `@ObservedObject` keeps subscriptions correct across Settings replay.
@@ -64,13 +65,27 @@ struct MainAppRoot: View {
     }
 
     var body: some View {
-        Group {
+        ZStack {
+            palette.background
+                .ignoresSafeArea()
             mainContent
         }
         .environment(\.locale, config.uiLanguage.swiftUILocale)
         .environmentObject(flowManager)
         .environmentObject(accountSession)
         .environmentObject(analytics)
+        .alert(
+            "account.error.title",
+            isPresented: accountOperationErrorBinding
+        ) {
+            Button("common.done") {
+                accountSession.dismissOperationError()
+            }
+        } message: {
+            if let key = accountSession.operationErrorKey {
+                Text(LocalizedStringKey(key))
+            }
+        }
         .background {
             FlowPiPHostView { view in
                 flowManager.attachPiPHostView(view)
@@ -209,6 +224,7 @@ struct MainAppRoot: View {
                 // launch. The coordinator no-ops after a terminal restore, so
                 // this only retries a previously interrupted attempt.
                 await accountSession.restoreIfNeeded()
+                await accountSession.validateAppleCredentialState()
             }
             if config.hasCompletedOnboarding {
                 activateForegroundServices(reason: "scenePhase.active")
@@ -217,11 +233,19 @@ struct MainAppRoot: View {
                     releaseNotes.presentIfNeeded(onboardingCompleted: true)
                 }
             }
-            Task {
-                await accountSession.validateAppleCredentialState()
-                await AppCloudSync.shared.pullAllIfEnabled()
-            }
+            Task { await AppCloudSync.shared.pullAllIfEnabled() }
         }
+    }
+
+    private var accountOperationErrorBinding: Binding<Bool> {
+        Binding(
+            get: { accountSession.operationErrorKey != nil },
+            set: { isPresented in
+                if !isPresented {
+                    accountSession.dismissOperationError()
+                }
+            }
+        )
     }
 
     private func refreshOfficialSkillCatalog(reason: String) {

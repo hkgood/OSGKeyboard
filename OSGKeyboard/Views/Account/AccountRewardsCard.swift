@@ -31,15 +31,6 @@ struct AccountRewardsCard: View {
             guard coordinator.isSignedIn else { return }
             await coordinator.refreshAccountData()
         }
-        .alert("account.error.title", isPresented: operationErrorBinding) {
-            Button("common.done") {
-                coordinator.dismissOperationError()
-            }
-        } message: {
-            if let key = coordinator.operationErrorKey {
-                Text(LocalizedStringKey(key))
-            }
-        }
     }
 
     private var signedOutContent: some View {
@@ -59,10 +50,10 @@ struct AccountRewardsCard: View {
                     )
 
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text("home.accountRewards.signedOut.title")
+                    Text("account.signedOut.title")
                         .font(TypeStyle.headline)
                         .foregroundStyle(palette.textPrimary)
-                    Text("home.accountRewards.signedOut.summary")
+                    Text("account.signedOut.body")
                         .font(TypeStyle.footnote)
                         .foregroundStyle(palette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -189,16 +180,6 @@ struct AccountRewardsCard: View {
         )
     }
 
-    private var operationErrorBinding: Binding<Bool> {
-        Binding(
-            get: { coordinator.operationErrorKey != nil },
-            set: { isPresented in
-                if !isPresented {
-                    coordinator.dismissOperationError()
-                }
-            }
-        )
-    }
 }
 
 private struct AccountReferralLinkView: View {

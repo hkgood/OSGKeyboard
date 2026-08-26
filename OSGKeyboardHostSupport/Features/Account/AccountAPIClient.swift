@@ -539,22 +539,18 @@ public actor AccountAPIClient {
     }
 
     private func clearSession() async throws {
-        cachedSession = nil
-        didLoadSession = true
-        var storageFailed = false
         do {
             try await sessionVault.clearSession()
         } catch {
-            storageFailed = true
-        }
-        do {
-            try await sessionVault.clearRefreshTransaction()
-        } catch {
-            storageFailed = true
-        }
-        if storageFailed {
+            // Keep the cached session aligned with Keychain so a transient
+            // deletion failure can be retried instead of resurrecting on launch.
             throw AccountAPIError.secureStorage
         }
+        cachedSession = nil
+        didLoadSession = true
+        // A stale operation identifier is harmless once its refresh token is
+        // gone; do not turn a successful credential purge into a failed logout.
+        try? await sessionVault.clearRefreshTransaction()
     }
 
     private func invalidateSession(ifAccessTokenMatches expectedAccessToken: String) async throws {
@@ -562,12 +558,7 @@ public actor AccountAPIClient {
               current.accessToken == expectedAccessToken else {
             return
         }
-        do {
-            try await clearSession()
-        } catch {
-            publishSessionInvalidation()
-            throw error
-        }
+        try await clearSession()
         publishSessionInvalidation()
     }
 

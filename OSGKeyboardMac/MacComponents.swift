@@ -104,9 +104,9 @@ struct MacToggleStyle: ToggleStyle {
                 Capsule()
                     .fill(configuration.isOn ? palette.accent : offTrackColor)
                 Circle()
-                    .fill(Color.white)
+                    .fill(OSGColor.macToggleKnob)
                     .frame(width: 16, height: 16)
-                    .shadow(color: .black.opacity(0.25), radius: 1, y: 1)
+                    .shadow(color: OSGColor.macToggleKnobShadow, radius: 1, y: 1)
                     .padding(2)
             }
             .frame(width: 36, height: 20)
@@ -117,8 +117,8 @@ struct MacToggleStyle: ToggleStyle {
 
     private var offTrackColor: Color {
         colorScheme == .dark
-            ? Color.white.opacity(0.18)
-            : Color.black.opacity(0.15)
+            ? OSGColor.macToggleOffTrackDark
+            : OSGColor.macToggleOffTrackLight
     }
 }
 
@@ -411,7 +411,7 @@ struct MacHeaderActionButtonStyle: ButtonStyle {
         configuration.label
             .padding(.horizontal, Spacing.md)
             .frame(height: MacMetrics.pageHeaderControlHeight)
-            .foregroundStyle(.white)
+            .foregroundStyle(OSGColor.fixedLightContent)
             .background(
                 palette.accent.opacity(configuration.isPressed ? 0.82 : 1),
                 in: Capsule()

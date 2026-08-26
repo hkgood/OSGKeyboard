@@ -514,7 +514,7 @@ private struct MacPolishStyleEditor: View {
                 .font(.body.monospaced())
                 .frame(minHeight: 320)
                 .padding(4)
-                .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.medium))
+                .background(palette.formSurface, in: RoundedRectangle(cornerRadius: Radius.medium))
                 .overlay(
                     RoundedRectangle(cornerRadius: Radius.medium)
                         .stroke(palette.divider, lineWidth: 1)

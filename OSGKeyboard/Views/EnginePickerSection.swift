@@ -75,7 +75,7 @@ struct EnginePickerSection<ConfigurationRows: View>: View {
             HStack(spacing: Spacing.sm) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(TypeStyle.body)
+                        .font(.system(size: 15, weight: isSelected ? .semibold : .regular))
                         .foregroundStyle(isSelected ? palette.accent : palette.textPrimary)
                     Text(subtitle)
                         .font(TypeStyle.caption2)

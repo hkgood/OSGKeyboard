@@ -3,6 +3,7 @@
 //
 // Pure invitation parsing and account coordinator state-machine coverage.
 
+import AuthenticationServices
 @testable import OSGKeyboard
 import XCTest
 
@@ -184,7 +185,8 @@ final class AccountCenterViewModelTests: XCTestCase {
                 with: AppleAuthorizationPayload(
                     identityToken: "identity",
                     authorizationCode: "authorization",
-                    nonce: "nonce"
+                    nonce: "nonce",
+                    userIdentifier: "apple-user"
                 )
             )
         }
@@ -342,6 +344,40 @@ final class AccountCenterViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testForcedRefreshQueuedDuringInFlightRefreshRunsAfterward() async {
+        let account = AccountSession(
+            accountID: UUID(),
+            createdAtEpochSeconds: 1_700_000_000
+        )
+        let clock = MutableAccountClock(now: Date(timeIntervalSince1970: 1_000))
+        let service = AccountServiceSpy(
+            restoredSession: account,
+            snapshot: makeSnapshot(account: account),
+            accountLoadDelayNanoseconds: 20_000_000
+        )
+        let coordinator = AccountSessionCoordinator(
+            dependencies: AccountDependencies(
+                sessionService: service,
+                centerService: service
+            ),
+            pendingReferralStore: InMemoryPendingReferralStore(),
+            now: { clock.now }
+        )
+        await coordinator.restoreIfNeeded()
+        clock.now = clock.now.addingTimeInterval(601)
+
+        let staleRefresh = Task { await coordinator.refreshAccountData() }
+        while !coordinator.isRefreshingAccountData {
+            await Task.yield()
+        }
+        await coordinator.refreshAccountData(force: true)
+        await staleRefresh.value
+
+        let loadCount = await service.loadCount()
+        XCTAssertEqual(loadCount, 3)
+    }
+
+    @MainActor
     func testFailedAccountRefreshKeepsLastSuccessfulSnapshotAndTime() async {
         let account = AccountSession(
             accountID: UUID(),
@@ -488,7 +524,8 @@ final class AccountCenterViewModelTests: XCTestCase {
             with: AppleAuthorizationPayload(
                 identityToken: "identity",
                 authorizationCode: "authorization",
-                nonce: "nonce"
+                nonce: "nonce",
+                userIdentifier: "apple-user"
             )
         )
 
@@ -570,6 +607,128 @@ final class AccountCenterViewModelTests: XCTestCase {
         XCTAssertEqual(signOutCount, 1)
     }
 
+    @MainActor
+    func testMissingAppleIdentifierRequiresOneTimeReauthentication() async {
+        let account = AccountSession(
+            accountID: UUID(),
+            createdAtEpochSeconds: 1_700_000_000
+        )
+        let service = AccountServiceSpy(
+            restoredSession: account,
+            snapshot: makeSnapshot(account: account),
+            appleCredentialState: .reauthenticationRequired
+        )
+        let coordinator = AccountSessionCoordinator(
+            dependencies: AccountDependencies(
+                sessionService: service,
+                centerService: service
+            ),
+            pendingReferralStore: InMemoryPendingReferralStore()
+        )
+        await coordinator.restoreIfNeeded()
+
+        await coordinator.validateAppleCredentialState()
+
+        XCTAssertEqual(coordinator.sessionPhase, .signedOut)
+        XCTAssertEqual(
+            coordinator.operationErrorKey,
+            "account.error.appleReauthenticationRequired"
+        )
+    }
+
+    @MainActor
+    func testRevocationSignOutFailureKeepsSessionForRetry() async {
+        let account = AccountSession(
+            accountID: UUID(),
+            createdAtEpochSeconds: 1_700_000_000
+        )
+        let service = AccountServiceSpy(
+            restoredSession: account,
+            snapshot: makeSnapshot(account: account),
+            shouldFailSignOut: true,
+            appleCredentialState: .revoked
+        )
+        let coordinator = AccountSessionCoordinator(
+            dependencies: AccountDependencies(
+                sessionService: service,
+                centerService: service
+            ),
+            pendingReferralStore: InMemoryPendingReferralStore()
+        )
+        await coordinator.restoreIfNeeded()
+
+        await coordinator.validateAppleCredentialState()
+
+        XCTAssertEqual(coordinator.sessionPhase, .signedIn(account))
+        XCTAssertEqual(coordinator.operationErrorKey, "account.error.signOut")
+    }
+
+    @MainActor
+    func testCredentialRevocationNotificationClearsSignedInState() async {
+        let account = AccountSession(
+            accountID: UUID(),
+            createdAtEpochSeconds: 1_700_000_000
+        )
+        let center = NotificationCenter()
+        let service = AccountServiceSpy(
+            restoredSession: account,
+            snapshot: makeSnapshot(account: account)
+        )
+        let coordinator = AccountSessionCoordinator(
+            dependencies: AccountDependencies(
+                sessionService: service,
+                centerService: service
+            ),
+            pendingReferralStore: InMemoryPendingReferralStore(),
+            notificationCenter: center
+        )
+        await coordinator.restoreIfNeeded()
+
+        center.post(
+            name: ASAuthorizationAppleIDProvider.credentialRevokedNotification,
+            object: nil
+        )
+        for _ in 0..<100 where coordinator.isSignedIn {
+            await Task.yield()
+        }
+
+        XCTAssertEqual(coordinator.sessionPhase, .signedOut)
+        XCTAssertEqual(coordinator.operationErrorKey, "account.error.sessionExpired")
+    }
+
+    @MainActor
+    func testRevocationPreventsInFlightProfileUpdateFromRestoringSession() async {
+        let account = AccountSession(
+            accountID: UUID(),
+            createdAtEpochSeconds: 1_700_000_000,
+            displayName: "Before"
+        )
+        let service = AccountServiceSpy(
+            restoredSession: account,
+            snapshot: makeSnapshot(account: account),
+            profileUpdateDelayNanoseconds: 20_000_000,
+            appleCredentialState: .revoked
+        )
+        let coordinator = AccountSessionCoordinator(
+            dependencies: AccountDependencies(
+                sessionService: service,
+                centerService: service
+            ),
+            pendingReferralStore: InMemoryPendingReferralStore()
+        )
+        await coordinator.restoreIfNeeded()
+
+        let update = Task { await coordinator.updateDisplayName("After") }
+        while coordinator.operation != .updatingProfile {
+            await Task.yield()
+        }
+        await coordinator.validateAppleCredentialState()
+        let didUpdate = await update.value
+
+        XCTAssertFalse(didUpdate)
+        XCTAssertEqual(coordinator.sessionPhase, .signedOut)
+    }
+
     private func makeReferral(status: AccountReferralStatus) -> AccountReferral {
         AccountReferral(
             id: UUID(),
@@ -642,9 +801,11 @@ private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing
     private let refreshedSnapshot: AccountCenterSnapshot?
     private let shouldFailRedemption: Bool
     private let shouldFailAccountRefresh: Bool
+    private let shouldFailSignOut: Bool
     private let signOutDelayNanoseconds: UInt64
     private let signInDelayNanoseconds: UInt64
     private let accountLoadDelayNanoseconds: UInt64
+    private let profileUpdateDelayNanoseconds: UInt64
     private var remainingRestoreFailures: Int
     private let storedAppleCredentialState: AccountAppleCredentialState
     private var redeemed: [String] = []
@@ -662,10 +823,12 @@ private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing
         refreshedSnapshot: AccountCenterSnapshot? = nil,
         shouldFailRedemption: Bool = false,
         shouldFailAccountRefresh: Bool = false,
+        shouldFailSignOut: Bool = false,
         signOutDelayNanoseconds: UInt64 = 0,
         signInDelayNanoseconds: UInt64 = 0,
         restoreFailureCount: Int = 0,
         accountLoadDelayNanoseconds: UInt64 = 0,
+        profileUpdateDelayNanoseconds: UInt64 = 0,
         appleCredentialState: AccountAppleCredentialState = .unknown
     ) {
         restored = restoredSession
@@ -674,10 +837,12 @@ private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing
         self.refreshedSnapshot = refreshedSnapshot
         self.shouldFailRedemption = shouldFailRedemption
         self.shouldFailAccountRefresh = shouldFailAccountRefresh
+        self.shouldFailSignOut = shouldFailSignOut
         self.signOutDelayNanoseconds = signOutDelayNanoseconds
         self.signInDelayNanoseconds = signInDelayNanoseconds
         remainingRestoreFailures = restoreFailureCount
         self.accountLoadDelayNanoseconds = accountLoadDelayNanoseconds
+        self.profileUpdateDelayNanoseconds = profileUpdateDelayNanoseconds
         self.storedAppleCredentialState = appleCredentialState
     }
 
@@ -703,6 +868,9 @@ private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing
             try await Task.sleep(nanoseconds: signOutDelayNanoseconds)
         }
         logoutCount += 1
+        if shouldFailSignOut {
+            throw AccountServiceSpyError.failed
+        }
     }
 
     func deleteAccount(with payload: AppleAuthorizationPayload) async throws {
@@ -737,6 +905,20 @@ private actor AccountServiceSpy: AccountSessionServicing, AccountCenterServicing
         }
         guard let centerSnapshot else { throw AccountIntegrationError.unavailable }
         return centerSnapshot
+    }
+
+    func updateDisplayName(_ displayName: String) async throws -> AccountSession {
+        if profileUpdateDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: profileUpdateDelayNanoseconds)
+        }
+        guard let signedInAccount else {
+            throw AccountIntegrationError.unavailable
+        }
+        return AccountSession(
+            accountID: signedInAccount.accountID,
+            createdAtEpochSeconds: signedInAccount.createdAtEpochSeconds,
+            displayName: displayName
+        )
     }
 
     func redeemReferral(code: String) async throws {

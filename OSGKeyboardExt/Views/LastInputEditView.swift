@@ -123,7 +123,7 @@ struct LastInputEditView: View {
                     Color.clear
                     if case .listening = state.editSession {
                         Capsule()
-                            .stroke(Color.white.opacity(0.28), lineWidth: 1.5)
+                            .stroke(OSGColor.recordListeningRing, lineWidth: 1.5)
                             .scaleEffect(1 + min(max(state.level, 0), 1) * 0.08)
                             .animation(Motion.soft, value: state.level)
                     }
@@ -161,16 +161,16 @@ struct LastInputEditView: View {
     private var primaryIcon: some View {
         switch state.editSession {
         case .preparing, .processing, .applying, .appending:
-            ProgressView().tint(.white)
+            ProgressView().tint(OSGColor.fixedLightContent)
         case .review:
             Image(systemName: "checkmark")
                 .font(.system(size: 21, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(OSGColor.fixedLightContent)
         case .listening:
             WaveformView(
                 level: state.level,
                 barCount: 7,
-                color: .white,
+                color: OSGColor.fixedLightContent,
                 active: true
             )
             .frame(width: 35, height: 22)
@@ -178,7 +178,7 @@ struct LastInputEditView: View {
         default:
             Image(systemName: "mic.fill")
                 .font(.system(size: 21, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(OSGColor.fixedLightContent)
         }
     }
 

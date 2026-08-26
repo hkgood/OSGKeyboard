@@ -67,7 +67,9 @@ private struct ToolbarKeySurface<Content: View>: View {
         case .standard:
             return palette.divider
         case .send:
-            return Color.black.opacity(colorScheme == .dark ? 0.10 : 0.08)
+            return colorScheme == .dark
+                ? OSGColor.keyboardActionBorderDark
+                : OSGColor.keyboardActionBorderLight
         }
     }
 }
@@ -340,7 +342,7 @@ struct RectangularToolbarButton: View {
     }
 
     private var buttonForeground: Color {
-        isSend ? .white : NativeKeyboardKeyColors.text(for: colorScheme)
+        isSend ? OSGColor.fixedLightContent : NativeKeyboardKeyColors.text(for: colorScheme)
     }
 
     // 按下即响、即震、即执行，与系统键盘 / 打字面保持一致（Button 默认松手才触发）。

@@ -26,5 +26,6 @@ struct PrivacyInfoCard: View {
         .padding(Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .cardElevation()
     }
 }

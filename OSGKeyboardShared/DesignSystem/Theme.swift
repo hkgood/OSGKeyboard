@@ -1,7 +1,8 @@
 // Theme.swift
 // OSGKeyboard · Design System
 //
-// Single source of truth for colour, spacing, corner radius, typography.
+// Semantic theme roles, spacing, corner radius, and typography. Canonical
+// custom colour values live in `ColorLibrary.swift`.
 // Inspired by Dieter Rams ("less but better") and Apple Human Interface:
 // every surface has a single purpose, every token earns its place, and
 // the visual hierarchy is carried by *whitespace + one accent*, never by
@@ -19,6 +20,7 @@ import SwiftUI
 public struct ThemePalette: Sendable, Equatable {
     public let background: Color
     public let surface: Color
+    public let formSurface: Color
     public let surfaceElevated: Color
     public let surfaceMuted: Color
 
@@ -47,35 +49,36 @@ public struct ThemePalette: Sendable, Equatable {
 
 public enum Palette {
     // Backgrounds
-    public static let background      = Color(red: 0.039, green: 0.039, blue: 0.043)  // #0A0A0B
-    public static let surface         = Color(red: 0.094, green: 0.094, blue: 0.106)  // #18181B
-    public static let surfaceElevated = Color(red: 0.153, green: 0.153, blue: 0.169)  // #27272A
-    public static let surfaceMuted    = Color(red: 0.071, green: 0.071, blue: 0.082)  // #121215
+    public static let background      = OSGColor.darkBackground
+    public static let surface         = OSGColor.darkSurface
+    public static let formSurface     = OSGColor.darkFormSurface
+    public static let surfaceElevated = OSGColor.darkSurfaceElevated
+    public static let surfaceMuted    = OSGColor.darkSurfaceMuted
 
     // Accents
-    public static let accent          = Color(red: 0.227, green: 0.627, blue: 0.353)  // #3AA05A
+    public static let accent          = OSGColor.brandAccent
     public static let accentMuted     = accent.opacity(0.18)
     public static let accentGlow      = accent.opacity(0.42)
-    public static let aiTeal           = Color(red: 0.169, green: 0.686, blue: 0.643)  // #2BAFA4
+    public static let aiTeal           = OSGColor.aiTeal
 
     // Semantic
-    public static let danger          = Color(red: 1.000, green: 0.271, blue: 0.227)  // #FF453A
+    public static let danger          = OSGColor.darkDanger
     public static let success         = accent  // unified brand green in UI
-    public static let warning         = Color(red: 1.000, green: 0.749, blue: 0.094)  // #FFBF18
+    public static let warning         = OSGColor.darkWarning
 
     // Text
-    public static let textPrimary     = Color.white
-    public static let textSecondary   = Color(white: 0.7)
-    public static let textTertiary    = Color(white: 0.50)
-    public static let textOnAccent    = Color.black
+    public static let textPrimary     = OSGColor.darkTextPrimary
+    public static let textSecondary   = OSGColor.darkTextSecondary
+    public static let textTertiary    = OSGColor.darkTextTertiary
+    public static let textOnAccent    = OSGColor.fixedDarkContent
 
     // Lines
-    public static let divider         = Color.white.opacity(0.06)
-    public static let dividerStrong   = Color.white.opacity(0.10)
+    public static let divider         = OSGColor.darkDivider
+    public static let dividerStrong   = OSGColor.darkDividerStrong
 
     // Recording state
-    public static let recordRed       = Color(red: 1.000, green: 0.231, blue: 0.188)  // #FF3B30
-    public static let recordBlue      = Color(red: 0.000, green: 0.478, blue: 1.000)  // #007AFF
+    public static let recordRed       = OSGColor.recordRed
+    public static let recordBlue      = OSGColor.recordBlue
 
     /// Canonical dark palette — preserves every legacy literal above so
     /// existing call sites that read `Palette.background` directly keep
@@ -84,6 +87,7 @@ public enum Palette {
     public static let dark = ThemePalette(
         background: background,
         surface: surface,
+        formSurface: formSurface,
         surfaceElevated: surfaceElevated,
         surfaceMuted: surfaceMuted,
         accent: accent,
@@ -105,25 +109,26 @@ public enum Palette {
 
     /// Light palette — warm gray backgrounds for daytime use.
     public static let light = ThemePalette(
-        background: Color(red: 0.949, green: 0.945, blue: 0.933),  // #F2F1EE warm gray
-        surface: Color(red: 0.988, green: 0.984, blue: 0.976),  // #FCFBF9
-        surfaceElevated: Color(red: 0.922, green: 0.918, blue: 0.906),  // #EBEAE7
-        surfaceMuted: Color(red: 0.933, green: 0.929, blue: 0.918),  // #EEEDE9
-        accent: Color(red: 0.227, green: 0.627, blue: 0.353),  // #3AA05A
-        accentMuted: Color(red: 0.227, green: 0.627, blue: 0.353).opacity(0.14),
-        accentGlow: Color(red: 0.227, green: 0.627, blue: 0.353).opacity(0.32),
-        aiTeal: Color(red: 0.169, green: 0.686, blue: 0.643),  // #2BAFA4
-        danger: Color(red: 1.000, green: 0.231, blue: 0.188),  // #FF3B30
-        success: Color(red: 0.227, green: 0.627, blue: 0.353),  // same as accent
-        warning: Color(red: 1.000, green: 0.620, blue: 0.094),  // #FF9E18
-        textPrimary: Color(red: 0.067, green: 0.067, blue: 0.094),  // #111118
-        textSecondary: Color(red: 0.392, green: 0.392, blue: 0.435),  // #64646F
-        textTertiary: Color(red: 0.557, green: 0.557, blue: 0.604),  // #8E8E9A
-        textOnAccent: Color.white,
-        divider: Color.black.opacity(0.06),
-        dividerStrong: Color.black.opacity(0.10),
-        recordRed: Color(red: 1.000, green: 0.231, blue: 0.188),  // #FF3B30
-        recordBlue: Color(red: 0.000, green: 0.478, blue: 1.000)   // #007AFF
+        background: OSGColor.lightBackground,
+        surface: OSGColor.lightSurface,
+        formSurface: OSGColor.lightFormSurface,
+        surfaceElevated: OSGColor.lightSurfaceElevated,
+        surfaceMuted: OSGColor.lightSurfaceMuted,
+        accent: OSGColor.brandAccent,
+        accentMuted: OSGColor.brandAccent.opacity(0.14),
+        accentGlow: OSGColor.brandAccent.opacity(0.32),
+        aiTeal: OSGColor.aiTeal,
+        danger: OSGColor.lightDanger,
+        success: OSGColor.brandAccent,
+        warning: OSGColor.lightWarning,
+        textPrimary: OSGColor.lightTextPrimary,
+        textSecondary: OSGColor.lightTextSecondary,
+        textTertiary: OSGColor.lightTextTertiary,
+        textOnAccent: OSGColor.fixedLightContent,
+        divider: OSGColor.lightDivider,
+        dividerStrong: OSGColor.lightDividerStrong,
+        recordRed: OSGColor.recordRed,
+        recordBlue: OSGColor.recordBlue
     )
 }
 
@@ -235,6 +240,7 @@ private struct CardSurfaceModifier: ViewModifier {
         content
             .padding(padding)
             .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+            .cardElevation()
     }
 }
 

@@ -112,7 +112,7 @@ public struct SupportDeveloperSection: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, Spacing.sm)
-            .foregroundStyle(.white)
+            .foregroundStyle(OSGColor.fixedLightContent)
             .background(palette.accent, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
         }
         .buttonStyle(.plain)

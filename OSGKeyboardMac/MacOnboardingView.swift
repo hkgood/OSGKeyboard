@@ -272,7 +272,9 @@ struct MacOnboardingView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 128, height: 128)
-                    .foregroundStyle(colorScheme == .dark ? Color.white : palette.accent)
+                    .foregroundStyle(
+                        colorScheme == .dark ? OSGColor.fixedLightContent : palette.accent
+                    )
                     .accessibilityLabel("OSGKeyboard")
                     .allowsHitTesting(false)
             }

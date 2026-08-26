@@ -7,12 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Flow startup diagnostics**: save a privacy-safe ten-second state trace whenever session startup reaches a terminal failure, with local export and deletion controls in Settings. / **Flow 启动诊断**：会话启动最终失败时保存隐私安全的最近十秒状态轨迹，并在设置中提供本机导出与清除入口。
+
 ### Changed
+- **Card depth**: add a faint directional long shadow to card surfaces throughout the iOS app in both light and dark appearances. / **卡片层次**：为 iOS App 内的卡片界面统一加入淡雅的定向长投影，并适配浅色与深色外观。
+- **Neutral dialog actions**: use adaptive black or white styling for system alerts, confirmation dialogs, and modal actions instead of inheriting the green brand accent. / **中性弹窗操作色**：系统警告、确认弹窗及模态操作改用自适应黑色或白色，不再继承绿色品牌强调色。
 - **Monthly usage calendar**: replace the seven-day Home and Mac Dashboard chart with a full current-month calendar whose date-circle opacity reflects each day's dictation characters, placing the Home calendar between its four metrics and Personal Dictionary. / **月度用量日历**：以完整的当月日历替换首页与 Mac 总览的近七天图表，并通过日期圆形背景透明度表示每天的听写字数；首页日历位于四项统计指标与个性词库之间。
 - **Home credits and navigation**: move the credit and invitation card from Settings to Home above the usage metrics, explain free signup and referral rewards before sign-in, and open History or Personal Dictionary directly from their metric cards. / **首页积分与导航**：将积分与邀请卡片从设置迁移到首页统计指标上方，登录前明确说明免费注册与邀请奖励，并支持从听写字数和词库指标卡片直接进入历史记录或个性词库。
 - **Personal style threshold**: allow generating a learned speaking style after 2,500 effective dictation characters instead of 5,000. / **专属风格门槛**：生成学习型说话风格所需的有效听写字符由 5,000 降至 2,500。
 
 ### Fixed
+- **Durable Apple account sessions**: persist refresh operation identifiers before token rotation, reliably store and validate Apple user identifiers, require one-time reauthentication for unverifiable legacy sessions, and prevent failed Keychain deletion or concurrent account work from restoring a revoked login. / **可靠 Apple 账号会话**：在令牌轮换前持久化刷新操作标识，可靠存储并验证 Apple 用户标识，为无法验证的旧会话执行一次重新认证，并防止 Keychain 删除失败或并发账号操作恢复已撤销的登录态。
+- **Account sign-in presentation**: use the concise reward message consistently and keep a uniform app surface beneath translucent Apple authorization sheets. / **账号登录呈现**：统一使用精简的积分奖励文案，并在半透明 Apple 授权弹窗下保持一致的 App 背景。
 - **Recommended hotword details**: label Home recommendations by their actual source, render suggestion chips in adaptive monochrome, remove internal usage counts from dictionary rows, and anchor the iPhone confirmation popover to the selected hotword. / **推荐热词详情**：按真实来源标记首页推荐词，以自适应黑白配色显示推荐标签，移除词库列表中的内部使用次数，并让 iPhone 确认弹窗指向所选热词。
 
 ## [2.0.3] - 2026-08-24
@@ -44,7 +51,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Conversational skill replies**: make non-business replies sound like an ordinary person talking with friends or colleagues, allow one fitting emoji when emotion clearly calls for it, keep business replies naturally professional, and apply the active user-owned learned style only as a bounded wording-and-rhythm layer. / **口语化技能回复**：非商务回复采用普通人与朋友、好友或同事交谈的自然口吻，情绪明确时可合理使用一个表情；商务回复保持自然专业，当前用户自有的学习风格仅作为受限的用词与节奏层应用。
 
 ### Fixed
-- **Durable account sessions**: persist refresh operation identifiers before network rotation, recover safely after crashes or Keychain write failures, and sign out when Apple reports revoked credentials. / **可靠账号会话**：在网络轮换前持久化刷新操作标识，在崩溃或 Keychain 写入失败后安全恢复，并在 Apple 凭据被撤销时退出登录。
 - **Personal dictionary aliases**: generate common speech-recognition mistakes for Home term suggestions through the same concurrency-safe save path used by manual entries. / **个性词库易错词**：首页推荐词现在与手动词条共用并发安全的保存流程，并自动生成常见语音误识别写法。
 - **Home service setup guidance**: explain whether user-owned API keys are missing, link directly to the relevant provider settings, and offer OSG credits as the no-key alternative. / **首页服务配置引导**：明确说明缺少哪类自备 API Key，直接跳转到对应服务商设置，并提供无需填写 Key 的 OSG 积分方案。
 - **Live keyboard configuration guidance**: apply speech-language changes to an already open keyboard and explain when clipboard capture is paused because Full Access is off. / **键盘实时配置引导**：识别语言变更会同步到已打开的键盘，并在“允许完全访问”关闭导致剪贴板采集暂停时给出说明。

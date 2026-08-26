@@ -437,6 +437,37 @@ final class AccountAPIClientTests: XCTestCase {
         XCTAssertEqual(requests.single?.url?.path, "/v1/auth/logout")
     }
 
+    func testLogoutClearFailureRetainsSessionForRetry() async throws {
+        let retained = makeAccountSession()
+        let store = InMemoryAccountSecurityStore(
+            session: retained,
+            sessionClearFailures: 1
+        )
+        let transport = QueueAccountTransport([])
+        let client = AccountAPIClient(
+            baseURL: URL(string: "https://account.test")!,
+            transport: transport,
+            sessionVault: store
+        )
+
+        do {
+            try await client.logout()
+            XCTFail("Expected the first Keychain deletion to fail")
+        } catch let error as AccountAPIError {
+            XCTAssertEqual(error, .secureStorage)
+        }
+
+        let sessionAfterFailure = await store.session
+        let cachedSessionAfterFailure = try await client.currentSession()
+        XCTAssertEqual(sessionAfterFailure, retained)
+        XCTAssertEqual(cachedSessionAfterFailure, retained)
+
+        try await client.logout()
+
+        let sessionAfterRetry = await store.session
+        XCTAssertNil(sessionAfterRetry)
+    }
+
     func testDeleteAccountUsesAuthenticatedDeleteAndClearsPrivateSession() async throws {
         let store = InMemoryAccountSecurityStore(session: makeAccountSession())
         let transport = QueueAccountTransport([

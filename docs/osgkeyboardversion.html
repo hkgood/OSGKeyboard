@@ -178,97 +178,154 @@
   <p class="empty" id="empty-zh">暂无与当前版本匹配的更新说明。</p>
   <p class="empty" id="empty-en">No release notes match this app version.</p>
 
-  <!-- ========== 2.0.1 ========== -->
-  <article class="version-block" data-version="2.0.1">
-    <div class="version-chip">2.0.1</div>
+  <!-- ========== 2.0.2 ========== -->
+  <article class="version-block" data-version="2.0.2">
+    <div class="version-chip">2.0.2</div>
 
     <div class="lang-block" data-lang="zh">
       <section class="section">
-        <h2>更安全、更顺畅的 AI 体验</h2>
+        <h2>UI 与交互全面升级</h2>
         <ul>
-          <li>未登录、退出账号或会话过期时，所有 AI 功能会自动切回<strong>用户自备 API Key</strong>，并阻止缓存的托管 Grant 继续消耗积分</li>
-          <li>首次使用流程更加精简，可依次体验听写、翻译、智能回复和语音提问，再决定是否登录</li>
-          <li>官方 AI 技能目录可独立更新，无需等待新的 App 版本</li>
-          <li>修复后台挂起时的埋点数据库锁、重复显示购买成功提示，以及账号和设置刷新不稳定的问题</li>
+          <li>iPhone 使用 iOS 26 原生 Liquid Glass 标签栏与页面过渡，切换标签时会保留各页面的导航状态</li>
+          <li>技能页改为更清晰的已安装与未安装列表；点按技能进入完整详情页，集中管理安装、快捷指令配置和自定义技能编辑</li>
+          <li>重新整理首页、账号、AI 服务和个人词库中的信息层级；缺少必要配置时，会直接说明原因并提供下一步入口</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <div class="group">
+          <h2>新增 Apple 账号登录</h2>
+          <div class="wn-media wide">
+            <img src="assets/whats-new/account-sign-in-zh.png" alt="OSGKeyboard 通过 Apple 登录账号的真实界面卡片" loading="lazy" decoding="async">
+          </div>
+          <ul>
+            <li>支持通过 Apple 登录创建或打开 OSG 账号，集中查看积分、邀请奖励和购买记录</li>
+            <li>登录后可直接通过 OSG 积分使用托管语音与 AI 服务，也可通过 App Store 购买积分包</li>
+            <li>本地听写和用户自备 API Key 仍可独立使用，无需登录</li>
+          </ul>
+        </div>
+
+        <div class="group">
+          <h2>邀请好友，双方得积分</h2>
+          <div class="wn-media wide">
+            <img src="assets/whats-new/referral-rewards-zh.png" alt="OSGKeyboard 账号中的积分余额与邀请奖励" loading="lazy" decoding="async">
+          </div>
+          <ul>
+            <li>登录可领取注册奖励；每成功邀请一位好友，你和好友都可以获得积分</li>
+            <li>邀请链接与积分余额会跟随账号保持同步</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>新增个人专属风格</h2>
+        <div class="wn-media wide">
+          <img src="assets/whats-new/personal-style-card-zh.png" alt="润色风格页面中的生成专属风格真实界面卡片" loading="lazy" decoding="async">
+        </div>
+        <ul>
+          <li>可从自己的听写表达与明确修改中学习说话风格，生成专属于你的措辞和表达习惯</li>
+          <li>个人风格可应用于剪贴板回复，在不改变原意的前提下调整用词与节奏，让回复更像你自己</li>
+          <li>用于学习的文字语料仅在你主动点击生成时发送给所选 AI 服务，生成结果需要确认后才会保存和启用</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>新增智能剪贴板技能</h2>
+        <ul>
+          <li>端侧模型与本地规则会对剪贴板内容进行基础语义识别，并从完整技能目录中智能推荐最多五个相关操作</li>
+          <li>可识别任务、邀约、问句、情绪和语言，推荐回复、翻译、总结、澄清、共情、商务回复或整理清单等技能</li>
+          <li>复制单个电话号码时可直接拨号或新建联系人；复制网页链接时可直接打开，或提取公开网页内容进行总结</li>
+          <li>识别和推荐过程在设备端完成；只有主动运行需要 AI 的技能时，相关内容才会发送给所选服务</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>新增自动推荐个人热词</h2>
+        <div class="wn-media wide">
+          <img src="assets/whats-new/personal-terms-card-zh.png" alt="首页个性词库中的个人热词推荐真实界面卡片" loading="lazy" decoding="async">
+        </div>
+        <ul>
+          <li>根据键盘中反复输入的新词自动生成个人热词推荐，让常用名称、术语和表达更容易再次输入</li>
+          <li>推荐词必须由你明确确认后才会加入个人词库；本地学习不会记录完整击键内容</li>
         </ul>
       </section>
     </div>
 
     <div class="lang-block" data-lang="en">
       <section class="section">
-        <h2>Safer, Smoother AI</h2>
+        <h2>UI and Interaction, Rebuilt</h2>
         <ul>
-          <li>When signed out or after a session expires, every AI feature now returns to <strong>your own API key</strong> and cached managed grants can no longer consume credits</li>
-          <li>The shorter first-run guide demonstrates dictation, translation, smart reply, and voice questions before the optional sign-in step</li>
-          <li>The official AI skill catalog can refresh without waiting for a new App Store release</li>
-          <li>Fixes analytics database locks during suspension, repeated purchase confirmations, and unreliable account or settings refreshes</li>
+          <li>iPhone now uses the native iOS 26 Liquid Glass tab bar and transitions while preserving each tab's navigation state</li>
+          <li>Skills are organized into clearer Installed and Not Installed lists; tap one to manage installation, Shortcut setup, or custom-skill editing on a dedicated detail page</li>
+          <li>Home, Account, AI Service, and Personal Dictionary now have a clearer hierarchy, with direct explanations and next steps when setup is incomplete</li>
         </ul>
       </section>
-    </div>
-  </article>
 
-  <!-- ========== 2.0.0 ========== -->
-  <article class="version-block" data-version="2.0.0">
-    <div class="version-chip">2.0.0</div>
-
-    <div class="lang-block" data-lang="zh">
       <section class="section">
-        <h2>全新积分体验</h2>
-
         <div class="group">
-          <p class="group-title">邀请好友，双方得积分</p>
+          <h2>New Sign in with Apple</h2>
           <div class="wn-media wide">
-            <img src="assets/whats-new/referral-rewards-zh.png" alt="OSGKeyboard 设置中的邀请奖励卡片" loading="lazy" decoding="async">
+            <img src="assets/whats-new/account-sign-in-en.png" alt="Real OSGKeyboard account card with Sign in with Apple" loading="lazy" decoding="async">
           </div>
           <ul>
-            <li>每成功邀请一位好友，你和好友各获得<strong>1000 积分</strong></li>
-            <li>可在设置的账号区域分享邀请链接</li>
-          </ul>
-        </div>
-
-        <div class="group">
-          <p class="group-title">OSG 积分模式</p>
-          <div class="wn-media wide">
-            <img src="assets/whats-new/osg-credits-zh.png" alt="OSGKeyboard AI 服务中已选择使用积分" loading="lazy" decoding="async">
-          </div>
-          <ul>
-            <li>使用 Apple 登录后，无需配置自己的 API Key，即可使用托管语音与 AI 服务</li>
-            <li>支持通过 App Store 购买积分包，积分余额自动同步</li>
-            <li>本地听写和自备 API Key 仍可独立使用，无需登录</li>
-          </ul>
-        </div>
-      </section>
-    </div>
-
-    <div class="lang-block" data-lang="en">
-      <section class="section">
-        <h2>A New Credits Experience</h2>
-
-        <div class="group">
-          <p class="group-title">Invite Friends, Earn Credits Together</p>
-          <div class="wn-media wide">
-            <img src="assets/whats-new/referral-rewards-en.png" alt="Referral rewards card in OSGKeyboard Settings" loading="lazy" decoding="async">
-          </div>
-          <ul>
-            <li>For every successful referral, you and your friend each receive <strong>1,000 credits</strong></li>
-            <li>Share your invitation link from the Account section in Settings</li>
-          </ul>
-        </div>
-
-        <div class="group">
-          <p class="group-title">OSG Credits Mode</p>
-          <div class="wn-media wide">
-            <img src="assets/whats-new/osg-credits-en.png" alt="Use Credits selected in OSGKeyboard AI Service" loading="lazy" decoding="async">
-          </div>
-          <ul>
-            <li>Sign in with Apple to use managed speech and AI services without configuring your own API key</li>
-            <li>Purchase credit packs through the App Store and keep your balance synchronized automatically</li>
+            <li>Use Sign in with Apple to create or open an OSG account and manage credits, referral rewards, and purchase history in one place</li>
+            <li>After signing in, use managed speech and AI services with OSG credits, with additional credit packs available through the App Store</li>
             <li>Local dictation and user-owned API keys remain available independently, with no sign-in required</li>
           </ul>
         </div>
+
+        <div class="group">
+          <h2>Invite Friends, Earn Credits Together</h2>
+          <div class="wn-media wide">
+            <img src="assets/whats-new/referral-rewards-en.png" alt="Credit balance and referral rewards in an OSGKeyboard account" loading="lazy" decoding="async">
+          </div>
+          <ul>
+            <li>Sign in to receive the signup reward; for every successful referral, both you and your friend can earn credits</li>
+            <li>Your invitation link and credit balance stay synchronized with your account</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>New Personal Style</h2>
+        <div class="wn-media wide">
+          <img src="assets/whats-new/personal-style-card-en.png" alt="Real Generate Your Style card on the Polish Styles page" loading="lazy" decoding="async">
+        </div>
+        <ul>
+          <li>Learn a personal speaking style from your dictation and explicit edits, capturing the wording and expression patterns that make your voice distinct</li>
+          <li>Apply that style to clipboard replies so wording and rhythm sound more like you without changing the original meaning</li>
+          <li>Learning text is sent to the selected AI service only when you explicitly tap Generate, and the result must be reviewed before it is saved and enabled</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>New Smart Clipboard Skills</h2>
+        <ul>
+          <li>On-device models and local rules perform lightweight semantic recognition, then recommend up to five relevant actions from the complete skill catalog</li>
+          <li>Tasks, invitations, questions, sentiment, and language can surface skills such as Reply, Translate, Summarize, Clarify, Empathy, Business Reply, or Organize List</li>
+          <li>A single copied phone number can open calling or a prefilled new-contact form; a copied web link can open directly or be summarized from bounded public webpage content</li>
+          <li>Recognition and recommendation stay on device. Content is sent to the selected service only after you run a skill that requires AI</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>New Automatic Personal-Term Suggestions</h2>
+        <div class="wn-media wide">
+          <img src="assets/whats-new/personal-terms-card-en.png" alt="Real personal-term suggestion card on Home" loading="lazy" decoding="async">
+        </div>
+        <ul>
+          <li>Repeated new terms from keyboard input become suggestions, making frequently used names, terminology, and expressions easier to type again</li>
+          <li>A suggestion joins Personal Dictionary only after your explicit confirmation; local learning does not record complete keystrokes</li>
+        </ul>
       </section>
     </div>
   </article>
+
+  <!-- ========== 2.0.1 ========== -->
+  <!-- Consolidated into the cumulative 2.0.2 user-facing release notes. -->
+
+  <!-- ========== 2.0.0 ========== -->
+  <!-- Intentionally skipped in user-facing notes; key changes are included in 2.0.2. -->
 
   <!-- ========== 1.8.0 ========== -->
   <article class="version-block" data-version="1.8.0">

@@ -385,7 +385,7 @@ struct MacLocalASRModelSettingsView: View {
             MacSettingsToolButton(
                 title: MacL10n.string("mac.localASR.download", language: lang),
                 fill: palette.accent,
-                foreground: .white
+                foreground: OSGColor.fixedLightContent
             ) {
                 modelVM.installModel(model)
             }

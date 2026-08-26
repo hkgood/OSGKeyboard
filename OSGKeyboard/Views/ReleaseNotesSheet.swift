@@ -48,7 +48,7 @@ struct ReleaseNotesSheet: View {
 
                         if isLoading {
                             ProgressView()
-                                .tint(palette.accent)
+                                .tint(palette.textPrimary)
                         }
                     }
                 } else {
@@ -70,6 +70,7 @@ struct ReleaseNotesSheet: View {
                     Button(AppL10n.string("common.done", language: language)) {
                         dismiss()
                     }
+                    .tint(palette.textPrimary)
                 }
             }
         }

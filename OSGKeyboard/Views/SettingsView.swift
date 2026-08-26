@@ -24,6 +24,7 @@ private enum SettingsRoute: Hashable {
     case general
     case aiAgent
     case clipboard
+    case diagnostics
     case about
 }
 
@@ -144,6 +145,8 @@ struct SettingsView: View {
             AIAgentSettingsView(config: config)
         case .clipboard:
             ClipboardSettingsView(config: config)
+        case .diagnostics:
+            FlowDiagnosticsSettingsView()
         case .about:
             AboutSettingsView(config: config)
         }
@@ -314,6 +317,10 @@ struct SettingsView: View {
 
             Divider().background(palette.divider)
 
+            settingsRouteButton(.diagnostics, title: "settings.diagnostics.title")
+
+            Divider().background(palette.divider)
+
             // Opens the remote release-notes sheet (same as post-upgrade prompt).
             SettingsVersionRow()
         }
@@ -356,9 +363,11 @@ struct SettingsView: View {
 
 private struct SettingsSheetDismissButton: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.themePalette) private var palette
 
     var body: some View {
         Button("common.done") { dismiss() }
+            .tint(palette.textPrimary)
     }
 }
 

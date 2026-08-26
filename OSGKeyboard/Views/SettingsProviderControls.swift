@@ -93,10 +93,6 @@ struct SettingsCredentialRow: View {
         .padding(.horizontal, Spacing.sm)
         .frame(minHeight: 38)
         .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
-                .stroke(palette.divider, lineWidth: 0.5)
-        )
     }
 
     private func iconButton(systemName: String, label: LocalizedStringKey, action: @escaping () -> Void) -> some View {
@@ -157,8 +153,8 @@ struct SettingsModelPickerRow: View {
         .onDisappear { invalidateRequest() }
     }
 
-    /// Editable model id + trailing menu chevron in one well (same chrome as
-    /// Mac `MacPickerFieldBox`). Chevron is overlaid so it stays inside the border.
+    /// Editable model id + trailing menu chevron in one well. Chevron is
+    /// overlaid so it stays inside the field surface.
     private var comboField: some View {
         let shape = RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
         let chevronWidth: CGFloat = 28
@@ -173,7 +169,6 @@ struct SettingsModelPickerRow: View {
                 .padding(.trailing, chevronWidth + Spacing.sm)
                 .frame(maxWidth: .infinity, minHeight: controlHeight, alignment: .leading)
                 .background(palette.surfaceElevated, in: shape)
-                .overlay(shape.stroke(palette.divider, lineWidth: 0.5))
 
             Menu {
                 if models.isEmpty {

@@ -173,7 +173,7 @@ struct MacDictionaryView: View {
         }
         .padding(.horizontal, Spacing.sm)
         .frame(width: 220, height: MacMetrics.pageHeaderControlHeight)
-        .background(palette.surface, in: Capsule())
+        .background(palette.formSurface, in: Capsule())
         .overlay(Capsule().stroke(palette.divider, lineWidth: 0.5))
     }
 
@@ -289,9 +289,13 @@ private struct MacDictionaryEntryEditor: View {
                 Button(MacL10n.string("mac.cancel", language: language)) {
                     dismiss()
                 }
-                Button(MacL10n.string("mac.save", language: language), action: save)
+                .tint(palette.textPrimary)
+                Button(action: save) {
+                    Text(MacL10n.string("mac.save", language: language))
+                        .foregroundStyle(palette.background)
+                }
                     .buttonStyle(.borderedProminent)
-                    .tint(palette.accent)
+                    .tint(palette.textPrimary)
                     .disabled(trimmedTerm.isEmpty)
             }
         }

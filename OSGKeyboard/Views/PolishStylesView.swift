@@ -10,6 +10,7 @@ import SwiftUI
 @MainActor
 struct PolishStylesView: View {
     @Environment(\.themePalette) private var palette
+    @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var config = ProviderConfig.shared
     @ObservedObject private var history = SpeechHistoryStore.shared
 
@@ -51,6 +52,7 @@ struct PolishStylesView: View {
                 }
                 .tabBarScrollBottomPadding()
             }
+            .scrollClipDisabled()
             .background(palette.background)
             .navigationTitle("polishStyles.title")
             .navigationBarTitleDisplayMode(.large)
@@ -61,6 +63,7 @@ struct PolishStylesView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .tint(palette.textPrimary)
                     .disabled(catalog.entries.count >= PolishStyleLimits.maximumUserPacks)
                     .accessibilityLabel(Text("polishStyles.add"))
                 }
@@ -111,6 +114,15 @@ struct PolishStylesView: View {
         let reachedLimit = catalog.entries.count >= PolishStyleLimits.maximumUserPacks
         let isActionAvailable = corpus.isReady && !reachedLimit
         let canGenerate = isActionAvailable && !isGeneratingLearnedStyle
+        let completedCharacterCount = min(corpus.effectiveCharacterCount, required)
+        let learnedFraction = required > 0
+            ? Double(completedCharacterCount) / Double(required)
+            : 0
+        let progressDescription = AppL10n.format(
+            "polishStyles.learn.progress",
+            Int64(corpus.effectiveCharacterCount),
+            Int64(required)
+        )
 
         return VStack(alignment: .leading, spacing: Spacing.md) {
             HStack(alignment: .top, spacing: Spacing.md) {
@@ -134,20 +146,19 @@ struct PolishStylesView: View {
                 }
             }
 
-            ProgressView(
-                value: Double(min(corpus.effectiveCharacterCount, required)),
-                total: Double(required)
+            ProgressTrack(
+                segments: [
+                    ProgressTrackSegment(
+                        fraction: learnedFraction,
+                        color: palette.accent
+                    )
+                ]
             )
-            .tint(palette.accent)
+            .accessibilityLabel(Text("polishStyles.learn.title"))
+            .accessibilityValue(Text(progressDescription))
 
             HStack {
-                Text(
-                    AppL10n.format(
-                        "polishStyles.learn.progress",
-                        Int64(corpus.effectiveCharacterCount),
-                        Int64(required)
-                    )
-                )
+                Text(progressDescription)
                 .font(TypeStyle.caption2)
                 .foregroundStyle(palette.textTertiary)
 
@@ -224,6 +235,19 @@ struct PolishStylesView: View {
 
     private func packCard(_ pack: PolishStylePack) -> some View {
         let isSelected = pack.id == activeID
+        let shape = RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+        let selectedFillColors = colorScheme == .dark
+            ? [
+                OSGColor.selectedCardFillLeadingDark,
+                OSGColor.selectedCardFillTrailingDark
+            ]
+            : [
+                OSGColor.selectedCardFillLeadingLight,
+                OSGColor.selectedCardFillTrailingLight
+            ]
+        let selectedStroke = colorScheme == .dark
+            ? OSGColor.selectedCardStrokeDark
+            : OSGColor.selectedCardStrokeLight
         return ZStack(alignment: .topTrailing) {
             Button {
                 activate(pack)
@@ -263,11 +287,25 @@ struct PolishStylesView: View {
                 CatalogCardChrome.checkIcon(palette: palette)
             }
         }
-        .background(
-            isSelected ? palette.accentMuted : palette.surface,
-            in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
-        )
-        .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+        .background {
+            shape
+                .fill(palette.surface)
+                .overlay {
+                    if isSelected {
+                        shape
+                            .fill(
+                                LinearGradient(
+                                    colors: selectedFillColors,
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .overlay(shape.stroke(selectedStroke, lineWidth: 0.75))
+                    }
+                }
+        }
+        .clipShape(shape)
+        .cardElevation(accented: isSelected)
         .contextMenu {
             Button("polishStyles.duplicate") {
                 duplicate(pack)
@@ -423,7 +461,7 @@ private struct PolishStylePromptDetailSheet: View {
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(Spacing.md)
-                        .surfaceCard()
+                        .surfaceCard(elevated: false)
                 }
             }
             .background(palette.background)
@@ -432,6 +470,7 @@ private struct PolishStylePromptDetailSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("common.done") { dismiss() }
+                        .tint(palette.textPrimary)
                 }
             }
         }
@@ -467,9 +506,13 @@ private struct PolishStyleEditorSheet: View {
             Form {
                 Section("polishStyles.editor.name") {
                     TextField("polishStyles.editor.namePlaceholder", text: $name)
+                        .settingsListRow()
+                        .cardListRow(elevated: false)
                 }
                 Section {
                     Toggle("polishStyles.editor.allowsAddedEmoji", isOn: $allowsAddedEmoji)
+                        .settingsListRow()
+                        .cardListRow(elevated: false)
                 } footer: {
                     Text("polishStyles.editor.allowsAddedEmoji.hint")
                 }
@@ -477,6 +520,8 @@ private struct PolishStyleEditorSheet: View {
                     TextEditor(text: $prompt)
                         .font(.body.monospaced())
                         .frame(minHeight: 320)
+                        .padding(Spacing.md)
+                        .cardListRow(elevated: false)
                         .onChange(of: prompt) { _, newValue in
                             // Paste-only custom prompts that declare emoji opt-in
                             // should flip the toggle so post-processing keeps them.
@@ -505,6 +550,7 @@ private struct PolishStyleEditorSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("common.cancel") { dismiss() }
+                        .tint(palette.textPrimary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("common.save") {
@@ -525,6 +571,7 @@ private struct PolishStyleEditorSheet: View {
                             || prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             || prompt.count > PolishStyleLimits.maximumPromptCharacters
                     )
+                    .tint(palette.textPrimary)
                 }
             }
         }

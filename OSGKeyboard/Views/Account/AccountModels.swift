@@ -245,14 +245,14 @@ struct AppleAuthorizationPayload: Equatable, Sendable {
     let authorizationCode: String
     let nonce: String
     let displayName: String?
-    let userIdentifier: String?
+    let userIdentifier: String
 
     init(
         identityToken: String,
         authorizationCode: String,
         nonce: String,
         displayName: String? = nil,
-        userIdentifier: String? = nil
+        userIdentifier: String
     ) {
         self.identityToken = identityToken
         self.authorizationCode = authorizationCode
@@ -265,6 +265,7 @@ struct AppleAuthorizationPayload: Equatable, Sendable {
 enum AccountAppleCredentialState: Equatable, Sendable {
     case authorized
     case revoked
+    case reauthenticationRequired
     case unknown
 }
 

@@ -12,9 +12,10 @@
 //   (backgrounds do not need 120 Hz) — roughly halves GPU vs. uncapped TimelineView.
 // - `accessibilityReduceMotion` → static frame at phase = 0 (Apple HIG).
 // - Palette is the same near-black base used across the rest of the app
-//   (`Color(red: 0.06, green: 0.06, blue: 0.07)`) with cool-warm accents that
+//   (`OSGColor.demoBackground`) with cool-warm accents that
 //   sit in the "premium, calm, late-night" register — fits the Typeless vibe.
 
+import OSGKeyboardShared
 import SwiftUI
 
 @available(iOS 18.0, *)
@@ -108,43 +109,13 @@ struct AnimatedMeshPalette: Sendable {
     var colors: [Color]
 
     /// Deep indigo / amber / teal. Default — works for the dark home screen.
-    static let aurora = AnimatedMeshPalette(colors: [
-        Color(red: 0.06, green: 0.07, blue: 0.13),  // top-left
-        Color(red: 0.10, green: 0.08, blue: 0.20),  // top-mid
-        Color(red: 0.05, green: 0.10, blue: 0.18),  // top-right
-        Color(red: 0.12, green: 0.09, blue: 0.16),  // left-mid
-        Color(red: 0.18, green: 0.11, blue: 0.22),  // center  ← deepest violet
-        Color(red: 0.08, green: 0.12, blue: 0.20),  // right-mid
-        Color(red: 0.16, green: 0.10, blue: 0.10),  // bottom-left  (amber hint)
-        Color(red: 0.10, green: 0.08, blue: 0.18),  // bottom-mid
-        Color(red: 0.05, green: 0.09, blue: 0.14)   // bottom-right
-    ])
+    static let aurora = AnimatedMeshPalette(colors: OSGColor.meshAurora)
 
     /// Cooler / more "Apple" feel — slate blue, steel, ice.
-    static let polar = AnimatedMeshPalette(colors: [
-        Color(red: 0.05, green: 0.07, blue: 0.10),
-        Color(red: 0.09, green: 0.12, blue: 0.18),
-        Color(red: 0.07, green: 0.09, blue: 0.14),
-        Color(red: 0.10, green: 0.13, blue: 0.18),
-        Color(red: 0.13, green: 0.16, blue: 0.22),
-        Color(red: 0.08, green: 0.10, blue: 0.16),
-        Color(red: 0.06, green: 0.10, blue: 0.16),
-        Color(red: 0.09, green: 0.11, blue: 0.18),
-        Color(red: 0.05, green: 0.07, blue: 0.12)
-    ])
+    static let polar = AnimatedMeshPalette(colors: OSGColor.meshPolar)
 
     /// Warm "candlelight" — fits evening writing session vibes.
-    static let ember = AnimatedMeshPalette(colors: [
-        Color(red: 0.08, green: 0.06, blue: 0.05),
-        Color(red: 0.14, green: 0.09, blue: 0.06),
-        Color(red: 0.10, green: 0.07, blue: 0.06),
-        Color(red: 0.16, green: 0.10, blue: 0.07),
-        Color(red: 0.22, green: 0.13, blue: 0.08),
-        Color(red: 0.12, green: 0.08, blue: 0.07),
-        Color(red: 0.10, green: 0.06, blue: 0.05),
-        Color(red: 0.15, green: 0.09, blue: 0.06),
-        Color(red: 0.08, green: 0.06, blue: 0.05)
-    ])
+    static let ember = AnimatedMeshPalette(colors: OSGColor.meshEmber)
 }
 
 // MARK: - Helpers

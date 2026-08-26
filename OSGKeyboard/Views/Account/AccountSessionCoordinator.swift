@@ -58,8 +58,10 @@ final class AccountSessionCoordinator: ObservableObject {
     private var didAttemptRestore = false
     private var accountRefreshTask: Task<Void, Never>?
     private var accountRefreshRequestID: UUID?
+    private var pendingForcedAccountRefresh = false
     private var sessionEventsTask: Task<Void, Never>?
     private var appleCredentialRevocationCancellable: AnyCancellable?
+    private var sessionRevision: UInt64 = 0
 
     init(
         dependencies: AccountDependencies,
@@ -70,6 +72,7 @@ final class AccountSessionCoordinator: ObservableObject {
             UserDefaultsReferralProfileStore(),
         accountRefreshInterval: TimeInterval = 10 * 60,
         now: @escaping () -> Date = Date.init,
+        notificationCenter: NotificationCenter = .default,
         analyticsClient: any AnalyticsClient = NoopAnalyticsClient(),
         onAccountAuthenticated: @escaping (UUID) async -> Void = { _ in },
         onAccountSignedOut: @escaping () async -> Void = {},
@@ -102,11 +105,13 @@ final class AccountSessionCoordinator: ObservableObject {
                 await self?.handleSessionEvent(event)
             }
         }
-        appleCredentialRevocationCancellable = NotificationCenter.default
+        appleCredentialRevocationCancellable = notificationCenter
             .publisher(for: ASAuthorizationAppleIDProvider.credentialRevokedNotification)
             .sink { [weak self] _ in
                 Task { @MainActor [weak self] in
-                    await self?.handleAppleCredentialRevocation()
+                    await self?.handleAppleCredentialRevocation(
+                        errorKey: "account.error.sessionExpired"
+                    )
                 }
             }
     }
@@ -142,6 +147,7 @@ final class AccountSessionCoordinator: ObservableObject {
                 return
             }
             await onAccountAuthenticated(session.accountID)
+            advanceSessionRevision()
             sessionPhase = .signedIn(session)
             creditPurchases.startSession(accountID: session.accountID)
             referralProfile.startSession(accountID: session.accountID)
@@ -167,11 +173,19 @@ final class AccountSessionCoordinator: ObservableObject {
     }
 
     func validateAppleCredentialState() async {
-        guard isSignedIn,
-              await sessionService.appleCredentialState() == .revoked else {
+        guard isSignedIn else { return }
+        switch await sessionService.appleCredentialState() {
+        case .authorized, .unknown:
             return
+        case .revoked:
+            await handleAppleCredentialRevocation(
+                errorKey: "account.error.sessionExpired"
+            )
+        case .reauthenticationRequired:
+            await handleAppleCredentialRevocation(
+                errorKey: "account.error.appleReauthenticationRequired"
+            )
         }
-        await handleAppleCredentialRevocation()
     }
 
     @discardableResult
@@ -208,6 +222,7 @@ final class AccountSessionCoordinator: ObservableObject {
         do {
             let session = try await sessionService.signIn(with: payload)
             await onAccountAuthenticated(session.accountID)
+            advanceSessionRevision()
             sessionPhase = .signedIn(session)
             creditPurchases.startSession(accountID: session.accountID)
             referralProfile.startSession(accountID: session.accountID)
@@ -229,6 +244,9 @@ final class AccountSessionCoordinator: ObservableObject {
             return
         }
         if let accountRefreshTask {
+            if force {
+                pendingForcedAccountRefresh = true
+            }
             await accountRefreshTask.value
             return
         }
@@ -257,16 +275,27 @@ final class AccountSessionCoordinator: ObservableObject {
         accountRefreshTask = task
         await task.value
         finishAccountRefresh(requestID: requestID)
+        let shouldRunForcedRefresh = pendingForcedAccountRefresh
+        pendingForcedAccountRefresh = false
+        if shouldRunForcedRefresh, self.accountID != nil {
+            await refreshAccountData(force: true)
+        }
     }
 
     func updateDisplayName(_ displayName: String) async -> Bool {
-        guard operation == nil, isSignedIn else { return false }
+        guard operation == nil, let expectedAccountID = accountID else { return false }
+        let expectedRevision = sessionRevision
         operation = .updatingProfile
         operationErrorKey = nil
         defer { operation = nil }
 
         do {
             let account = try await centerService.updateDisplayName(displayName)
+            guard sessionRevision == expectedRevision,
+                  accountID == expectedAccountID,
+                  account.accountID == expectedAccountID else {
+                return false
+            }
             sessionPhase = .signedIn(account)
             if case let .loaded(snapshot) = snapshotPhase {
                 snapshotPhase = .loaded(
@@ -279,6 +308,10 @@ final class AccountSessionCoordinator: ObservableObject {
             }
             return true
         } catch {
+            guard sessionRevision == expectedRevision,
+                  accountID == expectedAccountID else {
+                return false
+            }
             operationErrorKey = errorMessageKey(
                 for: error,
                 fallback: "account.error.updateProfile"
@@ -288,14 +321,24 @@ final class AccountSessionCoordinator: ObservableObject {
     }
 
     func prepareManagedGateway() async -> Bool {
-        guard operation == nil, isSignedIn else { return false }
+        guard operation == nil, let expectedAccountID = accountID else { return false }
+        let expectedRevision = sessionRevision
         operation = .preparingManagedGateway
         operationErrorKey = nil
         defer { operation = nil }
         do {
             try await sessionService.prepareManagedGateway()
+            guard sessionRevision == expectedRevision,
+                  accountID == expectedAccountID else {
+                await sessionService.clearManagedGateway()
+                return false
+            }
             return true
         } catch {
+            guard sessionRevision == expectedRevision,
+                  accountID == expectedAccountID else {
+                return false
+            }
             operationErrorKey = errorMessageKey(
                 for: error,
                 fallback: "account.error.managedGateway"
@@ -318,6 +361,7 @@ final class AccountSessionCoordinator: ObservableObject {
         do {
             try await sessionService.signOut()
             await onAccountSignedOut()
+            advanceSessionRevision()
             creditPurchases.endSession()
             clearAccountRefreshState()
             referralProfile.endSession()
@@ -342,6 +386,7 @@ final class AccountSessionCoordinator: ObservableObject {
             try await sessionService.deleteAccount(with: payload)
             await onAccountDeleted()
             await onAccountSignedOut()
+            advanceSessionRevision()
             creditPurchases.endSession()
             clearAccountRefreshState()
             referralProfile.endSession(removeCache: true)
@@ -412,6 +457,7 @@ final class AccountSessionCoordinator: ObservableObject {
         accountRefreshTask?.cancel()
         accountRefreshTask = nil
         accountRefreshRequestID = nil
+        pendingForcedAccountRefresh = false
         lastAccountRefreshAt = nil
         isRefreshingAccountData = false
         accountRefreshErrorKey = nil
@@ -427,26 +473,48 @@ final class AccountSessionCoordinator: ObservableObject {
     private func handleSessionEvent(_ event: AccountSessionEvent) async {
         switch event {
         case .expired:
-            await transitionToExpiredSession()
+            await expireSession(
+                errorKey: "account.error.sessionExpired",
+                signsOutService: false
+            )
         }
     }
 
-    private func handleAppleCredentialRevocation() async {
-        guard isSignedIn else { return }
-        try? await sessionService.signOut()
-        await transitionToExpiredSession()
+    private func handleAppleCredentialRevocation(errorKey: String) async {
+        guard operation != .signingOut,
+              operation != .deletingAccount else {
+            return
+        }
+        await expireSession(errorKey: errorKey, signsOutService: true)
     }
 
-    private func transitionToExpiredSession() async {
+    private func expireSession(
+        errorKey: String,
+        signsOutService: Bool
+    ) async {
         guard isSignedIn else { return }
+        advanceSessionRevision()
+        if signsOutService {
+            do {
+                try await sessionService.signOut()
+            } catch {
+                operationErrorKey = "account.error.signOut"
+                return
+            }
+        }
         await sessionService.clearManagedGateway()
         await onAccountSignedOut()
         creditPurchases.endSession()
         clearAccountRefreshState()
         referralProfile.endSession()
+        operation = nil
         sessionPhase = .signedOut
         snapshotPhase = .idle
-        operationErrorKey = "account.error.sessionExpired"
+        operationErrorKey = errorKey
+    }
+
+    private func advanceSessionRevision() {
+        sessionRevision &+= 1
     }
 
     private func redeemPendingReferralIfNeeded() async {

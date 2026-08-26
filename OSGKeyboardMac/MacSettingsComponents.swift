@@ -421,14 +421,14 @@ struct MacProviderModelRow: View {
             HStack(spacing: Spacing.sm) {
                 Text(modelId)
                     .font(TypeStyle.mono)
-                    .foregroundStyle(isSelected ? palette.accent : palette.textPrimary)
+                    .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer(minLength: 0)
                 if isSelected {
                     Image(systemName: "checkmark")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(palette.accent)
+                        .foregroundStyle(palette.textPrimary)
                 }
             }
             .padding(.horizontal, Spacing.sm)
@@ -436,7 +436,7 @@ struct MacProviderModelRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: Radius.small, style: .continuous)
-                    .fill(isSelected ? palette.accentMuted : Color.clear)
+                    .fill(isSelected ? palette.textPrimary.opacity(0.10) : Color.clear)
             )
             .contentShape(Rectangle())
         }

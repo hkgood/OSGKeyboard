@@ -352,6 +352,23 @@ struct HomeView: View {
         compact: Bool = false
     ) -> some View {
         VStack(spacing: CardLayoutMetrics.sectionSpacing) {
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--home-dictionary-screenshot") {
+                dictionaryCard
+            } else {
+                standardHomeContentSections(layout: layout, compact: compact)
+            }
+            #else
+            standardHomeContentSections(layout: layout, compact: compact)
+            #endif
+        }
+    }
+
+    @ViewBuilder
+    private func standardHomeContentSections(
+        layout: UsageStatsClusterLayout,
+        compact: Bool
+    ) -> some View {
             AccountRewardsCard {
                 path.append(HomeRoute.account)
             }
@@ -375,7 +392,6 @@ struct HomeView: View {
             )
 
             dictionaryCard
-        }
     }
 
     private var dictionaryCard: some View {
@@ -496,14 +512,18 @@ struct HomeView: View {
                     pendingDictionarySuggestion = nil
                 }
                 .buttonStyle(.bordered)
+                .tint(palette.textPrimary)
 
                 Spacer(minLength: 0)
 
-                Button("home.card.dictionary.confirm.add") {
+                Button {
                     addSuggestedTerm(suggestion)
+                } label: {
+                    Text("home.card.dictionary.confirm.add")
+                        .foregroundStyle(palette.background)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(palette.accent)
+                .tint(palette.textPrimary)
             }
         }
         .padding(Spacing.lg)
@@ -576,9 +596,11 @@ struct HomeView: View {
     private var headerGradientColors: [Color] {
         // 云端引擎未配置（缺 API Key）时不算就绪，保持中性灰渐变。
         if sessionIsLive, !needsAPIKeySetup {
+            let leadingOpacity = colorScheme == .dark ? 0.18 : 0.28
+            let trailingOpacity = colorScheme == .dark ? 0.06 : 0.10
             return [
-                palette.accent.opacity(0.28),
-                palette.accent.opacity(0.10),
+                palette.accent.opacity(leadingOpacity),
+                palette.accent.opacity(trailingOpacity),
                 palette.background.opacity(0)
             ]
         }
@@ -601,7 +623,11 @@ struct HomeView: View {
                 .renderingMode(.template)
                 .scaledToFit()
                 .frame(width: logoWidth, height: logoHeight)
-                .foregroundStyle(colorScheme == .dark ? Color.white : Color.black)
+                .foregroundStyle(
+                    colorScheme == .dark
+                        ? OSGColor.fixedLightContent
+                        : OSGColor.fixedDarkContent
+                )
                 .accessibilityHidden(true)
         }
         .frame(maxWidth: .infinity)
@@ -769,6 +795,7 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.md)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+        .cardElevation()
     }
 
     private var flowStatusColor: Color {

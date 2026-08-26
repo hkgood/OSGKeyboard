@@ -186,7 +186,7 @@ private struct SystemAppleCredentialStateChecker: AppleCredentialStateChecking {
                 case .revoked, .notFound:
                     continuation.resume(returning: .revoked)
                 case .transferred:
-                    continuation.resume(returning: .unknown)
+                    continuation.resume(returning: .reauthenticationRequired)
                 @unknown default:
                     continuation.resume(returning: .unknown)
                 }
@@ -324,6 +324,15 @@ private actor LiveAccountService:
                 + "appAttest=\(evidence.appAttest == nil ? 0 : 1)",
             category: "account"
         )
+        do {
+            try await appleUserIdentifiers.saveAppleUserIdentifier(payload.userIdentifier)
+        } catch {
+            OSGDiag.log(
+                "signIn failed stage=apple-user-identifier",
+                category: "account"
+            )
+            throw AccountAPIError.secureStorage
+        }
         let session: OSGKeyboardHostSupport.AccountSession
         do {
             session = try await apiClient.signInWithApple(
@@ -337,33 +346,43 @@ private actor LiveAccountService:
                 )
             )
         } catch {
+            try? await appleUserIdentifiers.clearAppleUserIdentifier()
             OSGDiag.log(
                 "signIn failed stage=session error=\(AccountDiagnostic.code(for: error))",
                 category: "account"
             )
             throw error
         }
-        if let userIdentifier = payload.userIdentifier,
-           !userIdentifier.isEmpty {
-            try? await appleUserIdentifiers.saveAppleUserIdentifier(userIdentifier)
-        }
-        let account: OSGAccount
+        let account: OSGAccount?
         do {
             account = try await apiClient.account()
+        } catch let error as AccountAPIError {
+            switch error {
+            case .sessionUnavailable, .unauthorized, .refreshTokenReuse:
+                try? await appleUserIdentifiers.clearAppleUserIdentifier()
+                await invalidateManagedGatewaySession()
+                throw error
+            default:
+                OSGDiag.log(
+                    "signIn account fallback error=\(AccountDiagnostic.code(for: error))",
+                    category: "account"
+                )
+                account = nil
+            }
         } catch {
             OSGDiag.log(
-                "signIn failed stage=account error=\(AccountDiagnostic.code(for: error))",
+                "signIn account fallback error=\(AccountDiagnostic.code(for: error))",
                 category: "account"
             )
-            throw error
+            account = nil
         }
         configuration.setManagedGatewayAccountSessionAvailable(true)
         await synchronizeManagedGrant()
         OSGDiag.log("signIn completed", category: "account")
         return uiSession(
             session,
-            createdAtEpochSeconds: account.createdAtEpochSeconds,
-            displayName: account.displayName
+            createdAtEpochSeconds: account?.createdAtEpochSeconds ?? 0,
+            displayName: account?.displayName ?? payload.displayName
         )
     }
 
@@ -375,7 +394,6 @@ private actor LiveAccountService:
             try await apiClient.logout()
         } catch {
             try? await grants.clearGrant()
-            try? await appleUserIdentifiers.clearAppleUserIdentifier()
             throw error
         }
         try? await grants.clearGrant()
@@ -396,9 +414,14 @@ private actor LiveAccountService:
     }
 
     func appleCredentialState() async -> AccountAppleCredentialState {
-        guard let userIdentifier = try? await appleUserIdentifiers.loadAppleUserIdentifier(),
-              !userIdentifier.isEmpty else {
+        let userIdentifier: String?
+        do {
+            userIdentifier = try await appleUserIdentifiers.loadAppleUserIdentifier()
+        } catch {
             return .unknown
+        }
+        guard let userIdentifier, !userIdentifier.isEmpty else {
+            return .reauthenticationRequired
         }
         return await appleCredentialChecker.state(for: userIdentifier)
     }

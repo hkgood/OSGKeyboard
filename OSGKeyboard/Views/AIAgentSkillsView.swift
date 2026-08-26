@@ -67,6 +67,7 @@ struct AIAgentSkillsView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .tint(palette.textPrimary)
                     .accessibilityLabel(Text("skills.add"))
                 }
             }
@@ -141,6 +142,7 @@ struct AIAgentSkillsView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.md)
         .background(palette.surface, in: skillCardShape)
+        .cardElevation()
         .accessibilityIdentifier("skills.clipboard.guide")
     }
 
@@ -367,6 +369,7 @@ struct AIAgentSkillsView: View {
         .padding(.vertical, Spacing.xs)
         .background(palette.surface, in: skillCardShape)
         .clipShape(skillCardShape)
+        .cardElevation()
         .contentShape(Rectangle())
     }
 
@@ -600,7 +603,10 @@ private struct SkillDetailView: View {
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(Spacing.md)
-                .surfaceCard()
+                .background(
+                    palette.surface,
+                    in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
+                )
         }
     }
 
@@ -731,11 +737,15 @@ private struct SkillEditorSheet: View {
             Form {
                 Section("skills.editor.name") {
                     TextField("skills.editor.namePlaceholder", text: $name)
+                        .settingsListRow()
+                        .cardListRow(elevated: false)
                 }
                 Section("skills.editor.summary") {
                     TextField("skills.editor.summaryPlaceholder", text: $summary, axis: .vertical)
                         .lineLimit(6...12)
                         .frame(minHeight: 108, alignment: .top)
+                        .settingsListRow(alignment: .topLeading)
+                        .cardListRow(elevated: false)
                 }
                 Section("skills.editor.icon") {
                     Button {
@@ -743,11 +753,12 @@ private struct SkillEditorSheet: View {
                     } label: {
                         HStack(spacing: Spacing.md) {
                             Image(systemName: systemImage)
-                                .font(.system(size: 22, weight: .semibold))
-                                .foregroundStyle(palette.accent)
-                                .frame(width: 44, height: 44)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(palette.textPrimary)
+                                .symbolRenderingMode(.monochrome)
+                                .frame(width: 38, height: 38)
                                 .background(
-                                    palette.accentMuted,
+                                    palette.textPrimary.opacity(0.08),
                                     in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
                                 )
                             VStack(alignment: .leading, spacing: 2) {
@@ -764,11 +775,16 @@ private struct SkillEditorSheet: View {
                                 .foregroundStyle(palette.textTertiary)
                         }
                     }
+                    .buttonStyle(.plain)
+                    .settingsListRow()
+                    .cardListRow(elevated: false)
                 }
                 Section {
                     TextEditor(text: $prompt)
                         .font(.body.monospaced())
                         .frame(minHeight: 180)
+                        .padding(Spacing.md)
+                        .cardListRow(elevated: false)
                 } header: {
                     HStack {
                         Text("skills.editor.prompt")
@@ -782,20 +798,33 @@ private struct SkillEditorSheet: View {
                     }
                 }
                 Section {
-                    TextField("skills.editor.linkPlaceholder", text: $shortcutLink)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.URL)
-                        .autocorrectionDisabled()
-                    TextField("skills.editor.shortcutNamePlaceholder", text: $shortcutName)
-                    if isLookingUp {
-                        Text("skills.editor.lookingUp")
-                            .font(TypeStyle.caption)
-                            .foregroundStyle(palette.textTertiary)
-                    } else if let lookupMessage {
-                        Text(lookupMessage)
-                            .font(TypeStyle.caption)
-                            .foregroundStyle(palette.textTertiary)
+                    VStack(spacing: 0) {
+                        TextField("skills.editor.linkPlaceholder", text: $shortcutLink)
+                            .textInputAutocapitalization(.never)
+                            .keyboardType(.URL)
+                            .autocorrectionDisabled()
+                            .settingsListRow()
+
+                        Divider().background(palette.divider)
+
+                        TextField("skills.editor.shortcutNamePlaceholder", text: $shortcutName)
+                            .settingsListRow()
+
+                        if isLookingUp {
+                            Divider().background(palette.divider)
+                            Text("skills.editor.lookingUp")
+                                .font(TypeStyle.caption)
+                                .foregroundStyle(palette.textTertiary)
+                                .settingsListRow()
+                        } else if let lookupMessage {
+                            Divider().background(palette.divider)
+                            Text(lookupMessage)
+                                .font(TypeStyle.caption)
+                                .foregroundStyle(palette.textTertiary)
+                                .settingsListRow()
+                        }
                     }
+                    .cardListRow(elevated: false)
                 } header: {
                     Text("skills.editor.shortcut")
                 } footer: {
@@ -803,6 +832,8 @@ private struct SkillEditorSheet: View {
                 }
                 Section {
                     Toggle("skills.editor.thinking", isOn: $thinkingEnabled)
+                        .settingsListRow()
+                        .cardListRow(elevated: false)
                 } footer: {
                     Text("skills.editor.thinkingHint")
                 }
@@ -811,6 +842,8 @@ private struct SkillEditorSheet: View {
                         Button("common.delete", role: .destructive) {
                             confirmDelete = true
                         }
+                        .settingsListRow()
+                        .cardListRow(elevated: false)
                     }
                 }
             }
@@ -819,6 +852,7 @@ private struct SkillEditorSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("common.cancel") { dismiss() }
+                        .tint(palette.textPrimary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("common.save") {
@@ -830,6 +864,7 @@ private struct SkillEditorSheet: View {
                         }
                     }
                     .disabled(!canSave)
+                    .tint(palette.textPrimary)
                 }
             }
             .sheet(isPresented: $showSymbolPicker) {
@@ -970,12 +1005,12 @@ private struct SkillSymbolPicker: View {
                         } label: {
                             Image(systemName: symbol)
                                 .font(.system(size: 18, weight: .medium))
-                                .foregroundStyle(
-                                    symbol == selection ? palette.textOnAccent : palette.textPrimary
-                                )
+                                .foregroundStyle(palette.textPrimary)
                                 .frame(width: 44, height: 44)
                                 .background(
-                                    symbol == selection ? palette.accent : palette.surfaceElevated,
+                                    symbol == selection
+                                        ? palette.textPrimary.opacity(0.12)
+                                        : palette.surfaceElevated,
                                     in: RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 )
                         }
@@ -993,6 +1028,7 @@ private struct SkillSymbolPicker: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("common.done") { dismiss() }
+                        .tint(palette.textPrimary)
                 }
             }
         }

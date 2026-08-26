@@ -3,32 +3,37 @@
 //
 // Shared native-like key surface used by voice and typing action rows.
 
+import OSGKeyboardShared
 import SwiftUI
 
 enum NativeKeyboardKeyColors {
     static func fill(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark ? Color(white: 0.32) : .white
+        colorScheme == .dark
+            ? OSGColor.keyboardDarkKeyFill
+            : OSGColor.fixedLightContent
     }
 
     static func pressedFill(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark ? Color(white: 0.23) : Color(white: 0.84)
+        colorScheme == .dark
+            ? OSGColor.keyboardDarkKeyPressed
+            : OSGColor.keyboardLightKeyPressed
     }
 
     static func text(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark ? .white : Color(red: 0.06, green: 0.06, blue: 0.08)
+        colorScheme == .dark ? OSGColor.fixedLightContent : OSGColor.keyboardLightText
     }
 
     /// Adaptive brand green: brighter in dark mode and deeper in light mode.
     static func sendFill(for colorScheme: ColorScheme) -> Color {
         colorScheme == .dark
-            ? Color(red: 0.286, green: 0.725, blue: 0.416)
-            : Color(red: 0.196, green: 0.549, blue: 0.298)
+            ? OSGColor.keyboardDarkSend
+            : OSGColor.keyboardLightSend
     }
 
     static func sendPressedFill(for colorScheme: ColorScheme) -> Color {
         colorScheme == .dark
-            ? Color(red: 0.227, green: 0.627, blue: 0.353)
-            : Color(red: 0.157, green: 0.447, blue: 0.247)
+            ? OSGColor.keyboardDarkSendPressed
+            : OSGColor.keyboardLightSendPressed
     }
 }
 

@@ -188,7 +188,7 @@ struct AIKeyboardView: View {
             Button(action: state.confirmPendingAIAnswer) {
                 Image(systemName: "plus")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(OSGColor.fixedLightContent)
                     .frame(width: Layout.fieldActionWidth, height: 44)
                     .background(palette.accent, in: Capsule())
             }
@@ -709,13 +709,13 @@ struct AIKeyboardView: View {
         if state.assistantInsertionSucceeded {
             Image(systemName: "checkmark")
                 .font(.system(size: 27, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(OSGColor.fixedLightContent)
         } else {
             switch state.aiSession.phase {
             case .listening:
-                waveform(color: .white)
+                waveform(color: OSGColor.fixedLightContent)
             case .preparing, .recognizing, .generating:
-                ProgressView().tint(.white)
+                ProgressView().tint(OSGColor.fixedLightContent)
             case .inactive, .idle, .ready, .awaitingSend, .inserted, .sent, .failed:
                 ordinaryMicrophoneContent
             }
@@ -726,17 +726,17 @@ struct AIKeyboardView: View {
     private var ordinaryMicrophoneContent: some View {
         switch state.phase {
         case .recording:
-            waveform(color: Color(red: 1, green: 0.78, blue: 0.78))
+            waveform(color: OSGColor.recordingWaveform)
         case .requestingPermissions, .processing:
-            ProgressView().tint(.white)
+            ProgressView().tint(OSGColor.fixedLightContent)
         case .error:
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 25, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(OSGColor.fixedLightContent)
         case .idle, .denied:
             Image(systemName: "mic.fill")
                 .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(OSGColor.fixedLightContent)
                 .symbolEffect(.breathe, isActive: micIsHoldingForAI)
         }
     }

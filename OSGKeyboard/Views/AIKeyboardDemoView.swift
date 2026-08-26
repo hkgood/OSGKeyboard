@@ -29,7 +29,7 @@ struct AIKeyboardDemoView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.06, green: 0.06, blue: 0.07).ignoresSafeArea()
+            OSGColor.demoBackground.ignoresSafeArea()
             // Both scenes sit on the bottom band so what's-new crop matches Ext chrome.
             VStack(spacing: 0) {
                 Spacer(minLength: 0)

@@ -71,7 +71,7 @@ struct MacDictationOverlayView: View {
             Capsule(style: .continuous)
                 .stroke(palette.dividerStrong, lineWidth: 0.5)
         )
-        .shadow(color: Color.black.opacity(0.22), radius: 14, y: 5)
+        .shadow(color: OSGColor.macOverlayShadow, radius: 14, y: 5)
         .padding(Self.shadowMargin)
         .contentShape(Capsule(style: .continuous))
         // Manual drag: `isMovableByWindowBackground` doesn't work on a

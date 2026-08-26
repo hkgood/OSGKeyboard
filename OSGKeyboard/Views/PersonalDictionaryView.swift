@@ -45,6 +45,7 @@ struct PersonalDictionaryView: View {
                     } label: {
                         Image(systemName: "trash")
                     }
+                    .tint(palette.textPrimary)
                     .accessibilityLabel(AppL10n.string("settings.personalDictionary.clearAll"))
                     .confirmationDialog(
                         AppL10n.string("settings.personalDictionary.clearAll.confirmTitle"),
@@ -67,6 +68,7 @@ struct PersonalDictionaryView: View {
                 } label: {
                     Image(systemName: "plus")
                 }
+                .tint(palette.textPrimary)
                 .accessibilityLabel(AppL10n.string("settings.personalDictionary.add.title"))
             }
         }
@@ -94,36 +96,40 @@ struct PersonalDictionaryView: View {
         }
     }
 
-    // MARK: - List
+    // MARK: - Card list
 
     private var list: some View {
-        List {
-            ForEach(filteredSections, id: \.0) { _, items in
-                Section {
-                    ForEach(items) { entry in
-                        entryRow(entry)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                            .listRowBackground(palette.surface)
-                            .listRowSeparatorTint(palette.divider)
-                    }
-                    .onDelete { offsets in
-                        delete(items: items, at: offsets)
+        ScrollView {
+            CardPageContent(topPadding: Spacing.lg) {
+                ForEach(filteredSections, id: \.0) { category, items in
+                    CardSection(
+                        title: SharedL10n.string(category.labelKey, language: config.uiLanguage)
+                    ) {
+                        LazyVStack(spacing: CardLayoutMetrics.compactItemSpacing) {
+                            ForEach(items) { entry in
+                                entryRow(entry)
+                                    .surfaceCard()
+                                    .contextMenu {
+                                        Button("common.delete", role: .destructive) {
+                                            delete(entry)
+                                        }
+                                    }
+                            }
+                        }
                     }
                 }
             }
+            .tabBarScrollBottomPadding()
         }
-        .listStyle(.insetGrouped)
-        .listSectionSpacing(CardLayoutMetrics.sectionSpacing)
-        .scrollContentBackground(.hidden)
+        .scrollClipDisabled()
         .background(palette.background)
-        // 让搜索栏与首个词条之间留出呼吸空间，视觉更透气。
-        .contentMargins(.top, Spacing.lg, for: .scrollContent)
+        // CardPageContent keeps the search results and their section labels
+        // on the same horizontal guide while preserving top breathing room.
         .searchable(
             text: $searchText,
             placement: .navigationBarDrawer(displayMode: .always),
             prompt: "settings.personalDictionary.search.prompt"
         )
-        .tabBarListScrollBottomMargin()
     }
 
     private func entryRow(_ entry: PersonalDictionary.Entry) -> some View {
@@ -252,12 +258,6 @@ struct PersonalDictionaryView: View {
         dictionary.recordDeletion(of: entry.id)
         generatingAliasEntryIDs.remove(entry.id)
         persist()
-    }
-
-    private func delete(items: [PersonalDictionary.Entry], at offsets: IndexSet) {
-        for index in offsets {
-            delete(items[index])
-        }
     }
 
     private func clearAll() {

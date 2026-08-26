@@ -67,6 +67,19 @@ private extension ManagedGatewayOOBEFeature {
         }
     }
 
+    var editorSystemImage: String {
+        switch self {
+        case .voiceInput:
+            return "message"
+        case .clipboardTranslate:
+            return "translate"
+        case .clipboardReply:
+            return "arrowshape.turn.up.left"
+        case .askAI:
+            return "sparkles.2"
+        }
+    }
+
     var next: ManagedGatewayOOBEFeature? {
         switch self {
         case .voiceInput:
@@ -81,9 +94,18 @@ private extension ManagedGatewayOOBEFeature {
     }
 }
 
+#if DEBUG
+private enum OOBEPreviewDestination {
+    case practice(ManagedGatewayOOBEFeature)
+    case loginReward
+    case complete
+}
+#endif
+
 struct OnboardingExperienceView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.themePalette) private var palette
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var flowManager: FlowSessionManager
     @EnvironmentObject private var accountSession: AccountSessionCoordinator
 
@@ -104,11 +126,15 @@ struct OnboardingExperienceView: View {
     @State private var isPreparingManagedPractice = false
     @State private var managedPracticeReady = false
     @State private var managedPracticeFailed = false
-    @State private var practiceFeature: ManagedGatewayOOBEFeature = .voiceInput
+    @State private var practiceFeature = Self.initialPracticeFeature
     @State private var practiceSessionID: UUID?
     @State private var completedPracticeFeatures: Set<ManagedGatewayOOBEFeature> = []
     @State private var didCopyPracticeSample = false
     @State private var didRefreshLoginReward = false
+    @State private var showsKeyboardSwitchIcon = false
+    @State private var showsLoginRewardIcon = false
+    @State private var showsCompleteIcon = false
+    @State private var previewPageIndex = 0
     @FocusState private var keyboardSwitchFieldFocused: Bool
     @FocusState private var practiceFieldFocused: Bool
 
@@ -117,8 +143,121 @@ struct OnboardingExperienceView: View {
         "onboarding.experience.oobe.completedFeatures.v1"
 
     private var currentStep: OnboardingExperienceStep {
-        OnboardingExperienceStep(rawValue: config.onboardingPage) ?? .introduction
+        #if DEBUG
+        switch activePreviewDestination {
+        case .practice:
+            return .practice
+        case .loginReward:
+            return .loginReward
+        case .complete:
+            return .complete
+        case nil:
+            break
+        }
+        #endif
+        return OnboardingExperienceStep(rawValue: config.onboardingPage) ?? .introduction
     }
+
+    #if DEBUG
+    private var activePreviewDestination: OOBEPreviewDestination? {
+        guard Self.previewsAllScreensFromArguments else {
+            return Self.previewDestination
+        }
+        return Self.allPreviewDestinations[
+            min(previewPageIndex, Self.allPreviewDestinations.count - 1)
+        ]
+    }
+    #endif
+
+    private var isPreviewMode: Bool {
+        #if DEBUG
+        Self.isPreviewEnabled
+        #else
+        false
+        #endif
+    }
+
+    private var previewLanguageOverride: AppUILanguage? {
+        #if DEBUG
+        isPreviewMode ? Self.previewLanguage : nil
+        #else
+        nil
+        #endif
+    }
+
+    private var previewsAllScreens: Bool {
+        #if DEBUG
+        Self.previewsAllScreensFromArguments
+        #else
+        false
+        #endif
+    }
+
+    private static var initialPracticeFeature: ManagedGatewayOOBEFeature {
+        #if DEBUG
+        if case let .practice(feature) = previewDestination {
+            return feature
+        }
+        #endif
+        return .voiceInput
+    }
+
+    #if DEBUG
+    static var isPreviewEnabled: Bool {
+        previewDestination != nil
+    }
+
+    static var previewLanguage: AppUILanguage {
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("--screenshot-lang=en") {
+            return .english
+        }
+        if arguments.contains("--screenshot-lang=zh") {
+            return .chinese
+        }
+        return ProviderConfig.shared.uiLanguage
+    }
+
+    private static var previewsAllScreensFromArguments: Bool {
+        ProcessInfo.processInfo.arguments.contains("--oobe-preview=all")
+    }
+
+    private static let allPreviewDestinations: [OOBEPreviewDestination] = [
+        .practice(.voiceInput),
+        .practice(.clipboardTranslate),
+        .practice(.clipboardReply),
+        .practice(.askAI),
+        .loginReward,
+        .complete
+    ]
+
+    private static var previewDestination: OOBEPreviewDestination? {
+        let prefix = "--oobe-preview="
+        guard let argument = ProcessInfo.processInfo.arguments.first(
+            where: { $0.hasPrefix(prefix) }
+        ) else {
+            return nil
+        }
+        switch String(argument.dropFirst(prefix.count)) {
+        case "all":
+            return .practice(.voiceInput)
+        case "voice":
+            return .practice(.voiceInput)
+        case "translate":
+            return .practice(.clipboardTranslate)
+        case "reply":
+            return .practice(.clipboardReply)
+        case "ask-ai":
+            return .practice(.askAI)
+        case "login":
+            return .loginReward
+        case "complete":
+            return .complete
+        default:
+            return nil
+        }
+    }
+    #endif
 
     var body: some View {
         ZStack {
@@ -137,6 +276,7 @@ struct OnboardingExperienceView: View {
             }
         }
         .onAppear {
+            guard !isPreviewMode else { return }
             migrateLegacyProgressIfNeeded()
             applyPrivacySafeDefaultsIfNeeded()
             refreshState()
@@ -147,9 +287,11 @@ struct OnboardingExperienceView: View {
             }
         }
         .onDisappear {
+            guard !isPreviewMode else { return }
             endPractice()
         }
         .onChange(of: scenePhase) { _, phase in
+            guard !isPreviewMode else { return }
             guard phase == .active else { return }
             refreshState()
             if currentStep == .keyboard, hasOpenedKeyboardSettings {
@@ -164,6 +306,7 @@ struct OnboardingExperienceView: View {
             }
         }
         .onChange(of: currentStep) { previous, current in
+            guard !isPreviewMode else { return }
             if previous == .keyboardSwitch {
                 keyboardSwitchFieldFocused = false
             }
@@ -182,15 +325,18 @@ struct OnboardingExperienceView: View {
             }
         }
         .onChange(of: accountSession.isSignedIn) { _, isSignedIn in
+            guard !isPreviewMode else { return }
             guard isSignedIn, currentStep == .loginReward else { return }
             didRefreshLoginReward = false
             refreshLoginRewardIfNeeded()
         }
         .onChange(of: config.hasAcknowledgedCloudSharing) { _, acknowledged in
+            guard !isPreviewMode else { return }
             guard acknowledged, currentStep == .practice else { return }
             prepareManagedPractice()
         }
         .task(id: currentStep) {
+            guard !isPreviewMode else { return }
             switch currentStep {
             case .keyboardSwitch:
                 await monitorKeyboardVerification()
@@ -248,17 +394,23 @@ struct OnboardingExperienceView: View {
 
                 Image("osglogo")
                     .resizable()
+                    .renderingMode(.template)
                     .scaledToFit()
-                    .frame(maxWidth: 174, maxHeight: 50)
+                    .frame(maxWidth: 122, maxHeight: 35)
+                    .foregroundStyle(palette.textPrimary)
                     .accessibilityHidden(true)
 
                 Text("onboarding.experience.intro.eyebrow")
-                    .font(TypeStyle.caption)
+                    .font(.system(size: 10, weight: .medium))
                     .tracking(1.2)
-                    .foregroundStyle(palette.accent)
+                    .foregroundStyle(palette.textPrimary)
                     .padding(.horizontal, Spacing.sm)
                     .frame(height: 28)
-                    .background(palette.accentMuted, in: Capsule())
+                    .background(palette.surfaceElevated, in: Capsule())
+                    .overlay {
+                        Capsule()
+                            .stroke(palette.dividerStrong, lineWidth: 0.5)
+                    }
                     .padding(.top, Spacing.hero)
 
                 Text("onboarding.experience.intro.title")
@@ -275,18 +427,18 @@ struct OnboardingExperienceView: View {
                 VStack(spacing: Spacing.sm) {
                     promiseRow(
                         icon: "waveform",
-                        title: "onboarding.experience.privacy.local.title",
-                        detail: "onboarding.experience.privacy.local.body"
+                        title: "onboarding.experience.promise.voice.title",
+                        detail: "onboarding.experience.promise.voice.body"
                     )
                     promiseRow(
-                        icon: "network",
-                        title: "onboarding.experience.privacy.cloud.title",
-                        detail: "onboarding.experience.privacy.cloud.body"
+                        icon: "sparkles",
+                        title: "onboarding.experience.promise.agent.title",
+                        detail: "onboarding.experience.promise.agent.body"
                     )
                     promiseRow(
-                        icon: "keyboard",
-                        title: "onboarding.experience.privacy.anywhere.title",
-                        detail: "onboarding.experience.privacy.anywhere.body"
+                        icon: "key",
+                        title: "onboarding.experience.promise.privacy.title",
+                        detail: "onboarding.experience.promise.privacy.body"
                     )
                 }
                 .padding(.top, Spacing.xxl)
@@ -316,9 +468,9 @@ struct OnboardingExperienceView: View {
         HStack(alignment: .top, spacing: Spacing.md) {
             Image(systemName: icon)
                 .font(.system(size: 19, weight: .semibold))
-                .foregroundStyle(palette.accent)
+                .foregroundStyle(palette.textPrimary)
                 .frame(width: 42, height: 42)
-                .background(palette.accentMuted, in: RoundedRectangle(cornerRadius: Radius.medium))
+                .background(palette.surfaceMuted, in: RoundedRectangle(cornerRadius: Radius.medium))
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
@@ -334,6 +486,7 @@ struct OnboardingExperienceView: View {
         }
         .padding(Spacing.md)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .cardElevation()
     }
 
     // MARK: - Permissions
@@ -390,9 +543,9 @@ struct OnboardingExperienceView: View {
         HStack(spacing: Spacing.md) {
             Image(systemName: icon)
                 .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(palette.accent)
+                .foregroundStyle(palette.textPrimary)
                 .frame(width: 42, height: 42)
-                .background(palette.accentMuted, in: RoundedRectangle(cornerRadius: Radius.medium))
+                .background(palette.surfaceMuted, in: RoundedRectangle(cornerRadius: Radius.medium))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -412,6 +565,7 @@ struct OnboardingExperienceView: View {
         }
         .padding(Spacing.md)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .cardElevation()
     }
 
     // MARK: - Keyboard setup
@@ -465,8 +619,13 @@ struct OnboardingExperienceView: View {
         ) {
             VStack(spacing: Spacing.md) {
                 Image(systemName: "globe")
-                    .font(.system(size: 34, weight: .semibold))
-                    .foregroundStyle(palette.accent)
+                    .font(.system(size: 40, weight: .ultraLight))
+                    .foregroundStyle(palette.textPrimary)
+                    .symbolEffect(
+                        .drawOn,
+                        isActive: !reduceMotion && !showsKeyboardSwitchIcon
+                    )
+                    .symbolEffectsRemoved(reduceMotion)
                     .accessibilityHidden(true)
 
                 Text("onboarding.experience.keyboardSwitch.instruction")
@@ -481,6 +640,7 @@ struct OnboardingExperienceView: View {
                 palette.surface,
                 in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
             )
+            .cardElevation()
             .padding(.top, Spacing.xxl)
 
             TextField(
@@ -497,15 +657,8 @@ struct OnboardingExperienceView: View {
             .padding(Spacing.md)
             .frame(maxWidth: .infinity, minHeight: 72, alignment: .topLeading)
             .background(
-                palette.surface,
+                palette.formSurface,
                 in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-                    .stroke(
-                        keyboardReady ? palette.accent : palette.dividerStrong,
-                        lineWidth: keyboardReady ? 1.5 : 0.5
-                    )
             )
             .accessibilityIdentifier("onboarding.keyboardSwitch.textField")
             .padding(.top, Spacing.lg)
@@ -536,6 +689,20 @@ struct OnboardingExperienceView: View {
                 .foregroundStyle(palette.accent)
                 .padding(.top, Spacing.sm)
             }
+        }
+        .task {
+            guard !reduceMotion else { return }
+            showsKeyboardSwitchIcon = false
+            do {
+                // 等待页面首帧完成，再绘制出现输入法切换图标。
+                try await Task.sleep(for: .milliseconds(120))
+                showsKeyboardSwitchIcon = true
+            } catch {
+                showsKeyboardSwitchIcon = false
+            }
+        }
+        .onDisappear {
+            showsKeyboardSwitchIcon = false
         }
     }
 
@@ -634,11 +801,13 @@ struct OnboardingExperienceView: View {
 
     @ViewBuilder
     private var practiceContent: some View {
-        if !config.hasAcknowledgedCloudSharing {
+        if isPreviewMode {
+            practiceFeatureContent
+        } else if !config.hasAcknowledgedCloudSharing {
             VStack(spacing: Spacing.md) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 34, weight: .semibold))
-                    .foregroundStyle(palette.accent)
+                    .foregroundStyle(palette.textPrimary)
 
                 Text("onboarding.experience.practice.cloudBody")
                     .font(TypeStyle.caption)
@@ -687,31 +856,38 @@ struct OnboardingExperienceView: View {
             }
             .practiceSetupCard(palette: palette)
         } else {
-            VStack(spacing: Spacing.md) {
-                if practiceFeature == .voiceInput {
-                    practiceVoiceSample
-                } else if practiceFeature == .clipboardTranslate
-                    || practiceFeature == .clipboardReply {
-                    practiceClipboardSample
-                }
-                practiceEditor
-                HStack(spacing: Spacing.xs) {
-                    if managedPracticeReady {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(palette.accent)
-                    }
-                    Text("onboarding.experience.practice.waiting")
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.textSecondary)
-                }
+            practiceFeatureContent
+        }
+    }
 
-                Button("onboarding.experience.practice.skip") {
-                    goToLoginReward()
-                }
-                .font(TypeStyle.caption)
-                .foregroundStyle(palette.textTertiary)
+    private var practiceFeatureContent: some View {
+        VStack(spacing: Spacing.md) {
+            if practiceFeature == .voiceInput {
+                practiceVoiceSample
+            } else if practiceFeature == .clipboardTranslate
+                || practiceFeature == .clipboardReply {
+                practiceClipboardSample
+            } else if practiceFeature == .askAI {
+                practiceAskAIPrompt
             }
+            practiceEditor
+            HStack(spacing: Spacing.xs) {
+                if managedPracticeReady || isPreviewMode {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(palette.accent)
+                }
+                Text("onboarding.experience.practice.waiting")
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
+            }
+
+            Button("onboarding.experience.practice.skip") {
+                guard !isPreviewMode else { return }
+                goToLoginReward()
+            }
+            .font(TypeStyle.caption)
+            .foregroundStyle(palette.textTertiary)
         }
     }
 
@@ -728,8 +904,10 @@ struct OnboardingExperienceView: View {
     private var practiceEditor: some View {
         VStack(spacing: 0) {
             HStack(spacing: Spacing.xs) {
-                Image(systemName: practiceFeature == .askAI ? "sparkles" : "message.fill")
-                    .foregroundStyle(palette.accent)
+                Image(systemName: practiceFeature.editorSystemImage)
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundStyle(palette.textPrimary)
+                    .accessibilityHidden(true)
                 Text(practiceFeature.progressKey)
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
@@ -749,7 +927,8 @@ struct OnboardingExperienceView: View {
                 .accessibilityIdentifier("onboarding.practice.textEditor")
         }
         .frame(maxWidth: .infinity, minHeight: 172, maxHeight: 240)
-        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .background(palette.formSurface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .cardElevation()
     }
 
     private var practiceVoiceSample: some View {
@@ -771,7 +950,7 @@ struct OnboardingExperienceView: View {
 
     private var practiceClipboardSample: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            Text("onboarding.experience.practice.sample")
+            Text(LocalizedStringKey(practiceClipboardSampleLocalizationKey))
                 .font(TypeStyle.bodyEmph)
                 .foregroundStyle(palette.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -806,9 +985,29 @@ struct OnboardingExperienceView: View {
         }
         .padding(Spacing.md)
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
+        .cardElevation()
+    }
+
+    private var practiceAskAIPrompt: some View {
+        Text("onboarding.experience.practice.askAIPrompt")
+            .font(TypeStyle.bodyEmph)
+            .foregroundStyle(palette.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Spacing.md)
+            .background(palette.accentMuted, in: RoundedRectangle(cornerRadius: Radius.large))
+    }
+
+    private var practiceClipboardSampleLocalizationKey: String {
+        practiceFeature == .clipboardTranslate
+            ? "onboarding.experience.practice.translateSample"
+            : "onboarding.experience.practice.replySample"
     }
 
     private var practiceTitle: LocalizedStringKey {
+        if isPreviewMode {
+            return practiceFeature.titleKey
+        }
         if !permissionsReady {
             return "onboarding.experience.practice.permissionsTitle"
         }
@@ -828,6 +1027,9 @@ struct OnboardingExperienceView: View {
     }
 
     private var practiceSubtitle: LocalizedStringKey {
+        if isPreviewMode {
+            return practiceFeature.subtitleKey
+        }
         if !permissionsReady {
             return "onboarding.experience.practice.permissionsSubtitle"
         }
@@ -855,9 +1057,14 @@ struct OnboardingExperienceView: View {
             onBack: goBack
         ) {
             VStack(spacing: Spacing.lg) {
-                Image(systemName: accountSession.isSignedIn ? "checkmark.seal.fill" : "gift.fill")
-                    .font(.system(size: 42, weight: .semibold))
-                    .foregroundStyle(palette.accent)
+                Image(systemName: "gift.circle")
+                    .font(.system(size: 50, weight: .ultraLight))
+                    .foregroundStyle(palette.textPrimary)
+                    .symbolEffect(
+                        .drawOn,
+                        isActive: !reduceMotion && !showsLoginRewardIcon
+                    )
+                    .symbolEffectsRemoved(reduceMotion)
                     .accessibilityHidden(true)
 
                 Text(
@@ -907,8 +1114,23 @@ struct OnboardingExperienceView: View {
                 palette.surface,
                 in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
             )
+            .cardElevation()
             .padding(.top, Spacing.xxl)
             .accessibilityIdentifier("onboarding.loginReward.card")
+        }
+        .task {
+            guard !reduceMotion else { return }
+            showsLoginRewardIcon = false
+            do {
+                // 等待页面首帧完成后，仅播放一次礼物图标绘制动画。
+                try await Task.sleep(for: .milliseconds(120))
+                showsLoginRewardIcon = true
+            } catch {
+                showsLoginRewardIcon = false
+            }
+        }
+        .onDisappear {
+            showsLoginRewardIcon = false
         }
     }
 
@@ -926,14 +1148,15 @@ struct OnboardingExperienceView: View {
             VStack(spacing: 0) {
                 Spacer(minLength: Spacing.xxl)
 
-                ZStack {
-                    Circle()
-                        .fill(palette.accentMuted)
-                        .frame(width: 108, height: 108)
-                    Image(systemName: completedAllPracticeFeatures ? "checkmark" : "sparkles")
-                        .font(.system(size: 44, weight: .semibold))
-                        .foregroundStyle(palette.accent)
-                }
+                Image(systemName: "checkmark.circle")
+                    .font(.system(size: 72, weight: .ultraLight))
+                    .foregroundStyle(palette.textPrimary)
+                    .symbolEffect(
+                        .drawOn,
+                        isActive: !reduceMotion && !showsCompleteIcon
+                    )
+                    .symbolEffectsRemoved(reduceMotion)
+                    .frame(width: 108, height: 108)
 
                 Text(
                     completedAllPracticeFeatures
@@ -970,20 +1193,35 @@ struct OnboardingExperienceView: View {
             .frame(maxWidth: 560)
             .frame(maxWidth: .infinity)
         }
+        .task {
+            guard !reduceMotion else { return }
+            showsCompleteIcon = false
+            do {
+                // 完成页每次进入时只绘制一次主图标。
+                try await Task.sleep(for: .milliseconds(120))
+                showsCompleteIcon = true
+            } catch {
+                showsCompleteIcon = false
+            }
+        }
+        .onDisappear {
+            showsCompleteIcon = false
+        }
     }
 
     private func capability(_ icon: String, _ title: LocalizedStringKey) -> some View {
         VStack(spacing: Spacing.xs) {
             Image(systemName: icon)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 24, weight: .semibold))
                 .foregroundStyle(palette.accent)
             Text(title)
                 .font(TypeStyle.caption)
                 .foregroundStyle(palette.textPrimary)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.md)
-        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.medium))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .aspectRatio(1.42, contentMode: .fit)
+        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large))
+        .cardElevation()
     }
 
     // MARK: - Bottom action
@@ -1005,6 +1243,9 @@ struct OnboardingExperienceView: View {
     }
 
     private var primaryActionDisabled: Bool {
+        if previewsAllScreens {
+            return false
+        }
         if isRequestingPermissions || (currentStep == .keyboardSwitch && !keyboardReady) {
             return true
         }
@@ -1048,6 +1289,9 @@ struct OnboardingExperienceView: View {
     }
 
     private func performPrimaryAction() {
+        if advancePreviewIfNeeded() {
+            return
+        }
         switch currentStep {
         case .introduction:
             goForward()
@@ -1070,6 +1314,26 @@ struct OnboardingExperienceView: View {
         case .complete:
             finishOnboarding()
         }
+    }
+
+    private func advancePreviewIfNeeded() -> Bool {
+        #if DEBUG
+        guard previewsAllScreens else { return false }
+        guard previewPageIndex < Self.allPreviewDestinations.count - 1 else {
+            return true
+        }
+        withAnimation(Motion.soft) {
+            previewPageIndex += 1
+            if case let .practice(feature) = activePreviewDestination {
+                practiceFeature = feature
+                practiceText = ""
+                didCopyPracticeSample = false
+            }
+        }
+        return true
+        #else
+        return false
+        #endif
     }
 
     // MARK: - State and actions
@@ -1269,8 +1533,16 @@ struct OnboardingExperienceView: View {
     }
 
     private func copyPracticeSample() {
+        let sample = AppL10n.string(
+            practiceClipboardSampleLocalizationKey,
+            language: previewLanguageOverride
+        )
+        if isPreviewMode {
+            UIPasteboard.general.string = sample
+            didCopyPracticeSample = true
+            return
+        }
         guard let sessionID = practiceSessionID else { return }
-        let sample = AppL10n.string("onboarding.experience.practice.sample")
         guard KeyboardSetupBridge.seedOOBEClipboardMaterial(
             sample,
             sessionID: sessionID
@@ -1451,6 +1723,32 @@ struct OnboardingExperienceView: View {
     }
 }
 
+#if DEBUG
+@MainActor
+struct OOBEPreviewHarness: View {
+    @ObservedObject private var config = ProviderConfig.shared
+    @StateObject private var flowManager = FlowSessionManager()
+    @StateObject private var accountSession: AccountSessionCoordinator
+
+    init() {
+        _accountSession = StateObject(
+            wrappedValue: AccountSessionCoordinator(
+                dependencies: LiveAccountDependencyFactory.make()
+            )
+        )
+    }
+
+    var body: some View {
+        ThemedRoot {
+            OnboardingExperienceView(config: config)
+                .environmentObject(flowManager)
+                .environmentObject(accountSession)
+        }
+        .environment(\.locale, OnboardingExperienceView.previewLanguage.swiftUILocale)
+    }
+}
+#endif
+
 private extension View {
     func practiceSetupCard(palette: ThemePalette) -> some View {
         frame(maxWidth: .infinity, minHeight: 172)
@@ -1459,6 +1757,7 @@ private extension View {
                 palette.surface,
                 in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
             )
+            .cardElevation()
     }
 }
 
@@ -1556,5 +1855,6 @@ private struct KeyboardSettingsPreview: View {
             .padding(Spacing.md)
         }
         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+        .cardElevation()
     }
 }

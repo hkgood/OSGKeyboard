@@ -223,12 +223,12 @@ public struct UsageStatsCluster<Header: View>: View {
         VStack(spacing: CardLayoutMetrics.compactItemSpacing) {
             HStack(spacing: CardLayoutMetrics.compactItemSpacing) {
                 compactCell(
-                    systemImage: "waveform.badge.microphone",
+                    systemImage: "timer",
                     value: UsageStatisticsStore.formatDuration(dictationDurationSeconds, language: language),
                     label: SharedL10n.string("stat.dictationTime", language: language)
                 )
                 compactCell(
-                    systemImage: "text.quote",
+                    systemImage: "quote.bubble",
                     value: UsageStatisticsStore.formatCount(dictationCharacterCount, language: language),
                     label: SharedL10n.string("stat.words", language: language),
                     action: onOpenHistory
@@ -242,7 +242,7 @@ public struct UsageStatsCluster<Header: View>: View {
                     label: SharedL10n.string("stat.translation", language: language)
                 )
                 compactCell(
-                    systemImage: "books.vertical",
+                    systemImage: "book.pages",
                     value: UsageStatisticsStore.formatCount(dictionaryTermCount, language: language),
                     label: SharedL10n.string("stat.dictionary", language: language),
                     action: onOpenDictionary
@@ -292,9 +292,9 @@ public struct UsageStatsCluster<Header: View>: View {
         return ZStack(alignment: .bottomTrailing) {
             // Subtle watermark stays fully visible within the card edges.
             Image(systemName: systemImage)
-                .font(.system(size: 26, weight: .semibold))
-                .foregroundStyle(palette.textPrimary.opacity(0.06))
-                .frame(width: 32, height: 32, alignment: .center)
+                .font(.system(size: 38, weight: .ultraLight))
+                .foregroundStyle(palette.textPrimary.opacity(0.10))
+                .frame(width: 44, height: 44, alignment: .center)
                 .offset(x: Spacing.xs, y: Spacing.xs)
 
             VStack(alignment: .leading, spacing: Spacing.xxs) {
@@ -323,6 +323,7 @@ public struct UsageStatsCluster<Header: View>: View {
             }
         }
         .clipShape(shape)
+        .cardElevation()
     }
 
     private var disclosureIndicator: some View {

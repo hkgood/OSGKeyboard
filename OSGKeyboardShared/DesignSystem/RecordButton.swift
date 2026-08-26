@@ -68,7 +68,7 @@ public struct RecordButton: View {
     }
 
     private var waveformColor: Color {
-        Color(red: 1.0, green: 0.78, blue: 0.78)
+        OSGColor.recordingWaveform
     }
 
     private enum Layout {
@@ -103,7 +103,10 @@ public struct RecordButton: View {
                 .animation(Motion.soft, value: level)
 
             Circle()
-                .stroke(Color.white.opacity(isIdle ? 0.08 : 0.12), lineWidth: 0.5)
+                .stroke(
+                    isIdle ? OSGColor.recordDiscHairlineIdle : OSGColor.recordDiscHairlineActive,
+                    lineWidth: 0.5
+                )
                 .frame(width: Layout.outerRing, height: Layout.outerRing)
 
             ZStack {
@@ -120,7 +123,7 @@ public struct RecordButton: View {
                     Circle()
                         .fill(discGradient)
                     Circle()
-                        .stroke(Color.white.opacity(0.16), lineWidth: 1)
+                        .stroke(OSGColor.recordDiscOverlayStroke, lineWidth: 1)
                         .blendMode(.overlay)
                 }
 
@@ -129,13 +132,13 @@ public struct RecordButton: View {
                     case .idleReady, .idleUnavailable:
                         Image(systemName: "mic.fill")
                             .font(.system(size: 36, weight: .medium))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(OSGColor.fixedLightContent)
                     case .recording:
                         VStack(spacing: 3) {
                             if let remainingSeconds {
                                 Text(formatRemaining(remainingSeconds))
                                     .font(.system(size: 22, weight: .semibold, design: .rounded))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(OSGColor.fixedLightContent)
                                     .monospacedDigit()
                                     .contentTransition(.numericText())
                                     .offset(y: 3)

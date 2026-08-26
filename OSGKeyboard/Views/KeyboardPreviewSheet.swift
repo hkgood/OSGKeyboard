@@ -96,7 +96,8 @@ struct KeyboardPreviewSheet: View {
                 .padding(.horizontal, 2)
         }
         .padding(Spacing.md)
-        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.medium))
+        .background(palette.formSurface, in: RoundedRectangle(cornerRadius: Radius.medium))
+        .cardElevation()
     }
 
     private var controls: some View {

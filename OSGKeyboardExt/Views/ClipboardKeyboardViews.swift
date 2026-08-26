@@ -104,7 +104,7 @@ struct ClipboardEnableGuideView: View {
                 Button(action: onOpenSettings) {
                     ExtL10n.text("keyboard.clipboard.guide.cta")
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(OSGColor.fixedLightContent)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 10)
                         .background(palette.accent, in: Capsule())
@@ -222,6 +222,7 @@ struct ClipboardHistoryPanelView: View {
                 }
                 .buttonStyle(.glass)
                 .buttonBorderShape(.capsule)
+                .tint(palette.textPrimary)
 
                 Button {
                     // Dismiss the popup before publishing an empty history
@@ -231,12 +232,13 @@ struct ClipboardHistoryPanelView: View {
                 } label: {
                     ExtL10n.text("keyboard.clipboard.clear.confirm")
                         .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(palette.background)
                         .frame(maxWidth: .infinity)
                         .frame(height: 36)
                 }
                 .buttonStyle(.glassProminent)
                 .buttonBorderShape(.capsule)
-                .tint(palette.accent)
+                .tint(palette.textPrimary)
             }
         }
         .padding(16)

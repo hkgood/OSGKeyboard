@@ -47,21 +47,22 @@ struct HistoryView: View {
                     } label: {
                         Image(systemName: "trash")
                     }
+                    .tint(palette.textPrimary)
                     .accessibilityLabel("history.clear.button")
+                    .confirmationDialog(
+                        "history.clear.title",
+                        isPresented: $showClearConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button("history.clear.confirm", role: .destructive) {
+                            store.clearAll()
+                        }
+                        Button("common.cancel", role: .cancel) {}
+                    } message: {
+                        Text("history.clear.message")
+                    }
                 }
             }
-        }
-        .confirmationDialog(
-            "history.clear.title",
-            isPresented: $showClearConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("history.clear.confirm", role: .destructive) {
-                store.clearAll()
-            }
-            Button("common.cancel", role: .cancel) {}
-        } message: {
-            Text("history.clear.message")
         }
         .confirmationDialog(
             "history.clearDay.title",
@@ -82,37 +83,37 @@ struct HistoryView: View {
         }
     }
 
-    // MARK: - List
+    // MARK: - Card list
 
     private var list: some View {
-        List {
-            ForEach(store.groupedByDay, id: \.day) { group in
-                Section {
-                    ForEach(group.items) { entry in
-                        historyRow(entry)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                            .listRowBackground(palette.surface)
-                            .listRowSeparatorTint(palette.divider)
+        ScrollView {
+            CardPageContent {
+                ForEach(store.groupedByDay, id: \.day) { group in
+                    VStack(alignment: .leading, spacing: SettingsListMetrics.sectionLabelSpacing) {
+                        daySectionHeader(day: group.day)
+
+                        LazyVStack(spacing: CardLayoutMetrics.compactItemSpacing) {
+                            ForEach(group.items) { entry in
+                                historyRow(entry)
+                                    .surfaceCard()
+                                    .contextMenu {
+                                        Button("common.delete", role: .destructive) {
+                                            delete(entry)
+                                        }
+                                    }
+                            }
+                        }
                     }
-                    .onDelete { offsets in
-                        delete(items: group.items, at: offsets)
-                    }
-                } header: {
-                    daySectionHeader(day: group.day)
                 }
-                .listSectionMargins(.horizontal, Spacing.lg)
             }
+            .tabBarScrollBottomPadding()
         }
-        .listStyle(.insetGrouped)
-        .listSectionSpacing(CardLayoutMetrics.sectionSpacing)
-        .scrollContentBackground(.hidden)
+        .scrollClipDisabled()
         .background(palette.background)
-        .contentMargins(.top, Spacing.md, for: .scrollContent)
-        .tabBarListScrollBottomMargin()
     }
 
     /// Date label + per-day delete, flush with the section card's left/right edges
-    /// (Settings section labels share the same edge; system List headers inset further).
+    /// (CardPageContent gives labels and cards the same horizontal guide).
     private func daySectionHeader(day: Date) -> some View {
         HStack(alignment: .center, spacing: Spacing.sm) {
             Text(Self.dayFormatter.string(from: day))
@@ -134,9 +135,8 @@ struct HistoryView: View {
             .accessibilityLabel("history.clearDay.button")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        // Cancel the default List section-header content inset so the label
-        // lines up with the card's left edge (rows use leading: 0).
-        .padding(.horizontal, -SettingsListMetrics.rowHorizontalPadding)
+        // CardPageContent owns horizontal padding, so no row-specific
+        // compensation is needed to keep the label flush with the cards.
         .textCase(nil)
     }
 
@@ -181,9 +181,7 @@ struct HistoryView: View {
 
     // MARK: - Mutations
 
-    private func delete(items: [SpeechHistoryEntry], at offsets: IndexSet) {
-        for index in offsets {
-            store.delete(id: items[index].id)
-        }
+    private func delete(_ entry: SpeechHistoryEntry) {
+        store.delete(id: entry.id)
     }
 }

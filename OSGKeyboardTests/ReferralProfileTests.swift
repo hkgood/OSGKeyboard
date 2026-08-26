@@ -314,7 +314,8 @@ final class ReferralProfileTests: XCTestCase {
             with: AppleAuthorizationPayload(
                 identityToken: "identity",
                 authorizationCode: "authorization",
-                nonce: "nonce"
+                nonce: "nonce",
+                userIdentifier: "apple-user"
             )
         )
 

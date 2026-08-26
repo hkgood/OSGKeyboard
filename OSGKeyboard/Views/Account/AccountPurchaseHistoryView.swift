@@ -68,50 +68,48 @@ struct AccountPurchaseHistoryView: View {
     private func purchaseList(
         _ records: [AccountCreditPurchaseRecord]
     ) -> some View {
-        List {
-            ForEach(records) { record in
-                purchaseRow(record)
-                    .listRowBackground(palette.surface)
-                    .listRowInsets(
-                        EdgeInsets(
-                            top: 0,
-                            leading: Spacing.md,
-                            bottom: 0,
-                            trailing: Spacing.md
-                        )
-                    )
-                    .listRowSeparatorTint(palette.divider)
-                    .task {
-                        guard record.id == records.last?.id else { return }
-                        await manager.loadNextPurchaseHistoryPage(accountID: accountID)
-                    }
-            }
+        ScrollView {
+            LazyVStack(spacing: CardLayoutMetrics.compactItemSpacing) {
+                ForEach(records) { record in
+                    purchaseRow(record)
+                        .padding(.horizontal, Spacing.md)
+                        .surfaceCard()
+                        .task {
+                            guard record.id == records.last?.id else { return }
+                            await manager.loadNextPurchaseHistoryPage(accountID: accountID)
+                        }
+                }
 
-            if manager.isLoadingMoreHistory {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                        .tint(palette.accent)
-                    Spacer()
-                }
-                .listRowBackground(palette.surface)
-            } else if let errorKey = manager.historyLoadMoreErrorKey {
-                Button {
-                    Task {
-                        await manager.loadNextPurchaseHistoryPage(accountID: accountID)
+                if manager.isLoadingMoreHistory {
+                    HStack {
+                        Spacer()
+                        ProgressView()
+                            .tint(palette.accent)
+                        Spacer()
                     }
-                } label: {
-                    Text(LocalizedStringKey(errorKey))
-                        .font(TypeStyle.caption)
-                        .foregroundStyle(palette.accent)
-                        .frame(maxWidth: .infinity)
+                    .settingsListRow()
+                    .surfaceCard()
+                } else if let errorKey = manager.historyLoadMoreErrorKey {
+                    Button {
+                        Task {
+                            await manager.loadNextPurchaseHistoryPage(accountID: accountID)
+                        }
+                    } label: {
+                        Text(LocalizedStringKey(errorKey))
+                            .font(TypeStyle.caption)
+                            .foregroundStyle(palette.accent)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.plain)
+                    .settingsListRow()
+                    .surfaceCard()
                 }
-                .buttonStyle(.plain)
-                .listRowBackground(palette.surface)
             }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.md)
+            .padding(.bottom, Spacing.xxl)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
+        .scrollClipDisabled()
         .background(palette.background)
         .accessibilityIdentifier("account.purchaseHistory.list")
         .refreshable {

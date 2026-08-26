@@ -302,6 +302,14 @@ final class FlowSessionManager: ObservableObject {
         )
         guard AppGroup.isAvailable else {
             debug("cannot start flow session: App Group unavailable")
+            FlowDiagnostics.persistStartupFailure(
+                reason: "appGroupUnavailable",
+                context: startupFailureContext(
+                    trigger: reason,
+                    attemptCount: 0,
+                    elapsed: 0
+                )
+            )
             return
         }
 
@@ -396,20 +404,35 @@ final class FlowSessionManager: ObservableObject {
         reason: String = "unspecified",
         startCapture: Bool = false
     ) {
-        OSGDiag.log(
+        FlowDiagnostics.log(
             "activateOnForeground reason=\(reason) startCapture=\(startCapture) "
                 + "onboardingDone=\(ProviderConfig.shared.hasCompletedOnboarding) "
-                + "\(OSGDiag.memoryTag())",
-            category: "flow"
+                + "\(OSGDiag.memoryTag())"
         )
         guard AppGroup.isAvailable else {
-            OSGDiag.log("activateOnForeground aborted reason=appGroupUnavailable", category: "flow")
+            FlowDiagnostics.log("activateOnForeground aborted reason=appGroupUnavailable")
+            FlowDiagnostics.persistStartupFailure(
+                reason: "appGroupUnavailable",
+                context: startupFailureContext(
+                    trigger: "activateOnForeground:\(reason)",
+                    attemptCount: 0,
+                    elapsed: 0
+                )
+            )
             return
         }
         guard AppPermissions.flowRequirementsMet else {
-            OSGDiag.log("activateOnForeground aborted reason=permissions", category: "flow")
+            FlowDiagnostics.log("activateOnForeground aborted reason=permissions")
             sessionWarning = permissionWarningMessage()
             FlowSessionBridge.setHostReady(false)
+            FlowDiagnostics.persistStartupFailure(
+                reason: "permissionsMissing",
+                context: startupFailureContext(
+                    trigger: "activateOnForeground:\(reason)",
+                    attemptCount: 0,
+                    elapsed: 0
+                )
+            )
             return
         }
 
@@ -422,10 +445,30 @@ final class FlowSessionManager: ObservableObject {
 
     /// User-requested recovery always discards the rejected AVKit generation.
     func retryPiPRecovery() {
-        guard AppGroup.isAvailable else { return }
+        guard AppGroup.isAvailable else {
+            FlowDiagnostics.log("manual PiP recovery aborted reason=appGroupUnavailable")
+            FlowDiagnostics.persistStartupFailure(
+                reason: "appGroupUnavailable",
+                context: startupFailureContext(
+                    trigger: FlowPiPActivationTrigger.manualRetry.rawValue,
+                    attemptCount: 0,
+                    elapsed: 0
+                )
+            )
+            return
+        }
         guard AppPermissions.flowRequirementsMet else {
             sessionWarning = permissionWarningMessage()
             FlowSessionBridge.setHostReady(false)
+            FlowDiagnostics.log("manual PiP recovery aborted reason=permissions")
+            FlowDiagnostics.persistStartupFailure(
+                reason: "permissionsMissing",
+                context: startupFailureContext(
+                    trigger: FlowPiPActivationTrigger.manualRetry.rawValue,
+                    attemptCount: 0,
+                    elapsed: 0
+                )
+            )
             return
         }
         wantsActiveSession = true
@@ -933,6 +976,7 @@ final class FlowSessionManager: ObservableObject {
         guard !Task.isCancelled else { return }
         traceState("startSessionAsync.begin", extra: "trigger=\(trigger.rawValue)")
         sessionWarning = nil
+        let recoveryStartedAt = Date()
 
         guard AppPermissions.flowRequirementsMet else {
             sessionWarning = permissionWarningMessage()
@@ -940,11 +984,20 @@ final class FlowSessionManager: ObservableObject {
             traceState("startSessionAsync.blocked", extra: "reason=permissions")
             FlowSessionBridge.setHostReady(false)
             isColdStartHandoff = false
+            FlowDiagnostics.persistStartupFailure(
+                reason: "permissionsMissing",
+                context: startupFailureContext(
+                    trigger: trigger.rawValue,
+                    attemptCount: 0,
+                    elapsed: Date().timeIntervalSince(recoveryStartedAt)
+                )
+            )
             return
         }
 
         let deadline = Date().addingTimeInterval(FlowPiPRecoveryPolicy.totalBudget)
         var lastFailure: FlowPiPStartFailure = .timedOut
+        var attemptsPerformed = 0
 
         for attempt in 1...FlowPiPRecoveryPolicy.maxAttempts {
             guard FlowPiPRecoveryPolicy.canContinue(
@@ -984,6 +1037,7 @@ final class FlowSessionManager: ObservableObject {
 
             let remaining = deadline.timeIntervalSinceNow
             guard remaining > 0 else { break }
+            attemptsPerformed = attempt
             pipLifecycleState = isActive
                 ? .recovering(attempt: attempt, total: FlowPiPRecoveryPolicy.maxAttempts)
                 : .preparing(attempt: attempt, total: FlowPiPRecoveryPolicy.maxAttempts)
@@ -1001,6 +1055,8 @@ final class FlowSessionManager: ObservableObject {
                     remainingBudget: deadline.timeIntervalSinceNow
                 )
             )
+            let recoveryElapsed = FlowPiPRecoveryPolicy.totalBudget
+                - max(0, deadline.timeIntervalSinceNow)
             guard FlowPiPRecoveryPolicy.canContinue(
                 operation: operation,
                 currentOperation: pipRecoveryOperation,
@@ -1029,7 +1085,9 @@ final class FlowSessionManager: ObservableObject {
                 lastFailure = failure
                 traceState(
                     "startSessionAsync.failed",
-                    extra: "reason=pipUnavailable trigger=\(trigger.rawValue) attempt=\(attempt) failure=\(failure)"
+                    extra: "reason=pipUnavailable trigger=\(trigger.rawValue) "
+                        + "attempt=\(attempt) failure=\(failure) "
+                        + "elapsed=\(String(format: "%.2f", recoveryElapsed))"
                 )
             }
         }
@@ -1040,6 +1098,14 @@ final class FlowSessionManager: ObservableObject {
         FlowSessionBridge.setHostReady(false)
         refreshHostReady()
         debug("PiP keep-alive failed after bounded recovery: \(lastFailure)")
+        FlowDiagnostics.persistStartupFailure(
+            reason: String(describing: lastFailure),
+            context: startupFailureContext(
+                trigger: trigger.rawValue,
+                attemptCount: attemptsPerformed,
+                elapsed: Date().timeIntervalSince(recoveryStartedAt)
+            )
+        )
     }
 
     private func activateFlowSessionAfterPiPProof(duration: TimeInterval?) {
@@ -3537,6 +3603,33 @@ final class FlowSessionManager: ObservableObject {
 
     private func debug(_ message: String) {
         FlowDiagnostics.log(message)
+    }
+
+    private func startupFailureContext(
+        trigger: String,
+        attemptCount: Int,
+        elapsed: TimeInterval
+    ) -> [String: String] {
+        let memory = OSGDiag.memorySnapshot()
+        return [
+            "trigger": trigger,
+            "attemptCount": "\(attemptCount)",
+            "elapsedSeconds": String(format: "%.3f", elapsed),
+            "appForeground": isAppForeground ? "true" : "false",
+            "sessionActive": isActive ? "true" : "false",
+            "sessionIntent": wantsActiveSession ? "true" : "false",
+            "pipLifecycleState": String(describing: pipLifecycleState),
+            "pipGeneration": "\(pipController.generation)",
+            "pipActive": pipController.isPictureInPictureActive ? "true" : "false",
+            "hostReady": FlowSessionBridge.isHostReady() ? "true" : "false",
+            "bridgeSessionActive": FlowSessionBridge.isSessionActive() ? "true" : "false",
+            "heartbeatStalenessSeconds": FlowSessionBridge.heartbeatStaleness()
+                .map { String(format: "%.3f", $0) } ?? "nil",
+            "microphonePermission": String(describing: AppPermissions.micStatus),
+            "speechPermission": String(describing: AppPermissions.speechStatus),
+            "rssMB": String(format: "%.1f", memory.rssMB),
+            "physicalFootprintMB": String(format: "%.1f", memory.physFootprintMB)
+        ]
     }
 
     private static func safeErrorLogMetadata(_ error: Error) -> String {

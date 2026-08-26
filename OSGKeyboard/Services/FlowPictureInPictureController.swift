@@ -10,6 +10,7 @@ import AVFoundation
 import AVKit
 import CoreMedia
 import OSGKeyboardHostSupport
+import OSGKeyboardShared
 import UIKit
 
 /// Why `startAndWait` could not prove an active PiP window.
@@ -174,11 +175,19 @@ final class FlowPictureInPictureController: NSObject, FlowPictureInPictureContro
     ) async -> FlowPiPStartOutcome {
         if isPictureInPictureActive { return .started }
 
+        FlowDiagnostics.log(
+            "PiP startAndWait begin generation=\(generation) "
+                + "hostTimeout=\(String(format: "%.2f", hostTimeout)) "
+                + "activeTimeout=\(String(format: "%.2f", activeTimeout)) "
+                + "supported=\(AVPictureInPictureController.isPictureInPictureSupported()) "
+                + hostDiagnosticTag
+        )
         let deadline = Date().addingTimeInterval(activeTimeout)
         let supportsPiP = await waitForPictureInPictureSupport(
             timeout: min(max(0, deadline.timeIntervalSinceNow), 0.8)
         )
         guard supportsPiP else {
+            FlowDiagnostics.log("PiP unavailable: unsupported \(hostDiagnosticTag)")
             return .failed(.unsupported)
         }
 
@@ -186,6 +195,7 @@ final class FlowPictureInPictureController: NSObject, FlowPictureInPictureContro
             timeout: min(hostTimeout, max(0, deadline.timeIntervalSinceNow))
         )
         guard hostReady else {
+            FlowDiagnostics.log("PiP unavailable: hostNotReady \(hostDiagnosticTag)")
             return .failed(.hostNotReady)
         }
 
@@ -193,8 +203,12 @@ final class FlowPictureInPictureController: NSObject, FlowPictureInPictureContro
         guard await prepareControllerForStart() else {
             stopFramePump()
             if lastSystemStartFailure != nil {
+                FlowDiagnostics.log(
+                    "PiP unavailable: systemRejected \(systemFailureDiagnosticTag)"
+                )
                 return .failed(.systemRejected)
             }
+            FlowDiagnostics.log("PiP unavailable: notPossible \(hostDiagnosticTag)")
             return .failed(hasHostView ? .notPossible : .hostNotReady)
         }
 
@@ -212,7 +226,7 @@ final class FlowPictureInPictureController: NSObject, FlowPictureInPictureContro
 
         guard pipController?.isPictureInPicturePossible == true else {
             FlowDiagnostics.log(
-                "PiP generation \(generation) never became possible"
+                "PiP generation \(generation) never became possible \(hostDiagnosticTag)"
             )
             return .failed(.notPossible)
         }
@@ -262,7 +276,8 @@ final class FlowPictureInPictureController: NSObject, FlowPictureInPictureContro
         }
         FlowDiagnostics.log(
             "PiP startAndWait failed: \(failure) possible=\(pipController?.isPictureInPicturePossible == true) "
-                + "requests=\(startRequestCount)"
+                + "active=\(pipController?.isPictureInPictureActive == true) "
+                + "requests=\(startRequestCount) \(systemFailureDiagnosticTag)"
         )
         return .failed(failure)
     }
@@ -401,6 +416,26 @@ final class FlowPictureInPictureController: NSObject, FlowPictureInPictureContro
             try? await Task.sleep(nanoseconds: 50_000_000)
         }
         return isHostInWindowHierarchy
+    }
+
+    private var hostDiagnosticTag: String {
+        guard let hostView else {
+            return "hostAttached=0 hostWindow=0 hostBounds=nil hostAlpha=nil"
+        }
+        return String(
+            format: "hostAttached=1 hostWindow=%d hostBounds=%.1fx%.1f hostAlpha=%.3f",
+            hostView.window == nil ? 0 : 1,
+            hostView.bounds.width,
+            hostView.bounds.height,
+            hostView.alpha
+        )
+    }
+
+    private var systemFailureDiagnosticTag: String {
+        guard let error = lastSystemStartFailure as NSError? else {
+            return "systemError=nil"
+        }
+        return "systemErrorDomain=\(error.domain) systemErrorCode=\(error.code)"
     }
 
     private func configureControllerIfNeeded() {
@@ -604,7 +639,7 @@ final class FlowPictureInPictureController: NSObject, FlowPictureInPictureContro
         let phoneInset = CGFloat(22)
         let phoneRect = canvas.insetBy(dx: phoneInset, dy: phoneInset)
         let phonePath = UIBezierPath(roundedRect: phoneRect, cornerRadius: 28)
-        context.setStrokeColor(UIColor(red: 0.898, green: 0.906, blue: 0.922, alpha: 1).cgColor)
+        context.setStrokeColor(UIColor(OSGColor.pictureInPictureOutline).cgColor)
         context.setLineWidth(2.5)
         context.addPath(phonePath.cgPath)
         context.strokePath()
@@ -639,11 +674,11 @@ final class FlowPictureInPictureController: NSObject, FlowPictureInPictureContro
     private func drawLogoCard(in context: CGContext, rect: CGRect, tuckProgress: CGFloat) {
         let cardPath = UIBezierPath(roundedRect: rect, cornerRadius: 16)
 
-        context.setFillColor(UIColor(red: 0.20, green: 0.78, blue: 0.55, alpha: 1).cgColor)
+        context.setFillColor(UIColor(OSGColor.pictureInPictureAccent).cgColor)
         context.addPath(cardPath.cgPath)
         context.fillPath()
 
-        context.setStrokeColor(UIColor(red: 0.20, green: 0.78, blue: 0.55, alpha: 1).cgColor)
+        context.setStrokeColor(UIColor(OSGColor.pictureInPictureAccent).cgColor)
         context.setLineWidth(1.5)
         context.addPath(cardPath.cgPath)
         context.strokePath()
@@ -751,6 +786,7 @@ extension FlowPictureInPictureController: @preconcurrency AVPictureInPictureCont
         guard pictureInPictureController === pipController else { return }
         isPictureInPictureActive = true
         lastSystemStartFailure = nil
+        FlowDiagnostics.log("PiP delegate didStart generation=\(generation)")
         releaseAudioSessionForLowPowerPiP()
     }
 
@@ -772,7 +808,11 @@ extension FlowPictureInPictureController: @preconcurrency AVPictureInPictureCont
         // Sample-buffer fallback may need warm-up retries. VideoCall PiP uses
         // the automatic-inline path plus the bounded startAndWait fallback.
         lastSystemStartFailure = error
-        FlowDiagnostics.log("PiP start attempt failed (will retry): \(error.localizedDescription)")
+        let error = error as NSError
+        FlowDiagnostics.log(
+            "PiP start attempt failed (will retry): "
+                + "domain=\(error.domain) code=\(error.code)"
+        )
     }
 
     func pictureInPictureController(

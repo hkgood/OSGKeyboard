@@ -152,7 +152,8 @@ private enum AccountAppleAuthorizationPayload {
               let identityToken = String(data: identityTokenData, encoding: .utf8),
               let authorizationCode = String(data: authorizationCodeData, encoding: .utf8),
               !identityToken.isEmpty,
-              !authorizationCode.isEmpty
+              !authorizationCode.isEmpty,
+              !credential.user.isEmpty
         else {
             return nil
         }

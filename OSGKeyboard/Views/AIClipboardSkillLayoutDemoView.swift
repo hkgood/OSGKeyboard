@@ -32,7 +32,7 @@ struct AIClipboardSkillLayoutDemoView: View {
             )
             .background(Palette.light.background)
         }
-        .background(Color(red: 0.06, green: 0.06, blue: 0.07).ignoresSafeArea())
+        .background(OSGColor.demoBackground.ignoresSafeArea())
         .environment(\.locale, language == .en ? Locale(identifier: "en") : Locale(identifier: "zh-Hans"))
         .preferredColorScheme(.light)
         .task { await runTimeline() }
@@ -48,7 +48,7 @@ struct AIClipboardSkillLayoutDemoView: View {
         VStack(spacing: 10) {
             Text("技能布局预览")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(OSGColor.fixedLightContent)
             HStack(spacing: 16) {
                 Button {
                     count = max(1, count - 1)
@@ -58,7 +58,7 @@ struct AIClipboardSkillLayoutDemoView: View {
                 }
                 Text("\(count) 个")
                     .font(.title2.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(OSGColor.fixedLightContent)
                     .frame(minWidth: 72)
                 Button {
                     count = min(AIClipboardSkillCatalog.catalog.count, count + 1)
@@ -67,14 +67,14 @@ struct AIClipboardSkillLayoutDemoView: View {
                         .font(.system(size: 28))
                 }
             }
-            .foregroundStyle(.green)
+            .foregroundStyle(OSGColor.brandAccent)
             HStack(spacing: 8) {
                 ForEach([3, 8, AIClipboardSkillCatalog.catalog.count], id: \.self) { n in
                     Button("\(n)") {
                         count = n
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(count == n ? .green : .gray)
+                    .tint(count == n ? OSGColor.brandAccent : OSGColor.demoSelectionInactive)
                 }
             }
         }
