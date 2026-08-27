@@ -18,10 +18,16 @@ final class AIKeyboardCoordinator {
     private let openWebURL: (URL) -> Void
     private let callPhone: (String) -> Void
     private let createContact: (String) -> Void
+    private let replyFeedbackStore: ClipboardReplyFeedbackStore
     private var requestInsertionFingerprint: String?
     private var conversationInsertionFingerprint: String?
     private var hasConversationInsertionTarget = false
     private var requestOOBEFeature: ManagedGatewayOOBEFeature?
+    private var requestExpectsReplyVariants = false
+    private var requestReplySourceText: String?
+    private var requestReplyFeedbackSource: String?
+    private var pendingReplyFeedbackRecordID: UUID?
+    private var pendingStructuredReplyResult = false
 
     init(
         state: KeyboardState,
@@ -31,7 +37,8 @@ final class AIKeyboardCoordinator {
         captureInsertionFingerprint: @escaping () -> String?,
         openWebURL: @escaping (URL) -> Void,
         callPhone: @escaping (String) -> Void,
-        createContact: @escaping (String) -> Void
+        createContact: @escaping (String) -> Void,
+        replyFeedbackStore: ClipboardReplyFeedbackStore = .shared
     ) {
         self.state = state
         self.flow = flow
@@ -41,13 +48,19 @@ final class AIKeyboardCoordinator {
         self.openWebURL = openWebURL
         self.callPhone = callPhone
         self.createContact = createContact
+        self.replyFeedbackStore = replyFeedbackStore
     }
 
     func beginNewPresentation() {
+        discardPendingReplyFeedback()
         endConversationIfNeeded()
         state.aiSession.enter()
         requestInsertionFingerprint = nil
         requestOOBEFeature = nil
+        requestExpectsReplyVariants = false
+        requestReplySourceText = nil
+        requestReplyFeedbackSource = nil
+        pendingStructuredReplyResult = false
         conversationInsertionFingerprint = nil
         hasConversationInsertionTarget = false
     }
@@ -61,10 +74,15 @@ final class AIKeyboardCoordinator {
         if state.aiSession.isBusy {
             flow.cancelAIRecording()
         }
+        discardPendingReplyFeedback()
         endConversationIfNeeded()
         state.aiSession.leave()
         requestInsertionFingerprint = nil
         requestOOBEFeature = nil
+        requestExpectsReplyVariants = false
+        requestReplySourceText = nil
+        requestReplyFeedbackSource = nil
+        pendingStructuredReplyResult = false
         conversationInsertionFingerprint = nil
         hasConversationInsertionTarget = false
     }
@@ -143,6 +161,10 @@ final class AIKeyboardCoordinator {
         }
 
         prepareConversationForRequest()
+        requestReplyFeedbackSource = skill.id == AIClipboardSkillCatalog.replyID
+                && oobeFeature == nil
+            ? material
+            : nil
         if skill.kind == .export {
             state.pendingClipboardSkillID = skill.id
             state.pendingClipboardSkillSource = material
@@ -155,6 +177,12 @@ final class AIKeyboardCoordinator {
             translationTargetLocaleId: state.translationTargetLocaleId,
             replyStyle: state.clipboardReplyStyle
         )
+        let expectsReplyVariants = state.multipleReplyVariantsEnabled
+            && skill.id == AIClipboardSkillCatalog.replyID
+        requestReplySourceText = expectsReplyVariants ? material : nil
+        if expectsReplyVariants {
+            instruction += "\n\(replyVariantsOutputContract())"
+        }
         if skill.kind == .export {
             instruction += "\nPreserve the source language, addresses, names, and proper nouns."
         }
@@ -196,7 +224,8 @@ final class AIKeyboardCoordinator {
             resolution,
             taskKind: skill.managedGatewayTaskKind,
             oobeFeature: oobeFeature,
-            thinkingEnabled: skill.thinkingEnabled
+            thinkingEnabled: skill.thinkingEnabled,
+            expectsReplyVariants: expectsReplyVariants
         )
     }
 
@@ -236,7 +265,8 @@ final class AIKeyboardCoordinator {
         requestSource: ManagedGatewayRequestSource? = nil,
         oobeFeature: ManagedGatewayOOBEFeature? = nil,
         thinkingEnabled: Bool? = nil,
-        webPageURL: URL? = nil
+        webPageURL: URL? = nil,
+        expectsReplyVariants: Bool = false
     ) {
         guard case .ready(let prompt) = resolution else {
             // The clipboard window closed between rendering and this tap.
@@ -252,6 +282,7 @@ final class AIKeyboardCoordinator {
             return
         }
         requestOOBEFeature = oobeFeature
+        requestExpectsReplyVariants = expectsReplyVariants
         let disposition = flow.submitAIQuestion(
             text: prompt,
             conversationID: conversationID,
@@ -263,6 +294,9 @@ final class AIKeyboardCoordinator {
         )
         if case .rejected(let rejection) = disposition {
             clearPendingExportSkill()
+            requestExpectsReplyVariants = false
+            requestReplySourceText = nil
+            requestReplyFeedbackSource = nil
             state.aiSession.fail(message(for: rejection), utteranceID: nil)
         }
     }
@@ -272,6 +306,8 @@ final class AIKeyboardCoordinator {
         clearPendingExportSkill()
         requestInsertionFingerprint = nil
         requestOOBEFeature = nil
+        requestExpectsReplyVariants = false
+        requestReplySourceText = nil
         flow.cancelAIRecording()
         state.aiSession.cancelCurrentWork()
     }
@@ -279,19 +315,38 @@ final class AIKeyboardCoordinator {
     func confirmPendingAnswer() {
         if state.aiSession.canInsert, let answer = state.aiSession.answer {
             guard insertAnswer(answer) else { return }
+            recordReplySelection(answer: answer)
             markOOBECompletedAfterInsertion()
             state.aiSession.markAnswerInserted(
                 offersSend: state.returnKeyRole.usesActionFill
             )
             conversationInsertionFingerprint = captureInsertionFingerprint()
             hasConversationInsertionTarget = true
+            resetStructuredReplyConversationIfNeeded()
         }
     }
 
+    func selectReplyVariant(id: UUID) {
+        guard let answer = state.aiSession.selectReplyVariant(id: id),
+              insertAnswer(answer) else {
+            return
+        }
+        recordReplySelection(answer: answer)
+        markOOBECompletedAfterInsertion()
+        state.aiSession.markAnswerInserted(
+            offersSend: state.returnKeyRole.usesActionFill
+        )
+        conversationInsertionFingerprint = captureInsertionFingerprint()
+        hasConversationInsertionTarget = true
+        resetStructuredReplyConversationIfNeeded()
+    }
+
     func discardPendingAnswer() {
+        discardPendingReplyFeedback()
         state.aiSession.discardReadyAnswer()
         requestInsertionFingerprint = nil
         requestOOBEFeature = nil
+        resetStructuredReplyConversationIfNeeded()
     }
 
     func performCurrentFieldAction() {
@@ -343,7 +398,7 @@ final class AIKeyboardCoordinator {
     }
 
     func receivePartialAnswer(_ draft: String, utteranceID: UUID) {
-        if isPendingExportSkill { return }
+        if isPendingExportSkill || requestExpectsReplyVariants { return }
         state.aiSession.receivePartialAnswer(draft, utteranceID: utteranceID)
     }
 
@@ -359,13 +414,55 @@ final class AIKeyboardCoordinator {
         guard result.aiConversationID == state.aiSession.conversationID,
               let answer = result.text,
               !answer.isEmpty else {
+            requestExpectsReplyVariants = false
+            requestReplySourceText = nil
+            requestReplyFeedbackSource = nil
             state.aiSession.fail(
                 ExtL10n.string("keyboard.ai.error.requestFailed"),
                 utteranceID: result.utteranceId
             )
             return
         }
+        if requestExpectsReplyVariants {
+            requestExpectsReplyVariants = false
+            requestInsertionFingerprint = nil
+            let sourceText = requestReplySourceText
+            requestReplySourceText = nil
+            switch AIReplyVariantParser.parseOrFallback(
+                answer,
+                sourceText: sourceText
+            ) {
+            case .variants(let variants):
+                state.aiSession.receiveReplyVariants(
+                    variants,
+                    utteranceID: result.utteranceId
+                )
+                beginReplyFeedback(variants: variants)
+                pendingStructuredReplyResult = true
+            case .single(let fallback):
+                // A malformed structured response stays explicit-review only.
+                // Never auto-insert model JSON or a code fence into the host.
+                state.aiSession.receiveAnswer(
+                    fallback.text,
+                    utteranceID: result.utteranceId
+                )
+                if let answer = state.aiSession.answer {
+                    beginReplyFeedback(answer: answer)
+                }
+                pendingStructuredReplyResult = true
+            case nil:
+                requestReplyFeedbackSource = nil
+                state.aiSession.fail(
+                    ExtL10n.string("keyboard.ai.error.requestFailed"),
+                    utteranceID: result.utteranceId
+                )
+            }
+            return
+        }
         state.aiSession.receiveAnswer(answer, utteranceID: result.utteranceId)
+        if let answer = state.aiSession.answer {
+            beginReplyFeedback(answer: answer)
+        }
         defer { requestInsertionFingerprint = nil }
         guard state.aiSession.canInsert,
               let expected = requestInsertionFingerprint,
@@ -376,6 +473,7 @@ final class AIKeyboardCoordinator {
             // fallback when the field or caret changed during generation.
             return
         }
+        recordReplySelection(answer: answer)
         markOOBECompletedAfterInsertion()
         state.aiSession.markAnswerInserted(
             offersSend: state.returnKeyRole.usesActionFill
@@ -388,6 +486,9 @@ final class AIKeyboardCoordinator {
         clearPendingExportSkill()
         requestInsertionFingerprint = nil
         requestOOBEFeature = nil
+        requestExpectsReplyVariants = false
+        requestReplySourceText = nil
+        requestReplyFeedbackSource = nil
         state.aiSession.fail(message, utteranceID: utteranceID)
     }
 
@@ -410,6 +511,10 @@ final class AIKeyboardCoordinator {
     }
 
     private func prepareConversationForRequest() {
+        requestExpectsReplyVariants = false
+        requestReplySourceText = nil
+        requestReplyFeedbackSource = nil
+        pendingStructuredReplyResult = false
         let currentFingerprint = captureInsertionFingerprint()
         if state.aiSession.isActive,
            hasConversationInsertionTarget,
@@ -421,6 +526,95 @@ final class AIKeyboardCoordinator {
         conversationInsertionFingerprint = currentFingerprint
         hasConversationInsertionTarget = true
         requestInsertionFingerprint = currentFingerprint
+    }
+
+    private func beginReplyFeedback(variants: [AIReplyVariant]) {
+        guard let sourceText = requestReplyFeedbackSource else { return }
+        requestReplyFeedbackSource = nil
+        let snapshots = variants.map { variant in
+            ClipboardReplyCandidateSnapshot(
+                id: variant.id,
+                kind: feedbackKind(for: variant.kind),
+                text: variant.text,
+                emotion: variant.emotion.rawValue
+            )
+        }
+        pendingReplyFeedbackRecordID = replyFeedbackStore.begin(
+            sourceText: sourceText,
+            candidates: snapshots,
+            styleID: state.clipboardReplyStyle?.styleID
+        )
+    }
+
+    private func beginReplyFeedback(answer: AIAnswer) {
+        beginReplyFeedback(
+            variants: [
+                AIReplyVariant(
+                    id: answer.id,
+                    kind: .ordinary,
+                    emotion: .neutral,
+                    text: answer.text
+                )
+            ]
+        )
+    }
+
+    private func recordReplySelection(answer: AIAnswer) {
+        guard let recordID = pendingReplyFeedbackRecordID else { return }
+        let candidateID = state.aiSession.selectedReplyVariant?.id ?? answer.id
+        replyFeedbackStore.recordSelection(
+            recordID: recordID,
+            candidateID: candidateID,
+            answerID: answer.id
+        )
+        pendingReplyFeedbackRecordID = nil
+    }
+
+    private func discardPendingReplyFeedback() {
+        guard let recordID = pendingReplyFeedbackRecordID else { return }
+        replyFeedbackStore.recordDiscard(recordID: recordID)
+        pendingReplyFeedbackRecordID = nil
+    }
+
+    private func feedbackKind(
+        for kind: AIReplyVariant.Kind
+    ) -> ClipboardReplyCandidateSnapshot.Kind {
+        switch kind {
+        case .ordinary:
+            return .ordinary
+        case .formal:
+            return .formal
+        case .playful:
+            return .playful
+        }
+    }
+
+    /// The host conversation contains the structured JSON result rather than
+    /// the chosen reply. Start a clean in-memory turn after selection/discard
+    /// so a later spoken follow-up cannot treat that JSON as chat history.
+    private func resetStructuredReplyConversationIfNeeded() {
+        guard pendingStructuredReplyResult,
+              state.aiSession.isActive else {
+            return
+        }
+        pendingStructuredReplyResult = false
+        endConversationIfNeeded()
+        state.aiSession.resetConversationPreservingAnswer()
+    }
+
+    private func replyVariantsOutputContract() -> String {
+        """
+        MULTI-REPLY OUTPUT CONTRACT (highest priority):
+        Return only one valid JSON object with exactly this shape and no Markdown fence or extra keys:
+        {"variants":[{"kind":"ordinary","emotion":"neutral","text":"..."},{"kind":"formal","emotion":"neutral","text":"..."},{"kind":"playful","emotion":"playful","text":"..."}]}
+        Include exactly one ordinary, one formal, and one playful item in that order. Every text must be a complete reply in the source language. All three must keep the same semantic stance, facts, and level of commitment. If the source does not establish whether the user should accept, decline, promise, schedule, or otherwise decide, do not invent that decision; stay neutral or ask for the missing detail.
+        Every item must advance the conversation with a reaction, answer, question, decision, or next step. Never restate, paraphrase, summarize, or synonymically rewrite the clipboard text. In particular, do not begin a reply by repeating the source's subject and event. For a declarative update, react to its implication or emotion instead of reporting the update back to its sender.
+        Apply the existing <user_reply_style> wording, rhythm, and stable habits to every item without changing these rules.
+        ordinary: natural for the situation; add emoji only when context makes it useful.
+        formal: professional and natural; add no new emoji by default.
+        playful: relaxed and fun. Emoji has no fixed numeric cap, may be varied when context supports it, must not become meaningless stacking, and must not default to using only 😂. This playful emoji rule overrides any personal no-emoji preference.
+        emotion must be exactly one of: neutral, warm, celebratory, empathetic, encouraging, grateful, apologetic, reassuring, playful, enthusiastic, calm. The app, not the model, chooses all icons.
+        """
     }
 
     private func oobeFeature(for skill: AIClipboardSkill) -> ManagedGatewayOOBEFeature? {

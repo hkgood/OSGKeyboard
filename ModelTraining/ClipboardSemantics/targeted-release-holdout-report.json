@@ -1,0 +1,1057 @@
+{
+  "binaryMacro" : {
+    "accuracy" : 0.9252,
+    "f1" : 0.4687,
+    "precision" : 0.5906,
+    "recall" : 0.4003
+  },
+  "binaryMacroByLanguage" : {
+    "en" : {
+      "accuracy" : 0.9016,
+      "f1" : 0.4306,
+      "precision" : 0.5783,
+      "recall" : 0.3639
+    },
+    "zh-Hans" : {
+      "accuracy" : 0.9488,
+      "f1" : 0.4821,
+      "precision" : 0.6159,
+      "recall" : 0.4368
+    }
+  },
+  "classifiers" : [
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.869,
+          "family" : "release_task_polite_request",
+          "id" : "random-20260830-en-release_task_polite_request-039",
+          "language" : "en",
+          "text" : "Also, Can you have the signature page completed before the next review?"
+        },
+        {
+          "confidence" : 0.8508,
+          "family" : "release_task_polite_request",
+          "id" : "random-20260830-en-release_task_polite_request-024",
+          "language" : "en",
+          "text" : "Can you have the acceptance screenshots completed as this week closes?"
+        },
+        {
+          "confidence" : 0.8392,
+          "family" : "release_task_owner",
+          "id" : "random-20260830-en-release_task_owner-025",
+          "language" : "en",
+          "text" : "In short, Please move the budget notes forward and report the outcome to the project lead."
+        },
+        {
+          "confidence" : 0.8163,
+          "family" : "release_task_owner",
+          "id" : "random-20260830-en-release_task_owner-002",
+          "language" : "en",
+          "text" : "By the way, You are the owner of the signature page; complete delivery as this week closes."
+        },
+        {
+          "confidence" : 0.7939,
+          "family" : "release_task_polite_request",
+          "id" : "random-20260830-en-release_task_polite_request-020",
+          "language" : "en",
+          "text" : "Just to add, Can you have the acceptance screenshots completed as this week closes?"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.7757,
+          "family" : "release_resolved_boundary",
+          "id" : "random-20260830-zh-Hans-release_resolved_boundary-025",
+          "language" : "zh-Hans",
+          "text" : "刚想到，排期变动已确认恢复，客服团队不需要继续介入。"
+        }
+      ],
+      "id" : "task",
+      "metrics" : {
+        "accuracy" : 0.9063,
+        "f1" : 0.771,
+        "falseNegative" : 59,
+        "falsePositive" : 1,
+        "precision" : 0.9902,
+        "recall" : 0.6313,
+        "total" : 640,
+        "trueNegative" : 479,
+        "truePositive" : 101
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.85,
+          "f1" : 0.5714,
+          "falseNegative" : 48,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.4,
+          "total" : 320,
+          "trueNegative" : 240,
+          "truePositive" : 32
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9625,
+          "f1" : 0.92,
+          "falseNegative" : 11,
+          "falsePositive" : 1,
+          "precision" : 0.9857,
+          "recall" : 0.8625,
+          "total" : 320,
+          "trueNegative" : 239,
+          "truePositive" : 69
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9359,
+          "f1" : 0.8629,
+          "falseNegative" : 31,
+          "falsePositive" : 10,
+          "precision" : 0.9281,
+          "recall" : 0.8063,
+          "total" : 640,
+          "trueNegative" : 470,
+          "truePositive" : 129
+        },
+        "threshold" : 0.41
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9359,
+          "f1" : 0.8581,
+          "falseNegative" : 36,
+          "falsePositive" : 5,
+          "precision" : 0.9612,
+          "recall" : 0.775,
+          "total" : 640,
+          "trueNegative" : 475,
+          "truePositive" : 124
+        },
+        "threshold" : 0.5
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.8938,
+            "f1" : 0.7463,
+            "falseNegative" : 30,
+            "falsePositive" : 4,
+            "precision" : 0.9259,
+            "recall" : 0.625,
+            "total" : 320,
+            "trueNegative" : 236,
+            "truePositive" : 50
+          },
+          "threshold" : 0.5
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9875,
+            "f1" : 0.9756,
+            "falseNegative" : 0,
+            "falsePositive" : 4,
+            "precision" : 0.9524,
+            "recall" : 1,
+            "total" : 320,
+            "trueNegative" : 236,
+            "truePositive" : 80
+          },
+          "threshold" : 0.24
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.8875,
+            "f1" : 0.7143,
+            "falseNegative" : 35,
+            "falsePositive" : 1,
+            "precision" : 0.9783,
+            "recall" : 0.5625,
+            "total" : 320,
+            "trueNegative" : 239,
+            "truePositive" : 45
+          },
+          "threshold" : 0.63
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9875,
+            "f1" : 0.9756,
+            "falseNegative" : 0,
+            "falsePositive" : 4,
+            "precision" : 0.9524,
+            "recall" : 1,
+            "total" : 320,
+            "trueNegative" : 236,
+            "truePositive" : 80
+          },
+          "threshold" : 0.24
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.4689,
+          "family" : "release_task_polite_request",
+          "id" : "random-20260830-en-release_task_polite_request-014",
+          "language" : "en",
+          "text" : "The main point is this: May I ask you to own the acceptance screenshots through delivery?"
+        },
+        {
+          "confidence" : 0.4313,
+          "family" : "release_task_polite_request",
+          "id" : "random-20260830-en-release_task_polite_request-032",
+          "language" : "en",
+          "text" : "The main point is this: May I ask you to own the delivery checklist through delivery?"
+        },
+        {
+          "confidence" : 0.4235,
+          "family" : "release_task_polite_request",
+          "id" : "random-20260830-en-release_task_polite_request-010",
+          "language" : "en",
+          "text" : "The main point is this: May I ask you to own the signature page through delivery?"
+        },
+        {
+          "confidence" : 0.3495,
+          "family" : "release_complaint_question",
+          "id" : "random-20260830-en-release_complaint_question-028",
+          "language" : "en",
+          "text" : "At the moment, the page stays blank, so all work is blocked. Can I get an actual resolution?"
+        },
+        {
+          "confidence" : 0.3021,
+          "family" : "release_complaint_question",
+          "id" : "random-20260830-en-release_complaint_question-031",
+          "language" : "en",
+          "text" : "One more thing: At the moment, the payment was charged twice, so all work is blocked. Can I get an actual resolution?"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "question",
+      "metrics" : {
+        "accuracy" : 0.9328,
+        "f1" : 0.8448,
+        "falseNegative" : 43,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.7313,
+        "total" : 640,
+        "trueNegative" : 480,
+        "truePositive" : 117
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.8656,
+          "f1" : 0.6325,
+          "falseNegative" : 43,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.4625,
+          "total" : 320,
+          "trueNegative" : 240,
+          "truePositive" : 37
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 320,
+          "trueNegative" : 240,
+          "truePositive" : 80
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9453,
+          "f1" : 0.8852,
+          "falseNegative" : 25,
+          "falsePositive" : 10,
+          "precision" : 0.931,
+          "recall" : 0.8438,
+          "total" : 640,
+          "trueNegative" : 470,
+          "truePositive" : 135
+        },
+        "threshold" : 0.05
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9516,
+          "f1" : 0.8963,
+          "falseNegative" : 26,
+          "falsePositive" : 5,
+          "precision" : 0.964,
+          "recall" : 0.8375,
+          "total" : 640,
+          "trueNegative" : 475,
+          "truePositive" : 134
+        },
+        "threshold" : 0.06
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9031,
+            "f1" : 0.777,
+            "falseNegative" : 26,
+            "falsePositive" : 5,
+            "precision" : 0.9153,
+            "recall" : 0.675,
+            "total" : 320,
+            "trueNegative" : 235,
+            "truePositive" : 54
+          },
+          "threshold" : 0.06
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 320,
+            "trueNegative" : 240,
+            "truePositive" : 80
+          },
+          "threshold" : 0.06
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9,
+            "f1" : 0.7576,
+            "falseNegative" : 30,
+            "falsePositive" : 2,
+            "precision" : 0.9615,
+            "recall" : 0.625,
+            "total" : 320,
+            "trueNegative" : 238,
+            "truePositive" : 50
+          },
+          "threshold" : 0.1
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 320,
+            "trueNegative" : 240,
+            "truePositive" : 80
+          },
+          "threshold" : 0.06
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "invitation",
+      "metrics" : {
+        "accuracy" : 1,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 0,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 640,
+        "trueNegative" : 640,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 320,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 320,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.8388,
+          "family" : "release_complaint_unspoken",
+          "id" : "random-20260830-en-release_complaint_unspoken-028",
+          "language" : "en",
+          "text" : "For the record, The promised handling did not happen; I am still seeing that the payment was charged twice."
+        },
+        {
+          "confidence" : 0.8358,
+          "family" : "release_complaint_question",
+          "id" : "random-20260830-en-release_complaint_question-036",
+          "language" : "en",
+          "text" : "The main point is this: At the moment, the account is locked again, so my family cannot receive the item. Can I get an actual resolution?"
+        },
+        {
+          "confidence" : 0.8322,
+          "family" : "release_complaint_unspoken",
+          "id" : "random-20260830-en-release_complaint_unspoken-002",
+          "language" : "en",
+          "text" : "Just to add, Since my last report, tracking has not moved for five days, and it has now reached the point where the client is already chasing us."
+        },
+        {
+          "confidence" : 0.8298,
+          "family" : "release_complaint_brief",
+          "id" : "random-20260830-en-release_complaint_brief-005",
+          "language" : "en",
+          "text" : "The main point is this: Once again, the account is locked again; normal use is now affected."
+        },
+        {
+          "confidence" : 0.8272,
+          "family" : "release_complaint_unspoken",
+          "id" : "random-20260830-en-release_complaint_unspoken-007",
+          "language" : "en",
+          "text" : "For context, The promised handling did not happen; I am still seeing that tracking has not moved for five days."
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "complaint",
+      "metrics" : {
+        "accuracy" : 0.8266,
+        "f1" : 0.6992,
+        "falseNegative" : 111,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.5375,
+        "total" : 640,
+        "trueNegative" : 400,
+        "truePositive" : 129
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.8156,
+          "f1" : 0.674,
+          "falseNegative" : 59,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5083,
+          "total" : 320,
+          "trueNegative" : 200,
+          "truePositive" : 61
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.8375,
+          "f1" : 0.7234,
+          "falseNegative" : 52,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5667,
+          "total" : 320,
+          "trueNegative" : 200,
+          "truePositive" : 68
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9359,
+          "f1" : 0.9158,
+          "falseNegative" : 17,
+          "falsePositive" : 24,
+          "precision" : 0.9028,
+          "recall" : 0.9292,
+          "total" : 640,
+          "trueNegative" : 376,
+          "truePositive" : 223
+        },
+        "threshold" : 0.19
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9359,
+          "f1" : 0.9111,
+          "falseNegative" : 30,
+          "falsePositive" : 11,
+          "precision" : 0.9502,
+          "recall" : 0.875,
+          "total" : 640,
+          "trueNegative" : 389,
+          "truePositive" : 210
+        },
+        "threshold" : 0.28
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9594,
+            "f1" : 0.9478,
+            "falseNegative" : 2,
+            "falsePositive" : 11,
+            "precision" : 0.9147,
+            "recall" : 0.9833,
+            "total" : 320,
+            "trueNegative" : 189,
+            "truePositive" : 118
+          },
+          "threshold" : 0.28
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9313,
+            "f1" : 0.9091,
+            "falseNegative" : 10,
+            "falsePositive" : 12,
+            "precision" : 0.9016,
+            "recall" : 0.9167,
+            "total" : 320,
+            "trueNegative" : 188,
+            "truePositive" : 110
+          },
+          "threshold" : 0.1
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9719,
+            "f1" : 0.9627,
+            "falseNegative" : 4,
+            "falsePositive" : 5,
+            "precision" : 0.9587,
+            "recall" : 0.9667,
+            "total" : 320,
+            "trueNegative" : 195,
+            "truePositive" : 116
+          },
+          "threshold" : 0.4
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9563,
+            "f1" : 0.9386,
+            "falseNegative" : 13,
+            "falsePositive" : 1,
+            "precision" : 0.9907,
+            "recall" : 0.8917,
+            "total" : 320,
+            "trueNegative" : 199,
+            "truePositive" : 107
+          },
+          "threshold" : 0.15
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.5837,
+          "family" : "release_complaint_question",
+          "id" : "random-20260830-zh-Hans-release_complaint_question-012",
+          "language" : "zh-Hans",
+          "text" : "刚想到，目前因为页面一直空白而家人收不到商品，可以给个处理结果吗？"
+        }
+      ],
+      "id" : "scheduleNegotiation",
+      "metrics" : {
+        "accuracy" : 0.9984,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 1,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 640,
+        "trueNegative" : 639,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 320,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9969,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 319,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.79,
+          "family" : "release_task_owner",
+          "id" : "random-20260830-en-release_task_owner-037",
+          "language" : "en",
+          "text" : "For context, Please move the signature page forward and report the outcome to the vendor."
+        },
+        {
+          "confidence" : 0.7855,
+          "family" : "release_task_owner",
+          "id" : "random-20260830-en-release_task_owner-004",
+          "language" : "en",
+          "text" : "By the way, Please move the signature page forward and report the outcome to the vendor."
+        }
+      ],
+      "id" : "confirmationDecision",
+      "metrics" : {
+        "accuracy" : 0.9969,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 2,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 640,
+        "trueNegative" : 638,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9938,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 2,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 318,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 320,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7131,
+          "family" : "release_personal_boundary",
+          "id" : "random-20260830-zh-Hans-release_personal_boundary-030",
+          "language" : "zh-Hans",
+          "text" : "顺便提一句，个人备忘，不交给任何人：午休前联系法务。"
+        },
+        {
+          "confidence" : 0.6878,
+          "family" : "release_personal_boundary",
+          "id" : "random-20260830-en-release_personal_boundary-030",
+          "language" : "en",
+          "text" : "For context, This is my private todo: confirm next steps after the sample arrives."
+        },
+        {
+          "confidence" : 0.6605,
+          "family" : "release_personal_boundary",
+          "id" : "random-20260830-zh-Hans-release_personal_boundary-015",
+          "language" : "zh-Hans",
+          "text" : "个人备忘，不交给任何人：月底前联系招聘方。"
+        },
+        {
+          "confidence" : 0.6539,
+          "family" : "release_personal_boundary",
+          "id" : "random-20260830-en-release_personal_boundary-036",
+          "language" : "en",
+          "text" : "For the record, This is my private todo: confirm next steps after the patch ships."
+        },
+        {
+          "confidence" : 0.6474,
+          "family" : "release_personal_boundary",
+          "id" : "random-20260830-en-release_personal_boundary-003",
+          "language" : "en",
+          "text" : "Also, This is my private todo: confirm next steps after the sample arrives."
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.7683,
+          "family" : "release_complaint_brief",
+          "id" : "random-20260830-en-release_complaint_brief-016",
+          "language" : "en",
+          "text" : "For the record, Once again, tracking has not moved for five days; normal use is now affected."
+        },
+        {
+          "confidence" : 0.7578,
+          "family" : "release_resolved_boundary",
+          "id" : "random-20260830-en-release_resolved_boundary-022",
+          "language" : "en",
+          "text" : "In short, the release is confirmed restored, so Finance does not need to intervene."
+        },
+        {
+          "confidence" : 0.755,
+          "family" : "release_resolved_boundary",
+          "id" : "random-20260830-en-release_resolved_boundary-039",
+          "language" : "en",
+          "text" : "Also, the release is confirmed restored, so the vendor does not need to intervene."
+        },
+        {
+          "confidence" : 0.743,
+          "family" : "release_complaint_brief",
+          "id" : "random-20260830-en-release_complaint_brief-006",
+          "language" : "en",
+          "text" : "Just to add, Once again, the account is locked again; normal use is now affected."
+        }
+      ],
+      "id" : "followUpReminder",
+      "metrics" : {
+        "accuracy" : 0.9219,
+        "f1" : 0.5763,
+        "falseNegative" : 46,
+        "falsePositive" : 4,
+        "precision" : 0.8947,
+        "recall" : 0.425,
+        "total" : 640,
+        "trueNegative" : 556,
+        "truePositive" : 34
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9469,
+          "f1" : 0.7606,
+          "falseNegative" : 13,
+          "falsePositive" : 4,
+          "precision" : 0.871,
+          "recall" : 0.675,
+          "total" : 320,
+          "trueNegative" : 276,
+          "truePositive" : 27
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.8969,
+          "f1" : 0.2979,
+          "falseNegative" : 33,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.175,
+          "total" : 320,
+          "trueNegative" : 280,
+          "truePositive" : 7
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9234,
+          "f1" : 0.5586,
+          "falseNegative" : 49,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.3875,
+          "total" : 640,
+          "trueNegative" : 560,
+          "truePositive" : 31
+        },
+        "threshold" : 0.77
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9234,
+          "f1" : 0.5586,
+          "falseNegative" : 49,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.3875,
+          "total" : 640,
+          "trueNegative" : 560,
+          "truePositive" : 31
+        },
+        "threshold" : 0.77
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9563,
+            "f1" : 0.7879,
+            "falseNegative" : 14,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.65,
+            "total" : 320,
+            "trueNegative" : 280,
+            "truePositive" : 26
+          },
+          "threshold" : 0.77
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9406,
+            "f1" : 0.6885,
+            "falseNegative" : 19,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.525,
+            "total" : 320,
+            "trueNegative" : 280,
+            "truePositive" : 21
+          },
+          "threshold" : 0.36
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9563,
+            "f1" : 0.7879,
+            "falseNegative" : 14,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.65,
+            "total" : 320,
+            "trueNegative" : 280,
+            "truePositive" : 26
+          },
+          "threshold" : 0.77
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9406,
+            "f1" : 0.6885,
+            "falseNegative" : 19,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.525,
+            "total" : 320,
+            "trueNegative" : 280,
+            "truePositive" : 21
+          },
+          "threshold" : 0.36
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7451,
+          "family" : "release_complaint_unspoken",
+          "id" : "random-20260830-en-release_complaint_unspoken-020",
+          "language" : "en",
+          "text" : "Also, The promised handling did not happen; I am still seeing that the attachment never opens."
+        },
+        {
+          "confidence" : 0.7418,
+          "family" : "release_complaint_unspoken",
+          "id" : "random-20260830-en-release_complaint_unspoken-013",
+          "language" : "en",
+          "text" : "Just to add, The promised handling did not happen; I am still seeing that the attachment never opens."
+        },
+        {
+          "confidence" : 0.7253,
+          "family" : "release_complaint_unspoken",
+          "id" : "random-20260830-en-release_complaint_unspoken-038",
+          "language" : "en",
+          "text" : "The main point is this: The promised handling did not happen; I am still seeing that the page stays blank."
+        },
+        {
+          "confidence" : 0.7016,
+          "family" : "release_complaint_unspoken",
+          "id" : "random-20260830-en-release_complaint_unspoken-007",
+          "language" : "en",
+          "text" : "For context, The promised handling did not happen; I am still seeing that tracking has not moved for five days."
+        },
+        {
+          "confidence" : 0.6887,
+          "family" : "release_complaint_unspoken",
+          "id" : "random-20260830-zh-Hans-release_complaint_unspoken-034",
+          "language" : "zh-Hans",
+          "text" : "补充一下，从上次反馈以后仍然付款结果重复扣款，现在已经客户已经在催。"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9999,
+          "family" : "release_resolved_boundary",
+          "id" : "random-20260830-en-release_resolved_boundary-033",
+          "language" : "en",
+          "text" : "By the way, The earlier problem where the payment was charged twice is over, and the current state is stable."
+        },
+        {
+          "confidence" : 0.9997,
+          "family" : "release_resolved_boundary",
+          "id" : "random-20260830-en-release_resolved_boundary-026",
+          "language" : "en",
+          "text" : "By the way, The earlier problem where the page stays blank is over, and the current state is stable."
+        },
+        {
+          "confidence" : 0.9993,
+          "family" : "release_resolved_boundary",
+          "id" : "random-20260830-en-release_resolved_boundary-019",
+          "language" : "en",
+          "text" : "The main point is this: The earlier problem where the account is locked again is over, and the current state is stable."
+        },
+        {
+          "confidence" : 0.9993,
+          "family" : "release_resolved_boundary",
+          "id" : "random-20260830-en-release_resolved_boundary-024",
+          "language" : "en",
+          "text" : "The earlier problem where the payment was charged twice is over, and the current state is stable."
+        },
+        {
+          "confidence" : 0.9992,
+          "family" : "release_resolved_boundary",
+          "id" : "random-20260830-en-release_resolved_boundary-020",
+          "language" : "en",
+          "text" : "By the way, the fee adjustment is confirmed restored, so Finance does not need to intervene."
+        }
+      ],
+      "id" : "replyableMessage",
+      "metrics" : {
+        "accuracy" : 0.8188,
+        "f1" : 0.8582,
+        "falseNegative" : 49,
+        "falsePositive" : 67,
+        "precision" : 0.8397,
+        "recall" : 0.8775,
+        "total" : 640,
+        "trueNegative" : 173,
+        "truePositive" : 351
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.7406,
+          "f1" : 0.8065,
+          "falseNegative" : 27,
+          "falsePositive" : 56,
+          "precision" : 0.7555,
+          "recall" : 0.865,
+          "total" : 320,
+          "trueNegative" : 64,
+          "truePositive" : 173
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.8969,
+          "f1" : 0.9152,
+          "falseNegative" : 22,
+          "falsePositive" : 11,
+          "precision" : 0.9418,
+          "recall" : 0.89,
+          "total" : 320,
+          "trueNegative" : 109,
+          "truePositive" : 178
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.8844,
+            "f1" : 0.9068,
+            "falseNegative" : 20,
+            "falsePositive" : 17,
+            "precision" : 0.9137,
+            "recall" : 0.9,
+            "total" : 320,
+            "trueNegative" : 103,
+            "truePositive" : 180
+          },
+          "threshold" : 0.68
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9031,
+            "f1" : 0.9199,
+            "falseNegative" : 22,
+            "falsePositive" : 9,
+            "precision" : 0.9519,
+            "recall" : 0.89,
+            "total" : 320,
+            "trueNegative" : 111,
+            "truePositive" : 178
+          },
+          "threshold" : 0.83
+        }
+      }
+    }
+  ],
+  "corpusRecordCount" : 640,
+  "exactTrainingOverlapCount" : 0,
+  "familyCount" : 8,
+  "generatedAt" : "2026-08-27T01:15:13Z",
+  "languageCounts" : {
+    "en" : 320,
+    "zh-Hans" : 320
+  },
+  "manifestSchemaVersion" : 2,
+  "seed" : 20260830,
+  "sentiment" : {
+    "accuracy" : 0.7453,
+    "correct" : 477,
+    "macroF1" : 0.5441,
+    "perLabelF1" : {
+      "negative" : 0.75,
+      "neutral" : 0.8824,
+      "positive" : 0
+    },
+    "total" : 640,
+    "unknown" : 122,
+    "unknownRate" : 0.1906
+  }
+}

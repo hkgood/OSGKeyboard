@@ -163,6 +163,8 @@ public final class KeyboardState: ObservableObject {
     /// User-owned speaking style injected only into conversational reply skills.
     /// Built-in polish personalities intentionally leave this nil.
     @Published public var clipboardReplyStyle: AIClipboardReplyStyleContext?
+    /// App Group setting: one Reply request should return three selectable tones.
+    @Published public var multipleReplyVariantsEnabled: Bool = false
     /// Export skills whose companion Shortcut setup the user confirmed.
     @Published public var confirmedClipboardShortcutIDs: [String] = []
     /// App language captured with the same App Group snapshot as skill copy.
@@ -352,6 +354,9 @@ public final class KeyboardState: ObservableObject {
     public var cancelAIInput: () -> Void = {}
     /// Explicitly inserts a retained AI result after target validation failed.
     public var confirmPendingAIAnswer: () -> Void = {}
+    /// Inserts the complete tapped reply card. The UUID remains available on
+    /// `aiSession.selectedReplyVariant` for a future feedback store.
+    public var selectAIReplyVariant: (UUID) -> Void = { _ in }
     public var discardPendingAIAnswer: () -> Void = {}
     /// Performs the focused field's semantic Return action.
     public var performAssistantFieldAction: () -> Void = {}

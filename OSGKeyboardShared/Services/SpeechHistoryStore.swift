@@ -14,10 +14,15 @@ public final class SpeechHistoryStore: ObservableObject {
     @Published public private(set) var entries: [SpeechHistoryEntry] = []
 
     public let defaults: UserDefaults
+    private let replyFeedbackStore: ClipboardReplyFeedbackStore?
     private var payload: SyncedSpeechHistory = .empty
 
-    public init(defaults: UserDefaults = .standard) {
+    public init(
+        defaults: UserDefaults = .standard,
+        replyFeedbackStore: ClipboardReplyFeedbackStore? = .shared
+    ) {
         self.defaults = defaults
+        self.replyFeedbackStore = replyFeedbackStore
         reloadFromDisk()
         NotificationCenter.default.addObserver(
             forName: .speechHistoryDidSyncFromCloud,
@@ -130,6 +135,13 @@ public final class SpeechHistoryStore: ObservableObject {
                 )
                 payload.entries.insert(conflictCopy, at: 0)
                 finishMutation(mutationID: mutation.id)
+                if mutation.action == .update, existing.source == .ai {
+                    replyFeedbackStore?.recordFinalEdit(
+                        answerID: existing.id,
+                        text: text,
+                        revision: existing.revision + 1
+                    )
+                }
                 return conflictCopy
             }
             let updated = SpeechHistoryEntry(
@@ -147,6 +159,13 @@ public final class SpeechHistoryStore: ObservableObject {
             )
             payload.entries[index] = updated
             finishMutation(mutationID: mutation.id)
+            if mutation.action == .update, updated.source == .ai {
+                replyFeedbackStore?.recordFinalEdit(
+                    answerID: updated.id,
+                    text: updated.text,
+                    revision: updated.revision
+                )
+            }
             return updated
 
         case .delete:

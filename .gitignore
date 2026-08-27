@@ -65,6 +65,12 @@ OSGKeyboard/Resources/CustomLanguageModel/v1/compiled/
 # Reproducible Create ML candidates (selected models live in Shared resources)
 ModelTraining/ClipboardSemantics/Candidates/
 
+# Reproducible open-data corpus artifacts (regenerated from pinned sources)
+ModelTraining/ClipboardSemantics/open-training-corpus.jsonl
+ModelTraining/ClipboardSemantics/combined-training-corpus.jsonl
+ModelTraining/ClipboardSemantics/Consensus/*.jsonl
+ModelTraining/ClipboardSemantics/VerifierCandidates/
+
 # Python bytecode
 __pycache__/
 *.pyc

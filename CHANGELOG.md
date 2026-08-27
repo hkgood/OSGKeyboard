@@ -8,9 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Adaptive personal replies**: learn separate dictation and reply preferences from reviewed evidence, offer ordinary, formal, and playful personalized reply choices from one keyboard action, and keep bounded choice feedback only on the device. / **自适应个人回复**：从经过确认的证据中分别学习听写与回复偏好，通过一个键盘回复操作提供普通、正式和轻松趣味三种个性化候选，并仅在本机限量保留选择反馈。
+- **Test-build ASR corpus export**: export the newest complete personal-style examples through the 2,500-character target as a protected ZIP containing versioned JSON from Settings in Debug and TestFlight builds, while still allowing smaller non-empty corpora. / **测试版 ASR 语料导出**：在 Debug 与 TestFlight 版本的设置中，将最新完整个人风格样本累积至 2,500 字符后导出为受保护的 ZIP（内含版本化 JSON），不足 2,500 字符的非空语料也可导出。
 - **Flow startup diagnostics**: save a privacy-safe ten-second state trace whenever session startup reaches a terminal failure, with local export and deletion controls in Settings. / **Flow 启动诊断**：会话启动最终失败时保存隐私安全的最近十秒状态轨迹，并在设置中提供本机导出与清除入口。
+- **Expanded clipboard semantics**: add fully local bilingual models for schedule negotiation, confirmed decisions, and follow-up reminders, with language-specific confidence thresholds, existing-skill routing, and reproducible random holdout evaluation. / **扩展剪贴板语义**：新增完全本地的中英双语日程协商、确认决策与跟进提醒模型，并加入分语言置信度阈值、现有技能路由及可复现的随机留出评估。
 
 ### Changed
+- **Clipboard intent precision**: specialize the local task and complaint models, add conservative language thresholds, and suppress complaint-only text from task routing unless it contains an explicit assignment. / **剪贴板意图精度**：专项优化本地任务与投诉模型，加入保守的分语言阈值，并在没有明确委派时阻止纯投诉文本进入任务路由。
+- **Precision-first semantic routing**: add traceable multi-model consensus labels, local joint intent verifiers, confidence-margin abstention, layered source-isolated evaluation, and privacy-safe shadow disagreement counters while retaining current models until every acceptance gate passes. / **精度优先语义路由**：新增可追溯多模型共识银标、本地联合意图验证器、置信度与差值拒识、按来源隔离的分层评估及隐私安全的影子分歧计数；所有验收门槛通过前继续保留当前模型。
 - **Card depth**: add a faint directional long shadow to card surfaces throughout the iOS app in both light and dark appearances. / **卡片层次**：为 iOS App 内的卡片界面统一加入淡雅的定向长投影，并适配浅色与深色外观。
 - **Neutral dialog actions**: use adaptive black or white styling for system alerts, confirmation dialogs, and modal actions instead of inheriting the green brand accent. / **中性弹窗操作色**：系统警告、确认弹窗及模态操作改用自适应黑色或白色，不再继承绿色品牌强调色。
 - **Monthly usage calendar**: replace the seven-day Home and Mac Dashboard chart with a full current-month calendar whose date-circle opacity reflects each day's dictation characters, placing the Home calendar between its four metrics and Personal Dictionary. / **月度用量日历**：以完整的当月日历替换首页与 Mac 总览的近七天图表，并通过日期圆形背景透明度表示每天的听写字数；首页日历位于四项统计指标与个性词库之间。

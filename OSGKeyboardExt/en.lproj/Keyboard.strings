@@ -311,6 +311,10 @@
 "keyboard.assistant.insertPending" = "Insert retained AI answer";
 "keyboard.assistant.discardPending" = "Discard AI answer";
 "keyboard.assistant.discardPendingHint" = "Discard the answer retained because the cursor or input field changed.";
+"keyboard.ai.replyVariant.ordinary" = "Ordinary";
+"keyboard.ai.replyVariant.formal" = "Formal";
+"keyboard.ai.replyVariant.playful" = "Relaxed & playful";
+"keyboard.ai.replyVariant.insertHint" = "Insert this complete reply.";
 "keyboard.assistant.dismissClipboard" = "Dismiss clipboard suggestions";
 "keyboard.assistant.dismissClipboardHint" = "Hide the current clipboard summary and skills.";
 "keyboard.ai.error.missingAPIKey" = "Configure an AI service in the main app first";
@@ -334,6 +338,7 @@
 "keyboard.ai.skill.acceptTask" = "Acknowledge";
 "keyboard.ai.skill.clarifyRequest" = "Clarify";
 "keyboard.ai.skill.empathyReply" = "Empathize";
+"keyboard.ai.skill.blessingReply" = "Reply to wishes";
 "keyboard.ai.skill.askForDetails" = "Ask details";
 "keyboard.ai.skill.businessReply" = "Business";
 "keyboard.ai.skill.organizeList" = "Organize";

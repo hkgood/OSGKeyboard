@@ -273,6 +273,43 @@ final class PolishStylePackTests: XCTestCase {
         decoder.dateDecodingStrategy = .secondsSince1970
         let pack = try decoder.decode(PolishStylePack.self, from: Data(legacyJSON.utf8))
         XCTAssertFalse(pack.allowsAddedEmoji)
+        XCTAssertNil(pack.learningMetadata)
+    }
+
+    func testLearningMetadataRoundTripsWithoutChangingRuntimePrompt() throws {
+        let generatedAt = Date(timeIntervalSince1970: 1_700_000_000)
+        let pack = PolishStylePack(
+            id: "user.learned-v2",
+            name: "Learned",
+            prompt: "# 角色\n自然表达\n# 风格边界\n保持原意\n# 示例\n输入 → 输出",
+            allowsAddedEmoji: true,
+            learningMetadata: PolishStylePack.LearningMetadata(
+                schemaVersion: 2,
+                evidenceStatus: "sufficient",
+                confidence: 0.88,
+                asrExampleCount: 4,
+                asrEffectiveCharacterCount: 2_650,
+                replyExampleCount: 3,
+                replyFinalEditCount: 1,
+                generatedAt: generatedAt
+            ),
+            createdAt: generatedAt
+        )
+
+        let data = try JSONEncoder().encode(pack)
+        let decoded = try JSONDecoder().decode(PolishStylePack.self, from: data)
+
+        XCTAssertEqual(decoded, pack)
+        XCTAssertEqual(decoded.learningMetadata?.schemaVersion, 2)
+        XCTAssertEqual(decoded.learningMetadata?.confidence, 0.88)
+        XCTAssertEqual(
+            PolishStylePackCatalog.runtimePersonality(for: decoded),
+            PolishStylePackCatalog.runtimePersonality(for: pack)
+        )
+        XCTAssertFalse(
+            PolishStylePackCatalog.runtimePersonality(for: decoded)
+                .contains("learningMetadata")
+        )
     }
 
     func testUpsertPreservesAllowsAddedEmoji() throws {

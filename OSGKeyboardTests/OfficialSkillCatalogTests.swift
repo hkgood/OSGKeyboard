@@ -132,10 +132,17 @@ final class OfficialSkillCatalogTests: XCTestCase {
             migrated.enabledIDs,
             [
                 AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.translateID,
                 AIClipboardSkillCatalog.openLinkID,
                 AIClipboardSkillCatalog.summarizeWebPageID,
                 AIClipboardSkillCatalog.callPhoneID,
                 AIClipboardSkillCatalog.createContactID,
+                AIClipboardSkillCatalog.summarizeID,
+                AIClipboardSkillCatalog.declineInvitationID,
+                AIClipboardSkillCatalog.clarifyRequestID,
+                AIClipboardSkillCatalog.empathyReplyID,
+                AIClipboardSkillCatalog.blessingReplyID,
+                AIClipboardSkillCatalog.organizeListID,
                 "official.rewrite"
             ]
         )

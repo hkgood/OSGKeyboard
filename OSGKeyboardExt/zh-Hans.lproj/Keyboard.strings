@@ -311,6 +311,10 @@
 "keyboard.assistant.insertPending" = "插入保留的 AI 回答";
 "keyboard.assistant.discardPending" = "丢弃 AI 回答";
 "keyboard.assistant.discardPendingHint" = "丢弃因光标或输入框变化而保留的回答。";
+"keyboard.ai.replyVariant.ordinary" = "普通";
+"keyboard.ai.replyVariant.formal" = "正式";
+"keyboard.ai.replyVariant.playful" = "轻松趣味";
+"keyboard.ai.replyVariant.insertHint" = "插入这条完整回复。";
 "keyboard.assistant.dismissClipboard" = "关闭剪贴板建议";
 "keyboard.assistant.dismissClipboardHint" = "隐藏当前剪贴板摘要和技能。";
 "keyboard.ai.error.missingAPIKey" = "请先在主 App 配置可用的 AI 服务";
@@ -334,6 +338,7 @@
 "keyboard.ai.skill.acceptTask" = "确认任务";
 "keyboard.ai.skill.clarifyRequest" = "澄清追问";
 "keyboard.ai.skill.empathyReply" = "共情回复";
+"keyboard.ai.skill.blessingReply" = "回复祝福";
 "keyboard.ai.skill.askForDetails" = "询问细节";
 "keyboard.ai.skill.businessReply" = "商务回复";
 "keyboard.ai.skill.organizeList" = "整理清单";

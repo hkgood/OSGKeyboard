@@ -221,23 +221,25 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         )
     }
 
-    func testAdvisoryComplaintPromotesEmpathyWithoutAutomaticApproval() {
+    func testUnapprovedComplaintFallsBackToGenericReply() {
         let complaint = ClipboardIntentLabel(
             confidence: 0.82,
             threshold: 0.6,
             isDetected: false,
             isApprovedForAutomaticRouting: false
         )
-        let ranked = rank(
-            text: "这个问题已经发生三次了，请尽快处理。",
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "这个问题已经发生三次了，请尽快处理。",
             analysis: analysis(
                 sentiment: .negative,
                 complaint: complaint
-            )
-        )
+            ),
+            uiLanguage: .chinese,
+            limit: 5
+        ).map(\.id)
 
-        XCTAssertEqual(ranked.first, AIClipboardSkillCatalog.empathyReplyID)
-        XCTAssertEqual(ranked.dropFirst().first, AIClipboardSkillCatalog.clarifyRequestID)
+        XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.replyID])
     }
 
     func testLongTextPromotesIntegratedSummaryAndNotes() {
@@ -369,6 +371,255 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         )
     }
 
+    func testScheduleNegotiationMapsToExistingSkills() {
+        let recommendations = recommended(
+            text: "Would Tuesday or Wednesday work better for our meeting?",
+            analysis: analysis(scheduleNegotiation: detected())
+        )
+
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.clarifyRequestID,
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.extractEventsID
+            ]
+        )
+    }
+
+    func testScheduleNegotiationWithDatesPromotesEventExtraction() {
+        let recommendations = recommended(
+            text: "周二下午还是周三下午开会更方便？",
+            analysis: analysis(
+                hasDate: true,
+                scheduleNegotiation: detected()
+            )
+        )
+
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.extractEventsID,
+                AIClipboardSkillCatalog.clarifyRequestID,
+                AIClipboardSkillCatalog.replyID
+            ]
+        )
+    }
+
+    func testConfirmationDecisionMapsToExistingSkills() {
+        let recommendations = recommended(
+            text: "Please confirm whether we should proceed or pause.",
+            analysis: analysis(confirmationDecision: detected())
+        )
+
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.acceptTaskID,
+                AIClipboardSkillCatalog.replyID
+            ]
+        )
+    }
+
+    func testFollowUpReminderMapsToExistingSkills() {
+        let recommendations = recommended(
+            text: "提醒一下，请在周五前跟进客户并同步进展。",
+            analysis: analysis(followUpReminder: detected())
+        )
+
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.extractTodosID,
+                AIClipboardSkillCatalog.acceptTaskID,
+                AIClipboardSkillCatalog.clarifyRequestID,
+                AIClipboardSkillCatalog.replyID
+            ]
+        )
+    }
+
+    func testBlessingMapsToDedicatedReplyAndGenericFallback() {
+        let recommendations = recommended(
+            text: "大家一起祝王老师生日快乐、身体健康！",
+            analysis: analysis(
+                replyableMessage: detected(),
+                blessing: detected()
+            )
+        )
+
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.blessingReplyID,
+                AIClipboardSkillCatalog.replyID
+            ]
+        )
+    }
+
+    func testNewIntentConflictKeepsTopFiveAndGenericReply() {
+        let recommendations = recommended(
+            text: "请确认周二还是周三开会，并提醒我之后跟进客户。",
+            analysis: analysis(
+                hasDate: true,
+                replyableMessage: detected(),
+                scheduleNegotiation: detected(),
+                confirmationDecision: detected(),
+                followUpReminder: detected()
+            )
+        )
+
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.acceptTaskID,
+                AIClipboardSkillCatalog.clarifyRequestID,
+                AIClipboardSkillCatalog.extractEventsID,
+                AIClipboardSkillCatalog.extractTodosID
+            ]
+        )
+        XCTAssertEqual(recommendations.count, 5)
+    }
+
+    func testSpecializedNewIntentSuppressesGenericReplyableBoost() {
+        let recommendations = recommended(
+            text: "Would Tuesday or Wednesday work better?",
+            analysis: analysis(
+                replyableMessage: detected(),
+                scheduleNegotiation: detected()
+            )
+        )
+
+        XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.playfulReplyID))
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.clarifyRequestID,
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.extractEventsID
+            ]
+        )
+    }
+
+    func testAnalyzerToRecommendationsForNewIntents() async {
+        let analyzer = ClipboardSemanticAnalyzer()
+        let samples: [
+            (
+                text: String,
+                label: KeyPath<ClipboardSemanticAnalysis, ClipboardIntentLabel>,
+                expectedSkillIDs: [String]
+            )
+        ] = [
+            (
+                "We need to reschedule the review. Is Tuesday or Thursday better?",
+                \.scheduleNegotiation,
+                [
+                    AIClipboardSkillCatalog.clarifyRequestID,
+                    AIClipboardSkillCatalog.replyID,
+                    AIClipboardSkillCatalog.extractEventsID
+                ]
+            ),
+            (
+                "I approve the revised proposal; proceed with this version.",
+                \.confirmationDecision,
+                [
+                    AIClipboardSkillCatalog.acceptTaskID,
+                    AIClipboardSkillCatalog.replyID
+                ]
+            ),
+            (
+                "提醒一下，下次会议前要创建发布标签。",
+                \.followUpReminder,
+                [
+                    AIClipboardSkillCatalog.extractTodosID,
+                    AIClipboardSkillCatalog.acceptTaskID,
+                    AIClipboardSkillCatalog.clarifyRequestID,
+                    AIClipboardSkillCatalog.replyID
+                ]
+            )
+        ]
+
+        for sample in samples {
+            let detected = await analyzer.analyze(sample.text)
+            let label = detected[keyPath: sample.label]
+            let recommendations = recommended(text: sample.text, analysis: detected)
+
+            XCTAssertTrue(
+                isThresholdCrossing(label),
+                "confidence \(label.confidence) is below \(label.threshold) for \(sample.text)"
+            )
+            for expectedID in sample.expectedSkillIDs {
+                XCTAssertTrue(
+                    recommendations.contains(expectedID),
+                    "\(expectedID) missing for \(sample.text)"
+                )
+            }
+        }
+    }
+
+    @MainActor
+    func testRankingStorePublishesAnalysisForMatchingEntry() async {
+        let probe = ClipboardSemanticAnalyzerProbe()
+        let expectedAnalysis = analysis(followUpReminder: detected())
+        let store = ClipboardSemanticRankingStore { text in
+            await probe.analyze(text)
+        }
+        let entry = ClipboardHistoryEntry(text: "follow up")
+
+        store.analyze(entry)
+        await waitUntil { await probe.hasRequest(for: entry.text) }
+        await probe.resolve(entry.text, with: expectedAnalysis)
+        await waitUntil { store.snapshot != nil }
+
+        XCTAssertEqual(store.snapshot?.entryID, entry.id)
+        XCTAssertEqual(store.snapshot?.analysis, expectedAnalysis)
+    }
+
+    @MainActor
+    func testRankingStoreRapidAnalyzeIgnoresCancelledResult() async {
+        let probe = ClipboardSemanticAnalyzerProbe()
+        let firstAnalysis = analysis(scheduleNegotiation: detected())
+        let secondAnalysis = analysis(confirmationDecision: detected())
+        let store = ClipboardSemanticRankingStore { text in
+            await probe.analyze(text)
+        }
+        let first = ClipboardHistoryEntry(text: "first")
+        let second = ClipboardHistoryEntry(text: "second")
+
+        store.analyze(first)
+        await waitUntil { await probe.hasRequest(for: first.text) }
+        store.analyze(second)
+        XCTAssertNil(store.snapshot)
+        await waitUntil { await probe.hasRequest(for: second.text) }
+
+        await probe.resolve(second.text, with: secondAnalysis)
+        await waitUntil { store.snapshot?.entryID == second.id }
+        await probe.resolve(first.text, with: firstAnalysis)
+        try? await Task.sleep(for: .milliseconds(10))
+
+        XCTAssertEqual(store.snapshot?.entryID, second.id)
+        XCTAssertEqual(store.snapshot?.analysis, secondAnalysis)
+    }
+
+    @MainActor
+    func testRankingStoreClearInvalidatesPendingAnalysis() async {
+        let probe = ClipboardSemanticAnalyzerProbe()
+        let store = ClipboardSemanticRankingStore { text in
+            await probe.analyze(text)
+        }
+        let entry = ClipboardHistoryEntry(text: "pending")
+
+        store.analyze(entry)
+        await waitUntil { await probe.hasRequest(for: entry.text) }
+        store.clear()
+        XCTAssertNil(store.snapshot)
+
+        await probe.resolve(entry.text, with: analysis())
+        try? await Task.sleep(for: .milliseconds(10))
+
+        XCTAssertNil(store.snapshot)
+    }
+
     private func rank(
         text: String,
         analysis: ClipboardSemanticAnalysis
@@ -378,6 +629,20 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             sourceText: text,
             analysis: analysis,
             uiLanguage: .chinese,
+            preferredLanguages: ["zh-Hans"]
+        ).map(\.id)
+    }
+
+    private func recommended(
+        text: String,
+        analysis: ClipboardSemanticAnalysis
+    ) -> [String] {
+        ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: text,
+            analysis: analysis,
+            uiLanguage: .chinese,
+            limit: 5,
             preferredLanguages: ["zh-Hans"]
         ).map(\.id)
     }
@@ -408,6 +673,10 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         )
     }
 
+    private func isThresholdCrossing(_ label: ClipboardIntentLabel) -> Bool {
+        label.confidence > 0 && label.confidence >= label.threshold
+    }
+
     private func analysis(
         language: String? = nil,
         hasDate: Bool = false,
@@ -419,7 +688,11 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         question: ClipboardIntentLabel? = nil,
         invitation: ClipboardIntentLabel? = nil,
         complaint: ClipboardIntentLabel? = nil,
-        replyableMessage: ClipboardIntentLabel? = nil
+        replyableMessage: ClipboardIntentLabel? = nil,
+        scheduleNegotiation: ClipboardIntentLabel? = nil,
+        confirmationDecision: ClipboardIntentLabel? = nil,
+        followUpReminder: ClipboardIntentLabel? = nil,
+        blessing: ClipboardIntentLabel? = nil
     ) -> ClipboardSemanticAnalysis {
         ClipboardSemanticAnalysis(
             language: language.map {
@@ -446,7 +719,51 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             question: question ?? absent(),
             invitation: invitation ?? absent(),
             complaint: complaint ?? absent(),
-            replyableMessage: replyableMessage ?? absent()
+            replyableMessage: replyableMessage ?? absent(),
+            scheduleNegotiation: scheduleNegotiation ?? absent(),
+            confirmationDecision: confirmationDecision ?? absent(),
+            followUpReminder: followUpReminder ?? absent(),
+            blessing: blessing ?? absent(),
+            actionVerifier: nil,
+            coordinationVerifier: nil
         )
+    }
+
+    @MainActor
+    private func waitUntil(
+        _ condition: @escaping () async -> Bool
+    ) async {
+        for _ in 0..<100 {
+            if await condition() {
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        XCTFail("Condition was not met before timeout.")
+    }
+}
+
+private actor ClipboardSemanticAnalyzerProbe {
+    private var requestedTexts = Set<String>()
+    private var continuations: [
+        String: CheckedContinuation<ClipboardSemanticAnalysis, Never>
+    ] = [:]
+
+    func analyze(_ text: String) async -> ClipboardSemanticAnalysis {
+        requestedTexts.insert(text)
+        return await withCheckedContinuation { continuation in
+            continuations[text] = continuation
+        }
+    }
+
+    func hasRequest(for text: String) -> Bool {
+        requestedTexts.contains(text)
+    }
+
+    func resolve(
+        _ text: String,
+        with analysis: ClipboardSemanticAnalysis
+    ) {
+        continuations.removeValue(forKey: text)?.resume(returning: analysis)
     }
 }

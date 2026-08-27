@@ -267,7 +267,11 @@ struct MacPolishStylesView: View {
             defer { isGeneratingLearnedStyle = false }
             do {
                 let generated = try await PolishStyleLearningService(store: store)
-                    .generateStyle(from: corpus, outputLanguage: lang)
+                    .generateStyle(
+                        from: corpus,
+                        replyExamples: ClipboardReplyFeedbackStore.shared.learningExamples(),
+                        outputLanguage: lang
+                    )
                 // Review is mandatory before the learned prompt enters sync or
                 // becomes the active dictation personality.
                 editingPack = generated

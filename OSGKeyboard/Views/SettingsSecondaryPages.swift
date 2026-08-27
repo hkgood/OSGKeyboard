@@ -330,6 +330,22 @@ struct AIAgentSettingsView: View {
                 CardSection("settings.aiAgent.responseLength.section") {
                     VStack(spacing: 0) {
                         AIResponseLengthPickerRow(config: config)
+                        Divider().background(palette.divider)
+                        Toggle(isOn: $config.multipleReplyVariantsEnabled) {
+                            VStack(alignment: .leading, spacing: Spacing.xxs) {
+                                Text("settings.aiAgent.multipleReplies.title")
+                                    .font(TypeStyle.body)
+                                    .foregroundStyle(palette.textPrimary)
+                                Text("settings.aiAgent.multipleReplies.description")
+                                    .font(TypeStyle.caption2)
+                                    .foregroundStyle(palette.textTertiary)
+                            }
+                        }
+                        .tint(palette.accent)
+                        .settingsListRow()
+                        .accessibilityIdentifier(
+                            "settings.aiAgent.multipleReplies.toggle"
+                        )
                     }
                     .surfaceCard()
                 }
@@ -492,6 +508,7 @@ struct ClipboardSettingsView: View {
         ) {
             Button("settings.clipboard.clear.confirm", role: .destructive) {
                 history.clearAll()
+                ClipboardReplyFeedbackStore.shared.clear()
             }
             Button("common.cancel", role: .cancel) {}
         } message: {

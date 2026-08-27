@@ -192,6 +192,7 @@ public final class KeyboardViewController: UIInputViewController {
         recordMemory("KVC.viewDidLoad.afterInstallSwiftUI")
         OSGDiag.log("KVC.viewDidLoad after installSwiftUI \(OSGDiag.memoryTag())", category: "boot")
         let configLoadResult = configSync.loadPersistedConfig()
+        refreshMultipleReplyVariantsSetting()
         recordMemory(
             "KVC.viewDidLoad.afterConfigLoad",
             details: "result=\(configLoadResult)"
@@ -279,6 +280,7 @@ public final class KeyboardViewController: UIInputViewController {
         flowCoordinator.startSessionMonitor()
         configSync.syncOnboardingStateFromAppGroup()
         configSync.refreshConfigFromAppGroup()
+        refreshMultipleReplyVariantsSetting()
         clipboardCapture.refreshFlagsFromStore()
         // Settings may have changed while the extension stayed alive.
         applyPreferredSurfaceOnOpen()
@@ -456,6 +458,7 @@ public final class KeyboardViewController: UIInputViewController {
                 // error; never force-create one just to retry.
                 self?.typingSessionStorage?.reloadPersonalDictionaryTerms()
                 self?.typingSessionStorage?.retryPrepareAfterResourceDeployment()
+                self?.refreshMultipleReplyVariantsSetting()
             }
         )
 
@@ -594,6 +597,9 @@ public final class KeyboardViewController: UIInputViewController {
         state.confirmPendingAIAnswer = { [weak self] in
             self?.aiKeyboardCoordinator.confirmPendingAnswer()
         }
+        state.selectAIReplyVariant = { [weak self] id in
+            self?.aiKeyboardCoordinator.selectReplyVariant(id: id)
+        }
         state.discardPendingAIAnswer = { [weak self] in
             self?.aiKeyboardCoordinator.discardPendingAnswer()
         }
@@ -635,6 +641,7 @@ public final class KeyboardViewController: UIInputViewController {
         }
         state.clearClipboardHistory = { [weak self] in
             self?.clipboardCapture.clearHistory()
+            ClipboardReplyFeedbackStore.shared.clear()
         }
         state.deleteClipboardHistoryEntry = { [weak self] id in
             self?.clipboardCapture.deleteEntry(id: id)
@@ -692,6 +699,12 @@ public final class KeyboardViewController: UIInputViewController {
                 self.refreshKeyboardHeight()
             }
             .store(in: &cancellables)
+    }
+
+    /// This App Group property is supplied by the parallel settings module.
+    /// Reading it here keeps the shared state independent from persistence.
+    private func refreshMultipleReplyVariantsSetting() {
+        state.multipleReplyVariantsEnabled = AppGroupStore().multipleReplyVariantsEnabled
     }
 
     private func applySurface(_ requestedSurface: State.Surface) {

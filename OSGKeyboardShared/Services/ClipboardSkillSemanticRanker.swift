@@ -116,7 +116,7 @@ public enum ClipboardSkillSemanticRanker {
             boost(AIClipboardSkillCatalog.navigateID, 180)
         }
 
-        if analysis.invitation.isDetected {
+        if isRoutingEvidence(analysis.invitation) {
             if analysis.hasDateOrTime {
                 boost(AIClipboardSkillCatalog.extractEventsID, 260)
             }
@@ -127,34 +127,59 @@ public enum ClipboardSkillSemanticRanker {
             boost(AIClipboardSkillCatalog.extractEventsID, 110)
         }
 
-        if analysis.task.isDetected {
+        // A threshold-crossing, evaluation-gated model may still rank a
+        // reversible chip; execution always remains explicitly user-initiated.
+        if isRoutingEvidence(analysis.scheduleNegotiation) {
+            boost(AIClipboardSkillCatalog.clarifyRequestID, 300)
+            boost(AIClipboardSkillCatalog.extractEventsID, 200)
+            boost(AIClipboardSkillCatalog.replyID, 250)
+        }
+
+        if isRoutingEvidence(analysis.confirmationDecision) {
+            boost(AIClipboardSkillCatalog.acceptTaskID, 300)
+            boost(AIClipboardSkillCatalog.replyID, 280)
+        }
+
+        if isRoutingEvidence(analysis.followUpReminder) {
+            boost(AIClipboardSkillCatalog.extractTodosID, 285)
+            boost(AIClipboardSkillCatalog.acceptTaskID, 250)
+            boost(AIClipboardSkillCatalog.clarifyRequestID, 170)
+            boost(AIClipboardSkillCatalog.replyID, 90)
+        }
+
+        if isRoutingEvidence(analysis.task) {
             boost(AIClipboardSkillCatalog.extractTodosID, 155)
             boost(AIClipboardSkillCatalog.acceptTaskID, 140)
             boost(AIClipboardSkillCatalog.clarifyRequestID, 105)
         }
 
-        if analysis.question.isDetected {
+        if isRoutingEvidence(analysis.question) {
             boost(AIClipboardSkillCatalog.replyID, 145)
             boost(AIClipboardSkillCatalog.clarifyRequestID, 110)
         }
 
-        // A threshold-crossing complaint can still be used as advisory evidence
-        // if a future model loses automatic-routing approval. Ranking a chip is
-        // reversible and remains user-initiated.
-        if isAdvisoryComplaint(analysis.complaint) {
+        if isRoutingEvidence(analysis.blessing) {
+            boost(AIClipboardSkillCatalog.blessingReplyID, 300)
+            boost(AIClipboardSkillCatalog.replyID, 95)
+        }
+
+        if isRoutingEvidence(analysis.complaint) {
             boost(AIClipboardSkillCatalog.empathyReplyID, 105)
             boost(AIClipboardSkillCatalog.clarifyRequestID, 90)
             boost(AIClipboardSkillCatalog.replyID, 55)
-        } else if analysis.sentiment == .negative, analysis.question.isDetected {
+        } else if analysis.sentiment == .negative,
+                  isRoutingEvidence(analysis.question) {
             boost(AIClipboardSkillCatalog.empathyReplyID, 85)
             boost(AIClipboardSkillCatalog.clarifyRequestID, 65)
         }
 
         if analysis.hasOrganizationName,
-           analysis.task.isDetected || analysis.question.isDetected || analysis.invitation.isDetected {
-            boost(AIClipboardSkillCatalog.businessReplyID, 125)
+           isRoutingEvidence(analysis.task)
+            || isRoutingEvidence(analysis.question)
+            || isRoutingEvidence(analysis.invitation) {
+            boost(AIClipboardSkillCatalog.replyID, 125)
         } else if analysis.hasOrganizationName {
-            boost(AIClipboardSkillCatalog.businessReplyID, 70)
+            boost(AIClipboardSkillCatalog.replyID, 70)
         }
 
         if isListLike(sourceText) {
@@ -168,18 +193,24 @@ public enum ClipboardSkillSemanticRanker {
             boost(AIClipboardSkillCatalog.saveToNotesID, 85)
         }
 
-        let hasSpecializedReplyIntent = analysis.task.isDetected
-            || analysis.question.isDetected
-            || analysis.invitation.isDetected
-            || isAdvisoryComplaint(analysis.complaint)
+        let hasSpecializedReplyIntent = isRoutingEvidence(analysis.task)
+            || isRoutingEvidence(analysis.question)
+            || isRoutingEvidence(analysis.invitation)
+            || isRoutingEvidence(analysis.scheduleNegotiation)
+            || isRoutingEvidence(analysis.confirmationDecision)
+            || isRoutingEvidence(analysis.followUpReminder)
+            || isRoutingEvidence(analysis.blessing)
+            || isRoutingEvidence(analysis.complaint)
         if analysis.replyableMessage.isDetected,
            !hasSpecializedReplyIntent,
            sourceText.count < longTextCharacterThreshold,
            !isListLike(sourceText) {
             boost(AIClipboardSkillCatalog.replyID, 160)
             if analysis.sentiment != .negative,
-               !isAdvisoryComplaint(analysis.complaint) {
-                boost(AIClipboardSkillCatalog.playfulReplyID, 145)
+               !isRoutingEvidence(analysis.complaint) {
+                // Reply now exposes ordinary, formal, and playful variants
+                // inside one action rather than ranking separate style skills.
+                boost(AIClipboardSkillCatalog.replyID, 145)
             }
         }
         if analysis.sentiment == .positive {
@@ -220,8 +251,8 @@ public enum ClipboardSkillSemanticRanker {
         )
     }
 
-    private static func isAdvisoryComplaint(_ label: ClipboardIntentLabel) -> Bool {
-        label.confidence > 0 && label.confidence >= label.threshold
+    private static func isRoutingEvidence(_ label: ClipboardIntentLabel) -> Bool {
+        label.isDetected && label.isApprovedForAutomaticRouting
     }
 
     private static func isListLike(_ text: String) -> Bool {
@@ -266,12 +297,27 @@ public final class ClipboardSemanticRankingStore: ObservableObject {
 
     @Published public private(set) var snapshot: ClipboardSemanticRankingSnapshot?
 
-    private let analyzer: ClipboardSemanticAnalyzer
+    private let analyzeText: @Sendable (String) async -> ClipboardSemanticAnalysis
+    private let shadowMetrics: ClipboardSemanticShadowMetricsStore?
     private var analysisTask: Task<Void, Never>?
     private var generation = UUID()
 
-    public init(analyzer: ClipboardSemanticAnalyzer = ClipboardSemanticAnalyzer()) {
-        self.analyzer = analyzer
+    public init(
+        analyzer: ClipboardSemanticAnalyzer = ClipboardSemanticAnalyzer(),
+        shadowMetrics: ClipboardSemanticShadowMetricsStore = .shared
+    ) {
+        analyzeText = { text in
+            await analyzer.analyze(text)
+        }
+        self.shadowMetrics = shadowMetrics
+    }
+
+    init(
+        analyzeText: @escaping @Sendable (String) async -> ClipboardSemanticAnalysis,
+        shadowMetrics: ClipboardSemanticShadowMetricsStore? = nil
+    ) {
+        self.analyzeText = analyzeText
+        self.shadowMetrics = shadowMetrics
     }
 
     public func analyze(_ entry: ClipboardHistoryEntry) {
@@ -282,8 +328,9 @@ public final class ClipboardSemanticRankingStore: ObservableObject {
 
         analysisTask = Task { [weak self] in
             guard let self else { return }
-            let analysis = await self.analyzer.analyze(entry.text)
+            let analysis = await self.analyzeText(entry.text)
             guard !Task.isCancelled, self.generation == expectedGeneration else { return }
+            self.shadowMetrics?.record(analysis)
             self.snapshot = ClipboardSemanticRankingSnapshot(
                 entryID: entry.id,
                 analysis: analysis

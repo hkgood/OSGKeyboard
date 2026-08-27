@@ -244,6 +244,7 @@ final class AIClipboardSkillTests: XCTestCase {
 
         XCTAssertTrue(instruction.contains("普通人在和朋友、好友或同事聊天"))
         XCTAssertTrue(instruction.contains("1 个合适的表情或 Emoji"))
+        XCTAssertTrue(instruction.contains("不得复述、改写、概括"))
         XCTAssertTrue(instruction.contains("<user_reply_style"))
         XCTAssertTrue(instruction.contains("喜欢短句"))
         XCTAssertTrue(instruction.contains("不能改变当前技能的意图"))

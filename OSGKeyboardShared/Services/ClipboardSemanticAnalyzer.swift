@@ -38,6 +38,15 @@ public struct ClipboardIntentLabel: Equatable, Sendable {
     public let isApprovedForAutomaticRouting: Bool
 }
 
+public struct ClipboardVerifierDecision: Equatable, Sendable {
+    public let group: String
+    public let label: String
+    public let confidence: Double
+    public let margin: Double
+    public let isShadow: Bool
+    public let isRouted: Bool
+}
+
 public struct ClipboardSemanticAnalysis: Equatable, Sendable {
     public let language: ClipboardLanguageLabel?
     public let dates: [ClipboardDateLabel]
@@ -53,6 +62,12 @@ public struct ClipboardSemanticAnalysis: Equatable, Sendable {
     public let invitation: ClipboardIntentLabel
     public let complaint: ClipboardIntentLabel
     public let replyableMessage: ClipboardIntentLabel
+    public let scheduleNegotiation: ClipboardIntentLabel
+    public let confirmationDecision: ClipboardIntentLabel
+    public let followUpReminder: ClipboardIntentLabel
+    public let blessing: ClipboardIntentLabel
+    public let actionVerifier: ClipboardVerifierDecision?
+    public let coordinationVerifier: ClipboardVerifierDecision?
 
     public var hasDateOrTime: Bool { !dates.isEmpty }
     public var hasAddress: Bool { !addresses.isEmpty }
@@ -141,6 +156,7 @@ public actor ClipboardSemanticAnalyzer {
     private struct Manifest: Decodable {
         let schemaVersion: Int
         let classifiers: [ManifestClassifier]
+        let verifiers: [ManifestVerifier]?
     }
 
     private struct ManifestClassifier: Decodable {
@@ -148,11 +164,28 @@ public actor ClipboardSemanticAnalyzer {
         let modelFile: String
         let positiveLabel: String?
         let confidenceThreshold: Double?
+        let confidenceThresholdsByLanguage: [String: Double]?
         let acceptedForAutomaticRouting: Bool
+    }
+
+    private struct ManifestVerifier: Decodable {
+        let id: String
+        let modelFile: String
+        let confidenceThreshold: Double
+        let confidenceThresholdsByLanguage: [String: Double]?
+        let minimumMargin: Double
+        let minimumMarginsByLanguage: [String: Double]?
+        let acceptedForAutomaticRouting: Bool
+        let deploymentMode: String
     }
 
     private struct ModelEntry {
         let configuration: ManifestClassifier
+        let model: NLModel
+    }
+
+    private struct VerifierEntry {
+        let configuration: ManifestVerifier
         let model: NLModel
     }
 
@@ -162,6 +195,10 @@ public actor ClipboardSemanticAnalyzer {
         case invitation
         case complaint
         case replyableMessage
+        case scheduleNegotiation
+        case confirmationDecision
+        case followUpReminder
+        case blessing
     }
 
     private static let resourceDirectory = "ClipboardSemantics"
@@ -174,6 +211,7 @@ public actor ClipboardSemanticAnalyzer {
     private let bundles: [Bundle]
     private var manifest: Manifest?
     private var models: [String: ModelEntry] = [:]
+    private var verifierModels: [String: VerifierEntry] = [:]
     private var didAttemptManifestLoad = false
 
     public init(additionalBundles: [Bundle] = []) {
@@ -197,12 +235,93 @@ public actor ClipboardSemanticAnalyzer {
             language: language.flatMap { NLLanguage(rawValue: $0.identifier) }
         )
         let segments = semanticSegments(in: text)
-        let task = intentLabel(.task, segments: segments)
-        let question = intentLabel(.question, segments: segments)
-        let invitation = intentLabel(.invitation, segments: segments)
-        let complaint = intentLabel(.complaint, segments: segments)
-        let replyableMessage = intentLabel(.replyableMessage, segments: segments)
+        let languageIdentifier = language?.identifier
+        let taskCandidate = intentLabel(
+            .task,
+            segments: segments,
+            languageIdentifier: languageIdentifier
+        )
+        let questionCandidate = intentLabel(
+            .question,
+            segments: segments,
+            languageIdentifier: languageIdentifier
+        )
+        let invitationCandidate = intentLabel(
+            .invitation,
+            segments: segments,
+            languageIdentifier: languageIdentifier
+        )
+        let complaint = intentLabel(
+            .complaint,
+            segments: segments,
+            languageIdentifier: languageIdentifier
+        )
+        let task = adjustedTaskLabel(
+            taskCandidate,
+            complaint: complaint,
+            text: text
+        )
+        let replyableMessage = intentLabel(
+            .replyableMessage,
+            segments: segments,
+            languageIdentifier: languageIdentifier
+        )
+        let scheduleNegotiationCandidate = intentLabel(
+            .scheduleNegotiation,
+            segments: segments,
+            languageIdentifier: languageIdentifier
+        )
+        let confirmationDecisionCandidate = intentLabel(
+            .confirmationDecision,
+            segments: segments,
+            languageIdentifier: languageIdentifier
+        )
+        let followUpReminderCandidate = intentLabel(
+            .followUpReminder,
+            segments: segments,
+            languageIdentifier: languageIdentifier
+        )
+        let blessingCandidate = intentLabel(
+            .blessing,
+            segments: segments,
+            languageIdentifier: languageIdentifier
+        )
+        let blessing = adjustedBlessingLabel(blessingCandidate, text: text)
         let sentiment = sentimentLabel(segments: segments)
+        let actionVerifier = verifierDecision(
+            id: "action",
+            segments: segments,
+            languageIdentifier: languageIdentifier,
+            shouldEvaluate: shouldEvaluateActionVerifier(
+                task: task,
+                question: questionCandidate,
+                complaint: complaint
+            )
+        )
+        let coordinationVerifier = verifierDecision(
+            id: "coordination",
+            segments: segments,
+            languageIdentifier: languageIdentifier,
+            shouldEvaluate: shouldEvaluateCoordinationVerifier(
+                invitation: invitationCandidate,
+                scheduleNegotiation: scheduleNegotiationCandidate,
+                confirmationDecision: confirmationDecisionCandidate,
+                followUpReminder: followUpReminderCandidate
+            )
+        )
+        let verifiedAction = verifiedActionLabels(
+            task: task,
+            question: questionCandidate,
+            complaint: complaint,
+            decision: actionVerifier
+        )
+        let verifiedCoordination = verifiedCoordinationLabels(
+            invitation: invitationCandidate,
+            scheduleNegotiation: scheduleNegotiationCandidate,
+            confirmationDecision: confirmationDecisionCandidate,
+            followUpReminder: followUpReminderCandidate,
+            decision: coordinationVerifier
+        )
 
         return ClipboardSemanticAnalysis(
             language: language,
@@ -214,12 +333,241 @@ public actor ClipboardSemanticAnalyzer {
             organizationNames: entities.organizations,
             sentiment: sentiment.label,
             sentimentConfidence: sentiment.confidence,
-            task: task,
-            question: question,
-            invitation: invitation,
-            complaint: complaint,
-            replyableMessage: replyableMessage
+            task: verifiedAction.task,
+            question: verifiedAction.question,
+            invitation: verifiedCoordination.invitation,
+            complaint: verifiedAction.complaint,
+            replyableMessage: replyableMessage,
+            scheduleNegotiation: verifiedCoordination.scheduleNegotiation,
+            confirmationDecision: verifiedCoordination.confirmationDecision,
+            followUpReminder: verifiedCoordination.followUpReminder,
+            blessing: blessing,
+            actionVerifier: actionVerifier,
+            coordinationVerifier: coordinationVerifier
         )
+    }
+
+    private func shouldEvaluateActionVerifier(
+        task: ClipboardIntentLabel,
+        question: ClipboardIntentLabel,
+        complaint: ClipboardIntentLabel
+    ) -> Bool {
+        [task, question, complaint].contains {
+            $0.confidence >= min($0.threshold, 0.50)
+        }
+    }
+
+    private func shouldEvaluateCoordinationVerifier(
+        invitation: ClipboardIntentLabel,
+        scheduleNegotiation: ClipboardIntentLabel,
+        confirmationDecision: ClipboardIntentLabel,
+        followUpReminder: ClipboardIntentLabel
+    ) -> Bool {
+        [
+            invitation,
+            scheduleNegotiation,
+            confirmationDecision,
+            followUpReminder
+        ].contains {
+            $0.confidence >= min($0.threshold, 0.50)
+        }
+    }
+
+    private func verifiedActionLabels(
+        task: ClipboardIntentLabel,
+        question: ClipboardIntentLabel,
+        complaint: ClipboardIntentLabel,
+        decision: ClipboardVerifierDecision?
+    ) -> (
+        task: ClipboardIntentLabel,
+        question: ClipboardIntentLabel,
+        complaint: ClipboardIntentLabel
+    ) {
+        guard let configuration = verifierConfiguration(id: "action") else {
+            return (task, question, complaint)
+        }
+        guard configuration.acceptedForAutomaticRouting,
+              configuration.deploymentMode == "automatic" else {
+            return (task, question, complaint)
+        }
+        guard let decision else {
+            return (
+                routedLabel(task, isApproved: false),
+                routedLabel(question, isApproved: false),
+                routedLabel(complaint, isApproved: false)
+            )
+        }
+        let taskApproved = decision.isRouted
+            && ["taskOnly", "both"].contains(decision.label)
+        let questionApproved = decision.isRouted
+            && decision.label == "questionRequest"
+        let complaintApproved = decision.isRouted
+            && ["complaintOnly", "both"].contains(decision.label)
+        return (
+            routedLabel(task, isApproved: taskApproved),
+            routedLabel(question, isApproved: questionApproved),
+            routedLabel(complaint, isApproved: complaintApproved)
+        )
+    }
+
+    private func verifiedCoordinationLabels(
+        invitation: ClipboardIntentLabel,
+        scheduleNegotiation: ClipboardIntentLabel,
+        confirmationDecision: ClipboardIntentLabel,
+        followUpReminder: ClipboardIntentLabel,
+        decision: ClipboardVerifierDecision?
+    ) -> (
+        invitation: ClipboardIntentLabel,
+        scheduleNegotiation: ClipboardIntentLabel,
+        confirmationDecision: ClipboardIntentLabel,
+        followUpReminder: ClipboardIntentLabel
+    ) {
+        guard let configuration = verifierConfiguration(id: "coordination") else {
+            return (
+                invitation,
+                scheduleNegotiation,
+                confirmationDecision,
+                followUpReminder
+            )
+        }
+        guard configuration.acceptedForAutomaticRouting,
+              configuration.deploymentMode == "automatic" else {
+            return (
+                invitation,
+                scheduleNegotiation,
+                confirmationDecision,
+                followUpReminder
+            )
+        }
+        guard let decision else {
+            return (
+                routedLabel(invitation, isApproved: false),
+                routedLabel(scheduleNegotiation, isApproved: false),
+                routedLabel(confirmationDecision, isApproved: false),
+                routedLabel(followUpReminder, isApproved: false)
+            )
+        }
+        return (
+            routedLabel(
+                invitation,
+                isApproved: decision.isRouted && decision.label == "invitation"
+            ),
+            routedLabel(
+                scheduleNegotiation,
+                isApproved: decision.isRouted
+                    && decision.label == "scheduleNegotiation"
+            ),
+            routedLabel(
+                confirmationDecision,
+                isApproved: decision.isRouted
+                    && decision.label == "confirmationDecision"
+            ),
+            routedLabel(
+                followUpReminder,
+                isApproved: decision.isRouted
+                    && decision.label == "followUpReminder"
+            )
+        )
+    }
+
+    private func routedLabel(
+        _ candidate: ClipboardIntentLabel,
+        isApproved: Bool
+    ) -> ClipboardIntentLabel {
+        ClipboardIntentLabel(
+            confidence: candidate.confidence,
+            threshold: candidate.threshold,
+            isDetected: isApproved,
+            isApprovedForAutomaticRouting: isApproved
+        )
+    }
+
+    private func adjustedTaskLabel(
+        _ task: ClipboardIntentLabel,
+        complaint: ClipboardIntentLabel,
+        text: String
+    ) -> ClipboardIntentLabel {
+        guard task.isDetected,
+              Self.shouldSuppressTask(
+                text: text,
+                complaintConfidence: complaint.confidence
+              ) else {
+            return task
+        }
+        return ClipboardIntentLabel(
+            confidence: task.confidence,
+            threshold: task.threshold,
+            isDetected: false,
+            isApprovedForAutomaticRouting: task.isApprovedForAutomaticRouting
+        )
+    }
+
+    static func shouldSuppressTask(
+        text: String,
+        complaintConfidence: Double
+    ) -> Bool {
+        guard complaintConfidence >= 0.60 else { return false }
+        let normalized = text.lowercased()
+        let explicitTaskMarkers = [
+            "请", "麻烦", "能否", "可以请你", "由你", "交给你", "需要你",
+            "你负责", "下一步", "行动项", "please ", "can you", "could you",
+            "would you", "assigned to you", "you are responsible", "we need you",
+            "would like you", "counting on you", "take ownership", "your task",
+            "next action", "complete the", "finish the", "send it to",
+            "deliver it to"
+        ]
+        return !explicitTaskMarkers.contains { normalized.contains($0) }
+    }
+
+    private func adjustedBlessingLabel(
+        _ candidate: ClipboardIntentLabel,
+        text: String
+    ) -> ClipboardIntentLabel {
+        guard Self.hasExplicitBlessingMarker(in: text) else {
+            return ClipboardIntentLabel(
+                confidence: candidate.confidence,
+                threshold: candidate.threshold,
+                isDetected: false,
+                isApprovedForAutomaticRouting: candidate.isApprovedForAutomaticRouting
+            )
+        }
+        // Explicit blessing phrases are deterministic routing evidence. The
+        // statistical model remains useful for diagnostics, but cannot route
+        // broad positive language without one of these high-precision markers.
+        return ClipboardIntentLabel(
+            confidence: 1,
+            threshold: 1,
+            isDetected: true,
+            isApprovedForAutomaticRouting: true
+        )
+    }
+
+    static func hasExplicitBlessingMarker(in text: String) -> Bool {
+        let normalized = text.lowercased()
+        let quotedOrMetaContexts = [
+            "祝福模板", "祝福语模板", "文章引用", "搜索词", "系统正在检查",
+            "文档里收录", "贺卡名单", "收集祝福", "greeting template",
+            "message template", "the article quotes", "search phrase",
+            "system is checking", "document contains", "card list",
+            "quotes the phrase", "如何描述生日快乐", "怎么说生日快乐",
+            "如何写生日祝福", "how would you describe a happy birthday",
+            "how do you say happy birthday", "what does happy birthday mean",
+            "宁愿你", "祝你倒闭", "祝你立马倒闭", "祝你去死", "祝你倒霉",
+            "祝你失败", "祝你完蛋"
+        ]
+        guard !quotedOrMetaContexts.contains(where: { normalized.contains($0) }) else {
+            return false
+        }
+        let markers = [
+            "生日快乐", "新年快乐", "春节快乐", "节日快乐", "圣诞快乐",
+            "中秋快乐", "恭喜", "预祝", "祝你", "祝您", "祝大家", "祝他", "祝她",
+            "愿你", "愿您", "happy birthday", "happy new year",
+            "merry christmas", "happy holidays", "congratulations",
+            "congrats", "best wishes", "good luck", "wishing you",
+            "wish you", "wish him", "wish her", "wish them", "let us wish",
+            "let's wish", "we wish", "may you"
+        ]
+        return markers.contains { normalized.contains($0) }
     }
 
     private func emptyAnalysis() -> ClipboardSemanticAnalysis {
@@ -243,7 +591,13 @@ public actor ClipboardSemanticAnalyzer {
             question: emptyIntent,
             invitation: emptyIntent,
             complaint: emptyIntent,
-            replyableMessage: emptyIntent
+            replyableMessage: emptyIntent,
+            scheduleNegotiation: emptyIntent,
+            confirmationDecision: emptyIntent,
+            followUpReminder: emptyIntent,
+            blessing: emptyIntent,
+            actionVerifier: nil,
+            coordinationVerifier: nil
         )
     }
 
@@ -378,7 +732,8 @@ public actor ClipboardSemanticAnalyzer {
 
     private func intentLabel(
         _ id: IntentID,
-        segments: [String]
+        segments: [String],
+        languageIdentifier: String?
     ) -> ClipboardIntentLabel {
         guard let entry = modelEntry(id: id.rawValue),
               let positiveLabel = entry.configuration.positiveLabel else {
@@ -389,7 +744,12 @@ public actor ClipboardSemanticAnalyzer {
                 isApprovedForAutomaticRouting: false
             )
         }
-        let threshold = entry.configuration.confidenceThreshold ?? 1
+        let languageThreshold = languageIdentifier.flatMap {
+            entry.configuration.confidenceThresholdsByLanguage?[$0]
+        }
+        let threshold = languageThreshold
+            ?? entry.configuration.confidenceThreshold
+            ?? 1
         let confidence = segments.map { segment in
             entry.model.predictedLabelHypotheses(
                 for: segment,
@@ -452,6 +812,81 @@ public actor ClipboardSemanticAnalyzer {
         return entry
     }
 
+    private func verifierDecision(
+        id: String,
+        segments: [String],
+        languageIdentifier: String?,
+        shouldEvaluate: Bool
+    ) -> ClipboardVerifierDecision? {
+        guard shouldEvaluate,
+              let entry = verifierEntry(id: id) else {
+            return nil
+        }
+        let rankedSegments = segments.compactMap { segment -> (
+            label: String,
+            confidence: Double,
+            margin: Double
+        )? in
+            let ranked = entry.model.predictedLabelHypotheses(
+                for: segment,
+                maximumCount: 2
+            ).sorted { $0.value > $1.value }
+            guard let winner = ranked.first else { return nil }
+            return (
+                winner.key,
+                winner.value,
+                winner.value - (ranked.dropFirst().first?.value ?? 0)
+            )
+        }
+        guard let winner = rankedSegments.max(by: {
+            if $0.confidence != $1.confidence {
+                return $0.confidence < $1.confidence
+            }
+            return $0.margin < $1.margin
+        }) else {
+            return nil
+        }
+        let threshold = languageIdentifier.flatMap {
+            entry.configuration.confidenceThresholdsByLanguage?[$0]
+        } ?? entry.configuration.confidenceThreshold
+        let minimumMargin = languageIdentifier.flatMap {
+            entry.configuration.minimumMarginsByLanguage?[$0]
+        } ?? entry.configuration.minimumMargin
+        let isShadow = entry.configuration.deploymentMode == "shadow"
+            || !entry.configuration.acceptedForAutomaticRouting
+        let isRouted = winner.label != "neither"
+            && winner.confidence >= threshold
+            && winner.margin >= minimumMargin
+        return ClipboardVerifierDecision(
+            group: id,
+            label: winner.label,
+            confidence: rounded(winner.confidence),
+            margin: rounded(winner.margin),
+            isShadow: isShadow,
+            isRouted: isRouted
+        )
+    }
+
+    private func verifierEntry(id: String) -> VerifierEntry? {
+        if let cached = verifierModels[id] {
+            return cached
+        }
+        guard let configuration = loadedManifest()?
+            .verifiers?
+            .first(where: { $0.id == id }),
+              let modelURL = modelURL(fileName: configuration.modelFile),
+              let model = try? NLModel(contentsOf: modelURL) else {
+            return nil
+        }
+        let entry = VerifierEntry(configuration: configuration, model: model)
+        verifierModels[id] = entry
+        return entry
+    }
+
+    private func verifierConfiguration(id: String) -> ManifestVerifier? {
+        loadedManifest()?.verifiers?.first { $0.id == id }
+    }
+
     private func loadedManifest() -> Manifest? {
         if didAttemptManifestLoad {
             return manifest
@@ -470,7 +905,7 @@ public actor ClipboardSemanticAnalyzer {
             guard let url,
                   let data = try? Data(contentsOf: url),
                   let decoded = try? decoder.decode(Manifest.self, from: data),
-                  decoded.schemaVersion == 1 else {
+                  (1...3).contains(decoded.schemaVersion) else {
                 continue
             }
             manifest = decoded

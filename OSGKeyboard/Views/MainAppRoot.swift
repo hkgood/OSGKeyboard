@@ -174,6 +174,13 @@ struct MainAppRoot: View {
         .onReceive(NotificationCenter.default.publisher(for: .settingsDidSyncFromCloud)) { _ in
             config.reloadFromPersistedStorage()
         }
+        .onReceive(
+            NotificationCenter.default.publisher(for: .managedCreditsMayHaveChanged)
+        ) { _ in
+            Task {
+                await accountSession.refreshAccountData(force: true)
+            }
+        }
         .onChange(of: config.hasCompletedOnboarding) { _, done in
             if done {
                 // Deploy now rather than via warmup: the user just finished

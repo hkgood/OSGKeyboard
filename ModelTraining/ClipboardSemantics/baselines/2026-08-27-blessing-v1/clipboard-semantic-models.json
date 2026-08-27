@@ -1,0 +1,23 @@
+{
+  "classifiers" : [
+    {
+      "acceptedForAutomaticRouting" : true,
+      "algorithm" : "maxEnt",
+      "confidenceThreshold" : 0.69,
+      "confidenceThresholdsByLanguage" : {
+        "en" : 0.69,
+        "zh-Hans" : 0.77
+      },
+      "id" : "blessing",
+      "labels" : [
+        "notBlessing",
+        "blessing"
+      ],
+      "modelFile" : "BlessingIntentClassifier.mlmodel",
+      "positiveLabel" : "blessing"
+    }
+  ],
+  "corpusRecordCount" : 17692,
+  "generatedAt" : "2026-08-27T01:58:55Z",
+  "schemaVersion" : 2
+}

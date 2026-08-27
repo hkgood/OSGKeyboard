@@ -1,0 +1,2039 @@
+{
+  "binaryMacro" : {
+    "accuracy" : 0.9298,
+    "f1" : 0.3957,
+    "precision" : 0.5402,
+    "recall" : 0.3233
+  },
+  "binaryMacroByLanguage" : {
+    "en" : {
+      "accuracy" : 0.9132,
+      "f1" : 0.3656,
+      "precision" : 0.5291,
+      "recall" : 0.3006
+    },
+    "zh-Hans" : {
+      "accuracy" : 0.9466,
+      "f1" : 0.4039,
+      "precision" : 0.5513,
+      "recall" : 0.346
+    }
+  },
+  "classifiers" : [
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.919,
+          "family" : "release_task_owner",
+          "id" : "random-20260830-en-release_task_owner-019",
+          "language" : "en",
+          "text" : "In short, You are the owner of the delivery checklist; complete delivery within two business days."
+        },
+        {
+          "confidence" : 0.9141,
+          "family" : "release_task_polite_request",
+          "id" : "random-20260830-en-release_task_polite_request-001",
+          "language" : "en",
+          "text" : "The main point is this: Can you have the delivery checklist completed before the next review?"
+        },
+        {
+          "confidence" : 0.9103,
+          "family" : "release_task_polite_request",
+          "id" : "random-20260830-en-release_task_polite_request-008",
+          "language" : "en",
+          "text" : "Also, Can you have the retro summary completed as this week closes?"
+        },
+        {
+          "confidence" : 0.9007,
+          "family" : "release_task_owner",
+          "id" : "random-20260830-zh-Hans-release_task_owner-018",
+          "language" : "zh-Hans",
+          "text" : "另外，接下来请你推进签字页，并向设计同学汇报结果。"
+        },
+        {
+          "confidence" : 0.8934,
+          "family" : "release_task_owner",
+          "id" : "random-20260830-en-release_task_owner-040",
+          "language" : "en",
+          "text" : "Please move the signature page forward and report the outcome to the project lead."
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9483,
+          "family" : "release_resolved_boundary",
+          "id" : "random-20260830-en-release_resolved_boundary-021",
+          "language" : "en",
+          "text" : "Also, the timeline change is confirmed restored, so the project lead does not need to intervene."
+        }
+      ],
+      "id" : "task",
+      "metrics" : {
+        "accuracy" : 0.8859,
+        "f1" : 0.7068,
+        "falseNegative" : 72,
+        "falsePositive" : 1,
+        "precision" : 0.9888,
+        "recall" : 0.55,
+        "total" : 640,
+        "trueNegative" : 479,
+        "truePositive" : 88
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.8406,
+          "f1" : 0.5405,
+          "falseNegative" : 50,
+          "falsePositive" : 1,
+          "precision" : 0.9677,
+          "recall" : 0.375,
+          "total" : 320,
+          "trueNegative" : 239,
+          "truePositive" : 30
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9313,
+          "f1" : 0.8406,
+          "falseNegative" : 22,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.725,
+          "total" : 320,
+          "trueNegative" : 240,
+          "truePositive" : 58
+        }
+      },
+      "metricsBySource" : {
+        "release_complaint_brief" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_complaint_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_complaint_unspoken" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_negative_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_personal_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_resolved_boundary" : {
+          "accuracy" : 0.9875,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 79,
+          "truePositive" : 0
+        },
+        "release_task_owner" : {
+          "accuracy" : 0.6,
+          "f1" : 0.75,
+          "falseNegative" : 32,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.6,
+          "total" : 80,
+          "trueNegative" : 0,
+          "truePositive" : 48
+        },
+        "release_task_polite_request" : {
+          "accuracy" : 0.5,
+          "f1" : 0.6667,
+          "falseNegative" : 40,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5,
+          "total" : 80,
+          "trueNegative" : 0,
+          "truePositive" : 40
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9563,
+          "f1" : 0.9097,
+          "falseNegative" : 19,
+          "falsePositive" : 9,
+          "precision" : 0.94,
+          "recall" : 0.8813,
+          "total" : 640,
+          "trueNegative" : 471,
+          "truePositive" : 141
+        },
+        "threshold" : 0.3
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9594,
+          "f1" : 0.9133,
+          "falseNegative" : 23,
+          "falsePositive" : 3,
+          "precision" : 0.9786,
+          "recall" : 0.8563,
+          "total" : 640,
+          "trueNegative" : 477,
+          "truePositive" : 137
+        },
+        "threshold" : 0.38
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9281,
+            "f1" : 0.8456,
+            "falseNegative" : 17,
+            "falsePositive" : 6,
+            "precision" : 0.913,
+            "recall" : 0.7875,
+            "total" : 320,
+            "trueNegative" : 234,
+            "truePositive" : 63
+          },
+          "threshold" : 0.3
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9844,
+            "f1" : 0.9697,
+            "falseNegative" : 0,
+            "falsePositive" : 5,
+            "precision" : 0.9412,
+            "recall" : 1,
+            "total" : 320,
+            "trueNegative" : 235,
+            "truePositive" : 80
+          },
+          "threshold" : 0.08
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9313,
+            "f1" : 0.8472,
+            "falseNegative" : 19,
+            "falsePositive" : 3,
+            "precision" : 0.9531,
+            "recall" : 0.7625,
+            "total" : 320,
+            "trueNegative" : 237,
+            "truePositive" : 61
+          },
+          "threshold" : 0.38
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9875,
+            "f1" : 0.9753,
+            "falseNegative" : 1,
+            "falsePositive" : 3,
+            "precision" : 0.9634,
+            "recall" : 0.9875,
+            "total" : 320,
+            "trueNegative" : 237,
+            "truePositive" : 79
+          },
+          "threshold" : 0.14
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.9892,
+          "family" : "release_complaint_question",
+          "id" : "random-20260830-zh-Hans-release_complaint_question-017",
+          "language" : "zh-Hans",
+          "text" : "顺便提一句，目前因为页面一直空白而家人收不到商品，可以给个处理结果吗？"
+        },
+        {
+          "confidence" : 0.9889,
+          "family" : "release_task_polite_request",
+          "id" : "random-20260830-zh-Hans-release_task_polite_request-021",
+          "language" : "zh-Hans",
+          "text" : "简单说，能麻烦你把交付清单负责到交付完成吗？"
+        },
+        {
+          "confidence" : 0.9883,
+          "family" : "release_task_polite_request",
+          "id" : "random-20260830-en-release_task_polite_request-001",
+          "language" : "en",
+          "text" : "The main point is this: Can you have the delivery checklist completed before the next review?"
+        },
+        {
+          "confidence" : 0.9871,
+          "family" : "release_task_polite_request",
+          "id" : "random-20260830-zh-Hans-release_task_polite_request-003",
+          "language" : "zh-Hans",
+          "text" : "先说重点，你可以在两个工作日内前处理好交付清单吗？"
+        },
+        {
+          "confidence" : 0.9848,
+          "family" : "release_complaint_question",
+          "id" : "random-20260830-zh-Hans-release_complaint_question-009",
+          "language" : "zh-Hans",
+          "text" : "先说重点，付款结果重复扣款到现在都没处理，什么时候能恢复正常？"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "question",
+      "metrics" : {
+        "accuracy" : 0.8734,
+        "f1" : 0.6611,
+        "falseNegative" : 81,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.4938,
+        "total" : 640,
+        "trueNegative" : 480,
+        "truePositive" : 79
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.8125,
+          "f1" : 0.4,
+          "falseNegative" : 60,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.25,
+          "total" : 320,
+          "trueNegative" : 240,
+          "truePositive" : 20
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9344,
+          "f1" : 0.8489,
+          "falseNegative" : 21,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.7375,
+          "total" : 320,
+          "trueNegative" : 240,
+          "truePositive" : 59
+        }
+      },
+      "metricsBySource" : {
+        "release_complaint_brief" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_complaint_question" : {
+          "accuracy" : 0.4125,
+          "f1" : 0.5841,
+          "falseNegative" : 47,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.4125,
+          "total" : 80,
+          "trueNegative" : 0,
+          "truePositive" : 33
+        },
+        "release_complaint_unspoken" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_negative_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_personal_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_resolved_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_task_owner" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_task_polite_request" : {
+          "accuracy" : 0.575,
+          "f1" : 0.7302,
+          "falseNegative" : 34,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.575,
+          "total" : 80,
+          "trueNegative" : 0,
+          "truePositive" : 46
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9313,
+          "f1" : 0.8533,
+          "falseNegative" : 32,
+          "falsePositive" : 12,
+          "precision" : 0.9143,
+          "recall" : 0.8,
+          "total" : 640,
+          "trueNegative" : 468,
+          "truePositive" : 128
+        },
+        "threshold" : 0.11
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9391,
+          "f1" : 0.866,
+          "falseNegative" : 34,
+          "falsePositive" : 5,
+          "precision" : 0.9618,
+          "recall" : 0.7875,
+          "total" : 640,
+          "trueNegative" : 475,
+          "truePositive" : 126
+        },
+        "threshold" : 0.15
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.8813,
+            "f1" : 0.7077,
+            "falseNegative" : 34,
+            "falsePositive" : 4,
+            "precision" : 0.92,
+            "recall" : 0.575,
+            "total" : 320,
+            "trueNegative" : 236,
+            "truePositive" : 46
+          },
+          "threshold" : 0.15
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 320,
+            "trueNegative" : 240,
+            "truePositive" : 80
+          },
+          "threshold" : 0.23
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.8875,
+            "f1" : 0.7143,
+            "falseNegative" : 35,
+            "falsePositive" : 1,
+            "precision" : 0.9783,
+            "recall" : 0.5625,
+            "total" : 320,
+            "trueNegative" : 239,
+            "truePositive" : 45
+          },
+          "threshold" : 0.23
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 320,
+            "trueNegative" : 240,
+            "truePositive" : 80
+          },
+          "threshold" : 0.23
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "invitation",
+      "metrics" : {
+        "accuracy" : 1,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 0,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 640,
+        "trueNegative" : 640,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 320,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 320,
+          "truePositive" : 0
+        }
+      },
+      "metricsBySource" : {
+        "release_complaint_brief" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_complaint_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_complaint_unspoken" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_negative_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_personal_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_resolved_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_task_owner" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_task_polite_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.8064,
+          "family" : "release_complaint_brief",
+          "id" : "random-20260830-en-release_complaint_brief-006",
+          "language" : "en",
+          "text" : "Just to add, Once again, the account is locked again; normal use is now affected."
+        },
+        {
+          "confidence" : 0.8062,
+          "family" : "release_complaint_question",
+          "id" : "random-20260830-en-release_complaint_question-034",
+          "language" : "en",
+          "text" : "For the record, The problem where the page stays blank has not been addressed. When will normal service return?"
+        },
+        {
+          "confidence" : 0.7908,
+          "family" : "release_complaint_unspoken",
+          "id" : "random-20260830-en-release_complaint_unspoken-015",
+          "language" : "en",
+          "text" : "The main point is this: The promised handling did not happen; I am still seeing that tracking has not moved for five days."
+        },
+        {
+          "confidence" : 0.786,
+          "family" : "release_complaint_question",
+          "id" : "random-20260830-en-release_complaint_question-008",
+          "language" : "en",
+          "text" : "For the record, At the moment, the page stays blank, so I cannot continue. Can I get an actual resolution?"
+        },
+        {
+          "confidence" : 0.7839,
+          "family" : "release_complaint_question",
+          "id" : "random-20260830-en-release_complaint_question-001",
+          "language" : "en",
+          "text" : "Also, At the moment, the page stays blank, so I cannot continue. Can I get an actual resolution?"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "complaint",
+      "metrics" : {
+        "accuracy" : 0.8531,
+        "f1" : 0.7565,
+        "falseNegative" : 94,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.6083,
+        "total" : 640,
+        "trueNegative" : 400,
+        "truePositive" : 146
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.85,
+          "f1" : 0.75,
+          "falseNegative" : 48,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.6,
+          "total" : 320,
+          "trueNegative" : 200,
+          "truePositive" : 72
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.8563,
+          "f1" : 0.7629,
+          "falseNegative" : 46,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.6167,
+          "total" : 320,
+          "trueNegative" : 200,
+          "truePositive" : 74
+        }
+      },
+      "metricsBySource" : {
+        "release_complaint_brief" : {
+          "accuracy" : 0.6,
+          "f1" : 0.75,
+          "falseNegative" : 32,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.6,
+          "total" : 80,
+          "trueNegative" : 0,
+          "truePositive" : 48
+        },
+        "release_complaint_question" : {
+          "accuracy" : 0.625,
+          "f1" : 0.7692,
+          "falseNegative" : 30,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.625,
+          "total" : 80,
+          "trueNegative" : 0,
+          "truePositive" : 50
+        },
+        "release_complaint_unspoken" : {
+          "accuracy" : 0.6,
+          "f1" : 0.75,
+          "falseNegative" : 32,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.6,
+          "total" : 80,
+          "trueNegative" : 0,
+          "truePositive" : 48
+        },
+        "release_negative_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_personal_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_resolved_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_task_owner" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_task_polite_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9547,
+          "f1" : 0.9407,
+          "falseNegative" : 10,
+          "falsePositive" : 19,
+          "precision" : 0.9237,
+          "recall" : 0.9583,
+          "total" : 640,
+          "trueNegative" : 381,
+          "truePositive" : 230
+        },
+        "threshold" : 0.18
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9625,
+          "f1" : 0.95,
+          "falseNegative" : 12,
+          "falsePositive" : 12,
+          "precision" : 0.95,
+          "recall" : 0.95,
+          "total" : 640,
+          "trueNegative" : 388,
+          "truePositive" : 228
+        },
+        "threshold" : 0.21
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9563,
+            "f1" : 0.944,
+            "falseNegative" : 2,
+            "falsePositive" : 12,
+            "precision" : 0.9077,
+            "recall" : 0.9833,
+            "total" : 320,
+            "trueNegative" : 188,
+            "truePositive" : 118
+          },
+          "threshold" : 0.21
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9719,
+            "f1" : 0.9633,
+            "falseNegative" : 2,
+            "falsePositive" : 7,
+            "precision" : 0.944,
+            "recall" : 0.9833,
+            "total" : 320,
+            "trueNegative" : 193,
+            "truePositive" : 118
+          },
+          "threshold" : 0.05
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9406,
+            "f1" : 0.917,
+            "falseNegative" : 15,
+            "falsePositive" : 4,
+            "precision" : 0.9633,
+            "recall" : 0.875,
+            "total" : 320,
+            "trueNegative" : 196,
+            "truePositive" : 105
+          },
+          "threshold" : 0.5
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9781,
+            "f1" : 0.9707,
+            "falseNegative" : 4,
+            "falsePositive" : 3,
+            "precision" : 0.9748,
+            "recall" : 0.9667,
+            "total" : 320,
+            "trueNegative" : 197,
+            "truePositive" : 116
+          },
+          "threshold" : 0.07
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.5029,
+          "family" : "release_complaint_question",
+          "id" : "random-20260830-zh-Hans-release_complaint_question-015",
+          "language" : "zh-Hans",
+          "text" : "另外，目前因为附件始终打不开而家人收不到商品，可以给个处理结果吗？"
+        }
+      ],
+      "id" : "scheduleNegotiation",
+      "metrics" : {
+        "accuracy" : 0.9984,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 1,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 640,
+        "trueNegative" : 639,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 320,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9969,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 319,
+          "truePositive" : 0
+        }
+      },
+      "metricsBySource" : {
+        "release_complaint_brief" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_complaint_question" : {
+          "accuracy" : 0.9875,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 79,
+          "truePositive" : 0
+        },
+        "release_complaint_unspoken" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_negative_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_personal_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_resolved_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_task_owner" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_task_polite_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "confirmationDecision",
+      "metrics" : {
+        "accuracy" : 1,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 0,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 640,
+        "trueNegative" : 640,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 320,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 320,
+          "truePositive" : 0
+        }
+      },
+      "metricsBySource" : {
+        "release_complaint_brief" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_complaint_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_complaint_unspoken" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_negative_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_personal_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_resolved_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_task_owner" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_task_polite_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.9245,
+          "family" : "release_personal_boundary",
+          "id" : "random-20260830-en-release_personal_boundary-038",
+          "language" : "en",
+          "text" : "One more thing: This is my private todo: confirm the delivery date after the payment lands."
+        },
+        {
+          "confidence" : 0.9134,
+          "family" : "release_personal_boundary",
+          "id" : "random-20260830-zh-Hans-release_personal_boundary-019",
+          "language" : "zh-Hans",
+          "text" : "顺便提一句，个人备忘，不交给任何人：两个工作日内联系医生。"
+        },
+        {
+          "confidence" : 0.8982,
+          "family" : "release_personal_boundary",
+          "id" : "random-20260830-zh-Hans-release_personal_boundary-031",
+          "language" : "zh-Hans",
+          "text" : "这是我的私人待办：客户回信之后确认最终结论。"
+        },
+        {
+          "confidence" : 0.8968,
+          "family" : "release_personal_boundary",
+          "id" : "random-20260830-zh-Hans-release_personal_boundary-010",
+          "language" : "zh-Hans",
+          "text" : "顺便提一句，这是我的私人待办：合同盖章之后确认最终结论。"
+        },
+        {
+          "confidence" : 0.8737,
+          "family" : "release_personal_boundary",
+          "id" : "random-20260830-zh-Hans-release_personal_boundary-005",
+          "language" : "zh-Hans",
+          "text" : "还有一件事，这是我的私人待办：补丁上线之后确认最终结论。"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "followUpReminder",
+      "metrics" : {
+        "accuracy" : 0.925,
+        "f1" : 0.5714,
+        "falseNegative" : 48,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.4,
+        "total" : 640,
+        "trueNegative" : 560,
+        "truePositive" : 32
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9563,
+          "f1" : 0.7879,
+          "falseNegative" : 14,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.65,
+          "total" : 320,
+          "trueNegative" : 280,
+          "truePositive" : 26
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.8938,
+          "f1" : 0.2609,
+          "falseNegative" : 34,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.15,
+          "total" : 320,
+          "trueNegative" : 280,
+          "truePositive" : 6
+        }
+      },
+      "metricsBySource" : {
+        "release_complaint_brief" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_complaint_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_complaint_unspoken" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_negative_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_personal_boundary" : {
+          "accuracy" : 0.4,
+          "f1" : 0.5714,
+          "falseNegative" : 48,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.4,
+          "total" : 80,
+          "trueNegative" : 0,
+          "truePositive" : 32
+        },
+        "release_resolved_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_task_owner" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_task_polite_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9344,
+          "f1" : 0.6667,
+          "falseNegative" : 38,
+          "falsePositive" : 4,
+          "precision" : 0.913,
+          "recall" : 0.525,
+          "total" : 640,
+          "trueNegative" : 556,
+          "truePositive" : 42
+        },
+        "threshold" : 0.85
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9328,
+          "f1" : 0.6446,
+          "falseNegative" : 41,
+          "falsePositive" : 2,
+          "precision" : 0.9512,
+          "recall" : 0.4875,
+          "total" : 640,
+          "trueNegative" : 558,
+          "truePositive" : 39
+        },
+        "threshold" : 0.87
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9594,
+            "f1" : 0.806,
+            "falseNegative" : 13,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.675,
+            "total" : 320,
+            "trueNegative" : 280,
+            "truePositive" : 27
+          },
+          "threshold" : 0.9
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 320,
+            "trueNegative" : 280,
+            "truePositive" : 40
+          },
+          "threshold" : 0.35
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9594,
+            "f1" : 0.806,
+            "falseNegative" : 13,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.675,
+            "total" : 320,
+            "trueNegative" : 280,
+            "truePositive" : 27
+          },
+          "threshold" : 0.9
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 320,
+            "trueNegative" : 280,
+            "truePositive" : 40
+          },
+          "threshold" : 0.35
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "blessing",
+      "metrics" : {
+        "accuracy" : 1,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 0,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 640,
+        "trueNegative" : 640,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 320,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 320,
+          "truePositive" : 0
+        }
+      },
+      "metricsBySource" : {
+        "release_complaint_brief" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_complaint_question" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_complaint_unspoken" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_negative_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_personal_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_resolved_boundary" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_task_owner" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        },
+        "release_task_polite_request" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 80,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7147,
+          "family" : "release_complaint_brief",
+          "id" : "random-20260830-zh-Hans-release_complaint_brief-024",
+          "language" : "zh-Hans",
+          "text" : "顺便提一句，又一次付款结果重复扣款，这已经影响正常使用。"
+        },
+        {
+          "confidence" : 0.6884,
+          "family" : "release_complaint_brief",
+          "id" : "random-20260830-zh-Hans-release_complaint_brief-008",
+          "language" : "zh-Hans",
+          "text" : "单独记一下，附件始终打不开，到现在还是老样子。"
+        },
+        {
+          "confidence" : 0.6588,
+          "family" : "release_complaint_brief",
+          "id" : "random-20260830-zh-Hans-release_complaint_brief-016",
+          "language" : "zh-Hans",
+          "text" : "又一次附件始终打不开，这已经影响正常使用。"
+        },
+        {
+          "confidence" : 0.6352,
+          "family" : "release_complaint_brief",
+          "id" : "random-20260830-zh-Hans-release_complaint_brief-005",
+          "language" : "zh-Hans",
+          "text" : "还有一件事，又一次附件始终打不开，这已经影响正常使用。"
+        },
+        {
+          "confidence" : 0.6224,
+          "family" : "release_complaint_unspoken",
+          "id" : "random-20260830-en-release_complaint_unspoken-030",
+          "language" : "en",
+          "text" : "A quick note: The promised handling did not happen; I am still seeing that the account is locked again."
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9996,
+          "family" : "release_resolved_boundary",
+          "id" : "random-20260830-en-release_resolved_boundary-033",
+          "language" : "en",
+          "text" : "By the way, The earlier problem where the payment was charged twice is over, and the current state is stable."
+        },
+        {
+          "confidence" : 0.9958,
+          "family" : "release_resolved_boundary",
+          "id" : "random-20260830-en-release_resolved_boundary-026",
+          "language" : "en",
+          "text" : "By the way, The earlier problem where the page stays blank is over, and the current state is stable."
+        },
+        {
+          "confidence" : 0.9941,
+          "family" : "release_resolved_boundary",
+          "id" : "random-20260830-en-release_resolved_boundary-020",
+          "language" : "en",
+          "text" : "By the way, the fee adjustment is confirmed restored, so Finance does not need to intervene."
+        },
+        {
+          "confidence" : 0.9935,
+          "family" : "release_resolved_boundary",
+          "id" : "random-20260830-en-release_resolved_boundary-024",
+          "language" : "en",
+          "text" : "The earlier problem where the payment was charged twice is over, and the current state is stable."
+        },
+        {
+          "confidence" : 0.9912,
+          "family" : "release_resolved_boundary",
+          "id" : "random-20260830-en-release_resolved_boundary-019",
+          "language" : "en",
+          "text" : "The main point is this: The earlier problem where the account is locked again is over, and the current state is stable."
+        }
+      ],
+      "id" : "replyableMessage",
+      "metrics" : {
+        "accuracy" : 0.8328,
+        "f1" : 0.8651,
+        "falseNegative" : 57,
+        "falsePositive" : 50,
+        "precision" : 0.8728,
+        "recall" : 0.8575,
+        "total" : 640,
+        "trueNegative" : 190,
+        "truePositive" : 343
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.7594,
+          "f1" : 0.8117,
+          "falseNegative" : 34,
+          "falsePositive" : 43,
+          "precision" : 0.7943,
+          "recall" : 0.83,
+          "total" : 320,
+          "trueNegative" : 77,
+          "truePositive" : 166
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9063,
+          "f1" : 0.9219,
+          "falseNegative" : 23,
+          "falsePositive" : 7,
+          "precision" : 0.962,
+          "recall" : 0.885,
+          "total" : 320,
+          "trueNegative" : 113,
+          "truePositive" : 177
+        }
+      },
+      "metricsBySource" : {
+        "release_complaint_brief" : {
+          "accuracy" : 0.925,
+          "f1" : 0.961,
+          "falseNegative" : 6,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.925,
+          "total" : 80,
+          "trueNegative" : 0,
+          "truePositive" : 74
+        },
+        "release_complaint_question" : {
+          "accuracy" : 0.7875,
+          "f1" : 0.8811,
+          "falseNegative" : 17,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.7875,
+          "total" : 80,
+          "trueNegative" : 0,
+          "truePositive" : 63
+        },
+        "release_complaint_unspoken" : {
+          "accuracy" : 0.5875,
+          "f1" : 0.7402,
+          "falseNegative" : 33,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5875,
+          "total" : 80,
+          "trueNegative" : 0,
+          "truePositive" : 47
+        },
+        "release_negative_boundary" : {
+          "accuracy" : 0.9625,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 3,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 77,
+          "truePositive" : 0
+        },
+        "release_personal_boundary" : {
+          "accuracy" : 0.9,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 8,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 72,
+          "truePositive" : 0
+        },
+        "release_resolved_boundary" : {
+          "accuracy" : 0.5125,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 39,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 80,
+          "trueNegative" : 41,
+          "truePositive" : 0
+        },
+        "release_task_owner" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 80,
+          "trueNegative" : 0,
+          "truePositive" : 80
+        },
+        "release_task_polite_request" : {
+          "accuracy" : 0.9875,
+          "f1" : 0.9937,
+          "falseNegative" : 1,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.9875,
+          "total" : 80,
+          "trueNegative" : 0,
+          "truePositive" : 79
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.8391,
+          "f1" : 0.865,
+          "falseNegative" : 70,
+          "falsePositive" : 33,
+          "precision" : 0.9091,
+          "recall" : 0.825,
+          "total" : 640,
+          "trueNegative" : 207,
+          "truePositive" : 330
+        },
+        "threshold" : 0.86
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.8094,
+          "f1" : 0.8277,
+          "falseNegative" : 107,
+          "falsePositive" : 15,
+          "precision" : 0.9513,
+          "recall" : 0.7325,
+          "total" : 640,
+          "trueNegative" : 225,
+          "truePositive" : 293
+        },
+        "threshold" : 0.96
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.7469,
+            "f1" : 0.7666,
+            "falseNegative" : 67,
+            "falsePositive" : 14,
+            "precision" : 0.9048,
+            "recall" : 0.665,
+            "total" : 320,
+            "trueNegative" : 106,
+            "truePositive" : 133
+          },
+          "threshold" : 0.95
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9,
+            "f1" : 0.9192,
+            "falseNegative" : 18,
+            "falsePositive" : 14,
+            "precision" : 0.9286,
+            "recall" : 0.91,
+            "total" : 320,
+            "trueNegative" : 106,
+            "truePositive" : 182
+          },
+          "threshold" : 0.36
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.675,
+            "f1" : 0.6601,
+            "falseNegative" : 99,
+            "falsePositive" : 5,
+            "precision" : 0.9528,
+            "recall" : 0.505,
+            "total" : 320,
+            "trueNegative" : 115,
+            "truePositive" : 101
+          },
+          "threshold" : 0.99
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9094,
+            "f1" : 0.9251,
+            "falseNegative" : 21,
+            "falsePositive" : 8,
+            "precision" : 0.9572,
+            "recall" : 0.895,
+            "total" : 320,
+            "trueNegative" : 112,
+            "truePositive" : 179
+          },
+          "threshold" : 0.68
+        }
+      }
+    }
+  ],
+  "corpusRecordCount" : 640,
+  "exactTrainingOverlapCount" : 0,
+  "familyCount" : 8,
+  "generatedAt" : "2026-08-27T05:29:37Z",
+  "languageCounts" : {
+    "en" : 320,
+    "zh-Hans" : 320
+  },
+  "manifestSchemaVersion" : 2,
+  "seed" : 20260826,
+  "sentiment" : {
+    "accuracy" : 0.8109,
+    "correct" : 519,
+    "macroF1" : 0.5748,
+    "perLabelF1" : {
+      "negative" : 0.8129,
+      "neutral" : 0.9114,
+      "positive" : 0
+    },
+    "total" : 640,
+    "unknown" : 81,
+    "unknownRate" : 0.1266
+  },
+  "sentimentBySource" : {
+    "release_complaint_brief" : {
+      "accuracy" : 0.675,
+      "correct" : 54,
+      "macroF1" : 0.2687,
+      "perLabelF1" : {
+        "negative" : 0.806,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 80,
+      "unknown" : 17,
+      "unknownRate" : 0.2125
+    },
+    "release_complaint_question" : {
+      "accuracy" : 0.65,
+      "correct" : 52,
+      "macroF1" : 0.2626,
+      "perLabelF1" : {
+        "negative" : 0.7879,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 80,
+      "unknown" : 16,
+      "unknownRate" : 0.2
+    },
+    "release_complaint_unspoken" : {
+      "accuracy" : 0.725,
+      "correct" : 58,
+      "macroF1" : 0.2802,
+      "perLabelF1" : {
+        "negative" : 0.8406,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 80,
+      "unknown" : 17,
+      "unknownRate" : 0.2125
+    },
+    "release_negative_boundary" : {
+      "accuracy" : 0.775,
+      "correct" : 62,
+      "macroF1" : 0.2911,
+      "perLabelF1" : {
+        "negative" : 0.8732,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 80,
+      "unknown" : 14,
+      "unknownRate" : 0.175
+    },
+    "release_personal_boundary" : {
+      "accuracy" : 0.9875,
+      "correct" : 79,
+      "macroF1" : 0.3312,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.9937,
+        "positive" : 0
+      },
+      "total" : 80,
+      "unknown" : 1,
+      "unknownRate" : 0.0125
+    },
+    "release_resolved_boundary" : {
+      "accuracy" : 0.9,
+      "correct" : 72,
+      "macroF1" : 0.3158,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.9474,
+        "positive" : 0
+      },
+      "total" : 80,
+      "unknown" : 7,
+      "unknownRate" : 0.0875
+    },
+    "release_task_owner" : {
+      "accuracy" : 0.775,
+      "correct" : 62,
+      "macroF1" : 0.2911,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.8732,
+        "positive" : 0
+      },
+      "total" : 80,
+      "unknown" : 9,
+      "unknownRate" : 0.1125
+    },
+    "release_task_polite_request" : {
+      "accuracy" : 1,
+      "correct" : 80,
+      "macroF1" : 0.3333,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 1,
+        "positive" : 0
+      },
+      "total" : 80,
+      "unknown" : 0,
+      "unknownRate" : 0
+    }
+  }
+}

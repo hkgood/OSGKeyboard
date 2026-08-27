@@ -76,6 +76,8 @@ struct AIKeyboardView: View {
         Group {
             if state.editSession.isActive {
                 LastInputEditView(state: state)
+            } else if state.aiSession.canSelectReplyVariant {
+                replyVariantsSurface
             } else if state.aiSession.canInsert {
                 pendingAnswerSurface
             } else {
@@ -204,6 +206,79 @@ struct AIKeyboardView: View {
         .frame(height: resolvedHeight)
     }
 
+    private var replyVariantsSurface: some View {
+        VStack(spacing: 0) {
+            topBar.frame(height: Layout.topBarHeight)
+            ScrollView(.vertical) {
+                LazyVStack(spacing: Spacing.xs) {
+                    ForEach(state.aiSession.replyVariants) { variant in
+                        replyVariantButton(variant)
+                    }
+                }
+                .padding(.horizontal, Spacing.xs)
+                .padding(.vertical, Spacing.xs)
+            }
+            .scrollIndicators(.visible)
+            .scrollBounceBehavior(.basedOnSize)
+            .accessibilityIdentifier("assistant.replyVariants")
+        }
+        .padding(.vertical, 4)
+        .padding(.horizontal, KeyboardChromeLayout.horizontalInset)
+        .frame(maxWidth: KeyboardChromeLayout.voiceContentMaxWidth)
+        .frame(maxWidth: .infinity)
+        .frame(height: resolvedHeight)
+    }
+
+    private func replyVariantButton(_ variant: AIReplyVariant) -> some View {
+        let title = ExtL10n.string(variant.kind.titleKey)
+        let shape = RoundedRectangle(cornerRadius: Radius.medium)
+        return Button {
+            state.selectAIReplyVariant(variant.id)
+        } label: {
+            HStack(alignment: .top, spacing: Spacing.sm) {
+                Image(
+                    systemName: variant.emotion.systemImage(
+                        fallback: variant.kind
+                    )
+                )
+                    .resizable()
+                    .scaledToFit()
+                    .symbolRenderingMode(.monochrome)
+                    .foregroundStyle(palette.textPrimary)
+                    .frame(width: 17, height: 17)
+                    .frame(width: 24, height: 24)
+                    .accessibilityHidden(true)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(TypeStyle.caption)
+                        .foregroundStyle(palette.textSecondary)
+                        .lineLimit(1)
+                    Text(variant.text)
+                        .font(TypeStyle.body)
+                        .foregroundStyle(palette.textPrimary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(shape)
+            .glassEffect(
+                .regular
+                    .tint(palette.textPrimary.opacity(0.04))
+                    .interactive(),
+                in: shape
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("assistant.replyVariant.\(variant.kind.rawValue)")
+        .accessibilityLabel(Text("\(title), \(variant.text)"))
+        .accessibilityHint(ExtL10n.text("keyboard.ai.replyVariant.insertHint"))
+    }
+
     private var resolvedHeight: CGFloat {
         TypingSurfaceMetrics.contentHeight(
             isIPad: state.usesIPadLayoutMetrics,
@@ -215,7 +290,7 @@ struct AIKeyboardView: View {
 
     @ViewBuilder
     private var topBar: some View {
-        if state.aiSession.canInsert {
+        if state.aiSession.canInsert || state.aiSession.canSelectReplyVariant {
             cancelTopBar(
                 action: state.discardPendingAIAnswer,
                 labelKey: "keyboard.assistant.discardPending",
@@ -1060,7 +1135,11 @@ struct AIKeyboardView: View {
     // MARK: - Visibility and clipboard
 
     private var assistantIsResting: Bool {
-        guard !state.aiSession.isBusy, !state.aiSession.canInsert else { return false }
+        guard !state.aiSession.isBusy,
+              !state.aiSession.canInsert,
+              !state.aiSession.canSelectReplyVariant else {
+            return false
+        }
         switch state.phase {
         case .idle, .error, .denied:
             return true

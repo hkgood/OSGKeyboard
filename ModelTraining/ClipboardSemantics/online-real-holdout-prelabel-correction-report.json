@@ -1,0 +1,967 @@
+{
+  "binaryMacro" : {
+    "accuracy" : 0.7863,
+    "f1" : 0.1613,
+    "precision" : 0.3899,
+    "recall" : 0.1203
+  },
+  "binaryMacroByLanguage" : {
+    "en" : {
+      "accuracy" : 0.805,
+      "f1" : 0.1635,
+      "precision" : 0.4342,
+      "recall" : 0.1331
+    },
+    "zh-Hans" : {
+      "accuracy" : 0.7675,
+      "f1" : 0.1603,
+      "precision" : 0.3719,
+      "recall" : 0.1126
+    }
+  },
+  "classifiers" : [
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.8831,
+          "family" : "online_massive_task",
+          "id" : "online-massive-en-US-16438",
+          "language" : "en",
+          "text" : "i need this email sent now"
+        },
+        {
+          "confidence" : 0.8183,
+          "family" : "online_massive_task",
+          "id" : "online-massive-en-US-9321",
+          "language" : "en",
+          "text" : "make the radio turn on now"
+        },
+        {
+          "confidence" : 0.792,
+          "family" : "online_massive_task",
+          "id" : "online-massive-en-US-9327",
+          "language" : "en",
+          "text" : "please scan the am dial on the radio right now"
+        },
+        {
+          "confidence" : 0.791,
+          "family" : "online_massive_task",
+          "id" : "online-massive-en-US-9542",
+          "language" : "en",
+          "text" : "let me listen the latest news program on radio"
+        },
+        {
+          "confidence" : 0.7748,
+          "family" : "online_massive_task",
+          "id" : "online-massive-en-US-9569",
+          "language" : "en",
+          "text" : "ok google play one hundred and six point seven"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.7822,
+          "family" : "online_massive_query_boundary",
+          "id" : "online-massive-zh-CN-11677",
+          "language" : "zh-Hans",
+          "text" : "定位下鼎泰丰餐馆"
+        }
+      ],
+      "id" : "task",
+      "metrics" : {
+        "accuracy" : 0.575,
+        "f1" : 0.1237,
+        "falseNegative" : 84,
+        "falsePositive" : 1,
+        "precision" : 0.8571,
+        "recall" : 0.0667,
+        "total" : 200,
+        "trueNegative" : 109,
+        "truePositive" : 6
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.53,
+          "f1" : 0.0784,
+          "falseNegative" : 47,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.0408,
+          "total" : 100,
+          "trueNegative" : 51,
+          "truePositive" : 2
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.62,
+          "f1" : 0.1739,
+          "falseNegative" : 37,
+          "falsePositive" : 1,
+          "precision" : 0.8,
+          "recall" : 0.0976,
+          "total" : 100,
+          "trueNegative" : 58,
+          "truePositive" : 4
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.56,
+          "f1" : 0.0435,
+          "falseNegative" : 88,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.0222,
+          "total" : 200,
+          "trueNegative" : 110,
+          "truePositive" : 2
+        },
+        "threshold" : 0.86
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.56,
+          "f1" : 0.0435,
+          "falseNegative" : 88,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.0222,
+          "total" : 200,
+          "trueNegative" : 110,
+          "truePositive" : 2
+        },
+        "threshold" : 0.86
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.53,
+            "f1" : 0.0784,
+            "falseNegative" : 47,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.0408,
+            "total" : 100,
+            "trueNegative" : 51,
+            "truePositive" : 2
+          },
+          "threshold" : 0.86
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.53,
+            "f1" : 0.0784,
+            "falseNegative" : 47,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.0408,
+            "total" : 100,
+            "trueNegative" : 51,
+            "truePositive" : 2
+          },
+          "threshold" : 0.86
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.5872,
+          "family" : "online_massive_query_boundary",
+          "id" : "online-massive-zh-CN-2921",
+          "language" : "zh-Hans",
+          "text" : "中国新闻网上有什么新闻"
+        },
+        {
+          "confidence" : 0.5268,
+          "family" : "online_massive_query_boundary",
+          "id" : "online-massive-en-US-16354",
+          "language" : "en",
+          "text" : "check for emails from my employer"
+        },
+        {
+          "confidence" : 0.5163,
+          "family" : "online_massive_query_boundary",
+          "id" : "online-massive-zh-CN-14117",
+          "language" : "zh-Hans",
+          "text" : "金字塔在哪里"
+        },
+        {
+          "confidence" : 0.5,
+          "family" : "online_massive_query_boundary",
+          "id" : "online-massive-en-US-11720",
+          "language" : "en",
+          "text" : "swimming"
+        },
+        {
+          "confidence" : 0.4906,
+          "family" : "online_massive_query_boundary",
+          "id" : "online-massive-en-US-14330",
+          "language" : "en",
+          "text" : "where was steve jobs born"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9794,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-329",
+          "language" : "zh-Hans",
+          "text" : "突然好想你"
+        },
+        {
+          "confidence" : 0.971,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-16519",
+          "language" : "zh-Hans",
+          "text" : "我想要添加新邮件到我的联系人"
+        },
+        {
+          "confidence" : 0.9471,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-8",
+          "language" : "zh-Hans",
+          "text" : "我们想要粉红色"
+        },
+        {
+          "confidence" : 0.9086,
+          "family" : "online_massive_task",
+          "id" : "online-massive-en-US-261",
+          "language" : "en",
+          "text" : "i can barely hear you"
+        },
+        {
+          "confidence" : 0.8587,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-6789",
+          "language" : "zh-Hans",
+          "text" : "安排星期六下午四点和乔安娜开会"
+        }
+      ],
+      "id" : "question",
+      "metrics" : {
+        "accuracy" : 0.71,
+        "f1" : 0.3409,
+        "falseNegative" : 38,
+        "falsePositive" : 20,
+        "precision" : 0.4286,
+        "recall" : 0.283,
+        "total" : 200,
+        "trueNegative" : 127,
+        "truePositive" : 15
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.77,
+          "f1" : 0.439,
+          "falseNegative" : 13,
+          "falsePositive" : 10,
+          "precision" : 0.4737,
+          "recall" : 0.4091,
+          "total" : 100,
+          "trueNegative" : 68,
+          "truePositive" : 9
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.65,
+          "f1" : 0.2553,
+          "falseNegative" : 25,
+          "falsePositive" : 10,
+          "precision" : 0.375,
+          "recall" : 0.1935,
+          "total" : 100,
+          "trueNegative" : 59,
+          "truePositive" : 6
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.8,
+            "f1" : 0.1667,
+            "falseNegative" : 20,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.0909,
+            "total" : 100,
+            "trueNegative" : 78,
+            "truePositive" : 2
+          },
+          "threshold" : 0.91
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.8,
+            "f1" : 0.1667,
+            "falseNegative" : 20,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.0909,
+            "total" : 100,
+            "trueNegative" : 78,
+            "truePositive" : 2
+          },
+          "threshold" : 0.91
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9718,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-8",
+          "language" : "zh-Hans",
+          "text" : "我们想要粉红色"
+        },
+        {
+          "confidence" : 0.8556,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-329",
+          "language" : "zh-Hans",
+          "text" : "突然好想你"
+        }
+      ],
+      "id" : "invitation",
+      "metrics" : {
+        "accuracy" : 0.99,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 2,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 200,
+        "trueNegative" : 198,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 100,
+          "trueNegative" : 100,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.98,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 2,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 100,
+          "trueNegative" : 98,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.777,
+          "family" : "online_cfpb_complaint",
+          "id" : "online-cfpb-7191973",
+          "language" : "en",
+          "text" : "15 USC 1681 Section 604 \" States rights to consumers privacy '' Reporting agencies can not furnish an account WITHOUT my WRITTEN consent!"
+        },
+        {
+          "confidence" : 0.7219,
+          "family" : "online_asap_complaint",
+          "id" : "online-asap-3672",
+          "language" : "zh-Hans",
+          "text" : "久负盛名的蜀九香，实在太令人失望了！跟其他家的火锅比，锅底不够香，清汤不够鲜，这些都可以忍，毕竟锅底每家有各自的调味和风格，口味因人而异，不能一概而论，但是食材不新鲜这种火锅店最基本要求都没能做到，实在不能容忍，牛肉不Q弹，又木又柴，羊肉更不用提了，端上来就趴下了，筷子一夹就散，烫完后味如嚼蜡，完全没有羊肉香味，其他就不一一吐槽了，必须差评！！！果断决定不吃了，不能浪费胃里的空间，马上找另一家火锅店重新来过！"
+        },
+        {
+          "confidence" : 0.683,
+          "family" : "online_cfpb_complaint",
+          "id" : "online-cfpb-3380445",
+          "language" : "en",
+          "text" : "This account in the amount of {$3700.00} was placed back on my credit reports after being taken off following an investigation. XXXX XXXX XXXX purchased the account. Previously a police report was presented with this account listed as fraud. All 3 of the credit reporting agencies removed this information from my report. It has now showed up under another name. I did not authorize this account. It was obtained fraudulently and needs to be removed."
+        },
+        {
+          "confidence" : 0.67,
+          "family" : "online_cfpb_complaint",
+          "id" : "online-cfpb-2383661",
+          "language" : "en",
+          "text" : "Called my parents phone and discussed my debt with them. I had n't lived at my parent 's house in 20 years"
+        },
+        {
+          "confidence" : 0.6572,
+          "family" : "online_cfpb_complaint",
+          "id" : "online-cfpb-4631876",
+          "language" : "en",
+          "text" : "I checked my credit and noticed a account and multiple hard inquiries I do not recognize"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.8704,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-2542",
+          "language" : "zh-Hans",
+          "text" : "变成卧室灯光红色和大厅灯正常颜色"
+        }
+      ],
+      "id" : "complaint",
+      "metrics" : {
+        "accuracy" : 0.62,
+        "f1" : 0.1163,
+        "falseNegative" : 75,
+        "falsePositive" : 1,
+        "precision" : 0.8333,
+        "recall" : 0.0625,
+        "total" : 200,
+        "trueNegative" : 119,
+        "truePositive" : 5
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.61,
+          "f1" : 0.0488,
+          "falseNegative" : 39,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.025,
+          "total" : 100,
+          "trueNegative" : 60,
+          "truePositive" : 1
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.63,
+          "f1" : 0.1778,
+          "falseNegative" : 36,
+          "falsePositive" : 1,
+          "precision" : 0.8,
+          "recall" : 0.1,
+          "total" : 100,
+          "trueNegative" : 59,
+          "truePositive" : 4
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.615,
+          "f1" : 0.0723,
+          "falseNegative" : 77,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.0375,
+          "total" : 200,
+          "trueNegative" : 120,
+          "truePositive" : 3
+        },
+        "threshold" : 0.88
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.615,
+          "f1" : 0.0723,
+          "falseNegative" : 77,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.0375,
+          "total" : 200,
+          "trueNegative" : 120,
+          "truePositive" : 3
+        },
+        "threshold" : 0.88
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.62,
+            "f1" : 0.0952,
+            "falseNegative" : 38,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.05,
+            "total" : 100,
+            "trueNegative" : 60,
+            "truePositive" : 2
+          },
+          "threshold" : 0.77
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.62,
+            "f1" : 0.0952,
+            "falseNegative" : 38,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.05,
+            "total" : 100,
+            "trueNegative" : 60,
+            "truePositive" : 2
+          },
+          "threshold" : 0.88
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.62,
+            "f1" : 0.0952,
+            "falseNegative" : 38,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.05,
+            "total" : 100,
+            "trueNegative" : 60,
+            "truePositive" : 2
+          },
+          "threshold" : 0.77
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.62,
+            "f1" : 0.0952,
+            "falseNegative" : 38,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.05,
+            "total" : 100,
+            "trueNegative" : 60,
+            "truePositive" : 2
+          },
+          "threshold" : 0.88
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9258,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-6789",
+          "language" : "zh-Hans",
+          "text" : "安排星期六下午四点和乔安娜开会"
+        },
+        {
+          "confidence" : 0.8636,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-7291",
+          "language" : "zh-Hans",
+          "text" : "明天早上十点起预定一个小时"
+        },
+        {
+          "confidence" : 0.823,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-7194",
+          "language" : "zh-Hans",
+          "text" : "我明天有个会议请设置它"
+        },
+        {
+          "confidence" : 0.8142,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-6878",
+          "language" : "zh-Hans",
+          "text" : "安排周五下午两点三十和财务部的会议"
+        },
+        {
+          "confidence" : 0.7838,
+          "family" : "online_massive_query_boundary",
+          "id" : "online-massive-zh-CN-14449",
+          "language" : "zh-Hans",
+          "text" : "刘亦菲有一个新生儿吗"
+        }
+      ],
+      "id" : "scheduleNegotiation",
+      "metrics" : {
+        "accuracy" : 0.92,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 16,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 200,
+        "trueNegative" : 184,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.99,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 100,
+          "trueNegative" : 99,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.85,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 15,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 100,
+          "trueNegative" : 85,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.7756,
+          "family" : "online_massive_query_boundary",
+          "id" : "online-massive-zh-CN-5006",
+          "language" : "zh-Hans",
+          "text" : "我的闹钟定了多少次啊"
+        },
+        {
+          "confidence" : 0.7361,
+          "family" : "online_massive_query_boundary",
+          "id" : "online-massive-en-US-2890",
+          "language" : "en",
+          "text" : "current weather"
+        }
+      ],
+      "id" : "confirmationDecision",
+      "metrics" : {
+        "accuracy" : 0.99,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 2,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 200,
+        "trueNegative" : 198,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.99,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 100,
+          "trueNegative" : 99,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.99,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 100,
+          "trueNegative" : 99,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9686,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-6865",
+          "language" : "zh-Hans",
+          "text" : "设置一个通知明天十点的会议"
+        },
+        {
+          "confidence" : 0.9264,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-7287",
+          "language" : "zh-Hans",
+          "text" : "提前一天提醒我我的周年纪念日"
+        },
+        {
+          "confidence" : 0.9111,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-6937",
+          "language" : "zh-Hans",
+          "text" : "设置一个提醒中午跟老板吃午餐"
+        },
+        {
+          "confidence" : 0.8792,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-6836",
+          "language" : "zh-Hans",
+          "text" : "提醒我明天六点的会议"
+        },
+        {
+          "confidence" : 0.8713,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-6901",
+          "language" : "zh-Hans",
+          "text" : "明天上午十点提醒我这个会"
+        }
+      ],
+      "id" : "followUpReminder",
+      "metrics" : {
+        "accuracy" : 0.935,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 13,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 200,
+        "trueNegative" : 187,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.96,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 4,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 100,
+          "trueNegative" : 96,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.91,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 9,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 100,
+          "trueNegative" : 91,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7819,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-9363",
+          "language" : "zh-Hans",
+          "text" : "让我们在电台播放热门歌曲"
+        },
+        {
+          "confidence" : 0.7649,
+          "family" : "online_asap_complaint",
+          "id" : "online-asap-10473",
+          "language" : "zh-Hans",
+          "text" : "去年光顾过一次感觉还行，虽然速度一如慢，菜品还行也拍了照片，今天又去了，明显不行，去的是午餐时间，一个人也没有，当然了，外卖为主，可以理解，只是速度慢得不要不要的，点了牛腩饭，冬阴功汤，炸鸡翅，虾饼，芒果糯米饭，第一份上来是冬阴功汤，吓我一跳，很小的碗半碗装，根本没法喝，因为这半碗装也就是被香料填补的，喝最好过滤，对比去年的照片，明显偷工减料了。其它都过很久才上，真心照片也没兴趣拍了，本来可以放去年拍的照片的，只是不想误导，生意越来越好，品质越来越差"
+        },
+        {
+          "confidence" : 0.7594,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-9591",
+          "language" : "zh-Hans",
+          "text" : "听中国之声的养生大讲堂"
+        },
+        {
+          "confidence" : 0.7587,
+          "family" : "online_massive_task",
+          "id" : "online-massive-zh-CN-7291",
+          "language" : "zh-Hans",
+          "text" : "明天早上十点起预定一个小时"
+        },
+        {
+          "confidence" : 0.749,
+          "family" : "online_massive_query_boundary",
+          "id" : "online-massive-zh-CN-2914",
+          "language" : "zh-Hans",
+          "text" : "告诉我今天几号"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "replyableMessage",
+      "metrics" : {
+        "accuracy" : 0.55,
+        "f1" : 0.7097,
+        "falseNegative" : 90,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.55,
+        "total" : 200,
+        "trueNegative" : 0,
+        "truePositive" : 110
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.59,
+          "f1" : 0.7421,
+          "falseNegative" : 41,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.59,
+          "total" : 100,
+          "trueNegative" : 0,
+          "truePositive" : 59
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.51,
+          "f1" : 0.6755,
+          "falseNegative" : 49,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.51,
+          "total" : 100,
+          "trueNegative" : 0,
+          "truePositive" : 51
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.975,
+          "f1" : 0.9873,
+          "falseNegative" : 5,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.975,
+          "total" : 200,
+          "trueNegative" : 0,
+          "truePositive" : 195
+        },
+        "threshold" : 0.05
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.975,
+          "f1" : 0.9873,
+          "falseNegative" : 5,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.975,
+          "total" : 200,
+          "trueNegative" : 0,
+          "truePositive" : 195
+        },
+        "threshold" : 0.05
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.97,
+            "f1" : 0.9848,
+            "falseNegative" : 3,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.97,
+            "total" : 100,
+            "trueNegative" : 0,
+            "truePositive" : 97
+          },
+          "threshold" : 0.05
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.98,
+            "f1" : 0.9899,
+            "falseNegative" : 2,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.98,
+            "total" : 100,
+            "trueNegative" : 0,
+            "truePositive" : 98
+          },
+          "threshold" : 0.05
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.97,
+            "f1" : 0.9848,
+            "falseNegative" : 3,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.97,
+            "total" : 100,
+            "trueNegative" : 0,
+            "truePositive" : 97
+          },
+          "threshold" : 0.05
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.98,
+            "f1" : 0.9899,
+            "falseNegative" : 2,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.98,
+            "total" : 100,
+            "trueNegative" : 0,
+            "truePositive" : 98
+          },
+          "threshold" : 0.05
+        }
+      }
+    }
+  ],
+  "corpusRecordCount" : 200,
+  "exactTrainingOverlapCount" : 0,
+  "familyCount" : 4,
+  "generatedAt" : "2026-08-27T01:30:19Z",
+  "languageCounts" : {
+    "en" : 100,
+    "zh-Hans" : 100
+  },
+  "manifestSchemaVersion" : 2,
+  "seed" : 20260831,
+  "sentiment" : {
+    "accuracy" : 0.205,
+    "correct" : 41,
+    "macroF1" : 0.1745,
+    "perLabelF1" : {
+      "negative" : 0.2391,
+      "neutral" : 0.2844,
+      "positive" : 0
+    },
+    "total" : 200,
+    "unknown" : 97,
+    "unknownRate" : 0.485
+  }
+}

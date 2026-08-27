@@ -29,6 +29,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
     public var keyboardHapticIntensity: SyncedField<KeyboardHapticIntensity>
     public var polishIntensity: SyncedField<PolishIntensity>
     public var aiResponseLength: SyncedField<AIResponseLength>
+    public var multipleReplyVariantsEnabled: SyncedField<Bool>
     public var activePolishStyleId: SyncedField<String>
     public var llmThinkingEnabled: SyncedField<Bool>
     public var flowSkipAppSwitch: SyncedField<Bool>
@@ -53,6 +54,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         keyboardHapticIntensity: SyncedField<KeyboardHapticIntensity>,
         polishIntensity: SyncedField<PolishIntensity>? = nil,
         aiResponseLength: SyncedField<AIResponseLength>? = nil,
+        multipleReplyVariantsEnabled: SyncedField<Bool>? = nil,
         activePolishStyleId: SyncedField<String>,
         llmThinkingEnabled: SyncedField<Bool>,
         clipboardHistoryEnabled: SyncedField<Bool>? = nil,
@@ -86,6 +88,11 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             updatedAt: keyboardHapticIntensity.updatedAt,
             deviceID: keyboardHapticIntensity.deviceID
         )
+        self.multipleReplyVariantsEnabled = multipleReplyVariantsEnabled ?? SyncedField(
+            value: true,
+            updatedAt: keyboardHapticIntensity.updatedAt,
+            deviceID: keyboardHapticIntensity.deviceID
+        )
         self.activePolishStyleId = activePolishStyleId
         self.llmThinkingEnabled = llmThinkingEnabled
         // Kept as optional parameters so old call sites and payload fixtures
@@ -115,6 +122,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         case keyboardHapticIntensity
         case polishIntensity
         case aiResponseLength
+        case multipleReplyVariantsEnabled
         case activePolishStyleId
         case llmThinkingEnabled
         case clipboardHistoryEnabled
@@ -171,6 +179,14 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             forKey: .aiResponseLength
         ) ?? SyncedField(
             value: .default,
+            updatedAt: keyboardHapticIntensity.updatedAt,
+            deviceID: keyboardHapticIntensity.deviceID
+        )
+        multipleReplyVariantsEnabled = try container.decodeIfPresent(
+            SyncedField<Bool>.self,
+            forKey: .multipleReplyVariantsEnabled
+        ) ?? SyncedField(
+            value: true,
             updatedAt: keyboardHapticIntensity.updatedAt,
             deviceID: keyboardHapticIntensity.deviceID
         )
@@ -251,6 +267,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             keyboardHapticIntensity.updatedAt,
             polishIntensity.updatedAt,
             aiResponseLength.updatedAt,
+            multipleReplyVariantsEnabled.updatedAt,
             activePolishStyleId.updatedAt,
             llmThinkingEnabled.updatedAt,
             flowSkipAppSwitch.updatedAt,
@@ -278,6 +295,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         try container.encode(keyboardHapticIntensity, forKey: .keyboardHapticIntensity)
         try container.encode(polishIntensity, forKey: .polishIntensity)
         try container.encode(aiResponseLength, forKey: .aiResponseLength)
+        try container.encode(multipleReplyVariantsEnabled, forKey: .multipleReplyVariantsEnabled)
         try container.encode(activePolishStyleId, forKey: .activePolishStyleId)
         try container.encode(llmThinkingEnabled, forKey: .llmThinkingEnabled)
         try container.encode(flowSkipAppSwitch, forKey: .flowSkipAppSwitch)
@@ -317,6 +335,7 @@ public extension SyncedAppSettingsV2 {
             keyboardHapticIntensity: field(configuration.keyboardHapticIntensity),
             polishIntensity: field(configuration.polishIntensity),
             aiResponseLength: field(configuration.aiResponseLength),
+            multipleReplyVariantsEnabled: field(configuration.multipleReplyVariantsEnabled),
             activePolishStyleId: field(configuration.activePolishStyleId),
             llmThinkingEnabled: field(configuration.llmThinkingEnabled),
             flowSkipAppSwitch: field(configuration.flowSkipAppSwitch),
@@ -349,6 +368,7 @@ public extension SyncedAppSettingsV2 {
             keyboardHapticIntensity: field(KeyboardHapticIntensity.default),
             polishIntensity: field(PolishIntensity.default),
             aiResponseLength: field(AIResponseLength.default),
+            multipleReplyVariantsEnabled: field(true),
             activePolishStyleId: field(PolishStylePackCatalog.defaultID),
             llmThinkingEnabled: field(false),
             flowSkipAppSwitch: field(legacy.flowSkipAppSwitch),
@@ -393,6 +413,10 @@ public extension SyncedAppSettingsV2 {
                 local: local.aiResponseLength,
                 remote: remote.aiResponseLength
             ),
+            multipleReplyVariantsEnabled: .merge(
+                local: local.multipleReplyVariantsEnabled,
+                remote: remote.multipleReplyVariantsEnabled
+            ),
             activePolishStyleId: .merge(
                 local: local.activePolishStyleId,
                 remote: remote.activePolishStyleId
@@ -424,6 +448,7 @@ public extension SyncedAppSettingsV2 {
         configuration.keyboardHapticIntensity = keyboardHapticIntensity.value
         configuration.polishIntensity = polishIntensity.value
         configuration.aiResponseLength = aiResponseLength.value
+        configuration.multipleReplyVariantsEnabled = multipleReplyVariantsEnabled.value
         configuration.activePolishStyleId = activePolishStyleId.value
         configuration.llmThinkingEnabled = llmThinkingEnabled.value
         configuration.flowSkipAppSwitch = flowSkipAppSwitch.value
@@ -454,6 +479,7 @@ public extension SyncedAppSettingsV2 {
         patch(&copy.keyboardHapticIntensity, value: configuration.keyboardHapticIntensity)
         patch(&copy.polishIntensity, value: configuration.polishIntensity)
         patch(&copy.aiResponseLength, value: configuration.aiResponseLength)
+        patch(&copy.multipleReplyVariantsEnabled, value: configuration.multipleReplyVariantsEnabled)
         patch(&copy.activePolishStyleId, value: configuration.activePolishStyleId)
         patch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
         patch(&copy.flowSkipAppSwitch, value: configuration.flowSkipAppSwitch)
@@ -487,6 +513,7 @@ public extension SyncedAppSettingsV2 {
         touch(&copy.keyboardHapticIntensity, value: configuration.keyboardHapticIntensity)
         touch(&copy.polishIntensity, value: configuration.polishIntensity)
         touch(&copy.aiResponseLength, value: configuration.aiResponseLength)
+        touch(&copy.multipleReplyVariantsEnabled, value: configuration.multipleReplyVariantsEnabled)
         touch(&copy.activePolishStyleId, value: configuration.activePolishStyleId)
         touch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
         touch(&copy.flowSkipAppSwitch, value: configuration.flowSkipAppSwitch)

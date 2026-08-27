@@ -9,10 +9,16 @@ private struct CorpusRecord: Codable {
     let language: String
     let split: String
     let family: String
+    let knownLabels: Set<String>?
+    let sourceDataset: String?
     let task: Bool
     let question: Bool
     let invitation: Bool
     let complaint: Bool
+    let scheduleNegotiation: Bool
+    let confirmationDecision: Bool
+    let followUpReminder: Bool
+    let blessing: Bool
     let sentiment: String
     let replyable: Bool
 }
@@ -44,6 +50,7 @@ private struct CandidateReport: Codable {
     let balancedTrainingCount: Int
     let balancedValidationCount: Int
     let threshold: Double?
+    let confidenceThresholdsByLanguage: [String: Double]?
     let acceptedForAutomaticRouting: Bool
     let validationBinary: BinaryMetrics?
     let testBinary: BinaryMetrics?
@@ -53,6 +60,7 @@ private struct CandidateReport: Codable {
     let goldenFalsePositiveExamples: [String]?
     let goldenFalseNegativeExamples: [String]?
     let binaryByLanguage: [String: BinaryMetrics]?
+    let goldenBinaryByLanguage: [String: BinaryMetrics]?
     let validationMulticlass: MulticlassMetrics?
     let testMulticlass: MulticlassMetrics?
     let goldenMulticlass: MulticlassMetrics?
@@ -87,6 +95,7 @@ private struct ManifestClassifier: Codable {
     let labels: [String]
     let positiveLabel: String?
     let confidenceThreshold: Double?
+    let confidenceThresholdsByLanguage: [String: Double]?
     let acceptedForAutomaticRouting: Bool
 }
 
@@ -118,11 +127,19 @@ private enum CandidateAlgorithm: String, CaseIterable {
     }
 }
 
+private let usesBaselineNegativePolicy = CommandLine.arguments.contains(
+    "--baseline-negative-policy"
+)
+
 private enum ClassifierID: String, CaseIterable {
     case task
     case question
     case invitation
     case complaint
+    case scheduleNegotiation
+    case confirmationDecision
+    case followUpReminder
+    case blessing
     case replyableMessage
     case sentiment
 
@@ -132,6 +149,10 @@ private enum ClassifierID: String, CaseIterable {
         case .question: "QuestionIntentClassifier"
         case .invitation: "InvitationIntentClassifier"
         case .complaint: "ComplaintIntentClassifier"
+        case .scheduleNegotiation: "ScheduleNegotiationIntentClassifier"
+        case .confirmationDecision: "ConfirmationDecisionIntentClassifier"
+        case .followUpReminder: "FollowUpReminderIntentClassifier"
+        case .blessing: "BlessingIntentClassifier"
         case .replyableMessage: "ConversationalReplyIntentClassifier"
         case .sentiment: "SentimentClassifier"
         }
@@ -143,6 +164,10 @@ private enum ClassifierID: String, CaseIterable {
         case .question: ["notQuestion", "question"]
         case .invitation: ["notInvitation", "invitation"]
         case .complaint: ["notComplaint", "complaint"]
+        case .scheduleNegotiation: ["notScheduleNegotiation", "scheduleNegotiation"]
+        case .confirmationDecision: ["notConfirmationDecision", "confirmationDecision"]
+        case .followUpReminder: ["notFollowUpReminder", "followUpReminder"]
+        case .blessing: ["notBlessing", "blessing"]
         case .replyableMessage: ["notReplyableMessage", "replyableMessage"]
         case .sentiment: ["negative", "neutral", "positive"]
         }
@@ -154,8 +179,143 @@ private enum ClassifierID: String, CaseIterable {
         case .question: "question"
         case .invitation: "invitation"
         case .complaint: "complaint"
+        case .scheduleNegotiation: "scheduleNegotiation"
+        case .confirmationDecision: "confirmationDecision"
+        case .followUpReminder: "followUpReminder"
+        case .blessing: "blessing"
         case .replyableMessage: "replyableMessage"
         case .sentiment: nil
+        }
+    }
+
+    var hardNegativeFamilies: Set<String> {
+        switch self {
+        case .task:
+            return [
+                "complaint_implicit_failure",
+                "complaint_incident_diverse",
+                "complaint_request",
+                "complaint_statement",
+                "confirmation_decision",
+                "confirmation_selection_short",
+                "event_statement",
+                "follow_up_personal_reminder",
+                "neutral_fact",
+                "personal_action_item_boundary",
+                "resolved_issue_boundary",
+                "self_plan"
+            ]
+        case .invitation:
+            return [
+                "event_statement",
+                "schedule_negotiation",
+                "task_question",
+                "task_statement"
+            ]
+        case .complaint:
+            return [
+                "information_question",
+                "negative_news",
+                "neutral_fact",
+                "personal_action_item_boundary",
+                "positive_feedback",
+                "quoted_question",
+                "resolved_issue_boundary",
+                "self_plan",
+                "task_assignment_diverse",
+                "task_completion_boundary",
+                "task_indirect_assignment",
+                "task_indirect_question",
+                "task_statement"
+            ]
+        case .scheduleNegotiation:
+            if usesBaselineNegativePolicy {
+                return [
+                    "event_statement",
+                    "information_question",
+                    "invitation_question",
+                    "schedule_fixed_invitation_boundary",
+                    "task_question",
+                    "task_statement",
+                    "vague_future_boundary"
+                ]
+            }
+            return [
+                "event_statement",
+                "confirmation_decision",
+                "confirmation_selection_short",
+                "follow_up_action",
+                "follow_up_triggered",
+                "information_question",
+                "invitation_question",
+                "schedule_fixed_invitation_boundary",
+                "task_question",
+                "task_statement",
+                "vague_future_boundary"
+            ]
+        case .confirmationDecision:
+            return [
+                "acknowledgment_decision_boundary",
+                "event_statement",
+                "follow_up_action",
+                "follow_up_personal_reminder",
+                "follow_up_triggered",
+                "neutral_fact",
+                "negative_news",
+                "schedule_negotiation",
+                "task_assignment_diverse",
+                "task_statement",
+                "vague_future_boundary"
+            ]
+        case .followUpReminder:
+            return [
+                "acknowledgment",
+                "complaint_request",
+                "confirmation_decision",
+                "confirmation_selection_short",
+                "event_statement",
+                "invitation_question",
+                "neutral_fact",
+                "positive_feedback",
+                "schedule_negotiation",
+                "self_plan",
+                "task_assignment_diverse",
+                "task_question",
+                "task_statement",
+                "vague_future_boundary"
+            ]
+        case .blessing:
+            return [
+                "acknowledgment",
+                "blessing_boundary",
+                "conversational_message",
+                "event_statement",
+                "invitation_question",
+                "neutral_fact",
+                "positive_feedback",
+                "quoted_question",
+                "task_question",
+                "task_statement"
+            ]
+        case .question, .replyableMessage, .sentiment:
+            return []
+        }
+    }
+
+    var hardNegativeFraction: Double {
+        switch self {
+        case .task:
+            0.65
+        case .complaint, .blessing:
+            0.65
+        case .invitation, .followUpReminder:
+            0.50
+        case .scheduleNegotiation:
+            0.75
+        case .confirmationDecision:
+            0.90
+        case .question, .replyableMessage, .sentiment:
+            0
         }
     }
 
@@ -165,9 +325,21 @@ private enum ClassifierID: String, CaseIterable {
         case .question: record.question ? "question" : "notQuestion"
         case .invitation: record.invitation ? "invitation" : "notInvitation"
         case .complaint: record.complaint ? "complaint" : "notComplaint"
+        case .scheduleNegotiation:
+            record.scheduleNegotiation ? "scheduleNegotiation" : "notScheduleNegotiation"
+        case .confirmationDecision:
+            record.confirmationDecision ? "confirmationDecision" : "notConfirmationDecision"
+        case .followUpReminder:
+            record.followUpReminder ? "followUpReminder" : "notFollowUpReminder"
+        case .blessing:
+            record.blessing ? "blessing" : "notBlessing"
         case .replyableMessage: record.replyable ? "replyableMessage" : "notReplyableMessage"
         case .sentiment: record.sentiment
         }
+    }
+
+    func hasKnownLabel(in record: CorpusRecord) -> Bool {
+        record.knownLabels?.contains(rawValue) ?? true
     }
 }
 
@@ -195,14 +367,36 @@ private struct TrainedCandidate {
 
 private let fileManager = FileManager.default
 private let repositoryRoot = URL(fileURLWithPath: fileManager.currentDirectoryPath)
-private let corpusURL = repositoryRoot
-    .appendingPathComponent("ModelTraining/ClipboardSemantics/clipboard_semantic_corpus.jsonl")
-private let candidateDirectory = repositoryRoot
-    .appendingPathComponent("ModelTraining/ClipboardSemantics/Candidates")
-private let resourceDirectory = repositoryRoot
-    .appendingPathComponent("OSGKeyboardShared/Resources/ClipboardSemantics")
-private let reportURL = repositoryRoot
-    .appendingPathComponent("ModelTraining/ClipboardSemantics/evaluation-report.json")
+
+private func commandLineValue(after flag: String) -> String? {
+    guard let index = CommandLine.arguments.firstIndex(of: flag),
+          CommandLine.arguments.indices.contains(index + 1) else {
+        return nil
+    }
+    return CommandLine.arguments[index + 1]
+}
+
+private func resolvedURL(flag: String, defaultPath: String) -> URL {
+    let path = commandLineValue(after: flag) ?? defaultPath
+    return URL(fileURLWithPath: path, relativeTo: repositoryRoot).standardizedFileURL
+}
+
+private let corpusURL = resolvedURL(
+    flag: "--corpus",
+    defaultPath: "ModelTraining/ClipboardSemantics/clipboard_semantic_corpus.jsonl"
+)
+private let candidateDirectory = resolvedURL(
+    flag: "--candidate-directory",
+    defaultPath: "ModelTraining/ClipboardSemantics/Candidates"
+)
+private let resourceDirectory = resolvedURL(
+    flag: "--resource-directory",
+    defaultPath: "OSGKeyboardShared/Resources/ClipboardSemantics"
+)
+private let reportURL = resolvedURL(
+    flag: "--report",
+    defaultPath: "ModelTraining/ClipboardSemantics/evaluation-report.json"
+)
 
 private func loadCorpus() throws -> [CorpusRecord] {
     let content = try String(contentsOf: corpusURL, encoding: .utf8)
@@ -217,6 +411,85 @@ private func stableSeed(for classifier: ClassifierID, split: String) -> UInt64 {
     return material.utf8.reduce(0xcbf2_9ce4_8422_2325) { partial, byte in
         (partial ^ UInt64(byte)) &* 0x0000_0100_0000_01B3
     }
+}
+
+private func sourceBalancedPrefix(
+    _ records: [CorpusRecord],
+    limit: Int,
+    classifier: ClassifierID,
+    label: String
+) -> [CorpusRecord] {
+    guard records.count > limit else { return records }
+    var grouped = Dictionary(grouping: records) {
+        $0.sourceDataset ?? "generated"
+    }
+    for source in grouped.keys.sorted() {
+        var generator = SeededGenerator(
+            seed: stableSeed(
+                for: classifier,
+                split: "open|\(label)|\(source)"
+            )
+        )
+        grouped[source]?.shuffle(using: &generator)
+    }
+    let sources = grouped.keys.sorted()
+    var offsets = Dictionary(uniqueKeysWithValues: sources.map { ($0, 0) })
+    var selected: [CorpusRecord] = []
+    while selected.count < limit {
+        var addedRecord = false
+        for source in sources where selected.count < limit {
+            let offset = offsets[source] ?? 0
+            guard let values = grouped[source], values.indices.contains(offset) else {
+                continue
+            }
+            selected.append(values[offset])
+            offsets[source] = offset + 1
+            addedRecord = true
+        }
+        if !addedRecord {
+            break
+        }
+    }
+    return selected
+}
+
+private func curatedTrainingRecords(
+    _ records: [CorpusRecord],
+    classifier: ClassifierID
+) -> [CorpusRecord] {
+    let knownRecords = records.filter {
+        classifier.hasKnownLabel(in: $0)
+    }
+    let generatedRecords = knownRecords.filter { $0.sourceDataset == nil }
+    let openRecords = knownRecords.filter { $0.sourceDataset != nil }
+    guard !openRecords.isEmpty else { return generatedRecords }
+
+    let generatedByLabel = Dictionary(grouping: generatedRecords) {
+        classifier.label(for: $0)
+    }
+    let openByLabel = Dictionary(grouping: openRecords) {
+        classifier.label(for: $0)
+    }
+    let multiplier = switch classifier {
+    case .blessing:
+        2.0
+    case .task, .question, .complaint, .confirmationDecision, .sentiment:
+        1.0
+    case .invitation, .scheduleNegotiation, .followUpReminder, .replyableMessage:
+        0.5
+    }
+
+    let selectedOpenRecords = classifier.labels.flatMap { label in
+        let generatedCount = generatedByLabel[label]?.count ?? 0
+        let limit = max(1, Int((Double(generatedCount) * multiplier).rounded()))
+        return sourceBalancedPrefix(
+            openByLabel[label] ?? [],
+            limit: limit,
+            classifier: classifier,
+            label: label
+        )
+    }
+    return generatedRecords + selectedOpenRecords
 }
 
 private func balancedTexts(
@@ -236,10 +509,31 @@ private func balancedTexts(
         var generator = SeededGenerator(
             seed: stableSeed(for: classifier, split: split) &+ UInt64(offset)
         )
-        let texts = (grouped[label] ?? [])
-            .map(\.text)
-            .shuffled(using: &generator)
-        result[label] = Array(texts.prefix(minimumCount))
+        let candidates = grouped[label] ?? []
+        if label != classifier.positiveLabel,
+           !classifier.hardNegativeFamilies.isEmpty,
+           classifier.hardNegativeFraction > 0 {
+            var hardNegatives = candidates
+                .filter { classifier.hardNegativeFamilies.contains($0.family) }
+                .map(\.text)
+                .shuffled(using: &generator)
+            var remaining = candidates
+                .filter { !classifier.hardNegativeFamilies.contains($0.family) }
+                .map(\.text)
+                .shuffled(using: &generator)
+            let requestedHardNegatives = Int(
+                (Double(minimumCount) * classifier.hardNegativeFraction).rounded(.down)
+            )
+            let hardNegativeCount = min(hardNegatives.count, requestedHardNegatives)
+            hardNegatives = Array(hardNegatives.prefix(hardNegativeCount))
+            remaining = Array(remaining.prefix(minimumCount - hardNegativeCount))
+            result[label] = hardNegatives + remaining
+        } else {
+            let texts = candidates
+                .map(\.text)
+                .shuffled(using: &generator)
+            result[label] = Array(texts.prefix(minimumCount))
+        }
     }
     return result
 }
@@ -305,6 +599,57 @@ private func binaryMetrics(
     )
 }
 
+private func binaryMetrics(
+    records: [CorpusRecord],
+    classifier: ClassifierID,
+    positiveLabel: String,
+    globalThreshold: Double,
+    thresholdsByLanguage: [String: Double],
+    scores: [Double]
+) -> BinaryMetrics {
+    precondition(records.count == scores.count)
+    let predictions = zip(records, scores).map { record, score in
+        score >= (thresholdsByLanguage[record.language] ?? globalThreshold)
+    }
+    var truePositive = 0
+    var trueNegative = 0
+    var falsePositive = 0
+    var falseNegative = 0
+    for (record, predictedPositive) in zip(records, predictions) {
+        let expectedPositive = classifier.label(for: record) == positiveLabel
+        switch (expectedPositive, predictedPositive) {
+        case (true, true): truePositive += 1
+        case (false, false): trueNegative += 1
+        case (false, true): falsePositive += 1
+        case (true, false): falseNegative += 1
+        }
+    }
+    let total = records.count
+    let precision = truePositive + falsePositive > 0
+        ? Double(truePositive) / Double(truePositive + falsePositive)
+        : 0
+    let recall = truePositive + falseNegative > 0
+        ? Double(truePositive) / Double(truePositive + falseNegative)
+        : 0
+    return BinaryMetrics(
+        total: total,
+        truePositive: truePositive,
+        trueNegative: trueNegative,
+        falsePositive: falsePositive,
+        falseNegative: falseNegative,
+        accuracy: rounded(
+            total > 0 ? Double(truePositive + trueNegative) / Double(total) : 0
+        ),
+        precision: rounded(precision),
+        recall: rounded(recall),
+        f1: rounded(
+            precision + recall > 0
+                ? 2 * precision * recall / (precision + recall)
+                : 0
+        )
+    )
+}
+
 private func scores(
     classifier: MLTextClassifier,
     records: [CorpusRecord],
@@ -320,6 +665,7 @@ private func binaryErrorExamples(
     classifier: ClassifierID,
     positiveLabel: String,
     threshold: Double,
+    thresholdsByLanguage: [String: Double] = [:],
     scores: [Double],
     expectedPositive: Bool,
     predictedPositive: Bool,
@@ -327,7 +673,8 @@ private func binaryErrorExamples(
 ) -> [String] {
     zip(records, scores).compactMap { record, score -> String? in
         let isExpectedPositive = classifier.label(for: record) == positiveLabel
-        let isPredictedPositive = score >= threshold
+        let effectiveThreshold = thresholdsByLanguage[record.language] ?? threshold
+        let isPredictedPositive = score >= effectiveThreshold
         guard isExpectedPositive == expectedPositive,
               isPredictedPositive == predictedPositive else {
             return nil
@@ -347,7 +694,15 @@ private func calibratedThreshold(
     var candidates: [(Double, BinaryMetrics)] = []
     // Low-confidence positives are too unstable for automatic keyboard
     // routing even when a synthetic validation split happens to accept them.
-    for integer in 60...99 {
+    let minimumThreshold = switch classifierID {
+    case .scheduleNegotiation, .confirmationDecision:
+        30
+    case .followUpReminder:
+        58
+    default:
+        60
+    }
+    for integer in minimumThreshold...99 {
         let threshold = Double(integer) / 100
         candidates.append(
             (
@@ -366,6 +721,11 @@ private func calibratedThreshold(
     let highPrecision = candidates.filter { $0.1.precision >= 0.97 }
     if let best = highPrecision.max(by: {
         if $0.1.recall == $1.1.recall {
+            if $0.1.precision == $1.1.precision {
+                // Prefer the lowest threshold on an identical validation
+                // plateau so held-out paraphrases are not needlessly lost.
+                return $0.0 > $1.0
+            }
             return $0.1.precision < $1.1.precision
         }
         return $0.1.recall < $1.1.recall
@@ -380,6 +740,40 @@ private func calibratedThreshold(
             threshold: 0.50,
             scores: scores
         ))
+}
+
+private func calibratedThresholdsByLanguage(
+    records: [CorpusRecord],
+    classifierID: ClassifierID,
+    positiveLabel: String,
+    scores: [Double],
+    minimumPerClass: Int = 20
+) -> [String: Double] {
+    var result: [String: Double] = [:]
+    for language in Set(records.map(\.language)).sorted() {
+        let indexed = records.enumerated().filter { $0.element.language == language }
+        let languageRecords = indexed.map(\.element)
+        let positiveCount = languageRecords.filter {
+            classifierID.label(for: $0) == positiveLabel
+        }.count
+        let negativeCount = languageRecords.count - positiveCount
+        guard positiveCount >= minimumPerClass, negativeCount >= minimumPerClass else {
+            print(
+                "CALIBRATION_SKIPPED classifier=\(classifierID.rawValue) "
+                    + "language=\(language) positives=\(positiveCount) negatives=\(negativeCount)"
+            )
+            continue
+        }
+        let languageScores = indexed.map { scores[$0.offset] }
+        let calibration = calibratedThreshold(
+            records: languageRecords,
+            classifierID: classifierID,
+            positiveLabel: positiveLabel,
+            scores: languageScores
+        )
+        result[language] = rounded(calibration.threshold)
+    }
+    return result
 }
 
 private func multiclassMetrics(
@@ -462,8 +856,16 @@ private func train(
     testRecords: [CorpusRecord],
     goldenRecords: [CorpusRecord]
 ) throws -> TrainedCandidate {
+    // Open datasets often annotate only a subset of product intents. Excluding
+    // unknown labels prevents an unannotated intent from becoming a false negative.
+    // Source-balanced caps then preserve the reviewed base corpus as the boundary
+    // anchor instead of allowing one large dataset to dominate model weights.
+    let knownTrainingRecords = curatedTrainingRecords(
+        trainingRecords,
+        classifier: classifierID
+    )
     let trainingTexts = balancedTexts(
-        records: trainingRecords,
+        records: knownTrainingRecords,
         classifier: classifierID,
         split: "train"
     )
@@ -524,6 +926,15 @@ private func train(
             positiveLabel: positiveLabel,
             scores: validationScores
         )
+        let calibratedLanguageThresholds = calibratedThresholdsByLanguage(
+            records: validationRecords,
+            classifierID: classifierID,
+            positiveLabel: positiveLabel,
+            scores: validationScores
+        )
+        let thresholdsByLanguage = calibratedLanguageThresholds.mapValues {
+            max($0, rounded(calibration.threshold))
+        }
         let testScores = try scores(
             classifier: classifier,
             records: testRecords,
@@ -533,7 +944,8 @@ private func train(
             records: testRecords,
             classifier: classifierID,
             positiveLabel: positiveLabel,
-            threshold: calibration.threshold,
+            globalThreshold: calibration.threshold,
+            thresholdsByLanguage: thresholdsByLanguage,
             scores: testScores
         )
         let goldenScores = try scores(
@@ -545,7 +957,8 @@ private func train(
             records: goldenRecords,
             classifier: classifierID,
             positiveLabel: positiveLabel,
-            threshold: calibration.threshold,
+            globalThreshold: calibration.threshold,
+            thresholdsByLanguage: thresholdsByLanguage,
             scores: goldenScores
         )
         var byLanguage: [String: BinaryMetrics] = [:]
@@ -557,8 +970,19 @@ private func train(
                 records: records,
                 classifier: classifierID,
                 positiveLabel: positiveLabel,
-                threshold: calibration.threshold,
+                threshold: thresholdsByLanguage[language] ?? calibration.threshold,
                 scores: languageScores
+            )
+        }
+        var goldenByLanguage: [String: BinaryMetrics] = [:]
+        for language in Set(goldenRecords.map(\.language)).sorted() {
+            let indexed = goldenRecords.enumerated().filter { $0.element.language == language }
+            goldenByLanguage[language] = binaryMetrics(
+                records: indexed.map(\.element),
+                classifier: classifierID,
+                positiveLabel: positiveLabel,
+                threshold: thresholdsByLanguage[language] ?? calibration.threshold,
+                scores: indexed.map { goldenScores[$0.offset] }
             )
         }
         report = CandidateReport(
@@ -568,6 +992,8 @@ private func train(
             balancedTrainingCount: totalCount(trainingTexts),
             balancedValidationCount: totalCount(validationTexts),
             threshold: rounded(calibration.threshold),
+            confidenceThresholdsByLanguage:
+                thresholdsByLanguage.isEmpty ? nil : thresholdsByLanguage,
             acceptedForAutomaticRouting: algorithm == .maxEnt
                 && calibration.metrics.precision >= 0.97
                 && testMetrics.precision >= 0.90
@@ -580,6 +1006,7 @@ private func train(
                 classifier: classifierID,
                 positiveLabel: positiveLabel,
                 threshold: calibration.threshold,
+                thresholdsByLanguage: thresholdsByLanguage,
                 scores: testScores,
                 expectedPositive: false,
                 predictedPositive: true
@@ -589,6 +1016,7 @@ private func train(
                 classifier: classifierID,
                 positiveLabel: positiveLabel,
                 threshold: calibration.threshold,
+                thresholdsByLanguage: thresholdsByLanguage,
                 scores: testScores,
                 expectedPositive: true,
                 predictedPositive: false
@@ -598,6 +1026,7 @@ private func train(
                 classifier: classifierID,
                 positiveLabel: positiveLabel,
                 threshold: calibration.threshold,
+                thresholdsByLanguage: thresholdsByLanguage,
                 scores: goldenScores,
                 expectedPositive: false,
                 predictedPositive: true
@@ -607,11 +1036,13 @@ private func train(
                 classifier: classifierID,
                 positiveLabel: positiveLabel,
                 threshold: calibration.threshold,
+                thresholdsByLanguage: thresholdsByLanguage,
                 scores: goldenScores,
                 expectedPositive: true,
                 predictedPositive: false
             ),
             binaryByLanguage: byLanguage,
+            goldenBinaryByLanguage: goldenByLanguage,
             validationMulticlass: nil,
             testMulticlass: nil,
             goldenMulticlass: nil,
@@ -658,6 +1089,7 @@ private func train(
             balancedTrainingCount: totalCount(trainingTexts),
             balancedValidationCount: totalCount(validationTexts),
             threshold: nil,
+            confidenceThresholdsByLanguage: nil,
             acceptedForAutomaticRouting: algorithm == .maxEnt
                 && validationMetrics.macroF1 >= 0.85
                 && testMetrics.macroF1 >= 0.85
@@ -670,6 +1102,7 @@ private func train(
             goldenFalsePositiveExamples: nil,
             goldenFalseNegativeExamples: nil,
             binaryByLanguage: nil,
+            goldenBinaryByLanguage: nil,
             validationMulticlass: validationMetrics,
             testMulticlass: testMetrics,
             goldenMulticlass: goldenMetrics,
@@ -723,7 +1156,7 @@ private func selectedAlgorithms() -> [CandidateAlgorithm] {
     guard let index = CommandLine.arguments.firstIndex(of: "--algorithms"),
           CommandLine.arguments.indices.contains(index + 1)
     else {
-        return CandidateAlgorithm.allCases
+        return [.maxEnt]
     }
     let requested = Set(
         CommandLine.arguments[index + 1]
@@ -834,6 +1267,8 @@ private func main() throws {
                 labels: classifierID.labels,
                 positiveLabel: classifierID.positiveLabel,
                 confidenceThreshold: selected.report.threshold,
+                confidenceThresholdsByLanguage:
+                    selected.report.confidenceThresholdsByLanguage,
                 acceptedForAutomaticRouting: selected.report.acceptedForAutomaticRouting
             )
         )
@@ -845,14 +1280,18 @@ private func main() throws {
 
     let report = TrainingReport(
         generatedAt: generatedAt,
-        corpusPath: "ModelTraining/ClipboardSemantics/clipboard_semantic_corpus.jsonl",
+        corpusPath: corpusURL.path,
         corpusCount: records.count,
         trainingCount: trainingRecords.count,
         validationCount: validationRecords.count,
         testCount: testRecords.count,
         goldenCount: goldenRecords.count,
         selectionPolicy:
-            "Validation only: binary models require precision >= 0.97, then maximize recall; "
+            "Open records with unknown labels are excluded per classifier, and source-balanced "
+            + "caps anchor each label to the reviewed generated corpus size. "
+            + "Validation only: global and per-language binary thresholds require precision "
+            + ">= 0.97, then maximize recall; languages with fewer than 20 examples per class "
+            + "fall back to the global threshold. "
             + "sentiment prioritizes macro-F1. Automatic routing also requires a self-contained "
             + "maxEnt model because BERT embedding assets are not guaranteed in extensions. "
             + "Test and golden data gate deployment but never tune model weights.",
@@ -861,7 +1300,7 @@ private func main() throws {
     try writeJSON(report, to: reportURL)
     try writeJSON(
         ModelManifest(
-            schemaVersion: 1,
+            schemaVersion: 2,
             generatedAt: generatedAt,
             corpusRecordCount: records.count,
             classifiers: manifestClassifiers

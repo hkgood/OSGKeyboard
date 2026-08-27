@@ -71,7 +71,9 @@ public struct AIClipboardSkill: Identifiable, Equatable, Sendable {
     public var isUserCreated: Bool { id.hasPrefix("user.") }
     public var isOfficial: Bool { id.hasPrefix("official.") }
     public var supportsReplyStyle: Bool {
-        AIClipboardSkillCatalog.replyStyleSkillIDs.contains(id)
+        AIClipboardSkillCatalog.replyStyleSkillIDs.contains(
+            AIClipboardSkillCatalog.canonicalID(for: id)
+        )
     }
     /// The server applies the final model policy; this only preserves whether
     /// the user invoked a built-in transform or a custom skill.
@@ -132,19 +134,19 @@ public enum AIClipboardSkillCatalog: Sendable {
     public static let acceptTaskID = "acceptTask"
     public static let clarifyRequestID = "clarifyRequest"
     public static let empathyReplyID = "empathyReply"
+    public static let blessingReplyID = "blessingReply"
     /// Legacy ID consolidated into `clarifyRequestID`.
     public static let askForDetailsID = "askForDetails"
     public static let businessReplyID = "businessReply"
     public static let organizeListID = "organizeList"
     public static let replyStyleSkillIDs: Set<String> = [
         replyID,
-        playfulReplyID,
         acceptInvitationID,
         declineInvitationID,
         acceptTaskID,
         clarifyRequestID,
         empathyReplyID,
-        businessReplyID
+        blessingReplyID
     ]
     /// Contextual system actions remain available to semantic ranking but are
     /// not user-managed entries in the host app's Skills catalog.
@@ -152,6 +154,7 @@ public enum AIClipboardSkillCatalog: Sendable {
         replyID,
         declineInvitationID,
         empathyReplyID,
+        blessingReplyID,
         acceptInvitationID,
         callPhoneID,
         createContactID,
@@ -179,15 +182,6 @@ public enum AIClipboardSkillCatalog: Sendable {
             titleKey: "keyboard.ai.skill.reply",
             cardTitleKey: "skills.reply.name",
             descriptionKey: "skills.reply.description",
-            kind: .transform,
-            isDefault: true
-        ),
-        AIClipboardSkill(
-            id: playfulReplyID,
-            systemImage: "theatermasks.fill",
-            titleKey: "keyboard.ai.skill.playfulReply",
-            cardTitleKey: "skills.playfulReply.name",
-            descriptionKey: "skills.playfulReply.description",
             kind: .transform,
             isDefault: true
         ),
@@ -291,11 +285,11 @@ public enum AIClipboardSkillCatalog: Sendable {
             isDefault: true
         ),
         AIClipboardSkill(
-            id: businessReplyID,
-            systemImage: "briefcase.fill",
-            titleKey: "keyboard.ai.skill.businessReply",
-            cardTitleKey: "skills.businessReply.name",
-            descriptionKey: "skills.businessReply.description",
+            id: blessingReplyID,
+            systemImage: "party.popper.fill",
+            titleKey: "keyboard.ai.skill.blessingReply",
+            cardTitleKey: "skills.blessingReply.name",
+            descriptionKey: "skills.blessingReply.description",
             kind: .transform,
             isDefault: true
         ),
@@ -352,12 +346,35 @@ public enum AIClipboardSkillCatalog: Sendable {
         )
     ]
 
+    /// Hidden compatibility objects for stale direct lookups. They are not
+    /// part of `catalog`, defaults, skill management, or keyboard visibility.
+    private static let legacyReplySkills: [String: AIClipboardSkill] = [
+        playfulReplyID: AIClipboardSkill(
+            id: playfulReplyID,
+            systemImage: "theatermasks.fill",
+            titleKey: "keyboard.ai.skill.playfulReply",
+            cardTitleKey: "skills.playfulReply.name",
+            descriptionKey: "skills.playfulReply.description",
+            kind: .transform,
+            isDefault: false
+        ),
+        businessReplyID: AIClipboardSkill(
+            id: businessReplyID,
+            systemImage: "briefcase.fill",
+            titleKey: "keyboard.ai.skill.businessReply",
+            cardTitleKey: "skills.businessReply.name",
+            descriptionKey: "skills.businessReply.description",
+            kind: .transform,
+            isDefault: false
+        )
+    ]
+
     /// Legacy alias: the three default transform skills used to be the whole list.
     public static let builtIn: [AIClipboardSkill] = catalog
 
     public static func canonicalID(for id: String) -> String {
         switch id {
-        case replyInSourceLanguageID:
+        case replyInSourceLanguageID, playfulReplyID, businessReplyID:
             return replyID
         case extractConclusionsID:
             return summarizeID
@@ -396,6 +413,9 @@ public enum AIClipboardSkillCatalog: Sendable {
         uiLanguage: AppUILanguage = .auto,
         preferredLanguages: [String] = Locale.preferredLanguages
     ) -> AIClipboardSkill? {
+        if let legacy = legacyReplySkills[id] {
+            return legacy
+        }
         let resolvedID = canonicalID(for: id)
         return all(
             officialCatalog: officialCatalog,
@@ -486,11 +506,18 @@ public enum AIClipboardSkillCatalog: Sendable {
         now: Date = Date()
     ) -> String {
         let zh = locale == "zh"
-        switch canonicalID(for: skillID) {
+        let instructionID: String
+        switch skillID {
+        case playfulReplyID, businessReplyID:
+            instructionID = skillID
+        default:
+            instructionID = canonicalID(for: skillID)
+        }
+        switch instructionID {
         case replyID:
             return zh
-                ? "请先理解剪贴板内容、对话意图和双方关系，再严格使用原文的主要语言写一段简短、自然、可直接发送的回复。直接回应对方，不要翻译、复述或解释原文，也不要写成正式邮件或客服话术。"
-                : "First understand the clipboard text, conversational intent, and relationship, then write a short, natural, sendable reply strictly in the source text's primary language. Respond directly; do not translate, restate, or explain the source, and do not sound like a formal email or support script."
+                ? "请先理解剪贴板内容、对话意图和双方关系，再严格使用原文的主要语言写一段简短、自然、可直接发送的回复。必须接着对方的话作出回应，不得复述、改写、概括或用同义词重新陈述原文；只有回应确实需要时，才引用最少量关键词。不要翻译或解释原文，也不要写成正式邮件或客服话术。"
+                : "First understand the clipboard text, conversational intent, and relationship, then write a short, natural, sendable reply strictly in the source text's primary language. Continue the conversation by responding to the sender. Never restate, paraphrase, summarize, or synonymically rewrite the source; quote only the minimum keywords genuinely needed for the response. Do not translate or explain the source, and do not sound like a formal email or support script."
         case playfulReplyID:
             return zh
                 ? "请根据剪贴板内容，用原文的主要语言写一段俏皮、有梗、可直接发送的回复，像一个懂分寸的脱口秀演员接话。包袱要短，通常 1～2 句；优先调侃情境，不攻击对方，不拿身份、外貌、隐私、疾病或创伤开玩笑，不编造事实。遇到严肃或敏感内容时收住幽默，改为轻松但尊重的表达。"
@@ -528,6 +555,10 @@ public enum AIClipboardSkillCatalog: Sendable {
             return zh
                 ? "请先用日常口语接住对方的不满，再确认核心问题并给出稳妥下一步。避免“深表歉意”“给您带来不便”等客服模板，不推诿或过度承诺。"
                 : "Respond to the frustration in everyday language, acknowledge the core issue, and give a safe next step. Avoid canned support phrases, deflection, and overpromising."
+        case blessingReplyID:
+            return zh
+                ? "请根据剪贴板中的祝福写一段简短、自然、可直接发送的回复。若祝福是发给用户的，先真诚感谢，再自然回祝；若群聊里是在祝福第三方，就以群成员身份接一句祝福，不要假装自己是收件人。保留节日、生日或人生事件，不虚构关系、经历和承诺。"
+                : "Write a short, natural, sendable response to the blessing in the clipboard. If it is addressed to the user, thank the sender sincerely and return an appropriate wish. If a group message blesses someone else, join the wish as a group member without pretending to be the recipient. Preserve the holiday, birthday, or life event, and invent no relationship, history, or commitment."
         case businessReplyID:
             return zh
                 ? "请写一段专业但不官腔的商务聊天回复，表达直接、自然，保留人名、组织名、时间和承诺边界，可直接发送。不要套用正式邮件开场和结尾。"

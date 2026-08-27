@@ -1,0 +1,1448 @@
+{
+  "binaryMacro" : {
+    "accuracy" : 0.9418,
+    "f1" : 0.6374,
+    "precision" : 0.9492,
+    "recall" : 0.5091
+  },
+  "binaryMacroByLanguage" : {
+    "en" : {
+      "accuracy" : 0.9344,
+      "f1" : 0.5749,
+      "precision" : 0.775,
+      "recall" : 0.4882
+    },
+    "zh-Hans" : {
+      "accuracy" : 0.9492,
+      "f1" : 0.66,
+      "precision" : 0.9929,
+      "recall" : 0.53
+    }
+  },
+  "classifiers" : [
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.9858,
+          "family" : "task_next_action",
+          "id" : "random-20260826-en-task_next_action-016",
+          "language" : "en",
+          "text" : "In short, Your next action is to prepare the budget notes before the next review for the project lead."
+        },
+        {
+          "confidence" : 0.9791,
+          "family" : "task_next_action",
+          "id" : "random-20260826-zh-Hans-task_next_action-004",
+          "language" : "zh-Hans",
+          "text" : "单独记一下，下一步由你整理验收截图，请在两个工作日内交给客服团队。"
+        },
+        {
+          "confidence" : 0.9788,
+          "family" : "task_next_action",
+          "id" : "random-20260826-en-task_next_action-011",
+          "language" : "en",
+          "text" : "Just to add, Your next action is to prepare the test findings within two business days for Finance."
+        },
+        {
+          "confidence" : 0.9785,
+          "family" : "task_next_action",
+          "id" : "random-20260826-en-task_next_action-004",
+          "language" : "en",
+          "text" : "Your next action is to prepare the delivery checklist as this week closes for the project lead."
+        },
+        {
+          "confidence" : 0.9759,
+          "family" : "task_next_action",
+          "id" : "random-20260826-en-task_next_action-017",
+          "language" : "en",
+          "text" : "In short, Your next action is to prepare the budget notes as this week closes for the project lead."
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "task",
+      "metrics" : {
+        "accuracy" : 0.9016,
+        "f1" : 0.3505,
+        "falseNegative" : 63,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.2125,
+        "total" : 640,
+        "trueNegative" : 560,
+        "truePositive" : 17
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.875,
+          "f1" : 0,
+          "falseNegative" : 40,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 320,
+          "trueNegative" : 280,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9281,
+          "f1" : 0.5965,
+          "falseNegative" : 23,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.425,
+          "total" : 320,
+          "trueNegative" : 280,
+          "truePositive" : 17
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9172,
+          "f1" : 0.531,
+          "falseNegative" : 50,
+          "falsePositive" : 3,
+          "precision" : 0.9091,
+          "recall" : 0.375,
+          "total" : 640,
+          "trueNegative" : 557,
+          "truePositive" : 30
+        },
+        "threshold" : 0.93
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9125,
+          "f1" : 0.4717,
+          "falseNegative" : 55,
+          "falsePositive" : 1,
+          "precision" : 0.9615,
+          "recall" : 0.3125,
+          "total" : 640,
+          "trueNegative" : 559,
+          "truePositive" : 25
+        },
+        "threshold" : 0.96
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.8875,
+            "f1" : 0.1818,
+            "falseNegative" : 36,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.1,
+            "total" : 320,
+            "trueNegative" : 280,
+            "truePositive" : 4
+          },
+          "threshold" : 0.97
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9438,
+            "f1" : 0.7273,
+            "falseNegative" : 16,
+            "falsePositive" : 2,
+            "precision" : 0.9231,
+            "recall" : 0.6,
+            "total" : 320,
+            "trueNegative" : 278,
+            "truePositive" : 24
+          },
+          "threshold" : 0.69
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.8875,
+            "f1" : 0.1818,
+            "falseNegative" : 36,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.1,
+            "total" : 320,
+            "trueNegative" : 280,
+            "truePositive" : 4
+          },
+          "threshold" : 0.97
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9375,
+            "f1" : 0.6667,
+            "falseNegative" : 20,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.5,
+            "total" : 320,
+            "trueNegative" : 280,
+            "truePositive" : 20
+          },
+          "threshold" : 0.94
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.5878,
+          "family" : "fixed_invitation",
+          "id" : "random-20260826-en-fixed_invitation-001",
+          "language" : "en",
+          "text" : "Also, I saved you a spot to attend the celebration tomorrow at 10:30 at the cafe downstairs; can you make it?"
+        },
+        {
+          "confidence" : 0.5765,
+          "family" : "complaint_support",
+          "id" : "random-20260826-zh-Hans-complaint_support-006",
+          "language" : "zh-Hans",
+          "text" : "对了，我已经重试三次，还是付款结果重复扣款，导致交付时间被耽误。请问什么时候能处理？"
+        },
+        {
+          "confidence" : 0.5511,
+          "family" : "schedule_negotiation",
+          "id" : "random-20260826-en-schedule_negotiation-009",
+          "language" : "en",
+          "text" : "The original slot is blocked for me; could we swap to Tuesday at 4:30?"
+        },
+        {
+          "confidence" : 0.5472,
+          "family" : "complaint_support",
+          "id" : "random-20260826-zh-Hans-complaint_support-007",
+          "language" : "zh-Hans",
+          "text" : "刚想到，物流状态停了五天到现在没解决，客户已经在催，能给一个明确答复吗？"
+        },
+        {
+          "confidence" : 0.5365,
+          "family" : "schedule_negotiation",
+          "id" : "random-20260826-en-schedule_negotiation-001",
+          "language" : "en",
+          "text" : "In short, I cannot make tomorrow at 10:30. Would late Friday afternoon be workable instead?"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "question",
+      "metrics" : {
+        "accuracy" : 0.9141,
+        "f1" : 0.7925,
+        "falseNegative" : 55,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.6563,
+        "total" : 640,
+        "trueNegative" : 480,
+        "truePositive" : 105
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.8563,
+          "f1" : 0.5965,
+          "falseNegative" : 46,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.425,
+          "total" : 320,
+          "trueNegative" : 240,
+          "truePositive" : 34
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9719,
+          "f1" : 0.9404,
+          "falseNegative" : 9,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.8875,
+          "total" : 320,
+          "trueNegative" : 240,
+          "truePositive" : 71
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9563,
+          "f1" : 0.9108,
+          "falseNegative" : 17,
+          "falsePositive" : 11,
+          "precision" : 0.9286,
+          "recall" : 0.8938,
+          "total" : 640,
+          "trueNegative" : 469,
+          "truePositive" : 143
+        },
+        "threshold" : 0.05
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9531,
+          "f1" : 0.9013,
+          "falseNegative" : 23,
+          "falsePositive" : 7,
+          "precision" : 0.9514,
+          "recall" : 0.8563,
+          "total" : 640,
+          "trueNegative" : 473,
+          "truePositive" : 137
+        },
+        "threshold" : 0.08
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9281,
+            "f1" : 0.8456,
+            "falseNegative" : 17,
+            "falsePositive" : 6,
+            "precision" : 0.913,
+            "recall" : 0.7875,
+            "total" : 320,
+            "trueNegative" : 234,
+            "truePositive" : 63
+          },
+          "threshold" : 0.05
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9875,
+            "f1" : 0.9756,
+            "falseNegative" : 0,
+            "falsePositive" : 4,
+            "precision" : 0.9524,
+            "recall" : 1,
+            "total" : 320,
+            "trueNegative" : 236,
+            "truePositive" : 80
+          },
+          "threshold" : 0.06
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9188,
+            "f1" : 0.8143,
+            "falseNegative" : 23,
+            "falsePositive" : 3,
+            "precision" : 0.95,
+            "recall" : 0.7125,
+            "total" : 320,
+            "trueNegative" : 237,
+            "truePositive" : 57
+          },
+          "threshold" : 0.08
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9875,
+            "f1" : 0.9756,
+            "falseNegative" : 0,
+            "falsePositive" : 4,
+            "precision" : 0.9524,
+            "recall" : 1,
+            "total" : 320,
+            "trueNegative" : 236,
+            "truePositive" : 80
+          },
+          "threshold" : 0.06
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7305,
+          "family" : "fixed_invitation",
+          "id" : "random-20260826-zh-Hans-fixed_invitation-003",
+          "language" : "zh-Hans",
+          "text" : "我给你留了位置，周六傍晚到楼下咖啡店碰面聊方案，能来不？"
+        },
+        {
+          "confidence" : 0.6961,
+          "family" : "fixed_invitation",
+          "id" : "random-20260826-zh-Hans-fixed_invitation-017",
+          "language" : "zh-Hans",
+          "text" : "刚想到，我给你留了位置，明天十点半到客户办公室碰面聊方案，能来不？"
+        },
+        {
+          "confidence" : 0.6813,
+          "family" : "fixed_invitation",
+          "id" : "random-20260826-zh-Hans-fixed_invitation-015",
+          "language" : "zh-Hans",
+          "text" : "补充一下，我给你留了位置，明天十点半到三号会议室参加小范围评审，能来不？"
+        },
+        {
+          "confidence" : 0.5808,
+          "family" : "fixed_invitation",
+          "id" : "random-20260826-zh-Hans-fixed_invitation-001",
+          "language" : "zh-Hans",
+          "text" : "简单说，我给你留了位置，今晚九点到园区北门参加庆功会，能来不？"
+        },
+        {
+          "confidence" : 0.5026,
+          "family" : "fixed_invitation",
+          "id" : "random-20260826-zh-Hans-fixed_invitation-019",
+          "language" : "zh-Hans",
+          "text" : "另外，我给你留了位置，周六傍晚到楼下咖啡店吃顿便饭，能来不？"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "invitation",
+      "metrics" : {
+        "accuracy" : 0.9688,
+        "f1" : 0.6667,
+        "falseNegative" : 20,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.5,
+        "total" : 640,
+        "trueNegative" : 600,
+        "truePositive" : 20
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9625,
+          "f1" : 0.5714,
+          "falseNegative" : 12,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.4,
+          "total" : 320,
+          "trueNegative" : 300,
+          "truePositive" : 8
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.975,
+          "f1" : 0.75,
+          "falseNegative" : 8,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.6,
+          "total" : 320,
+          "trueNegative" : 300,
+          "truePositive" : 12
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9797,
+          "f1" : 0.8219,
+          "falseNegative" : 10,
+          "falsePositive" : 3,
+          "precision" : 0.9091,
+          "recall" : 0.75,
+          "total" : 640,
+          "trueNegative" : 597,
+          "truePositive" : 30
+        },
+        "threshold" : 0.36
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.975,
+          "f1" : 0.7576,
+          "falseNegative" : 15,
+          "falsePositive" : 1,
+          "precision" : 0.9615,
+          "recall" : 0.625,
+          "total" : 640,
+          "trueNegative" : 599,
+          "truePositive" : 25
+        },
+        "threshold" : 0.46
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9938,
+            "f1" : 0.95,
+            "falseNegative" : 1,
+            "falsePositive" : 1,
+            "precision" : 0.95,
+            "recall" : 0.95,
+            "total" : 320,
+            "trueNegative" : 299,
+            "truePositive" : 19
+          },
+          "threshold" : 0.12
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9875,
+            "f1" : 0.8947,
+            "falseNegative" : 3,
+            "falsePositive" : 1,
+            "precision" : 0.9444,
+            "recall" : 0.85,
+            "total" : 320,
+            "trueNegative" : 299,
+            "truePositive" : 17
+          },
+          "threshold" : 0.46
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9938,
+            "f1" : 0.95,
+            "falseNegative" : 1,
+            "falsePositive" : 1,
+            "precision" : 0.95,
+            "recall" : 0.95,
+            "total" : 320,
+            "trueNegative" : 299,
+            "truePositive" : 19
+          },
+          "threshold" : 0.12
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9844,
+            "f1" : 0.8571,
+            "falseNegative" : 5,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.75,
+            "total" : 320,
+            "trueNegative" : 300,
+            "truePositive" : 15
+          },
+          "threshold" : 0.66
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7866,
+          "family" : "complaint_support",
+          "id" : "random-20260826-zh-Hans-complaint_support-005",
+          "language" : "zh-Hans",
+          "text" : "先说重点，我已经重试三次，还是账号又被锁住，导致我无法继续操作。请问什么时候能处理？"
+        },
+        {
+          "confidence" : 0.7672,
+          "family" : "complaint_support",
+          "id" : "random-20260826-zh-Hans-complaint_support-012",
+          "language" : "zh-Hans",
+          "text" : "对了，我已经重试三次，还是付款结果重复扣款，导致工作完全卡住。请问什么时候能处理？"
+        },
+        {
+          "confidence" : 0.7505,
+          "family" : "complaint_support",
+          "id" : "random-20260826-en-complaint_support-009",
+          "language" : "en",
+          "text" : "Also, the account is locked again is still unresolved and my family cannot receive the item. Can I get a clear answer?"
+        },
+        {
+          "confidence" : 0.749,
+          "family" : "complaint_support",
+          "id" : "random-20260826-zh-Hans-complaint_support-019",
+          "language" : "zh-Hans",
+          "text" : "先说重点，付款结果重复扣款到现在没解决，工作完全卡住，能给一个明确答复吗？"
+        },
+        {
+          "confidence" : 0.6596,
+          "family" : "complaint_support",
+          "id" : "random-20260826-zh-Hans-complaint_support-006",
+          "language" : "zh-Hans",
+          "text" : "对了，我已经重试三次，还是付款结果重复扣款，导致交付时间被耽误。请问什么时候能处理？"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.8486,
+          "family" : "information_question",
+          "id" : "random-20260826-en-information_question-016",
+          "language" : "en",
+          "text" : "Also, Where does support coverage stand right now?"
+        },
+        {
+          "confidence" : 0.8486,
+          "family" : "information_question",
+          "id" : "random-20260826-en-information_question-007",
+          "language" : "en",
+          "text" : "In short, Where does support coverage stand right now?"
+        },
+        {
+          "confidence" : 0.8486,
+          "family" : "information_question",
+          "id" : "random-20260826-en-information_question-001",
+          "language" : "en",
+          "text" : "For context, Where does support coverage stand right now?"
+        }
+      ],
+      "id" : "complaint",
+      "metrics" : {
+        "accuracy" : 0.9469,
+        "f1" : 0.3462,
+        "falseNegative" : 31,
+        "falsePositive" : 3,
+        "precision" : 0.75,
+        "recall" : 0.225,
+        "total" : 640,
+        "trueNegative" : 597,
+        "truePositive" : 9
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9344,
+          "f1" : 0.16,
+          "falseNegative" : 18,
+          "falsePositive" : 3,
+          "precision" : 0.4,
+          "recall" : 0.1,
+          "total" : 320,
+          "trueNegative" : 297,
+          "truePositive" : 2
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9594,
+          "f1" : 0.5185,
+          "falseNegative" : 13,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.35,
+          "total" : 320,
+          "trueNegative" : 300,
+          "truePositive" : 7
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9516,
+          "f1" : 0.3673,
+          "falseNegative" : 31,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.225,
+          "total" : 640,
+          "trueNegative" : 600,
+          "truePositive" : 9
+        },
+        "threshold" : 0.85
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9516,
+          "f1" : 0.3673,
+          "falseNegative" : 31,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.225,
+          "total" : 640,
+          "trueNegative" : 600,
+          "truePositive" : 9
+        },
+        "threshold" : 0.85
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9438,
+            "f1" : 0.1818,
+            "falseNegative" : 18,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.1,
+            "total" : 320,
+            "trueNegative" : 300,
+            "truePositive" : 2
+          },
+          "threshold" : 0.85
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9813,
+            "f1" : 0.8235,
+            "falseNegative" : 6,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.7,
+            "total" : 320,
+            "trueNegative" : 300,
+            "truePositive" : 14
+          },
+          "threshold" : 0.35
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9438,
+            "f1" : 0.1818,
+            "falseNegative" : 18,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.1,
+            "total" : 320,
+            "trueNegative" : 300,
+            "truePositive" : 2
+          },
+          "threshold" : 0.85
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9813,
+            "f1" : 0.8235,
+            "falseNegative" : 6,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.7,
+            "total" : 320,
+            "trueNegative" : 300,
+            "truePositive" : 14
+          },
+          "threshold" : 0.35
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.4934,
+          "family" : "schedule_negotiation",
+          "id" : "random-20260826-en-schedule_negotiation-014",
+          "language" : "en",
+          "text" : "By the way, The original slot is blocked for me; could we swap to late Friday afternoon?"
+        },
+        {
+          "confidence" : 0.4267,
+          "family" : "schedule_negotiation",
+          "id" : "random-20260826-zh-Hans-schedule_negotiation-005",
+          "language" : "zh-Hans",
+          "text" : "简单说，原来的时段卡住了，我只能周二四点半，能不能对调？"
+        },
+        {
+          "confidence" : 0.3878,
+          "family" : "schedule_negotiation",
+          "id" : "random-20260826-en-schedule_negotiation-002",
+          "language" : "en",
+          "text" : "The main point is this: The original slot is blocked for me; could we swap to next Monday afternoon?"
+        },
+        {
+          "confidence" : 0.3729,
+          "family" : "schedule_negotiation",
+          "id" : "random-20260826-en-schedule_negotiation-010",
+          "language" : "en",
+          "text" : "One more thing: I cannot make after Monday's stand-up. Would first thing tomorrow be workable instead?"
+        },
+        {
+          "confidence" : 0.3562,
+          "family" : "schedule_negotiation",
+          "id" : "random-20260826-zh-Hans-schedule_negotiation-014",
+          "language" : "zh-Hans",
+          "text" : "单独记一下，周六傍晚赶不过去，换成周四午休后你觉得可行吗？"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.6431,
+          "family" : "conversation",
+          "id" : "random-20260826-en-conversation-020",
+          "language" : "en",
+          "text" : "Just to add, Just letting you know, the demo went better than expected; we can talk later."
+        }
+      ],
+      "id" : "scheduleNegotiation",
+      "metrics" : {
+        "accuracy" : 0.9703,
+        "f1" : 0.6984,
+        "falseNegative" : 18,
+        "falsePositive" : 1,
+        "precision" : 0.9565,
+        "recall" : 0.55,
+        "total" : 640,
+        "trueNegative" : 599,
+        "truePositive" : 22
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9813,
+          "f1" : 0.8333,
+          "falseNegative" : 5,
+          "falsePositive" : 1,
+          "precision" : 0.9375,
+          "recall" : 0.75,
+          "total" : 320,
+          "trueNegative" : 299,
+          "truePositive" : 15
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9594,
+          "f1" : 0.5185,
+          "falseNegative" : 13,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.35,
+          "total" : 320,
+          "trueNegative" : 300,
+          "truePositive" : 7
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9719,
+          "f1" : 0.7188,
+          "falseNegative" : 17,
+          "falsePositive" : 1,
+          "precision" : 0.9583,
+          "recall" : 0.575,
+          "total" : 640,
+          "trueNegative" : 599,
+          "truePositive" : 23
+        },
+        "threshold" : 0.46
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9719,
+          "f1" : 0.7188,
+          "falseNegative" : 17,
+          "falsePositive" : 1,
+          "precision" : 0.9583,
+          "recall" : 0.575,
+          "total" : 640,
+          "trueNegative" : 599,
+          "truePositive" : 23
+        },
+        "threshold" : 0.46
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9844,
+            "f1" : 0.8649,
+            "falseNegative" : 4,
+            "falsePositive" : 1,
+            "precision" : 0.9412,
+            "recall" : 0.8,
+            "total" : 320,
+            "trueNegative" : 299,
+            "truePositive" : 16
+          },
+          "threshold" : 0.46
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.975,
+            "f1" : 0.7647,
+            "falseNegative" : 7,
+            "falsePositive" : 1,
+            "precision" : 0.9286,
+            "recall" : 0.65,
+            "total" : 320,
+            "trueNegative" : 299,
+            "truePositive" : 13
+          },
+          "threshold" : 0.22
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.975,
+            "f1" : 0.75,
+            "falseNegative" : 8,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.6,
+            "total" : 320,
+            "trueNegative" : 300,
+            "truePositive" : 12
+          },
+          "threshold" : 0.65
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.975,
+            "f1" : 0.75,
+            "falseNegative" : 8,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.6,
+            "total" : 320,
+            "trueNegative" : 300,
+            "truePositive" : 12
+          },
+          "threshold" : 0.28
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7506,
+          "family" : "confirmation_decision",
+          "id" : "random-20260826-zh-Hans-confirmation_decision-005",
+          "language" : "zh-Hans",
+          "text" : "刚想到，不用再比较了，就选季度结算，后续都按这个口径走。"
+        },
+        {
+          "confidence" : 0.7328,
+          "family" : "confirmation_decision",
+          "id" : "random-20260826-en-confirmation_decision-011",
+          "language" : "en",
+          "text" : "The main point is this: I formally approve the second quote; start the next steps as this week closes."
+        },
+        {
+          "confidence" : 0.7205,
+          "family" : "confirmation_decision",
+          "id" : "random-20260826-zh-Hans-confirmation_decision-015",
+          "language" : "zh-Hans",
+          "text" : "对了，不用再比较了，就选季度结算，后续都按这个口径走。"
+        },
+        {
+          "confidence" : 0.7075,
+          "family" : "confirmation_decision",
+          "id" : "random-20260826-en-confirmation_decision-017",
+          "language" : "en",
+          "text" : "By the way, No more comparisons: choose the lightweight version and use it as the final direction."
+        },
+        {
+          "confidence" : 0.6937,
+          "family" : "confirmation_decision",
+          "id" : "random-20260826-zh-Hans-confirmation_decision-009",
+          "language" : "zh-Hans",
+          "text" : "单独记一下，不用再比较了，就选第二套报价，后续都按这个口径走。"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "confirmationDecision",
+      "metrics" : {
+        "accuracy" : 0.9656,
+        "f1" : 0.6207,
+        "falseNegative" : 22,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.45,
+        "total" : 640,
+        "trueNegative" : 600,
+        "truePositive" : 18
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9656,
+          "f1" : 0.6207,
+          "falseNegative" : 11,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.45,
+          "total" : 320,
+          "trueNegative" : 300,
+          "truePositive" : 9
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9656,
+          "f1" : 0.6207,
+          "falseNegative" : 11,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.45,
+          "total" : 320,
+          "trueNegative" : 300,
+          "truePositive" : 9
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9844,
+          "f1" : 0.8649,
+          "falseNegative" : 8,
+          "falsePositive" : 2,
+          "precision" : 0.9412,
+          "recall" : 0.8,
+          "total" : 640,
+          "trueNegative" : 598,
+          "truePositive" : 32
+        },
+        "threshold" : 0.6
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9828,
+          "f1" : 0.8451,
+          "falseNegative" : 10,
+          "falsePositive" : 1,
+          "precision" : 0.9677,
+          "recall" : 0.75,
+          "total" : 640,
+          "trueNegative" : 599,
+          "truePositive" : 30
+        },
+        "threshold" : 0.63
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9875,
+            "f1" : 0.9,
+            "falseNegative" : 2,
+            "falsePositive" : 2,
+            "precision" : 0.9,
+            "recall" : 0.9,
+            "total" : 320,
+            "trueNegative" : 298,
+            "truePositive" : 18
+          },
+          "threshold" : 0.6
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 320,
+            "trueNegative" : 300,
+            "truePositive" : 20
+          },
+          "threshold" : 0.35
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9656,
+            "f1" : 0.6207,
+            "falseNegative" : 11,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.45,
+            "total" : 320,
+            "trueNegative" : 300,
+            "truePositive" : 9
+          },
+          "threshold" : 0.76
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 320,
+            "trueNegative" : 300,
+            "truePositive" : 20
+          },
+          "threshold" : 0.35
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7912,
+          "family" : "task_next_action",
+          "id" : "random-20260826-en-task_next_action-012",
+          "language" : "en",
+          "text" : "By the way, Your next action is to prepare the signature page by tomorrow evening for the project lead."
+        },
+        {
+          "confidence" : 0.7875,
+          "family" : "follow_up_reminder",
+          "id" : "random-20260826-en-follow_up_reminder-017",
+          "language" : "en",
+          "text" : "Also, Reminder: contact the account manager before lunch and follow up on the final decision."
+        },
+        {
+          "confidence" : 0.745,
+          "family" : "follow_up_reminder",
+          "id" : "random-20260826-en-follow_up_reminder-015",
+          "language" : "en",
+          "text" : "A quick note: Once the checkup ends, check with the landlord the next day about the delivery date."
+        },
+        {
+          "confidence" : 0.7131,
+          "family" : "follow_up_reminder",
+          "id" : "random-20260826-en-follow_up_reminder-001",
+          "language" : "en",
+          "text" : "By the way, Once the contract is signed, check with the landlord the next day about the delivery date."
+        },
+        {
+          "confidence" : 0.7044,
+          "family" : "task_next_action",
+          "id" : "random-20260826-zh-Hans-task_next_action-008",
+          "language" : "zh-Hans",
+          "text" : "顺便提一句，下一步由你整理预算备注，请在午休前交给供应商。"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.8775,
+          "family" : "information_question",
+          "id" : "random-20260826-en-information_question-005",
+          "language" : "en",
+          "text" : "One more thing: Quick check: who owns the final call on the release?"
+        },
+        {
+          "confidence" : 0.8369,
+          "family" : "information_question",
+          "id" : "random-20260826-en-information_question-006",
+          "language" : "en",
+          "text" : "For context, Quick check: who owns the final call on the release?"
+        }
+      ],
+      "id" : "followUpReminder",
+      "metrics" : {
+        "accuracy" : 0.9391,
+        "f1" : 0.688,
+        "falseNegative" : 37,
+        "falsePositive" : 2,
+        "precision" : 0.9556,
+        "recall" : 0.5375,
+        "total" : 640,
+        "trueNegative" : 558,
+        "truePositive" : 43
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9719,
+          "f1" : 0.88,
+          "falseNegative" : 7,
+          "falsePositive" : 2,
+          "precision" : 0.9429,
+          "recall" : 0.825,
+          "total" : 320,
+          "trueNegative" : 278,
+          "truePositive" : 33
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9063,
+          "f1" : 0.4,
+          "falseNegative" : 30,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.25,
+          "total" : 320,
+          "trueNegative" : 280,
+          "truePositive" : 10
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9484,
+          "f1" : 0.7591,
+          "falseNegative" : 28,
+          "falsePositive" : 5,
+          "precision" : 0.9123,
+          "recall" : 0.65,
+          "total" : 640,
+          "trueNegative" : 555,
+          "truePositive" : 52
+        },
+        "threshold" : 0.61
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9422,
+          "f1" : 0.7087,
+          "falseNegative" : 35,
+          "falsePositive" : 2,
+          "precision" : 0.9574,
+          "recall" : 0.5625,
+          "total" : 640,
+          "trueNegative" : 558,
+          "truePositive" : 45
+        },
+        "threshold" : 0.78
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9844,
+            "f1" : 0.9383,
+            "falseNegative" : 2,
+            "falsePositive" : 3,
+            "precision" : 0.9268,
+            "recall" : 0.95,
+            "total" : 320,
+            "trueNegative" : 277,
+            "truePositive" : 38
+          },
+          "threshold" : 0.69
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9313,
+            "f1" : 0.6452,
+            "falseNegative" : 20,
+            "falsePositive" : 2,
+            "precision" : 0.9091,
+            "recall" : 0.5,
+            "total" : 320,
+            "trueNegative" : 278,
+            "truePositive" : 20
+          },
+          "threshold" : 0.4
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9688,
+            "f1" : 0.8611,
+            "falseNegative" : 9,
+            "falsePositive" : 1,
+            "precision" : 0.9688,
+            "recall" : 0.775,
+            "total" : 320,
+            "trueNegative" : 279,
+            "truePositive" : 31
+          },
+          "threshold" : 0.84
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9344,
+            "f1" : 0.6441,
+            "falseNegative" : 21,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.475,
+            "total" : 320,
+            "trueNegative" : 280,
+            "truePositive" : 19
+          },
+          "threshold" : 0.44
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7591,
+          "family" : "confirmation_decision",
+          "id" : "random-20260826-zh-Hans-confirmation_decision-003",
+          "language" : "zh-Hans",
+          "text" : "我正式确认先灰度发布，请午休前启动后续安排。"
+        },
+        {
+          "confidence" : 0.747,
+          "family" : "task_request",
+          "id" : "random-20260826-zh-Hans-task_request-009",
+          "language" : "zh-Hans",
+          "text" : "简单说，运营还缺交付清单，麻烦午休前补齐后在群里留言。"
+        },
+        {
+          "confidence" : 0.742,
+          "family" : "confirmation_decision",
+          "id" : "random-20260826-zh-Hans-confirmation_decision-014",
+          "language" : "zh-Hans",
+          "text" : "先说重点，不用再比较了，就选线下处理方案，后续都按这个口径走。"
+        },
+        {
+          "confidence" : 0.7383,
+          "family" : "task_request",
+          "id" : "random-20260826-en-task_request-015",
+          "language" : "en",
+          "text" : "For the record, the vendor still needs the test findings; please add it within two business days and leave a note in the group thread."
+        },
+        {
+          "confidence" : 0.7364,
+          "family" : "conversation",
+          "id" : "random-20260826-zh-Hans-conversation-019",
+          "language" : "zh-Hans",
+          "text" : "刚看到你发的照片，突然想到你可能会想知道。"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9896,
+          "family" : "follow_up_reminder",
+          "id" : "random-20260826-zh-Hans-follow_up_reminder-015",
+          "language" : "zh-Hans",
+          "text" : "另外，等复诊结束后第二天再找招聘方确认处理进度，别漏了。"
+        },
+        {
+          "confidence" : 0.9867,
+          "family" : "follow_up_reminder",
+          "id" : "random-20260826-zh-Hans-follow_up_reminder-010",
+          "language" : "zh-Hans",
+          "text" : "单独记一下，等合同盖章后第二天再找仓库负责人确认下一步安排，别漏了。"
+        },
+        {
+          "confidence" : 0.9845,
+          "family" : "negative_news",
+          "id" : "random-20260826-en-negative_news-008",
+          "language" : "en",
+          "text" : "By the way, Data shows that many flights were delayed overnight, with no request for support."
+        },
+        {
+          "confidence" : 0.9831,
+          "family" : "follow_up_reminder",
+          "id" : "random-20260826-zh-Hans-follow_up_reminder-016",
+          "language" : "zh-Hans",
+          "text" : "先说重点，等复诊结束后第二天再找仓库负责人确认下一步安排，别漏了。"
+        },
+        {
+          "confidence" : 0.9806,
+          "family" : "follow_up_reminder",
+          "id" : "random-20260826-zh-Hans-follow_up_reminder-005",
+          "language" : "zh-Hans",
+          "text" : "还有一件事，等样品送达后第二天再找法务确认交付日期，别漏了。"
+        }
+      ],
+      "id" : "replyableMessage",
+      "metrics" : {
+        "accuracy" : 0.9281,
+        "f1" : 0.9365,
+        "falseNegative" : 21,
+        "falsePositive" : 25,
+        "precision" : 0.9313,
+        "recall" : 0.9417,
+        "total" : 640,
+        "trueNegative" : 255,
+        "truePositive" : 339
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9281,
+          "f1" : 0.9373,
+          "falseNegative" : 8,
+          "falsePositive" : 15,
+          "precision" : 0.9198,
+          "recall" : 0.9556,
+          "total" : 320,
+          "trueNegative" : 125,
+          "truePositive" : 172
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9281,
+          "f1" : 0.9356,
+          "falseNegative" : 13,
+          "falsePositive" : 10,
+          "precision" : 0.9435,
+          "recall" : 0.9278,
+          "total" : 320,
+          "trueNegative" : 130,
+          "truePositive" : 167
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9281,
+          "f1" : 0.9387,
+          "falseNegative" : 8,
+          "falsePositive" : 38,
+          "precision" : 0.9026,
+          "recall" : 0.9778,
+          "total" : 640,
+          "trueNegative" : 242,
+          "truePositive" : 352
+        },
+        "threshold" : 0.61
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9203,
+          "f1" : 0.9275,
+          "falseNegative" : 34,
+          "falsePositive" : 17,
+          "precision" : 0.9504,
+          "recall" : 0.9056,
+          "total" : 640,
+          "trueNegative" : 263,
+          "truePositive" : 326
+        },
+        "threshold" : 0.84
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9344,
+            "f1" : 0.944,
+            "falseNegative" : 3,
+            "falsePositive" : 18,
+            "precision" : 0.9077,
+            "recall" : 0.9833,
+            "total" : 320,
+            "trueNegative" : 122,
+            "truePositive" : 177
+          },
+          "threshold" : 0.66
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9281,
+            "f1" : 0.9383,
+            "falseNegative" : 5,
+            "falsePositive" : 18,
+            "precision" : 0.9067,
+            "recall" : 0.9722,
+            "total" : 320,
+            "trueNegative" : 122,
+            "truePositive" : 175
+          },
+          "threshold" : 0.57
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9,
+            "f1" : 0.907,
+            "falseNegative" : 24,
+            "falsePositive" : 8,
+            "precision" : 0.9512,
+            "recall" : 0.8667,
+            "total" : 320,
+            "trueNegative" : 132,
+            "truePositive" : 156
+          },
+          "threshold" : 0.87
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9281,
+            "f1" : 0.9348,
+            "falseNegative" : 15,
+            "falsePositive" : 8,
+            "precision" : 0.9538,
+            "recall" : 0.9167,
+            "total" : 320,
+            "trueNegative" : 132,
+            "truePositive" : 165
+          },
+          "threshold" : 0.84
+        }
+      }
+    }
+  ],
+  "corpusRecordCount" : 640,
+  "exactTrainingOverlapCount" : 0,
+  "familyCount" : 16,
+  "generatedAt" : "2026-08-26T15:16:55Z",
+  "languageCounts" : {
+    "en" : 320,
+    "zh-Hans" : 320
+  },
+  "manifestSchemaVersion" : 2,
+  "seed" : 20260826,
+  "sentiment" : {
+    "accuracy" : 0.7859,
+    "correct" : 503,
+    "macroF1" : 0.6228,
+    "perLabelF1" : {
+      "negative" : 0.36,
+      "neutral" : 0.9222,
+      "positive" : 0.5862
+    },
+    "total" : 640,
+    "unknown" : 107,
+    "unknownRate" : 0.1672
+  }
+}

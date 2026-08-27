@@ -89,6 +89,7 @@ public struct AppGroupStore: @unchecked Sendable {
     public var keyboardHapticIntensity: KeyboardHapticIntensity { configuration.keyboardHapticIntensity }
     public var polishIntensity: PolishIntensity { configuration.polishIntensity }
     public var aiResponseLength: AIResponseLength { configuration.aiResponseLength }
+    public var multipleReplyVariantsEnabled: Bool { configuration.multipleReplyVariantsEnabled }
     public var polishStyleCatalog: PolishStyleCatalog { configuration.polishStyleCatalog }
     public var activePolishStyleId: String { configuration.activePolishStyleId }
     public var activePolishStyle: PolishStylePack {
@@ -192,6 +193,11 @@ public struct AppGroupStore: @unchecked Sendable {
 
     public func setAIResponseLength(_ length: AIResponseLength) {
         mutateConfiguration { $0.aiResponseLength = length }
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
+    public func setMultipleReplyVariantsEnabled(_ enabled: Bool) {
+        mutateConfiguration { $0.multipleReplyVariantsEnabled = enabled }
         AppGroupConfigDarwin.postConfigChanged()
     }
 
@@ -446,6 +452,12 @@ public struct AppGroupStore: @unchecked Sendable {
                     AIClipboardSkillCatalog.organizeListID
                 ])
             }
+            if storedMigrationVersion < 8 {
+                additionIDs.insert(AIClipboardSkillCatalog.blessingReplyID)
+            }
+            // v9 consolidates playful and business reply into Reply. Do not
+            // add Reply here: `sanitized` preserves it only when any reply ID
+            // was enabled, so a user's explicit disabled state stays disabled.
             let additions = catalog.map(\.id).filter {
                 additionIDs.contains($0) && !decoded.enabledIDs.contains($0)
             }
@@ -471,7 +483,7 @@ public struct AppGroupStore: @unchecked Sendable {
         }
     }
 
-    private static let currentAgentSkillDefaultsMigrationVersion = 7
+    private static let currentAgentSkillDefaultsMigrationVersion = 9
 
     private static func decodeUserSkillCatalog(from defaults: UserDefaults) -> AIUserSkillCatalog {
         guard let data = defaults.data(forKey: AppGroupConfiguration.Keys.agentUserSkillCatalog) else {

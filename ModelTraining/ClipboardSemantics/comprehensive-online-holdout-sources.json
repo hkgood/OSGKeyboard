@@ -1,0 +1,166 @@
+{
+  "containsProjectUserClipboardData": false,
+  "corpusSHA256": "34387615f5721dc645edcc7c7feb2bd30b27c362a314aad6159fbc9e5baadf8c",
+  "coverage": {
+    "blessing": {
+      "en": {
+        "negative": 13107,
+        "positive": 69
+      },
+      "zh-Hans": {
+        "negative": 28002,
+        "positive": 17
+      }
+    },
+    "complaint": {
+      "en": {
+        "negative": 12742,
+        "positive": 434
+      },
+      "zh-Hans": {
+        "negative": 27749,
+        "positive": 270
+      }
+    },
+    "confirmationDecision": {
+      "en": {
+        "negative": 13164,
+        "positive": 12
+      },
+      "zh-Hans": {
+        "negative": 27962,
+        "positive": 57
+      }
+    },
+    "followUpReminder": {
+      "en": {
+        "negative": 13051,
+        "positive": 125
+      },
+      "zh-Hans": {
+        "negative": 27754,
+        "positive": 265
+      }
+    },
+    "invitation": {
+      "en": {
+        "negative": 13115,
+        "positive": 61
+      },
+      "zh-Hans": {
+        "negative": 27946,
+        "positive": 73
+      }
+    },
+    "question": {
+      "en": {
+        "negative": 10520,
+        "positive": 2656
+      },
+      "zh-Hans": {
+        "negative": 20835,
+        "positive": 7184
+      }
+    },
+    "replyable": {
+      "en": {
+        "negative": 2295,
+        "positive": 10881
+      },
+      "zh-Hans": {
+        "negative": 1593,
+        "positive": 26426
+      }
+    },
+    "scheduleNegotiation": {
+      "en": {
+        "negative": 13109,
+        "positive": 67
+      },
+      "zh-Hans": {
+        "negative": 28015,
+        "positive": 4
+      }
+    },
+    "task": {
+      "en": {
+        "negative": 12057,
+        "positive": 1119
+      },
+      "zh-Hans": {
+        "negative": 27360,
+        "positive": 659
+      }
+    }
+  },
+  "generatedFromOnlineSources": true,
+  "holdoutPolicy": "Frozen online evaluation only. These records are excluded from training, model selection, and threshold calibration.",
+  "labelCorrection": {
+    "reason": "An initial prelabel audit found obvious surface questions, invitations, schedule alternatives, reminders, and wishes that source intent schemas did not encode. A second audit removed quoted, sarcastic, and substring-only blessing matches. Deterministic label rules were corrected before the frozen evaluation.",
+    "supersededCorpusSHA256": [
+      "36f736f69e0c9ac42262d2b57640f9889534ffdc6e70da67fda6f41d7211b2f9",
+      "baffdfff4b5436810c45d92d28c5885d8ed475b878531220852ae6f2a55011e4"
+    ]
+  },
+  "labelingMethod": "Original dataset labels are retained where available. Product intents not present in source schemas use conservative lexical mapping; metrics must therefore be read with per-source results and label-coverage counts.",
+  "profile": "comprehensive",
+  "recordCount": 41195,
+  "seed": 20260831,
+  "sentimentCoverage": {
+    "en": {
+      "negative": 1605,
+      "neutral": 9578,
+      "positive": 1993
+    },
+    "zh-Hans": {
+      "negative": 11934,
+      "neutral": 10191,
+      "positive": 5894
+    }
+  },
+  "sources": [
+    {
+      "dataset": "CFPB via hpe-ai/customer-complaints",
+      "license": "CC0-1.0 source / Apache-2.0 mirror",
+      "records": 250,
+      "url": "https://huggingface.co/datasets/hpe-ai/customer-complaints"
+    },
+    {
+      "dataset": "Meituan-Dianping/ASAP",
+      "license": "Apache-2.0",
+      "records": 120,
+      "revision": "975122a60065240124df62cb4d5dbfd19ed9ef2c",
+      "url": "https://github.com/Meituan-Dianping/asap"
+    },
+    {
+      "dataset": "AmazonScience/MASSIVE",
+      "license": "CC-BY-4.0",
+      "records": 5817,
+      "url": "https://huggingface.co/datasets/AmazonScience/massive"
+    },
+    {
+      "dataset": "Verified Enron Intent Dataset",
+      "license": "MIT / public Enron source corpus",
+      "records": 3537,
+      "url": "https://github.com/vseledkin/enron_intent_dataset_verified"
+    },
+    {
+      "dataset": "CPED",
+      "license": "Apache-2.0",
+      "records": 25049,
+      "url": "https://github.com/qftie/CPED"
+    },
+    {
+      "dataset": "Google Research GoEmotions",
+      "license": "Apache-2.0",
+      "records": 5418,
+      "url": "https://huggingface.co/datasets/google-research-datasets/go_emotions"
+    },
+    {
+      "dataset": "Sulak2020 GitHub issues multi-repo dataset",
+      "license": "CC-BY-4.0 with per-record attribution",
+      "records": 1004,
+      "url": "https://huggingface.co/datasets/Sulak2020/github-issues-multirepo-datasets-Sulakshana"
+    }
+  ]
+}

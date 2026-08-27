@@ -1,0 +1,1073 @@
+{
+  "binaryMacro" : {
+    "accuracy" : 0.9463,
+    "f1" : 0.481,
+    "precision" : 0.5591,
+    "recall" : 0.4346
+  },
+  "binaryMacroByLanguage" : {
+    "en" : {
+      "accuracy" : 0.9342,
+      "f1" : 0.4483,
+      "precision" : 0.5403,
+      "recall" : 0.4073
+    },
+    "zh-Hans" : {
+      "accuracy" : 0.9584,
+      "f1" : 0.513,
+      "precision" : 0.5933,
+      "recall" : 0.4619
+    }
+  },
+  "classifiers" : [
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.879,
+          "family" : "final_operational_task_boundary",
+          "id" : "random-20260828-en-final_operational_task_boundary-004",
+          "language" : "en",
+          "text" : "The main point is this: Deliver the test findings to Operations before the next review, then close the workflow."
+        },
+        {
+          "confidence" : 0.8734,
+          "family" : "final_task_indirect",
+          "id" : "random-20260828-en-final_task_indirect-003",
+          "language" : "en",
+          "text" : "A quick note: the vendor is counting on you to pick up the retro summary and close it out before month-end."
+        },
+        {
+          "confidence" : 0.8699,
+          "family" : "final_task_question",
+          "id" : "random-20260828-en-final_task_question-006",
+          "language" : "en",
+          "text" : "One more thing: Could the retro summary be left with you for final completion?"
+        },
+        {
+          "confidence" : 0.8665,
+          "family" : "final_task_question",
+          "id" : "random-20260828-en-final_task_question-001",
+          "language" : "en",
+          "text" : "Also, Could the acceptance screenshots be left with you for final completion?"
+        },
+        {
+          "confidence" : 0.8538,
+          "family" : "final_task_direct",
+          "id" : "random-20260828-en-final_task_direct-009",
+          "language" : "en",
+          "text" : "For context, Ownership of the delivery checklist now belongs to you; deliver it to Support as this week closes."
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9322,
+          "family" : "final_complaint_implicit",
+          "id" : "random-20260828-en-final_complaint_implicit-023",
+          "language" : "en",
+          "text" : "Just to add, It is the same outcome again: the account is locked again, repeatedly leaving me with the client is already chasing us."
+        }
+      ],
+      "id" : "task",
+      "metrics" : {
+        "accuracy" : 0.88,
+        "f1" : 0.7818,
+        "falseNegative" : 71,
+        "falsePositive" : 1,
+        "precision" : 0.9923,
+        "recall" : 0.645,
+        "total" : 600,
+        "trueNegative" : 399,
+        "truePositive" : 129
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.8533,
+          "f1" : 0.7215,
+          "falseNegative" : 43,
+          "falsePositive" : 1,
+          "precision" : 0.9828,
+          "recall" : 0.57,
+          "total" : 300,
+          "trueNegative" : 199,
+          "truePositive" : 57
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9067,
+          "f1" : 0.8372,
+          "falseNegative" : 28,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.72,
+          "total" : 300,
+          "trueNegative" : 200,
+          "truePositive" : 72
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9633,
+          "f1" : 0.9471,
+          "falseNegative" : 3,
+          "falsePositive" : 19,
+          "precision" : 0.912,
+          "recall" : 0.985,
+          "total" : 600,
+          "trueNegative" : 381,
+          "truePositive" : 197
+        },
+        "threshold" : 0.12
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.975,
+          "f1" : 0.963,
+          "falseNegative" : 5,
+          "falsePositive" : 10,
+          "precision" : 0.9512,
+          "recall" : 0.975,
+          "total" : 600,
+          "trueNegative" : 390,
+          "truePositive" : 195
+        },
+        "threshold" : 0.17
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9833,
+            "f1" : 0.9756,
+            "falseNegative" : 0,
+            "falsePositive" : 5,
+            "precision" : 0.9524,
+            "recall" : 1,
+            "total" : 300,
+            "trueNegative" : 195,
+            "truePositive" : 100
+          },
+          "threshold" : 0.15
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9567,
+            "f1" : 0.9372,
+            "falseNegative" : 3,
+            "falsePositive" : 10,
+            "precision" : 0.9065,
+            "recall" : 0.97,
+            "total" : 300,
+            "trueNegative" : 190,
+            "truePositive" : 97
+          },
+          "threshold" : 0.12
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9833,
+            "f1" : 0.9756,
+            "falseNegative" : 0,
+            "falsePositive" : 5,
+            "precision" : 0.9524,
+            "recall" : 1,
+            "total" : 300,
+            "trueNegative" : 195,
+            "truePositive" : 100
+          },
+          "threshold" : 0.15
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.97,
+            "f1" : 0.9552,
+            "falseNegative" : 4,
+            "falsePositive" : 5,
+            "precision" : 0.9505,
+            "recall" : 0.96,
+            "total" : 300,
+            "trueNegative" : 195,
+            "truePositive" : 96
+          },
+          "threshold" : 0.17
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.1655,
+          "family" : "final_complaint_request",
+          "id" : "random-20260828-en-final_complaint_request-021",
+          "language" : "en",
+          "text" : "A quick note: Nothing has changed with this problem: the payment was charged twice. When will it actually be handled?"
+        },
+        {
+          "confidence" : 0.1163,
+          "family" : "final_complaint_request",
+          "id" : "random-20260828-en-final_complaint_request-003",
+          "language" : "en",
+          "text" : "Nothing has changed with this problem: the page stays blank. When will it actually be handled?"
+        },
+        {
+          "confidence" : 0.1133,
+          "family" : "final_complaint_request",
+          "id" : "random-20260828-en-final_complaint_request-019",
+          "language" : "en",
+          "text" : "A quick note: Nothing has changed with this problem: the page stays blank. When will it actually be handled?"
+        },
+        {
+          "confidence" : 0.0979,
+          "family" : "final_complaint_request",
+          "id" : "random-20260828-en-final_complaint_request-006",
+          "language" : "en",
+          "text" : "Nothing has changed with this problem: tracking has not moved for five days. When will it actually be handled?"
+        },
+        {
+          "confidence" : 0.0953,
+          "family" : "final_complaint_request",
+          "id" : "random-20260828-en-final_complaint_request-008",
+          "language" : "en",
+          "text" : "A quick note: Nothing has changed with this problem: tracking has not moved for five days. When will it actually be handled?"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "question",
+      "metrics" : {
+        "accuracy" : 0.9817,
+        "f1" : 0.9418,
+        "falseNegative" : 11,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.89,
+        "total" : 600,
+        "trueNegative" : 500,
+        "truePositive" : 89
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9633,
+          "f1" : 0.8764,
+          "falseNegative" : 11,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.78,
+          "total" : 300,
+          "trueNegative" : 250,
+          "truePositive" : 39
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 1,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 1,
+          "total" : 300,
+          "trueNegative" : 250,
+          "truePositive" : 50
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9817,
+          "f1" : 0.9418,
+          "falseNegative" : 11,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.89,
+          "total" : 600,
+          "trueNegative" : 500,
+          "truePositive" : 89
+        },
+        "threshold" : 0.6
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9817,
+          "f1" : 0.9418,
+          "falseNegative" : 11,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.89,
+          "total" : 600,
+          "trueNegative" : 500,
+          "truePositive" : 89
+        },
+        "threshold" : 0.6
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9633,
+            "f1" : 0.8764,
+            "falseNegative" : 11,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.78,
+            "total" : 300,
+            "trueNegative" : 250,
+            "truePositive" : 39
+          },
+          "threshold" : 0.6
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 300,
+            "trueNegative" : 250,
+            "truePositive" : 50
+          },
+          "threshold" : 0.45
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9633,
+            "f1" : 0.8764,
+            "falseNegative" : 11,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.78,
+            "total" : 300,
+            "trueNegative" : 250,
+            "truePositive" : 39
+          },
+          "threshold" : 0.6
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 1,
+            "f1" : 1,
+            "falseNegative" : 0,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 1,
+            "total" : 300,
+            "trueNegative" : 250,
+            "truePositive" : 50
+          },
+          "threshold" : 0.45
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "invitation",
+      "metrics" : {
+        "accuracy" : 1,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 0,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 600,
+        "trueNegative" : 600,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 300,
+          "trueNegative" : 300,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 300,
+          "trueNegative" : 300,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.838,
+          "family" : "final_complaint_request",
+          "id" : "random-20260828-en-final_complaint_request-022",
+          "language" : "en",
+          "text" : "Also, Nothing has changed with this problem: tracking has not moved for five days. When will it actually be handled?"
+        },
+        {
+          "confidence" : 0.8358,
+          "family" : "final_complaint_implicit",
+          "id" : "random-20260828-en-final_complaint_implicit-015",
+          "language" : "en",
+          "text" : "For the record, I should not have to chase the same issue repeatedly: the payment was charged twice, and now delivery is now delayed."
+        },
+        {
+          "confidence" : 0.832,
+          "family" : "final_complaint_implicit",
+          "id" : "random-20260828-en-final_complaint_implicit-014",
+          "language" : "en",
+          "text" : "A quick note: I should not have to chase the same issue repeatedly: the attachment never opens, and now my family cannot receive the item."
+        },
+        {
+          "confidence" : 0.8182,
+          "family" : "final_complaint_request",
+          "id" : "random-20260828-en-final_complaint_request-003",
+          "language" : "en",
+          "text" : "Nothing has changed with this problem: the page stays blank. When will it actually be handled?"
+        },
+        {
+          "confidence" : 0.8141,
+          "family" : "final_complaint_request",
+          "id" : "random-20260828-en-final_complaint_request-008",
+          "language" : "en",
+          "text" : "A quick note: Nothing has changed with this problem: tracking has not moved for five days. When will it actually be handled?"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "complaint",
+      "metrics" : {
+        "accuracy" : 0.8733,
+        "f1" : 0.6607,
+        "falseNegative" : 76,
+        "falsePositive" : 0,
+        "precision" : 1,
+        "recall" : 0.4933,
+        "total" : 600,
+        "trueNegative" : 450,
+        "truePositive" : 74
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.85,
+          "f1" : 0.5714,
+          "falseNegative" : 45,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.4,
+          "total" : 300,
+          "trueNegative" : 225,
+          "truePositive" : 30
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.8967,
+          "f1" : 0.7395,
+          "falseNegative" : 31,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5867,
+          "total" : 300,
+          "trueNegative" : 225,
+          "truePositive" : 44
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9367,
+          "f1" : 0.8681,
+          "falseNegative" : 25,
+          "falsePositive" : 13,
+          "precision" : 0.9058,
+          "recall" : 0.8333,
+          "total" : 600,
+          "trueNegative" : 437,
+          "truePositive" : 125
+        },
+        "threshold" : 0.49
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9433,
+          "f1" : 0.8777,
+          "falseNegative" : 28,
+          "falsePositive" : 6,
+          "precision" : 0.9531,
+          "recall" : 0.8133,
+          "total" : 600,
+          "trueNegative" : 444,
+          "truePositive" : 122
+        },
+        "threshold" : 0.6
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9367,
+            "f1" : 0.869,
+            "falseNegative" : 12,
+            "falsePositive" : 7,
+            "precision" : 0.9,
+            "recall" : 0.84,
+            "total" : 300,
+            "trueNegative" : 218,
+            "truePositive" : 63
+          },
+          "threshold" : 0.31
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9533,
+            "f1" : 0.9041,
+            "falseNegative" : 9,
+            "falsePositive" : 5,
+            "precision" : 0.9296,
+            "recall" : 0.88,
+            "total" : 300,
+            "trueNegative" : 220,
+            "truePositive" : 66
+          },
+          "threshold" : 0.6
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.94,
+            "f1" : 0.8676,
+            "falseNegative" : 16,
+            "falsePositive" : 2,
+            "precision" : 0.9672,
+            "recall" : 0.7867,
+            "total" : 300,
+            "trueNegative" : 223,
+            "truePositive" : 59
+          },
+          "threshold" : 0.46
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9367,
+            "f1" : 0.8613,
+            "falseNegative" : 16,
+            "falsePositive" : 3,
+            "precision" : 0.9516,
+            "recall" : 0.7867,
+            "total" : 300,
+            "trueNegative" : 222,
+            "truePositive" : 59
+          },
+          "threshold" : 0.67
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "scheduleNegotiation",
+      "metrics" : {
+        "accuracy" : 1,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 0,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 600,
+        "trueNegative" : 600,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 300,
+          "trueNegative" : 300,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 300,
+          "trueNegative" : 300,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "confirmationDecision",
+      "metrics" : {
+        "accuracy" : 1,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 0,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 600,
+        "trueNegative" : 600,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 300,
+          "trueNegative" : 300,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 300,
+          "trueNegative" : 300,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7264,
+          "family" : "final_personal_action_boundary",
+          "id" : "random-20260828-en-final_personal_action_boundary-010",
+          "language" : "en",
+          "text" : "A quick note: Personal note, not delegated work: ask the doctor about payment status before lunch."
+        },
+        {
+          "confidence" : 0.7236,
+          "family" : "final_personal_action_boundary",
+          "id" : "random-20260828-zh-Hans-final_personal_action_boundary-014",
+          "language" : "zh-Hans",
+          "text" : "还有一件事，这是我自己的行动清单：客户回信后检查交付日期。"
+        },
+        {
+          "confidence" : 0.7148,
+          "family" : "final_personal_action_boundary",
+          "id" : "random-20260828-en-final_personal_action_boundary-006",
+          "language" : "en",
+          "text" : "In short, Personal note, not delegated work: ask the doctor about the delivery date as this week closes."
+        },
+        {
+          "confidence" : 0.6807,
+          "family" : "final_personal_action_boundary",
+          "id" : "random-20260828-en-final_personal_action_boundary-018",
+          "language" : "en",
+          "text" : "One more thing: Personal note, not delegated work: ask the account manager about resolution progress by tomorrow evening."
+        },
+        {
+          "confidence" : 0.6763,
+          "family" : "final_personal_action_boundary",
+          "id" : "random-20260828-en-final_personal_action_boundary-015",
+          "language" : "en",
+          "text" : "Also, Personal note, not delegated work: ask the landlord about the delivery date as this week closes."
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9756,
+          "family" : "final_operational_task_boundary",
+          "id" : "random-20260828-en-final_operational_task_boundary-006",
+          "language" : "en",
+          "text" : "One more thing: Deliver the test findings to the vendor within two business days, then close the workflow."
+        },
+        {
+          "confidence" : 0.9745,
+          "family" : "final_operational_task_boundary",
+          "id" : "random-20260828-en-final_operational_task_boundary-008",
+          "language" : "en",
+          "text" : "One more thing: Deliver the retro summary to Support within two business days, then close the workflow."
+        },
+        {
+          "confidence" : 0.9596,
+          "family" : "final_operational_task_boundary",
+          "id" : "random-20260828-en-final_operational_task_boundary-002",
+          "language" : "en",
+          "text" : "Deliver the delivery checklist to Operations within two business days, then close the workflow."
+        },
+        {
+          "confidence" : 0.9505,
+          "family" : "final_operational_task_boundary",
+          "id" : "random-20260828-en-final_operational_task_boundary-001",
+          "language" : "en",
+          "text" : "Just to add, Deliver the retro summary to the vendor by tomorrow evening, then close the workflow."
+        },
+        {
+          "confidence" : 0.9331,
+          "family" : "final_operational_task_boundary",
+          "id" : "random-20260828-en-final_operational_task_boundary-024",
+          "language" : "en",
+          "text" : "Also, Deliver the delivery checklist to Support by tomorrow evening, then close the workflow."
+        }
+      ],
+      "id" : "followUpReminder",
+      "metrics" : {
+        "accuracy" : 0.9267,
+        "f1" : 0.5417,
+        "falseNegative" : 24,
+        "falsePositive" : 20,
+        "precision" : 0.5652,
+        "recall" : 0.52,
+        "total" : 600,
+        "trueNegative" : 530,
+        "truePositive" : 26
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9067,
+          "f1" : 0.5,
+          "falseNegative" : 11,
+          "falsePositive" : 17,
+          "precision" : 0.4516,
+          "recall" : 0.56,
+          "total" : 300,
+          "trueNegative" : 258,
+          "truePositive" : 14
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9467,
+          "f1" : 0.6,
+          "falseNegative" : 13,
+          "falsePositive" : 3,
+          "precision" : 0.8,
+          "recall" : 0.48,
+          "total" : 300,
+          "trueNegative" : 272,
+          "truePositive" : 12
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.92,
+          "f1" : 0.0769,
+          "falseNegative" : 48,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.04,
+          "total" : 600,
+          "trueNegative" : 550,
+          "truePositive" : 2
+        },
+        "threshold" : 0.98
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.92,
+          "f1" : 0.0769,
+          "falseNegative" : 48,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.04,
+          "total" : 600,
+          "trueNegative" : 550,
+          "truePositive" : 2
+        },
+        "threshold" : 0.98
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9433,
+            "f1" : 0.4848,
+            "falseNegative" : 17,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.32,
+            "total" : 300,
+            "trueNegative" : 275,
+            "truePositive" : 8
+          },
+          "threshold" : 0.86
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9433,
+            "f1" : 0.4848,
+            "falseNegative" : 17,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.32,
+            "total" : 300,
+            "trueNegative" : 275,
+            "truePositive" : 8
+          },
+          "threshold" : 0.86
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7763,
+          "family" : "final_complaint_implicit",
+          "id" : "random-20260828-zh-Hans-final_complaint_implicit-006",
+          "language" : "zh-Hans",
+          "text" : "单独记一下，又是同样的结果：物流状态停了五天，已经连续影响到交付时间被耽误。"
+        },
+        {
+          "confidence" : 0.7412,
+          "family" : "final_complaint_implicit",
+          "id" : "random-20260828-zh-Hans-final_complaint_implicit-008",
+          "language" : "zh-Hans",
+          "text" : "先说重点，我不应该为同一个问题反复追问，页面一直空白，现在客户已经在催。"
+        },
+        {
+          "confidence" : 0.728,
+          "family" : "final_complaint_short",
+          "id" : "random-20260828-zh-Hans-final_complaint_short-024",
+          "language" : "zh-Hans",
+          "text" : "顺便提一句，付款结果重复扣款，已经第三次了。"
+        },
+        {
+          "confidence" : 0.7182,
+          "family" : "final_task_direct",
+          "id" : "random-20260828-en-final_task_direct-003",
+          "language" : "en",
+          "text" : "For the record, Ownership of the acceptance screenshots now belongs to you; deliver it to the project lead before the next review."
+        },
+        {
+          "confidence" : 0.7087,
+          "family" : "final_complaint_request",
+          "id" : "random-20260828-en-final_complaint_request-001",
+          "language" : "en",
+          "text" : "For the record, Nothing has changed with this problem: the page stays blank. When will it actually be handled?"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9938,
+          "family" : "final_resolved_boundary",
+          "id" : "random-20260828-zh-Hans-final_resolved_boundary-003",
+          "language" : "zh-Hans",
+          "text" : "刚想到，费用调整的问题处理完毕，现在不需要任何支持。"
+        },
+        {
+          "confidence" : 0.9851,
+          "family" : "final_resolved_boundary",
+          "id" : "random-20260828-en-final_resolved_boundary-020",
+          "language" : "en",
+          "text" : "By the way, The earlier issue where the page stays blank is fully resolved; this is a closure record."
+        },
+        {
+          "confidence" : 0.9831,
+          "family" : "final_resolved_boundary",
+          "id" : "random-20260828-en-final_resolved_boundary-004",
+          "language" : "en",
+          "text" : "By the way, The problem involving the fee adjustment is complete, with no support needed now."
+        },
+        {
+          "confidence" : 0.963,
+          "family" : "final_resolved_boundary",
+          "id" : "random-20260828-en-final_resolved_boundary-013",
+          "language" : "en",
+          "text" : "For context, The earlier issue where the payment was charged twice is fully resolved; this is a closure record."
+        },
+        {
+          "confidence" : 0.962,
+          "family" : "final_resolved_boundary",
+          "id" : "random-20260828-en-final_resolved_boundary-024",
+          "language" : "en",
+          "text" : "The main point is this: The earlier issue where the payment was charged twice is fully resolved; this is a closure record."
+        }
+      ],
+      "id" : "replyableMessage",
+      "metrics" : {
+        "accuracy" : 0.9083,
+        "f1" : 0.922,
+        "falseNegative" : 25,
+        "falsePositive" : 30,
+        "precision" : 0.9155,
+        "recall" : 0.9286,
+        "total" : 600,
+        "trueNegative" : 220,
+        "truePositive" : 325
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9,
+          "f1" : 0.9171,
+          "falseNegative" : 9,
+          "falsePositive" : 21,
+          "precision" : 0.8877,
+          "recall" : 0.9486,
+          "total" : 300,
+          "trueNegative" : 104,
+          "truePositive" : 166
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.9167,
+          "f1" : 0.9271,
+          "falseNegative" : 16,
+          "falsePositive" : 9,
+          "precision" : 0.9464,
+          "recall" : 0.9086,
+          "total" : 300,
+          "trueNegative" : 116,
+          "truePositive" : 159
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9133,
+          "f1" : 0.928,
+          "falseNegative" : 15,
+          "falsePositive" : 37,
+          "precision" : 0.9005,
+          "recall" : 0.9571,
+          "total" : 600,
+          "trueNegative" : 213,
+          "truePositive" : 335
+        },
+        "threshold" : 0.66
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.9117,
+          "f1" : 0.9217,
+          "falseNegative" : 38,
+          "falsePositive" : 15,
+          "precision" : 0.9541,
+          "recall" : 0.8914,
+          "total" : 600,
+          "trueNegative" : 235,
+          "truePositive" : 312
+        },
+        "threshold" : 0.87
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.9133,
+            "f1" : 0.927,
+            "falseNegative" : 10,
+            "falsePositive" : 16,
+            "precision" : 0.9116,
+            "recall" : 0.9429,
+            "total" : 300,
+            "trueNegative" : 109,
+            "truePositive" : 165
+          },
+          "threshold" : 0.81
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.9367,
+            "f1" : 0.9471,
+            "falseNegative" : 5,
+            "falsePositive" : 14,
+            "precision" : 0.9239,
+            "recall" : 0.9714,
+            "total" : 300,
+            "trueNegative" : 111,
+            "truePositive" : 170
+          },
+          "threshold" : 0.59
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.86,
+            "f1" : 0.8696,
+            "falseNegative" : 35,
+            "falsePositive" : 7,
+            "precision" : 0.9524,
+            "recall" : 0.8,
+            "total" : 300,
+            "trueNegative" : 118,
+            "truePositive" : 140
+          },
+          "threshold" : 0.92
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.92,
+            "f1" : 0.9298,
+            "falseNegative" : 16,
+            "falsePositive" : 8,
+            "precision" : 0.9521,
+            "recall" : 0.9086,
+            "total" : 300,
+            "trueNegative" : 117,
+            "truePositive" : 159
+          },
+          "threshold" : 0.8
+        }
+      }
+    }
+  ],
+  "corpusRecordCount" : 600,
+  "exactTrainingOverlapCount" : 0,
+  "familyCount" : 12,
+  "generatedAt" : "2026-08-27T01:15:13Z",
+  "languageCounts" : {
+    "en" : 300,
+    "zh-Hans" : 300
+  },
+  "manifestSchemaVersion" : 2,
+  "seed" : 20260828,
+  "sentiment" : {
+    "accuracy" : 0.7533,
+    "correct" : 452,
+    "macroF1" : 0.5086,
+    "perLabelF1" : {
+      "negative" : 0.623,
+      "neutral" : 0.9027,
+      "positive" : 0
+    },
+    "total" : 600,
+    "unknown" : 104,
+    "unknownRate" : 0.1733
+  }
+}

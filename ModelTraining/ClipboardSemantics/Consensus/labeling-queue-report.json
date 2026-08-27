@@ -1,0 +1,24 @@
+{
+  "input": "ModelTraining/ClipboardSemantics/open-training-corpus.jsonl",
+  "languageCounts": {
+    "en": 240,
+    "zh-Hans": 120
+  },
+  "promptSHA256": "4bd3dbc01202f2a0c69c77ee30c66904889a31485fed3bc1944b286f9ab74cff",
+  "promptVersion": "clipboard-consensus-v1",
+  "queue": "ModelTraining/ClipboardSemantics/Consensus/labeling-queue.jsonl",
+  "recordCount": 360,
+  "schemaVersion": 1,
+  "seed": 20260827,
+  "sourceCounts": {
+    "AmazonScience/MASSIVE en-US": 40,
+    "AmazonScience/MASSIVE zh-CN": 40,
+    "CFPB via hpe-ai/customer-complaints": 40,
+    "CLINC150 UCI": 40,
+    "CrossWOZ": 40,
+    "Google Research GoEmotions": 40,
+    "Google Taskmaster-1": 40,
+    "Meituan-Dianping/ASAP": 40,
+    "MultiDoGO": 40
+  }
+}

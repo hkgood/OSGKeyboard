@@ -1,0 +1,288 @@
+{
+  "classifiers" : [
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : true,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 5760,
+          "balancedValidationCount" : 1440,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.8839,
+              "f1" : 0.7107,
+              "falseNegative" : 161,
+              "falsePositive" : 1,
+              "precision" : 0.995,
+              "recall" : 0.5528,
+              "total" : 1395,
+              "trueNegative" : 1034,
+              "truePositive" : 199
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9563,
+              "f1" : 0.9074,
+              "falseNegative" : 61,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.8306,
+              "total" : 1395,
+              "trueNegative" : 1035,
+              "truePositive" : 299
+            }
+          },
+          "confidenceThresholdsByLanguage" : {
+            "en" : 0.91,
+            "zh-Hans" : 0.89
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9292,
+            "f1" : 0.6341,
+            "falseNegative" : 15,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.4643,
+            "total" : 212,
+            "trueNegative" : 184,
+            "truePositive" : 13
+          },
+          "goldenBinaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.934,
+              "f1" : 0.6667,
+              "falseNegative" : 7,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.5,
+              "total" : 106,
+              "trueNegative" : 92,
+              "truePositive" : 7
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9245,
+              "f1" : 0.6,
+              "falseNegative" : 8,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.4286,
+              "total" : 106,
+              "trueNegative" : 92,
+              "truePositive" : 6
+            }
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] Alex owns the meeting notes and should post them in the project channel today. (score=0.8878)",
+            "[en] Could these documents be ready by the end of the month? (score=0.9042)",
+            "[en] Do not forget to check whether the refund arrives on Friday. (score=0.9049)",
+            "[en] After the meeting, summarize the three decisions in the project channel. (score=0.7419)",
+            "[en] When approval arrives, contact the applicant and explain the reason. (score=0.621)",
+            "[en] Follow up with the vendor about the delivery date next Monday. (score=0.8885)",
+            "[en] Next action: create the release tag after the tests pass. (score=0.4708)",
+            "[zh-Hans] 小王负责整理会议纪要，今天发到项目群。 (score=0.4243)",
+            "[zh-Hans] 方便帮我约一下周三下午的会议室吗？ (score=0.1551)",
+            "[zh-Hans] 这些材料可以在月底前准备好吗？ (score=0.6415)",
+            "[zh-Hans] 别忘了周五检查退款有没有到账。 (score=0.6693)",
+            "[zh-Hans] 会后需要整理三个决定并发到项目群。 (score=0.1071)"
+          ],
+          "goldenFalsePositiveExamples" : [
+
+          ],
+          "modelBytes" : 27115,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.9201,
+            "f1" : 0.8171,
+            "falseNegative" : 222,
+            "falsePositive" : 1,
+            "precision" : 0.998,
+            "recall" : 0.6917,
+            "total" : 2790,
+            "trueNegative" : 2069,
+            "truePositive" : 498
+          },
+          "testFalseNegativeExamples" : [
+            "[en] Also, Reminder: call the client back before the next meeting. (score=0.7075)",
+            "[en] One more thing: Reminder: book the follow-up visit by Friday. (score=0.7023)",
+            "[en] Reminder: check the invoice status by the end of the month. (score=0.8633)",
+            "[en] Reminder: call the client back by the end of the month. (score=0.8156)",
+            "[en] A quick note: Reminder: call the client back before the end of today. (score=0.7158)",
+            "[en] One more thing: Reminder: create the release tag before 3 PM. (score=0.6997)",
+            "[en] Reminder: contact the applicant by the end of the month. (score=0.8711)",
+            "[en] Also, Make review the approval result the next action and do it by the end of the month. (score=0.861)",
+            "[en] A quick note: Make check the vendor delivery date the next action and do it by the end of the month. (score=0.7974)",
+            "[en] Reminder: contact the applicant after you receive this message. (score=0.8494)",
+            "[en] Make summarize the meeting decisions the next action and do it after you receive this message. (score=0.8998)",
+            "[en] A quick note: Reminder: verify the refund status before the next meeting. (score=0.7043)"
+          ],
+          "testFalsePositiveExamples" : [
+            "[en] Todo visible only to me: summarize the test results. (score=0.9116)"
+          ],
+          "threshold" : 0.89,
+          "validationBinary" : {
+            "accuracy" : 0.9272,
+            "f1" : 0.84,
+            "falseNegative" : 187,
+            "falsePositive" : 16,
+            "precision" : 0.9709,
+            "recall" : 0.7403,
+            "total" : 2790,
+            "trueNegative" : 2054,
+            "truePositive" : 533
+          }
+        }
+      ],
+      "id" : "task",
+      "labels" : [
+        "notTask",
+        "task"
+      ],
+      "positiveLabel" : "task",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "TaskIntentClassifier.mlmodel"
+    },
+    {
+      "candidates" : [
+        {
+          "acceptedForAutomaticRouting" : false,
+          "algorithm" : "maxEnt",
+          "balancedTrainingCount" : 2880,
+          "balancedValidationCount" : 720,
+          "binaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9835,
+              "f1" : 0.9318,
+              "falseNegative" : 23,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.8722,
+              "total" : 1395,
+              "trueNegative" : 1215,
+              "truePositive" : 157
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9885,
+              "f1" : 0.9538,
+              "falseNegative" : 15,
+              "falsePositive" : 1,
+              "precision" : 0.994,
+              "recall" : 0.9167,
+              "total" : 1395,
+              "trueNegative" : 1214,
+              "truePositive" : 165
+            }
+          },
+          "confidenceThresholdsByLanguage" : {
+            "en" : 0.89,
+            "zh-Hans" : 0.75
+          },
+          "goldenBinary" : {
+            "accuracy" : 0.9575,
+            "f1" : 0.4706,
+            "falseNegative" : 8,
+            "falsePositive" : 1,
+            "precision" : 0.8,
+            "recall" : 0.3333,
+            "total" : 212,
+            "trueNegative" : 199,
+            "truePositive" : 4
+          },
+          "goldenBinaryByLanguage" : {
+            "en" : {
+              "accuracy" : 0.9528,
+              "f1" : 0.2857,
+              "falseNegative" : 5,
+              "falsePositive" : 0,
+              "precision" : 1,
+              "recall" : 0.1667,
+              "total" : 106,
+              "trueNegative" : 100,
+              "truePositive" : 1
+            },
+            "zh-Hans" : {
+              "accuracy" : 0.9623,
+              "f1" : 0.6,
+              "falseNegative" : 3,
+              "falsePositive" : 1,
+              "precision" : 0.75,
+              "recall" : 0.5,
+              "total" : 106,
+              "trueNegative" : 99,
+              "truePositive" : 3
+            }
+          },
+          "goldenFalseNegativeExamples" : [
+            "[en] The app has crashed constantly since the update, and I lost important data. (score=0.6932)",
+            "[en] The package arrived damaged and the cup inside was broken. (score=0.8516)",
+            "[en] My account was locked for no reason. Can you restore it today? (score=0.4141)",
+            "[en] Messages keep failing to send. Please provide a solution as soon as possible. (score=0.8782)",
+            "[en] Support has not replied for three days. When will this be handled? (score=0.7423)",
+            "[zh-Hans] 收到的商品外包装破损，里面的杯子也碎了。 (score=0.6318)",
+            "[zh-Hans] 消息一直发送失败，请尽快给我一个解决方案。 (score=0.2063)",
+            "[zh-Hans] 客服已经三天没有回复了，请问什么时候能处理？ (score=0.7074)"
+          ],
+          "goldenFalsePositiveExamples" : [
+            "[zh-Hans] 事情终于解决了，我现在轻松多了。 (score=0.8132)"
+          ],
+          "modelBytes" : 24298,
+          "runtimeAssetIndependent" : true,
+          "testBinary" : {
+            "accuracy" : 0.986,
+            "f1" : 0.9429,
+            "falseNegative" : 38,
+            "falsePositive" : 1,
+            "precision" : 0.9969,
+            "recall" : 0.8944,
+            "total" : 2790,
+            "trueNegative" : 2429,
+            "truePositive" : 322
+          },
+          "testFalseNegativeExamples" : [
+            "[en] Just to add, I need a clear answer: the page loads extremely slowly. How are you going to resolve it? (score=0.639)",
+            "[en] I need a clear answer: messages never send. How are you going to resolve it? (score=0.5932)",
+            "[en] I need a clear answer: the invoice information is wrong. How are you going to resolve it? (score=0.4813)",
+            "[en] I need a clear answer: the order was charged twice. How are you going to resolve it? (score=0.6328)",
+            "[en] I need a clear answer: my reservation disappeared. How are you going to resolve it? (score=0.6104)",
+            "[en] Just to add, I need a clear answer: the app keeps crashing. How are you going to resolve it? (score=0.5869)",
+            "[en] Also, I need a clear answer: the app keeps crashing. How are you going to resolve it? (score=0.4881)",
+            "[en] One more thing: I need a clear answer: the order was charged twice. How are you going to resolve it? (score=0.4748)",
+            "[en] A quick note: I need a clear answer: messages never send. How are you going to resolve it? (score=0.4082)",
+            "[en] A quick note: I need a clear answer: the item arrived damaged. How are you going to resolve it? (score=0.3109)",
+            "[en] One more thing: I need a clear answer: the app keeps crashing. How are you going to resolve it? (score=0.4723)",
+            "[en] Also, I need a clear answer: the page loads extremely slowly. How are you going to resolve it? (score=0.543)"
+          ],
+          "testFalsePositiveExamples" : [
+            "[zh-Hans] 对于订单状态，这次有没有明确答案？ (score=0.7592)"
+          ],
+          "threshold" : 0.7,
+          "validationBinary" : {
+            "accuracy" : 0.9957,
+            "f1" : 0.9836,
+            "falseNegative" : 1,
+            "falsePositive" : 11,
+            "precision" : 0.9703,
+            "recall" : 0.9972,
+            "total" : 2790,
+            "trueNegative" : 2419,
+            "truePositive" : 359
+          }
+        }
+      ],
+      "id" : "complaint",
+      "labels" : [
+        "notComplaint",
+        "complaint"
+      ],
+      "positiveLabel" : "complaint",
+      "selectedAlgorithm" : "maxEnt",
+      "selectedModelFile" : "ComplaintIntentClassifier.mlmodel"
+    }
+  ],
+  "corpusCount" : 16572,
+  "corpusPath" : "ModelTraining/ClipboardSemantics/clipboard_semantic_corpus.jsonl",
+  "generatedAt" : "2026-08-27T01:08:34Z",
+  "goldenCount" : 212,
+  "selectionPolicy" : "Validation only: global and per-language binary thresholds require precision >= 0.97, then maximize recall; languages with fewer than 20 examples per class fall back to the global threshold. sentiment prioritizes macro-F1. Automatic routing also requires a self-contained maxEnt model because BERT embedding assets are not guaranteed in extensions. Test and golden data gate deployment but never tune model weights.",
+  "testCount" : 2790,
+  "trainingCount" : 10780,
+  "validationCount" : 2790
+}

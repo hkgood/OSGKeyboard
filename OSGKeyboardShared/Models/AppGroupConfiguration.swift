@@ -44,6 +44,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         public static let keyboardHapticIntensity = "config.keyboardHapticIntensity"
         public static let polishIntensity = "config.polishIntensity"
         public static let aiResponseLength = "config.aiResponseLength"
+        public static let multipleReplyVariantsEnabled = "config.multipleReplyVariantsEnabled"
         public static let llmThinkingEnabled = "config.llmThinkingEnabled"
         /// When true, the keyboard records system clipboard text into local history.
         public static let clipboardHistoryEnabled = "config.clipboardHistoryEnabled"
@@ -113,6 +114,8 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     public var polishIntensity: PolishIntensity
     /// Soft AI-mode answer length preference (medium by default).
     public var aiResponseLength: AIResponseLength
+    /// When true, Reply may provide several sendable variants.
+    public var multipleReplyVariantsEnabled: Bool
     /// Enables provider-specific reasoning / thinking controls for polish LLM requests.
     public var llmThinkingEnabled: Bool
     /// Opt-in clipboard history capture in the keyboard extension.
@@ -314,6 +317,12 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             aiResponseLength: AIResponseLength.resolve(
                 storedRawValue: defaults.string(forKey: Keys.aiResponseLength)
             ),
+            multipleReplyVariantsEnabled: {
+                if defaults.object(forKey: Keys.multipleReplyVariantsEnabled) == nil {
+                    return true
+                }
+                return defaults.bool(forKey: Keys.multipleReplyVariantsEnabled)
+            }(),
             llmThinkingEnabled: defaults.bool(forKey: Keys.llmThinkingEnabled),
             clipboardHistoryEnabled: defaults.bool(forKey: Keys.clipboardHistoryEnabled),
             clipboardCandidateBarEnabled: defaults.bool(forKey: Keys.clipboardCandidateBarEnabled),
@@ -458,6 +467,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
         defaults.set(keyboardHapticIntensity.rawValue, forKey: Keys.keyboardHapticIntensity)
         defaults.set(polishIntensity.rawValue, forKey: Keys.polishIntensity)
         defaults.set(aiResponseLength.rawValue, forKey: Keys.aiResponseLength)
+        defaults.set(multipleReplyVariantsEnabled, forKey: Keys.multipleReplyVariantsEnabled)
         defaults.set(llmThinkingEnabled, forKey: Keys.llmThinkingEnabled)
         defaults.set(clipboardHistoryEnabled, forKey: Keys.clipboardHistoryEnabled)
         defaults.set(clipboardCandidateBarEnabled, forKey: Keys.clipboardCandidateBarEnabled)
@@ -537,6 +547,11 @@ public struct AppGroupConfiguration: Sendable, Equatable {
             aiResponseLength.rawValue,
             previous: baseline.aiResponseLength.rawValue,
             key: Keys.aiResponseLength
+        )
+        set(
+            multipleReplyVariantsEnabled,
+            previous: baseline.multipleReplyVariantsEnabled,
+            key: Keys.multipleReplyVariantsEnabled
         )
         set(
             llmThinkingEnabled,

@@ -1,0 +1,2506 @@
+{
+  "binaryMacro" : {
+    "accuracy" : 0.7889,
+    "f1" : 0.0976,
+    "precision" : 0.1815,
+    "recall" : 0.0686
+  },
+  "binaryMacroByLanguage" : {
+    "en" : {
+      "accuracy" : 0.7944,
+      "f1" : 0.0751,
+      "precision" : 0.1389,
+      "recall" : 0.0545
+    },
+    "zh-Hans" : {
+      "accuracy" : 0.7833,
+      "f1" : 0.119,
+      "precision" : 0.2222,
+      "recall" : 0.0815
+    }
+  },
+  "classifiers" : [
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.8155,
+          "family" : "consensus_public",
+          "id" : "open-multidogo-finance-<CONV>6d8d6219-54cf-4a11-a20b-5e90bd74110d<TURN>1",
+          "language" : "en",
+          "sourceDataset" : "MultiDoGO",
+          "text" : "hi drew i would like to close my account can you help me"
+        },
+        {
+          "confidence" : 0.8104,
+          "family" : "consensus_public",
+          "id" : "open-multidogo-media-<CONV>3dfcd6b8-b829-4e5b-a97c-e5d8120bd75b<TURN>3",
+          "language" : "en",
+          "sourceDataset" : "MultiDoGO",
+          "text" : "can you please help me to see my bill of my account"
+        },
+        {
+          "confidence" : 0.7166,
+          "family" : "consensus_public",
+          "id" : "open-clinc150-12742",
+          "language" : "en",
+          "sourceDataset" : "CLINC150 UCI",
+          "text" : "send a text message for me"
+        },
+        {
+          "confidence" : 0.5115,
+          "family" : "consensus_public",
+          "id" : "open-taskmaster-dlg-fa9a9747-e85e-4341-9f8b-647191d75be0-0",
+          "language" : "en",
+          "sourceDataset" : "Google Taskmaster-1",
+          "text" : "Can you see if there are any available showings for Alita Battle Angel"
+        },
+        {
+          "confidence" : 0.4339,
+          "family" : "consensus_public",
+          "id" : "open-multidogo-airline-<CONV>9115a2cc-b065-4f38-99bf-4f4644f769ad<TURN>12",
+          "language" : "en",
+          "sourceDataset" : "MultiDoGO",
+          "text" : "will you change the window seat to aisle"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9312,
+          "family" : "consensus_public",
+          "id" : "open-clinc150-11549",
+          "language" : "en",
+          "sourceDataset" : "CLINC150 UCI",
+          "text" : "check days of pto"
+        }
+      ],
+      "id" : "task",
+      "metrics" : {
+        "accuracy" : 0.525,
+        "f1" : 0.3448,
+        "falseNegative" : 18,
+        "falsePositive" : 1,
+        "precision" : 0.8333,
+        "recall" : 0.2174,
+        "total" : 40,
+        "trueNegative" : 16,
+        "truePositive" : 5
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.45,
+          "f1" : 0.1538,
+          "falseNegative" : 10,
+          "falsePositive" : 1,
+          "precision" : 0.5,
+          "recall" : 0.0909,
+          "total" : 20,
+          "trueNegative" : 8,
+          "truePositive" : 1
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.6,
+          "f1" : 0.5,
+          "falseNegative" : 8,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.3333,
+          "total" : 20,
+          "trueNegative" : 8,
+          "truePositive" : 4
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2,
+          "trueNegative" : 2,
+          "truePositive" : 0
+        },
+        "AmazonScience/MASSIVE zh-CN" : {
+          "accuracy" : 0.5,
+          "f1" : 0.6667,
+          "falseNegative" : 2,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.5,
+          "total" : 4,
+          "trueNegative" : 0,
+          "truePositive" : 2
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "CLINC150 UCI" : {
+          "accuracy" : 0.375,
+          "f1" : 0,
+          "falseNegative" : 4,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 3,
+          "truePositive" : 0
+        },
+        "CrossWOZ" : {
+          "accuracy" : 0.25,
+          "f1" : 0.4,
+          "falseNegative" : 6,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.25,
+          "total" : 8,
+          "trueNegative" : 0,
+          "truePositive" : 2
+        },
+        "Google Research GoEmotions" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "Google Taskmaster-1" : {
+          "accuracy" : 0.5,
+          "f1" : 0.5,
+          "falseNegative" : 2,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.3333,
+          "total" : 4,
+          "trueNegative" : 1,
+          "truePositive" : 1
+        },
+        "Meituan-Dianping/ASAP" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "MultiDoGO" : {
+          "accuracy" : 0,
+          "f1" : 0,
+          "falseNegative" : 4,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 0,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.45,
+          "f1" : 0.0833,
+          "falseNegative" : 22,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.0435,
+          "total" : 40,
+          "trueNegative" : 17,
+          "truePositive" : 1
+        },
+        "threshold" : 0.94
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.45,
+          "f1" : 0.0833,
+          "falseNegative" : 22,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.0435,
+          "total" : 40,
+          "trueNegative" : 17,
+          "truePositive" : 1
+        },
+        "threshold" : 0.94
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.65,
+            "f1" : 0.5882,
+            "falseNegative" : 7,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.4167,
+            "total" : 20,
+            "trueNegative" : 8,
+            "truePositive" : 5
+          },
+          "threshold" : 0.05
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.65,
+            "f1" : 0.5882,
+            "falseNegative" : 7,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.4167,
+            "total" : 20,
+            "trueNegative" : 8,
+            "truePositive" : 5
+          },
+          "threshold" : 0.05
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.5365,
+          "family" : "consensus_public",
+          "id" : "open-clinc150-2341",
+          "language" : "en",
+          "sourceDataset" : "CLINC150 UCI",
+          "text" : "i want manual on how to change oil"
+        },
+        {
+          "confidence" : 0.5025,
+          "family" : "consensus_public",
+          "id" : "open-massive-en-US-16722",
+          "language" : "en",
+          "sourceDataset" : "AmazonScience/MASSIVE en-US",
+          "text" : "have i gotten an email from sean"
+        },
+        {
+          "confidence" : 0.4898,
+          "family" : "consensus_public",
+          "id" : "open-clinc150-3",
+          "language" : "en",
+          "sourceDataset" : "CLINC150 UCI",
+          "text" : "tell me how to say, 'it is a beautiful morning' in italian"
+        },
+        {
+          "confidence" : 0.4342,
+          "family" : "consensus_public",
+          "id" : "open-clinc150-3124",
+          "language" : "en",
+          "sourceDataset" : "CLINC150 UCI",
+          "text" : "what will you call me"
+        },
+        {
+          "confidence" : 0.4287,
+          "family" : "consensus_public",
+          "id" : "open-massive-en-US-6911",
+          "language" : "en",
+          "sourceDataset" : "AmazonScience/MASSIVE en-US",
+          "text" : "who is scheduled for tomorrow's meeting"
+        }
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.9795,
+          "family" : "consensus_public",
+          "id" : "open-multidogo-finance-<CONV>6d8d6219-54cf-4a11-a20b-5e90bd74110d<TURN>1",
+          "language" : "en",
+          "sourceDataset" : "MultiDoGO",
+          "text" : "hi drew i would like to close my account can you help me"
+        },
+        {
+          "confidence" : 0.6147,
+          "family" : "consensus_public",
+          "id" : "open-clinc150-12742",
+          "language" : "en",
+          "sourceDataset" : "CLINC150 UCI",
+          "text" : "send a text message for me"
+        }
+      ],
+      "id" : "question",
+      "metrics" : {
+        "accuracy" : 0.65,
+        "f1" : 0.5333,
+        "falseNegative" : 12,
+        "falsePositive" : 2,
+        "precision" : 0.8,
+        "recall" : 0.4,
+        "total" : 40,
+        "trueNegative" : 18,
+        "truePositive" : 8
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.45,
+          "f1" : 0.5217,
+          "falseNegative" : 9,
+          "falsePositive" : 2,
+          "precision" : 0.75,
+          "recall" : 0.4,
+          "total" : 20,
+          "trueNegative" : 3,
+          "truePositive" : 6
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.85,
+          "f1" : 0.5714,
+          "falseNegative" : 3,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.4,
+          "total" : 20,
+          "trueNegative" : 15,
+          "truePositive" : 2
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US" : {
+          "accuracy" : 0,
+          "f1" : 0,
+          "falseNegative" : 2,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2,
+          "trueNegative" : 0,
+          "truePositive" : 0
+        },
+        "AmazonScience/MASSIVE zh-CN" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "CLINC150 UCI" : {
+          "accuracy" : 0.375,
+          "f1" : 0.4444,
+          "falseNegative" : 4,
+          "falsePositive" : 1,
+          "precision" : 0.6667,
+          "recall" : 0.3333,
+          "total" : 8,
+          "trueNegative" : 1,
+          "truePositive" : 2
+        },
+        "CrossWOZ" : {
+          "accuracy" : 0.625,
+          "f1" : 0.5714,
+          "falseNegative" : 3,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.4,
+          "total" : 8,
+          "trueNegative" : 3,
+          "truePositive" : 2
+        },
+        "Google Research GoEmotions" : {
+          "accuracy" : 0,
+          "f1" : 0,
+          "falseNegative" : 1,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 0,
+          "truePositive" : 0
+        },
+        "Google Taskmaster-1" : {
+          "accuracy" : 0.75,
+          "f1" : 0.8571,
+          "falseNegative" : 1,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.75,
+          "total" : 4,
+          "trueNegative" : 0,
+          "truePositive" : 3
+        },
+        "Meituan-Dianping/ASAP" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "MultiDoGO" : {
+          "accuracy" : 0.5,
+          "f1" : 0.5,
+          "falseNegative" : 1,
+          "falsePositive" : 1,
+          "precision" : 0.5,
+          "recall" : 0.5,
+          "total" : 4,
+          "trueNegative" : 1,
+          "truePositive" : 1
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.575,
+          "f1" : 0.2609,
+          "falseNegative" : 17,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.15,
+          "total" : 40,
+          "trueNegative" : 20,
+          "truePositive" : 3
+        },
+        "threshold" : 0.98
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.575,
+          "f1" : 0.2609,
+          "falseNegative" : 17,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.15,
+          "total" : 40,
+          "trueNegative" : 20,
+          "truePositive" : 3
+        },
+        "threshold" : 0.98
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.3,
+            "f1" : 0.125,
+            "falseNegative" : 14,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.0667,
+            "total" : 20,
+            "trueNegative" : 5,
+            "truePositive" : 1
+          },
+          "threshold" : 0.98
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.85,
+            "f1" : 0.5714,
+            "falseNegative" : 3,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.4,
+            "total" : 20,
+            "trueNegative" : 15,
+            "truePositive" : 2
+          },
+          "threshold" : 0.39
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "en" : {
+          "metrics" : {
+            "accuracy" : 0.3,
+            "f1" : 0.125,
+            "falseNegative" : 14,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.0667,
+            "total" : 20,
+            "trueNegative" : 5,
+            "truePositive" : 1
+          },
+          "threshold" : 0.98
+        },
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.85,
+            "f1" : 0.5714,
+            "falseNegative" : 3,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.4,
+            "total" : 20,
+            "trueNegative" : 15,
+            "truePositive" : 2
+          },
+          "threshold" : 0.39
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "invitation",
+      "metrics" : {
+        "accuracy" : 1,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 0,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 40,
+        "trueNegative" : 40,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2,
+          "trueNegative" : 2,
+          "truePositive" : 0
+        },
+        "AmazonScience/MASSIVE zh-CN" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "CLINC150 UCI" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "CrossWOZ" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "Google Research GoEmotions" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "Google Taskmaster-1" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "Meituan-Dianping/ASAP" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "MultiDoGO" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+        {
+          "confidence" : 0.7915,
+          "family" : "consensus_public",
+          "id" : "open-asap-35453",
+          "language" : "zh-Hans",
+          "sourceDataset" : "Meituan-Dianping/ASAP",
+          "text" : "菜品真的不想说太多,不知道网上那些那么多的好评怎么来的,水军真的太多,真的是济南最好的自助餐厅嘛?看了下网上的菜单品种很多,今天去了海鲜只有三种!煮熟的蛤蛎、煮熟的海星触角、煮熟的的扇贝、唯一生的就是三文鱼片!三文鱼限量供应,薄如纸片...扇贝太老、网上看的照片有烤牛舌、有鹅肝、有煎牛排、有西瓜汁、牛排、烤鸭卷、焗番薯,这些都没有看到,大部分感觉和早餐差不多。本来想用团购,因为我是住店顾客,说是138元,网上团购是128元。相差10元也无所谓,三文鱼真的太薄了,第一次吃到这样的厚度,限量供应,每次每人7片左右。不过客房服务还是挺好的。"
+        },
+        {
+          "confidence" : 0.6373,
+          "family" : "consensus_public",
+          "id" : "open-asap-44699",
+          "language" : "zh-Hans",
+          "sourceDataset" : "Meituan-Dianping/ASAP",
+          "text" : "地址:人民公园西门向被300米路西......走到一看店家门面活动价也是一元一个鸭头......有些人会觉得门面现金价和团购价一样都是一元一个鸭头,会有一些心理落差!其实我觉得还好,一元能买到一个鸭头,不管了门面活动价还是团购价都很值......一个帐号最多买六个~~服务还挺好的,走到说是大众点评团购的,说了一个验证码就可以连续把六个都验证了,很方便!环境一般,就是一般的门头,所有卖的东西都是外带的。没有餐桌,只能打包带回家吃!回到家一看鸭头上面很多毛都没清理干净,看着就浑身起鸡皮疙瘩......顿时胃口全无!挑了一个没怎么有鸭毛的尝了尝,说实话口味还是可以的,麻辣口味的!就试吃了这一个,剩下的五个都扔了!看着鸭头上的鸭毛实在吃不下去!希望商家要注意,以后一定要把鸭毛清理干净......"
+        },
+        {
+          "confidence" : 0.5467,
+          "family" : "consensus_public",
+          "id" : "open-cfpb-6854260",
+          "language" : "en",
+          "sourceDataset" : "CFPB via hpe-ai/customer-complaints",
+          "text" : "The account in question is not mine, as I stated in my initial complaint. Despite the fact that it says this account has been validated, the information is still incorrect. This account has to be immediately deleted from my credit record, as requested."
+        },
+        {
+          "confidence" : 0.3434,
+          "family" : "consensus_public",
+          "id" : "open-asap-11380",
+          "language" : "zh-Hans",
+          "sourceDataset" : "Meituan-Dianping/ASAP",
+          "text" : "口味:菜上了之后就很失望,色面就很普通,味道也是很普通,每道菜都是很普通,都没有一道是满意的,木瓜酥难吃,虾饺像速冻的一样,金钱肚不入味,凤爪点错了,也是难吃,炒饭就和外面福建沙县里的炒饭的味道一样。\\\\n环境:开在公园里,至少开了10年的店,白天进来发现装修已经落后了,不过有一点好,就是人少,安静,但是!有一个大缺点就是地毯,地毯看得出很脏,空气中还弥漫了一股臭味。\\\\n服务:上个苏打水,拿了半天没来,上菜速度倒是可以,服务员一点精神都没有。\\\\n上次晚上来包房和家人聚餐时对这家店留下的印象还挺好,味道,服务,环境都不错,两年后来吃中饭,这里的点心真是让人失望,还是唐宫好吃"
+        },
+        {
+          "confidence" : 0.0389,
+          "family" : "consensus_public",
+          "id" : "open-asap-40660",
+          "language" : "zh-Hans",
+          "sourceDataset" : "Meituan-Dianping/ASAP",
+          "text" : "针对这家的价位而言:设施不全没有本店自己的洗手间;口感差:其中一道酸辣汤辣的我们不轻,打包时碗底还沉着那么多胡椒粉,回家添了两碗水加了菜和面片还辣的大家出汗。另外的菜油性大,口感一般。炸菇的辣椒都发苦。菜量小。土豆丝18一份,36元的茄子没多少,因为极辣,带回家也没吃完一半。餐纸自费,打包盒自费。整体来讲没有以前的清心莲高雅周到但价位高;没有新开的自然林的品种多;也没有卫校对面那家素包子铺和乐天原来15元的自助亲民实惠;更没有雨花斋的感恩氛围。对于一个吃素食的人来讲,这顿饭没吃好,似乎不知它定位在哪里。第一次让我有了下次不来了的感觉。只是最后结账时的那个男孩一直很温和,体贴,很是受安慰。"
+        }
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "complaint",
+      "metrics" : {
+        "accuracy" : 0.775,
+        "f1" : 0,
+        "falseNegative" : 9,
+        "falsePositive" : 0,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 40,
+        "trueNegative" : 31,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.95,
+          "f1" : 0,
+          "falseNegative" : 1,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 19,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.6,
+          "f1" : 0,
+          "falseNegative" : 8,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 12,
+          "truePositive" : 0
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2,
+          "trueNegative" : 2,
+          "truePositive" : 0
+        },
+        "AmazonScience/MASSIVE zh-CN" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 0,
+          "f1" : 0,
+          "falseNegative" : 1,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 0,
+          "truePositive" : 0
+        },
+        "CLINC150 UCI" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "CrossWOZ" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "Google Research GoEmotions" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "Google Taskmaster-1" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "Meituan-Dianping/ASAP" : {
+          "accuracy" : 0,
+          "f1" : 0,
+          "falseNegative" : 8,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 0,
+          "truePositive" : 0
+        },
+        "MultiDoGO" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        }
+      },
+      "thresholdAt90Precision" : {
+        "metrics" : {
+          "accuracy" : 0.825,
+          "f1" : 0.3636,
+          "falseNegative" : 7,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.2222,
+          "total" : 40,
+          "trueNegative" : 31,
+          "truePositive" : 2
+        },
+        "threshold" : 0.58
+      },
+      "thresholdAt95Precision" : {
+        "metrics" : {
+          "accuracy" : 0.825,
+          "f1" : 0.3636,
+          "falseNegative" : 7,
+          "falsePositive" : 0,
+          "precision" : 1,
+          "recall" : 0.2222,
+          "total" : 40,
+          "trueNegative" : 31,
+          "truePositive" : 2
+        },
+        "threshold" : 0.58
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.7,
+            "f1" : 0.4,
+            "falseNegative" : 6,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.25,
+            "total" : 20,
+            "trueNegative" : 12,
+            "truePositive" : 2
+          },
+          "threshold" : 0.49
+        }
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+        "zh-Hans" : {
+          "metrics" : {
+            "accuracy" : 0.7,
+            "f1" : 0.4,
+            "falseNegative" : 6,
+            "falsePositive" : 0,
+            "precision" : 1,
+            "recall" : 0.25,
+            "total" : 20,
+            "trueNegative" : 12,
+            "truePositive" : 2
+          },
+          "threshold" : 0.49
+        }
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.8024,
+          "family" : "consensus_public",
+          "id" : "open-massive-en-US-16722",
+          "language" : "en",
+          "sourceDataset" : "AmazonScience/MASSIVE en-US",
+          "text" : "have i gotten an email from sean"
+        },
+        {
+          "confidence" : 0.5776,
+          "family" : "consensus_public",
+          "id" : "open-massive-zh-CN-1419",
+          "language" : "zh-Hans",
+          "sourceDataset" : "AmazonScience/MASSIVE zh-CN",
+          "text" : "请更多光亮"
+        }
+      ],
+      "id" : "scheduleNegotiation",
+      "metrics" : {
+        "accuracy" : 0.95,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 2,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 40,
+        "trueNegative" : 38,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.95,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 19,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.95,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 19,
+          "truePositive" : 0
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US" : {
+          "accuracy" : 0.5,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "AmazonScience/MASSIVE zh-CN" : {
+          "accuracy" : 0.75,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 3,
+          "truePositive" : 0
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "CLINC150 UCI" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "CrossWOZ" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "Google Research GoEmotions" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "Google Taskmaster-1" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "Meituan-Dianping/ASAP" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "MultiDoGO" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.7324,
+          "family" : "consensus_public",
+          "id" : "open-massive-zh-CN-9091",
+          "language" : "zh-Hans",
+          "sourceDataset" : "AmazonScience/MASSIVE zh-CN",
+          "text" : "清除日历中的所有的事件"
+        }
+      ],
+      "id" : "confirmationDecision",
+      "metrics" : {
+        "accuracy" : 0.975,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 1,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 40,
+        "trueNegative" : 39,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.95,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 19,
+          "truePositive" : 0
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2,
+          "trueNegative" : 2,
+          "truePositive" : 0
+        },
+        "AmazonScience/MASSIVE zh-CN" : {
+          "accuracy" : 0.75,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 3,
+          "truePositive" : 0
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "CLINC150 UCI" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "CrossWOZ" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "Google Research GoEmotions" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "Google Taskmaster-1" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "Meituan-Dianping/ASAP" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "MultiDoGO" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 0.8882,
+          "family" : "consensus_public",
+          "id" : "open-clinc150-11549",
+          "language" : "en",
+          "sourceDataset" : "CLINC150 UCI",
+          "text" : "check days of pto"
+        },
+        {
+          "confidence" : 0.783,
+          "family" : "consensus_public",
+          "id" : "open-clinc150-13091",
+          "language" : "en",
+          "sourceDataset" : "CLINC150 UCI",
+          "text" : "transfer my cash reward balance to my bank"
+        }
+      ],
+      "id" : "followUpReminder",
+      "metrics" : {
+        "accuracy" : 0.95,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 2,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 40,
+        "trueNegative" : 38,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.9,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 2,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 18,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2,
+          "trueNegative" : 2,
+          "truePositive" : 0
+        },
+        "AmazonScience/MASSIVE zh-CN" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "CLINC150 UCI" : {
+          "accuracy" : 0.75,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 2,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 6,
+          "truePositive" : 0
+        },
+        "CrossWOZ" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "Google Research GoEmotions" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "Google Taskmaster-1" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "Meituan-Dianping/ASAP" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "MultiDoGO" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+        {
+          "confidence" : 1,
+          "family" : "consensus_public",
+          "id" : "open-asap-22337",
+          "language" : "zh-Hans",
+          "sourceDataset" : "Meituan-Dianping/ASAP",
+          "text" : "总体来说,是不会再去第二次的消费地点。价格超级无敌的贵,菜品卖相很不好,很不精致,黑乎乎咸乎乎的,口味很差。专门去吃口味蛇,但是特别失望。口味蛇纯粹是被辣椒熬出来的,辣得无法张口,根本无法下咽。餐厅有一股霉味道,拥挤得很,还要收包厢服务费。。。餐前水果都变味了,变质了,放冰箱太久了。七个人花了1100多,真心不值这个价钱,建议大家千万不要去。之前有好多网上的好评论,可能都是他们花的钱,请的托,大家不要上当。。。"
+        },
+        {
+          "confidence" : 1,
+          "family" : "consensus_public",
+          "id" : "open-asap-11380",
+          "language" : "zh-Hans",
+          "sourceDataset" : "Meituan-Dianping/ASAP",
+          "text" : "口味:菜上了之后就很失望,色面就很普通,味道也是很普通,每道菜都是很普通,都没有一道是满意的,木瓜酥难吃,虾饺像速冻的一样,金钱肚不入味,凤爪点错了,也是难吃,炒饭就和外面福建沙县里的炒饭的味道一样。\\\\n环境:开在公园里,至少开了10年的店,白天进来发现装修已经落后了,不过有一点好,就是人少,安静,但是!有一个大缺点就是地毯,地毯看得出很脏,空气中还弥漫了一股臭味。\\\\n服务:上个苏打水,拿了半天没来,上菜速度倒是可以,服务员一点精神都没有。\\\\n上次晚上来包房和家人聚餐时对这家店留下的印象还挺好,味道,服务,环境都不错,两年后来吃中饭,这里的点心真是让人失望,还是唐宫好吃"
+        },
+        {
+          "confidence" : 0.9999,
+          "family" : "consensus_public",
+          "id" : "open-asap-31166",
+          "language" : "zh-Hans",
+          "sourceDataset" : "Meituan-Dianping/ASAP",
+          "text" : "用了大众点评活动~九折~要了一个薯条~不评论不过不失~先说好的~服务还可以~看样子卫生不错~ 服务和卫生对于一个吃货来说固然重要~~~然而味道更重要~~本着大众点评是用作各位吃货的公平公正的平台~我觉得真实评价很重要!!!!炸鸡是重点~因为我第一次在广州吃韩国炸鸡是在西城都会那家~从此我爱上这个东东~~~我见很多网友评论这家分数这么高~本着西城都会那家对广州版韩国炸鸡的标准对这家点抱有好大的希望~~~结果~~味道好不好见仁见智~我觉得像超市十块钱一整只香辣炸鸡加了酱料在表面一样~~~这里要88一只全鸡~~我是双拼了两个口味所以有两盘~~~我有个疑惑~全鸡不是应该是一整只鸡的意思吗?我上桌的全鸡是没有臂膀的~~颠覆了我的认知~是因为我用了优惠活动吗?只是有一只鸡腿在一堆碎鸡(四分之一手掌大)上面~~请问其他小伙伴你们吃的是这样的吗?在广州我觉得食物始终是店铺持久经营的灵魂~~~"
+        },
+        {
+          "confidence" : 0.9999,
+          "family" : "consensus_public",
+          "id" : "open-asap-23652",
+          "language" : "zh-Hans",
+          "sourceDataset" : "Meituan-Dianping/ASAP",
+          "text" : "我是抽奖抽到一个海鲜锅。之前去过他家光华村那家店感觉很好,所以这次非常高兴的就前往了。结果感觉非常不好。首先这个海鲜锅并没有宣传照片上那么华丽,端上来直接就是一锅开水煮白菜放了几个虾、2个蛏子,搂底能看到下面有些虾皮和墨鱼仔须须。汤的味道并没有任何海鲜本来的味道,基本全是靠调味品勾兑的。感觉有点欺骗消费者不说,连起码的一点卖相都没有。不知道是这一家店是这样还是其他几家店都这样?让我对这家泰国鱼翅馆现在的阿诺泰仅存的好感荡然无存。此外,其他菜品的价位感觉都比正常价位贵一倍或者1/3。价格不亲民,东西没卖相。。。不知道以前泰国领事馆为啥还要推荐。。。而且,团购券折扣力度微乎其微周末还无法使用,让本来就很不实惠的消费更加不实惠。所以我只能给2星。"
+        },
+        {
+          "confidence" : 0.9999,
+          "family" : "consensus_public",
+          "id" : "open-crosswoz-11884-12",
+          "language" : "zh-Hans",
+          "sourceDataset" : "CrossWOZ",
+          "text" : "好的,游玩结束后帮我找个最低价格是1000元以上的景点,我你希望酒店提供24小时热水和西式餐厅,平时工作很辛苦,我也享受一下。"
+        }
+      ],
+      "id" : "replyableMessage",
+      "metrics" : {
+        "accuracy" : 0.275,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 29,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 40,
+        "trueNegative" : 11,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 0.45,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 11,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 9,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 0.1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 18,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 2,
+          "truePositive" : 0
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2,
+          "trueNegative" : 2,
+          "truePositive" : 0
+        },
+        "AmazonScience/MASSIVE zh-CN" : {
+          "accuracy" : 0.25,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 3,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "CLINC150 UCI" : {
+          "accuracy" : 0.375,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 5,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 3,
+          "truePositive" : 0
+        },
+        "CrossWOZ" : {
+          "accuracy" : 0,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 8,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 0,
+          "truePositive" : 0
+        },
+        "Google Research GoEmotions" : {
+          "accuracy" : 0,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 1,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 0,
+          "truePositive" : 0
+        },
+        "Google Taskmaster-1" : {
+          "accuracy" : 0.25,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 3,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "Meituan-Dianping/ASAP" : {
+          "accuracy" : 0.125,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 7,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "MultiDoGO" : {
+          "accuracy" : 0.5,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 2,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 2,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    },
+    {
+      "falseNegativeExamples" : [
+
+      ],
+      "falsePositiveExamples" : [
+
+      ],
+      "id" : "blessing",
+      "metrics" : {
+        "accuracy" : 1,
+        "f1" : 0,
+        "falseNegative" : 0,
+        "falsePositive" : 0,
+        "precision" : 0,
+        "recall" : 0,
+        "total" : 40,
+        "trueNegative" : 40,
+        "truePositive" : 0
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        },
+        "zh-Hans" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 20,
+          "trueNegative" : 20,
+          "truePositive" : 0
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 2,
+          "trueNegative" : 2,
+          "truePositive" : 0
+        },
+        "AmazonScience/MASSIVE zh-CN" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "CLINC150 UCI" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "CrossWOZ" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "Google Research GoEmotions" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 1,
+          "trueNegative" : 1,
+          "truePositive" : 0
+        },
+        "Google Taskmaster-1" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        },
+        "Meituan-Dianping/ASAP" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 8,
+          "trueNegative" : 8,
+          "truePositive" : 0
+        },
+        "MultiDoGO" : {
+          "accuracy" : 1,
+          "f1" : 0,
+          "falseNegative" : 0,
+          "falsePositive" : 0,
+          "precision" : 0,
+          "recall" : 0,
+          "total" : 4,
+          "trueNegative" : 4,
+          "truePositive" : 0
+        }
+      },
+      "thresholdsAt90PrecisionByLanguage" : {
+
+      },
+      "thresholdsAt95PrecisionByLanguage" : {
+
+      }
+    }
+  ],
+  "corpusRecordCount" : 40,
+  "exactTrainingOverlapCount" : 0,
+  "familyCount" : 1,
+  "generatedAt" : "2026-08-27T09:28:39Z",
+  "languageCounts" : {
+    "en" : 20,
+    "zh-Hans" : 20
+  },
+  "manifestSchemaVersion" : 3,
+  "seed" : 20260826,
+  "sentiment" : {
+    "accuracy" : 0.275,
+    "correct" : 11,
+    "macroF1" : 0.1438,
+    "perLabelF1" : {
+      "negative" : 0,
+      "neutral" : 0.4314,
+      "positive" : 0
+    },
+    "total" : 40,
+    "unknown" : 24,
+    "unknownRate" : 0.6
+  },
+  "sentimentBySource" : {
+    "AmazonScience/MASSIVE en-US" : {
+      "accuracy" : 0,
+      "correct" : 0,
+      "macroF1" : 0,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 2,
+      "unknown" : 2,
+      "unknownRate" : 1
+    },
+    "AmazonScience/MASSIVE zh-CN" : {
+      "accuracy" : 0.25,
+      "correct" : 1,
+      "macroF1" : 0.1333,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.4,
+        "positive" : 0
+      },
+      "total" : 4,
+      "unknown" : 3,
+      "unknownRate" : 0.75
+    },
+    "CFPB via hpe-ai/customer-complaints" : {
+      "accuracy" : 0,
+      "correct" : 0,
+      "macroF1" : 0,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 1,
+      "unknown" : 0,
+      "unknownRate" : 0
+    },
+    "CLINC150 UCI" : {
+      "accuracy" : 0,
+      "correct" : 0,
+      "macroF1" : 0,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 8,
+      "unknown" : 8,
+      "unknownRate" : 1
+    },
+    "CrossWOZ" : {
+      "accuracy" : 0.75,
+      "correct" : 6,
+      "macroF1" : 0.2857,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.8571,
+        "positive" : 0
+      },
+      "total" : 8,
+      "unknown" : 2,
+      "unknownRate" : 0.25
+    },
+    "Google Research GoEmotions" : {
+      "accuracy" : 0,
+      "correct" : 0,
+      "macroF1" : 0,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 1,
+      "unknown" : 1,
+      "unknownRate" : 1
+    },
+    "Google Taskmaster-1" : {
+      "accuracy" : 0.25,
+      "correct" : 1,
+      "macroF1" : 0.1333,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.4,
+        "positive" : 0
+      },
+      "total" : 4,
+      "unknown" : 3,
+      "unknownRate" : 0.75
+    },
+    "Meituan-Dianping/ASAP" : {
+      "accuracy" : 0.375,
+      "correct" : 3,
+      "macroF1" : 0.1818,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0.5455,
+        "positive" : 0
+      },
+      "total" : 8,
+      "unknown" : 1,
+      "unknownRate" : 0.125
+    },
+    "MultiDoGO" : {
+      "accuracy" : 0,
+      "correct" : 0,
+      "macroF1" : 0,
+      "perLabelF1" : {
+        "negative" : 0,
+        "neutral" : 0,
+        "positive" : 0
+      },
+      "total" : 4,
+      "unknown" : 4,
+      "unknownRate" : 1
+    }
+  },
+  "verifierLayers" : [
+    {
+      "acceptedForAutomaticRouting" : false,
+      "coldLoadMilliseconds" : 5.9154,
+      "deploymentMode" : "shadow",
+      "id" : "action",
+      "leaveOneSourceOut" : {
+        "AmazonScience/MASSIVE en-US" : {
+          "correctRouted" : 10,
+          "expectedSpecialized" : 38,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.7225,
+          "finalRecall" : 0.2632,
+          "routed" : 10,
+          "stageACandidates" : 23,
+          "stageARecall" : 0.6053,
+          "stageBExactAccuracy" : 0.8261,
+          "total" : 38
+        },
+        "AmazonScience/MASSIVE zh-CN" : {
+          "correctRouted" : 8,
+          "expectedSpecialized" : 36,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.6756,
+          "finalRecall" : 0.2222,
+          "routed" : 8,
+          "stageACandidates" : 22,
+          "stageARecall" : 0.6111,
+          "stageBExactAccuracy" : 0.8182,
+          "total" : 36
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "correctRouted" : 9,
+          "expectedSpecialized" : 39,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.7009,
+          "finalRecall" : 0.2308,
+          "routed" : 9,
+          "stageACandidates" : 23,
+          "stageARecall" : 0.5897,
+          "stageBExactAccuracy" : 0.8261,
+          "total" : 39
+        },
+        "CLINC150 UCI" : {
+          "correctRouted" : 9,
+          "expectedSpecialized" : 32,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.7009,
+          "finalRecall" : 0.2813,
+          "routed" : 9,
+          "stageACandidates" : 17,
+          "stageARecall" : 0.5313,
+          "stageBExactAccuracy" : 0.8824,
+          "total" : 32
+        },
+        "CrossWOZ" : {
+          "correctRouted" : 7,
+          "expectedSpecialized" : 32,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.6457,
+          "finalRecall" : 0.2188,
+          "routed" : 7,
+          "stageACandidates" : 20,
+          "stageARecall" : 0.625,
+          "stageBExactAccuracy" : 0.8,
+          "total" : 32
+        },
+        "Google Research GoEmotions" : {
+          "correctRouted" : 10,
+          "expectedSpecialized" : 39,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.7225,
+          "finalRecall" : 0.2564,
+          "routed" : 10,
+          "stageACandidates" : 24,
+          "stageARecall" : 0.6154,
+          "stageBExactAccuracy" : 0.8333,
+          "total" : 39
+        },
+        "Google Taskmaster-1" : {
+          "correctRouted" : 10,
+          "expectedSpecialized" : 36,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.7225,
+          "finalRecall" : 0.2778,
+          "routed" : 10,
+          "stageACandidates" : 20,
+          "stageARecall" : 0.5556,
+          "stageBExactAccuracy" : 0.9,
+          "total" : 36
+        },
+        "Meituan-Dianping/ASAP" : {
+          "correctRouted" : 8,
+          "expectedSpecialized" : 32,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.6756,
+          "finalRecall" : 0.25,
+          "routed" : 8,
+          "stageACandidates" : 22,
+          "stageARecall" : 0.6875,
+          "stageBExactAccuracy" : 0.8182,
+          "total" : 32
+        },
+        "MultiDoGO" : {
+          "correctRouted" : 9,
+          "expectedSpecialized" : 36,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.7009,
+          "finalRecall" : 0.25,
+          "routed" : 9,
+          "stageACandidates" : 21,
+          "stageARecall" : 0.5833,
+          "stageBExactAccuracy" : 0.8095,
+          "total" : 36
+        }
+      },
+      "metrics" : {
+        "correctRouted" : 10,
+        "expectedSpecialized" : 40,
+        "falseRouted" : 0,
+        "finalPrecision" : 1,
+        "finalPrecisionWilsonLower95" : 0.7225,
+        "finalRecall" : 0.25,
+        "routed" : 10,
+        "stageACandidates" : 24,
+        "stageARecall" : 0.6,
+        "stageBExactAccuracy" : 0.8333,
+        "total" : 40
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "correctRouted" : 3,
+          "expectedSpecialized" : 20,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.4385,
+          "finalRecall" : 0.15,
+          "routed" : 3,
+          "stageACandidates" : 16,
+          "stageARecall" : 0.8,
+          "stageBExactAccuracy" : 0.75,
+          "total" : 20
+        },
+        "zh-Hans" : {
+          "correctRouted" : 7,
+          "expectedSpecialized" : 20,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.6457,
+          "finalRecall" : 0.35,
+          "routed" : 7,
+          "stageACandidates" : 8,
+          "stageARecall" : 0.4,
+          "stageBExactAccuracy" : 1,
+          "total" : 20
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 2,
+          "falseRouted" : 0,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 0,
+          "stageACandidates" : 1,
+          "stageARecall" : 0.5,
+          "stageBExactAccuracy" : 1,
+          "total" : 2
+        },
+        "AmazonScience/MASSIVE zh-CN" : {
+          "correctRouted" : 2,
+          "expectedSpecialized" : 4,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.3424,
+          "finalRecall" : 0.5,
+          "routed" : 2,
+          "stageACandidates" : 2,
+          "stageARecall" : 0.5,
+          "stageBExactAccuracy" : 1,
+          "total" : 4
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "correctRouted" : 1,
+          "expectedSpecialized" : 1,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.2065,
+          "finalRecall" : 1,
+          "routed" : 1,
+          "stageACandidates" : 1,
+          "stageARecall" : 1,
+          "stageBExactAccuracy" : 1,
+          "total" : 1
+        },
+        "CLINC150 UCI" : {
+          "correctRouted" : 1,
+          "expectedSpecialized" : 8,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.2065,
+          "finalRecall" : 0.125,
+          "routed" : 1,
+          "stageACandidates" : 7,
+          "stageARecall" : 0.875,
+          "stageBExactAccuracy" : 0.7143,
+          "total" : 8
+        },
+        "CrossWOZ" : {
+          "correctRouted" : 3,
+          "expectedSpecialized" : 8,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.4385,
+          "finalRecall" : 0.375,
+          "routed" : 3,
+          "stageACandidates" : 4,
+          "stageARecall" : 0.5,
+          "stageBExactAccuracy" : 1,
+          "total" : 8
+        },
+        "Google Research GoEmotions" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 1,
+          "falseRouted" : 0,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 0,
+          "stageACandidates" : 0,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0,
+          "total" : 1
+        },
+        "Google Taskmaster-1" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 4,
+          "falseRouted" : 0,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 0,
+          "stageACandidates" : 4,
+          "stageARecall" : 1,
+          "stageBExactAccuracy" : 0.5,
+          "total" : 4
+        },
+        "Meituan-Dianping/ASAP" : {
+          "correctRouted" : 2,
+          "expectedSpecialized" : 8,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.3424,
+          "finalRecall" : 0.25,
+          "routed" : 2,
+          "stageACandidates" : 2,
+          "stageARecall" : 0.25,
+          "stageBExactAccuracy" : 1,
+          "total" : 8
+        },
+        "MultiDoGO" : {
+          "correctRouted" : 1,
+          "expectedSpecialized" : 4,
+          "falseRouted" : 0,
+          "finalPrecision" : 1,
+          "finalPrecisionWilsonLower95" : 0.2065,
+          "finalRecall" : 0.25,
+          "routed" : 1,
+          "stageACandidates" : 3,
+          "stageARecall" : 0.75,
+          "stageBExactAccuracy" : 1,
+          "total" : 4
+        }
+      },
+      "warmMedianMilliseconds" : 0.0448,
+      "warmP95Milliseconds" : 0.6303
+    },
+    {
+      "acceptedForAutomaticRouting" : false,
+      "coldLoadMilliseconds" : 2.3034,
+      "deploymentMode" : "shadow",
+      "id" : "coordination",
+      "leaveOneSourceOut" : {
+        "AmazonScience/MASSIVE en-US" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 1,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 1,
+          "stageACandidates" : 9,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0.7778,
+          "total" : 38
+        },
+        "AmazonScience/MASSIVE zh-CN" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 1,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 1,
+          "stageACandidates" : 8,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0.75,
+          "total" : 36
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 1,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 1,
+          "stageACandidates" : 10,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0.8,
+          "total" : 39
+        },
+        "CLINC150 UCI" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 0,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 0,
+          "stageACandidates" : 5,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 1,
+          "total" : 32
+        },
+        "CrossWOZ" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 1,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 1,
+          "stageACandidates" : 10,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0.8,
+          "total" : 32
+        },
+        "Google Research GoEmotions" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 1,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 1,
+          "stageACandidates" : 10,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0.8,
+          "total" : 39
+        },
+        "Google Taskmaster-1" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 1,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 1,
+          "stageACandidates" : 10,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0.8,
+          "total" : 36
+        },
+        "Meituan-Dianping/ASAP" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 1,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 1,
+          "stageACandidates" : 10,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0.8,
+          "total" : 32
+        },
+        "MultiDoGO" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 1,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 1,
+          "stageACandidates" : 8,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0.75,
+          "total" : 36
+        }
+      },
+      "metrics" : {
+        "correctRouted" : 0,
+        "expectedSpecialized" : 0,
+        "falseRouted" : 1,
+        "finalPrecision" : 0,
+        "finalPrecisionWilsonLower95" : 0,
+        "finalRecall" : 0,
+        "routed" : 1,
+        "stageACandidates" : 10,
+        "stageARecall" : 0,
+        "stageBExactAccuracy" : 0.8,
+        "total" : 40
+      },
+      "metricsByLanguage" : {
+        "en" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 1,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 1,
+          "stageACandidates" : 8,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0.75,
+          "total" : 20
+        },
+        "zh-Hans" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 0,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 0,
+          "stageACandidates" : 2,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 1,
+          "total" : 20
+        }
+      },
+      "metricsBySource" : {
+        "AmazonScience/MASSIVE en-US" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 0,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 0,
+          "stageACandidates" : 1,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 1,
+          "total" : 2
+        },
+        "AmazonScience/MASSIVE zh-CN" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 0,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 0,
+          "stageACandidates" : 2,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 1,
+          "total" : 4
+        },
+        "CFPB via hpe-ai/customer-complaints" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 0,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 0,
+          "stageACandidates" : 0,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0,
+          "total" : 1
+        },
+        "CLINC150 UCI" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 1,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 1,
+          "stageACandidates" : 5,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0.6,
+          "total" : 8
+        },
+        "CrossWOZ" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 0,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 0,
+          "stageACandidates" : 0,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0,
+          "total" : 8
+        },
+        "Google Research GoEmotions" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 0,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 0,
+          "stageACandidates" : 0,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0,
+          "total" : 1
+        },
+        "Google Taskmaster-1" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 0,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 0,
+          "stageACandidates" : 0,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0,
+          "total" : 4
+        },
+        "Meituan-Dianping/ASAP" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 0,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 0,
+          "stageACandidates" : 0,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 0,
+          "total" : 8
+        },
+        "MultiDoGO" : {
+          "correctRouted" : 0,
+          "expectedSpecialized" : 0,
+          "falseRouted" : 0,
+          "finalPrecision" : 0,
+          "finalPrecisionWilsonLower95" : 0,
+          "finalRecall" : 0,
+          "routed" : 0,
+          "stageACandidates" : 2,
+          "stageARecall" : 0,
+          "stageBExactAccuracy" : 1,
+          "total" : 4
+        }
+      },
+      "warmMedianMilliseconds" : 0.031,
+      "warmP95Milliseconds" : 0.2455
+    }
+  ]
+}

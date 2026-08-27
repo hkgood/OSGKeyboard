@@ -1,0 +1,406 @@
+{
+  "baseCorpusPath" : "/Users/rocky/Documents/OSGKeyboard/ModelTraining/ClipboardSemantics/clipboard_semantic_corpus.jsonl",
+  "generatedAt" : "2026-08-27T09:25:26Z",
+  "selectionPolicy" : "Thresholds and top-1/top-2 margins are calibrated without acceptance data. Automatic routing requires >=95% exact-route precision and >=100 routed positives for every specialized label in both English and Simplified Chinese. Without human gold, passing values remain consensus-relative.",
+  "silverDirectoryPath" : "/Users/rocky/Documents/OSGKeyboard/ModelTraining/ClipboardSemantics/Consensus",
+  "verifiers" : [
+    {
+      "acceptanceByLanguage" : {
+        "en" : {
+          "correctByLabel" : {
+            "complaintOnly" : 2,
+            "questionRequest" : 11,
+            "taskOnly" : 10
+          },
+          "correctRouted" : 23,
+          "expectedSpecialized" : 59,
+          "f1" : 0.5349,
+          "falseRouted" : 4,
+          "missedSpecialized" : 35,
+          "precision" : 0.8519,
+          "recall" : 0.3898,
+          "routed" : 27,
+          "routedByLabel" : {
+            "complaintOnly" : 2,
+            "questionRequest" : 15,
+            "taskOnly" : 10
+          },
+          "total" : 146
+        },
+        "zh-Hans" : {
+          "correctByLabel" : {
+            "complaintOnly" : 12,
+            "questionRequest" : 17,
+            "taskOnly" : 18
+          },
+          "correctRouted" : 47,
+          "expectedSpecialized" : 59,
+          "f1" : 0.8174,
+          "falseRouted" : 9,
+          "missedSpecialized" : 9,
+          "precision" : 0.8393,
+          "recall" : 0.7966,
+          "routed" : 56,
+          "routedByLabel" : {
+            "both" : 2,
+            "complaintOnly" : 12,
+            "questionRequest" : 21,
+            "taskOnly" : 21
+          },
+          "total" : 146
+        }
+      },
+      "acceptanceCount" : 292,
+      "acceptanceMetrics" : {
+        "correctByLabel" : {
+          "complaintOnly" : 11,
+          "questionRequest" : 26,
+          "taskOnly" : 24
+        },
+        "correctRouted" : 61,
+        "expectedSpecialized" : 118,
+        "f1" : 0.6524,
+        "falseRouted" : 8,
+        "missedSpecialized" : 54,
+        "precision" : 0.8841,
+        "recall" : 0.5169,
+        "routed" : 69,
+        "routedByLabel" : {
+          "complaintOnly" : 11,
+          "questionRequest" : 33,
+          "taskOnly" : 25
+        },
+        "total" : 292
+      },
+      "calibrationCount" : 3020,
+      "calibrationMetrics" : {
+        "correctByLabel" : {
+          "complaintOnly" : 9,
+          "questionRequest" : 5,
+          "taskOnly" : 5
+        },
+        "correctRouted" : 19,
+        "expectedSpecialized" : 48,
+        "f1" : 0.5588,
+        "falseRouted" : 1,
+        "missedSpecialized" : 28,
+        "precision" : 0.95,
+        "recall" : 0.3958,
+        "routed" : 20,
+        "routedByLabel" : {
+          "complaintOnly" : 9,
+          "questionRequest" : 6,
+          "taskOnly" : 5
+        },
+        "total" : 50
+      },
+      "gate" : {
+        "accepted" : false,
+        "maximumSourceShareByLabelAndLanguage" : {
+          "en|complaintOnly" : 0.5,
+          "en|questionRequest" : 0.8667,
+          "en|taskOnly" : 0.9,
+          "zh-Hans|both" : 1,
+          "zh-Hans|complaintOnly" : 0.5833,
+          "zh-Hans|questionRequest" : 0.9524,
+          "zh-Hans|taskOnly" : 0.5714
+        },
+        "minimumPredictedPositivesPerLabelAndLanguage" : 100,
+        "precisionByLabelAndLanguage" : {
+          "en|complaintOnly" : 1,
+          "en|questionRequest" : 0.7333,
+          "en|taskOnly" : 1,
+          "zh-Hans|both" : 0,
+          "zh-Hans|complaintOnly" : 1,
+          "zh-Hans|questionRequest" : 0.8095,
+          "zh-Hans|taskOnly" : 0.8571
+        },
+        "reason" : "Shadow only: at least one label/language misses precision, support, or source-diversity gates.",
+        "supportByLabelAndLanguage" : {
+          "en|complaintOnly" : 2,
+          "en|questionRequest" : 15,
+          "en|taskOnly" : 10,
+          "zh-Hans|both" : 2,
+          "zh-Hans|complaintOnly" : 12,
+          "zh-Hans|questionRequest" : 21,
+          "zh-Hans|taskOnly" : 21
+        }
+      },
+      "id" : "action",
+      "labels" : [
+        "taskOnly",
+        "complaintOnly",
+        "both",
+        "questionRequest",
+        "neither"
+      ],
+      "modelBytes" : 80333,
+      "modelFile" : "ActionIntentVerifier.mlmodel",
+      "threshold" : {
+        "confidenceThreshold" : 0.82,
+        "metrics" : {
+          "correctByLabel" : {
+            "complaintOnly" : 9,
+            "questionRequest" : 5,
+            "taskOnly" : 5
+          },
+          "correctRouted" : 19,
+          "expectedSpecialized" : 48,
+          "f1" : 0.5588,
+          "falseRouted" : 1,
+          "missedSpecialized" : 28,
+          "precision" : 0.95,
+          "recall" : 0.3958,
+          "routed" : 20,
+          "routedByLabel" : {
+            "complaintOnly" : 9,
+            "questionRequest" : 6,
+            "taskOnly" : 5
+          },
+          "total" : 50
+        },
+        "minimumMargin" : 0
+      },
+      "thresholdCalibrationCount" : 50,
+      "thresholdsByLanguage" : {
+        "en" : {
+          "confidenceThreshold" : 0.85,
+          "metrics" : {
+            "correctByLabel" : {
+              "complaintOnly" : 4,
+              "questionRequest" : 3,
+              "taskOnly" : 2
+            },
+            "correctRouted" : 9,
+            "expectedSpecialized" : 31,
+            "f1" : 0.45,
+            "falseRouted" : 0,
+            "missedSpecialized" : 22,
+            "precision" : 1,
+            "recall" : 0.2903,
+            "routed" : 9,
+            "routedByLabel" : {
+              "complaintOnly" : 4,
+              "questionRequest" : 3,
+              "taskOnly" : 2
+            },
+            "total" : 33
+          },
+          "minimumMargin" : 0
+        },
+        "zh-Hans" : {
+          "confidenceThreshold" : 0.5,
+          "metrics" : {
+            "correctByLabel" : {
+              "complaintOnly" : 5,
+              "questionRequest" : 1,
+              "taskOnly" : 3
+            },
+            "correctRouted" : 9,
+            "expectedSpecialized" : 17,
+            "f1" : 0.6923,
+            "falseRouted" : 0,
+            "missedSpecialized" : 8,
+            "precision" : 1,
+            "recall" : 0.5294,
+            "routed" : 9,
+            "routedByLabel" : {
+              "complaintOnly" : 5,
+              "questionRequest" : 1,
+              "taskOnly" : 3
+            },
+            "total" : 17
+          },
+          "minimumMargin" : 0
+        }
+      },
+      "trainingCount" : 7490
+    },
+    {
+      "acceptanceByLanguage" : {
+        "en" : {
+          "correctByLabel" : {
+            "confirmationDecision" : 7,
+            "followUpReminder" : 8,
+            "invitation" : 4,
+            "scheduleNegotiation" : 8
+          },
+          "correctRouted" : 27,
+          "expectedSpecialized" : 41,
+          "f1" : 0.7606,
+          "falseRouted" : 3,
+          "missedSpecialized" : 14,
+          "precision" : 0.9,
+          "recall" : 0.6585,
+          "routed" : 30,
+          "routedByLabel" : {
+            "confirmationDecision" : 7,
+            "followUpReminder" : 10,
+            "invitation" : 5,
+            "scheduleNegotiation" : 8
+          },
+          "total" : 146
+        },
+        "zh-Hans" : {
+          "correctByLabel" : {
+
+          },
+          "correctRouted" : 0,
+          "expectedSpecialized" : 41,
+          "f1" : 0,
+          "falseRouted" : 0,
+          "missedSpecialized" : 41,
+          "precision" : 0,
+          "recall" : 0,
+          "routed" : 0,
+          "routedByLabel" : {
+
+          },
+          "total" : 146
+        }
+      },
+      "acceptanceCount" : 292,
+      "acceptanceMetrics" : {
+        "correctByLabel" : {
+          "confirmationDecision" : 14,
+          "followUpReminder" : 17,
+          "invitation" : 8,
+          "scheduleNegotiation" : 16
+        },
+        "correctRouted" : 55,
+        "expectedSpecialized" : 82,
+        "f1" : 0.7692,
+        "falseRouted" : 6,
+        "missedSpecialized" : 27,
+        "precision" : 0.9016,
+        "recall" : 0.6707,
+        "routed" : 61,
+        "routedByLabel" : {
+          "confirmationDecision" : 14,
+          "followUpReminder" : 20,
+          "invitation" : 11,
+          "scheduleNegotiation" : 16
+        },
+        "total" : 292
+      },
+      "calibrationCount" : 3020,
+      "calibrationMetrics" : {
+        "correctByLabel" : {
+          "confirmationDecision" : 1
+        },
+        "correctRouted" : 1,
+        "expectedSpecialized" : 8,
+        "f1" : 0.2222,
+        "falseRouted" : 0,
+        "missedSpecialized" : 7,
+        "precision" : 1,
+        "recall" : 0.125,
+        "routed" : 1,
+        "routedByLabel" : {
+          "confirmationDecision" : 1
+        },
+        "total" : 50
+      },
+      "gate" : {
+        "accepted" : false,
+        "maximumSourceShareByLabelAndLanguage" : {
+          "en|confirmationDecision" : 1,
+          "en|followUpReminder" : 0.9,
+          "en|invitation" : 1,
+          "en|scheduleNegotiation" : 1
+        },
+        "minimumPredictedPositivesPerLabelAndLanguage" : 100,
+        "precisionByLabelAndLanguage" : {
+          "en|confirmationDecision" : 1,
+          "en|followUpReminder" : 0.8,
+          "en|invitation" : 0.8,
+          "en|scheduleNegotiation" : 1
+        },
+        "reason" : "Shadow only: at least one label/language misses precision, support, or source-diversity gates.",
+        "supportByLabelAndLanguage" : {
+          "en|confirmationDecision" : 7,
+          "en|followUpReminder" : 10,
+          "en|invitation" : 5,
+          "en|scheduleNegotiation" : 8
+        }
+      },
+      "id" : "coordination",
+      "labels" : [
+        "invitation",
+        "scheduleNegotiation",
+        "confirmationDecision",
+        "followUpReminder",
+        "neither"
+      ],
+      "modelBytes" : 28191,
+      "modelFile" : "CoordinationIntentVerifier.mlmodel",
+      "threshold" : {
+        "confidenceThreshold" : 0.5,
+        "metrics" : {
+          "correctByLabel" : {
+            "confirmationDecision" : 1
+          },
+          "correctRouted" : 1,
+          "expectedSpecialized" : 8,
+          "f1" : 0.2222,
+          "falseRouted" : 0,
+          "missedSpecialized" : 7,
+          "precision" : 1,
+          "recall" : 0.125,
+          "routed" : 1,
+          "routedByLabel" : {
+            "confirmationDecision" : 1
+          },
+          "total" : 50
+        },
+        "minimumMargin" : 0.45
+      },
+      "thresholdCalibrationCount" : 50,
+      "thresholdsByLanguage" : {
+        "en" : {
+          "confidenceThreshold" : 0.5,
+          "metrics" : {
+            "correctByLabel" : {
+              "confirmationDecision" : 1
+            },
+            "correctRouted" : 1,
+            "expectedSpecialized" : 8,
+            "f1" : 0.2222,
+            "falseRouted" : 0,
+            "missedSpecialized" : 7,
+            "precision" : 1,
+            "recall" : 0.125,
+            "routed" : 1,
+            "routedByLabel" : {
+              "confirmationDecision" : 1
+            },
+            "total" : 33
+          },
+          "minimumMargin" : 0.45
+        },
+        "zh-Hans" : {
+          "confidenceThreshold" : 1,
+          "metrics" : {
+            "correctByLabel" : {
+
+            },
+            "correctRouted" : 0,
+            "expectedSpecialized" : 0,
+            "f1" : 0,
+            "falseRouted" : 0,
+            "missedSpecialized" : 0,
+            "precision" : 0,
+            "recall" : 0,
+            "routed" : 0,
+            "routedByLabel" : {
+
+            },
+            "total" : 17
+          },
+          "minimumMargin" : 1
+        }
+      },
+      "trainingCount" : 1810
+    }
+  ]
+}

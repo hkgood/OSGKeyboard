@@ -251,6 +251,18 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         }
     }
 
+    /// Whether Reply may return several sendable variants. Default is on.
+    @Published public var multipleReplyVariantsEnabled: Bool {
+        didSet {
+            guard !isApplyingConfiguration,
+                  multipleReplyVariantsEnabled != configuration.multipleReplyVariantsEnabled else {
+                return
+            }
+            configuration.multipleReplyVariantsEnabled = multipleReplyVariantsEnabled
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
     /// Whether the pipeline should run translate-and-polish (not just
     /// polish). Both engines honour the selected target locale.
     public var isTranslationEffective: Bool {
@@ -438,6 +450,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         keyboardHapticIntensity = configuration.keyboardHapticIntensity
         polishIntensity = configuration.polishIntensity
         aiResponseLength = configuration.aiResponseLength
+        multipleReplyVariantsEnabled = configuration.multipleReplyVariantsEnabled
         llmThinkingEnabled = configuration.llmThinkingEnabled
         clipboardHistoryEnabled = configuration.clipboardHistoryEnabled
         clipboardCandidateBarEnabled = configuration.clipboardCandidateBarEnabled
@@ -469,6 +482,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         keyboardHapticIntensity = .default
         polishIntensity = .default
         aiResponseLength = .default
+        multipleReplyVariantsEnabled = true
         localASRCustomLanguageModelEnabled = true
         llmThinkingEnabled = false
         clipboardHistoryEnabled = false
@@ -485,6 +499,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         configuration.keyboardHapticIntensity = .default
         configuration.polishIntensity = .default
         configuration.aiResponseLength = .default
+        configuration.multipleReplyVariantsEnabled = true
         configuration.localASRCustomLanguageModelEnabled = true
         configuration.llmThinkingEnabled = false
         configuration.clipboardHistoryEnabled = false
@@ -543,6 +558,7 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         keyboardHapticIntensity = fresh.keyboardHapticIntensity
         polishIntensity = fresh.polishIntensity
         aiResponseLength = fresh.aiResponseLength
+        multipleReplyVariantsEnabled = fresh.multipleReplyVariantsEnabled
         llmThinkingEnabled = fresh.llmThinkingEnabled
         clipboardHistoryEnabled = fresh.clipboardHistoryEnabled
         clipboardCandidateBarEnabled = fresh.clipboardCandidateBarEnabled

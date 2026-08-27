@@ -89,16 +89,17 @@ public final class AIAgentSkillLayoutStore: ObservableObject {
     @discardableResult
     public func enable(_ id: String) -> AIAgentSkillEnableResult {
         let current = layout.sanitized(catalog: mergedCatalog)
-        guard let skill = mergedCatalog.first(where: { $0.id == id }) else {
+        let canonicalID = AIClipboardSkillCatalog.canonicalID(for: id)
+        guard let skill = mergedCatalog.first(where: { $0.id == canonicalID }) else {
             return .unknown
         }
-        if current.isEnabled(id) { return .alreadyEnabled }
-        if skill.requiresShortcut, !current.hasConfirmedShortcut(id) {
+        if current.isEnabled(canonicalID) { return .alreadyEnabled }
+        if skill.requiresShortcut, !current.hasConfirmedShortcut(canonicalID) {
             return .needsShortcut
         }
         commitLayout(
             AIAgentSkillLayout(
-                enabledIDs: current.enabledIDs + [id],
+                enabledIDs: current.enabledIDs + [canonicalID],
                 confirmedShortcutIDs: current.confirmedShortcutIDs
             )
         )
@@ -109,9 +110,10 @@ public final class AIAgentSkillLayoutStore: ObservableObject {
     /// the user deletes them in the Shortcuts app if they want them gone.
     public func disable(_ id: String) {
         let current = layout.sanitized(catalog: mergedCatalog)
+        let canonicalID = AIClipboardSkillCatalog.canonicalID(for: id)
         commitLayout(
             AIAgentSkillLayout(
-                enabledIDs: current.enabledIDs.filter { $0 != id },
+                enabledIDs: current.enabledIDs.filter { $0 != canonicalID },
                 confirmedShortcutIDs: current.confirmedShortcutIDs
             )
         )
