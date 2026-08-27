@@ -1,10 +1,9 @@
 import json
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-
-import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -32,6 +31,26 @@ class ConsensusLabelTests(unittest.TestCase):
         self.assertEqual("taskOnly", accepted[0]["actionVerifierLabel"])
         self.assertTrue(accepted[0]["task"])
         self.assertEqual(1, report["acceptedCount"])
+        self.assertEqual(
+            {"labeler-0", "labeler-1", "labeler-2"},
+            set(accepted[0]["labelerResponseHashes"]),
+        )
+        self.assertTrue(
+            all(
+                len(value) == 64
+                for value in accepted[0]["labelerResponseHashes"].values()
+            )
+        )
+        self.assertEqual(
+            0,
+            report["overlapChecks"][
+                "sourceNearDuplicateClusterAcrossSplits"
+            ],
+        )
+        self.assertEqual(
+            1,
+            sum(report["sourceSplitCounts"]["fixture"].values()),
+        )
 
     def test_rejects_multi_coordination_consensus(self):
         _, accepted, conflicts = self._merge(
@@ -52,9 +71,11 @@ class ConsensusLabelTests(unittest.TestCase):
     def test_near_duplicate_slot_variants_share_split(self):
         first = {
             "text": "Could you send report 123 before Friday?",
+            "sourceDataset": "fixture",
         }
         second = {
             "text": "Could you send report 456 before Friday?",
+            "sourceDataset": "fixture",
         }
 
         self.assertEqual(
@@ -62,7 +83,41 @@ class ConsensusLabelTests(unittest.TestCase):
             consensus.split_for(second),
         )
 
-    def _merge(self, source_labels, label_sets):
+    def test_rejects_ambiguous_majority(self):
+        _, accepted, conflicts = self._merge(
+            source_labels={"task": True},
+            label_sets=[["task"], ["task"], ["task"]],
+            ambiguous_flags=[True, True, False],
+        )
+
+        self.assertEqual([], accepted)
+        self.assertEqual(
+            "ambiguous-majority",
+            conflicts[0]["rejectedReason"],
+        )
+
+    def test_rejects_quoted_intent_majority(self):
+        _, accepted, conflicts = self._merge(
+            source_labels={"question": True},
+            label_sets=[["question"], ["question"], ["question"]],
+            quoted_flags=[True, True, False],
+        )
+
+        self.assertEqual([], accepted)
+        self.assertEqual(
+            "quoted-or-meta-intent",
+            conflicts[0]["rejectedReason"],
+        )
+
+    def _merge(
+        self,
+        source_labels,
+        label_sets,
+        ambiguous_flags=None,
+        quoted_flags=None,
+    ):
+        ambiguous_flags = ambiguous_flags or [False] * len(label_sets)
+        quoted_flags = quoted_flags or [False] * len(label_sets)
         with tempfile.TemporaryDirectory() as raw_directory:
             directory = Path(raw_directory)
             queue_path = directory / "queue.jsonl"
@@ -88,8 +143,8 @@ class ConsensusLabelTests(unittest.TestCase):
                         {
                             "id": "record-1",
                             "labels": labels,
-                            "ambiguous": False,
-                            "quotedOrMeta": False,
+                            "ambiguous": ambiguous_flags[index],
+                            "quotedOrMeta": quoted_flags[index],
                             "confidence": 0.95,
                         }
                     ],

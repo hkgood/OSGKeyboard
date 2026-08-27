@@ -13,7 +13,6 @@ import unicodedata
 from collections import Counter, defaultdict
 from pathlib import Path
 
-
 SEED = 20260827
 INTENT_LABELS = (
     "task",
@@ -48,9 +47,7 @@ DEFAULT_INPUT = Path("ModelTraining/ClipboardSemantics/open-training-corpus.json
 
 def normalized_text(value: str) -> str:
     return " ".join(
-        unicodedata.normalize("NFKC", value)
-        .replace("\u0000", " ")
-        .split()
+        unicodedata.normalize("NFKC", value).replace("\u0000", " ").split()
     ).strip()
 
 
@@ -69,8 +66,7 @@ def read_json_lines(path: Path) -> list[dict]:
 def write_json_lines(path: Path, records: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     serialized = "\n".join(
-        json.dumps(record, ensure_ascii=False, sort_keys=True)
-        for record in records
+        json.dumps(record, ensure_ascii=False, sort_keys=True) for record in records
     )
     path.write_text(serialized + ("\n" if serialized else ""), encoding="utf-8")
 
@@ -118,8 +114,8 @@ def stratified_queue(
                 record.get("language", "unknown"),
             )
         ].append(record)
-    for key in grouped:
-        grouped[key].sort(
+    for values in grouped.values():
+        values.sort(
             key=lambda record: queue_priority(record, hard_negative_texts),
             reverse=True,
         )
@@ -232,8 +228,7 @@ def prepare(arguments: argparse.Namespace) -> None:
         "sourceCounts": dict(
             sorted(
                 Counter(
-                    record.get("sourceDataset") or "unknown"
-                    for record in queue_records
+                    record.get("sourceDataset") or "unknown" for record in queue_records
                 ).items()
             )
         ),
@@ -263,14 +258,16 @@ def validate_labeler_record(record: dict, expected_ids: set[str]) -> dict:
     if record_id not in expected_ids:
         raise ValueError(f"Unexpected labeler record id: {record_id}")
     labels = record.get("labels")
-    if not isinstance(labels, list) or any(label not in INTENT_LABELS for label in labels):
+    if not isinstance(labels, list) or any(
+        label not in INTENT_LABELS for label in labels
+    ):
         raise ValueError(f"Unsupported labels for {record_id}: {labels}")
     confidence = record.get("confidence")
     if not isinstance(confidence, (int, float)) or not 0 <= confidence <= 1:
         raise ValueError(f"Invalid confidence for {record_id}: {confidence}")
     for flag in SPECIAL_FLAGS:
         if not isinstance(record.get(flag), bool):
-            raise ValueError(f"Missing boolean {flag} for {record_id}")
+            raise TypeError(f"Missing boolean {flag} for {record_id}")
     return {
         "id": record_id,
         "labels": sorted(set(labels)),
@@ -294,9 +291,7 @@ def action_label(labels: set[str]) -> str:
 
 def coordination_label(labels: set[str]) -> str | None:
     matches = [
-        label
-        for label in COORDINATION_LABELS
-        if label != "neither" and label in labels
+        label for label in COORDINATION_LABELS if label != "neither" and label in labels
     ]
     if len(matches) > 1:
         return None
@@ -381,9 +376,7 @@ def merge(arguments: argparse.Namespace) -> None:
     for record_id in sorted(expected_ids):
         queue_record = queue_by_id[record_id]
         votes = Counter(
-            label
-            for _, records in labelers
-            for label in records[record_id]["labels"]
+            label for _, records in labelers for label in records[record_id]["labels"]
         )
         source_labels = {
             label
@@ -403,9 +396,8 @@ def merge(arguments: argparse.Namespace) -> None:
         )
         coordination = coordination_label(consensus_labels)
         full_agreement = all(
-            set(records[record_id]["labels"]) == set(
-                labelers[0][1][record_id]["labels"]
-            )
+            set(records[record_id]["labels"])
+            == set(labelers[0][1][record_id]["labels"])
             and records[record_id]["ambiguous"]
             == labelers[0][1][record_id]["ambiguous"]
             and records[record_id]["quotedOrMeta"]
@@ -426,8 +418,7 @@ def merge(arguments: argparse.Namespace) -> None:
             "id": record_id,
             "labelerVotes": dict(sorted(votes.items())),
             "labelerConfidences": {
-                name: records[record_id]["confidence"]
-                for name, records in labelers
+                name: records[record_id]["confidence"] for name, records in labelers
             },
             "labelerResponseHashes": {
                 name: hashlib.sha256(
@@ -472,9 +463,8 @@ def merge(arguments: argparse.Namespace) -> None:
             "quotedOrMeta": quoted_votes >= 2,
             "consensusAgreement": round(
                 max(
-                    [votes.get(label, 0) for label in INTENT_LABELS] + [
-                        len(labelers) if not labels and full_agreement else 0
-                    ]
+                    [votes.get(label, 0) for label in INTENT_LABELS]
+                    + [len(labelers) if not labels and full_agreement else 0]
                 )
                 / len(labelers),
                 4,
@@ -503,14 +493,23 @@ def merge(arguments: argparse.Namespace) -> None:
     labeler_maps = [records for _, records in labelers]
     text_split_map: dict[str, set[str]] = defaultdict(set)
     cluster_split_map: dict[str, set[str]] = defaultdict(set)
+    source_cluster_split_map: dict[str, set[str]] = defaultdict(set)
     for record in accepted:
         text_split_map[normalized_text(record["text"]).casefold()].add(record["split"])
         cluster_split_map[cluster_signature(record["text"])].add(record["split"])
+        source_cluster_key = (
+            f"{record.get('sourceDataset') or 'unknown'}|"
+            f"{cluster_signature(record['text'])}"
+        )
+        source_cluster_split_map[source_cluster_key].add(record["split"])
     exact_overlap_count = sum(len(splits) > 1 for splits in text_split_map.values())
     cluster_overlap_count = sum(
         len(splits) > 1 for splits in cluster_split_map.values()
     )
-    if exact_overlap_count or cluster_overlap_count:
+    source_cluster_overlap_count = sum(
+        len(splits) > 1 for splits in source_cluster_split_map.values()
+    )
+    if exact_overlap_count or cluster_overlap_count or source_cluster_overlap_count:
         raise ValueError("Silver split overlap validation failed")
     report = {
         "schemaVersion": 1,
@@ -527,6 +526,7 @@ def merge(arguments: argparse.Namespace) -> None:
         "overlapChecks": {
             "exactTextAcrossSplits": exact_overlap_count,
             "nearDuplicateClusterAcrossSplits": cluster_overlap_count,
+            "sourceNearDuplicateClusterAcrossSplits": (source_cluster_overlap_count),
         },
         "fullAgreementCount": sum(record["fullAgreement"] for record in accepted)
         + sum(record["fullAgreement"] for record in conflicts),
@@ -535,9 +535,13 @@ def merge(arguments: argparse.Namespace) -> None:
             sorted(expected_ids),
         ),
         "labelers": [name for name, _ in labelers],
-        "splitCounts": dict(sorted(Counter(record["split"] for record in accepted).items())),
+        "splitCounts": dict(
+            sorted(Counter(record["split"] for record in accepted).items())
+        ),
         "actionLabelCounts": dict(
-            sorted(Counter(record["actionVerifierLabel"] for record in accepted).items())
+            sorted(
+                Counter(record["actionVerifierLabel"] for record in accepted).items()
+            )
         ),
         "coordinationLabelCounts": dict(
             sorted(
@@ -556,11 +560,24 @@ def merge(arguments: argparse.Namespace) -> None:
         "sourceCounts": dict(
             sorted(
                 Counter(
-                    record.get("sourceDataset") or "unknown"
-                    for record in accepted
+                    record.get("sourceDataset") or "unknown" for record in accepted
                 ).items()
             )
         ),
+        "sourceSplitCounts": {
+            source: dict(
+                sorted(
+                    Counter(
+                        record["split"]
+                        for record in accepted
+                        if (record.get("sourceDataset") or "unknown") == source
+                    ).items()
+                )
+            )
+            for source in sorted(
+                {record.get("sourceDataset") or "unknown" for record in accepted}
+            )
+        },
     }
     arguments.report.write_text(
         json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
