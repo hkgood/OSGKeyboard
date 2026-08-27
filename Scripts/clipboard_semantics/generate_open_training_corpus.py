@@ -366,6 +366,11 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--open-output", type=Path, default=OPEN_CORPUS_PATH)
     parser.add_argument("--combined-output", type=Path, default=COMBINED_CORPUS_PATH)
     parser.add_argument("--sources-output", type=Path, default=SOURCES_PATH)
+    parser.add_argument(
+        "--allow-unavailable-sources",
+        action="store_true",
+        help="Continue with license-safe sources that are reachable.",
+    )
     return parser.parse_args()
 
 
@@ -1172,16 +1177,30 @@ def validate_records(records: list[dict], holdouts: set[str]) -> None:
 def main() -> None:
     arguments = parse_arguments()
     rng = random.Random(arguments.seed)
-    sources = (
-        massive_records(arguments.seed),
-        crosswoz_records(arguments.seed),
-        go_emotions_records(arguments.seed),
-        multidogo_records(arguments.seed),
-        taskmaster_records(arguments.seed),
-        clinc_records(arguments.seed),
-        cfpb_records(arguments.seed),
-        asap_records(arguments.seed),
+    source_builders = (
+        ("MASSIVE", massive_records),
+        ("CrossWOZ", crosswoz_records),
+        ("GoEmotions", go_emotions_records),
+        ("MultiDoGO", multidogo_records),
+        ("Taskmaster-1", taskmaster_records),
+        ("CLINC150", clinc_records),
+        ("CFPB", cfpb_records),
+        ("ASAP", asap_records),
     )
+    sources: list[list[dict]] = []
+    unavailable_sources: list[dict[str, str]] = []
+    for source_name, builder in source_builders:
+        try:
+            sources.append(builder(arguments.seed))
+        except (HTTPError, URLError, TimeoutError, ConnectionError, OSError) as error:
+            if not arguments.allow_unavailable_sources:
+                raise
+            unavailable_sources.append(
+                {
+                    "dataset": source_name,
+                    "reason": f"{type(error).__name__}: {error}",
+                }
+            )
     candidates = [record_value for source in sources for record_value in source]
     rng.shuffle(candidates)
 
@@ -1282,6 +1301,7 @@ def main() -> None:
                 "reason": "No clean official train split independent from the frozen holdout.",
             },
         ],
+        "unavailableSources": unavailable_sources,
         "baseCorpusRecords": len(base_records),
         "openTrainingRecords": len(selected),
         "combinedRecords": len(combined),
