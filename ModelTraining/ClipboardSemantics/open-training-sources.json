@@ -1,9 +1,9 @@
 {
   "baseCorpusRecords": 17692,
-  "combinedCorpusSHA256": "70d1547b41b08e4417cfa86ad93dd5637b557d174c6503575c44fbf152cc3ee5",
-  "combinedRecords": 23918,
+  "combinedCorpusSHA256": "f111bc7425912213082e01038b52dd3d25fe21418d156f532da8f01f27fa16e4",
+  "combinedRecords": 21537,
   "excludedBaseOverlap": 6,
-  "excludedHoldoutOverlap": 151,
+  "excludedHoldoutOverlap": 72,
   "excludedSources": [
     {
       "dataset": "MIDAS",
@@ -38,72 +38,11 @@
       "reason": "No clean official train split independent from the frozen holdout."
     }
   ],
-  "openTrainingRecords": 6226,
+  "openTrainingRecords": 3845,
   "policy": "Licensed official training splits only. Per-record knownLabels prevent unannotated intents from becoming false negatives. Exact normalized text overlap with every local *holdout-corpus.jsonl file is excluded.",
   "schemaVersion": 1,
   "seed": 20260827,
   "sources": [
-    {
-      "dataset": "AmazonScience/MASSIVE en-US",
-      "knownLabelCounts": {
-        "followUpReminder": 7,
-        "question": 223,
-        "sentiment": 4,
-        "task": 143
-      },
-      "languages": {
-        "en": 498
-      },
-      "license": "CC-BY-4.0",
-      "records": 498,
-      "revision": "1.1",
-      "url": "https://huggingface.co/datasets/AmazonScience/massive"
-    },
-    {
-      "dataset": "AmazonScience/MASSIVE zh-CN",
-      "knownLabelCounts": {
-        "followUpReminder": 3,
-        "question": 212,
-        "sentiment": 6,
-        "task": 165
-      },
-      "languages": {
-        "zh-Hans": 487
-      },
-      "license": "CC-BY-4.0",
-      "records": 487,
-      "revision": "1.1",
-      "url": "https://huggingface.co/datasets/AmazonScience/massive"
-    },
-    {
-      "dataset": "CFPB via hpe-ai/customer-complaints",
-      "knownLabelCounts": {
-        "complaint": 898,
-        "sentiment": 898
-      },
-      "languages": {
-        "en": 898
-      },
-      "license": "CC0-1.0 source / Apache-2.0 mirror",
-      "records": 898,
-      "revision": "e5fec64e1f0688e47699b9cf8c26fe4ed350123a",
-      "url": "https://www.consumerfinance.gov/data-research/consumer-complaints/search/detail/4696537"
-    },
-    {
-      "dataset": "CLINC150 UCI",
-      "knownLabelCounts": {
-        "followUpReminder": 5,
-        "question": 308,
-        "task": 143
-      },
-      "languages": {
-        "en": 498
-      },
-      "license": "CC-BY-3.0",
-      "records": 498,
-      "revision": "UCI-570-2020-05-07",
-      "url": "https://archive.ics.uci.edu/dataset/570/clinc150"
-    },
     {
       "dataset": "CrossWOZ",
       "knownLabelCounts": {
@@ -121,13 +60,13 @@
     {
       "dataset": "Google Research GoEmotions",
       "knownLabelCounts": {
-        "sentiment": 799
+        "sentiment": 798
       },
       "languages": {
-        "en": 1199
+        "en": 1198
       },
       "license": "Apache-2.0",
-      "records": 1199,
+      "records": 1198,
       "revision": "5d8f4ac97c873bde3a792ba4628f00bb9103d3e6",
       "url": "https://github.com/google-research/google-research/blob/5d8f4ac97c873bde3a792ba4628f00bb9103d3e6/goemotions/data/train.tsv"
     },
@@ -164,17 +103,31 @@
     {
       "dataset": "MultiDoGO",
       "knownLabelCounts": {
-        "confirmationDecision": 28,
+        "confirmationDecision": 27,
         "question": 83,
         "task": 222
       },
       "languages": {
-        "en": 464
+        "en": 465
       },
       "license": "CDLA-Permissive-1.0",
-      "records": 464,
+      "records": 465,
       "revision": "baa30639c4b271f394b81443c842193407cdf26d",
-      "url": "https://github.com/awslabs/multi-domain-goal-oriented-dialogues-dataset/blob/baa30639c4b271f394b81443c842193407cdf26d/data/paper_splits/splits_annotated_at_turn_level/insurance/train.tsv"
+      "url": "https://github.com/awslabs/multi-domain-goal-oriented-dialogues-dataset/blob/baa30639c4b271f394b81443c842193407cdf26d/data/paper_splits/splits_annotated_at_turn_level/software/train.tsv"
+    }
+  ],
+  "unavailableSources": [
+    {
+      "dataset": "MASSIVE",
+      "reason": "URLError: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)>"
+    },
+    {
+      "dataset": "CLINC150",
+      "reason": "URLError: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)>"
+    },
+    {
+      "dataset": "CFPB",
+      "reason": "URLError: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)>"
     }
   ]
 }

@@ -122,6 +122,48 @@ Without human-reviewed gold labels, these results measure agreement with the
 model committee, not production truth. A passing verifier may enter shadow
 deployment, but cannot be described as having 95% real-user precision.
 
+## Iterative weakly supervised research
+
+The portable research harness runs a fixed 20-round matrix over bilingual
+character/word n-grams, sparse logistic classifiers, class balancing,
+deterministic label-preserving augmentation, hard-example weighting, and
+three-round high-confidence self-training consensus:
+
+```bash
+python3 -m pip install -r \
+  Scripts/clipboard_semantics/requirements-research.txt
+python3 Scripts/clipboard_semantics/generate_open_training_corpus.py \
+  --allow-unavailable-sources
+python3 Scripts/clipboard_semantics/run_iterative_retraining.py
+```
+
+The harness fits thresholds only on the generated validation split. Synthetic
+test, golden, random, targeted-release, and comprehensive online corpora never
+enter training or threshold calibration. Exact normalized overlap with every
+frozen holdout is a fatal error.
+
+The 2026-08-27 study completed the requested 20 rounds and two additional
+20-round fine-tuning phases after the first phase missed its release target:
+
+- The shared-configuration phase selected round 1. Random-holdout macro F1 was
+  `0.5709`; research-only comprehensive macro F1 was `0.2383`.
+- Per-intent selection improved those values to `0.5770` and `0.2645`.
+- Explicit evidence gates raised golden macro precision to `0.9877` and
+  research-only precision to `0.6097`, but reduced recall too severely.
+- The current deployed reference remains stronger: random-holdout macro F1
+  `0.7669` and research-only comprehensive macro F1 `0.2783`.
+
+All three phases failed the release gate, so no model was promoted. Detailed
+rounds, final evaluations, source breakdowns, and macOS replay instructions are
+stored under `IterativeResearch/`.
+
+This harness is deliberately a Linux surrogate. It cannot emit the
+`NLModel`-compatible Create ML artifacts used by the keyboard extension.
+Deployable training, Core ML compilation, simulator regression, latency, and
+memory checks still require macOS with Xcode 26+. A surrogate result can
+nominate a data/threshold policy for macOS replay, but cannot authorize
+automatic deployment.
+
 ## Deployment decision
 
 Only maxEnt models are trained and deployed because they are self-contained in
