@@ -153,9 +153,10 @@ The 2026-08-27 study completed the requested 20 rounds and two additional
 - The current deployed reference remains stronger: random-holdout macro F1
   `0.7669` and research-only comprehensive macro F1 `0.2783`.
 
-All three phases failed the release gate, so no model was promoted. Detailed
-rounds, final evaluations, source breakdowns, and macOS replay instructions are
-stored under `IterativeResearch/`.
+All three phases failed the release gate, so no model was promoted. The compact
+study summary and macOS replay instructions are stored under
+`IterativeResearch/`; detailed round and evaluation JSON is reproducible and
+gitignored.
 
 This harness is deliberately a Linux surrogate. It cannot emit the
 `NLModel`-compatible Create ML artifacts used by the keyboard extension.

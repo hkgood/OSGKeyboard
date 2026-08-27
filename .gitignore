@@ -70,6 +70,8 @@ ModelTraining/ClipboardSemantics/open-training-corpus.jsonl
 ModelTraining/ClipboardSemantics/combined-training-corpus.jsonl
 ModelTraining/ClipboardSemantics/Consensus/*.jsonl
 ModelTraining/ClipboardSemantics/VerifierCandidates/
+ModelTraining/ClipboardSemantics/IterativeResearch/**/rounds.json
+ModelTraining/ClipboardSemantics/IterativeResearch/**/final-report.json
 
 # Python bytecode
 __pycache__/
