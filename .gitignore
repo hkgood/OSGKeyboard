@@ -66,12 +66,23 @@ OSGKeyboard/Resources/CustomLanguageModel/v1/compiled/
 ModelTraining/ClipboardSemantics/Candidates/
 
 # Reproducible open-data corpus artifacts (regenerated from pinned sources)
+ModelTraining/ClipboardSemantics/Generated/
 ModelTraining/ClipboardSemantics/open-training-corpus.jsonl
 ModelTraining/ClipboardSemantics/combined-training-corpus.jsonl
+ModelTraining/ClipboardSemantics/v6-boundary-training-supplement.jsonl
+ModelTraining/ClipboardSemantics/v6-blind-evaluation-corpus.jsonl
 ModelTraining/ClipboardSemantics/Consensus/*.jsonl
+ModelTraining/ClipboardSemantics/CorpusRegistry/*.jsonl
+ModelTraining/ClipboardSemantics/CorpusRegistry/Labels/
+ModelTraining/ClipboardSemantics/CorpusRegistry/*-report.json
 ModelTraining/ClipboardSemantics/VerifierCandidates/
 ModelTraining/ClipboardSemantics/IterativeResearch/**/rounds.json
 ModelTraining/ClipboardSemantics/IterativeResearch/**/final-report.json
+
+# Blind review queues can contain restricted evaluation text and reviewer IDs.
+ModelTraining/ClipboardSemantics/BlessingBenchmark/*.jsonl
+ModelTraining/ClipboardSemantics/BlessingBenchmark/manifest.json
+ModelTraining/ClipboardSemantics/BlessingBenchmark/final-manifest.json
 
 # Python bytecode
 __pycache__/
