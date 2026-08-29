@@ -26,6 +26,45 @@ unsupported labels, insufficient bilingual golden coverage, and content that
 resembles direct contact data or credentials. No user clipboard content is
 included.
 
+## Taxonomy v6 candidate contract
+
+The deployed models above remain the historical nine-intent suite. The next
+corpus taxonomy is defined by
+`Consensus/labeling-instructions-v6.md`: it retains `task`, `question`,
+`invitation`, `complaint`, `scheduleNegotiation`, `confirmationDecision`,
+`followUpReminder`, `blessing`, and `replyableMessage`, then adds
+`assistantCommand`, `informationQuery`, and `systemNotification`. Assistant,
+search, and machine-notification text is therefore preserved as explicit
+routing data instead of being flattened into legacy negatives or discarded.
+
+Every record also receives one primary domain or `unknown`: `finance`,
+`travel`, `calendar`, `communication`, `media`, `smartHome`, `shopping`,
+`dining`, `health`, `weather`, `accountService`, or `generalKnowledge`.
+`Consensus/adjudication-instructions-v5.md` defines evidence-based resolution
+for the expanded fields while retaining the existing queue format.
+
+Intent values remain three-state: `true`, `false`, or `unknown`.
+`knownLabels` lists only fields the source actually annotates after an audited
+mapping; an absent field is unknown and contributes neither a positive nor a
+negative training example. External sources may produce candidates only from a
+pinned upstream official `train` split under documented commercial-use terms.
+Upstream dev/validation/test data and every local frozen holdout are barred from
+training, including normalized near-duplicates.
+
+`chinese-corpus-candidate-audit-v1.json` records the first versioned source
+decision. MASSIVE, CrossWOZ, BiToD, MultiDoGO, Taskmaster-1, SNIPS, MInDS-14,
+GoEmotions, ASAP, Restaurant8k, and FormosaNLU are admitted to the candidate
+audit pipeline subject to their per-source conditions. BANKING77, ABCD,
+MultiWOZ, CLINC150, CFPB, `openclaw-zh-greetings`, and LCCC remain quarantined.
+Admission is not automatic commercial training approval: revision pinning,
+license evidence, attribution, privacy/content review, deterministic mapping,
+and holdout deduplication still apply.
+
+Synthetic records are train-only, retain generation and upstream provenance,
+use a sample weight no greater than `0.25`, and declare only contractually known
+fields. They never enter calibration, evaluation, human gold, or policy-anchor
+sets and cannot override conflicting human or licensed non-synthetic evidence.
+
 ## Reproduce
 
 ```bash
@@ -62,7 +101,8 @@ python3 Scripts/clipboard_semantics/apply_deployment_policy.py \
 
 The reproducible open-data supplement uses official training splits from
 MASSIVE, CrossWOZ, GoEmotions, MultiDoGO, Taskmaster-1, CLINC150, CFPB,
-and ASAP:
+and ASAP. It also includes the MIT-licensed `openclaw-zh-greetings` labels and
+the pinned MIT blessing templates from `SWHL/WeChat-AutoSendBless`:
 
 ```bash
 python3 Scripts/clipboard_semantics/generate_open_training_corpus.py
@@ -84,11 +124,145 @@ CPED is also excluded because the repository license does not establish
 commercial rights to the underlying television dialogue; synthetic blessing
 datasets without a clear per-record rights chain are excluded as well.
 
+## Broad blessing supplement
+
+`blessing-labeling-guidelines.md` defines the broad product boundary. The
+dedicated generator creates equal numbers of positive examples and difficult
+negatives such as greeting-only, blessing requests, received thanks,
+celebration mentions, quotations, reported wishes, and sarcasm:
+
+```bash
+python3 Scripts/clipboard_semantics/generate_blessing_training_corpus.py \
+  --records-per-language 50000
+```
+
+Every generated record declares only `blessing` in `knownLabels`, so unknown
+clipboard intents are not treated as false. The generator rejects normalized
+base-corpus and frozen-holdout overlap, duplicate text, and common PII shapes.
+
+LCCC may be mined only as an isolated research queue. Although its dataset card
+declares MIT, the official CDial-GPT README limits the dataset and pretrained
+models to research use. Its source is crawled Weibo dialogue without a complete
+underlying content-rights or privacy chain. Download LCCC-base from the official
+CDial-GPT link or the `silver/lccc` Hugging Face mirror, then run:
+
+```bash
+python3 Scripts/clipboard_semantics/extract_lccc_blessing_candidates.py \
+  /path/to/LCCC-base.zip \
+  --output /tmp/lccc-blessing-candidates.jsonl \
+  --manifest /tmp/lccc-blessing-candidates-manifest.json
+```
+
+The resulting unreviewed records are research-only and must not be merged into
+a commercial training corpus without legal, privacy, and manual label review.
+
+## Blessing benchmark review
+
+Prepare a blind queue with 3,000 Chinese and 1,500 English records from the
+frozen comprehensive holdout:
+
+```bash
+python3 Scripts/clipboard_semantics/prepare_blessing_benchmark.py
+```
+
+Two different people independently complete `annotator-a.jsonl` and
+`annotator-b.jsonl` without seeing `sealed-provenance.jsonl`. Finalization is
+strict: incomplete labels, duplicate IDs, reused annotator identity, and
+unadjudicated disagreement are fatal.
+
+```bash
+python3 Scripts/clipboard_semantics/finalize_blessing_benchmark.py \
+  --annotator-a-id reviewer-a \
+  --annotator-b-id reviewer-b
+```
+
+`BlessingBenchmark/README.md` defines the stable positive and negative boundary
+categories. The finalized calibration/test benchmark remains evaluation-only
+and must never enter a training corpus.
+
 ## Consensus silver data and joint verifiers
 
-The precision-first pipeline prepares a license-traceable queue from public
-training data, accepts only three-model agreement or source-supported
-two-of-three agreement, and keeps conflicts out of training:
+The corpus registry combines the preserved historical product corpus, current
+and scaled product generators, licensed open data, and project-owned blessing
+data without flattening provenance:
+
+```bash
+python3 Scripts/clipboard_semantics/build_corpus_registry.py
+```
+
+`corpus-registry-sources.json` is the source-of-truth inventory. Exact duplicate
+texts retain every source claim, while any occurrence in calibration or frozen
+evaluation data globally bars that text from training. Labels use three states:
+`true`, `false`, and `unknown`; a missing source annotation is never converted
+to a negative label. LCCC and other research-only or unclear-rights sources are
+explicitly excluded.
+
+The v2 blind-labeling pilot samples 1,000 distinct near-duplicate clusters.
+Three primary models label every record without seeing source labels. Any
+non-unanimous record is sent, still blind, to two review models:
+
+```bash
+python3 Scripts/clipboard_semantics/merge_consensus_labels_v2.py \
+  prepare-review \
+  --queue ModelTraining/ClipboardSemantics/CorpusRegistry/labeling-pilot.jsonl \
+  --primary sol=/path/to/primary-sol.jsonl \
+  --primary grok=/path/to/primary-grok.jsonl \
+  --primary codex=/path/to/primary-codex.jsonl \
+  --output /path/to/review-queue.jsonl \
+  --report /path/to/review-report.json
+```
+
+Primary unanimity produces Tier A silver data. Reviewed records require at
+least four of five votes for every intent and sentiment field to produce Tier B
+silver data at lower training weight. Remaining conflicts, ambiguity, and
+positive quoted/meta cases enter a human adjudication queue and never train
+automatically. `Consensus/labeling-instructions-v2.md` defines the shared
+taxonomy and strict output schema.
+
+The frozen 2026-08-28 pilot used Sol, Grok, and Luna as primary labelers, then
+Composer and Claude for blind conflict review. Of 1,000
+records, 81 reached Tier A, 290 reached Tier B, and 629 entered human review.
+The 0.80 per-language/per-field kappa gate failed, so this pilot is not eligible
+for automatic scale-up or model training. `replyableMessage`, `task`,
+`question`, and Chinese coordination/blessing boundaries require adjudication
+and instruction refinement first.
+
+The 629 unresolved records were then reviewed independently by Claude and Grok
+using `Consensus/adjudication-instructions-v1.md`. A record reaches Tier C only
+when both adjudicators select the same non-unknown value for every unresolved
+field, quote exact supporting text, and report confidence of at least 0.90.
+Only 21 records passed; 608 remain unresolved. Tier C keeps a 0.35 sample weight
+and remains silver data rather than human gold.
+
+The 608-record remainder was then re-adjudicated with Sol 5.6 and Grok 4.6
+using the product-approved boundaries in
+`Consensus/labeling-instructions-v3.md` and the disposition-aware schema in
+`Consensus/adjudication-instructions-v2.md`. The approved rules exclude clear
+device/assistant commands, separate invitation questions from information
+questions, treat self-reminders as follow-up only, treat first-person needs as
+implicit tasks, require explicit dissatisfaction for complaints, and require
+explicit wishes or congratulations for blessings. At the unchanged 0.90
+two-model confidence gate, all seven policy-sensitive intent fields were
+rechecked even when the old panel had agreed on them. In the final result, 202
+additional records reached Tier C, 109 clear device/assistant commands were
+isolated, and 297 remained unresolved. A
+deterministic language/field/severity-stratified sample of 60 records is the
+human product-policy acceptance set; the new silver data must not be promoted
+until that sample reaches 95% accuracy. The original per-language/per-field
+kappa gate still applies before full-corpus labeling can scale up.
+
+The product owner subsequently labeled 30 high-information anchors for
+`replyableMessage`, `task`, and `question`. These decisions are frozen in
+`Consensus/product-policy-anchors-v1.json`, and the clarified taxonomy is
+documented in `Consensus/labeling-instructions-v5.md`. On a blind replay, Grok
+4.6 matched all 63 scored target-field decisions, while Luna 5.6 matched 62 of
+63 (98.41%); both pass the 95% target-intent gate. Sol 5.6 was rejected for this
+role because it forced low-information fragments into negative labels. The
+target fields are eligible for focused re-adjudication, but the broader corpus
+is still blocked by the independent ambiguity/disposition and kappa gates.
+
+The original verifier pipeline remains available for reproducing its earlier
+three-model study:
 
 ```bash
 python3 Scripts/clipboard_semantics/generate_consensus_labels.py prepare
@@ -165,6 +339,28 @@ memory checks still require macOS with Xcode 26+. A surrogate result can
 nominate a data/threshold policy for macOS replay, but cannot authorize
 automatic deployment.
 
+## Taxonomy v6 candidate result
+
+The 2026-08-28 v6 run integrated 31,087 license-reviewed open-training
+records, 7,200 low-weight bilingual boundary records, and 99 high-confidence
+relabels from the former assistant-command exclusion queue. The registry
+contains 327,337 canonical records and emits 273,626 train candidates. The
+frozen 120-record bilingual product holdout has zero exact overlap with
+training.
+
+The additive maxEnt candidate trained `assistantCommand`, `informationQuery`,
+`systemNotification`, and the 12-way `domain` classifier. Runtime performance
+passed: the four models total 570,083 bytes, load in 49.30 ms, have 0.250 ms
+maximum warm p95 latency, and add 25,001,984 bytes of peak RSS in the macOS
+benchmark process.
+
+Quality did not pass. Golden new-intent macro F1 is 0.5915, minimum intent
+precision is 0.2500, and domain macro F1 is 0.3282, below the 0.90, 0.95, and
+0.85 release gates. Only 60 blind records have product-owner labels; the
+remaining v6 fields use per-field model consensus and are not human gold.
+Therefore the candidate remains staging-only and the deployed models are not
+replaced. See `v6-release-gate-report.json` for the machine-readable decision.
+
 ## Deployment decision
 
 Only maxEnt models are trained and deployed because they are self-contained in
@@ -172,11 +368,13 @@ the keyboard extension. Create ML BERT transfer models depend on
 `NLContextualEmbedding` assets that are not guaranteed to exist in a simulator
 or keyboard-extension runtime.
 
-The deployed manifest remains schema version 2 until a verifier passes its
+The deployed manifest remains schema version 2 until a candidate passes its
 frozen acceptance gates. Schema version 3 adds optional joint verifiers,
 per-language confidence thresholds, top-1/top-2 margins, and an explicit
-`shadow` or `automatic` deployment mode. Consumers fall back to the current
-binary routing behavior when verifiers are absent.
+`shadow` or `automatic` deployment mode. Schema version 4 adds the three
+display-only public intent heads and optional domain classifier. Consumers
+accept schema versions 1 through 4 and fall back to the current binary routing
+behavior when newer classifiers are absent.
 
 All ten deployed models pass the golden precision gate after deployment
 policy is applied. The preserved six-model and first nine-model reports are

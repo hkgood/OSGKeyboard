@@ -1,9 +1,9 @@
 {
   "baseCorpusRecords": 17692,
-  "combinedCorpusSHA256": "f111bc7425912213082e01038b52dd3d25fe21418d156f532da8f01f27fa16e4",
-  "combinedRecords": 21537,
+  "combinedCorpusSHA256": "24bbec3fb9b3cc6434582d660b03b37401abe1339185405115646675ec3b654a",
+  "combinedRecords": 48779,
   "excludedBaseOverlap": 6,
-  "excludedHoldoutOverlap": 72,
+  "excludedHoldoutOverlap": 425,
   "excludedSources": [
     {
       "dataset": "MIDAS",
@@ -36,60 +36,136 @@
     {
       "dataset": "Verified Enron Intent / GitHub issue holdout source",
       "reason": "No clean official train split independent from the frozen holdout."
+    },
+    {
+      "dataset": "CFPB",
+      "reason": "No official train split; the source is already represented in frozen evaluation data and contains privacy-sensitive narratives."
+    },
+    {
+      "dataset": "CLINC150",
+      "reason": "Kept isolated from product training because its assistant intents are not aligned with the product-policy taxonomy."
+    },
+    {
+      "dataset": "openclaw-zh-greetings / WeChat-AutoSendBless",
+      "reason": "Repository licenses do not establish a sufficiently clear, versioned rights chain for the underlying message templates."
     }
   ],
-  "openTrainingRecords": 3845,
+  "openTrainingRecords": 31087,
   "policy": "Licensed official training splits only. Per-record knownLabels prevent unannotated intents from becoming false negatives. Exact normalized text overlap with every local *holdout-corpus.jsonl file is excluded.",
   "schemaVersion": 1,
   "seed": 20260827,
   "sources": [
     {
-      "dataset": "CrossWOZ",
+      "dataset": "AmazonScience/MASSIVE en-US",
       "knownLabelCounts": {
-        "question": 279,
-        "task": 258
+        "assistantCommand": 3658,
+        "domain": 9824,
+        "informationQuery": 5307,
+        "sentiment": 126,
+        "task": 358
       },
       "languages": {
-        "zh-Hans": 544
+        "en": 10810
+      },
+      "license": "CC-BY-4.0",
+      "records": 10810,
+      "revision": "1.1",
+      "url": "https://huggingface.co/datasets/AmazonScience/massive"
+    },
+    {
+      "dataset": "AmazonScience/MASSIVE zh-CN",
+      "knownLabelCounts": {
+        "assistantCommand": 3272,
+        "domain": 9166,
+        "informationQuery": 5025,
+        "sentiment": 120,
+        "task": 348
+      },
+      "languages": {
+        "zh-Hans": 10099
+      },
+      "license": "CC-BY-4.0",
+      "records": 10099,
+      "revision": "1.1",
+      "url": "https://huggingface.co/datasets/AmazonScience/massive"
+    },
+    {
+      "dataset": "CrossWOZ",
+      "knownLabelCounts": {
+        "domain": 476,
+        "informationQuery": 393
+      },
+      "languages": {
+        "zh-Hans": 599
       },
       "license": "Apache-2.0",
-      "records": 544,
+      "records": 599,
       "revision": "df82c9fdff91b9b130f2d6b89110d3870ba6260e",
       "url": "https://github.com/thu-coai/CrossWOZ/blob/df82c9fdff91b9b130f2d6b89110d3870ba6260e/data/crosswoz/train.json.zip"
     },
     {
-      "dataset": "Google Research GoEmotions",
+      "dataset": "FormosaNLU Synth v1",
       "knownLabelCounts": {
-        "sentiment": 798
+        "assistantCommand": 839,
+        "domain": 1747,
+        "informationQuery": 817,
+        "task": 119
       },
       "languages": {
-        "en": 1198
+        "zh-Hans": 1988
+      },
+      "license": "CC-BY-4.0",
+      "records": 1988,
+      "revision": "03a337b61a200ab690994dca4dc31aa7f209800e",
+      "url": "https://huggingface.co/datasets/steven0226/formosa-nlu-synth-v1/resolve/03a337b61a200ab690994dca4dc31aa7f209800e/data/train.jsonl"
+    },
+    {
+      "dataset": "Google Research GoEmotions",
+      "knownLabelCounts": {
+        "sentiment": 799
+      },
+      "languages": {
+        "en": 1199
       },
       "license": "Apache-2.0",
-      "records": 1198,
+      "records": 1199,
       "revision": "5d8f4ac97c873bde3a792ba4628f00bb9103d3e6",
       "url": "https://github.com/google-research/google-research/blob/5d8f4ac97c873bde3a792ba4628f00bb9103d3e6/goemotions/data/train.tsv"
     },
     {
       "dataset": "Google Taskmaster-1",
       "knownLabelCounts": {
-        "confirmationDecision": 168,
-        "question": 138,
-        "scheduleNegotiation": 4,
-        "task": 90
+        "domain": 631
       },
       "languages": {
-        "en": 638
+        "en": 631
       },
       "license": "CC-BY-4.0",
-      "records": 638,
+      "records": 631,
       "revision": "d92cb6af3005f1dc09c39e75e7daf4a04905e00b",
       "url": "https://github.com/google-research-datasets/Taskmaster/tree/d92cb6af3005f1dc09c39e75e7daf4a04905e00b/TM-1-2019"
+    },
+    {
+      "dataset": "HLTCHKUST/BiToD",
+      "knownLabelCounts": {
+        "domain": 1339,
+        "informationQuery": 885,
+        "task": 355
+      },
+      "languages": {
+        "en": 681,
+        "zh-Hans": 658
+      },
+      "license": "Apache-2.0",
+      "records": 1339,
+      "revision": "a9bd74de9eecdc3d875cb4ebf6a6beaf9c30c2ff",
+      "url": "https://raw.githubusercontent.com/HLTCHKUST/BiToD/a9bd74de9eecdc3d875cb4ebf6a6beaf9c30c2ff/data/zh_train.json"
     },
     {
       "dataset": "Meituan-Dianping/ASAP",
       "knownLabelCounts": {
         "complaint": 500,
+        "domain": 1000,
         "sentiment": 1000
       },
       "languages": {
@@ -103,31 +179,62 @@
     {
       "dataset": "MultiDoGO",
       "knownLabelCounts": {
-        "confirmationDecision": 27,
-        "question": 83,
-        "task": 222
+        "domain": 464,
+        "informationQuery": 61,
+        "task": 83
       },
       "languages": {
-        "en": 465
+        "en": 464
       },
       "license": "CDLA-Permissive-1.0",
-      "records": 465,
+      "records": 464,
       "revision": "baa30639c4b271f394b81443c842193407cdf26d",
-      "url": "https://github.com/awslabs/multi-domain-goal-oriented-dialogues-dataset/blob/baa30639c4b271f394b81443c842193407cdf26d/data/paper_splits/splits_annotated_at_turn_level/software/train.tsv"
+      "url": "https://github.com/awslabs/multi-domain-goal-oriented-dialogues-dataset/blob/baa30639c4b271f394b81443c842193407cdf26d/data/paper_splits/splits_annotated_at_turn_level/airline/train.tsv"
+    },
+    {
+      "dataset": "PolyAI MInDS-14 zh-CN",
+      "knownLabelCounts": {
+        "assistantCommand": 163,
+        "domain": 480,
+        "informationQuery": 179
+      },
+      "languages": {
+        "zh-Hans": 480
+      },
+      "license": "CC-BY-4.0",
+      "records": 480,
+      "revision": "40ce77cb32a384e4d50a568e1ec39ac804019d33",
+      "url": "https://huggingface.co/datasets/PolyAI/minds14/resolve/40ce77cb32a384e4d50a568e1ec39ac804019d33/zh-CN/train-00000-of-00001.parquet"
+    },
+    {
+      "dataset": "PolyAI RESTAURANTS-8K",
+      "knownLabelCounts": {
+        "domain": 986
+      },
+      "languages": {
+        "en": 986
+      },
+      "license": "CC-BY-4.0",
+      "records": 986,
+      "revision": "57ec275d8078af65b7731c2a98be812d844a6d6b",
+      "url": "https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/57ec275d8078af65b7731c2a98be812d844a6d6b/span_extraction/restaurant8k/train_0.json"
+    },
+    {
+      "dataset": "SNIPS NLU Benchmark",
+      "knownLabelCounts": {
+        "assistantCommand": 499,
+        "domain": 1492,
+        "informationQuery": 743,
+        "task": 250
+      },
+      "languages": {
+        "en": 1492
+      },
+      "license": "CC0-1.0",
+      "records": 1492,
+      "revision": "b86ac7f1577868c42158d0dec77db50956046696",
+      "url": "https://raw.githubusercontent.com/sonos/nlu-benchmark/b86ac7f1577868c42158d0dec77db50956046696/2017-06-custom-intent-engines/BookRestaurant/train_BookRestaurant_full.json"
     }
   ],
-  "unavailableSources": [
-    {
-      "dataset": "MASSIVE",
-      "reason": "URLError: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)>"
-    },
-    {
-      "dataset": "CLINC150",
-      "reason": "URLError: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)>"
-    },
-    {
-      "dataset": "CFPB",
-      "reason": "URLError: <urlopen error [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1000)>"
-    }
-  ]
+  "unavailableSources": []
 }
