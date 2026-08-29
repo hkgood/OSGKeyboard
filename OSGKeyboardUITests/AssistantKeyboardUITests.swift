@@ -160,6 +160,16 @@ final class AssistantKeyboardUITests: XCTestCase {
         XCTAssertFalse(element("assistant.skills.pager", in: app).exists)
     }
 
+    func testReliableSemanticResultShowsCompactBadge() {
+        let app = launch(scenario: "semanticBadge")
+        let badge = requiredElement("assistant.semantic.badge", in: app)
+        let mic = requiredElement("assistant.mic.idle", in: app)
+
+        XCTAssertTrue(badge.label.contains("Weather") || badge.label.contains("天气"))
+        XCTAssertLessThan(badge.frame.height, mic.frame.height)
+        XCTAssertTrue(element("assistant.clipboard.dismiss", in: app).exists)
+    }
+
     func testSearchFieldShowsEnabledSearchAction() {
         let app = launch(scenario: "search")
         let search = requiredElement("assistant.action.search", in: app)

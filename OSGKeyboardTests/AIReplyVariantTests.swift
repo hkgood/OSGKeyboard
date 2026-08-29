@@ -116,16 +116,90 @@ final class AIReplyVariantTests: XCTestCase {
 
     func testReplyKindOwnsLocalPresentationMetadata() {
         XCTAssertEqual(
-            AIReplyVariant.Kind.allCases.map(\.systemImage),
+            AIReplyVariantSet.generic.kinds.map(\.systemImage),
             ["bubble.left.fill", "briefcase.fill", "theatermasks.fill"]
         )
         XCTAssertEqual(
-            AIReplyVariant.Kind.allCases.map(\.titleKey),
+            AIReplyVariantSet.generic.kinds.map(\.titleKey),
             [
                 "keyboard.ai.replyVariant.ordinary",
                 "keyboard.ai.replyVariant.formal",
                 "keyboard.ai.replyVariant.playful"
             ]
+        )
+    }
+
+    func testInvitationParserRequiresExactSceneRoles() throws {
+        let valid = """
+        {"variants":[
+          {"kind":"invitationTentative","emotion":"neutral","text":"我确认一下再告诉你。"},
+          {"kind":"invitationAccept","emotion":"warm","text":"好呀，到时见。"},
+          {"kind":"invitationDecline","emotion":"grateful","text":"谢谢你，不过这次我先不去了。"}
+        ]}
+        """
+
+        let variants = try XCTUnwrap(
+            AIReplyVariantParser.parse(
+                valid,
+                variantSet: .invitation
+            )
+        )
+        XCTAssertEqual(variants.map(\.kind), AIReplyVariantSet.invitation.kinds)
+        XCTAssertNil(AIReplyVariantParser.parse(valid, variantSet: .generic))
+        XCTAssertNil(
+            AIReplyVariantParser.parseOrFallback(
+                "好呀，到时见。",
+                variantSet: .invitation
+            )
+        )
+    }
+
+    func testIntentScenesAlwaysGenerateChoicesWhenPreferenceIsOff() {
+        for scene in [
+            AIClipboardReplyScene.invitation,
+            .task,
+            .blessing,
+            .clarification
+        ] {
+            XCTAssertTrue(
+                AIReplyVariantSet.shouldGenerate(
+                    multipleRepliesEnabled: false,
+                    scene: scene
+                )
+            )
+        }
+        XCTAssertFalse(
+            AIReplyVariantSet.shouldGenerate(
+                multipleRepliesEnabled: false,
+                scene: .complaint
+            )
+        )
+        XCTAssertFalse(
+            AIReplyVariantSet.shouldGenerate(
+                multipleRepliesEnabled: false,
+                scene: nil
+            )
+        )
+    }
+
+    func testIntentChoicePresentationUsesFixedLocalMeaning() {
+        XCTAssertEqual(
+            AIReplyVariantSet.task.kinds.map(\.titleKey),
+            [
+                "keyboard.ai.replyVariant.taskAcknowledge",
+                "keyboard.ai.replyVariant.taskClarify",
+                "keyboard.ai.replyVariant.taskNegotiate"
+            ]
+        )
+        XCTAssertEqual(
+            AIReplyVariantSet.invitation.kinds.map(\.systemImage),
+            ["checkmark.circle.fill", "hand.raised.fill", "clock.fill"]
+        )
+        XCTAssertTrue(AIReplyVariantSet.generic.kinds.allSatisfy(\.usesEmotionIcon))
+        XCTAssertTrue(
+            AIReplyVariantSet.invitation.kinds.allSatisfy {
+                !$0.usesEmotionIcon
+            }
         )
     }
 

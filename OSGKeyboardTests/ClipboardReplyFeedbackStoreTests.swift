@@ -241,6 +241,37 @@ final class ClipboardReplyFeedbackStoreTests: XCTestCase {
         XCTAssertNil(example.playfulCandidate)
     }
 
+    func testSceneDecisionTeachesStyleOnlyAfterUserFinalEdit() throws {
+        let candidate = ClipboardReplyCandidateSnapshot(
+            kind: .invitationDecline,
+            text: "谢谢邀请，不过这次先不去了。",
+            emotion: "grateful"
+        )
+        let recordID = try XCTUnwrap(
+            store.begin(
+                sourceText: "周六一起吃饭吗？",
+                candidates: [candidate],
+                styleID: "user.personal"
+            )
+        )
+        store.recordSelection(
+            recordID: recordID,
+            candidateID: candidate.id,
+            answerID: candidate.id
+        )
+
+        XCTAssertTrue(store.learningExamples().isEmpty)
+
+        store.recordFinalEdit(
+            answerID: candidate.id,
+            text: "这周六不行，下次约～",
+            revision: 1
+        )
+        let example = try XCTUnwrap(store.learningExamples().first)
+        XCTAssertEqual(example.selection, .contextual)
+        XCTAssertEqual(example.finalEdit, "这周六不行，下次约～")
+    }
+
     private func makeCandidates(
         suffix: String = ""
     ) -> [ClipboardReplyCandidateSnapshot] {

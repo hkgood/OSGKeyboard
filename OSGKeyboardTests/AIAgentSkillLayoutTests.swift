@@ -82,7 +82,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             [AIClipboardSkillCatalog.replyID, AIClipboardSkillCatalog.translateID]
         )
         XCTAssertTrue(migrated.enabledIDs.contains(AIClipboardSkillCatalog.summarizeID))
-        XCTAssertTrue(migrated.enabledIDs.contains(AIClipboardSkillCatalog.acceptInvitationID))
+        XCTAssertTrue(migrated.enabledIDs.contains(AIClipboardSkillCatalog.replyID))
         XCTAssertTrue(migrated.enabledIDs.contains(AIClipboardSkillCatalog.extractEventsID))
     }
 
@@ -113,10 +113,6 @@ final class AIAgentSkillLayoutTests: XCTestCase {
                 AIClipboardSkillCatalog.callPhoneID,
                 AIClipboardSkillCatalog.createContactID,
                 AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.declineInvitationID,
-                AIClipboardSkillCatalog.clarifyRequestID,
-                AIClipboardSkillCatalog.empathyReplyID,
-                AIClipboardSkillCatalog.blessingReplyID,
                 AIClipboardSkillCatalog.organizeListID
             ]
         )
@@ -149,10 +145,6 @@ final class AIAgentSkillLayoutTests: XCTestCase {
                 AIClipboardSkillCatalog.callPhoneID,
                 AIClipboardSkillCatalog.createContactID,
                 AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.declineInvitationID,
-                AIClipboardSkillCatalog.clarifyRequestID,
-                AIClipboardSkillCatalog.empathyReplyID,
-                AIClipboardSkillCatalog.blessingReplyID,
                 AIClipboardSkillCatalog.organizeListID
             ]
         )
@@ -183,10 +175,6 @@ final class AIAgentSkillLayoutTests: XCTestCase {
                 AIClipboardSkillCatalog.callPhoneID,
                 AIClipboardSkillCatalog.createContactID,
                 AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.declineInvitationID,
-                AIClipboardSkillCatalog.clarifyRequestID,
-                AIClipboardSkillCatalog.empathyReplyID,
-                AIClipboardSkillCatalog.blessingReplyID,
                 AIClipboardSkillCatalog.organizeListID
             ]
         )
@@ -218,11 +206,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             [
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.clarifyRequestID,
                 AIClipboardSkillCatalog.translateID,
-                AIClipboardSkillCatalog.declineInvitationID,
-                AIClipboardSkillCatalog.empathyReplyID,
-                AIClipboardSkillCatalog.blessingReplyID,
                 AIClipboardSkillCatalog.organizeListID
             ]
         )
@@ -230,7 +214,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             defaults.integer(
                 forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
             ),
-            9
+            11
         )
     }
 
@@ -256,10 +240,6 @@ final class AIAgentSkillLayoutTests: XCTestCase {
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.translateID,
                 AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.declineInvitationID,
-                AIClipboardSkillCatalog.clarifyRequestID,
-                AIClipboardSkillCatalog.empathyReplyID,
-                AIClipboardSkillCatalog.blessingReplyID,
                 AIClipboardSkillCatalog.organizeListID
             ]
         )
@@ -298,7 +278,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             defaults.integer(
                 forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
             ),
-            9
+            11
         )
     }
 
@@ -324,10 +304,88 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             defaults.integer(
                 forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
             ),
-            9
+            11
         )
         XCTAssertEqual(
             AppGroupStore(defaults: defaults).agentSkillLayout.enabledIDs,
+            [AIClipboardSkillCatalog.translateID]
+        )
+    }
+
+    func testVersionNineLayoutConsolidatesEmpathyReplyAndPersistsMigration() throws {
+        let defaults = makeDefaults()
+        let initial = AIAgentSkillLayout(
+            enabledIDs: [
+                AIClipboardSkillCatalog.empathyReplyID,
+                AIClipboardSkillCatalog.translateID
+            ],
+            confirmedShortcutIDs: []
+        )
+        defaults.set(
+            try JSONEncoder().encode(initial),
+            forKey: AppGroupConfiguration.Keys.agentSkillLayout
+        )
+        defaults.set(
+            9,
+            forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+        )
+
+        let migrated = AppGroupStore(defaults: defaults).agentSkillLayout
+
+        XCTAssertEqual(
+            migrated.enabledIDs,
+            [AIClipboardSkillCatalog.replyID, AIClipboardSkillCatalog.translateID]
+        )
+        XCTAssertEqual(
+            defaults.integer(
+                forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+            ),
+            11
+        )
+    }
+
+    func testVersionTenLayoutConsolidatesDecisionRepliesWithoutRestoringDisabledReply() throws {
+        let enabledDefaults = makeDefaults()
+        let legacy = AIAgentSkillLayout(
+            enabledIDs: [
+                AIClipboardSkillCatalog.acceptInvitationID,
+                AIClipboardSkillCatalog.declineInvitationID,
+                AIClipboardSkillCatalog.acceptTaskID,
+                AIClipboardSkillCatalog.clarifyRequestID,
+                AIClipboardSkillCatalog.blessingReplyID
+            ],
+            confirmedShortcutIDs: []
+        )
+        enabledDefaults.set(
+            try JSONEncoder().encode(legacy),
+            forKey: AppGroupConfiguration.Keys.agentSkillLayout
+        )
+        enabledDefaults.set(
+            10,
+            forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+        )
+
+        XCTAssertEqual(
+            AppGroupStore(defaults: enabledDefaults).agentSkillLayout.enabledIDs,
+            [AIClipboardSkillCatalog.replyID]
+        )
+
+        let disabledDefaults = makeDefaults()
+        disabledDefaults.set(
+            try JSONEncoder().encode(
+                AIAgentSkillLayout(
+                    enabledIDs: [AIClipboardSkillCatalog.translateID],
+                    confirmedShortcutIDs: []
+                )
+            ),
+            forKey: AppGroupConfiguration.Keys.agentSkillLayout
+        )
+        disabledDefaults.set(
+            10,
+            forKey: AppGroupConfiguration.Keys.agentSkillDefaultsMigrationVersion
+        )
+        XCTAssertEqual(
+            AppGroupStore(defaults: disabledDefaults).agentSkillLayout.enabledIDs,
             [AIClipboardSkillCatalog.translateID]
         )
     }
@@ -339,6 +397,9 @@ final class AIAgentSkillLayoutTests: XCTestCase {
         XCTAssertNotNil(
             AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.businessReplyID)
         )
+        XCTAssertNotNil(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.empathyReplyID)
+        )
         XCTAssertEqual(
             AIClipboardSkillCatalog.canonicalID(for: AIClipboardSkillCatalog.playfulReplyID),
             AIClipboardSkillCatalog.replyID
@@ -347,10 +408,37 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             AIClipboardSkillCatalog.canonicalID(for: AIClipboardSkillCatalog.businessReplyID),
             AIClipboardSkillCatalog.replyID
         )
+        XCTAssertEqual(
+            AIClipboardSkillCatalog.canonicalID(for: AIClipboardSkillCatalog.empathyReplyID),
+            AIClipboardSkillCatalog.replyID
+        )
+        for id in [
+            AIClipboardSkillCatalog.acceptInvitationID,
+            AIClipboardSkillCatalog.declineInvitationID,
+            AIClipboardSkillCatalog.acceptTaskID,
+            AIClipboardSkillCatalog.clarifyRequestID,
+            AIClipboardSkillCatalog.blessingReplyID,
+            AIClipboardSkillCatalog.askForDetailsID
+        ] {
+            XCTAssertEqual(
+                AIClipboardSkillCatalog.canonicalID(for: id),
+                AIClipboardSkillCatalog.replyID
+            )
+            XCTAssertEqual(
+                AIClipboardSkillCatalog.skill(id: id)?.id,
+                AIClipboardSkillCatalog.replyID
+            )
+        }
         XCTAssertFalse(
             AIClipboardSkillCatalog.catalog.contains {
                 $0.id == AIClipboardSkillCatalog.playfulReplyID
                     || $0.id == AIClipboardSkillCatalog.businessReplyID
+                    || $0.id == AIClipboardSkillCatalog.empathyReplyID
+                    || $0.id == AIClipboardSkillCatalog.acceptInvitationID
+                    || $0.id == AIClipboardSkillCatalog.declineInvitationID
+                    || $0.id == AIClipboardSkillCatalog.acceptTaskID
+                    || $0.id == AIClipboardSkillCatalog.clarifyRequestID
+                    || $0.id == AIClipboardSkillCatalog.blessingReplyID
             }
         )
     }
@@ -401,6 +489,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
                 AIClipboardSkillCatalog.replyInSourceLanguageID,
                 AIClipboardSkillCatalog.playfulReplyID,
                 AIClipboardSkillCatalog.businessReplyID,
+                AIClipboardSkillCatalog.empathyReplyID,
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.extractConclusionsID,
                 AIClipboardSkillCatalog.askForDetailsID
@@ -412,8 +501,7 @@ final class AIAgentSkillLayoutTests: XCTestCase {
             layout.enabledIDs,
             [
                 AIClipboardSkillCatalog.replyID,
-                AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.clarifyRequestID
+                AIClipboardSkillCatalog.summarizeID
             ]
         )
     }

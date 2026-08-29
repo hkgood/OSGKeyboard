@@ -19,6 +19,43 @@ final class ClipboardSemanticAnalyzerTests: XCTestCase {
         XCTAssertFalse(analysis.confirmationDecision.isDetected)
         XCTAssertFalse(analysis.followUpReminder.isDetected)
         XCTAssertFalse(analysis.blessing.isDetected)
+        XCTAssertFalse(analysis.assistantCommand.isDetected)
+        XCTAssertFalse(analysis.informationQuery.isDetected)
+        XCTAssertFalse(analysis.systemNotification.isDetected)
+        XCTAssertNil(analysis.domain)
+        XCTAssertNil(analysis.domainConfidence)
+    }
+
+    func testCurrentManifestWithoutExtendedClassifiersFailsClosed() async {
+        let analysis = await ClipboardSemanticAnalyzer().analyze(
+            "What is the weather in Shanghai tomorrow?"
+        )
+
+        XCTAssertEqual(analysis.assistantCommand, .notDetected)
+        XCTAssertEqual(analysis.informationQuery, .notDetected)
+        XCTAssertEqual(analysis.systemNotification, .notDetected)
+        XCTAssertNil(analysis.domain)
+        XCTAssertNil(analysis.domainConfidence)
+    }
+
+    func testPublicDomainTaxonomyContainsTwelveStableLabels() {
+        XCTAssertEqual(
+            ClipboardSemanticDomain.allCases.map(\.rawValue),
+            [
+                "finance",
+                "travel",
+                "calendar",
+                "communication",
+                "media",
+                "smartHome",
+                "shopping",
+                "dining",
+                "health",
+                "weather",
+                "accountService",
+                "generalKnowledge"
+            ]
+        )
     }
 
     func testComplaintTaskPolicySuppressesImplicitFailure() {
@@ -46,6 +83,88 @@ final class ClipboardSemanticAnalyzerTests: XCTestCase {
                 complaintConfidence: 0.59
             )
         )
+    }
+
+    func testBlessingRoutingAcceptsBroadExplicitWishes() {
+        let samples = [
+            "一路平安，到了记得报个平安。",
+            "祝愿她早日康复，重新回到喜欢的生活。",
+            "恭喜顺利毕业，前程似锦！",
+            "端午安康，愿大家平安喜乐。",
+            "Safe travels and all the best for the new chapter.",
+            "Get well soon. We are all thinking of you.",
+            "Happy anniversary! May your days stay full of love."
+        ]
+
+        for text in samples {
+            let result = ClipboardSemanticAnalyzer.adjustedBlessingLabel(
+                blessingCandidate(confidence: 0),
+                text: text
+            )
+
+            XCTAssertTrue(result.isDetected, "Missed broad blessing: \(text)")
+            XCTAssertTrue(result.isApprovedForAutomaticRouting)
+        }
+    }
+
+    func testBlessingRoutingRejectsBoundaryContexts() {
+        let samples = [
+            "谢谢大家发来的生日祝福。",
+            "帮我写一段适合春节发微信的祝福语。",
+            "文档里引用了“祝你生日快乐”这句话。",
+            "他们说晚点会祝你生日快乐。",
+            "我们应该找个时间庆祝项目上线。",
+            "The article quotes the phrase “wishing you good health.”",
+            "Thanks for all the wonderful birthday wishes.",
+            "Thanks for the birthday wish you sent yesterday.",
+            "Find me a message template that says happy birthday."
+        ]
+
+        for text in samples {
+            let result = ClipboardSemanticAnalyzer.adjustedBlessingLabel(
+                blessingCandidate(confidence: 0.999),
+                text: text
+            )
+
+            XCTAssertFalse(result.isDetected, "Boundary routed as blessing: \(text)")
+            XCTAssertTrue(
+                ClipboardSemanticAnalyzer.isRejectedBlessingContext(in: text),
+                "Boundary was not rejected: \(text)"
+            )
+        }
+    }
+
+    func testBlessingRoutingAllowsReciprocalWish() {
+        let samples = [
+            "谢谢你的祝福，也祝你新年快乐、万事如意！",
+            "Thanks for the kind wishes. Wishing you a wonderful year too!"
+        ]
+
+        for text in samples {
+            let result = ClipboardSemanticAnalyzer.adjustedBlessingLabel(
+                blessingCandidate(confidence: 0),
+                text: text
+            )
+
+            XCTAssertTrue(result.isDetected, "Reciprocal wish was rejected: \(text)")
+        }
+    }
+
+    func testBlessingRoutingUsesStrictModelFallback() {
+        let implicitWish = "希望接下来的日子都有温暖和惊喜。"
+        let highConfidence = ClipboardSemanticAnalyzer.adjustedBlessingLabel(
+            blessingCandidate(confidence: 0.99),
+            text: implicitWish
+        )
+        let lowerConfidence = ClipboardSemanticAnalyzer.adjustedBlessingLabel(
+            blessingCandidate(confidence: 0.97),
+            text: implicitWish
+        )
+
+        XCTAssertTrue(highConfidence.isDetected)
+        XCTAssertEqual(highConfidence.threshold, 0.98)
+        XCTAssertFalse(lowerConfidence.isDetected)
+        XCTAssertEqual(lowerConfidence.threshold, 0.98)
     }
 
     func testImplicitComplaintDoesNotRouteAsTask() async {
@@ -362,6 +481,15 @@ final class ClipboardSemanticAnalyzerTests: XCTestCase {
 
     private func isThresholdCrossing(_ label: ClipboardIntentLabel) -> Bool {
         label.confidence > 0 && label.confidence >= label.threshold
+    }
+
+    private func blessingCandidate(confidence: Double) -> ClipboardIntentLabel {
+        ClipboardIntentLabel(
+            confidence: confidence,
+            threshold: 0.77,
+            isDetected: confidence >= 0.77,
+            isApprovedForAutomaticRouting: true
+        )
     }
 
     private func milliseconds(from duration: Duration) -> Double {

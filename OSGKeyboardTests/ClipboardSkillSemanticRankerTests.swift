@@ -12,11 +12,10 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            Array(ranked.prefix(3)),
+            Array(ranked.prefix(2)),
             [
                 AIClipboardSkillCatalog.translateID,
-                AIClipboardSkillCatalog.replyID,
-                AIClipboardSkillCatalog.clarifyRequestID
+                AIClipboardSkillCatalog.replyID
             ]
         )
     }
@@ -54,7 +53,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         )
     }
 
-    func testInvitationWithDatePromotesCalendarAndBothReplyChoices() {
+    func testInvitationWithDatePromotesUnifiedReplyAndCalendar() {
         let ranked = rank(
             text: "今晚七点老地方吃饭，你能来吗？",
             analysis: analysis(
@@ -64,15 +63,16 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(ranked.first, AIClipboardSkillCatalog.extractEventsID)
+        XCTAssertEqual(ranked.first, AIClipboardSkillCatalog.replyID)
         XCTAssertLessThan(
-            tryIndex(AIClipboardSkillCatalog.acceptInvitationID, in: ranked),
+            tryIndex(AIClipboardSkillCatalog.extractEventsID, in: ranked),
             tryIndex(AIClipboardSkillCatalog.summarizeID, in: ranked)
         )
-        XCTAssertLessThan(
-            tryIndex(AIClipboardSkillCatalog.declineInvitationID, in: ranked),
-            tryIndex(AIClipboardSkillCatalog.summarizeID, in: ranked)
-        )
+        XCTAssertEqual(AIClipboardReplyScene.resolve(from: analysis(
+            hasDate: true,
+            question: detected(),
+            invitation: detected()
+        )), .invitation)
     }
 
     func testAddressPromotesNavigation() {
@@ -215,10 +215,6 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             tryIndex(AIClipboardSkillCatalog.organizeListID, in: ranked),
             tryIndex(AIClipboardSkillCatalog.replyID, in: ranked)
         )
-        XCTAssertLessThan(
-            tryIndex(AIClipboardSkillCatalog.acceptTaskID, in: ranked),
-            tryIndex(AIClipboardSkillCatalog.replyID, in: ranked)
-        )
     }
 
     func testUnapprovedComplaintFallsBackToGenericReply() {
@@ -240,6 +236,57 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         ).map(\.id)
 
         XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.replyID])
+    }
+
+    func testApprovedComplaintMergesEmpathyIntoGenericReply() {
+        let analysis = analysis(
+            sentiment: .negative,
+            complaint: detected()
+        )
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "这个问题已经发生三次了，到底什么时候能解决？",
+            analysis: analysis,
+            uiLanguage: .chinese,
+            limit: 5
+        ).map(\.id)
+
+        XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.replyID])
+        XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.empathyReplyID))
+        XCTAssertEqual(AIClipboardReplyScene.resolve(from: analysis), .complaint)
+    }
+
+    func testNegativeQuestionUsesLighterReplySceneWithoutEmpathyChip() {
+        let analysis = analysis(
+            sentiment: .negative,
+            question: detected()
+        )
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "为什么到现在还没有发给我？",
+            analysis: analysis,
+            uiLanguage: .chinese,
+            limit: 5
+        ).map(\.id)
+
+        XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.replyID])
+        XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.empathyReplyID))
+        XCTAssertEqual(AIClipboardReplyScene.resolve(from: analysis), .negativeQuestion)
+    }
+
+    func testUnapprovedNegativeSignalsDoNotCreateReplyScene() {
+        let unapprovedQuestion = ClipboardIntentLabel(
+            confidence: 0.82,
+            threshold: 0.6,
+            isDetected: true,
+            isApprovedForAutomaticRouting: false
+        )
+        let analysis = analysis(
+            sentiment: .negative,
+            question: unapprovedQuestion
+        )
+
+        XCTAssertNil(AIClipboardReplyScene.resolve(from: analysis))
     }
 
     func testLongTextPromotesIntegratedSummaryAndNotes() {
@@ -320,7 +367,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.replyID])
     }
 
-    func testInvitationKeepsSpecificRepliesAndGenericReply() {
+    func testInvitationUsesOneReplyCenterAndKeepsCalendarAction() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
             skills: AIClipboardSkillCatalog.catalog,
             sourceText: "今晚七点老地方吃饭，你能来吗？",
@@ -337,15 +384,13 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         XCTAssertEqual(
             recommendations,
             [
-                AIClipboardSkillCatalog.extractEventsID,
-                AIClipboardSkillCatalog.acceptInvitationID,
-                AIClipboardSkillCatalog.declineInvitationID,
-                AIClipboardSkillCatalog.replyID
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.extractEventsID
             ]
         )
     }
 
-    func testForeignQuestionKeepsReplyAndOneSpecializedFollowUp() {
+    func testForeignQuestionKeepsTranslationAndUnifiedReply() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
             skills: AIClipboardSkillCatalog.catalog,
             sourceText: "Could you send the final proposal by Friday?",
@@ -360,13 +405,12 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         )
         let replyCount = recommendations.filter(\.supportsReplyStyle).count
 
-        XCTAssertLessThanOrEqual(replyCount, 2)
+        XCTAssertEqual(replyCount, 1)
         XCTAssertEqual(
             recommendations.map(\.id),
             [
                 AIClipboardSkillCatalog.translateID,
-                AIClipboardSkillCatalog.replyID,
-                AIClipboardSkillCatalog.clarifyRequestID
+                AIClipboardSkillCatalog.replyID
             ]
         )
     }
@@ -380,7 +424,6 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         XCTAssertEqual(
             recommendations,
             [
-                AIClipboardSkillCatalog.clarifyRequestID,
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.extractEventsID
             ]
@@ -400,7 +443,6 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             recommendations,
             [
                 AIClipboardSkillCatalog.extractEventsID,
-                AIClipboardSkillCatalog.clarifyRequestID,
                 AIClipboardSkillCatalog.replyID
             ]
         )
@@ -412,13 +454,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             analysis: analysis(confirmationDecision: detected())
         )
 
-        XCTAssertEqual(
-            recommendations,
-            [
-                AIClipboardSkillCatalog.acceptTaskID,
-                AIClipboardSkillCatalog.replyID
-            ]
-        )
+        XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.replyID])
     }
 
     func testFollowUpReminderMapsToExistingSkills() {
@@ -431,14 +467,12 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             recommendations,
             [
                 AIClipboardSkillCatalog.extractTodosID,
-                AIClipboardSkillCatalog.acceptTaskID,
-                AIClipboardSkillCatalog.clarifyRequestID,
                 AIClipboardSkillCatalog.replyID
             ]
         )
     }
 
-    func testBlessingMapsToDedicatedReplyAndGenericFallback() {
+    func testBlessingMapsToUnifiedReplyCenter() {
         let recommendations = recommended(
             text: "大家一起祝王老师生日快乐、身体健康！",
             analysis: analysis(
@@ -447,13 +481,11 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             )
         )
 
-        XCTAssertEqual(
-            recommendations,
-            [
-                AIClipboardSkillCatalog.blessingReplyID,
-                AIClipboardSkillCatalog.replyID
-            ]
-        )
+        XCTAssertEqual(recommendations, [AIClipboardSkillCatalog.replyID])
+        XCTAssertEqual(AIClipboardReplyScene.resolve(from: analysis(
+            replyableMessage: detected(),
+            blessing: detected()
+        )), .blessing)
     }
 
     func testNewIntentConflictKeepsTopFiveAndGenericReply() {
@@ -472,13 +504,11 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             recommendations,
             [
                 AIClipboardSkillCatalog.replyID,
-                AIClipboardSkillCatalog.acceptTaskID,
-                AIClipboardSkillCatalog.clarifyRequestID,
                 AIClipboardSkillCatalog.extractEventsID,
                 AIClipboardSkillCatalog.extractTodosID
             ]
         )
-        XCTAssertEqual(recommendations.count, 5)
+        XCTAssertEqual(recommendations.count, 3)
     }
 
     func testSpecializedNewIntentSuppressesGenericReplyableBoost() {
@@ -494,11 +524,80 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         XCTAssertEqual(
             recommendations,
             [
-                AIClipboardSkillCatalog.clarifyRequestID,
                 AIClipboardSkillCatalog.replyID,
                 AIClipboardSkillCatalog.extractEventsID
             ]
         )
+    }
+
+    func testDisplayOnlyIntentsSuppressLegacyInterpersonalRoutes() {
+        let samples: [(String, ClipboardSemanticAnalysis)] = [
+            (
+                "Turn off the living room lights.",
+                analysis(
+                    task: detected(),
+                    replyableMessage: detected(),
+                    assistantCommand: displayDetected()
+                )
+            ),
+            (
+                "What is the weather tomorrow?",
+                analysis(
+                    question: detected(),
+                    replyableMessage: detected(),
+                    informationQuery: displayDetected()
+                )
+            ),
+            (
+                "Your package has shipped.",
+                analysis(
+                    replyableMessage: detected(),
+                    followUpReminder: detected(),
+                    systemNotification: displayDetected()
+                )
+            )
+        ]
+
+        for sample in samples {
+            XCTAssertEqual(
+                recommended(text: sample.0, analysis: sample.1),
+                [],
+                "Display-only intent leaked into a legacy route: \(sample.0)"
+            )
+        }
+    }
+
+    func testBelowThresholdDisplayIntentKeepsReplyFallback() {
+        let weakQuery = ClipboardIntentLabel(
+            confidence: 0.55,
+            threshold: 0.8,
+            isDetected: false,
+            isApprovedForAutomaticRouting: false
+        )
+
+        XCTAssertEqual(
+            recommended(
+                text: "Possibly a query",
+                analysis: analysis(informationQuery: weakQuery)
+            ),
+            [AIClipboardSkillCatalog.replyID]
+        )
+    }
+
+    func testDomainAloneDoesNotReorderOrTriggerReply() {
+        let baseline = [
+            AIClipboardSkillCatalog.businessReplyID,
+            AIClipboardSkillCatalog.replyID,
+            AIClipboardSkillCatalog.summarizeID
+        ]
+        let ranked = ClipboardSkillSemanticRanker.ranked(
+            skills: skills(ids: baseline),
+            sourceText: "Account update",
+            analysis: analysis(domain: .accountService),
+            uiLanguage: .chinese
+        ).map(\.id)
+
+        XCTAssertEqual(ranked, baseline)
     }
 
     func testAnalyzerToRecommendationsForNewIntents() async {
@@ -514,7 +613,6 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
                 "We need to reschedule the review. Is Tuesday or Thursday better?",
                 \.scheduleNegotiation,
                 [
-                    AIClipboardSkillCatalog.clarifyRequestID,
                     AIClipboardSkillCatalog.replyID,
                     AIClipboardSkillCatalog.extractEventsID
                 ]
@@ -523,7 +621,6 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
                 "I approve the revised proposal; proceed with this version.",
                 \.confirmationDecision,
                 [
-                    AIClipboardSkillCatalog.acceptTaskID,
                     AIClipboardSkillCatalog.replyID
                 ]
             ),
@@ -532,8 +629,6 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
                 \.followUpReminder,
                 [
                     AIClipboardSkillCatalog.extractTodosID,
-                    AIClipboardSkillCatalog.acceptTaskID,
-                    AIClipboardSkillCatalog.clarifyRequestID,
                     AIClipboardSkillCatalog.replyID
                 ]
             )
@@ -673,6 +768,15 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         )
     }
 
+    private func displayDetected() -> ClipboardIntentLabel {
+        ClipboardIntentLabel(
+            confidence: 0.95,
+            threshold: 0.8,
+            isDetected: true,
+            isApprovedForAutomaticRouting: false
+        )
+    }
+
     private func isThresholdCrossing(_ label: ClipboardIntentLabel) -> Bool {
         label.confidence > 0 && label.confidence >= label.threshold
     }
@@ -692,7 +796,11 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         scheduleNegotiation: ClipboardIntentLabel? = nil,
         confirmationDecision: ClipboardIntentLabel? = nil,
         followUpReminder: ClipboardIntentLabel? = nil,
-        blessing: ClipboardIntentLabel? = nil
+        blessing: ClipboardIntentLabel? = nil,
+        assistantCommand: ClipboardIntentLabel? = nil,
+        informationQuery: ClipboardIntentLabel? = nil,
+        systemNotification: ClipboardIntentLabel? = nil,
+        domain: ClipboardSemanticDomain? = nil
     ) -> ClipboardSemanticAnalysis {
         ClipboardSemanticAnalysis(
             language: language.map {
@@ -725,7 +833,12 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             followUpReminder: followUpReminder ?? absent(),
             blessing: blessing ?? absent(),
             actionVerifier: nil,
-            coordinationVerifier: nil
+            coordinationVerifier: nil,
+            assistantCommand: assistantCommand ?? absent(),
+            informationQuery: informationQuery ?? absent(),
+            systemNotification: systemNotification ?? absent(),
+            domain: domain,
+            domainConfidence: domain == nil ? nil : 0.9
         )
     }
 

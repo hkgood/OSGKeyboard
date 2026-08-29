@@ -138,10 +138,6 @@ final class OfficialSkillCatalogTests: XCTestCase {
                 AIClipboardSkillCatalog.callPhoneID,
                 AIClipboardSkillCatalog.createContactID,
                 AIClipboardSkillCatalog.summarizeID,
-                AIClipboardSkillCatalog.declineInvitationID,
-                AIClipboardSkillCatalog.clarifyRequestID,
-                AIClipboardSkillCatalog.empathyReplyID,
-                AIClipboardSkillCatalog.blessingReplyID,
                 AIClipboardSkillCatalog.organizeListID,
                 "official.rewrite"
             ]

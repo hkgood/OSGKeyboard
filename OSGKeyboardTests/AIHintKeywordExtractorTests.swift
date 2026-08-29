@@ -188,26 +188,27 @@ final class AIClipboardSkillTests: XCTestCase {
         XCTAssertTrue(prompt.contains("决定、结论和下一步"))
     }
 
-    func testSemanticReplySkillsHaveDistinctInstructions() {
-        let ids = [
-            AIClipboardSkillCatalog.playfulReplyID,
-            AIClipboardSkillCatalog.acceptInvitationID,
-            AIClipboardSkillCatalog.declineInvitationID,
-            AIClipboardSkillCatalog.acceptTaskID,
-            AIClipboardSkillCatalog.clarifyRequestID,
-            AIClipboardSkillCatalog.empathyReplyID,
-            AIClipboardSkillCatalog.businessReplyID,
-            AIClipboardSkillCatalog.summarizeID,
-            AIClipboardSkillCatalog.organizeListID
+    func testReplyScenesHaveDistinctInstructions() throws {
+        let skill = try XCTUnwrap(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.replyID)
+        )
+        let scenes: [AIClipboardReplyScene] = [
+            .invitation,
+            .task,
+            .blessing,
+            .clarification,
+            .complaint,
+            .negativeQuestion
         ]
-        let prompts = ids.map {
+        let prompts = scenes.map {
             AIClipboardSkillCatalog.instruction(
-                skillID: $0,
+                for: skill,
                 locale: "zh",
-                translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId
+                translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId,
+                replyScene: $0
             )
         }
-        XCTAssertEqual(Set(prompts).count, ids.count)
+        XCTAssertEqual(Set(prompts).count, scenes.count)
         XCTAssertFalse(prompts.contains { $0.contains("用户选择的操作") })
     }
 
@@ -248,6 +249,54 @@ final class AIClipboardSkillTests: XCTestCase {
         XCTAssertTrue(instruction.contains("<user_reply_style"))
         XCTAssertTrue(instruction.contains("喜欢短句"))
         XCTAssertTrue(instruction.contains("不能改变当前技能的意图"))
+    }
+
+    func testReplyUsesComplaintSceneModifier() throws {
+        let skill = try XCTUnwrap(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.replyID)
+        )
+        let instruction = AIClipboardSkillCatalog.instruction(
+            for: skill,
+            locale: "zh",
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId,
+            replyScene: .complaint
+        )
+
+        XCTAssertTrue(instruction.contains(#"<reply_scene type="complaint">"#))
+        XCTAssertTrue(instruction.contains("接住对方的情绪"))
+        XCTAssertTrue(instruction.contains("不虚构责任、进度或承诺"))
+        XCTAssertTrue(instruction.contains("不能开玩笑"))
+    }
+
+    func testReplyUsesLighterModifierForNegativeQuestion() throws {
+        let skill = try XCTUnwrap(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.replyID)
+        )
+        let instruction = AIClipboardSkillCatalog.instruction(
+            for: skill,
+            locale: "zh",
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId,
+            replyScene: .negativeQuestion
+        )
+
+        XCTAssertTrue(instruction.contains(#"<reply_scene type="negative_question">"#))
+        XCTAssertTrue(instruction.contains("不要因为语气负面就默认用户有错"))
+        XCTAssertFalse(instruction.contains(#"<reply_scene type="complaint">"#))
+    }
+
+    func testLegacyDecisionSkillUsesUnifiedReplyScene() throws {
+        let skill = try XCTUnwrap(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.acceptInvitationID)
+        )
+        let instruction = AIClipboardSkillCatalog.instruction(
+            for: skill,
+            locale: "zh",
+            translationTargetLocaleId: TranslationLanguageCatalog.offLocaleId,
+            replyScene: .complaint
+        )
+
+        XCTAssertEqual(skill.id, AIClipboardSkillCatalog.replyID)
+        XCTAssertTrue(instruction.contains(#"<reply_scene type="complaint">"#))
     }
 
     func testReplyStyleIsNotInjectedIntoNonReplySkill() throws {

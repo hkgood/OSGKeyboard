@@ -223,6 +223,39 @@ final class AISessionStateTests: XCTestCase {
         XCTAssertNil(state.selectedReplyVariant)
     }
 
+    func testSceneReplyVariantsUseLocalRoleOrder() {
+        var state = AISessionState()
+        let utteranceID = UUID()
+        state.enter()
+        state.beginPreparing(utteranceID: utteranceID)
+        state.receiveReplyVariants(
+            [
+                AIReplyVariant(
+                    kind: .invitationTentative,
+                    emotion: .neutral,
+                    text: "我确认一下。"
+                ),
+                AIReplyVariant(
+                    kind: .invitationDecline,
+                    emotion: .grateful,
+                    text: "这次先不去了。"
+                ),
+                AIReplyVariant(
+                    kind: .invitationAccept,
+                    emotion: .warm,
+                    text: "好呀，到时见。"
+                )
+            ],
+            utteranceID: utteranceID
+        )
+
+        XCTAssertTrue(state.canSelectReplyVariant)
+        XCTAssertEqual(
+            state.replyVariants.map(\.kind),
+            AIReplyVariantSet.invitation.kinds
+        )
+    }
+
     private func makeReplyVariants() -> [AIReplyVariant] {
         [
             AIReplyVariant(kind: .ordinary, emotion: .warm, text: "普通回复"),
