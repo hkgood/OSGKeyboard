@@ -122,7 +122,7 @@ public struct AISessionState: Equatable, Sendable {
         phase == .ready
             && answer == nil
             && selectedReplyVariant == nil
-            && replyVariants.count == AIReplyVariant.Kind.allCases.count
+            && AIReplyVariantSet.resolve(kinds: Set(replyVariants.map(\.kind))) != nil
     }
 
     public var canSend: Bool {
@@ -201,12 +201,12 @@ public struct AISessionState: Equatable, Sendable {
     ) {
         guard isActive, activeUtteranceID == utteranceID else { return }
         let kinds = Set(variants.map(\.kind))
-        guard variants.count == AIReplyVariant.Kind.allCases.count,
-              kinds == Set(AIReplyVariant.Kind.allCases) else {
+        guard let variantSet = AIReplyVariantSet.resolve(kinds: kinds),
+              variants.count == variantSet.kinds.count else {
             return
         }
         answer = nil
-        replyVariants = AIReplyVariant.Kind.allCases.compactMap { kind in
+        replyVariants = variantSet.kinds.compactMap { kind in
             variants.first { $0.kind == kind }
         }
         selectedReplyVariant = nil

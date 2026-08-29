@@ -39,6 +39,9 @@ public enum PolishStyleReplySelection: String, Codable, Equatable, Sendable {
     case ordinary
     case formal
     case playful
+    /// A scene-specific decision (for example accept/decline) is not a
+    /// reusable voice preference. Only its user-authored final edit may teach.
+    case contextual
     case discarded
 }
 
@@ -84,6 +87,7 @@ public struct PolishStyleLearningEvidence: Codable, Equatable, Sendable {
     public enum Source: String, Codable, Hashable, Sendable {
         case asrUserEdit
         case asrRepeatedBefore
+        case asrObservedBefore
         case replyFinalEdit
         case replyCrossContextSelection
         case replyAcceptance
@@ -259,6 +263,138 @@ public enum PolishStyleLearningError: Error, Equatable, Sendable {
     case requestTooLarge
 }
 
+/// Converts provider and credential failures into safe, actionable messages.
+/// Raw transport details can contain endpoint data, so they are never shown.
+public enum PolishStyleLearningFailureMessage {
+    public static func localized(
+        for error: Error,
+        language: AppUILanguage
+    ) -> String? {
+        if let polishError = error as? PolishingService.PolishError {
+            switch polishError {
+            case .noTranscript:
+                return SharedL10n.string(
+                    "styleLearning.error.emptyRequest",
+                    language: language
+                )
+            case .timeout:
+                return SharedL10n.string(
+                    "styleLearning.error.timeout",
+                    language: language
+                )
+            case .missingAPIKey:
+                return SharedL10n.string(
+                    "styleLearning.error.missingAPIKey",
+                    language: language
+                )
+            case .keychainLocked:
+                return SharedL10n.string(
+                    "styleLearning.error.keychainLocked",
+                    language: language
+                )
+            }
+        }
+
+        if let llmError = error as? LLMError {
+            switch llmError {
+            case .invalidURL:
+                return SharedL10n.string("error.llm.invalidURL", language: language)
+            case .noAPIKey:
+                return SharedL10n.string(
+                    "styleLearning.error.missingAPIKey",
+                    language: language
+                )
+            case .http(let status):
+                return SharedL10n.format(
+                    "error.llm.http",
+                    language: language,
+                    Int64(status)
+                )
+            case .decoding:
+                return SharedL10n.string("error.llm.decoding", language: language)
+            case .transport:
+                return SharedL10n.string("error.llm.transport", language: language)
+            case .timeout:
+                return SharedL10n.string("error.llm.timeout", language: language)
+            case .cancelled:
+                return SharedL10n.string("error.llm.cancelled", language: language)
+            case .rateLimited:
+                return SharedL10n.string("error.llm.rateLimited", language: language)
+            }
+        }
+
+        if let managedError = error as? ManagedGatewayError {
+            switch managedError {
+            case .missingGrant:
+                return SharedL10n.string(
+                    "managed.error.grantUnavailable",
+                    language: language
+                )
+            case .scopeNotGranted(let scope):
+                return SharedL10n.format(
+                    "managed.error.scopeNotGranted",
+                    language: language,
+                    scope.rawValue
+                )
+            case .invalidGrant:
+                return SharedL10n.string(
+                    "managed.error.grantRejected",
+                    language: language
+                )
+            case .insufficientCredits:
+                return SharedL10n.string(
+                    "managed.error.insufficientCredits",
+                    language: language
+                )
+            case .oobeFeatureAlreadyUsed:
+                return SharedL10n.string(
+                    "managed.error.oobeFeatureAlreadyUsed",
+                    language: language
+                )
+            case .timeout:
+                return SharedL10n.string("managed.error.timeout", language: language)
+            case .providerUnavailable:
+                return SharedL10n.string(
+                    "managed.error.providerUnavailable",
+                    language: language
+                )
+            case .providerRateLimited:
+                return SharedL10n.string(
+                    "managed.error.providerRateLimited",
+                    language: language
+                )
+            case .providerTimeout:
+                return SharedL10n.string(
+                    "managed.error.providerTimeout",
+                    language: language
+                )
+            case .providerFailure:
+                return SharedL10n.string(
+                    "managed.error.providerFailure",
+                    language: language
+                )
+            case .internalFailure:
+                return SharedL10n.string(
+                    "managed.error.internalFailure",
+                    language: language
+                )
+            case .server(let code, let status, _):
+                return SharedL10n.format(
+                    "managed.error.server",
+                    language: language,
+                    code,
+                    Int64(status)
+                )
+            }
+        }
+
+        if error is CancellationError {
+            return SharedL10n.string("error.llm.cancelled", language: language)
+        }
+        return nil
+    }
+}
+
 public actor PolishStyleLearningService {
     private struct StyleReference: Codable {
         let id: String
@@ -275,6 +411,7 @@ public actor PolishStyleLearningService {
     }
 
     private struct ASRInput: Codable {
+        let residualBaseline: StyleReference
         let currentStyleContamination: StyleReference
         let historicalStyleContamination: [StyleReference]
         let examples: [ASRExamplePayload]
@@ -324,7 +461,12 @@ public actor PolishStyleLearningService {
     private static let maximumEvidenceItemsPerDomain = 24
     private static let maximumContradictionsPerDomain = 12
     private static let maximumEvidenceFieldCharacters = 320
-    private static let learningSchemaVersion = 2
+    private static let learningSchemaVersion = 3
+    private static let generationOptions = LLMGenerationOptions(
+        temperature: 0.1,
+        topP: 0.9,
+        maxTokens: 4_096
+    )
 
     private let store: any ConfigurationStore
     private let client: LLMClient?
@@ -340,42 +482,51 @@ public actor PolishStyleLearningService {
     public func generateStyle(
         from corpus: PolishStyleLearningCorpus,
         replyExamples: [PolishStyleReplyLearningExample] = [],
-        outputLanguage: AppUILanguage
+        outputLanguage: AppUILanguage,
+        minimumEffectiveCharacterCount: Int =
+            PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount
     ) async throws -> PolishStylePack {
+        let requiredCharacterCount = max(0, minimumEffectiveCharacterCount)
         let verifiedCharacterCount = corpus.examples.reduce(into: 0) { count, example in
             count += PolishStyleLearningCorpusBuilder.effectiveCharacterCount(
                 in: example.prePolishText
             )
         }
-        guard verifiedCharacterCount
-                >= PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount else {
+        guard verifiedCharacterCount >= requiredCharacterCount else {
             throw PolishStyleLearningError.insufficientCorpus(
-                required: PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount,
+                required: requiredCharacterCount,
                 actual: verifiedCharacterCount
             )
         }
 
+        // Freeze provider, model, credential channel and contamination controls
+        // so retries and both model stages describe one coherent operation.
+        let configuration = LiveConfigurationStore(
+            snapshot: LiveConfigurationSnapshot(store: store)
+        )
+        let notifiesManagedCredits = client == nil
+            && configuration.credentialSource == .managed
         let selectedASRExamples = Self.selectExamples(from: corpus.examples)
         let selectedReplyExamples = Self.selectReplyExamples(from: replyExamples)
         let evidencePayload = try Self.makeEvidenceRequestPayload(
             corpus: corpus,
             replyExamples: selectedReplyExamples,
-            activeStyleID: store.activePolishStyleId,
-            catalog: store.polishStyleCatalog,
+            activeStyleID: configuration.activePolishStyleId,
+            catalog: configuration.polishStyleCatalog,
             outputLanguage: outputLanguage
         )
         let service = PolishingService(
-            store: store,
+            store: configuration,
             client: client,
-            timeout: 45
+            timeout: 45,
+            maximumTimeout: 45
         )
-        let evidenceResponse = try await service.polish(
-            evidencePayload,
-            systemPrompt: Self.evidenceExtractorSystemPrompt(),
-            taskKind: .customSkill
+        let evidence = try await extractEvidence(
+            payload: evidencePayload,
+            service: service,
+            requiresBestEffortASRCandidate: !selectedASRExamples.isEmpty,
+            notifiesManagedCredits: notifiesManagedCredits
         )
-        notifyManagedCreditsMayHaveChanged()
-        let evidence = try Self.parseEvidence(evidenceResponse)
         let metadata = PolishStylePack.LearningMetadata(
             schemaVersion: Self.learningSchemaVersion,
             evidenceStatus: evidence.status.rawValue,
@@ -392,28 +543,99 @@ public actor PolishStyleLearningService {
             }.count,
             generatedAt: Date()
         )
+        // Always synthesize from this operation's evidence. Low-confidence
+        // profiles use their strongest candidate traits; only genuinely empty
+        // profiles may disclose that no personal tendency was observed.
         let synthesisPayload = try Self.makeSynthesisRequestPayload(
             evidence: evidence,
             metadata: metadata
         )
-        let synthesisResponse = try await service.polish(
-            synthesisPayload,
-            systemPrompt: Self.synthesizerSystemPrompt(
-                outputLanguage: outputLanguage
-            ),
-            taskKind: .customSkill
-        )
-        notifyManagedCreditsMayHaveChanged()
-        return try Self.parseGeneratedStyle(
-            synthesisResponse,
-            evidenceStatus: evidence.status,
+        return try await synthesizeStyle(
+            payload: synthesisPayload,
+            service: service,
             learningMetadata: metadata,
-            outputLanguage: outputLanguage
+            outputLanguage: outputLanguage,
+            notifiesManagedCredits: notifiesManagedCredits
         )
     }
 
-    private func notifyManagedCreditsMayHaveChanged() {
-        guard client == nil, store.credentialSource == .managed else { return }
+    private func extractEvidence(
+        payload: String,
+        service: PolishingService,
+        requiresBestEffortASRCandidate: Bool,
+        notifiesManagedCredits: Bool
+    ) async throws -> PolishStyleLearningEvidence {
+        let response = try await service.polish(
+            payload,
+            systemPrompt: Self.evidenceExtractorSystemPrompt(),
+            options: Self.generationOptions,
+            taskKind: .customSkill
+        )
+        notifyManagedCreditsMayHaveChanged(ifNeeded: notifiesManagedCredits)
+        do {
+            return try Self.parseEvidence(
+                response,
+                requiresBestEffortASRCandidate: requiresBestEffortASRCandidate
+            )
+        } catch let error as PolishStyleLearningError
+            where error == .invalidResponse {
+            let repairedResponse = try await service.polish(
+                payload,
+                systemPrompt: Self.evidenceRepairSystemPrompt(),
+                options: Self.generationOptions,
+                taskKind: .customSkill
+            )
+            notifyManagedCreditsMayHaveChanged(ifNeeded: notifiesManagedCredits)
+            return try Self.parseEvidence(
+                repairedResponse,
+                requiresBestEffortASRCandidate: requiresBestEffortASRCandidate
+            )
+        }
+    }
+
+    private func synthesizeStyle(
+        payload: String,
+        service: PolishingService,
+        learningMetadata: PolishStylePack.LearningMetadata,
+        outputLanguage: AppUILanguage,
+        notifiesManagedCredits: Bool
+    ) async throws -> PolishStylePack {
+        let response = try await service.polish(
+            payload,
+            systemPrompt: Self.synthesizerSystemPrompt(
+                outputLanguage: outputLanguage
+            ),
+            options: Self.generationOptions,
+            taskKind: .customSkill
+        )
+        notifyManagedCreditsMayHaveChanged(ifNeeded: notifiesManagedCredits)
+        do {
+            return try Self.parseGeneratedStyle(
+                response,
+                learningMetadata: learningMetadata,
+                outputLanguage: outputLanguage
+            )
+        } catch let error as PolishStyleLearningError
+            where error == .invalidResponse {
+            let repairedResponse = try await service.polish(
+                payload,
+                systemPrompt: Self.synthesisRepairSystemPrompt(
+                    outputLanguage: outputLanguage
+                ),
+                options: Self.generationOptions,
+                taskKind: .customSkill
+            )
+            notifyManagedCreditsMayHaveChanged(ifNeeded: notifiesManagedCredits)
+            return try Self.parseGeneratedStyle(
+                repairedResponse,
+                learningMetadata: learningMetadata,
+                outputLanguage: outputLanguage
+            )
+        }
+    }
+
+    private func notifyManagedCreditsMayHaveChanged(ifNeeded shouldNotify: Bool) {
+        guard shouldNotify else { return }
         NotificationCenter.default.post(name: .managedCreditsMayHaveChanged, object: nil)
     }
 
@@ -445,6 +667,10 @@ public actor PolishStyleLearningService {
             userCatalog: catalog
         )
         let selectedExamples = selectExamples(from: corpus.examples)
+        let baselineStyle = PolishStylePackCatalog.resolve(
+            id: "builtin.chat",
+            userCatalog: catalog
+        )
         let references = styleReferences(
             for: selectedExamples,
             activeStyle: activeStyle,
@@ -454,6 +680,10 @@ public actor PolishStyleLearningService {
         let payload = EvidenceRequestPayload(
             schemaVersion: learningSchemaVersion,
             asr: ASRInput(
+                residualBaseline: reference(
+                    for: baselineStyle,
+                    outputLanguage: outputLanguage
+                ),
                 currentStyleContamination: reference(
                     for: activeStyle,
                     outputLanguage: outputLanguage
@@ -487,15 +717,15 @@ public actor PolishStyleLearningService {
         return try encodeRequest(payload)
     }
 
-    static func parseEvidence(_ raw: String) throws -> PolishStyleLearningEvidence {
-        guard raw.count <= maximumEvidenceResponseCharacters else {
-            throw PolishStyleLearningError.invalidResponse
-        }
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.first == "{",
-              trimmed.last == "}",
-              let data = trimmed.data(using: .utf8),
-              hasExactEvidenceProtocol(data),
+    static func parseEvidence(
+        _ raw: String,
+        requiresBestEffortASRCandidate: Bool = false
+    ) throws -> PolishStyleLearningEvidence {
+        let data = try extractUniqueJSONObject(
+            from: raw,
+            maximumCharacters: maximumEvidenceResponseCharacters
+        )
+        guard hasExactEvidenceProtocol(data),
               let evidence = try? JSONDecoder().decode(
                   PolishStyleLearningEvidence.self,
                   from: data
@@ -503,32 +733,26 @@ public actor PolishStyleLearningService {
               isValid(evidence) else {
             throw PolishStyleLearningError.invalidResponse
         }
+        if requiresBestEffortASRCandidate,
+           evidence.status == .insufficient,
+           evidence.asr.traits.isEmpty {
+            throw PolishStyleLearningError.invalidResponse
+        }
         return evidence
     }
 
     static func parseGeneratedStyle(
         _ raw: String,
-        evidenceStatus: PolishStyleLearningEvidence.Status = .sufficient,
         learningMetadata: PolishStylePack.LearningMetadata? = nil,
         outputLanguage: AppUILanguage
     ) throws -> PolishStylePack {
-        guard raw.count <= maximumSynthesisResponseCharacters else {
-            throw PolishStyleLearningError.invalidResponse
-        }
-        let trimmedResponse = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmedResponse.first == "{",
-              trimmedResponse.last == "}",
-              let data = trimmedResponse.data(using: .utf8),
-              hasExactGeneratedStyleProtocol(data),
+        let data = try extractUniqueJSONObject(
+            from: raw,
+            maximumCharacters: maximumSynthesisResponseCharacters
+        )
+        guard hasExactGeneratedStyleProtocol(data),
               let generated = try? JSONDecoder().decode(GeneratedStyle.self, from: data) else {
             throw PolishStyleLearningError.invalidResponse
-        }
-
-        if evidenceStatus == .insufficient {
-            return insufficientEvidencePack(
-                outputLanguage: outputLanguage,
-                learningMetadata: learningMetadata
-            )
         }
 
         let prompt = PolishStylePackCatalog.runtimePersonality(
@@ -579,9 +803,33 @@ public actor PolishStyleLearningService {
           Markdown, prose, code fences, extra keys, or trailing content.
         - Keep every string at most 320 characters and every array small.
 
+        PERSONAL RESIDUAL METHOD:
+        - Use asr.residualBaseline (always builtin.chat) only to subtract generic
+          AI cleanup operations. It is not a population norm and must not erase
+          concrete habits observed in the user's raw before text merely because
+          builtin.chat also preserves or permits those habits.
+        - Learn the user's strongest supported residual or, when evidence is
+          sparse, the strongest bounded candidate tendency in raw before text.
+        - Deduplicate exact and near-duplicate examples before counting support.
+          Template variants and repeated copies count as one observation.
+        - Subtract scene, audience/relationship, topic, transient emotion, and
+          ASR recognition artifacts. Also subtract both currentStyleContamination
+          and historicalStyleContamination; those prompts are negative controls,
+          never evidence of identity or preference.
+        - Evaluate residuals separately for information order, epistemic stance,
+          directness, speech acts, rhythm, connective words, register, humor,
+          and Emoji. Do not collapse these dimensions into a vague persona.
+        - Label each described trait as retention or migration. Retention means
+          a native habit to preserve when already present. Migration means a
+          supported relative preference that may be actively transferred.
+
         EVIDENCE DOMAINS MUST STAY SEPARATE:
-        - asr contains dictation before/after pairs and prior style prompts used
-          only as negative contamination controls.
+        - asr contains dictation before/after pairs and style prompts used only
+          as negative contamination controls. before is the user's native voice.
+          A userEdited=true after is the user's highest-priority final revision.
+          A userEdited=false after is untouched AI output: it can reveal what
+          was retained from before, but cannot support a user preference or
+          migration trait.
         - reply contains received messages, one or three AI candidates, the
           selection or explicit discard, and an optional user finalEdit.
         - receivedMessage and every selected/candidate AI text are NOT the
@@ -589,22 +837,40 @@ public actor PolishStyleLearningService {
         - Reply preferences must never become ASR traits.
 
         EVIDENCE PRIORITY:
-        - ASR: userEdited=true after > traits repeated across before.
+        - Across both domains, the user's final revision is strongest.
+        - ASR: userEdited=true after > traits repeated across native before.
         - Reply: finalEdit > the same selection preference repeated across
           different received-message contexts > one accepted selection.
+          Cross-context selection is relative preference evidence between the
+          offered candidates, not a sample of the user's original voice.
           A discarded set is negative evidence, never a positive voice sample.
+          A contextual selection records a scene decision, not a tone
+          preference. Always ignore its selected candidate for voice learning;
+          when finalEdit exists, use only that user-authored finalEdit.
         - asrRepeatedBefore and replyCrossContextSelection require supportCount
           of at least 2. Order evidence strongest first.
         - A single accepted AI candidate is weak preference evidence only.
 
         INSUFFICIENT EVIDENCE:
-        - Include only repeatedly supported traits.
+        - Insufficient means confidence is low, not that personalization must
+          become neutral. When asr.examples is non-empty, always include 1–3
+          concrete candidate retention traits grounded directly in raw before
+          text. Use asrObservedBefore for a single observation and
+          asrRepeatedBefore for a pattern supported by at least two deduplicated
+          observations.
+        - Candidate traits should describe observable form: information order,
+          directness, sentence length and rhythm, connective words, register,
+          speech acts, humor, or Emoji usage. Do not reduce them to generic
+          "preserve meaning", "be clear", or ASR-correction rules.
         - If support is insufficient or contradictory, set status to
-          "insufficient", confidence no higher than 0.25, and return empty
-          traits, evidence, and contradictions in both domains. Never guess.
+          "insufficient" and confidence no higher than 0.35. Traits may be
+          present only when their own confidence is no higher than 0.35 and
+          they have matching evidence. Empty domains are valid. Never guess.
+          The ASR domain may be empty only when asr.examples itself is empty.
+        - Set status to "sufficient" only when total confidence is at least 0.5.
 
         Allowed source values:
-        asrUserEdit, asrRepeatedBefore, replyFinalEdit,
+        asrUserEdit, asrRepeatedBefore, asrObservedBefore, replyFinalEdit,
         replyCrossContextSelection, replyAcceptance.
 
         Return this exact Codable shape:
@@ -622,6 +888,18 @@ public actor PolishStyleLearningService {
             "contradictions": [{"trait":"","summary":""}]
           }
         }
+        """
+    }
+
+    static func evidenceRepairSystemPrompt() -> String {
+        evidenceExtractorSystemPrompt() + """
+
+
+        REPAIR ATTEMPT:
+        - The previous response failed local protocol validation.
+        - Reanalyze the original payload above. Emit only one syntactically
+          valid JSON object matching the exact schema and validation limits.
+        - Do not mention the failed response and do not add a second object.
         """
     }
 
@@ -654,14 +932,29 @@ public actor PolishStyleLearningService {
         PolishPromptComposer owns those stable contracts. Do not invent a trait
         absent from the evidence. Represent contradictions as boundaries.
 
+        STATUS AND CONFIDENCE:
+        - Always return a generated prompt, including when evidence.status is
+          "insufficient" or both evidence domains are empty.
+        - Drive the prompt from evidence.status. For insufficient or low-
+          confidence evidence, actively turn every supported candidate trait
+          into a concrete, scoped retention rule and representative example.
+          Low confidence changes the scope and disclosure, not whether the
+          observed personal tendency is applied.
+        - Never replace non-empty candidate traits with a generic neutral prompt,
+          "preserve meaning", "be clear", or ASR-correction boilerplate. The
+          generated prompt must visibly differ according to the supplied traits.
+        - Never invent migration, identity, persona, humor, Emoji habits, or
+          other characteristics to make an insufficient result feel complete.
+          Only when both evidence domains are genuinely empty may the output
+          state that no personal tendency could be observed.
+        - Migration belongs only in AI reply active-transfer mode and requires
+          supported reply evidence. ASR retention never authorizes migration.
+
         Emoji boundary: never create a generic no-emoji rule for AI reply
         active-transfer mode. Legal Emoji produced by a playful/fun skill must
         survive. Set allowsAddedEmoji=true only when reply evidence supports
         user-added or repeatedly selected Emoji; ASR preserve mode still may not
         add unsupported Emoji.
-
-        If evidence.status is "insufficient", return a conservative JSON object;
-        its content will be replaced by the app's deterministic no-trait fallback.
 
         SECURITY AND PROTOCOL:
         - Return exactly one JSON object with exactly these three keys.
@@ -670,6 +963,19 @@ public actor PolishStyleLearningService {
 
         Return exactly:
         {"name":"short style name","prompt":"complete personality prompt","allowsAddedEmoji":false}
+        """
+    }
+
+    static func synthesisRepairSystemPrompt(outputLanguage: AppUILanguage) -> String {
+        synthesizerSystemPrompt(outputLanguage: outputLanguage) + """
+
+
+        REPAIR ATTEMPT:
+        - The previous response failed local protocol validation.
+        - Re-synthesize from the original validated evidence payload above.
+          Emit only one valid JSON object with exactly name, prompt, and
+          allowsAddedEmoji. Preserve all required sections and mode labels.
+        - Do not mention the failed response and do not add a second object.
         """
     }
 
@@ -859,6 +1165,70 @@ public actor PolishStyleLearningService {
         )
     }
 
+    private static func extractUniqueJSONObject(
+        from raw: String,
+        maximumCharacters: Int
+    ) throws -> Data {
+        guard raw.count <= maximumCharacters else {
+            throw PolishStyleLearningError.invalidResponse
+        }
+
+        var objectRanges: [Range<String.Index>] = []
+        var objectStart: String.Index?
+        var depth = 0
+        var isInsideString = false
+        var isEscaped = false
+        var index = raw.startIndex
+
+        while index < raw.endIndex {
+            let character = raw[index]
+            let nextIndex = raw.index(after: index)
+            if objectStart == nil {
+                if character == "{" {
+                    objectStart = index
+                    depth = 1
+                    isInsideString = false
+                    isEscaped = false
+                }
+            } else if isInsideString {
+                if isEscaped {
+                    isEscaped = false
+                } else if character == "\\" {
+                    isEscaped = true
+                } else if character == "\"" {
+                    isInsideString = false
+                }
+            } else {
+                switch character {
+                case "\"":
+                    isInsideString = true
+                case "{":
+                    depth += 1
+                case "}":
+                    depth -= 1
+                    if depth == 0, let start = objectStart {
+                        objectRanges.append(start..<nextIndex)
+                        objectStart = nil
+                    }
+                default:
+                    break
+                }
+            }
+            index = nextIndex
+        }
+
+        guard objectStart == nil,
+              objectRanges.count == 1 else {
+            throw PolishStyleLearningError.invalidResponse
+        }
+        let object = String(raw[objectRanges[0]])
+        guard object.count <= maximumCharacters,
+              let data = object.data(using: .utf8) else {
+            throw PolishStyleLearningError.invalidResponse
+        }
+        return data
+    }
+
     private static func hasExactEvidenceProtocol(_ data: Data) -> Bool {
         guard let object = try? JSONSerialization.jsonObject(with: data),
               let root = object as? [String: Any],
@@ -903,7 +1273,11 @@ public actor PolishStyleLearningService {
               (0...1).contains(evidence.confidence),
               isValid(
                   evidence.asr,
-                  allowedSources: [.asrUserEdit, .asrRepeatedBefore]
+                  allowedSources: [
+                      .asrUserEdit,
+                      .asrRepeatedBefore,
+                      .asrObservedBefore
+                  ]
               ),
               isValid(
                   evidence.reply,
@@ -917,11 +1291,12 @@ public actor PolishStyleLearningService {
         }
 
         if evidence.status == .insufficient {
-            return evidence.confidence <= 0.25
-                && isEmpty(evidence.asr)
-                && isEmpty(evidence.reply)
+            return evidence.confidence <= 0.35
+                && evidence.asr.traits.allSatisfy { $0.confidence <= 0.35 }
+                && evidence.reply.traits.allSatisfy { $0.confidence <= 0.35 }
         }
-        return !evidence.asr.traits.isEmpty || !evidence.reply.traits.isEmpty
+        return evidence.confidence >= 0.5
+            && (!evidence.asr.traits.isEmpty || !evidence.reply.traits.isEmpty)
     }
 
     private static func isValid(
@@ -967,7 +1342,7 @@ public actor PolishStyleLearningService {
         switch item.source {
         case .asrRepeatedBefore, .replyCrossContextSelection:
             return item.supportCount >= 2
-        case .asrUserEdit, .replyFinalEdit, .replyAcceptance:
+        case .asrUserEdit, .asrObservedBefore, .replyFinalEdit, .replyAcceptance:
             return true
         }
     }
@@ -988,17 +1363,9 @@ public actor PolishStyleLearningService {
             return 0
         case .asrRepeatedBefore, .replyCrossContextSelection:
             return 1
-        case .replyAcceptance:
+        case .asrObservedBefore, .replyAcceptance:
             return 2
         }
-    }
-
-    private static func isEmpty(
-        _ domain: PolishStyleLearningEvidence.Domain
-    ) -> Bool {
-        domain.traits.isEmpty
-            && domain.evidence.isEmpty
-            && domain.contradictions.isEmpty
     }
 
     private static func hasRequiredPromptSections(_ prompt: String) -> Bool {
@@ -1015,46 +1382,6 @@ public actor PolishStyleLearningService {
         let lowercased = prompt.lowercased()
         return lowercased.contains("asr preserve mode")
             && lowercased.contains("ai reply active-transfer mode")
-    }
-
-    private static func insufficientEvidencePack(
-        outputLanguage: AppUILanguage,
-        learningMetadata: PolishStylePack.LearningMetadata?
-    ) -> PolishStylePack {
-        let isChinese = outputLanguage.resolvedLanguageCode().hasPrefix("zh")
-        let name = isChinese ? "保守保真风格" : "Conservative Preserve Style"
-        let prompt = isChinese
-            ? """
-            # 角色
-            在证据不足时不推断个人口吻，只做保守、自然的表达保真。
-
-            # 风格边界
-            ASR preserve mode：保持用户原有语义、言语行为、措辞和直接程度，不引入回复偏好。
-            AI reply active-transfer mode：当前没有足够的个人回复偏好证据，不主动迁移任何风格特征。
-
-            # 示例
-            输入 → 保持原意与原有口吻，不增加未经证据支持的表达习惯。
-            """
-            : """
-            # Role
-            # 角色
-            With insufficient evidence, infer no personal voice and preserve expression conservatively.
-
-            # Style Boundaries
-            # 风格边界
-            ASR preserve mode: preserve meaning, speech act, wording, and directness without reply preferences.
-            AI reply active-transfer mode: no reply preference has enough evidence, so transfer no inferred trait.
-
-            # Examples
-            # 示例
-            Input → Preserve intent and voice without adding unsupported habits.
-            """
-        return PolishStylePack(
-            name: name,
-            prompt: prompt,
-            allowsAddedEmoji: false,
-            learningMetadata: learningMetadata
-        )
     }
 
     private static func containsInstructionOverride(_ prompt: String) -> Bool {

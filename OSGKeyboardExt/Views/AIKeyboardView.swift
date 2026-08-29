@@ -37,9 +37,23 @@ struct AIKeyboardView: View {
         static let maximumSemanticSkills = 5
     }
 
+    private struct SemanticBadgeContent {
+        let intentKey: String?
+        let domainKey: String?
+
+        var text: String {
+            [intentKey, domainKey]
+                .compactMap { $0 }
+                .map { ExtL10n.string($0) }
+                .joined(separator: " · ")
+        }
+    }
+
     #if DEBUG
     /// Layout preview for `--ai-skills-demo`. Nil keeps production clipboard-window gating.
     static var debugPreviewSkills: [AIClipboardSkill]?
+    /// Deterministic intent/domain labels for the assistant UI harness.
+    static var debugPreviewSemanticBadgeKeys: (intent: String?, domain: String?)?
     /// Keeps the deterministic UI harness on the tappable idle hint.
     static var debugSkipsLongPressCoach = false
     /// Prevents deterministic feedback previews from expiring mid-assertion.
@@ -237,9 +251,9 @@ struct AIKeyboardView: View {
         } label: {
             HStack(alignment: .top, spacing: Spacing.sm) {
                 Image(
-                    systemName: variant.emotion.systemImage(
-                        fallback: variant.kind
-                    )
+                    systemName: variant.kind.usesEmotionIcon
+                        ? variant.emotion.systemImage(fallback: variant.kind)
+                        : variant.kind.systemImage
                 )
                     .resizable()
                     .scaledToFit()
@@ -315,7 +329,7 @@ struct AIKeyboardView: View {
                 onDismiss: dismissClipboardPresentation
             )
             .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
-        } else if showsClipboardSkills {
+        } else if showsClipboardSkills || semanticBadgeContent != nil {
             cancelTopBar(
                 action: dismissClipboardPresentation,
                 labelKey: "keyboard.assistant.dismissClipboard",
@@ -396,7 +410,14 @@ struct AIKeyboardView: View {
                 }
                 .accessibilityIdentifier("assistant.skillTip")
             } else if showsClipboardSkills {
-                clipboardSkillPager
+                VStack(spacing: Spacing.xs) {
+                    if let content = semanticBadgeContent {
+                        semanticBadge(content)
+                    }
+                    clipboardSkillPager
+                }
+            } else if let content = semanticBadgeContent {
+                semanticBadge(content)
             } else if let status = activeStatus {
                 statusText(status.text, color: status.color)
             } else if showsLongPressCoach {
@@ -413,6 +434,73 @@ struct AIKeyboardView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, Spacing.md)
+    }
+
+    private func semanticBadge(_ content: SemanticBadgeContent) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: "tag.fill")
+                .font(.system(size: 10, weight: .semibold))
+                .accessibilityHidden(true)
+            Text(content.text)
+                .font(.system(size: 12, weight: .semibold))
+                .lineLimit(1)
+        }
+        .foregroundStyle(palette.textSecondary)
+        .padding(.horizontal, 10)
+        .frame(height: 24)
+        .background(palette.accentMuted, in: Capsule())
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("assistant.semantic.badge")
+        .accessibilityLabel(Text(content.text))
+    }
+
+    private var semanticBadgeContent: SemanticBadgeContent? {
+        #if DEBUG
+        if let keys = Self.debugPreviewSemanticBadgeKeys {
+            return SemanticBadgeContent(
+                intentKey: keys.intent,
+                domainKey: keys.domain
+            )
+        }
+        #endif
+        guard assistantIsResting,
+              state.clipboardHistoryEnabled,
+              let newest = clipboardHistory.newestEntry,
+              let snapshot = semanticRanking.snapshot,
+              snapshot.entryID == newest.id,
+              AIHintPool.isClipboardSkillWindowActive(
+                  clipboardHistoryEnabled: true,
+                  newestClipboard: newest
+              ) else {
+            return nil
+        }
+        let intentKey = semanticIntentKey(snapshot.analysis)
+        let domainKey: String? = snapshot.analysis.domain.flatMap { domain in
+            guard let confidence = snapshot.analysis.domainConfidence,
+                  confidence > 0 else {
+                return nil
+            }
+            return domain.localizationKey
+        }
+        guard intentKey != nil || domainKey != nil else { return nil }
+        return SemanticBadgeContent(intentKey: intentKey, domainKey: domainKey)
+    }
+
+    private func semanticIntentKey(
+        _ analysis: ClipboardSemanticAnalysis
+    ) -> String? {
+        let candidates = [
+            (analysis.assistantCommand, "keyboard.semantic.intent.assistantCommand"),
+            (analysis.informationQuery, "keyboard.semantic.intent.informationQuery"),
+            (analysis.systemNotification, "keyboard.semantic.intent.systemNotification")
+        ].filter { label, _ in
+            label.isDetected
+                && label.confidence > 0
+                && label.confidence >= label.threshold
+        }
+        return candidates.max {
+            $0.0.confidence < $1.0.confidence
+        }?.1
     }
 
     private func statusText(_ text: String, color: Color) -> some View {
@@ -588,7 +676,7 @@ struct AIKeyboardView: View {
 
     private func skillChip(_ skill: AIClipboardSkill) -> some View {
         Button {
-            state.submitAIClipboardSkill(skill)
+            state.submitAIClipboardSkill(skill, replyScene(for: skill))
         } label: {
             VStack(spacing: 6) {
                 Image(systemName: skill.systemImage)
@@ -608,6 +696,17 @@ struct AIKeyboardView: View {
         .disabled(!state.aiServiceAvailable || state.aiSession.isBusy)
         .accessibilityIdentifier("assistant.skill.\(skill.id)")
         .accessibilityLabel(Text(clipboardSkillTitle(skill)))
+    }
+
+    private func replyScene(for skill: AIClipboardSkill) -> AIClipboardReplyScene? {
+        guard skill.id == AIClipboardSkillCatalog.replyID,
+              state.oobePracticeSession == nil,
+              let newest = clipboardHistory.newestEntry,
+              let snapshot = semanticRanking.snapshot,
+              snapshot.entryID == newest.id else {
+            return nil
+        }
+        return AIClipboardReplyScene.resolve(from: snapshot.analysis)
     }
 
     private func clipboardSkillTitle(_ skill: AIClipboardSkill) -> String {
@@ -1193,7 +1292,7 @@ struct AIKeyboardView: View {
 
     private func resetCarousel() {
         reloadHintPool(resetBag: true)
-        guard !showsClipboardSkills else { return }
+        guard !showsClipboardSkills, semanticBadgeContent == nil else { return }
         showNextHint(animated: false)
     }
 

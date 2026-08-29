@@ -11,6 +11,18 @@ public struct AIReplyVariant: Equatable, Identifiable, Sendable {
         case ordinary
         case formal
         case playful
+        case invitationAccept
+        case invitationDecline
+        case invitationTentative
+        case taskAcknowledge
+        case taskClarify
+        case taskNegotiate
+        case blessingReturn
+        case blessingWarm
+        case blessingPlayful
+        case clarificationDirect
+        case clarificationQuestion
+        case clarificationConfirm
 
         public var systemImage: String {
             switch self {
@@ -20,6 +32,26 @@ public struct AIReplyVariant: Equatable, Identifiable, Sendable {
                 return "briefcase.fill"
             case .playful:
                 return "theatermasks.fill"
+            case .invitationAccept, .taskAcknowledge:
+                return "checkmark.circle.fill"
+            case .invitationDecline:
+                return "hand.raised.fill"
+            case .invitationTentative:
+                return "clock.fill"
+            case .taskClarify, .clarificationQuestion:
+                return "questionmark.bubble.fill"
+            case .taskNegotiate:
+                return "arrow.left.arrow.right"
+            case .blessingReturn:
+                return "heart.fill"
+            case .blessingWarm:
+                return "hands.sparkles.fill"
+            case .blessingPlayful:
+                return "party.popper.fill"
+            case .clarificationDirect:
+                return "bubble.left.and.text.bubble.right.fill"
+            case .clarificationConfirm:
+                return "checkmark.bubble.fill"
             }
         }
 
@@ -31,6 +63,52 @@ public struct AIReplyVariant: Equatable, Identifiable, Sendable {
                 return "keyboard.ai.replyVariant.formal"
             case .playful:
                 return "keyboard.ai.replyVariant.playful"
+            case .invitationAccept:
+                return "keyboard.ai.replyVariant.invitationAccept"
+            case .invitationDecline:
+                return "keyboard.ai.replyVariant.invitationDecline"
+            case .invitationTentative:
+                return "keyboard.ai.replyVariant.invitationTentative"
+            case .taskAcknowledge:
+                return "keyboard.ai.replyVariant.taskAcknowledge"
+            case .taskClarify:
+                return "keyboard.ai.replyVariant.taskClarify"
+            case .taskNegotiate:
+                return "keyboard.ai.replyVariant.taskNegotiate"
+            case .blessingReturn:
+                return "keyboard.ai.replyVariant.blessingReturn"
+            case .blessingWarm:
+                return "keyboard.ai.replyVariant.blessingWarm"
+            case .blessingPlayful:
+                return "keyboard.ai.replyVariant.blessingPlayful"
+            case .clarificationDirect:
+                return "keyboard.ai.replyVariant.clarificationDirect"
+            case .clarificationQuestion:
+                return "keyboard.ai.replyVariant.clarificationQuestion"
+            case .clarificationConfirm:
+                return "keyboard.ai.replyVariant.clarificationConfirm"
+            }
+        }
+
+        /// Generic choices communicate tone through emotion icons. Intent
+        /// choices keep their fixed icon so the user's decision stays clear.
+        public var usesEmotionIcon: Bool {
+            switch self {
+            case .ordinary, .formal, .playful:
+                return true
+            case .invitationAccept,
+                 .invitationDecline,
+                 .invitationTentative,
+                 .taskAcknowledge,
+                 .taskClarify,
+                 .taskNegotiate,
+                 .blessingReturn,
+                 .blessingWarm,
+                 .blessingPlayful,
+                 .clarificationDirect,
+                 .clarificationQuestion,
+                 .clarificationConfirm:
+                return false
             }
         }
     }
@@ -96,6 +174,59 @@ public struct AIReplyVariant: Equatable, Identifiable, Sendable {
     }
 }
 
+public enum AIReplyVariantSet: String, CaseIterable, Sendable {
+    case generic
+    case invitation
+    case task
+    case blessing
+    case clarification
+
+    public var kinds: [AIReplyVariant.Kind] {
+        switch self {
+        case .generic:
+            return [.ordinary, .formal, .playful]
+        case .invitation:
+            return [.invitationAccept, .invitationDecline, .invitationTentative]
+        case .task:
+            return [.taskAcknowledge, .taskClarify, .taskNegotiate]
+        case .blessing:
+            return [.blessingReturn, .blessingWarm, .blessingPlayful]
+        case .clarification:
+            return [
+                .clarificationDirect,
+                .clarificationQuestion,
+                .clarificationConfirm
+            ]
+        }
+    }
+
+    public static func resolve(scene: AIClipboardReplyScene?) -> Self {
+        switch scene {
+        case .invitation:
+            return .invitation
+        case .task:
+            return .task
+        case .blessing:
+            return .blessing
+        case .clarification:
+            return .clarification
+        case .complaint, .negativeQuestion, nil:
+            return .generic
+        }
+    }
+
+    public static func resolve(kinds: Set<AIReplyVariant.Kind>) -> Self? {
+        allCases.first { Set($0.kinds) == kinds }
+    }
+
+    public static func shouldGenerate(
+        multipleRepliesEnabled: Bool,
+        scene: AIClipboardReplyScene?
+    ) -> Bool {
+        multipleRepliesEnabled || scene?.requiresIntentVariants == true
+    }
+}
+
 public enum AIReplyVariantParsingResult: Equatable, Sendable {
     case variants([AIReplyVariant])
     case single(AIReplyVariant)
@@ -107,22 +238,25 @@ public enum AIReplyVariantParser {
     /// with exactly one item of each kind and no additional JSON fields.
     public static func parse(
         _ raw: String,
-        sourceText: String? = nil
+        sourceText: String? = nil,
+        variantSet: AIReplyVariantSet = .generic
     ) -> [AIReplyVariant]? {
         guard let data = raw.data(using: .utf8),
               let root = try? JSONSerialization.jsonObject(with: data),
               let object = root as? [String: Any],
               Set(object.keys) == ["variants"],
               let items = object["variants"] as? [[String: Any]],
-              items.count == AIReplyVariant.Kind.allCases.count else {
+              items.count == variantSet.kinds.count else {
             return nil
         }
 
+        let expectedKinds = Set(variantSet.kinds)
         var variantsByKind: [AIReplyVariant.Kind: AIReplyVariant] = [:]
         for item in items {
             guard Set(item.keys) == ["kind", "emotion", "text"],
                   let rawKind = item["kind"] as? String,
                   let kind = AIReplyVariant.Kind(rawValue: rawKind),
+                  expectedKinds.contains(kind),
                   variantsByKind[kind] == nil,
                   let rawEmotion = item["emotion"] as? String,
                   let rawText = item["text"] as? String else {
@@ -141,19 +275,27 @@ public enum AIReplyVariantParser {
             )
         }
 
-        let ordered = AIReplyVariant.Kind.allCases.compactMap { variantsByKind[$0] }
-        return ordered.count == AIReplyVariant.Kind.allCases.count ? ordered : nil
+        let ordered = variantSet.kinds.compactMap { variantsByKind[$0] }
+        return ordered.count == variantSet.kinds.count ? ordered : nil
     }
 
-    /// Strict multi-reply parsing with a conservative single ordinary fallback.
-    /// Fenced or malformed JSON is never surfaced verbatim to the insertion UI.
+    /// Strict multi-reply parsing with a conservative single ordinary fallback
+    /// only for generic tone choices. Intent scenes fail closed instead.
     public static func parseOrFallback(
         _ raw: String,
-        sourceText: String? = nil
+        sourceText: String? = nil,
+        variantSet: AIReplyVariantSet = .generic
     ) -> AIReplyVariantParsingResult? {
-        if let variants = parse(raw, sourceText: sourceText) {
+        if let variants = parse(
+            raw,
+            sourceText: sourceText,
+            variantSet: variantSet
+        ) {
             return .variants(variants)
         }
+        // A plain-text fallback cannot safely preserve the user's intended
+        // stance for invitation, task, blessing, or clarification choices.
+        guard variantSet == .generic else { return nil }
         guard let text = fallbackText(from: raw),
               !isSourceEcho(text, sourceText: sourceText) else {
             return nil

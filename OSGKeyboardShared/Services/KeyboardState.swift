@@ -362,8 +362,8 @@ public final class KeyboardState: ObservableObject {
     public var performAssistantFieldAction: () -> Void = {}
     /// Sends a tapped idle hint card as the AI question (skip microphone).
     public var submitAIHint: (AIHintCard) -> Void = { _ in }
-    /// Sends a clipboard skill (reply / summarize / translate / export).
-    public var submitAIClipboardSkill: (AIClipboardSkill) -> Void = { _ in }
+    /// Sends a clipboard skill plus any source-bound Reply scene modifier.
+    public var submitAIClipboardSkill: (AIClipboardSkill, AIClipboardReplyScene?) -> Void = { _, _ in }
     /// Writes extract-todos titles and opens the host to run the Shortcut.
     public var runClipboardExportSkill: (String, [String]) -> Void = { _, _ in }
     public var openSettings: () -> Void = {}

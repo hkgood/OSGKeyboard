@@ -12,6 +12,18 @@ public struct ClipboardReplyCandidateSnapshot: Codable, Equatable, Identifiable,
         case ordinary
         case formal
         case playful
+        case invitationAccept
+        case invitationDecline
+        case invitationTentative
+        case taskAcknowledge
+        case taskClarify
+        case taskNegotiate
+        case blessingReturn
+        case blessingWarm
+        case blessingPlayful
+        case clarificationDirect
+        case clarificationQuestion
+        case clarificationConfirm
     }
 
     public let id: UUID
@@ -121,11 +133,28 @@ public final class ClipboardReplyFeedbackStore {
         now: Date = Date()
     ) -> [PolishStyleReplyLearningExample] {
         records(now: now).compactMap { record in
-            guard record.outcome != .awaitingSelection,
-                  let ordinary = record.candidates.first(where: {
-                      $0.kind == .ordinary
-                  }) else {
+            guard record.outcome != .awaitingSelection else {
                 return nil
+            }
+            guard let ordinary = record.candidates.first(where: {
+                $0.kind == .ordinary
+            }) else {
+                // Scene-specific choices express the user's decision, not a
+                // reusable tone preference. Only a later user-authored edit is
+                // valid personal-style evidence.
+                guard record.outcome == .selected,
+                      let selected = record.selectedCandidate,
+                      let finalText = record.finalText else {
+                    return nil
+                }
+                return PolishStyleReplyLearningExample(
+                    receivedMessage: record.sourceText,
+                    ordinaryCandidate: selected.text,
+                    selection: .contextual,
+                    finalEdit: finalText,
+                    createdAt: record.createdAt,
+                    styleID: record.styleID
+                )
             }
             let selection: PolishStyleReplySelection
             if record.outcome == .discarded {
@@ -279,6 +308,19 @@ public final class ClipboardReplyFeedbackStore {
             return .formal
         case .playful:
             return .playful
+        case .invitationAccept,
+             .invitationDecline,
+             .invitationTentative,
+             .taskAcknowledge,
+             .taskClarify,
+             .taskNegotiate,
+             .blessingReturn,
+             .blessingWarm,
+             .blessingPlayful,
+             .clarificationDirect,
+             .clarificationQuestion,
+             .clarificationConfirm:
+            return .contextual
         }
     }
 

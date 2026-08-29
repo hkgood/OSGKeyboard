@@ -6,7 +6,7 @@
 
 import Foundation
 
-public struct LiveConfigurationSnapshot {
+public struct LiveConfigurationSnapshot: @unchecked Sendable {
     public let providerId: String
     public let baseURL: String
     public let apiKey: String
@@ -66,6 +66,32 @@ public struct LiveConfigurationSnapshot {
         self.cloudASRPersistence = cloudASRPersistence
     }
 
+    /// Capture every value exposed by an arbitrary configuration store.
+    /// Later source changes cannot alter provider, credential, or style
+    /// selection for an operation already using this snapshot.
+    public init(store: any ConfigurationStore) {
+        self.init(
+            providerId: store.providerId,
+            baseURL: store.baseURL,
+            apiKey: store.apiKey,
+            model: store.model,
+            asrProviderId: store.asrProviderId,
+            asrBaseURL: store.asrBaseURL,
+            asrApiKey: store.asrApiKey,
+            asrModel: store.asrModel,
+            engineMode: store.engineMode,
+            credentialSource: store.credentialSource,
+            polishIntensity: store.polishIntensity,
+            aiResponseLength: store.aiResponseLength,
+            llmThinkingEnabled: store.llmThinkingEnabled,
+            personalDictionary: store.personalDictionary,
+            polishStyleCatalog: store.polishStyleCatalog,
+            activePolishStyleId: store.activePolishStyleId,
+            detectedAppContext: store.detectedAppContext,
+            cloudASRPersistence: store.cloudASRPersistence
+        )
+    }
+
     /// Build from live `ProviderConfig` plus persisted App Group extras.
     public init(config: ProviderConfig, fallback: AppGroupStore) {
         self.init(
@@ -101,6 +127,10 @@ public struct LiveConfigurationStore: ConfigurationStore, @unchecked Sendable {
         self.snapshot = snapshot
     }
 
+    public init(store: any ConfigurationStore) {
+        self.init(snapshot: LiveConfigurationSnapshot(store: store))
+    }
+
     public init(config: ProviderConfig, fallback: AppGroupStore) {
         self.init(snapshot: LiveConfigurationSnapshot(config: config, fallback: fallback))
     }
@@ -131,7 +161,7 @@ public struct LiveConfigurationStore: ConfigurationStore, @unchecked Sendable {
     ) -> LLMClient {
         if credentialSource == .managed || requestPurpose == .oobe {
             return ManagedLLMClient(
-                capability: .polish,
+                capability: .resolve(taskKind: taskKind),
                 taskKind: taskKind,
                 requestPurpose: requestPurpose,
                 oobeFeature: oobeFeature,

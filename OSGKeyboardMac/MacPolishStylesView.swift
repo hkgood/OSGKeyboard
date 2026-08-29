@@ -6,6 +6,11 @@
 
 import SwiftUI
 
+private struct MacPolishStyleErrorAlert {
+    let title: String
+    let message: String
+}
+
 struct MacPolishStylesView: View {
     @ObservedObject var viewModel: MacDictationViewModel
     @ObservedObject private var history = SpeechHistoryStore.shared
@@ -13,7 +18,7 @@ struct MacPolishStylesView: View {
 
     @State private var editingPack: PolishStylePack?
     @State private var viewingPack: PolishStylePack?
-    @State private var errorMessage: String?
+    @State private var errorAlert: MacPolishStyleErrorAlert?
     @State private var isGeneratingLearnedStyle = false
 
     private var lang: AppUILanguage { viewModel.config.uiLanguage }
@@ -95,15 +100,15 @@ struct MacPolishStylesView: View {
             MacPolishStylePromptDetailSheet(pack: pack, language: lang)
         }
         .alert(
-            MacL10n.string("mac.styles.error", language: lang),
+            errorAlert?.title ?? "",
             isPresented: Binding(
-                get: { errorMessage != nil },
-                set: { if !$0 { errorMessage = nil } }
+                get: { errorAlert != nil },
+                set: { if !$0 { errorAlert = nil } }
             )
         ) {
-            Button(MacL10n.string("mac.done", language: lang)) { errorMessage = nil }
+            Button(MacL10n.string("mac.done", language: lang)) { errorAlert = nil }
         } message: {
-            Text(errorMessage ?? "")
+            Text(errorAlert?.message ?? "")
         }
         .task {
             await MacICloudSyncBootstrap.polishStyleSync.pullAndMergeIfEnabled()
@@ -276,7 +281,13 @@ struct MacPolishStylesView: View {
                 // becomes the active dictation personality.
                 editingPack = generated
             } catch {
-                errorMessage = localizedLearningError(error)
+                errorAlert = MacPolishStyleErrorAlert(
+                    title: MacL10n.string(
+                        "mac.styles.learn.error.title",
+                        language: lang
+                    ),
+                    message: localizedLearningError(error)
+                )
             }
         }
     }
@@ -292,7 +303,10 @@ struct MacPolishStylesView: View {
         case .requestTooLarge:
             return MacL10n.string("mac.styles.learn.error.requestTooLarge", language: lang)
         case nil:
-            return MacL10n.string("mac.styles.learn.error.request", language: lang)
+            return PolishStyleLearningFailureMessage.localized(
+                for: error,
+                language: lang
+            ) ?? MacL10n.string("mac.styles.learn.error.request", language: lang)
         }
     }
 
@@ -323,7 +337,10 @@ struct MacPolishStylesView: View {
                 try? await MacICloudSyncBootstrap.settingsSync.pushLocalIfEnabled()
             }
         } catch {
-            errorMessage = MacL10n.string("mac.styles.validation", language: lang)
+            errorAlert = MacPolishStyleErrorAlert(
+                title: MacL10n.string("mac.styles.error", language: lang),
+                message: MacL10n.string("mac.styles.validation", language: lang)
+            )
         }
     }
 

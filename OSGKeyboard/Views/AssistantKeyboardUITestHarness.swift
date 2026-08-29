@@ -13,6 +13,7 @@ struct AssistantKeyboardUITestHarness: View {
         case pending
         case skillFailure
         case skills
+        case semanticBadge
         case search
     }
 
@@ -55,8 +56,9 @@ struct AssistantKeyboardUITestHarness: View {
         .background(backgroundColor.ignoresSafeArea())
         .onDisappear {
             AIKeyboardView.debugPreviewSkills = nil
-                    AIKeyboardView.debugSkipsLongPressCoach = false
-                    AIKeyboardView.debugKeepsSkillTip = false
+            AIKeyboardView.debugPreviewSemanticBadgeKeys = nil
+            AIKeyboardView.debugSkipsLongPressCoach = false
+            AIKeyboardView.debugKeepsSkillTip = false
         }
     }
 
@@ -74,6 +76,7 @@ struct AssistantKeyboardUITestHarness: View {
         state.aiServiceAvailable = true
         state.micDisabled = false
         state.returnKeyRole = .send
+        AIKeyboardView.debugPreviewSemanticBadgeKeys = nil
 
         let keyboardState = state
         state.tapMic = { [weak keyboardState] in
@@ -190,6 +193,12 @@ struct AssistantKeyboardUITestHarness: View {
             AIKeyboardView.debugPreviewSkills = previewSkills
             state.undoAvailable = true
             state.editAvailable = true
+        case .semanticBadge:
+            AIKeyboardView.debugPreviewSkills = nil
+            AIKeyboardView.debugPreviewSemanticBadgeKeys = (
+                intent: "keyboard.semantic.intent.informationQuery",
+                domain: "keyboard.semantic.domain.weather"
+            )
         case .search:
             AIKeyboardView.debugPreviewSkills = nil
             state.returnKeyRole = .search

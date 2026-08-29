@@ -213,7 +213,7 @@ public struct AppGroupConfiguration: Sendable, Equatable {
     ) -> LLMClient {
         if credentialSource == .managed || requestPurpose == .oobe {
             return ManagedLLMClient(
-                capability: .polish,
+                capability: .resolve(taskKind: taskKind),
                 taskKind: taskKind,
                 requestPurpose: requestPurpose,
                 oobeFeature: oobeFeature,

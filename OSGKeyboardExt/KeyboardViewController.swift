@@ -609,8 +609,8 @@ public final class KeyboardViewController: UIInputViewController {
         state.submitAIHint = { [weak self] card in
             self?.aiKeyboardCoordinator.submitHintCard(card)
         }
-        state.submitAIClipboardSkill = { [weak self] skill in
-            self?.aiKeyboardCoordinator.submitClipboardSkill(skill)
+        state.submitAIClipboardSkill = { [weak self] skill, replyScene in
+            self?.aiKeyboardCoordinator.submitClipboardSkill(skill, replyScene: replyScene)
         }
         state.runClipboardExportSkill = { [weak self] skillID, titles in
             AppGroupStore().setPendingShortcutRun(skillID: skillID, titles: titles)

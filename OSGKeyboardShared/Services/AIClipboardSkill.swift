@@ -41,6 +41,142 @@ public struct AIClipboardReplyStyleContext: Equatable, Sendable {
     }
 }
 
+/// A semantic modifier for the generic Reply action. Scenes change how the
+/// reply is expressed without creating another user-facing keyboard action.
+public enum AIClipboardReplyScene: Equatable, Sendable {
+    case invitation
+    case task
+    case blessing
+    case clarification
+    case complaint
+    case negativeQuestion
+
+    public static func resolve(from analysis: ClipboardSemanticAnalysis) -> Self? {
+        if analysis.complaint.isDetected,
+           analysis.complaint.isApprovedForAutomaticRouting {
+            return .complaint
+        }
+        if analysis.invitation.isDetected,
+           analysis.invitation.isApprovedForAutomaticRouting {
+            return .invitation
+        }
+        if analysis.blessing.isDetected,
+           analysis.blessing.isApprovedForAutomaticRouting {
+            return .blessing
+        }
+        if [
+            analysis.confirmationDecision,
+            analysis.followUpReminder,
+            analysis.task
+        ].contains(where: {
+            $0.isDetected && $0.isApprovedForAutomaticRouting
+        }) {
+            return .task
+        }
+        if analysis.sentiment == .negative,
+           analysis.question.isDetected,
+           analysis.question.isApprovedForAutomaticRouting {
+            return .negativeQuestion
+        }
+        if [
+            analysis.scheduleNegotiation,
+            analysis.question
+        ].contains(where: {
+            $0.isDetected && $0.isApprovedForAutomaticRouting
+        }) {
+            return .clarification
+        }
+        return nil
+    }
+
+    public var requiresIntentVariants: Bool {
+        switch self {
+        case .invitation, .task, .blessing, .clarification:
+            return true
+        case .complaint, .negativeQuestion:
+            return false
+        }
+    }
+
+    fileprivate func instruction(locale: String) -> String {
+        let zh = locale == "zh"
+        switch self {
+        case .invitation:
+            return zh
+                ? """
+                <reply_scene type="invitation">
+                场景修饰：对方正在发出邀约。三个候选必须分别表达接受、婉拒和暂不确定；不得替用户编造已有安排、拒绝理由、同行人、时间承诺或地点承诺。接受候选可确认原文已有的时间地点；婉拒候选可以简短感谢但不过度道歉；待定候选只说明需要确认，不虚构何时能答复。
+                </reply_scene>
+                """
+                : """
+                <reply_scene type="invitation">
+                Scene modifier: the sender is making an invitation. The three variants must respectively accept, decline, and stay tentative. Never invent the user's schedule, reason for declining, companion, or time/place commitment. The accepting variant may confirm source-supported details; the declining variant may briefly thank without over-apologizing; the tentative variant may say the user needs to check without inventing when they will decide.
+                </reply_scene>
+                """
+        case .task:
+            return zh
+                ? """
+                <reply_scene type="task">
+                场景修饰：对方正在提出任务、行动请求、确认事项或跟进提醒。三个候选必须分别表达确认处理、追问关键信息和协商范围或时间；不得虚构已经完成、确定截止时间、负责人、能力或承诺。仅复用原文明确给出的事项和期限。
+                </reply_scene>
+                """
+                : """
+                <reply_scene type="task">
+                Scene modifier: the sender is assigning a task, requesting action, asking for confirmation, or following up. The three variants must respectively acknowledge, ask for essential clarification, and negotiate scope or timing. Never invent completion, deadlines, ownership, capability, or commitments. Reuse only task and timing details stated in the source.
+                </reply_scene>
+                """
+        case .blessing:
+            return zh
+                ? """
+                <reply_scene type="blessing">
+                场景修饰：对方正在表达节日、生日或人生事件祝福。三个候选必须分别是真诚感谢并回祝、简短温暖回应和轻松活泼回应。先判断用户是否是祝福对象；若群聊在祝福第三方，只能以群成员身份接一句祝福。不得虚构关系、共同经历或承诺。
+                </reply_scene>
+                """
+                : """
+                <reply_scene type="blessing">
+                Scene modifier: the sender is sharing a holiday, birthday, or life-event wish. The three variants must respectively thank and return the wish, respond briefly and warmly, and respond lightly and playfully. First determine whether the user is the recipient; when a group is wishing someone else, join only as a group member. Invent no relationship, shared history, or commitment.
+                </reply_scene>
+                """
+        case .clarification:
+            return zh
+                ? """
+                <reply_scene type="clarification">
+                场景修饰：当前问题、日程协商或请求缺少作答或执行所需的信息。三个候选必须分别直接回应当前能够确认的部分、追问一个最关键缺口，以及先简短确认理解再追问；每个候选最多两个问题。不得把猜测当成答案，也不要写成表单、审问或客服问卷。
+                </reply_scene>
+                """
+                : """
+                <reply_scene type="clarification">
+                Scene modifier: the question, schedule negotiation, or request lacks information needed to answer or act. The three variants must respectively respond to what can already be confirmed, ask one key missing detail, and briefly confirm understanding before asking. Use at most two questions per variant. Never present a guess as an answer or sound like a form, interrogation, or support questionnaire.
+                </reply_scene>
+                """
+        case .complaint:
+            return zh
+                ? """
+                <reply_scene type="complaint">
+                场景修饰：对方正在表达明确不满。先用日常口语接住对方的情绪，再直接回应核心问题；仅在原文支持时给出稳妥下一步。避免“深表歉意”“给您带来不便”等客服模板，不推诿、不淡化问题，也不虚构责任、进度或承诺。多回复模式下，所有候选都必须保持这一共情立场；“轻松趣味”只能更口语，不能开玩笑、调侃对方或使用 playful 情绪。
+                </reply_scene>
+                """
+                : """
+                <reply_scene type="complaint">
+                Scene modifier: the sender is expressing clear frustration. First acknowledge the emotion in everyday language, then respond directly to the core issue and offer a safe next step only when supported by the source. Avoid canned support phrases, deflection, minimizing the problem, and invented responsibility, progress, or promises. In multi-reply mode every variant must keep this empathetic stance; playful may only sound more conversational and must not joke, tease the sender, or use the playful emotion.
+                </reply_scene>
+                """
+        case .negativeQuestion:
+            return zh
+                ? """
+                <reply_scene type="negative_question">
+                场景修饰：对方的问题带有着急、不满或困扰。先简短接住这种感受，再直接回答或说明下一步；不要因为语气负面就默认用户有错，不要无依据道歉、认责或承诺。多回复模式下，所有候选都必须保持克制和体谅；“轻松趣味”不能开玩笑、调侃对方或使用 playful 情绪。
+                </reply_scene>
+                """
+                : """
+                <reply_scene type="negative_question">
+                Scene modifier: the question carries urgency, frustration, or concern. Briefly acknowledge that feeling, then answer directly or state the next step. A negative tone alone does not prove the user is at fault, so do not apologize, accept blame, or promise anything without source support. In multi-reply mode every variant must stay measured and considerate; playful must not joke, tease the sender, or use the playful emotion.
+                </reply_scene>
+                """
+        }
+    }
+}
+
 public struct AIClipboardSkill: Identifiable, Equatable, Sendable {
     public let id: String
     public let systemImage: String
@@ -133,32 +269,20 @@ public enum AIClipboardSkillCatalog: Sendable {
     public static let declineInvitationID = "declineInvitation"
     public static let acceptTaskID = "acceptTask"
     public static let clarifyRequestID = "clarifyRequest"
+    /// Legacy ID consolidated into `replyID`.
     public static let empathyReplyID = "empathyReply"
     public static let blessingReplyID = "blessingReply"
     /// Legacy ID consolidated into `clarifyRequestID`.
     public static let askForDetailsID = "askForDetails"
     public static let businessReplyID = "businessReply"
     public static let organizeListID = "organizeList"
-    public static let replyStyleSkillIDs: Set<String> = [
-        replyID,
-        acceptInvitationID,
-        declineInvitationID,
-        acceptTaskID,
-        clarifyRequestID,
-        empathyReplyID,
-        blessingReplyID
-    ]
+    public static let replyStyleSkillIDs: Set<String> = [replyID]
     /// Contextual system actions remain available to semantic ranking but are
     /// not user-managed entries in the host app's Skills catalog.
     public static let hiddenFromSkillManagementIDs: Set<String> = [
         replyID,
-        declineInvitationID,
-        empathyReplyID,
-        blessingReplyID,
-        acceptInvitationID,
         callPhoneID,
-        createContactID,
-        clarifyRequestID
+        createContactID
     ]
     public static let extractTodosID = "extractTodos"
     public static let extractTodosShortcutName = "OSGExtractTodos"
@@ -240,60 +364,6 @@ public enum AIClipboardSkillCatalog: Sendable {
             isDefault: true
         ),
         AIClipboardSkill(
-            id: acceptInvitationID,
-            systemImage: "checkmark.bubble.fill",
-            titleKey: "keyboard.ai.skill.acceptInvitation",
-            cardTitleKey: "skills.acceptInvitation.name",
-            descriptionKey: "skills.acceptInvitation.description",
-            kind: .transform,
-            isDefault: true
-        ),
-        AIClipboardSkill(
-            id: declineInvitationID,
-            systemImage: "hand.raised.fill",
-            titleKey: "keyboard.ai.skill.declineInvitation",
-            cardTitleKey: "skills.declineInvitation.name",
-            descriptionKey: "skills.declineInvitation.description",
-            kind: .transform,
-            isDefault: true
-        ),
-        AIClipboardSkill(
-            id: acceptTaskID,
-            systemImage: "checkmark.circle.fill",
-            titleKey: "keyboard.ai.skill.acceptTask",
-            cardTitleKey: "skills.acceptTask.name",
-            descriptionKey: "skills.acceptTask.description",
-            kind: .transform,
-            isDefault: true
-        ),
-        AIClipboardSkill(
-            id: clarifyRequestID,
-            systemImage: "questionmark.bubble.fill",
-            titleKey: "keyboard.ai.skill.clarifyRequest",
-            cardTitleKey: "skills.clarifyRequest.name",
-            descriptionKey: "skills.clarifyRequest.description",
-            kind: .transform,
-            isDefault: true
-        ),
-        AIClipboardSkill(
-            id: empathyReplyID,
-            systemImage: "heart.fill",
-            titleKey: "keyboard.ai.skill.empathyReply",
-            cardTitleKey: "skills.empathyReply.name",
-            descriptionKey: "skills.empathyReply.description",
-            kind: .transform,
-            isDefault: true
-        ),
-        AIClipboardSkill(
-            id: blessingReplyID,
-            systemImage: "party.popper.fill",
-            titleKey: "keyboard.ai.skill.blessingReply",
-            cardTitleKey: "skills.blessingReply.name",
-            descriptionKey: "skills.blessingReply.description",
-            kind: .transform,
-            isDefault: true
-        ),
-        AIClipboardSkill(
             id: organizeListID,
             systemImage: "list.bullet.rectangle",
             titleKey: "keyboard.ai.skill.organizeList",
@@ -349,6 +419,15 @@ public enum AIClipboardSkillCatalog: Sendable {
     /// Hidden compatibility objects for stale direct lookups. They are not
     /// part of `catalog`, defaults, skill management, or keyboard visibility.
     private static let legacyReplySkills: [String: AIClipboardSkill] = [
+        empathyReplyID: AIClipboardSkill(
+            id: empathyReplyID,
+            systemImage: "heart.fill",
+            titleKey: "keyboard.ai.skill.empathyReply",
+            cardTitleKey: "skills.empathyReply.name",
+            descriptionKey: "skills.empathyReply.description",
+            kind: .transform,
+            isDefault: false
+        ),
         playfulReplyID: AIClipboardSkill(
             id: playfulReplyID,
             systemImage: "theatermasks.fill",
@@ -374,12 +453,19 @@ public enum AIClipboardSkillCatalog: Sendable {
 
     public static func canonicalID(for id: String) -> String {
         switch id {
-        case replyInSourceLanguageID, playfulReplyID, businessReplyID:
+        case replyInSourceLanguageID,
+             playfulReplyID,
+             businessReplyID,
+             empathyReplyID,
+             acceptInvitationID,
+             declineInvitationID,
+             acceptTaskID,
+             clarifyRequestID,
+             blessingReplyID,
+             askForDetailsID:
             return replyID
         case extractConclusionsID:
             return summarizeID
-        case askForDetailsID:
-            return clarifyRequestID
         default:
             return id
         }
@@ -425,7 +511,7 @@ public enum AIClipboardSkillCatalog: Sendable {
         ).first { $0.id == resolvedID }
     }
 
-    /// `enabledIDs` is the Skills-tab order. `nil` keeps the default three.
+    /// `enabledIDs` is the Skills-tab order. `nil` keeps current defaults.
     /// An explicit empty array shows no chips (carousel fallback).
     public static func visible(
         enabledIDs: [String]? = nil,
@@ -457,6 +543,7 @@ public enum AIClipboardSkillCatalog: Sendable {
         locale: String,
         translationTargetLocaleId: String,
         replyStyle: AIClipboardReplyStyleContext? = nil,
+        replyScene: AIClipboardReplyScene? = nil,
         preferredLanguages: [String] = Locale.preferredLanguages,
         now: Date = Date()
     ) -> String {
@@ -479,7 +566,8 @@ public enum AIClipboardSkillCatalog: Sendable {
             baseInstruction,
             skillID: skill.id,
             locale: locale,
-            style: replyStyle
+            style: replyStyle,
+            scene: canonicalID(for: skill.id) == replyID ? replyScene : nil
         )
     }
 
@@ -535,30 +623,6 @@ public enum AIClipboardSkillCatalog: Sendable {
                 locale: locale,
                 preferredLanguages: preferredLanguages
             )
-        case acceptInvitationID:
-            return zh
-                ? "请自然、爽快地接受剪贴板中的邀约，像聊天一样确认必要的时间或地点。不要客套过头，也不要虚构用户的安排。"
-                : "Accept the invitation in a relaxed, natural chat tone and confirm any necessary time or place. Avoid excessive pleasantries and invented plans."
-        case declineInvitationID:
-            return zh
-                ? "请用自然、不端着的口吻婉拒剪贴板中的邀约。可以简单表达感谢，但不要过度道歉、长篇解释或虚构理由。"
-                : "Decline the invitation naturally without sounding stiff. A brief thank-you is fine; avoid excessive apology, long explanations, or invented reasons."
-        case acceptTaskID:
-            return zh
-                ? "请像聊天一样简短确认收到剪贴板中的任务或行动请求，可自然带上事项和截止时间。不要写成正式回执，也不要虚构承诺。"
-                : "Acknowledge the task or action request in a short chat-style reply, naturally confirming the work and deadline. Do not sound like a formal receipt or invent commitments."
-        case clarifyRequestID:
-            return zh
-                ? "请理解剪贴板中的问题、任务或故障描述，找出回答、执行、定位或解决前最缺的关键信息，用自然聊天口吻最多追问两个最必要的问题。问题要简短、不重复，不要像表单、审问或客服问卷。"
-                : "Understand the question, task, or problem in the clipboard, identify the key information missing before answering, acting, diagnosing, or resolving it, and ask at most two essential questions in a natural chat tone. Keep them short and non-repetitive, not like a form, interrogation, or support questionnaire."
-        case empathyReplyID:
-            return zh
-                ? "请先用日常口语接住对方的不满，再确认核心问题并给出稳妥下一步。避免“深表歉意”“给您带来不便”等客服模板，不推诿或过度承诺。"
-                : "Respond to the frustration in everyday language, acknowledge the core issue, and give a safe next step. Avoid canned support phrases, deflection, and overpromising."
-        case blessingReplyID:
-            return zh
-                ? "请根据剪贴板中的祝福写一段简短、自然、可直接发送的回复。若祝福是发给用户的，先真诚感谢，再自然回祝；若群聊里是在祝福第三方，就以群成员身份接一句祝福，不要假装自己是收件人。保留节日、生日或人生事件，不虚构关系、经历和承诺。"
-                : "Write a short, natural, sendable response to the blessing in the clipboard. If it is addressed to the user, thank the sender sincerely and return an appropriate wish. If a group message blesses someone else, join the wish as a group member without pretending to be the recipient. Preserve the holiday, birthday, or life event, and invent no relationship, history, or commitment."
         case businessReplyID:
             return zh
                 ? "请写一段专业但不官腔的商务聊天回复，表达直接、自然，保留人名、组织名、时间和承诺边界，可直接发送。不要套用正式邮件开场和结尾。"
@@ -671,7 +735,8 @@ public enum AIClipboardSkillCatalog: Sendable {
         _ baseInstruction: String,
         skillID: String,
         locale: String,
-        style: AIClipboardReplyStyleContext?
+        style: AIClipboardReplyStyleContext?,
+        scene: AIClipboardReplyScene?
     ) -> String {
         let zh = locale == "zh"
         let conversationalBaseline: String
@@ -692,9 +757,10 @@ public enum AIClipboardSkillCatalog: Sendable {
                 Voice baseline: sound like an ordinary person chatting naturally with a friend, close friend, or colleague. Match the relationship without putting on a voice, and never sound like a memo, support template, or AI. Prefer short sentences, everyday wording, and natural conversational cues. When the message clearly carries warmth, comfort, frustration, apology, or another emotion, one fitting emoji may be used naturally; never force or stack emojis. Usually write 1–3 sentences with no title, quotation marks, or explanation.
                 """
         }
+        let sceneInstruction = scene.map { "\n\($0.instruction(locale: locale))" } ?? ""
         guard let style,
               !style.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return "\(baseInstruction)\n\(conversationalBaseline)"
+            return "\(baseInstruction)\n\(conversationalBaseline)\(sceneInstruction)"
         }
         let boundedStyle = String(
             style.prompt
@@ -714,7 +780,7 @@ public enum AIClipboardSkillCatalog: Sendable {
             </user_reply_style>
             Apply only stable wording, rhythm, and expression habits from this style. It must not change the selected skill's intent, facts, safety boundaries, or output language; the selected skill wins on conflict.
             """
-        return "\(baseInstruction)\n\(conversationalBaseline)\n\(personalStyle)"
+        return "\(baseInstruction)\n\(conversationalBaseline)\(sceneInstruction)\n\(personalStyle)"
     }
 
     /// Clipboard translation always follows the device's primary system language.

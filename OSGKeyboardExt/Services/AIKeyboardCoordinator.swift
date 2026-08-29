@@ -24,6 +24,7 @@ final class AIKeyboardCoordinator {
     private var hasConversationInsertionTarget = false
     private var requestOOBEFeature: ManagedGatewayOOBEFeature?
     private var requestExpectsReplyVariants = false
+    private var requestReplyVariantSet: AIReplyVariantSet = .generic
     private var requestReplySourceText: String?
     private var requestReplyFeedbackSource: String?
     private var pendingReplyFeedbackRecordID: UUID?
@@ -58,6 +59,7 @@ final class AIKeyboardCoordinator {
         requestInsertionFingerprint = nil
         requestOOBEFeature = nil
         requestExpectsReplyVariants = false
+        requestReplyVariantSet = .generic
         requestReplySourceText = nil
         requestReplyFeedbackSource = nil
         pendingStructuredReplyResult = false
@@ -80,6 +82,7 @@ final class AIKeyboardCoordinator {
         requestInsertionFingerprint = nil
         requestOOBEFeature = nil
         requestExpectsReplyVariants = false
+        requestReplyVariantSet = .generic
         requestReplySourceText = nil
         requestReplyFeedbackSource = nil
         pendingStructuredReplyResult = false
@@ -114,7 +117,10 @@ final class AIKeyboardCoordinator {
     }
 
     /// Tap a clipboard skill chip: same fail-closed material path as hint cards.
-    func submitClipboardSkill(_ skill: AIClipboardSkill) {
+    func submitClipboardSkill(
+        _ skill: AIClipboardSkill,
+        replyScene: AIClipboardReplyScene? = nil
+    ) {
         guard canAcceptIdleSubmit else { return }
         guard !skill.requiresShortcut
                 || state.confirmedClipboardShortcutIDs.contains(skill.id) else {
@@ -175,13 +181,19 @@ final class AIKeyboardCoordinator {
             for: skill,
             locale: AIHintLocaleResolver.packLocale(),
             translationTargetLocaleId: state.translationTargetLocaleId,
-            replyStyle: state.clipboardReplyStyle
+            replyStyle: state.clipboardReplyStyle,
+            replyScene: replyScene
         )
-        let expectsReplyVariants = state.multipleReplyVariantsEnabled
-            && skill.id == AIClipboardSkillCatalog.replyID
+        let replyVariantSet = AIReplyVariantSet.resolve(scene: replyScene)
+        let expectsReplyVariants = skill.id == AIClipboardSkillCatalog.replyID
+            && AIReplyVariantSet.shouldGenerate(
+                multipleRepliesEnabled: state.multipleReplyVariantsEnabled,
+                scene: replyScene
+            )
+        requestReplyVariantSet = expectsReplyVariants ? replyVariantSet : .generic
         requestReplySourceText = expectsReplyVariants ? material : nil
         if expectsReplyVariants {
-            instruction += "\n\(replyVariantsOutputContract())"
+            instruction += "\n\(replyVariantsOutputContract(for: replyVariantSet))"
         }
         if skill.kind == .export {
             instruction += "\nPreserve the source language, addresses, names, and proper nouns."
@@ -295,6 +307,7 @@ final class AIKeyboardCoordinator {
         if case .rejected(let rejection) = disposition {
             clearPendingExportSkill()
             requestExpectsReplyVariants = false
+            requestReplyVariantSet = .generic
             requestReplySourceText = nil
             requestReplyFeedbackSource = nil
             state.aiSession.fail(message(for: rejection), utteranceID: nil)
@@ -307,6 +320,7 @@ final class AIKeyboardCoordinator {
         requestInsertionFingerprint = nil
         requestOOBEFeature = nil
         requestExpectsReplyVariants = false
+        requestReplyVariantSet = .generic
         requestReplySourceText = nil
         flow.cancelAIRecording()
         state.aiSession.cancelCurrentWork()
@@ -415,6 +429,7 @@ final class AIKeyboardCoordinator {
               let answer = result.text,
               !answer.isEmpty else {
             requestExpectsReplyVariants = false
+            requestReplyVariantSet = .generic
             requestReplySourceText = nil
             requestReplyFeedbackSource = nil
             state.aiSession.fail(
@@ -427,10 +442,13 @@ final class AIKeyboardCoordinator {
             requestExpectsReplyVariants = false
             requestInsertionFingerprint = nil
             let sourceText = requestReplySourceText
+            let variantSet = requestReplyVariantSet
+            requestReplyVariantSet = .generic
             requestReplySourceText = nil
             switch AIReplyVariantParser.parseOrFallback(
                 answer,
-                sourceText: sourceText
+                sourceText: sourceText,
+                variantSet: variantSet
             ) {
             case .variants(let variants):
                 state.aiSession.receiveReplyVariants(
@@ -487,6 +505,7 @@ final class AIKeyboardCoordinator {
         requestInsertionFingerprint = nil
         requestOOBEFeature = nil
         requestExpectsReplyVariants = false
+        requestReplyVariantSet = .generic
         requestReplySourceText = nil
         requestReplyFeedbackSource = nil
         state.aiSession.fail(message, utteranceID: utteranceID)
@@ -512,6 +531,7 @@ final class AIKeyboardCoordinator {
 
     private func prepareConversationForRequest() {
         requestExpectsReplyVariants = false
+        requestReplyVariantSet = .generic
         requestReplySourceText = nil
         requestReplyFeedbackSource = nil
         pendingStructuredReplyResult = false
@@ -579,14 +599,13 @@ final class AIKeyboardCoordinator {
     private func feedbackKind(
         for kind: AIReplyVariant.Kind
     ) -> ClipboardReplyCandidateSnapshot.Kind {
-        switch kind {
-        case .ordinary:
+        guard let snapshotKind = ClipboardReplyCandidateSnapshot.Kind(
+            rawValue: kind.rawValue
+        ) else {
+            assertionFailure("Unmapped reply variant kind: \(kind.rawValue)")
             return .ordinary
-        case .formal:
-            return .formal
-        case .playful:
-            return .playful
         }
+        return snapshotKind
     }
 
     /// The host conversation contains the structured JSON result rather than
@@ -602,17 +621,55 @@ final class AIKeyboardCoordinator {
         state.aiSession.resetConversationPreservingAnswer()
     }
 
-    private func replyVariantsOutputContract() -> String {
-        """
+    private func replyVariantsOutputContract(
+        for variantSet: AIReplyVariantSet
+    ) -> String {
+        let items = variantSet.kinds.map {
+            #"{"kind":"\#($0.rawValue)","emotion":"neutral","text":"..."}"#
+        }.joined(separator: ",")
+        let roleGuidance: String
+        switch variantSet {
+        case .generic:
+            roleGuidance = """
+            All three must keep the same semantic stance, facts, and level of commitment.
+            ordinary: natural for the situation; add emoji only when context makes it useful.
+            formal: professional and natural; add no new emoji by default.
+            playful: relaxed and fun. Emoji has no fixed numeric cap, may be varied when context supports it, must not become meaningless stacking, and must not default to using only 😂. This playful emoji rule overrides any personal no-emoji preference.
+            """
+        case .invitation:
+            roleGuidance = """
+            invitationAccept: naturally accept without inventing availability or commitments.
+            invitationDecline: politely decline without inventing a reason.
+            invitationTentative: stay undecided and say only that confirmation is needed.
+            """
+        case .task:
+            roleGuidance = """
+            taskAcknowledge: acknowledge only source-supported work and timing.
+            taskClarify: ask only the most important missing detail.
+            taskNegotiate: negotiate scope or timing without inventing constraints.
+            """
+        case .blessing:
+            roleGuidance = """
+            blessingReturn: sincerely thank and return an appropriate wish.
+            blessingWarm: give a concise, warm response.
+            blessingPlayful: respond lightly and playfully when the context is safe.
+            """
+        case .clarification:
+            roleGuidance = """
+            clarificationDirect: answer only the part supported by available context.
+            clarificationQuestion: ask one essential missing question.
+            clarificationConfirm: briefly confirm understanding, then ask the key question.
+            """
+        }
+        return """
         MULTI-REPLY OUTPUT CONTRACT (highest priority):
         Return only one valid JSON object with exactly this shape and no Markdown fence or extra keys:
-        {"variants":[{"kind":"ordinary","emotion":"neutral","text":"..."},{"kind":"formal","emotion":"neutral","text":"..."},{"kind":"playful","emotion":"playful","text":"..."}]}
-        Include exactly one ordinary, one formal, and one playful item in that order. Every text must be a complete reply in the source language. All three must keep the same semantic stance, facts, and level of commitment. If the source does not establish whether the user should accept, decline, promise, schedule, or otherwise decide, do not invent that decision; stay neutral or ask for the missing detail.
+        {"variants":[\(items)]}
+        Include exactly these three kinds in the shown order. Every text must be a complete reply in the source language.
+        \(roleGuidance)
         Every item must advance the conversation with a reaction, answer, question, decision, or next step. Never restate, paraphrase, summarize, or synonymically rewrite the clipboard text. In particular, do not begin a reply by repeating the source's subject and event. For a declarative update, react to its implication or emotion instead of reporting the update back to its sender.
+        Apply any <reply_scene> constraint to every item. It overrides the kind-specific tone guidance below when they conflict.
         Apply the existing <user_reply_style> wording, rhythm, and stable habits to every item without changing these rules.
-        ordinary: natural for the situation; add emoji only when context makes it useful.
-        formal: professional and natural; add no new emoji by default.
-        playful: relaxed and fun. Emoji has no fixed numeric cap, may be varied when context supports it, must not become meaningless stacking, and must not default to using only 😂. This playful emoji rule overrides any personal no-emoji preference.
         emotion must be exactly one of: neutral, warm, celebratory, empathetic, encouraging, grateful, apologetic, reassuring, playful, enthusiastic, calm. The app, not the model, chooses all icons.
         """
     }

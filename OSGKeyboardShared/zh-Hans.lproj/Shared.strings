@@ -45,8 +45,15 @@
 "error.llm.http" = "API 返回 HTTP %lld。请稍后重试或联系服务方。";
 "error.llm.decoding" = "解析 API 响应失败。";
 "error.llm.transport" = "网络错误，请检查连接后重试。";
+"error.llm.timeout" = "AI 请求超时，请稍后重试。";
 "error.llm.rateLimited" = "API 调用过于频繁，请稍候再试。";
 "error.llm.cancelled" = "请求已取消。";
+
+/* Personal style learning errors */
+"styleLearning.error.emptyRequest" = "没有可发送给 AI 的学习内容，请重新打开页面后重试。";
+"styleLearning.error.timeout" = "生成风格超时。AI 需要分析较多历史记录，请稍后重试。";
+"styleLearning.error.missingAPIKey" = "当前 AI 服务未配置 API Key，请前往「设置」完成配置后重试。";
+"styleLearning.error.keychainLocked" = "暂时无法读取 API Key，请解锁设备后重试。";
 
 /* ASR errors */
 "error.asr.localeUnsupported" = "当前系统未分配可用语音语言模型，请稍后重试或切换语言。";
@@ -201,6 +208,7 @@
 "mac.styles.learn.generating" = "生成中…";
 "mac.styles.learn.privacy" = "仅在生成时发送给你配置的 AI，保存前可预览和修改。";
 "mac.styles.learn.limit" = "请先删除一个自定义风格，再生成新风格。";
+"mac.styles.learn.error.title" = "无法生成风格";
 "mac.styles.learn.error.insufficient" = "请继续听写，累积到 2,500 个有效字符后再生成。";
 "mac.styles.learn.error.invalidResponse" = "AI 没有返回有效的润色风格，请重试。";
 "mac.styles.learn.error.promptTooLong" = "生成的 Prompt 超过 6,000 个字符，请重试。";

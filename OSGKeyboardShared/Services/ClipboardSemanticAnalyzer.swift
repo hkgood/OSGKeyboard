@@ -38,6 +38,25 @@ public struct ClipboardIntentLabel: Equatable, Sendable {
     public let isApprovedForAutomaticRouting: Bool
 }
 
+public enum ClipboardSemanticDomain: String, CaseIterable, Equatable, Sendable {
+    case finance
+    case travel
+    case calendar
+    case communication
+    case media
+    case smartHome
+    case shopping
+    case dining
+    case health
+    case weather
+    case accountService
+    case generalKnowledge
+
+    public var localizationKey: String {
+        "keyboard.semantic.domain.\(rawValue)"
+    }
+}
+
 public struct ClipboardVerifierDecision: Equatable, Sendable {
     public let group: String
     public let label: String
@@ -68,6 +87,11 @@ public struct ClipboardSemanticAnalysis: Equatable, Sendable {
     public let blessing: ClipboardIntentLabel
     public let actionVerifier: ClipboardVerifierDecision?
     public let coordinationVerifier: ClipboardVerifierDecision?
+    public let assistantCommand: ClipboardIntentLabel
+    public let informationQuery: ClipboardIntentLabel
+    public let systemNotification: ClipboardIntentLabel
+    public let domain: ClipboardSemanticDomain?
+    public let domainConfidence: Double?
 
     public var hasDateOrTime: Bool { !dates.isEmpty }
     public var hasAddress: Bool { !addresses.isEmpty }
@@ -81,6 +105,69 @@ public struct ClipboardSemanticAnalysis: Equatable, Sendable {
     }
     public var hasPersonName: Bool { !personNames.isEmpty }
     public var hasOrganizationName: Bool { !organizationNames.isEmpty }
+
+    public init(
+        language: ClipboardLanguageLabel?,
+        dates: [ClipboardDateLabel],
+        addresses: [ClipboardTextLabel],
+        phoneNumbers: [ClipboardTextLabel],
+        urls: [URL],
+        personNames: [ClipboardTextLabel],
+        organizationNames: [ClipboardTextLabel],
+        sentiment: ClipboardSentimentLabel,
+        sentimentConfidence: Double,
+        task: ClipboardIntentLabel,
+        question: ClipboardIntentLabel,
+        invitation: ClipboardIntentLabel,
+        complaint: ClipboardIntentLabel,
+        replyableMessage: ClipboardIntentLabel,
+        scheduleNegotiation: ClipboardIntentLabel,
+        confirmationDecision: ClipboardIntentLabel,
+        followUpReminder: ClipboardIntentLabel,
+        blessing: ClipboardIntentLabel,
+        actionVerifier: ClipboardVerifierDecision?,
+        coordinationVerifier: ClipboardVerifierDecision?,
+        assistantCommand: ClipboardIntentLabel = .notDetected,
+        informationQuery: ClipboardIntentLabel = .notDetected,
+        systemNotification: ClipboardIntentLabel = .notDetected,
+        domain: ClipboardSemanticDomain? = nil,
+        domainConfidence: Double? = nil
+    ) {
+        self.language = language
+        self.dates = dates
+        self.addresses = addresses
+        self.phoneNumbers = phoneNumbers
+        self.urls = urls
+        self.personNames = personNames
+        self.organizationNames = organizationNames
+        self.sentiment = sentiment
+        self.sentimentConfidence = sentimentConfidence
+        self.task = task
+        self.question = question
+        self.invitation = invitation
+        self.complaint = complaint
+        self.replyableMessage = replyableMessage
+        self.scheduleNegotiation = scheduleNegotiation
+        self.confirmationDecision = confirmationDecision
+        self.followUpReminder = followUpReminder
+        self.blessing = blessing
+        self.actionVerifier = actionVerifier
+        self.coordinationVerifier = coordinationVerifier
+        self.assistantCommand = assistantCommand
+        self.informationQuery = informationQuery
+        self.systemNotification = systemNotification
+        self.domain = domain
+        self.domainConfidence = domainConfidence
+    }
+}
+
+public extension ClipboardIntentLabel {
+    static let notDetected = ClipboardIntentLabel(
+        confidence: 0,
+        threshold: 1,
+        isDetected: false,
+        isApprovedForAutomaticRouting: false
+    )
 }
 
 /// Deterministic HTTP(S) extraction shared by analysis and direct URL skills.
@@ -199,6 +286,20 @@ public actor ClipboardSemanticAnalyzer {
         case confirmationDecision
         case followUpReminder
         case blessing
+        case assistantCommand
+        case informationQuery
+        case systemNotification
+
+        var isDisplayOnly: Bool {
+            switch self {
+            case .assistantCommand, .informationQuery, .systemNotification:
+                return true
+            case .task, .question, .invitation, .complaint,
+                 .replyableMessage, .scheduleNegotiation,
+                 .confirmationDecision, .followUpReminder, .blessing:
+                return false
+            }
+        }
     }
 
     private static let resourceDirectory = "ClipboardSemantics"
@@ -286,7 +387,26 @@ public actor ClipboardSemanticAnalyzer {
             segments: segments,
             languageIdentifier: languageIdentifier
         )
-        let blessing = adjustedBlessingLabel(blessingCandidate, text: text)
+        let assistantCommand = intentLabel(
+            .assistantCommand,
+            segments: segments,
+            languageIdentifier: languageIdentifier
+        )
+        let informationQuery = intentLabel(
+            .informationQuery,
+            segments: segments,
+            languageIdentifier: languageIdentifier
+        )
+        let systemNotification = intentLabel(
+            .systemNotification,
+            segments: segments,
+            languageIdentifier: languageIdentifier
+        )
+        let domain = domainLabel(
+            segments: segments,
+            languageIdentifier: languageIdentifier
+        )
+        let blessing = Self.adjustedBlessingLabel(blessingCandidate, text: text)
         let sentiment = sentimentLabel(segments: segments)
         let actionVerifier = verifierDecision(
             id: "action",
@@ -343,7 +463,12 @@ public actor ClipboardSemanticAnalyzer {
             followUpReminder: verifiedCoordination.followUpReminder,
             blessing: blessing,
             actionVerifier: actionVerifier,
-            coordinationVerifier: coordinationVerifier
+            coordinationVerifier: coordinationVerifier,
+            assistantCommand: assistantCommand,
+            informationQuery: informationQuery,
+            systemNotification: systemNotification,
+            domain: domain.value,
+            domainConfidence: domain.confidence
         )
     }
 
@@ -519,64 +644,147 @@ public actor ClipboardSemanticAnalyzer {
         return !explicitTaskMarkers.contains { normalized.contains($0) }
     }
 
-    private func adjustedBlessingLabel(
+    static func adjustedBlessingLabel(
         _ candidate: ClipboardIntentLabel,
         text: String
     ) -> ClipboardIntentLabel {
-        guard Self.hasExplicitBlessingMarker(in: text) else {
+        if isRejectedBlessingContext(in: text) {
             return ClipboardIntentLabel(
                 confidence: candidate.confidence,
-                threshold: candidate.threshold,
+                threshold: 1,
                 isDetected: false,
                 isApprovedForAutomaticRouting: candidate.isApprovedForAutomaticRouting
             )
         }
-        // Explicit blessing phrases are deterministic routing evidence. The
-        // statistical model remains useful for diagnostics, but cannot route
-        // broad positive language without one of these high-precision markers.
+
+        if hasExplicitBlessingMarker(in: text) {
+            // Explicit blessing phrases are deterministic routing evidence.
+            return ClipboardIntentLabel(
+                confidence: 1,
+                threshold: 1,
+                isDetected: true,
+                isApprovedForAutomaticRouting: true
+            )
+        }
+
+        let modelThreshold = max(candidate.threshold, 0.98)
+        let isModelApproved = candidate.isApprovedForAutomaticRouting
+            && candidate.confidence >= modelThreshold
         return ClipboardIntentLabel(
-            confidence: 1,
-            threshold: 1,
-            isDetected: true,
-            isApprovedForAutomaticRouting: true
+            confidence: candidate.confidence,
+            threshold: modelThreshold,
+            isDetected: isModelApproved,
+            isApprovedForAutomaticRouting: candidate.isApprovedForAutomaticRouting
         )
     }
 
     static func hasExplicitBlessingMarker(in text: String) -> Bool {
-        let normalized = text.lowercased()
-        let quotedOrMetaContexts = [
-            "祝福模板", "祝福语模板", "文章引用", "搜索词", "系统正在检查",
-            "文档里收录", "贺卡名单", "收集祝福", "greeting template",
-            "message template", "the article quotes", "search phrase",
-            "system is checking", "document contains", "card list",
-            "quotes the phrase", "如何描述生日快乐", "怎么说生日快乐",
-            "如何写生日祝福", "how would you describe a happy birthday",
-            "how do you say happy birthday", "what does happy birthday mean",
-            "宁愿你", "祝你倒闭", "祝你立马倒闭", "祝你去死", "祝你倒霉",
-            "祝你失败", "祝你完蛋"
-        ]
-        guard !quotedOrMetaContexts.contains(where: { normalized.contains($0) }) else {
+        let normalized = normalizedBlessingText(text)
+        guard !isRejectedBlessingContext(in: normalized) else {
             return false
         }
         let markers = [
-            "生日快乐", "新年快乐", "春节快乐", "节日快乐", "圣诞快乐",
-            "中秋快乐", "恭喜", "预祝", "祝你", "祝您", "祝大家", "祝他", "祝她",
-            "愿你", "愿您", "happy birthday", "happy new year",
-            "merry christmas", "happy holidays", "congratulations",
-            "congrats", "best wishes", "good luck", "wishing you",
-            "wish you", "wish him", "wish her", "wish them", "let us wish",
-            "let's wish", "we wish", "may you"
+            "生日快乐", "新年快乐", "春节快乐", "元旦快乐", "元宵节快乐",
+            "端午安康", "端午快乐", "节日快乐", "圣诞快乐", "中秋快乐",
+            "国庆快乐", "新婚快乐", "毕业快乐", "纪念日快乐", "恭喜",
+            "祝贺", "预祝", "祝你", "祝您", "祝大家", "祝各位", "祝我们",
+            "祝他", "祝她", "祝他们", "祝愿", "愿你", "愿您", "愿大家",
+            "愿各位", "愿我们", "愿他", "愿她", "愿他们", "一路顺风",
+            "一路平安", "早日康复", "前程似锦", "万事如意", "心想事成",
+            "平安喜乐", "节哀顺变", "开业大吉", "做个好梦",
+            "happy birthday", "happy new year", "happy anniversary",
+            "happy graduation", "happy wedding", "merry christmas",
+            "happy holidays", "congratulations", "congrats", "best wishes",
+            "good luck", "safe travels", "get well soon", "sweet dreams",
+            "all the best", "wishing you", "wishing him", "wishing her",
+            "wishing them", "wish you", "wish him", "wish her", "wish them",
+            "let us wish", "let's wish", "we wish", "may you", "may your",
+            "hope you have"
         ]
         return markers.contains { normalized.contains($0) }
     }
 
-    private func emptyAnalysis() -> ClipboardSemanticAnalysis {
-        let emptyIntent = ClipboardIntentLabel(
-            confidence: 0,
-            threshold: 1,
-            isDetected: false,
-            isApprovedForAutomaticRouting: false
+    static func isRejectedBlessingContext(in text: String) -> Bool {
+        let normalized = normalizedBlessingText(text)
+        let blockedFragments = [
+            "祝福模板", "祝福语模板", "祝福文案", "文章引用", "搜索词",
+            "系统正在检查", "文档里收录", "文档里引用", "海报上印着",
+            "示例文本", "关键词列表", "分析句式", "贺卡名单", "收集祝福",
+            "如何描述生日快乐", "怎么说生日快乐", "如何写生日祝福",
+            "怎么写生日祝福", "帮我写一段祝福", "帮我生成祝福",
+            "greeting template", "message template", "blessing template",
+            "the article quotes", "the document quotes", "search phrase",
+            "system is checking", "document contains", "card list",
+            "quotes the phrase", "sample text", "keyword list",
+            "how would you describe a happy birthday",
+            "how do you say happy birthday", "how to write a birthday wish",
+            "what does happy birthday mean", "write a birthday wish",
+            "宁愿你", "祝你倒闭", "祝你立马倒闭", "祝你去死", "祝你倒霉",
+            "祝你失败", "祝你完蛋", "wish you would die", "wish you bad luck"
+        ]
+        if blockedFragments.contains(where: { normalized.contains($0) }) {
+            return true
+        }
+
+        let receivedPatterns = [
+            #"(?:谢谢|感谢|收到|收到了|多谢).{0,20}(?:祝福|祝愿|生日快乐|恭喜)"#,
+            #"(?:thank|thanks).{0,64}(?:wish|wishes|congratulations|birthday message)"#
+        ]
+        let reportedOrMetaPatterns = [
+            #"(?:帮我写|帮我生成|搜索|查找).{0,16}(?:祝福|祝福语|祝愿|生日快乐)"#,
+            #"(?:他说|她说|他们说|会议记录|新闻|群公告).{0,20}(?:祝|愿|恭喜)"#,
+            #"(?:he said|she said|they said|meeting notes|the article reports).{0,32}(?:wish|congratulat)"#
+        ]
+        if reportedOrMetaPatterns.contains(where: {
+            normalized.range(of: $0, options: .regularExpression) != nil
+        }) {
+            return true
+        }
+        let containsReciprocalWish = [
+            "也祝", "同样祝", "，祝你", "，祝您", "。祝你", "。祝您",
+            ". wish you", ". wishing you", "! wish you", "! wishing you",
+            ", and wish you", ", wishing you", "same to you"
+        ].contains { normalized.contains($0) }
+        if !containsReciprocalWish,
+           receivedPatterns.contains(where: {
+               normalized.range(of: $0, options: .regularExpression) != nil
+           }) {
+            return true
+        }
+
+        let plainGreetings = [
+            "你好", "您好", "早上好", "中午好", "下午好", "晚上好",
+            "晚安", "好久不见", "hello", "good morning", "good afternoon",
+            "good evening", "long time no see"
+        ]
+        let trimmed = normalized.trimmingCharacters(
+            in: .whitespacesAndNewlines.union(.punctuationCharacters)
         )
+        if plainGreetings.contains(trimmed) {
+            return true
+        }
+
+        let celebrationOnly = [
+            "庆祝", "庆功", "庆典", "celebrate", "celebration"
+        ].contains { normalized.contains($0) }
+        return celebrationOnly && !containsDirectWishCue(in: normalized)
+    }
+
+    private static func normalizedBlessingText(_ text: String) -> String {
+        text.precomposedStringWithCompatibilityMapping.lowercased()
+    }
+
+    private static func containsDirectWishCue(in normalized: String) -> Bool {
+        [
+            "祝你", "祝您", "祝大家", "祝各位", "祝他", "祝她", "祝他们",
+            "愿你", "愿您", "愿大家", "愿他", "愿她", "恭喜", "祝贺",
+            "wishing you", "wish you", "wish him", "wish her", "wish them",
+            "congratulations", "congrats", "good luck", "best wishes"
+        ].contains { normalized.contains($0) }
+    }
+
+    private func emptyAnalysis() -> ClipboardSemanticAnalysis {
+        let emptyIntent = ClipboardIntentLabel.notDetected
         return ClipboardSemanticAnalysis(
             language: nil,
             dates: [],
@@ -597,7 +805,12 @@ public actor ClipboardSemanticAnalyzer {
             followUpReminder: emptyIntent,
             blessing: emptyIntent,
             actionVerifier: nil,
-            coordinationVerifier: nil
+            coordinationVerifier: nil,
+            assistantCommand: emptyIntent,
+            informationQuery: emptyIntent,
+            systemNotification: emptyIntent,
+            domain: nil,
+            domainConfidence: nil
         )
     }
 
@@ -756,13 +969,48 @@ public actor ClipboardSemanticAnalyzer {
                 maximumCount: 2
             )[positiveLabel] ?? 0
         }.max() ?? 0
+        // Boundary classifiers launch in display/shadow mode. They may expose a
+        // threshold-crossing result, but can never authorize an existing route.
         let approved = entry.configuration.acceptedForAutomaticRouting
+            && !id.isDisplayOnly
         return ClipboardIntentLabel(
             confidence: rounded(confidence),
             threshold: rounded(threshold),
-            isDetected: approved && confidence >= threshold,
+            isDetected: (approved || id.isDisplayOnly) && confidence >= threshold,
             isApprovedForAutomaticRouting: approved
         )
+    }
+
+    private func domainLabel(
+        segments: [String],
+        languageIdentifier: String?
+    ) -> (value: ClipboardSemanticDomain?, confidence: Double?) {
+        guard let entry = modelEntry(id: "domain") else {
+            return (nil, nil)
+        }
+        let threshold = languageIdentifier.flatMap {
+            entry.configuration.confidenceThresholdsByLanguage?[$0]
+        } ?? entry.configuration.confidenceThreshold ?? 1
+        let winners = segments.compactMap { segment -> (
+            domain: ClipboardSemanticDomain,
+            confidence: Double
+        )? in
+            let ranked = entry.model.predictedLabelHypotheses(
+                for: segment,
+                maximumCount: ClipboardSemanticDomain.allCases.count
+            ).sorted { $0.value > $1.value }
+            guard let winner = ranked.first,
+                  let domain = ClipboardSemanticDomain(rawValue: winner.key) else {
+                return nil
+            }
+            return (domain, winner.value)
+        }
+        guard let winner = winners.max(by: {
+            $0.confidence < $1.confidence
+        }), winner.confidence >= threshold else {
+            return (nil, nil)
+        }
+        return (winner.domain, rounded(winner.confidence))
     }
 
     private func sentimentLabel(
@@ -905,7 +1153,7 @@ public actor ClipboardSemanticAnalyzer {
             guard let url,
                   let data = try? Data(contentsOf: url),
                   let decoded = try? decoder.decode(Manifest.self, from: data),
-                  (1...3).contains(decoded.schemaVersion) else {
+                  (1...4).contains(decoded.schemaVersion) else {
                 continue
             }
             manifest = decoded

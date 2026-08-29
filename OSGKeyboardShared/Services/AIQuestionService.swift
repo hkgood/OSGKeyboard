@@ -318,6 +318,8 @@ public struct AIQuestionService: Sendable {
             switch error {
             case .cancelled:
                 return .cancelled
+            case .timeout:
+                return .timeout
             case .transport, .rateLimited:
                 return .network
             case .invalidURL, .noAPIKey, .decoding:

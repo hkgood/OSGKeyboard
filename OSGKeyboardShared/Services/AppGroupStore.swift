@@ -458,6 +458,9 @@ public struct AppGroupStore: @unchecked Sendable {
             // v9 consolidates playful and business reply into Reply. Do not
             // add Reply here: `sanitized` preserves it only when any reply ID
             // was enabled, so a user's explicit disabled state stays disabled.
+            // v10 applies the same canonical migration to Empathetic Reply.
+            // v11 folds invitation, task, blessing, and clarification replies
+            // into Reply. `sanitized` again preserves explicit disabled state.
             let additions = catalog.map(\.id).filter {
                 additionIDs.contains($0) && !decoded.enabledIDs.contains($0)
             }
@@ -483,7 +486,7 @@ public struct AppGroupStore: @unchecked Sendable {
         }
     }
 
-    private static let currentAgentSkillDefaultsMigrationVersion = 9
+    private static let currentAgentSkillDefaultsMigrationVersion = 11
 
     private static func decodeUserSkillCatalog(from defaults: UserDefaults) -> AIUserSkillCatalog {
         guard let data = defaults.data(forKey: AppGroupConfiguration.Keys.agentUserSkillCatalog) else {

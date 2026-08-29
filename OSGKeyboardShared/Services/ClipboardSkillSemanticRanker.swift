@@ -11,7 +11,6 @@ import Foundation
 public enum ClipboardSkillSemanticRanker {
     private static let longTextCharacterThreshold = 360
     private static let languageConfidenceThreshold = 0.75
-    private static let maximumReplyRecommendations = 2
 
     public static func ranked(
         skills: [AIClipboardSkill],
@@ -31,8 +30,8 @@ public enum ClipboardSkillSemanticRanker {
         )
     }
 
-    /// Returns semantically relevant skills and always keeps the generic Reply
-    /// action available as a safe fallback for accepted clipboard text.
+    /// Returns semantically relevant skills and keeps generic Reply as a safe
+    /// fallback unless a display-only boundary intent suppresses human routing.
     public static func recommended(
         skills: [AIClipboardSkill],
         sourceText: String,
@@ -47,7 +46,9 @@ public enum ClipboardSkillSemanticRanker {
             analysis: analysis,
             preferredLanguages: preferredLanguages
         )
-        let genericReply = skills.first { $0.id == AIClipboardSkillCatalog.replyID }
+        let genericReply = suppressesInterpersonalRouting(analysis)
+            ? nil
+            : skills.first { $0.id == AIClipboardSkillCatalog.replyID }
         if genericReply != nil {
             scores[AIClipboardSkillCatalog.replyID, default: 0] = max(
                 1,
@@ -56,7 +57,6 @@ public enum ClipboardSkillSemanticRanker {
         }
         let relevant = skills.filter { scores[$0.id, default: 0] > 0 }
         var selected: [AIClipboardSkill] = []
-        var specializedReplyCount = 0
         for skill in sorted(relevant, scores: scores) {
             let mustReserveGenericReply = genericReply != nil
                 && !selected.contains(where: { $0.id == AIClipboardSkillCatalog.replyID })
@@ -66,10 +66,6 @@ public enum ClipboardSkillSemanticRanker {
             if skill.id == AIClipboardSkillCatalog.replyID {
                 selected.append(skill)
                 continue
-            }
-            if skill.supportsReplyStyle {
-                guard specializedReplyCount < maximumReplyRecommendations else { continue }
-                specializedReplyCount += 1
             }
             selected.append(skill)
         }
@@ -116,70 +112,65 @@ public enum ClipboardSkillSemanticRanker {
             boost(AIClipboardSkillCatalog.navigateID, 180)
         }
 
-        if isRoutingEvidence(analysis.invitation) {
-            if analysis.hasDateOrTime {
-                boost(AIClipboardSkillCatalog.extractEventsID, 260)
+        let suppressesInterpersonalRouting = suppressesInterpersonalRouting(analysis)
+        if !suppressesInterpersonalRouting {
+            if isRoutingEvidence(analysis.invitation) {
+                if analysis.hasDateOrTime {
+                    boost(AIClipboardSkillCatalog.extractEventsID, 260)
+                }
+                boost(AIClipboardSkillCatalog.replyID, 300)
+            } else if analysis.hasDateOrTime {
+                boost(AIClipboardSkillCatalog.extractEventsID, 110)
             }
-            boost(AIClipboardSkillCatalog.acceptInvitationID, 240)
-            boost(AIClipboardSkillCatalog.declineInvitationID, 230)
-            boost(AIClipboardSkillCatalog.replyID, 60)
         } else if analysis.hasDateOrTime {
             boost(AIClipboardSkillCatalog.extractEventsID, 110)
         }
 
-        // A threshold-crossing, evaluation-gated model may still rank a
-        // reversible chip; execution always remains explicitly user-initiated.
-        if isRoutingEvidence(analysis.scheduleNegotiation) {
-            boost(AIClipboardSkillCatalog.clarifyRequestID, 300)
-            boost(AIClipboardSkillCatalog.extractEventsID, 200)
-            boost(AIClipboardSkillCatalog.replyID, 250)
-        }
+        if !suppressesInterpersonalRouting {
+            // A threshold-crossing, evaluation-gated model may still rank a
+            // reversible chip; execution always remains explicitly user-initiated.
+            if isRoutingEvidence(analysis.scheduleNegotiation) {
+                boost(AIClipboardSkillCatalog.extractEventsID, 200)
+                boost(AIClipboardSkillCatalog.replyID, 300)
+            }
 
-        if isRoutingEvidence(analysis.confirmationDecision) {
-            boost(AIClipboardSkillCatalog.acceptTaskID, 300)
-            boost(AIClipboardSkillCatalog.replyID, 280)
-        }
+            if isRoutingEvidence(analysis.confirmationDecision) {
+                boost(AIClipboardSkillCatalog.replyID, 300)
+            }
 
-        if isRoutingEvidence(analysis.followUpReminder) {
-            boost(AIClipboardSkillCatalog.extractTodosID, 285)
-            boost(AIClipboardSkillCatalog.acceptTaskID, 250)
-            boost(AIClipboardSkillCatalog.clarifyRequestID, 170)
-            boost(AIClipboardSkillCatalog.replyID, 90)
-        }
+            if isRoutingEvidence(analysis.followUpReminder) {
+                boost(AIClipboardSkillCatalog.extractTodosID, 285)
+                boost(AIClipboardSkillCatalog.replyID, 250)
+            }
 
-        if isRoutingEvidence(analysis.task) {
-            boost(AIClipboardSkillCatalog.extractTodosID, 155)
-            boost(AIClipboardSkillCatalog.acceptTaskID, 140)
-            boost(AIClipboardSkillCatalog.clarifyRequestID, 105)
-        }
+            if isRoutingEvidence(analysis.task) {
+                boost(AIClipboardSkillCatalog.extractTodosID, 155)
+                boost(AIClipboardSkillCatalog.replyID, 140)
+            }
 
-        if isRoutingEvidence(analysis.question) {
-            boost(AIClipboardSkillCatalog.replyID, 145)
-            boost(AIClipboardSkillCatalog.clarifyRequestID, 110)
-        }
+            if isRoutingEvidence(analysis.question) {
+                boost(AIClipboardSkillCatalog.replyID, 145)
+            }
 
-        if isRoutingEvidence(analysis.blessing) {
-            boost(AIClipboardSkillCatalog.blessingReplyID, 300)
-            boost(AIClipboardSkillCatalog.replyID, 95)
-        }
+            if isRoutingEvidence(analysis.blessing) {
+                boost(AIClipboardSkillCatalog.replyID, 300)
+            }
 
-        if isRoutingEvidence(analysis.complaint) {
-            boost(AIClipboardSkillCatalog.empathyReplyID, 105)
-            boost(AIClipboardSkillCatalog.clarifyRequestID, 90)
-            boost(AIClipboardSkillCatalog.replyID, 55)
-        } else if analysis.sentiment == .negative,
-                  isRoutingEvidence(analysis.question) {
-            boost(AIClipboardSkillCatalog.empathyReplyID, 85)
-            boost(AIClipboardSkillCatalog.clarifyRequestID, 65)
-        }
+            if isRoutingEvidence(analysis.complaint) {
+                boost(AIClipboardSkillCatalog.replyID, 105)
+            } else if analysis.sentiment == .negative,
+                      isRoutingEvidence(analysis.question) {
+                boost(AIClipboardSkillCatalog.replyID, 85)
+            }
 
-        if analysis.hasOrganizationName,
-           isRoutingEvidence(analysis.task)
-            || isRoutingEvidence(analysis.question)
-            || isRoutingEvidence(analysis.invitation) {
-            boost(AIClipboardSkillCatalog.replyID, 125)
-        } else if analysis.hasOrganizationName {
-            boost(AIClipboardSkillCatalog.replyID, 70)
+            if analysis.hasOrganizationName,
+               isRoutingEvidence(analysis.task)
+                || isRoutingEvidence(analysis.question)
+                || isRoutingEvidence(analysis.invitation) {
+                boost(AIClipboardSkillCatalog.replyID, 125)
+            } else if analysis.hasOrganizationName {
+                boost(AIClipboardSkillCatalog.replyID, 70)
+            }
         }
 
         if isListLike(sourceText) {
@@ -193,30 +184,78 @@ public enum ClipboardSkillSemanticRanker {
             boost(AIClipboardSkillCatalog.saveToNotesID, 85)
         }
 
-        let hasSpecializedReplyIntent = isRoutingEvidence(analysis.task)
-            || isRoutingEvidence(analysis.question)
-            || isRoutingEvidence(analysis.invitation)
-            || isRoutingEvidence(analysis.scheduleNegotiation)
-            || isRoutingEvidence(analysis.confirmationDecision)
-            || isRoutingEvidence(analysis.followUpReminder)
-            || isRoutingEvidence(analysis.blessing)
-            || isRoutingEvidence(analysis.complaint)
-        if analysis.replyableMessage.isDetected,
-           !hasSpecializedReplyIntent,
-           sourceText.count < longTextCharacterThreshold,
-           !isListLike(sourceText) {
-            boost(AIClipboardSkillCatalog.replyID, 160)
-            if analysis.sentiment != .negative,
-               !isRoutingEvidence(analysis.complaint) {
-                // Reply now exposes ordinary, formal, and playful variants
-                // inside one action rather than ranking separate style skills.
-                boost(AIClipboardSkillCatalog.replyID, 145)
+        if !suppressesInterpersonalRouting {
+            let hasSpecializedReplyIntent = isRoutingEvidence(analysis.task)
+                || isRoutingEvidence(analysis.question)
+                || isRoutingEvidence(analysis.invitation)
+                || isRoutingEvidence(analysis.scheduleNegotiation)
+                || isRoutingEvidence(analysis.confirmationDecision)
+                || isRoutingEvidence(analysis.followUpReminder)
+                || isRoutingEvidence(analysis.blessing)
+                || isRoutingEvidence(analysis.complaint)
+            if analysis.replyableMessage.isDetected,
+               !hasSpecializedReplyIntent,
+               sourceText.count < longTextCharacterThreshold,
+               !isListLike(sourceText) {
+                boost(AIClipboardSkillCatalog.replyID, 160)
+                if analysis.sentiment != .negative,
+                   !isRoutingEvidence(analysis.complaint) {
+                    // Reply now exposes ordinary, formal, and playful variants
+                    // inside one action rather than ranking separate style skills.
+                    boost(AIClipboardSkillCatalog.replyID, 145)
+                }
+            }
+            if analysis.sentiment == .positive {
+                boost(AIClipboardSkillCatalog.replyID, 45)
             }
         }
-        if analysis.sentiment == .positive {
-            boost(AIClipboardSkillCatalog.replyID, 45)
-        }
+        applyDomainBoosts(
+            analysis,
+            sourceText: sourceText,
+            suppressesInterpersonalRouting: suppressesInterpersonalRouting,
+            boost: boost
+        )
         return scores
+    }
+
+    private static func applyDomainBoosts(
+        _ analysis: ClipboardSemanticAnalysis,
+        sourceText: String,
+        suppressesInterpersonalRouting: Bool,
+        boost: (String, Int) -> Void
+    ) {
+        guard let domain = analysis.domain,
+              let confidence = analysis.domainConfidence,
+              confidence > 0 else {
+            return
+        }
+        switch domain {
+        case .calendar:
+            if analysis.hasDateOrTime {
+                boost(AIClipboardSkillCatalog.extractEventsID, 20)
+            }
+        case .travel:
+            if analysis.hasAddress {
+                boost(AIClipboardSkillCatalog.navigateID, 20)
+            }
+        case .media, .generalKnowledge:
+            if sourceText.count >= longTextCharacterThreshold {
+                boost(AIClipboardSkillCatalog.summarizeID, 15)
+            }
+        case .communication:
+            if !suppressesInterpersonalRouting,
+               hasInterpersonalRoutingEvidence(analysis) {
+                boost(AIClipboardSkillCatalog.replyID, 15)
+            }
+        case .finance, .accountService:
+            if !suppressesInterpersonalRouting,
+               isRoutingEvidence(analysis.question)
+                || isRoutingEvidence(analysis.complaint) {
+                boost(AIClipboardSkillCatalog.replyID, 10)
+            }
+        case .smartHome, .shopping, .dining, .health, .weather:
+            return
+        }
     }
 
     private static func sorted(
@@ -253,6 +292,34 @@ public enum ClipboardSkillSemanticRanker {
 
     private static func isRoutingEvidence(_ label: ClipboardIntentLabel) -> Bool {
         label.isDetected && label.isApprovedForAutomaticRouting
+    }
+
+    private static func isDisplayEvidence(_ label: ClipboardIntentLabel) -> Bool {
+        label.isDetected
+            && label.confidence > 0
+            && label.confidence >= label.threshold
+    }
+
+    private static func suppressesInterpersonalRouting(
+        _ analysis: ClipboardSemanticAnalysis
+    ) -> Bool {
+        isDisplayEvidence(analysis.assistantCommand)
+            || isDisplayEvidence(analysis.informationQuery)
+            || isDisplayEvidence(analysis.systemNotification)
+    }
+
+    private static func hasInterpersonalRoutingEvidence(
+        _ analysis: ClipboardSemanticAnalysis
+    ) -> Bool {
+        isRoutingEvidence(analysis.task)
+            || isRoutingEvidence(analysis.question)
+            || isRoutingEvidence(analysis.invitation)
+            || isRoutingEvidence(analysis.complaint)
+            || isRoutingEvidence(analysis.replyableMessage)
+            || isRoutingEvidence(analysis.scheduleNegotiation)
+            || isRoutingEvidence(analysis.confirmationDecision)
+            || isRoutingEvidence(analysis.followUpReminder)
+            || isRoutingEvidence(analysis.blessing)
     }
 
     private static func isListLike(_ text: String) -> Bool {

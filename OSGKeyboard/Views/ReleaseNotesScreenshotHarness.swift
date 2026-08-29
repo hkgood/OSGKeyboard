@@ -14,21 +14,54 @@ struct PolishStylesScreenshotHarness: View {
     private let generatedPack: PolishStylePack?
     private let showsSavedGeneratedStyle: Bool
     private let simulatesGeneration: Bool
+    private let usesServiceBackedGeneration: Bool
+    private let usesInsufficientEvidence: Bool
+    private let failsServiceBackedSynthesis: Bool
+    private let delaysServiceBackedGeneration: Bool
 
     init() {
+        let arguments = ProcessInfo.processInfo.arguments
         language = ReleaseNotesScreenshotFixture.language
         ProviderConfig.shared.uiLanguage = language
         ReleaseNotesScreenshotFixture.seedReadyStyleCorpus(language: language)
-        simulatesGeneration = ProcessInfo.processInfo.arguments.contains(
+        let testsWithoutCorpus = arguments.contains(
+            "--polish-styles-service-ui-test-no-corpus"
+        )
+        if testsWithoutCorpus {
+            SpeechHistoryStore.shared.clearAll()
+        }
+        simulatesGeneration = arguments.contains(
             "--polish-styles-generation-demo"
         )
-        if simulatesGeneration {
+        usesInsufficientEvidence = arguments.contains(
+            "--polish-styles-service-ui-test-insufficient"
+        )
+        failsServiceBackedSynthesis = arguments.contains(
+            "--polish-styles-service-ui-test-failure"
+        )
+        delaysServiceBackedGeneration = arguments.contains(
+            "--polish-styles-service-ui-test-cancel"
+        )
+        let testsRegeneration = arguments.contains(
+            "--polish-styles-service-ui-test-regenerate"
+        )
+        usesServiceBackedGeneration = usesInsufficientEvidence
+            || failsServiceBackedSynthesis
+            || delaysServiceBackedGeneration
+            || testsRegeneration
+            || arguments.contains(
+                "--polish-styles-service-ui-test"
+            )
+        if simulatesGeneration || usesServiceBackedGeneration {
             ReleaseNotesScreenshotFixture.resetStyleCatalog()
         }
-        showsSavedGeneratedStyle = ProcessInfo.processInfo.arguments.contains(
+        if testsRegeneration || failsServiceBackedSynthesis {
+            ReleaseNotesScreenshotFixture.seedGeneratedStyle(language: language)
+        }
+        showsSavedGeneratedStyle = arguments.contains(
             "--polish-styles-generated-saved"
         )
-        generatedPack = ProcessInfo.processInfo.arguments.contains(
+        generatedPack = arguments.contains(
             "--polish-styles-generated-review"
         )
             ? ReleaseNotesScreenshotFixture.generatedStyle(language: language)
@@ -40,7 +73,13 @@ struct PolishStylesScreenshotHarness: View {
 
     var body: some View {
         ThemedRoot {
-            if simulatesGeneration {
+            if usesServiceBackedGeneration {
+                PolishStylesServiceUITestHarness(
+                    usesInsufficientEvidence: usesInsufficientEvidence,
+                    failsSynthesis: failsServiceBackedSynthesis,
+                    delaysGeneration: delaysServiceBackedGeneration
+                )
+            } else if simulatesGeneration {
                 PolishStylesView(
                     learnedStyleGenerator: { _, _, language in
                         try await Task.sleep(for: .seconds(1.8))
@@ -55,6 +94,136 @@ struct PolishStylesScreenshotHarness: View {
         }
         .environment(\.locale, language.swiftUILocale)
         .preferredColorScheme(.light)
+    }
+}
+
+/// Exercises the production learning service without network access. Unlike
+/// release-note fixtures, this host scripts only the LLM boundary and lets the
+/// real two-stage extractor/synthesizer pipeline build the review pack.
+@MainActor
+private struct PolishStylesServiceUITestHarness: View {
+    let usesInsufficientEvidence: Bool
+    let failsSynthesis: Bool
+    let delaysGeneration: Bool
+
+    @StateObject private var recorder = PolishStylesUITestRecorder()
+    @State private var showsStyles = true
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            if showsStyles {
+                PolishStylesView(
+                    pullsCloudStylesOnAppear: false,
+                    learnedStyleGenerator: { corpus, replyExamples, language in
+                        let client = PolishStylesUITestScriptedLLMClient(
+                            responses: ReleaseNotesScreenshotFixture.serviceResponses(
+                                language: language,
+                                usesInsufficientEvidence: usesInsufficientEvidence,
+                                failsSynthesis: failsSynthesis
+                            ),
+                            delay: delaysGeneration ? 5 : 0.15,
+                            recorder: recorder
+                        )
+                        return try await PolishStyleLearningService(
+                            store: AppGroupStore(),
+                            client: client
+                        )
+                        .generateStyle(
+                            from: corpus,
+                            replyExamples: replyExamples,
+                            outputLanguage: language,
+                            minimumEffectiveCharacterCount:
+                                AppDistributionChannel.allowsInternalTools
+                                    ? 0
+                                    : PolishStyleLearningCorpusBuilder
+                                        .requiredEffectiveCharacterCount
+                        )
+                    }
+                )
+            } else {
+                VStack(spacing: 16) {
+                    Text("Style view closed")
+                        .accessibilityIdentifier("polishStyles.test.closed")
+                    if recorder.didObserveCancellation {
+                        Text("Generation cancellation observed")
+                            .accessibilityIdentifier("polishStyles.test.cancelled")
+                    }
+                    Button("Return to styles") {
+                        showsStyles = true
+                    }
+                    .accessibilityIdentifier("polishStyles.test.return")
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+
+            if delaysGeneration, showsStyles {
+                Button("Leave styles") {
+                    showsStyles = false
+                }
+                .accessibilityIdentifier("polishStyles.test.leave")
+                .padding()
+            }
+        }
+    }
+}
+
+@MainActor
+private final class PolishStylesUITestRecorder: ObservableObject {
+    @Published var didObserveCancellation = false
+
+    func markCancellationObserved() {
+        didObserveCancellation = true
+    }
+}
+
+private final class PolishStylesUITestScriptedLLMClient: LLMClient, @unchecked Sendable {
+    let requestTimeout: TimeInterval = 15
+
+    private let responses: [String]
+    private let delay: TimeInterval
+    private let recorder: PolishStylesUITestRecorder
+    private var responseIndex = 0
+
+    init(
+        responses: [String],
+        delay: TimeInterval,
+        recorder: PolishStylesUITestRecorder
+    ) {
+        self.responses = responses
+        self.delay = delay
+        self.recorder = recorder
+    }
+
+    func polish(
+        _: String,
+        systemPrompt: String,
+        timeout _: TimeInterval?
+    ) async throws -> String {
+        try await response(for: systemPrompt)
+    }
+
+    func polish(
+        _: String,
+        systemPrompt: String,
+        timeout _: TimeInterval?,
+        options _: LLMGenerationOptions
+    ) async throws -> String {
+        try await response(for: systemPrompt)
+    }
+
+    private func response(for _: String) async throws -> String {
+        do {
+            try Task.checkCancellation()
+            try await Task.sleep(for: .seconds(delay))
+            try Task.checkCancellation()
+        } catch is CancellationError {
+            await recorder.markCancellationObserved()
+            throw CancellationError()
+        }
+        guard !responses.isEmpty else { return "{}" }
+        let index = min(responseIndex, responses.count - 1)
+        responseIndex += 1
+        return responses[index]
     }
 }
 
@@ -146,6 +315,94 @@ private enum ReleaseNotesScreenshotFixture {
                 generatedAt: Date()
             )
         )
+    }
+
+    static func serviceResponses(
+        language: AppUILanguage,
+        usesInsufficientEvidence: Bool,
+        failsSynthesis: Bool
+    ) -> [String] {
+        if failsSynthesis {
+            return [
+                sufficientEvidenceResponse,
+                "invalid synthesis response",
+                "invalid synthesis repair response"
+            ]
+        }
+        if usesInsufficientEvidence {
+            return [
+                insufficientEvidenceResponse,
+                generatedStyleResponse(language: language)
+            ]
+        }
+        return [
+            sufficientEvidenceResponse,
+            generatedStyleResponse(language: language)
+        ]
+    }
+
+    private static let sufficientEvidenceResponse = ##"""
+    {
+      "status":"sufficient",
+      "confidence":0.86,
+      "asr":{
+        "traits":[
+          {"name":"concise and direct","description":"The user repeatedly preserves concise direct wording","confidence":0.9,"supportCount":4}
+        ],
+        "evidence":[
+          {"source":"asrUserEdit","summary":"User edits preserve direct wording","supportCount":2},
+          {"source":"asrRepeatedBefore","summary":"Short direct phrases recur in dictation","supportCount":4}
+        ],
+        "contradictions":[]
+      },
+      "reply":{
+        "traits":[
+          {"name":"relaxed replies","description":"The user prefers relaxed replies without invented information","confidence":0.7,"supportCount":2}
+        ],
+        "evidence":[
+          {"source":"replyFinalEdit","summary":"Final edits preserve natural short sentences","supportCount":1},
+          {"source":"replyCrossContextSelection","summary":"Relaxed tone is preferred across contexts","supportCount":2},
+          {"source":"replyAcceptance","summary":"A single acceptance remains weak evidence","supportCount":1}
+        ],
+        "contradictions":[]
+      }
+    }
+    """##
+
+    private static let insufficientEvidenceResponse = ##"""
+    {
+      "status":"insufficient",
+      "confidence":0.2,
+      "asr":{
+        "traits":[
+          {"name":"retention:direct short phrasing","description":"The raw ASR uses a direct short-message rhythm","confidence":0.2,"supportCount":1}
+        ],
+        "evidence":[
+          {"source":"asrObservedBefore","summary":"A raw before sample uses direct short phrasing","supportCount":1}
+        ],
+        "contradictions":[]
+      },
+      "reply":{"traits":[],"evidence":[],"contradictions":[]}
+    }
+    """##
+
+    private static func generatedStyleResponse(language: AppUILanguage) -> String {
+        if language == .chinese {
+            return ##"""
+            {
+              "name":"我的说话风格",
+              "prompt":"# 角色\n保留用户自然、直接的表达方式。\n# 风格边界\nASR preserve mode：只修正识别错误与标点，不改变原意。\nAI reply active-transfer mode：先回应，再补充必要信息，不虚构事实或承诺。\n# 示例\n原文：这个我晚点确认一下\n输出：这个我晚点确认一下。",
+              "allowsAddedEmoji":false
+            }
+            """##
+        }
+        return ##"""
+        {
+          "name":"My Speaking Style",
+          "prompt":"# 角色\nPreserve the user's natural, direct voice.\n# 风格边界\nASR preserve mode: correct recognition and punctuation without changing intent.\nAI reply active-transfer mode: respond first, add only necessary detail, and invent no facts or commitments.\n# 示例\nDraft: I will check later\nOutput: I'll check later.",
+          "allowsAddedEmoji":false
+        }
+        """##
     }
 
     static func seedGeneratedStyle(language: AppUILanguage) {
