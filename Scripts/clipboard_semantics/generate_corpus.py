@@ -13,6 +13,7 @@ import hashlib
 import json
 import random
 import re
+import sys
 from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -20,6 +21,7 @@ from typing import Iterable
 
 
 SEED = 20260821
+TRAIN_SAMPLE_SCALE = 1
 TARGETS = {"train": 180, "validation": 45, "test": 45}
 FAMILY_TARGETS = {
     "quoted_question": {"train": 100, "validation": 45, "test": 45},
@@ -2091,6 +2093,7 @@ def generate_family(
     slots: dict[str, list[str]],
     labels: Labels,
     target: int,
+    minimum_target: int | None,
     seen: set[str],
     uses_discourse_prefixes: bool,
 ) -> Iterable[Record]:
@@ -2144,10 +2147,18 @@ def generate_family(
             replyable=bool(labels.replyable),
         )
 
-    if produced != target:
+    if produced != target and (
+        minimum_target is None or produced < minimum_target
+    ):
         raise RuntimeError(
             f"Only generated {produced}/{target} unique records for "
             f"{family} {language} {split}"
+        )
+    if produced != target:
+        print(
+            f"Warning: generated all {produced} unique records available "
+            f"for {family} {language} {split}; requested {target}.",
+            file=sys.stderr,
         )
 
 
@@ -2174,6 +2185,9 @@ def generate_records(profile: str) -> list[Record]:
             split_templates = definition["templates"][language]
             family_targets = FAMILY_TARGETS.get(family, TARGETS)
             for split, target in family_targets.items():
+                scaled_target = (
+                    target * TRAIN_SAMPLE_SCALE if split == "train" else target
+                )
                 records.extend(
                     generate_family(
                         family=family,
@@ -2182,7 +2196,12 @@ def generate_records(profile: str) -> list[Record]:
                         templates=split_templates[split],
                         slots=slots,
                         labels=labels,
-                        target=target,
+                        target=scaled_target,
+                        minimum_target=(
+                            target
+                            if split == "train" and TRAIN_SAMPLE_SCALE > 1
+                            else None
+                        ),
                         seen=seen,
                         uses_discourse_prefixes=profile == "expanded",
                     )
@@ -2361,6 +2380,7 @@ def summary(records: list[Record]) -> dict[str, object]:
     sentiment_counts = Counter(record.sentiment for record in records)
     return {
         "seed": SEED,
+        "trainSampleScale": TRAIN_SAMPLE_SCALE,
         "total": len(records),
         "splits": dict(sorted(split_counts.items())),
         "languages": dict(sorted(language_counts.items())),
@@ -2382,6 +2402,12 @@ def summary(records: list[Record]) -> dict[str, object]:
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--train-sample-scale",
+        type=int,
+        default=1,
+        help="Multiply train records per family without changing evaluation splits.",
+    )
+    parser.add_argument(
         "--profile",
         choices=("baseline", "expanded"),
         default="expanded",
@@ -2400,7 +2426,12 @@ def parse_arguments() -> argparse.Namespace:
 
 
 def main() -> None:
+    global TRAIN_SAMPLE_SCALE
+
     arguments = parse_arguments()
+    if arguments.train_sample_scale < 1:
+        raise ValueError("--train-sample-scale must be at least 1")
+    TRAIN_SAMPLE_SCALE = arguments.train_sample_scale
     records = generate_records(arguments.profile)
     validate(records)
 

@@ -37,7 +37,11 @@ INTENTS = (
     "followUpReminder",
     "blessing",
     "replyableMessage",
+    "assistantCommand",
+    "informationQuery",
+    "systemNotification",
 )
+LEGACY_IMPLICITLY_KNOWN_INTENTS = frozenset(INTENTS[:9])
 OUTPUT_DIRECTORY = Path("ModelTraining/ClipboardSemantics/IterativeResearch")
 BASE_CORPUS = Path(
     "ModelTraining/ClipboardSemantics/clipboard_semantic_corpus.jsonl"
@@ -282,7 +286,7 @@ def record_label(record: dict[str, Any], intent: str) -> bool:
 def is_known(record: dict[str, Any], intent: str) -> bool:
     known = record.get("knownLabels")
     if known is None:
-        return True
+        return intent in LEGACY_IMPLICITLY_KNOWN_INTENTS
     return intent in known or (
         intent == "replyableMessage" and "replyable" in known
     )
@@ -449,6 +453,7 @@ def sample_weight(
     weight = 1.0
     if record.get("knownLabels") is not None:
         weight *= configuration.external_weight
+    weight *= float(record.get("sampleWeight", 1.0))
     if record.get("_augmentation"):
         weight *= 0.60
     family = str(record.get("family", "")).casefold()
@@ -498,13 +503,20 @@ def calibrated_thresholds(
     languages = np.array([record["language"] for record in records])
     result: dict[str, dict[str, Any]] = {}
     for intent in INTENTS:
+        known_mask = np.array(
+            [is_known(record, intent) for record in records],
+            dtype=bool,
+        )
         expected = np.array(
             [record_label(record, intent) for record in records], dtype=bool
         )
-        selection = select_threshold(expected, probabilities[intent])
+        selection = select_threshold(
+            expected[known_mask],
+            probabilities[intent][known_mask],
+        )
         by_language = {}
         for language in sorted(set(languages)):
-            mask = languages == language
+            mask = (languages == language) & known_mask
             positives = int(np.sum(expected[mask]))
             negatives = int(np.sum(~expected[mask]))
             if positives < 20 or negatives < 20:
@@ -574,11 +586,15 @@ def metrics_for_records(
     predictions = runtime_predictions(records, probabilities, thresholds)
     per_intent = {}
     for intent in INTENTS:
+        known_mask = np.array(
+            [is_known(record, intent) for record in records],
+            dtype=bool,
+        )
         expected = np.array(
             [record_label(record, intent) for record in records], dtype=bool
         )
         counts = BinaryCounts()
-        counts.update(expected, predictions[intent])
+        counts.update(expected[known_mask], predictions[intent][known_mask])
         per_intent[intent] = counts.metrics()
     return aggregate_metrics(per_intent)
 
@@ -819,14 +835,21 @@ def batched_evaluation(
             probabilities = prediction_probabilities(matrix, models)
         predictions = runtime_predictions(batch, probabilities, thresholds)
         for intent in INTENTS:
+            known_mask = np.array(
+                [is_known(record, intent) for record in batch],
+                dtype=bool,
+            )
             expected = np.array(
                 [record_label(record, intent) for record in batch], dtype=bool
             )
-            counts[intent].update(expected, predictions[intent])
+            counts[intent].update(
+                expected[known_mask],
+                predictions[intent][known_mask],
+            )
             for language in {record["language"] for record in batch}:
                 mask = np.array(
                     [record["language"] == language for record in batch]
-                )
+                ) & known_mask
                 by_language[language][intent].update(
                     expected[mask], predictions[intent][mask]
                 )
@@ -843,7 +866,7 @@ def batched_evaluation(
                         == source
                         for record in batch
                     ]
-                )
+                ) & known_mask
                 by_source[source][intent].update(
                     expected[mask], predictions[intent][mask]
                 )

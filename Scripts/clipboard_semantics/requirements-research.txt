@@ -1,3 +1,6 @@
+ijson==3.5.1
 numpy==2.4.4
+opencc-python-reimplemented==0.1.7
+pyarrow==25.0.1
 scikit-learn==1.9.0
 scipy==1.18.1

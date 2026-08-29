@@ -1,0 +1,99 @@
+{
+  "domains": {
+    "accountService": 14,
+    "calendar": 8,
+    "communication": 14,
+    "dining": 10,
+    "finance": 5,
+    "generalKnowledge": 10,
+    "health": 5,
+    "media": 1,
+    "shopping": 6,
+    "smartHome": 3,
+    "travel": 6,
+    "unknown": 38
+  },
+  "humanCoverage": {
+    "excludeDeviceCommandRecords": 11,
+    "overriddenRecords": 49,
+    "overridesByField": {
+      "ambiguous": 49,
+      "question": 49,
+      "replyableMessage": 49,
+      "task": 49
+    },
+    "records": 60
+  },
+  "inputSHA256": {
+    "holdout": "95ac25ff01113de05eb3c6b9dd9a7b38efa3fa1d434439097f604bb9f2de1a9b",
+    "humanLabels": "d6f5897227991a59420d2892e0d946c4fb4125d1cab37f4137deb3e1f3d1f688",
+    "primary:composer": "6221c8f6fa7a2fed7bb8c8d93f70eee1c1017f6a1dbf75487f90cb9789165644",
+    "primary:grok": "940ede21bfaaf30db36e931135cbb196240cdf96ff1eff36dbf490156738cb94",
+    "primary:luna": "63c525c05f146546603610bcb04d229d8ee415259aa5a7bdacb277715aef289b",
+    "reviewQueue": "7dd224c20dd1ee1da4c8ead6f19f99264fcb5a868e3588432b77ce233c6f500e",
+    "reviewer:claude": "fe34fea28628f5f84b41c838bfc59591feabd5851a21ba8e08d828811f637b26",
+    "reviewer:sol": "78f869bcd685cea9c579d488e5f588f21d67a1db1ca4fdf13d3ccb43713b1b9d"
+  },
+  "knownByField": {
+    "assistantCommand": 111,
+    "blessing": 120,
+    "complaint": 118,
+    "confirmationDecision": 113,
+    "domain": 82,
+    "followUpReminder": 120,
+    "informationQuery": 115,
+    "invitation": 120,
+    "question": 107,
+    "replyableMessage": 100,
+    "scheduleNegotiation": 112,
+    "sentiment": 107,
+    "systemNotification": 118,
+    "task": 104
+  },
+  "languages": {
+    "en": 60,
+    "zh-Hans": 60
+  },
+  "outputSHA256": "c800922eb24e9681e34d16d4328ffbdbfc3ba8a0e6b2538ea670d85dc3cf6b03",
+  "positiveByIntent": {
+    "assistantCommand": 6,
+    "blessing": 0,
+    "complaint": 4,
+    "confirmationDecision": 7,
+    "followUpReminder": 2,
+    "informationQuery": 10,
+    "invitation": 6,
+    "question": 23,
+    "replyableMessage": 63,
+    "scheduleNegotiation": 2,
+    "systemNotification": 8,
+    "task": 25
+  },
+  "recordCount": 120,
+  "schemaVersion": 1,
+  "sourceDataset": "product-policy-blind-holdout-v1",
+  "sourceLicense": "OSGKeyboard project license",
+  "sourceRevision": "v1",
+  "splits": {
+    "golden": 40,
+    "test": 40,
+    "validation": 40
+  },
+  "unresolvedByField": {
+    "ambiguous": 2,
+    "assistantCommand": 9,
+    "blessing": 0,
+    "complaint": 2,
+    "confirmationDecision": 7,
+    "domain": 38,
+    "followUpReminder": 0,
+    "informationQuery": 5,
+    "invitation": 0,
+    "question": 13,
+    "replyableMessage": 20,
+    "scheduleNegotiation": 8,
+    "sentiment": 13,
+    "systemNotification": 2,
+    "task": 16
+  }
+}

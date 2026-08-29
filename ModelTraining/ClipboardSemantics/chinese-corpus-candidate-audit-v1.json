@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "auditVersion": "chinese-corpus-candidate-audit-v1",
+  "reviewedAt": "2026-08-28",
+  "taxonomyVersion": "clipboard-consensus-v6",
+  "scope": "面向简体中文、繁体中文及配套英文边界样本的 taxonomy 语料候选准入审计。",
+  "policy": {
+    "admittedMeaning": "准入仅允许来源进入候选抽取、映射和清洗队列，不代表已经进入商业训练集。",
+    "splitBoundary": "只允许上游官方明确标识的 train 数据产生训练候选；dev、validation、test、challenge、hidden test 和本地冻结 holdout 一律不得训练。",
+    "commercialBoundary": "导入前必须固定上游 revision、保存许可证及 attribution、确认数据本体而非仅代码受该许可证覆盖，并完成隐私、内容安全和重复检查。",
+    "knownLabelsBoundary": "每条记录只声明来源实际标注且经过确定性映射审计的 knownLabels；未声明字段保持 unknown，不得作为负例。",
+    "syntheticBoundary": "合成语料仅用于 train，必须记录生成与上游 provenance，sampleWeight 不得高于 0.35，不得进入校准、评估、人类 gold 或 policy anchors，也不得覆盖冲突的真人或许可非合成样本。",
+    "holdoutBoundary": "与任一冻结 holdout 精确或归一化近重复的文本全局禁止训练。"
+  },
+  "admittedSources": [
+    {
+      "id": "MASSIVE",
+      "status": "admitted",
+      "languages": [
+        "zh-CN",
+        "en-US"
+      ],
+      "license": "CC-BY-4.0",
+      "commercialUse": "允许，须署名并保留许可证与修改说明。",
+      "url": "https://huggingface.co/datasets/AmazonScience/massive",
+      "licenseUrl": "https://huggingface.co/datasets/AmazonScience/massive/blob/main/LICENSE",
+      "trainBoundary": "仅固定 revision 的官方 train split；dev/test 禁止训练。",
+      "synthetic": false,
+      "reason": "覆盖中英文助手意图与多领域表达，标签结构适合映射 assistantCommand、informationQuery 和 domain；需避免把源 intent 扩展为其他 taxonomy 字段的负例。"
+    },
+    {
+      "id": "CrossWOZ",
+      "status": "admitted",
+      "languages": [
+        "zh-CN"
+      ],
+      "license": "Apache-2.0",
+      "commercialUse": "允许，须保留许可证和 NOTICE 要求。",
+      "url": "https://github.com/thu-coai/CrossWOZ",
+      "licenseUrl": "https://github.com/thu-coai/CrossWOZ/blob/master/LICENSE",
+      "trainBoundary": "仅 data/crosswoz/train.json.zip 的固定官方 revision；val/test 禁止训练。",
+      "synthetic": false,
+      "reason": "中文跨领域任务对话可补充 travel、dining、calendar 等边界；只抽取当前轮可独立判断的文本，依赖隐藏对话状态的记录保持 unknown 或丢弃。"
+    },
+    {
+      "id": "BiToD",
+      "status": "admitted",
+      "languages": [
+        "zh-CN",
+        "en"
+      ],
+      "license": "Apache-2.0",
+      "commercialUse": "允许，须保留许可证和 NOTICE 要求。",
+      "url": "https://github.com/HLTCHKUST/BiToD",
+      "licenseUrl": "https://github.com/HLTCHKUST/BiToD/blob/main/LICENSE",
+      "trainBoundary": "仅官方 zh_train/en_train 数据；valid/test 和 cross-lingual evaluation split 禁止训练。",
+      "synthetic": false,
+      "reason": "官方提供中英双语和明确切分，可用于 travel、dining、calendar 与 assistant 路由映射；只保留脱离上下文仍有稳定语义的轮次。"
+    },
+    {
+      "id": "MultiDoGO",
+      "status": "admitted",
+      "languages": [
+        "en"
+      ],
+      "license": "CDLA-Permissive-1.0",
+      "commercialUse": "允许，按数据许可证保留来源和许可记录。",
+      "url": "https://github.com/awslabs/multi-domain-goal-oriented-dialogues-dataset",
+      "licenseUrl": "https://github.com/awslabs/multi-domain-goal-oriented-dialogues-dataset/blob/master/LICENSE.txt",
+      "trainBoundary": "仅 data/paper_splits 下官方 train.tsv；dev/test 禁止训练。",
+      "synthetic": false,
+      "reason": "金融、媒体、软件等域的 turn-level intent 可补充英文边界与跨语言对照；只映射明确源标签，不推断其余 intent。"
+    },
+    {
+      "id": "Taskmaster-1",
+      "status": "admitted",
+      "languages": [
+        "en"
+      ],
+      "license": "CC-BY-4.0（数据；代码 Apache-2.0）",
+      "commercialUse": "允许，数据须署名并记录修改。",
+      "url": "https://github.com/google-research-datasets/Taskmaster/tree/master/TM-1-2019",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/legalcode",
+      "trainBoundary": "只使用官方训练用途文件并固定清单；任何官方 evaluation/test 文件禁止训练。",
+      "synthetic": false,
+      "reason": "可补充服务预订、计划和确认边界；Wizard/self-dialogue 风格需单独标记 provenance，并过滤依赖多轮上下文的 utterance。"
+    },
+    {
+      "id": "SNIPS",
+      "status": "admitted",
+      "languages": [
+        "en"
+      ],
+      "license": "CC0-1.0",
+      "commercialUse": "允许；保留数据集来源、固定 revision 和修改记录。",
+      "url": "https://github.com/sonos/nlu-benchmark",
+      "licenseUrl": "https://github.com/sonos/nlu-benchmark/blob/master/LICENSE",
+      "trainBoundary": "仅 sonos/nlu-benchmark 固定 revision 的 train_*_full.json；validate 文件和第三方镜像不得导入。",
+      "synthetic": false,
+      "reason": "可提供 assistantCommand 与媒体、天气、smartHome 等清晰边界；准入不延伸到来源和许可不一致的第三方 SNIPS 镜像。"
+    },
+    {
+      "id": "MInDS-14",
+      "status": "admitted",
+      "languages": [
+        "zh-CN",
+        "en-US",
+        "en-GB",
+        "en-AU"
+      ],
+      "license": "CC-BY-4.0",
+      "commercialUse": "允许，须署名并记录转录文本的处理。",
+      "url": "https://huggingface.co/datasets/PolyAI/minds14",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/legalcode",
+      "trainBoundary": "上游每个 config 仅发布 train；这些记录只能产生训练候选，不能充当 OSGKeyboard 校准或评估真值。",
+      "synthetic": false,
+      "reason": "中英文银行意图可补充 finance、accountService 和 informationQuery；只使用转录文本，音频不进入本项目。"
+    },
+    {
+      "id": "GoEmotions",
+      "status": "admitted",
+      "languages": [
+        "en"
+      ],
+      "license": "Apache-2.0",
+      "commercialUse": "允许，须保留许可证和 NOTICE；导入时保存固定 revision 的许可证证据。",
+      "url": "https://github.com/google-research/google-research/tree/master/goemotions",
+      "licenseUrl": "https://github.com/google-research/google-research/blob/master/LICENSE",
+      "trainBoundary": "仅官方 train.tsv；dev/test 禁止训练。",
+      "synthetic": false,
+      "reason": "只用于 sentiment 的已审计映射，不从情绪标签推断 complaint、blessing 或 replyableMessage；Reddit 文本须经过隐私与内容安全过滤。"
+    },
+    {
+      "id": "ASAP",
+      "status": "admitted",
+      "languages": [
+        "zh-CN"
+      ],
+      "license": "Apache-2.0",
+      "commercialUse": "允许，须保留许可证和 notices。",
+      "url": "https://github.com/Meituan-Dianping/ASAP",
+      "licenseUrl": "https://github.com/Meituan-Dianping/ASAP/blob/master/LICENSE",
+      "trainBoundary": "仅 data/train.csv；dev/test 禁止训练。",
+      "synthetic": false,
+      "reason": "中文餐饮评价可补充 dining、sentiment 与显式 complaint 边界；负面 aspect 或低评分不能自动映射为 complaint。"
+    },
+    {
+      "id": "Restaurant8k",
+      "status": "admitted",
+      "languages": [
+        "en"
+      ],
+      "license": "CC-BY-4.0",
+      "commercialUse": "允许，须署名并记录修改。",
+      "url": "https://github.com/PolyAI-LDN/task-specific-datasets/tree/master/span_extraction/restaurant8k",
+      "licenseUrl": "https://github.com/PolyAI-LDN/task-specific-datasets/blob/master/LICENSE",
+      "trainBoundary": "仅 train_0.json 作为完整官方训练集；其下采样副本不得重复导入，test.json 禁止训练。",
+      "synthetic": false,
+      "reason": "可补充 dining domain 和餐饮查询边界；span 标注只使经审计映射的字段 known，不使十二个 intent 全部已知。"
+    },
+    {
+      "id": "FormosaNLU-Synth-v1",
+      "status": "admitted",
+      "languages": [
+        "zh-TW"
+      ],
+      "license": "CC-BY-4.0（合成数据及 MASSIVE zh-TW seed）",
+      "commercialUse": "允许，须同时署名 MASSIVE 与 FormosaNLU Synth，并说明合成和过滤修改。",
+      "url": "https://huggingface.co/datasets/steven0226/formosa-nlu-synth-v1",
+      "licenseUrl": "https://huggingface.co/datasets/steven0226/formosa-nlu-synth-v1/blob/main/LICENSE",
+      "trainBoundary": "仅固定 release manifest 对应的 train；不得作为校准、评估或人工 gold。",
+      "synthetic": true,
+      "maximumSampleWeight": 0.35,
+      "reason": "可补充繁体中文和台湾表达，但必须保留双重 attribution、生成 provenance 与 synthetic 标记；只声明生成契约保证的 knownLabels。"
+    }
+  ],
+  "quarantinedSources": [
+    {
+      "id": "BANKING77",
+      "status": "quarantined",
+      "license": "CC-BY-4.0",
+      "commercialUse": "许可证允许商业使用，但当前不准进入训练。",
+      "url": "https://huggingface.co/datasets/PolyAI/banking77",
+      "reason": "与 MInDS-14 的 finance/accountService 覆盖高度重叠，且大量短查询会放大 informationQuery 与低信息 fragment 偏差；待完成去重、源域平衡和独立边界审计。"
+    },
+    {
+      "id": "ABCD",
+      "status": "quarantined",
+      "license": "MIT",
+      "commercialUse": "许可证允许商业使用，但当前不准进入训练。",
+      "url": "https://github.com/asappresearch/abcd",
+      "reason": "虚构零售客服的多轮 action dialogue 强依赖角色与上下文，直接抽取会污染单条 clipboard 的 task、confirmationDecision 和 systemNotification 边界。"
+    },
+    {
+      "id": "MultiWOZ",
+      "status": "quarantined",
+      "license": "MIT（官方仓库）",
+      "commercialUse": "许可证允许商业使用，但当前不准进入训练。",
+      "url": "https://github.com/budzianowski/multiwoz",
+      "reason": "版本多、历史标注错误和修订差异明显，且多轮状态依赖强；在固定唯一版本、验证官方 train 和完成 turn-level 质量审计前隔离。"
+    },
+    {
+      "id": "CLINC150",
+      "status": "quarantined",
+      "license": "CC-BY-4.0（UCI 官方分发）",
+      "commercialUse": "许可证允许商业使用，但当前不准进入 v6 新训练。",
+      "url": "https://archive.ics.uci.edu/dataset/570/clinc150",
+      "reason": "以虚拟助手和 OOS 检测为目标，短命令分布会主导新增路由标签；历史实验及 holdout 已使用相关文本，须先完成全局泄漏审计和旧产物隔离。"
+    },
+    {
+      "id": "CFPB",
+      "status": "quarantined",
+      "license": "CC0-1.0",
+      "commercialUse": "许可证允许商业使用，但真实投诉叙述当前不准进入训练。",
+      "url": "https://www.consumerfinance.gov/data-research/consumer-complaints/",
+      "reason": "真实消费者投诉可能包含敏感财务、身份和叙事隐私信息，且 2026 年官方停止主动发布投诉 narratives；即使是 CC0，也需法律、隐私和历史快照来源审查。"
+    },
+    {
+      "id": "openclaw-zh-greetings",
+      "status": "quarantined",
+      "license": "MIT（数据卡声明）",
+      "commercialUse": "许可声明表面允许，但当前证据不足以批准商业训练。",
+      "url": "https://huggingface.co/datasets/trytax/openclaw-zh-greetings",
+      "reason": "小型非官方示例集缺少稳定上游、版本化生成过程和逐条权利链；仓库/软件的 MIT 许可不能替代对数据文本本体的 provenance 审计。"
+    },
+    {
+      "id": "LCCC",
+      "status": "quarantined",
+      "license": "MIT 仓库标识与官方“仅限科研用途”说明并存",
+      "commercialUse": "禁止用于当前商业训练。",
+      "url": "https://github.com/thu-coai/CDial-GPT",
+      "reason": "官方 README 明确限定科研用途，语料来自抓取的微博对话，缺少完整底层内容权利与隐私链；只能在隔离研究队列中审阅。"
+    }
+  ]
+}

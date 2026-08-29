@@ -16,11 +16,19 @@ import unicodedata
 import urllib.request
 import zipfile
 from collections import Counter, defaultdict
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 from urllib.error import HTTPError, URLError
+
+try:
+    from opencc import OpenCC
+except ImportError:  # Optional research dependency; the source is reported unavailable.
+    OpenCC = None
 
 
 SEED = 20260827
+SAMPLE_SCALE = 1
 OUTPUT_DIRECTORY = Path("ModelTraining/ClipboardSemantics")
 BASE_CORPUS_PATH = OUTPUT_DIRECTORY / "clipboard_semantic_corpus.jsonl"
 OPEN_CORPUS_PATH = OUTPUT_DIRECTORY / "open-training-corpus.jsonl"
@@ -37,6 +45,13 @@ GOEMOTIONS_REVISION = "5d8f4ac97c873bde3a792ba4628f00bb9103d3e6"
 TIANJI_REVISION = "8043c8cbdfba10d1cfeb9a52b9eed0e3ea2c231b"
 BIRTHDAY_REVISION = "13134d2e67e624b38b9a9b6ce3cbce5011975bea"
 CFPB_REVISION = "e5fec64e1f0688e47699b9cf8c26fe4ed350123a"
+OPENCLAW_GREETINGS_REVISION = "f4e3c0323d5c44235b62454706e06acd60ebeaae"
+WECHAT_BLESSINGS_REVISION = "9ad614ada57aa710ae7f7fa5823d91e0fb57bc8c"
+SNIPS_REVISION = "b86ac7f1577868c42158d0dec77db50956046696"
+MINDS14_REVISION = "40ce77cb32a384e4d50a568e1ec39ac804019d33"
+BITOD_REVISION = "a9bd74de9eecdc3d875cb4ebf6a6beaf9c30c2ff"
+RESTAURANT8K_REVISION = "57ec275d8078af65b7731c2a98be812d844a6d6b"
+FORMOSA_NLU_REVISION = "03a337b61a200ab690994dca4dc31aa7f209800e"
 
 MASSIVE_ARCHIVE_URL = (
     "https://amazon-massive-nlu-dataset.s3.amazonaws.com/"
@@ -58,8 +73,25 @@ INTENT_LABELS = (
     "followUpReminder",
     "blessing",
     "replyableMessage",
+    "assistantCommand",
+    "informationQuery",
+    "systemNotification",
 )
-ALL_LABELS = (*INTENT_LABELS, "sentiment")
+DOMAINS = (
+    "finance",
+    "travel",
+    "calendar",
+    "communication",
+    "media",
+    "smartHome",
+    "shopping",
+    "dining",
+    "health",
+    "weather",
+    "accountService",
+    "generalKnowledge",
+)
+ALL_LABELS = (*INTENT_LABELS, "sentiment", "domain")
 
 MASSIVE_INTENT_NAMES = (
     "datetime_query",
@@ -123,34 +155,106 @@ MASSIVE_INTENT_NAMES = (
     "play_podcasts",
     "lists_query",
 )
-MASSIVE_TASK_INTENTS = {
+MASSIVE_ASSISTANT_COMMAND_INTENTS = {
     "iot_hue_lightchange",
-    "transport_ticket",
     "iot_wemo_off",
-    "email_addcontact",
-    "takeaway_order",
     "iot_hue_lightup",
     "lists_createoradd",
     "iot_wemo_on",
     "calendar_remove",
-    "email_sendemail",
     "iot_cleaning",
+    "iot_hue_lightdim",
+    "audio_volume_up",
+    "audio_volume_other",
+    "audio_volume_down",
     "iot_hue_lightoff",
     "iot_hue_lighton",
+    "play_music",
+    "play_radio",
+    "play_audiobook",
+    "play_game",
+    "play_podcasts",
+    "audio_volume_mute",
     "social_post",
-    "calendar_set",
+    "alarm_set",
     "alarm_remove",
     "lists_remove",
-    "transport_taxi",
+    "music_settings",
     "iot_coffee",
 }
-MASSIVE_QUERY_INTENTS = {
-    name
-    for name in MASSIVE_INTENT_NAMES
-    if name.endswith("_query")
-    or name.startswith("qa_")
-    or name.startswith("recommendation_")
-    or name in {"cooking_recipe", "datetime_convert", "transport_traffic"}
+MASSIVE_SERVICE_TASK_INTENTS = {
+    "transport_ticket",
+    "takeaway_order",
+    "transport_taxi",
+}
+MASSIVE_INFORMATION_QUERY_INTENTS = {
+    name for name in MASSIVE_INTENT_NAMES if name.endswith("_query")
+} | {
+    name for name in MASSIVE_INTENT_NAMES if name.startswith("qa_")
+} | {
+    name for name in MASSIVE_INTENT_NAMES if name.startswith("recommendation_")
+} | {
+    "cooking_recipe",
+    "datetime_convert",
+    "transport_traffic",
+}
+MASSIVE_DOMAIN_BY_PREFIX = {
+    "weather": "weather",
+    "transport": "travel",
+    "calendar": "calendar",
+    "alarm": "calendar",
+    "email": "communication",
+    "social": "communication",
+    "music": "media",
+    "audio": "media",
+    "play": "media",
+    "iot": "smartHome",
+    "takeaway": "dining",
+    "cooking": "dining",
+    "news": "generalKnowledge",
+    "qa": "generalKnowledge",
+    "datetime": "generalKnowledge",
+}
+
+MINDS14_INTENT_NAMES = (
+    "abroad",
+    "address",
+    "app_error",
+    "atm_limit",
+    "balance",
+    "business_loan",
+    "card_issues",
+    "cash_deposit",
+    "direct_debit",
+    "freeze",
+    "high_value_payment",
+    "joint_account",
+    "latest_transactions",
+    "pay_bill",
+)
+MINDS14_INFORMATION_QUERY_INTENTS = {
+    "abroad",
+    "address",
+    "atm_limit",
+    "balance",
+    "latest_transactions",
+}
+MINDS14_ASSISTANT_COMMAND_INTENTS = {
+    "cash_deposit",
+    "direct_debit",
+    "freeze",
+    "high_value_payment",
+    "pay_bill",
+}
+
+SNIPS_MAPPING = {
+    "PlayMusic": ("assistantCommand", "media"),
+    "AddToPlaylist": ("assistantCommand", "media"),
+    "GetWeather": ("informationQuery", "weather"),
+    "BookRestaurant": ("task", "dining"),
+    "SearchScreeningEvent": ("informationQuery", "media"),
+    "SearchCreativeWork": ("informationQuery", "media"),
+    "RateBook": (None, None),
 }
 
 GO_EMOTIONS_POSITIVE = {0, 1, 4, 5, 13, 15, 17, 18, 20, 21, 23}
@@ -293,44 +397,6 @@ CLINC_QUESTION_INTENTS = {
     "who_made_you",
 }
 
-ENGLISH_QUESTION_PATTERN = re.compile(
-    r"(?:\?$|^(?:what|when|where|which|who|why|how|can|could|would|"
-    r"do|does|did|has|have|is|are|will|should)\b)",
-    re.IGNORECASE,
-)
-CHINESE_QUESTION_PATTERN = re.compile(
-    r"(?:[吗呢么？]$|^(?:怎么|为什么|哪|谁|什么|是否|能否|"
-    r"可以|你能|有没有|是不是))"
-)
-ENGLISH_TASK_PATTERN = re.compile(
-    r"(?:^(?:please\s+)?(?:add|book|buy|call|cancel|change|check|"
-    r"create|delete|email|find|make|move|order|pay|post|remove|"
-    r"schedule|send|set|share|show|tell|text|transfer|update)\b|"
-    r"\b(?:can|could|would|will) you\b|\bplease\b)",
-    re.IGNORECASE,
-)
-CHINESE_TASK_PATTERN = re.compile(
-    r"(?:请|麻烦|帮我|帮忙|替我|给我|需要你|希望你|能否|可以帮|"
-    r"提醒|添加|安排|设置|删除|取消|发送|回复|联系)"
-)
-ENGLISH_SCHEDULE_PATTERN = re.compile(
-    r"\b(?:reschedule|move (?:the|our) (?:meeting|appointment)|"
-    r"what time|which day|available (?:on|at)|"
-    r"(?:monday|tuesday|wednesday|thursday|friday).{0,24}\bor\b|"
-    r"(?:meeting|appointment).{0,24}\bor\b)\b",
-    re.IGNORECASE,
-)
-CHINESE_SCHEDULE_PATTERN = re.compile(
-    r"(?:(?:改到|改成|改期|几点|什么时候|哪天|有空|方便).{0,18}"
-    r"(?:见面|开会|碰面|约|吃饭|出发)|"
-    r"(?:周[一二三四五六日天]|星期[一二三四五六日天]|明天|后天|今晚)"
-    r".{0,18}(?:还是|或者|或).{0,18})"
-)
-ENGLISH_CONFIRMATION_PATTERN = re.compile(
-    r"^(?:yes|no|sure|okay|ok|confirmed|go ahead|sounds good|"
-    r"let'?s do (?:it|that)|that works)(?:[.! ]|$)",
-    re.IGNORECASE,
-)
 ENGLISH_BLESSING_PATTERN = re.compile(
     r"\b(?:happy birthday|happy new year|merry christmas|happy holidays|"
     r"best wishes|good luck|congratulations|congrats|wishing you|"
@@ -359,9 +425,64 @@ META_BLESSING_PATTERN = re.compile(
 )
 
 
+@dataclass(frozen=True)
+class SourceBuilder:
+    """A pinned, license-reviewed source that can fail independently."""
+
+    name: str
+    build: Callable[[int], list[dict]]
+    optional: bool = True
+
+
+class SourceUnavailable(RuntimeError):
+    """A source cannot be built in the current environment."""
+
+
+def massive_mapping(intent: str) -> tuple[str | None, str | None]:
+    """Map only official MASSIVE intents with product-policy-safe semantics."""
+    if intent in MASSIVE_ASSISTANT_COMMAND_INTENTS:
+        label = "assistantCommand"
+    elif intent in MASSIVE_INFORMATION_QUERY_INTENTS:
+        label = "informationQuery"
+    elif intent in MASSIVE_SERVICE_TASK_INTENTS:
+        label = "task"
+    else:
+        label = None
+    prefix = intent.split("_", 1)[0]
+    return label, MASSIVE_DOMAIN_BY_PREFIX.get(prefix)
+
+
+def known_labels_for_mapping(
+    mapped_label: str | None,
+    domain: str | None,
+) -> set[str]:
+    known = set()
+    if mapped_label:
+        # These official assistant/service intents are mutually exclusive under
+        # the product policy, so their negative evidence is also trustworthy.
+        known.update(
+            {
+                "assistantCommand",
+                "informationQuery",
+                "systemNotification",
+            }
+        )
+        if mapped_label == "task":
+            known.add("task")
+    if domain:
+        known.add("domain")
+    return known
+
+
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--seed", type=int, default=SEED)
+    parser.add_argument(
+        "--sample-scale",
+        type=int,
+        default=1,
+        help="Multiply license-safe source sampling caps while preserving source balance.",
+    )
     parser.add_argument("--base-corpus", type=Path, default=BASE_CORPUS_PATH)
     parser.add_argument("--open-output", type=Path, default=OPEN_CORPUS_PATH)
     parser.add_argument("--combined-output", type=Path, default=COMBINED_CORPUS_PATH)
@@ -406,6 +527,14 @@ def normalized_text(value: str) -> str:
     return " ".join(normalized.split()).strip()
 
 
+def traditional_to_simplified(value: str) -> str:
+    if OpenCC is None:
+        raise SourceUnavailable(
+            "FormosaNLU conversion requires opencc-python-reimplemented"
+        )
+    return normalized_text(OpenCC("t2s").convert(value))
+
+
 def fingerprint(value: str) -> str:
     return normalized_text(value).casefold()
 
@@ -427,6 +556,10 @@ def stable_sample(records: list[dict], limit: int, seed: int, salt: str) -> list
             f"{seed}|{salt}|{record['id']}".encode()
         ).digest(),
     )[:limit]
+
+
+def scaled_limit(value: int) -> int:
+    return value * SAMPLE_SCALE
 
 
 def limited_by_family(
@@ -470,7 +603,12 @@ def make_record(
     follow_up_reminder: bool = False,
     blessing: bool = False,
     replyable: bool = False,
+    assistant_command: bool = False,
+    information_query: bool = False,
+    system_notification: bool = False,
     sentiment: str = "neutral",
+    domain: str | None = None,
+    sample_weight: float = 1.0,
 ) -> dict | None:
     clean_text = normalized_text(text)
     if not eligible_text(clean_text):
@@ -480,6 +618,12 @@ def make_record(
         raise ValueError(f"Unsupported known labels: {sorted(invalid_labels)}")
     if sentiment not in {"positive", "neutral", "negative"}:
         raise ValueError(f"Unsupported sentiment: {sentiment}")
+    if domain is not None and domain not in DOMAINS:
+        raise ValueError(f"Unsupported domain: {domain}")
+    if "domain" in known_labels and domain is None:
+        raise ValueError("Known domain requires a domain value")
+    if not 0 < sample_weight <= 1:
+        raise ValueError(f"Unsupported sample weight: {sample_weight}")
     return {
         "id": record_id,
         "text": clean_text,
@@ -496,6 +640,11 @@ def make_record(
         "blessing": blessing,
         "sentiment": sentiment,
         "replyable": replyable,
+        "assistantCommand": assistant_command,
+        "informationQuery": information_query,
+        "systemNotification": system_notification,
+        "domain": domain,
+        "sampleWeight": sample_weight,
         "knownLabels": sorted(known_labels),
         "labelingMethod": labeling_method,
         "sourceDataset": source_dataset,
@@ -526,11 +675,17 @@ def massive_records(seed: int) -> list[dict]:
             if source["partition"] != "train":
                 continue
             intent = source["intent"]
-            is_reminder = intent == "alarm_set"
+            mapped_label, domain = massive_mapping(intent)
             sentiment_known = intent in {"music_dislikeness", "music_likeness"}
-            known = {"task", "question", "followUpReminder"}
+            known = known_labels_for_mapping(mapped_label, domain)
+            if intent == "general_greet":
+                # A greeting opens a conversation but does not itself express
+                # a wish for the recipient.
+                known.add("blessing")
             if sentiment_known:
                 known.add("sentiment")
+            if not known:
+                continue
             record_value = make_record(
                 record_id=f"open-massive-{config}-{source['id']}",
                 text=source["utt"],
@@ -543,9 +698,9 @@ def massive_records(seed: int) -> list[dict]:
                 source_split="train",
                 known_labels=known,
                 labeling_method="official intent mapping",
-                task=intent in MASSIVE_TASK_INTENTS,
-                question=intent in MASSIVE_QUERY_INTENTS,
-                follow_up_reminder=is_reminder,
+                task=mapped_label == "task",
+                assistant_command=mapped_label == "assistantCommand",
+                information_query=mapped_label == "informationQuery",
                 sentiment=(
                     "negative"
                     if intent == "music_dislikeness"
@@ -553,21 +708,79 @@ def massive_records(seed: int) -> list[dict]:
                     if intent == "music_likeness"
                     else "neutral"
                 ),
+                domain=domain,
             )
             if record_value:
                 records.append(record_value)
     archive.close()
-    return stable_sample(
-        [record for record in records if record["language"] == "en"],
-        500,
-        seed,
-        "massive-en",
-    ) + stable_sample(
-        [record for record in records if record["language"] == "zh-Hans"],
-        500,
-        seed,
-        "massive-zh",
+    # MASSIVE is the strongest license-reviewed bilingual source in this
+    # pipeline. Keep every official-train record with an audited label mapping;
+    # downstream source balancing controls its effective training weight.
+    return records
+
+
+def openclaw_greeting_records(seed: int) -> list[dict]:
+    url = (
+        "https://huggingface.co/datasets/trytax/openclaw-zh-greetings/"
+        f"resolve/{OPENCLAW_GREETINGS_REVISION}/data/greetings.jsonl"
     )
+    records: list[dict] = []
+    for line in fetch_bytes(url).decode("utf-8").splitlines():
+        if not line.strip():
+            continue
+        source = json.loads(line)
+        is_wish = source["label"] == "wish"
+        record_value = make_record(
+            record_id=f"open-openclaw-greetings-{source['id']}",
+            text=source["text"],
+            language="zh-Hans",
+            family=f"open_openclaw_{source['label']}",
+            source_dataset="openclaw-zh-greetings",
+            source_license="MIT",
+            source_url=(
+                "https://huggingface.co/datasets/trytax/openclaw-zh-greetings"
+            ),
+            source_revision=OPENCLAW_GREETINGS_REVISION,
+            source_split="train",
+            known_labels={"blessing"},
+            labeling_method="official wish versus non-wish label",
+            blessing=is_wish,
+        )
+        if record_value:
+            records.append(record_value)
+    return stable_sample(records, scaled_limit(100), seed, "openclaw-greetings")
+
+
+def wechat_blessing_records(seed: int) -> list[dict]:
+    url = (
+        "https://raw.githubusercontent.com/SWHL/WeChat-AutoSendBless/"
+        f"{WECHAT_BLESSINGS_REVISION}/assets/bless.txt"
+    )
+    records: list[dict] = []
+    for index, text in enumerate(
+        fetch_bytes(url).decode("utf-8-sig").splitlines(),
+        start=1,
+    ):
+        record_value = make_record(
+            record_id=f"open-wechat-blessing-{index}",
+            text=text,
+            language="zh-Hans",
+            family="open_wechat_new_year_blessing",
+            source_dataset="SWHL/WeChat-AutoSendBless templates",
+            source_license="MIT",
+            source_url=(
+                "https://github.com/SWHL/WeChat-AutoSendBless/"
+                f"blob/{WECHAT_BLESSINGS_REVISION}/assets/bless.txt"
+            ),
+            source_revision=WECHAT_BLESSINGS_REVISION,
+            source_split="templates",
+            known_labels={"blessing"},
+            labeling_method="repository-authored blessing template",
+            blessing=True,
+        )
+        if record_value:
+            records.append(record_value)
+    return stable_sample(records, scaled_limit(100), seed, "wechat-blessings")
 
 
 def cped_records(seed: int) -> list[dict]:
@@ -644,11 +857,37 @@ def crosswoz_records(seed: int) -> list[dict]:
             general_intents = {
                 str(act[1]) for act in acts if len(act) > 1 and act[0] == "General"
             }
-            question = "Request" in intents or bool(
-                CHINESE_QUESTION_PATTERN.search(text)
+            source_domains = {
+                str(act[1]).casefold()
+                for act in acts
+                if len(act) > 1 and act[0] != "General"
+            }
+            mapped_domains = {
+                "dining"
+                if value in {"餐厅", "restaurant"}
+                else "travel"
+                if value in {
+                    "酒店",
+                    "景点",
+                    "地铁",
+                    "出租",
+                    "hotel",
+                    "attraction",
+                    "metro",
+                    "taxi",
+                }
+                else None
+                for value in source_domains
+            }
+            mapped_domains.discard(None)
+            domain = next(iter(mapped_domains)) if len(mapped_domains) == 1 else None
+            information_query = "Request" in intents
+            known = known_labels_for_mapping(
+                "informationQuery" if information_query else None,
+                domain,
             )
-            task = bool(CHINESE_TASK_PATTERN.search(text))
-            known = {"task", "question"}
+            if not known:
+                continue
             record_value = make_record(
                 record_id=f"open-crosswoz-{dialogue_id}-{turn_index}",
                 text=text,
@@ -666,17 +905,17 @@ def crosswoz_records(seed: int) -> list[dict]:
                 source_revision=CROSSWOZ_REVISION,
                 source_split="train",
                 known_labels=known,
-                labeling_method="official dialogue acts plus conservative surface mapping",
-                task=task,
-                question=question,
+                labeling_method="official dialogue-act mapping only",
+                information_query=information_query,
+                domain=domain,
             )
             if record_value:
                 records.append(record_value)
     archive.close()
     return limited_by_family(
         records,
-        per_family=150,
-        total=600,
+        per_family=scaled_limit(150),
+        total=scaled_limit(600),
         seed=seed,
         salt="crosswoz",
     )
@@ -735,16 +974,13 @@ def go_emotions_records(seed: int) -> list[dict]:
 
 def multidogo_records(seed: int) -> list[dict]:
     domains = ("airline", "fastfood", "finance", "insurance", "media", "software")
-    non_task_intents = {
-        "contentonly",
-        "confirmation",
-        "openinggreeting",
-        "closinggreeting",
-        "thankyou",
-        "rejection",
-        "outofdomain",
-        "other",
-        "pleasantries",
+    domain_mapping = {
+        "airline": "travel",
+        "fastfood": "dining",
+        "finance": "finance",
+        "insurance": "accountService",
+        "media": "media",
+        "software": "accountService",
     }
     records: list[dict] = []
     for domain in domains:
@@ -762,15 +998,26 @@ def multidogo_records(seed: int) -> list[dict]:
         ):
             text = normalized_text(row["utterance"])
             intent = row["intent"].casefold()
-            question = bool(ENGLISH_QUESTION_PATTERN.search(text)) or intent.startswith(
-                ("get", "check", "query")
+            information_query = intent.startswith(("get", "check", "query"))
+            task = domain in {"airline", "fastfood"} and intent.startswith(
+                ("book", "cancel", "change", "order", "reserve")
             )
-            confirmation = intent == "confirmation"
-            task = (
-                intent not in non_task_intents
-                and not question
-                and not confirmation
-            ) or bool(ENGLISH_TASK_PATTERN.search(text))
+            assistant_command = domain in {"media", "software"} and intent.startswith(
+                ("activate", "deactivate", "install", "reset", "update")
+            )
+            mapped_label = (
+                "informationQuery"
+                if information_query
+                else "task"
+                if task
+                else "assistantCommand"
+                if assistant_command
+                else None
+            )
+            known = known_labels_for_mapping(
+                mapped_label,
+                domain_mapping[domain],
+            )
             record_value = make_record(
                 record_id=f"open-multidogo-{domain}-{row['utteranceId']}",
                 text=text,
@@ -787,18 +1034,19 @@ def multidogo_records(seed: int) -> list[dict]:
                 ),
                 source_revision=MULTIDOGO_REVISION,
                 source_split="train",
-                known_labels={"task", "question", "confirmationDecision"},
-                labeling_method="official customer intent mapping",
+                known_labels=known,
+                labeling_method="official customer intent and domain mapping only",
                 task=task,
-                question=question,
-                confirmation_decision=confirmation,
+                assistant_command=assistant_command,
+                information_query=information_query,
+                domain=domain_mapping[domain],
             )
             if record_value:
                 records.append(record_value)
     return limited_by_family(
         records,
-        per_family=100,
-        total=600,
+        per_family=scaled_limit(100),
+        total=scaled_limit(600),
         seed=seed,
         salt="multidogo",
     )
@@ -824,24 +1072,22 @@ def taskmaster_records(seed: int) -> list[dict]:
         dialogue_id = dialogue["conversation_id"]
         if dialogue_id not in train_ids:
             continue
+        instruction = str(dialogue["instruction_id"]).casefold()
+        domain = (
+            "dining"
+            if any(value in instruction for value in ("pizza", "restaurant", "coffee"))
+            else "travel"
+            if any(value in instruction for value in ("uber", "auto"))
+            else "media"
+            if "movie" in instruction
+            else None
+        )
+        if domain is None:
+            continue
         for utterance in dialogue["utterances"]:
             if utterance["speaker"] != "USER":
                 continue
             text = normalized_text(utterance["text"])
-            annotations = {
-                annotation["name"]
-                for segment in utterance.get("segments") or []
-                for annotation in segment.get("annotations") or []
-            }
-            question = bool(ENGLISH_QUESTION_PATTERN.search(text))
-            confirmation = bool(ENGLISH_CONFIRMATION_PATTERN.search(text)) or any(
-                name.endswith((".accept", ".reject")) for name in annotations
-            )
-            schedule = bool(ENGLISH_SCHEDULE_PATTERN.search(text))
-            task = (
-                bool(ENGLISH_TASK_PATTERN.search(text))
-                or utterance["index"] == 0
-            ) and not confirmation
             record_value = make_record(
                 record_id=(
                     f"open-taskmaster-{dialogue_id}-{utterance['index']}"
@@ -857,24 +1103,16 @@ def taskmaster_records(seed: int) -> list[dict]:
                 ),
                 source_revision=TASKMASTER_REVISION,
                 source_split="train",
-                known_labels={
-                    "task",
-                    "question",
-                    "scheduleNegotiation",
-                    "confirmationDecision",
-                },
-                labeling_method="official train split plus conservative surface mapping",
-                task=task,
-                question=question,
-                schedule_negotiation=schedule,
-                confirmation_decision=confirmation,
+                known_labels={"domain"},
+                labeling_method="official train split and instruction domain only",
+                domain=domain,
             )
             if record_value:
                 records.append(record_value)
     return limited_by_family(
         records,
-        per_family=100,
-        total=700,
+        per_family=scaled_limit(100),
+        total=scaled_limit(700),
         seed=seed,
         salt="taskmaster",
     )
@@ -911,8 +1149,8 @@ def clinc_records(seed: int) -> list[dict]:
     archive.close()
     return limited_by_family(
         records,
-        per_family=10,
-        total=500,
+        per_family=scaled_limit(10),
+        total=scaled_limit(500),
         seed=seed,
         salt="clinc150",
     )
@@ -1047,7 +1285,7 @@ def cfpb_records(seed: int) -> list[dict]:
         )
         if record_value and len(record_value["text"]) >= 40:
             candidates.append(record_value)
-    return stable_sample(candidates, 1_000, seed, "cfpb")
+    return stable_sample(candidates, scaled_limit(1_000), seed, "cfpb")
 
 
 def asap_records(seed: int) -> list[dict]:
@@ -1086,18 +1324,282 @@ def asap_records(seed: int) -> list[dict]:
             ),
             source_revision=ASAP_REVISION,
             source_split="train",
-            known_labels={"complaint", "sentiment"},
+            known_labels={"complaint", "sentiment", "domain"},
             labeling_method="official star and aspect-sentiment labels",
             complaint=is_complaint,
             sentiment="negative" if is_complaint else "positive",
+            domain="dining",
         )
         if record_value:
             (negative if is_complaint else positive).append(record_value)
-    return stable_sample(negative, 500, seed, "asap-negative") + stable_sample(
+    return stable_sample(
+        negative,
+        scaled_limit(500),
+        seed,
+        "asap-negative",
+    ) + stable_sample(
         positive,
-        500,
+        scaled_limit(500),
         seed,
         "asap-positive",
+    )
+
+
+def snips_records(seed: int) -> list[dict]:
+    records: list[dict] = []
+    for intent, (mapped_label, domain) in SNIPS_MAPPING.items():
+        url = (
+            "https://raw.githubusercontent.com/sonos/nlu-benchmark/"
+            f"{SNIPS_REVISION}/2017-06-custom-intent-engines/{intent}/"
+            f"train_{intent}_full.json"
+        )
+        payload = json.loads(fetch_bytes(url))
+        for index, item in enumerate(payload[intent]):
+            text = "".join(segment["text"] for segment in item["data"])
+            known = known_labels_for_mapping(mapped_label, domain)
+            if not known:
+                continue
+            record_value = make_record(
+                record_id=f"open-snips-{intent}-{index}",
+                text=text,
+                language="en",
+                family=f"open_snips_{intent.casefold()}",
+                source_dataset="SNIPS NLU Benchmark",
+                source_license="CC0-1.0",
+                source_url=url,
+                source_revision=SNIPS_REVISION,
+                source_split="train",
+                known_labels=known,
+                labeling_method="official intent mapping",
+                task=mapped_label == "task",
+                assistant_command=mapped_label == "assistantCommand",
+                information_query=mapped_label == "informationQuery",
+                domain=domain,
+            )
+            if record_value:
+                records.append(record_value)
+    return limited_by_family(
+        records,
+        per_family=scaled_limit(250),
+        total=scaled_limit(1_500),
+        seed=seed,
+        salt="snips",
+    )
+
+
+def minds14_records(seed: int) -> list[dict]:
+    url = (
+        "https://huggingface.co/datasets/PolyAI/minds14/resolve/"
+        f"{MINDS14_REVISION}/zh-CN/train-00000-of-00001.parquet"
+    )
+    try:
+        import pyarrow.parquet as parquet
+    except ImportError as error:
+        raise SourceUnavailable(
+            "MInDS-14 requires optional pyarrow to read its pinned Parquet artifact"
+        ) from error
+    table = parquet.read_table(
+        io.BytesIO(fetch_bytes(url)),
+        columns=["transcription", "intent_class"],
+    )
+    records: list[dict] = []
+    for index, source in enumerate(table.to_pylist()):
+        raw_intent = source["intent_class"]
+        intent = (
+            MINDS14_INTENT_NAMES[raw_intent]
+            if isinstance(raw_intent, int)
+            else str(raw_intent)
+        )
+        mapped_label = (
+            "informationQuery"
+            if intent in MINDS14_INFORMATION_QUERY_INTENTS
+            else "assistantCommand"
+            if intent in MINDS14_ASSISTANT_COMMAND_INTENTS
+            else None
+        )
+        known = known_labels_for_mapping(mapped_label, "finance")
+        record_value = make_record(
+            record_id=f"open-minds14-zh-CN-{index}",
+            text=source["transcription"],
+            language="zh-Hans",
+            family=f"open_minds14_{intent}",
+            source_dataset="PolyAI MInDS-14 zh-CN",
+            source_license="CC-BY-4.0",
+            source_url=url,
+            source_revision=MINDS14_REVISION,
+            source_split="train",
+            known_labels=known,
+            labeling_method="official intent and banking-domain mapping",
+            assistant_command=mapped_label == "assistantCommand",
+            information_query=mapped_label == "informationQuery",
+            domain="finance",
+        )
+        if record_value:
+            records.append(record_value)
+    return limited_by_family(
+        records,
+        per_family=scaled_limit(80),
+        total=scaled_limit(600),
+        seed=seed,
+        salt="minds14-zh-CN",
+    )
+
+
+def bitod_domain(active_intent: str) -> str | None:
+    normalized = active_intent.casefold()
+    if normalized.startswith("restaurants_") or normalized.startswith("餐馆"):
+        return "dining"
+    if normalized.startswith(
+        ("hotels_", "attractions_", "hkmtr_", "宾馆", "景点", "香港地铁")
+    ):
+        return "travel"
+    if normalized.startswith("weathers_") or normalized.startswith("天气"):
+        return "weather"
+    return None
+
+
+def bitod_mapping(active_intent: str) -> tuple[str | None, str | None]:
+    normalized = active_intent.casefold()
+    domain = bitod_domain(active_intent)
+    is_search = (
+        normalized.endswith("_search")
+        or normalized.endswith("查询")
+        or normalized == "香港地铁"
+    )
+    is_booking = normalized.endswith("_booking") or normalized.endswith("预订")
+    label = (
+        "informationQuery"
+        if is_search
+        else "task"
+        if is_booking
+        else None
+    )
+    return label, domain
+
+
+def bitod_records(seed: int) -> list[dict]:
+    records: list[dict] = []
+    for file_name, language in (
+        ("en_train.json", "en"),
+        ("zh_train.json", "zh-Hans"),
+    ):
+        url = (
+            "https://raw.githubusercontent.com/HLTCHKUST/BiToD/"
+            f"{BITOD_REVISION}/data/{file_name}"
+        )
+        payload = json.loads(fetch_bytes(url))
+        for dialogue_id, dialogue in payload.items():
+            for turn_index, turn in enumerate(dialogue["Events"]):
+                if turn.get("Agent") != "User":
+                    continue
+                active_intent = str(turn.get("active_intent") or "")
+                mapped_label, domain = bitod_mapping(active_intent)
+                known = known_labels_for_mapping(mapped_label, domain)
+                if not known:
+                    continue
+                record_value = make_record(
+                    record_id=f"open-bitod-{language}-{dialogue_id}-{turn_index}",
+                    text=turn.get("Text") or "",
+                    language=language,
+                    family=f"open_bitod_{active_intent or 'unknown'}",
+                    source_dataset="HLTCHKUST/BiToD",
+                    source_license="Apache-2.0",
+                    source_url=url,
+                    source_revision=BITOD_REVISION,
+                    source_split="train",
+                    known_labels=known,
+                    labeling_method="official active-intent mapping",
+                    task=mapped_label == "task",
+                    information_query=mapped_label == "informationQuery",
+                    domain=domain,
+                )
+                if record_value:
+                    records.append(record_value)
+    return limited_by_family(
+        records,
+        per_family=scaled_limit(120),
+        total=scaled_limit(1_500),
+        seed=seed,
+        salt="bitod",
+    )
+
+
+def restaurant8k_records(seed: int) -> list[dict]:
+    url = (
+        "https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/"
+        f"{RESTAURANT8K_REVISION}/span_extraction/restaurant8k/train_0.json"
+    )
+    records: list[dict] = []
+    for index, source in enumerate(json.loads(fetch_bytes(url))):
+        record_value = make_record(
+            record_id=f"open-restaurant8k-{index}",
+            text=source.get("userInput", {}).get("text") or "",
+            language="en",
+            family="open_restaurant8k",
+            source_dataset="PolyAI RESTAURANTS-8K",
+            source_license="CC-BY-4.0",
+            source_url=url,
+            source_revision=RESTAURANT8K_REVISION,
+            source_split="train_0",
+            known_labels={"domain"},
+            labeling_method="official dataset domain only; slots are not intents",
+            domain="dining",
+        )
+        if record_value:
+            records.append(record_value)
+    return stable_sample(
+        records,
+        scaled_limit(1_000),
+        seed,
+        "restaurant8k",
+    )
+
+
+def formosa_nlu_records(seed: int) -> list[dict]:
+    url = (
+        "https://huggingface.co/datasets/steven0226/"
+        "formosa-nlu-synth-v1/resolve/"
+        f"{FORMOSA_NLU_REVISION}/data/train.jsonl"
+    )
+    records: list[dict] = []
+    for source in (
+        json.loads(line)
+        for line in fetch_bytes(url).decode("utf-8").splitlines()
+        if line.strip()
+    ):
+        intent = source["intent"]
+        mapped_label, domain = massive_mapping(intent)
+        known = known_labels_for_mapping(mapped_label, domain)
+        if not known:
+            continue
+        record_value = make_record(
+            record_id=f"open-formosanlu-{source['id']}",
+            text=traditional_to_simplified(source["utt"]),
+            language="zh-Hans",
+            family=f"open_formosanlu_{intent}",
+            source_dataset="FormosaNLU Synth v1",
+            source_license="CC-BY-4.0",
+            source_url=url,
+            source_revision=FORMOSA_NLU_REVISION,
+            source_split="train",
+            known_labels=known,
+            labeling_method=(
+                "official synthetic MASSIVE-intent mapping; OpenCC t2s conversion"
+            ),
+            task=mapped_label == "task",
+            assistant_command=mapped_label == "assistantCommand",
+            information_query=mapped_label == "informationQuery",
+            domain=domain,
+            sample_weight=0.35,
+        )
+        if record_value:
+            records.append(record_value)
+    return limited_by_family(
+        records,
+        per_family=scaled_limit(80),
+        total=scaled_limit(2_000),
+        seed=seed,
+        salt="formosa-nlu",
     )
 
 
@@ -1133,9 +1635,15 @@ def source_summary(records: list[dict]) -> list[dict]:
                 1
                 for value in values
                 if label in value["knownLabels"] and (
-                    value[label]
-                    if label != "sentiment"
+                    value[
+                        "replyable"
+                        if label == "replyableMessage"
+                        else label
+                    ]
+                    if label not in {"sentiment", "domain"}
                     else value["sentiment"] != "neutral"
+                    if label == "sentiment"
+                    else value["domain"] is not None
                 )
             )
             for label in ALL_LABELS
@@ -1174,33 +1682,71 @@ def validate_records(records: list[dict], holdouts: set[str]) -> None:
         texts.add(text_key)
 
 
-def main() -> None:
-    arguments = parse_arguments()
-    rng = random.Random(arguments.seed)
-    source_builders = (
-        ("MASSIVE", massive_records),
-        ("CrossWOZ", crosswoz_records),
-        ("GoEmotions", go_emotions_records),
-        ("MultiDoGO", multidogo_records),
-        ("Taskmaster-1", taskmaster_records),
-        ("CLINC150", clinc_records),
-        ("CFPB", cfpb_records),
-        ("ASAP", asap_records),
+def configured_source_builders() -> tuple[SourceBuilder, ...]:
+    return (
+        SourceBuilder("MASSIVE", massive_records),
+        SourceBuilder("CrossWOZ", crosswoz_records),
+        SourceBuilder("GoEmotions", go_emotions_records),
+        SourceBuilder("MultiDoGO", multidogo_records),
+        SourceBuilder("Taskmaster-1", taskmaster_records),
+        SourceBuilder("ASAP", asap_records),
+        SourceBuilder("SNIPS", snips_records),
+        SourceBuilder("MInDS-14 zh-CN", minds14_records),
+        SourceBuilder("BiToD", bitod_records),
+        SourceBuilder("RESTAURANTS-8K", restaurant8k_records),
+        SourceBuilder("FormosaNLU Synth v1", formosa_nlu_records),
+    )
+
+
+def build_available_sources(
+    builders: tuple[SourceBuilder, ...],
+    seed: int,
+    allow_unavailable_sources: bool,
+) -> tuple[list[list[dict]], list[dict[str, str]]]:
+    source_failures = (
+        HTTPError,
+        URLError,
+        TimeoutError,
+        ConnectionError,
+        OSError,
+        KeyError,
+        ValueError,
+        json.JSONDecodeError,
+        tarfile.ReadError,
+        zipfile.BadZipFile,
+        SourceUnavailable,
     )
     sources: list[list[dict]] = []
     unavailable_sources: list[dict[str, str]] = []
-    for source_name, builder in source_builders:
+    for builder in builders:
         try:
-            sources.append(builder(arguments.seed))
-        except (HTTPError, URLError, TimeoutError, ConnectionError, OSError) as error:
-            if not arguments.allow_unavailable_sources:
+            sources.append(builder.build(seed))
+        except source_failures as error:
+            if not (builder.optional or allow_unavailable_sources):
                 raise
             unavailable_sources.append(
                 {
-                    "dataset": source_name,
+                    "dataset": builder.name,
                     "reason": f"{type(error).__name__}: {error}",
                 }
             )
+    return sources, unavailable_sources
+
+
+def main() -> None:
+    global SAMPLE_SCALE
+
+    arguments = parse_arguments()
+    if arguments.sample_scale < 1:
+        raise ValueError("--sample-scale must be at least 1")
+    SAMPLE_SCALE = arguments.sample_scale
+    rng = random.Random(arguments.seed)
+    source_builders = configured_source_builders()
+    sources, unavailable_sources = build_available_sources(
+        source_builders,
+        arguments.seed,
+        arguments.allow_unavailable_sources,
+    )
     candidates = [record_value for source in sources for record_value in source]
     rng.shuffle(candidates)
 
@@ -1299,6 +1845,27 @@ def main() -> None:
             {
                 "dataset": "Verified Enron Intent / GitHub issue holdout source",
                 "reason": "No clean official train split independent from the frozen holdout.",
+            },
+            {
+                "dataset": "CFPB",
+                "reason": (
+                    "No official train split; the source is already represented in "
+                    "frozen evaluation data and contains privacy-sensitive narratives."
+                ),
+            },
+            {
+                "dataset": "CLINC150",
+                "reason": (
+                    "Kept isolated from product training because its assistant intents "
+                    "are not aligned with the product-policy taxonomy."
+                ),
+            },
+            {
+                "dataset": "openclaw-zh-greetings / WeChat-AutoSendBless",
+                "reason": (
+                    "Repository licenses do not establish a sufficiently clear, "
+                    "versioned rights chain for the underlying message templates."
+                ),
             },
         ],
         "unavailableSources": unavailable_sources,

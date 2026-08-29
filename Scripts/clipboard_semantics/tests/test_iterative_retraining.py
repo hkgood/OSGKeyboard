@@ -91,6 +91,30 @@ class IterativeRetrainingTests(unittest.TestCase):
 
         self.assertEqual([False, True], predicted["task"].tolist())
 
+    def test_registry_sample_weight_is_applied(self):
+        configuration = research.configurations()[0]
+        record = {
+            "id": "weighted",
+            "text": "Play music",
+            "language": "en",
+            "knownLabels": ["assistantCommand"],
+            "assistantCommand": True,
+            "sampleWeight": 0.35,
+        }
+
+        self.assertIn("assistantCommand", research.INTENTS)
+        self.assertAlmostEqual(
+            configuration.external_weight * 0.35,
+            research.sample_weight(record, configuration),
+        )
+
+    def test_legacy_records_do_not_define_new_labels_as_false(self):
+        record = {"id": "legacy", "text": "Play music", "language": "en"}
+
+        self.assertTrue(research.is_known(record, "task"))
+        self.assertFalse(research.is_known(record, "assistantCommand"))
+        self.assertFalse(research.is_known(record, "systemNotification"))
+
 
 if __name__ == "__main__":
     unittest.main()

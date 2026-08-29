@@ -19,7 +19,19 @@ private struct HoldoutRecord: Decodable {
     let blessing: Bool?
     let sentiment: String
     let replyable: Bool
+    let assistantCommand: Bool?
+    let informationQuery: Bool?
+    let systemNotification: Bool?
     let sourceDataset: String?
+    let knownLabels: Set<String>?
+
+    func hasKnownLabel(_ label: String) -> Bool {
+        guard let knownLabels else {
+            return true
+        }
+        return knownLabels.contains(label)
+            || (label == "replyableMessage" && knownLabels.contains("replyable"))
+    }
 
     func isPositive(for classifierID: String) -> Bool {
         switch classifierID {
@@ -32,6 +44,9 @@ private struct HoldoutRecord: Decodable {
         case "followUpReminder": followUpReminder
         case "blessing": blessing ?? false
         case "replyableMessage": replyable
+        case "assistantCommand": assistantCommand ?? false
+        case "informationQuery": informationQuery ?? false
+        case "systemNotification": systemNotification ?? false
         default: false
         }
     }
@@ -64,6 +79,7 @@ private struct HoldoutRecord: Decodable {
 
 private struct TrainingRecord: Decodable {
     let text: String
+    let split: String?
 }
 
 private struct Manifest: Decodable {
@@ -225,7 +241,9 @@ private let corpusURL = argumentValue(after: "--corpus").map {
 } ?? root.appendingPathComponent(
     "ModelTraining/ClipboardSemantics/random-holdout-corpus.jsonl"
 )
-private let trainingCorpusURL = root.appendingPathComponent(
+private let trainingCorpusURL = argumentValue(after: "--training-corpus").map {
+    URL(fileURLWithPath: $0, relativeTo: root).standardizedFileURL
+} ?? root.appendingPathComponent(
     "ModelTraining/ClipboardSemantics/clipboard_semantic_corpus.jsonl"
 )
 private let manifestURL = argumentValue(after: "--manifest").map {
@@ -248,6 +266,7 @@ private let includesRejectedModels = CommandLine.arguments.contains(
     "--include-rejected-models"
 )
 private let requestedSplit = argumentValue(after: "--split")
+private let requestedLanguage = argumentValue(after: "--language")
 
 private func rounded(_ value: Double) -> Double {
     guard value.isFinite else { return 0 }
@@ -630,15 +649,22 @@ private func writeJSON<T: Encodable>(_ value: T, to url: URL) throws {
 
 private func main() throws {
     let decodedRecords = try decodeJSONLines(HoldoutRecord.self, from: corpusURL)
-    let records = requestedSplit.map { split in
+    let splitRecords = requestedSplit.map { split in
         decodedRecords.filter { $0.split == split }
     } ?? decodedRecords
+    let records = requestedLanguage.map { language in
+        splitRecords.filter { $0.language == language }
+    } ?? splitRecords
     let trainingRecords = try decodeJSONLines(TrainingRecord.self, from: trainingCorpusURL)
     let manifest = try JSONDecoder().decode(
         Manifest.self,
         from: Data(contentsOf: manifestURL)
     )
-    let trainingTexts = Set(trainingRecords.map { normalized($0.text) })
+    let trainingTexts = Set(
+        trainingRecords
+            .filter { $0.split == nil || $0.split == "train" }
+            .map { normalized($0.text) }
+    )
     let exactOverlapCount = records.filter { trainingTexts.contains(normalized($0.text)) }.count
 
     let temporaryDirectory = fileManager.temporaryDirectory.appendingPathComponent(
@@ -680,8 +706,9 @@ private func main() throws {
     }
 
     var binaryEvaluations: [BinaryEvaluation] = []
+    let sentimentRecords = records.filter { $0.hasKnownLabel("sentiment") }
     let sentimentResult = models["sentiment"].map {
-        sentimentMetrics(records: records, model: $0)
+        sentimentMetrics(records: sentimentRecords, model: $0)
     }
     for configuration in manifest.classifiers {
         if configuration.id == "sentiment" {
@@ -691,7 +718,9 @@ private func main() throws {
         guard let positiveLabel = configuration.positiveLabel else {
             continue
         }
-        let observations = records.map { record in
+        let observations = records
+            .filter { $0.hasKnownLabel(configuration.id) }
+            .map { record in
             let confidence = model.predictedLabelHypotheses(
                 for: record.text,
                 maximumCount: 2
@@ -875,7 +904,7 @@ private func main() throws {
         return (language, aggregate(metrics))
     })
     let sentimentModel = models["sentiment"]!
-    let sentimentBySource = Dictionary(grouping: records) {
+    let sentimentBySource = Dictionary(grouping: sentimentRecords) {
         $0.sourceDataset ?? $0.family
     }.mapValues {
         sentimentMetrics(records: $0, model: sentimentModel)

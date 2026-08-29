@@ -11,6 +11,7 @@ private struct CorpusRecord: Codable {
     let family: String
     let knownLabels: Set<String>?
     let sourceDataset: String?
+    let sampleWeight: Double?
     let task: Bool
     let question: Bool
     let invitation: Bool
@@ -21,6 +22,10 @@ private struct CorpusRecord: Codable {
     let blessing: Bool
     let sentiment: String
     let replyable: Bool
+    let assistantCommand: Bool?
+    let informationQuery: Bool?
+    let systemNotification: Bool?
+    let domain: String?
 }
 
 private struct BinaryMetrics: Codable {
@@ -141,6 +146,10 @@ private enum ClassifierID: String, CaseIterable {
     case followUpReminder
     case blessing
     case replyableMessage
+    case assistantCommand
+    case informationQuery
+    case systemNotification
+    case domain
     case sentiment
 
     var resourceName: String {
@@ -154,6 +163,10 @@ private enum ClassifierID: String, CaseIterable {
         case .followUpReminder: "FollowUpReminderIntentClassifier"
         case .blessing: "BlessingIntentClassifier"
         case .replyableMessage: "ConversationalReplyIntentClassifier"
+        case .assistantCommand: "AssistantCommandIntentClassifier"
+        case .informationQuery: "InformationQueryIntentClassifier"
+        case .systemNotification: "SystemNotificationIntentClassifier"
+        case .domain: "ClipboardDomainClassifier"
         case .sentiment: "SentimentClassifier"
         }
     }
@@ -169,6 +182,14 @@ private enum ClassifierID: String, CaseIterable {
         case .followUpReminder: ["notFollowUpReminder", "followUpReminder"]
         case .blessing: ["notBlessing", "blessing"]
         case .replyableMessage: ["notReplyableMessage", "replyableMessage"]
+        case .assistantCommand: ["notAssistantCommand", "assistantCommand"]
+        case .informationQuery: ["notInformationQuery", "informationQuery"]
+        case .systemNotification: ["notSystemNotification", "systemNotification"]
+        case .domain:
+            [
+                "finance", "travel", "calendar", "communication", "media", "smartHome",
+                "shopping", "dining", "health", "weather", "accountService", "generalKnowledge"
+            ]
         case .sentiment: ["negative", "neutral", "positive"]
         }
     }
@@ -184,7 +205,10 @@ private enum ClassifierID: String, CaseIterable {
         case .followUpReminder: "followUpReminder"
         case .blessing: "blessing"
         case .replyableMessage: "replyableMessage"
-        case .sentiment: nil
+        case .assistantCommand: "assistantCommand"
+        case .informationQuery: "informationQuery"
+        case .systemNotification: "systemNotification"
+        case .domain, .sentiment: nil
         }
     }
 
@@ -297,7 +321,8 @@ private enum ClassifierID: String, CaseIterable {
                 "task_question",
                 "task_statement"
             ]
-        case .question, .replyableMessage, .sentiment:
+        case .question, .replyableMessage, .assistantCommand, .informationQuery,
+             .systemNotification, .domain, .sentiment:
             return []
         }
     }
@@ -314,7 +339,8 @@ private enum ClassifierID: String, CaseIterable {
             0.75
         case .confirmationDecision:
             0.90
-        case .question, .replyableMessage, .sentiment:
+        case .question, .replyableMessage, .assistantCommand, .informationQuery,
+             .systemNotification, .domain, .sentiment:
             0
         }
     }
@@ -334,12 +360,31 @@ private enum ClassifierID: String, CaseIterable {
         case .blessing:
             record.blessing ? "blessing" : "notBlessing"
         case .replyableMessage: record.replyable ? "replyableMessage" : "notReplyableMessage"
+        case .assistantCommand:
+            record.assistantCommand == true ? "assistantCommand" : "notAssistantCommand"
+        case .informationQuery:
+            record.informationQuery == true ? "informationQuery" : "notInformationQuery"
+        case .systemNotification:
+            record.systemNotification == true ? "systemNotification" : "notSystemNotification"
+        case .domain:
+            record.domain ?? { preconditionFailure("Known domain record is missing domain") }()
         case .sentiment: record.sentiment
         }
     }
 
     func hasKnownLabel(in record: CorpusRecord) -> Bool {
-        record.knownLabels?.contains(rawValue) ?? true
+        if let knownLabels = record.knownLabels {
+            return knownLabels.contains(rawValue)
+                || (self == .replyableMessage && knownLabels.contains("replyable"))
+        }
+        // Legacy product corpora predate knownLabels and only fully annotate
+        // the original nine intents plus sentiment. New fields must stay unknown.
+        switch self {
+        case .assistantCommand, .informationQuery, .systemNotification, .domain:
+            return false
+        default:
+            return true
+        }
     }
 }
 
@@ -397,6 +442,7 @@ private let reportURL = resolvedURL(
     flag: "--report",
     defaultPath: "ModelTraining/ClipboardSemantics/evaluation-report.json"
 )
+private let requestedLanguage = commandLineValue(after: "--language")
 
 private func loadCorpus() throws -> [CorpusRecord] {
     let content = try String(contentsOf: corpusURL, encoding: .utf8)
@@ -419,9 +465,13 @@ private func sourceBalancedPrefix(
     classifier: ClassifierID,
     label: String
 ) -> [CorpusRecord] {
-    guard records.count > limit else { return records }
+    // MLTextClassifier's dictionary API has no per-example weight parameter.
+    // Quantized weight buckets plus deterministic smooth weighted round-robin
+    // preserve registry weights without introducing nondeterministic duplication.
     var grouped = Dictionary(grouping: records) {
-        $0.sourceDataset ?? "generated"
+        let weight = min(max($0.sampleWeight ?? 1.0, 0.01), 1.0)
+        let bucket = (weight * 100).rounded() / 100
+        return "\($0.sourceDataset ?? "generated")|weight=\(bucket)"
     }
     for source in grouped.keys.sorted() {
         var generator = SeededGenerator(
@@ -431,24 +481,49 @@ private func sourceBalancedPrefix(
             )
         )
         grouped[source]?.shuffle(using: &generator)
+        if let values = grouped[source], let first = values.first {
+            let weight = min(max(first.sampleWeight ?? 1.0, 0.01), 1.0)
+            let weightedCount = max(1, Int((Double(values.count) * weight).rounded()))
+            grouped[source] = Array(values.prefix(weightedCount))
+        }
     }
     let sources = grouped.keys.sorted()
+    let weightedTotal = grouped.values.reduce(0) { $0 + $1.count }
+    if weightedTotal <= limit {
+        return sources.flatMap { grouped[$0] ?? [] }
+    }
     var offsets = Dictionary(uniqueKeysWithValues: sources.map { ($0, 0) })
+    let sourceWeights = Dictionary(uniqueKeysWithValues: sources.map { source in
+        (source, grouped[source]?.first?.sampleWeight ?? 1.0)
+    })
+    var schedulingScores = Dictionary(uniqueKeysWithValues: sources.map { ($0, 0.0) })
     var selected: [CorpusRecord] = []
     while selected.count < limit {
-        var addedRecord = false
-        for source in sources where selected.count < limit {
-            let offset = offsets[source] ?? 0
-            guard let values = grouped[source], values.indices.contains(offset) else {
-                continue
-            }
-            selected.append(values[offset])
-            offsets[source] = offset + 1
-            addedRecord = true
+        let available = sources.filter {
+            let offset = offsets[$0] ?? 0
+            return grouped[$0]?.indices.contains(offset) == true
         }
-        if !addedRecord {
+        if available.isEmpty {
             break
         }
+        let totalWeight = available.reduce(0.0) {
+            $0 + max(sourceWeights[$1] ?? 1.0, 0.01)
+        }
+        for source in available {
+            schedulingScores[source, default: 0] += max(
+                sourceWeights[source] ?? 1.0,
+                0.01
+            )
+        }
+        let source = available.max {
+            let left = schedulingScores[$0, default: 0]
+            let right = schedulingScores[$1, default: 0]
+            return left == right ? $0 > $1 : left < right
+        }!
+        let offset = offsets[source] ?? 0
+        selected.append(grouped[source]![offset])
+        offsets[source] = offset + 1
+        schedulingScores[source, default: 0] -= totalWeight
     }
     return selected
 }
@@ -462,18 +537,28 @@ private func curatedTrainingRecords(
     }
     let generatedRecords = knownRecords.filter { $0.sourceDataset == nil }
     let openRecords = knownRecords.filter { $0.sourceDataset != nil }
-    guard !openRecords.isEmpty else { return generatedRecords }
+    let weightedGeneratedRecords = sourceBalancedPrefix(
+        generatedRecords,
+        limit: generatedRecords.count,
+        classifier: classifier,
+        label: "generated"
+    )
+    guard !openRecords.isEmpty else { return weightedGeneratedRecords }
 
-    let generatedByLabel = Dictionary(grouping: generatedRecords) {
+    let generatedByLabel = Dictionary(grouping: weightedGeneratedRecords) {
         classifier.label(for: $0)
     }
     let openByLabel = Dictionary(grouping: openRecords) {
         classifier.label(for: $0)
     }
+    let openOnlyBalancedCount = classifier.labels
+        .compactMap { openByLabel[$0]?.count }
+        .min() ?? 0
     let multiplier = switch classifier {
     case .blessing:
         2.0
-    case .task, .question, .complaint, .confirmationDecision, .sentiment:
+    case .task, .question, .complaint, .confirmationDecision, .assistantCommand,
+         .informationQuery, .systemNotification, .domain, .sentiment:
         1.0
     case .invitation, .scheduleNegotiation, .followUpReminder, .replyableMessage:
         0.5
@@ -481,7 +566,8 @@ private func curatedTrainingRecords(
 
     let selectedOpenRecords = classifier.labels.flatMap { label in
         let generatedCount = generatedByLabel[label]?.count ?? 0
-        let limit = max(1, Int((Double(generatedCount) * multiplier).rounded()))
+        let anchorCount = generatedCount > 0 ? generatedCount : openOnlyBalancedCount
+        let limit = max(1, Int((Double(anchorCount) * multiplier).rounded()))
         return sourceBalancedPrefix(
             openByLabel[label] ?? [],
             limit: limit,
@@ -489,7 +575,7 @@ private func curatedTrainingRecords(
             label: label
         )
     }
-    return generatedRecords + selectedOpenRecords
+    return weightedGeneratedRecords + selectedOpenRecords
 }
 
 private func balancedTexts(
@@ -1192,15 +1278,36 @@ private func writeJSON<T: Encodable>(_ value: T, to url: URL) throws {
 }
 
 private func main() throws {
-    let records = try loadCorpus()
+    let loadedRecords = try loadCorpus()
+    let records = requestedLanguage.map { language in
+        loadedRecords.filter { $0.language == language }
+    } ?? loadedRecords
+    precondition(!records.isEmpty, "No corpus records match the requested language")
     let trainingRecords = records.filter { $0.split == "train" }
     let validationRecords = records.filter { $0.split == "validation" }
     let testRecords = records.filter { $0.split == "test" }
     let goldenRecords = records.filter { $0.split == "golden" }
     let algorithms = selectedAlgorithms()
-    let classifiers = selectedClassifiers()
+    let requestedClassifiers = selectedClassifiers()
+    let classifiers = requestedClassifiers.filter { classifier in
+        let trainingLabels = Set(
+            trainingRecords
+                .filter { classifier.hasKnownLabel(in: $0) }
+                .map { classifier.label(for: $0) }
+        )
+        return Set(classifier.labels).isSubset(of: trainingLabels)
+            && [validationRecords, testRecords, goldenRecords].allSatisfy {
+                !$0.filter { classifier.hasKnownLabel(in: $0) }.isEmpty
+            }
+    }
+    for classifier in requestedClassifiers where !classifiers.contains(classifier) {
+        print(
+            "TRAIN_SKIPPED classifier=\(classifier.rawValue) "
+                + "reason=insufficient-known-label-coverage"
+        )
+    }
     precondition(!algorithms.isEmpty, "No supported algorithms requested")
-    precondition(!classifiers.isEmpty, "No supported classifiers requested")
+    precondition(!classifiers.isEmpty, "No classifiers have sufficient known-label coverage")
 
     try fileManager.createDirectory(
         at: resourceDirectory,
@@ -1212,6 +1319,15 @@ private func main() throws {
 
     for classifierID in classifiers {
         var candidates: [TrainedCandidate] = []
+        let knownValidationRecords = validationRecords.filter {
+            classifierID.hasKnownLabel(in: $0)
+        }
+        let knownTestRecords = testRecords.filter {
+            classifierID.hasKnownLabel(in: $0)
+        }
+        let knownGoldenRecords = goldenRecords.filter {
+            classifierID.hasKnownLabel(in: $0)
+        }
         for algorithm in algorithms {
             do {
                 candidates.append(
@@ -1219,9 +1335,9 @@ private func main() throws {
                         classifierID: classifierID,
                         algorithm: algorithm,
                         trainingRecords: trainingRecords,
-                        validationRecords: validationRecords,
-                        testRecords: testRecords,
-                        goldenRecords: goldenRecords
+                        validationRecords: knownValidationRecords,
+                        testRecords: knownTestRecords,
+                        goldenRecords: knownGoldenRecords
                     )
                 )
             } catch {
@@ -1288,7 +1404,9 @@ private func main() throws {
         goldenCount: goldenRecords.count,
         selectionPolicy:
             "Open records with unknown labels are excluded per classifier, and source-balanced "
-            + "caps anchor each label to the reviewed generated corpus size. "
+            + "caps anchor each label to the reviewed generated corpus size. Because Create ML "
+            + "does not expose per-example weights, registry sampleWeight values are applied as "
+            + "deterministic quantized quotas with smooth weighted source scheduling. "
             + "Validation only: global and per-language binary thresholds require precision "
             + ">= 0.97, then maximize recall; languages with fewer than 20 examples per class "
             + "fall back to the global threshold. "
@@ -1300,7 +1418,7 @@ private func main() throws {
     try writeJSON(report, to: reportURL)
     try writeJSON(
         ModelManifest(
-            schemaVersion: 2,
+            schemaVersion: 4,
             generatedAt: generatedAt,
             corpusRecordCount: records.count,
             classifiers: manifestClassifiers

@@ -1,0 +1,302 @@
+{
+  "schemaVersion": 2,
+  "policy": "Only license-safe sources may produce train candidates. Any text seen in calibration or evaluation data is globally barred from training.",
+  "intentLabels": [
+    "task",
+    "question",
+    "invitation",
+    "complaint",
+    "scheduleNegotiation",
+    "confirmationDecision",
+    "followUpReminder",
+    "blessing",
+    "replyableMessage",
+    "assistantCommand",
+    "informationQuery",
+    "systemNotification"
+  ],
+  "domains": [
+    "finance",
+    "travel",
+    "calendar",
+    "communication",
+    "media",
+    "smartHome",
+    "shopping",
+    "dining",
+    "health",
+    "weather",
+    "accountService",
+    "generalKnowledge"
+  ],
+  "legacyFullyKnownIntentLabels": [
+    "task",
+    "question",
+    "invitation",
+    "complaint",
+    "scheduleNegotiation",
+    "confirmationDecision",
+    "followUpReminder",
+    "blessing",
+    "replyableMessage"
+  ],
+  "sources": [
+    {
+      "id": "historical-nine-model-v1",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/Generated/historical-nine-model-v1.jsonl",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "by-split",
+      "sourceType": "project-generated",
+      "allIntentLabelsKnown": true,
+      "knownIntentLabels": ["task", "question", "invitation", "complaint", "scheduleNegotiation", "confirmationDecision", "followUpReminder", "blessing", "replyableMessage"],
+      "sentimentKnown": true,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "current-product-corpus",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/clipboard_semantic_corpus.jsonl",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "by-split",
+      "sourceType": "project-generated",
+      "allIntentLabelsKnown": true,
+      "knownIntentLabels": ["task", "question", "invitation", "complaint", "scheduleNegotiation", "confirmationDecision", "followUpReminder", "blessing", "replyableMessage"],
+      "sentimentKnown": true,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "product-corpus-16x",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/Generated/product-corpus-16x.jsonl",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "by-split",
+      "sourceType": "project-generated",
+      "allIntentLabelsKnown": true,
+      "knownIntentLabels": ["task", "question", "invitation", "complaint", "scheduleNegotiation", "confirmationDecision", "followUpReminder", "blessing", "replyableMessage"],
+      "sentimentKnown": true,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "licensed-open-training",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/open-training-corpus.jsonl",
+      "license": "mixed per-record commercial licenses",
+      "defaultUse": "train",
+      "sourceType": "licensed-open-data",
+      "allIntentLabelsKnown": false,
+      "sentimentKnown": false,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "v6-boundary-synthetic",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/v6-boundary-training-supplement.jsonl",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "train",
+      "sourceType": "project-generated-synthetic",
+      "allIntentLabelsKnown": false,
+      "sentimentKnown": false,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "v6-migration-tier-a",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/CorpusRegistry/Labels/V6Migration/tier-a.jsonl",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "train",
+      "sourceType": "model-consensus",
+      "allIntentLabelsKnown": false,
+      "sentimentKnown": false,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "v6-migration-tier-b",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/CorpusRegistry/Labels/V6Migration/tier-b.jsonl",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "train",
+      "sourceType": "model-consensus",
+      "allIntentLabelsKnown": false,
+      "sentimentKnown": false,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "v6-migration-adjudicated",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/CorpusRegistry/Labels/V6Migration/adjudicated.jsonl",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "train",
+      "sourceType": "model-adjudicated",
+      "allIntentLabelsKnown": false,
+      "sentimentKnown": false,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "v6-blind-evaluation",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/v6-blind-evaluation-corpus.jsonl",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "by-split",
+      "sourceType": "frozen-holdout",
+      "allIntentLabelsKnown": false,
+      "sentimentKnown": false,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "blessing-synthetic-100k",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/Generated/blessing-synthetic-100k.jsonl",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "train",
+      "sourceType": "project-generated",
+      "allIntentLabelsKnown": false,
+      "sentimentKnown": false,
+      "weight": 0.35,
+      "required": true
+    },
+    {
+      "id": "consensus-silver-v1",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/Consensus/consensus-silver.jsonl",
+      "license": "Apache-2.0",
+      "defaultUse": "by-split",
+      "sourceType": "model-consensus",
+      "allIntentLabelsKnown": false,
+      "sentimentKnown": false,
+      "weight": 1.0,
+      "required": false
+    },
+    {
+      "id": "random-holdout",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/random-holdout-corpus.jsonl",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "evaluation-only",
+      "sourceType": "frozen-holdout",
+      "allIntentLabelsKnown": true,
+      "knownIntentLabels": ["task", "question", "invitation", "complaint", "scheduleNegotiation", "confirmationDecision", "followUpReminder", "blessing", "replyableMessage"],
+      "sentimentKnown": true,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "fresh-metric-holdout",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/fresh-metric-holdout-corpus.jsonl",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "evaluation-only",
+      "sourceType": "frozen-holdout",
+      "allIntentLabelsKnown": true,
+      "knownIntentLabels": ["task", "question", "invitation", "complaint", "scheduleNegotiation", "confirmationDecision", "followUpReminder", "blessing", "replyableMessage"],
+      "sentimentKnown": true,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "targeted-confirmation-holdout",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/targeted-confirmation-holdout-corpus.jsonl",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "evaluation-only",
+      "sourceType": "frozen-holdout",
+      "allIntentLabelsKnown": true,
+      "knownIntentLabels": ["task", "question", "invitation", "complaint", "scheduleNegotiation", "confirmationDecision", "followUpReminder", "blessing", "replyableMessage"],
+      "sentimentKnown": true,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "targeted-final-holdout",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/targeted-final-holdout-corpus.jsonl",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "evaluation-only",
+      "sourceType": "frozen-holdout",
+      "allIntentLabelsKnown": true,
+      "knownIntentLabels": ["task", "question", "invitation", "complaint", "scheduleNegotiation", "confirmationDecision", "followUpReminder", "blessing", "replyableMessage"],
+      "sentimentKnown": true,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "targeted-release-holdout",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/targeted-release-holdout-corpus.jsonl",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "evaluation-only",
+      "sourceType": "frozen-holdout",
+      "allIntentLabelsKnown": true,
+      "knownIntentLabels": ["task", "question", "invitation", "complaint", "scheduleNegotiation", "confirmationDecision", "followUpReminder", "blessing", "replyableMessage"],
+      "sentimentKnown": true,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "online-real-holdout",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/online-real-holdout-corpus.jsonl",
+      "license": "evaluation-only mixed provenance",
+      "defaultUse": "evaluation-only",
+      "sourceType": "frozen-holdout",
+      "allIntentLabelsKnown": true,
+      "knownIntentLabels": ["task", "question", "invitation", "complaint", "scheduleNegotiation", "confirmationDecision", "followUpReminder", "blessing", "replyableMessage"],
+      "sentimentKnown": true,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "comprehensive-online-holdout",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/comprehensive-online-holdout-corpus.jsonl",
+      "license": "evaluation-only mixed provenance",
+      "defaultUse": "evaluation-only",
+      "sourceType": "frozen-holdout",
+      "allIntentLabelsKnown": true,
+      "knownIntentLabels": ["task", "question", "invitation", "complaint", "scheduleNegotiation", "confirmationDecision", "followUpReminder", "blessing", "replyableMessage"],
+      "sentimentKnown": true,
+      "weight": 1.0,
+      "required": true
+    },
+    {
+      "id": "blessing-benchmark-review",
+      "path": "${REPO_ROOT}/ModelTraining/ClipboardSemantics/BlessingBenchmark/review-queue.jsonl",
+      "license": "evaluation-only mixed provenance",
+      "defaultUse": "evaluation-only",
+      "sourceType": "blind-review-benchmark",
+      "allIntentLabelsKnown": false,
+      "sentimentKnown": false,
+      "weight": 1.0,
+      "sensitive": true,
+      "required": true
+    },
+    {
+      "id": "blessing-unseen-scenarios",
+      "path": "${REPO_ROOT}/OSGKeyboardTests/Fixtures/BlessingUnseenScenarios.json",
+      "license": "OSGKeyboard project license",
+      "defaultUse": "evaluation-only",
+      "sourceType": "frozen-holdout",
+      "allIntentLabelsKnown": false,
+      "sentimentKnown": false,
+      "weight": 1.0,
+      "required": false
+    }
+  ],
+  "excludedSources": [
+    {
+      "id": "LCCC",
+      "reason": "Research-only terms and incomplete content-rights/privacy chain. It must not influence production corpus generation or training."
+    },
+    {
+      "id": "DailyDialog-EmpatheticDialogues-Switchboard",
+      "reason": "Non-commercial license restrictions."
+    },
+    {
+      "id": "CPED",
+      "reason": "Repository license does not establish commercial rights to the underlying television dialogue."
+    },
+    {
+      "id": "Tianji-Wishes-Birthday-Quotes",
+      "reason": "No sufficiently clear per-record source or generation-rights chain."
+    },
+    {
+      "id": "CFPB",
+      "reason": "No official train split; privacy-sensitive narratives overlap the frozen evaluation provenance."
+    },
+    {
+      "id": "CLINC150",
+      "reason": "Isolated from product training because its assistant taxonomy is not product-policy compatible."
+    }
+  ]
+}

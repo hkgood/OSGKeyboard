@@ -1,0 +1,182 @@
+[
+  {
+    "id": "human-anchor-001",
+    "text": "下一班离开纽约市的火车几点出发",
+    "language": "zh-Hans",
+    "expected": {"recordDisposition": "exclude-device-command"}
+  },
+  {
+    "id": "human-anchor-002",
+    "text": "告诉我露丝姑妈的电子邮件地址",
+    "language": "zh-Hans",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "true", "task": "false", "question": "true", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-003",
+    "text": "顺便说一下，这件事我会亲自处理：预约会议室，计划周五之前开始。",
+    "language": "zh-Hans",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "true", "task": "true", "question": "false", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-004",
+    "text": "在我上班的路上有什么事故吗",
+    "language": "zh-Hans",
+    "expected": {"recordDisposition": "exclude-device-command"}
+  },
+  {
+    "id": "human-anchor-005",
+    "text": "take your time",
+    "language": "en",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "true", "task": "false", "question": "false", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-006",
+    "text": "tell me what's new",
+    "language": "en",
+    "expected": {"recordDisposition": "exclude-device-command"}
+  },
+  {
+    "id": "human-anchor-007",
+    "text": "知道了，这边谢谢。",
+    "language": "zh-Hans",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "false", "task": "false", "question": "false", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-008",
+    "text": "另外，活动规则按当前方案通过。",
+    "language": "zh-Hans",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "false", "task": "false", "question": "false", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-009",
+    "text": "我拍板用先发布基础版，其他候选停止评估。",
+    "language": "zh-Hans",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "true", "task": "false", "question": "false", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-010",
+    "text": "还有一件事，我批准退款流程的最终版本，可以签字。",
+    "language": "zh-Hans",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "true", "task": "true", "question": "false", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-011",
+    "text": "事情总算处理完了，结果居然成了。",
+    "language": "zh-Hans",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "true", "task": "false", "question": "false", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-012",
+    "text": "好的，谢谢您的回答。",
+    "language": "zh-Hans",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "false", "task": "false", "question": "false", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-013",
+    "text": "你能把报告发给我吗？",
+    "language": "zh-Hans",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "true", "task": "true", "question": "true", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-014",
+    "text": "报告什么时候发给我？",
+    "language": "zh-Hans",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "true", "task": "false", "question": "true", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-015",
+    "text": "请推荐一家附近评分 4.5 以上的餐馆。",
+    "language": "zh-Hans",
+    "expected": {"recordDisposition": "exclude-device-command"}
+  },
+  {
+    "id": "human-anchor-016",
+    "text": "I need to set up a new PIN.",
+    "language": "en",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "false", "task": "true", "question": "false", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-017",
+    "text": "my claim status",
+    "language": "en",
+    "expected": {"recordDisposition": "exclude-device-command"}
+  },
+  {
+    "id": "human-anchor-018",
+    "text": "send an email to Julie that I can meet her Saturday at 1 p.m.",
+    "language": "en",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "true", "task": "true", "question": "false", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-019",
+    "text": "call Mark",
+    "language": "en",
+    "expected": {"replyableMessage": "unknown", "task": "unknown", "question": "unknown", "ambiguous": "true"}
+  },
+  {
+    "id": "human-anchor-020",
+    "text": "text Sarah that I'll be late",
+    "language": "en",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "true", "task": "true", "question": "false", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-021",
+    "text": "open my inbox",
+    "language": "en",
+    "expected": {"recordDisposition": "exclude-device-command"}
+  },
+  {
+    "id": "human-anchor-022",
+    "text": "show me my account balance",
+    "language": "en",
+    "expected": {"recordDisposition": "exclude-device-command"}
+  },
+  {
+    "id": "human-anchor-023",
+    "text": "book me a taxi to the airport",
+    "language": "en",
+    "expected": {"recordDisposition": "keep", "replyableMessage": "true", "task": "true", "question": "false", "ambiguous": "false"}
+  },
+  {
+    "id": "human-anchor-024",
+    "text": "set an alarm for 4 a.m.",
+    "language": "en",
+    "expected": {"recordDisposition": "exclude-device-command"}
+  },
+  {
+    "id": "human-anchor-025",
+    "text": "internet",
+    "language": "en",
+    "expected": {"replyableMessage": "unknown", "task": "unknown", "question": "unknown", "ambiguous": "true"}
+  },
+  {
+    "id": "human-anchor-026",
+    "text": "chennai 45879",
+    "language": "en",
+    "expected": {"replyableMessage": "unknown", "task": "unknown", "question": "unknown", "ambiguous": "true"}
+  },
+  {
+    "id": "human-anchor-027",
+    "text": "seat assignment",
+    "language": "en",
+    "expected": {"replyableMessage": "unknown", "task": "unknown", "question": "unknown", "ambiguous": "true"}
+  },
+  {
+    "id": "human-anchor-028",
+    "text": "maximum kilometer to delivery",
+    "language": "en",
+    "expected": {"replyableMessage": "unknown", "task": "unknown", "question": "unknown", "ambiguous": "true"}
+  },
+  {
+    "id": "human-anchor-029",
+    "text": "事件重复的整个月",
+    "language": "zh-Hans",
+    "expected": {"replyableMessage": "unknown", "task": "unknown", "question": "unknown", "ambiguous": "true"}
+  },
+  {
+    "id": "human-anchor-030",
+    "text": "意大利面的食谱",
+    "language": "zh-Hans",
+    "expected": {"recordDisposition": "exclude-device-command"}
+  }
+]
