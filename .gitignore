@@ -112,3 +112,18 @@ CHANGES.md
 .ai-skills-layout-shots/
 .workbuddy-ai/
 reports/
+
+# Internal planning / audit docs kept locally only (zero in-repo or
+# GitHub-Pages references; never re-add these — they were removed
+# in 2026-08 to keep the public docs/ limited to GitHub Pages assets).
+/docs/ACCOUNT_MANAGED_GATEWAY_TESTING.md
+/docs/APPSTORE_METADATA.md
+/docs/STOREKIT_TESTING.md
+/docs/TYPING_KEYBOARD_BASELINE.md
+/docs/ios-pip-voice-session-plan.md
+/docs/keyboard-accuracy-plan.md
+/docs/keyboard-memory-budget.md
+/docs/local-asr-architecture.md
+/docs/mac-parity-audit-2026-08-23.md
+/docs/personal-dictionary-icloud-kvs-checklist.md
+/docs/screenshots/README.md

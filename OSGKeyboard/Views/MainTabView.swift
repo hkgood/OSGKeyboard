@@ -8,7 +8,19 @@ struct MainTabView: View {
     @Environment(\.themePalette) private var palette: ThemePalette
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    @State private var tab: AppTab = .keyboard
+    @State private var tab: AppTab = {
+        #if DEBUG
+        if let raw = ProcessInfo.processInfo.arguments
+            .first(where: { $0.hasPrefix("-osgStartTab=") })?
+            .split(separator: "=").last,
+           let value = Int(raw),
+           let initial = AppTab(rawValue: value)
+        {
+            return initial
+        }
+        #endif
+        return .keyboard
+    }()
 
     private var usesSplitLayout: Bool {
         horizontalSizeClass == .regular
