@@ -150,7 +150,23 @@ public struct PolishStyleLearningCorpus: Equatable, Sendable {
 }
 
 public enum PolishStyleLearningCorpusBuilder {
+    /// Production minimum effective character count required to unlock
+    /// personal style generation. App Store builds enforce this gate.
     public static let requiredEffectiveCharacterCount = 2_500
+
+    /// Test builds (Debug + TestFlight) lower the unlock threshold so
+    /// internal testers can exercise the complete generation pipeline
+    /// without dictating a full production corpus. The threshold is
+    /// still a real gate; the previous "0 / unlimited" bypass is gone.
+    public static let testBuildEffectiveCharacterCount = 1_250
+
+    /// Upper bound on effective characters included in a single
+    /// training-corpus export. Even when the user has accumulated
+    /// significantly more history than the unlock threshold, the
+    /// exported training set never exceeds this cap so the user's
+    /// full private dictation history does not leave the device in
+    /// one shot.
+    public static let trainingExtractionMaximumCharacterCount = 5_000
 
     public static func build(
         from entries: [SpeechHistoryEntry]
@@ -167,12 +183,23 @@ public enum PolishStyleLearningCorpusBuilder {
         )
     }
 
-    /// Selects the newest complete examples until the learning threshold is
-    /// reached. If less history is available, every eligible example is kept.
-    /// The returned order is chronological for export and model input.
+    /// Selects the newest complete examples until `maximumCharacterCount`
+    /// is reached. If less history is available, every eligible example
+    /// is kept. The returned order is chronological for export and
+    /// model input.
+    ///
+    /// - Parameter maximumCharacterCount: Hard upper bound for the
+    ///   selected window. Defaults to the production unlock threshold
+    ///   (2,500) so live generation still fits the LLM request budget.
+    ///   Callers that build a training-corpus export should pass
+    ///   `trainingExtractionMaximumCharacterCount` (5,000) so the
+    ///   export can carry up to the broader extraction cap when the
+    ///   user has accumulated more history than the live gate.
     public static func trainingWindow(
-        from examples: [PolishStyleLearningExample]
+        from examples: [PolishStyleLearningExample],
+        maximumCharacterCount: Int = requiredEffectiveCharacterCount
     ) -> PolishStyleLearningCorpus {
+        let limit = max(0, maximumCharacterCount)
         let newestFirst = examples.sorted { $0.createdAt > $1.createdAt }
         var selected: [PolishStyleLearningExample] = []
         var effectiveCharacterCount = 0
@@ -182,7 +209,7 @@ public enum PolishStyleLearningCorpusBuilder {
             effectiveCharacterCount += self.effectiveCharacterCount(
                 in: example.prePolishText
             )
-            if effectiveCharacterCount >= requiredEffectiveCharacterCount {
+            if effectiveCharacterCount >= limit {
                 break
             }
         }

@@ -55,7 +55,8 @@ struct PolishStylesView: View {
                     outputLanguage: language,
                     minimumEffectiveCharacterCount:
                         AppDistributionChannel.allowsInternalTools
-                            ? 0
+                            ? PolishStyleLearningCorpusBuilder
+                                .testBuildEffectiveCharacterCount
                             : PolishStyleLearningCorpusBuilder
                                 .requiredEffectiveCharacterCount
                 )
@@ -158,17 +159,20 @@ struct PolishStylesView: View {
         PolishStyleLearningCorpusBuilder.build(from: history.snapshot())
     }
 
-    /// Debug and TestFlight builds may exercise the complete generation
-    /// pipeline before enough personal corpus exists. App Store builds keep
-    /// the production 2,500-character gate.
-    private var bypassesStyleLearningCharacterGate: Bool {
+    /// Minimum effective character count required to unlock personal style
+    /// generation. Debug + TestFlight builds use a lower 1,250-character
+    /// gate so internal testers can still exercise the pipeline; the
+    /// previous 0 / "unlimited" bypass has been removed.
+    private var styleLearningMinimumCharacterCount: Int {
         AppDistributionChannel.allowsInternalTools
+            ? PolishStyleLearningCorpusBuilder.testBuildEffectiveCharacterCount
+            : PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount
     }
 
     private func isEligibleForStyleGeneration(
         _ corpus: PolishStyleLearningCorpus
     ) -> Bool {
-        bypassesStyleLearningCharacterGate || corpus.isReady
+        corpus.effectiveCharacterCount >= styleLearningMinimumCharacterCount
     }
 
     private var learnedStylePack: PolishStylePack? {
@@ -185,7 +189,7 @@ struct PolishStylesView: View {
 
     private var styleLearningCard: some View {
         let corpus = styleLearningCorpus
-        let required = PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount
+        let required = styleLearningMinimumCharacterCount
         let reachedLimit = catalog.entries.count >= PolishStyleLimits.maximumUserPacks
         let isActionAvailable = isEligibleForStyleGeneration(corpus) && !reachedLimit
         let canGenerate = isActionAvailable && !isGeneratingLearnedStyle
@@ -240,13 +244,17 @@ struct PolishStylesView: View {
                 Spacer()
 
                 Text(
-                    bypassesStyleLearningCharacterGate && !corpus.isReady
-                        ? AppL10n.string("polishStyles.learn.testBuildReady")
-                        : corpus.isReady
+                    isEligibleForStyleGeneration(corpus)
                         ? AppL10n.string("polishStyles.learn.ready")
                         : AppL10n.format(
                             "polishStyles.learn.remaining",
-                            Int64(corpus.remainingCharacterCount)
+                            Int64(
+                                max(
+                                    0,
+                                    styleLearningMinimumCharacterCount
+                                        - corpus.effectiveCharacterCount
+                                )
+                            )
                         )
                 )
                 .font(TypeStyle.caption2)

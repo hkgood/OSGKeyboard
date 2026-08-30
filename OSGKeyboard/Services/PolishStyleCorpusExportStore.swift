@@ -15,6 +15,10 @@ struct PolishStyleCorpusExport: Codable, Equatable {
     let appBuild: String
     let effectiveCharacterCount: Int
     let requiredEffectiveCharacterCount: Int
+    /// Maximum effective characters included in this export. Caps the
+    /// training-corpus window even when the user has accumulated far
+    /// more history than the production 2,500-character unlock gate.
+    let trainingExtractionMaximumCharacterCount: Int
     let examples: [Example]
 
     struct Example: Codable, Equatable {
@@ -55,7 +59,10 @@ final class PolishStyleCorpusExportStore {
         let eligibleCorpus = PolishStyleLearningCorpusBuilder.build(from: history)
         guard !eligibleCorpus.examples.isEmpty else { return nil }
         let corpus = PolishStyleLearningCorpusBuilder.trainingWindow(
-            from: eligibleCorpus.examples
+            from: eligibleCorpus.examples,
+            maximumCharacterCount:
+                PolishStyleLearningCorpusBuilder
+                    .trainingExtractionMaximumCharacterCount
         )
 
         let examples = corpus.examples
@@ -77,6 +84,9 @@ final class PolishStyleCorpusExportStore {
             effectiveCharacterCount: corpus.effectiveCharacterCount,
             requiredEffectiveCharacterCount:
                 PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount,
+            trainingExtractionMaximumCharacterCount:
+                PolishStyleLearningCorpusBuilder
+                    .trainingExtractionMaximumCharacterCount,
             examples: examples
         )
     }

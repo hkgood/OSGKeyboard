@@ -1,21 +1,29 @@
 import XCTest
 
 final class PolishStylesGenerationUITests: XCTestCase {
-    func testTestBuildCanGenerateWithoutPersonalCorpus() {
+    func testTestBuildRequiresTwelveFiftyCharacterMinimum() {
+        // The old "unlimited" test-mode bypass has been removed. Test
+        // builds now enforce a 1,250-character minimum: an empty corpus
+        // must keep the generation button disabled, and the visible
+        // progress text should reflect the remaining distance to the
+        // active gate.
         continueAfterFailure = false
         let app = launchServiceHarness(
             additionalArgument: "--polish-styles-service-ui-test-no-corpus"
         )
 
-        XCTAssertTrue(
+        let generate = app.buttons["polishStyles.learn.generate"]
+        XCTAssertTrue(generate.waitForExistence(timeout: 5))
+        XCTAssertFalse(
+            generate.isEnabled,
+            "Empty corpus in a test build must not unlock generation; the 1,250-character minimum still applies."
+        )
+        XCTAssertFalse(
             app.staticTexts[
                 "Test build: 2,500-character limit disabled"
-            ]
-            .waitForExistence(timeout: 5)
+            ].exists,
+            "The old unlimited-bypass label must no longer be shown."
         )
-        let generate = app.buttons["polishStyles.learn.generate"]
-        XCTAssertTrue(generate.exists)
-        XCTAssertTrue(generate.isEnabled)
     }
 
     func testGeneratedStyleReviewAndSaveFlow() {

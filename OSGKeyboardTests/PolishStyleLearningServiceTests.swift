@@ -146,6 +146,42 @@ final class PolishStyleLearningServiceTests: XCTestCase {
         XCTAssertEqual(window.examples.map(\.finalText), ["older", "newer"])
     }
 
+    func testTrainingWindowHonorsCustomMaximumCharacterCount() {
+        // Total available characters: 7,000. With a 5,000-character
+        // cap (training-corpus export), newest (3,000) + middle (2,000)
+        // fills the window and oldest is dropped.
+        let oldest = PolishStyleLearningExample(
+            prePolishText: String(repeating: "旧", count: 2_000),
+            finalText: "oldest",
+            polishStyleID: nil,
+            createdAt: Date(timeIntervalSince1970: 1)
+        )
+        let middle = PolishStyleLearningExample(
+            prePolishText: String(repeating: "中", count: 2_000),
+            finalText: "middle",
+            polishStyleID: nil,
+            createdAt: Date(timeIntervalSince1970: 2)
+        )
+        let newest = PolishStyleLearningExample(
+            prePolishText: String(repeating: "新", count: 3_000),
+            finalText: "newest",
+            polishStyleID: nil,
+            createdAt: Date(timeIntervalSince1970: 3)
+        )
+
+        let window = PolishStyleLearningCorpusBuilder.trainingWindow(
+            from: [oldest, newest, middle],
+            maximumCharacterCount: PolishStyleLearningCorpusBuilder
+                .trainingExtractionMaximumCharacterCount
+        )
+
+        XCTAssertEqual(window.effectiveCharacterCount, 5_000)
+        XCTAssertEqual(
+            window.examples.map(\.finalText),
+            ["middle", "newest"]
+        )
+    }
+
     func testGenerationRunsExtractorBeforeSynthesizerWithSeparatedPayloads() async throws {
         var catalog = PolishStyleCatalog()
         let activeStyle = PolishStylePack(

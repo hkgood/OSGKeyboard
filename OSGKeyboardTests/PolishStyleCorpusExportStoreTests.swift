@@ -46,6 +46,7 @@ final class PolishStyleCorpusExportStoreTests: XCTestCase {
         XCTAssertEqual(export.appBuild, "94")
         XCTAssertEqual(export.effectiveCharacterCount, 4)
         XCTAssertEqual(export.requiredEffectiveCharacterCount, 2_500)
+        XCTAssertEqual(export.trainingExtractionMaximumCharacterCount, 5_000)
         XCTAssertEqual(export.examples.count, 1)
         XCTAssertEqual(export.examples[0].prePolishText, "你好 世界")
         XCTAssertEqual(export.examples[0].finalText, "你好，世界。")
@@ -105,7 +106,50 @@ final class PolishStyleCorpusExportStoreTests: XCTestCase {
         XCTAssertEqual(decoded.examples.count, 1)
     }
 
-    func testExportUsesNewestCompleteExamplesThroughThreshold() throws {
+    func testExportUsesNewestCompleteExamplesThroughFiveThousandThreshold() throws {
+        // Total available characters: 7,000 — above the export cap.
+        // Newest first: newest (3,000) + middle (2,000) = 5,000 (cap reached,
+        // stop). Oldest is dropped from the export window.
+        let history = SyncedSpeechHistory(
+            entries: [
+                SpeechHistoryEntry(
+                    text: "oldest",
+                    prePolishText: String(repeating: "旧", count: 2_000),
+                    createdAt: Date(timeIntervalSince1970: 1)
+                ),
+                SpeechHistoryEntry(
+                    text: "middle-complete",
+                    prePolishText: String(repeating: "中", count: 2_000),
+                    createdAt: Date(timeIntervalSince1970: 2)
+                ),
+                SpeechHistoryEntry(
+                    text: "newest-complete",
+                    prePolishText: String(repeating: "新", count: 3_000),
+                    createdAt: Date(timeIntervalSince1970: 3)
+                )
+            ]
+        )
+
+        let export = try XCTUnwrap(
+            PolishStyleCorpusExportStore(
+                directoryURL: temporaryDirectory()
+            ).makeExport(from: history)
+        )
+
+        XCTAssertEqual(export.effectiveCharacterCount, 5_000)
+        XCTAssertEqual(export.requiredEffectiveCharacterCount, 2_500)
+        XCTAssertEqual(export.trainingExtractionMaximumCharacterCount, 5_000)
+        XCTAssertEqual(
+            export.examples.map(\.finalText),
+            ["middle-complete", "newest-complete"]
+        )
+        XCTAssertEqual(export.examples[0].prePolishText.count, 2_000)
+        XCTAssertEqual(export.examples[1].prePolishText.count, 3_000)
+    }
+
+    func testExportKeepsEveryEligibleExampleWhenUnderFiveThousandThreshold() throws {
+        // 3,600 characters total — below the 5,000 cap, so the export keeps
+        // every eligible example chronologically.
         let history = SyncedSpeechHistory(
             entries: [
                 SpeechHistoryEntry(
@@ -132,13 +176,11 @@ final class PolishStyleCorpusExportStoreTests: XCTestCase {
             ).makeExport(from: history)
         )
 
-        XCTAssertEqual(export.effectiveCharacterCount, 2_600)
+        XCTAssertEqual(export.effectiveCharacterCount, 3_600)
         XCTAssertEqual(
             export.examples.map(\.finalText),
-            ["middle-complete", "newest-complete"]
+            ["oldest", "middle-complete", "newest-complete"]
         )
-        XCTAssertEqual(export.examples[0].prePolishText.count, 1_600)
-        XCTAssertEqual(export.examples[1].prePolishText.count, 1_000)
     }
 
     func testEmptyCorpusRemovesPreviousExport() throws {

@@ -128,6 +128,7 @@
 "common.continue" = "继续";
 "common.reset" = "重置";
 "common.cancel" = "取消";
+"common.dismiss" = "关闭";
 "common.save" = "保存";
 "common.clear" = "清空";
 "common.delete" = "删除";
@@ -294,7 +295,7 @@
 "settings.diagnostics.corpus.section" = "个人风格训练语料";
 "settings.diagnostics.corpus.count" = "%d 条可用样本 · %d 个有效字符";
 "settings.diagnostics.corpus.empty" = "暂无符合条件的成对听写语料。";
-"settings.diagnostics.corpus.ready" = "选取最新完整样本，累积至至少 2,500 个有效字符。";
+"settings.diagnostics.corpus.ready" = "选取最新完整样本，导出时最多累积 5,000 个有效字符。";
 "settings.diagnostics.corpus.export" = "导出训练语料";
 "settings.diagnostics.corpus.privacy" = "文件包含口述文本和历史润色提示词，不会自动上传。请仅分享给可信设备或服务。";
 "settings.diagnostics.privacy.section" = "隐私";
@@ -682,7 +683,6 @@
 "polishStyles.learn.progress" = "%lld / %lld 字";
 "polishStyles.learn.remaining" = "还差 %lld 字";
 "polishStyles.learn.ready" = "可以生成";
-"polishStyles.learn.testBuildReady" = "测试版本：已暂时取消 2500 字限制";
 "polishStyles.learn.action" = "生成风格";
 "polishStyles.learn.generating" = "生成中…";
 "polishStyles.learn.generated.description" = "根据经过确认的证据学习得到的个人表达风格。";
@@ -958,6 +958,8 @@
 "account.referral.status.rewarded" = "已奖励";
 "account.referral.status.ineligible" = "不符合条件";
 "account.referral.pendingAfterSignIn" = "邀请已暂存，登录后会自动兑换。";
+"account.referral.rewardGranted" = "恭喜获得 %@ 积分";
+"account.referral.rewardGrantedGeneric" = "邀请奖励已发放，积分已到账。";
 "account.security.section" = "账号操作";
 "account.signOut.action" = "退出登录";
 "account.signOut.confirmTitle" = "退出登录？";

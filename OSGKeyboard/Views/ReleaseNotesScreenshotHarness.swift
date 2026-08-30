@@ -134,7 +134,8 @@ private struct PolishStylesServiceUITestHarness: View {
                             outputLanguage: language,
                             minimumEffectiveCharacterCount:
                                 AppDistributionChannel.allowsInternalTools
-                                    ? 0
+                                    ? PolishStyleLearningCorpusBuilder
+                                        .testBuildEffectiveCharacterCount
                                     : PolishStyleLearningCorpusBuilder
                                         .requiredEffectiveCharacterCount
                         )

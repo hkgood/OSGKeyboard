@@ -135,7 +135,10 @@ struct FlowDiagnosticsSettingsView: View {
             from: historyStore.snapshot()
         )
         return PolishStyleLearningCorpusBuilder.trainingWindow(
-            from: eligibleCorpus.examples
+            from: eligibleCorpus.examples,
+            maximumCharacterCount:
+                PolishStyleLearningCorpusBuilder
+                    .trainingExtractionMaximumCharacterCount
         )
     }
 

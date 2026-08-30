@@ -128,6 +128,7 @@
 "common.continue" = "Continue";
 "common.reset" = "Reset";
 "common.cancel" = "Cancel";
+"common.dismiss" = "Dismiss";
 "common.save" = "Save";
 "common.clear" = "Clear";
 "common.delete" = "Delete";
@@ -294,7 +295,7 @@
 "settings.diagnostics.corpus.section" = "Personal Style Training Corpus";
 "settings.diagnostics.corpus.count" = "%d eligible samples · %d effective characters";
 "settings.diagnostics.corpus.empty" = "No eligible paired dictations are available.";
-"settings.diagnostics.corpus.ready" = "Newest complete samples through the 2,500-character target.";
+"settings.diagnostics.corpus.ready" = "Newest complete samples through the 5,000-character export cap.";
 "settings.diagnostics.corpus.export" = "Export Training Corpus";
 "settings.diagnostics.corpus.privacy" = "Contains dictated text and prior polish prompts. Nothing is uploaded automatically. Share only with trusted devices or services.";
 "settings.diagnostics.privacy.section" = "Privacy";
@@ -683,7 +684,6 @@
 "polishStyles.learn.progress" = "%lld / %lld characters";
 "polishStyles.learn.remaining" = "%lld to go";
 "polishStyles.learn.ready" = "Ready";
-"polishStyles.learn.testBuildReady" = "Test build: 2,500-character limit disabled";
 "polishStyles.learn.action" = "Generate Style";
 "polishStyles.learn.generating" = "Generating…";
 "polishStyles.learn.generated.description" = "Your personal style learned from reviewed evidence.";
@@ -959,6 +959,8 @@
 "account.referral.status.rewarded" = "Rewarded";
 "account.referral.status.ineligible" = "Ineligible";
 "account.referral.pendingAfterSignIn" = "Your invitation is saved and will be redeemed after sign-in.";
+"account.referral.rewardGranted" = "You received %@ credits from the invitation.";
+"account.referral.rewardGrantedGeneric" = "Your invitation reward has been added to your balance.";
 "account.security.section" = "Account controls";
 "account.signOut.action" = "Sign Out";
 "account.signOut.confirmTitle" = "Sign out?";
