@@ -10,6 +10,10 @@ import Security
 public struct HostPrivateAccountKeychainDescriptor: Equatable, Sendable {
     public static let defaultService = "com.osgkeyboard.ios.account"
     public static let hostBundleIdentifier = "com.osgkeyboard.ios"
+    /// The macOS menu-bar app has no extension to share with, so it owns its
+    /// own private group. Listed here so the guard below still rejects the
+    /// App-Group-reachable `com.osgkeyboard.shared` group on both platforms.
+    public static let macHostBundleIdentifier = "com.osgkeyboard.mac"
 
     public let service: String
     public let accessGroup: String
@@ -20,8 +24,10 @@ public struct HostPrivateAccountKeychainDescriptor: Equatable, Sendable {
     ) throws {
         let normalizedService = service.trimmingCharacters(in: .whitespacesAndNewlines)
         let normalizedAccessGroup = accessGroup.trimmingCharacters(in: .whitespacesAndNewlines)
+        let isHostPrivate = [Self.hostBundleIdentifier, Self.macHostBundleIdentifier]
+            .contains { normalizedAccessGroup.hasSuffix(".\($0)") }
         guard !normalizedService.isEmpty,
-              normalizedAccessGroup.hasSuffix(".\(Self.hostBundleIdentifier)"),
+              isHostPrivate,
               !normalizedAccessGroup.hasSuffix(".com.osgkeyboard.shared") else {
             throw AccountAPIError.secureStorage
         }
@@ -67,9 +73,9 @@ public actor HostPrivateAccountKeychain:
         self.decoder = JSONDecoder()
     }
 
-    public func loadSession() async throws -> AccountSession? {
+    public func loadSession() async throws -> AccountTokenSession? {
         do {
-            let session = try read(AccountSession.self, account: Account.session)
+            let session = try read(AccountTokenSession.self, account: Account.session)
             Self.logger.info(
                 "session keychain restore status=\(session == nil ? "not-found" : "found", privacy: .public)"
             )
@@ -80,7 +86,7 @@ public actor HostPrivateAccountKeychain:
         }
     }
 
-    public func saveSession(_ session: AccountSession) async throws {
+    public func saveSession(_ session: AccountTokenSession) async throws {
         try write(session, account: Account.session)
     }
 
@@ -205,12 +211,20 @@ public actor HostPrivateAccountKeychain:
     }
 
     private func baseQuery(account: String) -> [String: Any] {
-        [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: descriptor.service,
             kSecAttrAccount as String: account,
             kSecAttrAccessGroup as String: descriptor.accessGroup,
             kSecAttrSynchronizable as String: kCFBooleanFalse!
         ]
+        #if os(macOS)
+        // macOS defaults to the legacy file-based keychain, which ignores
+        // `kSecAttrAccessGroup` and rejects `kSecAttrAccessible`. Opt into the
+        // data-protection keychain so entitlement-scoped access groups and the
+        // AfterFirstUnlockThisDeviceOnly protection behave as they do on iOS.
+        query[kSecUseDataProtectionKeychain as String] = true
+        #endif
+        return query
     }
 }

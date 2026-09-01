@@ -80,7 +80,7 @@ public actor AccountAPIClient {
     private struct RefreshOperation {
         let id: UUID
         let failedAccessToken: String
-        let task: Task<AccountSession, Error>
+        let task: Task<AccountTokenSession, Error>
     }
 
     private let baseURL: URL
@@ -90,7 +90,7 @@ public actor AccountAPIClient {
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
-    private var cachedSession: AccountSession?
+    private var cachedSession: AccountTokenSession?
     private var didLoadSession = false
     private var refreshOperation: RefreshOperation?
     private var invalidationContinuations: [
@@ -113,19 +113,19 @@ public actor AccountAPIClient {
     }
 
     @discardableResult
-    public func signInWithApple(_ request: AppleSignInRequest) async throws -> AccountSession {
+    public func signInWithApple(_ request: AppleSignInRequest) async throws -> AccountTokenSession {
         let data = try await perform(
             endpoint: .appleSignIn,
             body: try encode(request),
             requiresSession: false
         )
-        let session = try decode(APIDataEnvelope<AccountSession>.self, from: data).data
+        let session = try decode(APIDataEnvelope<AccountTokenSession>.self, from: data).data
         try await replaceSession(with: session)
         try? await sessionVault.clearRefreshTransaction()
         return session
     }
 
-    public func currentSession() async throws -> AccountSession? {
+    public func currentSession() async throws -> AccountTokenSession? {
         try await loadSessionIfNeeded()
     }
 
@@ -386,7 +386,7 @@ public actor AccountAPIClient {
         }
     }
 
-    private func sessionForRequest() async throws -> AccountSession {
+    private func sessionForRequest() async throws -> AccountTokenSession {
         guard let session = try await loadSessionIfNeeded() else {
             throw AccountAPIError.sessionUnavailable
         }
@@ -403,7 +403,7 @@ public actor AccountAPIClient {
         return session
     }
 
-    private func refreshSession(afterUnauthorizedAccessToken failedToken: String) async throws -> AccountSession {
+    private func refreshSession(afterUnauthorizedAccessToken failedToken: String) async throws -> AccountTokenSession {
         // Refresh always re-reads Keychain so another client instance cannot
         // rotate a stale in-memory session with a new operation identifier.
         guard let current = try await reloadSessionFromVault() else {
@@ -438,7 +438,7 @@ public actor AccountAPIClient {
         return try await finishRefresh(operation)
     }
 
-    private func finishRefresh(_ operation: RefreshOperation) async throws -> AccountSession {
+    private func finishRefresh(_ operation: RefreshOperation) async throws -> AccountTokenSession {
         do {
             let replacement = try await operation.task.value
             guard let current = try await reloadSessionFromVault() else {
@@ -478,7 +478,7 @@ public actor AccountAPIClient {
     private func requestRefresh(
         using refreshToken: String,
         operationId: UUID
-    ) async throws -> AccountSession {
+    ) async throws -> AccountTokenSession {
         let request = try makeRequest(
             endpoint: .refresh,
             body: try encode(
@@ -491,7 +491,7 @@ public actor AccountAPIClient {
         )
         let response = try await send(request)
         let data = try validatedData(response)
-        return try decode(APIDataEnvelope<AccountSession>.self, from: data).data
+        return try decode(APIDataEnvelope<AccountTokenSession>.self, from: data).data
     }
 
     private func shouldClearSession(afterRefreshError error: Error) -> Bool {
@@ -504,7 +504,7 @@ public actor AccountAPIClient {
         }
     }
 
-    private func loadSessionIfNeeded() async throws -> AccountSession? {
+    private func loadSessionIfNeeded() async throws -> AccountTokenSession? {
         if didLoadSession {
             return cachedSession
         }
@@ -517,7 +517,7 @@ public actor AccountAPIClient {
         }
     }
 
-    private func reloadSessionFromVault() async throws -> AccountSession? {
+    private func reloadSessionFromVault() async throws -> AccountTokenSession? {
         do {
             let session = try await sessionVault.loadSession()
             cachedSession = session
@@ -528,7 +528,7 @@ public actor AccountAPIClient {
         }
     }
 
-    private func replaceSession(with session: AccountSession) async throws {
+    private func replaceSession(with session: AccountTokenSession) async throws {
         do {
             try await sessionVault.saveSession(session)
             cachedSession = session

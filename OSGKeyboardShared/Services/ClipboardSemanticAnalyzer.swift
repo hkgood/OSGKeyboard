@@ -304,8 +304,12 @@ public actor ClipboardSemanticAnalyzer {
 
     private static let resourceDirectory = "ClipboardSemantics"
     private static let manifestName = "clipboard-semantic-models"
-    private static let maximumSemanticSegments = 8
-    private static let maximumSegmentCharacters = 500
+    // Segment length tracks the training corpus, whose records are single
+    // sentences (zh max 33 characters, en max 138). Feeding a whole multi-
+    // sentence paste as one blob puts the classifiers far out of distribution
+    // and dilutes bag-of-words confidence below their routing thresholds.
+    private static let maximumSemanticSegments = 24
+    private static let maximumSegmentCharacters = 180
     private static let minimumSentimentConfidence = 0.65
     private static let minimumSentimentMargin = 0.15
 
@@ -923,9 +927,6 @@ public actor ClipboardSemanticAnalyzer {
     }
 
     private func semanticSegments(in text: String) -> [String] {
-        if text.count <= Self.maximumSegmentCharacters {
-            return [text]
-        }
         let tokenizer = NLTokenizer(unit: .sentence)
         tokenizer.string = text
         var segments: [String] = []

@@ -23,22 +23,27 @@ public final class LocalASRModelDownloadController: NSObject, URLSessionDownload
     private let destinationURL: URL
     private let onProgress: @Sendable (LocalASRDownloadProgressUpdate) -> Void
     private let maxRetries: Int
-    private lazy var delegateSession: URLSession = {
-        let config = URLSessionConfiguration.default
-        // Big weight files over flaky links: allow long total transfers but
-        // fail (and retry) a stalled connection that goes quiet for a while.
-        config.timeoutIntervalForRequest = 90
-        config.timeoutIntervalForResource = 24 * 60 * 60
-        config.waitsForConnectivity = true
-        return URLSession(configuration: config, delegate: self, delegateQueue: nil)
-    }()
+    private var delegateSession: URLSession!
 
+    // Every field below is reachable from BOTH the caller's thread
+    // (`download` / `pause` / `resumeFromPause` / `cancel`) and URLSession's
+    // delegate queue (`delegateQueue: nil` = a private serial background
+    // queue), so all of them are guarded by `lock`. That is what makes the
+    // `@unchecked Sendable` above true rather than aspirational: an unguarded
+    // check-then-act on `finished` let two threads each resume
+    // `completionContinuation`, and a checked continuation resumed twice is a
+    // hard crash, not a recoverable error.
+    private let lock = NSLock()
     private var remoteURL: URL?
     private var task: URLSessionDownloadTask?
     private var completionContinuation: CheckedContinuation<Void, Error>?
     private var isPausing = false
     private var finished = false
     private var retryCount = 0
+    /// Set by `cancel()` before it invalidates the session. `startTask` refuses
+    /// to build a task once this is set: `URLSession.downloadTask` on an
+    /// invalidated session raises an ObjC exception, which Swift cannot catch.
+    private var sessionInvalidated = false
 
     init(
         destinationURL: URL,
@@ -49,57 +54,145 @@ public final class LocalASRModelDownloadController: NSObject, URLSessionDownload
         self.maxRetries = maxRetries
         self.onProgress = onProgress
         super.init()
+        let config = URLSessionConfiguration.default
+        // Big weight files over flaky links: allow long total transfers but
+        // fail (and retry) a stalled connection that goes quiet for a while.
+        config.timeoutIntervalForRequest = 90
+        config.timeoutIntervalForResource = 24 * 60 * 60
+        config.waitsForConnectivity = true
+        // Built here rather than in a `lazy var`: lazy initialization is not
+        // atomic, and this session is first touched from whichever thread wins
+        // the `startTask` / `cancel` race.
+        delegateSession = URLSession(configuration: config, delegate: self, delegateQueue: nil)
+    }
+
+    /// Atomically takes ownership of the pending completion continuation and
+    /// marks the download finished. Returns `nil` when another thread already
+    /// claimed it — the single guarantee that `download(from:)` is resumed
+    /// exactly once, no matter how cancel / completion / failure interleave.
+    private func claimCompletion() -> CheckedContinuation<Void, Error>? {
+        lock.withLock { () -> CheckedContinuation<Void, Error>? in
+            guard !finished else { return nil }
+            finished = true
+            let pending = completionContinuation
+            completionContinuation = nil
+            return pending
+        }
     }
 
     /// Runs until the archive is fully written to `destinationURL` (survives pause/resume).
     public func download(from remoteURL: URL) async throws {
-        self.remoteURL = remoteURL
-        retryCount = 0
+        // A controller is single-use — `LocalASRModelDownloadClient.makeController`
+        // builds a fresh one per download. `finished` is deliberately NOT reset
+        // here: doing so would resurrect a controller already settled by
+        // `cancel()`, and `startTask` would then hand work to a session that
+        // `cancel()` had invalidated (an uncatchable ObjC exception).
+        lock.withLock {
+            self.remoteURL = remoteURL
+            retryCount = 0
+        }
+
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            completionContinuation = continuation
+            // `cancel()` can land between the setup above and here; parking a
+            // continuation nobody will ever resume would hang the caller.
+            let alreadyCancelled = lock.withLock { () -> Bool in
+                guard !finished else { return true }
+                completionContinuation = continuation
+                return false
+            }
+            guard !alreadyCancelled else {
+                continuation.resume(throwing: CancellationError())
+                return
+            }
             startTask(resumeData: nil)
         }
     }
 
     public func pause() async throws -> Data {
-        guard task != nil, !finished else {
+        let pending = lock.withLock { () -> URLSessionDownloadTask? in
+            guard let running = task, !finished, !isPausing else { return nil }
+            isPausing = true
+            return running
+        }
+        guard let pending else {
             throw LocalASRModelManagerError.downloadFailed("No active download to pause.")
         }
         return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
-            isPausing = true
-            task?.cancel(byProducingResumeData: { [weak self] data in
-                guard let self else { return }
-                self.isPausing = false
-                if let data {
-                    continuation.resume(returning: data)
-                } else {
-                    continuation.resume(throwing: LocalASRModelManagerError.downloadFailed("Pause failed."))
+            pending.cancel(byProducingResumeData: { [weak self] data in
+                guard let self else {
+                    continuation.resume(
+                        throwing: LocalASRModelManagerError.downloadFailed("Pause failed.")
+                    )
+                    return
                 }
+                if let data {
+                    // `isPausing` deliberately stays set until `resumeFromPause`
+                    // / `cancel` clears it. Cancelling for resume data also
+                    // fires `didCompleteWithError`, and that callback can land
+                    // either side of this one — clearing the flag here (as this
+                    // used to) let the cancellation be misread as a permanent
+                    // failure, tearing down a download the user only paused.
+                    continuation.resume(returning: data)
+                    return
+                }
+                // No resume data: the task is dead and cannot be continued, and
+                // the `didCompleteWithError` that would normally report it was
+                // suppressed by `isPausing`. Settle `download(from:)` here so
+                // it cannot hang waiting for a callback that already passed.
+                self.lock.withLock { self.isPausing = false }
+                let failure = LocalASRModelManagerError.downloadFailed("Pause failed.")
+                self.claimCompletion()?.resume(throwing: failure)
+                continuation.resume(throwing: failure)
             })
         }
     }
 
     /// Continues a paused download; `download(from:)` must still be awaiting.
     public func resumeFromPause(_ resumeData: Data) {
-        finished = false
+        // Only a genuinely paused download may continue. `finished` is NOT
+        // reset: a completed or cancelled download must never be revived, and
+        // pausing no longer sets it in the first place.
+        let canResume = lock.withLock { () -> Bool in
+            guard isPausing, !finished else { return false }
+            isPausing = false
+            return true
+        }
+        guard canResume else { return }
         startTask(resumeData: resumeData)
     }
 
     public func cancel() {
-        finished = true
-        task?.cancel()
-        completionContinuation?.resume(throwing: CancellationError())
-        completionContinuation = nil
+        let pending = lock.withLock { () -> URLSessionDownloadTask? in
+            isPausing = false
+            // Flagged under the same lock `startTask` takes, so the two are
+            // totally ordered: either the task is built first (and cancelled
+            // just below), or `startTask` sees this and builds nothing.
+            sessionInvalidated = true
+            return task
+        }
+        // Claim before cancelling the task: the cancellation then arrives at
+        // `didCompleteWithError` already settled, so it cannot re-report the
+        // download as a generic network failure.
+        claimCompletion()?.resume(throwing: CancellationError())
+        pending?.cancel()
         delegateSession.invalidateAndCancel()
     }
 
     private func startTask(resumeData: Data?) {
-        if let resumeData {
-            task = delegateSession.downloadTask(withResumeData: resumeData)
-        } else if let remoteURL {
-            task = delegateSession.downloadTask(with: remoteURL)
+        let started = lock.withLock { () -> URLSessionDownloadTask? in
+            guard !sessionInvalidated else { return nil }
+            let created: URLSessionDownloadTask?
+            if let resumeData {
+                created = delegateSession.downloadTask(withResumeData: resumeData)
+            } else if let remoteURL {
+                created = delegateSession.downloadTask(with: remoteURL)
+            } else {
+                created = nil
+            }
+            task = created
+            return created
         }
-        task?.resume()
+        started?.resume()
     }
 
     // MARK: - URLSessionDownloadDelegate
@@ -124,48 +217,56 @@ public final class LocalASRModelDownloadController: NSObject, URLSessionDownload
         downloadTask: URLSessionDownloadTask,
         didFinishDownloadingTo location: URL
     ) {
-        guard !finished else { return }
-        finished = true
+        // Claim first: a cancelled download must not have its archive moved
+        // into place, and claiming is what stops the `didCompleteWithError`
+        // that follows every finished download from resuming us a second time.
+        guard let pending = claimCompletion() else { return }
         do {
             let fm = FileManager.default
             if fm.fileExists(atPath: destinationURL.path) {
                 try fm.removeItem(at: destinationURL)
             }
             try fm.moveItem(at: location, to: destinationURL)
-            completionContinuation?.resume()
+            pending.resume()
         } catch {
-            completionContinuation?.resume(
+            pending.resume(
                 throwing: LocalASRModelManagerError.downloadFailed(error.localizedDescription)
             )
         }
-        completionContinuation = nil
         session.finishTasksAndInvalidate()
     }
 
     public func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
-        guard !finished else { return }
-        if isPausing { return }
+        // `isPausing` means the cancellation below is the one *we* asked for in
+        // `pause()`; the download is not over and must keep its continuation.
+        let (suppressed, shouldRetry, delay) = lock.withLock { () -> (Bool, Bool, Double) in
+            let suppressed = finished || isPausing
+            guard let error, !suppressed, Self.isRetryable(error), retryCount < maxRetries else {
+                return (suppressed, false, 0)
+            }
+            retryCount += 1
+            return (suppressed, true, Self.backoffSeconds(attempt: retryCount))
+        }
+
+        if suppressed { return }
         guard let error else { return }
 
         // Transient network drop: resume from where we stopped (if the server
         // handed back resume data) after a short exponential backoff, up to a cap.
-        if Self.isRetryable(error), retryCount < maxRetries {
-            retryCount += 1
+        if shouldRetry {
             let resumeData = (error as NSError)
                 .userInfo[NSURLSessionDownloadTaskResumeData] as? Data
-            let delay = Self.backoffSeconds(attempt: retryCount)
             DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + delay) { [weak self] in
-                guard let self, !self.finished, !self.isPausing else { return }
+                guard let self else { return }
+                let stillActive = self.lock.withLock { !self.finished && !self.isPausing }
+                guard stillActive else { return }
                 self.startTask(resumeData: resumeData)
             }
             return
         }
 
-        finished = true
-        completionContinuation?.resume(
-            throwing: LocalASRModelManagerError.downloadFailed(error.localizedDescription)
-        )
-        completionContinuation = nil
+        guard let pending = claimCompletion() else { return }
+        pending.resume(throwing: LocalASRModelManagerError.downloadFailed(error.localizedDescription))
         session.finishTasksAndInvalidate()
     }
 

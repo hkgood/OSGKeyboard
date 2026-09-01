@@ -352,6 +352,7 @@
 "mac.hint.hold.leftOption" = "长按左 Option（⌥）开始听写";
 "mac.hint.hold.eitherOption" = "长按任一 Option（⌥）开始听写";
 "mac.hint.holdOption" = "长按 Option 开始听写";
+"mac.hint.holdOption.compact" = "按住 Option";
 "mac.settings.qwen3Model" = "Qwen3 模型目录";
 "mac.settings.qwen3ModelDesc" = "需包含 config.json、model.safetensors、vocab.json 与 merges.txt。";
 "mac.settings.qwen3Browse" = "选择文件夹…";
@@ -391,9 +392,12 @@
 "mac.onboarding.engine.subtitle" = "默认可用本地识别以保护隐私，也可以配置自己的云端 API。";
 "mac.onboarding.engine.localDesc" = "使用 Sherpa 本地模型进行私密转写；模型未安装前会回退到 Apple 语音识别。";
 "mac.onboarding.engine.cloudDesc" = "使用你的 API Key 进行云端语音识别和 AI 润色。";
-"mac.onboarding.cloud.title" = "配置 API 访问";
-"mac.onboarding.cloud.subtitle" = "选择服务商并填写密钥。此步骤可跳过，之后可在设置中补齐。";
+"mac.onboarding.cloud.title" = "配置语音识别服务";
+"mac.onboarding.cloud.subtitle" = "选择云端语音识别服务商并填写密钥。此步骤可跳过，之后可在设置中补齐。";
 "mac.onboarding.cloud.skipHint" = "可以先留空并完成引导；云端模式使用前会提示需要 API Key。";
+"mac.onboarding.polish.title" = "配置润色服务";
+"mac.onboarding.polish.subtitle" = "选择用于润色、翻译和 AI 问答的大模型服务商。此步骤可跳过，之后可在设置中补齐。";
+"mac.onboarding.polish.skipHint" = "可以先留空并完成引导；使用润色前会提示需要 API Key。";
 "mac.onboarding.model.title" = "准备本地识别";
 "mac.onboarding.model.subtitle" = "现在下载基础 Sherpa runtime 和默认模型，或先跳过并使用 Apple Speech 兜底。";
 "mac.onboarding.model.download" = "下载默认模型";
@@ -466,17 +470,56 @@
 "settings.appLanguage.english" = "英文";
 "settings.appLanguage.chinese" = "中文";
 
-/* 自愿打赏（消耗型 IAP — 不解锁功能） */
-"tip.title" = "支持开发者";
-"tip.body" = "OSGKeyboard 全功能免费、无任何付费墙。若觉得好用，可以自愿打赏一杯咖啡——不会解锁额外功能。";
-"tip.button" = "打赏 %@";
-"tip.buttonFallback" = "打赏支持";
-"tip.consumableNotice" = "消耗型应用内购买，无法恢复购买（Apple 规则）。";
-"tip.thankYou.title" = "感谢支持！";
-"tip.thankYou.message" = "你的支持帮助我们继续免费、开源地维护 OSGKeyboard。";
-"tip.thankYou.past" = "你已支持 %lld 次，感谢！";
-"tip.error.title" = "购买失败";
-"tip.error.productUnavailable" = "暂时无法加载打赏商品，请稍后再试。";
-"tip.error.pending" = "购买待审批，请稍后查看。";
-"tip.error.unknown" = "无法完成购买。";
-"tip.alert.dismiss" = "好";
+
+/* Account — Mac account page (Sign in with Apple, credits, invitation link).
+   The account.* / account.referral.* keys below mirror the iOS app bundle so
+   the shared AccountSessionCoordinator error keys resolve on macOS too. */
+"mac.section.account" = "账户";
+"mac.account.restoring" = "正在恢复登录状态…";
+"mac.account.signedOut.title" = "尚未登录";
+"mac.account.signedOut.body" = "通过 Apple 登录，即可在这台 Mac 上使用积分余额并获取你的邀请链接。";
+"mac.account.signedOut.footnote" = "积分在 iPhone 或网页购买，所有设备共用同一余额。";
+"mac.account.signIn.loading" = "正在登录…";
+"mac.account.profile.unnamed" = "Apple 账户";
+"mac.account.profile.accountID" = "账户 %@";
+"mac.account.signOut" = "退出登录";
+"mac.account.credits.title" = "积分";
+"mac.account.credits.balance" = "余额";
+"mac.account.credits.used" = "已使用";
+"mac.account.credits.loading" = "正在加载余额…";
+"mac.account.credits.refresh" = "刷新";
+"mac.account.credits.purchaseNote" = "macOS 端不支持购买。请在 iPhone 或网页购买积分，余额通用。";
+"mac.account.invite.title" = "邀请";
+"mac.account.invite.link" = "你的邀请链接";
+"mac.account.invite.copy" = "复制";
+"mac.account.invite.copied" = "已复制";
+"mac.account.invite.loading" = "正在加载邀请链接…";
+"mac.account.invite.retry" = "重试";
+"mac.account.invite.rewarded" = "已奖励邀请";
+"mac.account.invite.pending" = "待生效邀请";
+"mac.account.invite.footnote" = "受邀好友达成条件后，双方都可获得积分。";
+"mac.account.delete.title" = "注销账号";
+"mac.account.delete.body" = "注销会删除你的账号及剩余积分，且无法撤销。";
+"mac.account.delete.action" = "注销账号…";
+"mac.account.delete.confirmBody" = "请通过 Apple 确认，以永久删除账号及剩余积分。";
+"mac.account.delete.cancel" = "取消";
+"mac.account.error.title" = "账户";
+"mac.account.error.dismiss" = "好";
+"account.error.appleAuthorization" = "未能完成 Apple 授权。";
+"account.error.appleReauthenticationRequired" = "为继续保护账号，请重新通过 Apple 登录。";
+"account.error.delete" = "无法注销账号。";
+"account.error.load" = "无法加载账号详情。";
+"account.error.managedGateway" = "无法准备托管服务。";
+"account.error.redeemReferral" = "邀请已暂存，但暂时无法兑换。";
+"account.error.restore" = "无法恢复账号会话。";
+"account.error.sessionExpired" = "登录状态已过期，请重新登录后继续。";
+"account.error.signIn" = "登录失败，请重试。";
+"account.error.signOut" = "退出失败，请重试。";
+"account.error.unavailable" = "当前构建尚未接入账号服务。";
+"account.error.updateProfile" = "无法更新个人资料。";
+"account.referral.error.conflict" = "邀请链接暂时不可用。";
+"account.referral.error.load" = "无法加载邀请链接。";
+"account.referral.error.network" = "请检查网络连接后重试。";
+"account.referral.error.notFound" = "邀请链接暂不可用。";
+"account.referral.error.session" = "请重新登录后加载邀请链接。";
+"account.referral.error.unavailable" = "邀请服务暂时不可用。";

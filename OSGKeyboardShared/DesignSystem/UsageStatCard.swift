@@ -16,6 +16,8 @@ public struct UsageStatCard: View {
     public var accent: Bool
     /// Hero metric: wide horizontal layout for the primary word count.
     public var prominent: Bool
+    /// Stretch to the container's height (split layouts aligning a grid with a taller sibling).
+    public var expands: Bool
 
     public init(
         title: String,
@@ -23,7 +25,8 @@ public struct UsageStatCard: View {
         caption: String,
         systemImage: String? = nil,
         accent: Bool = false,
-        prominent: Bool = false
+        prominent: Bool = false,
+        expands: Bool = false
     ) {
         self.title = title
         self.value = value
@@ -31,6 +34,7 @@ public struct UsageStatCard: View {
         self.systemImage = systemImage
         self.accent = accent
         self.prominent = prominent
+        self.expands = expands
     }
 
     public var body: some View {
@@ -69,7 +73,11 @@ public struct UsageStatCard: View {
                 .font(TypeStyle.caption)
                 .foregroundStyle(palette.textSecondary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(
+            maxWidth: .infinity,
+            maxHeight: expands ? .infinity : nil,
+            alignment: .topLeading
+        )
     }
 
     /// Wide "hero bar": icon badge + title/caption left, big number right.

@@ -27,6 +27,9 @@ enum MacMetrics {
     /// label. Content is centered within it; taller rows (status text, progress)
     /// grow past it.
     static let settingsRowMinHeight: CGFloat = 40
+    /// Sign in with Apple 按钮高度：系统按钮的字号随高度缩放，44 让文字与图标
+    /// 与设置页 15pt 正文观感一致（40 时明显偏小）。
+    static let appleButtonHeight: CGFloat = 44
     /// The single vertical rhythm for settings cards: the gap *between* rows AND
     /// the padding between a card's top/bottom edge and its first/last row are
     /// both this value, so the card breathes evenly. Applied as `VStack(spacing:)`
@@ -62,10 +65,20 @@ enum MacMetrics {
     /// `pageHorizontalInset` on the Settings Form so its card outer edge lands
     /// on `pageHorizontalInset` — matching the History page and the page title.
     static let groupedFormSectionInset: CGFloat = Spacing.lg
-    /// Default (= minimum) main-window size. Opening the app uses this size;
-    /// the window cannot shrink below it.
+    /// Smallest the main window may be dragged to. Every page stays usable
+    /// (and scrollable) at this size, but nothing is laid out *for* it.
+    ///
+    /// The height floor also repairs windows restored from saved state:
+    /// `defaultSize` only applies on a window's first appearance, so anyone
+    /// who already ran the app keeps the old frame until the minimum lifts it.
     static let windowMinWidth: CGFloat = 860
-    static let windowMinHeight: CGFloat = 600
+    static let windowMinHeight: CGFloat = 680
+    /// Size the window opens at. Deliberately larger than the minimum: at
+    /// 860×600 the onboarding hero + step card + progress dots + bottom bar
+    /// do not all fit, so the primary action fell below the window edge.
+    /// Settings and Onboarding both fit comfortably at this size.
+    static let windowDefaultWidth: CGFloat = 1_100
+    static let windowDefaultHeight: CGFloat = 800
     /// Compact dictation-canvas height so Home fits the min window without scrolling.
     static let dictationCanvasMinHeight: CGFloat = 120
     /// Top inset that clears the window traffic-light buttons now that the

@@ -98,7 +98,11 @@ private final class FlowPrerollStore: @unchecked Sendable {
 }
 
 /// Rolling bar levels updated from the audio tap; read on the main actor.
-private final class FlowLevelStore: @unchecked Sendable {
+///
+/// Deliberately not `private`: the bar arithmetic runs on the realtime audio
+/// thread where a bad range is an uncatchable trap, so it needs direct
+/// `@testable` coverage rather than only being reachable through a live engine.
+final class FlowLevelStore: @unchecked Sendable {
     private let lock = OSAllocatedUnfairLock()
     private var levels: [Float]
 
@@ -115,7 +119,7 @@ private final class FlowLevelStore: @unchecked Sendable {
         lock.withLock { levels }
     }
 
-    private static func calculateLevels(from buffer: AVAudioPCMBuffer, barCount: Int) -> [Float] {
+    static func calculateLevels(from buffer: AVAudioPCMBuffer, barCount: Int) -> [Float] {
         guard let channelData = buffer.floatChannelData else {
             return Array(repeating: 0, count: barCount)
         }
@@ -127,7 +131,12 @@ private final class FlowLevelStore: @unchecked Sendable {
         var result = [Float]()
         result.reserveCapacity(barCount)
         for barIndex in 0..<barCount {
-            let start = barIndex * samplesPerBar
+            // A tap buffer shorter than `barCount` floors `samplesPerBar` to 1,
+            // so the tail bars would otherwise start past `frameLength` and
+            // build a reversed `start..<end` range — an uncatchable trap on the
+            // realtime audio thread. Clamping `start` leaves those bars empty
+            // (level 0), which is the right reading for samples we do not have.
+            let start = min(barIndex * samplesPerBar, frameLength)
             let end = min(start + samplesPerBar, frameLength)
             var sum: Float = 0
             for i in start..<end {

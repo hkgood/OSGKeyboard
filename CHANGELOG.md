@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **Voluntary tip purchase**: remove the `ByRockyACoffee` consumable, the macOS Settings support-the-developer section, and the unused iOS tip view. Optional credit packs are now the only in-app purchase. / **自愿打赏**：移除 `ByRockyACoffee` 消耗型内购、macOS 设置中的支持开发者区域，以及未被使用的 iOS 打赏视图；可选积分包成为唯一的 App 内购买项。
+
 ### Added
 - **Adaptive personal replies**: learn separate dictation and reply preferences from reviewed evidence, offer ordinary, formal, and playful personalized reply choices from one keyboard action, and keep bounded choice feedback only on the device. / **自适应个人回复**：从经过确认的证据中分别学习听写与回复偏好，通过一个键盘回复操作提供普通、正式和轻松趣味三种个性化候选，并仅在本机限量保留选择反馈。
 - **Test-build ASR corpus export**: export the newest complete personal-style examples through the 2,500-character target as a protected ZIP containing versioned JSON from Settings in Debug and TestFlight builds, while still allowing smaller non-empty corpora. / **测试版 ASR 语料导出**：在 Debug 与 TestFlight 版本的设置中，将最新完整个人风格样本累积至 2,500 字符后导出为受保护的 ZIP（内含版本化 JSON），不足 2,500 字符的非空语料也可导出。
@@ -27,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Personal style generation**: derive every reviewed prompt through two-stage corpus evidence, apply concrete low-confidence ASR tendencies instead of replacing them with a neutral template, recover wrapped model JSON once, keep one provider configuration and a 45-second budget across both stages, and distinguish cancellation from timeout. / **专属风格生成**：每个待审阅 Prompt 均通过两阶段语料证据生成，并在证据较少时仍应用原始 ASR 中具体的低置信度表达倾向，而非替换为中性模板；同时支持一次模型 JSON 包装恢复，在两阶段固定同一服务配置与 45 秒预算，并区分主动取消和请求超时。
+- **Clipboard skill matching**: classify multi-sentence pastes sentence by sentence instead of as one block, keep a message's own skills available when a link or phone number is embedded in it, and scale the summary and list thresholds to Chinese text density. / **剪贴板技能匹配**：多句粘贴改为逐句识别而非整段判断，消息中内嵌链接或电话号码时保留消息本身的技能，并按中文文本密度调整总结与清单的长度阈值。
 - **Durable Apple account sessions**: persist refresh operation identifiers before token rotation, reliably store and validate Apple user identifiers, require one-time reauthentication for unverifiable legacy sessions, and prevent failed Keychain deletion or concurrent account work from restoring a revoked login. / **可靠 Apple 账号会话**：在令牌轮换前持久化刷新操作标识，可靠存储并验证 Apple 用户标识，为无法验证的旧会话执行一次重新认证，并防止 Keychain 删除失败或并发账号操作恢复已撤销的登录态。
 - **Account sign-in presentation**: use the concise reward message consistently and keep a uniform app surface beneath translucent Apple authorization sheets. / **账号登录呈现**：统一使用精简的积分奖励文案，并在半透明 Apple 授权弹窗下保持一致的 App 背景。
 - **Recommended hotword details**: label Home recommendations by their actual source, render suggestion chips in adaptive monochrome, remove internal usage counts from dictionary rows, and anchor the iPhone confirmation popover to the selected hotword. / **推荐热词详情**：按真实来源标记首页推荐词，以自适应黑白配色显示推荐标签，移除词库列表中的内部使用次数，并让 iPhone 确认弹窗指向所选热词。
@@ -113,8 +117,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Account confirmation anchors**: sign-out and account-deletion confirmations now open from their selected action rows instead of the profile summary card. / **账号确认弹窗锚点**：退出登录与注销账号确认弹窗现在从对应操作行弹出，不再错误指向资料卡。
 
 ## [1.8.0] - 2026-08-14
-
-> **Release highlights**: See the concise [1.8.0 release notes](docs/RELEASE_NOTES_1.8.0.md) for the key changes since 1.6.6. / **版本亮点**：请参阅精简的 [1.8.0 更新说明](docs/RELEASE_NOTES_1.8.0.md)，了解自 1.6.6 以来的关键变化。
 
 ### Added
 - **English QuickType bar**: while typing a word, three equal slots show the verbatim text (quoted when unknown), the unique Space correction, and a completion. The bar stays empty before typing and between committed words. / **英文 QuickType 栏**：输入单词时，三个等宽格显示原文（生词带引号）、空格会采用的唯一纠错和补全；尚未输入及单词提交后保持空白。

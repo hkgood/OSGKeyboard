@@ -204,6 +204,15 @@ public final class EnglishLexicon: @unchecked Sendable {
             guard let group = lookupBigramGroup(prevIndex: prevIndex, header: header, buf: buf) else {
                 return []
             }
+            // `firstNext` / `nextCount` come straight off the mapped file; a
+            // group that runs past the next-word table is corrupt, and reading
+            // it would be an out-of-bounds `loadUnaligned`.
+            guard group.firstNext >= 0,
+                  group.nextCount >= 0,
+                  group.firstNext + group.nextCount <= header.bigramNextCapacity
+            else {
+                return []
+            }
             let count = min(limit, group.nextCount)
             var words: [String] = []
             words.reserveCapacity(count)
@@ -230,6 +239,11 @@ public final class EnglishLexicon: @unchecked Sendable {
         var bigramIndexOffset: Int
         var bigramNextOffset: Int
         var fileSize: Int
+
+        /// How many 2-byte entries fit between `bigramNextOffset` and EOF. The
+        /// header carries no length for this table, so reads are bounded
+        /// against the file tail rather than a declared count.
+        var bigramNextCapacity: Int { (fileSize - bigramNextOffset) / 2 }
 
         static let magic = "OSGENG01"
         static let version = 1
@@ -260,7 +274,11 @@ public final class EnglishLexicon: @unchecked Sendable {
                       region(freqRankOffset, unigramCount * 2, in: fileSize),
                       region(initialOffset, initialCount * 4, in: fileSize),
                       region(bigramIndexOffset, bigramGroupCount * 8, in: fileSize),
-                      region(stringPoolOffset, stringPoolSize, in: fileSize)
+                      region(stringPoolOffset, stringPoolSize, in: fileSize),
+                      // The next-word table has no length field, so only its
+                      // base can be validated here; per-group reads are bounded
+                      // against `bigramNextCapacity` at the call site.
+                      region(bigramNextOffset, 0, in: fileSize)
                 else {
                     return nil
                 }

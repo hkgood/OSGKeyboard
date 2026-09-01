@@ -143,7 +143,6 @@
 "ai.responseLength.medium" = "Medium";
 "ai.responseLength.detailed" = "Detailed";
 
-
 /* v0.3.0: Detected app context labels */
 "appContext.code" = "Code";
 "appContext.email" = "Email";
@@ -353,6 +352,7 @@
 "mac.hint.hold.leftOption" = "Hold left Option (⌥) to dictate";
 "mac.hint.hold.eitherOption" = "Hold either Option (⌥) to dictate";
 "mac.hint.holdOption" = "Hold Option to dictate";
+"mac.hint.holdOption.compact" = "Hold Option";
 "mac.settings.qwen3Model" = "Qwen3 model folder";
 "mac.settings.qwen3ModelDesc" = "Folder with config.json, model.safetensors, vocab.json, and merges.txt.";
 "mac.settings.qwen3Browse" = "Choose folder…";
@@ -392,9 +392,12 @@
 "mac.onboarding.engine.subtitle" = "Start locally for privacy, or use your own cloud API for provider-based recognition and polish.";
 "mac.onboarding.engine.localDesc" = "Private on-device recognition with Sherpa models. Falls back to Apple Speech until a model is installed.";
 "mac.onboarding.engine.cloudDesc" = "Use your API key for cloud speech recognition and AI polishing.";
-"mac.onboarding.cloud.title" = "Configure API access";
-"mac.onboarding.cloud.subtitle" = "Pick a provider and add your key. This step is optional, so you can finish now and fill it later in Settings.";
+"mac.onboarding.cloud.title" = "Configure speech recognition";
+"mac.onboarding.cloud.subtitle" = "Pick a cloud speech provider and add your key. This step is optional, so you can finish now and fill it later in Settings.";
 "mac.onboarding.cloud.skipHint" = "You can leave these blank and finish setup; cloud mode will ask for a key before use.";
+"mac.onboarding.polish.title" = "Configure polishing";
+"mac.onboarding.polish.subtitle" = "Pick the model provider used for polishing, translation and AI answers. Optional — you can fill it in later in Settings.";
+"mac.onboarding.polish.skipHint" = "You can leave these blank and finish setup; polishing will ask for a key before use.";
 "mac.onboarding.model.title" = "Prepare local recognition";
 "mac.onboarding.model.subtitle" = "Download the basic Sherpa runtime and default model now, or skip and continue with Apple Speech fallback.";
 "mac.onboarding.model.download" = "Download Default Model";
@@ -467,17 +470,56 @@
 "settings.appLanguage.english" = "English";
 "settings.appLanguage.chinese" = "Chinese";
 
-/* Voluntary support tip (Consumable IAP — no feature unlock) */
-"tip.title" = "Support the Developer";
-"tip.body" = "OSGKeyboard is completely free with every feature unlocked. If you find it useful, you can leave an optional tip — it does not unlock anything extra.";
-"tip.button" = "Tip %@";
-"tip.buttonFallback" = "Send a Tip";
-"tip.consumableNotice" = "Consumable in-app purchase. Tips cannot be restored (Apple policy).";
-"tip.thankYou.title" = "Thank you!";
-"tip.thankYou.message" = "Your support helps keep OSGKeyboard free and open for everyone.";
-"tip.thankYou.past" = "You've supported us %lld time(s). Thank you!";
-"tip.error.title" = "Purchase Failed";
-"tip.error.productUnavailable" = "The tip product is unavailable right now. Try again later.";
-"tip.error.pending" = "Your purchase is pending approval.";
-"tip.error.unknown" = "The purchase could not be completed.";
-"tip.alert.dismiss" = "OK";
+
+/* Account — Mac account page (Sign in with Apple, credits, invitation link).
+   The account.* / account.referral.* keys below mirror the iOS app bundle so
+   the shared AccountSessionCoordinator error keys resolve on macOS too. */
+"mac.section.account" = "Account";
+"mac.account.restoring" = "Restoring your session…";
+"mac.account.signedOut.title" = "Not signed in";
+"mac.account.signedOut.body" = "Sign in with Apple to use your credit balance on this Mac and to get your invitation link.";
+"mac.account.signedOut.footnote" = "Credits are bought on iPhone or on the web and shared across all your devices.";
+"mac.account.signIn.loading" = "Signing in…";
+"mac.account.profile.unnamed" = "Apple Account";
+"mac.account.profile.accountID" = "Account %@";
+"mac.account.signOut" = "Sign Out";
+"mac.account.credits.title" = "Credits";
+"mac.account.credits.balance" = "Balance";
+"mac.account.credits.used" = "Used";
+"mac.account.credits.loading" = "Loading balance…";
+"mac.account.credits.refresh" = "Refresh";
+"mac.account.credits.purchaseNote" = "Purchases are not available on macOS. Buy credits on iPhone or on the web — the balance is shared.";
+"mac.account.invite.title" = "Invitation";
+"mac.account.invite.link" = "Your invitation link";
+"mac.account.invite.copy" = "Copy";
+"mac.account.invite.copied" = "Copied";
+"mac.account.invite.loading" = "Loading your invitation link…";
+"mac.account.invite.retry" = "Retry";
+"mac.account.invite.rewarded" = "Rewarded invites";
+"mac.account.invite.pending" = "Pending invites";
+"mac.account.invite.footnote" = "Both of you get credits once an invited friend qualifies.";
+"mac.account.delete.title" = "Delete Account";
+"mac.account.delete.body" = "Deleting removes your account and any remaining credits. This cannot be undone.";
+"mac.account.delete.action" = "Delete Account…";
+"mac.account.delete.confirmBody" = "Confirm with Apple to permanently delete your account and remaining credits.";
+"mac.account.delete.cancel" = "Cancel";
+"mac.account.error.title" = "Account";
+"mac.account.error.dismiss" = "OK";
+"account.error.appleAuthorization" = "Apple authorization could not be completed.";
+"account.error.appleReauthenticationRequired" = "Sign in with Apple again to keep your account protected.";
+"account.error.delete" = "Could not delete the account.";
+"account.error.load" = "Could not load account details.";
+"account.error.managedGateway" = "Could not prepare the managed service.";
+"account.error.redeemReferral" = "The invitation is saved, but could not be redeemed yet.";
+"account.error.restore" = "Could not restore your account session.";
+"account.error.sessionExpired" = "Your session expired. Sign in again to continue.";
+"account.error.signIn" = "Could not sign in. Please try again.";
+"account.error.signOut" = "Could not sign out. Please try again.";
+"account.error.unavailable" = "Account services are not connected in this build.";
+"account.error.updateProfile" = "Could not update your profile.";
+"account.referral.error.conflict" = "Your invitation link is temporarily unavailable.";
+"account.referral.error.load" = "Couldn’t load your invitation link.";
+"account.referral.error.network" = "Check your connection and try again.";
+"account.referral.error.notFound" = "Your invitation link isn’t available yet.";
+"account.referral.error.session" = "Sign in again to load your invitation link.";
+"account.referral.error.unavailable" = "The invitation service is temporarily unavailable.";
