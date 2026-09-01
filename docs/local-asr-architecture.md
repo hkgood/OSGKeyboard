@@ -1,6 +1,6 @@
 # OSGKeyboard 本地 ASR 技术架构
 
-> **文档状态**：1.7.0 代码事实 + 后续评测方向
+> **文档状态**：Mac 本地 ASR 现行架构说明（结论已复核至 **2.0.3 / build 94**，2026-08-31）+ 后续评测方向
 > **适用范围**：macOS 15+ 本地听写；iOS 26+ 使用 Apple SpeechAnalyzer。
 > **当前结论**：Mac 默认安装目录模型为
 > `qwen3-mlx-0.6b-4bit`，通过 `mlx-audio-swift` 做 Qwen3 MLX 真流式识别；

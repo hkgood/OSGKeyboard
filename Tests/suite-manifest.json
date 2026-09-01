@@ -154,6 +154,7 @@
         "OSGKeyboardTests/FlowKeyboardPoliciesTests",
         "OSGKeyboardTests/FlowReliabilityTests",
         "OSGKeyboardTests/FlowSessionManagerAnalyticsTests",
+        "OSGKeyboardTests/FlowFailureLogStoreTests",
         "OSGKeyboardTests/AISessionStateTests"
       ]
     },
@@ -203,7 +204,6 @@
       "tests": [
         "OSGKeyboardTests/HostAppURLRegistryTests",
         "OSGKeyboardTests/PublicContentRefreshServiceTests",
-        "OSGKeyboardTests/TipProductTests",
         "OSGKeyboardTests/OpenSourceLicenseCatalogTests"
       ]
     },

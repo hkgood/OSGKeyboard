@@ -5,7 +5,7 @@
 
 import Foundation
 
-public struct AccountSession: Codable, Equatable, Sendable {
+public struct AccountTokenSession: Codable, Equatable, Sendable {
     public let accountId: UUID
     public let tokenType: String
     public let accessToken: String
@@ -229,8 +229,8 @@ public struct AccountRefreshTransaction: Codable, Equatable, Sendable {
 }
 
 public protocol AccountSessionVault: Sendable {
-    func loadSession() async throws -> AccountSession?
-    func saveSession(_ session: AccountSession) async throws
+    func loadSession() async throws -> AccountTokenSession?
+    func saveSession(_ session: AccountTokenSession) async throws
     func clearSession() async throws
     func beginRefreshTransaction(
         refreshTokenDigest: String

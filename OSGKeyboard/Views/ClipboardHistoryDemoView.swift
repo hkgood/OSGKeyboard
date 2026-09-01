@@ -22,11 +22,18 @@ struct ClipboardHistoryDemoView: View {
 
     @StateObject private var state = KeyboardState()
     @StateObject private var typing = TypingSessionController()
-    @StateObject private var history = ClipboardHistoryStore(
-        defaults: UserDefaults(suiteName: "osg.whatsnew.clipboard.demo")
-    )
+    // `AIKeyboardView` ranks its skill row off `ClipboardHistoryStore.shared`
+    // and `ClipboardSemanticRankingStore.shared`. Driving a private store here
+    // would leave the row to be faked, which is exactly what made earlier takes
+    // diverge from the shipping UI.
+    @ObservedObject private var history = ClipboardHistoryStore.shared
+    @ObservedObject private var ranking = ClipboardSemanticRankingStore.shared
 
     @Environment(\.colorScheme) private var colorScheme
+    /// Mirrors the chat host for `--preview-fullscreen` recordings.
+    @State private var hostDraft: String = ""
+    /// Closing beat: hand the copied text to the real AI skill row.
+    @State private var showsSkills = false
 
     private var palette: ThemePalette {
         colorScheme == .dark ? Palette.dark : Palette.light
@@ -34,9 +41,22 @@ struct ClipboardHistoryDemoView: View {
 
     var body: some View {
         ZStack {
-            OSGColor.demoBackground.ignoresSafeArea()
+            if FeaturePreviewFlags.isFullscreen {
+                Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+            } else {
+                OSGColor.demoBackground.ignoresSafeArea()
+            }
             VStack(spacing: 0) {
-                Spacer(minLength: 0)
+                if FeaturePreviewFlags.isFullscreen {
+                    FeaturePreviewHostDocument(
+                        kind: .messages,
+                        title: "信息",
+                        text: hostDraft,
+                        incoming: Self.incomingMessage
+                    )
+                } else {
+                    Spacer(minLength: 0)
+                }
                 keyboardChrome
                     .background(palette.background.ignoresSafeArea(edges: .bottom))
                     .overlay(alignment: .top) {
@@ -56,9 +76,15 @@ struct ClipboardHistoryDemoView: View {
 
     private var keyboardChrome: some View {
         ZStack {
-            voiceSurface
-                .opacity(state.clipboardOverlay == .none ? 1 : 0)
-                .allowsHitTesting(state.clipboardOverlay == .none)
+            if showsSkills {
+                // Real unified AI surface — the skill row owns「一键回复」.
+                AIKeyboardView(state: state, typing: typing, onInsert: { _ in })
+                    .transition(.opacity)
+            } else {
+                voiceSurface
+                    .opacity(state.clipboardOverlay == .none ? 1 : 0)
+                    .allowsHitTesting(state.clipboardOverlay == .none)
+            }
 
             if state.clipboardOverlay == .historyPanel {
                 ClipboardHistoryPanelView(
@@ -228,6 +254,134 @@ struct ClipboardHistoryDemoView: View {
             }
         }
         try? await sleep(2.4)
+
+        guard FeaturePreviewFlags.isFullscreen else { return }
+        await runReplyBeat()
+    }
+
+    /// Reply styles are separate skills in the row rather than variants offered
+    /// after one tap, so the beat runs the same copied message through two of
+    /// them back to back — that is what "多个风格的回复" looks like in the real UI.
+    ///
+    /// Which chips appear is decided by `ClipboardSkillSemanticRanker`, not by
+    /// this file: production caps specialised reply skills at two alongside the
+    /// generic 回复, so hand-picking a longer row produced a keyboard that could
+    /// never exist. The beat therefore taps whatever the ranker surfaced.
+    private func runReplyBeat() async {
+        AIKeyboardView.debugSkipsLongPressCoach = true
+        AIKeyboardView.debugPreviewSkills = nil
+        state.aiServiceAvailable = true
+        state.surface = .ai
+        state.aiSession.enter()
+        state.pendingClipboardSkillID = nil
+        withAnimation(.easeInOut(duration: 0.3)) {
+            showsSkills = true
+        }
+
+        let skills = await rankedReplySkills()
+        try? await sleep(0.85)
+
+        guard let generic = skills.first(where: {
+            $0.id == AIClipboardSkillCatalog.replyID
+        }) else { return }
+        await runReplySkill(
+            skill: generic,
+            answer: "好的，预算版我整理一下，明天上午发你。"
+        )
+        state.pendingClipboardSkillID = nil
+        try? await sleep(0.6)
+
+        // Second style: whatever specialised reply the ranker actually offered.
+        if let specialised = skills.first(where: {
+            $0.supportsReplyStyle && $0.id != AIClipboardSkillCatalog.replyID
+        }) {
+            await runReplySkill(
+                skill: specialised,
+                answer: Self.answer(for: specialised.id)
+            )
+        }
+        // End back on the skill row so the card loops without a jump.
+        state.pendingClipboardSkillID = nil
+        try? await sleep(0.25)
+    }
+
+    /// Runs the real semantic analysis the keyboard uses, then reports the row
+    /// it produced so the beat can tap chips that are genuinely on screen.
+    private func rankedReplySkills() async -> [AIClipboardSkill] {
+        guard let newest = history.newestEntry else { return [] }
+        ranking.analyze(newest)
+        // The analyzer runs off the main actor; wait for its snapshot rather
+        // than racing it, or the row falls back to a lone 回复 chip.
+        for _ in 0..<40 {
+            if ranking.snapshot?.entryID == newest.id { break }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        guard let snapshot = ranking.snapshot, snapshot.entryID == newest.id else {
+            return state.clipboardSkillCatalog.filter {
+                $0.id == AIClipboardSkillCatalog.replyID
+            }
+        }
+        return ClipboardSkillSemanticRanker.recommended(
+            skills: state.clipboardSkillCatalog,
+            sourceText: newest.text,
+            analysis: snapshot.analysis,
+            uiLanguage: state.uiLanguage,
+            limit: 5
+        )
+    }
+
+    /// Demo copy per reply style. Keyed by skill so the answer matches whatever
+    /// chip the ranker put in the row.
+    private static func answer(for skillID: String) -> String {
+        switch skillID {
+        case AIClipboardSkillCatalog.playfulReplyID:
+            return "行嘞，预算表这就去梳妆打扮，明早准时上桌。"
+        case AIClipboardSkillCatalog.businessReplyID:
+            return "收到，预算版本我今晚整理完，明日上午发送给您。"
+        case AIClipboardSkillCatalog.empathyReplyID:
+            return "理解，这版确实等着用。我加紧整理，明早一定发你。"
+        case AIClipboardSkillCatalog.acceptTaskID:
+            return "好的，这件事我接了，明天上午把预算版发你。"
+        case AIClipboardSkillCatalog.clarifyRequestID:
+            return "没问题，你要的是含人力成本的那版，还是只要采购部分？"
+        default:
+            return "好的，我整理一下，明天上午发你。"
+        }
+    }
+
+    /// One tap on a reply-style chip: the row gives way to the thinking state,
+    /// the answer streams in, then it is offered for insertion.
+    private func runReplySkill(skill: AIClipboardSkill, answer: String) async {
+        // Drives the real generating copy (falls through to「AI 正在思考…」,
+        // same as a production skill run).
+        state.pendingClipboardSkillID = skill.id
+
+        // `beginGenerating` (and every later step) is guarded on
+        // `activeUtteranceID`, which only `beginPreparing` sets — skipping it
+        // makes the whole sequence a silent no-op and the keyboard never
+        // shows an answer.
+        let utteranceID = UUID()
+        state.aiSession.enter()
+        state.aiSession.beginPreparing(utteranceID: utteranceID)
+        state.aiSession.beginGenerating(question: "", utteranceID: utteranceID)
+        try? await sleep(0.2)
+
+        let chars = Array(answer)
+        var index = 0
+        while index < chars.count {
+            index = min(chars.count, index + 3)
+            state.aiSession.receivePartialAnswer(
+                String(chars[..<index]),
+                utteranceID: utteranceID
+            )
+            try? await sleep(0.04)
+        }
+        state.aiSession.receiveAnswer(answer, utteranceID: utteranceID)
+        try? await sleep(0.45)
+
+        state.aiSession.markAnswerInserted(offersSend: true)
+        hostDraft = answer
+        try? await sleep(0.2)
     }
 
     private func prepareState() {
@@ -236,6 +390,10 @@ struct ClipboardHistoryDemoView: View {
         state.layoutWidth = 390
         state.usesIPadLayoutMetrics = false
         state.showsSystemGlobeKey = false
+        // `AIKeyboardView.showsClipboardSkills` gates on this — without it the
+        // real skill row never appears no matter what the ranker returns.
+        state.clipboardHistoryEnabled = true
+        state.clipboardCandidateBarEnabled = true
         state.clipboardOverlay = .none
         state.clipboardSuggestionText = nil
         state.openClipboardPanel = {
@@ -254,9 +412,13 @@ struct ClipboardHistoryDemoView: View {
         history.clearAll()
         _ = history.ingest(rawText: "订单号 OSG-20260811-8842", changeCount: 3)
         _ = history.ingest(rawText: "https://osglab.com", changeCount: 2)
-        _ = history.ingest(rawText: "明天下午三点会议室见", changeCount: 1)
+        _ = history.ingest(rawText: Self.incomingMessage, changeCount: 1)
         history.reload()
     }
+
+    /// The message the clip replies to. Copying it is what puts the reply
+    /// skills in the row, so it has to be the newest clipboard entry.
+    static let incomingMessage = "方案我看了，明天能不能把预算那一版也发我？" 
 
     private func sleep(_ seconds: Double) async throws {
         try await Task.sleep(nanoseconds: UInt64(seconds * 2.4 * 1_000_000_000))

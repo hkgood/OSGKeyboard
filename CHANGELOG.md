@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **Voluntary tip purchase**: remove the `ByRockyACoffee` consumable, the macOS Settings support-the-developer section, and the unused iOS tip view. Optional credit packs are now the only in-app purchase. / **自愿打赏**：移除 `ByRockyACoffee` 消耗型内购、macOS 设置中的支持开发者区域，以及未被使用的 iOS 打赏视图；可选积分包成为唯一的 App 内购买项。
+
 ### Added
 - **Flow startup diagnostics**: save a privacy-safe ten-second state trace whenever session startup reaches a terminal failure, with local export and deletion controls in Settings. / **Flow 启动诊断**：会话启动最终失败时保存隐私安全的最近十秒状态轨迹，并在设置中提供本机导出与清除入口。
 
@@ -18,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Personal style threshold**: allow generating a learned speaking style after 2,500 effective dictation characters instead of 5,000. / **专属风格门槛**：生成学习型说话风格所需的有效听写字符由 5,000 降至 2,500。
 
 ### Fixed
+- **Clipboard skill matching**: classify multi-sentence pastes sentence by sentence instead of as one block, keep a message's own skills available when a link or phone number is embedded in it, and scale the summary and list thresholds to Chinese text density. / **剪贴板技能匹配**：多句粘贴改为逐句识别而非整段判断，消息中内嵌链接或电话号码时保留消息本身的技能，并按中文文本密度调整总结与清单的长度阈值。
 - **Durable Apple account sessions**: persist refresh operation identifiers before token rotation, reliably store and validate Apple user identifiers, require one-time reauthentication for unverifiable legacy sessions, and prevent failed Keychain deletion or concurrent account work from restoring a revoked login. / **可靠 Apple 账号会话**：在令牌轮换前持久化刷新操作标识，可靠存储并验证 Apple 用户标识，为无法验证的旧会话执行一次重新认证，并防止 Keychain 删除失败或并发账号操作恢复已撤销的登录态。
 - **Account sign-in presentation**: use the concise reward message consistently and keep a uniform app surface beneath translucent Apple authorization sheets. / **账号登录呈现**：统一使用精简的积分奖励文案，并在半透明 Apple 授权弹窗下保持一致的 App 背景。
 - **Recommended hotword details**: label Home recommendations by their actual source, render suggestion chips in adaptive monochrome, remove internal usage counts from dictionary rows, and anchor the iPhone confirmation popover to the selected hotword. / **推荐热词详情**：按真实来源标记首页推荐词，以自适应黑白配色显示推荐标签，移除词库列表中的内部使用次数，并让 iPhone 确认弹窗指向所选热词。
@@ -104,8 +108,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Account confirmation anchors**: sign-out and account-deletion confirmations now open from their selected action rows instead of the profile summary card. / **账号确认弹窗锚点**：退出登录与注销账号确认弹窗现在从对应操作行弹出，不再错误指向资料卡。
 
 ## [1.8.0] - 2026-08-14
-
-> **Release highlights**: See the concise [1.8.0 release notes](docs/RELEASE_NOTES_1.8.0.md) for the key changes since 1.6.6. / **版本亮点**：请参阅精简的 [1.8.0 更新说明](docs/RELEASE_NOTES_1.8.0.md)，了解自 1.6.6 以来的关键变化。
 
 ### Added
 - **English QuickType bar**: while typing a word, three equal slots show the verbatim text (quoted when unknown), the unique Space correction, and a completion. The bar stays empty before typing and between committed words. / **英文 QuickType 栏**：输入单词时，三个等宽格显示原文（生词带引号）、空格会采用的唯一纠错和补全；尚未输入及单词提交后保持空白。

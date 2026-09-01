@@ -1,12 +1,12 @@
 # Personal Dictionary iCloud KVS — Manual Verification Checklist
 
-Use this on **macOS with Xcode 16+** and at least two devices signed into the **same Apple ID** with iCloud Drive / iCloud enabled.
+Use this on **macOS with Xcode 26** (the repository build requirement) and at least two devices signed into the **same Apple ID** with iCloud Drive / iCloud enabled.
 
 ## Prerequisites
 
 1. In Apple Developer Portal, enable **iCloud** → **Key-value storage** for `com.osgkeyboard.ios`.
 2. Regenerate provisioning profiles after entitlements change.
-3. Run `xcodegen generate` and install a fresh build on each device.
+3. Run `./Scripts/generate-xcodeproj.sh` and install a fresh build on each device.
 
 ## Scenarios
 

@@ -15,26 +15,6 @@
   ],
   "products" : [
     {
-      "displayPrice" : "28",
-      "familyShareable" : false,
-      "internalID" : "6789921326",
-      "localizations" : [
-        {
-          "description" : "Support me keep vibe coding~ Voluntary tip — does not unlock any features.",
-          "displayName" : "Buy me a cup of coffee",
-          "locale" : "en_US"
-        },
-        {
-          "description" : "支持一下老刘的 Vibe Coding 工作。自愿打赏，不解锁任何功能。",
-          "displayName" : "给老刘买杯冰美式",
-          "locale" : "zh_Hans"
-        }
-      ],
-      "productID" : "ByRockyACoffee",
-      "referenceName" : "给老刘买杯咖啡",
-      "type" : "Consumable"
-    },
-    {
       "displayPrice" : "8",
       "familyShareable" : false,
       "internalID" : "6789921327",

@@ -1,11 +1,12 @@
 # 打字键盘输入准确率提升计划
 
-> **文档状态**：产品与工程规划（**实现中**：Phase 1～4 已落地，待真机试打）
+> **文档状态**：**Phase 1～4 已随 1.6.1（2026-08-05）发布**；本文保留为设计依据与验收脚本，剩余工作见下方「剩余事项」
 > **适用范围**：iOS 键盘扩展打字面（`OSGKeyboardExt` 打字键网格）+ 共享布局度量（`OSGKeyboardShared`）
 > **关联基线**：`docs/TYPING_KEYBOARD_BASELINE.md`
-> **实现分支**：`feat/keyboard-touch-accuracy`
+> **已落地代码**：`OSGKeyboardShared/Typing/KeyHitTesting.swift`、`TypingKeyLayout.swift`、`PinyinNextKeyResolver.swift`、`OSGKeyboardExt/Typing/TypingKeyTouchPad.swift`（原分支 `feat/keyboard-touch-accuracy` 已合入 `main` 并删除）
 > **创建日期**：2026-08-03
-> **目标版本**：待 Phase 0 基线试打后确定发布节奏
+>
+> **剩余事项**：附录 A 的真机试打脚本尚未留下正式打分记录；Phase 5（气泡预览等加分项）未启动。
 
 ---
 

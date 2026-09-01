@@ -1,5 +1,10 @@
 # Typing Keyboard Baseline (Phase 0)
 
+> **文档状态**：Phase 0 冻结基线（历史快照，2026-08-03）。它记录当时的选型依据，
+> 不随版本更新。**当前权威的依赖版本与许可以 `NOTICE-TYPING.md` 和
+> `OSGKeyboard/Resources/Typing/Rime/manifest.json` 为准**；实施进展见
+> `docs/keyboard-accuracy-plan.md`。
+
 Frozen reference for NanoMouse × OSGKeyboard fusion.
 
 ## NanoMouse reference

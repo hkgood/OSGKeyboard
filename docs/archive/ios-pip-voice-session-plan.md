@@ -1,8 +1,10 @@
 # iOS PiP 语音会话保活规划
 
-> **文档状态**：产品与架构规划（待验证，未进入实现）
-> **适用范围**：iOS 主 App + 键盘扩展 + Live Activity
-> **目标版本**：待产品验证后确定
+> **文档状态**：**历史规划（已实现，部分结论已被取代）**——保留用于追溯设计取舍，不代表当前行为
+> **实际落地**：自动低感知 PiP 于 **1.6.5** 上线（`OSGKeyboard/Services/FlowPictureInPictureController.swift`）
+> **主要偏差**：本文假设 Live Activity 继续承担锁屏与灵动岛展示；**1.6.6 已删除 Live Activity 扩展与全部 ActivityKit 代码**，语音会话仅保留静默低感知 PiP，用户可见文案不出现「画中画」
+> **当前事实以何为准**：`CHANGELOG.md`、`docs/FLOW_BLUETOOTH_TESTING.md`、`docs/keyboard-memory-budget.md`
+> **适用范围**：iOS 主 App + 键盘扩展
 > **创建日期**：2026-07-26
 
 ---

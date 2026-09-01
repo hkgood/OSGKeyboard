@@ -105,8 +105,8 @@ difference until the server request schema supports them.
 
 ## StoreKit credits
 
-The existing `ByRockyACoffee` product remains a voluntary consumable and never
-grants credits. Configure `500tks` for 500 credits at USD 0.99, `1500tks` for
+The app ships three consumable credit packs and no other in-app purchase.
+Configure `500tks` for 500 credits at USD 0.99, `1500tks` for
 1,500 credits at USD 1.99 / CNY 18, and `3000tks` for 3,000 credits at
 USD 2.99 / CNY 28.
 
@@ -123,5 +123,4 @@ USD 2.99 / CNY 28.
    once.
 6. Sign in to another OSG account and verify the first account's transaction is
    rejected.
-7. Confirm there is no Restore Purchases action for credit packs and that the
-   voluntary tip still changes only the local support count.
+7. Confirm there is no Restore Purchases action for credit packs.

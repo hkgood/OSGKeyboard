@@ -369,6 +369,136 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         )
     }
 
+    func testLinkInsideAMessageKeepsTheMessageSkills() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "会议链接 https://zoom.us/j/123 周三下午三点开始，能来吗？",
+            analysis: analysis(
+                hasDate: true,
+                urls: [URL(string: "https://zoom.us/j/123")!],
+                question: detected(),
+                invitation: detected()
+            ),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["zh-Hans"]
+        ).map(\.id)
+
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.extractEventsID,
+                AIClipboardSkillCatalog.acceptInvitationID,
+                AIClipboardSkillCatalog.declineInvitationID,
+                AIClipboardSkillCatalog.replyID,
+                AIClipboardSkillCatalog.openLinkID
+            ]
+        )
+    }
+
+    func testLabelledLinkPasteStaysExclusive() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "详情见 https://example.com/article",
+            analysis: analysis(urls: [URL(string: "https://example.com/article")!]),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["zh-Hans"]
+        ).map(\.id)
+
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.openLinkID,
+                AIClipboardSkillCatalog.summarizeWebPageID,
+                AIClipboardSkillCatalog.replyID
+            ]
+        )
+    }
+
+    func testPhoneNumberInsideAMessageKeepsTheMessageSkills() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "王经理说这个订单有问题，你直接打 400-666-8800 找售后处理一下。",
+            analysis: analysis(
+                phoneNumbers: [ClipboardTextLabel(sourceText: "400-666-8800")],
+                task: detected()
+            ),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["zh-Hans"]
+        ).map(\.id)
+
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.callPhoneID,
+                AIClipboardSkillCatalog.extractTodosID,
+                AIClipboardSkillCatalog.createContactID,
+                AIClipboardSkillCatalog.acceptTaskID,
+                AIClipboardSkillCatalog.replyID
+            ]
+        )
+    }
+
+    /// 180 Chinese characters carry about as much text as 400 Latin ones, so the
+    /// summary threshold must fire well below the raw 360-character mark.
+    func testChineseTextReachesTheSummaryThresholdBelowTheLatinCharacterCount() {
+        let text = String(
+            repeating: "这是一段需要归纳整理的中文长文内容。",
+            count: 10
+        )
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: text,
+            analysis: analysis(),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["zh-Hans"]
+        ).map(\.id)
+
+        XCTAssertLessThan(text.count, 360)
+        XCTAssertEqual(
+            recommendations,
+            [
+                AIClipboardSkillCatalog.summarizeID,
+                AIClipboardSkillCatalog.saveToNotesID,
+                AIClipboardSkillCatalog.replyID
+            ]
+        )
+    }
+
+    func testHardWrappedChineseProseIsNotTreatedAsAList() {
+        let prose = [
+            "我们这次的目标是在下个季度之前完成整套流程的重构工作",
+            "同时还要保证现有的客户不会受到任何影响并保持稳定",
+            "最后需要在月底之前把完整的测试报告提交给管理层评审"
+        ].joined(separator: "\n")
+
+        let proseRecommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: prose,
+            analysis: analysis(),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["zh-Hans"]
+        ).map(\.id)
+
+        let listRecommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "牛奶\n鸡蛋\n面包",
+            analysis: analysis(),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["zh-Hans"]
+        ).map(\.id)
+
+        XCTAssertEqual(proseRecommendations, [AIClipboardSkillCatalog.replyID])
+        XCTAssertTrue(
+            listRecommendations.contains(AIClipboardSkillCatalog.organizeListID)
+        )
+    }
+
     private func rank(
         text: String,
         analysis: ClipboardSemanticAnalysis

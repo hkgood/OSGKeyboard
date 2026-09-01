@@ -32,7 +32,7 @@
 | Field | Value |
 |---|---|
 | Price | Free |
-| In-App Purchases | Optional consumables: tip `ByRockyACoffee`; managed-credit packs `500tks`, `1500tks`, `3000tks` |
+| In-App Purchases | Optional consumables: managed-credit packs `500tks`, `1500tks`, `3000tks` |
 | Availability | All configured App Store territories |
 | Pre-order | No |
 
@@ -153,16 +153,14 @@ OSGKeyboard is a custom keyboard for iOS/iPadOS 26.
    transactions are finished.
 7. AI polish and AI mode can use either managed credits or a user-owned
    provider key. Without either, local dictation still inserts recognized text.
-8. Optional tip `ByRockyACoffee` remains a consumable support purchase and
-   does not grant managed credits or unlock features.
-9. Clipboard history is off by default. To test it, open Settings →
+8. Clipboard history is off by default. To test it, open Settings →
    Clipboard, enable History, copy text on this device or through Universal
    Clipboard, then return to the keyboard. Secure fields hide the clipboard
    entry point. Turning History off preserves saved items; use the separate
    confirmed clear action to delete them.
-10. First-party Product Analytics is enabled by default under Settings →
-    About → Privacy. Turning it off deletes queued events. It does not collect
-    keyboard input, audio, transcripts, prompts, model output, or credentials.
+9. First-party Product Analytics is enabled by default under Settings →
+   About → Privacy. Turning it off deletes queued events. It does not collect
+   keyboard input, audio, transcripts, prompts, model output, or credentials.
 
 Privacy policy:
 https://hkgood.github.io/OSGKeyboard/privacy/
@@ -280,17 +278,50 @@ output, audio, or keyboard content.
 `Info.plist` declares `ITSAppUsesNonExemptEncryption = false`. Network calls use
 standard HTTPS. Re-evaluate this answer if non-exempt cryptography is added.
 
+## Screenshots
+
+OSGKeyboard ships for **iPhone and iPad** (`TARGETED_DEVICE_FAMILY: "1,2"`), so
+both device families need screenshots. Apple scales one uploaded set down to
+smaller devices, so only the largest size per family is required.
+
+| Set | Capture device | Pixel size | Required |
+|---|---|---|---|
+| iPhone 6.9" | iPhone 17 Pro Max | 1320 × 2868 (or 1290 × 2796) | Yes |
+| iPad 13" | iPad Pro 13" (M4) | 2064 × 2752 (or 2048 × 2732) | Yes, because the app supports iPad |
+
+Apple adjusts accepted sizes over time — confirm the current list in the
+App Store Connect media manager before capturing.
+
+### Capture procedure
+
+1. Run the **submitted build** on the simulators above (Xcode 26).
+2. Capture with `xcrun simctl io booted screenshot ~/Desktop/shot.png`.
+   Simulator captures contain no device bezel, which Apple requires.
+3. Verify pixel dimensions; do not upscale a smaller capture.
+4. Upload per device family in App Store Connect. Screenshots are **not**
+   stored in this repository; `docs/assets/screenshots/` holds the smaller,
+   web-optimized images used by the GitHub Pages site only.
+
+### Scenes, in order
+
+1. **Keyboard at rest** — OSGKeyboard in a text field, not recording
+2. **Dictation in progress** — recording state with a partial transcript visible
+3. **Chinese / English typing** — candidate bar with pinyin candidates or the
+   three-slot English QuickType bar
+4. **AI assistant** — a streamed answer inside the keyboard before insertion
+5. **Clipboard skills** — recommended actions after a copy
+6. **Home** — monthly usage calendar, metrics, and personal dictionary
+
 ## Submission checklist
 
 - [ ] Confirm `project.yml` still reads version 2.0.3 / build 94
 - [ ] Open the existing Xcode project (do not regenerate unless needed)
 - [ ] Run the release build and test suites on macOS with Xcode 26
-- [ ] Replace screenshots with captures from the submitted build
+- [ ] Capture fresh iPhone 6.9" and iPad 13" screenshots from the submitted
+      build (see Screenshots above)
 - [ ] Verify the privacy answers against the submitted provider features
 - [ ] In App Store Connect, add Device ID, Product Interaction, and Other
       Usage Data for Analytics; linked to the user, not used for tracking
 - [ ] Confirm `500tks`, `1500tks`, and `3000tks` are approved, consumable,
       and mapped to the server credit catalog
-- [ ] Confirm `ByRockyACoffee` remains an optional consumable tip and unlocks
-      no feature
 - [ ] Upload, select build 94, add review notes, and submit

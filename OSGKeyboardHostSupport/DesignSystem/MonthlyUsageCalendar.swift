@@ -75,7 +75,30 @@ public struct MonthlyUsageCalendar: View {
     }
 
     private var cellDiameter: CGFloat {
+        #if os(macOS)
+        // Mac 端收紧圆点直径，让左侧日历与右侧 2×2 网格高度接近。
+        compact ? 26 : 28
+        #else
         compact ? 28 : 32
+        #endif
+    }
+
+    /// 日期网格的行间距（Mac 端更紧凑）。
+    private var dayRowSpacing: CGFloat {
+        #if os(macOS)
+        compact ? 2 : 3
+        #else
+        compact ? 3 : 5
+        #endif
+    }
+
+    /// 卡片内各区块（标题 / 星期 / 日期网格）的垂直间距。
+    private var sectionSpacing: CGFloat {
+        #if os(macOS)
+        Spacing.xs
+        #else
+        Spacing.sm
+        #endif
     }
 
     public var body: some View {
@@ -91,7 +114,7 @@ public struct MonthlyUsageCalendar: View {
     }
 
     private var calendarContent: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
+        VStack(alignment: .leading, spacing: sectionSpacing) {
             header
             weekdayHeader
             dayGrid
@@ -133,7 +156,7 @@ public struct MonthlyUsageCalendar: View {
     }
 
     private var dayGrid: some View {
-        LazyVGrid(columns: columns, spacing: compact ? 3 : 5) {
+        LazyVGrid(columns: columns, spacing: dayRowSpacing) {
             ForEach(Array(calendarCells.enumerated()), id: \.offset) { _, point in
                 if let point {
                     dayCell(point)
@@ -161,7 +184,7 @@ public struct MonthlyUsageCalendar: View {
         let usesContrastingText = opacity >= 0.48
 
         return Text(day.formatted())
-            .font(.system(size: compact ? 12 : 13, weight: isToday ? .semibold : .medium, design: .rounded))
+            .font(.system(size: dayFontSize, weight: isToday ? .semibold : .medium, design: .rounded))
             .foregroundStyle(
                 isFuture
                     ? palette.textTertiary.opacity(0.45)
@@ -183,6 +206,14 @@ public struct MonthlyUsageCalendar: View {
             .accessibilityValue(
                 Text(UsageStatisticsStore.formatCount(point.value, language: language))
             )
+    }
+
+    private var dayFontSize: CGFloat {
+        #if os(macOS)
+        compact ? 11 : 12
+        #else
+        compact ? 12 : 13
+        #endif
     }
 
     private func fillOpacity(for value: Int, isFuture: Bool) -> Double {

@@ -76,6 +76,6 @@ operation-specific context. Filter Console by `OSGDiag/memory` and compare:
 ## Structural split
 
 - Extension links **OSGKeyboardShared** only (no Charts / StoreKit / Speech / HostSupport).
-- Host embeds **OSGKeyboardHostSupport** (ASR, CLM, CloudASR, tip/charts UI).
+- Host embeds **OSGKeyboardHostSupport** (ASR, CLM, CloudASR, charts UI).
 - Heavy assets (`osg_pinyin.dict.yaml`, CLM bin, licenses, local-asr catalog)
   ship in the **host app** bundle; extension reads Rime from App Group after deploy.

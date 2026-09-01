@@ -9,9 +9,27 @@ import Combine
 import Foundation
 
 public enum ClipboardSkillSemanticRanker {
-    private static let longTextCharacterThreshold = 360
+    /// Calibrated against Latin script. `effectiveLength` scales dense scripts
+    /// up to the same information density before comparing.
+    private static let longTextLengthThreshold = 360.0
+    private static let listLineLengthThreshold = 48.0
+    private static let denseScriptCharacterWeight = 2.25
+    /// A bare link or phone paste keeps at most a short label ("详情：",
+    /// "Contact:"). Anything longer means the entity is embedded in a real
+    /// message, which must keep its own skills.
+    private static let entityResidualLengthLimit = 12
     private static let languageConfidenceThreshold = 0.75
     private static let maximumReplyRecommendations = 2
+    /// Characters permitted in a URL, used to carve the link out of text with no
+    /// whitespace around it (`详见https://example.com`). Deliberately spelled out
+    /// in ASCII: `CharacterSet.alphanumerics` also matches CJK ideographs, which
+    /// would swallow the surrounding message.
+    private static let urlCharacters = CharacterSet(
+        charactersIn: "abcdefghijklmnopqrstuvwxyz"
+            + "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            + "0123456789"
+            + "-._~:/?#[]@!$&'()*+,;=%"
+    )
 
     public static func ranked(
         skills: [AIClipboardSkill],
@@ -91,18 +109,28 @@ public enum ClipboardSkillSemanticRanker {
             scores[id, default: 0] += value
         }
 
+        // A bare link or phone paste has no other intent to serve, so it stays
+        // exclusive. One embedded in a message must not suppress the skills the
+        // message itself earns — scoring continues at a weight that still ranks
+        // the direct action high without outranking a strong message intent.
         if let webURL = analysis.singleWebURL {
-            boost(AIClipboardSkillCatalog.openLinkID, 320)
+            let isBarePaste = isWebLinkDominant(sourceText, url: webURL)
+            boost(AIClipboardSkillCatalog.openLinkID, isBarePaste ? 320 : 200)
             if webURL.scheme?.lowercased() == "https" {
-                boost(AIClipboardSkillCatalog.summarizeWebPageID, 310)
+                boost(AIClipboardSkillCatalog.summarizeWebPageID, isBarePaste ? 310 : 150)
             }
-            return scores
+            if isBarePaste {
+                return scores
+            }
         }
 
         if analysis.singlePhoneNumber != nil {
-            boost(AIClipboardSkillCatalog.callPhoneID, 320)
-            boost(AIClipboardSkillCatalog.createContactID, 310)
-            return scores
+            let isBarePaste = isPhoneNumberDominant(sourceText)
+            boost(AIClipboardSkillCatalog.callPhoneID, isBarePaste ? 320 : 200)
+            boost(AIClipboardSkillCatalog.createContactID, isBarePaste ? 310 : 150)
+            if isBarePaste {
+                return scores
+            }
         }
 
         if isLanguageMismatch(
@@ -163,7 +191,7 @@ public enum ClipboardSkillSemanticRanker {
             boost(AIClipboardSkillCatalog.summarizeID, 45)
         }
 
-        if sourceText.count >= longTextCharacterThreshold {
+        if effectiveLength(sourceText) >= longTextLengthThreshold {
             boost(AIClipboardSkillCatalog.summarizeID, 145)
             boost(AIClipboardSkillCatalog.saveToNotesID, 85)
         }
@@ -174,7 +202,7 @@ public enum ClipboardSkillSemanticRanker {
             || isAdvisoryComplaint(analysis.complaint)
         if analysis.replyableMessage.isDetected,
            !hasSpecializedReplyIntent,
-           sourceText.count < longTextCharacterThreshold,
+           effectiveLength(sourceText) < longTextLengthThreshold,
            !isListLike(sourceText) {
             boost(AIClipboardSkillCatalog.replyID, 160)
             if analysis.sentiment != .negative,
@@ -235,8 +263,71 @@ public enum ClipboardSkillSemanticRanker {
         if markedCount * 2 >= lines.count {
             return true
         }
-        let averageLength = lines.reduce(0) { $0 + $1.count } / lines.count
-        return lines.count >= 3 && averageLength <= 48
+        let averageLength = lines.reduce(0.0) {
+            $0 + effectiveLength($1)
+        } / Double(lines.count)
+        return lines.count >= 3 && averageLength <= listLineLengthThreshold
+    }
+
+    /// CJK characters carry roughly twice the information of a Latin character,
+    /// so a raw `count` makes every length threshold fire about twice too late
+    /// in Chinese and too early in English. Weight dense scripts instead.
+    private static func effectiveLength(_ text: String) -> Double {
+        text.reduce(into: 0.0) { total, character in
+            total += isDenseScriptCharacter(character) ? denseScriptCharacterWeight : 1
+        }
+    }
+
+    private static func isDenseScriptCharacter(_ character: Character) -> Bool {
+        guard let scalar = character.unicodeScalars.first else { return false }
+        switch scalar.value {
+        case 0x3040...0x30FF,      // kana
+             0x3400...0x4DBF,      // CJK unified ideographs extension A
+             0x4E00...0x9FFF,      // CJK unified ideographs
+             0xAC00...0xD7AF,      // hangul syllables
+             0xF900...0xFAFF,      // CJK compatibility ideographs
+             0x20000...0x2FA1F:    // CJK unified ideographs extensions B+
+            return true
+        default:
+            return false
+        }
+    }
+
+    private static func isWebLinkDominant(_ text: String, url: URL) -> Bool {
+        guard let host = url.host, !host.isEmpty else { return false }
+        guard let hostRange = text.range(of: host, options: [.caseInsensitive]) else {
+            return significantCharacterCount(text) <= entityResidualLengthLimit
+        }
+        var start = hostRange.lowerBound
+        while start > text.startIndex {
+            let previous = text.index(before: start)
+            guard isURLCharacter(text[previous]) else { break }
+            start = previous
+        }
+        var end = hostRange.upperBound
+        while end < text.endIndex, isURLCharacter(text[end]) {
+            end = text.index(after: end)
+        }
+        var residual = text
+        residual.removeSubrange(start..<end)
+        return significantCharacterCount(residual) <= entityResidualLengthLimit
+    }
+
+    /// Digits belong to the number itself, so only letters count as residual.
+    private static func isPhoneNumberDominant(_ text: String) -> Bool {
+        text.reduce(into: 0) { count, character in
+            if character.isLetter { count += 1 }
+        } <= entityResidualLengthLimit
+    }
+
+    private static func significantCharacterCount(_ text: String) -> Int {
+        text.reduce(into: 0) { count, character in
+            if character.isLetter || character.isNumber { count += 1 }
+        }
+    }
+
+    private static func isURLCharacter(_ character: Character) -> Bool {
+        character.unicodeScalars.allSatisfy { urlCharacters.contains($0) }
     }
 
     private static func isMarkedListLine(_ line: String) -> Bool {

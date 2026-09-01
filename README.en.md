@@ -78,7 +78,6 @@ The iOS / iPadOS account center includes:
 - Server verification of purchases and a synchronized credit ledger
 - Short-lived, scope-limited managed-service grants for the keyboard extension
 
-The voluntary `ByRockyACoffee` tip is separate from credit packs and does not unlock core functionality.
 
 ## History, statistics, and sync
 

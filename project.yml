@@ -556,6 +556,21 @@ targets:
           - "AppIcon.appiconset"
       - path: OSGKeyboardMac
       - path: OSGKeyboard/Services/OpenSourceLicenseCatalog.swift
+      # Account stack shared with the iOS app at the source level. These files
+      # are platform-agnostic (no UIKit); the iOS-only SwiftUI account center
+      # stays behind in OSGKeyboard/Views/Account and Mac ships MacAccountView.
+      # AccountCreditStore / AccountCreditPurchaseManager compile here because
+      # AccountSessionCoordinator owns one, but Mac never surfaces purchase UI:
+      # Developer ID builds cannot use StoreKit. Credits are bought on iOS/web
+      # and only consumed here.
+      - path: OSGKeyboard/Views/Account/AccountCenterModels.swift
+      - path: OSGKeyboard/Views/Account/AccountSessionCoordinator.swift
+      - path: OSGKeyboard/Views/Account/AccountCreditStore.swift
+      - path: OSGKeyboard/Views/Account/AccountCreditPurchaseManager.swift
+      - path: OSGKeyboard/Views/Account/LiveAccountServices.swift
+      - path: OSGKeyboard/Views/Account/ReferralProfileViewModel.swift
+      - path: OSGKeyboard/Views/Account/AccountAppleAuthorizationFactories.swift
+      - path: OSGKeyboard/Services/AccountAnalyticsBearerBridge.swift
       - path: OSGKeyboardHostSupport
         excludes:
           # iOS SpeechAnalyzer / AVAudioSession capture — Mac has its own paths.
@@ -621,16 +636,36 @@ targets:
     entitlements:
       path: OSGKeyboardMac/OSGKeyboardMac.entitlements
       properties:
-        # Sandbox disabled on purpose: this menu-bar dictation utility uses the
-        # Accessibility API to monitor a global hotkey and inject ⌘V into other
-        # apps — both are forbidden by App Sandbox. Ship via Developer ID +
-        # notarization (not Mac App Store / TestFlight, which force the sandbox).
+        # Sandbox disabled on purpose. Precisely: App Sandbox does not itself
+        # ban the Accessibility API — TCC does, and sandboxed Mac App Store
+        # apps can be granted it. What makes the sandbox a bad trade here is
+        # the combination this app needs: a global `.flagsChanged` monitor over
+        # every keystroke (MacHotkeyService) plus a synthesized ⌘V into other
+        # apps (MacTextInsertionService). That pairing is a review risk not
+        # worth taking just to gain StoreKit. Ship Developer ID + notarized.
+        #
+        # Consequence for the account stack: no in-app purchases here. Credits
+        # are bought on iOS/web and only spent on Mac. Sign in with Apple and
+        # the account API need no sandbox and no Mac App Store.
+        # NSPasteboard, for the record, is unrestricted under the sandbox —
+        # clipboard capture was never the reason to opt out.
         com.apple.security.app-sandbox: false
         com.apple.security.device.audio-input: true
         com.apple.security.network.client: true
         com.apple.developer.ubiquity-kvstore-identifier: $(TeamIdentifierPrefix)com.osgkeyboard.ios
+        # Sign in with Apple needs no sandbox and no Mac App Store — a
+        # Developer ID + notarized build is enough. The Mac App ID must be
+        # grouped under the iOS primary App ID in the developer portal, or the
+        # same person gets a different Apple `sub` here than on iOS and the
+        # server treats them as two accounts.
+        com.apple.developer.applesignin:
+          - Default
         keychain-access-groups:
           - $(AppIdentifierPrefix)com.osgkeyboard.shared
+          # Host-private account credentials (session tokens, Apple user id).
+          # Never the .shared group — that one is reachable by the iOS keyboard
+          # extension; see HostPrivateAccountKeychainDescriptor.
+          - $(AppIdentifierPrefix)com.osgkeyboard.mac
     info:
       path: OSGKeyboardMac/Info.plist
       properties:
@@ -642,6 +677,7 @@ targets:
           - en
           - zh-Hans
         LSApplicationCategoryType: public.app-category.utilities
+        OSGPrivateKeychainAccessGroup: $(AppIdentifierPrefix)com.osgkeyboard.mac
         NSMicrophoneUsageDescription: "OSGKeyboard uses the microphone to transcribe your voice via your configured cloud speech provider."
         NSSpeechRecognitionUsageDescription: "OSGKeyboard uses on-device speech recognition for local dictation mode."
         NSHumanReadableCopyright: "OSGKeyboard"

@@ -126,6 +126,21 @@ final class ClipboardSemanticAnalyzerTests: XCTestCase {
         XCTAssertFalse(acknowledgment.replyableMessage.isDetected)
     }
 
+    /// The classifiers are trained on single sentences. A multi-sentence paste
+    /// analyzed as one blob dilutes bag-of-words confidence below the routing
+    /// threshold, so the intent must be scored per sentence instead.
+    func testIntentIsFoundInsideAMultiSentencePaste() async {
+        let analysis = await ClipboardSemanticAnalyzer().analyze(
+            """
+            各位好，这是本周的进度同步。设计稿已经全部定稿，开发那边也开始联调了。\
+            麻烦你今天下班前把新版报价单发我。另外测试环境这两天可能会有波动，\
+            大家注意一下。
+            """
+        )
+
+        XCTAssertTrue(analysis.task.isDetected)
+    }
+
     func testPersonalPlanDoesNotBecomeAutomaticTask() async {
         let analysis = await ClipboardSemanticAnalyzer().analyze(
             "私人备忘：我准备周五自己整理完这份报告。"

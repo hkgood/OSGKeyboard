@@ -2,7 +2,7 @@
 // OSGKeyboard · HostSupport
 //
 // Provisions anonymous, App-Attest-bound OOBE credentials without creating or
-// mutating an AccountSession.
+// mutating an AccountTokenSession.
 
 import Foundation
 #if canImport(OSGKeyboardShared)

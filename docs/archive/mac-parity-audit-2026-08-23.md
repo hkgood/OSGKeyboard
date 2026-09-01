@@ -1,5 +1,6 @@
 # OSGKeyboard · iOS 完整检查 + macOS 差距与移植建议报告
 
+> **文档状态**：**一次性审计快照（历史存档）**——仅代表 2026-08-23 当时的代码状态，其后 Mac 与 iOS 均有改动（如总览页已改为月度用量日历），不要作为现行文档使用
 > **报告日期**：2026-08-23
 > **当前版本**：2.0.1（build 90）— `project.yml:51-52`
 > **审查范围**：iOS Host (`OSGKeyboard/`, 88 .swift) + iOS HostSupport (`OSGKeyboardHostSupport/`, 29 .swift) + iOS Extension (`OSGKeyboardExt/`, 27 .swift) + Shared (`OSGKeyboardShared/`, 230 .swift) + macOS (`OSGKeyboardMac/`, 39 .swift) + macOS Tests (3 .swift)

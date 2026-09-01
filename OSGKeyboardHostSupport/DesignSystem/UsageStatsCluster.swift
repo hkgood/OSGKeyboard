@@ -98,7 +98,7 @@ public struct UsageStatsCluster<Header: View>: View {
             chartCard
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             splitStatGrid
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .fixedSize(horizontal: false, vertical: true)
     }
@@ -121,6 +121,7 @@ public struct UsageStatsCluster<Header: View>: View {
                     systemImage: "waveform"
                 )
             }
+            .frame(maxHeight: splitRowMaxHeight)
             HStack(spacing: splitItemSpacing) {
                 splitCell(
                     title: SharedL10n.string("stat.translation", language: language),
@@ -136,6 +137,7 @@ public struct UsageStatsCluster<Header: View>: View {
                     action: onOpenDictionary
                 )
             }
+            .frame(maxHeight: splitRowMaxHeight)
         }
     }
 
@@ -164,7 +166,8 @@ public struct UsageStatsCluster<Header: View>: View {
                     title: title,
                     value: value,
                     caption: caption,
-                    accent: accent
+                    accent: accent,
+                    expands: splitCellsFillHeight
                 )
                 .overlay(alignment: .topTrailing) {
                     disclosureIndicator
@@ -173,15 +176,17 @@ public struct UsageStatsCluster<Header: View>: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: splitRowMaxHeight)
         } else {
             UsageStatCard(
                 title: title,
                 value: value,
                 caption: caption,
                 systemImage: systemImage,
-                accent: accent
+                accent: accent,
+                expands: splitCellsFillHeight
             )
+            .frame(maxHeight: splitRowMaxHeight)
         }
     }
 
@@ -335,7 +340,7 @@ public struct UsageStatsCluster<Header: View>: View {
 
     private var splitSectionSpacing: CGFloat {
         #if os(macOS)
-        Spacing.md
+        Spacing.sm
         #else
         CardLayoutMetrics.sectionSpacing
         #endif
@@ -343,9 +348,22 @@ public struct UsageStatsCluster<Header: View>: View {
 
     private var splitItemSpacing: CGFloat {
         #if os(macOS)
-        Spacing.md
+        Spacing.sm
         #else
         CardLayoutMetrics.compactItemSpacing
+        #endif
+    }
+
+    private var splitRowMaxHeight: CGFloat? {
+        splitCellsFillHeight ? .infinity : nil
+    }
+
+    /// Mac 侧的 2×2 网格拉伸到与左侧日历同高，保证左右卡片底边对齐。
+    private var splitCellsFillHeight: Bool {
+        #if os(macOS)
+        layout == .split
+        #else
+        false
         #endif
     }
 }

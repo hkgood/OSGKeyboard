@@ -159,6 +159,12 @@ public enum EnglishQWERTYProximity: Sendable {
     ) -> Int {
         let aCount = source.count
         let bCount = target.count
+        // `1...count` traps on an empty operand. Current callers filter empties
+        // out via the `delta <= 2` gate, but this is a public entry point — an
+        // empty word has no proximity cost, so fall back to pure insert/delete.
+        guard aCount > 0, bCount > 0 else {
+            return max(aCount, bCount) * insDelCost
+        }
         var previous = Array(0...bCount).map { $0 * insDelCost }
         var older = previous
         for i in 1...aCount {
