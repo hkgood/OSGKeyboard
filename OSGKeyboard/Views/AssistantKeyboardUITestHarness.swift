@@ -15,6 +15,9 @@ struct AssistantKeyboardUITestHarness: View {
         case skills
         case semanticBadge
         case search
+        case autoReplyGuidance
+        case translateResult
+        case yesNoReply
     }
 
     @StateObject private var state = KeyboardState()
@@ -39,11 +42,25 @@ struct AssistantKeyboardUITestHarness: View {
         GeometryReader { proxy in
             VStack(spacing: 0) {
                 Spacer(minLength: 0)
-                AIKeyboardView(
-                    state: state,
-                    typing: typing,
-                    onInsert: { _ in }
-                )
+                // Mirror KeyboardSurfaceRoot: the auto-reply guide dims the live
+                // keyboard and floats its pitch on top (keyboard stays visible).
+                ZStack {
+                    AIKeyboardView(
+                        state: state,
+                        typing: typing,
+                        onInsert: { _ in }
+                    )
+
+                    if scenario == .autoReplyGuidance {
+                        ClipboardAutoReplyGuideView(
+                            onClose: { state.clipboardOverlay = .none },
+                            onTry: {}
+                        )
+                    }
+                }
+                // Constrain to a realistic keyboard band so the scrim dims only
+                // the keyboard region, as it does over a real host app.
+                .frame(height: scenario == .autoReplyGuidance ? 300 : nil)
                 .background(backgroundColor)
             }
             .onAppear {
@@ -173,6 +190,58 @@ struct AssistantKeyboardUITestHarness: View {
             state.discardPendingAIAnswer = { [weak keyboardState] in
                 keyboardState?.aiSession.discardReadyAnswer()
             }
+        case .translateResult:
+            // Staged auto-translate: result shown on the keyboard, inserted only
+            // via the liquid-glass button.
+            AIKeyboardView.debugPreviewSkills = nil
+            state.activeClipboardSkillID = AIClipboardSkillCatalog.translateID
+            state.autoResultReadOnly = true
+            let utteranceID = UUID()
+            state.aiSession.enter()
+            state.aiSession.beginPreparing(utteranceID: utteranceID)
+            state.aiSession.receiveAnswer(
+                "Let's meet at the cafe tomorrow at 3pm — does that work for you?",
+                utteranceID: utteranceID
+            )
+            state.confirmPendingAIAnswer = { [weak keyboardState] in
+                keyboardState?.aiSession.markAnswerInserted(offersSend: true)
+            }
+            state.discardPendingAIAnswer = { [weak keyboardState] in
+                keyboardState?.aiSession.discardReadyAnswer()
+            }
+        case .yesNoReply:
+            // Both-stance answers for a yes/no question (4 variants > 3).
+            AIKeyboardView.debugPreviewSkills = nil
+            state.activeClipboardSkillID = AIClipboardSkillCatalog.replyID
+            // Fresh copy present → the leading slot shows the Paste capsule and the
+            // alternates row can rank the skills for this text.
+            state.clipboardSuggestionText = "明天下午三点方便吗？"
+            state.clipboardSuggestionChangeCount = 1
+            ClipboardHistoryStore.shared.ingest(rawText: "明天下午三点方便吗？", changeCount: 1)
+            let utteranceID = UUID()
+            state.aiSession.enter()
+            state.aiSession.beginPreparing(utteranceID: utteranceID)
+            state.aiSession.receiveReplyVariants(
+                [
+                    AIReplyVariant(kind: .answerAffirmative, emotion: .neutral,
+                                   text: "可以的，这个时间我没问题，就这么定。"),
+                    AIReplyVariant(kind: .answerNegative, emotion: .neutral,
+                                   text: "不行，我那天已经排满了，来不了。"),
+                    AIReplyVariant(kind: .answerConditional, emotion: .neutral,
+                                   text: "如果能改到下午三点之后，我就可以。"),
+                    AIReplyVariant(kind: .answerDefer, emotion: .neutral,
+                                   text: "我先确认一下日程，稍后回复你。")
+                ],
+                utteranceID: utteranceID
+            )
+            state.selectAIReplyVariant = { [weak keyboardState] id in
+                _ = keyboardState?.aiSession.selectReplyVariant(id: id)
+            }
+            // Deterministic stand-in for the coordinator: switch the active skill
+            // so the alternates row updates when a capsule is tapped.
+            state.submitAIClipboardSkill = { [weak keyboardState] skill, _ in
+                keyboardState?.activeClipboardSkillID = skill.id
+            }
         case .skillFailure:
             AIKeyboardView.debugPreviewSkills = nil
             state.skillTipText = "Skill failed"
@@ -203,6 +272,9 @@ struct AssistantKeyboardUITestHarness: View {
             AIKeyboardView.debugPreviewSkills = nil
             state.returnKeyRole = .search
             state.assistantActionAvailable = true
+        case .autoReplyGuidance:
+            AIKeyboardView.debugPreviewSkills = nil
+            state.clipboardOverlay = .autoReplyGuide
         }
     }
 

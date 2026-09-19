@@ -33,7 +33,7 @@
     <li><strong>AI mode questions</strong> — in AI keyboard mode, your spoken question text—or a question you tap from an idle suggestion—is sent to the selected AI service to generate an answer. User-configured requests go directly to that provider; managed-credit requests go through <code>account.osglab.com</code>. When the selected service supports server-side web search, it may retrieve public web results for time-sensitive answers.</li>
     <li><strong>Anonymous onboarding AI trial</strong> — before you sign in, onboarding can issue a short-lived, feature-limited credential after Apple App Attest verifies a genuine app installation. The four fixed lessons may send one voice transcript, an explicitly copied lesson sample for translation and reply, and one transcribed AI question through <code>account.osglab.com</code>. This flow does not create an account, process an Apple identity token, use credits, or upload raw voice audio. The copied lesson sample is temporary and does not enable or populate clipboard history. The service keeps only pseudonymous integrity, request-state, feature, and metering records needed to enforce the one-use limits and investigate abuse; it does not retain request or response bodies.</li>
     <li><strong>AI suggestions and OSGKeyboard web pages</strong> — the main app may request public suggestion titles from <code>key.osglab.com</code>; no voice, transcript, clipboard body, API key, or ordinary keystroke content is included. Opening the update page requests public content from <code>download.osglab.com</code>. Those hosts may process ordinary connection metadata such as IP address and request time.</li>
-    <li><strong>AI Agent skills, Shortcuts, and maps</strong> — when you deliberately run a skill, the selected or copied text and skill prompt are sent to your configured LLM provider. Reminders, Calendar, and Notes exports pass the generated result on-device to an Apple Shortcut you install. Navigation opens an address or route in Apple Maps, Amap, or Baidu Maps; the selected provider's policy applies.</li>
+    <li><strong>AI Agent skills, Shortcuts, and maps</strong> — when you deliberately run a skill, the selected or copied text and skill prompt are sent to your configured LLM provider. Reminders and Calendar exports write the generated items directly through Apple's EventKit on this device, after iOS asks you for permission; Calendar uses write-only access, so the app can add events but never reads your existing ones. Notes exports pass the generated result on-device to an Apple Shortcut you install. Navigation opens an address or route in Apple Maps, Amap, or Baidu Maps; the selected provider's policy applies.</li>
     <li><strong>API credentials</strong> — stored in the iOS Keychain and shared between the main app and keyboard extension. When iCloud settings sync is enabled, keys replicate through iCloud Keychain (not iCloud KVS JSON).</li>
     <li><strong>Optional OSGKeyboard account and purchases</strong> — no account is required for local transcription or user-configured providers. If you choose Sign in with Apple, the account service processes the Apple identity token, a pseudonymous OSGKeyboard account identifier, optional display name, device-integrity evidence, credit balance, referral state, and StoreKit transaction identifiers needed to verify consumable credit purchases. Account session tokens stay in the main app's private Keychain; the keyboard extension receives only a short-lived, scope-limited managed-service grant. You can sign out or delete the account in the app.</li>
     <li><strong>App preferences</strong> — engine mode, language, and keyboard settings stored in App Group UserDefaults. Optional iCloud sync mirrors eligible preferences, usage statistics, and voice history through your private iCloud account. Clipboard-history consent and its suggestion-strip switch stay device-local and are not activated by iCloud settings sync.</li>
@@ -47,7 +47,7 @@
   <h2>What we do not collect</h2>
   <ul>
     <li>We do <strong>not</strong> log or upload ordinary keystrokes.</li>
-    <li>We do <strong>not</strong> use third-party analytics, crash-reporting, advertising SDKs, ATT, or IDFA.</li>
+    <li>We do <strong>not</strong> use third-party analytics, crash-reporting, advertising SDKs, ATT, or IDFA. OSGKeyboard records Apple <strong>MetricKit</strong> crash and hang diagnostics on your device so you can export them from Settings ▸ Diagnostics; App Store builds never upload them. Beta builds distributed through TestFlight additionally upload these diagnostics to <code>account.osglab.com</code>, and you can turn that off in the same screen. The reports contain crash metadata only — exception type, signal, termination reason, binary names and a truncated call stack — never audio, transcripts, clipboard content, prompts, or API keys.</li>
     <li>We do <strong>not</strong> sell personal data.</li>
   </ul>
 
@@ -86,7 +86,7 @@
     <li><strong>AI 模式问题</strong> — 在 AI 键盘模式下，语音转写后的问题文字或你点选的建议会发送到当前选择的 AI 服务。用户自备请求直达所选服务商；托管积分请求经 <code>account.osglab.com</code> 处理。所选服务支持联网搜索时，可能检索公开网页结果回答时效性问题。</li>
     <li><strong>匿名首次体验</strong> — 登录前，开机引导可在 Apple App Attest 验证正版 App 后签发短时、限功能的匿名凭证。四项固定教学会经 <code>account.osglab.com</code> 分别发送一次语音转写文字、由你明确复制的教学示例（用于翻译与回复），以及一次语音转写后的 AI 问题；不会创建账号、处理 Apple 身份令牌、使用积分或上传原始语音。教学示例仅短时使用，不会开启或写入剪贴板历史。服务端只保留执行一次性限制和调查滥用所需的匿名完整性、请求状态、功能类型及计量记录，不保留请求或回答正文。</li>
     <li><strong>AI 建议与 OSGKeyboard 网页</strong> — 主 App 可能从 <code>key.osglab.com</code> 请求公开建议标题；请求不包含语音、转写、剪贴板正文、API Key 或普通击键内容。打开更新页时会从 <code>download.osglab.com</code> 请求公开内容。相关主机可能处理 IP 地址、请求时间等普通连接元数据。</li>
-    <li><strong>AI Agent 技能、快捷指令与地图</strong> — 仅在你主动运行技能时，所选或复制文字及技能提示词才会发送到你配置的 LLM。提醒事项、日历与备忘录导出会在设备端把生成结果交给你安装的 Apple 快捷指令；导航会在 Apple 地图、高德地图或百度地图中打开地址或路线。</li>
+    <li><strong>AI Agent 技能、快捷指令与地图</strong> — 仅在你主动运行技能时，所选或复制文字及技能提示词才会发送到你配置的 LLM。提醒事项与日历导出会在本机经 iOS 授权后通过 Apple EventKit 直接写入，日历仅使用「仅写入」权限，只能新增日程、无法读取你已有的日程；备忘录导出会在设备端把生成结果交给你安装的 Apple 快捷指令；导航会在 Apple 地图、高德地图或百度地图中打开地址或路线。</li>
     <li><strong>API 凭证</strong> — 保存在设备 Keychain，在主 App 与键盘扩展间共享。开启 iCloud 设置同步后，经 iCloud 钥匙串同步（非 iCloud KVS JSON）。</li>
     <li><strong>可选 OSGKeyboard 账号与购买</strong> — 本地转写和用户自备服务商无需账号。若你选择 Apple 登录，账号服务会处理 Apple 身份令牌、匿名化的 OSGKeyboard 账号标识、可选昵称、设备完整性证明、积分余额、邀请状态，以及核验消耗型积分包所需的 StoreKit 交易标识。账号会话令牌只保存在主 App 私有 Keychain；键盘扩展仅获得短时、限权的托管服务凭证。你可以在 App 内退出或注销账号。</li>
     <li><strong>应用偏好</strong> — 引擎、语言等设置保存在 App Group。可选 iCloud 同步经私有 iCloud 账户镜像可同步的偏好、统计与语音历史。剪贴板历史采集许可与建议条开关仅属于本机，不会被 iCloud 设置同步开启。</li>
@@ -100,7 +100,7 @@
   <h2>我们不收集的内容</h2>
   <ul>
     <li>我们<strong>不会</strong>记录或上传你平时在键盘上的击键内容。</li>
-    <li>我们<strong>不会</strong>集成第三方分析、崩溃上报或广告 SDK，也不使用 ATT 或 IDFA。</li>
+    <li>我们<strong>不会</strong>集成第三方分析、崩溃上报或广告 SDK，也不使用 ATT 或 IDFA。OSGKeyboard 会在你的设备上记录 Apple <strong>MetricKit</strong> 崩溃与卡顿诊断，供你在「设置 ▸ 诊断」中导出；App Store 版本不会上传。通过 TestFlight 分发的内测版本会额外将这些诊断上传至 <code>account.osglab.com</code>，可在同一页面关闭。报告只包含崩溃元数据——异常类型、信号、终止原因、二进制名称与截断的调用栈——不包含录音、转写文本、剪贴板内容、提示词或 API 密钥。</li>
     <li>我们<strong>不会</strong>出售个人数据。</li>
   </ul>
 

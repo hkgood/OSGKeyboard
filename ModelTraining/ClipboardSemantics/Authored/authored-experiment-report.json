@@ -1,0 +1,112 @@
+{
+  "configurations": {},
+  "experiment": "llm-authored-rare-intent-supplement-v1",
+  "results": [
+    {
+      "authoredDeployedThresholds": {
+        "macroF1": 0.3415,
+        "macroPrecision": 0.3925,
+        "macroRecall": 0.4449,
+        "records": 144
+      },
+      "authoredRecalibratedThresholds": {
+        "macroF1": 0.3864,
+        "macroPrecision": 0.4341,
+        "macroRecall": 0.448,
+        "records": 144
+      },
+      "baseline": {
+        "macroF1": 0.2651,
+        "macroPrecision": 0.418,
+        "macroRecall": 0.2798,
+        "records": 144
+      },
+      "corpus": "authoredEvaluation"
+    },
+    {
+      "authoredDeployedThresholds": {
+        "macroF1": 0.7138,
+        "macroPrecision": 0.8635,
+        "macroRecall": 0.6273,
+        "records": 680
+      },
+      "authoredRecalibratedThresholds": {
+        "macroF1": 0.6978,
+        "macroPrecision": 0.8722,
+        "macroRecall": 0.6023,
+        "records": 680
+      },
+      "baseline": {
+        "macroF1": 0.6817,
+        "macroPrecision": 0.874,
+        "macroRecall": 0.5829,
+        "records": 680
+      },
+      "corpus": "randomHoldout"
+    },
+    {
+      "authoredDeployedThresholds": {
+        "macroF1": 0.4166,
+        "macroPrecision": 0.525,
+        "macroRecall": 0.3558,
+        "records": 640
+      },
+      "authoredRecalibratedThresholds": {
+        "macroF1": 0.4166,
+        "macroPrecision": 0.525,
+        "macroRecall": 0.3558,
+        "records": 640
+      },
+      "baseline": {
+        "macroF1": 0.4166,
+        "macroPrecision": 0.525,
+        "macroRecall": 0.3558,
+        "records": 640
+      },
+      "corpus": "targetedReleaseHoldout"
+    },
+    {
+      "authoredDeployedThresholds": {
+        "macroF1": 0.1486,
+        "macroPrecision": 0.3363,
+        "macroRecall": 0.1116,
+        "records": 200
+      },
+      "authoredRecalibratedThresholds": {
+        "macroF1": 0.1486,
+        "macroPrecision": 0.3363,
+        "macroRecall": 0.1116,
+        "records": 200
+      },
+      "baseline": {
+        "macroF1": 0.1486,
+        "macroPrecision": 0.3363,
+        "macroRecall": 0.1116,
+        "records": 200
+      },
+      "corpus": "onlineRealHoldout"
+    },
+    {
+      "authoredDeployedThresholds": {
+        "macroF1": 0.2726,
+        "macroPrecision": 0.291,
+        "macroRecall": 0.3919,
+        "records": 41195
+      },
+      "authoredRecalibratedThresholds": {
+        "macroF1": 0.2744,
+        "macroPrecision": 0.2919,
+        "macroRecall": 0.3834,
+        "records": 41195
+      },
+      "baseline": {
+        "macroF1": 0.2783,
+        "macroPrecision": 0.2948,
+        "macroRecall": 0.332,
+        "records": 41195
+      },
+      "corpus": "comprehensiveOnlineHoldout"
+    }
+  ],
+  "schemaVersion": 1
+}

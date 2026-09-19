@@ -67,11 +67,13 @@
 "error.cloudASR.invalidURL" = "Invalid cloud ASR endpoint.";
 "error.cloudASR.http" = "Cloud ASR returned HTTP %lld.";
 "error.cloudASR.httpWithMessage" = "Cloud ASR returned HTTP %lld: %@";
+"error.cloudASR.insufficientBalance" = "Account balance is insufficient. Some models require a positive balance even when priced at ¥0 — top up your account and try again.";
 "error.cloudASR.decoding" = "Failed to parse cloud ASR response: %@";
 "error.cloudASR.transport" = "Cloud ASR network error: %@";
 "error.cloudASR.emptyTranscript" = "Cloud ASR returned an empty transcript.";
 "error.cloudASR.audioTooLong" = "Audio segment is too long for this cloud ASR provider.";
 "error.cloudASR.providerUnsupported" = "This provider does not support cloud speech recognition yet.";
+"error.cloudASR.timedOut" = "Connection check timed out. The provider did not respond in time — check your network, API key, and account balance, then try again.";
 "error.cloudASR.streamingNotImplemented" = "Streaming ASR failed for this provider. Check your API key and network, or try again.";
 
 /* Managed account gateway */
@@ -200,7 +202,7 @@
 "mac.styles.prompt" = "Complete prompt";
 "mac.styles.hint" = "Use {{DICTIONARY}} to place the personal dictionary. System rules are appended automatically.";
 "mac.styles.learn.title" = "Generate Your Style";
-"mac.styles.learn.body" = "Learn how you naturally express yourself from past dictation.";
+"mac.styles.learn.body" = "Learn how you naturally express yourself from past dictation. Applies to AI replies on the iPhone keyboard.";
 "mac.styles.learn.progress" = "%lld / %lld characters";
 "mac.styles.learn.remaining" = "%lld to go";
 "mac.styles.learn.ready" = "Ready";
@@ -287,7 +289,6 @@
 "mac.delete" = "Delete";
 "mac.dict.deleteTitle" = "Delete this word?";
 "mac.dict.deleteMessage" = "This cannot be undone.";
-"mac.hint.holdOption" = "Hold Option to dictate";
 "mac.settings.cloudProvider" = "CLOUD PROVIDER";
 "mac.settings.polishProvider" = "TEXT POLISH (LLM)";
 "mac.settings.asrProvider" = "SPEECH RECOGNITION (ASR)";
@@ -470,7 +471,6 @@
 "settings.appLanguage.english" = "English";
 "settings.appLanguage.chinese" = "Chinese";
 
-
 /* Account — Mac account page (Sign in with Apple, credits, invitation link).
    The account.* / account.referral.* keys below mirror the iOS app bundle so
    the shared AccountSessionCoordinator error keys resolve on macOS too. */
@@ -523,3 +523,51 @@
 "account.referral.error.notFound" = "Your invitation link isn’t available yet.";
 "account.referral.error.session" = "Sign in again to load your invitation link.";
 "account.referral.error.unavailable" = "The invitation service is temporarily unavailable.";
+
+/* Rime / typing engine errors */
+"error.rime.appGroupUnavailable" = "App Group unavailable.";
+"error.rime.bundledResourceMissing" = "Missing input-method resource: %@";
+"error.rime.lockUnavailable" = "Input-method resources are being updated by another process.";
+"error.rime.deploymentFailed" = "Input-method resource deployment failed.";
+"error.rime.resourcesNotInstalled" = "Open OSGKeyboard first to finish input-method setup.";
+"error.rime.hostAppRequired" = "Input-method resources can only be deployed by the OSGKeyboard app.";
+"error.rime.schemaUnavailable" = "Input schema unavailable: %@";
+
+/* Text polish errors */
+"error.polish.noTranscript" = "No transcript to polish.";
+"error.polish.timeout" = "LLM polish timed out.";
+"error.polish.missingAPIKey" = "Missing API key — fill it in Settings before polish can run.";
+"error.polish.keychainLocked" = "API key unavailable while the device is locked — will work after unlock.";
+
+/* Local ASR model errors */
+"error.localASR.downloadFailed" = "Download failed: %@";
+"error.localASR.extractFailed" = "Extract failed: %@";
+"error.localASR.validationFailed" = "Validation failed: %@";
+"error.localASR.runtimeMissing" = "Sherpa runtime is not installed.";
+"error.localASR.binaryMissing" = "Sherpa binary not found in runtime bundle.";
+"error.localASR.missingBundledCatalog" = "Missing bundled local ASR catalog.";
+"error.localASR.modelNotFound" = "Local ASR model not found: %@";
+
+/* Account service errors */
+"error.account.refreshTokenReuse" = "The session was revoked because refresh-token reuse was detected.";
+"error.account.transport" = "The account service could not be reached.";
+"error.account.invalidResponse" = "The account service returned an invalid response.";
+"error.account.decoding" = "The account service response could not be decoded.";
+"error.account.secureStorage" = "The private account session could not be stored securely.";
+"error.account.sessionUnavailable" = "No account session is available.";
+"error.account.appleAuthorization" = "Sign in with Apple did not return valid credentials.";
+"error.account.integrityUnavailable" = "Device integrity verification is unavailable.";
+
+/* Custom language model errors */
+"error.clm.missingManifest" = "Missing bundled custom language model manifest.";
+"error.clm.missingTrainingAsset" = "Missing bundled custom language model training asset.";
+"error.clm.missingAppGroupContainer" = "App Group container unavailable for custom language model preparation.";
+"error.clm.missingPreparedArtifacts" = "Custom language model preparation did not produce LM/Vocab artifacts.";
+"error.clm.retryBudgetExhausted" = "Custom language model preparation retry budget exhausted.";
+
+/* macOS-only errors and status labels */
+"mac.error.speechDenied" = "Speech recognition permission denied.";
+"mac.error.converterUnavailable" = "Failed to initialize audio converter.";
+"mac.error.microphoneAccessDenied" = "Microphone access denied — enable it in System Settings → Privacy & Security → Microphone.";
+"mac.accessibility.status.granted" = "Granted";
+"mac.accessibility.status.needed" = "Needed";

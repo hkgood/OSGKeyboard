@@ -24,12 +24,12 @@ struct HelpFeedbackView: View {
                 ContentUnavailableView(
                     "settings.support.unavailable.title",
                     systemImage: "wifi.slash",
-                    description: Text("settings.support.unavailable.message")
+                    description: Text(AppL10n.string("settings.support.unavailable.message"))
                 )
             }
         }
         .background(palette.background.ignoresSafeArea())
-        .navigationTitle("settings.link.support")
+        .navigationTitle(AppL10n.string("settings.link.support"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }

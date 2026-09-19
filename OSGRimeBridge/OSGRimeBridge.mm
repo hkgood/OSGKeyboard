@@ -10,6 +10,30 @@ static RimeApi_stdbool *OSGRimeAPI(void) {
     return rime_get_api_stdbool();
 }
 
+/// Decodes a librime-owned C string into a string that is never nil.
+///
+/// `+[NSString stringWithUTF8String:]` returns nil for malformed UTF-8, which
+/// librime hands back when a user dictionary is truncated or corrupted (an
+/// interrupted deploy, a half-synced iCloud file). Everything on this boundary
+/// is declared `nonnull` under `NS_ASSUME_NONNULL`, so a nil slipping through
+/// becomes a crash on the Swift side the moment the string is read — the
+/// keyboard dies while the user is typing. Fall back to Latin-1, which cannot
+/// fail and keeps the ASCII portion legible, and to the empty string if even
+/// that is refused.
+static NSString *OSGRimeString(const char *value) {
+    if (value == NULL) {
+        return @"";
+    }
+    NSString *decoded = [NSString stringWithUTF8String:value];
+    if (decoded != nil) {
+        return decoded;
+    }
+    NSData *bytes = [NSData dataWithBytes:value length:strlen(value)];
+    NSString *latin1 = [[NSString alloc] initWithData:bytes
+                                             encoding:NSISOLatin1StringEncoding];
+    return latin1 ?: @"";
+}
+
 @implementation OSGRimeCandidate
 
 - (instancetype)initWithText:(NSString *)text
@@ -242,7 +266,15 @@ static NSArray<OSGRimeCandidate *> *OSGAssembleDisplayCandidates(
 }
 
 - (BOOL)running {
-    return self.session != 0 && OSGRimeAPI()->find_session(self.session);
+    RimeApi_stdbool *api = OSGRimeAPI();
+    // Every other session call funnels through here, so one NULL check on the
+    // API vector covers the whole class. A NULL vector means librime failed to
+    // link/initialise; dereferencing it would crash instead of degrading to
+    // "Chinese input unavailable".
+    if (api == NULL) {
+        return NO;
+    }
+    return self.session != 0 && api->find_session(self.session);
 }
 
 - (void)populateTraits:(RimeTraits *)traits {
@@ -301,17 +333,22 @@ static NSArray<OSGRimeCandidate *> *OSGAssembleDisplayCandidates(
 }
 
 - (void)stopSession {
-    if (self.session != 0) {
-        OSGRimeAPI()->destroy_session(self.session);
-        self.session = 0;
+    RimeApi_stdbool *api = OSGRimeAPI();
+    if (api != NULL && self.session != 0) {
+        api->destroy_session(self.session);
     }
+    self.session = 0;
 }
 
 - (void)finalizeRuntime {
     [self stopSession];
+    RimeApi_stdbool *api = OSGRimeAPI();
+    if (api == NULL) {
+        return;
+    }
     @synchronized([OSGRimeBridge class]) {
         if (sInitialized) {
-            OSGRimeAPI()->finalize();
+            api->finalize();
             sInitialized = NO;
         }
     }
@@ -375,8 +412,7 @@ static NSArray<OSGRimeCandidate *> *OSGAssembleDisplayCandidates(
     if (![self running]) {
         return @"";
     }
-    const char *input = OSGRimeAPI()->get_input(self.session);
-    return input ? [NSString stringWithUTF8String:input] : @"";
+    return OSGRimeString(OSGRimeAPI()->get_input(self.session));
 }
 
 - (OSGRimeSnapshot *)snapshotWithCandidateLimit:(NSInteger)limit {
@@ -391,9 +427,7 @@ static NSArray<OSGRimeCandidate *> *OSGAssembleDisplayCandidates(
     NSString *commitText = @"";
     RIME_STRUCT(RimeCommit, commit);
     if (api->get_commit(self.session, &commit)) {
-        if (commit.text) {
-            commitText = [NSString stringWithUTF8String:commit.text];
-        }
+        commitText = OSGRimeString(commit.text);
         api->free_commit(&commit);
     }
 
@@ -402,9 +436,7 @@ static NSArray<OSGRimeCandidate *> *OSGAssembleDisplayCandidates(
     RIME_STRUCT(RimeContext_stdbool, context);
     if (api->get_context(self.session, &context)) {
         composing = context.composition.length > 0;
-        if (context.composition.preedit) {
-            preedit = [NSString stringWithUTF8String:context.composition.preedit];
-        }
+        preedit = OSGRimeString(context.composition.preedit);
         api->free_context(&context);
     }
 
@@ -426,12 +458,8 @@ static NSArray<OSGRimeCandidate *> *OSGAssembleDisplayCandidates(
             NSInteger charsSeen = 0;
             NSInteger charQuota = hasRemainder ? MAX((NSInteger)24, safeLimit / 4) : 0;
             while ((NSInteger)scanned.count < scanCap && api->candidate_list_next(&iterator)) {
-                NSString *text = iterator.candidate.text
-                    ? [NSString stringWithUTF8String:iterator.candidate.text]
-                    : @"";
-                NSString *comment = iterator.candidate.comment
-                    ? [NSString stringWithUTF8String:iterator.candidate.comment]
-                    : @"";
+                NSString *text = OSGRimeString(iterator.candidate.text);
+                NSString *comment = OSGRimeString(iterator.candidate.comment);
                 [scanned addObject:[[OSGRimeCandidate alloc] initWithText:text
                                                                   comment:comment
                                                                     index:iterator.index]];
@@ -455,11 +483,17 @@ static NSArray<OSGRimeCandidate *> *OSGAssembleDisplayCandidates(
     if (scanned.count == 0) {
         RIME_STRUCT(RimeContext_stdbool, menuContext);
         if (api->get_context(self.session, &menuContext)) {
-            NSInteger count = MIN((NSInteger)menuContext.menu.num_candidates, safeLimit);
+            // Defensive: `num_candidates` and `candidates` are separate
+            // fields, and nothing in the C API guarantees the pointer is set
+            // whenever the count is non-zero. Indexing a NULL array would
+            // crash, so trust the pointer over the count.
+            NSInteger count = menuContext.menu.candidates == NULL
+                ? 0
+                : MIN((NSInteger)menuContext.menu.num_candidates, safeLimit);
             for (NSInteger index = 0; index < count; index++) {
                 RimeCandidate item = menuContext.menu.candidates[index];
-                NSString *text = item.text ? [NSString stringWithUTF8String:item.text] : @"";
-                NSString *comment = item.comment ? [NSString stringWithUTF8String:item.comment] : @"";
+                NSString *text = OSGRimeString(item.text);
+                NSString *comment = OSGRimeString(item.comment);
                 // Menu indices are page-local; absolute index ≈ page_no * page_size + i.
                 NSInteger absolute = (NSInteger)menuContext.menu.page_no
                     * (NSInteger)menuContext.menu.page_size

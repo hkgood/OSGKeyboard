@@ -113,7 +113,7 @@ struct RepeatingPressButton<Label: View>: View {
             .gesture(pressGesture)
             .opacity(disabled ? 0.38 : 1)
             .allowsHitTesting(!disabled)
-            .accessibilityLabel(Text("delete"))
+            .accessibilityLabel(ExtL10n.string("keyboard.key.deleteA11y"))
             .accessibilityAddTraits(.isButton)
             .onDisappear { stopRepeating() }
     }

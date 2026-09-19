@@ -195,6 +195,22 @@ public final class TypingInputConfiguration: ObservableObject {
         (defaults ?? AppGroup.defaultsIfAvailable)?.bool(forKey: Key.rememberLastSurface) ?? false
     }
 
+    /// The surface present when the keyboard last left the screen, regardless of
+    /// the "remember last surface" preference. `.ai` migrates to `.voice`;
+    /// returns `.voice` when nothing was persisted. Auto mode uses this to send
+    /// the user back to the keyboard they last used after a reply takeover,
+    /// even when the keyboard opened straight onto voice.
+    nonisolated public static func lastLeftSurface(
+        defaults: UserDefaults? = nil
+    ) -> KeyboardState.Surface {
+        guard let store = defaults ?? AppGroup.defaultsIfAvailable,
+              let raw = store.string(forKey: Key.lastSurface),
+              let surface = KeyboardState.Surface(rawValue: raw) else {
+            return .voice
+        }
+        return surface == .ai ? .voice : surface
+    }
+
     /// Surface to show on the first frame of a keyboard presentation.
     /// Prefer last-left surface when remembering; otherwise default input mode.
     nonisolated public static func preferredSurfaceOnOpen(

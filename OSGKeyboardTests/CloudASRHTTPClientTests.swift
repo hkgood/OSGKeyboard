@@ -133,6 +133,47 @@ final class CloudASRHTTPClientTests: XCTestCase {
         XCTAssertEqual(json["model"] as? String, "openai/whisper-large-v3-turbo")
     }
 
+    func testMiMoTranscribeSendsAudioOnlyContentAndApiKeyHeader() async throws {
+        StubURLProtocolStorage.config = (
+            200,
+            Data(#"{"choices":[{"message":{"content":"你好世界"}}]}"#.utf8)
+        )
+        let session = StubURLProtocol.makeEphemeralSession()
+        let client = PromptCloudASRClient(
+            providerId: "mimo",
+            baseURL: "https://api.xiaomimimo.com/v1",
+            apiKey: "mimo-key",
+            model: "mimo-v2.5-asr",
+            session: session
+        )
+        // A non-empty dictionary must NOT add a text prompt part: MiMo-V2.5-ASR
+        // rejects any content part besides input_audio with HTTP 400.
+        let dict = PersonalDictionary(entries: [
+            PersonalDictionary.Entry(term: "OSGKeyboard", category: .productName, source: .manual)
+        ])
+        let text = try await client.transcribe(
+            samples: [Float](repeating: 0.01, count: 1_600),
+            sampleRate: 16_000,
+            locale: Locale(identifier: "zh-Hans"),
+            dictionary: dict
+        )
+        XCTAssertEqual(text, "你好世界")
+
+        let request = try XCTUnwrap(StubURLProtocolStorage.lastRequest)
+        XCTAssertEqual(request.url?.path, "/v1/chat/completions")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "api-key"), "mimo-key")
+        XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
+
+        let body = try XCTUnwrap(request.httpBody)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        XCTAssertEqual(json["model"] as? String, "mimo-v2.5-asr")
+        let messages = try XCTUnwrap(json["messages"] as? [[String: Any]])
+        let content = try XCTUnwrap(messages.first?["content"] as? [[String: Any]])
+        XCTAssertEqual(content.count, 1)
+        XCTAssertEqual(content.first?["type"] as? String, "input_audio")
+        XCTAssertFalse(content.contains { ($0["type"] as? String) == "text" })
+    }
+
     func testUnsupportedCloudASRClientThrowsProviderUnsupported() async {
         let client = UnsupportedCloudASRClient(providerId: "unknown-provider")
         do {

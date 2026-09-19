@@ -43,6 +43,7 @@ struct AIKeyboardDemoView: View {
                     FeaturePreviewHostDocument(
                         kind: .messages,
                         title: language == .en ? "Messages" : "信息",
+                        language: language,
                         text: hostDraft,
                         incoming: incoming,
                         isSent: hostSent
@@ -61,7 +62,7 @@ struct AIKeyboardDemoView: View {
                     .frame(maxWidth: .infinity)
                     // Keep under what's-new crop (~327 pt visible at 3x).
                     .frame(height: 300)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
                     .padding(.horizontal, 8)
                     .padding(.bottom, 24)
                     .transition(.opacity)

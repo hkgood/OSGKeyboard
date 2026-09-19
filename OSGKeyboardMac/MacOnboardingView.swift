@@ -334,10 +334,10 @@ struct MacOnboardingView: View {
     private func featureRow(_ icon: String, _ text: String) -> some View {
         HStack(spacing: Spacing.md) {
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
+                .font(TypeStyle.body.weight(.semibold))
                 .foregroundStyle(palette.accent)
                 .frame(width: 26, height: 26)
-                .background(palette.accentMuted, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .background(palette.accentMuted, in: RoundedRectangle(cornerRadius: Radius.small, style: .continuous))
 
             Text(text)
                 .font(TypeStyle.footnote)
@@ -355,7 +355,7 @@ struct MacOnboardingView: View {
     private func permissionCard(isGranted: Bool, grantedText: String, neededText: String) -> some View {
         HStack(spacing: Spacing.sm) {
             Image(systemName: isGranted ? "checkmark.seal.fill" : "exclamationmark.circle.fill")
-                .font(.system(size: 20, weight: .semibold))
+                .font(TypeStyle.title3)
                 .foregroundStyle(isGranted ? palette.accent : palette.warning)
 
             Text(isGranted ? grantedText : neededText)
@@ -520,7 +520,7 @@ struct MacOnboardingView: View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             HStack(spacing: Spacing.sm) {
                 Image(systemName: model.isDefaultModelInstalled ? "checkmark.circle.fill" : "shippingbox.fill")
-                    .font(.system(size: 20, weight: .medium))
+                    .font(TypeStyle.title3.weight(.medium))
                     .foregroundStyle(model.isDefaultModelInstalled ? palette.accent : palette.textTertiary)
 
                 VStack(alignment: .leading, spacing: 2) {

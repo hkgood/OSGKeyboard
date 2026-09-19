@@ -23,7 +23,7 @@ struct ClipboardSuggestionBar: View {
 
             Button(action: onInsert) {
                 Text(text)
-                    .font(.system(size: 15))
+                    .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -96,14 +96,14 @@ struct ClipboardEnableGuideView: View {
 
             VStack(spacing: 16) {
                 ExtL10n.text("keyboard.clipboard.guide.body")
-                    .font(.system(size: 15))
+                    .font(TypeStyle.body)
                     .foregroundStyle(palette.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 28)
 
                 Button(action: onOpenSettings) {
                     ExtL10n.text("keyboard.clipboard.guide.cta")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(TypeStyle.body.weight(.semibold))
                         .foregroundStyle(OSGColor.fixedLightContent)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 10)
@@ -116,6 +116,85 @@ struct ClipboardEnableGuideView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.clear)
+    }
+}
+
+// MARK: - Auto-reply guide
+
+/// One-time nudge layered *over* the live keyboard: a soft scrim keeps the keys
+/// faintly visible while a floating pitch + primary action invite the user to
+/// turn auto mode on. Tapping the scrim (or the ✕) dismisses it.
+struct ClipboardAutoReplyGuideView: View {
+    let onClose: () -> Void
+    let onTry: () -> Void
+
+    var body: some View {
+        ZStack {
+            // Dim the keyboard beneath; a tap anywhere off the card dismisses.
+            Rectangle()
+                .fill(Color.black.opacity(0.5))
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onClose)
+                .accessibilityIdentifier("assistant.autoReply.guide.scrim")
+                .accessibilityLabel(ExtL10n.text("keyboard.assistant.autoReply.guide.close"))
+
+            VStack(spacing: 12) {
+                Image(systemName: "sparkles")
+                    .font(TypeStyle.title.weight(.semibold))
+                    .foregroundStyle(OSGColor.fixedLightContent)
+
+                ExtL10n.text("keyboard.assistant.autoReply.guide.title")
+                    .font(TypeStyle.headline)
+                    .foregroundStyle(OSGColor.fixedLightContent)
+                    .multilineTextAlignment(.center)
+
+                ExtL10n.text("keyboard.assistant.autoReply.guide.body")
+                    .font(TypeStyle.footnote)
+                    .foregroundStyle(OSGColor.fixedLightContent.opacity(0.85))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+
+                Button(action: onTry) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles")
+                            .font(TypeStyle.body.weight(.semibold))
+                        ExtL10n.text("keyboard.assistant.autoReply.guidance.cta")
+                            .font(TypeStyle.body.weight(.semibold))
+                    }
+                    .foregroundStyle(OSGColor.fixedLightContent)
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 11)
+                    .background(Palette.light.accent, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
+                .accessibilityIdentifier("assistant.autoReply.guide.try")
+            }
+            .padding(.horizontal, 20)
+
+            VStack(spacing: 0) {
+                HStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(TypeStyle.footnote.weight(.semibold))
+                            .foregroundStyle(OSGColor.fixedLightContent)
+                            .frame(width: 30, height: 30)
+                            .background(Color.black.opacity(0.28), in: Circle())
+                            .contentShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("assistant.autoReply.guide.close")
+                    .accessibilityLabel(ExtL10n.text("keyboard.assistant.autoReply.guide.close"))
+                    .accessibilityHint(ExtL10n.text("keyboard.assistant.autoReply.guide.closeHint"))
+                }
+                .padding(.horizontal, KeyboardTopBarMetrics.horizontalInset)
+                .padding(.top, 6)
+                Spacer(minLength: 0)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityIdentifier("assistant.autoReply.guide")
     }
 }
 
@@ -156,7 +235,7 @@ struct ClipboardHistoryPanelView: View {
 
                 if let pastePermissionHint, !pastePermissionHint.isEmpty {
                     Text(pastePermissionHint)
-                        .font(.system(size: 12))
+                        .font(TypeStyle.caption.weight(.regular))
                         .foregroundStyle(palette.warning)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 14)
@@ -207,7 +286,7 @@ struct ClipboardHistoryPanelView: View {
                 .background(palette.surface.opacity(0.35), in: Circle())
 
             ExtL10n.text("keyboard.clipboard.clear.title")
-                .font(.system(size: 15, weight: .semibold))
+                .font(TypeStyle.body.weight(.semibold))
                 .foregroundStyle(palette.textPrimary)
                 .multilineTextAlignment(.center)
 
@@ -216,7 +295,7 @@ struct ClipboardHistoryPanelView: View {
                     showClearConfirmation = false
                 } label: {
                     ExtL10n.text("common.cancel")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(TypeStyle.footnote.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .frame(height: 36)
                 }
@@ -231,14 +310,15 @@ struct ClipboardHistoryPanelView: View {
                     onClear()
                 } label: {
                     ExtL10n.text("keyboard.clipboard.clear.confirm")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(TypeStyle.footnote.weight(.semibold))
                         .foregroundStyle(palette.background)
                         .frame(maxWidth: .infinity)
                         .frame(height: 36)
                 }
                 .buttonStyle(.glassProminent)
                 .buttonBorderShape(.capsule)
-                .tint(palette.textPrimary)
+                // Match the system alert's destructive styling used in-app.
+                .tint(palette.danger)
             }
         }
         .padding(16)
@@ -269,7 +349,7 @@ private struct ClipboardHistoryRow: View {
             HStack(alignment: .top, spacing: 8) {
                 Button(action: onInsert) {
                     Text(entry.text)
-                        .font(.system(size: 15))
+                        .font(TypeStyle.body)
                         .foregroundStyle(palette.textPrimary)
                         .lineLimit(3)
                         .multilineTextAlignment(.leading)
@@ -302,7 +382,7 @@ private struct ClipboardHistoryRow: View {
                                 onInsertToken(token)
                             } label: {
                                 Text(token)
-                                    .font(.system(size: 12, weight: .medium))
+                                    .font(TypeStyle.caption)
                                     .foregroundStyle(palette.textSecondary)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
@@ -321,7 +401,7 @@ private struct ClipboardHistoryRow: View {
         // Half opacity so the keyboard chrome still reads through the card.
         .background(
             palette.surface.opacity(0.5),
-            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+            in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
         )
     }
 }

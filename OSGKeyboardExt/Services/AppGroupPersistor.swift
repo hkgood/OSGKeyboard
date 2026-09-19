@@ -42,6 +42,9 @@ public struct AppGroupPersistor {
         state.handednessPreference = store.handednessPreference
         state.clipboardHistoryEnabled = store.clipboardHistoryEnabled
         state.clipboardCandidateBarEnabled = store.clipboardCandidateBarEnabled
+        state.clipboardAutoModeEnabled = store.clipboardAutoModeEnabled
+        state.clipboardAutoTranslateEnabled = store.clipboardAutoTranslateEnabled
+        state.clipboardAutoEmailReplyEnabled = store.clipboardAutoEmailReplyEnabled
         applySkillSnapshot(store: store, into: state)
         state.keyboardHapticIntensity = store.keyboardHapticIntensity
         applyAPIKeyAvailability(store: store, into: state)
@@ -98,6 +101,9 @@ public struct AppGroupPersistor {
         state.handednessPreference = store.handednessPreference
         state.clipboardHistoryEnabled = store.clipboardHistoryEnabled
         state.clipboardCandidateBarEnabled = store.clipboardCandidateBarEnabled
+        state.clipboardAutoModeEnabled = store.clipboardAutoModeEnabled
+        state.clipboardAutoTranslateEnabled = store.clipboardAutoTranslateEnabled
+        state.clipboardAutoEmailReplyEnabled = store.clipboardAutoEmailReplyEnabled
         applySkillSnapshot(store: store, into: state)
         state.keyboardHapticIntensity = store.keyboardHapticIntensity
         applyAPIKeyAvailability(store: store, into: state)
@@ -112,24 +118,39 @@ public struct AppGroupPersistor {
         let layout = store.agentSkillLayout
         let language = store.uiLanguage
         state.uiLanguage = language
-        state.enabledClipboardSkillIDs = layout.enabledIDs
+        let personalReplyStyle = store.personalReplyStyle
+        let hasPersonalReplyStyle = personalReplyStyle != nil
+        let enabledIDs = AIClipboardSkillCatalog.availableEnabledIDs(
+            layout.enabledIDs,
+            layout: layout,
+            hasPersonalReplyStyle: hasPersonalReplyStyle
+        )
+        state.enabledClipboardSkillIDs = enabledIDs
         state.confirmedClipboardShortcutIDs = layout.confirmedShortcutIDs
         state.enabledClipboardSkills = AIClipboardSkillCatalog.visible(
-            enabledIDs: layout.enabledIDs,
+            enabledIDs: enabledIDs,
             officialCatalog: store.officialSkillCatalog,
             userCatalog: store.agentUserSkillCatalog,
             uiLanguage: language
         )
-        state.clipboardSkillCatalog = AIClipboardSkillCatalog.all(
-            officialCatalog: store.officialSkillCatalog,
-            userCatalog: store.agentUserSkillCatalog,
-            uiLanguage: language
+        // The keyboard's chips are ranked from this full catalog, not from the
+        // enabled list, so an unavailable skill has to be removed here or it
+        // still reaches the surface (and `AIKeyboardCoordinator` could run it).
+        state.clipboardSkillCatalog = AIClipboardSkillCatalog.availableForKeyboard(
+            AIClipboardSkillCatalog.all(
+                officialCatalog: store.officialSkillCatalog,
+                userCatalog: store.agentUserSkillCatalog,
+                uiLanguage: language
+            ),
+            layout: layout,
+            hasPersonalReplyStyle: hasPersonalReplyStyle
         )
-        let activeStyle = store.activePolishStyle
-        // Built-in formal/corporate personalities must not make ordinary
-        // clipboard replies sound less like the user.
+        // Independent of the voice-polish selection: the Styles page shapes
+        // dictation, this shapes AI replies. Sharing one selector previously
+        // made "clean dictation" and "replies that sound like me" mutually
+        // exclusive.
         state.clipboardReplyStyle = AIClipboardReplyStyleContext.resolve(
-            activeStyle: activeStyle
+            personalReplyStyle: personalReplyStyle
         )
     }
 

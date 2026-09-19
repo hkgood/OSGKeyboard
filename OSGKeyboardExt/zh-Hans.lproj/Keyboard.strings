@@ -3,20 +3,20 @@
 "OSGKeyboard" = "OSGKeyboard";
 
 /* Onboarding */
-"onboarding.welcome.subtitle" = "点按麦克风说话，再点一次结束，文字即出现。";
+"onboarding.welcome.subtitle" = "轻点麦克风说话，再轻点一次结束，文字即出现。";
 "onboarding.enable.title" = "启用 OSGKeyboard";
 "onboarding.enable.step1" = "设置 → 通用 → 键盘 → 键盘";
-"onboarding.enable.step2" = "点击「添加新键盘…」并选择 OSGKeyboard";
-"onboarding.enable.step3" = "点击 OSGKeyboard 并启用「允许完全访问」";
+"onboarding.enable.step2" = "轻点「添加新键盘…」并选择 OSGKeyboard";
+"onboarding.enable.step3" = "轻点 OSGKeyboard 并启用「允许完全访问」";
 "onboarding.enable.step4" = "允许完全访问是麦克风和网络调用的前提。";
 "onboarding.enable.openSettings" = "打开 iOS 设置";
 "onboarding.api.title" = "选择引擎";
 "onboarding.api.subtitle" = "本地识别无需 Key；填写 API Key 后可开启 AI 润色。";
 "onboarding.api.localReady.title" = "本地识别已就绪";
 "onboarding.api.localReady.body" = "识别在端侧完成。请在设置中填写 API Key 以开启 AI 润色。";
-"keyboard.onboarding.practice.mic" = "点按麦克风，说完后再点一次";
-"keyboard.onboarding.practice.translate" = "点击「翻译」，再插入生成的文字";
-"keyboard.onboarding.practice.reply" = "点击「回复」，让 AI 起草可发送的回复";
+"keyboard.onboarding.practice.mic" = "轻点麦克风，说完后再轻点一次";
+"keyboard.onboarding.practice.translate" = "轻点「翻译」，再插入生成的文字";
+"keyboard.onboarding.practice.reply" = "AI 正在自动为你起草可发送的回复";
 "keyboard.onboarding.practice.askAI" = "长按麦克风，说出你想问的问题";
 
 /* Common navigation */
@@ -118,8 +118,8 @@
 
 /* Keyboard preview */
 "preview.title" = "键盘预览";
-"preview.subtitle" = "点击「开始录音」/「停止录音」按钮测试；真实键盘为长按麦克风圆盘。";
-"preview.placeholder" = "试着输入或点击按钮录音";
+"preview.subtitle" = "轻点「开始录音」/「停止录音」按钮测试；真实键盘为长按麦克风圆盘。";
+"preview.placeholder" = "试着输入或轻轻点钮录音";
 "preview.clear" = "清空";
 "preview.openSettingsA11y" = "打开 OSGKeyboard 设置";
 "preview.modeChip.cycle" = "切换输入模式";
@@ -134,7 +134,7 @@
 "keyboard.tab.voice.a11y" = "切换到语音输入";
 "keyboard.tab.chinese.a11y" = "切换到中文输入";
 "keyboard.tab.english.a11y" = "切换到英文输入";
-"keyboard.placeholder.idle" = "点按说话";
+"keyboard.placeholder.idle" = "轻点说话";
 "keyboard.placeholder.preparing" = "准备中…";
 "keyboard.placeholder.preparingRecording" = "准备录音…";
 "keyboard.placeholder.processing" = "处理中…";
@@ -147,7 +147,7 @@
 "keyboard.denied.speech" = "语音识别被拒绝";
 "keyboard.openSettingsA11y" = "打开 OSGKeyboard 设置";
 "keyboard.deniedHint" = "打开 OSGKeyboard 设置,可授予麦克风 / 语音识别权限。";
-"keyboard.tapToTalkA11y" = "点按说话";
+"keyboard.tapToTalkA11y" = "轻点说话";
 "keyboard.undoA11y" = "撤销上次输入";
 "keyboard.redoA11y" = "重做";
 "keyboard.copyA11y" = "拷贝";
@@ -219,6 +219,7 @@
 "keyboard.clipboard.clear.confirm" = "清空历史";
 "keyboard.clipboard.suggestion.dismissA11y" = "关闭剪贴板建议";
 "keyboard.clipboard.suggestion.dismissHint" = "隐藏本次剪贴板建议条。";
+"keyboard.clipboard.paste" = "粘贴";
 "keyboard.voice.cancel" = "取消本次语音输入";
 "keyboard.voice.cancelHint" = "放弃当前录音、识别和润色结果。";
 "keyboard.scenario.a11y" = "润色场景";
@@ -228,9 +229,6 @@
 "mode.off" = "关闭";
 "mode.transcribe" = "转写";
 "mode.polish" = "润色";
-
-/* Locale chip labels (preview stub) */
-"locale.zh-Hans" = "简体";
 
 /* Locale menu items (settings) */
 "locale.auto"     = "跟随系统";
@@ -245,7 +243,7 @@
 
 /* v0.3.0：键盘顶栏的输入场景芯片 */
 "keyboard.appContext.a11y"        = "润色场景";
-"keyboard.appContext.a11yHint"     = "点击可手动切换输入场景(代码/邮件/聊天/文档),覆盖自动检测结果。";
+"keyboard.appContext.a11yHint"     = "轻点可手动切换输入场景(代码/邮件/聊天/文档),覆盖自动检测结果。";
 "keyboard.appContext.chip.code"     = "代码";
 "keyboard.appContext.chip.email"    = "邮件";
 "keyboard.appContext.chip.chat"     = "聊天";
@@ -261,7 +259,7 @@
 "keyboard.edit.hint.available" = "长按编辑上一条";
 "keyboard.edit.error.noTarget" = "没有可编辑的上一条输入";
 "keyboard.edit.error.llmUnavailable" = "请先在主 App 配置可用的 AI 服务";
-"keyboard.edit.error.startTimeout" = "麦克风启动超时，点击重试";
+"keyboard.edit.error.startTimeout" = "麦克风启动超时，轻点重试";
 "keyboard.edit.error.processing" = "编辑失败，请重试";
 "keyboard.edit.error.processingTimeout" = "编辑超时，请重试";
 "keyboard.edit.error.unchanged" = "内容没有变化，请换一种说法";
@@ -273,9 +271,9 @@
 "keyboard.edit.page.original" = "原文";
 "keyboard.edit.page.edited" = "编辑后";
 "keyboard.edit.helper.speak" = "说话编辑文字";
-"keyboard.edit.helper.finish" = "点击完成编辑";
+"keyboard.edit.helper.finish" = "轻点完成编辑";
 "keyboard.edit.helper.compare" = "左右滑动对比";
-"keyboard.edit.helper.apply" = "点击应用编辑";
+"keyboard.edit.helper.apply" = "轻点应用编辑";
 "keyboard.edit.helper.append" = "插入当前位置";
 "keyboard.edit.close" = "关闭编辑模式";
 "keyboard.edit.closeHint" = "放弃本次编辑并返回语音输入。";
@@ -284,7 +282,7 @@
 "keyboard.edit.stop" = "完成编辑指令";
 
 /* AI 问答模式 */
-"keyboard.ai.placeholder" = "点击麦克风向 AI 提问";
+"keyboard.ai.placeholder" = "轻点麦克风向 AI 提问";
 "keyboard.ai.hintA11yPrefix" = "建议：";
 "keyboard.ai.hint" = "先插入 AI 回答，再按发送";
 "keyboard.ai.listening" = "正在聆听…";
@@ -297,10 +295,15 @@
 "keyboard.ai.sent" = "已发送";
 "keyboard.ai.cancel" = "取消 AI 问答";
 "keyboard.ai.cancelHint" = "取消当前录音、识别或 AI 请求。";
-"keyboard.ai.sendA11y" = "首次点击插入 AI 回答；在支持发送的输入框中再次点击发送";
+"keyboard.ai.sendA11y" = "首次轻点插入 AI 回答；在支持发送的输入框中再次轻点发送";
 "keyboard.ai.startA11y" = "开始向 AI 提问";
 "keyboard.ai.stopA11y" = "结束提问并发送给 AI";
 "keyboard.assistant.longPressCoach" = "轻点听写 · 长按问 AI";
+"keyboard.assistant.autoReply.guidance.cta" = "试试 AI 自动回复";
+"keyboard.assistant.autoReply.guide.title" = "让 AI 替你回复";
+"keyboard.assistant.autoReply.guide.body" = "开启自动回复后，一复制消息，键盘就自动为你起草可发送的回复。";
+"keyboard.assistant.autoReply.guide.close" = "暂不";
+"keyboard.assistant.autoReply.guide.closeHint" = "关闭自动回复建议。";
 "keyboard.assistant.micA11y" = "语音与 AI";
 "keyboard.assistant.micHint" = "轻点开始语音听写，长按向 AI 提问。";
 "keyboard.assistant.dictationAction" = "开始语音听写";
@@ -309,6 +312,8 @@
 "keyboard.assistant.delete" = "删除";
 "keyboard.assistant.sendHint" = "执行当前输入框的发送、搜索、完成或前往操作。";
 "keyboard.assistant.insertPending" = "插入保留的 AI 回答";
+"keyboard.assistant.insertTranslation" = "插入译文";
+"keyboard.assistant.insertReply" = "插入回信";
 "keyboard.assistant.discardPending" = "丢弃 AI 回答";
 "keyboard.assistant.discardPendingHint" = "丢弃因光标或输入框变化而保留的回答。";
 "keyboard.ai.replyVariant.ordinary" = "普通";
@@ -326,6 +331,10 @@
 "keyboard.ai.replyVariant.clarificationDirect" = "直接回应";
 "keyboard.ai.replyVariant.clarificationQuestion" = "追问关键点";
 "keyboard.ai.replyVariant.clarificationConfirm" = "确认并追问";
+"keyboard.ai.replyVariant.answerAffirmative" = "肯定";
+"keyboard.ai.replyVariant.answerNegative" = "否定";
+"keyboard.ai.replyVariant.answerConditional" = "视情况";
+"keyboard.ai.replyVariant.answerDefer" = "待确认";
 "keyboard.ai.replyVariant.insertHint" = "插入这条完整回复。";
 "keyboard.assistant.dismissClipboard" = "关闭剪贴板建议";
 "keyboard.assistant.dismissClipboardHint" = "隐藏当前剪贴板摘要和技能。";
@@ -351,9 +360,10 @@
 "keyboard.ai.error.requestFailed" = "AI 回答失败，请重试";
 "keyboard.ai.error.clipboardUnavailable" = "剪贴板建议已过期，请重新复制文本";
 "keyboard.ai.skill.reply" = "回复";
-"keyboard.ai.skill.playfulReply" = "俏皮回复";
+"keyboard.ai.skill.speakAsMe" = "我来说";
+"keyboard.ai.skill.playfulReply" = "俏皮";
 "keyboard.ai.skill.replyInSourceLanguage" = "回复";
-"keyboard.ai.skill.summarize" = "总结要点";
+"keyboard.ai.skill.summarize" = "总结";
 "keyboard.ai.skill.openLink" = "打开";
 "keyboard.ai.skill.summarizeWebPage" = "总结网页";
 "keyboard.ai.skill.callPhone" = "拨打";
@@ -364,11 +374,11 @@
 "keyboard.ai.skill.declineInvitation" = "委婉拒绝";
 "keyboard.ai.skill.acceptTask" = "确认任务";
 "keyboard.ai.skill.clarifyRequest" = "澄清追问";
-"keyboard.ai.skill.empathyReply" = "共情回复";
+"keyboard.ai.skill.empathyReply" = "共情";
 "keyboard.ai.skill.blessingReply" = "回复祝福";
 "keyboard.ai.skill.askForDetails" = "询问细节";
-"keyboard.ai.skill.businessReply" = "商务回复";
-"keyboard.ai.skill.organizeList" = "整理清单";
+"keyboard.ai.skill.businessReply" = "商务";
+"keyboard.ai.skill.organizeList" = "整理";
 "keyboard.ai.skill.extractTodos" = "待办";
 "keyboard.ai.skill.extractEvents" = "日程";
 "keyboard.ai.skill.saveToNotes" = "备忘录";
@@ -386,9 +396,18 @@
 "keyboard.ai.skill.extractingAddress" = "正在识别地址…";
 "keyboard.ai.skill.namingNote" = "正在生成标题…";
 "keyboard.ai.skill.runningShortcut" = "正在运行捷径…";
+"keyboard.ai.skill.savingReminders" = "正在加入提醒事项…";
+"keyboard.ai.skill.savingEvents" = "正在加入日历…";
 "keyboard.ai.skill.openingMaps" = "正在打开地图…";
 "keyboard.ai.skill.shortcutMissing" = "找不到配套捷径，请在技能页重新安装";
 "keyboard.ai.skill.handoffFailed" = "无法打开 App 运行捷径";
 "keyboard.ai.skill.openLinkFailed" = "无法打开该链接";
 "keyboard.ai.skill.callPhoneFailed" = "无法拨打该号码";
 "keyboard.ai.skill.createContactFailed" = "无法打开新建联系人页面";
+
+/* 按键 / 面板无障碍标签 */
+"keyboard.typing.candidates.collapseA11y" = "收起候选";
+"keyboard.typing.candidates.expandA11y" = "更多候选";
+"keyboard.key.shiftA11y" = "上档";
+"keyboard.key.deleteA11y" = "删除";
+"keyboard.key.returnA11y" = "回车";

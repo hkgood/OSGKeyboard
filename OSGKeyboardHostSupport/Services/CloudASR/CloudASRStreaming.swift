@@ -33,6 +33,8 @@ enum CloudASRLogMetadata {
                 return "category=audioTooLong"
             case .providerUnsupported:
                 return "category=providerUnsupported"
+            case .timedOut:
+                return "category=timedOut"
             }
         }
         if let urlError = error as? URLError {

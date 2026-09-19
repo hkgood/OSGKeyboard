@@ -33,6 +33,7 @@ public protocol ConfigurationStore: Sendable {
     var personalDictionary: PersonalDictionary { get }
     var polishStyleCatalog: PolishStyleCatalog { get }
     var activePolishStyleId: String { get }
+    var personalReplyStyleId: String { get }
 
     /// Foreground-app context for polish prompts (keyboard extension publishes this).
     var detectedAppContext: (context: AppContext, observedAt: Date)? { get }

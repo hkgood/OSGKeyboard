@@ -75,10 +75,10 @@ struct MacPolishStylesView: View {
                         title: MacL10n.string("mac.styles.fun", language: lang),
                         packs: PolishStylePackCatalog.BuiltinStyleGroup.fun.packs
                     )
-                    if !catalog.entries.isEmpty {
+                    if !handWrittenPacks.isEmpty {
                         styleSection(
                             title: MacL10n.string("mac.styles.custom", language: lang),
-                            packs: catalog.entries
+                            packs: handWrittenPacks
                         )
                     }
                 }
@@ -126,6 +126,13 @@ struct MacPolishStylesView: View {
         PolishStyleLearningCorpusBuilder.build(from: history.snapshot())
     }
 
+    /// Distilled personal styles drive AI replies, never dictation, so they are
+    /// not selectable here. macOS has no reply skills of its own — the pack is
+    /// generated from Mac dictation and takes effect on iPhone through iCloud.
+    private var handWrittenPacks: [PolishStylePack] {
+        catalog.entries.filter { !PolishStylePackCatalog.isPersonalReplyStyle($0) }
+    }
+
     private var styleLearningCard: some View {
         let corpus = styleLearningCorpus
         let required = PolishStyleLearningCorpusBuilder.requiredEffectiveCharacterCount
@@ -134,7 +141,7 @@ struct MacPolishStylesView: View {
         return VStack(alignment: .leading, spacing: Spacing.md) {
             HStack(alignment: .top, spacing: Spacing.md) {
                 Image(systemName: "waveform")
-                    .font(.system(size: 20, weight: .semibold))
+                    .font(TypeStyle.title3)
                     .foregroundStyle(palette.accent)
                     .frame(width: 42, height: 42)
                     .background(
@@ -330,7 +337,11 @@ struct MacPolishStylesView: View {
         do {
             try updated.upsert(pack)
             store.setPolishStyleCatalog(updated)
-            store.setActivePolishStyleId(pack.id)
+            if PolishStylePackCatalog.isPersonalReplyStyle(pack) {
+                store.setPersonalReplyStyleId(pack.id)
+            } else {
+                store.setActivePolishStyleId(pack.id)
+            }
             viewModel.refreshPolishStyles()
             Task {
                 try? await MacICloudSyncBootstrap.polishStyleSync.pushLocalIfEnabled(updated)
@@ -402,7 +413,7 @@ private struct MacPolishStyleCard: View {
             // Pencil opens the prompt (built-in, read-only) or the editor (custom).
             Button(action: primaryAction) {
                 Image(systemName: "pencil")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(TypeStyle.body.weight(.semibold))
                     .foregroundStyle(palette.textSecondary)
                     .frame(width: 30, height: 30)
                     .background(palette.background.opacity(isHovering ? 0.9 : 0.72), in: Circle())

@@ -26,6 +26,12 @@ jobs:
         run: |
           python3 Scripts/check_sensitive_logs.py --self-test
           python3 Scripts/check_sensitive_logs.py
+      - name: Check App Group / Keychain wiring
+        run: |
+          python3 Scripts/check_app_group_wiring.py --self-test
+          python3 Scripts/check_app_group_wiring.py
+      - name: Check localization parity and bare LocalizedStringKey
+        run: ./Scripts/check_l10n_keys.sh
 
   lint:
     name: SwiftLint

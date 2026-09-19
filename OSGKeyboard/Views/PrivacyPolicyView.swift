@@ -16,7 +16,7 @@ struct PrivacyPolicyView: View {
             scrollToAnchor: privacyScrollAnchor
         )
         .background(palette.background.ignoresSafeArea())
-        .navigationTitle("settings.privacy.policy")
+        .navigationTitle(AppL10n.string("settings.privacy.policy"))
         .navigationBarTitleDisplayMode(.inline)
     }
 

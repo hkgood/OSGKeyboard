@@ -87,7 +87,7 @@ private struct MacOpenSourceLicenseDetailView: View {
                                 .multilineTextAlignment(.leading)
                             Spacer(minLength: 0)
                             Image(systemName: "arrow.up.right.square")
-                                .font(.system(size: 12))
+                                .font(TypeStyle.caption.weight(.regular))
                                 .foregroundStyle(palette.textTertiary)
                         }
                     }

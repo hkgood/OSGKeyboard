@@ -50,10 +50,10 @@ struct AccountRewardsCard: View {
                     )
 
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text("account.signedOut.title")
+                    Text(AppL10n.string("account.signedOut.title"))
                         .font(TypeStyle.headline)
                         .foregroundStyle(palette.textPrimary)
-                    Text("account.signedOut.body")
+                    Text(AppL10n.string("account.signedOut.body"))
                         .font(TypeStyle.footnote)
                         .foregroundStyle(palette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -74,10 +74,10 @@ struct AccountRewardsCard: View {
                 creditSummary(snapshot)
             case .failed:
                 VStack(alignment: .leading, spacing: Spacing.sm) {
-                    Text("account.error.load")
+                    Text(AppL10n.string("account.error.load"))
                         .font(TypeStyle.body)
                         .foregroundStyle(palette.textSecondary)
-                    Button("account.retry") {
+                    Button(AppL10n.string("account.retry")) {
                         Task { await coordinator.refreshAccountData(force: true) }
                     }
                     .font(TypeStyle.bodyEmph)
@@ -103,7 +103,7 @@ struct AccountRewardsCard: View {
                         Text(creditRemainingText(snapshot.credits.balance))
                             .font(TypeStyle.title3.monospacedDigit())
                             .foregroundStyle(palette.textPrimary)
-                        Text("account.credits.balance")
+                        Text(AppL10n.string("account.credits.balance"))
                             .font(TypeStyle.caption)
                             .foregroundStyle(palette.textSecondary)
                     }
@@ -119,7 +119,7 @@ struct AccountRewardsCard: View {
                     .foregroundStyle(palette.textSecondary)
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(TypeStyle.caption.weight(.semibold))
                         .foregroundStyle(palette.textTertiary)
                         .frame(minWidth: 32, minHeight: 32)
                         .accessibilityHidden(true)
@@ -137,11 +137,11 @@ struct AccountRewardsCard: View {
         .padding(Spacing.md)
     }
 
-    private func loadingContent(_ key: LocalizedStringKey) -> some View {
+    private func loadingContent(_ key: String) -> some View {
         HStack(spacing: Spacing.sm) {
             ProgressView()
                 .tint(palette.accent)
-            Text(key)
+            Text(AppL10n.string(key))
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textSecondary)
             Spacer()
@@ -199,7 +199,7 @@ private struct AccountReferralLinkView: View {
                     ProgressView()
                         .controlSize(.small)
                         .tint(palette.accent)
-                    Text("account.referral.loadingLink")
+                    Text(AppL10n.string("account.referral.loadingLink"))
                         .font(TypeStyle.footnote)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -217,8 +217,8 @@ private struct AccountReferralLinkView: View {
     private func loadedContent(_ profile: ReferralProfile) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack(spacing: Spacing.md) {
-                Text("account.referral.equalRewardDescription")
-                    .font(TypeStyle.caption)
+                Text(AppL10n.string("account.referral.equalRewardDescription"))
+                    .font(TypeStyle.body.weight(.bold))
                     .foregroundStyle(palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: Spacing.xs)
@@ -229,7 +229,7 @@ private struct AccountReferralLinkView: View {
                 HStack(spacing: Spacing.xs) {
                     ProgressView()
                         .controlSize(.mini)
-                    Text("account.referral.refreshingLink")
+                    Text(AppL10n.string("account.referral.refreshingLink"))
                 }
                 .font(TypeStyle.caption)
                 .foregroundStyle(palette.textTertiary)
@@ -241,14 +241,14 @@ private struct AccountReferralLinkView: View {
 
     private func retryRow(
         messageKey: String,
-        actionKey: LocalizedStringKey
+        actionKey: String
     ) -> some View {
         HStack(spacing: Spacing.sm) {
-            Text(LocalizedStringKey(messageKey))
+            Text(AppL10n.string(messageKey))
                 .font(TypeStyle.footnote)
                 .foregroundStyle(palette.textSecondary)
             Spacer(minLength: Spacing.xs)
-            Button(actionKey) {
+            Button(AppL10n.string(actionKey)) {
                 Task { await viewModel.refresh() }
             }
             .font(TypeStyle.bodyEmph)

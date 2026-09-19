@@ -67,11 +67,13 @@
 "error.cloudASR.invalidURL" = "云端识别接口地址无效。";
 "error.cloudASR.http" = "云端识别返回 HTTP %lld。";
 "error.cloudASR.httpWithMessage" = "云端识别返回 HTTP %lld：%@";
+"error.cloudASR.insufficientBalance" = "账户余额不足。部分模型即使标价 ¥0，也需账户有余额才能调用，请充值后重试。";
 "error.cloudASR.decoding" = "解析云端识别响应失败：%@";
 "error.cloudASR.transport" = "云端识别网络错误：%@";
 "error.cloudASR.emptyTranscript" = "云端识别返回了空文本。";
 "error.cloudASR.audioTooLong" = "音频片段超过该云端识别服务的时长限制。";
 "error.cloudASR.providerUnsupported" = "该服务商暂不支持云端语音识别。";
+"error.cloudASR.timedOut" = "连接检查超时。服务商未在规定时间内响应，请检查网络、API Key 与账户余额后重试。";
 "error.cloudASR.streamingNotImplemented" = "该服务商流式 ASR 失败。请检查 API Key 与网络后重试。";
 
 /* 托管账号网关 */
@@ -200,7 +202,7 @@
 "mac.styles.prompt" = "完整提示词";
 "mac.styles.hint" = "使用 {{DICTIONARY}} 指定个人词典位置；系统规则会自动追加。";
 "mac.styles.learn.title" = "生成专属风格";
-"mac.styles.learn.body" = "从历史听写中学习你的表达习惯。";
+"mac.styles.learn.body" = "从历史听写中学习你的表达习惯，用于 iPhone 键盘的 AI 回复。";
 "mac.styles.learn.progress" = "%lld / %lld 字";
 "mac.styles.learn.remaining" = "还差 %lld 字";
 "mac.styles.learn.ready" = "可以生成";
@@ -287,7 +289,6 @@
 "mac.delete" = "删除";
 "mac.dict.deleteTitle" = "删除该词条？";
 "mac.dict.deleteMessage" = "此操作无法撤销。";
-"mac.hint.holdOption" = "长按 Option 开始听写";
 "mac.settings.cloudProvider" = "云端服务商";
 "mac.settings.polishProvider" = "文本润色（LLM）";
 "mac.settings.asrProvider" = "语音转写（ASR）";
@@ -470,7 +471,6 @@
 "settings.appLanguage.english" = "英文";
 "settings.appLanguage.chinese" = "中文";
 
-
 /* Account — Mac account page (Sign in with Apple, credits, invitation link).
    The account.* / account.referral.* keys below mirror the iOS app bundle so
    the shared AccountSessionCoordinator error keys resolve on macOS too. */
@@ -523,3 +523,51 @@
 "account.referral.error.notFound" = "邀请链接暂不可用。";
 "account.referral.error.session" = "请重新登录后加载邀请链接。";
 "account.referral.error.unavailable" = "邀请服务暂时不可用。";
+
+/* 输入法引擎错误 */
+"error.rime.appGroupUnavailable" = "App Group 不可用。";
+"error.rime.bundledResourceMissing" = "缺少输入法资源：%@";
+"error.rime.lockUnavailable" = "输入法资源正在被其他进程更新。";
+"error.rime.deploymentFailed" = "输入法资源部署失败。";
+"error.rime.resourcesNotInstalled" = "请先打开 OSGKeyboard 完成输入法初始化。";
+"error.rime.hostAppRequired" = "输入法资源只能由 OSGKeyboard 主应用部署。";
+"error.rime.schemaUnavailable" = "输入方案不可用：%@";
+
+/* 文本润色错误 */
+"error.polish.noTranscript" = "没有可润色的文本。";
+"error.polish.timeout" = "大模型润色超时。";
+"error.polish.missingAPIKey" = "缺少 API 密钥——请先在设置中填写后再使用润色。";
+"error.polish.keychainLocked" = "设备锁定期间无法读取 API 密钥——解锁后即可使用。";
+
+/* 本地识别模型错误 */
+"error.localASR.downloadFailed" = "下载失败：%@";
+"error.localASR.extractFailed" = "解压失败：%@";
+"error.localASR.validationFailed" = "校验失败：%@";
+"error.localASR.runtimeMissing" = "尚未安装 Sherpa 运行时。";
+"error.localASR.binaryMissing" = "运行时包中找不到 Sherpa 可执行文件。";
+"error.localASR.missingBundledCatalog" = "缺少内置的本地识别模型清单。";
+"error.localASR.modelNotFound" = "找不到本地识别模型：%@";
+
+/* 账户服务错误 */
+"error.account.refreshTokenReuse" = "检测到刷新令牌被重复使用，会话已被吊销。";
+"error.account.transport" = "无法连接账户服务。";
+"error.account.invalidResponse" = "账户服务返回了无效响应。";
+"error.account.decoding" = "无法解析账户服务的响应。";
+"error.account.secureStorage" = "无法安全保存账户会话。";
+"error.account.sessionUnavailable" = "当前没有可用的账户会话。";
+"error.account.appleAuthorization" = "“通过 Apple 登录”未返回有效凭据。";
+"error.account.integrityUnavailable" = "设备完整性验证不可用。";
+
+/* 自定义语言模型错误 */
+"error.clm.missingManifest" = "缺少内置的自定义语言模型清单。";
+"error.clm.missingTrainingAsset" = "缺少内置的自定义语言模型训练资源。";
+"error.clm.missingAppGroupContainer" = "准备自定义语言模型时 App Group 容器不可用。";
+"error.clm.missingPreparedArtifacts" = "自定义语言模型准备未生成 LM/Vocab 产物。";
+"error.clm.retryBudgetExhausted" = "自定义语言模型准备的重试次数已用尽。";
+
+/* macOS 专有错误与状态 */
+"mac.error.speechDenied" = "语音识别权限被拒绝。";
+"mac.error.converterUnavailable" = "无法初始化音频转换器。";
+"mac.error.microphoneAccessDenied" = "麦克风权限被拒绝——请在「系统设置 → 隐私与安全性 → 麦克风」中启用。";
+"mac.accessibility.status.granted" = "已授权";
+"mac.accessibility.status.needed" = "未授权";

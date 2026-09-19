@@ -84,7 +84,7 @@ struct MainTabView: View {
 
     private func tabLabel(for item: AppTab) -> some View {
         Label {
-            Text(item.accessibilityKey)
+            Text(AppL10n.string(item.accessibilityKey))
         } icon: {
             Image(systemName: item.dockSystemImage(selected: tab == item))
         }

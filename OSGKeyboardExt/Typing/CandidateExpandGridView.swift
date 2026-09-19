@@ -88,10 +88,26 @@ struct CandidateExpandGridView: UIViewRepresentable {
             _ collectionView: UICollectionView,
             cellForItemAt indexPath: IndexPath
         ) -> UICollectionViewCell {
-            let cell = collectionView.dequeueReusableCell(
+            let dequeued = collectionView.dequeueReusableCell(
                 withReuseIdentifier: Cell.reuseID,
                 for: indexPath
-            ) as! Cell
+            )
+            guard let cell = dequeued as? Cell else { return dequeued }
+            // Rime refreshes the candidate list on every keystroke, so the
+            // collection view can still be laying out against the *previous*
+            // count when a new list lands. An out-of-range read here would
+            // crash the whole keyboard; render an empty cell instead — the
+            // pending `reloadData` repaints it a frame later.
+            guard candidates.indices.contains(indexPath.item) else {
+                cell.configure(
+                    text: "",
+                    emphasized: false,
+                    textColor: textColor,
+                    dividerColor: dividerColor,
+                    showDivider: false
+                )
+                return cell
+            }
             let index = indexPath.item
             cell.configure(
                 text: candidates[index].text,

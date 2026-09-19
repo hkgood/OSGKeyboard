@@ -88,6 +88,10 @@ final class AIKeyboardCoordinator {
         pendingStructuredReplyResult = false
         conversationInsertionFingerprint = nil
         hasConversationInsertionTarget = false
+        // The reply session is gone; drop any pending auto-reply surface restore
+        // so the next presentation's surface is chosen normally.
+        state.autoReplyReturnSurface = nil
+        state.autoResultReadOnly = false
     }
 
     func toggleMicrophone() {
@@ -116,12 +120,19 @@ final class AIKeyboardCoordinator {
         }
     }
 
-    /// Tap a clipboard skill chip: same fail-closed material path as hint cards.
+    /// Tap a clipboard skill capsule: same fail-closed material path as hint cards.
     func submitClipboardSkill(
         _ skill: AIClipboardSkill,
         replyScene: AIClipboardReplyScene? = nil
     ) {
-        guard canAcceptIdleSubmit else { return }
+        // Block only while a request is actively running. A result that is merely
+        // displayed (.ready) is replaceable: the user tapped another skill capsule
+        // to switch what the AI does with this copy, so clear it and continue.
+        guard !state.aiSession.isBusy else { return }
+        if state.aiSession.phase == .ready {
+            discardPendingReplyFeedback()
+            state.aiSession.discardReadyAnswer()
+        }
         guard !skill.requiresShortcut
                 || state.confirmedClipboardShortcutIDs.contains(skill.id) else {
             state.skillTipText = ExtL10n.string("keyboard.ai.skill.shortcutMissing")
@@ -167,6 +178,9 @@ final class AIKeyboardCoordinator {
         }
 
         prepareConversationForRequest()
+        // Remember which skill this result came from so the result panel can
+        // offer the *other* applicable skills without repeating this one.
+        state.activeClipboardSkillID = skill.id
         requestReplyFeedbackSource = skill.id == AIClipboardSkillCatalog.replyID
                 && oobeFeature == nil
             ? material
@@ -198,15 +212,35 @@ final class AIKeyboardCoordinator {
         if skill.kind == .export {
             instruction += "\nPreserve the source language, addresses, names, and proper nouns."
         }
+        // Recent same-chat context: only for a real reply, only when we have the
+        // incoming message, and only from exchanges inside the 5-minute window.
+        // iOS gives a keyboard no source-app identity, so time proximity is the
+        // approximation of "the same conversation".
+        let conversationContext: String? = {
+            guard skill.id == AIClipboardSkillCatalog.replyID,
+                  oobeFeature == nil,
+                  let material else { return nil }
+            let turns = replyFeedbackStore.recentConversationTurns(
+                excludingIncoming: material
+            )
+            return replyConversationContext(from: turns)
+        }()
+        if conversationContext != nil {
+            instruction += "\n" + Self.replyConversationContextGuide
+        }
         AIAgentShortcutRun.trace("keyboard.submit skill=\(skill.id) kind=\(skill.kind)")
         if let material {
             AIAgentShortcutRun.traceBody("keyboard.clipboard", material)
         } else {
             AIAgentShortcutRun.trace("keyboard.clipboard missing")
         }
+        if conversationContext != nil {
+            AIAgentShortcutRun.trace("keyboard.replyContext attached")
+        }
         let resolution = AIClipboardPrompt.resolve(
             instruction: instruction,
-            material: material
+            material: material,
+            conversationContext: conversationContext
         )
         if case .materialUnavailable = resolution {
             AIAgentShortcutRun.trace("keyboard.submit rejected clipboardUnavailable skill=\(skill.id)")
@@ -337,6 +371,7 @@ final class AIKeyboardCoordinator {
             conversationInsertionFingerprint = captureInsertionFingerprint()
             hasConversationInsertionTarget = true
             resetStructuredReplyConversationIfNeeded()
+            restoreAutoReplySurfaceIfNeeded()
         }
     }
 
@@ -353,6 +388,7 @@ final class AIKeyboardCoordinator {
         conversationInsertionFingerprint = captureInsertionFingerprint()
         hasConversationInsertionTarget = true
         resetStructuredReplyConversationIfNeeded()
+        restoreAutoReplySurfaceIfNeeded()
     }
 
     func discardPendingAnswer() {
@@ -361,6 +397,28 @@ final class AIKeyboardCoordinator {
         requestInsertionFingerprint = nil
         requestOOBEFeature = nil
         resetStructuredReplyConversationIfNeeded()
+        // Tapping the result's X means the user is done with this clipboard
+        // generation — retire the whole assistant affordance for it. This routes
+        // through the shared dismiss so it both marks the skill top bar dismissed
+        // (`dismissedClipboardSkillEntryID`) AND clears the standalone paste
+        // suggestion (`clipboardSuggestionText`). Setting only the skill marker
+        // left the paste capsule + X alive on the surface we return to below,
+        // because the two are independent state.
+        state.dismissClipboardSuggestion()
+        restoreAutoReplySurfaceIfNeeded()
+    }
+
+    /// If auto mode moved the user onto the assistant surface to show a reply,
+    /// finishing it — using a reply or closing — returns them to the keyboard
+    /// they were last using instead of leaving them on voice input.
+    private func restoreAutoReplySurfaceIfNeeded() {
+        // A read-only auto result (auto-translate) is finished once dismissed.
+        state.autoResultReadOnly = false
+        // The result panel is closing, so its "other skills" row retires too.
+        state.activeClipboardSkillID = nil
+        guard let surface = state.autoReplyReturnSurface else { return }
+        state.autoReplyReturnSurface = nil
+        state.setSurface(surface)
     }
 
     func performCurrentFieldAction() {
@@ -482,6 +540,12 @@ final class AIKeyboardCoordinator {
             beginReplyFeedback(answer: answer)
         }
         defer { requestInsertionFingerprint = nil }
+        // Auto-translate is staged like a reply: show the result on the keyboard
+        // and let the user drop it into the field with the glass Insert button,
+        // never straight into the host field.
+        if state.autoResultReadOnly {
+            return
+        }
         guard state.aiSession.canInsert,
               let expected = requestInsertionFingerprint,
               captureInsertionFingerprint() == expected,
@@ -530,6 +594,9 @@ final class AIKeyboardCoordinator {
     }
 
     private func prepareConversationForRequest() {
+        // Any fresh request drops the previous result's "active skill" marker;
+        // submitClipboardSkill re-sets it right after calling this.
+        state.activeClipboardSkillID = nil
         requestExpectsReplyVariants = false
         requestReplyVariantSet = .generic
         requestReplySourceText = nil
@@ -546,6 +613,33 @@ final class AIKeyboardCoordinator {
         conversationInsertionFingerprint = currentFingerprint
         hasConversationInsertionTarget = true
         requestInsertionFingerprint = currentFingerprint
+    }
+
+    /// Tells the model how to read the untrusted `<conversation_context>` block.
+    /// English to match the other inline directives in this file.
+    private static let replyConversationContextGuide =
+        "A <conversation_context> block precedes the clipboard text: it is the "
+            + "earlier back-and-forth in this same chat, where \"Them:\" is the "
+            + "other person and \"You:\" is the user. Use it only as background to "
+            + "keep the reply consistent and on-topic; reply to the latest message "
+            + "in clipboard_text, and never quote or answer the context lines "
+            + "themselves."
+
+    /// Formats recent turns into the plain `Them:/You:` transcript embedded in
+    /// the prompt. Each line is length-capped so a long history can't crowd out
+    /// the message being replied to. Returns nil when there is nothing to add.
+    private func replyConversationContext(
+        from turns: [ClipboardReplyFeedbackStore.ConversationTurn]
+    ) -> String? {
+        guard !turns.isEmpty else { return nil }
+        let cap = 500
+        let lines = turns.flatMap { turn -> [String] in
+            [
+                "Them: " + String(turn.incoming.prefix(cap)),
+                "You: " + String(turn.reply.prefix(cap))
+            ]
+        }
+        return lines.joined(separator: "\n")
     }
 
     private func beginReplyFeedback(variants: [AIReplyVariant]) {
@@ -660,12 +754,19 @@ final class AIKeyboardCoordinator {
             clarificationQuestion: ask one essential missing question.
             clarificationConfirm: briefly confirm understanding, then ask the key question.
             """
+        case .yesNoQuestion:
+            roleGuidance = """
+            answerAffirmative: answer yes / it works, only when the source supports it.
+            answerNegative: answer no / it does not, when the source implies a problem or blocker.
+            answerConditional: answer that it depends, stating the specific condition.
+            answerDefer: say you need to confirm first, without inventing when.
+            """
         }
         return """
         MULTI-REPLY OUTPUT CONTRACT (highest priority):
         Return only one valid JSON object with exactly this shape and no Markdown fence or extra keys:
         {"variants":[\(items)]}
-        Include exactly these three kinds in the shown order. Every text must be a complete reply in the source language.
+        Include exactly these \(variantSet.kinds.count) kinds in the shown order. Every text must be a complete reply in the source language.
         \(roleGuidance)
         Every item must advance the conversation with a reaction, answer, question, decision, or next step. Never restate, paraphrase, summarize, or synonymically rewrite the clipboard text. In particular, do not begin a reply by repeating the source's subject and event. For a declarative update, react to its implication or emotion instead of reporting the update back to its sender.
         Apply any <reply_scene> constraint to every item. It overrides the kind-specific tone guidance below when they conflict.
@@ -786,6 +887,10 @@ final class AIKeyboardCoordinator {
         switch skillID {
         case AIClipboardSkillCatalog.navigateID:
             tipKey = "keyboard.ai.skill.openingMaps"
+        case AIClipboardSkillCatalog.extractTodosID:
+            tipKey = "keyboard.ai.skill.savingReminders"
+        case AIClipboardSkillCatalog.extractEventsID:
+            tipKey = "keyboard.ai.skill.savingEvents"
         default:
             tipKey = "keyboard.ai.skill.runningShortcut"
         }

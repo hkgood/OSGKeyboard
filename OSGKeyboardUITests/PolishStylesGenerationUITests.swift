@@ -12,7 +12,7 @@ final class PolishStylesGenerationUITests: XCTestCase {
             additionalArgument: "--polish-styles-service-ui-test-no-corpus"
         )
 
-        let generate = app.buttons["polishStyles.learn.generate"]
+        let generate = app.buttons["personalReplyStyle.generate"]
         XCTAssertTrue(generate.waitForExistence(timeout: 5))
         XCTAssertFalse(
             generate.isEnabled,
@@ -26,11 +26,27 @@ final class PolishStylesGenerationUITests: XCTestCase {
         )
     }
 
+    /// Distilling a style is the only decision the section asks for. Neither
+    /// "Speak as me" nor the reply style has a switch: a seeded personal style
+    /// must leave the card standing with no toggles on it.
+    func testPersonalReplyStyleSectionOffersNoToggles() {
+        continueAfterFailure = false
+        let app = launchServiceHarness(
+            additionalArgument: "--polish-styles-service-ui-test-regenerate"
+        )
+
+        let card = app.otherElements["personalReplyStyle.card"]
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+
+        XCTAssertFalse(app.switches["personalReplyStyle.speakAsMe.toggle"].exists)
+        XCTAssertFalse(app.switches["personalReplyStyle.toggle"].exists)
+    }
+
     func testGeneratedStyleReviewAndSaveFlow() {
         continueAfterFailure = false
         let app = launchServiceHarness()
 
-        let generate = app.buttons["polishStyles.learn.generate"]
+        let generate = app.buttons["personalReplyStyle.generate"]
         XCTAssertTrue(generate.waitForExistence(timeout: 5))
         generate.tap()
 
@@ -45,7 +61,7 @@ final class PolishStylesGenerationUITests: XCTestCase {
         save.tap()
 
         let learnedCard = app.descendants(matching: .any)[
-            "polishStyles.learnedStyle.card"
+            "personalReplyStyle.card"
         ]
         XCTAssertTrue(learnedCard.waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Confidence: 86%"].exists)
@@ -55,7 +71,7 @@ final class PolishStylesGenerationUITests: XCTestCase {
         continueAfterFailure = false
         let app = launchServiceHarness(usesInsufficientEvidence: true)
 
-        let generate = app.buttons["polishStyles.learn.generate"]
+        let generate = app.buttons["personalReplyStyle.generate"]
         XCTAssertTrue(generate.waitForExistence(timeout: 5))
         generate.tap()
 
@@ -70,7 +86,7 @@ final class PolishStylesGenerationUITests: XCTestCase {
         save.tap()
 
         let learnedCard = app.descendants(matching: .any)[
-            "polishStyles.learnedStyle.card"
+            "personalReplyStyle.card"
         ]
         XCTAssertTrue(learnedCard.waitForExistence(timeout: 5))
         XCTAssertTrue(warning.waitForExistence(timeout: 2))
@@ -82,7 +98,7 @@ final class PolishStylesGenerationUITests: XCTestCase {
             additionalArgument: "--polish-styles-service-ui-test-regenerate"
         )
         let learnedCard = app.descendants(matching: .any)[
-            "polishStyles.learnedStyle.card"
+            "personalReplyStyle.card"
         ]
         XCTAssertTrue(learnedCard.waitForExistence(timeout: 5))
         let regenerate = app.buttons["Regenerate"]
@@ -113,7 +129,7 @@ final class PolishStylesGenerationUITests: XCTestCase {
             additionalArgument: "--polish-styles-service-ui-test-failure"
         )
         let learnedCard = app.descendants(matching: .any)[
-            "polishStyles.learnedStyle.card"
+            "personalReplyStyle.card"
         ]
         XCTAssertTrue(learnedCard.waitForExistence(timeout: 5))
         let regenerate = app.buttons["Regenerate"]
@@ -132,7 +148,7 @@ final class PolishStylesGenerationUITests: XCTestCase {
         let app = launchServiceHarness(
             additionalArgument: "--polish-styles-service-ui-test-cancel"
         )
-        let generate = app.buttons["polishStyles.learn.generate"]
+        let generate = app.buttons["personalReplyStyle.generate"]
         XCTAssertTrue(generate.waitForExistence(timeout: 5))
         generate.tap()
 

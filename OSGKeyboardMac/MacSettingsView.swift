@@ -598,10 +598,10 @@ struct MacSettingsView: View {
     }
 
     private var accessibilityStatusGranted: String {
-        lang.resolvedLanguageCode().hasPrefix("zh") ? "已授权" : "Granted"
+        MacL10n.string("mac.accessibility.status.granted", language: lang)
     }
 
     private var accessibilityStatusNeeded: String {
-        lang.resolvedLanguageCode().hasPrefix("zh") ? "未授权" : "Needed"
+        MacL10n.string("mac.accessibility.status.needed", language: lang)
     }
 }

@@ -45,9 +45,13 @@ struct EditDemoView: View {
             }
             VStack(spacing: 0) {
                 if FeaturePreviewFlags.isFullscreen {
+                    // Chinese-only recording: the sample text below has no
+                    // English variant, so the host chrome is pinned to match
+                    // (see the `zh-Hans` locale pin on this view's body).
                     FeaturePreviewHostDocument(
                         kind: .notes,
                         title: "备忘录",
+                        language: .zh,
                         text: hostText
                     )
                 } else {

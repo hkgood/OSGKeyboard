@@ -20,9 +20,122 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         )
     }
 
-    func testTranslationIsNotRecommendedForSystemLanguage() {
+    /// No clipboard signal can detect "this is my own draft", so the skill
+    /// scores zero everywhere in `relevanceScores`. Without an explicit floor
+    /// it is filtered out and never reaches the keyboard.
+    func testSpeakAsMeIsOfferedWheneverItIsAvailable() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
             skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "明天的评审会我这边准备得差不多了，材料稍后发群里。",
+            analysis: analysis(language: "zh"),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["zh-Hans-CN"]
+        ).map(\.id)
+
+        XCTAssertTrue(recommendations.contains(AIClipboardSkillCatalog.speakAsMeID))
+    }
+
+    /// End-to-end contract for the reported bug: chips are ranked from the
+    /// keyboard's catalog, so the skill has to survive `availableForKeyboard`
+    /// *and* be offered by `recommended` before the user ever sees it.
+    func testEnabledSkillWithPersonalStyleReachesTheKeyboardChips() {
+        let layout = AIAgentSkillLayout(
+            enabledIDs: AIAgentSkillLayout.defaultEnabledIDs
+                + [AIClipboardSkillCatalog.speakAsMeID],
+            confirmedShortcutIDs: []
+        )
+        let available = AIClipboardSkillCatalog.availableForKeyboard(
+            AIClipboardSkillCatalog.catalog,
+            layout: layout,
+            hasPersonalReplyStyle: true
+        )
+        XCTAssertTrue(available.contains { $0.id == AIClipboardSkillCatalog.speakAsMeID })
+
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: available,
+            sourceText: "明天的评审会我这边准备得差不多了，材料稍后发群里。",
+            analysis: analysis(language: "zh"),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["zh-Hans-CN"]
+        ).map(\.id)
+        XCTAssertTrue(recommendations.contains(AIClipboardSkillCatalog.speakAsMeID))
+    }
+
+    func testSkillIsWithheldWithoutAPersonalStyleOrWithoutOptIn() {
+        let optedIn = AIAgentSkillLayout(
+            enabledIDs: [AIClipboardSkillCatalog.speakAsMeID],
+            confirmedShortcutIDs: []
+        )
+        let notOptedIn = AIAgentSkillLayout(enabledIDs: [], confirmedShortcutIDs: [])
+
+        // Opted in, but the personal style was never generated or was deleted.
+        XCTAssertFalse(
+            AIClipboardSkillCatalog.availableForKeyboard(
+                AIClipboardSkillCatalog.catalog,
+                layout: optedIn,
+                hasPersonalReplyStyle: false
+            ).contains { $0.id == AIClipboardSkillCatalog.speakAsMeID }
+        )
+        // Style exists, but the user never turned the skill on.
+        XCTAssertFalse(
+            AIClipboardSkillCatalog.availableForKeyboard(
+                AIClipboardSkillCatalog.catalog,
+                layout: notOptedIn,
+                hasPersonalReplyStyle: true
+            ).contains { $0.id == AIClipboardSkillCatalog.speakAsMeID }
+        )
+        // Always-available skills are untouched by this gate.
+        XCTAssertTrue(
+            AIClipboardSkillCatalog.availableForKeyboard(
+                AIClipboardSkillCatalog.catalog,
+                layout: notOptedIn,
+                hasPersonalReplyStyle: false
+            ).contains { $0.id == AIClipboardSkillCatalog.replyID }
+        )
+    }
+
+    /// Availability is decided upstream by dropping it from the catalog; the
+    /// floor must never resurrect a skill that was filtered out.
+    func testSpeakAsMeIsAbsentWhenFilteredOutOfTheCatalog() {
+        let gatedCatalog = AIClipboardSkillCatalog.catalog.filter {
+            $0.id != AIClipboardSkillCatalog.speakAsMeID
+        }
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: gatedCatalog,
+            sourceText: "明天的评审会我这边准备得差不多了，材料稍后发群里。",
+            analysis: analysis(language: "zh"),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["zh-Hans-CN"]
+        ).map(\.id)
+
+        XCTAssertFalse(recommendations.contains(AIClipboardSkillCatalog.speakAsMeID))
+    }
+
+    /// The floor is a fallback, not a promotion: a strong content match still
+    /// outranks it.
+    func testSpeakAsMeDoesNotOutrankAContentMatch() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: AIClipboardSkillCatalog.catalog,
+            sourceText: "Could you send me the final proposal by Friday?",
+            analysis: analysis(language: "en", question: detected()),
+            uiLanguage: .chinese,
+            limit: 5,
+            preferredLanguages: ["zh-Hans-CN"]
+        ).map(\.id)
+
+        let translateIndex = recommendations.firstIndex(of: AIClipboardSkillCatalog.translateID)
+        let speakAsMeIndex = recommendations.firstIndex(of: AIClipboardSkillCatalog.speakAsMeID)
+        XCTAssertNotNil(translateIndex)
+        XCTAssertNotNil(speakAsMeIndex)
+        XCTAssertLessThan(try XCTUnwrap(translateIndex), try XCTUnwrap(speakAsMeIndex))
+    }
+
+    func testTranslationIsNotRecommendedForSystemLanguage() {
+        let recommendations = ClipboardSkillSemanticRanker.recommended(
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "Could you send me the final proposal?",
             analysis: analysis(language: "en", question: detected()),
             uiLanguage: .chinese,
@@ -36,7 +149,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
     func testChineseScriptMismatchPromotesTranslation() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "這是一段繁體中文。",
             analysis: analysis(language: "zh-Hant"),
             uiLanguage: .chinese,
@@ -86,7 +199,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
     func testSingleHTTPSLinkOffersOpenAndWebpageSummary() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "https://example.com/article",
             analysis: analysis(urls: [URL(string: "https://example.com/article")!]),
             uiLanguage: .chinese,
@@ -107,7 +220,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         let text = "https://www.apple.com/newsroom/"
         let detected = await ClipboardSemanticAnalyzer().analyze(text)
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: text,
             analysis: detected,
             uiLanguage: .chinese,
@@ -126,7 +239,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
     func testMultipleLinksDoNotChooseAnAmbiguousTarget() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "https://example.com/a https://example.com/b",
             analysis: analysis(urls: [
                 URL(string: "https://example.com/a")!,
@@ -143,7 +256,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
     func testSinglePhoneNumberOffersCallAndCreateContact() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "请拨打 +1 408-996-1010",
             analysis: analysis(
                 phoneNumbers: [
@@ -168,7 +281,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         let text = "联系电话：+1 408-996-1010"
         let detected = await ClipboardSemanticAnalyzer().analyze(text)
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: text,
             analysis: detected,
             uiLanguage: .chinese,
@@ -187,7 +300,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
     func testMultiplePhoneNumbersDoNotChooseAnAmbiguousTarget() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "+1 408-996-1010 / 400-666-8800",
             analysis: analysis(
                 phoneNumbers: [
@@ -225,7 +338,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             isApprovedForAutomaticRouting: false
         )
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "这个问题已经发生三次了，请尽快处理。",
             analysis: analysis(
                 sentiment: .negative,
@@ -244,7 +357,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             complaint: detected()
         )
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "这个问题已经发生三次了，到底什么时候能解决？",
             analysis: analysis,
             uiLanguage: .chinese,
@@ -262,7 +375,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             question: detected()
         )
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "为什么到现在还没有发给我？",
             analysis: analysis,
             uiLanguage: .chinese,
@@ -322,7 +435,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
     func testRecommendationsAddReplyToSemanticallyRelevantSkills() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "北京市朝阳区望京街 10 号，到了给我电话。",
             analysis: analysis(hasAddress: true),
             uiLanguage: .chinese,
@@ -342,7 +455,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
     func testRecommendationsFallBackToReplyWhenNoSemanticLabelMatches() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "知道了",
             analysis: analysis(),
             uiLanguage: .chinese,
@@ -354,7 +467,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
     func testNegativeReplyableMessageDoesNotOfferPlayfulReply() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "我刚到家，今天真是累坏了。",
             analysis: analysis(
                 sentiment: .negative,
@@ -369,7 +482,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
     func testInvitationUsesOneReplyCenterAndKeepsCalendarAction() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "今晚七点老地方吃饭，你能来吗？",
             analysis: analysis(
                 hasDate: true,
@@ -392,7 +505,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
     func testForeignQuestionKeepsTranslationAndUnifiedReply() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "Could you send the final proposal by Friday?",
             analysis: analysis(
                 language: "en",
@@ -717,7 +830,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
     func testLinkInsideAMessageKeepsTheMessageSkills() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "会议链接 https://zoom.us/j/123 周三下午三点开始，能来吗？",
             analysis: analysis(
                 hasDate: true,
@@ -743,7 +856,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
     func testLabelledLinkPasteStaysExclusive() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "详情见 https://example.com/article",
             analysis: analysis(urls: [URL(string: "https://example.com/article")!]),
             uiLanguage: .chinese,
@@ -763,7 +876,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
 
     func testPhoneNumberInsideAMessageKeepsTheMessageSkills() {
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "王经理说这个订单有问题，你直接打 400-666-8800 找售后处理一下。",
             analysis: analysis(
                 phoneNumbers: [ClipboardTextLabel(sourceText: "400-666-8800")],
@@ -793,7 +906,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
             count: 10
         )
         let recommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: text,
             analysis: analysis(),
             uiLanguage: .chinese,
@@ -820,7 +933,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         ].joined(separator: "\n")
 
         let proseRecommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: prose,
             analysis: analysis(),
             uiLanguage: .chinese,
@@ -829,7 +942,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         ).map(\.id)
 
         let listRecommendations = ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: "牛奶\n鸡蛋\n面包",
             analysis: analysis(),
             uiLanguage: .chinese,
@@ -843,12 +956,22 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         )
     }
 
+    /// Most tests describe the default experience, which is the one before any
+    /// personal style exists. "Speak as me" ships enabled but stays out of the
+    /// keyboard's catalog until a style is distilled, so passing the raw catalog
+    /// would assert against a state most users are never in. Filter on the real
+    /// prerequisite rather than on `isDefault`, which no longer implies it.
+    private static let catalogWithoutOptInSkills = AIClipboardSkillCatalog.catalog
+        .filter {
+            !AIClipboardSkillCatalog.requiresPersonalReplyStyleIDs.contains($0.id)
+        }
+
     private func rank(
         text: String,
         analysis: ClipboardSemanticAnalysis
     ) -> [String] {
         ClipboardSkillSemanticRanker.ranked(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: text,
             analysis: analysis,
             uiLanguage: .chinese,
@@ -861,7 +984,7 @@ final class ClipboardSkillSemanticRankerTests: XCTestCase {
         analysis: ClipboardSemanticAnalysis
     ) -> [String] {
         ClipboardSkillSemanticRanker.recommended(
-            skills: AIClipboardSkillCatalog.catalog,
+            skills: Self.catalogWithoutOptInSkills,
             sourceText: text,
             analysis: analysis,
             uiLanguage: .chinese,

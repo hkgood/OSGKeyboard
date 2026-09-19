@@ -23,11 +23,9 @@ final class MacAudioRecorder: MacAudioRecording, @unchecked Sendable {
         var errorDescription: String? {
             switch self {
             case .converterUnavailable:
-                return "无法初始化音频转换器 / Failed to initialize audio converter"
+                return MacL10n.string("mac.error.converterUnavailable")
             case .microphoneAccessDenied:
-                return "麦克风权限被拒绝——请在「系统设置 → 隐私与安全性 → 麦克风」中启用"
-                    + " / Microphone access denied — enable it in System Settings"
-                    + " → Privacy & Security → Microphone"
+                return MacL10n.string("mac.error.microphoneAccessDenied")
             }
         }
     }
@@ -39,7 +37,11 @@ final class MacAudioRecorder: MacAudioRecording, @unchecked Sendable {
         channels: 1,
         interleaved: false
     )!
-    private var converter: AVAudioConverter?
+    /// Route-adaptive resampler shared with the iOS capture paths. It rebuilds
+    /// its converter from the format of each incoming buffer, so switching
+    /// between the built-in mic, AirPods and a USB interface mid-recording
+    /// resamples correctly instead of feeding a converter a stale rate.
+    private var downsampler: FlowAdaptiveDownsampler?
     private let lock = NSLock()
     private var samples: [Float] = []
     private var snapshotContinuation: AsyncStream<AudioBufferSnapshot>.Continuation?
@@ -63,9 +65,6 @@ final class MacAudioRecorder: MacAudioRecording, @unchecked Sendable {
     /// whole excess in one move instead.
     private static let trimHysteresisSamples = 30 * 16_000
     private var smoothedLevel: Float = 0
-    /// One-shot flag for the converter pull block. Taps are serialized per
-    /// bus, so a plain instance property (not a captured local) is safe here.
-    private var didProvideInput = false
 
     /// Normalised input level (0…1), smoothed for a calm waveform.
     /// Read from the main thread by a polling timer while recording.
@@ -162,12 +161,20 @@ final class MacAudioRecorder: MacAudioRecording, @unchecked Sendable {
 
         let input = engine.inputNode
         let inputFormat = input.outputFormat(forBus: 0)
-        guard let converter = AVAudioConverter(from: inputFormat, to: targetFormat) else {
+        // Pre-flight only: the converter actually used on the audio thread is
+        // built by the downsampler from the first delivered buffer. Probing here
+        // still turns "no usable input device" into a clean thrown error.
+        guard AVAudioConverter(from: inputFormat, to: targetFormat) != nil else {
             throw RecorderError.converterUnavailable
         }
-        self.converter = converter
+        self.downsampler = FlowAdaptiveDownsampler(targetFormat: targetFormat)
 
-        input.installTap(onBus: 0, bufferSize: 4_096, format: inputFormat) { [weak self] buffer, _ in
+        // `format: nil` — NEVER pass an explicit format. `installTap` raises an
+        // uncatchable NSException ("Failed to create tap due to format
+        // mismatch") when the format read above has already been superseded by
+        // a route change, and that kills the whole app. `nil` always resolves
+        // to the node's live format.
+        input.installTap(onBus: 0, bufferSize: 4_096, format: nil) { [weak self] buffer, _ in
             self?.appendResampled(buffer)
         }
         engine.prepare()
@@ -202,26 +209,17 @@ final class MacAudioRecorder: MacAudioRecording, @unchecked Sendable {
     }
 
     private func appendResampled(_ buffer: AVAudioPCMBuffer) {
-        guard let converter else { return }
-        let ratio = targetFormat.sampleRate / buffer.format.sampleRate
-        let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 1_024
-        guard let output = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity) else { return }
-
-        didProvideInput = false
-        var conversionError: NSError?
-        converter.convert(to: output, error: &conversionError) { [self] _, statusPointer in
-            if didProvideInput {
-                statusPointer.pointee = .noDataNow
-                return nil
-            }
-            didProvideInput = true
-            statusPointer.pointee = .haveData
-            return buffer
-        }
-        guard conversionError == nil, let channel = output.floatChannelData else { return }
+        guard let downsampler else { return }
+        // The downsampler owns the frame-count arithmetic (it clamps before
+        // converting to `AVAudioFrameCount`, which traps on NaN/overflow) and
+        // the one-shot pull flag.
+        guard case .converted(let output) = downsampler.convertReusingScratch(buffer),
+              let channel = output.floatChannelData else { return }
 
         let frameCount = Int(output.frameLength)
         guard frameCount > 0 else { return }
+        // `output` is the downsampler's reusable scratch buffer, valid only
+        // until the next callback — copy the samples out synchronously.
         let chunk = Array(UnsafeBufferPointer(start: channel[0], count: frameCount))
 
         // RMS → rough 0…1 level with an attack/decay smoothing so the UI

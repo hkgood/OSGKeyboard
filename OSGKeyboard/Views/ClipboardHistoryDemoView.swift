@@ -48,9 +48,13 @@ struct ClipboardHistoryDemoView: View {
             }
             VStack(spacing: 0) {
                 if FeaturePreviewFlags.isFullscreen {
+                    // Chinese-only recording — see the `zh-Hans` locale pin on
+                    // this view's body; the sample conversation has no English
+                    // variant, so the host chrome stays Chinese to match.
                     FeaturePreviewHostDocument(
                         kind: .messages,
                         title: "信息",
+                        language: .zh,
                         text: hostDraft,
                         incoming: Self.incomingMessage
                     )

@@ -70,6 +70,7 @@ final class SettingsCloudSyncTests: XCTestCase {
             aiResponseLength: SyncedField(value: .medium, updatedAt: stampA, deviceID: deviceA),
             multipleReplyVariantsEnabled: SyncedField(value: true, updatedAt: stampA, deviceID: deviceA),
             activePolishStyleId: SyncedField(value: "builtin.light", updatedAt: stampA, deviceID: deviceA),
+            personalReplyStyleId: SyncedField(value: "user.a", updatedAt: stampA, deviceID: deviceA),
             llmThinkingEnabled: SyncedField(value: false, updatedAt: stampA, deviceID: deviceA),
             flowSkipAppSwitch: SyncedField(value: true, updatedAt: stampA, deviceID: deviceA),
             flowInactivityDuration: SyncedField(value: .twelveHours, updatedAt: stampA, deviceID: deviceA)
@@ -94,6 +95,7 @@ final class SettingsCloudSyncTests: XCTestCase {
             aiResponseLength: SyncedField(value: .detailed, updatedAt: stampB, deviceID: deviceB),
             multipleReplyVariantsEnabled: SyncedField(value: false, updatedAt: stampB, deviceID: deviceB),
             activePolishStyleId: SyncedField(value: "builtin.formal", updatedAt: stampB, deviceID: deviceB),
+            personalReplyStyleId: SyncedField(value: "user.b", updatedAt: stampB, deviceID: deviceB),
             llmThinkingEnabled: SyncedField(value: true, updatedAt: stampB, deviceID: deviceB),
             flowSkipAppSwitch: SyncedField(value: false, updatedAt: stampB, deviceID: deviceB),
             flowInactivityDuration: SyncedField(value: .threeHours, updatedAt: stampB, deviceID: deviceB)
@@ -108,6 +110,50 @@ final class SettingsCloudSyncTests: XCTestCase {
         XCTAssertEqual(merged.polishIntensity.value, .heavy)
         XCTAssertEqual(merged.aiResponseLength.value, .detailed)
         XCTAssertFalse(merged.multipleReplyVariantsEnabled.value)
+        XCTAssertEqual(merged.personalReplyStyleId.value, "user.b")
+    }
+
+    /// Devices still on the pre-split build omit the key entirely. Empty is the
+    /// right default: the local one-shot migration owns adopting an existing
+    /// personal style, not the sync layer.
+    func testPreSplitPayloadDecodesWithPersonalReplyStyleDisabled() throws {
+        let payload = SyncedAppSettingsV2.seeded(
+            from: AppGroupConfiguration.load(fromAvailable: defaults),
+            deviceID: deviceA,
+            updatedAt: Date(timeIntervalSince1970: 100)
+        )
+        var object = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(payload)) as? [String: Any]
+        )
+        object.removeValue(forKey: "personalReplyStyleId")
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let decoded = try JSONDecoder().decode(SyncedAppSettingsV2.self, from: legacyData)
+
+        XCTAssertEqual(decoded.personalReplyStyleId.value, "")
+    }
+
+    /// A pre-split device can still push a learned pack id as the voice style.
+    /// `applying(to:)` writes straight into the configuration, so the gate has
+    /// to be re-applied there or the disfluency bug returns through iCloud.
+    func testAppliedRemoteVoiceStyleCannotBeADistilledPersonalStyle() throws {
+        var configuration = AppGroupConfiguration.load(fromAvailable: defaults)
+        let distilled = PolishStylePackTests.distilledPack()
+        try configuration.polishStyleCatalog.upsert(distilled)
+
+        var payload = SyncedAppSettingsV2.seeded(
+            from: configuration,
+            deviceID: deviceA,
+            updatedAt: Date(timeIntervalSince1970: 100)
+        )
+        payload.activePolishStyleId = SyncedField(
+            value: distilled.id,
+            updatedAt: Date(timeIntervalSince1970: 200),
+            deviceID: deviceB
+        )
+        payload.applying(to: &configuration)
+
+        XCTAssertEqual(configuration.activePolishStyleId, PolishStylePackCatalog.defaultID)
     }
 
     func testLegacyKeepAliveFieldDecodesButIsNotReencoded() throws {

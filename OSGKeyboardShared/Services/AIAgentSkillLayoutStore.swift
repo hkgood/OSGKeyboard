@@ -72,13 +72,13 @@ public final class AIAgentSkillLayoutStore: ObservableObject {
 
     public var skillManagementEnabledSkills: [AIClipboardSkill] {
         enabledSkills.filter {
-            !AIClipboardSkillCatalog.hiddenFromSkillManagementIDs.contains($0.id)
+            !AIClipboardSkillCatalog.managedOutsideSkillListIDs.contains($0.id)
         }
     }
 
     public var skillManagementAvailableSkills: [AIClipboardSkill] {
         availableSkills.filter {
-            !AIClipboardSkillCatalog.hiddenFromSkillManagementIDs.contains($0.id)
+            !AIClipboardSkillCatalog.managedOutsideSkillListIDs.contains($0.id)
         }
     }
 

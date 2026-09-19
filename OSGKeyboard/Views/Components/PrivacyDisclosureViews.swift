@@ -10,15 +10,15 @@ import SwiftUI
 struct PrivacyInfoCard: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
-    let title: LocalizedStringKey
-    let bodyText: LocalizedStringKey
+    let title: String
+    let bodyText: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(title)
+            Text(AppL10n.string(title))
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textPrimary)
-            Text(bodyText)
+            Text(AppL10n.string(bodyText))
                 .font(TypeStyle.caption2)
                 .foregroundStyle(palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)

@@ -263,8 +263,43 @@ public enum PolishStylePackCatalog {
         }
     }
 
+    /// Distilled personal styles serve the AI-reply pipeline only. Voice polish
+    /// must never load one: a learned pack is injected as "outranks generic
+    /// cleanup", which would override the core T1/T2 filler and repetition
+    /// cleanup and put the speaker's disfluencies back into the transcript.
+    public static func isPersonalReplyStyle(_ pack: PolishStylePack) -> Bool {
+        pack.learningMetadata != nil
+    }
+
+    /// Voice-polish eligibility. Rejecting learned packs here — rather than in
+    /// the UI — means a stale iCloud value or a view bug still cannot reach
+    /// `PolishPromptComposer`; `setActivePolishStyleId` falls back to `defaultID`.
     public static func isValidActiveID(_ id: String, userCatalog: PolishStyleCatalog) -> Bool {
-        builtins.contains(where: { $0.id == id }) || userCatalog.entries.contains(where: { $0.id == id })
+        if builtins.contains(where: { $0.id == id }) { return true }
+        guard let pack = userCatalog.entries.first(where: { $0.id == id }) else { return false }
+        return !isPersonalReplyStyle(pack)
+    }
+
+    /// The mirror gate: only a distilled personal style may drive AI replies.
+    /// Hand-written user packs stay on the Styles page (voice input only).
+    public static func resolvePersonalReplyStyle(
+        id: String,
+        userCatalog: PolishStyleCatalog
+    ) -> PolishStylePack? {
+        guard !id.isEmpty,
+              let pack = userCatalog.entries.first(where: { $0.id == id }),
+              isPersonalReplyStyle(pack) else { return nil }
+        return pack
+    }
+
+    /// Newest distilled personal style. Used by the Skills page and by the
+    /// one-shot migration that splits voice input from AI replies.
+    public static func latestPersonalReplyStyle(
+        userCatalog: PolishStyleCatalog
+    ) -> PolishStylePack? {
+        userCatalog.entries
+            .filter(isPersonalReplyStyle)
+            .max { $0.updatedAt < $1.updatedAt }
     }
 
     /// Fun personality packs that fully rewrite voice (dating / flex / corp / diba / xhs).

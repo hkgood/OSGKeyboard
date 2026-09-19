@@ -29,6 +29,12 @@ struct OSGKeyboardApp: App {
         // near ~150 MB RSS in Debug; compiling CLM during onboarding races the
         // keyboard extension and gets the host jetsammed (signal 9). Warmup
         // runs from MainAppRoot only after onboarding completes.
+        // Subscribe before the first frame: MetricKit delivers the previous
+        // run's crash / hang diagnostics shortly after launch, and a late
+        // subscriber simply misses that delivery. This is the only visibility
+        // we have into keyboard-extension memory kills, which never surface as
+        // crashes in App Store Connect.
+        CrashDiagnosticsService.shared.start()
         OSGDiag.log("OSGKeyboardApp.init \(OSGDiag.memoryTag())", category: "flow")
     }
 
@@ -48,13 +54,16 @@ struct OSGKeyboardApp: App {
                 AIKeyboardDemoView()
             } else if ProcessInfo.processInfo.arguments.contains("--ai-skills-demo") {
                 AIClipboardSkillLayoutDemoView()
+            } else if ProcessInfo.processInfo.arguments.contains("--smart-reply-demo") {
+                SmartReplyDemoView()
             } else if ProcessInfo.processInfo.arguments.contains("--assistant-ui-test") {
                 AssistantKeyboardUITestHarness()
             } else if ProcessInfo.processInfo.arguments.contains("--account-ui-test") {
                 AccountCenterUITestHarness()
             } else if ProcessInfo.processInfo.arguments.contains("--polish-styles-screenshot") {
                 PolishStylesScreenshotHarness()
-            } else if ProcessInfo.processInfo.arguments.contains("--home-dictionary-screenshot") {
+            } else if ProcessInfo.processInfo.arguments.contains("--home-dictionary-screenshot")
+                || ProcessInfo.processInfo.arguments.contains("--home-calendar-screenshot") {
                 HomeDictionaryScreenshotHarness()
             } else if ProcessInfo.processInfo.arguments.contains("--managed-consent-ui-test") {
                 ManagedCloudConsentUITestHarness()

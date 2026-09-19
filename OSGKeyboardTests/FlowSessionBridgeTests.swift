@@ -746,6 +746,41 @@ final class FlowSessionBridgeTests: XCTestCase {
         XCTAssertTrue(FlowSessionBridge.isHostReady(defaults: defaults))
     }
 
+    func testReassertSessionActiveRecoversFlagClearedByKeyboardCleanup() {
+        let defaults = makeDefaults()
+        let sessionId = UUID()
+        FlowSessionBridge.markSessionActivePersistent(sessionId: sessionId, defaults: defaults)
+
+        // Host suspended after a PiP drop: heartbeat froze, so the keyboard's
+        // stale-host cleanup declares it dead and clears the session flag while
+        // the host process is actually still alive.
+        let zombieHeartbeat = Date().timeIntervalSince1970 - 120
+        defaults.set(zombieHeartbeat, forKey: FlowSessionKeys.flowHeartbeat)
+        XCTAssertTrue(FlowSessionBridge.clearIfHostStale(defaults: defaults))
+        XCTAssertFalse(FlowSessionBridge.isSessionActive(defaults: defaults))
+
+        // The resumed-but-alive host re-asserts the flag and republishes ready.
+        FlowSessionBridge.reassertSessionActive(defaults: defaults)
+        XCTAssertTrue(FlowSessionBridge.isSessionActive(defaults: defaults))
+        XCTAssertTrue(FlowSessionBridge.isHostReachable(defaults: defaults))
+
+        let now = Date().timeIntervalSince1970
+        FlowSessionBridge.writeReadySnapshot(
+            FlowReadySnapshot(
+                sessionId: sessionId,
+                ready: true,
+                reason: .ready,
+                heartbeatAt: now,
+                readyAt: now,
+                audioProofAt: now,
+                engineMode: "cloud",
+                localeId: "zh-Hans"
+            ),
+            defaults: defaults
+        )
+        XCTAssertTrue(FlowSessionBridge.isHostReady(defaults: defaults))
+    }
+
     func testHostReadyRejectedWhenReadyAtSkewsFromHeartbeat() {
         let defaults = makeDefaults()
         let sessionId = UUID()

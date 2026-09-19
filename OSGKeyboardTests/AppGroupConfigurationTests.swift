@@ -67,6 +67,10 @@ final class AppGroupConfigurationTests: XCTestCase {
         config.flowSkipAppSwitch = false
         // Use a non-default value so the round-trip actually proves persistence.
         config.flowInactivityDuration = .threeHours
+        // Non-default so the round-trip proves the auto-mode flags persist.
+        config.clipboardAutoModeEnabled = true
+        config.clipboardAutoTranslateEnabled = true
+        config.clipboardAutoEmailReplyEnabled = true
         config.save(to: defaults)
 
         let loaded = AppGroupConfiguration.load(fromAvailable: defaults)
@@ -92,6 +96,9 @@ final class AppGroupConfigurationTests: XCTestCase {
         XCTAssertEqual(loaded.aiResponseLength, .short)
         XCTAssertFalse(loaded.flowSkipAppSwitch)
         XCTAssertEqual(loaded.flowInactivityDuration, .threeHours)
+        XCTAssertTrue(loaded.clipboardAutoModeEnabled)
+        XCTAssertTrue(loaded.clipboardAutoTranslateEnabled)
+        XCTAssertTrue(loaded.clipboardAutoEmailReplyEnabled)
     }
 
     func testAppGroupStorePersistsLocaleChanges() {
@@ -173,6 +180,171 @@ final class AppGroupConfigurationTests: XCTestCase {
         updated.save(to: defaults)
         let second = AppGroupConfiguration.load(fromAvailable: defaults)
         XCTAssertEqual(second.flowInactivityDuration, .thirtyMinutes)
+    }
+
+    // MARK: - Personal reply style split
+
+    private func seedCatalog(
+        _ defaults: UserDefaults,
+        entries: [PolishStylePack],
+        activeID: String
+    ) {
+        var config = AppGroupConfiguration.load(fromAvailable: defaults)
+        for entry in entries {
+            try? config.polishStyleCatalog.upsert(entry)
+        }
+        config.activePolishStyleId = activeID
+        config.save(to: defaults)
+        // The split migration may already have run during the load above.
+        defaults.removeObject(forKey: AppGroupConfiguration.Keys.personalReplyStyleMigrated)
+        defaults.removeObject(forKey: AppGroupConfiguration.Keys.personalReplyStyleId)
+        defaults.set(activeID, forKey: AppGroupConfiguration.Keys.activePolishStyleId)
+    }
+
+    /// The reported bug: a selected personal style outranked the core filler
+    /// cleanup. Migration hands it to replies and gives dictation its default back.
+    func testActiveDistilledStyleMovesToRepliesAndVoiceFallsBack() {
+        let defaults = makeDefaults()
+        let distilled = PolishStylePackTests.distilledPack()
+        seedCatalog(defaults, entries: [distilled], activeID: distilled.id)
+
+        let config = AppGroupConfiguration.load(fromAvailable: defaults)
+
+        XCTAssertEqual(config.activePolishStyleId, PolishStylePackCatalog.defaultID)
+        XCTAssertEqual(config.personalReplyStyleId, distilled.id)
+    }
+
+    /// These users had generated a personal style but could not use it: the
+    /// single selector forced them to choose voice cleanup instead.
+    func testUnusedDistilledStyleIsAdoptedForReplies() {
+        let defaults = makeDefaults()
+        let distilled = PolishStylePackTests.distilledPack()
+        seedCatalog(defaults, entries: [distilled], activeID: PolishStylePackCatalog.defaultID)
+
+        let config = AppGroupConfiguration.load(fromAvailable: defaults)
+
+        XCTAssertEqual(config.activePolishStyleId, PolishStylePackCatalog.defaultID)
+        XCTAssertEqual(config.personalReplyStyleId, distilled.id)
+    }
+
+    func testHandWrittenStyleStaysOnVoiceAndNeverDrivesReplies() {
+        let defaults = makeDefaults()
+        let handWritten = PolishStylePack(id: "user.handwritten", name: "手写", prompt: "长句")
+        seedCatalog(defaults, entries: [handWritten], activeID: handWritten.id)
+
+        let config = AppGroupConfiguration.load(fromAvailable: defaults)
+
+        XCTAssertEqual(config.activePolishStyleId, handWritten.id)
+        XCTAssertEqual(config.personalReplyStyleId, "")
+    }
+
+    func testPersonalReplyStyleMigrationRunsOnce() {
+        let defaults = makeDefaults()
+        let distilled = PolishStylePackTests.distilledPack()
+        seedCatalog(defaults, entries: [distilled], activeID: distilled.id)
+
+        let first = AppGroupConfiguration.load(fromAvailable: defaults)
+        XCTAssertEqual(first.personalReplyStyleId, distilled.id)
+        XCTAssertTrue(
+            defaults.bool(forKey: AppGroupConfiguration.Keys.personalReplyStyleMigrated)
+        )
+
+        // A later opt-out must not be undone by a second load.
+        var updated = first
+        updated.personalReplyStyleId = ""
+        updated.save(to: defaults)
+
+        XCTAssertEqual(AppGroupConfiguration.load(fromAvailable: defaults).personalReplyStyleId, "")
+    }
+
+    func testStoreRejectsDistilledStyleAsVoiceSelection() {
+        let defaults = makeDefaults()
+        let distilled = PolishStylePackTests.distilledPack()
+        seedCatalog(defaults, entries: [distilled], activeID: PolishStylePackCatalog.defaultID)
+        let store = AppGroupStore(defaults: defaults)
+
+        store.setActivePolishStyleId(distilled.id)
+
+        XCTAssertEqual(store.activePolishStyleId, PolishStylePackCatalog.defaultID)
+    }
+
+    func testStoreRejectsHandWrittenStyleAsReplySelection() {
+        let defaults = makeDefaults()
+        let handWritten = PolishStylePack(id: "user.handwritten", name: "手写", prompt: "长句")
+        seedCatalog(defaults, entries: [handWritten], activeID: PolishStylePackCatalog.defaultID)
+        let store = AppGroupStore(defaults: defaults)
+
+        store.setPersonalReplyStyleId(handWritten.id)
+
+        XCTAssertEqual(store.personalReplyStyleId, "")
+        XCTAssertNil(store.personalReplyStyle)
+    }
+
+    /// The half the instruction tests cannot see: they hand-build a context, so
+    /// nothing pinned the path from a stored pack to the prompt the model reads.
+    /// This walks the production chain — App Group pack -> `personalReplyStyle`
+    /// -> `resolve` -> `instruction(for:)` — and asserts the user's own wording
+    /// reaches "Speak as me". A break anywhere in it degrades the skill into
+    /// generic polish without failing any other test.
+    func testSpeakAsMeInstructionCarriesTheStoredPersonalStyle() throws {
+        let defaults = makeDefaults()
+        let distilled = PolishStylePackTests.distilledPack()
+        seedCatalog(defaults, entries: [distilled], activeID: PolishStylePackCatalog.defaultID)
+        let store = AppGroupStore(defaults: defaults)
+        store.setPersonalReplyStyleId(distilled.id)
+
+        let context = try XCTUnwrap(
+            AIClipboardReplyStyleContext.resolve(personalReplyStyle: store.personalReplyStyle)
+        )
+        XCTAssertEqual(context.styleID, distilled.id)
+
+        let skill = try XCTUnwrap(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.speakAsMeID)
+        )
+        let instruction = AIClipboardSkillCatalog.instruction(
+            for: skill,
+            locale: "zh",
+            translationTargetLocaleId: "en",
+            replyStyle: context
+        )
+
+        XCTAssertTrue(instruction.contains(distilled.prompt))
+        XCTAssertTrue(instruction.contains("<user_reply_style id=\"\(distilled.id)\">"))
+    }
+
+    /// `supportsReplyStyle` is false for this skill, so a composer that checked
+    /// that flag before injecting the style would silently strip it.
+    func testSpeakAsMeGetsTheStyleDespiteNotSupportingTheReplyStylePath() throws {
+        let skill = try XCTUnwrap(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.speakAsMeID)
+        )
+        XCTAssertFalse(skill.supportsReplyStyle)
+
+        let instruction = AIClipboardSkillCatalog.instruction(
+            for: skill,
+            locale: "zh",
+            translationTargetLocaleId: "en",
+            replyStyle: AIClipboardReplyStyleContext(
+                styleID: "user.learned",
+                prompt: "句子要短，先说结论"
+            )
+        )
+
+        XCTAssertTrue(instruction.contains("句子要短，先说结论"))
+    }
+
+    func testDeletingPersonalStyleDisablesPersonalizedReplies() {
+        let defaults = makeDefaults()
+        let distilled = PolishStylePackTests.distilledPack()
+        seedCatalog(defaults, entries: [distilled], activeID: PolishStylePackCatalog.defaultID)
+        let store = AppGroupStore(defaults: defaults)
+        store.setPersonalReplyStyleId(distilled.id)
+        XCTAssertNotNil(store.personalReplyStyle)
+
+        store.deletePolishStylePack(id: distilled.id)
+
+        XCTAssertEqual(store.personalReplyStyleId, "")
+        XCTAssertNil(store.personalReplyStyle)
     }
 
     func testDefaultMigrationGivesFreshInstallPrivacyDefaults() {

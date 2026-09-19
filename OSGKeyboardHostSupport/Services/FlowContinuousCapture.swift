@@ -169,33 +169,9 @@ private final class FlowAudioProofStore: @unchecked Sendable {
     }
 }
 
-/// Why a tap buffer never reached the recogniser.
-///
-/// Recorded as a plain integer on the realtime audio thread and rendered on the
-/// main actor — calling `Logger` inside the tap would allocate and risk
-/// priority inversion. Each of these was previously a bare `return`, which is
-/// what made "waveform moves but the transcript is empty" invisible: levels and
-/// the audio-proof timestamp are taken from the *raw* buffer, before
-/// conversion, so they keep looking healthy while ASR receives nothing.
-public enum FlowDownsampleFailure: Int, Sendable {
-    case none = 0
-    case invalidSourceFormat
-    case converterCreateFailed
-    case scratchOverflow
-    case converterError
-    case emptyOutput
+// `FlowDownsampleFailure` lives in `FlowAdaptiveDownsampler.swift` next to
+// the resampler that produces it.
 
-    public var label: String {
-        switch self {
-        case .none: return "none"
-        case .invalidSourceFormat: return "invalidSourceFormat"
-        case .converterCreateFailed: return "converterCreateFailed"
-        case .scratchOverflow: return "scratchOverflow"
-        case .converterError: return "converterError"
-        case .emptyOutput: return "emptyOutput"
-        }
-    }
-}
 
 /// Tap accounting for one utterance (`beginUtterance()` resets it).
 public struct FlowCaptureFrameReport: Sendable, Equatable {
@@ -275,152 +251,10 @@ private final class FlowCaptureFrameStats: @unchecked Sendable {
     }
 }
 
-/// Outcome of one realtime conversion attempt. Carries the reason (and the
-/// formats involved) so the drop can be explained after the fact.
-private enum FlowDownsampleOutcome {
-    case converted(AVAudioPCMBuffer)
-    case failed(
-        failure: FlowDownsampleFailure,
-        sourceRate: Double,
-        inputFrames: Int,
-        wantedFrames: Int
-    )
-}
+// `FlowDownsampleOutcome` and the route-adaptive resampler now live in
+// `FlowAdaptiveDownsampler.swift` so every realtime tap consumer shares one
+// crash-safe implementation.
 
-/// Route-adaptive downsampling converter, safe to call from the realtime tap.
-///
-/// `AVAudioEngine.installTap(format:)` traps with an **uncatchable** NSException
-/// when the format passed to it does not match the input node's *live* format.
-/// After an audio-route change — which the on-device `SpeechAnalyzer` triggers
-/// during warmup by reconfiguring the shared `AVAudioSession` — the value
-/// returned by `inputNode.outputFormat(forBus:)` can lag behind the real
-/// hardware rate (e.g. it reports 48 kHz while the node has already switched to
-/// 24 kHz). Installing a tap with that stale explicit format crashes the whole
-/// app (`Failed to create tap due to format mismatch`).
-///
-/// We therefore install the tap with `format: nil` (which always uses the
-/// node's live format) and rebuild the sample-rate converter *here* whenever the
-/// incoming buffer's format actually changes, so downsampling to the ASR target
-/// rate is always valid regardless of route churn.
-private final class AdaptiveDownsampler: @unchecked Sendable {
-    // `AVAudioConverter` / `AVAudioFormat` / `AVAudioPCMBuffer` are not
-    // `Sendable`, so the state is guarded manually via the unchecked lock
-    // APIs. The scratch output buffer is REUSED across tap callbacks —
-    // allocating on the realtime audio thread risks priority inversion, and
-    // taps on one bus are serialized, so a single scratch is safe as long as
-    // callers copy its contents out before returning (AudioBufferSnapshot
-    // does exactly that).
-    private struct State {
-        var converter: AVAudioConverter
-        var source: AVAudioFormat
-        var scratch: AVAudioPCMBuffer
-    }
-
-    private let lock = OSAllocatedUnfairLock<State?>(uncheckedState: nil)
-    let targetFormat: AVAudioFormat
-
-    /// Frame headroom for the reusable output buffer. Taps deliver ≤4096
-    /// input frames; output frames = input × (16k / hardwareRate), which
-    /// exceeds input only for sub-16 kHz hardware (rare telephony routes),
-    /// so 2× the tap size covers every realistic ratio.
-    private static let scratchCapacity: AVAudioFrameCount = 8_192
-
-    init(targetFormat: AVAudioFormat) {
-        self.targetFormat = targetFormat
-    }
-
-    /// Downsamples `buffer` into the reusable scratch buffer and returns it,
-    /// rebuilding the converter lazily when the hardware route (and thus the
-    /// source format) changes. The returned buffer is only valid until the
-    /// next call — copy its samples out synchronously.
-    func convertReusingScratch(_ buffer: AVAudioPCMBuffer) -> FlowDownsampleOutcome {
-        let sourceFormat = buffer.format
-        let sourceRate = sourceFormat.sampleRate
-        let inputFrames = Int(buffer.frameLength)
-        guard sourceRate > 0 else {
-            return .failed(
-                failure: .invalidSourceFormat,
-                sourceRate: sourceRate,
-                inputFrames: inputFrames,
-                wantedFrames: 0
-            )
-        }
-        return lock.withLockUnchecked { state -> FlowDownsampleOutcome in
-            if state == nil || state!.source != sourceFormat {
-                guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat),
-                      let scratch = AVAudioPCMBuffer(
-                        pcmFormat: targetFormat,
-                        frameCapacity: Self.scratchCapacity
-                      ) else {
-                    state = nil
-                    return .failed(
-                        failure: .converterCreateFailed,
-                        sourceRate: sourceRate,
-                        inputFrames: inputFrames,
-                        wantedFrames: 0
-                    )
-                }
-                state = State(converter: converter, source: sourceFormat, scratch: scratch)
-            }
-            guard let current = state else {
-                return .failed(
-                    failure: .converterCreateFailed,
-                    sourceRate: sourceRate,
-                    inputFrames: inputFrames,
-                    wantedFrames: 0
-                )
-            }
-
-            let wanted = AVAudioFrameCount(
-                Double(buffer.frameLength) * targetFormat.sampleRate / sourceRate
-            )
-            guard wanted > 0, wanted <= current.scratch.frameCapacity else {
-                return .failed(
-                    failure: .scratchOverflow,
-                    sourceRate: sourceRate,
-                    inputFrames: inputFrames,
-                    wantedFrames: Int(wanted)
-                )
-            }
-            current.scratch.frameLength = 0
-
-            // ONE-SHOT input: the converter keeps pulling until the output
-            // buffer's frameCapacity is full, and the scratch is deliberately
-            // oversized — feeding the same tap buffer on every pull would
-            // duplicate the audio ~6× (stuttering ASR input). After the
-            // single feed we report "ran dry", so the expected status is
-            // `.inputRanDry` (output not full), not `.haveData`.
-            let provided = OSAllocatedUnfairLock(initialState: false)
-            var error: NSError?
-            let status = current.converter.convert(to: current.scratch, error: &error) { _, outStatus in
-                if provided.withLock({ $0 }) {
-                    outStatus.pointee = .noDataNow
-                    return nil
-                }
-                provided.withLock { $0 = true }
-                outStatus.pointee = .haveData
-                return buffer
-            }
-            guard status != .error, error == nil else {
-                return .failed(
-                    failure: .converterError,
-                    sourceRate: sourceRate,
-                    inputFrames: inputFrames,
-                    wantedFrames: Int(wanted)
-                )
-            }
-            guard current.scratch.frameLength > 0 else {
-                return .failed(
-                    failure: .emptyOutput,
-                    sourceRate: sourceRate,
-                    inputFrames: inputFrames,
-                    wantedFrames: Int(wanted)
-                )
-            }
-            return .converted(current.scratch)
-        }
-    }
-}
 
 /// Owns the session-long capture graph on the main actor. The realtime tap
 /// must not touch UserDefaults, log, or invoke actor callbacks; it exchanges
@@ -478,7 +312,7 @@ public final class FlowContinuousCapture {
     )
     private let frameStats = FlowCaptureFrameStats()
 
-    private var downsampler: AdaptiveDownsampler?
+    private var downsampler: FlowAdaptiveDownsampler?
     private var targetFormat: AVAudioFormat?
     private var hwFormat: AVAudioFormat?
     private var activeRouteSnapshot: FlowAudioSessionSnapshot?
@@ -676,7 +510,7 @@ public final class FlowContinuousCapture {
 
         // Route-adaptive converter: it rebuilds itself from the live buffer
         // format inside the tap, so it never assumes a fixed hardware rate.
-        let downsampler = AdaptiveDownsampler(targetFormat: resolvedTargetFormat)
+        let downsampler = FlowAdaptiveDownsampler(targetFormat: resolvedTargetFormat)
         self.downsampler = downsampler
         targetFormat = resolvedTargetFormat
         hwFormat = hardwareFormat
@@ -1166,7 +1000,7 @@ public final class FlowContinuousCapture {
     // MARK: - Audio tap (nonisolated — runs on realtime thread)
 
     private nonisolated static func makeAudioTapBlock(
-        downsampler: AdaptiveDownsampler,
+        downsampler: FlowAdaptiveDownsampler,
         gate: OSAllocatedUnfairLock<UtteranceGatePhase>,
         levelStore: FlowLevelStore,
         audioProofStore: FlowAudioProofStore,

@@ -254,7 +254,7 @@ private struct MacMenuBarPopover: View {
     private var onboardingPrompt: some View {
         VStack(spacing: Spacing.md) {
             Image(systemName: "sparkles")
-                .font(.system(size: 30, weight: .semibold))
+                .font(TypeStyle.pageTitle)
                 .foregroundStyle(.accent)
 
             Text(MacL10n.string("mac.onboarding.popover.title", language: viewModel.config.uiLanguage))

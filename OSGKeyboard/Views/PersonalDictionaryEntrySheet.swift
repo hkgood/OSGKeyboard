@@ -23,7 +23,7 @@ struct PersonalDictionaryEntrySheet: View {
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                TextField("settings.personalDictionary.add.field", text: $term)
+                TextField(AppL10n.string("settings.personalDictionary.add.field"), text: $term)
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                     .tint(palette.textPrimary)
@@ -36,7 +36,7 @@ struct PersonalDictionaryEntrySheet: View {
                         in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
                     )
 
-                Text("settings.personalDictionary.add.footer")
+                Text(AppL10n.string("settings.personalDictionary.add.footer"))
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -54,11 +54,11 @@ struct PersonalDictionaryEntrySheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
+                    Button(AppL10n.string("common.cancel")) { dismiss() }
                         .tint(palette.textPrimary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("common.save") { save() }
+                    Button(AppL10n.string("common.save")) { save() }
                         .disabled(trimmedTerm.isEmpty)
                         .tint(palette.textPrimary)
                 }

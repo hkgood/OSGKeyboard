@@ -272,6 +272,102 @@ final class ClipboardReplyFeedbackStoreTests: XCTestCase {
         XCTAssertEqual(example.finalEdit, "这周六不行，下次约～")
     }
 
+    func testRecentConversationTurnsReturnsSelectedExchangesOldestFirst() throws {
+        let now = Date()
+        let first = try selectedRecord(
+            source: "你有空吗？",
+            reply: "有的，怎么了",
+            at: now.addingTimeInterval(-120)
+        )
+        let second = try selectedRecord(
+            source: "周六一起吃饭？",
+            reply: "好啊，几点",
+            at: now.addingTimeInterval(-30)
+        )
+        _ = (first, second)
+
+        let turns = store.recentConversationTurns(now: now)
+        XCTAssertEqual(turns.count, 2)
+        XCTAssertEqual(turns[0].incoming, "你有空吗？")
+        XCTAssertEqual(turns[0].reply, "有的，怎么了")
+        XCTAssertEqual(turns[1].incoming, "周六一起吃饭？")
+        XCTAssertEqual(turns[1].reply, "好啊，几点")
+    }
+
+    func testRecentConversationTurnsExcludesOutsideWindowAndCurrentMessage() throws {
+        let now = Date()
+        _ = try selectedRecord(
+            source: "很久以前的消息",
+            reply: "旧回复",
+            at: now.addingTimeInterval(-10 * 60)
+        )
+        _ = try selectedRecord(
+            source: "刚刚的消息",
+            reply: "新回复",
+            at: now.addingTimeInterval(-60)
+        )
+
+        // Outside the 5-minute window is dropped; the message being replied to
+        // right now is excluded so it is not duplicated as context.
+        XCTAssertEqual(
+            store.recentConversationTurns(now: now).map(\.incoming),
+            ["刚刚的消息"]
+        )
+        XCTAssertTrue(
+            store.recentConversationTurns(now: now, excludingIncoming: "刚刚的消息").isEmpty
+        )
+    }
+
+    func testRecentConversationTurnsIgnoresAwaitingAndDiscarded() throws {
+        let now = Date()
+        _ = try XCTUnwrap(
+            store.begin(
+                sourceText: "还没选的消息",
+                candidates: makeCandidates(suffix: "a"),
+                styleID: nil,
+                now: now.addingTimeInterval(-40)
+            )
+        )
+        let discardID = try XCTUnwrap(
+            store.begin(
+                sourceText: "被丢弃的消息",
+                candidates: makeCandidates(suffix: "b"),
+                styleID: nil,
+                now: now.addingTimeInterval(-30)
+            )
+        )
+        store.recordDiscard(recordID: discardID)
+
+        XCTAssertTrue(store.recentConversationTurns(now: now).isEmpty)
+    }
+
+    @discardableResult
+    private func selectedRecord(
+        source: String,
+        reply: String,
+        at date: Date
+    ) throws -> UUID {
+        let candidate = ClipboardReplyCandidateSnapshot(
+            kind: .ordinary,
+            text: reply,
+            emotion: "neutral"
+        )
+        let recordID = try XCTUnwrap(
+            store.begin(
+                sourceText: source,
+                candidates: [candidate],
+                styleID: nil,
+                now: date
+            )
+        )
+        store.recordSelection(
+            recordID: recordID,
+            candidateID: candidate.id,
+            answerID: candidate.id
+        )
+        return recordID
+    }
+
     private func makeCandidates(
         suffix: String = ""
     ) -> [ClipboardReplyCandidateSnapshot] {

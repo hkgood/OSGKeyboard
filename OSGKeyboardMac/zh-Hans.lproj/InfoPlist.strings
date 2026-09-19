@@ -1,0 +1,4 @@
+/* 权限说明（macOS）— 简体中文 */
+
+"NSMicrophoneUsageDescription" = "OSGKeyboard 使用麦克风，通过你配置的云端语音服务商将语音转为文字。";
+"NSSpeechRecognitionUsageDescription" = "OSGKeyboard 在本地听写模式下使用设备端语音识别。";

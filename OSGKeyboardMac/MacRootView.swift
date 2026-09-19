@@ -131,7 +131,7 @@ private struct MacSidebarRow: View {
                 .padding(.vertical, 9)
                 .background(
                     rowBackground,
-                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: Radius.small, style: .continuous)
                 )
                 .contentShape(Rectangle())
         }

@@ -69,7 +69,7 @@ public enum ClipboardSkillSemanticRanker {
             analysis: analysis,
             preferredLanguages: preferredLanguages
         )
-        let genericReply = suppressesInterpersonalRouting(analysis)
+        let genericReply = suppressesInterpersonalRouting(analysis, sourceText: sourceText)
             ? nil
             : skills.first { $0.id == AIClipboardSkillCatalog.replyID }
         if genericReply != nil {
@@ -96,6 +96,17 @@ public enum ClipboardSkillSemanticRanker {
            selected.count < limit,
            !selected.contains(where: { $0.id == genericReply.id }) {
             selected.append(genericReply)
+        }
+        // "Speak as me" rewrites the user's own draft, which no clipboard
+        // signal can detect — nothing in `relevanceScores` can ever score it,
+        // so it would never surface on its own. It reaches this list only when
+        // the user has a personal style and opted the skill in, so it is
+        // offered as a trailing fallback: never displacing a content match,
+        // and leaving the "is this my own text?" judgement to the user.
+        if let speakAsMe = skills.first(where: { $0.id == AIClipboardSkillCatalog.speakAsMeID }),
+           selected.count < limit,
+           !selected.contains(where: { $0.id == speakAsMe.id }) {
+            selected.append(speakAsMe)
         }
         return selected
     }
@@ -145,7 +156,18 @@ public enum ClipboardSkillSemanticRanker {
             boost(AIClipboardSkillCatalog.navigateID, 180)
         }
 
-        let suppressesInterpersonalRouting = suppressesInterpersonalRouting(analysis)
+        // An explicit "please reply" is the strongest Reply signal there is: it
+        // must win even over a date (Events) or a command/query classification,
+        // so a message that asks for a response actually auto-replies instead of
+        // ranking Events/other first. Scored above every non-bare-entity boost.
+        if hasExplicitReplyRequest(sourceText) {
+            boost(AIClipboardSkillCatalog.replyID, 340)
+        }
+
+        let suppressesInterpersonalRouting = suppressesInterpersonalRouting(
+            analysis,
+            sourceText: sourceText
+        )
         if !suppressesInterpersonalRouting {
             if isRoutingEvidence(analysis.invitation) {
                 if analysis.hasDateOrTime {
@@ -308,6 +330,51 @@ public enum ClipboardSkillSemanticRanker {
         }
     }
 
+    /// Public gate for auto-translate: true when the paste's detected language
+    /// is confidently different from the device's primary language.
+    public static func isForeignLanguage(
+        _ analysis: ClipboardSemanticAnalysis,
+        preferredLanguages: [String] = Locale.preferredLanguages
+    ) -> Bool {
+        isLanguageMismatch(analysis.language, preferredLanguages: preferredLanguages)
+    }
+
+    /// Whether auto mode should draft a reply for this copy. Defined by
+    /// exclusion, not by positive intent labels — the on-device model tags many
+    /// ordinary chat messages (short statements, casual questions) with no
+    /// routing intent, so requiring one would silently skip them. Auto-reply
+    /// therefore fires for any copy that is NOT:
+    ///   - a bare link / phone (those keep their own direct action),
+    ///   - foreign text (that routes to Translate),
+    ///   - a system notification (a delivery notice / code, nothing to answer),
+    ///   - a long article or a pure list (better summarized / organized).
+    /// Everything else reads as a message worth answering.
+    public static func isAutoReplyEligible(
+        sourceText: String,
+        analysis: ClipboardSemanticAnalysis,
+        preferredLanguages: [String] = Locale.preferredLanguages
+    ) -> Bool {
+        if let url = analysis.singleWebURL, isWebLinkDominant(sourceText, url: url) {
+            return false
+        }
+        if analysis.singlePhoneNumber != nil, isPhoneNumberDominant(sourceText) {
+            return false
+        }
+        if isForeignLanguage(analysis, preferredLanguages: preferredLanguages) {
+            return false
+        }
+        if isDisplayEvidence(analysis.systemNotification) {
+            return false
+        }
+        if effectiveLength(sourceText) >= longTextLengthThreshold {
+            return false
+        }
+        if isListLike(sourceText) {
+            return false
+        }
+        return true
+    }
+
     private static func isLanguageMismatch(
         _ language: ClipboardLanguageLabel?,
         preferredLanguages: [String]
@@ -334,11 +401,36 @@ public enum ClipboardSkillSemanticRanker {
     }
 
     private static func suppressesInterpersonalRouting(
-        _ analysis: ClipboardSemanticAnalysis
+        _ analysis: ClipboardSemanticAnalysis,
+        sourceText: String = ""
     ) -> Bool {
-        isDisplayEvidence(analysis.assistantCommand)
+        let looksLikeCommandOrQuery = isDisplayEvidence(analysis.assistantCommand)
             || isDisplayEvidence(analysis.informationQuery)
             || isDisplayEvidence(analysis.systemNotification)
+        guard looksLikeCommandOrQuery else { return false }
+        // A directive/query label must not strip Reply when the paste explicitly
+        // asks for one — an imperative "请及时回复" is a message to reply to, not a
+        // command to the assistant. The exemption is deliberately text-level:
+        // keying it off interpersonal *labels* instead would disable suppression
+        // outright, because the on-device models tag almost every display-only
+        // paste as `replyableMessage` too.
+        if hasExplicitReplyRequest(sourceText) { return false }
+        return true
+    }
+
+    /// Deterministic "please reply" detector. An explicit request to respond is
+    /// strong evidence the paste is a message to answer, overriding a command or
+    /// information-query classification.
+    private static func hasExplicitReplyRequest(_ text: String) -> Bool {
+        guard !text.isEmpty else { return false }
+        let lower = text.lowercased()
+        let markers = [
+            "回复", "回信", "回覆", "答复", "回个信", "回条信息", "回消息",
+            "等你回", "尽快回", "及时回", "尽早回", "务必回", "记得回",
+            "reply", "respond", "get back to me", "let me know", "your reply",
+            "write back", "awaiting your response", "please answer"
+        ]
+        return markers.contains { lower.contains($0) }
     }
 
     private static func hasInterpersonalRoutingEvidence(
@@ -506,5 +598,60 @@ public final class ClipboardSemanticRankingStore: ObservableObject {
         analysisTask?.cancel()
         analysisTask = nil
         snapshot = nil
+    }
+}
+
+// MARK: - Email detection
+
+/// Deterministic, high-precision "is this an email?" check used to gate the
+/// auto-email-reply behavior. Email is the content type with the strongest
+/// structural markers (headers, reply/forward scaffolding, formal closings), so
+/// a rule-based detector reaches high precision without an ML model. Tuned to
+/// favor precision: it drives an automatic action, so a miss (no auto-reply,
+/// the user still sees the chip) is far cheaper than a false positive.
+public enum ClipboardEmailDetector {
+
+    /// True when the paste carries recognizable email structure. Conservative:
+    /// a single casual "thanks" is not enough; it requires headers, a reply /
+    /// forward marker, quoted lines, or an explicit formal closing.
+    public static func isEmail(_ raw: String) -> Bool {
+        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard text.count >= 12 else { return false }
+
+        let headerHits = count("(?m)^\\s*(from|to|subject|cc|bcc|sent|date|reply-to)\\s*:", text)
+            + count("(?m)^\\s*(发件人|收件人|主题|抄送|密送|发送时间|日期)\\s*[:：]", text)
+        if headerHits >= 2 { return true }
+
+        if matches("(?m)^-{3,}\\s*(original message|原始邮件|forwarded message|转发邮件)", text) { return true }
+        if matches("在.{1,40}写道[:：]", text) { return true }
+        if matches("(?m)^On .{3,80}wrote:", text) { return true }
+        if count("(?m)^\\s*>", text) >= 2 { return true }
+
+        let salutation = matches("(?m)^\\s*(dear |hi |hello |尊敬的|亲爱的|各位好|老师好|您好[，,])", text)
+        let formalSignoff = containsAny([
+            "best regards", "kind regards", "sincerely", "regards,", "yours truly", "yours sincerely",
+            "此致", "敬礼", "顺颂商祺", "顺祝商祺", "顺致敬意", "发自我的iphone", "sent from my iphone"
+        ], in: text)
+        if headerHits == 1 && (salutation || formalSignoff) { return true }
+        if salutation && formalSignoff { return true }
+        if formalSignoff { return true }
+
+        return false
+    }
+
+    private static func count(_ pattern: String, _ text: String) -> Int {
+        guard let re = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return 0
+        }
+        return re.numberOfMatches(in: text, options: [], range: NSRange(text.startIndex..., in: text))
+    }
+
+    private static func matches(_ pattern: String, _ text: String) -> Bool {
+        count(pattern, text) > 0
+    }
+
+    private static func containsAny(_ needles: [String], in text: String) -> Bool {
+        let lower = text.lowercased()
+        return needles.contains { lower.contains($0.lowercased()) }
     }
 }

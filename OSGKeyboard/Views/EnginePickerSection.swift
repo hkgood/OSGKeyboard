@@ -24,7 +24,7 @@ struct EnginePickerSection<ConfigurationRows: View>: View {
     }
 
     var body: some View {
-        CardSection("settings.aiService.title") {
+        CardSection(title: AppL10n.string("settings.aiService.title")) {
             VStack(spacing: 0) {
                 serviceOptionRow(
                     source: .managed,
@@ -48,17 +48,17 @@ struct EnginePickerSection<ConfigurationRows: View>: View {
             .surfaceCard()
         }
         .alert(
-            "settings.aiService.credits.consent.title",
+            AppL10n.string("settings.aiService.credits.consent.title"),
             isPresented: $showsManagedCloudConsent
         ) {
-            Button("common.cancel", role: .cancel) {}
-            Button("settings.aiService.credits.consent.accept") {
+            Button(AppL10n.string("common.cancel"), role: .cancel) {}
+            Button(AppL10n.string("settings.aiService.credits.consent.accept")) {
                 config.hasAcknowledgedCloudSharing = true
                 activateManagedService()
             }
             .accessibilityIdentifier("settings.aiService.credits.consent.accept")
         } message: {
-            Text("settings.aiService.credits.consent.message")
+            Text(AppL10n.string("settings.aiService.credits.consent.message"))
         }
     }
 
@@ -84,7 +84,7 @@ struct EnginePickerSection<ConfigurationRows: View>: View {
                 Spacer()
                 if isSelected {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(TypeStyle.footnote.weight(.semibold))
                         .foregroundStyle(palette.accent)
                 }
             }

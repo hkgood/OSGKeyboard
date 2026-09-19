@@ -95,7 +95,7 @@ struct SettingsCredentialRow: View {
         .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
     }
 
-    private func iconButton(systemName: String, label: LocalizedStringKey, action: @escaping () -> Void) -> some View {
+    private func iconButton(systemName: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 14, weight: .medium))
@@ -104,7 +104,7 @@ struct SettingsCredentialRow: View {
                 .background(palette.surfaceElevated, in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(label)
+        .accessibilityLabel(AppL10n.string(label))
     }
 }
 
@@ -185,7 +185,7 @@ struct SettingsModelPickerRow: View {
                 }
             } label: {
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(TypeStyle.caption2.weight(.semibold))
                     .foregroundStyle(palette.textTertiary)
                     .frame(width: chevronWidth, height: controlHeight)
                     .contentShape(Rectangle())

@@ -47,6 +47,10 @@ public final class KeyboardViewController: UIInputViewController {
         return created
     }
     private let persistor = AppGroupPersistor()
+    /// Uptime of the most recent key-driven document change. Memory relief uses
+    /// it to tell "the user is mid-sentence" from "the typing surface is merely
+    /// on screen" — see `isMidTypingBurst`.
+    private var lastTypingActivityUptime: TimeInterval = -1
 
     private var hosting: UIHostingController<KeyboardSurfaceRoot>?
     private var keyboardHeightConstraint: NSLayoutConstraint?
@@ -199,6 +203,11 @@ public final class KeyboardViewController: UIInputViewController {
         )
         configSync.installDarwinObservers()
         flowCoordinator.refreshSessionState()
+        // Installed last: the handler tears down surfaces, so it must not be
+        // reachable until the whole controller is wired up.
+        KeyboardExtensionMemoryTelemetry.reliefHandler = { [weak self] level in
+            self?.shedHeavyResources(level: level, reason: "budget") ?? false
+        }
         recordMemory(
             "KVC.viewDidLoad.done",
             details: "sessionActive=\(FlowSessionBridge.isSessionActive() ? 1 : 0) "
@@ -234,6 +243,8 @@ public final class KeyboardViewController: UIInputViewController {
             details: "preserve=\(flowCoordinator.preservesLifecycleOnDisappear ? 1 : 0)"
         )
         heightPhase = .idle
+        // A hidden keyboard cannot grow; stop waking the process to sample it.
+        KeyboardExtensionMemoryTelemetry.stopSampling()
         flowCoordinator.stopSessionMonitor()
         // Remember what the user left on, then pre-position a reused
         // extension instance for the next open policy (no first-frame jump).
@@ -295,6 +306,10 @@ public final class KeyboardViewController: UIInputViewController {
         }
         clipboardCapture.keyboardDidAppear()
         recordMemory("KVC.viewWillAppear.afterClipboard")
+        // Re-presented keyboards reuse the same process, so resume pressure
+        // polling here. No-ops while the first-launch boot burst is still
+        // running, so the startup samples are never cut short.
+        KeyboardExtensionMemoryTelemetry.startSustainedSamplingIfIdle()
         recordMemory("KVC.viewWillAppear.done")
         OSGDiag.log(
             "KVC.viewWillAppear done surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
@@ -405,12 +420,79 @@ public final class KeyboardViewController: UIInputViewController {
             "KVC.didReceiveMemoryWarning surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
             category: "boot"
         )
-        flowCoordinator.cancelPipelineUnlessAwaitingResult()
-        if state.surface == .typing {
-            applySurface(.voice)
-        } else {
-            deactivateTypingSurface()
+        // The system signal is not an advance warning — jetsam may be moments
+        // away — so this path sheds even mid-composition.
+        _ = shedHeavyResources(level: .critical, reason: "systemWarning", force: true)
+    }
+
+    /// Whether the user is actively composing right now. A non-empty preedit is
+    /// an unfinished Pinyin syllable, and a keystroke within the last window
+    /// means a burst is in progress even between syllables.
+    private var isMidTypingBurst: Bool {
+        if let session = typingSessionStorage, !session.composition.preedit.isEmpty {
+            return true
         }
+        guard lastTypingActivityUptime >= 0 else { return false }
+        return ProcessInfo.processInfo.systemUptime - lastTypingActivityUptime
+            < Self.typingBurstWindow
+    }
+
+    /// How long after a keystroke the keyboard still counts as "being typed on".
+    private static let typingBurstWindow: TimeInterval = 1.5
+
+    /// Releases the keyboard's heavy caches (Rime engine, English lexicon,
+    /// in-flight pipeline work).
+    ///
+    /// Two callers: the system memory warning above, and — crucially, *earlier*
+    /// — `KeyboardExtensionMemoryTelemetry.reliefHandler`. Jetsam kills
+    /// keyboards at the ~60 MiB boundary without reliably delivering a warning
+    /// first, so waiting for the system signal means the keyboard simply
+    /// vanishes mid-sentence. Our own 40 / 48 MiB thresholds fire while there
+    /// is still headroom to recover.
+    /// Returns whether relief actually happened, so a declined attempt keeps the
+    /// level armed for the next poll instead of counting as a completed shed.
+    @discardableResult
+    private func shedHeavyResources(
+        level: KeyboardExtensionMemoryBudget.Level,
+        reason: String,
+        force: Bool = false
+    ) -> Bool {
+        // Relief can be requested from the boot sampler before `installServices`
+        // has run; nothing below is safe to touch until the view is loaded.
+        guard isViewLoaded, flowCoordinator != nil else { return false }
+        OSGDiag.log(
+            "KVC.shed level=\(level.rawValue) reason=\(reason) "
+                + "surface=\(state.surface.rawValue) \(OSGDiag.memoryTag())",
+            category: "memory"
+        )
+        flowCoordinator.cancelPipelineUnlessAwaitingResult()
+        guard level == .critical else {
+            // `.high`: release only what the user is not looking at. Yanking an
+            // active typing surface at 40 MiB would be more disruptive than the
+            // risk it avoids.
+            if state.surface != .typing {
+                deactivateTypingSurface()
+            }
+            recordMemory("KVC.shed.soft", details: "reason=\(reason)")
+            return true
+        }
+        guard state.surface == .typing else {
+            deactivateTypingSurface()
+            recordMemory("KVC.shed.hard", details: "reason=\(reason)")
+            return true
+        }
+        // Swapping the surface out from under someone mid-syllable loses the
+        // composition and drops them into voice mode with no explanation. A
+        // jetsam kill costs the same composition but reads as "the keyboard
+        // crashed", which is the lesser of the two for the user's trust in the
+        // keyboard — and the poll comes back in a second to try again.
+        guard force || !isMidTypingBurst else {
+            recordMemory("KVC.shed.deferred", details: "reason=\(reason) cause=typing")
+            return false
+        }
+        applySurface(.voice)
+        recordMemory("KVC.shed.hard", details: "reason=\(reason)")
+        return true
     }
 
     public override func viewDidLayoutSubviews() {
@@ -622,6 +704,9 @@ public final class KeyboardViewController: UIInputViewController {
         state.openClipboardSettings = { [weak self] in
             SettingsDeepLink.setPending(.clipboard)
             self?.openHostApp(path: "settings/clipboard")
+        }
+        state.tryAutoReplyFromGuide = { [weak self] in
+            self?.clipboardCapture.confirmAutoReplyGuide()
         }
         state.openClipboardPanel = { [weak self] in
             self?.clipboardCapture.openPanelFromTopButton()
@@ -887,6 +972,7 @@ public final class KeyboardViewController: UIInputViewController {
         source: KeyboardTextInsertionSource
     ) {
         guard !text.isEmpty else { return }
+        lastTypingActivityUptime = ProcessInfo.processInfo.systemUptime
         textDocumentProxy.insertText(text)
         if source.contributesToKeyboardUsage {
             let counts = KeyboardUsageCharacterClassifier.classify(text)
@@ -902,6 +988,7 @@ public final class KeyboardViewController: UIInputViewController {
     }
 
     private func deleteBackwardFromDocument() {
+        lastTypingActivityUptime = ProcessInfo.processInfo.systemUptime
         textDocumentProxy.deleteBackward()
         refreshAssistantFieldAction()
         scheduleAssistantFieldActionRefresh()

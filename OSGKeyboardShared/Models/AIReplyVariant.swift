@@ -23,6 +23,10 @@ public struct AIReplyVariant: Equatable, Identifiable, Sendable {
         case clarificationDirect
         case clarificationQuestion
         case clarificationConfirm
+        case answerAffirmative
+        case answerNegative
+        case answerConditional
+        case answerDefer
 
         public var systemImage: String {
             switch self {
@@ -52,6 +56,14 @@ public struct AIReplyVariant: Equatable, Identifiable, Sendable {
                 return "bubble.left.and.text.bubble.right.fill"
             case .clarificationConfirm:
                 return "checkmark.bubble.fill"
+            case .answerAffirmative:
+                return "checkmark.circle.fill"
+            case .answerNegative:
+                return "xmark.circle.fill"
+            case .answerConditional:
+                return "arrow.triangle.branch"
+            case .answerDefer:
+                return "clock.fill"
             }
         }
 
@@ -87,6 +99,14 @@ public struct AIReplyVariant: Equatable, Identifiable, Sendable {
                 return "keyboard.ai.replyVariant.clarificationQuestion"
             case .clarificationConfirm:
                 return "keyboard.ai.replyVariant.clarificationConfirm"
+            case .answerAffirmative:
+                return "keyboard.ai.replyVariant.answerAffirmative"
+            case .answerNegative:
+                return "keyboard.ai.replyVariant.answerNegative"
+            case .answerConditional:
+                return "keyboard.ai.replyVariant.answerConditional"
+            case .answerDefer:
+                return "keyboard.ai.replyVariant.answerDefer"
             }
         }
 
@@ -107,7 +127,11 @@ public struct AIReplyVariant: Equatable, Identifiable, Sendable {
                  .blessingPlayful,
                  .clarificationDirect,
                  .clarificationQuestion,
-                 .clarificationConfirm:
+                 .clarificationConfirm,
+                 .answerAffirmative,
+                 .answerNegative,
+                 .answerConditional,
+                 .answerDefer:
                 return false
             }
         }
@@ -180,6 +204,7 @@ public enum AIReplyVariantSet: String, CaseIterable, Sendable {
     case task
     case blessing
     case clarification
+    case yesNoQuestion
 
     public var kinds: [AIReplyVariant.Kind] {
         switch self {
@@ -197,6 +222,15 @@ public enum AIReplyVariantSet: String, CaseIterable, Sendable {
                 .clarificationQuestion,
                 .clarificationConfirm
             ]
+        case .yesNoQuestion:
+            // A yes/no question deserves both stances, not just tone variants —
+            // and this set intentionally exceeds three options.
+            return [
+                .answerAffirmative,
+                .answerNegative,
+                .answerConditional,
+                .answerDefer
+            ]
         }
     }
 
@@ -210,6 +244,8 @@ public enum AIReplyVariantSet: String, CaseIterable, Sendable {
             return .blessing
         case .clarification:
             return .clarification
+        case .yesNoQuestion:
+            return .yesNoQuestion
         case .complaint, .negativeQuestion, nil:
             return .generic
         }

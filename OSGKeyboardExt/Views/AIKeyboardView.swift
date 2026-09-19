@@ -76,7 +76,6 @@ struct AIKeyboardView: View {
     @State private var carouselBag = AIHintCarouselBag()
     @State private var poolCards: [AIHintCard] = []
     @State private var selectedSkillPage = 0
-    @State private var dismissedClipboardEntryID: UUID?
     @State private var debugSkillsDismissed = false
     @State private var micLongPressConsumed = false
     @State private var micIsHoldingForAI = false
@@ -121,7 +120,7 @@ struct AIKeyboardView: View {
         }
         .onChange(of: state.clipboardHistoryEnabled) { _, _ in resetCarousel() }
         .onChange(of: clipboardHistory.entries.first?.id) { _, _ in
-            dismissedClipboardEntryID = nil
+            state.dismissedClipboardSkillEntryID = nil
             debugSkillsDismissed = false
             selectedSkillPage = 0
             resetCarousel()
@@ -191,33 +190,84 @@ struct AIKeyboardView: View {
     private var pendingAnswerSurface: some View {
         VStack(spacing: 0) {
             topBar.frame(height: Layout.topBarHeight)
-            ScrollView(.vertical) {
-                Text(state.aiSession.answer?.text ?? "")
-                    .font(TypeStyle.body)
-                    .foregroundStyle(palette.textPrimary)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, Spacing.sm)
-            }
-            .scrollIndicators(.visible)
+            if state.autoResultReadOnly {
+                // Auto-translate / email-reply stay staged: the result is shown,
+                // and lands in the field via the labeled liquid-glass button.
+                ScrollView(.vertical) {
+                    Text(state.aiSession.answer?.text ?? "")
+                        .font(TypeStyle.body)
+                        .foregroundStyle(palette.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.vertical, Spacing.sm)
+                }
+                .scrollIndicators(.visible)
 
-            Button(action: state.confirmPendingAIAnswer) {
-                Image(systemName: "plus")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(OSGColor.fixedLightContent)
-                    .frame(width: Layout.fieldActionWidth, height: 44)
-                    .background(palette.accent, in: Capsule())
+                Button(action: state.confirmPendingAIAnswer) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.down.to.line")
+                            .font(TypeStyle.body.weight(.semibold))
+                        ExtL10n.text(state.autoResultInsertLabelKey)
+                            .font(TypeStyle.body.weight(.semibold))
+                    }
+                    .foregroundStyle(palette.textPrimary)
+                    .padding(.horizontal, 22)
+                    .frame(height: 44)
+                    .glassEffect(.regular.interactive(), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("assistant.autoResult.insert")
+                .frame(height: 55)
+                .accessibilityLabel(ExtL10n.text(state.autoResultInsertLabelKey))
+            } else {
+                // A single reply is one tappable liquid-glass card — same style
+                // as the multi-variant cards; tapping it inserts.
+                ScrollView(.vertical) {
+                    pendingAnswerCard
+                        .padding(.horizontal, Spacing.xs)
+                        .padding(.vertical, Spacing.xs)
+                }
+                .scrollIndicators(.visible)
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("assistant.pending.insert")
-            .frame(height: 55)
-            .accessibilityLabel(ExtL10n.text("keyboard.assistant.insertPending"))
         }
         .padding(.vertical, 4)
         .padding(.horizontal, KeyboardChromeLayout.horizontalInset)
         .frame(maxWidth: KeyboardChromeLayout.voiceContentMaxWidth)
         .frame(maxWidth: .infinity)
         .frame(height: resolvedHeight)
+    }
+
+    private var pendingAnswerCard: some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.medium)
+        return Button(action: state.confirmPendingAIAnswer) {
+            HStack(alignment: .top, spacing: Spacing.sm) {
+                Text(state.aiSession.answer?.text ?? "")
+                    .font(TypeStyle.body)
+                    .foregroundStyle(palette.textPrimary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "arrow.down.to.line")
+                    .font(TypeStyle.body.weight(.semibold))
+                    .foregroundStyle(palette.textSecondary)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(shape)
+            .glassEffect(
+                .regular
+                    .tint(palette.textPrimary.opacity(0.04))
+                    .interactive(),
+                in: shape
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("assistant.pending.insert")
+        .accessibilityLabel(Text(state.aiSession.answer?.text ?? ""))
+        .accessibilityHint(ExtL10n.text("keyboard.assistant.insertPending"))
     }
 
     private var replyVariantsSurface: some View {
@@ -322,14 +372,12 @@ struct AIKeyboardView: View {
                 labelKey: "keyboard.voice.cancel",
                 hintKey: "keyboard.voice.cancelHint"
             )
-        } else if shouldShowClipboardSuggestion {
-            ClipboardSuggestionBar(
-                text: state.clipboardSuggestionText ?? "",
-                onInsert: insertClipboardSuggestion,
-                onDismiss: dismissClipboardPresentation
-            )
-            .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
-        } else if showsClipboardSkills || semanticBadgeContent != nil {
+        } else if showsClipboardSkillBar {
+            // Fresh copy, no AI result yet: the top bar becomes the skill entry
+            // point (paste + every applicable skill + dismiss).
+            clipboardSkillTopBar
+        } else if showsClipboardSkills {
+            // OOBE / debug chip pager keeps its dismiss bar.
             cancelTopBar(
                 action: dismissClipboardPresentation,
                 labelKey: "keyboard.assistant.dismissClipboard",
@@ -344,7 +392,7 @@ struct AIKeyboardView: View {
                     onInsert: onInsert
                 )
                 HStack {
-                    KeyboardBrandLogo(action: state.openSettings)
+                    leadingBrandOrPaste
                     Spacer(minLength: 0)
                 }
             }
@@ -352,14 +400,75 @@ struct AIKeyboardView: View {
         }
     }
 
+    /// Fresh-copy top bar (no active result): paste + scrollable skills + dismiss.
+    private var clipboardSkillTopBar: some View {
+        HStack(spacing: 6) {
+            leadingScrollRow
+            KeyboardCancelButton(
+                action: dismissClipboardPresentation,
+                accessibilityLabel: ExtL10n.text("keyboard.assistant.dismissClipboard"),
+                accessibilityHint: ExtL10n.text("keyboard.assistant.dismissClipboardHint"),
+                accessibilityIdentifier: "assistant.clipboard.dismiss"
+            )
+        }
+        .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
+    }
+
+    /// Fresh copy with applicable skills and no active AI result to defer to.
+    private var showsClipboardSkillBar: Bool {
+        guard assistantIsResting,
+              state.oobePracticeSession == nil,
+              state.clipboardHistoryEnabled,
+              state.aiServiceAvailable,
+              !state.aiSession.canInsert,
+              !state.aiSession.canSelectReplyVariant,
+              let newest = clipboardHistory.newestEntry,
+              newest.id != state.dismissedClipboardSkillEntryID,
+              !topBarSkills.isEmpty else {
+            return false
+        }
+        return AIHintPool.isClipboardSkillWindowActive(
+            clipboardHistoryEnabled: true,
+            newestClipboard: newest
+        )
+    }
+
+    /// The top-bar leading slot: a "Paste" glass capsule whenever a fresh copy is
+    /// available (replacing the OSG logo), otherwise the logo itself. Copying is
+    /// frequent, so this keeps a one-tap paste always in the same spot without a
+    /// full-width suggestion strip.
+    @ViewBuilder
+    private var leadingBrandOrPaste: some View {
+        if shouldShowClipboardSuggestion {
+            pasteCapsule
+        } else {
+            KeyboardBrandLogo(action: state.openSettings)
+        }
+    }
+
+    private var pasteCapsule: some View {
+        Button(action: insertClipboardSuggestion) {
+            Text(ExtL10n.string("keyboard.clipboard.paste"))
+                .font(TypeStyle.footnote.weight(.semibold))
+                .foregroundStyle(palette.textPrimary)
+                .lineLimit(1)
+                .padding(.horizontal, 14)
+                .frame(height: 30)
+                .glassEffect(.regular.interactive(), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("assistant.clipboard.paste")
+        .accessibilityLabel(ExtL10n.text("keyboard.clipboard.paste"))
+    }
+
     private func cancelTopBar(
         action: @escaping () -> Void,
         labelKey: String,
         hintKey: String
     ) -> some View {
-        HStack(spacing: Spacing.xs) {
-            KeyboardBrandLogo(action: state.openSettings)
-            Spacer(minLength: 0)
+        HStack(spacing: 6) {
+            // Paste + every applicable skill scroll together; the X stays put.
+            leadingScrollRow
             KeyboardCancelButton(
                 action: action,
                 accessibilityLabel: ExtL10n.text(labelKey),
@@ -368,6 +477,110 @@ struct AIKeyboardView: View {
             )
         }
         .padding(.horizontal, KeyboardTopBarMetrics.nestedHorizontalInset)
+    }
+
+    /// Leading region of the clipboard top bars: the OSG logo when there's no
+    /// fresh copy, otherwise a horizontally scrollable row whose first item is the
+    /// Paste capsule followed by every applicable skill — so Paste scrolls along
+    /// with the skills instead of staying pinned.
+    @ViewBuilder
+    private var leadingScrollRow: some View {
+        let paste = shouldShowClipboardSuggestion
+        let skills = topBarSkills
+        HStack(spacing: 6) {
+            if !paste {
+                KeyboardBrandLogo(action: state.openSettings)
+            }
+            if paste || !skills.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        if paste {
+                            pasteCapsule
+                        }
+                        ForEach(skills) { skill in
+                            otherSkillCapsule(skill)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .scrollClipDisabled()
+            } else {
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private func otherSkillCapsule(_ skill: AIClipboardSkill) -> some View {
+        Button {
+            state.submitAIClipboardSkill(skill, replyScene(for: skill))
+        } label: {
+            Text(clipboardSkillTitle(skill))
+                .font(TypeStyle.footnote.weight(.semibold))
+                .foregroundStyle(palette.textPrimary)
+                .lineLimit(1)
+                .padding(.horizontal, 12)
+                .frame(height: 30)
+                .glassEffect(.regular.interactive(), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(!state.aiServiceAvailable || state.aiSession.isBusy)
+        .accessibilityIdentifier("assistant.otherSkill.\(skill.id)")
+        .accessibilityLabel(Text(clipboardSkillTitle(skill)))
+    }
+
+    /// Skills that apply to the current copy, most-relevant first. This is the
+    /// sole skill entry point now that the circular chips are gone; it shows with
+    /// or without an active result (the invoked skill is excluded when active).
+    ///
+    /// Purely relevance-ranked: a skill appears only when its signal is present
+    /// (a URL → Open / Summarize page; a phone → Call; a date/list → Events /
+    /// Todos / Organize; long text → Summary; plus Reply as the message baseline).
+    /// No blanket fallback, so Summary / Organize / Events / Notes do NOT show on
+    /// an ordinary short message.
+    private var topBarSkills: [AIClipboardSkill] {
+        guard state.oobePracticeSession == nil,
+              state.aiServiceAvailable,
+              let newest = clipboardHistory.newestEntry else {
+            return []
+        }
+        let translatable = clipboardIsTranslatable
+        let activeID = state.activeClipboardSkillID
+        func present(_ list: [AIClipboardSkill]) -> [AIClipboardSkill] {
+            list.filter {
+                $0.id != activeID
+                    // Don't offer "Translate" for text already in the user's language.
+                    && ($0.id != AIClipboardSkillCatalog.translateID || translatable)
+            }
+        }
+        guard let snapshot = semanticRanking.snapshot,
+              snapshot.entryID == newest.id else {
+            // Analysis not ready yet — keep Reply reachable in the meantime.
+            let reply = state.enabledClipboardSkills.first {
+                $0.id == AIClipboardSkillCatalog.replyID
+            }
+            return present([reply].compactMap { $0 })
+        }
+        return present(
+            ClipboardSkillSemanticRanker.recommended(
+                skills: state.enabledClipboardSkills,
+                sourceText: newest.text,
+                analysis: snapshot.analysis,
+                uiLanguage: state.uiLanguage,
+                limit: 6
+            )
+        )
+    }
+
+    /// True only when the current copy is in a language other than the user's,
+    /// so offering Translate makes sense.
+    private var clipboardIsTranslatable: Bool {
+        guard let newest = clipboardHistory.newestEntry,
+              let snapshot = semanticRanking.snapshot,
+              snapshot.entryID == newest.id else {
+            return false
+        }
+        return ClipboardSkillSemanticRanker.isForeignLanguage(snapshot.analysis)
     }
 
     private func cancelIdentifier(for labelKey: String) -> String {
@@ -390,7 +603,7 @@ struct AIKeyboardView: View {
                 clipboardSkillPager
             } else if let onboardingPracticeHint, activeStatus == nil {
                 Text(onboardingPracticeHint)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(TypeStyle.footnote.weight(.semibold))
                     .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
                     .padding(.horizontal, 14)
@@ -422,7 +635,7 @@ struct AIKeyboardView: View {
                 statusText(status.text, color: status.color)
             } else if showsLongPressCoach {
                 Text(ExtL10n.string("keyboard.assistant.longPressCoach"))
-                    .font(.system(size: 13, weight: .medium))
+                    .font(TypeStyle.footnote.weight(.medium))
                     .foregroundStyle(palette.textSecondary)
                     .lineLimit(1)
                     .padding(.horizontal, 14)
@@ -442,7 +655,7 @@ struct AIKeyboardView: View {
                 .font(.system(size: 10, weight: .semibold))
                 .accessibilityHidden(true)
             Text(content.text)
-                .font(.system(size: 12, weight: .semibold))
+                .font(TypeStyle.caption.weight(.semibold))
                 .lineLimit(1)
         }
         .foregroundStyle(palette.textSecondary)
@@ -463,44 +676,9 @@ struct AIKeyboardView: View {
             )
         }
         #endif
-        guard assistantIsResting,
-              state.clipboardHistoryEnabled,
-              let newest = clipboardHistory.newestEntry,
-              let snapshot = semanticRanking.snapshot,
-              snapshot.entryID == newest.id,
-              AIHintPool.isClipboardSkillWindowActive(
-                  clipboardHistoryEnabled: true,
-                  newestClipboard: newest
-              ) else {
-            return nil
-        }
-        let intentKey = semanticIntentKey(snapshot.analysis)
-        let domainKey: String? = snapshot.analysis.domain.flatMap { domain in
-            guard let confidence = snapshot.analysis.domainConfidence,
-                  confidence > 0 else {
-                return nil
-            }
-            return domain.localizationKey
-        }
-        guard intentKey != nil || domainKey != nil else { return nil }
-        return SemanticBadgeContent(intentKey: intentKey, domainKey: domainKey)
-    }
-
-    private func semanticIntentKey(
-        _ analysis: ClipboardSemanticAnalysis
-    ) -> String? {
-        let candidates = [
-            (analysis.assistantCommand, "keyboard.semantic.intent.assistantCommand"),
-            (analysis.informationQuery, "keyboard.semantic.intent.informationQuery"),
-            (analysis.systemNotification, "keyboard.semantic.intent.systemNotification")
-        ].filter { label, _ in
-            label.isDetected
-                && label.confidence > 0
-                && label.confidence >= label.threshold
-        }
-        return candidates.max {
-            $0.0.confidence < $1.0.confidence
-        }?.1
+        // Retired alongside the idle skill chips it accompanied: the copy flow now
+        // goes straight to an auto result, so no standalone badge is shown.
+        return nil
     }
 
     private func statusText(_ text: String, color: Color) -> some View {
@@ -600,11 +778,11 @@ struct AIKeyboardView: View {
                 HStack(spacing: 6) {
                     if let hint = currentHint {
                         Image(systemName: hint.visualKind.systemImage)
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(TypeStyle.footnote.weight(.semibold))
                     }
                     Text(currentHint.map(\.resolvedDisplayText)
                         ?? ExtL10n.string("keyboard.ai.placeholder"))
-                        .font(.system(size: 13, weight: .medium))
+                        .font(TypeStyle.footnote.weight(.medium))
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
@@ -706,16 +884,15 @@ struct AIKeyboardView: View {
               snapshot.entryID == newest.id else {
             return nil
         }
-        return AIClipboardReplyScene.resolve(from: snapshot.analysis)
+        return AIClipboardReplyScene.resolve(
+            from: snapshot.analysis,
+            sourceText: newest.text
+        )
     }
 
     private func clipboardSkillTitle(_ skill: AIClipboardSkill) -> String {
-        if skill.id == AIClipboardSkillCatalog.translateID {
-            return AIClipboardSkillCatalog.translateButtonTitle(
-                translationTargetLocaleId: state.translationTargetLocaleId,
-                uiLanguage: state.uiLanguage
-            )
-        }
+        // Capsules stay short: use the plain skill title, not the verbose
+        // "Translate to <language>" form.
         if let custom = skill.customName?.trimmingCharacters(in: .whitespacesAndNewlines),
            !custom.isEmpty {
             return custom
@@ -734,16 +911,10 @@ struct AIKeyboardView: View {
         if showsOOBEClipboardSkill {
             return assistantIsResting
         }
-        guard assistantIsResting, state.clipboardHistoryEnabled else { return false }
-        guard !visibleClipboardSkills.isEmpty,
-              let newest = clipboardHistory.newestEntry,
-              newest.id != dismissedClipboardEntryID else {
-            return false
-        }
-        return AIHintPool.isClipboardSkillWindowActive(
-            clipboardHistoryEnabled: true,
-            newestClipboard: newest
-        )
+        // The idle circular skill chips are retired: auto mode runs one skill and
+        // the result panel's top-bar capsules offer the rest. Only OOBE / debug
+        // still present the chip pager above.
+        return false
     }
 
     private var visibleClipboardSkills: [AIClipboardSkill] {
@@ -909,7 +1080,7 @@ struct AIKeyboardView: View {
                 .foregroundStyle(OSGColor.fixedLightContent)
         case .idle, .denied:
             Image(systemName: "mic.fill")
-                .font(.system(size: 28, weight: .semibold))
+                .font(TypeStyle.title.weight(.semibold))
                 .foregroundStyle(OSGColor.fixedLightContent)
                 .symbolEffect(.breathe, isActive: micIsHoldingForAI)
         }
@@ -1131,7 +1302,7 @@ struct AIKeyboardView: View {
     private var fieldActionButton: some View {
         Button(action: performFieldAction) {
             Image(systemName: fieldActionSystemImage)
-                .font(.system(size: 20, weight: .semibold))
+                .font(TypeStyle.title3)
                 .foregroundStyle(fieldActionButtonForeground)
                 .frame(
                     width: fieldActionButtonWidth,
@@ -1219,7 +1390,7 @@ struct AIKeyboardView: View {
             ZStack {
                 Color.clear
                 Image(systemName: "delete.left")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(TypeStyle.headline)
                     .foregroundStyle(NativeKeyboardKeyColors.text(for: colorScheme))
             }
             .frame(width: lowerCircleSize, height: lowerCircleSize)
@@ -1272,7 +1443,7 @@ struct AIKeyboardView: View {
     }
 
     private func insertClipboardSuggestion() {
-        dismissedClipboardEntryID = clipboardHistory.newestEntry?.id
+        state.dismissedClipboardSkillEntryID = clipboardHistory.newestEntry?.id
         if let text = state.clipboardSuggestionText {
             state.insertClipboardText(text)
         }
@@ -1284,7 +1455,7 @@ struct AIKeyboardView: View {
             debugSkillsDismissed = true
         }
         #endif
-        dismissedClipboardEntryID = clipboardHistory.newestEntry?.id
+        state.dismissedClipboardSkillEntryID = clipboardHistory.newestEntry?.id
         state.dismissClipboardSuggestion()
     }
 

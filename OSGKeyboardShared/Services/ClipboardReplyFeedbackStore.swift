@@ -24,6 +24,10 @@ public struct ClipboardReplyCandidateSnapshot: Codable, Equatable, Identifiable,
         case clarificationDirect
         case clarificationQuestion
         case clarificationConfirm
+        case answerAffirmative
+        case answerNegative
+        case answerConditional
+        case answerDefer
     }
 
     public let id: UUID
@@ -124,6 +128,47 @@ public final class ClipboardReplyFeedbackStore {
             persist(result, now: now)
         }
         return result
+    }
+
+    /// One resolved exchange in a recent chat: their message and the reply the
+    /// user actually chose (edited text preferred over the raw candidate).
+    public struct ConversationTurn: Sendable, Equatable {
+        public let incoming: String
+        public let reply: String
+
+        public init(incoming: String, reply: String) {
+            self.incoming = incoming
+            self.reply = reply
+        }
+    }
+
+    /// Recent resolved exchanges, oldest → newest, for use as background context
+    /// on the next reply. This is a time-window approximation of "the same
+    /// conversation" — iOS gives a keyboard no source-app identity, so proximity
+    /// in time is the only signal available. Only `.selected` records with a
+    /// known reply are returned; awaiting/discarded rows carry no exchange.
+    /// `excludingIncoming` drops the message currently being replied to so it is
+    /// never duplicated as both context and the live prompt.
+    public func recentConversationTurns(
+        now: Date = Date(),
+        window: TimeInterval = 5 * 60,
+        maximumTurns: Int = 6,
+        excludingIncoming: String? = nil
+    ) -> [ConversationTurn] {
+        let cutoff = now.addingTimeInterval(-window)
+        let excluded = excludingIncoming?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let turns: [ConversationTurn] = records(now: now)
+            .filter { $0.createdAt >= cutoff && $0.outcome == .selected }
+            .sorted { $0.createdAt < $1.createdAt }
+            .compactMap { record in
+                let reply = (record.finalText ?? record.selectedCandidate?.text)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                guard let reply, !reply.isEmpty else { return nil }
+                let incoming = record.sourceText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !incoming.isEmpty, incoming != excluded else { return nil }
+                return ConversationTurn(incoming: incoming, reply: reply)
+            }
+        return Array(turns.suffix(maximumTurns))
     }
 
     /// Converts local records into the bounded comparative schema accepted by
@@ -319,7 +364,11 @@ public final class ClipboardReplyFeedbackStore {
              .blessingPlayful,
              .clarificationDirect,
              .clarificationQuestion,
-             .clarificationConfirm:
+             .clarificationConfirm,
+             .answerAffirmative,
+             .answerNegative,
+             .answerConditional,
+             .answerDefer:
             return .contextual
         }
     }

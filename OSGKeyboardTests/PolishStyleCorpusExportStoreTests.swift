@@ -34,7 +34,7 @@ final class PolishStyleCorpusExportStoreTests: XCTestCase {
         let store = PolishStyleCorpusExportStore(
             directoryURL: temporaryDirectory(),
             now: { generatedAt },
-            appVersion: { "2.0.3" },
+            appVersion: { "2.1.0" },
             appBuild: { "94" }
         )
 
@@ -42,7 +42,7 @@ final class PolishStyleCorpusExportStoreTests: XCTestCase {
 
         XCTAssertEqual(export.schemaVersion, 1)
         XCTAssertEqual(export.generatedAt, generatedAt)
-        XCTAssertEqual(export.appVersion, "2.0.3")
+        XCTAssertEqual(export.appVersion, "2.1.0")
         XCTAssertEqual(export.appBuild, "94")
         XCTAssertEqual(export.effectiveCharacterCount, 4)
         XCTAssertEqual(export.requiredEffectiveCharacterCount, 2_500)
@@ -77,7 +77,7 @@ final class PolishStyleCorpusExportStoreTests: XCTestCase {
         let store = PolishStyleCorpusExportStore(
             directoryURL: directory,
             now: { createdAt },
-            appVersion: { "2.0.3" },
+            appVersion: { "2.1.0" },
             appBuild: { "94" }
         )
 

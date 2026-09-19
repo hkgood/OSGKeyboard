@@ -85,7 +85,7 @@ struct TypingInputSettingsView: View {
                 Spacer()
                 if isSelected {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(TypeStyle.footnote.weight(.semibold))
                         .foregroundStyle(palette.accent)
                 }
             }

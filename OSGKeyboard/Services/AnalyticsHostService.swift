@@ -172,6 +172,17 @@ final class AnalyticsHostService: ObservableObject {
         }
     }
 
+    /// Installation identifier shared with the analytics pipeline, or `nil`
+    /// when analytics are switched off.
+    ///
+    /// Diagnostics upload deliberately reuses it instead of minting a second
+    /// device identifier: a tester who turned analytics off has said they do
+    /// not want a stable id leaving the device, and that answer should hold
+    /// here too. `nil` simply means the crash report stays on device.
+    func installationIdentifierIfEnabled() async -> UUID? {
+        await runtime.repository.installationIdentifierIfEnabled()
+    }
+
     func refreshEnabledState() {
         Task {
             let current = await runtime.isEnabled()

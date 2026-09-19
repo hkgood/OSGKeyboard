@@ -303,6 +303,39 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         }
     }
 
+    /// When enabled (and history is on), a freshly copied replyable message is
+    /// auto-routed into the Reply flow when the keyboard opens. Default off.
+    @Published public var clipboardAutoModeEnabled: Bool {
+        didSet {
+            guard !isApplyingConfiguration,
+                  clipboardAutoModeEnabled != configuration.clipboardAutoModeEnabled else { return }
+            configuration.clipboardAutoModeEnabled = clipboardAutoModeEnabled
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
+    /// When enabled (and history is on), a freshly copied non-system-language
+    /// paste is auto-translated on open. Default off.
+    @Published public var clipboardAutoTranslateEnabled: Bool {
+        didSet {
+            guard !isApplyingConfiguration,
+                  clipboardAutoTranslateEnabled != configuration.clipboardAutoTranslateEnabled else { return }
+            configuration.clipboardAutoTranslateEnabled = clipboardAutoTranslateEnabled
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
+    /// When enabled (and history is on), a freshly copied email auto-drafts a
+    /// reply on open. Default off.
+    @Published public var clipboardAutoEmailReplyEnabled: Bool {
+        didSet {
+            guard !isApplyingConfiguration,
+                  clipboardAutoEmailReplyEnabled != configuration.clipboardAutoEmailReplyEnabled else { return }
+            configuration.clipboardAutoEmailReplyEnabled = clipboardAutoEmailReplyEnabled
+            persistConfiguration(postConfigChanged: true)
+        }
+    }
+
     /// When enabled, the host app tries to return to the source app after a cold-start handoff.
     @Published public var flowSkipAppSwitch: Bool {
         didSet {
@@ -454,6 +487,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         llmThinkingEnabled = configuration.llmThinkingEnabled
         clipboardHistoryEnabled = configuration.clipboardHistoryEnabled
         clipboardCandidateBarEnabled = configuration.clipboardCandidateBarEnabled
+        clipboardAutoModeEnabled = configuration.clipboardAutoModeEnabled
+        clipboardAutoTranslateEnabled = configuration.clipboardAutoTranslateEnabled
+        clipboardAutoEmailReplyEnabled = configuration.clipboardAutoEmailReplyEnabled
         flowSkipAppSwitch = configuration.flowSkipAppSwitch
         flowInactivityDuration = configuration.flowInactivityDuration
         localASRCustomLanguageModelEnabled = configuration.localASRCustomLanguageModelEnabled
@@ -487,6 +523,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         llmThinkingEnabled = false
         clipboardHistoryEnabled = false
         clipboardCandidateBarEnabled = false
+        clipboardAutoModeEnabled = false
+        clipboardAutoTranslateEnabled = false
+        clipboardAutoEmailReplyEnabled = false
         hasAcknowledgedCloudSharing = false
         credentialSource = .byok
         configuration.providerId = polishPreset.id
@@ -504,6 +543,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         configuration.llmThinkingEnabled = false
         configuration.clipboardHistoryEnabled = false
         configuration.clipboardCandidateBarEnabled = false
+        configuration.clipboardAutoModeEnabled = false
+        configuration.clipboardAutoTranslateEnabled = false
+        configuration.clipboardAutoEmailReplyEnabled = false
         configuration.hasAcknowledgedCloudSharing = false
         configuration.credentialSource = .byok
         isApplyingConfiguration = false
@@ -562,6 +604,9 @@ public final class ProviderConfig: ObservableObject, @unchecked Sendable {
         llmThinkingEnabled = fresh.llmThinkingEnabled
         clipboardHistoryEnabled = fresh.clipboardHistoryEnabled
         clipboardCandidateBarEnabled = fresh.clipboardCandidateBarEnabled
+        clipboardAutoModeEnabled = fresh.clipboardAutoModeEnabled
+        clipboardAutoTranslateEnabled = fresh.clipboardAutoTranslateEnabled
+        clipboardAutoEmailReplyEnabled = fresh.clipboardAutoEmailReplyEnabled
         flowSkipAppSwitch = fresh.flowSkipAppSwitch
         flowInactivityDuration = fresh.flowInactivityDuration
         localASRCustomLanguageModelEnabled = fresh.localASRCustomLanguageModelEnabled

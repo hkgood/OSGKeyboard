@@ -28,7 +28,7 @@ enum MacLocalASRError: Error, LocalizedError {
         case .qwen3InferenceFailed(let detail):
             return MacL10n.format("mac.error.qwen3InferenceFailed", detail)
         case .speechDenied:
-            return "Speech recognition permission denied"
+            return MacL10n.string("mac.error.speechDenied")
         case .speechFailed(let detail):
             return detail
         case .emptyTranscript:

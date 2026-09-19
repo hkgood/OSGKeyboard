@@ -118,11 +118,15 @@ final class AIHintKeywordExtractorTests: XCTestCase {
 }
 
 final class AIClipboardSkillTests: XCTestCase {
+    /// Every built-in skill ships on. "Speak as me" included: it is withheld by
+    /// `requiresPersonalReplyStyleIDs` until a style exists, so it can never
+    /// become a permanently broken chip, and it needs no opt-in of its own.
     func testVisibleDefaultsContainEveryBuiltInSkill() {
         XCTAssertEqual(
             AIClipboardSkillCatalog.visible().map(\.id),
             AIClipboardSkillCatalog.catalog.map(\.id)
         )
+        XCTAssertTrue(AIClipboardSkillCatalog.catalog.allSatisfy(\.isDefault))
     }
 
     func testVisibleRespectsEnabledIDsForFutureSettings() {
@@ -317,11 +321,19 @@ final class AIClipboardSkillTests: XCTestCase {
         XCTAssertFalse(instruction.contains("这是个人回复风格"))
     }
 
-    func testReplyStyleResolverAcceptsOnlyUserOwnedStyle() {
-        let user = PolishStylePack(
+    func testReplyStyleResolverAcceptsOnlyDistilledPersonalStyle() {
+        let distilled = PolishStylePack(
             id: "user.learned",
             name: "我的风格",
             prompt: "喜欢短句",
+            learningMetadata: Self.learningMetadata(),
+            kind: .user
+        )
+        // Hand-written packs live on the Styles page and shape dictation only.
+        let handWritten = PolishStylePack(
+            id: "user.handwritten",
+            name: "我手写的",
+            prompt: "使用长句",
             kind: .user
         )
         let builtIn = PolishStylePack(
@@ -332,10 +344,111 @@ final class AIClipboardSkillTests: XCTestCase {
         )
 
         XCTAssertEqual(
-            AIClipboardReplyStyleContext.resolve(activeStyle: user)?.prompt,
+            AIClipboardReplyStyleContext.resolve(personalReplyStyle: distilled)?.prompt,
             "喜欢短句"
         )
-        XCTAssertNil(AIClipboardReplyStyleContext.resolve(activeStyle: builtIn))
+        XCTAssertNil(AIClipboardReplyStyleContext.resolve(personalReplyStyle: handWritten))
+        XCTAssertNil(AIClipboardReplyStyleContext.resolve(personalReplyStyle: builtIn))
+        XCTAssertNil(AIClipboardReplyStyleContext.resolve(personalReplyStyle: nil))
+    }
+
+    // MARK: - Speak as me
+
+    private func speakAsMeInstruction(
+        style: AIClipboardReplyStyleContext?,
+        locale: String = "zh"
+    ) throws -> String {
+        let skill = try XCTUnwrap(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.speakAsMeID)
+        )
+        return AIClipboardSkillCatalog.instruction(
+            for: skill,
+            locale: locale,
+            translationTargetLocaleId: "en",
+            replyStyle: style
+        )
+    }
+
+    /// Reuses `replyInstruction` and the skill inherits its "usually 1–3
+    /// sentences" chat baseline, which would truncate a long clipboard and
+    /// fight a formal personal style.
+    func testSpeakAsMeSkipsTheReplyChatBaselineAndItsLengthCap() throws {
+        let instruction = try speakAsMeInstruction(
+            style: AIClipboardReplyStyleContext(styleID: "user.learned", prompt: "偏好长句书面表达")
+        )
+
+        XCTAssertFalse(instruction.contains("通常控制在 1～3 句"))
+        XCTAssertFalse(instruction.contains("像一个普通人在和朋友"))
+        XCTAssertTrue(instruction.contains("± 20%"))
+    }
+
+    /// Rewriting is not replying: Reply deliberately omits the never-answer
+    /// boundary because answering is its job. This skill must carry it.
+    func testSpeakAsMeCarriesTheNeverAnswerBoundary() throws {
+        let zh = try speakAsMeInstruction(
+            style: AIClipboardReplyStyleContext(styleID: "user.learned", prompt: "偏好短句")
+        )
+        XCTAssertTrue(zh.contains("# 不可协商边界"))
+        XCTAssertTrue(zh.contains("偏好短句"))
+        XCTAssertTrue(zh.contains("user_reply_style"))
+
+        let en = try speakAsMeInstruction(
+            style: AIClipboardReplyStyleContext(styleID: "user.learned", prompt: "short sentences"),
+            locale: "en"
+        )
+        XCTAssertTrue(en.contains("# Non-negotiable boundary"))
+    }
+
+    /// Without a personal style the skill has nothing to rewrite toward. It is
+    /// gated upstream; if it ever runs anyway it must not answer the clipboard.
+    func testSpeakAsMeWithoutStyleStillRefusesToAnswer() throws {
+        let instruction = try speakAsMeInstruction(style: nil)
+
+        XCTAssertFalse(instruction.contains("user_reply_style"))
+        XCTAssertTrue(instruction.contains("# 不可协商边界"))
+    }
+
+    func testSpeakAsMeShipsEnabledAndIsManagedOutsideTheGenericSkillLists() throws {
+        let skill = try XCTUnwrap(
+            AIClipboardSkillCatalog.skill(id: AIClipboardSkillCatalog.speakAsMeID)
+        )
+
+        XCTAssertTrue(skill.isDefault)
+        XCTAssertTrue(
+            AIAgentSkillLayout.defaultEnabledIDs.contains(AIClipboardSkillCatalog.speakAsMeID)
+        )
+        XCTAssertTrue(
+            AIClipboardSkillCatalog.managedOutsideSkillListIDs
+                .contains(AIClipboardSkillCatalog.speakAsMeID)
+        )
+        // Hidden for a different reason than the always-on system actions: it
+        // carries a prerequisite they do not.
+        XCTAssertFalse(
+            AIClipboardSkillCatalog.hiddenFromSkillManagementIDs
+                .contains(AIClipboardSkillCatalog.speakAsMeID)
+        )
+        XCTAssertTrue(
+            AIClipboardSkillCatalog.requiresPersonalReplyStyleIDs
+                .contains(AIClipboardSkillCatalog.speakAsMeID)
+        )
+        // The personal style is this skill's task, not a modifier layered on a
+        // generated reply, so it must not ride the reply-style path.
+        XCTAssertFalse(skill.supportsReplyStyle)
+    }
+
+    private static func learningMetadata(
+        generatedAt: Date = Date()
+    ) -> PolishStylePack.LearningMetadata {
+        PolishStylePack.LearningMetadata(
+            schemaVersion: 2,
+            evidenceStatus: "sufficient",
+            confidence: 0.7,
+            asrExampleCount: 8,
+            asrEffectiveCharacterCount: 2_600,
+            replyExampleCount: 3,
+            replyFinalEditCount: 1,
+            generatedAt: generatedAt
+        )
     }
 
     func testBusinessReplyKeepsProfessionalBaselineWithoutFriendEmojiGuidance() throws {

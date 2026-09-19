@@ -98,9 +98,11 @@ public final class LiveDictationController: ObservableObject {
     private var chunkedPipeline: ChunkedUtterancePipeline?
     private let captureGate = OSAllocatedUnfairLock(initialState: LiveCaptureGatePhase.idle)
     private let drainTracker = FlowCaptureDrainTracker()
-    private var audioConverter: AVAudioConverter?
-    private var targetFormat: AVAudioFormat?
-    private var hwFormat: AVAudioFormat?
+    /// Route-adaptive resampler shared with the Flow capture path. Rebuilt
+    /// lazily whenever the live input format changes, so a headset/Bluetooth
+    /// swap mid-session downsamples correctly instead of feeding the converter
+    /// a stale rate.
+    private var downsampler: FlowAdaptiveDownsampler?
     private var didConfigureAudioSession = false
     private var didInstallTap = false
 
@@ -273,16 +275,20 @@ public final class LiveDictationController: ObservableObject {
         let hwFormat = inputNode.inputFormat(forBus: 0)
 
         // Pre-flight check: a placeholder / unconfigured input bus
-        // reports `sampleRate == 0` (or `channelCount == 0`).
-        // `installTap` on such a bus traps with "Failed to create
-        // tap due to format mismatch" (an NSException, not a Swift
-        // `Error`, so we can't `try`/`catch` it). The safest fix
-        // is to refuse the tap up front and surface a clear
-        // `.error` phase instead of crashing the app. We've seen
-        // this on the iOS Simulator when the host's microphone
-        // permission isn't granted to CoreSimulator, and on
-        // devices where the audio session is in an unexpected
-        // state from a previous foreground/background transition.
+        // reports `sampleRate == 0` (or `channelCount == 0`), and no
+        // amount of adaptive resampling downstream makes a dead bus
+        // usable — `installTap` on one raises "Failed to create tap
+        // due to format mismatch", an NSException rather than a Swift
+        // `Error`, so we can't `try`/`catch` it. Refuse up front and
+        // surface a clear `.error` phase instead of crashing. We've
+        // seen this on the iOS Simulator when the host's microphone
+        // permission isn't granted to CoreSimulator, and on devices
+        // where the audio session is in an unexpected state from a
+        // previous foreground/background transition.
+        //
+        // The *other* half of that crash — a format that was valid
+        // here but stale by the time the tap is installed — is handled
+        // by passing `format: nil` below rather than by this check.
         guard hwFormat.sampleRate > 0, hwFormat.channelCount > 0 else {
             debug("invalid hardware format sr=\(hwFormat.sampleRate) ch=\(hwFormat.channelCount)")
             phase = .error(
@@ -305,15 +311,18 @@ public final class LiveDictationController: ObservableObject {
             phase = .error(NSLocalizedString("preview.error.formatCreate", comment: ""))
             return
         }
-        guard let converter = AVAudioConverter(from: hwFormat, to: targetFormat) else {
+        // The converter itself is built lazily by the downsampler from the
+        // format of the *first buffer the tap actually delivers*, so a route
+        // change between here and the first callback cannot desync it. Probe
+        // once up front purely to fail fast with a clear message.
+        guard AVAudioConverter(from: hwFormat, to: targetFormat) != nil else {
             debug("converter creation failed")
             phase = .error(NSLocalizedString("preview.error.converterCreate", comment: ""))
             return
         }
 
-        audioConverter = converter
-        self.targetFormat = targetFormat
-        self.hwFormat = hwFormat
+        let downsampler = FlowAdaptiveDownsampler(targetFormat: targetFormat)
+        self.downsampler = downsampler
         drainTracker.reset()
         captureGate.withLock { $0 = .recording }
 
@@ -351,13 +360,17 @@ public final class LiveDictationController: ObservableObject {
             }
         }
         let tap = Self.makeAudioTapBlock(
-            converter: converter,
-            targetFormat: targetFormat,
-            hwFormat: hwFormat,
+            downsampler: downsampler,
             onMeter: onMeter,
             onSnapshot: onSnapshot
         )
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat, block: tap)
+        // `format: nil` — NEVER pass an explicit format here. `installTap`
+        // raises an uncatchable NSException ("Failed to create tap due to
+        // format mismatch") when the format we captured above has already been
+        // superseded by a route change, and that kills the whole app. `nil`
+        // always resolves to the node's live format; `FlowAdaptiveDownsampler`
+        // absorbs whatever rate actually arrives.
+        inputNode.installTap(onBus: 0, bufferSize: 4096, format: nil, block: tap)
         didInstallTap = true
 
         audioEngine.prepare()
@@ -489,9 +502,7 @@ public final class LiveDictationController: ObservableObject {
     // main actor via `Task { @MainActor in … }`, which is itself
     // safe to call from a non-isolated context.
     private nonisolated static func makeAudioTapBlock(
-        converter: AVAudioConverter,
-        targetFormat: AVAudioFormat,
-        hwFormat: AVAudioFormat,
+        downsampler: FlowAdaptiveDownsampler,
         onMeter: @Sendable @escaping (Double) -> Void,
         onSnapshot: @Sendable @escaping (AudioBufferSnapshot) -> Void
     ) -> @Sendable (AVAudioPCMBuffer, AVAudioTime) -> Void {
@@ -514,21 +525,15 @@ public final class LiveDictationController: ObservableObject {
             onMeter(meter)
 
             // 2) Downsample to the 16 kHz mono Float32 format expected by
-            // HostSupport ASR and Apple's `considering:` hint.
-            let outFrames = AVAudioFrameCount(
-                Double(buffer.frameLength) * targetFormat.sampleRate / hwFormat.sampleRate
-            )
-            guard outFrames > 0,
-                  let outBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: outFrames)
-            else { return }
+            // HostSupport ASR and Apple's `considering:` hint. The rate comes
+            // from the buffer we were just handed, not from a format captured
+            // at install time, so a mid-session route change degrades to a few
+            // dropped frames instead of garbled audio.
+            guard case .converted(let outBuffer) =
+                    downsampler.convertReusingScratch(buffer) else { return }
 
-            var error: NSError?
-            let status = converter.convert(to: outBuffer, error: &error) { _, outStatus in
-                outStatus.pointee = .haveData
-                return buffer
-            }
-            guard status == .haveData, error == nil, outBuffer.frameLength > 0 else { return }
-
+            // `outBuffer` is the downsampler's reusable scratch — valid only
+            // until the next callback, so copy the samples out right here.
             let snapshot = AudioBufferSnapshot(buffer: outBuffer)
             guard !snapshot.samples.isEmpty else { return }
             onSnapshot(snapshot)
@@ -565,9 +570,7 @@ public final class LiveDictationController: ObservableObject {
         teardownCaptureEngine()
         captureGate.withLock { $0 = .idle }
         drainTracker.reset()
-        audioConverter = nil
-        targetFormat = nil
-        hwFormat = nil
+        downsampler = nil
 
         try? AVAudioSession.sharedInstance().setActive(
             false,

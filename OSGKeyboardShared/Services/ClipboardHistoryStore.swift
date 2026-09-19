@@ -15,6 +15,8 @@ public final class ClipboardHistoryStore: ObservableObject {
         public static let lastChangeCount = "clipboard.history.lastChangeCount"
         public static let suggestionDismissedChangeCount =
             "clipboard.history.suggestionDismissedChangeCount"
+        public static let lastAutoRepliedChangeCount =
+            "clipboard.history.lastAutoRepliedChangeCount"
     }
 
     @Published public private(set) var entries: [ClipboardHistoryEntry] = []
@@ -49,6 +51,25 @@ public final class ClipboardHistoryStore: ObservableObject {
                 defaults.set(newValue, forKey: Keys.suggestionDismissedChangeCount)
             } else {
                 defaults.removeObject(forKey: Keys.suggestionDismissedChangeCount)
+            }
+        }
+    }
+
+    /// Pasteboard generation whose replyable text auto mode already routed into
+    /// the Reply flow. App Group–backed so a single copy triggers auto-reply at
+    /// most once, even across keyboard close/reopen.
+    public var lastAutoRepliedChangeCount: Int? {
+        get {
+            guard defaults.object(forKey: Keys.lastAutoRepliedChangeCount) != nil else {
+                return nil
+            }
+            return defaults.integer(forKey: Keys.lastAutoRepliedChangeCount)
+        }
+        set {
+            if let newValue {
+                defaults.set(newValue, forKey: Keys.lastAutoRepliedChangeCount)
+            } else {
+                defaults.removeObject(forKey: Keys.lastAutoRepliedChangeCount)
             }
         }
     }

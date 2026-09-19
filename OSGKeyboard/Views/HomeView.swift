@@ -155,12 +155,10 @@ struct HomeView: View {
         return !config.isConfigured
     }
 
-    private var apiKeySetupMessageKey: LocalizedStringKey {
-        LocalizedStringKey(
-            HomeServiceSetupPolicy.apiKeyMessageKey(
-                isLocalEngine: config.isLocalEngine,
-                isASRConfigured: config.isASRConfigured
-            )
+    private var apiKeySetupMessageKey: String {
+        HomeServiceSetupPolicy.apiKeyMessageKey(
+            isLocalEngine: config.isLocalEngine,
+            isASRConfigured: config.isASRConfigured
         )
     }
 
@@ -330,13 +328,13 @@ struct HomeView: View {
 
     private var wideHeroHeader: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text("onboarding.welcome.tagline")
-                .font(.system(size: 30, weight: .semibold))
+            Text(AppL10n.string("onboarding.welcome.tagline"))
+                .font(TypeStyle.pageTitle)
                 .foregroundStyle(palette.textPrimary)
                 .lineLimit(2)
                 .minimumScaleFactor(0.85)
 
-            Text("home.wide.tagline.subtitle")
+            Text(AppL10n.string("home.wide.tagline.subtitle"))
                 .font(TypeStyle.footnote)
                 .foregroundStyle(palette.textTertiary)
         }
@@ -355,6 +353,8 @@ struct HomeView: View {
             #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("--home-dictionary-screenshot") {
                 dictionaryCard
+            } else if ProcessInfo.processInfo.arguments.contains("--home-calendar-screenshot") {
+                HomeUsageStatsSection(layout: layout, compact: compact, content: .calendar)
             } else {
                 standardHomeContentSections(layout: layout, compact: compact)
             }
@@ -404,14 +404,14 @@ struct HomeView: View {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(palette.textPrimary)
                         .symbolRenderingMode(.monochrome)
-                    Text("settings.personalDictionary.title")
-                        .font(.system(size: 13, weight: .semibold))
+                    Text(AppL10n.string("settings.personalDictionary.title"))
+                        .font(TypeStyle.footnote.weight(.semibold))
                         .tracking(0.6)
                         .textCase(.uppercase)
                         .foregroundStyle(palette.textTertiary)
                     Spacer(minLength: Spacing.xs)
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(TypeStyle.caption.weight(.semibold))
                         .foregroundStyle(palette.textTertiary)
                 }
                 .contentShape(Rectangle())
@@ -419,7 +419,7 @@ struct HomeView: View {
             .buttonStyle(.plain)
 
             if dictionarySuggestions.isEmpty {
-                Text("home.card.dictionary.smart.empty")
+                Text(AppL10n.string("home.card.dictionary.smart.empty"))
                     .font(TypeStyle.footnote)
                     .foregroundStyle(palette.textTertiary)
                     .multilineTextAlignment(.center)
@@ -441,7 +441,7 @@ struct HomeView: View {
                                 pendingDictionarySuggestion = suggestion
                             } label: {
                                 Text(suggestion.term)
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .font(TypeStyle.body.weight(.semibold))
                                     .foregroundStyle(palette.textPrimary)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.8)
@@ -480,7 +480,7 @@ struct HomeView: View {
                         }
                     }
 
-                    Text("home.card.dictionary.smart.addHint")
+                    Text(AppL10n.string("home.card.dictionary.smart.addHint"))
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.textTertiary)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -508,7 +508,7 @@ struct HomeView: View {
             .foregroundStyle(palette.textSecondary)
 
             HStack(spacing: Spacing.sm) {
-                Button("common.cancel") {
+                Button(AppL10n.string("common.cancel")) {
                     pendingDictionarySuggestion = nil
                 }
                 .buttonStyle(.bordered)
@@ -519,7 +519,7 @@ struct HomeView: View {
                 Button {
                     addSuggestedTerm(suggestion)
                 } label: {
-                    Text("home.card.dictionary.confirm.add")
+                    Text(AppL10n.string("home.card.dictionary.confirm.add"))
                         .foregroundStyle(palette.background)
                 }
                 .buttonStyle(.borderedProminent)
@@ -642,25 +642,25 @@ struct HomeView: View {
                 .frame(width: 6, height: 6)
 
             if needsPermissionSetup || needsAPIKeySetup {
-                Text("home.flow.notReady")
+                Text(AppL10n.string("home.flow.notReady"))
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.warning)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
             } else if flowManager.isUtteranceRecording {
-                Text("home.flow.recording")
+                Text(AppL10n.string("home.flow.recording"))
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
             } else if flowManager.isUtteranceProcessing {
-                Text("home.flow.processing")
+                Text(AppL10n.string("home.flow.processing"))
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textPrimary)
                     .lineLimit(1)
             } else if flowManager.isActive,
                FlowSessionBridge.isHostReady(),
                let expires = flowManager.sessionExpiresAt {
-                Text("home.flow.label")
+                Text(AppL10n.string("home.flow.label"))
                     .font(TypeStyle.caption2)
                     .foregroundStyle(palette.textPrimary)
                 Text(":")
@@ -698,7 +698,7 @@ struct HomeView: View {
                 Button {
                     flowManager.retryPiPRecovery()
                 } label: {
-                    Text("home.flow.retry")
+                    Text(AppL10n.string("home.flow.retry"))
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.accent)
                 }
@@ -707,7 +707,7 @@ struct HomeView: View {
                 Button {
                     flowManager.endSession()
                 } label: {
-                    Text("home.flow.endShort")
+                    Text(AppL10n.string("home.flow.endShort"))
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -717,7 +717,7 @@ struct HomeView: View {
                 Button {
                     flowManager.endSession()
                 } label: {
-                    Text("home.flow.endShort")
+                    Text(AppL10n.string("home.flow.endShort"))
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.accent)
                 }
@@ -732,7 +732,7 @@ struct HomeView: View {
                         startCapture: true
                     )
                 } label: {
-                    Text("home.flow.startShort")
+                    Text(AppL10n.string("home.flow.startShort"))
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.accent)
                 }
@@ -745,12 +745,12 @@ struct HomeView: View {
 
     private var apiKeySetupGuidance: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(apiKeySetupMessageKey)
+            Text(AppL10n.string(apiKeySetupMessageKey))
                 .font(TypeStyle.footnote)
                 .foregroundStyle(palette.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("home.setup.credits.alternative")
+            Text(AppL10n.string("home.setup.credits.alternative"))
                 .font(TypeStyle.caption2)
                 .foregroundStyle(palette.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -759,7 +759,7 @@ struct HomeView: View {
                 Button {
                     openSettings(apiKeySettingsDeepLink)
                 } label: {
-                    Label("home.setup.byok.configure", systemImage: "key")
+                    Label(AppL10n.string("home.setup.byok.configure"), systemImage: "key")
                         .foregroundStyle(palette.textPrimary)
                         .padding(.horizontal, Spacing.sm)
                         .frame(minHeight: 34)
@@ -773,7 +773,7 @@ struct HomeView: View {
                 Button {
                     openSettings(.aiService)
                 } label: {
-                    Label("home.setup.credits.open", systemImage: "sparkles")
+                    Label(AppL10n.string("home.setup.credits.open"), systemImage: "sparkles")
                         .foregroundStyle(palette.textOnAccent)
                         .padding(.horizontal, Spacing.sm)
                         .frame(minHeight: 34)

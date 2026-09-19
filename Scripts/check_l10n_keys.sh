@@ -57,10 +57,61 @@ compare_pair "$APP_ZH_KEYS" "$APP_EN_KEYS" "App Localizable zh-Hans vs en"
 compare_pair "$EXT_EN_KEYS" "$EXT_ZH_KEYS" "Extension Keyboard en vs zh-Hans"
 compare_pair "$EXT_ZH_KEYS" "$EXT_EN_KEYS" "Extension Keyboard zh-Hans vs en"
 
+# --- Host-app bare LocalizedStringKey check -------------------------------
+#
+# SwiftUI resolves a bare `Text("some.key")` through `Bundle.main`, whose
+# localization is fixed at launch from the *system* language. That silently
+# ignores the in-app language override (Settings → App Language), so such a
+# call site renders the system language no matter what the user picked.
+# `.environment(\.locale, …)` does NOT fix this — it only drives formatting.
+#
+# The host app must therefore go through `AppL10n.string` / `AppL10n.format`,
+# which resolve the `.lproj` sub-bundle manually. The keyboard extension and
+# the Mac app already do this via `ExtL10n` / `MacL10n`.
+KEY_RE='"[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z0-9_+-]+)+"'
+BARE_RE="(\\.(navigationTitle|navigationBarTitle|alert|confirmationDialog|help|accessibilityLabel|accessibilityHint)|[^A-Za-z0-9_](Text|Button|Section|Label|Toggle|TextField|Picker|Stepper|Link|NavigationLink))\\([[:space:]]*${KEY_RE}"
+
+bare_hits="$(
+  grep -rnE "$BARE_RE|LocalizedStringKey\\([[:space:]]*${KEY_RE}" \
+    --include='*.swift' "$ROOT/OSGKeyboard" 2>/dev/null \
+    | grep -v '/Tests/' \
+    | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' \
+    || true
+)"
+
+if [[ -n "$bare_hits" ]]; then
+  echo "❌ Host app uses bare LocalizedStringKey — these ignore the in-app language override:"
+  echo "$bare_hits" | sed "s|^$ROOT/||" | sed 's/^/   /'
+  echo ""
+  echo "   Wrap the key: Text(\"foo.bar\") → Text(AppL10n.string(\"foo.bar\"))"
+  fail=1
+fi
+
+# The host app must not reintroduce `LocalizedStringKey` at all: any value of
+# that type is resolved by SwiftUI through `Bundle.main` and so ignores the
+# in-app language override. Keys travel as `String` and are resolved at the
+# render site with `AppL10n.string`.
+lsk_hits="$(
+  grep -rn 'LocalizedStringKey' --include='*.swift' "$ROOT/OSGKeyboard" 2>/dev/null \
+    | grep -v '/Tests/' \
+    | grep -vE '^[^:]+:[0-9]+:[[:space:]]*//' \
+    || true
+)"
+
+if [[ -n "$lsk_hits" ]]; then
+  echo "❌ Host app reintroduced LocalizedStringKey — it resolves via Bundle.main (system language):"
+  echo "$lsk_hits" | sed "s|^$ROOT/||" | sed 's/^/   /'
+  echo ""
+  echo "   Store the key as String and resolve at render: Text(AppL10n.string(key))"
+  fail=1
+fi
+
 if [[ "$fail" -ne 0 ]]; then
   echo ""
-  echo "L10n key parity check failed."
+  echo "L10n check failed."
   exit 1
 fi
 
 echo "✅ L10n key parity check passed (Shared / App / Extension en ↔ zh-Hans)."
+echo "✅ Host app has no bare LocalizedStringKey call sites."
+echo "✅ Host app does not use LocalizedStringKey."

@@ -385,6 +385,143 @@ Synthetic results are not treated as production truth. Real opt-in, anonymized
 or manually reviewed examples are still required before widening labels or
 lowering thresholds.
 
+## LLM-authored rare-intent supplement
+
+Four intents are socially scarce: `blessing`, `invitation`,
+`confirmationDecision`, and `scheduleNegotiation`. They occur in private
+messages, so no commercially licensed public corpus contains them at useful
+volume. The existing generator already produces roughly 540 template records
+per intent, and that configuration scores 0.2326 macro F1 on the real blind
+holdout, so more slot-filled variants add nothing.
+
+`ModelTraining/ClipboardSemantics/Authored/` holds individually written
+bilingual records instead of generated ones. The v1 batch is 480 Simplified
+Chinese records across 80 scenario families: ten positive and ten difficult
+negative families per intent, six records each. Negative families cover the
+boundaries that template corpora miss, such as received thanks, quoted or
+reported wishes, sarcasm, commercial greetings, acknowledgment without a
+decision, fixed-time announcements that are not negotiation, and requests to
+join that are not invitations.
+
+`validate_authored_corpus.py` measures template-ness directly rather than
+trusting the author:
+
+```bash
+python3 Scripts/clipboard_semantics/validate_authored_corpus.py \
+  ModelTraining/ClipboardSemantics/Authored/*.jsonl \
+  --holdout ModelTraining/ClipboardSemantics/comprehensive-online-holdout-corpus.jsonl
+```
+
+On size-matched 120-record Chinese samples the authored batch reaches a 0.9695
+distinct-4-gram ratio against 0.757 to 0.776 for the template corpus, and 0.3908
+for that corpus's blessing slice. The most common six-character opening covers
+0.83% of authored records against 14% to 17.5% of template records; those
+repeated openings are the template fingerprint the models memorize.
+
+`build_authored_splits.py` splits whole scenario families, never individual
+records, so the evaluation side tests unseen scenarios rather than paraphrases:
+
+```bash
+python3 Scripts/clipboard_semantics/build_authored_splits.py
+```
+
+The seed `20260903` split reserves 24 of 80 families (144 records) for
+evaluation and keeps 56 families (336 records) for training, with zero text
+overlap between the two sides.
+
+### Measured result
+
+Retraining only the four classifiers on the base corpus plus the authored train
+split, then evaluating every frozen corpus with `--include-rejected-models`:
+
+| Corpus | Records | Deployed | Authored, recalibrated | Authored, deployed thresholds |
+| --- | --- | --- | --- | --- |
+| Authored evaluation | 144 | 0.2651 | **0.3864** | 0.3415 |
+| Random holdout | 680 | 0.6817 | 0.6978 | **0.7138** |
+| Targeted release holdout | 640 | 0.4166 | 0.4166 | 0.4166 |
+| Online real holdout | 200 | 0.1486 | 0.1486 | 0.1486 |
+| Comprehensive online holdout | 41,195 | **0.2783** | 0.2744 | 0.2726 |
+
+Per intent on the authored evaluation set, recalibrated thresholds move
+`confirmationDecision` from 0.100 to 0.636 F1 (recall 0.056 to 0.778),
+`scheduleNegotiation` from 0.222 to 0.479, and `invitation` from 0.267 to
+0.565. `blessing` does not move: precision is already 1.0 and the
+0.88 Chinese threshold caps recall at 0.333.
+
+Two regressions are real and are not explained away. Recalibrated thresholds
+cost `confirmationDecision` 0.166 F1 on the random holdout at nearly unchanged
+precision, which is a recall loss caused by the threshold moving from 0.72 to
+0.89. On the comprehensive corpus, `invitation` F1 falls from 0.0875 to 0.0441;
+both values are near zero on a corpus whose invitation labels are derived by
+source mapping rather than annotated, so neither number supports a conclusion.
+
+Keeping the deployed thresholds and promoting only the retrained models is the
+one configuration that improves both the authored evaluation set and the random
+holdout while staying within 0.006 of the deployed result on the two real-text
+corpora. That is the recommended promotion candidate.
+
+### Standing limitation
+
+The authored evaluation set and the authored training data were written by the
+same model in the same session, so they share an authorial voice that real user
+text does not have. The result demonstrates that non-template supervision
+generalizes across held-out scenarios; it does not establish real-user
+precision. The baseline of 0.2651 on this set sits close to the 0.2326 real
+blind-holdout baseline and far from the 0.7669 template-holdout baseline, which
+is evidence that the authored text behaves like real text rather than like the
+generator, but it is not a substitute for the human-labeled blind holdout
+described above.
+
+## Product blind holdout v2
+
+The v1 product blind holdout has 120 records and as few as two positives per
+new intent, so a one-record error moves macro F1 by more than 0.2. It cannot
+distinguish a real regression from sampling noise, and the v6 release gate
+therefore measured evaluation power rather than model quality.
+
+`prepare_product_blind_holdout_v2.py` builds a larger blind queue from real
+licensed text only:
+
+```bash
+python3 Scripts/clipboard_semantics/prepare_product_blind_holdout_v2.py
+```
+
+Eligibility keeps `online_*` families and drops template-generated ones, then
+applies a clipboard-shape filter. CPED television dialogue and GoEmotions
+Reddit reactions are excluded by family, and text shorter than 25 characters is
+rejected: the unfiltered real pool has a median length of 11 characters, which
+is conversational-turn shape, not clipboard shape.
+
+Sampling is single-stage stratified. Each pool record joins exactly one
+`(language, stratum)` cell using a rarest-first intent priority
+(`blessing`, `confirmationDecision`, `scheduleNegotiation`, `invitation`,
+`followUpReminder`, `complaint`, `task`, `question`, then `replyableOnly` and
+`noWeakIntent`). Scarce cells draw 50 records and abundant cells draw 120, so
+rare intents gain statistical power. Because cells are disjoint and every
+record carries `inclusionProbability`, prevalence-corrected metrics follow
+directly from Horvitz-Thompson weighting; oversampling does not bias reported
+rates. Weak source labels are stratification input only. They are written to
+`sealed-provenance.jsonl` and never to the blind queue.
+
+The seed `20260902` run draws 721 records (625 English, 96 Simplified Chinese)
+from a 6,939-record eligible pool, with zero duplicate text, zero configured
+training overlap, and no detected PII.
+
+`manifest.json` also reports `unfilledCells`, and the current gap is large:
+699 records must be authored because the licensed public pool cannot supply
+them. Chinese is the dominant gap. Real clipboard-shaped Chinese text in the
+commercially usable pool is only about 200 records and is almost entirely ASAP
+restaurant reviews, so `blessing`, `confirmationDecision`,
+`scheduleNegotiation`, `invitation`, and `noWeakIntent` have zero Chinese
+candidates. English `blessing` (3) and `confirmationDecision` (12) are also
+short. Those cells require project-authored text before the benchmark can gate
+a release.
+
+Two people then annotate `annotator-a.jsonl` and `annotator-b.jsonl`
+independently without reading `sealed-provenance.jsonl`, following the same
+strict double-annotation and adjudication rules as the blessing benchmark. The
+result is evaluation-only and must never enter a training corpus.
+
 ## Random holdout
 
 The deployment models also have a reproducible random-combination holdout check

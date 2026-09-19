@@ -31,6 +31,8 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
     public var aiResponseLength: SyncedField<AIResponseLength>
     public var multipleReplyVariantsEnabled: SyncedField<Bool>
     public var activePolishStyleId: SyncedField<String>
+    /// Distilled personal style for AI replies; empty means disabled.
+    public var personalReplyStyleId: SyncedField<String>
     public var llmThinkingEnabled: SyncedField<Bool>
     public var flowSkipAppSwitch: SyncedField<Bool>
     public var flowInactivityDuration: SyncedField<FlowInactivityDuration>
@@ -56,6 +58,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         aiResponseLength: SyncedField<AIResponseLength>? = nil,
         multipleReplyVariantsEnabled: SyncedField<Bool>? = nil,
         activePolishStyleId: SyncedField<String>,
+        personalReplyStyleId: SyncedField<String>,
         llmThinkingEnabled: SyncedField<Bool>,
         clipboardHistoryEnabled: SyncedField<Bool>? = nil,
         clipboardCandidateBarEnabled: SyncedField<Bool>? = nil,
@@ -94,6 +97,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             deviceID: keyboardHapticIntensity.deviceID
         )
         self.activePolishStyleId = activePolishStyleId
+        self.personalReplyStyleId = personalReplyStyleId
         self.llmThinkingEnabled = llmThinkingEnabled
         // Kept as optional parameters so old call sites and payload fixtures
         // remain source-compatible. Clipboard consent is device-local.
@@ -124,6 +128,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         case aiResponseLength
         case multipleReplyVariantsEnabled
         case activePolishStyleId
+        case personalReplyStyleId
         case llmThinkingEnabled
         case clipboardHistoryEnabled
         case clipboardCandidateBarEnabled
@@ -198,6 +203,17 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             updatedAt: keyboardHapticIntensity.updatedAt,
             deviceID: keyboardHapticIntensity.deviceID
         )
+        // Absent on payloads written before voice input and AI replies were
+        // split. Empty is the correct default: the local one-shot migration
+        // owns adopting an existing personal style, not the sync layer.
+        personalReplyStyleId = try container.decodeIfPresent(
+            SyncedField<String>.self,
+            forKey: .personalReplyStyleId
+        ) ?? SyncedField(
+            value: "",
+            updatedAt: keyboardHapticIntensity.updatedAt,
+            deviceID: keyboardHapticIntensity.deviceID
+        )
         llmThinkingEnabled = try container.decodeIfPresent(
             SyncedField<Bool>.self,
             forKey: .llmThinkingEnabled
@@ -269,6 +285,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
             aiResponseLength.updatedAt,
             multipleReplyVariantsEnabled.updatedAt,
             activePolishStyleId.updatedAt,
+            personalReplyStyleId.updatedAt,
             llmThinkingEnabled.updatedAt,
             flowSkipAppSwitch.updatedAt,
             flowInactivityDuration.updatedAt
@@ -297,6 +314,7 @@ public struct SyncedAppSettingsV2: Codable, Equatable, Sendable {
         try container.encode(aiResponseLength, forKey: .aiResponseLength)
         try container.encode(multipleReplyVariantsEnabled, forKey: .multipleReplyVariantsEnabled)
         try container.encode(activePolishStyleId, forKey: .activePolishStyleId)
+        try container.encode(personalReplyStyleId, forKey: .personalReplyStyleId)
         try container.encode(llmThinkingEnabled, forKey: .llmThinkingEnabled)
         try container.encode(flowSkipAppSwitch, forKey: .flowSkipAppSwitch)
         try container.encode(flowInactivityDuration, forKey: .flowInactivityDuration)
@@ -337,6 +355,7 @@ public extension SyncedAppSettingsV2 {
             aiResponseLength: field(configuration.aiResponseLength),
             multipleReplyVariantsEnabled: field(configuration.multipleReplyVariantsEnabled),
             activePolishStyleId: field(configuration.activePolishStyleId),
+            personalReplyStyleId: field(configuration.personalReplyStyleId),
             llmThinkingEnabled: field(configuration.llmThinkingEnabled),
             flowSkipAppSwitch: field(configuration.flowSkipAppSwitch),
             flowInactivityDuration: field(configuration.flowInactivityDuration)
@@ -370,6 +389,7 @@ public extension SyncedAppSettingsV2 {
             aiResponseLength: field(AIResponseLength.default),
             multipleReplyVariantsEnabled: field(true),
             activePolishStyleId: field(PolishStylePackCatalog.defaultID),
+            personalReplyStyleId: field(""),
             llmThinkingEnabled: field(false),
             flowSkipAppSwitch: field(legacy.flowSkipAppSwitch),
             flowInactivityDuration: field(legacy.flowInactivityDuration)
@@ -421,6 +441,10 @@ public extension SyncedAppSettingsV2 {
                 local: local.activePolishStyleId,
                 remote: remote.activePolishStyleId
             ),
+            personalReplyStyleId: .merge(
+                local: local.personalReplyStyleId,
+                remote: remote.personalReplyStyleId
+            ),
             llmThinkingEnabled: .merge(local: local.llmThinkingEnabled, remote: remote.llmThinkingEnabled),
             flowSkipAppSwitch: .merge(local: local.flowSkipAppSwitch, remote: remote.flowSkipAppSwitch),
             flowInactivityDuration: .merge(
@@ -449,7 +473,17 @@ public extension SyncedAppSettingsV2 {
         configuration.polishIntensity = polishIntensity.value
         configuration.aiResponseLength = aiResponseLength.value
         configuration.multipleReplyVariantsEnabled = multipleReplyVariantsEnabled.value
-        configuration.activePolishStyleId = activePolishStyleId.value
+        // Writes bypass `AppGroupStore.setActivePolishStyleId`, so re-apply its
+        // gate here: a device still on the pre-split build can push a learned
+        // pack id, which must never reach the voice-polish prompt.
+        configuration.activePolishStyleId = PolishStylePackCatalog.isValidActiveID(
+            activePolishStyleId.value,
+            userCatalog: configuration.polishStyleCatalog
+        ) ? activePolishStyleId.value : PolishStylePackCatalog.defaultID
+        configuration.personalReplyStyleId = PolishStylePackCatalog.resolvePersonalReplyStyle(
+            id: personalReplyStyleId.value,
+            userCatalog: configuration.polishStyleCatalog
+        )?.id ?? ""
         configuration.llmThinkingEnabled = llmThinkingEnabled.value
         configuration.flowSkipAppSwitch = flowSkipAppSwitch.value
         configuration.flowInactivityDuration = flowInactivityDuration.value
@@ -481,6 +515,7 @@ public extension SyncedAppSettingsV2 {
         patch(&copy.aiResponseLength, value: configuration.aiResponseLength)
         patch(&copy.multipleReplyVariantsEnabled, value: configuration.multipleReplyVariantsEnabled)
         patch(&copy.activePolishStyleId, value: configuration.activePolishStyleId)
+        patch(&copy.personalReplyStyleId, value: configuration.personalReplyStyleId)
         patch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
         patch(&copy.flowSkipAppSwitch, value: configuration.flowSkipAppSwitch)
         patch(&copy.flowInactivityDuration, value: configuration.flowInactivityDuration)
@@ -515,6 +550,7 @@ public extension SyncedAppSettingsV2 {
         touch(&copy.aiResponseLength, value: configuration.aiResponseLength)
         touch(&copy.multipleReplyVariantsEnabled, value: configuration.multipleReplyVariantsEnabled)
         touch(&copy.activePolishStyleId, value: configuration.activePolishStyleId)
+        touch(&copy.personalReplyStyleId, value: configuration.personalReplyStyleId)
         touch(&copy.llmThinkingEnabled, value: configuration.llmThinkingEnabled)
         touch(&copy.flowSkipAppSwitch, value: configuration.flowSkipAppSwitch)
         touch(&copy.flowInactivityDuration, value: configuration.flowInactivityDuration)

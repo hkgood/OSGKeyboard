@@ -15,8 +15,10 @@
       --card: #ffffff;
       --border: rgba(0, 0, 0, 0.08);
       --media-border: rgba(0, 0, 0, 0.06);
-      --accent: #2f6fed;
-      --chip-bg: rgba(47, 111, 237, 0.1);
+      /* Brand green — matches OSGColor.brandAccent (#3AA05A) in the app. */
+      --accent: #3aa05a;
+      --chip-bg: rgba(58, 160, 90, 0.1);
+      --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 10px 26px rgba(0, 0, 0, 0.05);
     }
 
     html[data-theme="dark"] {
@@ -27,8 +29,10 @@
       --card: #161618;
       --border: rgba(255, 255, 255, 0.1);
       --media-border: rgba(255, 255, 255, 0.08);
-      --accent: #6b9fff;
-      --chip-bg: rgba(107, 159, 255, 0.16);
+      /* Brightened brand green for legibility on dark surfaces. */
+      --accent: #57c47d;
+      --chip-bg: rgba(87, 196, 125, 0.16);
+      --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px rgba(0, 0, 0, 0.35);
     }
 
     * { box-sizing: border-box; }
@@ -85,6 +89,8 @@
       border-radius: 16px;
       padding: 18px 16px 8px;
       margin-bottom: 16px;
+      /* Faint directional long shadow — mirrors the app's card depth. */
+      box-shadow: var(--card-shadow);
     }
 
     .version-block.visible { display: block; }
@@ -153,8 +159,13 @@
       margin: 0 auto;
       border-radius: 14px;
       border: 0.5px solid var(--media-border);
-      background: #000;
     }
+
+    /* Screenshots and demo clips are light captures — keep a light backing in
+       both themes so a not-yet-painted frame never disappears against the dark
+       page background (e.g. before autoplay starts). */
+    .wn-media img { background: #ffffff; }
+    .wn-media video { background: #ffffff; }
 
     /* Landscape-ish clip (near-square) can sit a bit wider. */
     .wn-media.wide video,
@@ -178,80 +189,16 @@
   <p class="empty" id="empty-zh">暂无与当前版本匹配的更新说明。</p>
   <p class="empty" id="empty-en">No release notes match this app version.</p>
 
-  <!-- ========== 2.0.3 ========== -->
-  <article class="version-block" data-version="2.0.3">
-    <div class="version-chip">2.0.3</div>
+  <!-- ========== 2.1.0 ========== -->
+  <!-- Cumulative notes for users upgrading from 1.8.0: 2.0.x were skipped as -->
+  <!-- public releases, so all of their user-facing changes ship here. -->
+  <article class="version-block" data-version="2.1.0">
+    <div class="version-chip">2.1.0</div>
 
     <div class="lang-block" data-lang="zh">
-      <section class="section">
-        <h2>英文个性词推荐</h2>
-        <ul>
-          <li>除中文输入习惯外，键盘现在也会学习你反复使用的英文生词，并推荐加入个人词库</li>
-          <li>中英文推荐词都需要你确认后才会加入，原有的中文学习记录不受影响</li>
-        </ul>
-      </section>
-
-      <section class="section">
-        <h2>界面一致性优化</h2>
-        <ul>
-          <li>统一卡片间距、设置页字体和菜单对齐方式，账号与购买记录的排版更整齐</li>
-          <li>一级页面与详情页之间的标签栏过渡更自然</li>
-        </ul>
-      </section>
-
-      <section class="section">
-        <h2>问题修复</h2>
-        <ul>
-          <li>重装 App 或重新回到前台后，Apple 账号登录状态恢复更可靠，登录过程中的加载提示保持一致</li>
-          <li>在不同 App 之间切换后，中英文候选词可靠恢复，且不会残留上一个输入框的内容</li>
-        </ul>
-      </section>
-    </div>
-
-    <div class="lang-block" data-lang="en">
-      <section class="section">
-        <h2>English Personal-Term Suggestions</h2>
-        <ul>
-          <li>Alongside Chinese typing habits, the keyboard now learns rare English words you use repeatedly and suggests adding them to your Personal Dictionary</li>
-          <li>Suggestions in either language are added only after you confirm, and existing Chinese learning history is preserved</li>
-        </ul>
-      </section>
-
-      <section class="section">
-        <h2>Interface Consistency</h2>
-        <ul>
-          <li>Card spacing, settings typography, menu alignment, and the account and purchase-history rows are now consistent</li>
-          <li>Tab-bar transitions between primary pages and detail pages feel smoother</li>
-        </ul>
-      </section>
-
-      <section class="section">
-        <h2>Fixes</h2>
-        <ul>
-          <li>Apple sign-in is restored more reliably after a reinstall or when returning to the foreground, with a consistent loading state</li>
-          <li>Chinese and English candidates recover reliably after switching apps, without leaking state from the previous text field</li>
-        </ul>
-      </section>
-    </div>
-  </article>
-
-  <!-- ========== 2.0.2 ========== -->
-  <article class="version-block" data-version="2.0.2">
-    <div class="version-chip">2.0.2</div>
-
-    <div class="lang-block" data-lang="zh">
-      <section class="section">
-        <h2>UI 与交互全面升级</h2>
-        <ul>
-          <li>iPhone 使用 iOS 26 原生 Liquid Glass 标签栏与页面过渡，切换标签时会保留各页面的导航状态</li>
-          <li>技能页改为更清晰的已安装与未安装列表；点按技能进入完整详情页，集中管理安装、快捷指令配置和自定义技能编辑</li>
-          <li>重新整理首页、账号、AI 服务和个人词库中的信息层级；缺少必要配置时，会直接说明原因并提供下一步入口</li>
-        </ul>
-      </section>
-
       <section class="section">
         <div class="group">
-          <h2>新增 Apple 账号登录</h2>
+          <h2>全新 Apple 账号登录</h2>
           <div class="wn-media wide">
             <img src="assets/whats-new/account-sign-in-zh.png" alt="OSGKeyboard 通过 Apple 登录账号的真实界面卡片" loading="lazy" decoding="async">
           </div>
@@ -275,49 +222,75 @@
       </section>
 
       <section class="section">
-        <h2>新增个人专属风格</h2>
+        <h2>全新 App 界面与视觉</h2>
+        <ul>
+          <li>iPhone 使用 iOS 26 原生 Liquid Glass 标签栏与页面过渡，切换标签时保留各页面的导航状态</li>
+          <li>技能页改为更清晰的已安装与未安装列表，点按进入详情页，集中管理安装、快捷指令配置和自定义技能编辑</li>
+          <li>重新整理首页、账号、AI 服务与个人词库的信息层级；缺少必要配置时会直接说明原因并提供下一步入口</li>
+          <li>卡片统一加入淡雅的定向长投影；系统弹窗与模态操作改用自适应黑白配色，不再继承绿色，主次更清晰</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>首页焕新：月度用量日历与积分</h2>
+        <div class="wn-media wide">
+          <img src="assets/whats-new/monthly-usage-zh.png" alt="首页当月听写字数日历卡片" loading="lazy" decoding="async">
+        </div>
+        <ul>
+          <li>首页与 Mac 总览用<strong>当月日历</strong>替换近七天图表，日期圆点的深浅代表当天听写字数，一眼看清整月节奏</li>
+          <li>积分与邀请卡片从设置迁到首页统计上方，登录前也能看清免费注册与邀请奖励</li>
+          <li>可直接从「听写字数」和「个性词库」卡片进入历史记录或个性词库</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>智能剪贴板技能与智能回复</h2>
+        <div class="wn-media wide">
+          <video src="assets/whats-new/smart-reply-zh.mp4" autoplay muted loop playsinline preload="metadata"></video>
+        </div>
+        <ul>
+          <li>端侧模型与本地规则会对剪贴板内容进行语义识别，并从完整技能目录中智能推荐最多五个相关操作（回复、翻译、总结、澄清、共情、商务回复、整理清单等）</li>
+          <li>对可回复的消息，<strong>「回复」</strong>会给出<strong>普通 / 正式 / 轻松趣味</strong>三种个性化候选；键盘分别学习你的听写与回复偏好，让候选越来越像你</li>
+          <li>遇到邀约、任务、祝福、澄清、共情等需要明确表态的场景，提供三种固定且清晰标注的立场，绝不替你猜测意图</li>
+          <li>复制单个电话号码可直接拨号或新建联系人；复制网页链接可直接打开，或提取公开网页正文进行总结</li>
+          <li>识别与推荐在设备端完成；只有运行需要 AI 的技能时内容才会发送给所选服务，选择反馈仅保留在本机</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>个人专属风格</h2>
         <div class="wn-media wide">
           <img src="assets/whats-new/personal-style-card-zh.png" alt="润色风格页面中的生成专属风格真实界面卡片" loading="lazy" decoding="async">
         </div>
         <ul>
-          <li>可从自己的听写表达与明确修改中学习说话风格，生成专属于你的措辞和表达习惯</li>
-          <li>个人风格可应用于剪贴板回复，在不改变原意的前提下调整用词与节奏，让回复更像你自己</li>
-          <li>用于学习的文字语料仅在你主动点击生成时发送给所选 AI 服务，生成结果需要确认后才会保存和启用</li>
+          <li>从你的听写表达和明确修改中学习说话风格，生成专属于你的措辞与表达习惯</li>
+          <li>应用到剪贴板回复时，在不改变原意的前提下让用词和节奏更像你自己</li>
+          <li>用于学习的语料仅在你点击「生成」时发送给所选 AI 服务，结果需确认后才会保存启用</li>
         </ul>
       </section>
 
       <section class="section">
-        <h2>新增智能剪贴板技能</h2>
-        <ul>
-          <li>端侧模型与本地规则会对剪贴板内容进行基础语义识别，并从完整技能目录中智能推荐最多五个相关操作</li>
-          <li>可识别任务、邀约、问句、情绪和语言，推荐回复、翻译、总结、澄清、共情、商务回复或整理清单等技能</li>
-          <li>复制单个电话号码时可直接拨号或新建联系人；复制网页链接时可直接打开，或提取公开网页内容进行总结</li>
-          <li>识别和推荐过程在设备端完成；只有主动运行需要 AI 的技能时，相关内容才会发送给所选服务</li>
-        </ul>
-      </section>
-
-      <section class="section">
-        <h2>新增自动推荐个人热词</h2>
+        <h2>更聪明的输入</h2>
         <div class="wn-media wide">
           <img src="assets/whats-new/personal-terms-card-zh.png" alt="首页个性词库中的个人热词推荐真实界面卡片" loading="lazy" decoding="async">
         </div>
         <ul>
-          <li>根据键盘中反复输入的新词自动生成个人热词推荐，让常用名称、术语和表达更容易再次输入</li>
-          <li>推荐词必须由你明确确认后才会加入个人词库；本地学习不会记录完整击键内容</li>
+          <li>根据键盘中反复输入的新词自动推荐个人热词，让常用名称、术语与表达更容易再次输入；本地学习不会记录完整击键内容</li>
+          <li>在中文输入习惯之外，也会学习你反复使用的<strong>英文生词</strong>并推荐加入个人词库；中英文推荐词都需你确认后才会加入</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>问题修复与其他</h2>
+        <ul>
+          <li>Apple 账号登录状态更可靠：令牌轮换更稳，已撤销的登录不会被恢复，切换 App 后中英文候选词可靠恢复</li>
+          <li>推荐热词按真实来源标记，移除词库列表中的内部使用次数，iPhone 确认弹窗指向所选热词</li>
+          <li>移除自愿打赏，积分包成为唯一的 App 内购买项</li>
         </ul>
       </section>
     </div>
 
     <div class="lang-block" data-lang="en">
-      <section class="section">
-        <h2>UI and Interaction, Rebuilt</h2>
-        <ul>
-          <li>iPhone now uses the native iOS 26 Liquid Glass tab bar and transitions while preserving each tab's navigation state</li>
-          <li>Skills are organized into clearer Installed and Not Installed lists; tap one to manage installation, Shortcut setup, or custom-skill editing on a dedicated detail page</li>
-          <li>Home, Account, AI Service, and Personal Dictionary now have a clearer hierarchy, with direct explanations and next steps when setup is incomplete</li>
-        </ul>
-      </section>
-
       <section class="section">
         <div class="group">
           <h2>New Sign in with Apple</h2>
@@ -344,45 +317,77 @@
       </section>
 
       <section class="section">
-        <h2>New Personal Style</h2>
+        <h2>A New App Interface and Visual Language</h2>
+        <ul>
+          <li>iPhone uses the native iOS 26 Liquid Glass tab bar and transitions while preserving each tab's navigation state</li>
+          <li>Skills are organized into clearer Installed and Not Installed lists; tap one to manage installation, Shortcut setup, or custom-skill editing on a dedicated detail page</li>
+          <li>Home, Account, AI Service, and Personal Dictionary have a clearer hierarchy, with direct explanations and next steps when setup is incomplete</li>
+          <li>Card surfaces gain a faint directional long shadow; system dialogs and modal actions use adaptive black or white instead of the green accent</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Home, Refreshed: Monthly Usage Calendar and Credits</h2>
+        <div class="wn-media wide">
+          <img src="assets/whats-new/monthly-usage-en.png" alt="Home monthly dictation-characters calendar card" loading="lazy" decoding="async">
+        </div>
+        <ul>
+          <li>Home and the Mac Dashboard replace the seven-day chart with a full <strong>current-month calendar</strong> whose date-circle opacity reflects each day's dictation characters</li>
+          <li>The credits and invitation card moves from Settings to Home above the usage metrics, explaining free signup and referral rewards before you sign in</li>
+          <li>Open History or Personal Dictionary directly from their metric cards</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Smart Clipboard Skills and Replies</h2>
+        <div class="wn-media wide">
+          <video src="assets/whats-new/smart-reply-en.mp4" autoplay muted loop playsinline preload="metadata"></video>
+        </div>
+        <ul>
+          <li>On-device models and local rules recognize clipboard content and recommend up to five relevant actions from the full catalog (Reply, Translate, Summarize, Clarify, Empathy, Business Reply, Organize List, and more)</li>
+          <li>For a message worth answering, <strong>Reply</strong> offers <strong>Ordinary / Formal / Playful</strong> personalized choices; the keyboard learns your dictation and reply preferences separately so they sound more like you</li>
+          <li>For invitations, tasks, blessings, clarifications, and empathy — where intent must not be guessed — it offers three fixed, clearly labeled positions</li>
+          <li>A copied phone number can open calling or a prefilled new-contact form; a copied web link can open directly or be summarized from bounded public webpage content</li>
+          <li>Recognition and recommendation stay on device; content is sent to the selected service only when a skill needs AI, and choice feedback stays on this device</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Personal Style</h2>
         <div class="wn-media wide">
           <img src="assets/whats-new/personal-style-card-en.png" alt="Real Generate Your Style card on the Polish Styles page" loading="lazy" decoding="async">
         </div>
         <ul>
-          <li>Learn a personal speaking style from your dictation and explicit edits, capturing the wording and expression patterns that make your voice distinct</li>
-          <li>Apply that style to clipboard replies so wording and rhythm sound more like you without changing the original meaning</li>
-          <li>Learning text is sent to the selected AI service only when you explicitly tap Generate, and the result must be reviewed before it is saved and enabled</li>
+          <li>Learn a personal speaking style from your dictation and explicit edits, capturing the wording and expression that make your voice distinct</li>
+          <li>Apply it to clipboard replies so wording and rhythm sound more like you, without changing the original meaning</li>
+          <li>Learning text is sent to the selected AI service only when you tap Generate, and the result is saved only after you review it</li>
         </ul>
       </section>
 
       <section class="section">
-        <h2>New Smart Clipboard Skills</h2>
-        <ul>
-          <li>On-device models and local rules perform lightweight semantic recognition, then recommend up to five relevant actions from the complete skill catalog</li>
-          <li>Tasks, invitations, questions, sentiment, and language can surface skills such as Reply, Translate, Summarize, Clarify, Empathy, Business Reply, or Organize List</li>
-          <li>A single copied phone number can open calling or a prefilled new-contact form; a copied web link can open directly or be summarized from bounded public webpage content</li>
-          <li>Recognition and recommendation stay on device. Content is sent to the selected service only after you run a skill that requires AI</li>
-        </ul>
-      </section>
-
-      <section class="section">
-        <h2>New Automatic Personal-Term Suggestions</h2>
+        <h2>Smarter Typing</h2>
         <div class="wn-media wide">
           <img src="assets/whats-new/personal-terms-card-en.png" alt="Real personal-term suggestion card on Home" loading="lazy" decoding="async">
         </div>
         <ul>
-          <li>Repeated new terms from keyboard input become suggestions, making frequently used names, terminology, and expressions easier to type again</li>
-          <li>A suggestion joins Personal Dictionary only after your explicit confirmation; local learning does not record complete keystrokes</li>
+          <li>Repeated new terms from keyboard input become suggestions, making frequently used names, terminology, and expressions easier to type again; local learning does not record complete keystrokes</li>
+          <li>Beyond Chinese typing habits, the keyboard learns rare <strong>English words</strong> you use repeatedly and suggests them; suggestions in either language are added only after you confirm</li>
+        </ul>
+      </section>
+
+      <section class="section">
+        <h2>Fixes and Other Changes</h2>
+        <ul>
+          <li>Apple sign-in is more durable: steadier token rotation, a revoked login is no longer restored, and Chinese/English candidates recover reliably after switching apps</li>
+          <li>Hotword recommendations are labeled by their real source, internal usage counts are removed from dictionary rows, and the iPhone confirmation popover points at the selected hotword</li>
+          <li>The voluntary tip purchase is removed; credit packs are now the only in-app purchase</li>
         </ul>
       </section>
     </div>
   </article>
 
-  <!-- ========== 2.0.1 ========== -->
-  <!-- Consolidated into the cumulative 2.0.2 user-facing release notes. -->
-
-  <!-- ========== 2.0.0 ========== -->
-  <!-- Intentionally skipped in user-facing notes; key changes are included in 2.0.2. -->
+  <!-- ========== 2.0.0 – 2.0.3 ========== -->
+  <!-- Skipped as public releases; all user-facing changes are folded into 2.1.0 above. -->
 
   <!-- ========== 1.8.0 ========== -->
   <article class="version-block" data-version="1.8.0">

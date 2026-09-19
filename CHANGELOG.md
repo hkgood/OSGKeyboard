@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-09-18
+
+### Added
+- **Native Reminders and Calendar export**: Extract To-dos and Extract Events now write directly through EventKit in the main app instead of a companion Shortcut — no Shortcut install step, and Calendar is requested with write-only access so existing events are never read. The bundled `OSGExtractTodos` / `OSGExtractEvents` Shortcut resources are removed; Save to Notes still uses its companion Shortcut. / **原生提醒事项与日历写入**：「提取待办」与「提取日程」改由主 App 通过 EventKit 直接写入，不再需要安装配套捷径；日历仅申请「仅写入」权限，不会读取你已有的日程。内置的 `OSGExtractTodos` / `OSGExtractEvents` 捷径资源已移除；「存入备忘录」仍使用配套捷径。
+- **Crash and hang reporting**: subscribe to MetricKit so crash, hang, CPU, and disk-write diagnostics — including keyboard-extension memory kills, which never surface as crashes in App Store Connect — are recorded on device and exported from Settings ▸ Diagnostics alongside Flow startup reports. App Store builds keep them on device; beta builds also upload them (see below). / **崩溃与卡顿上报**：接入 MetricKit，将崩溃、卡顿、CPU 与磁盘写入诊断（含在 App Store Connect 中从不显示为崩溃的键盘扩展内存回收）记录在本机，并可在「设置 ▸ 诊断」中与 Flow 启动报告一同导出。App Store 版本仅保留在本机，内测版本会另行上传（见下条）。
+- **Keyboard memory relief**: release the Chinese engine, the English lexicon, and in-flight pipeline work at the 40 MiB and 48 MiB budget thresholds, and keep sampling memory for the whole presentation instead of only during startup. Relief sheds at most once per threshold until the footprint falls back below 36 MiB, and the hard shed waits while you are mid-composition, so the keyboard never swaps surfaces out from under an unfinished syllable. / **键盘内存主动降级**：在 40 MiB 与 48 MiB 预算阈值主动释放中文引擎、英文词库与进行中的管线任务，并在整个键盘展示期间持续采样内存，而非仅在启动阶段采样。每个阈值在内存回落到 36 MiB 以下前只释放一次，且正在拼字时会推迟重度释放，不会在音节未完成时切走输入界面。
+- **Beta crash upload**: internal builds (local Debug and TestFlight) batch MetricKit crash and hang reports to `POST /v1/analytics/diagnostics` so keyboard memory shutdowns can be investigated without asking a tester to export them by hand, with a Settings toggle, per-report deduplication, retry backoff, and a circuit breaker while the backend route is unavailable. Reports reuse the analytics installation identifier and are skipped entirely when analytics are switched off; App Store builds never upload. / **内测版崩溃上传**：内测版本（本地 Debug 与 TestFlight）将 MetricKit 崩溃与卡顿报告批量发送至 `POST /v1/analytics/diagnostics`，无需测试员手动导出即可排查键盘内存回收问题；配有设置开关、逐份去重、失败退避重试，以及后端路由不可用时的熔断。报告复用统计的安装标识，关闭统计时完全不上传；App Store 版本不会上传。
+- **App Group wiring check**: gate CI on a static check that the App Group identifier and the shared Keychain access-group ordering agree across the app, the keyboard extension, the Mac target, and `project.yml`. / **App Group 配置校验**：在 CI 中静态校验 App Group 标识符与共享 Keychain 访问组顺序在主 App、键盘扩展、Mac 端及 `project.yml` 之间保持一致。
+
+### Fixed
+- **App Group error screen**: resolve localized text without the App Group so the screen shown when that container is missing renders its message instead of crashing on launch — the one situation it exists to handle. / **App Group 错误页**：本地化文案不再依赖 App Group，容器缺失时该页面可正常显示提示，而不是在启动时崩溃——这正是它存在的场景。
+- **Dictation preview and Mac recording crashes**: install audio taps with the input node's live format and resample adaptively through one shared converter, so changing the audio route mid-recording no longer raises an uncatchable format-mismatch exception. / **听写预览与 Mac 录音崩溃**：音频采集改用输入节点的实时格式，并通过统一的自适应重采样器转换，录音过程中切换音频线路不再触发不可捕获的格式不匹配异常。
+- **Degenerate audio routes**: clamp the resampled frame count before converting it, so a hardware rate near zero drops one frame instead of trapping on the realtime audio thread. / **异常音频线路**：重采样帧数在转换前先行钳制，采样率接近零时仅丢弃一帧，而不会在实时音频线程上触发陷阱。
+- **Chinese input robustness**: never pass a nil string across the librime bridge when a user dictionary holds malformed UTF-8, guard the engine API vector against null before dereferencing it, and ignore a candidate array that librime reports as non-empty but leaves unset. / **中文输入健壮性**：用户词库含非法 UTF-8 时不再让空字符串穿过 librime 桥接层，引擎 API 指针解引用前补齐空值判断，并忽略 librime 报告数量非零却未填充的候选数组。
+- **Expanded candidate panel**: render an empty cell instead of crashing when the candidate list shrinks while the grid is still laying out against the previous count. / **候选词展开面板**：候选列表在网格仍按旧数量布局时缩短，渲染空白单元格而非崩溃。
+
+## [2.1.0] - 2026-09-11
+
 ### Removed
 - **Voluntary tip purchase**: remove the `ByRockyACoffee` consumable, the macOS Settings support-the-developer section, and the unused iOS tip view. Optional credit packs are now the only in-app purchase. / **自愿打赏**：移除 `ByRockyACoffee` 消耗型内购、macOS 设置中的支持开发者区域，以及未被使用的 iOS 打赏视图；可选积分包成为唯一的 App 内购买项。
 
@@ -27,6 +45,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Home credits and navigation**: move the credit and invitation card from Settings to Home above the usage metrics, explain free signup and referral rewards before sign-in, and open History or Personal Dictionary directly from their metric cards. / **首页积分与导航**：将积分与邀请卡片从设置迁移到首页统计指标上方，登录前明确说明免费注册与邀请奖励，并支持从听写字数和词库指标卡片直接进入历史记录或个性词库。
 - **Personal style threshold**: allow generating a learned speaking style after 2,500 effective dictation characters instead of 5,000. / **专属风格门槛**：生成学习型说话风格所需的有效听写字符由 5,000 降至 2,500。
 - **Personal style corpus gate**: replace the test-mode unlimited gate with a 1,250-character minimum while keeping the production 2,500-character gate, and cap the training-corpus export at 5,000 effective characters so the user's full private history never leaves the device in one export. / **个人风格语料门槛**：移除测试版本的「无下限」逻辑，改为 1,250 字符最低门槛，正式版保持 2,500 字符；训练语料导出上限调整为 5,000 字符，避免一次性带出全部听写历史。
+- **English personal-term suggestions**: learn repeated rare English words alongside Chinese typing habits, preserve existing Rime history, and ask before adding either language to the Personal Dictionary. / **英文个性词推荐**：在中文输入习惯之外学习重复使用的英文低频词，保留现有 Rime 历史，并在将任一语言加入个性词库前由用户确认。
+- **Interface consistency**: standardize borderless card spacing, compact settings typography, native menu alignment, account and purchase-history rows, and tab-bar transitions between primary and detail pages. / **界面一致性**：统一无描边卡片间距、紧凑设置字体、原生菜单对齐、账号与购买记录行，以及一级与详情页面之间的标签栏过渡。
 
 ### Fixed
 - **Personal style generation**: derive every reviewed prompt through two-stage corpus evidence, apply concrete low-confidence ASR tendencies instead of replacing them with a neutral template, recover wrapped model JSON once, keep one provider configuration and a 45-second budget across both stages, and distinguish cancellation from timeout. / **专属风格生成**：每个待审阅 Prompt 均通过两阶段语料证据生成，并在证据较少时仍应用原始 ASR 中具体的低置信度表达倾向，而非替换为中性模板；同时支持一次模型 JSON 包装恢复，在两阶段固定同一服务配置与 45 秒预算，并区分主动取消和请求超时。
@@ -34,14 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Durable Apple account sessions**: persist refresh operation identifiers before token rotation, reliably store and validate Apple user identifiers, require one-time reauthentication for unverifiable legacy sessions, and prevent failed Keychain deletion or concurrent account work from restoring a revoked login. / **可靠 Apple 账号会话**：在令牌轮换前持久化刷新操作标识，可靠存储并验证 Apple 用户标识，为无法验证的旧会话执行一次重新认证，并防止 Keychain 删除失败或并发账号操作恢复已撤销的登录态。
 - **Account sign-in presentation**: use the concise reward message consistently and keep a uniform app surface beneath translucent Apple authorization sheets. / **账号登录呈现**：统一使用精简的积分奖励文案，并在半透明 Apple 授权弹窗下保持一致的 App 背景。
 - **Recommended hotword details**: label Home recommendations by their actual source, render suggestion chips in adaptive monochrome, remove internal usage counts from dictionary rows, and anchor the iPhone confirmation popover to the selected hotword. / **推荐热词详情**：按真实来源标记首页推荐词，以自适应黑白配色显示推荐标签，移除词库列表中的内部使用次数，并让 iPhone 确认弹窗指向所选热词。
-
-## [2.0.3] - 2026-08-24
-
-### Changed
-- **English personal-term suggestions**: learn repeated rare English words alongside Chinese typing habits, preserve existing Rime history, and ask before adding either language to the Personal Dictionary. / **英文个性词推荐**：在中文输入习惯之外学习重复使用的英文低频词，保留现有 Rime 历史，并在将任一语言加入个性词库前由用户确认。
-- **Interface consistency**: standardize borderless card spacing, compact settings typography, native menu alignment, account and purchase-history rows, and tab-bar transitions between primary and detail pages. / **界面一致性**：统一无描边卡片间距、紧凑设置字体、原生菜单对齐、账号与购买记录行，以及一级与详情页面之间的标签栏过渡。
-
-### Fixed
 - **Apple account continuity**: retry transient secure-session restoration after reinstall or foreground activation, and show a consistent loading state while Apple sign-in finishes. / **Apple 账号连续性**：在重装或重新进入前台后重试瞬时失败的安全会话恢复，并在 Apple 登录完成期间统一显示加载状态。
 - **Cross-app typing candidates**: isolate document-scoped candidate state from the reusable keyboard engine so English and Chinese candidates recover reliably after switching apps without leaking the previous field. / **跨 App 输入候选词**：将文档级候选状态与可复用键盘引擎分离，使中英文候选词在切换 App 后可靠恢复，且不会泄漏上一个输入框的状态。
 

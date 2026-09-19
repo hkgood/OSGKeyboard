@@ -232,9 +232,9 @@ public enum LocalASRModelCatalogError: Error, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .missingBundledCatalog:
-            return "Missing bundled local ASR catalog."
+            return SharedL10n.string("error.localASR.missingBundledCatalog")
         case .modelNotFound(let id):
-            return "Local ASR model not found: \(id)"
+            return SharedL10n.format("error.localASR.modelNotFound", id)
         }
     }
 }

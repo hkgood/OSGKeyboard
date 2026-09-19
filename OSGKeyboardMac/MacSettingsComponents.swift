@@ -42,7 +42,7 @@ private struct MacPickerFieldBox: View {
             Spacer(minLength: Spacing.xs)
 
             Image(systemName: "chevron.up.chevron.down")
-                .font(.system(size: 11, weight: .semibold))
+                .font(TypeStyle.caption2.weight(.semibold))
                 .foregroundStyle(palette.textTertiary)
         }
         .padding(.horizontal, Spacing.sm)
@@ -360,7 +360,7 @@ struct MacProviderModelRow: View {
                 isDropdownOpen.toggle()
             } label: {
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(TypeStyle.caption2.weight(.semibold))
                     .foregroundStyle(palette.textTertiary)
                     .frame(width: chevronWidth, height: MacMetrics.settingsControlHeight)
                     .contentShape(Rectangle())
@@ -427,7 +427,7 @@ struct MacProviderModelRow: View {
                 Spacer(minLength: 0)
                 if isSelected {
                     Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(TypeStyle.caption2.weight(.semibold))
                         .foregroundStyle(palette.textPrimary)
                 }
             }

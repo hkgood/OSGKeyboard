@@ -69,10 +69,10 @@ struct ASRSettingsCard: View {
         Group {
             Toggle(isOn: volcengineAPIKeyModeBinding) {
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text("settings.asr.volcengine.apiKeyMode.title")
+                    Text(AppL10n.string("settings.asr.volcengine.apiKeyMode.title"))
                         .font(TypeStyle.body)
                         .foregroundStyle(palette.textPrimary)
-                    Text("settings.asr.volcengine.apiKeyMode.subtitle")
+                    Text(AppL10n.string("settings.asr.volcengine.apiKeyMode.subtitle"))
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)

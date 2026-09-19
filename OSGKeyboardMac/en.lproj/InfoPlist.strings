@@ -1,0 +1,4 @@
+/* Permission prompts (macOS) — English */
+
+"NSMicrophoneUsageDescription" = "OSGKeyboard uses the microphone to transcribe your voice via your configured cloud speech provider.";
+"NSSpeechRecognitionUsageDescription" = "OSGKeyboard uses on-device speech recognition for local dictation mode.";

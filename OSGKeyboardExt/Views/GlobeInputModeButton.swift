@@ -57,7 +57,7 @@ struct SystemGlobeKey: View {
                 cornerRadius: KeyboardChromeLayout.actionKeyCornerRadius
             ) {
                 Image(systemName: "globe")
-                    .font(.system(size: 17, weight: .medium))
+                    .font(TypeStyle.headline.weight(.medium))
                     .foregroundStyle(NativeKeyboardKeyColors.text(for: colorScheme))
                     .accessibilityHidden(true)
             }

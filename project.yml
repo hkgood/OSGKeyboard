@@ -48,8 +48,8 @@ settings:
     ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
     STRING_CATALOG_GENERATE_SYMBOLS: YES
     CLANG_CXX_LANGUAGE_STANDARD: c++17
-    MARKETING_VERSION: "2.0.3"
-    CURRENT_PROJECT_VERSION: "94"
+    MARKETING_VERSION: "2.2.0"
+    CURRENT_PROJECT_VERSION: "96"
     # 签名配置来自 Signing.local.xcconfig（gitignored，不会被覆盖）
 
 # 项目级签名 xcconfig，适用于所有 target
@@ -68,10 +68,18 @@ targets:
     sources:
       - path: OSGKeyboard/AppIcon.icon
         buildPhase: resources
+      # Empty Settings bundle: guarantees the app owns a Settings entry so
+      # `openSettingsURLString` lands on the app's own page instead of the
+      # Settings root or the Apps list.
+      - path: OSGKeyboard/Settings.bundle
+        type: folder
+        buildPhase: resources
       - path: OSGKeyboard
         excludes:
           - "AppIcon.icon"
           - "OSGKeyboard.icon"
+          # Declared explicitly under `resources` so it ships as a bundle.
+          - "Settings.bundle/**"
           # Legacy PNG app icons must not coexist with AppIcon.icon — actool
           # crashes when both are passed. iOS 26 uses Icon Composer only.
           - "Assets.xcassets/AppIcon.appiconset"
@@ -94,12 +102,6 @@ targets:
         buildPhase: resources
       # `.shortcut` is not a XcodeGen-known resource type; list each file
       # as an explicit resource source or it never lands in the app bundle.
-      - path: OSGKeyboard/Resources/Shortcuts/OSGExtractTodos.shortcut
-        type: file
-        buildPhase: resources
-      - path: OSGKeyboard/Resources/Shortcuts/OSGExtractEvents.shortcut
-        type: file
-        buildPhase: resources
       - path: OSGKeyboard/Resources/Shortcuts/OSGSaveToNotes.shortcut
         type: file
         buildPhase: resources
@@ -184,6 +186,8 @@ targets:
         NSMicrophoneUsageDescription: "OSGKeyboard uses the microphone for voice dictation, including active Flow sessions while you type in other apps."
         NSSpeechRecognitionUsageDescription: "OSGKeyboard uses speech recognition to transcribe your voice. Audio is processed on-device by default, or sent to your configured speech provider only when you enable cloud recognition."
         NSContactsUsageDescription: "OSGKeyboard uses Contacts only when you choose Create Contact for a copied phone number."
+        NSRemindersFullAccessUsageDescription: "OSGKeyboard adds reminders only when you choose Extract To-dos for copied text."
+        NSCalendarsFullAccessUsageDescription: "OSGKeyboard adds calendar events only when you choose Extract Events for copied text."
         UIBackgroundModes:
           - audio
         BGTaskSchedulerPermittedIdentifiers:
@@ -302,6 +306,12 @@ targets:
       - path: OSGKeyboardExt/en.lproj/Keyboard.strings
         buildPhase: resources
       - path: OSGKeyboardExt/zh-Hans.lproj/Keyboard.strings
+        buildPhase: resources
+      # The extension shows its own microphone / speech prompts, so it needs
+      # its own InfoPlist.strings — the host app's copy does not cover it.
+      - path: OSGKeyboardExt/en.lproj/InfoPlist.strings
+        buildPhase: resources
+      - path: OSGKeyboardExt/zh-Hans.lproj/InfoPlist.strings
         buildPhase: resources
     resources:
       - path: OSGKeyboardExt/Assets.xcassets

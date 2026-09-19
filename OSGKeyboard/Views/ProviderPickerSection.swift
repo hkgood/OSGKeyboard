@@ -94,7 +94,7 @@ struct ProviderPickerSection: View {
             }
 
             Image(systemName: "chevron.up.chevron.down")
-                .font(.system(size: 12, weight: .semibold))
+                .font(TypeStyle.caption.weight(.semibold))
                 .foregroundStyle(palette.textTertiary)
                 .accessibilityHidden(true)
         }
@@ -103,7 +103,7 @@ struct ProviderPickerSection: View {
 
     /// 通义千问 / 智谱 GLM 等支持云端 ASR 热词 API 的提供商。
     private var personalDictionaryBadge: some View {
-        Text("settings.provider.personalDictionaryBadge")
+        Text(AppL10n.string("settings.provider.personalDictionaryBadge"))
             .font(TypeStyle.caption2)
             .foregroundStyle(palette.accent)
             .padding(.horizontal, Spacing.sm)
@@ -114,7 +114,7 @@ struct ProviderPickerSection: View {
 
     /// Bailian / Volcengine / OpenAI Realtime — utterance-level true streaming.
     private var streamingBadge: some View {
-        Text("settings.provider.streamingBadge")
+        Text(AppL10n.string("settings.provider.streamingBadge"))
             .font(TypeStyle.caption2)
             .foregroundStyle(palette.accent)
             .padding(.horizontal, Spacing.sm)

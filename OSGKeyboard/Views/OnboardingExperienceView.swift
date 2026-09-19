@@ -4,11 +4,11 @@
 // A short, outcome-led first run:
 //   1) Explain the product and its data boundaries.
 //   2) Request the two permissions needed by Flow.
-//   3) Guide keyboard installation with a visual system-settings preview.
-//   4) Activate and verify the real keyboard in a host text field.
-//   5) Teach four real features without requiring an account or API key.
-//   6) Offer optional sign-in for the existing signup reward.
-//   7) Celebrate the verified onboarding outcomes.
+//   3) Add the keyboard and verify Full Access on one screen — a settings
+//      preview plus a type-to-verify field that auto-advances on success.
+//   4) Teach four real features without requiring an account or API key.
+//   5) Offer optional sign-in for the existing signup reward.
+//   6) Celebrate the verified onboarding outcomes.
 
 import OSGKeyboardShared
 import SwiftUI
@@ -17,9 +17,11 @@ import UIKit
 private enum OnboardingExperienceStep: Int, CaseIterable {
     case introduction = 0
     case permissions = 1
+    // Setup + verification are now a single step: the user adds the keyboard
+    // and confirms Full Access by typing in the same screen.
     case keyboard = 2
-    // Keep existing persisted raw values stable while inserting this step
-    // between keyboard setup and practice.
+    // Retired: kept only so a value persisted mid-onboarding by an older build
+    // resolves to `.keyboard` instead of an unknown step. Never navigated to.
     case keyboardSwitch = 5
     case practice = 3
     case complete = 4
@@ -28,7 +30,7 @@ private enum OnboardingExperienceStep: Int, CaseIterable {
 }
 
 private extension ManagedGatewayOOBEFeature {
-    var progressKey: LocalizedStringKey {
+    var progressKey: String {
         switch self {
         case .voiceInput:
             return "onboarding.experience.practice.progress.voice"
@@ -41,7 +43,7 @@ private extension ManagedGatewayOOBEFeature {
         }
     }
 
-    var titleKey: LocalizedStringKey {
+    var titleKey: String {
         switch self {
         case .voiceInput:
             return "onboarding.experience.practice.speakTitle"
@@ -54,7 +56,7 @@ private extension ManagedGatewayOOBEFeature {
         }
     }
 
-    var subtitleKey: LocalizedStringKey {
+    var subtitleKey: String {
         switch self {
         case .voiceInput:
             return "onboarding.experience.practice.speakSubtitle"
@@ -117,7 +119,10 @@ struct OnboardingExperienceView: View {
     @State private var speechStatus = AppPermissions.speechStatus
     @State private var keyboardAppeared = KeyboardSetupBridge.hasAppeared
     @State private var keyboardReady = KeyboardSetupBridge.isReadyForOnboardingSkip
+    /// `nil` when iOS does not expose the enabled-keyboard list.
+    @State private var keyboardInstalled = KeyboardInstallationProbe.isKeyboardEnabled()
     @State private var hasOpenedKeyboardSettings = false
+    @State private var keyboardSettingsOpenFailed = false
     @State private var isRequestingPermissions = false
     @State private var keyboardSwitchText = ""
     @State private var keyboardVerificationTimedOut = false
@@ -131,10 +136,13 @@ struct OnboardingExperienceView: View {
     @State private var completedPracticeFeatures: Set<ManagedGatewayOOBEFeature> = []
     @State private var didCopyPracticeSample = false
     @State private var didRefreshLoginReward = false
-    @State private var showsKeyboardSwitchIcon = false
     @State private var showsLoginRewardIcon = false
     @State private var showsCompleteIcon = false
     @State private var previewPageIndex = 0
+    // Which edge a newly presented page slides in from. Forward navigation
+    // enters from the trailing edge, back navigation from the leading edge, so
+    // the motion always matches the direction the user is travelling.
+    @State private var transitionEdge: Edge = .trailing
     @FocusState private var keyboardSwitchFieldFocused: Bool
     @FocusState private var practiceFieldFocused: Bool
 
@@ -155,7 +163,10 @@ struct OnboardingExperienceView: View {
             break
         }
         #endif
-        return OnboardingExperienceStep(rawValue: config.onboardingPage) ?? .introduction
+        let resolved = OnboardingExperienceStep(rawValue: config.onboardingPage) ?? .introduction
+        // The switch step was folded into `.keyboard`; a value left behind by an
+        // older build lands on the merged setup screen.
+        return resolved == .keyboardSwitch ? .keyboard : resolved
     }
 
     #if DEBUG
@@ -262,13 +273,13 @@ struct OnboardingExperienceView: View {
     var body: some View {
         ZStack {
             palette.background.ignoresSafeArea()
-            ambientBackground
+            OnboardingAmbientBackground()
 
             VStack(spacing: 0) {
                 page
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .id(currentStep)
-                    .transition(.opacity.combined(with: .move(edge: .trailing)))
+                    .transition(pageTransition)
 
                 bottomAction
                     .padding(.horizontal, Spacing.lg)
@@ -279,6 +290,9 @@ struct OnboardingExperienceView: View {
             guard !isPreviewMode else { return }
             migrateLegacyProgressIfNeeded()
             applyPrivacySafeDefaultsIfNeeded()
+            if currentStep == .keyboard {
+                KeyboardSetupBridge.invalidateSetupObservation()
+            }
             refreshState()
             if currentStep == .practice {
                 beginPractice()
@@ -294,11 +308,9 @@ struct OnboardingExperienceView: View {
             guard !isPreviewMode else { return }
             guard phase == .active else { return }
             refreshState()
-            if currentStep == .keyboard, hasOpenedKeyboardSettings {
-                goForward()
-                return
-            }
-            if currentStep == .keyboardSwitch, !keyboardReady {
+            // Returning from Settings: keep the verify field ready so the
+            // extension can run and report Full Access on this same screen.
+            if currentStep == .keyboard, !keyboardReady {
                 focusKeyboardSwitchField()
             }
             if currentStep == .practice {
@@ -307,14 +319,18 @@ struct OnboardingExperienceView: View {
         }
         .onChange(of: currentStep) { previous, current in
             guard !isPreviewMode else { return }
-            if previous == .keyboardSwitch {
+            if previous == .keyboard {
                 keyboardSwitchFieldFocused = false
             }
             if previous == .practice {
                 endPractice()
             }
-            if current == .keyboardSwitch {
+            if current == .keyboard {
+                // Re-verify from scratch: the previous record may predate the
+                // user removing the keyboard or revoking Full Access.
+                KeyboardSetupBridge.invalidateSetupObservation()
                 keyboardVerificationTimedOut = false
+                refreshState()
                 focusKeyboardSwitchField()
             }
             if current == .practice {
@@ -338,7 +354,7 @@ struct OnboardingExperienceView: View {
         .task(id: currentStep) {
             guard !isPreviewMode else { return }
             switch currentStep {
-            case .keyboardSwitch:
+            case .keyboard:
                 await monitorKeyboardVerification()
             case .practice:
                 await monitorPractice()
@@ -355,10 +371,8 @@ struct OnboardingExperienceView: View {
             introductionPage
         case .permissions:
             permissionsPage
-        case .keyboard:
+        case .keyboard, .keyboardSwitch:
             keyboardPage
-        case .keyboardSwitch:
-            keyboardSwitchPage
         case .practice:
             practicePage
         case .loginReward:
@@ -368,21 +382,17 @@ struct OnboardingExperienceView: View {
         }
     }
 
-    private var ambientBackground: some View {
-        GeometryReader { geometry in
-            LinearGradient(
-                colors: [
-                    palette.accent.opacity(0.10),
-                    palette.accent.opacity(0.025),
-                    palette.background.opacity(0)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: geometry.size.height * 0.46)
-            .allowsHitTesting(false)
-        }
-        .ignoresSafeArea(edges: .top)
+    /// Directional page transition: a page enters from the edge the user is
+    /// travelling toward and the outgoing page exits the opposite way, so
+    /// forward and back feel physically distinct. Collapses to a plain fade
+    /// when Reduce Motion is on.
+    private var pageTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        let exitEdge: Edge = transitionEdge == .trailing ? .leading : .trailing
+        return .asymmetric(
+            insertion: .move(edge: transitionEdge).combined(with: .opacity),
+            removal: .move(edge: exitEdge).combined(with: .opacity)
+        )
     }
 
     // MARK: - Introduction
@@ -400,7 +410,7 @@ struct OnboardingExperienceView: View {
                     .foregroundStyle(palette.textPrimary)
                     .accessibilityHidden(true)
 
-                Text("onboarding.experience.intro.eyebrow")
+                Text(AppL10n.string("onboarding.experience.intro.eyebrow"))
                     .font(.system(size: 10, weight: .medium))
                     .tracking(1.2)
                     .foregroundStyle(palette.textPrimary)
@@ -413,12 +423,12 @@ struct OnboardingExperienceView: View {
                     }
                     .padding(.top, Spacing.hero)
 
-                Text("onboarding.experience.intro.title")
+                Text(AppL10n.string("onboarding.experience.intro.title"))
                     .font(TypeStyle.largeTitle)
                     .foregroundStyle(palette.textPrimary)
                     .padding(.top, Spacing.md)
 
-                Text("onboarding.experience.intro.subtitle")
+                Text(AppL10n.string("onboarding.experience.intro.subtitle"))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -445,7 +455,7 @@ struct OnboardingExperienceView: View {
 
                 if let privacyURL = LegalLinks.privacyPolicyURL {
                     Link(destination: privacyURL) {
-                        Text("legal.privacyPolicy")
+                        Text(AppL10n.string("legal.privacyPolicy"))
                             .font(TypeStyle.caption)
                             .foregroundStyle(palette.textSecondary)
                             .underline()
@@ -462,8 +472,8 @@ struct OnboardingExperienceView: View {
 
     private func promiseRow(
         icon: String,
-        title: LocalizedStringKey,
-        detail: LocalizedStringKey
+        title: String,
+        detail: String
     ) -> some View {
         HStack(alignment: .top, spacing: Spacing.md) {
             Image(systemName: icon)
@@ -473,10 +483,10 @@ struct OnboardingExperienceView: View {
                 .background(palette.surfaceMuted, in: RoundedRectangle(cornerRadius: Radius.medium))
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(title)
+                Text(AppL10n.string(title))
                     .font(TypeStyle.bodyEmph)
                     .foregroundStyle(palette.textPrimary)
-                Text(detail)
+                Text(AppL10n.string(detail))
                     .font(TypeStyle.footnote)
                     .foregroundStyle(palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -515,7 +525,7 @@ struct OnboardingExperienceView: View {
             }
             .padding(.top, Spacing.xxl)
 
-            Text("onboarding.experience.permissions.systemHint")
+            Text(AppL10n.string("onboarding.experience.permissions.systemHint"))
                 .font(TypeStyle.caption)
                 .foregroundStyle(palette.textTertiary)
                 .multilineTextAlignment(.center)
@@ -523,11 +533,11 @@ struct OnboardingExperienceView: View {
                 .padding(.top, Spacing.lg)
 
             if !permissionsReady {
-                Button("onboarding.experience.permissions.later") {
+                Button(AppL10n.string("onboarding.experience.permissions.later")) {
                     goForward()
                 }
-                .font(TypeStyle.footnote)
-                .foregroundStyle(palette.textSecondary)
+                .font(TypeStyle.footnote.weight(.medium))
+                .foregroundStyle(palette.accent)
                 .padding(.top, Spacing.xl)
             }
         }
@@ -535,23 +545,23 @@ struct OnboardingExperienceView: View {
 
     private func permissionRow(
         icon: String,
-        title: LocalizedStringKey,
-        detail: LocalizedStringKey,
+        title: String,
+        detail: String,
         granted: Bool,
         denied: Bool
     ) -> some View {
         HStack(spacing: Spacing.md) {
             Image(systemName: icon)
-                .font(.system(size: 20, weight: .semibold))
+                .font(TypeStyle.title3)
                 .foregroundStyle(palette.textPrimary)
                 .frame(width: 42, height: 42)
                 .background(palette.surfaceMuted, in: RoundedRectangle(cornerRadius: Radius.medium))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(AppL10n.string(title))
                     .font(TypeStyle.bodyEmph)
                     .foregroundStyle(palette.textPrimary)
-                Text(detail)
+                Text(AppL10n.string(detail))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
             }
@@ -559,7 +569,7 @@ struct OnboardingExperienceView: View {
             Spacer(minLength: Spacing.sm)
 
             Image(systemName: granted ? "checkmark.circle.fill" : (denied ? "exclamationmark.circle.fill" : "circle"))
-                .font(.system(size: 20, weight: .semibold))
+                .font(TypeStyle.title3)
                 .foregroundStyle(granted ? palette.accent : (denied ? palette.warning : palette.textTertiary))
                 .accessibilityHidden(true)
         }
@@ -570,35 +580,76 @@ struct OnboardingExperienceView: View {
 
     // MARK: - Keyboard setup
 
+    // MARK: - Keyboard setup and verification (single merged step)
+
+    /// Adds the keyboard and verifies Full Access on one screen: the extension
+    /// can only report Full Access by actually running, so the verify field
+    /// lives here rather than on a separate switch step.
     private var keyboardPage: some View {
         OnboardingExperienceShell(
             title: "onboarding.experience.keyboard.title",
             subtitle: "onboarding.experience.keyboard.subtitle",
             onBack: goBack
         ) {
-            KeyboardSettingsPreview(isReady: keyboardReady)
+            KeyboardSettingsPreview(
+                isKeyboardEnabled: keyboardInstalled == true,
+                hasFullAccess: keyboardReady
+            )
                 .padding(.top, Spacing.xxl)
 
             HStack(spacing: Spacing.xs) {
                 Image(systemName: keyboardReady ? "checkmark.circle.fill" : "info.circle")
                     .foregroundStyle(keyboardReady ? palette.accent : palette.textSecondary)
-                Text(
-                    keyboardReady
-                        ? "onboarding.experience.keyboard.ready"
-                        : "onboarding.experience.keyboard.fullAccess"
-                )
-                .font(TypeStyle.caption)
-                .foregroundStyle(palette.textSecondary)
+                Text(AppL10n.string(keyboardStatusHint))
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.textSecondary)
             }
             .padding(.top, Spacing.lg)
 
-            if hasOpenedKeyboardSettings, !keyboardReady {
-                Button("onboarding.experience.keyboard.openAgain") {
-                    openKeyboardSettings()
-                }
-                .font(TypeStyle.footnote)
-                .foregroundStyle(palette.textSecondary)
+            if keyboardSettingsOpenFailed {
+                Text(AppL10n.string("onboarding.experience.keyboard.openFailed"))
+                    .font(TypeStyle.caption)
+                    .foregroundStyle(palette.warning)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, Spacing.lg)
+            }
+
+            keyboardVerifySection
                 .padding(.top, Spacing.lg)
+
+            if hasOpenedKeyboardSettings, !keyboardReady {
+                Button {
+                    openKeyboardSettings()
+                } label: {
+                    Label(
+                        keyboardAppeared
+                            ? "onboarding.experience.keyboardSwitch.checkSettings"
+                            : "onboarding.experience.keyboard.openAgain",
+                        systemImage: "arrow.up.right.square"
+                    )
+                    .font(TypeStyle.bodyEmph)
+                    .foregroundStyle(palette.accent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Spacing.md)
+                    .background(
+                        palette.surface,
+                        in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
+                    )
+                }
+                .buttonStyle(.plain)
+                .padding(.top, Spacing.md)
+            }
+
+            // The extension never reports back until it actually runs, so a
+            // stalled verification must not trap the user in onboarding.
+            if !keyboardReady, keyboardVerificationTimedOut, !keyboardAppeared {
+                Button(AppL10n.string("onboarding.experience.keyboardSwitch.skip")) {
+                    goToLoginReward()
+                }
+                .font(TypeStyle.footnote.weight(.medium))
+                .foregroundStyle(palette.accent)
+                .padding(.top, Spacing.sm)
             }
 
             resourceStatus
@@ -609,42 +660,17 @@ struct OnboardingExperienceView: View {
         }
     }
 
-    // MARK: - Keyboard activation and verification
-
-    private var keyboardSwitchPage: some View {
-        OnboardingExperienceShell(
-            title: "onboarding.experience.keyboardSwitch.title",
-            subtitle: "onboarding.experience.keyboardSwitch.subtitle",
-            onBack: goBack
-        ) {
-            VStack(spacing: Spacing.md) {
-                Image(systemName: "globe")
-                    .font(.system(size: 40, weight: .ultraLight))
-                    .foregroundStyle(palette.textPrimary)
-                    .symbolEffect(
-                        .drawOn,
-                        isActive: !reduceMotion && !showsKeyboardSwitchIcon
-                    )
-                    .symbolEffectsRemoved(reduceMotion)
-                    .accessibilityHidden(true)
-
-                Text("onboarding.experience.keyboardSwitch.instruction")
-                    .font(TypeStyle.bodyEmph)
-                    .foregroundStyle(palette.textPrimary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(Spacing.lg)
-            .background(
-                palette.surface,
-                in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
-            )
-            .cardElevation()
-            .padding(.top, Spacing.xxl)
+    /// The type-to-verify block. Typing here launches the extension, which is
+    /// the only way the host learns Full Access was granted.
+    private var keyboardVerifySection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text(AppL10n.string("onboarding.experience.keyboardSwitch.instruction"))
+                .font(TypeStyle.caption)
+                .foregroundStyle(palette.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             TextField(
-                "onboarding.experience.keyboardSwitch.placeholder",
+                AppL10n.string("onboarding.experience.keyboardSwitch.placeholder"),
                 text: $keyboardSwitchText,
                 axis: .vertical
             )
@@ -661,7 +687,6 @@ struct OnboardingExperienceView: View {
                 in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
             )
             .accessibilityIdentifier("onboarding.keyboardSwitch.textField")
-            .padding(.top, Spacing.lg)
 
             HStack(spacing: Spacing.xs) {
                 if keyboardReady {
@@ -670,43 +695,34 @@ struct OnboardingExperienceView: View {
                 } else if keyboardAppeared || keyboardVerificationTimedOut {
                     Image(systemName: "exclamationmark.circle.fill")
                         .foregroundStyle(palette.warning)
-                } else {
+                } else if hasOpenedKeyboardSettings {
                     ProgressView()
                         .tint(palette.accent)
+                } else {
+                    Image(systemName: "keyboard")
+                        .foregroundStyle(palette.textTertiary)
                 }
 
-                Text(keyboardVerificationStatus)
+                Text(AppL10n.string(keyboardVerificationStatus))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
             }
-            .padding(.top, Spacing.md)
-
-            if !keyboardReady, keyboardAppeared || keyboardVerificationTimedOut {
-                Button("onboarding.experience.keyboardSwitch.checkSettings") {
-                    openKeyboardSettings()
-                }
-                .font(TypeStyle.footnote)
-                .foregroundStyle(palette.accent)
-                .padding(.top, Spacing.sm)
-            }
-        }
-        .task {
-            guard !reduceMotion else { return }
-            showsKeyboardSwitchIcon = false
-            do {
-                // 等待页面首帧完成，再绘制出现输入法切换图标。
-                try await Task.sleep(for: .milliseconds(120))
-                showsKeyboardSwitchIcon = true
-            } catch {
-                showsKeyboardSwitchIcon = false
-            }
-        }
-        .onDisappear {
-            showsKeyboardSwitchIcon = false
         }
     }
 
-    private var keyboardVerificationStatus: LocalizedStringKey {
+    /// iOS reports whether the keyboard is enabled, but only the extension can
+    /// confirm Full Access.
+    private var keyboardStatusHint: String {
+        if keyboardReady {
+            return "onboarding.experience.keyboard.ready"
+        }
+        if keyboardInstalled == true {
+            return "onboarding.experience.keyboard.addedNeedsFullAccess"
+        }
+        return "onboarding.experience.keyboard.fullAccess"
+    }
+
+    private var keyboardVerificationStatus: String {
         if keyboardReady {
             return "onboarding.experience.keyboardSwitch.ready"
         }
@@ -723,7 +739,7 @@ struct OnboardingExperienceView: View {
     private var resourceStatus: some View {
         switch deployment.status {
         case .deploying:
-            Label("onboarding.enable.resources.preparing", systemImage: "hourglass")
+            Label(AppL10n.string("onboarding.enable.resources.preparing"), systemImage: "hourglass")
                 .font(TypeStyle.caption2)
                 .foregroundStyle(palette.textTertiary)
         case .ready:
@@ -732,7 +748,7 @@ struct OnboardingExperienceView: View {
             Button {
                 deployment.deployNow(force: true, reason: "onboarding.experience.retry")
             } label: {
-                Label("onboarding.enable.resources.retry", systemImage: "arrow.clockwise")
+                Label(AppL10n.string("onboarding.enable.resources.retry"), systemImage: "arrow.clockwise")
                     .font(TypeStyle.caption)
             }
             .foregroundStyle(palette.warning)
@@ -748,25 +764,25 @@ struct OnboardingExperienceView: View {
             HStack {
                 Button(action: goBack) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(TypeStyle.headline)
                         .foregroundStyle(palette.textPrimary)
                         .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text("common.back"))
+                .accessibilityLabel(Text(AppL10n.string("common.back")))
 
                 Spacer()
             }
             .padding(.horizontal, Spacing.sm)
 
             VStack(alignment: .leading, spacing: Spacing.sm) {
-                Text(practiceTitle)
+                Text(AppL10n.string(practiceTitle))
                     .font(TypeStyle.title)
                     .foregroundStyle(palette.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text(practiceSubtitle)
+                Text(AppL10n.string(practiceSubtitle))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -787,7 +803,7 @@ struct OnboardingExperienceView: View {
                     openKeyboardSettings()
                 } label: {
                     Label(
-                        "onboarding.experience.practice.fullAccessAction",
+                        AppL10n.string("onboarding.experience.practice.fullAccessAction"),
                         systemImage: "arrow.up.right.square"
                     )
                     .font(TypeStyle.caption)
@@ -809,7 +825,7 @@ struct OnboardingExperienceView: View {
                     .font(.system(size: 34, weight: .semibold))
                     .foregroundStyle(palette.textPrimary)
 
-                Text("onboarding.experience.practice.cloudBody")
+                Text(AppL10n.string("onboarding.experience.practice.cloudBody"))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
                     .multilineTextAlignment(.center)
@@ -818,7 +834,7 @@ struct OnboardingExperienceView: View {
                 Button {
                     config.hasAcknowledgedCloudSharing = true
                 } label: {
-                    Text("onboarding.experience.practice.cloudAction")
+                    Text(AppL10n.string("onboarding.experience.practice.cloudAction"))
                         .primaryButton()
                 }
                 .buttonStyle(.plain)
@@ -828,7 +844,7 @@ struct OnboardingExperienceView: View {
             VStack(spacing: Spacing.md) {
                 ProgressView()
                     .tint(palette.accent)
-                Text("onboarding.experience.practice.preparingCredits")
+                Text(AppL10n.string("onboarding.experience.practice.preparingCredits"))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
             }
@@ -838,21 +854,21 @@ struct OnboardingExperienceView: View {
                 Image(systemName: "arrow.clockwise.circle")
                     .font(.system(size: 34, weight: .semibold))
                     .foregroundStyle(palette.warning)
-                Text("onboarding.experience.practice.creditsFailed")
+                Text(AppL10n.string("onboarding.experience.practice.creditsFailed"))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                Button("onboarding.experience.practice.retry") {
+                Button(AppL10n.string("onboarding.experience.practice.retry")) {
                     prepareManagedPractice()
                 }
                 .font(TypeStyle.bodyEmph)
                 .foregroundStyle(palette.accent)
-                Button("onboarding.experience.practice.skip") {
+                Button(AppL10n.string("onboarding.experience.practice.skip")) {
                     goToLoginReward()
                 }
-                .font(TypeStyle.footnote)
-                .foregroundStyle(palette.textSecondary)
+                .font(TypeStyle.footnote.weight(.medium))
+                .foregroundStyle(palette.accent)
             }
             .practiceSetupCard(palette: palette)
         } else {
@@ -877,24 +893,24 @@ struct OnboardingExperienceView: View {
                         .controlSize(.small)
                         .tint(palette.accent)
                 }
-                Text("onboarding.experience.practice.waiting")
+                Text(AppL10n.string("onboarding.experience.practice.waiting"))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
             }
 
-            Button("onboarding.experience.practice.skip") {
+            Button(AppL10n.string("onboarding.experience.practice.skip")) {
                 guard !isPreviewMode else { return }
                 goToLoginReward()
             }
-            .font(TypeStyle.caption)
-            .foregroundStyle(palette.textTertiary)
+            .font(TypeStyle.caption.weight(.medium))
+            .foregroundStyle(palette.accent)
         }
     }
 
     @ViewBuilder
     private var accountOperationError: some View {
         if let key = accountSession.operationErrorKey {
-            Text(LocalizedStringKey(key))
+            Text(AppL10n.string(key))
                 .font(TypeStyle.caption2)
                 .foregroundStyle(palette.warning)
                 .multilineTextAlignment(.center)
@@ -908,7 +924,7 @@ struct OnboardingExperienceView: View {
                     .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(palette.textPrimary)
                     .accessibilityHidden(true)
-                Text(practiceFeature.progressKey)
+                Text(AppL10n.string(practiceFeature.progressKey))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
                 Spacer()
@@ -933,11 +949,11 @@ struct OnboardingExperienceView: View {
 
     private var practiceVoiceSample: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text("onboarding.experience.practice.readAloud")
+            Text(AppL10n.string("onboarding.experience.practice.readAloud"))
                 .font(TypeStyle.caption)
                 .foregroundStyle(palette.textSecondary)
 
-            Text("onboarding.experience.practice.voiceSample")
+            Text(AppL10n.string("onboarding.experience.practice.voiceSample"))
                 .font(TypeStyle.bodyEmph)
                 .foregroundStyle(palette.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -950,7 +966,7 @@ struct OnboardingExperienceView: View {
 
     private var practiceClipboardSample: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            Text(LocalizedStringKey(practiceClipboardSampleLocalizationKey))
+            Text(AppL10n.string(practiceClipboardSampleLocalizationKey))
                 .font(TypeStyle.bodyEmph)
                 .foregroundStyle(palette.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -989,7 +1005,7 @@ struct OnboardingExperienceView: View {
     }
 
     private var practiceAskAIPrompt: some View {
-        Text("onboarding.experience.practice.askAIPrompt")
+        Text(AppL10n.string("onboarding.experience.practice.askAIPrompt"))
             .font(TypeStyle.bodyEmph)
             .foregroundStyle(palette.textPrimary)
             .fixedSize(horizontal: false, vertical: true)
@@ -1004,7 +1020,7 @@ struct OnboardingExperienceView: View {
             : "onboarding.experience.practice.replySample"
     }
 
-    private var practiceTitle: LocalizedStringKey {
+    private var practiceTitle: String {
         if isPreviewMode {
             return practiceFeature.titleKey
         }
@@ -1026,7 +1042,7 @@ struct OnboardingExperienceView: View {
         return practiceFeature.titleKey
     }
 
-    private var practiceSubtitle: LocalizedStringKey {
+    private var practiceSubtitle: String {
         if isPreviewMode {
             return practiceFeature.subtitleKey
         }
@@ -1079,7 +1095,7 @@ struct OnboardingExperienceView: View {
 
                 if accountSession.isSignedIn {
                     if let balance = loginRewardBalance {
-                        Text("onboarding.experience.login.balance \(balance)")
+                        Text(AppL10n.format("onboarding.experience.login.balance %lld", balance))
                             .font(TypeStyle.title)
                             .foregroundStyle(palette.textPrimary)
                     } else {
@@ -1099,11 +1115,11 @@ struct OnboardingExperienceView: View {
                     accountOperationError
                 }
 
-                Button("onboarding.experience.login.skip") {
+                Button(AppL10n.string("onboarding.experience.login.skip")) {
                     goToComplete()
                 }
-                .font(TypeStyle.footnote)
-                .foregroundStyle(palette.textSecondary)
+                .font(TypeStyle.footnote.weight(.medium))
+                .foregroundStyle(palette.accent)
                 .opacity(accountSession.isSignedIn ? 0 : 1)
                 .disabled(accountSession.isSignedIn || accountSession.operation != nil)
                 .accessibilityHidden(accountSession.isSignedIn)
@@ -1168,7 +1184,7 @@ struct OnboardingExperienceView: View {
                 .multilineTextAlignment(.center)
                 .padding(.top, Spacing.xxl)
 
-                Text("onboarding.experience.complete.subtitle")
+                Text(AppL10n.string("onboarding.experience.complete.subtitle"))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textSecondary)
                     .multilineTextAlignment(.center)
@@ -1209,12 +1225,12 @@ struct OnboardingExperienceView: View {
         }
     }
 
-    private func capability(_ icon: String, _ title: LocalizedStringKey) -> some View {
+    private func capability(_ icon: String, _ title: String) -> some View {
         VStack(spacing: Spacing.xs) {
             Image(systemName: icon)
                 .font(.system(size: 24, weight: .semibold))
                 .foregroundStyle(palette.accent)
-            Text(title)
+            Text(AppL10n.string(title))
                 .font(TypeStyle.caption)
                 .foregroundStyle(palette.textPrimary)
         }
@@ -1229,11 +1245,14 @@ struct OnboardingExperienceView: View {
     private var bottomAction: some View {
         Button(action: performPrimaryAction) {
             HStack(spacing: Spacing.xs) {
-                if isRequestingPermissions || (currentStep == .keyboardSwitch && !keyboardReady) {
+                if isRequestingPermissions
+                    || (currentStep == .keyboard
+                && hasOpenedKeyboardSettings
+                && !keyboardSwitchCanContinue) {
                     ProgressView()
                         .tint(palette.textOnAccent)
                 }
-                Text(primaryActionTitle)
+                Text(AppL10n.string(primaryActionTitle))
             }
             .primaryButton()
         }
@@ -1246,7 +1265,10 @@ struct OnboardingExperienceView: View {
         if previewsAllScreens {
             return false
         }
-        if isRequestingPermissions || (currentStep == .keyboardSwitch && !keyboardReady) {
+        if isRequestingPermissions
+            || (currentStep == .keyboard
+                && hasOpenedKeyboardSettings
+                && !keyboardSwitchCanContinue) {
             return true
         }
         if currentStep == .practice {
@@ -1258,7 +1280,7 @@ struct OnboardingExperienceView: View {
         return false
     }
 
-    private var primaryActionTitle: LocalizedStringKey {
+    private var primaryActionTitle: String {
         switch currentStep {
         case .introduction:
             return "onboarding.experience.intro.action"
@@ -1268,15 +1290,15 @@ struct OnboardingExperienceView: View {
                 return "onboarding.permission.openSettings"
             }
             return "common.continue"
-        case .keyboard:
+        case .keyboard, .keyboardSwitch:
             if keyboardReady { return "common.continue" }
-            return hasOpenedKeyboardSettings
-                ? "common.continue"
-                : "onboarding.enable.openSettings"
-        case .keyboardSwitch:
-            return keyboardReady
-                ? "common.continue"
-                : "onboarding.experience.keyboardSwitch.waitingAction"
+            if keyboardAppeared {
+                return "onboarding.experience.keyboardSwitch.continueWithoutFullAccess"
+            }
+            if !hasOpenedKeyboardSettings {
+                return "onboarding.enable.openSettings"
+            }
+            return "onboarding.experience.keyboardSwitch.waitingAction"
         case .practice:
             return "common.continue"
         case .loginReward:
@@ -1297,15 +1319,13 @@ struct OnboardingExperienceView: View {
             goForward()
         case .permissions:
             handlePermissionAction()
-        case .keyboard:
-            if keyboardReady || hasOpenedKeyboardSettings {
+        case .keyboard, .keyboardSwitch:
+            if keyboardSwitchCanContinue {
                 goForward()
-            } else {
+            } else if !hasOpenedKeyboardSettings {
                 openKeyboardSettings()
             }
-        case .keyboardSwitch:
-            guard keyboardReady else { return }
-            goForward()
+            // Otherwise verification is still in flight — wait for the monitor.
         case .practice:
             guard completedAllPracticeFeatures else { return }
             goToLoginReward()
@@ -1322,6 +1342,7 @@ struct OnboardingExperienceView: View {
         guard previewPageIndex < Self.allPreviewDestinations.count - 1 else {
             return true
         }
+        transitionEdge = .trailing
         withAnimation(Motion.soft) {
             previewPageIndex += 1
             if case let .practice(feature) = activePreviewDestination {
@@ -1340,6 +1361,13 @@ struct OnboardingExperienceView: View {
 
     private var permissionsReady: Bool {
         micStatus == .granted && speechStatus == .granted
+    }
+
+    /// Full Access is required for the practice steps, but the keyboard itself
+    /// already works without it. Once the extension has reported an appearance
+    /// the switch is verified, so onboarding must not block on Full Access.
+    private var keyboardSwitchCanContinue: Bool {
+        keyboardReady || keyboardAppeared
     }
 
     private var speechPermissionDenied: Bool {
@@ -1367,9 +1395,36 @@ struct OnboardingExperienceView: View {
         }
     }
 
+    /// Settings can refuse the jump outright, and the public fallback only
+    /// reaches the app's own page. Mark the step optimistically so returning
+    /// from Settings still advances, and surface the written path when iOS
+    /// refuses every attempt.
     private func openKeyboardSettings() {
         hasOpenedKeyboardSettings = true
-        AppPermissions.openSystemSettings()
+        keyboardSettingsOpenFailed = false
+        Task { @MainActor in
+            await ensureSettingsEntryExists()
+            AppPermissions.openKeyboardSettings { opened in
+                guard !opened else { return }
+                Task { @MainActor in
+                    hasOpenedKeyboardSettings = false
+                    keyboardSettingsOpenFailed = true
+                }
+            }
+        }
+    }
+
+    /// The public settings URL resolves to the app's own page only once the
+    /// app *has* one, and iOS creates that page the first time the app asks
+    /// for a permission. A user who chose "set up later" has never asked, so
+    /// the fallback would land on the Settings root. Requesting once here —
+    /// the outcome does not matter, only that it was asked — gives the
+    /// fallback somewhere to land.
+    @MainActor
+    private func ensureSettingsEntryExists() async {
+        guard micStatus == .undetermined, speechStatus == .undetermined else { return }
+        _ = await AppPermissions.requestMicrophone()
+        refreshState()
     }
 
     private func beginPracticeIfNeeded() {
@@ -1441,7 +1496,11 @@ struct OnboardingExperienceView: View {
     private func focusKeyboardSwitchField() {
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(350))
-            guard currentStep == .keyboardSwitch, !keyboardReady else { return }
+            // Only steal focus (and raise the system keyboard) once the user has
+            // been to Settings — before that the setup preview must stay visible.
+            guard currentStep == .keyboard,
+                  !keyboardReady,
+                  hasOpenedKeyboardSettings else { return }
             keyboardSwitchFieldFocused = true
         }
     }
@@ -1469,15 +1528,19 @@ struct OnboardingExperienceView: View {
     private func monitorKeyboardVerification() async {
         let startedAt = Date()
         refreshState()
-        guard !keyboardReady else { return }
         focusKeyboardSwitchField()
 
-        while !Task.isCancelled, currentStep == .keyboardSwitch {
+        while !Task.isCancelled, currentStep == .keyboard {
             refreshState()
             if keyboardReady {
                 keyboardVerificationTimedOut = false
                 keyboardSwitchFieldFocused = false
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
+                // Auto-advance once Full Access is verified, matching the
+                // practice steps — no manual Continue tap needed.
+                try? await Task.sleep(for: .milliseconds(650))
+                guard !Task.isCancelled, currentStep == .keyboard else { return }
+                goForward()
                 return
             }
             if !keyboardVerificationTimedOut,
@@ -1500,6 +1563,17 @@ struct OnboardingExperienceView: View {
                 let completedFeature = practiceFeature
                 completedPracticeFeatures.insert(completedFeature)
                 persistCompletedPracticeFeatures()
+                // The reply step demonstrates auto mode (the keyboard drafts a
+                // reply on its own). Persist that behavior so it keeps working
+                // after onboarding — auto mode also requires clipboard history.
+                if completedFeature == .clipboardReply {
+                    if !config.clipboardHistoryEnabled {
+                        config.clipboardHistoryEnabled = true
+                    }
+                    if !config.clipboardAutoModeEnabled {
+                        config.clipboardAutoModeEnabled = true
+                    }
+                }
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
                 try? await Task.sleep(for: .milliseconds(650))
                 guard !Task.isCancelled, currentStep == .practice else { return }
@@ -1599,8 +1673,14 @@ struct OnboardingExperienceView: View {
     private func refreshState() {
         micStatus = AppPermissions.micStatus
         speechStatus = AppPermissions.speechStatus
-        keyboardAppeared = KeyboardSetupBridge.hasAppeared
-        keyboardReady = KeyboardSetupBridge.isReadyForOnboardingSkip
+        // iOS reports the enabled-keyboard list to the host, so a removed
+        // keyboard can override the extension's older self-report. It cannot
+        // confirm Full Access — only the extension can — so `nil`/`true` leave
+        // the bridge's own answer untouched.
+        let installed = KeyboardInstallationProbe.isKeyboardEnabled()
+        keyboardInstalled = installed
+        keyboardAppeared = KeyboardSetupBridge.hasAppeared && installed != false
+        keyboardReady = KeyboardSetupBridge.isReadyForOnboardingSkip && installed != false
     }
 
     private func goForward() {
@@ -1610,9 +1690,7 @@ struct OnboardingExperienceView: View {
             next = .permissions
         case .permissions:
             next = .keyboard
-        case .keyboard:
-            next = keyboardReady ? .practice : .keyboardSwitch
-        case .keyboardSwitch:
+        case .keyboard, .keyboardSwitch:
             next = .practice
         case .practice:
             next = .loginReward
@@ -1622,6 +1700,7 @@ struct OnboardingExperienceView: View {
         if next == .practice {
             resetPracticeRun()
         }
+        transitionEdge = .trailing
         withAnimation(Motion.soft) {
             config.onboardingPage = next.rawValue
         }
@@ -1632,12 +1711,10 @@ struct OnboardingExperienceView: View {
         switch currentStep {
         case .introduction, .permissions:
             previous = .introduction
-        case .keyboard:
+        case .keyboard, .keyboardSwitch:
             previous = .permissions
-        case .keyboardSwitch:
-            previous = .keyboard
         case .practice:
-            previous = .keyboardSwitch
+            previous = .keyboard
         case .loginReward:
             previous = .practice
         case .complete:
@@ -1646,6 +1723,7 @@ struct OnboardingExperienceView: View {
         if previous == .practice {
             resetPracticeRun()
         }
+        transitionEdge = .leading
         withAnimation(Motion.soft) {
             config.onboardingPage = previous.rawValue
         }
@@ -1658,6 +1736,7 @@ struct OnboardingExperienceView: View {
             // voice keyboard instead of a managed mode with no credential.
             config.credentialSource = .byok
         }
+        transitionEdge = .trailing
         withAnimation(Motion.soft) {
             config.onboardingPage = OnboardingExperienceStep.complete.rawValue
         }
@@ -1665,6 +1744,7 @@ struct OnboardingExperienceView: View {
 
     private func goToLoginReward() {
         endPractice()
+        transitionEdge = .trailing
         withAnimation(Motion.soft) {
             config.onboardingPage = OnboardingExperienceStep.loginReward.rawValue
         }
@@ -1761,11 +1841,68 @@ private extension View {
     }
 }
 
+/// Ambient backdrop for the onboarding flow: the original calm top wash plus a
+/// pair of soft, slowly drifting accent orbs that give the emptier screens
+/// (intro, complete) a sense of life without competing with the content. The
+/// orbs are heavily blurred and low-opacity so they read as light, not shapes,
+/// and they hold still entirely when Reduce Motion is on.
+private struct OnboardingAmbientBackground: View {
+    @Environment(\.themePalette) private var palette
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var drift = false
+
+    var body: some View {
+        GeometryReader { geometry in
+            let size = geometry.size
+            ZStack(alignment: .top) {
+                LinearGradient(
+                    colors: [
+                        palette.accent.opacity(0.10),
+                        palette.accent.opacity(0.025),
+                        palette.background.opacity(0)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: size.height * 0.46)
+
+                orb(diameter: size.width * 0.95, opacity: 0.20)
+                    .position(
+                        x: size.width * (drift ? 0.16 : 0.26),
+                        y: size.height * (drift ? 0.14 : 0.09)
+                    )
+
+                orb(diameter: size.width * 0.75, opacity: 0.13)
+                    .position(
+                        x: size.width * (drift ? 0.88 : 0.80),
+                        y: size.height * (drift ? 0.24 : 0.32)
+                    )
+            }
+            .frame(width: size.width, height: size.height, alignment: .top)
+        }
+        .allowsHitTesting(false)
+        .ignoresSafeArea()
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 11).repeatForever(autoreverses: true)) {
+                drift = true
+            }
+        }
+    }
+
+    private func orb(diameter: CGFloat, opacity: Double) -> some View {
+        Circle()
+            .fill(palette.accent.opacity(opacity))
+            .frame(width: diameter, height: diameter)
+            .blur(radius: diameter * 0.34)
+    }
+}
+
 private struct OnboardingExperienceShell<Content: View>: View {
     @Environment(\.themePalette) private var palette
 
-    let title: LocalizedStringKey
-    let subtitle: LocalizedStringKey
+    let title: String
+    let subtitle: String
     let onBack: () -> Void
     @ViewBuilder let content: Content
 
@@ -1775,21 +1912,21 @@ private struct OnboardingExperienceShell<Content: View>: View {
                 HStack {
                     Button(action: onBack) {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(TypeStyle.headline)
                             .foregroundStyle(palette.textPrimary)
                             .frame(width: 44, height: 44)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(Text("common.back"))
+                    .accessibilityLabel(Text(AppL10n.string("common.back")))
                     Spacer()
                 }
 
                 VStack(spacing: Spacing.sm) {
-                    Text(title)
+                    Text(AppL10n.string(title))
                         .font(TypeStyle.largeTitle)
                         .foregroundStyle(palette.textPrimary)
-                    Text(subtitle)
+                    Text(AppL10n.string(subtitle))
                         .font(TypeStyle.body)
                         .foregroundStyle(palette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1808,15 +1945,19 @@ private struct OnboardingExperienceShell<Content: View>: View {
     }
 }
 
+/// Mirrors the two switches the user has to find in Settings. They are shown
+/// separately because they are separate steps — enabling the keyboard does not
+/// grant Full Access — and because each is verified by a different mechanism.
 private struct KeyboardSettingsPreview: View {
     @Environment(\.themePalette) private var palette
 
-    let isReady: Bool
+    let isKeyboardEnabled: Bool
+    let hasFullAccess: Bool
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("onboarding.experience.keyboard.previewTitle")
+                Text(AppL10n.string("onboarding.experience.keyboard.previewTitle"))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
                 Spacer()
@@ -1826,35 +1967,53 @@ private struct KeyboardSettingsPreview: View {
 
             Divider().overlay(palette.divider)
 
-            HStack(spacing: Spacing.md) {
+            row(title: "OSGKeyboard", isOn: isKeyboardEnabled, showsBrandMark: true)
+
+            Divider().overlay(palette.divider).padding(.leading, Spacing.md)
+
+            row(
+                title: AppL10n.string("onboarding.experience.keyboard.fullAccessRow"),
+                isOn: hasFullAccess,
+                showsBrandMark: false
+            )
+        }
+        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+        .cardElevation()
+    }
+
+    private func row(title: String, isOn: Bool, showsBrandMark: Bool) -> some View {
+        HStack(spacing: Spacing.md) {
+            if showsBrandMark {
                 Image("OSGBrandMark")
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
                     .foregroundStyle(palette.textPrimary)
                     .frame(width: 28, height: 28)
-
-                Text("OSGKeyboard")
-                    .font(TypeStyle.bodyEmph)
-                    .foregroundStyle(palette.textPrimary)
-
-                Spacer()
-
-                ZStack(alignment: isReady ? .trailing : .leading) {
-                    Capsule()
-                        .fill(isReady ? palette.accent : palette.surfaceElevated)
-                        .frame(width: 48, height: 28)
-                    Circle()
-                        .fill(isReady ? palette.textOnAccent : palette.textTertiary)
-                        .frame(width: 22, height: 22)
-                        .padding(3)
-                }
-                .animation(Motion.quick, value: isReady)
-                .accessibilityHidden(true)
+            } else {
+                Color.clear.frame(width: 28, height: 28)
             }
-            .padding(Spacing.md)
+
+            Text(title)
+                .font(TypeStyle.bodyEmph)
+                .foregroundStyle(palette.textPrimary)
+
+            Spacer()
+
+            ZStack(alignment: isOn ? .trailing : .leading) {
+                Capsule()
+                    .fill(isOn ? palette.accent : palette.surfaceElevated)
+                    .frame(width: 48, height: 28)
+                Circle()
+                    .fill(isOn ? palette.textOnAccent : palette.textTertiary)
+                    .frame(width: 22, height: 22)
+                    .padding(3)
+            }
+            .animation(Motion.quick, value: isOn)
         }
-        .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-        .cardElevation()
+        .padding(Spacing.md)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(title))
+        .accessibilityValue(Text(isOn ? "1" : "0"))
     }
 }

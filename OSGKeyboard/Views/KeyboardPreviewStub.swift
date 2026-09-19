@@ -62,7 +62,7 @@ struct KeyboardPreviewStub: View {
             Spacer(minLength: 0)
             Button(action: openSettings) {
                 Image(systemName: "gearshape.fill")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(TypeStyle.footnote.weight(.medium))
                     .foregroundStyle(palette.textSecondary)
                     .frame(width: 28, height: 28)
                     .background(palette.surface, in: Circle())
@@ -76,7 +76,7 @@ struct KeyboardPreviewStub: View {
         Button(action: onModeCycle) {
             HStack(spacing: 4) {
                 Image(systemName: modeIconName)
-                Text(modeChipLabel)
+                Text(AppL10n.string(modeChipLabel))
                 Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
             }
             .font(TypeStyle.caption2)
@@ -85,14 +85,14 @@ struct KeyboardPreviewStub: View {
             .background(palette.surfaceElevated, in: Capsule())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text("preview.modeChip.cycle"))
+        .accessibilityLabel(Text(AppL10n.string("preview.modeChip.cycle")))
     }
 
     private var localeChip: some View {
         Button(action: onLocaleCycle) {
             HStack(spacing: 4) {
                 Image(systemName: "globe")
-                Text(localeChipLabel)
+                Text(AppL10n.string(localeChipLabel))
                 Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold))
             }
             .font(TypeStyle.caption2)
@@ -101,7 +101,7 @@ struct KeyboardPreviewStub: View {
             .background(palette.surfaceElevated, in: Capsule())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text("preview.localeChip.cycle"))
+        .accessibilityLabel(Text(AppL10n.string("preview.localeChip.cycle")))
     }
 
     /// Display label for the mode chip. The mode ids are
@@ -109,12 +109,12 @@ struct KeyboardPreviewStub: View {
     /// from `Localizable.strings` and fall back to the raw id if a
     /// translation is missing (shouldn't happen, but cheaper than
     /// crashing in the preview).
-    private var modeChipLabel: LocalizedStringKey {
+    private var modeChipLabel: String {
         switch modeId {
         case "off":        return "settings.mode.off"
         case "transcribe": return "settings.mode.transcribe"
         case "polish":     return "settings.mode.polish"
-        default:           return LocalizedStringKey(modeId)
+        default:           return modeId
         }
     }
 
@@ -122,7 +122,7 @@ struct KeyboardPreviewStub: View {
     /// locale list the Settings view also uses — see `staticLocales` in
     /// `SettingsView.swift`. We keep the list inline here so the
     /// preview doesn't need a settings dependency.
-    private var localeChipLabel: LocalizedStringKey {
+    private var localeChipLabel: String {
         switch localeId {
         case "auto":       return "locale.auto"
         case "zh-Hans":    return "locale.zh-Hans"
@@ -130,7 +130,7 @@ struct KeyboardPreviewStub: View {
         case "en-US":      return "locale.en-US"
         case "ja-JP":      return "locale.ja-JP"
         case "ko-KR":      return "locale.ko-KR"
-        default:           return LocalizedStringKey(localeId)
+        default:           return localeId
         }
     }
 
@@ -159,7 +159,7 @@ struct KeyboardPreviewStub: View {
         Group {
             switch phase {
             case .idle:
-                Text("keyboard.placeholder.idle")
+                Text(AppL10n.string("keyboard.placeholder.idle"))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textTertiary)
             case .recording:
@@ -172,7 +172,7 @@ struct KeyboardPreviewStub: View {
             case .processing:
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(palette.accent)
-                    Text("keyboard.placeholder.processing")
+                    Text(AppL10n.string("keyboard.placeholder.processing"))
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -286,7 +286,7 @@ struct KeyboardPreviewStub: View {
         HStack(spacing: Spacing.xxs) {
             iconButton("delete.left")
             Button(action: {}) {
-                Text("common.space")
+                Text(AppL10n.string("common.space"))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                     .frame(maxWidth: .infinity, minHeight: 42)

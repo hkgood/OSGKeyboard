@@ -29,6 +29,9 @@ struct FeaturePreviewHostDocument: View {
 
     let kind: Kind
     let title: String
+    /// Recording language for the host chrome this view draws itself
+    /// (everything else is passed in already localized by the caller).
+    var language: WhatsNewDemoScenario.Language = .zh
     /// Text the keyboard has produced so far. Empty renders the placeholder.
     let text: String
     /// Messages only — the message being replied to.
@@ -39,7 +42,7 @@ struct FeaturePreviewHostDocument: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.system(size: 13))
+                .font(TypeStyle.footnote)
                 .foregroundStyle(Color(uiColor: .secondaryLabel))
                 .padding(.horizontal, 4)
 
@@ -94,8 +97,8 @@ struct FeaturePreviewHostDocument: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
             if isSent {
-                Text("已发送")
-                    .font(.system(size: 12))
+                Text(language == .en ? "Sent" : "已发送")
+                    .font(TypeStyle.caption.weight(.regular))
                     .foregroundStyle(Color(uiColor: .tertiaryLabel))
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
@@ -139,7 +142,7 @@ struct FeaturePreviewHostDocument: View {
 
     private var placeholder: String {
         switch kind {
-        case .notes: return "开始记录…"
+        case .notes: return language == .en ? "Start writing…" : "开始记录…"
         case .messages: return ""
         }
     }

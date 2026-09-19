@@ -24,10 +24,10 @@ struct SettingsICloudSyncRow: View {
         VStack(spacing: 0) {
             Toggle(isOn: toggleBinding) {
                 VStack(alignment: .leading, spacing: Spacing.xxs) {
-                    Text("settings.appSettings.iCloudSync.title")
+                    Text(AppL10n.string("settings.appSettings.iCloudSync.title"))
                         .font(TypeStyle.body)
                         .foregroundStyle(palette.textPrimary)
-                    Text("settings.appSettings.iCloudSync.subtitle")
+                    Text(AppL10n.string("settings.appSettings.iCloudSync.subtitle"))
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -45,7 +45,7 @@ struct SettingsICloudSyncRow: View {
                 } label: {
                     VStack(alignment: .leading, spacing: Spacing.xxs) {
                         HStack(spacing: Spacing.sm) {
-                            Text(syncButtonTitleKey)
+                            Text(AppL10n.string(syncButtonTitleKey))
                                 .font(TypeStyle.body)
                             Spacer(minLength: Spacing.xs)
                             if isSyncingNow {
@@ -106,7 +106,7 @@ struct SettingsICloudSyncRow: View {
         )
     }
 
-    private var syncButtonTitleKey: LocalizedStringKey {
+    private var syncButtonTitleKey: String {
         if isSyncingNow {
             return "settings.appSettings.iCloudSync.syncing"
         }

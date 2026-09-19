@@ -17,13 +17,28 @@ public enum AIClipboardPrompt: Sendable {
         case materialUnavailable
     }
 
-    /// Instruction + clipboard body in the shared untrusted-data schema.
-    public static func compose(instruction: String, material: String) -> String {
+    /// Instruction + clipboard body in the shared untrusted-data schema. When
+    /// `conversationContext` is present it is emitted as its own untrusted block
+    /// before the clipboard body: it is earlier back-and-forth in the same chat
+    /// (also not authored by the app), so it must not join the trusted
+    /// `<instruction>`.
+    public static func compose(
+        instruction: String,
+        material: String,
+        conversationContext: String? = nil
+    ) -> String {
+        let context = trimmed(conversationContext ?? "")
+        let contextBlock = context.isEmpty ? "" : """
+
+          <conversation_context>
+        \(PromptXMLEscaping.escapeTextContent(context))
+          </conversation_context>
         """
+        return """
         <clipboard_request protocol="clipboard-ai-v1">
           <instruction>
         \(PromptXMLEscaping.escapeTextContent(trimmed(instruction)))
-          </instruction>
+          </instruction>\(contextBlock)
           <clipboard_text>
         \(PromptXMLEscaping.escapeTextContent(trimmed(material)))
           </clipboard_text>
@@ -33,11 +48,21 @@ public enum AIClipboardPrompt: Sendable {
 
     /// Resolves a clipboard-dependent instruction. Empty material fails closed
     /// instead of asking the model to answer without the text it needs.
-    public static func resolve(instruction: String, material: String?) -> Resolution {
+    /// `conversationContext`, when present, carries recent turns of the same
+    /// chat as background (see `compose`).
+    public static func resolve(
+        instruction: String,
+        material: String?,
+        conversationContext: String? = nil
+    ) -> Resolution {
         let body = trimmed(material ?? "")
         guard !body.isEmpty else { return .materialUnavailable }
         return .ready(
-            compose(instruction: strippingPlaceholder(instruction), material: body)
+            compose(
+                instruction: strippingPlaceholder(instruction),
+                material: body,
+                conversationContext: conversationContext
+            )
         )
     }
 

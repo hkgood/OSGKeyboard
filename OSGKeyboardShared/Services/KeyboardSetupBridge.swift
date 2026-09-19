@@ -336,6 +336,22 @@ public enum KeyboardSetupBridge {
         return material.text
     }
 
+    /// Discards the previous appearance record so onboarding cannot present a
+    /// stale observation as current state.
+    ///
+    /// iOS never tells the host when the user removes the keyboard or revokes
+    /// Full Access — those actions do not launch the extension, so nothing can
+    /// overwrite an earlier `true`. Clearing the record when onboarding reaches
+    /// the setup step means the flags can only be re-armed by the extension
+    /// actually running during this run.
+    public static func invalidateSetupObservation(defaults: UserDefaults? = nil) {
+        guard let store = defaults ?? AppGroup.defaultsIfAvailable else { return }
+        store.removeObject(forKey: Key.fullAccessReady)
+        store.removeObject(forKey: Key.lastSeenAt)
+        store.synchronize()
+        AppGroupConfigDarwin.postConfigChanged()
+    }
+
     /// Called from the keyboard extension on each appearance.
     public static func markExtensionAppearance(
         hasFullAccess: Bool,

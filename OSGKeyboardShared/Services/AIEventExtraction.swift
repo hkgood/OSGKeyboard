@@ -53,6 +53,74 @@ public enum AIEventExtraction: Sendable {
         return items
     }
 
+    // MARK: - Decode
+
+    /// One calendar event decoded from a canonical `lines(...)` entry, ready to
+    /// hand to EventKit. `end` is nil only for an all-day event (`isAllDay`).
+    public struct ParsedEvent: Sendable, Equatable {
+        public let title: String
+        public let location: String?
+        public let start: Date
+        public let end: Date?
+        public let isAllDay: Bool
+
+        public init(title: String, location: String?, start: Date, end: Date?, isAllDay: Bool) {
+            self.title = title
+            self.location = location
+            self.start = start
+            self.end = end
+            self.isAllDay = isAllDay
+        }
+    }
+
+    /// Inverse of the encoding produced by `lines(...)`. Strict: only accepts the
+    /// canonical `start|end|title|location` shape this type emits. Returns nil for
+    /// anything it cannot fully parse so the host never writes a malformed event.
+    public static func decode(_ line: String, calendar: Calendar = .current) -> ParsedEvent? {
+        let fields = line
+            .split(separator: "|", omittingEmptySubsequences: false)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        guard fields.count >= 3 else { return nil }
+        let startRaw = fields[0]
+        let endRaw = fields[1]
+        let title = fields[2]
+        guard !title.isEmpty else { return nil }
+        let location: String? = {
+            guard fields.count >= 4 else { return nil }
+            let joined = fields[3...].joined(separator: "|")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return joined.isEmpty ? nil : joined
+        }()
+
+        // All-day: start is a bare day, end is the ALLDAY sentinel.
+        if endRaw.caseInsensitiveCompare(allDaySentinel) == .orderedSame {
+            guard let day = date(from: startRaw, format: "yyyy-MM-dd", calendar: calendar) else {
+                return nil
+            }
+            return ParsedEvent(
+                title: title,
+                location: location,
+                start: calendar.startOfDay(for: day),
+                end: nil,
+                isAllDay: true
+            )
+        }
+
+        // Timed: both ends are minute-precision timestamps.
+        guard let start = date(from: startRaw, format: "yyyy-MM-dd HH:mm", calendar: calendar) else {
+            return nil
+        }
+        let end = date(from: endRaw, format: "yyyy-MM-dd HH:mm", calendar: calendar)
+            ?? start.addingTimeInterval(defaultDuration)
+        return ParsedEvent(
+            title: title,
+            location: location,
+            start: start,
+            end: max(end, start.addingTimeInterval(60)),
+            isAllDay: false
+        )
+    }
+
     // MARK: - Line
 
     private static func encodeLine(

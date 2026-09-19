@@ -23,6 +23,7 @@ public struct LiveConfigurationSnapshot: @unchecked Sendable {
     public let personalDictionary: PersonalDictionary
     public let polishStyleCatalog: PolishStyleCatalog
     public let activePolishStyleId: String
+    public let personalReplyStyleId: String
     public let detectedAppContext: (context: AppContext, observedAt: Date)?
     public let cloudASRPersistence: UserDefaults
 
@@ -43,6 +44,7 @@ public struct LiveConfigurationSnapshot: @unchecked Sendable {
         personalDictionary: PersonalDictionary,
         polishStyleCatalog: PolishStyleCatalog,
         activePolishStyleId: String,
+        personalReplyStyleId: String,
         detectedAppContext: (context: AppContext, observedAt: Date)?,
         cloudASRPersistence: UserDefaults
     ) {
@@ -62,6 +64,7 @@ public struct LiveConfigurationSnapshot: @unchecked Sendable {
         self.personalDictionary = personalDictionary
         self.polishStyleCatalog = polishStyleCatalog
         self.activePolishStyleId = activePolishStyleId
+        self.personalReplyStyleId = personalReplyStyleId
         self.detectedAppContext = detectedAppContext
         self.cloudASRPersistence = cloudASRPersistence
     }
@@ -87,6 +90,7 @@ public struct LiveConfigurationSnapshot: @unchecked Sendable {
             personalDictionary: store.personalDictionary,
             polishStyleCatalog: store.polishStyleCatalog,
             activePolishStyleId: store.activePolishStyleId,
+            personalReplyStyleId: store.personalReplyStyleId,
             detectedAppContext: store.detectedAppContext,
             cloudASRPersistence: store.cloudASRPersistence
         )
@@ -111,6 +115,7 @@ public struct LiveConfigurationSnapshot: @unchecked Sendable {
             personalDictionary: fallback.personalDictionary,
             polishStyleCatalog: fallback.polishStyleCatalog,
             activePolishStyleId: fallback.activePolishStyleId,
+            personalReplyStyleId: fallback.personalReplyStyleId,
             detectedAppContext: fallback.detectedAppContext,
             cloudASRPersistence: fallback.defaults
         )
@@ -151,6 +156,7 @@ public struct LiveConfigurationStore: ConfigurationStore, @unchecked Sendable {
     public var personalDictionary: PersonalDictionary { snapshot.personalDictionary }
     public var polishStyleCatalog: PolishStyleCatalog { snapshot.polishStyleCatalog }
     public var activePolishStyleId: String { snapshot.activePolishStyleId }
+    public var personalReplyStyleId: String { snapshot.personalReplyStyleId }
     public var detectedAppContext: (context: AppContext, observedAt: Date)? { snapshot.detectedAppContext }
     public var cloudASRPersistence: UserDefaults { snapshot.cloudASRPersistence }
 

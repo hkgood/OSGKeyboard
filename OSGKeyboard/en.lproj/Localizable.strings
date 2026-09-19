@@ -51,12 +51,14 @@
 "onboarding.experience.permissions.systemHint" = "These permissions are used only when you start voice input.";
 "onboarding.experience.permissions.later" = "Set Up Later";
 "onboarding.experience.keyboard.title" = "Add the keyboard";
-"onboarding.experience.keyboard.subtitle" = "Add the keyboard in iOS Settings and turn on Allow Full Access.";
+"onboarding.experience.keyboard.subtitle" = "Open Settings → Apps → OSGKeyboard → Keyboards, turn on OSGKeyboard, then enable Allow Full Access.";
 "onboarding.experience.keyboard.ready" = "OSGKeyboard and Full Access are ready";
 "onboarding.experience.keyboard.fullAccess" = "Full Access connects the keyboard to the host app microphone and optional AI services";
+"onboarding.experience.keyboard.addedNeedsFullAccess" = "OSGKeyboard is added — now turn on Allow Full Access";
 "onboarding.experience.keyboard.openAgain" = "Open Settings Again";
 "onboarding.experience.keyboard.practiceAction" = "Try It Now";
 "onboarding.experience.keyboard.previewTitle" = "Keyboards";
+"onboarding.experience.keyboard.fullAccessRow" = "Allow Full Access";
 "onboarding.experience.keyboardSwitch.title" = "Switch keyboards";
 "onboarding.experience.keyboardSwitch.subtitle" = "Once the keyboard is active, we’ll automatically verify Full Access.";
 "onboarding.experience.keyboardSwitch.instruction" = "Tap the field below, hold the globe key, then choose OSGKeyboard.";
@@ -67,6 +69,9 @@
 "onboarding.experience.keyboardSwitch.timeout" = "OSGKeyboard has not appeared yet. Make sure you switched keyboards.";
 "onboarding.experience.keyboardSwitch.checkSettings" = "Check Full Access in Settings";
 "onboarding.experience.keyboardSwitch.waitingAction" = "Waiting for Verification";
+"onboarding.experience.keyboard.openFailed" = "Settings could not be opened. Go to Settings → Apps → OSGKeyboard → Keyboards manually to finish setup.";
+"onboarding.experience.keyboardSwitch.continueWithoutFullAccess" = "Continue (Turn On Full Access Later)";
+"onboarding.experience.keyboardSwitch.skip" = "Skip for Now";
 "onboarding.experience.practice.skip" = "Skip for Now";
 "onboarding.experience.practice.translateSample" = "我明天下午到，到了以后给你消息。";
 "onboarding.experience.practice.replySample" = "I’ll arrive tomorrow afternoon and message you when I’m there.";
@@ -97,8 +102,8 @@
 "onboarding.experience.practice.voiceSample" = "Today is Thursday. Where are you planning to go for fun?";
 "onboarding.experience.practice.translateTitle" = "Try Translate";
 "onboarding.experience.practice.translateSubtitle" = "Copy the Chinese sample, translate it into English in OSGKeyboard, then insert the result.";
-"onboarding.experience.practice.replyTitle" = "Try Reply";
-"onboarding.experience.practice.replySubtitle" = "Copy the sample below, tap Reply in the keyboard, then insert the generated response.";
+"onboarding.experience.practice.replyTitle" = "Try Auto-Reply";
+"onboarding.experience.practice.replySubtitle" = "Copy the sample below; back in the keyboard, AI drafts a reply automatically — just insert it.";
 "onboarding.experience.practice.askAITitle" = "Ask AI";
 "onboarding.experience.practice.askAISubtitle" = "Hold the keyboard microphone and ask a question. Tap it again to stop recording and wait for the answer, then insert the result.";
 "onboarding.experience.practice.askAIPrompt" = "Try asking: “What’s in the news today?”";
@@ -287,11 +292,17 @@
 "settings.diagnostics.count" = "%d startup failure reports";
 "settings.diagnostics.empty" = "No startup failures have been saved.";
 "settings.diagnostics.latest" = "Latest: %@";
+"settings.diagnostics.processBreakdown" = "Main app %1$d · Keyboard %2$d";
 "settings.diagnostics.export" = "Export Diagnostic Logs";
 "settings.diagnostics.clear" = "Clear Diagnostic Logs";
 "settings.diagnostics.clear.title" = "Clear diagnostic logs?";
 "settings.diagnostics.clear.message" = "This permanently removes all saved Flow startup failure reports from this device.";
 "settings.diagnostics.clear.confirm" = "Clear Logs";
+"settings.diagnostics.upload.section" = "Internal Upload (Beta Builds)";
+"settings.diagnostics.upload.title" = "Send crash reports automatically";
+"settings.diagnostics.upload.description" = "Beta builds only. Sends crash and hang reports — including keyboard memory shutdowns, which TestFlight cannot see — so they can be fixed. Never includes audio, transcripts, clipboard content, prompts, or API keys.";
+"settings.diagnostics.upload.status.off" = "Automatic sending is off. Reports stay on this device until you export them.";
+"settings.diagnostics.upload.status.pending" = "%d report(s) waiting to send.";
 "settings.diagnostics.corpus.section" = "Personal Style Training Corpus";
 "settings.diagnostics.corpus.count" = "%d eligible samples · %d effective characters";
 "settings.diagnostics.corpus.empty" = "No eligible paired dictations are available.";
@@ -299,7 +310,8 @@
 "settings.diagnostics.corpus.export" = "Export Training Corpus";
 "settings.diagnostics.corpus.privacy" = "Contains dictated text and prior polish prompts. Nothing is uploaded automatically. Share only with trusted devices or services.";
 "settings.diagnostics.privacy.section" = "Privacy";
-"settings.diagnostics.privacy.body" = "Reports stay on this device until you export or clear them. They include startup state, timings, error codes, and memory usage, but never audio, transcripts, clipboard content, prompts, API keys, or account identifiers.";
+"settings.diagnostics.privacy.body" = "Reports stay on this device until you export or clear them. They include startup state, timings, error codes, memory usage, and crash or hang details, but never audio, transcripts, clipboard content, prompts, API keys, or account identifiers.";
+"settings.diagnostics.privacy.body.internal" = "This is a beta build, so crash and hang reports are also sent automatically unless you turn that off above. Reports include startup state, timings, error codes, memory usage, and crash or hang details, but never audio, transcripts, clipboard content, prompts, API keys, or account identifiers.";
 "releaseNotes.title" = "What's New";
 "releaseNotes.openHint" = "View release notes for this version";
 "releaseNotes.unavailable.title" = "Cannot load page";
@@ -315,14 +327,19 @@
 "settings.aiAgent.responseLength.title" = "Response length";
 "settings.aiAgent.multipleReplies.title" = "Provide multiple replies";
 "settings.aiAgent.multipleReplies.description" = "Show natural, formal, and playful options for ordinary chats. Invitations and tasks always offer separate decisions so AI never chooses your stance.";
+"settings.aiAgent.autoMode.section" = "Auto mode";
+"settings.aiAgent.autoMode.title" = "Auto-reply on open";
+"settings.aiAgent.autoMode.description" = "When you copy a message that reads as replyable and open the keyboard, drafting starts automatically — no need to tap Reply. Requires clipboard history. You still review before sending.";
+"settings.aiAgent.autoTranslate.title" = "Auto-translate on open";
+"settings.aiAgent.autoTranslate.description" = "When you copy text in another language and open the keyboard, it's translated automatically and shown for reading. Requires clipboard history.";
+"settings.aiAgent.autoEmailReply.title" = "Auto-draft email replies";
+"settings.aiAgent.autoEmailReply.description" = "When you copy an email and open the keyboard, a reply is drafted automatically. Requires clipboard history. You still review before sending.";
 "settings.clipboard.title" = "Clipboard";
 "settings.clipboard.section" = "Features";
 "settings.clipboard.subtitle.on" = "On";
 "settings.clipboard.subtitle.off" = "Off";
 "settings.clipboard.history.title" = "History";
 "settings.clipboard.history.footer" = "Keeps up to 15 copied text items on this device. Off by default.";
-"settings.clipboard.candidate.title" = "Suggestion strip";
-"settings.clipboard.candidate.footer" = "Shows your latest copy above the keyboard. Tap to insert.";
 "settings.clipboard.paste.section" = "System access";
 "settings.clipboard.paste.body" = "Allows clipboard skills to read text you copy.";
 "settings.clipboard.paste.request" = "Verify Paste Access";
@@ -443,7 +460,6 @@
 "preview.title" = "Keyboard Preview";
 "preview.subtitle" = "Tap Start/Stop Recording to test here. On the real keyboard, tap the mic disc to dictate.";
 "preview.placeholder" = "Type here or tap the record button";
-"preview.placeholder" = "Type here or tap the record button";
 "preview.clear" = "Clear text";
 "preview.openSettingsA11y" = "Open OSGKeyboard settings";
 "preview.openSettings" = "Settings";
@@ -477,8 +493,6 @@
 "keyboard.placeholder.error" = "Polishing failed";
 "keyboard.rec" = "REC";
 "keyboard.space" = "Space";
-"keyboard.denied.mic" = "Mic denied";
-"keyboard.denied.speech" = "Speech denied";
 "keyboard.openSettingsA11y" = "Open OSGKeyboard settings";
 "keyboard.deniedHint" = "Opens the OSGKeyboard settings page where you can grant microphone or speech recognition access.";
 "keyboard.tapToTalkA11y" = "Tap to talk";
@@ -487,9 +501,6 @@
 "mode.off" = "Off";
 "mode.transcribe" = "Transcribe";
 "mode.polish" = "Polish";
-
-/* Locale chip labels (preview stub) */
-"locale.zh-Hans" = "ZH-Hans";
 
 /* Locale menu items (settings) */
 "locale.auto"     = "Auto";
@@ -590,6 +601,8 @@
 "skills.action.reinstallShortcut" = "Reinstall Shortcut";
 "skills.reply.name" = "Reply";
 "skills.reply.description" = "Understand the copied text and reply naturally in its primary language.";
+"skills.speakAsMe.name" = "Say It My Way";
+"skills.speakAsMe.description" = "Rewrite the copied text in your personal reply style, keeping the meaning and changing only how it is said.";
 "skills.playfulReply.name" = "Playful reply";
 "skills.playfulReply.description" = "Reply with a short, witty joke that stays kind and appropriate.";
 "skills.replyInSourceLanguage.name" = "Reply";
@@ -628,6 +641,16 @@
 "skills.organizeList.description" = "Clean up lists, agendas, and steps without adding new tasks.";
 "skills.extractTodos.name" = "Extract tasks";
 "skills.extractTodos.description" = "Extract to-dos from copied text into Reminders.";
+"skills.reminders.resultTitle" = "Reminders";
+"skills.reminders.resultSuccess" = "Added to Reminders.";
+"skills.reminders.resultDenied" = "OSGKeyboard needs Reminders access to add your to-dos. Turn it on in Settings.";
+"skills.reminders.resultFailed" = "Couldn't add the reminders. Please try again.";
+"skills.reminders.openSettings" = "Open Settings";
+"skills.events.resultTitle" = "Calendar";
+"skills.events.resultSuccess" = "Added to Calendar.";
+"skills.events.resultDenied" = "OSGKeyboard needs Calendar access to add your events. Turn it on in Settings.";
+"skills.events.resultFailed" = "Couldn't add the events. Please try again.";
+"skills.events.openSettings" = "Open Settings";
 "skills.extractEvents.name" = "Extract events";
 "skills.extractEvents.description" = "Extract events from copied text into Calendar.";
 "skills.saveToNotes.name" = "Save to Notes";
@@ -678,27 +701,26 @@
 "polishStyles.fun.section" = "Fun styles";
 "polishStyles.custom.section" = "My styles";
 "polishStyles.intro.title" = "Choose a writing personality";
-"polishStyles.intro.body" = "The selected style shapes every polished dictation. Your custom styles sync through iCloud when settings sync is enabled.";
-"polishStyles.learn.title" = "Generate Your Style";
-"polishStyles.learn.body" = "Learn how you naturally express yourself from past dictation.";
-"polishStyles.learn.progress" = "%lld / %lld characters";
-"polishStyles.learn.remaining" = "%lld to go";
-"polishStyles.learn.ready" = "Ready";
-"polishStyles.learn.action" = "Generate Style";
-"polishStyles.learn.generating" = "Generating…";
-"polishStyles.learn.generated.description" = "Your personal style learned from reviewed evidence.";
-"polishStyles.learn.lowConfidence" = "Low confidence. The prompt was generated from limited evidence; please review it.";
-"polishStyles.learn.generatedAt" = "Generated";
-"polishStyles.learn.evidenceSummary" = "%lld ASR characters · %lld reply choices · %lld final edits";
-"polishStyles.learn.confidence" = "Confidence: %lld%%";
-"polishStyles.learn.select" = "Use this style";
-"polishStyles.learn.selected" = "In use";
-"polishStyles.learn.regenerate" = "Regenerate";
-"polishStyles.learn.regenerating" = "Regenerating…";
-"polishStyles.learn.privacy" = "Sent to your configured AI only when you generate. Review and edit before saving.";
-"polishStyles.learn.limit" = "Delete a custom style before generating another one.";
-"polishStyles.learn.error.title" = "Couldn’t Generate Style";
-"polishStyles.learn.error.insufficient" = "Keep dictating until 2,500 effective characters are available.";
+"polishStyles.intro.body" = "The selected style shapes polished dictation only. Your custom styles sync through iCloud when settings sync is enabled.";
+"personalReplyStyle.section" = "Personal reply style";
+"personalReplyStyle.empty.title" = "Generate Your Reply Style";
+"personalReplyStyle.empty.body" = "Learn how you naturally express yourself from past dictation, so AI replies read like you wrote them.";
+"personalReplyStyle.progress" = "%lld / %lld characters";
+"personalReplyStyle.remaining" = "%lld to go";
+"personalReplyStyle.ready" = "Ready";
+"personalReplyStyle.action" = "Generate Style";
+"personalReplyStyle.generating" = "Generating…";
+"personalReplyStyle.generated.description" = "Your personal style learned from reviewed evidence.";
+"personalReplyStyle.lowConfidence" = "Low confidence. The prompt was generated from limited evidence; please review it.";
+"personalReplyStyle.generatedAt" = "Generated";
+"personalReplyStyle.evidenceSummary" = "%lld ASR characters · %lld reply choices · %lld final edits";
+"personalReplyStyle.confidence" = "Confidence: %lld%%";
+"personalReplyStyle.regenerate" = "Regenerate";
+"personalReplyStyle.regenerating" = "Regenerating…";
+"personalReplyStyle.privacy" = "Sent to your configured AI only when you generate. Review and edit before saving.";
+"personalReplyStyle.limit" = "Delete a custom style before generating another one.";
+"personalReplyStyle.error.title" = "Couldn’t Generate Style";
+"personalReplyStyle.error.insufficient" = "Keep dictating until 2,500 effective characters are available.";
 "polishStyles.learn.error.invalidResponse" = "The AI did not return a valid writing style. Please try again.";
 "polishStyles.learn.error.promptTooLong" = "The generated prompt exceeded 6,000 characters. Please try again.";
 "polishStyles.learn.error.requestTooLarge" = "The learning sample is too large for the configured AI service. Shorten unusually long history entries and try again.";
@@ -784,7 +806,6 @@
 "settings.appSettings.iCloudSync.syncing" = "Syncing…";
 "settings.appSettings.iCloudSync.synced" = "Synced";
 "settings.appSettings.iCloudSync.error.generic" = "Could not sync settings with iCloud. Try again later.";
-
 
 /* Polish intensity */
 "settings.polishIntensity.title" = "Polish intensity";

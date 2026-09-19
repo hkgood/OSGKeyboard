@@ -28,7 +28,7 @@ struct AccountCenterView: View {
             sessionContent
         }
         .background(palette.background)
-        .navigationTitle("account.title")
+        .navigationTitle(AppL10n.string("account.title"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(palette.background, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
@@ -49,15 +49,15 @@ struct AccountCenterView: View {
             coordinator.creditPurchases.dismissSuccessMessage()
         }
         .alert(
-            "account.profile.editTitle",
+            AppL10n.string("account.profile.editTitle"),
             isPresented: $showProfileEditor
         ) {
-            TextField("account.profile.nickname", text: $displayNameDraft)
+            TextField(AppL10n.string("account.profile.nickname"), text: $displayNameDraft)
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
-            Button("common.cancel", role: .cancel) {}
+            Button(AppL10n.string("common.cancel"), role: .cancel) {}
                 .tint(palette.textPrimary)
-            Button("account.profile.save") {
+            Button(AppL10n.string("account.profile.save")) {
                 if case let .signedIn(session) = coordinator.sessionPhase {
                     saveDisplayName(session: session)
                 }
@@ -65,7 +65,7 @@ struct AccountCenterView: View {
             .disabled(!canSaveCurrentDisplayName)
             .tint(palette.textPrimary)
         } message: {
-            Text("account.profile.editMessage")
+            Text(AppL10n.string("account.profile.editMessage"))
         }
         .sheet(isPresented: $showDeleteReauthentication) {
             deleteReauthenticationSheet
@@ -98,11 +98,11 @@ struct AccountCenterView: View {
                         .accessibilityHidden(true)
 
                     VStack(spacing: Spacing.xs) {
-                        Text("account.signedOut.title")
+                        Text(AppL10n.string("account.signedOut.title"))
                             .font(.title2.bold())
                             .foregroundStyle(palette.textPrimary)
                             .multilineTextAlignment(.center)
-                        Text("account.signedOut.body")
+                        Text(AppL10n.string("account.signedOut.body"))
                             .font(.body)
                             .foregroundStyle(palette.textSecondary)
                             .multilineTextAlignment(.center)
@@ -112,13 +112,13 @@ struct AccountCenterView: View {
                         .disabled(coordinator.operation != nil)
 
                     if coordinator.pendingReferralCode != nil {
-                        Label("account.referral.pendingAfterSignIn", systemImage: "link")
+                        Label(AppL10n.string("account.referral.pendingAfterSignIn"), systemImage: "link")
                             .font(.footnote)
                             .foregroundStyle(palette.textSecondary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    Text("account.signedOut.localUnaffected")
+                    Text(AppL10n.string("account.signedOut.localUnaffected"))
                         .font(.footnote)
                         .foregroundStyle(palette.textTertiary)
                         .multilineTextAlignment(.center)
@@ -183,7 +183,7 @@ struct AccountCenterView: View {
             }
         }
 
-        CardSection("account.storekit.section") {
+        CardSection(title: AppL10n.string("account.storekit.section")) {
             VStack(spacing: Spacing.sm) {
                 AccountCreditPurchaseSection(
                     manager: coordinator.creditPurchases,
@@ -206,16 +206,16 @@ struct AccountCenterView: View {
         } label: {
             HStack(spacing: Spacing.md) {
                 Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 17, weight: .medium))
+                    .font(TypeStyle.headline.weight(.medium))
                     .foregroundStyle(palette.textPrimary)
                     .frame(width: 24)
                     .accessibilityHidden(true)
-                Text("account.purchaseHistory.title")
+                Text(AppL10n.string("account.purchaseHistory.title"))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                 Spacer(minLength: Spacing.xs)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(TypeStyle.caption.weight(.semibold))
                     .foregroundStyle(palette.textTertiary)
                     .accessibilityHidden(true)
             }
@@ -273,7 +273,7 @@ struct AccountCenterView: View {
             }
             .buttonStyle(.plain)
             .disabled(coordinator.operation != nil)
-            .accessibilityLabel("account.profile.editTitle")
+            .accessibilityLabel(AppL10n.string("account.profile.editTitle"))
         }
         .padding(Spacing.lg)
         .background(palette.surface, in: shape)
@@ -319,11 +319,11 @@ struct AccountCenterView: View {
             .buttonStyle(.plain)
             .disabled(coordinator.operation != nil)
             .confirmationDialog(
-                "account.signOut.confirmTitle",
+                AppL10n.string("account.signOut.confirmTitle"),
                 isPresented: $showSignOutConfirmation,
                 titleVisibility: .visible
             ) {
-                Button("account.signOut.action", role: .destructive) {
+                Button(AppL10n.string("account.signOut.action"), role: .destructive) {
                     Task {
                         await coordinator.signOut()
                         if !coordinator.isSignedIn {
@@ -331,9 +331,9 @@ struct AccountCenterView: View {
                         }
                     }
                 }
-                Button("common.cancel", role: .cancel) {}
+                Button(AppL10n.string("common.cancel"), role: .cancel) {}
             } message: {
-                Text("account.signOut.confirmMessage")
+                Text(AppL10n.string("account.signOut.confirmMessage"))
             }
 
             Divider().background(palette.divider)
@@ -351,16 +351,16 @@ struct AccountCenterView: View {
             .buttonStyle(.plain)
             .disabled(coordinator.operation != nil)
             .confirmationDialog(
-                "account.delete.confirmTitle",
+                AppL10n.string("account.delete.confirmTitle"),
                 isPresented: $showDeleteConfirmation,
                 titleVisibility: .visible
             ) {
-                Button("account.delete.continue", role: .destructive) {
+                Button(AppL10n.string("account.delete.continue"), role: .destructive) {
                     showDeleteReauthentication = true
                 }
-                Button("common.cancel", role: .cancel) {}
+                Button(AppL10n.string("common.cancel"), role: .cancel) {}
             } message: {
-                Text("account.delete.confirmMessage")
+                Text(AppL10n.string("account.delete.confirmMessage"))
             }
         }
         .surfaceCard()
@@ -374,7 +374,7 @@ struct AccountCenterView: View {
                     .foregroundStyle(palette.danger)
                     .accessibilityHidden(true)
 
-                Text("account.delete.reauthenticateBody")
+                Text(AppL10n.string("account.delete.reauthenticateBody"))
                     .font(.body)
                     .foregroundStyle(palette.textSecondary)
 
@@ -388,7 +388,7 @@ struct AccountCenterView: View {
                 .disabled(coordinator.operation != nil)
 
                 if coordinator.operation == .deletingAccount {
-                    ProgressView("account.delete.loading")
+                    ProgressView(AppL10n.string("account.delete.loading"))
                         .tint(palette.textPrimary)
                         .frame(maxWidth: .infinity)
                 }
@@ -397,11 +397,11 @@ struct AccountCenterView: View {
             }
             .padding(Spacing.lg)
             .background(palette.background.ignoresSafeArea())
-            .navigationTitle("account.delete.reauthenticateTitle")
+            .navigationTitle(AppL10n.string("account.delete.reauthenticateTitle"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") {
+                    Button(AppL10n.string("common.cancel")) {
                         showDeleteReauthentication = false
                     }
                     .tint(palette.textPrimary)
@@ -469,7 +469,7 @@ private struct AccountCreditsSection: View {
                     .font(.system(size: 32, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(palette.textPrimary)
-                    Text("account.credits.balance")
+                    Text(AppL10n.string("account.credits.balance"))
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -477,7 +477,7 @@ private struct AccountCreditsSection: View {
                 Spacer(minLength: Spacing.md)
 
                 HStack(spacing: Spacing.xxs) {
-                    Text("account.credits.used")
+                    Text(AppL10n.string("account.credits.used"))
                     Text(
                         snapshot.credits.usedCredits,
                         format: .number.grouping(.automatic)
@@ -524,7 +524,7 @@ private struct AccountCreditPurchaseSection: View {
                     ProgressView()
                         .controlSize(.small)
                         .tint(palette.accent)
-                    Text("account.storekit.loading")
+                    Text(AppL10n.string("account.storekit.loading"))
                         .font(TypeStyle.footnote)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -560,7 +560,7 @@ private struct AccountCreditPurchaseSection: View {
                     Text(option.credits, format: .number.grouping(.automatic))
                         .font(TypeStyle.title3.monospacedDigit())
                         .foregroundStyle(palette.textPrimary)
-                    Text("account.storekit.credits")
+                    Text(AppL10n.string("account.storekit.credits"))
                         .font(TypeStyle.body)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -577,7 +577,7 @@ private struct AccountCreditPurchaseSection: View {
                             .controlSize(.small)
                             .tint(OSGColor.fixedLightContent)
                     } else {
-                        Text("account.storekit.purchase")
+                        Text(AppL10n.string("account.storekit.purchase"))
                             .font(TypeStyle.caption.weight(.semibold))
                     }
                 }
@@ -601,7 +601,7 @@ private struct AccountCreditPurchaseSection: View {
         .accessibilityIdentifier("account.purchase.\(option.productID)")
         .accessibilityLabel(
             Text(
-                "\(Text(option.credits, format: .number)) \(Text("account.storekit.credits")) \(Text(option.displayPrice))"
+                "\(Text(option.credits, format: .number)) \(Text(AppL10n.string("account.storekit.credits"))) \(Text(option.displayPrice))"
             )
         )
     }
@@ -628,13 +628,13 @@ private struct AccountCreditPurchaseSection: View {
     private func catalogRetryMessage(messageKey: String) -> some View {
         HStack(spacing: Spacing.sm) {
             Label(
-                LocalizedStringKey(messageKey),
+                AppL10n.string(messageKey),
                 systemImage: "exclamationmark.triangle.fill"
             )
             .font(TypeStyle.footnote)
             .foregroundStyle(palette.danger)
             Spacer(minLength: Spacing.xs)
-            Button("account.retry") {
+            Button(AppL10n.string("account.retry")) {
                 Task { await manager.refreshCatalog(accountID: accountID) }
             }
             .font(TypeStyle.bodyEmph)
@@ -647,7 +647,7 @@ private struct AccountCreditPurchaseSection: View {
         Group {
             switch manager.state {
             case .pending:
-                Label("account.storekit.pending", systemImage: "clock")
+                Label(AppL10n.string("account.storekit.pending"), systemImage: "clock")
                     .font(.footnote)
                     .foregroundStyle(palette.textSecondary)
             case .succeeded(let credits):
@@ -669,7 +669,7 @@ private struct AccountCreditPurchaseSection: View {
             case .failed(let messageKey):
                 HStack(spacing: Spacing.sm) {
                     Label(
-                        LocalizedStringKey(messageKey),
+                        AppL10n.string(messageKey),
                         systemImage: "exclamationmark.triangle.fill"
                     )
                     .font(TypeStyle.footnote)
@@ -730,13 +730,13 @@ struct AccountCreditProgress: View {
             if showsLabels {
                 HStack(spacing: Spacing.sm) {
                     percentageLabel(
-                        "account.credits.remaining",
+                        AppL10n.string("account.credits.remaining"),
                         fraction: remainingFraction,
                         color: palette.success
                     )
                     Spacer(minLength: Spacing.xs)
                     percentageLabel(
-                        "account.credits.used",
+                        AppL10n.string("account.credits.used"),
                         fraction: usedFraction,
                         color: palette.textTertiary
                     )
@@ -747,7 +747,7 @@ struct AccountCreditProgress: View {
     }
 
     private func percentageLabel(
-        _ titleKey: LocalizedStringKey,
+        _ title: String,
         fraction: Double,
         color: Color
     ) -> some View {
@@ -758,7 +758,7 @@ struct AccountCreditProgress: View {
             Circle()
                 .fill(color)
                 .frame(width: 7, height: 7)
-            Text(titleKey)
+            Text(title)
             Text(verbatim: percentageText)
                 .monospacedDigit()
         }
@@ -778,7 +778,7 @@ struct AccountInvitationButton: View {
             guard invitationURL != nil else { return }
             showsShareDrawer = true
         } label: {
-            Label("account.referral.inviteTitle", systemImage: "person.badge.plus")
+            Label(AppL10n.string("account.referral.inviteTitle"), systemImage: "person.badge.plus")
                 .font(TypeStyle.bodyEmph)
                 .foregroundStyle(OSGColor.fixedLightContent)
                 .padding(.horizontal, Spacing.sm)
@@ -847,7 +847,7 @@ struct IAPReviewScreenshotHarness: View {
         NavigationStack {
             ScrollView {
                 CardPageContent {
-                    CardSection("account.credits.section") {
+                    CardSection(title: AppL10n.string("account.credits.section")) {
                         VStack(spacing: Spacing.sm) {
                             AccountCreditsSection(snapshot: Self.snapshot)
                             AccountCreditPurchaseSection(
@@ -860,7 +860,7 @@ struct IAPReviewScreenshotHarness: View {
                 }
                 .padding(.bottom, Spacing.lg)
             }
-            .navigationTitle("account.rewards.title")
+            .navigationTitle(AppL10n.string("account.rewards.title"))
             .navigationBarTitleDisplayMode(.inline)
         }
         .task {
@@ -934,7 +934,7 @@ private final class IAPReviewCreditStore: AccountCreditStore {
 #endif
 
 private struct AccountActionRow: View {
-    let titleKey: LocalizedStringKey
+    let titleKey: String
     let systemImage: String
     let color: Color
     let showsProgress: Bool
@@ -944,7 +944,7 @@ private struct AccountActionRow: View {
             Image(systemName: systemImage)
                 .font(.system(size: 16, weight: .regular))
                 .frame(width: 20)
-            Text(titleKey)
+            Text(AppL10n.string(titleKey))
                 .font(TypeStyle.body)
             Spacer(minLength: Spacing.xs)
             if showsProgress {
@@ -963,7 +963,7 @@ private struct AccountStateCard: View {
 
     let systemImage: String
     let titleKey: String
-    var actionKey: LocalizedStringKey?
+    var actionKey: String?
     var showsProgress = false
     var action: () -> Void = {}
 
@@ -980,13 +980,13 @@ private struct AccountStateCard: View {
                     .accessibilityHidden(true)
             }
 
-            Text(LocalizedStringKey(titleKey))
+            Text(AppL10n.string(titleKey))
                 .font(.body)
                 .foregroundStyle(palette.textSecondary)
                 .multilineTextAlignment(.center)
 
             if let actionKey {
-                Button(actionKey, action: action)
+                Button(AppL10n.string(actionKey), action: action)
                     .font(.headline)
                     .foregroundStyle(palette.accent)
             }

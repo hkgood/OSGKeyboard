@@ -20,10 +20,7 @@ struct AIAgentSkillsView: View {
     @ObservedObject private var store = AIAgentSkillLayoutStore.shared
 
     @State private var editingDraft: SkillEditorDraft?
-    @State private var pasteAccessVerified = AppPermissions.hasVerifiedPasteAccess
-    @State private var pasteAccessNeedsRecovery = false
-    @State private var showPasteNoTextAlert = false
-    @State private var showPasteAccessSuccess = false
+    @StateObject private var pasteAccess = PasteAccessController()
     @State private var path = NavigationPath()
     private var skillCardShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: Radius.xl, style: .continuous)
@@ -37,6 +34,7 @@ struct AIAgentSkillsView: View {
                         clipboardAccessGuide
                             .transition(.opacity.combined(with: .move(edge: .top)))
                     }
+                    PersonalReplyStyleSection()
                     installedSection
                     if !store.skillManagementAvailableSkills.isEmpty {
                         uninstalledSection
@@ -45,7 +43,7 @@ struct AIAgentSkillsView: View {
                 .tabBarScrollBottomPadding()
             }
             .background(palette.background)
-            .navigationTitle("skills.title")
+            .navigationTitle(AppL10n.string("skills.title"))
             .navigationBarTitleDisplayMode(.large)
             .navigationDestination(for: SkillRoute.self) { route in
                 switch route {
@@ -68,7 +66,7 @@ struct AIAgentSkillsView: View {
                         Image(systemName: "plus")
                     }
                     .tint(palette.textPrimary)
-                    .accessibilityLabel(Text("skills.add"))
+                    .accessibilityLabel(Text(AppL10n.string("skills.add")))
                 }
             }
         }
@@ -85,9 +83,9 @@ struct AIAgentSkillsView: View {
         }
         .alert(
             AppL10n.string("clipboard.paste.noText.title", language: config.uiLanguage),
-            isPresented: $showPasteNoTextAlert
+            isPresented: $pasteAccess.showNoTextAlert
         ) {
-            Button("common.done") { showPasteNoTextAlert = false }
+            Button(AppL10n.string("common.done")) { pasteAccess.showNoTextAlert = false }
         } message: {
             Text(AppL10n.string("clipboard.paste.noText.message", language: config.uiLanguage))
         }
@@ -97,7 +95,7 @@ struct AIAgentSkillsView: View {
                 reason: "AIAgentSkillsView.onAppear",
                 force: true
             )
-            refreshPasteAccessState()
+            pasteAccess.refresh()
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
@@ -106,8 +104,7 @@ struct AIAgentSkillsView: View {
                 reason: "AIAgentSkillsView.active",
                 force: true
             )
-            refreshPasteAccessState()
-            pasteAccessNeedsRecovery = false
+            pasteAccess.refresh(clearRecovery: true)
         }
     }
 
@@ -117,17 +114,17 @@ struct AIAgentSkillsView: View {
                 skillIcon(systemImage: clipboardGuideIcon)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(clipboardGuideTitle)
+                    Text(AppL10n.string(clipboardGuideTitle))
                         .font(TypeStyle.bodyEmph)
                         .foregroundStyle(palette.textPrimary)
-                    Text(clipboardGuideBody)
+                    Text(AppL10n.string(clipboardGuideBody))
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
-            if !showPasteAccessSuccess {
+            if !pasteAccess.showSuccess {
                 Button(action: performClipboardGuideAction) {
                     guideRow(
                         titleKey: clipboardGuideActionTitle,
@@ -147,7 +144,7 @@ struct AIAgentSkillsView: View {
     }
 
     private func guideRow(
-        titleKey: LocalizedStringKey,
+        titleKey: String,
         systemImage: String,
         trailing: String
     ) -> some View {
@@ -157,12 +154,12 @@ struct AIAgentSkillsView: View {
                 .foregroundStyle(palette.textPrimary)
                 .symbolRenderingMode(.monochrome)
                 .frame(width: 22)
-            Text(titleKey)
+            Text(AppL10n.string(titleKey))
                 .font(TypeStyle.body)
                 .foregroundStyle(palette.textPrimary)
             Spacer(minLength: 0)
             Image(systemName: trailing)
-                .font(.system(size: 12, weight: .semibold))
+                .font(TypeStyle.caption.weight(.semibold))
                 .foregroundStyle(palette.textTertiary)
         }
         .padding(.horizontal, Spacing.sm)
@@ -175,47 +172,47 @@ struct AIAgentSkillsView: View {
     }
 
     private var showsClipboardAccessGuide: Bool {
-        !config.clipboardHistoryEnabled || !pasteAccessVerified || showPasteAccessSuccess
+        !config.clipboardHistoryEnabled || !pasteAccess.isVerified || pasteAccess.showSuccess
     }
 
-    private var clipboardGuideTitle: LocalizedStringKey {
-        if showPasteAccessSuccess {
+    private var clipboardGuideTitle: String {
+        if pasteAccess.showSuccess {
             return "skills.clipboard.guide.success.title"
         }
         if !config.clipboardHistoryEnabled {
             return "skills.clipboard.guide.title"
         }
-        if pasteAccessNeedsRecovery {
+        if pasteAccess.needsRecovery {
             return "skills.clipboard.guide.recovery.title"
         }
         return "skills.clipboard.guide.verify.title"
     }
 
-    private var clipboardGuideBody: LocalizedStringKey {
-        if showPasteAccessSuccess {
+    private var clipboardGuideBody: String {
+        if pasteAccess.showSuccess {
             return "skills.clipboard.guide.success.body"
         }
         if !config.clipboardHistoryEnabled {
             return "skills.clipboard.guide.body"
         }
-        if pasteAccessNeedsRecovery {
+        if pasteAccess.needsRecovery {
             return "skills.clipboard.guide.recovery.body"
         }
         return "skills.clipboard.guide.verify.body"
     }
 
     private var clipboardGuideIcon: String {
-        if showPasteAccessSuccess {
+        if pasteAccess.showSuccess {
             return "checkmark"
         }
-        return pasteAccessNeedsRecovery ? "exclamationmark" : "clipboard"
+        return pasteAccess.needsRecovery ? "exclamationmark" : "clipboard"
     }
 
-    private var clipboardGuideActionTitle: LocalizedStringKey {
+    private var clipboardGuideActionTitle: String {
         if !config.clipboardHistoryEnabled {
             return "skills.clipboard.guide.enableHistory"
         }
-        if pasteAccessNeedsRecovery {
+        if pasteAccess.needsRecovery {
             return "skills.clipboard.guide.openSystemSettings"
         }
         return "skills.clipboard.guide.verify.action"
@@ -225,18 +222,18 @@ struct AIAgentSkillsView: View {
         if !config.clipboardHistoryEnabled {
             return "clock.arrow.circlepath"
         }
-        return pasteAccessNeedsRecovery ? "gearshape" : "checkmark.shield"
+        return pasteAccess.needsRecovery ? "gearshape" : "checkmark.shield"
     }
 
     private var clipboardGuideActionTrailing: String {
-        pasteAccessNeedsRecovery ? "arrow.up.right" : "arrow.right"
+        pasteAccess.needsRecovery ? "arrow.up.right" : "arrow.right"
     }
 
     private var clipboardGuideActionIdentifier: String {
         if !config.clipboardHistoryEnabled {
             return "skills.clipboard.guide.enableHistory"
         }
-        if pasteAccessNeedsRecovery {
+        if pasteAccess.needsRecovery {
             return "skills.clipboard.guide.openSystemSettings"
         }
         return "skills.clipboard.guide.verifyPaste"
@@ -249,39 +246,11 @@ struct AIAgentSkillsView: View {
             }
             return
         }
-        if pasteAccessNeedsRecovery {
+        if pasteAccess.needsRecovery {
             AppPermissions.openSystemSettings()
             return
         }
-        verifyPasteAccess()
-    }
-
-    private func verifyPasteAccess() {
-        switch AppPermissions.requestPasteAccess() {
-        case .verified:
-            withAnimation(Motion.soft) {
-                pasteAccessVerified = true
-                pasteAccessNeedsRecovery = false
-                showPasteAccessSuccess = true
-            }
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(700))
-                withAnimation(Motion.soft) {
-                    showPasteAccessSuccess = false
-                }
-            }
-        case .noTextAvailable:
-            showPasteNoTextAlert = true
-        case .unavailable:
-            withAnimation(Motion.soft) {
-                pasteAccessVerified = false
-                pasteAccessNeedsRecovery = true
-            }
-        }
-    }
-
-    private func refreshPasteAccessState() {
-        pasteAccessVerified = AppPermissions.hasVerifiedPasteAccess
+        pasteAccess.verify(flashSuccess: true)
     }
 
     private func refreshOfficialSkillCatalog(reason: String, force: Bool) {
@@ -305,7 +274,7 @@ struct AIAgentSkillsView: View {
             )
         ) {
             if store.skillManagementEnabledSkills.isEmpty {
-                Text("skills.installed.empty")
+                Text(AppL10n.string("skills.installed.empty"))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textTertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -320,7 +289,7 @@ struct AIAgentSkillsView: View {
     }
 
     private var uninstalledSection: some View {
-        CardSection("skills.uninstalled.section") {
+        CardSection(title: AppL10n.string("skills.uninstalled.section")) {
             LazyVStack(spacing: CardLayoutMetrics.compactItemSpacing) {
                 ForEach(store.skillManagementAvailableSkills) { skill in
                     skillListItem(skill)
@@ -336,7 +305,7 @@ struct AIAgentSkillsView: View {
         .buttonStyle(.plain)
         .contextMenu {
             if skill.isUserCreated {
-                Button("common.delete", role: .destructive) {
+                Button(AppL10n.string("common.delete"), role: .destructive) {
                     store.deleteUserSkill(id: skill.id)
                 }
             }
@@ -360,7 +329,7 @@ struct AIAgentSkillsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
+                .font(TypeStyle.caption.weight(.semibold))
                 .foregroundStyle(palette.textTertiary)
                 .frame(width: 18)
         }
@@ -529,12 +498,12 @@ private struct SkillDetailView: View {
             }
         }
         .background(palette.background)
-        .navigationTitle("skills.detail.title")
+        .navigationTitle(AppL10n.string("skills.detail.title"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if skill.isUserCreated {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("skills.edit", action: onEdit)
+                    Button(AppL10n.string("skills.edit"), action: onEdit)
                 }
             }
         }
@@ -575,7 +544,7 @@ private struct SkillDetailView: View {
                     .font(TypeStyle.title3)
                     .foregroundStyle(palette.textPrimary)
                 if skill.isDefault {
-                    Text("skills.badge.default")
+                    Text(AppL10n.string("skills.badge.default"))
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.textSecondary)
                 }
@@ -594,7 +563,7 @@ private struct SkillDetailView: View {
 
     private var promptBlock: some View {
         VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text("skills.editor.prompt")
+            Text(AppL10n.string("skills.editor.prompt"))
                 .font(TypeStyle.caption)
                 .foregroundStyle(palette.textTertiary)
             Text(promptText)
@@ -611,7 +580,7 @@ private struct SkillDetailView: View {
     }
 
     private var thinkingRow: some View {
-        Toggle("skills.editor.thinking", isOn: .constant(skill.thinkingEnabled))
+        Toggle(AppL10n.string("skills.editor.thinking"), isOn: .constant(skill.thinkingEnabled))
             .disabled(true)
             .font(TypeStyle.body)
     }
@@ -671,13 +640,13 @@ private struct SkillDetailView: View {
 
     @ViewBuilder
     private func fullWidthButton(
-        _ titleKey: LocalizedStringKey,
+        _ titleKey: String,
         prominent: Bool,
         action: @escaping () -> Void
     ) -> some View {
         let shape = RoundedRectangle(cornerRadius: Radius.large, style: .continuous)
         Button(action: action) {
-            Text(titleKey)
+            Text(AppL10n.string(titleKey))
                 .font(TypeStyle.bodyEmph)
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .foregroundStyle(prominent ? palette.textOnAccent : palette.textPrimary)
@@ -735,19 +704,19 @@ private struct SkillEditorSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("skills.editor.name") {
-                    TextField("skills.editor.namePlaceholder", text: $name)
+                Section(AppL10n.string("skills.editor.name")) {
+                    TextField(AppL10n.string("skills.editor.namePlaceholder"), text: $name)
                         .settingsListRow()
                         .cardListRow(elevated: false)
                 }
-                Section("skills.editor.summary") {
-                    TextField("skills.editor.summaryPlaceholder", text: $summary, axis: .vertical)
+                Section(AppL10n.string("skills.editor.summary")) {
+                    TextField(AppL10n.string("skills.editor.summaryPlaceholder"), text: $summary, axis: .vertical)
                         .lineLimit(6...12)
                         .frame(minHeight: 108, alignment: .top)
                         .settingsListRow(alignment: .topLeading)
                         .cardListRow(elevated: false)
                 }
-                Section("skills.editor.icon") {
+                Section(AppL10n.string("skills.editor.icon")) {
                     Button {
                         showSymbolPicker = true
                     } label: {
@@ -762,7 +731,7 @@ private struct SkillEditorSheet: View {
                                     in: RoundedRectangle(cornerRadius: Radius.medium, style: .continuous)
                                 )
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("skills.editor.iconChoose")
+                                Text(AppL10n.string("skills.editor.iconChoose"))
                                     .foregroundStyle(palette.textPrimary)
                                 Text(systemImage)
                                     .font(TypeStyle.caption)
@@ -771,7 +740,7 @@ private struct SkillEditorSheet: View {
                             }
                             Spacer(minLength: 0)
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(TypeStyle.caption.weight(.semibold))
                                 .foregroundStyle(palette.textTertiary)
                         }
                     }
@@ -787,7 +756,7 @@ private struct SkillEditorSheet: View {
                         .cardListRow(elevated: false)
                 } header: {
                     HStack {
-                        Text("skills.editor.prompt")
+                        Text(AppL10n.string("skills.editor.prompt"))
                         Spacer()
                         Text("\(prompt.count)/\(AIUserSkillLimits.maximumPromptCharacters)")
                             .foregroundStyle(
@@ -799,7 +768,7 @@ private struct SkillEditorSheet: View {
                 }
                 Section {
                     VStack(spacing: 0) {
-                        TextField("skills.editor.linkPlaceholder", text: $shortcutLink)
+                        TextField(AppL10n.string("skills.editor.linkPlaceholder"), text: $shortcutLink)
                             .textInputAutocapitalization(.never)
                             .keyboardType(.URL)
                             .autocorrectionDisabled()
@@ -807,12 +776,12 @@ private struct SkillEditorSheet: View {
 
                         Divider().background(palette.divider)
 
-                        TextField("skills.editor.shortcutNamePlaceholder", text: $shortcutName)
+                        TextField(AppL10n.string("skills.editor.shortcutNamePlaceholder"), text: $shortcutName)
                             .settingsListRow()
 
                         if isLookingUp {
                             Divider().background(palette.divider)
-                            Text("skills.editor.lookingUp")
+                            Text(AppL10n.string("skills.editor.lookingUp"))
                                 .font(TypeStyle.caption)
                                 .foregroundStyle(palette.textTertiary)
                                 .settingsListRow()
@@ -826,20 +795,20 @@ private struct SkillEditorSheet: View {
                     }
                     .cardListRow(elevated: false)
                 } header: {
-                    Text("skills.editor.shortcut")
+                    Text(AppL10n.string("skills.editor.shortcut"))
                 } footer: {
-                    Text("skills.editor.shortcutHint")
+                    Text(AppL10n.string("skills.editor.shortcutHint"))
                 }
                 Section {
-                    Toggle("skills.editor.thinking", isOn: $thinkingEnabled)
+                    Toggle(AppL10n.string("skills.editor.thinking"), isOn: $thinkingEnabled)
                         .settingsListRow()
                         .cardListRow(elevated: false)
                 } footer: {
-                    Text("skills.editor.thinkingHint")
+                    Text(AppL10n.string("skills.editor.thinkingHint"))
                 }
                 if !draft.isNew {
                     Section {
-                        Button("common.delete", role: .destructive) {
+                        Button(AppL10n.string("common.delete"), role: .destructive) {
                             confirmDelete = true
                         }
                         .settingsListRow()
@@ -851,11 +820,11 @@ private struct SkillEditorSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("common.cancel") { dismiss() }
+                    Button(AppL10n.string("common.cancel")) { dismiss() }
                         .tint(palette.textPrimary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("common.save") {
+                    Button(AppL10n.string("common.save")) {
                         do {
                             try save()
                             dismiss()
@@ -870,23 +839,23 @@ private struct SkillEditorSheet: View {
             .sheet(isPresented: $showSymbolPicker) {
                 SkillSymbolPicker(selection: $systemImage)
             }
-            .alert("skills.delete.title", isPresented: $confirmDelete) {
-                Button("common.cancel", role: .cancel) {}
-                Button("common.delete", role: .destructive) {
+            .alert(AppL10n.string("skills.delete.title"), isPresented: $confirmDelete) {
+                Button(AppL10n.string("common.cancel"), role: .cancel) {}
+                Button(AppL10n.string("common.delete"), role: .destructive) {
                     onDelete(draft.id)
                     dismiss()
                 }
             } message: {
-                Text("skills.delete.message")
+                Text(AppL10n.string("skills.delete.message"))
             }
             .alert(
-                Text("skills.error.title"),
+                Text(AppL10n.string("skills.error.title")),
                 isPresented: Binding(
                     get: { saveError != nil },
                     set: { if !$0 { saveError = nil } }
                 )
             ) {
-                Button("common.done") { saveError = nil }
+                Button(AppL10n.string("common.done")) { saveError = nil }
             } message: {
                 Text(saveError ?? "")
             }
@@ -1011,7 +980,7 @@ private struct SkillSymbolPicker: View {
                                     symbol == selection
                                         ? palette.textPrimary.opacity(0.12)
                                         : palette.surfaceElevated,
-                                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    in: RoundedRectangle(cornerRadius: Radius.small, style: .continuous)
                                 )
                         }
                         .buttonStyle(.plain)
@@ -1022,12 +991,12 @@ private struct SkillSymbolPicker: View {
                 .padding(.vertical, Spacing.sm)
             }
             .background(palette.background)
-            .navigationTitle("skills.editor.icon")
+            .navigationTitle(AppL10n.string("skills.editor.icon"))
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $query, prompt: Text("skills.editor.iconSearch"))
+            .searchable(text: $query, prompt: Text(AppL10n.string("skills.editor.iconSearch")))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("common.done") { dismiss() }
+                    Button(AppL10n.string("common.done")) { dismiss() }
                         .tint(palette.textPrimary)
                 }
             }

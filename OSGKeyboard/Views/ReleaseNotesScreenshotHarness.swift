@@ -80,16 +80,18 @@ struct PolishStylesScreenshotHarness: View {
                     delaysGeneration: delaysServiceBackedGeneration
                 )
             } else if simulatesGeneration {
-                PolishStylesView(
-                    learnedStyleGenerator: { _, _, language in
+                PersonalReplyStyleHost(
+                    generator: { _, _, language in
                         try await Task.sleep(for: .seconds(1.8))
                         return ReleaseNotesScreenshotFixture.generatedStyle(
                             language: language
                         )
                     }
                 )
+            } else if let generatedPack {
+                PersonalReplyStyleHost(initialEditingPack: generatedPack)
             } else {
-                PolishStylesView(initialEditingPack: generatedPack)
+                PersonalReplyStyleHost()
             }
         }
         .environment(\.locale, language.swiftUILocale)
@@ -112,9 +114,8 @@ private struct PolishStylesServiceUITestHarness: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             if showsStyles {
-                PolishStylesView(
-                    pullsCloudStylesOnAppear: false,
-                    learnedStyleGenerator: { corpus, replyExamples, language in
+                PersonalReplyStyleHost(
+                    generator: { corpus, replyExamples, language in
                         let client = PolishStylesUITestScriptedLLMClient(
                             responses: ReleaseNotesScreenshotFixture.serviceResponses(
                                 language: language,
@@ -163,6 +164,38 @@ private struct PolishStylesServiceUITestHarness: View {
                 }
                 .accessibilityIdentifier("polishStyles.test.leave")
                 .padding()
+            }
+        }
+    }
+}
+
+/// Personal-style generation moved to the Skills tab when voice input and AI
+/// replies were split, so these hosts drive the section directly instead of the
+/// Styles page.
+@MainActor
+private struct PersonalReplyStyleHost: View {
+    let initialEditingPack: PolishStylePack?
+    let generator: LearnedStyleGenerator?
+
+    init(
+        initialEditingPack: PolishStylePack? = nil,
+        generator: LearnedStyleGenerator? = nil
+    ) {
+        self.initialEditingPack = initialEditingPack
+        self.generator = generator
+    }
+
+    var body: some View {
+        ScrollView {
+            CardPageContent {
+                if let generator {
+                    PersonalReplyStyleSection(
+                        initialEditingPack: initialEditingPack,
+                        generator: generator
+                    )
+                } else {
+                    PersonalReplyStyleSection(initialEditingPack: initialEditingPack)
+                }
             }
         }
     }
@@ -237,6 +270,7 @@ struct HomeDictionaryScreenshotHarness: View {
         language = ReleaseNotesScreenshotFixture.language
         ProviderConfig.shared.uiLanguage = language
         ReleaseNotesScreenshotFixture.seedFrequentTerms(language: language)
+        ReleaseNotesScreenshotFixture.seedMonthlyUsage()
     }
 
     var body: some View {
@@ -412,13 +446,47 @@ private enum ReleaseNotesScreenshotFixture {
         try? catalog.upsert(pack)
         let store = AppGroupStore()
         store.setPolishStyleCatalog(catalog)
-        store.setActivePolishStyleId(pack.id)
+        // A distilled pack drives AI replies, not dictation; the voice-style
+        // setter would reject it.
+        store.setPersonalReplyStyleId(pack.id)
     }
 
     static func resetStyleCatalog() {
         let store = AppGroupStore()
         store.setPolishStyleCatalog(PolishStyleCatalog())
         store.setActivePolishStyleId(PolishStylePackCatalog.defaultID)
+        store.setPersonalReplyStyleId("")
+    }
+
+    /// Seeds varied per-day dictation totals across the current month so the
+    /// Home monthly-usage calendar renders a realistic spread instead of an
+    /// empty grid. Writes this device's slice only, mirroring `recordUtterance`.
+    static func seedMonthlyUsage() {
+        let store = UsageStatisticsStore.shared
+        let defaults = store.defaults
+        var slice = SyncedUsageStatisticsStorage.currentDeviceSlice(from: defaults)
+        let calendar = Calendar.current
+        let today = Date()
+        let dayOfMonth = calendar.component(.day, from: today)
+        let pattern = [
+            420, 980, 0, 260, 1360, 640, 180, 0, 1120, 540,
+            760, 300, 1500, 220, 880, 0, 640, 1180, 360, 940
+        ]
+        var daily: [String: Int] = [:]
+        var total = 0
+        for offset in 0..<dayOfMonth {
+            guard let date = calendar.date(byAdding: .day, value: -offset, to: today)
+            else { continue }
+            let value = pattern[offset % pattern.count]
+            guard value > 0 else { continue }
+            daily[UsageStatisticsDayKey.key(for: date)] = value
+            total += value
+        }
+        slice.dailyDictationCharacters = daily
+        slice.dictationCharacterCount = total
+        slice.updatedAt = today
+        SyncedUsageStatisticsStorage.upsertCurrentDeviceSlice(slice, defaults: defaults)
+        store.reloadFromDisk()
     }
 
     static func seedFrequentTerms(language: AppUILanguage) {

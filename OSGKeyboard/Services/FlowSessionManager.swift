@@ -48,6 +48,56 @@ enum FlowPiPReconciliationDecision: Equatable, Sendable {
     case startRecovery
 }
 
+/// Guarantees that every user-visible session warning (the home-screen
+/// "cannot start voice session" toast) leaves a report behind.
+///
+/// Most warning sites already write their own, better-labelled report on the
+/// following lines. This gate lets the catch-all skip those and fire only for
+/// the paths nobody instrumented — which is exactly where a silent toast comes
+/// from.
+struct FlowSessionWarningReportGate: Equatable, Sendable {
+    /// An explicit report this recent is assumed to describe the same incident.
+    static let duplicateGrace: TimeInterval = 1.5
+
+    private var lastReportedWarning: String?
+
+    mutating func shouldReport(
+        warning: String,
+        lastExplicitReportAt: Date?,
+        now: Date
+    ) -> Bool {
+        guard lastReportedWarning != warning else { return false }
+        lastReportedWarning = warning
+        guard let lastExplicitReportAt else { return true }
+        return now.timeIntervalSince(lastExplicitReportAt) >= Self.duplicateGrace
+    }
+
+    /// A cleared warning ends the episode: the same text later is a new toast.
+    mutating func warningCleared() {
+        lastReportedWarning = nil
+    }
+}
+
+/// One startup-failure report per PiP-loss episode.
+///
+/// While the app is backgrounded the heartbeat re-evaluates the lost PiP every
+/// second; without this gate a single incident would write dozens of identical
+/// reports and evict everything else from the 40-report budget.
+struct FlowPiPLossReportGate: Equatable, Sendable {
+    private var reportedForCurrentEpisode = false
+
+    mutating func shouldReport() -> Bool {
+        guard !reportedForCurrentEpisode else { return false }
+        reportedForCurrentEpisode = true
+        return true
+    }
+
+    /// A healthy PiP closes the episode, so the next loss reports again.
+    mutating func pipBecameActive() {
+        reportedForCurrentEpisode = false
+    }
+}
+
 enum FlowPiPRecoveryPolicy {
     static let maxAttempts = 3
     static let totalBudget: TimeInterval = 5
@@ -109,8 +159,34 @@ final class FlowSessionManager: ObservableObject {
     @Published private(set) var isStarting = false
     @Published private(set) var sessionExpiresAt: Date?
     /// Non-nil when continuous capture failed or permissions are missing.
-    @Published private(set) var sessionWarning: String?
-    @Published private(set) var pipLifecycleState: FlowPiPLifecycleState = .inactive
+    @Published private(set) var sessionWarning: String? {
+        didSet {
+            guard let sessionWarning else {
+                sessionWarningReportGate.warningCleared()
+                return
+            }
+            guard sessionWarning != oldValue else { return }
+            // Deferred by one runloop turn on purpose: the paths that raise a
+            // warning keep mutating lifecycle state — and usually write their
+            // own, better-labelled report — on the following lines. Reporting
+            // synchronously here would snapshot half-updated state and
+            // double-count the same incident.
+            Task { @MainActor [weak self] in
+                self?.reportSessionWarningIfUnreported(sessionWarning)
+            }
+        }
+    }
+
+    private var sessionWarningReportGate = FlowSessionWarningReportGate()
+    @Published private(set) var pipLifecycleState: FlowPiPLifecycleState = .inactive {
+        didSet {
+            // A healthy PiP closes the current loss episode, so the next loss
+            // reports again instead of being deduped against a stale one.
+            if pipLifecycleState == .active { pipLossReportGate.pipBecameActive() }
+        }
+    }
+
+    private var pipLossReportGate = FlowPiPLossReportGate()
 
     private let capture = FlowContinuousCapture()
     private let pipController: any FlowPictureInPictureControlling
@@ -147,6 +223,9 @@ final class FlowSessionManager: ObservableObject {
     private var startupAudioHealthTask: Task<Void, Never>?
     private var didRunStartupAudioHealthCheck = false
     private var commandObserver: FlowSessionDarwinObserver?
+    /// Alive for the whole process, not just an active session: the keyboard
+    /// asks for a companion dump exactly when no session exists.
+    private var diagnosticsDumpObserver: FlowSessionDarwinObserver?
     /// Last recording state the poll loop observed — logs only on transition.
     private var lastObservedRecordingState: FlowSessionKeys.RecordingState = .idle
     private var activeSessionId: UUID?
@@ -281,6 +360,30 @@ final class FlowSessionManager: ObservableObject {
             self.handleUnexpectedPiPStop()
         }
         FlowTerminationCoordinator.register(self)
+        startDiagnosticsDumpObserver()
+    }
+
+    /// The keyboard extension is the process that witnesses "the session never
+    /// came up", but only the host knows why it never published ready. When the
+    /// keyboard writes a terminal start-failure report it pings us here so the
+    /// host's own breadcrumb window lands next to it in the same export.
+    private func startDiagnosticsDumpObserver() {
+        diagnosticsDumpObserver = FlowSessionDarwinObserver(
+            notificationName: FlowSessionDarwin.diagnosticsDumpNotificationName
+        ) { [weak self] in
+            guard let self else { return }
+            guard let request = FlowFailureDiagnostics.consumeHostSnapshotRequest() else {
+                return
+            }
+            FlowDiagnostics.persistStartupFailure(
+                reason: "keyboardReported:\(request.reason)",
+                context: self.startupFailureContext(
+                    trigger: "keyboardDumpRequest",
+                    attemptCount: 0,
+                    elapsed: Date().timeIntervalSince(request.requestedAt)
+                )
+            )
+        }
     }
 
     // MARK: - Public
@@ -699,6 +802,12 @@ final class FlowSessionManager: ObservableObject {
     private func handleUnexpectedPiPStop() {
         guard wantsActiveSession else { return }
         traceState("pip.unexpectedStop")
+        // Root cause of the "session never comes up while I stay in another
+        // app" report. Persist HERE, not later: without PiP there is nothing
+        // keeping this process alive, so iOS suspends it within seconds and the
+        // in-memory breadcrumb window dies with it. This is the one event that
+        // explains the whole failure, and it must survive the suspension.
+        reportPiPLossIfNeeded(origin: "unexpectedStop")
         pipLifecycleState = .waitingForForeground
         sessionWarning = nil
         if isUtteranceRecording {
@@ -721,6 +830,51 @@ final class FlowSessionManager: ObservableObject {
         isStarting = false
         pipLifecycleState = .waitingForForeground
         refreshHostReady()
+        reportPiPLossIfNeeded(origin: "recoveryPausedUntilForeground")
+    }
+
+    /// Catch-all: the home screen is showing a failure toast, so a report must
+    /// exist for it no matter which code path raised the warning.
+    private func reportSessionWarningIfUnreported(_ warning: String) {
+        // Cleared or replaced while we waited — whatever the user sees now will
+        // have triggered its own pass.
+        guard sessionWarning == warning else { return }
+        guard sessionWarningReportGate.shouldReport(
+            warning: warning,
+            lastExplicitReportAt: FlowFailureDiagnostics.lastReportPersistedAt(),
+            now: Date()
+        ) else { return }
+
+        var context = startupFailureContext(
+            trigger: "sessionWarningToast",
+            attemptCount: 0,
+            elapsed: 0
+        )
+        context["warningMessage"] = warning
+        FlowDiagnostics.persistStartupFailure(
+            reason: "sessionWarningShown",
+            context: context
+        )
+    }
+
+    /// Persists the moment this process gives up on the PiP keep-alive.
+    ///
+    /// Restarting PiP requires the scene to be active, so while the user stays
+    /// in another app this is terminal: the session cannot come back until they
+    /// open the app by hand. The keyboard cannot see the cause — it only sees
+    /// `ready=false` — so the host has to record it while it still can.
+    private func reportPiPLossIfNeeded(origin: String) {
+        guard wantsActiveSession, pipLossReportGate.shouldReport() else { return }
+        var context = startupFailureContext(
+            trigger: "pipLoss:\(origin)",
+            attemptCount: 0,
+            elapsed: 0
+        )
+        context["recoverableWithoutForeground"] = isAppForeground ? "true" : "false"
+        FlowDiagnostics.persistStartupFailure(
+            reason: isAppForeground ? "pipLostInForeground" : "pipLostWhileBackgrounded",
+            context: context
+        )
     }
 
     private func resumeAfterForeground() {
@@ -797,23 +951,63 @@ final class FlowSessionManager: ObservableObject {
             sessionWarning = message
             debug("capture restart failed: \(message)")
             refreshHostReady()
+            FlowDiagnostics.persistStartupFailure(
+                reason: "captureRestartFailed",
+                context: startupFailureContext(
+                    trigger: "resumeAfterForeground",
+                    attemptCount: 0,
+                    elapsed: 0
+                ).merging(
+                    ["captureError": Self.safeErrorLogMetadata(error)]
+                ) { _, new in new }
+            )
         }
     }
 
     /// Publish whether the keyboard can start a new utterance without jumping to the host app.
     private func refreshHostReady() {
         guard isActive else {
+            // Not active yet. Distinguish "no host session at all" from
+            // "received a start request and warming up" so the keyboard can
+            // tell an alive-but-starting host from a dead one and hold its
+            // start budget instead of timing out. When the start is parked
+            // because the app is not foreground (PiP cannot arm from the
+            // background), advertise `.waitingForForeground` so the keyboard
+            // prompts the user to bring the app forward.
+            let startupReason: FlowReadySnapshot.Reason
+            if wantsActiveSession {
+                startupReason = isAppForeground ? .starting : .waitingForForeground
+            } else {
+                startupReason = .noSession
+            }
             FlowSessionBridge.writeReadySnapshot(
                 FlowReadySnapshot(
                     sessionId: activeSessionId,
                     ready: false,
-                    reason: .noSession,
+                    reason: startupReason,
+                    heartbeatAt: Date().timeIntervalSince1970,
                     engineMode: store.engineMode,
                     localeId: store.localeId,
                     hostGeneration: FlowSessionBridge.currentHostGeneration()
                 )
             )
             return
+        }
+
+        // Invariant: an active host (this process owns a live session) must keep
+        // the App Group `flowSessionActive` flag set. It can be violated from the
+        // outside — a host suspended after a PiP drop stops writing heartbeats, so
+        // the keyboard's `clearIfHostStale()` reads it as dead and clears the flag
+        // while the process is merely asleep. On resume `isActive` is still true,
+        // but `isHostReachable()`/`isHostReady()` stay false forever because they
+        // gate on that flag, so every startflow is rejected as
+        // `coldStartHostReadyNotPublished`. Re-assert it here — the single publish
+        // chokepoint every path (and the 1 s heartbeat loop) funnels through — so
+        // the divergence heals within a second, before the user presses mic.
+        if !FlowSessionBridge.isSessionActive() {
+            FlowSessionBridge.reassertSessionActive()
+            FlowSessionDarwin.postSessionChanged()
+            debug("re-asserted flowSessionActive flag cleared by keyboard stale-host cleanup")
         }
 
         let pollingAlive = pollingTask != nil && pollingTask?.isCancelled != true
@@ -908,6 +1102,12 @@ final class FlowSessionManager: ObservableObject {
             isPictureInPictureActive: pipController.isPictureInPictureActive
         ) {
         case .noSessionIntent:
+            // Silent before: the keyboard just waited out its 8 s budget with
+            // nothing on either timeline explaining why.
+            traceState(
+                "pipRecovery.skipped",
+                extra: "trigger=\(trigger.rawValue) reason=noSessionIntent"
+            )
             return
         case .alreadyActive:
             pipLifecycleState = .active
@@ -923,6 +1123,13 @@ final class FlowSessionManager: ObservableObject {
             pipLifecycleState = .waitingForForeground
             FlowSessionBridge.setHostReady(false)
             refreshHostReady()
+            // The most likely cold-start miss: the URL was routed before iOS
+            // reported the scene as active, so the start is deferred and the
+            // keyboard sees nothing but `hostReady=false` until it times out.
+            traceState(
+                "pipRecovery.deferred",
+                extra: "trigger=\(trigger.rawValue) reason=waitForForeground"
+            )
             return
         case .startRecovery:
             break
@@ -976,6 +1183,11 @@ final class FlowSessionManager: ObservableObject {
         guard !Task.isCancelled else { return }
         traceState("startSessionAsync.begin", extra: "trigger=\(trigger.rawValue)")
         sessionWarning = nil
+        // Advertise "warming" the moment arming begins. PiP arming can take up
+        // to `FlowPiPRecoveryPolicy.totalBudget`; without this the keyboard sees
+        // `.noSession` for that whole window and cannot tell it apart from a
+        // dead host, so it burns its start budget in the dark.
+        refreshHostReady()
         let recoveryStartedAt = Date()
 
         guard AppPermissions.flowRequirementsMet else {
@@ -1014,6 +1226,11 @@ final class FlowSessionManager: ObservableObject {
                     pipLifecycleState = .waitingForForeground
                     FlowSessionBridge.setHostReady(false)
                 }
+                traceState(
+                    "startSessionAsync.aborted",
+                    extra: "trigger=\(trigger.rawValue) attempt=\(attempt) "
+                        + "at=loopTop reason=\(pipRecoveryAbortReason(operation: operation))"
+                )
                 return
             }
 
@@ -1029,7 +1246,14 @@ final class FlowSessionManager: ObservableObject {
                 wantsActiveSession: wantsActiveSession,
                 isAppForeground: isAppForeground,
                 taskIsCancelled: Task.isCancelled
-            ) else { return }
+            ) else {
+                traceState(
+                    "startSessionAsync.aborted",
+                    extra: "trigger=\(trigger.rawValue) attempt=\(attempt) "
+                        + "at=afterRetryDelay reason=\(pipRecoveryAbortReason(operation: operation))"
+                )
+                return
+            }
 
             if resetFirstGeneration || attempt > 1 {
                 pipController.resetGeneration()
@@ -1063,7 +1287,15 @@ final class FlowSessionManager: ObservableObject {
                 wantsActiveSession: wantsActiveSession,
                 isAppForeground: isAppForeground,
                 taskIsCancelled: Task.isCancelled
-            ) else { return }
+            ) else {
+                traceState(
+                    "startSessionAsync.aborted",
+                    extra: "trigger=\(trigger.rawValue) attempt=\(attempt) "
+                        + "at=afterStartAndWait outcome=\(outcome) "
+                        + "reason=\(pipRecoveryAbortReason(operation: operation))"
+                )
+                return
+            }
 
             switch outcome {
             case .started:
@@ -1246,6 +1478,17 @@ final class FlowSessionManager: ObservableObject {
                 scheduleColdStartRecovery(duration: nil)
             }
             debug("cold-start blocked: host ready contract not published")
+            // This is the toast the user reports as "cannot start voice
+            // session": the keyboard jumped us here and we still could not
+            // publish ready.
+            FlowDiagnostics.persistStartupFailure(
+                reason: "coldStartHostReadyNotPublished",
+                context: startupFailureContext(
+                    trigger: "coldStartHandoff",
+                    attemptCount: 0,
+                    elapsed: 0
+                )
+            )
             return
         }
 
@@ -3591,6 +3834,9 @@ final class FlowSessionManager: ObservableObject {
                         self.ensurePiPActive(trigger: .healthCheck, duration: nil)
                     } else {
                         self.pipLifecycleState = .waitingForForeground
+                        // Deduped to one report per episode — this branch runs
+                        // once a second for as long as the loss lasts.
+                        self.reportPiPLossIfNeeded(origin: "heartbeatHealthCheck")
                     }
                 }
                 FlowSessionBridge.writeHeartbeat()
@@ -3603,6 +3849,19 @@ final class FlowSessionManager: ObservableObject {
 
     private func debug(_ message: String) {
         FlowDiagnostics.log(message)
+    }
+
+    /// Why a bounded PiP recovery gave up mid-loop. These aborts are not
+    /// failures from the host's point of view — but they *are* the user-visible
+    /// failure on the keyboard side, which sits there until its start budget
+    /// expires. Naming the cause is what makes the two timelines line up.
+    private func pipRecoveryAbortReason(operation: UInt64) -> String {
+        var causes: [String] = []
+        if operation != pipRecoveryOperation { causes.append("supersededOperation") }
+        if !wantsActiveSession { causes.append("sessionIntentCleared") }
+        if !isAppForeground { causes.append("appBackgrounded") }
+        if Task.isCancelled { causes.append("taskCancelled") }
+        return causes.isEmpty ? "unknown" : causes.joined(separator: "+")
     }
 
     private func startupFailureContext(

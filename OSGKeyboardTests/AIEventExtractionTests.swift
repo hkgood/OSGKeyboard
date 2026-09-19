@@ -127,6 +127,45 @@ final class AIEventExtractionTests: XCTestCase {
         XCTAssertTrue(prompt.contains("all-day"))
     }
 
+    // MARK: - Decode (inverse of `lines`, for native EventKit export)
+
+    func testDecodeTimedEventWithLocation() {
+        let parsed = AIEventExtraction.decode(
+            "2026-08-15 14:00|2026-08-15 16:00|项目评审|3楼会议室",
+            calendar: calendar
+        )
+        XCTAssertEqual(parsed?.title, "项目评审")
+        XCTAssertEqual(parsed?.location, "3楼会议室")
+        XCTAssertEqual(parsed?.isAllDay, false)
+        XCTAssertEqual(parsed?.start, date(2026, 8, 15, 14, 0))
+        XCTAssertEqual(parsed?.end, date(2026, 8, 15, 16, 0))
+    }
+
+    func testDecodeAllDayHasNoEnd() {
+        let parsed = AIEventExtraction.decode("2026-08-15|ALLDAY|提交周报|", calendar: calendar)
+        XCTAssertEqual(parsed?.title, "提交周报")
+        XCTAssertNil(parsed?.location)
+        XCTAssertEqual(parsed?.isAllDay, true)
+        XCTAssertEqual(parsed?.start, calendar.startOfDay(for: date(2026, 8, 15, 0, 0)))
+        XCTAssertNil(parsed?.end)
+    }
+
+    func testDecodeRejectsMalformedLine() {
+        XCTAssertNil(AIEventExtraction.decode("garbage", calendar: calendar))
+        XCTAssertNil(AIEventExtraction.decode("2026-08-15 14:00||", calendar: calendar))
+        XCTAssertNil(AIEventExtraction.decode("notadate|notadate|标题|", calendar: calendar))
+    }
+
+    func testEncodeThenDecodeRoundTrips() {
+        let encoded = lines("2026-08-15 14:00|2026-08-15 16:00|项目评审|3楼会议室")
+        XCTAssertEqual(encoded.count, 1)
+        let parsed = AIEventExtraction.decode(encoded[0], calendar: calendar)
+        XCTAssertEqual(parsed?.title, "项目评审")
+        XCTAssertEqual(parsed?.start, date(2026, 8, 15, 14, 0))
+        XCTAssertEqual(parsed?.end, date(2026, 8, 15, 16, 0))
+        XCTAssertEqual(parsed?.isAllDay, false)
+    }
+
     private func lines(_ raw: String) -> [String] {
         AIEventExtraction.lines(from: raw, now: now, calendar: calendar)
     }

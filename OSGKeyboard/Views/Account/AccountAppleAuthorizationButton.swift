@@ -25,7 +25,7 @@ struct AccountAppleAuthorizationButton: View {
                 HStack(spacing: Spacing.sm) {
                     ProgressView()
                         .tint(authorizationButtonForeground)
-                    Text("account.signIn.loading")
+                    Text(AppL10n.string("account.signIn.loading"))
                         .font(TypeStyle.bodyEmph)
                 }
                 .foregroundStyle(authorizationButtonForeground)
@@ -47,13 +47,13 @@ struct AccountAppleAuthorizationButton: View {
                 .clipShape(RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
                 .accessibilityLabel(
                     purpose == .signIn
-                        ? Text("account.signIn.apple")
-                        : Text("account.delete.reauthenticate")
+                        ? Text(AppL10n.string("account.signIn.apple"))
+                        : Text(AppL10n.string("account.delete.reauthenticate"))
                 )
                 .accessibilityHint(
                     purpose == .signIn
-                        ? Text("account.signIn.hint")
-                        : Text("account.delete.reauthenticateHint")
+                        ? Text(AppL10n.string("account.signIn.hint"))
+                        : Text(AppL10n.string("account.delete.reauthenticateHint"))
                 )
                 .accessibilityIdentifier(
                     purpose == .signIn

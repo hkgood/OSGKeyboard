@@ -111,7 +111,7 @@ struct DashboardView: View {
                     // 总览：累积所有会话文本，内部滚动、自动贴底显示最新一句。
                     ScrollView {
                         Text(viewModel.homePreviewText)
-                            .font(.system(size: 20, weight: .regular))
+                            .font(TypeStyle.title3.weight(.regular))
                             .foregroundStyle(palette.textPrimary)
                             .lineSpacing(4)
                             .textSelection(.enabled)
@@ -216,7 +216,7 @@ struct BottomDictationBar: View {
                     .truncationMode(.tail)
                 Spacer(minLength: Spacing.xs)
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(TypeStyle.caption2.weight(.semibold))
                     .foregroundStyle(palette.textTertiary)
             }
             .font(MacSettingsType.control)
@@ -249,7 +249,7 @@ struct BottomDictationBar: View {
     private var optionHoldHint: some View {
         HStack(spacing: Spacing.xxs) {
             Image(systemName: "option")
-                .font(.system(size: 12, weight: .semibold))
+                .font(TypeStyle.caption.weight(.semibold))
             Text(MacL10n.string("mac.hint.holdOption.compact", language: lang))
                 .font(TypeStyle.caption)
                 .lineLimit(1)

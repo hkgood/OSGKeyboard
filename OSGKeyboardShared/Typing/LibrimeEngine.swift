@@ -168,7 +168,7 @@ public enum LibrimeEngineError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .schemaUnavailable(let id):
-            return "输入方案不可用：\(id)"
+            return SharedL10n.format("error.rime.schemaUnavailable", id)
         }
     }
 }

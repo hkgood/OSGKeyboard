@@ -291,7 +291,7 @@ struct OnboardingView: View {
                 Button {
                     withAnimation(Motion.soft) { config.onboardingPage = previous }
                 } label: {
-                    Text("common.back")
+                    Text(AppL10n.string("common.back"))
                         .font(TypeStyle.headline)
                         .frame(maxWidth: .infinity, minHeight: 50)
                         .background(palette.surface, in: RoundedRectangle(cornerRadius: Radius.large, style: .continuous))
@@ -346,22 +346,22 @@ private enum OnboardingLayoutMetrics {
 private struct OnboardingTitleBlock: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
-    let title: LocalizedStringKey
-    var subtitle: LocalizedStringKey?
-    var secondarySubtitle: LocalizedStringKey?
+    let title: String
+    var subtitle: String?
+    var secondarySubtitle: String?
 
     var body: some View {
         VStack(spacing: Spacing.xs) {
-            Text(title)
+            Text(AppL10n.string(title))
                 .font(TypeStyle.title3)
                 .foregroundStyle(palette.textPrimary)
             if let subtitle {
-                Text(subtitle)
+                Text(AppL10n.string(subtitle))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textSecondary)
             }
             if let secondarySubtitle {
-                Text(secondarySubtitle)
+                Text(AppL10n.string(secondarySubtitle))
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textSecondary)
             }
@@ -447,7 +447,7 @@ private struct MicPermissionPage: View {
         }
     }
 
-    private var statusLabel: LocalizedStringKey {
+    private var statusLabel: String {
         switch status {
         case .undetermined: return "onboarding.permission.status.undetermined"
         case .granted: return "onboarding.permission.status.granted"
@@ -463,7 +463,7 @@ private struct MicPermissionPage: View {
         }
     }
 
-    private var primaryButtonTitle: LocalizedStringKey {
+    private var primaryButtonTitle: String {
         switch status {
         case .granted: return "onboarding.permission.status.granted"
         case .denied: return "onboarding.permission.openSettings"
@@ -514,7 +514,7 @@ private struct SpeechPermissionPage: View {
         }
     }
 
-    private var statusLabel: LocalizedStringKey {
+    private var statusLabel: String {
         switch status {
         case .undetermined: return "onboarding.permission.status.undetermined"
         case .granted: return "onboarding.permission.status.granted"
@@ -530,7 +530,7 @@ private struct SpeechPermissionPage: View {
         }
     }
 
-    private var primaryButtonTitle: LocalizedStringKey {
+    private var primaryButtonTitle: String {
         switch status {
         case .granted: return "onboarding.permission.status.granted"
         case .denied, .restricted: return "onboarding.permission.openSettings"
@@ -555,17 +555,17 @@ private struct PermissionPageLayout: View {
     @Environment(\.themePalette) private var palette: ThemePalette
 
     let icon: String
-    let title: LocalizedStringKey
-    let detail: LocalizedStringKey
-    var preface: LocalizedStringKey?
-    let status: LocalizedStringKey
+    let title: String
+    let detail: String
+    var preface: String?
+    let status: String
     let statusColor: Color
-    let primaryTitle: LocalizedStringKey
+    let primaryTitle: String
     let primaryDisabled: Bool
     let onPrimary: () -> Void
-    var secondaryTitle: LocalizedStringKey?
+    var secondaryTitle: String?
     var onSecondary: (() -> Void)?
-    var deniedHint: LocalizedStringKey?
+    var deniedHint: String?
 
     var body: some View {
         ScrollView {
@@ -573,7 +573,7 @@ private struct PermissionPageLayout: View {
                 Spacer(minLength: Spacing.lg)
 
                 if let preface {
-                    Text(preface)
+                    Text(AppL10n.string(preface))
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                         .multilineTextAlignment(.center)
@@ -588,14 +588,14 @@ private struct PermissionPageLayout: View {
 
                 HStack(spacing: 6) {
                     Circle().fill(statusColor).frame(width: 8, height: 8)
-                    Text(status)
+                    Text(AppL10n.string(status))
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                 }
                 .padding(.top, OnboardingLayoutMetrics.heroTextGap)
 
                 if let deniedHint {
-                    Text(deniedHint)
+                    Text(AppL10n.string(deniedHint))
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.warning)
                         .multilineTextAlignment(.center)
@@ -605,7 +605,7 @@ private struct PermissionPageLayout: View {
 
                 VStack(spacing: Spacing.sm) {
                     Button(action: onPrimary) {
-                        Text(primaryTitle)
+                        Text(AppL10n.string(primaryTitle))
                             .primaryButton()
                     }
                     .buttonStyle(.plain)
@@ -613,7 +613,7 @@ private struct PermissionPageLayout: View {
 
                     if let secondaryTitle, let onSecondary {
                         Button(action: onSecondary) {
-                            Text(secondaryTitle)
+                            Text(AppL10n.string(secondaryTitle))
                                 .secondaryButton()
                         }
                         .buttonStyle(.plain)
@@ -666,7 +666,7 @@ private struct EnableKeyboardPage: View {
                 Button {
                     AppPermissions.openSystemSettings()
                 } label: {
-                    Label(LocalizedStringKey("onboarding.enable.openSettings"), systemImage: "arrow.up.right.square")
+                    Label(AppL10n.string("onboarding.enable.openSettings"), systemImage: "arrow.up.right.square")
                         .primaryButton()
                 }
                 .buttonStyle(.plain)
@@ -694,7 +694,7 @@ private struct EnableKeyboardPage: View {
         case .deploying:
             HStack(spacing: Spacing.xs) {
                 ProgressView().controlSize(.small)
-                Text(LocalizedStringKey("onboarding.enable.resources.preparing"))
+                Text(AppL10n.string("onboarding.enable.resources.preparing"))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
             }
@@ -702,7 +702,7 @@ private struct EnableKeyboardPage: View {
             HStack(spacing: Spacing.xs) {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(palette.accent)
-                Text(LocalizedStringKey("onboarding.enable.resources.ready"))
+                Text(AppL10n.string("onboarding.enable.resources.ready"))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
             }
@@ -710,10 +710,10 @@ private struct EnableKeyboardPage: View {
             HStack(spacing: Spacing.xs) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(palette.warning)
-                Text(LocalizedStringKey("onboarding.enable.resources.failed"))
+                Text(AppL10n.string("onboarding.enable.resources.failed"))
                     .font(TypeStyle.caption)
                     .foregroundStyle(palette.textSecondary)
-                Button(LocalizedStringKey("onboarding.enable.resources.retry")) {
+                Button(AppL10n.string("onboarding.enable.resources.retry")) {
                     deployment.deployNow(force: true, reason: "onboarding.retry")
                 }
                 .font(TypeStyle.caption)
@@ -739,14 +739,14 @@ private struct EnableKeyboardPage: View {
         HStack(alignment: .top, spacing: Spacing.sm) {
             stepLabel(num)
             HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text("onboarding.enable.step3.prefix")
+                Text(AppL10n.string("onboarding.enable.step3.prefix"))
                 Image(systemName: "globe")
                     .font(TypeStyle.body)
                     .foregroundStyle(palette.textPrimary)
                     .alignmentGuide(.firstTextBaseline) { dimensions in
                         dimensions[.bottom] - dimensions.height * 0.12
                     }
-                Text("onboarding.enable.step3.suffix")
+                Text(AppL10n.string("onboarding.enable.step3.suffix"))
             }
             .font(TypeStyle.body)
             .foregroundStyle(palette.textPrimary)
@@ -800,7 +800,7 @@ private struct APISetupPage: View {
                     .surfaceCard()
                     .padding(.horizontal, Spacing.lg)
                 } else {
-                    Text("settings.aiService.credits.subtitle")
+                    Text(AppL10n.string("settings.aiService.credits.subtitle"))
                         .font(TypeStyle.body)
                         .foregroundStyle(palette.textSecondary)
                         .multilineTextAlignment(.center)
@@ -832,13 +832,13 @@ private struct PolishSetupPage: View {
                 .padding(.horizontal, Spacing.lg)
 
                 if config.credentialSource == .managed {
-                    Text("settings.aiService.credits.subtitle")
+                    Text(AppL10n.string("settings.aiService.credits.subtitle"))
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, Spacing.xl)
                 } else if config.isLocalEngine {
-                    Text("onboarding.polish.localHint")
+                    Text(AppL10n.string("onboarding.polish.localHint"))
                         .font(TypeStyle.caption)
                         .foregroundStyle(palette.textSecondary)
                         .multilineTextAlignment(.center)

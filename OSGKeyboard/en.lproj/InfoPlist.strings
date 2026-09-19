@@ -3,3 +3,5 @@
 "NSMicrophoneUsageDescription" = "OSGKeyboard uses the microphone for voice dictation, including active Flow sessions while you type in other apps.";
 "NSSpeechRecognitionUsageDescription" = "OSGKeyboard transcribes your voice with on-device speech recognition by default. If you explicitly switch to a cloud engine in Settings, recordings are sent to the ASR provider you configure.";
 "NSContactsUsageDescription" = "OSGKeyboard uses Contacts only when you choose Create Contact for a copied phone number.";
+"NSRemindersFullAccessUsageDescription" = "OSGKeyboard adds reminders only when you choose Extract To-dos for copied text.";
+"NSCalendarsWriteOnlyAccessUsageDescription" = "OSGKeyboard adds calendar events only when you choose Extract Events for copied text. It never reads your existing events.";

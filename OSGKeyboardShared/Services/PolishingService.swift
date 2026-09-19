@@ -660,13 +660,13 @@ extension PolishingService.PolishError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .noTranscript:
-            return "No transcript to polish."
+            return SharedL10n.string("error.polish.noTranscript")
         case .timeout:
-            return "LLM polish timed out."
+            return SharedL10n.string("error.polish.timeout")
         case .missingAPIKey:
-            return "Missing API key — fill it in Settings before polish can run."
+            return SharedL10n.string("error.polish.missingAPIKey")
         case .keychainLocked:
-            return "API key unavailable while the device is locked — will work after unlock."
+            return SharedL10n.string("error.polish.keychainLocked")
         }
     }
 }

@@ -11,7 +11,7 @@ enum AppTab: Int, CaseIterable {
     case styles
     case settings
 
-    var accessibilityKey: LocalizedStringKey {
+    var accessibilityKey: String {
         switch self {
         case .keyboard: return "tab.keyboard"
         case .skills: return "tab.skills"
@@ -32,7 +32,7 @@ enum AppTab: Int, CaseIterable {
     }
 
     /// Sidebar label for iPad `NavigationSplitView` (SF Symbol + title).
-    var sidebarTitle: LocalizedStringKey { accessibilityKey }
+    var sidebarTitle: String { accessibilityKey }
 
     /// iPad sidebar. Home stays `house` in both states; other tabs follow
     /// the same outline / fill pairing as the phone tab bar.
