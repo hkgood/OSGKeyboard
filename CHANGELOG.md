@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Style card captions**: resolve each built-in style’s short description through the in-app language override, so switching App Language updates the caption instead of showing a localization key or the system language. / **风格卡片说明**：内置风格的说明小字改为走应用内语言设置；切换 App 语言后说明会跟着变，而不再显示本地化 key 或跟随系统语言。
+
 ## [2.2.0] - 2026-09-18
 
 ### Added
