@@ -196,9 +196,11 @@ struct PersonalReplyStyleSection: View {
                         Image(systemName: "arrow.clockwise")
                     }
                     Text(
-                        isGenerating
-                            ? "personalReplyStyle.regenerating"
-                            : "personalReplyStyle.regenerate"
+                        AppL10n.string(
+                            isGenerating
+                                ? "personalReplyStyle.regenerating"
+                                : "personalReplyStyle.regenerate"
+                        )
                     )
                 }
                 .font(TypeStyle.bodyEmph)

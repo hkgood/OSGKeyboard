@@ -169,7 +169,10 @@ struct PolishStylesView: View {
                         .foregroundStyle(palette.textPrimary)
                         .lineLimit(1)
                         .padding(.trailing, 32)
-                    Text(descriptionKey(for: pack))
+                    // AppL10n honors Settings → App Language; Text(String) would
+                    // show the raw key, and a bare LocalizedStringKey would follow
+                    // the system language instead (see Scripts/check_l10n_keys.sh).
+                    Text(AppL10n.string(descriptionKey(for: pack), language: config.uiLanguage))
                         .font(TypeStyle.caption2)
                         .foregroundStyle(palette.textTertiary)
                         .lineLimit(2)
@@ -229,19 +232,11 @@ struct PolishStylesView: View {
         }
     }
 
+    /// Host-bundle caption keys. Resolved at the render site with `AppL10n`
+    /// so Settings → App Language wins over the launch-time system locale.
     private func descriptionKey(for pack: PolishStylePack) -> String {
         guard pack.kind == .builtin else { return "polishStyles.custom.description" }
-        switch pack.id {
-        case "builtin.structured": return "polishStyles.structured.description"
-        case "builtin.formal": return "polishStyles.formal.description"
-        case "builtin.dating": return "polishStyles.dating.description"
-        case "builtin.chat": return "polishStyles.chat.description"
-        case "builtin.flex": return "polishStyles.flex.description"
-        case "builtin.corp": return "polishStyles.corp.description"
-        case "builtin.diba": return "polishStyles.diba.description"
-        case "builtin.xhs": return "polishStyles.xhs.description"
-        default: return "polishStyles.light.description"
-        }
+        return "polishStyles.\(pack.id.dropFirst("builtin.".count)).description"
     }
 
     private func reload() {
@@ -464,7 +459,9 @@ struct PolishStyleEditorSheet: View {
                     Text(AppL10n.string("polishStyles.editor.hint"))
                 }
             }
-            .navigationTitle(isNew ? "polishStyles.add" : "polishStyles.edit")
+            .navigationTitle(
+                AppL10n.string(isNew ? "polishStyles.add" : "polishStyles.edit")
+            )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
